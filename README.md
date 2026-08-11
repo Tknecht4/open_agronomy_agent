@@ -53,8 +53,18 @@ Model weights are deliberately not committed. Download the pinned conference can
 
 ```bash
 python scripts/download_model.py \
-  --model-config configs/model_gemma4_e2b_interface_v1.yaml
+  --model-config configs/model_gemma4_e2b_interface_v2.yaml
 ```
+
+The optional fast profile is separately pinned. Install it only if you want it selectable in the UI:
+
+```bash
+python scripts/download_model.py \
+  --model mlx-community/Qwen3.5-0.8B-OptiQ-4bit \
+  --revision ef60586933bd2cc02b763f77eb8839a5114bbec1
+```
+
+The app never downloads a model during a question. Missing or incomplete weights are reported as setup-required and generation remains disabled until an operator provisions them explicitly.
 
 Run the API and frontend together:
 
@@ -64,7 +74,7 @@ PYTHONPATH=src python scripts/run_cockpit.py \
   --port 8000 \
   --frontend \
   --frontend-port 5173 \
-  --model-config configs/model_gemma4_e2b_interface_v1.yaml \
+  --model-config configs/model_gemma4_e2b_interface_v2.yaml \
   --warm-model
 ```
 
@@ -75,6 +85,8 @@ Open `http://127.0.0.1:5173`. Omit `--warm-model` during ordinary UI development
 The local model, admitted RAG/KG artifacts, field/session database, and deterministic calculator work without a network. Tools that require a live provider declare that requirement and are blocked before an external call in offline mode. Current weather, current legal labels, and live regulatory authority must never be simulated from stale local text.
 
 The field-LAN launch path requires HTTPS and one-time client pairing. It intentionally blocks public adapters. See [Offline operation](docs/public/offline-operation.md).
+
+Large generated Prairie soil indexes are also excluded from Git. The Alberta, Saskatchewan, and Manitoba demonstration fields use detailed local soil intersections only when the separately built offline spatial package is installed; otherwise the UI reports the missing layer and the normal retrieval/model path continues. Manifests in `data/derived/geo_layers/` preserve the build and source lineage.
 
 ## Structured agronomic calculator
 

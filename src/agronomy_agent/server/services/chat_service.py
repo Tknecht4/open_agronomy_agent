@@ -32,7 +32,7 @@ from agronomy_agent.evidence_contracts import (
     sha256_text,
     validated_answer_from_runtime,
 )
-from agronomy_agent.model_identity import model_identity_contract
+from agronomy_agent.model_identity import bind_response_identity, model_identity_contract
 from agronomy_agent.high_consequence import apply_high_consequence_boundary, evaluate_high_consequence_policy
 from agronomy_agent.source_freshness import assess_source_freshness
 from agronomy_agent.field_measurements import (
@@ -91,7 +91,7 @@ DEEP_SOURCE_CARD_PATTERNS: tuple[tuple[str, str], ...] = (
     ),
     (
         "cross_border_crop_history_public_layers",
-        r"\b(crop history|crop-cover|land cover|cropland data layer|cdl|annual crop inventory|aafc|cross[- ]border|border|canadian field|canada field)\b",
+        r"\b(crop history|crop-cover|land cover|cropland data layer|cdl|annual crop inventory|aafc annual crop inventory|cross[- ]border|border|canadian field|canada field)\b",
     ),
     (
         "source_availability_and_tool_choice",
@@ -238,6 +238,14 @@ def _build_mlx_generator(
 ) -> Any:
     backend = os.getenv("AGRONOMY_AGENT_MODEL_BACKEND", "mlx").strip().lower()
     effective_config_path = model_config_path or os.getenv("AGRONOMY_AGENT_MODEL_CONFIG", "configs/model.yaml")
+    serving_model_id = str(model_config.get("serving_model_id") or model_config.get("model_id") or "")
+    assistant_model_id = str(model_config.get("assistant_model_id") or "")
+    if model_id == serving_model_id or model_id == str(model_config.get("model_id") or ""):
+        selected_revision = str(model_config.get("model_revision") or "").strip() or None
+    elif model_id == assistant_model_id:
+        selected_revision = str(model_config.get("assistant_model_revision") or "").strip() or None
+    else:
+        selected_revision = None
     if backend in {"http", "mlx_http", "openai_compatible"}:
         base_url = os.getenv("AGRONOMY_AGENT_MODEL_BASE_URL", "").strip()
         if not base_url:
@@ -251,7 +259,7 @@ def _build_mlx_generator(
             temperature=float(model_config.get("temperature", 0.0)),
             top_p=float(model_config.get("top_p", 0.9)),
             top_k=int(model_config.get("top_k", 0)),
-            model_revision=str(model_config.get("model_revision") or "") or None,
+            model_revision=selected_revision,
             model_config_path=effective_config_path,
             identity_receipt_path=os.getenv("AGRONOMY_AGENT_MODEL_IDENTITY_RECEIPT") or None,
             identity_required=os.getenv("AGRONOMY_AGENT_MODEL_IDENTITY_REQUIRED", "").strip().lower()
@@ -263,6 +271,7 @@ def _build_mlx_generator(
         prompt_cache_max_bytes = int(float(model_config.get("prompt_cache_max_bytes_mb", 256)) * 1024 * 1024)
         generator = MLXGenerator(
             model_id,
+            model_revision=selected_revision,
             temperature=float(model_config.get("temperature", 0.0)),
             top_p=float(model_config.get("top_p", 0.9)),
             top_k=int(model_config.get("top_k", 0)),
@@ -281,7 +290,7 @@ def _build_mlx_generator(
         )
         generator.model_identity = model_identity_contract(
             model_id=model_id,
-            model_revision=str(model_config.get("model_revision") or "") or None,
+            model_revision=selected_revision,
             backend="mlx_local",
             model_config_path=effective_config_path,
         )
@@ -289,10 +298,10 @@ def _build_mlx_generator(
     except TypeError as exc:
         if "unexpected keyword argument" not in str(exc):
             raise
-        generator = MLXGenerator(model_id)
+        generator = MLXGenerator(model_id, model_revision=selected_revision)
         generator.model_identity = model_identity_contract(
             model_id=model_id,
-            model_revision=str(model_config.get("model_revision") or "") or None,
+            model_revision=selected_revision,
             backend="mlx_local",
             model_config_path=effective_config_path,
         )
@@ -403,7 +412,10 @@ def run_turn(
     else:
         map_interpretation_answer = render_map_interpretation_answer(
             message,
-            {"metadata": {"field_context": _safe_field_context_summary(field_context)}},
+            {
+                "route": _normalize_route(route_payload),
+                "metadata": {"field_context": _safe_field_context_summary(field_context)},
+            },
         )
         source_grounded = is_source_grounded_question(message)
         public_adapter_records = (
@@ -735,7 +747,17 @@ def run_turn(
     elif generator is not None and getattr(generator, "last_generation_stats", None):
         trace_store_payload["metadata"]["generation_stats"] = dict(generator.last_generation_stats)
     if generator is not None and getattr(generator, "model_identity", None):
-        trace_store_payload["metadata"]["model_identity"] = dict(generator.model_identity)
+        identity = dict(generator.model_identity)
+        generation_stats = draft_generation_stats or getattr(generator, "last_generation_stats", None)
+        if (
+            isinstance(generation_stats, dict)
+            and int(generation_stats.get("generation_tokens") or 0) > 0
+            and not generation_metadata.get("generation_bypass")
+            and not generation_metadata.get("generation_fallback")
+            and not generation_metadata.get("generation_unavailable")
+        ):
+            identity = bind_response_identity(identity, model_to_use)
+        trace_store_payload["metadata"]["model_identity"] = identity
 
     safety_answer = enforce_answer_safety_postconditions(
         answer,
@@ -1242,10 +1264,27 @@ def _canadian_public_source_tasks(
         tasks.append(lambda: _call_daymet_single_pixel(latitude, longitude, field_context, timeout=timeout))
     if _should_call_openet(message, field_context):
         tasks.append(lambda: _call_canada_et_source_lane(latitude, longitude, geometry, crop=crop, province=province))
-    tasks.append(lambda: _call_aafc_annual_crop_inventory(latitude, longitude, geometry, crop=crop, province=province))
-    if crop:
+    if _should_call_aafc_crop_inventory(message, field_context):
+        tasks.append(lambda: _call_aafc_annual_crop_inventory(latitude, longitude, geometry, crop=crop, province=province))
+    if crop and _should_call_statcan_crop_statistics(message, field_context):
         tasks.append(lambda: _call_statcan_field_crop_statistics(crop=crop, province=province))
     return tasks
+
+
+def _should_call_aafc_crop_inventory(message: str, field_context: dict[str, Any]) -> bool:
+    haystack = _source_card_haystack(message, field_context)
+    return _source_card_matches(
+        haystack,
+        r"\b(annual crop inventory|crop cover|land cover|crop history|rotation|what (?:was|is) grown|previous crop|planting record|cropland classification)\b",
+    )
+
+
+def _should_call_statcan_crop_statistics(message: str, field_context: dict[str, Any]) -> bool:
+    haystack = _source_card_haystack(message, field_context)
+    return _source_card_matches(
+        haystack,
+        r"\b(statistics canada|statcan|provincial (?:yield|area|production)|average yield|regional yield|seeded area|harvested area|acreage|production statistics|benchmark yield)\b",
+    )
 
 
 def _call_cansis_soil_landscapes(

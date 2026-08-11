@@ -40,8 +40,8 @@ export function fieldAnswerCapability(
     return {
       canGenerateAnswer: true,
       state: 'runtime_online',
-      badge: 'Local runtime · live sources enabled',
-      detail: 'Local answers are available. Live sources may be used when the answer records them.',
+      badge: 'Local runtime · connected mode',
+      detail: 'Local answers are available. Live source checks run only when requested and are recorded in the answer trace.',
     }
   }
   return {

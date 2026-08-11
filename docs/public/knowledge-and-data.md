@@ -6,13 +6,26 @@ The runtime knowledge base is selected by `data/manifests/runtime_corpus_policy.
 
 | Artifact | Rows | Runtime role | Boundary |
 |---|---:|---|---|
-| Canadian distributable v13 | 718 | Decisive where row policy, jurisdiction and currency allow | Uneven provincial depth; Ontario Publication 811/811F excluded |
+| Canadian distributable v13 | 718 | 706 context-only; 12 require live authority | No row is currently admitted as standard applied authority; uneven provincial depth; Ontario Publication 811/811F excluded |
 | Ontario context v1 | 234 | Context only | Regional statistics, not field truth or calibration |
 | Canadian supplements v1/v2 | 56 | Context only | Historical/regional and data-product context |
 | Canadian regional context v1 | 38 | Context only | Data-product descriptions, not local applied guidance |
 | SoilWise RAG + KG | 1,784 RAG rows | Context only | Soil-health concepts and relations, not a soil test |
 | Compact NRCS ESD | 24,396 | Context only | United States regional profiles; never Canadian soil authority |
 | Project seed/boundary corpora | 42 | Context and safety policy | Project-authored synthesis, not independent evidence |
+
+### Prairie applied-guidance coverage
+
+The main 718-row Canadian corpus is not provincially balanced. Its row-level jurisdiction counts are:
+
+| Jurisdiction | Rows | Practical interpretation |
+|---|---:|---|
+| Alberta | 511 | Strongest Prairie depth, but most historical publications remain context-only and require current local calibration for rates or thresholds |
+| Manitoba | 119 | Useful soil-fertility coverage, still bounded by date, method and current-authority checks |
+| Canada/federal | 78 | Cross-provincial context and federal material; not a substitute for provincial recommendations |
+| Saskatchewan | 10 | Detailed-soil-survey specification context, not sufficient province-specific applied crop guidance |
+
+SoilWise adds useful soil-process concepts across all three provinces, but it does not repair the Saskatchewan applied-guidance gap and must not be presented as if it does. The conference interface therefore treats Saskatchewan mapping as a regional prior and asks for current Saskatchewan guidance before locally calibrated decisions.
 
 Every admitted Canadian row carries source and lineage fields. The policy manifest also records a byte hash, evidence tier, rights status, admission reason, and runtime role for every configured corpus.
 

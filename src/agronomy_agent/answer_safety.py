@@ -40,8 +40,50 @@ def enforce_answer_safety_postconditions(
 
     answer_text = _normalize_unsupported_regional_product_prescription(answer_text, question=question)
     answer_text = _normalize_field_trafficability_gaps(answer_text, question=question)
+    answer_text = _normalize_salinity_terminology(answer_text, question=question, route=route)
     if _route_question_type(route) == "product_label":
         answer_text = _ensure_current_product_label_boundary(answer_text)
+    return answer_text
+
+
+def _normalize_salinity_terminology(
+    answer_text: str,
+    *,
+    question: str | None,
+    route: Any | None,
+) -> str:
+    question_type = _route_question_type(route)
+    if question_type != "soil_water" and not re.search(
+        r"\b(?:salin\w*|sodic\w*|\bSAR\b|\bESP\b)\b",
+        str(question or ""),
+        re.IGNORECASE,
+    ):
+        return answer_text
+    answer_text = re.sub(
+        r"\bSodium Absorption Ratio\b",
+        "sodium adsorption ratio",
+        answer_text,
+        flags=re.IGNORECASE,
+    )
+    answer_text = re.sub(
+        r"\bElectrical Saturation Percentage\b",
+        "exchangeable sodium percentage",
+        answer_text,
+        flags=re.IGNORECASE,
+    )
+    answer_text = re.sub(
+        r"\bEquivalent Salt Index\s*\(ESI\)",
+        "an appropriate soil electrical-conductivity measure",
+        answer_text,
+        flags=re.IGNORECASE,
+    )
+    if not re.search(r"\birrigat\w*\b", str(question or ""), re.IGNORECASE):
+        answer_text = re.sub(
+            r"\bSample the irrigation water being used and",
+            "If irrigation water is used, sample it and",
+            answer_text,
+            flags=re.IGNORECASE,
+        )
     return answer_text
 
 

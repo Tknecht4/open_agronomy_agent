@@ -94,7 +94,7 @@ export const buildPublicToolCard = (tool: ToolInvocation): PublicToolCard => {
 }
 
 export const summarizePublicToolCards = (tools: ToolInvocation[]): string => {
-  if (tools.length === 0) return 'need point/boundary'
+  if (tools.length === 0) return 'not requested'
   const cards = tools.map(buildPublicToolCard)
   const available = cards.filter((card) => card.statusTone === 'ok').length
   const attention = cards.length - available
@@ -120,16 +120,16 @@ export const buildSourceCheckSummary = (
     ? summarizePublicToolCards(tools)
     : mapEvidenceCount
       ? `${mapEvidenceCount} map match${mapEvidenceCount === 1 ? '' : 'es'}`
-      : 'need field context'
+      : 'not checked'
   const items: SourceCheckSummary['items'] = [
     {
       label: 'Map',
-      value: mapEvidenceCount ? `${mapEvidenceCount} match${mapEvidenceCount === 1 ? '' : 'es'}` : 'pending',
+      value: mapEvidenceCount ? `${mapEvidenceCount} match${mapEvidenceCount === 1 ? '' : 'es'}` : 'not checked',
       tone: mapEvidenceCount ? 'ok' : 'attention',
     },
     {
       label: 'Public',
-      value: publicCheckCount ? `${publicCheckCount} check${publicCheckCount === 1 ? '' : 's'}` : 'pending',
+      value: publicCheckCount ? `${publicCheckCount} check${publicCheckCount === 1 ? '' : 's'}` : 'not requested',
       tone: publicCheckCount ? (attentionCount || unavailableCount ? 'attention' : 'ok') : 'attention',
     },
     {
@@ -216,7 +216,7 @@ const mapTraceGroup = (mapCards: StructuredEvidenceCard[]): TraceToolGroup => ({
   id: 'map_context',
   label: 'Map evidence',
   count: mapCards.length,
-  summary: mapCards.length ? `${mapCards.length} visible map card${mapCards.length === 1 ? '' : 's'}` : 'pending field intersection',
+  summary: mapCards.length ? `${mapCards.length} visible map card${mapCards.length === 1 ? '' : 's'}` : 'not checked',
   statusTone: mapCards.length ? 'ok' : 'attention',
   items: mapCards.slice(0, 4).map((card) => ({
     name: asString(card.doc_id) || asString(card.title) || 'map_context',

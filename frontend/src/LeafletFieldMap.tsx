@@ -37,7 +37,9 @@ const ESRI_WORLD_IMAGERY =
   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
 
 const scenarioViews: Record<string, { center: [number, number]; zoom: number }> = {
+  'central-alberta-barley': { center: [53.3, -113.6], zoom: 12 },
   'abbotsford-capability': { center: [49.05, -122.3], zoom: 12 },
+  'regina-thematic-soil': { center: [50.45, -104.73], zoom: 12 },
   'canola-acidity': { center: [49.87, -99.95], zoom: 11 },
   'iowa-phosphorus': { center: [42.03, -93.72], zoom: 12 },
   'irrigated-salinity': { center: [42.9, -114.4], zoom: 12 },

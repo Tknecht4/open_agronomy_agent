@@ -4,8 +4,9 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from agronomy_agent.agent import generate_answer, load_model_config
+from agronomy_agent.agent import generate_answer, load_model_config, resolve_local_model_snapshot
 from agronomy_agent.server.app import create_app
+from agronomy_agent.server.services.chat_service import _build_mlx_generator
 from agronomy_agent.server.settings import build_settings
 
 
@@ -111,3 +112,53 @@ def test_gemma_270m_bounded_profile_is_single_model_and_revision_pinned() -> Non
     assert config["answer_verification"]["model_id"] == config["model_id"]
     assert config["answer_verification"]["model_revision"] == config["model_revision"]
     assert config["intervention_profile"] == "constrained"
+
+
+def test_pre_demo_profile_pins_every_selectable_local_model() -> None:
+    config = load_model_config("configs/model_gemma4_e2b_interface_v2.yaml")
+
+    assert config["model_revision"]
+    assert config["assistant_model_revision"]
+    assert config["serving_quality_gate"] == "open_agronomy_system_interface_v2"
+
+
+def test_generator_receives_revision_for_selected_profile(monkeypatch: Any) -> None:
+    calls: list[dict[str, Any]] = []
+
+    class CapturingGenerator:
+        def __init__(self, model_id: str, **kwargs: Any) -> None:
+            calls.append({"model_id": model_id, **kwargs})
+
+    monkeypatch.setattr("agronomy_agent.server.services.chat_service.MLXGenerator", CapturingGenerator)
+    config = {
+        "model_id": "serving/model",
+        "serving_model_id": "serving/model",
+        "model_revision": "serving-revision",
+        "assistant_model_id": "assistant/model",
+        "assistant_model_revision": "assistant-revision",
+    }
+
+    _build_mlx_generator("serving/model", config)
+    _build_mlx_generator("assistant/model", config)
+
+    assert calls[0]["model_revision"] == "serving-revision"
+    assert calls[1]["model_revision"] == "assistant-revision"
+
+
+def test_local_snapshot_resolution_fails_closed_without_downloading(monkeypatch: Any) -> None:
+    observed: dict[str, Any] = {}
+
+    def unavailable_snapshot_download(**kwargs: Any) -> str:
+        observed.update(kwargs)
+        raise FileNotFoundError("not cached")
+
+    monkeypatch.setattr("huggingface_hub.snapshot_download", unavailable_snapshot_download)
+
+    try:
+        resolve_local_model_snapshot("example/missing-model", revision="immutable-revision")
+    except RuntimeError as exc:
+        assert "No automatic download was attempted" in str(exc)
+    else:
+        raise AssertionError("missing local model should fail closed")
+    assert observed["local_files_only"] is True
+    assert observed["revision"] == "immutable-revision"

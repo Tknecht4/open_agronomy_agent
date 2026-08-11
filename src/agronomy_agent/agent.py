@@ -247,6 +247,88 @@ def build_answer_prompt(context_block: str, question: str) -> str:
     return f"{answer_output_contract()}\n\n{context_block}\n\nField question:\n{question}"
 
 
+def resolve_local_model_snapshot(
+    model_id: str,
+    *,
+    revision: str | None = None,
+) -> Path:
+    """Resolve a complete local model snapshot without permitting a download."""
+
+    direct_path = Path(model_id).expanduser()
+    if direct_path.exists():
+        snapshot = direct_path.resolve()
+    else:
+        from huggingface_hub import snapshot_download
+
+        cache_dir = Path(
+            os.environ.get("HF_HUB_CACHE") or repo_path(".hf_cache/hub")
+        ).expanduser()
+        try:
+            snapshot = Path(
+                snapshot_download(
+                    repo_id=model_id,
+                    revision=revision,
+                    cache_dir=str(cache_dir),
+                    local_files_only=True,
+                )
+            ).resolve()
+        except Exception as exc:
+            revision_label = revision or "the configured default revision"
+            raise RuntimeError(
+                f"Local model snapshot unavailable for {model_id}@{revision_label}. "
+                "No automatic download was attempted. Provision it explicitly with "
+                "scripts/download_model.py before starting the answer engine."
+            ) from exc
+
+    names = {path.name for path in snapshot.rglob("*") if path.is_file()}
+    has_tokenizer = "tokenizer.json" in names or "tokenizer.model" in names
+    weights = [
+        path
+        for path in snapshot.rglob("*")
+        if path.is_file() and path.name.endswith((".safetensors", ".gguf", ".npz"))
+    ]
+    if not (
+        snapshot.is_dir()
+        and "config.json" in names
+        and "tokenizer_config.json" in names
+        and has_tokenizer
+        and weights
+        and all(path.stat().st_size > 0 for path in weights)
+    ):
+        raise RuntimeError(
+            f"Local model snapshot is incomplete for {model_id}@{revision or 'configured default'}. "
+            "No automatic download was attempted; rerun scripts/download_model.py while online."
+        )
+    return snapshot
+
+
+def local_model_snapshot_status(
+    model_id: str,
+    *,
+    revision: str | None = None,
+) -> dict[str, Any]:
+    """Return operator-facing local readiness without changing cache state."""
+
+    try:
+        snapshot = resolve_local_model_snapshot(model_id, revision=revision)
+    except RuntimeError as exc:
+        return {
+            "ready": False,
+            "status": "not_installed",
+            "model_id": model_id,
+            "revision": revision,
+            "detail": str(exc),
+        }
+    return {
+        "ready": True,
+        "status": "ready",
+        "model_id": model_id,
+        "revision": revision,
+        "snapshot": str(snapshot),
+        "detail": "Pinned model weights and tokenizer are available locally.",
+    }
+
+
 @dataclass
 class AgentContext:
     retrieved_docs: list[RetrievedDoc]
@@ -1939,13 +2021,22 @@ class MLXGenerator:
             return
         from mlx_lm import load
 
-        self._model, self._tokenizer = self._load_cached(
-            load,
+        resolved_model = resolve_local_model_snapshot(
             self.model_id,
             revision=self.model_revision,
         )
+        self._model, self._tokenizer = self._load_cached(
+            load,
+            str(resolved_model),
+            cache_key=f"{self.model_id}@{self.model_revision or 'main'}",
+        )
         if self.draft_model_id:
-            self._draft_model, _ = self._load_cached(load, self.draft_model_id)
+            resolved_draft = resolve_local_model_snapshot(self.draft_model_id)
+            self._draft_model, _ = self._load_cached(
+                load,
+                str(resolved_draft),
+                cache_key=f"{self.draft_model_id}@main",
+            )
 
     def warmup(self) -> None:
         """Load model weights without generating user-visible text."""
@@ -1958,8 +2049,9 @@ class MLXGenerator:
         model_id: str,
         *,
         revision: str | None = None,
+        cache_key: str | None = None,
     ) -> tuple[Any, Any]:
-        cache_key = f"{model_id}@{revision or 'main'}"
+        cache_key = cache_key or f"{model_id}@{revision or 'main'}"
         with _MLX_MODEL_LOCK:
             cached = _MLX_MODEL_CACHE.get(cache_key)
             if cached is not None:
