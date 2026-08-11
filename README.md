@@ -4,7 +4,7 @@ Open Agronomy Agent is a local-first research system for evidence-grounded Canad
 
 This repository is a conference release candidate, not a finished agronomist replacement. It is designed to show its evidence, distinguish regional priors from field measurements, and stop when a safe recommendation requires a current label, laboratory result, local calibration, or professional review.
 
-> **Licence status:** the owner is reviewing the public release. Until a root `LICENSE` is selected, the code is source-available for review but does not yet grant open-source reuse rights. Third-party data terms are separate and are recorded in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+> **Licence:** project-authored repository contents are licensed under the [Apache License 2.0](LICENSE) unless noted otherwise. Third-party datasets, evaluation material, dependencies, and separately downloaded model weights retain their own terms, recorded in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and the governed source manifests.
 
 ## What is in the system
 

@@ -29,6 +29,8 @@ SCHEMA_VERSION = "open_agronomy_agent.edge_runtime_manifest.v1"
 RAG_CONFIG = "configs/rag_governed_runtime_v1.yaml"
 MODEL_CONFIG = "configs/model_gemma4_e2b_interface_v2.yaml"
 CONTROL_PATHS = (
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
     "Containerfile",
     "Containerfile.overlay",
     ".dockerignore",

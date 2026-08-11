@@ -1,6 +1,6 @@
 {
-  "built_at": "2026-08-11T18:02:30+00:00",
-  "file_count": 525,
+  "built_at": "2026-08-11T18:38:43+00:00",
+  "file_count": 526,
   "files": [
     {
       "bytes": 3780,
@@ -13,9 +13,9 @@
       "sha256": "1bca767d98b26ca01b23c043f029b12ac3b9f7c86a5410ccd9a1fd8443e75c08"
     },
     {
-      "bytes": 3891,
+      "bytes": 3921,
       "path": "Containerfile",
-      "sha256": "bf14a76d8d99fc61fff5825b4526d6deba2e067fa09accb3705522b49b7dcc75"
+      "sha256": "a621bd01e04562133ce58fb767e2d69cb08aacb78e100e8395f20fafb994f60f"
     },
     {
       "bytes": 1668,
@@ -23,14 +23,19 @@
       "sha256": "75b8aef9353f63b5bcbd56fcb03b6e261cc92650d6003c9fffb6f18811887d74"
     },
     {
-      "bytes": 11019,
-      "path": "README.md",
-      "sha256": "e1c551821f943f5f9f790d35f5dba32a577d67045f54fb7bb33b650127bf17e0"
+      "bytes": 11358,
+      "path": "LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
     },
     {
-      "bytes": 3185,
+      "bytes": 11069,
+      "path": "README.md",
+      "sha256": "c217799cb00a7981ebcb5b83c81ecbd941c9db81bbddf8f4a2ce2d1d553caac7"
+    },
+    {
+      "bytes": 3342,
       "path": "THIRD_PARTY_NOTICES.md",
-      "sha256": "b5af6c56dde64b11ef7f1e53338e82d6a86165ce6a79c60e934afb92c060b941"
+      "sha256": "45aa6f00130eacc4f51c89d16560c5beeca5592901f7dff79303c4069f38bb0e"
     },
     {
       "bytes": 378,
@@ -248,9 +253,9 @@
       "sha256": "66a78dd56288cc0b7e9b88519def2be7ef89be93a9e2a562aa6ade29f9967aeb"
     },
     {
-      "bytes": 9200,
+      "bytes": 9215,
       "path": "configs/public_repository_manifest.json",
-      "sha256": "8cbc941ca1b25ae8e7db4999a0e173c607bed31fbd51eacf0265567f0a71ebd0"
+      "sha256": "c32316d87c8df255ba0e956cdd648033a2e9c9af69a56c1a9331c8cf23108848"
     },
     {
       "bytes": 450,
@@ -383,9 +388,9 @@
       "sha256": "3fa6d8899b1ba72460e3d2d77df038d21aba8d13688d6ed6181fa01c896b0dd6"
     },
     {
-      "bytes": 18586,
+      "bytes": 18952,
       "path": "container/runtime_manifest.json",
-      "sha256": "48c71534ef85864656664118351fe6d319844287a6c162ade9785a6f2e08b7fb"
+      "sha256": "2532349256331b8bdb38a7b1dc426e4fd095ed8a8ff69f05b68ea92ccae2d57d"
     },
     {
       "bytes": 4553,
@@ -933,14 +938,14 @@
       "sha256": "3b59acf5e40c4f6ffd83cb584690e7c94336bb7040d118754fa5eecc8d85a073"
     },
     {
-      "bytes": 160597,
+      "bytes": 160628,
       "path": "frontend/package-lock.json",
-      "sha256": "4e1087387b14511c20eebb69ccc2dfe5606cefd270b742e6dda09f095e013018"
+      "sha256": "5578bfef76e183399f168078d2b4a5e978cca14bec0761cd5d1e7576778c7f7e"
     },
     {
-      "bytes": 798,
+      "bytes": 825,
       "path": "frontend/package.json",
-      "sha256": "5a240150c345bb8049b23896a4526c81238477fcc3bc77de9150dbd257112302"
+      "sha256": "7c9357749d61f727d49faf5f4ef6b03a7f30201d7f60b0afffbcacae395404ab"
     },
     {
       "bytes": 722,
@@ -1323,9 +1328,9 @@
       "sha256": "42cc63899ff37019fa4afc1ff36726ec7732ed3630872dba99a9f11474ad573a"
     },
     {
-      "bytes": 703,
+      "bytes": 808,
       "path": "pyproject.toml",
-      "sha256": "9f3c9ee149270a852b67b087b83a874b094372649f9b32e924301b8adab8da66"
+      "sha256": "4a4365c4580a24220f72afd537501d8b8465bbea58d6c1c04a90ec3a75fca99f"
     },
     {
       "bytes": 262,
@@ -1463,9 +1468,9 @@
       "sha256": "26c7aa4245c8222e20a14a0e0238008a7161bf659c348b1c19cafaf3a6e6dd53"
     },
     {
-      "bytes": 9862,
+      "bytes": 9907,
       "path": "scripts/build_edge_runtime_manifest.py",
-      "sha256": "9823fb645023f5b9f17d03dd531e172f2d8f212e9a583c2d80d2203a6f437eea"
+      "sha256": "eb754ffd5e7d02256d64ea620925799ce22476ff31bd1fe17331ab172fb647a3"
     },
     {
       "bytes": 41152,
@@ -2629,8 +2634,8 @@
     }
   ],
   "manifest_path": "configs/public_repository_manifest.json",
-  "manifest_sha256": "8cbc941ca1b25ae8e7db4999a0e173c607bed31fbd51eacf0265567f0a71ebd0",
+  "manifest_sha256": "c32316d87c8df255ba0e956cdd648033a2e9c9af69a56c1a9331c8cf23108848",
   "release_id": "conference_release_candidate_20260811",
   "schema_version": "open_agronomy_agent.public_repository_receipt.v1",
-  "total_bytes": 145349643
+  "total_bytes": 145361827
 }

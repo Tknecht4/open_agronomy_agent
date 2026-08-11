@@ -53,6 +53,8 @@ terms.
 
 ## Project software licence
 
-No project software licence has yet been selected by the owner. Until a root
-`LICENSE` is added, this repository should not be described as granting open-
-source reuse rights merely because its source is publicly visible.
+Unless otherwise noted, project-authored repository contents are licensed
+under the Apache License, Version 2.0, as provided in the root `LICENSE` file.
+That licence does not relicense third-party datasets, evaluation material,
+dependencies, external publications, or model weights; those assets remain
+subject to the terms identified above and in their governed source records.

@@ -7,6 +7,10 @@ name = "agronomy-agent"
 version = "0.1.0"
 description = "Local-first agronomist agent MVP with RAG, tools, and evals."
 requires-python = ">=3.11"
+license = {file = "LICENSE"}
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+]
 dependencies = [
     "agno>=2.6,<2.7",
     "cryptography>=45,<47",

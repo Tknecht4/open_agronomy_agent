@@ -39,7 +39,7 @@ RUN apt-get update \
     && groupadd --gid 10001 agronomy \
     && useradd --uid 10001 --gid agronomy --home-dir /app --shell /usr/sbin/nologin agronomy
 
-COPY requirements-container.txt pyproject.toml ./
+COPY requirements-container.txt pyproject.toml LICENSE THIRD_PARTY_NOTICES.md ./
 COPY src ./src
 RUN pip install --no-cache-dir -r requirements-container.txt \
     && pip install --no-cache-dir --no-deps .
@@ -74,7 +74,7 @@ ARG RELEASE_VERSION=development
 LABEL org.opencontainers.image.title="Open Agronomy Agent" \
       org.opencontainers.image.description="Local-first Canadian agronomy agent and map workspace" \
       org.opencontainers.image.source="https://github.com/open-agronomy/open-agronomy-agent" \
-      org.opencontainers.image.licenses="NOASSERTION" \
+      org.opencontainers.image.licenses="Apache-2.0" \
       org.opencontainers.image.version="${RELEASE_VERSION}" \
       io.openagronomy.runtime-manifest-sha256="${RUNTIME_MANIFEST_SHA256}"
 
