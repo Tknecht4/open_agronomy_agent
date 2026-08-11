@@ -1,0 +1,458 @@
+{
+  "schema_version": "open_agronomy_agent.source_retention_receipt.v1",
+  "status": "pass",
+  "deletion_authorized": false,
+  "checks": {
+    "runtime_corpus_audit_passed": true,
+    "canadian_lineage_complete": true,
+    "canadian_exact_source_bytes_verified": true,
+    "nrcs_projection_passed": true,
+    "knowledge_graphs_verified": true,
+    "unadmitted_candidate_source_receipts_verified": true
+  },
+  "governed_canadian_rag": {
+    "rows": 1052,
+    "sources": 31,
+    "lineage_complete_rate": 1.0,
+    "exact_source_byte_receipts": [
+      {
+        "source_id": "ab_beginning_berry_production_2016",
+        "expected_raw_hashes": [
+          "d90d8bca86e06291fcfd2dd92d55c7e385624f5709459a8d10b5260c16d58f56"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "ab_clubroot_canola_mustard_2015",
+        "expected_raw_hashes": [
+          "248c1e496de08df06aedd982f28db096cd9285555c0a9d49ca3e1265bdde0e7a"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "ab_crop_producer_bmp_manual_2004",
+        "expected_raw_hashes": [
+          "edfbe9e19ea074eedc1aeffff6cdadc8edeb36fe4bfb8add5dd4de53b00f1b91"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "ab_fall_applied_nitrogen_2013",
+        "expected_raw_hashes": [
+          "f3968c29e46d8328336a7ceb9311624aee2e3923baa4e3382adb99fd50bfd7c1"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "ab_land_application_manure_nutrients_2026",
+        "expected_raw_hashes": [
+          "6f12aa3a296c7207ca3c60d552cd4d553a47b805a878d4c5ca7c7c81f9239579"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "ab_nutrient_management_planning_guide_2008",
+        "expected_raw_hashes": [
+          "18a745b04aad4f419b5a8961a957ff62db0a0c965c87e1e81effe9315eec176e"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "ab_phosphorus_fertilizer_crops_2013",
+        "expected_raw_hashes": [
+          "7cca5e86579cb267341199d5bd5582d0e4d45bbea2e05248d182a8b77ce9e67d"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "ab_potassium_fertilizer_crops_2013",
+        "expected_raw_hashes": [
+          "90c94a2c79aaf57f2c9c8ddf8723101ef420099859b2c7bb82f4f6643edce4ff"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "ab_red_lentil_management_2020",
+        "expected_raw_hashes": [
+          "181019bfe4149b3830cf60893bb4f79107df3df6654058fa86c272ec954fd042"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "ab_russet_burbank_potato_nutrients_2011",
+        "expected_raw_hashes": [
+          "3a6ec06504a22fa2037f3f127069ce2c2bcf43b684b945bf10d0e234349026cb"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "ab_stripe_rust_101_2023",
+        "expected_raw_hashes": [
+          "76e9535c185b41ac73e7fef774a0b491979524fc6918e35a3a48e88276b9c1f7"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "ab_sulphur_fertilizer_crops_2013",
+        "expected_raw_hashes": [
+          "734b490ee358ca5a2392b855ed1a0c01612e6ef0f2ec7efab96099cf92d67b2d"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "ca_aafc_annual_crop_inventory_specification",
+        "expected_raw_hashes": [
+          "b8aeff19eb36dfbb83b99a4029c00419ebe325daaf2e32a842136689ba507959"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "ca_aafc_bc_detailed_soil_survey_specification",
+        "expected_raw_hashes": [
+          "f71591620b34c6ad4fc55a8d0ddb3d32d943dd82b82fd882c14c7ac003c72d2f"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "ca_aafc_canadian_crop_yields_specification_fr",
+        "expected_raw_hashes": [
+          "83e5b5c782692cea47e0ed349ef247c951ec317ff7d46c190ced9f6eae2ce17b"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "ca_aafc_crop_health_indices_specification",
+        "expected_raw_hashes": [
+          "06d23451384e55bdc70a853e881365191b69e988e40419ebabc34de57e67df1a"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "ca_aafc_crop_health_indices_specification_fr",
+        "expected_raw_hashes": [
+          "28950df74d3622bc7a475e3cb9e76900850645487df19c141419181bd6e20db9"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "ca_aafc_historical_crop_yield_slc_specification",
+        "expected_raw_hashes": [
+          "e991a9c10c21f1ddfe0a84cd7135442dea5a7d0b5dd07d76054ccb9c941726fc"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "ca_aafc_nasdi_specification",
+        "expected_raw_hashes": [
+          "81b510113263c21ca22f4ecf69e35874d4aa85273f49262dd9ac44b9b7d3b34d"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "ca_aafc_ns_detailed_soil_survey_specification",
+        "expected_raw_hashes": [
+          "f71591620b34c6ad4fc55a8d0ddb3d32d943dd82b82fd882c14c7ac003c72d2f"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "ca_aafc_pei_detailed_soil_survey_specification",
+        "expected_raw_hashes": [
+          "f71591620b34c6ad4fc55a8d0ddb3d32d943dd82b82fd882c14c7ac003c72d2f"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "ca_aafc_qc_agropedological_atlas_specification",
+        "expected_raw_hashes": [
+          "8b91e9aad80278c98cdc7d85b1ea26328ac6ca1ac58dbecb6648950f21d9de8b"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "ca_aafc_sk_detailed_soil_survey_specification",
+        "expected_raw_hashes": [
+          "f71591620b34c6ad4fc55a8d0ddb3d32d943dd82b82fd882c14c7ac003c72d2f"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "ca_aafc_soil_erosion_risk_technical_chapter_2021",
+        "expected_raw_hashes": [
+          "f05b76fe135726f989c71fd3427e3f2941e303e8b88bfe525b5779b341a75cc9"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "ca_cansis_soil_landscapes",
+        "expected_raw_hashes": [
+          "5c83b3ad272cd2352f2a032a348c738a087d46eee221abb7a2c75834cb102f62"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "mb_2026_canola_insect_scouting",
+        "expected_raw_hashes": [
+          "1faefa12d43bed5565c175bf41b672e9d437c7d0021a4db970e17d569ab9909c"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "mb_2026_crop_disease_scouting",
+        "expected_raw_hashes": [
+          "9552dd91b8bb7bbd20748c866e1ea691bb9b9507251a1a176e6b49d6c71d4483"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "mb_soil_fertility_guide",
+        "expected_raw_hashes": [
+          "f8a9dfbb62c84f42e07e8b4ff12c4556bd7e33df2dcd3002b6e02b515ad4e653"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "nb_geonb_agricultural_soil_classes",
+        "expected_raw_hashes": [
+          "1798c88d325817da09d26498114ba7cec6e76c62574fc83ff5b41bd392a816a0"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "nl_historical_weather_station_climate_metadata",
+        "expected_raw_hashes": [
+          "c4429b147feabfc35d035fff75ccfcd7581ba5afc2b94468ab955c644c1591ab"
+        ],
+        "status": "verified"
+      },
+      {
+        "source_id": "on_field_crop_production_current",
+        "expected_raw_hashes": [
+          "68f5cfada142b015d1ac7a13377191c1c0e1697d06a8465ce76c75909357199b"
+        ],
+        "status": "verified"
+      }
+    ]
+  },
+  "knowledge_graphs": [
+    {
+      "path": "data/seed/agronomy_knowledge_graph.json",
+      "sha256": "e293a7327ed0763807a90d93f43dc65b6b7d67bc0d9c5791adcb26070df50dea",
+      "nodes": 10,
+      "edges": 8,
+      "knowledge_role": "project_authored_domain_relations"
+    },
+    {
+      "path": "data/derived/rag/soilwise_knowledge_graph.json",
+      "sha256": "9e73db954212216241b4b77d63088d4671fa017539e5309ee71e444b086a618b",
+      "nodes": 1784,
+      "edges": 1450,
+      "knowledge_role": "soil_ontology_and_relations"
+    }
+  ],
+  "nrcs_reference_projection": {
+    "status": "pass",
+    "source_catalog_sites": 8300,
+    "source_failures": [],
+    "raw_site_json_files": 8300,
+    "full_rows": 293883,
+    "full_sites": 8300,
+    "full_sha256": "73f0cbbe4404b05e3e1f446dfa0cf3c0a4279821c5515a336df8d02b951d6708",
+    "compact_rows": 32624,
+    "compact_sites": 8300,
+    "compact_sha256": "d86786e7e3dffd6a41be8e7c76e0d1a3c60d8b026741f19e2e742fee7aecd16d",
+    "exact_text_matches": 32624,
+    "facet_coverage": {
+      "site_context": {
+        "available_sites": 8153,
+        "preserved_sites": 8153,
+        "coverage_rate": 1.0
+      },
+      "soil_water": {
+        "available_sites": 8297,
+        "preserved_sites": 8297,
+        "coverage_rate": 1.0
+      },
+      "ecological_dynamics": {
+        "available_sites": 7846,
+        "preserved_sites": 7846,
+        "coverage_rate": 1.0
+      },
+      "interpretations": {
+        "available_sites": 5771,
+        "preserved_sites": 5771,
+        "coverage_rate": 1.0
+      },
+      "physiography_climate": {
+        "available_sites": 8300,
+        "preserved_sites": 3466,
+        "coverage_rate": 0.41759
+      }
+    },
+    "checks": {
+      "all_discovered_sites_ingested": true,
+      "all_full_sites_represented": true,
+      "all_compact_text_exact_from_full": true,
+      "all_rows_cross_border_context_bounded": true,
+      "all_raw_site_json_present": true,
+      "required_facets_fully_preserved": true
+    },
+    "retention_decision": "retain_full_reference_and_raw_json; compact_v2_is_promotable_but_no_deletion_authorized"
+  },
+  "unadmitted_candidate_sources": {
+    "status": "verified",
+    "source_receipts": [
+      {
+        "source_id": "on_pub811_agronomy_guide",
+        "expected_raw_hashes": [
+          "3e2d84477d435a55d163f124d9361637069c9b5c35cf098a07d8ee6f0a9f34c1"
+        ],
+        "status": "verified",
+        "rights_or_admission_receipt_count": 2
+      }
+    ]
+  },
+  "historical_canadian_builds": [
+    {
+      "name": "canada_agronomy_distributable.jsonl",
+      "sha256": "50c61a506b0179bfc60795f750bd057e9334b107b923cd7396266c06ae10ce2a",
+      "rows": 1405,
+      "admitted_source_exact_coverage_rate": 1.0,
+      "unadmitted_source_row_counts": {
+        "on_pub811_agronomy_guide": 1286
+      },
+      "retention_decision": "archive_redundant_build_after_unadmitted_source_receipt_is_retained"
+    },
+    {
+      "name": "canada_agronomy_distributable_v10_candidate.jsonl",
+      "sha256": "f2ecdad88b50a977c8c4966e1925e121c6b5c51076d9d2f78b4c2f1afced067e",
+      "rows": 2034,
+      "admitted_source_exact_coverage_rate": 1.0,
+      "unadmitted_source_row_counts": {
+        "on_pub811_agronomy_guide": 1286
+      },
+      "retention_decision": "archive_redundant_build_after_unadmitted_source_receipt_is_retained"
+    },
+    {
+      "name": "canada_agronomy_distributable_v11_candidate.jsonl",
+      "sha256": "42b2b0b3b00f717a68a51d5a2f6c8a72c0e41a74c888bd2063154e6b59442322",
+      "rows": 2038,
+      "admitted_source_exact_coverage_rate": 1.0,
+      "unadmitted_source_row_counts": {
+        "on_pub811_agronomy_guide": 1286
+      },
+      "retention_decision": "archive_redundant_build_after_unadmitted_source_receipt_is_retained"
+    },
+    {
+      "name": "canada_agronomy_distributable_v12_candidate.jsonl",
+      "sha256": "18480e99bcb4a4b2b95a5d7a29fc457da108da5b5393333a0ad3f331b01bd6b1",
+      "rows": 2042,
+      "admitted_source_exact_coverage_rate": 1.0,
+      "unadmitted_source_row_counts": {
+        "on_pub811_agronomy_guide": 1286
+      },
+      "retention_decision": "archive_redundant_build_after_unadmitted_source_receipt_is_retained"
+    },
+    {
+      "name": "canada_agronomy_distributable_v2.jsonl",
+      "sha256": "2cc87ccd0d569c64b1faef2b491bb9b0c351c0062126a1ab7af96cbb9bcd9248",
+      "rows": 1405,
+      "admitted_source_exact_coverage_rate": 1.0,
+      "unadmitted_source_row_counts": {
+        "on_pub811_agronomy_guide": 1286
+      },
+      "retention_decision": "archive_redundant_build_after_unadmitted_source_receipt_is_retained"
+    },
+    {
+      "name": "canada_agronomy_distributable_v3.jsonl",
+      "sha256": "83754cb8089746f388f173910baaf158326f6d5f5c9f86fa7c80f6212a7772ad",
+      "rows": 1722,
+      "admitted_source_exact_coverage_rate": 1.0,
+      "unadmitted_source_row_counts": {
+        "on_pub811_agronomy_guide": 1286
+      },
+      "retention_decision": "archive_redundant_build_after_unadmitted_source_receipt_is_retained"
+    },
+    {
+      "name": "canada_agronomy_distributable_v4.jsonl",
+      "sha256": "fcd3b0680a54f8181131f7abe82ce2e59a74ed0b544a12b24aa4ecd83814d513",
+      "rows": 1745,
+      "admitted_source_exact_coverage_rate": 1.0,
+      "unadmitted_source_row_counts": {
+        "on_pub811_agronomy_guide": 1286
+      },
+      "retention_decision": "archive_redundant_build_after_unadmitted_source_receipt_is_retained"
+    },
+    {
+      "name": "canada_agronomy_distributable_v5.jsonl",
+      "sha256": "a4d55763a1c624c116df638e4992721b16a74fbe4713647438b8bc2867edd7c3",
+      "rows": 1769,
+      "admitted_source_exact_coverage_rate": 1.0,
+      "unadmitted_source_row_counts": {
+        "on_pub811_agronomy_guide": 1286
+      },
+      "retention_decision": "archive_redundant_build_after_unadmitted_source_receipt_is_retained"
+    },
+    {
+      "name": "canada_agronomy_distributable_v6.jsonl",
+      "sha256": "6195e793c2300c6caa4a4cb2bb5266e06cd3d03fa4d2a185a0e38aa26ccaf5f9",
+      "rows": 1963,
+      "admitted_source_exact_coverage_rate": 1.0,
+      "unadmitted_source_row_counts": {
+        "on_pub811_agronomy_guide": 1286
+      },
+      "retention_decision": "archive_redundant_build_after_unadmitted_source_receipt_is_retained"
+    },
+    {
+      "name": "canada_agronomy_distributable_v7.jsonl",
+      "sha256": "dc8c0e32314c836f77b3e70088f49e7293f97598bae615b9403de3a79bd5268e",
+      "rows": 1971,
+      "admitted_source_exact_coverage_rate": 1.0,
+      "unadmitted_source_row_counts": {
+        "on_pub811_agronomy_guide": 1286
+      },
+      "retention_decision": "archive_redundant_build_after_unadmitted_source_receipt_is_retained"
+    },
+    {
+      "name": "canada_agronomy_distributable_v7_candidate.jsonl",
+      "sha256": "dc8c0e32314c836f77b3e70088f49e7293f97598bae615b9403de3a79bd5268e",
+      "rows": 1971,
+      "admitted_source_exact_coverage_rate": 1.0,
+      "unadmitted_source_row_counts": {
+        "on_pub811_agronomy_guide": 1286
+      },
+      "retention_decision": "archive_redundant_build_after_unadmitted_source_receipt_is_retained"
+    },
+    {
+      "name": "canada_agronomy_distributable_v8.jsonl",
+      "sha256": "3b23fd6cf4272aebea8dad3d8c28968b88aa458530e601f3ac517f5b7ae7ee89",
+      "rows": 2004,
+      "admitted_source_exact_coverage_rate": 1.0,
+      "unadmitted_source_row_counts": {
+        "on_pub811_agronomy_guide": 1286
+      },
+      "retention_decision": "archive_redundant_build_after_unadmitted_source_receipt_is_retained"
+    },
+    {
+      "name": "canada_agronomy_distributable_v8_candidate.jsonl",
+      "sha256": "3b23fd6cf4272aebea8dad3d8c28968b88aa458530e601f3ac517f5b7ae7ee89",
+      "rows": 2004,
+      "admitted_source_exact_coverage_rate": 1.0,
+      "unadmitted_source_row_counts": {
+        "on_pub811_agronomy_guide": 1286
+      },
+      "retention_decision": "archive_redundant_build_after_unadmitted_source_receipt_is_retained"
+    },
+    {
+      "name": "canada_agronomy_distributable_v9_candidate.jsonl",
+      "sha256": "02511851ce6eeb7382468202d55fc6088118ad9bd363086453ef67818778e580",
+      "rows": 2022,
+      "admitted_source_exact_coverage_rate": 1.0,
+      "unadmitted_source_row_counts": {
+        "on_pub811_agronomy_guide": 1286
+      },
+      "retention_decision": "archive_redundant_build_after_unadmitted_source_receipt_is_retained"
+    }
+  ],
+  "deletion_gate": "No deletion is authorized. A separate approval must bind exact paths, hashes, replacement artifacts, rebuild commands, and passing retrieval/package tests."
+}

@@ -1,6 +1,6 @@
 {
   "schema_version": "open_agronomy_agent.runtime_corpus_policy.v1",
-  "policy_id": "rc20_rights_scope_ontario_context_20260725",
+  "policy_id": "rc21_nrcs_section_balanced_analogue_20260811",
   "default_eligibility": "quarantined",
   "rules": {
     "decisive": "May support an action only within its jurisdiction, currency, retrieval-policy, and field-fit limits.",
@@ -98,11 +98,11 @@
     },
     {
       "path": "data/derived/rag/nrcs_esd_rag_corpus_compact.jsonl",
-      "sha256": "05802c7fcf75c4175bcd2a298651abe583fddf29fd15d3b90e21142cfb7b5545",
+      "sha256": "d86786e7e3dffd6a41be8e7c76e0d1a3c60d8b026741f19e2e742fee7aecd16d",
       "runtime_eligibility": "context_only",
       "evidence_tier": "government_regional_profile",
       "rights_status": "US_government_public_source",
-      "reason": "Regional ecological-site descriptions can frame context but cannot establish field condition or prescribe action."
+      "reason": "Section-balanced projection of all 8,300 recovered USDA EDIT ecological sites. It preserves available site-context, soil/water, ecological-dynamics, and interpretation sections as explicit US cross-border analogues. Retrieval for Canadian questions requires an explicit NRCS, MLRA, or ecological-site analogue request; it cannot establish Canadian field condition, calibration, legal authority, product use, rate, threshold, or prescription."
     },
     {
       "path": "data/derived/rag/forum_newagtalk_forum_threads_rag_corpus.jsonl",

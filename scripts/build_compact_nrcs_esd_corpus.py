@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -30,6 +32,19 @@ PRIORITY_TERMS = (
     "management",
 )
 
+# The full EDIT record is ordered by section. A global keyword score tended to
+# choose three adjacent climate/soil chunks and discard nearly every site's
+# ecological-dynamics and interpretation sections. These facets preserve the
+# minimum useful ecological-site model while keeping the offline projection
+# bounded. Order is intentional when ``--chunks-per-site`` is constrained.
+FACET_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("site_context", (r"\bgeneral information\b",)),
+    ("soil_water", (r"\bwater features\b", r"\bsoil features\b")),
+    ("ecological_dynamics", (r"\becological dynamics\b",)),
+    ("interpretations", (r"\binterpretations\b",)),
+    ("physiography_climate", (r"\bphysiographic features\b", r"\bclimatic features\b")),
+)
+
 
 def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -45,12 +60,85 @@ def priority(row: dict[str, Any]) -> tuple[int, int]:
     return score, -int(row.get("chunk_index", 9999))
 
 
+def matched_facets(row: dict[str, Any]) -> tuple[str, ...]:
+    text = str(row.get("text") or "").lower()
+    return tuple(
+        name
+        for name, patterns in FACET_PATTERNS
+        if any(re.search(pattern, text) for pattern in patterns)
+    )
+
+
+def select_site_rows(
+    candidates: list[dict[str, Any]],
+    *,
+    chunks_per_site: int,
+) -> list[dict[str, Any]]:
+    selected: list[dict[str, Any]] = []
+    selected_ids: set[str] = set()
+    facets_by_id = {
+        str(row.get("doc_id") or id(row)): matched_facets(row)
+        for row in candidates
+    }
+    for facet, _patterns in FACET_PATTERNS:
+        if len(selected) >= chunks_per_site:
+            break
+        matches = [
+            row
+            for row in candidates
+            if facet in facets_by_id[str(row.get("doc_id") or id(row))]
+            and str(row.get("doc_id") or id(row)) not in selected_ids
+        ]
+        if not matches:
+            continue
+        # The first chunk carrying a section heading contains the section's
+        # definition or central concept; later chunks usually contain tables.
+        chosen = min(matches, key=lambda row: int(row.get("chunk_index", 9999)))
+        selected.append(chosen)
+        selected_ids.add(str(chosen.get("doc_id") or id(chosen)))
+
+    if len(selected) < chunks_per_site:
+        for row in sorted(candidates, key=priority, reverse=True):
+            row_id = str(row.get("doc_id") or id(row))
+            if row_id in selected_ids:
+                continue
+            selected.append(row)
+            selected_ids.add(row_id)
+            if len(selected) >= chunks_per_site:
+                break
+
+    projected: list[dict[str, Any]] = []
+    for rank, row in enumerate(
+        sorted(selected, key=lambda item: int(item.get("chunk_index", 9999))),
+        start=1,
+    ):
+        item = dict(row)
+        item.update(
+            {
+                "jurisdiction": ["United States"],
+                "language": ["en-US"],
+                "retrieval_policy": "context_only",
+                "answer_role": "cross_border_analogue",
+                "transfer_scope": "cross_border_analogue",
+                "applicability_boundary": "US analogue only; Canadian field validation required.",
+                "content_risk_tags": [
+                    "cross_jurisdiction_analogue_requires_canadian_validation"
+                ],
+                "retrieval_projection": "nrcs_esd_section_balanced_compact_v2",
+                "compact_rank": rank,
+                "compact_facets": list(matched_facets(row)),
+            }
+        )
+        projected.append(item)
+    return projected
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build a compact NRCS ESD retrieval projection from the full JSON corpus.")
     parser.add_argument("--input", type=Path, default=DEFAULT_INPUT)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--summary", type=Path, default=DEFAULT_SUMMARY)
-    parser.add_argument("--chunks-per-site", type=int, default=3)
+    parser.add_argument("--chunks-per-site", type=int, default=4)
     args = parser.parse_args()
 
     if args.chunks_per_site < 1:
@@ -59,7 +147,30 @@ def main() -> int:
         raise FileNotFoundError(f"missing NRCS ESD corpus: {args.input}")
 
     input_rows = 0
-    by_site: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    sites = 0
+    compact: list[dict[str, Any]] = []
+    facet_counts: Counter[str] = Counter()
+    current_key: tuple[str, str] | None = None
+    current_candidates: list[dict[str, Any]] = []
+
+    def flush_site() -> None:
+        nonlocal sites, current_candidates
+        if not current_candidates:
+            return
+        selected = select_site_rows(
+            current_candidates,
+            chunks_per_site=args.chunks_per_site,
+        )
+        compact.extend(selected)
+        sites += 1
+        for facet in {
+            facet
+            for row in selected
+            for facet in row.get("compact_facets") or []
+        }:
+            facet_counts[facet] += 1
+        current_candidates = []
+
     with args.input.open("r", encoding="utf-8") as handle:
         for line in handle:
             if not line.strip():
@@ -67,27 +178,22 @@ def main() -> int:
             input_rows += 1
             row = json.loads(line)
             key = (str(row.get("mlra", "")), str(row.get("ecological_site_id", row.get("doc_id", ""))))
-            candidates = by_site.setdefault(key, [])
-            candidates.append(row)
-            if len(candidates) > args.chunks_per_site * 4:
-                by_site[key] = sorted(candidates, key=priority, reverse=True)[: args.chunks_per_site]
-
-    compact: list[dict[str, Any]] = []
-    for key in sorted(by_site):
-        candidates = sorted(by_site[key], key=priority, reverse=True)
-        selected = sorted(candidates[: args.chunks_per_site], key=lambda row: int(row.get("chunk_index", 9999)))
-        for index, row in enumerate(selected, start=1):
-            item = dict(row)
-            item["retrieval_projection"] = "nrcs_esd_compact"
-            item["compact_rank"] = index
-            compact.append(item)
+            if current_key is not None and key != current_key:
+                flush_site()
+            current_key = key
+            current_candidates.append(row)
+    flush_site()
 
     write_jsonl(args.output, compact)
     summary = {
         "input_rows": input_rows,
         "output_rows": len(compact),
-        "sites": len(by_site),
+        "sites": sites,
         "chunks_per_site": args.chunks_per_site,
+        "selection_method": "section_balanced_v2",
+        "site_facet_counts": dict(sorted(facet_counts.items())),
+        "transfer_scope": "cross_border_analogue",
+        "deletion_gate": "full corpus must be retained until this projection passes source coverage and retrieval validation",
         "output": str(args.output),
     }
     args.summary.parent.mkdir(parents=True, exist_ok=True)

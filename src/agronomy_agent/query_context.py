@@ -499,6 +499,7 @@ def _doc_rejection_reason(doc: Any, signals: QueryContextSignals, *, primary_int
         [str(getattr(doc, "title", "")), " ".join(str(item) for item in getattr(doc, "tags", ()) or ())]
     ).lower()
     country_only_canola_harvest_transfer = False
+    cross_border_analogue = _cross_border_analogue_allowed(doc, signals)
 
     named_regional_product_interpretation = False
     if source_type == "regional_environment_profile":
@@ -610,7 +611,12 @@ def _doc_rejection_reason(doc: Any, signals: QueryContextSignals, *, primary_int
             and not doc_subdivisions
         ):
             return "jurisdiction_unscoped"
-        if doc_countries and query_countries and doc_countries.isdisjoint(query_countries):
+        if (
+            doc_countries
+            and query_countries
+            and doc_countries.isdisjoint(query_countries)
+            and not cross_border_analogue
+        ):
             return "jurisdiction_mismatch"
         if doc_subdivisions and query_subdivisions and doc_subdivisions.isdisjoint(query_subdivisions):
             return "jurisdiction_mismatch"
@@ -767,11 +773,38 @@ def _doc_rejection_reason(doc: Any, signals: QueryContextSignals, *, primary_int
     )
     canadian_federal = any(term in haystack for term in ("aafc", "agriculture and agri-food canada", "canada.ca", "cansis"))
     jurisdiction_sensitive = source_type in {"regional_environment_profile", "boundary"}
-    if signals.country == "canada" and us_federal:
+    if signals.country == "canada" and us_federal and not cross_border_analogue:
         return "jurisdiction_mismatch"
     if jurisdiction_sensitive and signals.country == "united states" and canadian_federal:
         return "jurisdiction_mismatch"
     return None
+
+
+def _cross_border_analogue_allowed(doc: Any, signals: QueryContextSignals) -> bool:
+    """Permit explicit, non-prescriptive US ecological analogues for Canada.
+
+    This is intentionally narrower than generic cross-jurisdiction transfer.
+    The document must be a row- and corpus-bounded regional profile, and the
+    user must explicitly ask for an NRCS/MLRA/ecological-site analogue. It can
+    never authorize a Canadian rate, threshold, diagnosis, product use, or law.
+    """
+
+    if signals.country != "canada" or not signals.regional_context_requested:
+        return False
+    if str(getattr(doc, "source_type", "")).lower() != "regional_environment_profile":
+        return False
+    if str(getattr(doc, "retrieval_policy", "")).lower() != "context_only":
+        return False
+    if str(getattr(doc, "transfer_scope", "")).lower() != "cross_border_analogue":
+        return False
+    return bool(
+        re.search(
+            r"\b(?:nrcs|usda|mlra|major land resource area|ecological site|"
+            r"cross[- ]border|u\.?s\.? analogue|american analogue)\b",
+            signals.query_text,
+            re.IGNORECASE,
+        )
+    )
 
 
 def _extract_crops(text: str) -> tuple[str, ...]:

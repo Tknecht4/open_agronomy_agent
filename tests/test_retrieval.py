@@ -16,6 +16,37 @@ def test_specialized_guidance_source_types_are_canonicalized_for_retrieval() -> 
     assert infer_source_type({"source_type": "extension_document"}) == "applied_guidance"
 
 
+def test_jsonl_loader_projects_corpus_context_policy_into_retrieved_docs(tmp_path: Path) -> None:
+    corpus = tmp_path / "context.jsonl"
+    corpus.write_text(
+        "\n".join(
+            [
+                json.dumps({"doc_id": "default", "title": "Soil context", "text": "soil context"}),
+                json.dumps(
+                    {
+                        "doc_id": "live",
+                        "title": "Current label context",
+                        "text": "current label context",
+                        "retrieval_policy": "requires_live_authority",
+                    }
+                ),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    retriever = LexicalRetriever.from_jsonl_paths(
+        [corpus],
+        corpus_eligibility_by_path={str(corpus.resolve()): "context_only"},
+    )
+
+    assert retriever.docs[0]["retrieval_policy"] == "context_only"
+    assert retriever.docs[1]["retrieval_policy"] == "requires_live_authority"
+    hits = retriever.search("soil context", top_k=1)
+    assert hits[0].retrieval_policy == "context_only"
+
+
 def _agentic_doc_ids(question: str, docs: list[dict[str, object]], *, top_k: int = 3) -> list[str]:
     retriever = LexicalRetriever(docs)
     route = classify_query(question)

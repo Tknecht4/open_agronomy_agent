@@ -137,32 +137,20 @@
   "rag_contamination": {
     "exact_public_question_match_count": 0,
     "matching_public_eval_ids": [],
-    "records_scanned": 28565,
+    "records_scanned": 35504,
     "scanned_paths": [
       "data/derived/rag/canada_agronomy_distributable_v13.jsonl",
       "data/derived/rag/canada_agronomy_ontario_context_v1.jsonl",
       "data/derived/rag/canada_agronomy_regional_context_v1.jsonl",
       "data/derived/rag/canada_agronomy_supplement_v1.jsonl",
       "data/derived/rag/canada_agronomy_supplement_v2.jsonl",
-      "data/derived/rag/document_expansion_rag_corpus.jsonl",
-      "data/derived/rag/forum_agricultivation_communities_agrictalk_forum_threads_rag_corpus.jsonl",
-      "data/derived/rag/forum_agricultureinformation_forum_threads_rag_corpus.jsonl",
-      "data/derived/rag/forum_agriville_forum_threads_rag_corpus.jsonl",
-      "data/derived/rag/forum_farmchat_forum_threads_rag_corpus.jsonl",
-      "data/derived/rag/forum_farmnest_india_forum_threads_rag_corpus.jsonl",
-      "data/derived/rag/forum_forum4farming_forum_threads_rag_corpus.jsonl",
-      "data/derived/rag/forum_newagtalk_forum_threads_rag_corpus.jsonl",
-      "data/derived/rag/forum_soilforwater_forum_threads_rag_corpus.jsonl",
+      "data/derived/rag/canada_agronomy_supplement_v3.jsonl",
       "data/derived/rag/nrcs_esd_rag_corpus_compact.jsonl",
       "data/derived/rag/soilwise_knowledge_graph.json",
       "data/derived/rag/soilwise_rag_corpus.jsonl",
       "data/seed/agronomy_knowledge_graph.json",
       "data/seed/agronomy_rag_corpus.jsonl",
-      "data/seed/aiagribench_public_gap_corpus.jsonl",
-      "data/seed/aiagribench_transfer_v2_source_corpus.jsonl",
-      "data/seed/boundary_rag_corpus.jsonl",
-      "data/seed/cca_objective_rag_corpus.jsonl",
-      "data/seed/final_mvp_gap_repair_corpus.jsonl"
+      "data/seed/boundary_rag_corpus.jsonl"
     ]
   },
   "schema_version": "open_agronomy_agent.benchmark_separation.v1",
@@ -174,16 +162,7 @@
   "training_contamination": {
     "exact_public_question_match_count": 0,
     "matching_public_eval_ids": [],
-    "records_scanned": 6110,
-    "scanned_paths": [
-      "data/training/agxqa_grounded_answer_lora_v1/test.jsonl",
-      "data/training/agxqa_grounded_answer_lora_v1/train.jsonl",
-      "data/training/agxqa_grounded_answer_lora_v1/valid.jsonl",
-      "data/training/agxqa_grounded_answer_lora_v2_positive4to1/test.jsonl",
-      "data/training/agxqa_grounded_answer_lora_v2_positive4to1/train.jsonl",
-      "data/training/agxqa_grounded_answer_lora_v2_positive4to1/valid.jsonl",
-      "data/training/canadian_task_rabbit_v1/train.jsonl",
-      "data/training/canadian_task_rabbit_v1/valid.jsonl"
-    ]
+    "records_scanned": 0,
+    "scanned_paths": []
   }
 }

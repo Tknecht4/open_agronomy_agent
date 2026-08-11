@@ -11,7 +11,7 @@ The runtime knowledge base is selected by `data/manifests/runtime_corpus_policy.
 | Canadian supplements v1/v2/v3 | 62 | Context only | Historical/regional, data-product, and six current Manitoba scouting companion records; the scouting rows remain non-decisive pending independent agronomic review |
 | Canadian regional context v1 | 38 | Context only | Data-product descriptions, not local applied guidance |
 | SoilWise RAG + KG | 1,784 RAG rows | Context only | Soil-health concepts and relations, not a soil test |
-| Compact NRCS ESD | 24,396 | Context only | United States regional profiles; never Canadian soil authority |
+| Compact NRCS ESD | 32,624 | Context only | Section-balanced projection of all 8,300 recovered USDA EDIT sites; explicit US analogue use only, never Canadian field truth or authority |
 | Project seed/boundary corpora | 42 | Context and safety policy | Project-authored synthesis, not independent evidence |
 
 ### Prairie applied-guidance coverage
@@ -29,6 +29,8 @@ SoilWise adds useful soil-process concepts across all three provinces, but it do
 
 Every admitted Canadian row carries source and lineage fields. The policy manifest also records a byte hash, evidence tier, rights status, admission reason, and runtime role for every configured corpus.
 
+The maintainer-only retention audit verifies the governed rows against their exact raw-source byte hashes before any historical corpus can be considered redundant. It also compares the compact NRCS projection with the retained full corpus by site, exact source text, and section facet. Its path-sanitized evidence is committed as `data/manifests/source_retention_receipt.json`. Passing that audit is necessary but not sufficient for deletion: deletion requires a separate path- and hash-specific approval manifest.
+
 ## Why processed material can be absent from runtime
 
 Processing proves that bytes can be extracted; it does not prove that they should influence an answer or be redistributed. The following remain excluded before index construction:
@@ -38,6 +40,8 @@ Processing proves that bytes can be extracted; it does not prove that they shoul
 - copied certification competency objectives;
 - answer-gap and benchmark-shaped synthesis that could leak evaluation targets;
 - candidate corpus versions superseded by the rights-repaired v13 release.
+
+Ontario Publication 811 is the material exception inside the historical Canadian builds: its extracted rows remain quarantined while the original source bytes and rights-review record are preserved. Those historical files must not be removed until that separate receipt is bound into an explicitly approved archive or deletion plan.
 
 The exclusion is intentional and auditable. Quarantined byte files are not required in a portable release even when their identifiers remain in the policy.
 

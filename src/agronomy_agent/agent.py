@@ -20,6 +20,7 @@ from agronomy_agent.agno_runtime.knowledge_factory import build_knowledge
 from agronomy_agent.agno_runtime.retriever_adapter import knowledge_filter_cache_key, route_to_knowledge_filters
 from agronomy_agent.corpus_governance import (
     corpus_policy_for_doc,
+    corpus_policy_for_path,
     filter_docs_by_corpus_governance,
     load_corpus_policy,
     partition_runtime_corpus_paths,
@@ -481,7 +482,7 @@ def _resource_key(cfg: dict[str, Any]) -> str:
             "artifacts": fingerprints,
             # Invalidate indexes built before quarantined corpora were pruned
             # at load time. The policy file hash alone cannot distinguish them.
-            "runtime_corpus_loader_contract": "fail_closed_v3_portable",
+            "runtime_corpus_loader_contract": "fail_closed_v4_effective_policy",
         }
     )
 
@@ -527,9 +528,10 @@ def load_agent_resources(rag_config: dict[str, Any] | str | Path | None = None) 
         public_corpus_paths,
         corpus_policy,
     )
-    retriever, index_cache_status, index_cache_path = _load_retriever_with_compiled_cache(
+    retriever, index_cache_status, index_cache_path = _load_retriever_with_policy_cache(
         [repo_path(path) for path in public_indexed_corpus_paths],
         key=stable_digest({"resource_key": key, "retrieval_scope": "public"}),
+        corpus_policy=corpus_policy,
     )
     private_retriever: LexicalRetriever | None = None
     if private_overlay is not None:
@@ -537,9 +539,10 @@ def load_agent_resources(rag_config: dict[str, Any] | str | Path | None = None) 
             private_overlay.corpus_paths,
             corpus_policy,
         )
-        private_retriever, private_cache_status, private_cache_path = _load_retriever_with_compiled_cache(
+        private_retriever, private_cache_status, private_cache_path = _load_retriever_with_policy_cache(
             [repo_path(path) for path in private_indexed_paths],
             key=stable_digest({"resource_key": key, "retrieval_scope": "private"}),
+            corpus_policy=corpus_policy,
         )
         index_cache_status = f"public:{index_cache_status};private:{private_cache_status}"
         index_cache_path = ";".join(
@@ -598,9 +601,29 @@ def phase5_cache_stats() -> dict[str, Any]:
 
 
 def _load_retriever_with_compiled_cache(paths: list[Path], *, key: str) -> tuple[LexicalRetriever, str, str | None]:
+    return _load_retriever_with_policy_cache(paths, key=key, corpus_policy={})
+
+
+def _load_retriever_with_policy_cache(
+    paths: list[Path],
+    *,
+    key: str,
+    corpus_policy: dict[str, Any],
+) -> tuple[LexicalRetriever, str, str | None]:
+    eligibility_by_path = {
+        str(path.resolve()): str(
+            (corpus_policy_for_path(path, corpus_policy) or {}).get(
+                "runtime_eligibility", ""
+            )
+        )
+        for path in paths
+    }
     cache_dir_value = os.getenv("AGRONOMY_AGENT_AGNO_INDEX_CACHE_DIR", "outputs/cache/agno_lexical_index").strip()
     if cache_dir_value.lower() in {"", "0", "false", "off", "disabled", "none"}:
-        return LexicalRetriever.from_jsonl_paths(paths), "disabled", None
+        return LexicalRetriever.from_jsonl_paths(
+            paths,
+            corpus_eligibility_by_path=eligibility_by_path,
+        ), "disabled", None
     cache_path = repo_path(cache_dir_value) / f"{key}.pickle"
     if cache_path.exists():
         try:
@@ -613,7 +636,10 @@ def _load_retriever_with_compiled_cache(paths: list[Path], *, key: str) -> tuple
     else:
         status_prefix = "miss"
 
-    retriever = LexicalRetriever.from_jsonl_paths(paths)
+    retriever = LexicalRetriever.from_jsonl_paths(
+        paths,
+        corpus_eligibility_by_path=eligibility_by_path,
+    )
     try:
         retriever.write_compiled_cache(cache_path)
         _prune_compiled_index_cache(cache_path.parent, keep_path=cache_path)
