@@ -35,7 +35,7 @@ def test_runtime_corpus_manifest_hashes_and_rows_are_valid() -> None:
     for config_name in ("rag_governed_runtime_v1.yaml", "rag_final_mvp.yaml"):
         report = audit_runtime_corpora(root=ROOT, rag_config_path=ROOT / "configs" / config_name)
         assert report["status"] == "pass", report["errors"]
-        assert report["configured_corpus_count"] == report["audited_corpus_count"] == 22
+        assert report["configured_corpus_count"] == report["audited_corpus_count"] == 23
         validate_implementation_binding(
             report["implementation_binding"],
             expected_paths=CORPUS_AUDIT_IMPLEMENTATION_PATHS,
@@ -194,6 +194,26 @@ def test_bilingual_and_regional_context_additions_remain_non_decisive() -> None:
     }
     assert {row["runtime_eligibility"] for row in blocked} == {"context_only"}
     assert {row["reason"] for row in blocked} == {"not_decisive_for_high_consequence"}
+
+
+def test_manitoba_2026_scouting_candidate_remains_non_decisive() -> None:
+    policy = load_corpus_policy(ROOT, "data/manifests/runtime_corpus_policy.json")
+    docs = [
+        _doc(
+            "data/derived/rag/canada_agronomy_supplement_v3.jsonl",
+            doc_id="mb-2026-scouting-candidate",
+        )
+    ]
+
+    allowed, blocked = filter_docs_by_corpus_governance(
+        "Should I spray this Manitoba canola field at the flea beetle threshold?",
+        docs,
+        policy,
+    )
+
+    assert allowed == []
+    assert blocked[0]["runtime_eligibility"] == "context_only"
+    assert blocked[0]["reason"] == "not_decisive_for_high_consequence"
 
 
 def test_unreviewed_provincial_standard_rows_fail_the_runtime_audit(

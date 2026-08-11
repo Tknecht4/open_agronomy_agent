@@ -23,6 +23,8 @@ def _doc(
     jurisdictions: tuple[str, ...] = (),
     crops: tuple[str, ...] = (),
     source_id: str = "",
+    retrieval_policy: str = "standard",
+    transfer_scope: str = "",
 ) -> RetrievedDoc:
     return RetrievedDoc(
         doc_id=doc_id,
@@ -37,6 +39,8 @@ def _doc(
         crops=crops,
         jurisdictions=jurisdictions,
         source_id=source_id,
+        retrieval_policy=retrieval_policy,
+        transfer_scope=transfer_scope,
     )
 
 
@@ -118,6 +122,40 @@ def test_regional_and_crop_mismatches_are_removed_before_context_packing() -> No
     assert {item["doc_id"]: item["reason"] for item in result.dropped} == {
         "wrong-region": "regional_context_mismatch",
         "wrong-crop": "crop_mismatch",
+    }
+
+
+def test_explicit_nrcs_cross_border_analogue_is_context_only_for_canada() -> None:
+    analogue = _doc(
+        "nrcs-analogue",
+        "NRCS ecological site soil-water context",
+        "USDA NRCS MLRA soil features, ecological dynamics, and interpretations.",
+        source_type="regional_environment_profile",
+        source="USDA NRCS",
+        jurisdictions=("United States",),
+        retrieval_policy="context_only",
+        transfer_scope="cross_border_analogue",
+    )
+
+    requested = filter_docs_for_query(
+        [analogue],
+        analyze_query_context(
+            "For a Saskatchewan field, can an NRCS ecological site be used as a cross-border analogue?"
+        ),
+    )
+    ordinary = filter_docs_for_query(
+        [analogue],
+        analyze_query_context(
+            "A Saskatchewan field has wet depressions. What should I inspect before changing drainage?"
+        ),
+    )
+
+    assert [doc.doc_id for doc in requested.docs] == ["nrcs-analogue"]
+    assert ordinary.docs == ()
+    assert ordinary.dropped[0]["reason"] in {
+        "regional_context_not_requested",
+        "regional_scope_too_broad",
+        "jurisdiction_mismatch",
     }
 
 

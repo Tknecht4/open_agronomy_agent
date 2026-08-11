@@ -310,10 +310,10 @@ describe('source card normalization', () => {
     const summary = buildSourceCheckSummary([], [])
 
     expect(summary.tone).toBe('attention')
-    expect(summary.label).toBe('need field context')
+    expect(summary.label).toBe('not checked')
     expect(summary.items).toEqual([
-      { label: 'Map', value: 'pending', tone: 'attention' },
-      { label: 'Public', value: 'pending', tone: 'attention' },
+      { label: 'Map', value: 'not checked', tone: 'attention' },
+      { label: 'Public', value: 'not requested', tone: 'attention' },
       { label: 'Attention', value: 'clear', tone: 'ok' },
     ])
   })

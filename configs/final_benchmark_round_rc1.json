@@ -1,0 +1,114 @@
+{
+  "schema_version": "open_agronomy_agent.final_benchmark_round.v1",
+  "round_id": "preconference_rc1_20260811",
+  "status": "release_candidate_requires_clean_readiness_gate",
+  "release_branch": "codex/pre-demo-core-polish-20260810",
+  "evaluation_order": [
+    "internal_development_matrix",
+    "blinded_review_packet",
+    "finalist_freeze",
+    "external_transfer_diagnostic"
+  ],
+  "internal_benchmark": {
+    "contract_path": "configs/open_agronomy_canadian_performance_v1.json",
+    "contract_sha256": "ad7accc107400ea6bcdd8e27660508fb724640e9e7fdc59389463642f4c0614e",
+    "suite_path": "data/eval/open_agronomy_canadian_performance_v1.jsonl",
+    "suite_sha256": "5c3ce59195ac603d2dd8ec5f36f3672b3ee0c20227cdb4fd301dfe3848a83c63",
+    "rows": 241,
+    "arms": [
+      "raw_model",
+      "baseline",
+      "kernel_field_context",
+      "agronomic_rag"
+    ],
+    "output_dir": "outputs/open_agronomy_canadian_performance_v1_rc1",
+    "claim_boundary": "Project-owned Canadian development evidence only; no agronomist-equivalence or field-outcome claim."
+  },
+  "external_diagnostic": {
+    "contract_path": "configs/open_agronomy_external_agroqa_v1.json",
+    "contract_sha256": "42692bc3eb638ca77768b67b4954722d449127c812c147808ab06ec77c99f6b7",
+    "suite_path": "data/eval/open_agronomy_external_agroqa_v1.jsonl",
+    "suite_sha256": "d15888bb4cf0ea339380a71abecdb5a5fa770829e67e616765d2d140c9365e93",
+    "rows": 256,
+    "use_policy": "Run once after the finalist and implementation commit are frozen; do not tune and retest on this version.",
+    "claim_boundary": "Different-geography transfer diagnostic, not Canadian validation."
+  },
+  "models": [
+    {
+      "model_key": "gemma3_270m_rc1",
+      "backend": "mlx_local",
+      "config_path": "configs/benchmark_models/gemma3_270m.yaml",
+      "config_sha256": "9e330974dad5a651fc6eccdac46320f8d2ca81425ca6f98a2f17b28bc5b111d0",
+      "model_id": "mlx-community/gemma-3-270m-it-4bit",
+      "revision": "ff1143e3a10547c9f2129e94ca37059b096b23f4"
+    },
+    {
+      "model_key": "gemma4_e2b_rc1",
+      "backend": "mlx_local",
+      "config_path": "configs/benchmark_models/gemma4_e2b.yaml",
+      "config_sha256": "c6e1e37e86542d0af8e77831a6c97db6413f13eeff82b3170bd207954b2d45de",
+      "model_id": "mlx-community/gemma-4-e2b-it-4bit",
+      "revision": "238767527555cb75a05732a84dff5d6ba0dd6809"
+    },
+    {
+      "model_key": "luna_high_rc1",
+      "backend": "codex_app_server",
+      "config_path": "configs/benchmark_models/openai_luna_high_app_server.yaml",
+      "config_sha256": "abeae5a6cdb37a11980c9ccb02e62c3257a6739b666a8cc6b8b8e195ec54a0b3",
+      "model_id": "gpt-5.6-luna",
+      "revision": null,
+      "reasoning_effort": "high"
+    }
+  ],
+  "judge": {
+    "backend": "codex_app_server",
+    "model": "gpt-5.6-luna",
+    "reasoning_effort": "high",
+    "roles": [
+      "semantic_answer_quality"
+    ],
+    "status": "advisory_triage_only",
+    "required_controls": [
+      "answers_stored_before_scoring",
+      "exact_prompts_and_context_packets_retained",
+      "lane_level_reporting",
+      "no_single_composite_score",
+      "blinded_review_packet_for_raw_model_vs_agronomic_rag"
+    ]
+  },
+  "egress": {
+    "authorization_required": true,
+    "authorized_payload_classes_required": [
+      "project_owned_frozen_benchmark_questions",
+      "benchmark_field_context",
+      "candidate_answers",
+      "benchmark_reference_and_rubric_for_judging"
+    ],
+    "payload_classes_forbidden": [
+      "farmer_records",
+      "private_field_history",
+      "credentials",
+      "local_knowledge_corpus_files"
+    ]
+  },
+  "readiness": {
+    "minimum_free_disk_bytes": 2147483648,
+    "require_clean_git": true,
+    "require_source_retention_receipt": true,
+    "require_runtime_corpus_audit": true,
+    "require_benchmark_construct_audit": true,
+    "require_internal_external_separation": true,
+    "require_public_release_receipt": true,
+    "require_fresh_output_directory": true,
+    "require_local_model_snapshots": true,
+    "require_saskatchewan_fail_closed_probe": true,
+    "require_nrcs_explicit_analogue_probe": true
+  },
+  "promotion_policy": {
+    "single_composite_score_allowed": false,
+    "automated_judge_can_promote": false,
+    "external_diagnostic_can_drive_same_version_repairs": false,
+    "independent_agronomist_review_available": false,
+    "permitted_conference_claim": "controlled development comparison of model-only and governed-agent behavior on a frozen Canadian project-owned suite"
+  }
+}

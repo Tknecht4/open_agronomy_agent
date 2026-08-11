@@ -24,7 +24,7 @@ from agronomy_agent.paths import repo_path
 
 SCHEMA_VERSION = "open_agronomy_agent.portable_runtime_bundle.v4"
 DEFAULT_RAG_CONFIG = "configs/rag_governed_runtime_v1.yaml"
-DEFAULT_MODEL_CONFIG = "configs/model_gemma4_e2b_interface_v1.yaml"
+DEFAULT_MODEL_CONFIG = "configs/model_gemma4_e2b_interface_v2.yaml"
 DEFAULT_OUTPUT_DIR = "outputs/portable_agent"
 DEFAULT_BUNDLE_NAME = "open_agronomy_agent_portable_knowledge_latest.tar.gz"
 ARCHIVE_ROOT = "open_agronomy_agent"

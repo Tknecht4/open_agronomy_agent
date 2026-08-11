@@ -26,7 +26,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Resp
 from starlette.datastructures import UploadFile as StarletteUploadFile
 from starlette.staticfiles import StaticFiles
 
-from agronomy_agent.agent import load_model_config, phase5_cache_stats
+from agronomy_agent.agent import load_model_config, local_model_snapshot_status, phase5_cache_stats
 from agronomy_agent.field_events import FieldEventSyncError
 from agronomy_agent.knowledge_updates import read_activation, validate_activation_freshness
 from agronomy_agent.paths import repo_path
@@ -3626,6 +3626,9 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         ]
         serving_model_id = str(model_config.get("serving_model_id") or settings.default_model_id)
         assistant_model_id = str(model_config.get("assistant_model_id") or "")
+        serving_revision = str(model_config.get("model_revision") or "").strip() or None
+        assistant_revision = str(model_config.get("assistant_model_revision") or "").strip() or None
+        serving_readiness = local_model_snapshot_status(serving_model_id, revision=serving_revision)
         model_profiles = [
             {
                 "id": serving_model_id,
@@ -3633,9 +3636,13 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 "role": str(model_config.get("serving_role") or "default"),
                 "max_tokens": int(model_config.get("serving_max_tokens") or 140),
                 "quality_gate": str(model_config.get("serving_quality_gate") or "answer_default"),
+                "local_ready": bool(serving_readiness["ready"]),
+                "local_status": str(serving_readiness["status"]),
+                "local_detail": str(serving_readiness["detail"]),
             }
         ]
         if assistant_model_id:
+            assistant_readiness = local_model_snapshot_status(assistant_model_id, revision=assistant_revision)
             model_profiles.append(
                 {
                     "id": assistant_model_id,
@@ -3643,6 +3650,9 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                     "role": str(model_config.get("assistant_role") or "fast"),
                     "max_tokens": int(model_config.get("assistant_max_tokens") or 35),
                     "quality_gate": str(model_config.get("assistant_quality_gate") or "fast_repaired"),
+                    "local_ready": bool(assistant_readiness["ready"]),
+                    "local_status": str(assistant_readiness["status"]),
+                    "local_detail": str(assistant_readiness["detail"]),
                 }
             )
         knowledge_activation = (

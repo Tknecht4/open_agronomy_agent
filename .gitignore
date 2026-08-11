@@ -34,7 +34,9 @@ data/derived/rag/*
 !data/derived/rag/canada_agronomy_regional_context_v1.jsonl
 !data/derived/rag/canada_agronomy_supplement_v1.jsonl
 !data/derived/rag/canada_agronomy_supplement_v2.jsonl
+!data/derived/rag/canada_agronomy_supplement_v3.jsonl
 !data/derived/rag/nrcs_esd_rag_corpus_compact.jsonl
+!data/derived/rag/nrcs_esd_compact_summary.json
 !data/derived/rag/soilwise_knowledge_graph.json
 !data/derived/rag/soilwise_rag_corpus.jsonl
 !data/derived/geo_layers/
@@ -46,6 +48,7 @@ data/raw/canada_agronomy/*
 !data/raw/canada_agronomy/bc_agriculture_capability_mapping/
 !data/raw/canada_agronomy/ca_aafc_ab_detailed_soil_survey_dss_v3/
 !data/raw/canada_agronomy/ca_aafc_mb_detailed_soil_survey_dss_v3/
+!data/raw/canada_agronomy/ca_aafc_sk_detailed_soil_survey_dss_v3/
 !data/raw/canada_agronomy/ca_aafc_ns_detailed_soil_survey/
 !data/raw/canada_agronomy/ca_aafc_pei_detailed_soil_survey/
 !data/raw/canada_agronomy/ca_aafc_soil_erosion_risk_2021/
@@ -53,6 +56,7 @@ data/raw/canada_agronomy/*
 data/raw/canada_agronomy/bc_agriculture_capability_mapping/*
 data/raw/canada_agronomy/ca_aafc_ab_detailed_soil_survey_dss_v3/*
 data/raw/canada_agronomy/ca_aafc_mb_detailed_soil_survey_dss_v3/*
+data/raw/canada_agronomy/ca_aafc_sk_detailed_soil_survey_dss_v3/*
 data/raw/canada_agronomy/ca_aafc_ns_detailed_soil_survey/*
 data/raw/canada_agronomy/ca_aafc_pei_detailed_soil_survey/*
 data/raw/canada_agronomy/ca_aafc_soil_erosion_risk_2021/*
@@ -60,6 +64,7 @@ data/raw/canada_agronomy/ca_sk_thematic_soil_maps/*
 !data/raw/canada_agronomy/bc_agriculture_capability_mapping/source.zip.lineage.json
 !data/raw/canada_agronomy/ca_aafc_ab_detailed_soil_survey_dss_v3/source.zip.lineage.json
 !data/raw/canada_agronomy/ca_aafc_mb_detailed_soil_survey_dss_v3/source.zip.lineage.json
+!data/raw/canada_agronomy/ca_aafc_sk_detailed_soil_survey_dss_v3/source.zip.lineage.json
 !data/raw/canada_agronomy/ca_aafc_ns_detailed_soil_survey/source.gpkg.lineage.json
 !data/raw/canada_agronomy/ca_aafc_pei_detailed_soil_survey/source.gpkg.lineage.json
 !data/raw/canada_agronomy/ca_aafc_soil_erosion_risk_2021/source.zip.lineage.json

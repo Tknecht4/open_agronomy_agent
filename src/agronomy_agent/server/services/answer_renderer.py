@@ -89,7 +89,7 @@ def render_structured_answer(
         trace=trace,
     )
     clean_answer = _localize_known_safety_boundaries(clean_answer, question=question)
-    missing_data = _extract_missing_data(clean_answer)
+    missing_data = _extract_missing_data(clean_answer, trace=trace)
     risk_banner = _extract_risk_banner(clean_answer, trace=trace)
     return StructuredAnswer(
         answer=clean_answer,
@@ -369,6 +369,10 @@ def _map_interpretation_answer(question: str | None, trace: dict[str, Any]) -> s
     if not question:
         return None
     query = question.lower()
+    route = trace.get("route") if isinstance(trace.get("route"), dict) else {}
+    question_type = str(route.get("question_type") or "").strip().lower()
+    if question_type and question_type != "field_data":
+        return None
     if re.search(r"\b(?:saskatchewan detailed soil survey|annual crop inventory)\b", query):
         return None
     if not (
@@ -393,7 +397,9 @@ def _map_interpretation_answer(question: str | None, trace: dict[str, Any]) -> s
             re.IGNORECASE,
         )
     ]
-    selected = thematic[0] if thematic else usable[0]
+    if not thematic:
+        return None
+    selected = thematic[0]
     system = str(selected.get("system") or "official regional mapping").strip()
     name = str(
         selected.get("capability_summary")
@@ -768,6 +774,16 @@ def _prioritize_public_adapter_limitations(limitations: list[str]) -> list[str]:
 def _append_to_labeled_line(answer_text: str, label: str, sentence: str) -> str:
     if not sentence.strip() or re.search(re.escape(sentence[: min(48, len(sentence))]), answer_text, re.IGNORECASE):
         return answer_text
+    markdown_pattern = re.compile(
+        rf"^(\*\*{re.escape(label)}\*\*\s*\n+)(.*?)(?=\n{{2,}}\*\*[^*\n]+\*\*\s*(?:\n|$)|\Z)",
+        re.IGNORECASE | re.MULTILINE | re.DOTALL,
+    )
+    markdown_match = markdown_pattern.search(answer_text)
+    if markdown_match:
+        current = markdown_match.group(2).rstrip()
+        separator = " " if current.endswith((".", "!", "?")) else ". "
+        replacement = f"{markdown_match.group(1)}{current}{separator}{sentence.strip()}"
+        return answer_text[: markdown_match.start()] + replacement + answer_text[markdown_match.end():]
     pattern = re.compile(rf"^({re.escape(label)}\s*:\s*)(.*)$", re.IGNORECASE | re.MULTILINE)
     match = pattern.search(answer_text)
     if match:
@@ -777,9 +793,8 @@ def _append_to_labeled_line(answer_text: str, label: str, sentence: str) -> str:
         return answer_text[: match.start()] + replacement + answer_text[match.end():]
     stripped = answer_text.rstrip()
     if not stripped:
-        return sentence.strip()
-    separator = " " if stripped.endswith((".", "!", "?")) else ". "
-    return f"{stripped}{separator}{sentence.strip()}"
+        return f"**{label}**\n\n{sentence.strip()}"
+    return f"{stripped}\n\n**{label}**\n\n{sentence.strip()}"
 
 
 def _strip_leaking_lines(answer_text: str) -> str:
@@ -802,7 +817,7 @@ def _sanitize_markdown(answer_text: str) -> str:
     return re.sub(r"</?[A-Za-z][^>\n]{0,240}>", replace_tag, no_scripts).strip()
 
 
-def _extract_missing_data(answer_text: str) -> list[str]:
+def _extract_missing_data(answer_text: str, *, trace: dict[str, Any] | None = None) -> list[str]:
     lowered = answer_text.lower()
     candidates = {
         "soil test": r"soil test|soil-test",
@@ -815,7 +830,17 @@ def _extract_missing_data(answer_text: str) -> list[str]:
     }
     if not re.search(r"\b(missing|need|ask for|before|without)\b", lowered):
         return []
-    return [name for name, pattern in candidates.items() if re.search(pattern, lowered)]
+    missing = [name for name, pattern in candidates.items() if re.search(pattern, lowered)]
+    field_context = _trace_field_context(trace or {})
+    session_context = (trace or {}).get("session_context") or {}
+    known_context = field_context if isinstance(field_context, dict) else {}
+    if isinstance(session_context, dict):
+        known_context = {**session_context, **known_context}
+    if str(known_context.get("crop") or "").strip() and "crop" in missing:
+        missing.remove("crop")
+    if any(str(known_context.get(key) or "").strip() for key in ("region", "jurisdiction")) and "location" in missing:
+        missing.remove("location")
+    return missing
 
 
 def _extract_risk_banner(answer_text: str, *, trace: dict[str, Any] | None) -> str | None:

@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from heapq import nlargest
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Mapping
 
 from agronomy_agent.paths import minimized_path_reference
 
@@ -125,6 +125,8 @@ class RetrievedDoc:
     corpus_path: str = ""
     distribution_scope: str = ""
     answer_role: str = ""
+    transfer_scope: str = ""
+    applicability_boundary: str = ""
 
 
 @dataclass(frozen=True)
@@ -421,14 +423,32 @@ class LexicalRetriever:
         return cls(load_jsonl(path))
 
     @classmethod
-    def from_jsonl_paths(cls, paths: Iterable[Path]) -> "LexicalRetriever":
+    def from_jsonl_paths(
+        cls,
+        paths: Iterable[Path],
+        *,
+        corpus_eligibility_by_path: Mapping[str, str] | None = None,
+    ) -> "LexicalRetriever":
         docs: list[dict] = []
         for path in paths:
+            path_key = str(path.resolve())
+            corpus_eligibility = str(
+                (corpus_eligibility_by_path or {}).get(path_key, "")
+            ).strip().lower()
             if path.exists():
                 for row in load_jsonl(path):
+                    row_policy = str(row.get("retrieval_policy") or "standard").strip().lower()
+                    if row_policy == "requires_live_authority":
+                        effective_policy = row_policy
+                    elif corpus_eligibility == "context_only" or row_policy == "context_only":
+                        effective_policy = "context_only"
+                    else:
+                        effective_policy = row_policy
                     docs.append(
                         {
                             **row,
+                            "retrieval_policy": effective_policy,
+                            "_corpus_runtime_eligibility": corpus_eligibility,
                             "_corpus_path": minimized_path_reference(path),
                         }
                     )
@@ -667,6 +687,8 @@ class LexicalRetriever:
                     corpus_path=str(doc.get("_corpus_path") or ""),
                     distribution_scope=str(doc.get("distribution_scope") or ""),
                     answer_role=str(doc.get("answer_role") or ""),
+                    transfer_scope=str(doc.get("transfer_scope") or ""),
+                    applicability_boundary=str(doc.get("applicability_boundary") or ""),
                 )
             )
         self._record_search_stats(

@@ -1,0 +1,129 @@
+{
+  "construct_verdict": {
+    "blockers": [
+      "zero proven real-user questions",
+      "primary reference points are project-authored and not independently adjudicated",
+      "legacy proxy gold answers are keyword-derived",
+      "service and live tool orchestration is not exercised by the text-only runner"
+    ],
+    "next_authoring_gaps": [
+      "traceable deidentified grower and adviser questions with consent and province/crop labels",
+      "multi-turn cases where the correct next action is to ask one discriminating question",
+      "objective calculations and unit conversions with exact tolerances",
+      "field geometry cases that execute local soil, weather, and history services rather than merely naming tools",
+      "longitudinal cases where a later answer must use dated field observations and distinguish stale from current evidence",
+      "answer-blind agronomist adjudication of reference claims, material errors, and acceptable uncertainty"
+    ],
+    "primary_capability_claim_eligible": false,
+    "what_it_does_not_measure": [
+      "frequency or distribution of real grower questions",
+      "probability of a correct and useful field recommendation",
+      "field outcomes or economic benefit",
+      "independently certified agronomic correctness"
+    ],
+    "what_it_measures": [
+      "synthetic Canadian field-scenario response behaviour",
+      "kernel, retrieval, evidence-boundary, and safety regressions",
+      "answer-origin and fallback dependence when generation traces are retained"
+    ]
+  },
+  "current_suite": {
+    "canadian_field_decision_rows": 131,
+    "canadian_rows": 211,
+    "field_decision_rows": 144,
+    "primary_coverage": {
+      "categories": {
+        "Diseases": 10,
+        "Horticulture": 10,
+        "Nutrition": 10,
+        "Pests": 10,
+        "Seed Hybrids": 10,
+        "Soils": 10,
+        "Water": 10,
+        "Weather": 10,
+        "Weeds": 10
+      },
+      "crops": {
+        "barley": 6,
+        "blueberry": 4,
+        "canola": 10,
+        "corn": 8,
+        "field pea": 5,
+        "field vegetables": 6,
+        "forage or pasture": 5,
+        "lentil": 5,
+        "oats": 5,
+        "other fruit or berries": 4,
+        "potato": 10,
+        "soybean": 8,
+        "spring wheat": 10,
+        "unknown or map context": 4
+      },
+      "geometry_payload_rows": 0,
+      "independently_adjudicated_reference_rows": 0,
+      "jurisdictions": {
+        "Alberta": 8,
+        "British Columbia": 8,
+        "Canada": 10,
+        "Manitoba": 8,
+        "New Brunswick": 8,
+        "Newfoundland and Labrador": 8,
+        "Nova Scotia": 8,
+        "Ontario": 8,
+        "Prince Edward Island": 8,
+        "Quebec": 8,
+        "Saskatchewan": 8
+      },
+      "multi_turn_rows": 0,
+      "nonempty_field_context_rows": 90,
+      "question_styles": {
+        "advisor_narrative": 9,
+        "decision_first": 9,
+        "direct": 9,
+        "follow_up_missing_context": 9,
+        "lab_or_table_fragment": 9,
+        "map_first": 9,
+        "plain_language_or_bilingual": 9,
+        "structured_field_notes": 9,
+        "terse_mobile": 9,
+        "voice_note": 9
+      }
+    },
+    "primary_semantic_rows": 90,
+    "proven_real_user_rows": 0,
+    "question_origin_counts": {
+      "project_authored_answer_blind": 16,
+      "project_authored_or_legacy_synthetic_not_real_user": 225
+    },
+    "regression_or_interface_rows": 120,
+    "rows": 241,
+    "secondary_advisory_rows": 31
+  },
+  "legacy_input_inventory": {
+    "note": "Legacy banks are optional research inputs. Their absence does not block auditing the consolidated suite.",
+    "proxy_rows": 0,
+    "semantic_v1_rows": 0,
+    "standalone_transfer_rows": 31
+  },
+  "legacy_proxy": {
+    "available_in_checkout": false,
+    "canadian_jurisdictions": {},
+    "canadian_rows": 0,
+    "canadian_unique_questions": 0,
+    "duplicate_rows": 0,
+    "gold_reference_status": "keyword_contract_summary_not_independent_agronomic_ground_truth",
+    "largest_template_clusters": [],
+    "retention_decisions": {},
+    "rows": 0,
+    "unique_questions": 0
+  },
+  "promotion_rule": "Do not promote a legacy proxy row into the semantic capability lane without answer-blind source review, case-specific reference claims and material errors, and an independent agronomy reviewer.",
+  "required_benchmark_roles": {
+    "agronomic_rag": "kernel, governed evidence, deterministic in-process tools and guards, and verifier policy; external service orchestration remains a separate product gate",
+    "baseline": "raw model plus the Open Agronomy kernel and answer contract",
+    "kernel_field_context": "kernel plus the same structured field context admitted to the full-system arm",
+    "raw_model": "user question only"
+  },
+  "schema_version": "open_agronomy_agent.canadian_field_benchmark_audit.v1",
+  "status": "development_construct_only"
+}

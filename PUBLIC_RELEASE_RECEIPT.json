@@ -1,21 +1,21 @@
 {
-  "built_at": "2026-08-11T01:21:32+00:00",
-  "file_count": 507,
+  "built_at": "2026-08-11T18:38:43+00:00",
+  "file_count": 526,
   "files": [
     {
-      "bytes": 3438,
+      "bytes": 3780,
       "path": ".dockerignore",
-      "sha256": "b3bd84ddc8dd81951ec53fd8fb5001b51b2e65c7fdcba02ec0f0175f100c5934"
+      "sha256": "ac004a12f51ea75c2501514b420f97486788f9769425cb474b8597abe7405b0c"
     },
     {
-      "bytes": 2839,
+      "bytes": 3162,
       "path": ".gitignore",
-      "sha256": "6054640b2e022841767a9ef37d66b437bd54da3f94bdff705a1ba04250933e83"
+      "sha256": "1bca767d98b26ca01b23c043f029b12ac3b9f7c86a5410ccd9a1fd8443e75c08"
     },
     {
-      "bytes": 8303,
+      "bytes": 3921,
       "path": "Containerfile",
-      "sha256": "fc16c6326cd54cf12a772292bb535a112e105938138066ae852fb38f85e320df"
+      "sha256": "a621bd01e04562133ce58fb767e2d69cb08aacb78e100e8395f20fafb994f60f"
     },
     {
       "bytes": 1668,
@@ -23,14 +23,19 @@
       "sha256": "75b8aef9353f63b5bcbd56fcb03b6e261cc92650d6003c9fffb6f18811887d74"
     },
     {
-      "bytes": 8306,
-      "path": "README.md",
-      "sha256": "d8b01ad7b848fe131db6757b9ee531ae41df0ace9428d36c6e8715000e62bd61"
+      "bytes": 11358,
+      "path": "LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
     },
     {
-      "bytes": 2818,
+      "bytes": 11069,
+      "path": "README.md",
+      "sha256": "c217799cb00a7981ebcb5b83c81ecbd941c9db81bbddf8f4a2ce2d1d553caac7"
+    },
+    {
+      "bytes": 3342,
       "path": "THIRD_PARTY_NOTICES.md",
-      "sha256": "fd031e7cdd1fa87b6557cb1b0d827cd9362f7978194be4ea27a8d7e940ead087"
+      "sha256": "45aa6f00130eacc4f51c89d16560c5beeca5592901f7dff79303c4069f38bb0e"
     },
     {
       "bytes": 378,
@@ -113,6 +118,11 @@
       "sha256": "9f2f748b6b688c57c21bd7f909f31fbdaaaa4a595258bc8224a40905a37fc48f"
     },
     {
+      "bytes": 4509,
+      "path": "configs/final_benchmark_round_rc1.json",
+      "sha256": "03567e5cda523f6c4e1fbbb96509c80a21eba2e66d94945a5972c42038655bec"
+    },
+    {
       "bytes": 1907,
       "path": "configs/frozen/semantic_reserve_v2_rag_final_mvp_86b146303a40.yaml",
       "sha256": "86b146303a408aaa822acc750e1ee24a5fd8b429c44354bbfae257967a49f9fe"
@@ -171,6 +181,11 @@
       "bytes": 1293,
       "path": "configs/model_gemma4_e2b_interface_v1.yaml",
       "sha256": "0d2a2343b0056517d50bb32574a00706223d3a68135f04649789bf5de468d1a0"
+    },
+    {
+      "bytes": 1359,
+      "path": "configs/model_gemma4_e2b_interface_v2.yaml",
+      "sha256": "3a078b5351c3655bff793c44c6edbb488f655f6ca623a2d8f03a8954d818d20e"
     },
     {
       "bytes": 1041,
@@ -238,9 +253,9 @@
       "sha256": "66a78dd56288cc0b7e9b88519def2be7ef89be93a9e2a562aa6ade29f9967aeb"
     },
     {
-      "bytes": 8423,
+      "bytes": 9215,
       "path": "configs/public_repository_manifest.json",
-      "sha256": "0ba36850350c4563c58cc1fdd3f3c7b1c9c42c437131b06a1f12a2b6e51e8cb1"
+      "sha256": "c32316d87c8df255ba0e956cdd648033a2e9c9af69a56c1a9331c8cf23108848"
     },
     {
       "bytes": 450,
@@ -293,14 +308,14 @@
       "sha256": "2b1079554f6702c18ecf92e87c9c04c1c9c6273f24c5ac10477cb0e2b2cf024b"
     },
     {
-      "bytes": 2338,
+      "bytes": 2397,
       "path": "configs/rag_final_mvp.yaml",
-      "sha256": "7ca0fbe545f19dd6959f794f70e0da0f1bf5e0bdd470b677e8006a48c27bc0f6"
+      "sha256": "ea04348fc109b028fcc98acabec3ce38ce5bfabf507a6321f87870ef086f0abc"
     },
     {
-      "bytes": 2338,
+      "bytes": 2397,
       "path": "configs/rag_governed_runtime_v1.yaml",
-      "sha256": "7ca0fbe545f19dd6959f794f70e0da0f1bf5e0bdd470b677e8006a48c27bc0f6"
+      "sha256": "ea04348fc109b028fcc98acabec3ce38ce5bfabf507a6321f87870ef086f0abc"
     },
     {
       "bytes": 12459,
@@ -313,19 +328,19 @@
       "sha256": "c179d33073b4ec77a66080b9ce6b052ab1bf2dcfd250e34a2ba2edf8eed77e70"
     },
     {
-      "bytes": 1840,
+      "bytes": 1893,
       "path": "container/.env.example",
-      "sha256": "8cb298a4e932d449e413ebc2db3a0b069905ab94b8c04b914f42301eafe1b39b"
+      "sha256": "1cd9cce5c4f2710b8e3493277efc448a291e75ccc9030b0e96addd1f76a482a7"
     },
     {
-      "bytes": 8300,
+      "bytes": 8638,
       "path": "container/README.md",
-      "sha256": "0a363c85a054d2698dcdf3b70711386ed614b62826f299c9bb7aa44f3c892179"
+      "sha256": "8a73f827e84a388b078c28973ee8e70a62ffd385f4b2dc07da8bb51b6ba9fc73"
     },
     {
-      "bytes": 10725,
+      "bytes": 10861,
       "path": "container/apple.sh",
-      "sha256": "b58f919726a37ca89b05fc77a65bd46a5fc5b7893386775de8c44c009c710464"
+      "sha256": "69014de84f25e444d1d20077c663eb26b1079cab221a381e3057720801cc8606"
     },
     {
       "bytes": 2075,
@@ -363,19 +378,19 @@
       "sha256": "56c8ef46b98896a6c50fa2228be139593668e89b3d70283c2bbe4684c31756dc"
     },
     {
-      "bytes": 4844,
+      "bytes": 4982,
       "path": "container/runtime-common.sh",
-      "sha256": "98f925d6b9a45bfaa9e530380b38880e83f2113032d6b0940a2003a6a9390641"
+      "sha256": "d6c9219b793b51bdb85b0ba279111e6efd27bfc311eda50c1bb9e2d8436777b1"
     },
     {
-      "bytes": 303,
+      "bytes": 356,
       "path": "container/runtime-defaults.env",
-      "sha256": "a5828abafffc63ecc34d1fa5c7a65762b8161ab44e3ca6be0e48f60f8fbd95e4"
+      "sha256": "3fa6d8899b1ba72460e3d2d77df038d21aba8d13688d6ed6181fa01c896b0dd6"
     },
     {
-      "bytes": 34766,
+      "bytes": 18952,
       "path": "container/runtime_manifest.json",
-      "sha256": "566c4a920e2a10d3fe38b046e6c5c6be910e563017e09f338d9f13be164d69ea"
+      "sha256": "2532349256331b8bdb38a7b1dc426e4fd095ed8a8ff69f05b68ea92ccae2d57d"
     },
     {
       "bytes": 4553,
@@ -408,6 +423,11 @@
       "sha256": "8832c57f3f2e7241583bb823a9e7dd122ac9efddf2d25e81c7f0c216b1e010d1"
     },
     {
+      "bytes": 5097,
+      "path": "data/derived/geo_layers/sk_detailed_soil_manifest.json",
+      "sha256": "f4acfeacd5a38dc3811d7283f713d4d09d99c46c199c61c24d40ebdfe3dac14c"
+    },
+    {
       "bytes": 2269,
       "path": "data/derived/geo_layers/sk_thematic_soil_manifest.json",
       "sha256": "b5d6a8d9dc5d69a0ccbf88feb4db81f5af33034999fa7579dad66073bb5fe797"
@@ -438,9 +458,19 @@
       "sha256": "d0ed46ffb8fc153f4fb8c60dab2b74706c89bdf144eeb01142c8677eece41988"
     },
     {
-      "bytes": 59888672,
+      "bytes": 37455,
+      "path": "data/derived/rag/canada_agronomy_supplement_v3.jsonl",
+      "sha256": "f175130e4dbd635ecd7142ce47e996a05a9d1671aaea4041e67187f0cea22e21"
+    },
+    {
+      "bytes": 543,
+      "path": "data/derived/rag/nrcs_esd_compact_summary.json",
+      "sha256": "3aaef45dc0ab6a97bc4f71e2d19ac76c6ffab9ab7bf2ddd74ef468b18993bff2"
+    },
+    {
+      "bytes": 92050082,
       "path": "data/derived/rag/nrcs_esd_rag_corpus_compact.jsonl",
-      "sha256": "05802c7fcf75c4175bcd2a298651abe583fddf29fd15d3b90e21142cfb7b5545"
+      "sha256": "d86786e7e3dffd6a41be8e7c76e0d1a3c60d8b026741f19e2e742fee7aecd16d"
     },
     {
       "bytes": 953273,
@@ -528,14 +558,24 @@
       "sha256": "fa81a34430642e91650e2214d1aa721b3f8df5241a3ae949682a7eafe5b941f9"
     },
     {
-      "bytes": 8583,
+      "bytes": 7174,
       "path": "data/eval/open_agronomy_canadian_external_agroqa_separation_manifest.json",
-      "sha256": "db47798b2c9f1c268e7a45d1f9c3e2ea674780ea0516d1bfa7682a052c90caae"
+      "sha256": "8426ae20097da88b82eedeea5e7bafd866f90d9a245716f18e3b193dc4719944"
     },
     {
       "bytes": 508432,
       "path": "data/eval/open_agronomy_canadian_performance_v1.jsonl",
       "sha256": "5c3ce59195ac603d2dd8ec5f36f3672b3ee0c20227cdb4fd301dfe3848a83c63"
+    },
+    {
+      "bytes": 4865,
+      "path": "data/eval/open_agronomy_canadian_performance_v1_construct_audit.json",
+      "sha256": "c4297000bd1c2344dcedb8e0e2dd9ea4087eef8a74ed5334ae8c8de28b76fd9f"
+    },
+    {
+      "bytes": 1816,
+      "path": "data/eval/open_agronomy_canadian_performance_v1_construct_audit.md",
+      "sha256": "9b6e6d1ac3c4db06ffc3fac721d26e84a3d8dd34343b52d4cdb0137fb547b02f"
     },
     {
       "bytes": 9629,
@@ -598,9 +638,14 @@
       "sha256": "8e2c94f5fa28ae5398eaec3a119bed645a11f4095ad8b7059910499eec7e50a1"
     },
     {
-      "bytes": 20072,
+      "bytes": 7355,
+      "path": "data/manifests/canada_agronomy_supplement_v3_sources.json",
+      "sha256": "ba748fff3af19e6dbcf97656925a0344b200cbc584bd0e4d31531eb43d09f62d"
+    },
+    {
+      "bytes": 22240,
       "path": "data/manifests/canada_geospatial_sources.json",
-      "sha256": "4c6579f5ec103d401d2034a1ba20891d4c3d9e779117674447896d5684e963f9"
+      "sha256": "3ec2c4efbb7eb55996588b71931e5dd156b68f08107231ccd21c6c35d7b89f6e"
     },
     {
       "bytes": 3104,
@@ -613,9 +658,9 @@
       "sha256": "68132f32311487084c97a5312af2f434f4ed5ebd20e05276a53f4fc90b17c8ec"
     },
     {
-      "bytes": 11082,
+      "bytes": 12118,
       "path": "data/manifests/runtime_corpus_policy.json",
-      "sha256": "b7d46e04c25304c4a3ea5eb77c2d38ec11c5e1edbe54817fd172e7d5cb87f18d"
+      "sha256": "80a8d9413129fe2b04606771e899abb06dcb4d9b731f5f75b9d66008566b155f"
     },
     {
       "bytes": 4031,
@@ -626,6 +671,11 @@
       "bytes": 4371,
       "path": "data/manifests/source_licensing_matrix.json",
       "sha256": "929329e1516fb1c1a5477d22b1c518563b39cb8cc8d78383285a9e56edf10f2a"
+    },
+    {
+      "bytes": 16146,
+      "path": "data/manifests/source_retention_receipt.json",
+      "sha256": "d1339a74c643bd96c7f022692ffa979070092bdad1c0848380e2d5ec12fd3542"
     },
     {
       "bytes": 589,
@@ -748,6 +798,11 @@
       "sha256": "7763b1e01e738aec42c445fc1e2cf10bd01638c425b76a2364845355343537d9"
     },
     {
+      "bytes": 1907,
+      "path": "data/raw/canada_agronomy/ca_aafc_sk_detailed_soil_survey_dss_v3/source.zip.lineage.json",
+      "sha256": "9dab859727798effaa85659958e05560bbecb5ecd13238a9b5af3ccce6774d98"
+    },
+    {
       "bytes": 607,
       "path": "data/raw/canada_agronomy/ca_aafc_sk_detailed_soil_survey_specification/source.pdf.lineage.json",
       "sha256": "7de05ed3c08d1868763281ced5028d98efb726685ce5010df9952315b650899a"
@@ -828,9 +883,9 @@
       "sha256": "ce8f6f2c1524f6ce92a41c1e29a9210b7c4ba79a1dce8ab778b332d11679503f"
     },
     {
-      "bytes": 1410,
+      "bytes": 1507,
       "path": "docker-compose.edge.yml",
-      "sha256": "e999981134de2489a5112536483a7aa257ed06c8699737742c2738c2e85207e9"
+      "sha256": "3cf9ea40c44f29a46f4af6f467b30603e8c9e76008cd2d4277947bbbc810f6c7"
     },
     {
       "bytes": 4641,
@@ -848,19 +903,19 @@
       "sha256": "b3f378c5248efa69ae9c316ba3c3730591505ef0d009878b93ebfe6b295c8d46"
     },
     {
-      "bytes": 2617,
+      "bytes": 5127,
       "path": "docs/public/evaluation.md",
-      "sha256": "03b3e9c8c36821005e73928044c54ce957d9a17ded0787338ae81f853f2e627b"
+      "sha256": "d550aa61dfab8ea80b000513c2a3f5348575d981588beee6a5cac899a2b9b836"
     },
     {
-      "bytes": 3202,
+      "bytes": 6471,
       "path": "docs/public/knowledge-and-data.md",
-      "sha256": "c6705301a5017847402bb087488cf9a491d427c84163fda18d18a0313488e88c"
+      "sha256": "86da6c0d5f3f408c1feb95794cf614456d54b390943af591b066790a847b952b"
     },
     {
-      "bytes": 1515,
+      "bytes": 2906,
       "path": "docs/public/offline-operation.md",
-      "sha256": "af0eee407a6c854d6ad1504fd0e6a1ee2309678fb09c4aae5b74eb0025ba86e2"
+      "sha256": "30fdd4120f2a2229b4d582d3b395c913db59e6cc855ba7a8a3a3e16e3017b392"
     },
     {
       "bytes": 145,
@@ -883,14 +938,14 @@
       "sha256": "3b59acf5e40c4f6ffd83cb584690e7c94336bb7040d118754fa5eecc8d85a073"
     },
     {
-      "bytes": 115961,
+      "bytes": 160628,
       "path": "frontend/package-lock.json",
-      "sha256": "be09cefbd76db65f530d7d4e154f8b955d5cdb198f28ec227e6083bd80bc4e08"
+      "sha256": "5578bfef76e183399f168078d2b4a5e978cca14bec0761cd5d1e7576778c7f7e"
     },
     {
-      "bytes": 765,
+      "bytes": 825,
       "path": "frontend/package.json",
-      "sha256": "3d637b57038c248ad91865c854214f32934a505b6f3255c4c0a3e18f067cb451"
+      "sha256": "7c9357749d61f727d49faf5f4ef6b03a7f30201d7f60b0afffbcacae395404ab"
     },
     {
       "bytes": 722,
@@ -968,9 +1023,9 @@
       "sha256": "a8d863bbb3cc760d82b6741c2d00b83613e224776b13ffd23386e5937ff7bce9"
     },
     {
-      "bytes": 13289,
+      "bytes": 13783,
       "path": "frontend/src/LeafletFieldMap.tsx",
-      "sha256": "7c6e7e505e1adaf29a40c722006ce6efac86965c4910abd658bf43fb3f4f6f8d"
+      "sha256": "50259d22a0cda291f872e345fe2dd319f6e88b96e49e95a876d4665575197be0"
     },
     {
       "bytes": 3702,
@@ -978,9 +1033,9 @@
       "sha256": "f16ca35c260023fa925cf6fd45d35d86b16698741ea3fef8a0c3e5698f942888"
     },
     {
-      "bytes": 155992,
+      "bytes": 156598,
       "path": "frontend/src/OpenAgronomyApp.tsx",
-      "sha256": "577d27d10547ac93c73c75e87906640c942903de62f8fd7d8888380344f616d9"
+      "sha256": "405d54a34ad11ed67eba9b06197b7b8c4b825335983fc668a1d9abd4d91a302f"
     },
     {
       "bytes": 4618,
@@ -1083,14 +1138,14 @@
       "sha256": "2fa1c6b74581e3a1111c48bc958501f8e2be552465f25db3cfa388d9d81ea249"
     },
     {
-      "bytes": 1988,
+      "bytes": 2008,
       "path": "frontend/src/fieldRuntimeAvailability.ts",
-      "sha256": "8fc84cc1cc1d5e2897597130e0ab49e1aef1f360477790f3ec45ec9878e20849"
+      "sha256": "923b4d4be38eb0ca6fab8c6a00fff2ef72748db79df85c3550aa74f41ebbeacc"
     },
     {
-      "bytes": 880,
+      "bytes": 2397,
       "path": "frontend/src/formattedAnswer.test.tsx",
-      "sha256": "9f9a360d48965c025d6e1d3cedaaa81dc317efa9f35bba8ac2332115e5151666"
+      "sha256": "1a8e86d7613b8b04d2be6744590c806a879e4aaba6e199c6aabc2ea5bb0e93e3"
     },
     {
       "bytes": 4831,
@@ -1168,9 +1223,9 @@
       "sha256": "f3c124e859e4287d984ba4de053bf4590928b73d0c035d59155460f55d7c1912"
     },
     {
-      "bytes": 82763,
+      "bytes": 84062,
       "path": "frontend/src/openAgronomyMapWorkflow.test.tsx",
-      "sha256": "07c064c7381170faaffdeb7955ee33c99c0b924dfa2642301cae6d12f8eca349"
+      "sha256": "c8d41a05a5423d9ea6223f7d6f54ba599e72a39351efaf695fec9a2c296a5796"
     },
     {
       "bytes": 16138,
@@ -1228,19 +1283,19 @@
       "sha256": "96c0acf0d00893fab7313559fd89da669e49e0f50315619523fcd56aab903e97"
     },
     {
-      "bytes": 17040,
+      "bytes": 17043,
       "path": "frontend/src/sourceCards.test.ts",
-      "sha256": "15f1ea5a4eab71640a4deeed50523db32df1169c2a806d2c54c63158736b6f96"
+      "sha256": "0372c70a660e1ab7352422aeedc50aee7805c9d1796b3d530a65be16e024fe6f"
     },
     {
-      "bytes": 32085,
+      "bytes": 32067,
       "path": "frontend/src/sourceCards.ts",
-      "sha256": "d1ed6eea70f45c4e5f7b69b6577ae182d4868d90a911752cd4ee26c81d568e8d"
+      "sha256": "e2d05a3176ee7a08991b8ad7d3b76ec2d366b454e0c6aa020f35b5966fac32a4"
     },
     {
-      "bytes": 61238,
+      "bytes": 61884,
       "path": "frontend/src/styles.css",
-      "sha256": "9bc9b0bc996ae635dbc2af0909cf9913ea1523fa2e70891bdc09298d3a90992a"
+      "sha256": "048fae7bbfb98028eaddba66d3baf6cb93af017491f6809bc621f4cd8bd54a04"
     },
     {
       "bytes": 42,
@@ -1273,9 +1328,9 @@
       "sha256": "42cc63899ff37019fa4afc1ff36726ec7732ed3630872dba99a9f11474ad573a"
     },
     {
-      "bytes": 703,
+      "bytes": 808,
       "path": "pyproject.toml",
-      "sha256": "9f3c9ee149270a852b67b087b83a874b094372649f9b32e924301b8adab8da66"
+      "sha256": "4a4365c4580a24220f72afd537501d8b8465bbea58d6c1c04a90ec3a75fca99f"
     },
     {
       "bytes": 262,
@@ -1338,9 +1393,9 @@
       "sha256": "ad9a8321da2d67cfdd9336982074b792ffba96fafdea0f19d1d994b064135328"
     },
     {
-      "bytes": 17553,
+      "bytes": 18661,
       "path": "scripts/audit_canadian_field_benchmark.py",
-      "sha256": "be57759ebedfaeaa2c1eebefc7ac1d4e5c9cfcaa63d8242e3bbc34ddc289e5fa"
+      "sha256": "700e80dd89515d7c110d6b9f70089b83b3f2b0a57ab74aa24e09d8675faaf54e"
     },
     {
       "bytes": 4940,
@@ -1363,6 +1418,11 @@
       "sha256": "792d3ecfb2f5d85b465125d3460a9c2e1a2d19173f11b4b724552201947d2ff6"
     },
     {
+      "bytes": 22166,
+      "path": "scripts/audit_final_benchmark_readiness.py",
+      "sha256": "b5f45d678c22a754f80c5b668ba2105d1da48ed699a1e0a0a5e0773bf6dce122"
+    },
+    {
       "bytes": 1217,
       "path": "scripts/audit_runtime_corpus.py",
       "sha256": "30fa259ccbd96b02986470efdf4508e93fcceea60d67a5894507d0c0e42fd5ac"
@@ -1371,6 +1431,11 @@
       "bytes": 22505,
       "path": "scripts/audit_runtime_knowledge_sufficiency.py",
       "sha256": "30b917e52ad5c8e71ff70b2c039891986c0706813d57cbcf2160422d76b0b6c8"
+    },
+    {
+      "bytes": 24887,
+      "path": "scripts/audit_source_retention.py",
+      "sha256": "8977e5e03ceea6f9d2c15662fa8c1092bbc25b2a37b9d77800e47b983053c89a"
     },
     {
       "bytes": 7569,
@@ -1393,9 +1458,9 @@
       "sha256": "4951bb0d1466f518775647919356f3c3b615771e9dbbb0d416fd6d5d37a97870"
     },
     {
-      "bytes": 3653,
+      "bytes": 7489,
       "path": "scripts/build_compact_nrcs_esd_corpus.py",
-      "sha256": "bac0516a5f3d7195ce2234f97f050752ccc36b9dd41eacce6e3b9432ff897386"
+      "sha256": "786ef8f166c9615101278218ba558505a2b3b6afe3945a26c42c3396c1bd308c"
     },
     {
       "bytes": 5355,
@@ -1403,9 +1468,9 @@
       "sha256": "26c7aa4245c8222e20a14a0e0238008a7161bf659c348b1c19cafaf3a6e6dd53"
     },
     {
-      "bytes": 15001,
+      "bytes": 9907,
       "path": "scripts/build_edge_runtime_manifest.py",
-      "sha256": "e97302191e14f34b385e48fcf514b7a3a8306568699067f2c90563e4ec0071f0"
+      "sha256": "eb754ffd5e7d02256d64ea620925799ce22476ff31bd1fe17331ab172fb647a3"
     },
     {
       "bytes": 41152,
@@ -1435,7 +1500,7 @@
     {
       "bytes": 29085,
       "path": "scripts/build_portable_agent_bundle.py",
-      "sha256": "7f92d61b0a2246461e868bfad0694c7b8e8d810ccdf8363a712989f25d0b982f"
+      "sha256": "0868ad742f2d3512413ec0c777942c12236bb4801776280be21855f2688fe356"
     },
     {
       "bytes": 12051,
@@ -1453,14 +1518,19 @@
       "sha256": "dd9c9a2d1d94e687ce5745139fe36c27cc5ceb722c388aa42db154805810f151"
     },
     {
-      "bytes": 39640,
+      "bytes": 42018,
       "path": "scripts/build_prairie_detailed_soil_layer.py",
-      "sha256": "027307fe39d51f61eb43158654bce4dcd099de21838e33b11a7d51e4754845d1"
+      "sha256": "715639565d4a190599558e825ab8189bdeddac150d93a8d4f5b200e1c15baad3"
     },
     {
-      "bytes": 5513,
+      "bytes": 13226,
+      "path": "scripts/build_prairie_spatial_pack.py",
+      "sha256": "7cf4ec418038d9a96c962421fff09c56b4579f81518dbf97b1956a112f7fd5f3"
+    },
+    {
+      "bytes": 6647,
       "path": "scripts/build_public_repository.py",
-      "sha256": "caecb256381845e50948fddbecf1930d4359b967115ccd635be74755fa77b0f9"
+      "sha256": "a1338377f21c74aca68d043a8dee11231cf19a59831f9f974ae56681ce12483c"
     },
     {
       "bytes": 6500,
@@ -1508,9 +1578,9 @@
       "sha256": "30681811caa0b781eefb0b0fa880af24a2be3e40ca68e38a0e6c5f52aeaef90b"
     },
     {
-      "bytes": 16742,
+      "bytes": 18048,
       "path": "scripts/ingest_nrcs_esd_json.py",
-      "sha256": "44e096af649d9a15e0f5222148e6726fcb090929c6c4d54dd59c0a611afc74a9"
+      "sha256": "6f3a1ec136de840380a62a56c3ca0bfcf54315d360a67e177abc5e649bc06427"
     },
     {
       "bytes": 5566,
@@ -1578,9 +1648,9 @@
       "sha256": "6f0d51c3ae8df3616f30945f3821fd3978b2e6f834310f90a34ebfb64d4ab0bd"
     },
     {
-      "bytes": 1414,
+      "bytes": 1436,
       "path": "scripts/run_national_environment_ingest.sh",
-      "sha256": "3d74fbc4756e176d4a9fc9e52fc30d638d24d769c4e420620703273de45951c2"
+      "sha256": "6b0b3043d766e46a3f1cbadb3c5300246036692985a9c221de692049e0c80a45"
     },
     {
       "bytes": 11527,
@@ -1623,14 +1693,19 @@
       "sha256": "77f2634db589fe4c8dbab33771a51e705c77f1c840d28375b8394e6919d90903"
     },
     {
+      "bytes": 4389,
+      "path": "scripts/stage_edge_build_context.py",
+      "sha256": "a605436c7eb77e1279b3c8fbd12d6e4b5bc7c61018a1c0cb4fe4d8c86f76ebd3"
+    },
+    {
       "bytes": 1511,
       "path": "scripts/validate_canada_agronomy_sources.py",
       "sha256": "ae157b212614c137a89e31b489cffea40acbcb186838542e6187da88a2869e43"
     },
     {
-      "bytes": 13023,
+      "bytes": 13243,
       "path": "scripts/validate_canada_geospatial_sources.py",
-      "sha256": "9b32ddf32102680c79c24e1ce3996ba8e913048cd30fb8f389448f0db1d10cf6"
+      "sha256": "9b83e7af1f70962be2d7fbd76e341081fc7be116086594ec2105fb20465f6350"
     },
     {
       "bytes": 14953,
@@ -1638,9 +1713,9 @@
       "sha256": "980861be73dfd6a7f57dc8591de2fa214be3339173f145b2088498ad269d8359"
     },
     {
-      "bytes": 22593,
+      "bytes": 21338,
       "path": "scripts/validate_edge_container_package.py",
-      "sha256": "d6b9848305af589c0769c955f1805c0d72a4fb1b01aedbd6ea3984245600184c"
+      "sha256": "b4702feeeff8a31017a7277c91b5eb20c627907cc990d1a211b859e978597ce3"
     },
     {
       "bytes": 7297,
@@ -1678,6 +1753,11 @@
       "sha256": "f85203dcfd80f5bdf69b12484d07f5d250608192c4f97df1d595770245c56203"
     },
     {
+      "bytes": 5584,
+      "path": "scripts/verify_prairie_spatial_pack.py",
+      "sha256": "94ae51664af967ebbca6e9d9305ba26d20060a3845219396f9040374cffe518c"
+    },
+    {
       "bytes": 5671,
       "path": "scripts/write_model_host_identity.py",
       "sha256": "200ff84c48f0a6073ed3d6dcdeb8a8c2d6319a7a9a3cc098da099791555ce7f7"
@@ -1693,9 +1773,9 @@
       "sha256": "aeb2338bd89f632b364226fe6c89cb736b4034e9302f2d6d728dcce895fa13a8"
     },
     {
-      "bytes": 144417,
+      "bytes": 148321,
       "path": "src/agronomy_agent/agent.py",
-      "sha256": "606a8d7a1bf25da3030cffac5e2a426c7c85cc56728d1d8098fc25769036b484"
+      "sha256": "684b170b265b8cb9123683d4368b786b34f13ea8de8857cd39a46a6ba9fe7e02"
     },
     {
       "bytes": 181,
@@ -1728,9 +1808,9 @@
       "sha256": "1d7fb2c9366416fc8f987ee509635eb1d88331025bdd4b33b8678832ffebb0a8"
     },
     {
-      "bytes": 45592,
+      "bytes": 46704,
       "path": "src/agronomy_agent/agno_runtime/local_index.py",
-      "sha256": "82b503b15c5d283720f309d3f4a9f8421471028c18a37a2f3a3cc42a5f193701"
+      "sha256": "f2aefb236c555ae3a4ff2af7686aed915443e4496a88ad4e0ef7a47533b9004c"
     },
     {
       "bytes": 565,
@@ -1788,14 +1868,14 @@
       "sha256": "5a6cf72ee1d274714a2542527494e17b612fcffee9926663a89156567b540280"
     },
     {
-      "bytes": 208584,
+      "bytes": 209888,
       "path": "src/agronomy_agent/answer_safety.py",
-      "sha256": "0ec8a3078d2a0ed9ee08591b19605b19589d96ab4a965a8709cbc1c432dd584c"
+      "sha256": "20a08b947bb988b25b9ef67010677c94ba5fc6236d487cfcb132927164ade99f"
     },
     {
-      "bytes": 466730,
+      "bytes": 468093,
       "path": "src/agronomy_agent/answer_verifier.py",
-      "sha256": "d9a6efec26697f69ef953a1aed3b80a701a5788408cbfea17b04429b45c90833"
+      "sha256": "913df55928789c6e43bf7668ef95f61291b7fbee466218f435cfee8303f40f71"
     },
     {
       "bytes": 108418,
@@ -1838,9 +1918,9 @@
       "sha256": "75a65dba27b48ac6190ed434d928bc6aab627bcdd7975fe0b93a03ad89c65658"
     },
     {
-      "bytes": 30592,
+      "bytes": 31296,
       "path": "src/agronomy_agent/context_packer.py",
-      "sha256": "7f30ffb6939575a59de8750b03d814423dd2e25f107d19d1ed1c6b20e221a4d3"
+      "sha256": "4e95bbba91c3c6ca54e4769488dbcd6321cc6e71b42e2a2261ffffb58535f1f1"
     },
     {
       "bytes": 17732,
@@ -1868,9 +1948,9 @@
       "sha256": "3158560d6f687ab732713863393f9a8184c9564413aadda5f7161b083bc6e348"
     },
     {
-      "bytes": 123719,
+      "bytes": 124037,
       "path": "src/agronomy_agent/decision_route.py",
-      "sha256": "1a16e8e9ce57ee6471c165c8e59ca07fce66e7f722282f69e87792562446f9ac"
+      "sha256": "3ee512a91accd3b1cd775f65f858b9c6529ecacd9a30fcc0e2349e11c39358d0"
     },
     {
       "bytes": 6192,
@@ -2163,9 +2243,9 @@
       "sha256": "38065cef4fec818cb24973cc93208878b192bd28d469668f9eec84bee4585cfa"
     },
     {
-      "bytes": 47363,
+      "bytes": 48729,
       "path": "src/agronomy_agent/query_context.py",
-      "sha256": "90e83e35bb3db6033f0b173e333733b49c0e800b3cf8c1a0ddaffe9eaab4ca5a"
+      "sha256": "e356d2bb319f2cfd678f562feb2cb438772c1c401e1cbf06c24ece616ab07ef9"
     },
     {
       "bytes": 36200,
@@ -2193,9 +2273,9 @@
       "sha256": "431037c618a68f26eb668772d8daa347d9c298f6bc34d3e9e25c758a5597cae6"
     },
     {
-      "bytes": 335344,
+      "bytes": 336187,
       "path": "src/agronomy_agent/server/app.py",
-      "sha256": "0f83036b43e36a7232033abeb8dc8b414ddefc3817482f5b38fdc36a7d3865e7"
+      "sha256": "5ad5c6450d6877443168483210adfcf507237920906fab37fd37f13401a17a75"
     },
     {
       "bytes": 15420,
@@ -2243,9 +2323,9 @@
       "sha256": "fc2a482df54b7b31cd4b72575dd318a1d038e57c6842dc016949f39042753afa"
     },
     {
-      "bytes": 57802,
+      "bytes": 59221,
       "path": "src/agronomy_agent/server/services/answer_renderer.py",
-      "sha256": "659d20f459dd0d412e1f23137cdc9de099a215f38e9cbd049cf67602f1ee8933"
+      "sha256": "3d78dd50930bb34ce8001452cf06b02d070a95bc3d16182cc46c377de4504a41"
     },
     {
       "bytes": 4679,
@@ -2258,9 +2338,9 @@
       "sha256": "88e4b135f0938e631837cc92c6b601f3faecacbde9844808f53a79ee874437bb"
     },
     {
-      "bytes": 163448,
+      "bytes": 165548,
       "path": "src/agronomy_agent/server/services/chat_service.py",
-      "sha256": "6e2c86438e322cf241bddd35b6974e6b87c45bb0fb665eb431d75065efe9eb69"
+      "sha256": "3d437d61d1b1afcb382b6892edd024dcdfcf8486fd1edf1af90432905de5b0e6"
     },
     {
       "bytes": 7499,
@@ -2288,9 +2368,9 @@
       "sha256": "13d369e5086383cb77f358b4171696e0e6f9884e40b621df425e7678ef82bd64"
     },
     {
-      "bytes": 73238,
+      "bytes": 75924,
       "path": "src/agronomy_agent/server/services/geospatial_service.py",
-      "sha256": "0f88bd1af17d4a56744ae3936c8a6e51e5d0982710b33bd3ff0f111926a49e67"
+      "sha256": "c400e6ab2f43b5d07c3430ecce822b114cdb4ce1c0b2e4398edf52f295c38b92"
     },
     {
       "bytes": 6914,
@@ -2458,9 +2538,9 @@
       "sha256": "e62e6b17b49580d1c9267c0ea5abec4ed18a948e57e76e60135fff7559e77eb3"
     },
     {
-      "bytes": 4516,
+      "bytes": 5189,
       "path": "tests/test_agent_context_reservation.py",
-      "sha256": "4a18e66a5fe815c6d988afa0cda54b137927fc4fe7de3b23154a64a9b1a4ba59"
+      "sha256": "b33f718f95f80c076ccdabaa2150a29984066f4f9776a852c314b67d39eb0f5b"
     },
     {
       "bytes": 5753,
@@ -2468,14 +2548,14 @@
       "sha256": "39383d4156f23d701519542bd98830fa83eca0bce74da1da8f12332193b17ff5"
     },
     {
-      "bytes": 4840,
+      "bytes": 11188,
       "path": "tests/test_chat_service_field_context.py",
-      "sha256": "e4b2aa728faf5f7d0aa925e7bd695b0ed74ce616e2835c2af86abca43ca2b179"
+      "sha256": "b57d99fef6c22c8fe00ad6c435b288c70eb169eecdb042ce3011d7e06c92bb31"
     },
     {
-      "bytes": 11268,
+      "bytes": 11924,
       "path": "tests/test_corpus_governance.py",
-      "sha256": "0e72d5b8bc57e6f902042ebc7035426e29c61e7d363d29e74950df13d10ac974"
+      "sha256": "ed034f3b2c4fc4459179a0411cfd212fd4b4af909a459747f9480534713c1003"
     },
     {
       "bytes": 39569,
@@ -2508,9 +2588,24 @@
       "sha256": "bbff883e660a31b9b220fe1c52ee2600acdeaf551f924f42de1f9606fbf188f6"
     },
     {
-      "bytes": 4633,
+      "bytes": 2838,
+      "path": "tests/test_final_benchmark_readiness.py",
+      "sha256": "81522e91bd0fcdcd1c6ee0646a5a5c3972a361c27720f8ad9de3cf59a62baedf"
+    },
+    {
+      "bytes": 5545,
+      "path": "tests/test_geospatial_service.py",
+      "sha256": "ce070f22053ec655ab3558ff6f4f45d712dab05e7eb294a9c72d02beb5caed63"
+    },
+    {
+      "bytes": 6670,
       "path": "tests/test_model_profile_controls.py",
-      "sha256": "1e06c0c0642b9af383c53dda8b9352e4ef41c44c166b2143c5a4d132c36d4c70"
+      "sha256": "09348123cd9b2ba51a757bc55cfb29cee015eca663b409ebeb9f23ec60864043"
+    },
+    {
+      "bytes": 2287,
+      "path": "tests/test_nrcs_compact.py",
+      "sha256": "3cfacb9a6a41a8ca981b0a959f8f67d22c9ea0644febb9d2c2913b9dcb0267f4"
     },
     {
       "bytes": 31576,
@@ -2518,14 +2613,14 @@
       "sha256": "a64c431569bc801db1824a016dbcad9dfaad1ba4bcc0afc64bb4249115df5dd6"
     },
     {
-      "bytes": 51046,
+      "bytes": 52368,
       "path": "tests/test_query_context.py",
-      "sha256": "ca36acb7dd8529e8121898c3a928ca941ba2797b905fe513fe94b91de655569d"
+      "sha256": "abe68581c7bfd68562012086f5d924982109543dfb79ae4516bca252f8094c05"
     },
     {
-      "bytes": 45660,
+      "bytes": 47459,
       "path": "tests/test_retrieval.py",
-      "sha256": "9326ffa8bc9601568efb31fe07824ffb974adc0af497e952ce13a10838303700"
+      "sha256": "e1aa21dfb8314fd8297b1afaf0ff5a5642f1dc61de805b99a2e1491f7be423c4"
     },
     {
       "bytes": 2185,
@@ -2539,8 +2634,8 @@
     }
   ],
   "manifest_path": "configs/public_repository_manifest.json",
-  "manifest_sha256": "0ba36850350c4563c58cc1fdd3f3c7b1c9c42c437131b06a1f12a2b6e51e8cb1",
-  "release_id": "conference_public_review_20260810",
+  "manifest_sha256": "c32316d87c8df255ba0e956cdd648033a2e9c9af69a56c1a9331c8cf23108848",
+  "release_id": "conference_release_candidate_20260811",
   "schema_version": "open_agronomy_agent.public_repository_receipt.v1",
-  "total_bytes": 112949631
+  "total_bytes": 145361827
 }

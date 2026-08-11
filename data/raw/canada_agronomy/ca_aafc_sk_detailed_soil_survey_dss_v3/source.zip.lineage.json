@@ -1,0 +1,31 @@
+{
+  "schema_version": "open_agronomy_agent.canada_raw_source_lineage.v1",
+  "source_id": "ca_aafc_sk_detailed_soil_survey",
+  "source_record_id": "3734623c-25c5-4e69-936d-26f764a2807f",
+  "canonical_url": "https://open.canada.ca/data/en/dataset/3734623c-25c5-4e69-936d-26f764a2807f",
+  "download_url": "https://sis.agr.gc.ca/cansis/nsdb/dss/v3/dss_v3_sk_20170111.zip",
+  "fetched_at": "2026-08-11T02:56:19Z",
+  "raw_path": "data/raw/canada_agronomy/ca_aafc_sk_detailed_soil_survey_dss_v3/source.zip",
+  "raw_bytes": 173315189,
+  "raw_sha256": "84cb07414d27aafca93d9831dfa444381cfc3a954af47f1af3b4c2a6015da296",
+  "support_files": [],
+  "source_registry_path": "data/manifests/canada_geospatial_sources.json",
+  "source_registry_sha256": "3ec2c4efbb7eb55996588b71931e5dd156b68f08107231ccd21c6c35d7b89f6e",
+  "source_entry_sha256": "88970dfc2951424577d1d20044b150576eb129d3f9f0fe9b315bb634b1e41038",
+  "format": "versioned_zip_shapefile_plus_dbf_relational_tables",
+  "source_crs": "EPSG:4269",
+  "language": ["en-CA", "fr-CA"],
+  "jurisdiction": ["Canada", "Saskatchewan"],
+  "currency": "dss_v3_compilation_2017_current_catalogue_record_2026",
+  "license_snapshot": {
+    "status": "redistributable",
+    "identifier": "Open Government Licence - Canada",
+    "evidence_url": "https://open.canada.ca/data/api/action/package_show?id=3734623c-25c5-4e69-936d-26f764a2807f",
+    "reviewed_on": "2026-08-10",
+    "permits_modification": true,
+    "permits_commercial": true,
+    "permits_redistribution": true,
+    "attribution": "Contains information licensed under the Open Government Licence - Canada from Agriculture and Agri-Food Canada, Canadian Soil Information Service."
+  },
+  "boundary": "Versioned 2017 DSS v3 compilation of historical 1:100,000 soil-landscape mapping for nearly all agricultural areas in southern Saskatchewan; mapped context, not current field truth or management-rate authority."
+}

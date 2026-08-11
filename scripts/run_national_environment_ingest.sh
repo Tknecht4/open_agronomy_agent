@@ -25,10 +25,11 @@ LOG_FILE="$LOG_DIR/national_environment_ingest.log"
     --attempts 2 \
     --workers "${NRCS_ESD_WORKERS:-8}" \
     --max-words 220 \
-    --overlap-words 35
+    --overlap-words 35 \
+    --retry-missing
 
   echo "phase=us_nrcs_edit_compact_projection"
-  python scripts/build_compact_nrcs_esd_corpus.py --chunks-per-site "${NRCS_ESD_COMPACT_CHUNKS_PER_SITE:-3}"
+  python scripts/build_compact_nrcs_esd_corpus.py --chunks-per-site "${NRCS_ESD_COMPACT_CHUNKS_PER_SITE:-4}"
 
   if [[ "${RUN_SUPPLEMENTAL_CANADA:-0}" == "1" ]]; then
     echo "phase=canada_supplemental_environment"

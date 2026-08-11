@@ -28,6 +28,60 @@ Automated semantic judges are advisory triage. They can help find regressions bu
 
 Historical CROP multiple-choice imports are quarantined because audit found material answer-key problems. CCA-aligned questions are project-authored coverage probes and make no professional-exam claim.
 
+## Construct boundary
+
+The checked-in construct audit separates the 241 rows into 90 primary semantic
+field-decision cases, 31 secondary advisory cases, and 120 regression or
+interface cases. The latter must not be averaged into an agronomic answer-
+quality claim. The primary lane spans nine task categories with ten cases each
+and balanced province-level coverage, but it currently contains no proven
+real-user questions, independent agronomist adjudication, multi-turn primary
+cases, or executable field geometries. These are explicit residual validity
+gaps, not zero-valued capabilities.
+
+Regenerate the audit with:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/audit_canadian_field_benchmark.py
+```
+
+The expected output status is `development_construct_only`. A change that
+silently upgrades this status or collapses the three reporting tiers is a
+release blocker.
+
 ## Reproducibility gates
 
 The runner locks the suite hash, interface contract, arm-contract version, executable source snapshot, model profile, and RAG artifact identities. A partial run resumes only when those substantive identities match. Release validation requires all canonical comparison arms to share one implementation hash. Dirty-checkout experiments may be retained for development, but a public result must identify the exact committed source.
+
+## Final-round readiness
+
+`configs/final_benchmark_round_rc1.json` is the orchestration contract for the
+current development round. It freezes the internal and external suite hashes,
+four arms, Gemma 3 270M and Gemma 4 local profiles, Luna High remote profile,
+semantic-judge role, output location, claim boundary, and promotion policy.
+
+Run the model-free gate from a clean checkout before any final generation:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/audit_final_benchmark_readiness.py \
+  --hub-cache /absolute/path/to/huggingface/hub \
+  --egress-authorization /absolute/path/to/egress_authorization.json
+```
+
+The authorization receipt must be suite-bound and may cover only project-owned
+benchmark questions, benchmark field context, candidate answers, and the
+reference/rubric needed for judging. Farmer records, private field history,
+credentials, and local corpus files remain excluded. Luna judging is advisory
+semantic triage only; deterministic calculation and interface checks retain
+their own scorers.
+
+The canonical output directory must also be absent or empty at this gate. This
+prevents an old response database or identity lock from being mistaken for the
+new final round; resume is allowed only after the round has started and the
+runner confirms substantive identity equality.
+
+The gate must report `ready` and emit exact commands for all three candidates.
+Run the internal matrix first, build the blinded raw-model versus full-system
+review packet, freeze a finalist, and only then run the 256-item external
+diagnostic once. Do not use that external result to repair and rerun the same
+benchmark version.

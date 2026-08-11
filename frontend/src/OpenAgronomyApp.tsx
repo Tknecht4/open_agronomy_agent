@@ -1,5 +1,6 @@
 import { Fragment, FormEvent, Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import ReactMarkdown from 'react-markdown'
 import {
   Database,
   Eraser,
@@ -325,6 +326,9 @@ type ModelProfile = {
   role: 'default' | 'fast' | string
   max_tokens: number
   quality_gate?: string
+  local_ready?: boolean
+  local_status?: string
+  local_detail?: string
 }
 
 type TurnCreateResponse = {
@@ -1014,17 +1018,17 @@ const sampleBoundary = (acres: number, south: number, west: number, north: numbe
 
 const sampleProfiles: SampleProfile[] = [
   {
-    id: 'abbotsford-capability',
-    name: 'BC capability field',
-    crop: 'mixed cropping',
-    region: 'Fraser Valley',
-    jurisdiction: 'British Columbia',
-    acres: '96',
-    concern: 'what the mapped capability means before choosing a crop or input plan',
-    notes: 'Interpret the official polygon as legacy regional context. Ask for current soil observations, drainage, field history, sampling, crop goals, and local guidance before making a recommendation.',
-    mlra: 'BC agriculture capability context',
-    geometry: 'Bundled BC capability intersection.',
-    initialGeometry: sampleBoundary(96, 49.047, -122.305, 49.053, -122.295),
+    id: 'central-alberta-barley',
+    name: 'Alberta barley field',
+    crop: 'barley',
+    region: 'Leduc County',
+    jurisdiction: 'Alberta',
+    acres: '160',
+    concern: 'Low soil-test phosphorus and uneven early growth',
+    notes: 'Compare normal and weak zones. Confirm soil-test method and units, pH, moisture, rooting, previous crops and inputs, yield goal, and current Alberta guidance before choosing a rate.',
+    mlra: 'Alberta detailed soil survey context',
+    geometry: 'Local Alberta soil intersection when the Prairie soil package is installed.',
+    initialGeometry: sampleBoundary(160, 53.296, -113.608, 53.304, -113.592),
   },
   {
     id: 'regina-thematic-soil',
@@ -1035,8 +1039,8 @@ const sampleProfiles: SampleProfile[] = [
     acres: '96',
     concern: 'how the mapped soil constraints should change scouting and crop planning',
     notes: 'Use mapped drainage, capability, erosion, slope, and surface texture as regional screening context. Confirm field variability, soil profile, nutrient status, salinity, compaction, drainage performance, and current Saskatchewan guidance before choosing a crop or rate.',
-    mlra: 'Saskatchewan thematic soil context',
-    geometry: 'Bundled Saskatchewan soil intersection.',
+    mlra: 'Saskatchewan detailed soil context with thematic fallback',
+    geometry: 'Local Saskatchewan detailed-soil intersection when the Prairie spatial pack is installed.',
     initialGeometry: sampleBoundary(96, 50.447, -104.734, 50.453, -104.726),
   },
   {
@@ -1049,32 +1053,8 @@ const sampleProfiles: SampleProfile[] = [
     concern: 'Pale, patchy stand after a cool wet start',
     notes: 'Compare affected and normal strips, field position, rooting, moisture, fertility history, and soil or tissue evidence before calling sulfur deficiency.',
     mlra: 'Canadian prairie parkland context',
-    geometry: 'Bundled AAFC erosion-risk intersection.',
+    geometry: 'Local Manitoba soil intersection when the Prairie soil package is installed.',
     initialGeometry: sampleBoundary(320, 49.865, -99.959, 49.875, -99.941),
-  },
-  {
-    id: 'iowa-phosphorus',
-    name: 'Iowa corn field',
-    crop: 'corn',
-    region: 'Des Moines Lobe',
-    jurisdiction: 'Iowa',
-    acres: '148',
-    concern: 'High soil-test phosphorus near a ditch',
-    notes: 'Ask for method, units, pH, manure history, crop removal, runoff path, buffers, and local calibration.',
-    mlra: 'MLRA 103 - Central Iowa and Minnesota Till Prairies',
-    geometry: 'Uploaded boundary intersects a prairie pothole/till plain proxy region.',
-  },
-  {
-    id: 'irrigated-salinity',
-    name: 'Irrigated salinity field',
-    crop: 'alfalfa',
-    region: 'Snake River Plain',
-    jurisdiction: 'Idaho',
-    acres: '76',
-    concern: 'White crusting and declining stand in low areas',
-    notes: 'Ask for EC, SAR, water quality, drainage, irrigation pattern, and yield map history.',
-    mlra: 'MLRA 11 - Snake River Plains',
-    geometry: 'Boundary proxy intersects irrigated arid plain context.',
   },
 ]
 
@@ -1160,8 +1140,18 @@ const copyTextToClipboard = async (text: string): Promise<void> => {
   }
 }
 
-const defaultQuestion = (field: FieldProfile): string =>
-  `Use this ${field.jurisdiction} ${field.crop} field and map context to give me a practical agronomic read on ${field.concern.toLowerCase()}: what matters most, what should I do next, and what evidence would change the decision?`
+const defaultQuestion = (field: SampleProfile): string => {
+  if (field.id === 'central-alberta-barley') {
+    return 'This Alberta barley field has low soil-test phosphorus and uneven early growth. What should I compare and verify before choosing a phosphorus rate or placement strategy?'
+  }
+  if (field.id === 'regina-thematic-soil') {
+    return 'This Saskatchewan spring wheat field has patchy emergence and white crusting in low areas. What should I compare and sample before deciding whether salinity is the cause or changing next year\'s crop plan?'
+  }
+  if (field.id === 'canola-acidity') {
+    return 'This Manitoba canola field has a pale, patchy stand after a cool wet start. What should I compare and sample before deciding whether sulphur deficiency is the cause or choosing a corrective treatment?'
+  }
+  return `Use this ${field.jurisdiction} ${field.crop} field and map context to give me a practical agronomic read on ${field.concern.toLowerCase()}: what matters most, what should I do next, and what evidence would change the decision?`
+}
 
 const geometryForScenario = (scenario: SampleProfile): FieldGeometry => {
   const geometry = scenario.initialGeometry
@@ -1529,32 +1519,37 @@ const readSseStream = async (
   }
 }
 
-const normalizeAnswer = (text: string): string[] =>
+const normalizeChatMarkdown = (text: string): string =>
   text
-    .replace(/\s+-\s+/g, '\n- ')
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
+    .replace(/\s+\*\s+(?=\*\*)/g, '\n* ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
 
-const renderInlineMarkdown = (text: string) =>
-  text.split(/(\*\*.+?\*\*|\[.+?\]\(https:\/\/.+?\))/g).map((part, index) => {
-    if (part.startsWith('**')) return <strong key={index}>{part.slice(2, -2)}</strong>
-    const [label, href] = part.slice(1, -1).split('](')
-    return part[0] === '[' && href?.startsWith('https://') ? <a key={index} href={href}>{label}</a> : part
-  })
+const safeMarkdownUrl = (url: string): string => (/^https:\/\//i.test(url) ? url : '')
 
 export function FormattedAnswer({ text }: { text: string }) {
-  const lines = normalizeAnswer(text)
   return (
     <div className="formatted-answer">
-      {lines.map((line, index) => {
-        if (line.startsWith('- ')) {
-          return <p key={`${line}-${index}`} className="answer-bullet">{renderInlineMarkdown(line.slice(2))}</p>
-        }
-        return <p key={`${line}-${index}`}>{renderInlineMarkdown(line)}</p>
-      })}
+      <ReactMarkdown
+        skipHtml
+        urlTransform={safeMarkdownUrl}
+        components={{
+          a: ({ href, children }) => href?.startsWith('https://')
+            ? <a href={href} target="_blank" rel="noreferrer">{children}</a>
+            : <span>{children}</span>,
+        }}
+      >
+        {normalizeChatMarkdown(text)}
+      </ReactMarkdown>
     </div>
   )
+}
+
+const primaryRegionalCandidate = (priors: GeoPriors | null): GeoPriorCandidate | null => {
+  const candidates = priors?.candidate_regions || []
+  return candidates.find((candidate) =>
+    /(?:soil|capability|erosion)/i.test(`${candidate.system} ${candidate.name} ${candidate.code}`),
+  ) || candidates[0] || null
 }
 
 const streamProgressFromPayload = (payload: Record<string, unknown>, kind: StreamProgressStep['kind']): StreamProgressStep => ({
@@ -1923,11 +1918,12 @@ export function OpenAgronomyApp() {
   const evidenceMapCards = mapContextEvidenceCards(evidenceTurn)
   const evidenceSourceSummary = buildSourceCheckSummary(evidenceLiveToolCards, evidenceMapCards)
   const evidenceTraceGroups = buildTraceToolGroups(evidenceTurn, evidenceMapCards)
-  const primaryGeoCandidate = geoPriors?.candidate_regions?.[0] || null
+  const primaryGeoCandidate = primaryRegionalCandidate(geoPriors)
   const geometryIssue = fieldGeometryIssue(fieldGeometry)
   const geometryReady = isUsableFieldGeometry(fieldGeometry)
   const activeArea = fieldGeometry.kind === 'polygon' ? Math.round(fieldGeometry.acres).toLocaleString() : field.acres
   const selectedModelProfile = modelProfiles.find((profile) => profile.id === modelId)
+  const selectedModelReady = selectedModelProfile?.local_ready !== false
   const selectedUploadFeature =
     uploadContext?.feature_summaries?.find((feature) => feature.id === selectedUploadFeatureId) ||
     uploadContext?.feature_summaries?.find((feature) => feature.selected) ||
@@ -2053,7 +2049,8 @@ export function OpenAgronomyApp() {
         setTurns(matchingSession?.turns || [])
         const nextModels = configs.models.length > 0 ? configs.models : ['mock']
         const nextRagConfigs = configs.rag_configs.length > 0 ? configs.rag_configs : ['configs/rag_final_mvp.yaml']
-        setModelProfiles(configs.model_profiles || [])
+        const nextProfiles = configs.model_profiles || []
+        setModelProfiles(nextProfiles)
         setNetworkMode(
           configs.network?.mode === 'offline'
             ? 'offline'
@@ -2062,7 +2059,8 @@ export function OpenAgronomyApp() {
               : 'unknown',
         )
         setRuntimeAccess('available')
-        setModelId(nextModels.includes('mock') ? 'mock' : nextModels[0])
+        const readyProfile = nextProfiles.find((profile) => profile.local_ready !== false)
+        setModelId(readyProfile?.id || (nextModels.includes('mock') ? 'mock' : nextModels[0]))
         setRagConfig(configs.default_rag_config || nextRagConfigs[0])
       } catch (err) {
         setRuntimeAccess('unavailable')
@@ -2385,7 +2383,7 @@ export function OpenAgronomyApp() {
       if (parsed.regional_intersections || parsed.geo_errors) {
         const priors = geoPriorsFromBoundaryUpload(parsed)
         setGeoPriors(priors)
-        const candidate = priors.candidate_regions[0]
+        const candidate = primaryRegionalCandidate(priors)
         setBoundaryStatus(
           candidate
             ? `Matched ${candidate.system} ${candidate.code} from uploaded boundary.`
@@ -2695,7 +2693,7 @@ export function OpenAgronomyApp() {
         return
       }
       setGeoPriors(priors)
-      const candidate = priors.candidate_regions?.[0]
+      const candidate = primaryRegionalCandidate(priors)
       setBoundaryStatus(
         candidate
           ? `Matched ${candidate.system} ${candidate.code} at ${Math.round(candidate.confidence * 100)}% confidence.`
@@ -3487,7 +3485,7 @@ export function OpenAgronomyApp() {
             <div className={`network-answer-state ${answerCapability.state}`}>
               <strong title={answerCapability.detail}>
                 {answerCapability.state === 'runtime_online'
-                  ? 'Answer engine ready · live sources on'
+                  ? 'Answer engine ready · live checks on demand'
                   : answerCapability.state === 'runtime_offline'
                     ? 'Answer engine ready · offline sources only'
                     : answerCapability.state === 'notes_only'
@@ -3495,6 +3493,7 @@ export function OpenAgronomyApp() {
                       : 'Checking answer engine'}
               </strong>
               {answerCapability.state === 'notes_only' ? <span>{answerCapability.detail}</span> : null}
+              {!selectedModelReady ? <span>{selectedModelProfile?.local_detail || 'Selected local model is not installed.'}</span> : null}
               {runtimeAccess === 'unavailable' ? (
                 <button
                   type="button"
@@ -3583,15 +3582,15 @@ export function OpenAgronomyApp() {
                       Model
                       <select value={modelId} onChange={(event) => setModelId(event.target.value)}>
                         {modelProfiles.map((profile) => (
-                          <option key={profile.id} value={profile.id}>
-                            {profile.label} · {profile.role} · {profile.max_tokens} tok
+                          <option key={profile.id} value={profile.id} disabled={profile.local_ready === false}>
+                            {profile.label} · {profile.role} · {profile.max_tokens} tok{profile.local_ready === false ? ' · setup required' : ''}
                           </option>
                         ))}
                       </select>
                     </label>
                   ) : <span>Local model profile</span>}
                 </details>
-                <button type="submit" disabled={isAnalyzing || !message.trim() || !answerCapability.canGenerateAnswer}>
+                <button type="submit" disabled={isAnalyzing || !message.trim() || !answerCapability.canGenerateAnswer || !selectedModelReady}>
                   <Send size={17} /> {isAnalyzing ? 'Working' : 'Ask'}
                 </button>
               </div>

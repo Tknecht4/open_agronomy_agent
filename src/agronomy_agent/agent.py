@@ -20,6 +20,7 @@ from agronomy_agent.agno_runtime.knowledge_factory import build_knowledge
 from agronomy_agent.agno_runtime.retriever_adapter import knowledge_filter_cache_key, route_to_knowledge_filters
 from agronomy_agent.corpus_governance import (
     corpus_policy_for_doc,
+    corpus_policy_for_path,
     filter_docs_by_corpus_governance,
     load_corpus_policy,
     partition_runtime_corpus_paths,
@@ -247,6 +248,88 @@ def build_answer_prompt(context_block: str, question: str) -> str:
     return f"{answer_output_contract()}\n\n{context_block}\n\nField question:\n{question}"
 
 
+def resolve_local_model_snapshot(
+    model_id: str,
+    *,
+    revision: str | None = None,
+) -> Path:
+    """Resolve a complete local model snapshot without permitting a download."""
+
+    direct_path = Path(model_id).expanduser()
+    if direct_path.exists():
+        snapshot = direct_path.resolve()
+    else:
+        from huggingface_hub import snapshot_download
+
+        cache_dir = Path(
+            os.environ.get("HF_HUB_CACHE") or repo_path(".hf_cache/hub")
+        ).expanduser()
+        try:
+            snapshot = Path(
+                snapshot_download(
+                    repo_id=model_id,
+                    revision=revision,
+                    cache_dir=str(cache_dir),
+                    local_files_only=True,
+                )
+            ).resolve()
+        except Exception as exc:
+            revision_label = revision or "the configured default revision"
+            raise RuntimeError(
+                f"Local model snapshot unavailable for {model_id}@{revision_label}. "
+                "No automatic download was attempted. Provision it explicitly with "
+                "scripts/download_model.py before starting the answer engine."
+            ) from exc
+
+    names = {path.name for path in snapshot.rglob("*") if path.is_file()}
+    has_tokenizer = "tokenizer.json" in names or "tokenizer.model" in names
+    weights = [
+        path
+        for path in snapshot.rglob("*")
+        if path.is_file() and path.name.endswith((".safetensors", ".gguf", ".npz"))
+    ]
+    if not (
+        snapshot.is_dir()
+        and "config.json" in names
+        and "tokenizer_config.json" in names
+        and has_tokenizer
+        and weights
+        and all(path.stat().st_size > 0 for path in weights)
+    ):
+        raise RuntimeError(
+            f"Local model snapshot is incomplete for {model_id}@{revision or 'configured default'}. "
+            "No automatic download was attempted; rerun scripts/download_model.py while online."
+        )
+    return snapshot
+
+
+def local_model_snapshot_status(
+    model_id: str,
+    *,
+    revision: str | None = None,
+) -> dict[str, Any]:
+    """Return operator-facing local readiness without changing cache state."""
+
+    try:
+        snapshot = resolve_local_model_snapshot(model_id, revision=revision)
+    except RuntimeError as exc:
+        return {
+            "ready": False,
+            "status": "not_installed",
+            "model_id": model_id,
+            "revision": revision,
+            "detail": str(exc),
+        }
+    return {
+        "ready": True,
+        "status": "ready",
+        "model_id": model_id,
+        "revision": revision,
+        "snapshot": str(snapshot),
+        "detail": "Pinned model weights and tokenizer are available locally.",
+    }
+
+
 @dataclass
 class AgentContext:
     retrieved_docs: list[RetrievedDoc]
@@ -399,7 +482,7 @@ def _resource_key(cfg: dict[str, Any]) -> str:
             "artifacts": fingerprints,
             # Invalidate indexes built before quarantined corpora were pruned
             # at load time. The policy file hash alone cannot distinguish them.
-            "runtime_corpus_loader_contract": "fail_closed_v3_portable",
+            "runtime_corpus_loader_contract": "fail_closed_v4_effective_policy",
         }
     )
 
@@ -445,9 +528,10 @@ def load_agent_resources(rag_config: dict[str, Any] | str | Path | None = None) 
         public_corpus_paths,
         corpus_policy,
     )
-    retriever, index_cache_status, index_cache_path = _load_retriever_with_compiled_cache(
+    retriever, index_cache_status, index_cache_path = _load_retriever_with_policy_cache(
         [repo_path(path) for path in public_indexed_corpus_paths],
         key=stable_digest({"resource_key": key, "retrieval_scope": "public"}),
+        corpus_policy=corpus_policy,
     )
     private_retriever: LexicalRetriever | None = None
     if private_overlay is not None:
@@ -455,9 +539,10 @@ def load_agent_resources(rag_config: dict[str, Any] | str | Path | None = None) 
             private_overlay.corpus_paths,
             corpus_policy,
         )
-        private_retriever, private_cache_status, private_cache_path = _load_retriever_with_compiled_cache(
+        private_retriever, private_cache_status, private_cache_path = _load_retriever_with_policy_cache(
             [repo_path(path) for path in private_indexed_paths],
             key=stable_digest({"resource_key": key, "retrieval_scope": "private"}),
+            corpus_policy=corpus_policy,
         )
         index_cache_status = f"public:{index_cache_status};private:{private_cache_status}"
         index_cache_path = ";".join(
@@ -516,9 +601,29 @@ def phase5_cache_stats() -> dict[str, Any]:
 
 
 def _load_retriever_with_compiled_cache(paths: list[Path], *, key: str) -> tuple[LexicalRetriever, str, str | None]:
+    return _load_retriever_with_policy_cache(paths, key=key, corpus_policy={})
+
+
+def _load_retriever_with_policy_cache(
+    paths: list[Path],
+    *,
+    key: str,
+    corpus_policy: dict[str, Any],
+) -> tuple[LexicalRetriever, str, str | None]:
+    eligibility_by_path = {
+        str(path.resolve()): str(
+            (corpus_policy_for_path(path, corpus_policy) or {}).get(
+                "runtime_eligibility", ""
+            )
+        )
+        for path in paths
+    }
     cache_dir_value = os.getenv("AGRONOMY_AGENT_AGNO_INDEX_CACHE_DIR", "outputs/cache/agno_lexical_index").strip()
     if cache_dir_value.lower() in {"", "0", "false", "off", "disabled", "none"}:
-        return LexicalRetriever.from_jsonl_paths(paths), "disabled", None
+        return LexicalRetriever.from_jsonl_paths(
+            paths,
+            corpus_eligibility_by_path=eligibility_by_path,
+        ), "disabled", None
     cache_path = repo_path(cache_dir_value) / f"{key}.pickle"
     if cache_path.exists():
         try:
@@ -531,7 +636,10 @@ def _load_retriever_with_compiled_cache(paths: list[Path], *, key: str) -> tuple
     else:
         status_prefix = "miss"
 
-    retriever = LexicalRetriever.from_jsonl_paths(paths)
+    retriever = LexicalRetriever.from_jsonl_paths(
+        paths,
+        corpus_eligibility_by_path=eligibility_by_path,
+    )
     try:
         retriever.write_compiled_cache(cache_path)
         _prune_compiled_index_cache(cache_path.parent, keep_path=cache_path)
@@ -1559,7 +1667,7 @@ def build_context(
                     for item in (query_signals.field_context.get("regional_intersections") or [])
                     if isinstance(item, dict)
                     and str(item.get("layer_id") or "").lower()
-                    in {"ab_detailed_soil", "mb_detailed_soil"}
+                    in {"ab_detailed_soil", "sk_detailed_soil", "mb_detailed_soil"}
                 }
             ),
             "allowlisted_terms": list(field_graph_terms),
@@ -1939,13 +2047,22 @@ class MLXGenerator:
             return
         from mlx_lm import load
 
-        self._model, self._tokenizer = self._load_cached(
-            load,
+        resolved_model = resolve_local_model_snapshot(
             self.model_id,
             revision=self.model_revision,
         )
+        self._model, self._tokenizer = self._load_cached(
+            load,
+            str(resolved_model),
+            cache_key=f"{self.model_id}@{self.model_revision or 'main'}",
+        )
         if self.draft_model_id:
-            self._draft_model, _ = self._load_cached(load, self.draft_model_id)
+            resolved_draft = resolve_local_model_snapshot(self.draft_model_id)
+            self._draft_model, _ = self._load_cached(
+                load,
+                str(resolved_draft),
+                cache_key=f"{self.draft_model_id}@main",
+            )
 
     def warmup(self) -> None:
         """Load model weights without generating user-visible text."""
@@ -1958,8 +2075,9 @@ class MLXGenerator:
         model_id: str,
         *,
         revision: str | None = None,
+        cache_key: str | None = None,
     ) -> tuple[Any, Any]:
-        cache_key = f"{model_id}@{revision or 'main'}"
+        cache_key = cache_key or f"{model_id}@{revision or 'main'}"
         with _MLX_MODEL_LOCK:
             cached = _MLX_MODEL_CACHE.get(cache_key)
             if cached is not None:

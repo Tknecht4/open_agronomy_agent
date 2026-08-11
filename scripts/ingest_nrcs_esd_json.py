@@ -286,6 +286,11 @@ def main() -> int:
     parser.add_argument("--attempts", type=int, default=2)
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--force", action="store_true")
+    parser.add_argument(
+        "--retry-missing",
+        action="store_true",
+        help="When a shard exists, fetch only ecological-site IDs absent from that shard and merge them.",
+    )
     parser.add_argument("--refresh-class-list", action="store_true")
     parser.add_argument("--no-combine", action="store_true")
     parser.add_argument("--list-mlras", action="store_true", help="Only print discovered MLRA codes from the class-list service.")
@@ -327,7 +332,8 @@ def main() -> int:
     rows: list[dict[str, Any]] = []
     for mlra in selected_mlras:
         shard_path = args.shard_dir / f"{mlra}.jsonl"
-        if shard_path.exists() and not args.force and not args.dry_run:
+        existing_rows: list[dict[str, Any]] = []
+        if shard_path.exists() and not args.force and not args.dry_run and not args.retry_missing:
             shard_rows = read_jsonl(shard_path)
             rows.extend(shard_rows)
             summary["mlras"][mlra] = {
@@ -340,20 +346,45 @@ def main() -> int:
             continue
 
         sites = by_mlra[mlra]
+        if shard_path.exists() and args.retry_missing and not args.force:
+            existing_rows = read_jsonl(shard_path)
+            existing_site_ids = {
+                str(row.get("ecological_site_id") or "")
+                for row in existing_rows
+            }
+            sites = [site for site in sites if str(site.get("id") or "") not in existing_site_ids]
         if args.max_sites_per_mlra:
             sites = sites[: args.max_sites_per_mlra]
         summary["mlras"][mlra] = {
             "sites_discovered": len(by_mlra[mlra]),
             "sites_selected": len(sites),
-            "sites_ingested": 0,
-            "chunks": 0,
-            "status": "pending" if args.dry_run else "ingested",
+            "sites_previously_ingested": len(
+                {
+                    str(row.get("ecological_site_id") or "")
+                    for row in existing_rows
+                }
+            ),
+            "sites_ingested": len(
+                {
+                    str(row.get("ecological_site_id") or "")
+                    for row in existing_rows
+                }
+            ),
+            "sites_ingested_this_run": 0,
+            "chunks": len(existing_rows),
+            "status": (
+                "pending"
+                if args.dry_run
+                else "retry_missing"
+                if args.retry_missing and existing_rows
+                else "ingested"
+            ),
         }
         if args.dry_run:
             print(f"{mlra}: {len(sites)} ecological classes", file=sys.stderr)
             continue
 
-        mlra_rows: list[dict[str, Any]] = []
+        mlra_rows: list[dict[str, Any]] = list(existing_rows)
         with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, args.workers)) as executor:
             future_map = {
                 executor.submit(
@@ -377,6 +408,7 @@ def main() -> int:
                     continue
                 mlra_rows.extend(site_rows)
                 summary["mlras"][mlra]["sites_ingested"] += 1
+                summary["mlras"][mlra]["sites_ingested_this_run"] += 1
                 summary["mlras"][mlra]["chunks"] += len(site_rows)
                 print(f"{mlra}/{site_id}: {len(site_rows)} chunks", file=sys.stderr)
         mlra_rows.sort(key=lambda row: (str(row.get("ecological_site_id")), int(row.get("chunk_index", 0))))

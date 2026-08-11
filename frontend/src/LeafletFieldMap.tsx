@@ -37,7 +37,9 @@ const ESRI_WORLD_IMAGERY =
   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
 
 const scenarioViews: Record<string, { center: [number, number]; zoom: number }> = {
+  'central-alberta-barley': { center: [53.3, -113.6], zoom: 12 },
   'abbotsford-capability': { center: [49.05, -122.3], zoom: 12 },
+  'regina-thematic-soil': { center: [50.45, -104.73], zoom: 12 },
   'canola-acidity': { center: [49.87, -99.95], zoom: 11 },
   'iowa-phosphorus': { center: [42.03, -93.72], zoom: 12 },
   'irrigated-salinity': { center: [42.9, -114.4], zoom: 12 },
@@ -92,6 +94,10 @@ export function LeafletFieldMap({
   )
   const hasSkThematicSoil = useMemo(
     () => visibleFeatures.features.some((feature) => feature.properties?.layer_id === 'sk_thematic_soil'),
+    [visibleFeatures],
+  )
+  const hasSkDetailedSoil = useMemo(
+    () => visibleFeatures.features.some((feature) => feature.properties?.layer_id === 'sk_detailed_soil'),
     [visibleFeatures],
   )
   const hasPeiDetailedSoil = useMemo(
@@ -236,6 +242,8 @@ export function LeafletFieldMap({
                 ? '5 3'
                 : properties.layer_id === 'sk_thematic_soil'
                   ? '3 3'
+                : properties.layer_id === 'sk_detailed_soil'
+                  ? undefined
                 : properties.layer_id === 'pei_detailed_soil'
                   ? '2 4'
                 : properties.layer_id === 'ns_pictou_detailed_soil'
@@ -357,6 +365,7 @@ export function LeafletFieldMap({
         <span><i className="legend-mlra" /> MLRA</span>
         <span><i className="legend-eco" /> Ecoregion</span>
         {hasBcCapability ? <span><i className="legend-bc-capability" /> BC capability</span> : null}
+        {hasSkDetailedSoil ? <span><i className="legend-sk-soil" /> SK detailed soil</span> : null}
         {hasSkThematicSoil ? <span><i className="legend-sk-soil" /> SK thematic soil</span> : null}
         {hasPeiDetailedSoil ? <span><i className="legend-pei-soil" /> PEI mapped soil</span> : null}
         {hasNsPictouDetailedSoil ? <span><i className="legend-ns-pictou-soil" /> Pictou County soil</span> : null}

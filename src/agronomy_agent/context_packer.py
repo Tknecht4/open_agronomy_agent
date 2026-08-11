@@ -466,6 +466,15 @@ class ContextPacker:
         budget_report["dropped_doc_ids"].extend(str(getattr(doc, "doc_id", "")) for doc in docs[limit:] if getattr(doc, "doc_id", ""))
         if not selected:
             return
+        slot_token_budget = int(
+            max_tokens_override
+            or self._slots.get(slot, {}).get("max_tokens")
+            or self.max_context_tokens
+        )
+        per_doc_token_budget = max(
+            96,
+            (slot_token_budget - 12) // len(selected),
+        )
         lines = []
         source_ids = []
         for doc in selected:
@@ -491,9 +500,11 @@ class ContextPacker:
             else:
                 role = "VOCABULARY"
             policy_note = _doc_policy_note(doc)
-            lines.append(
-                f"- [{role}] [{doc.doc_id}] {doc.title}: {doc.text} Source: {doc.source}.{policy_note}"
-            )
+            lines.append(_trim_to_tokens(
+                f"- [{role}] [{doc.doc_id}].{policy_note} "
+                f"Title: {doc.title}. Source: {doc.source}. Excerpt: {doc.text}",
+                per_doc_token_budget,
+            ))
         self._append(
             sections,
             slot,
@@ -606,6 +617,11 @@ def _doc_policy_note(doc: Any) -> str:
             "CONTEXT ONLY: use qualitative background only; do not copy numeric thresholds, "
             "rates, product uses, or timing into the answer; FIELD ACTION: NOT AUTHORIZED; "
             "validate against current local guidance"
+        )
+    if str(getattr(doc, "transfer_scope", "") or "").strip().lower() == "cross_border_analogue":
+        notes.append(
+            "US CROSS-BORDER ANALOGUE: match climate, landscape, soil and ecological process; "
+            "never treat as Canadian field truth, calibration, legal authority or prescription"
         )
     if "historical_source_requires_current_validation" in risks:
         notes.append("historical source")

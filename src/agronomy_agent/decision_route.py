@@ -1199,6 +1199,12 @@ def _decision_name(lower: str, question_type: str) -> str:
         and re.search(r"\b(?:escape\w*|surviv\w*|seed set|seedbank|control plan|burndown)\b", lower)
     ):
         return "weed_escape_management"
+    if (
+        re.search(r"\b(?:saline|salinity|sodic|sodicity|salt)\b", lower)
+        and re.search(r"\b(?:white (?:crust|crusting)|low areas?|patchy emergence|stunting)\b", lower)
+        and re.search(r"\b(?:cause|compare|sample|decid|diagnos|crop plan)\w*\b", lower)
+    ):
+        return "salinity_management"
     if re.search(r"\b(?:soil |surface )?crust\w*\b", lower) and re.search(
         r"\b(?:emerg|hypocotyl|rotary[- ]hoe)\w*\b", lower
     ):

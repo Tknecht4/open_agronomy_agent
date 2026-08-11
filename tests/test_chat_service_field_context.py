@@ -1,6 +1,18 @@
 from __future__ import annotations
 
-from agronomy_agent.server.services.chat_service import _safe_field_context_intersections
+from agronomy_agent.server.services.chat_service import (
+    _safe_field_context_intersections,
+    _should_call_aafc_crop_inventory,
+    _should_call_statcan_crop_statistics,
+)
+from agronomy_agent.server.services.answer_renderer import (
+    _append_to_labeled_line,
+    render_map_interpretation_answer,
+    render_structured_answer,
+)
+from agronomy_agent.answer_verifier import _decision_route_failure_answer
+from agronomy_agent.answer_safety import enforce_answer_safety_postconditions
+from agronomy_agent.decision_route import build_decision_route_state
 
 
 def test_pei_mapped_soil_context_keeps_bounded_lineage_fields() -> None:
@@ -111,3 +123,157 @@ def test_prairie_dss_context_keeps_actionable_but_bounded_mapped_attributes() ->
     assert component["surface_layer"]["cec"] == 12
     assert "observation count not supplied" in component["surface_layer"]["measurement_basis"]
     assert "untrusted_instruction" not in component["surface_layer"]
+
+
+def test_generic_ecozone_does_not_bypass_the_answer_engine() -> None:
+    trace = {
+        "field_context": {
+            "regional_intersections": [
+                {"system": "AAFC Ecozones", "layer_id": "ca_ecozones", "code": "PRA", "name": "Prairies"}
+            ]
+        }
+    }
+
+    answer = render_map_interpretation_answer(
+        "What does the mapped regional intersection support before I make a decision?",
+        trace,
+    )
+
+    assert answer is None
+
+
+def test_thematic_soil_map_answer_uses_known_field_context_without_false_missing_crop_or_location() -> None:
+    trace = {
+        "route": {"question_type": "field_data"},
+        "field_context": {
+            "crop": "spring wheat",
+            "region": "Regina Plain",
+            "jurisdiction": "Saskatchewan",
+            "regional_intersections": [
+                {
+                    "system": "AAFC Saskatchewan Thematic Soil",
+                    "layer_id": "sk_detailed_soil",
+                    "code": "SK-2",
+                    "name": "Saskatchewan thematic soil",
+                    "capability_summary": "capability class 2; well drainage; 0 - 2% slope",
+                    "capability_class": "2",
+                    "drainage_class": "well",
+                    "slope_class": "0 - 2%",
+                }
+            ],
+        }
+    }
+
+    rendered = render_structured_answer(
+        "Fallback text",
+        trace=trace,
+        question="What does the mapped soil intersection support and what should I collect before deciding?",
+    )
+
+    assert "0 - 2%" in rendered.answer
+    assert "crop" not in rendered.missing_data
+    assert "location" not in rendered.missing_data
+
+
+def test_management_question_with_map_context_does_not_bypass_retrieval_and_model() -> None:
+    trace = {
+        "route": {"question_type": "fertility_rate"},
+        "field_context": {
+            "regional_intersections": [
+                {
+                    "system": "AAFC Alberta Detailed Soil Survey",
+                    "layer_id": "ab_detailed_soil",
+                    "code": "AB-SOIL",
+                    "name": "Alberta detailed soil map unit",
+                }
+            ]
+        },
+    }
+
+    answer = render_map_interpretation_answer(
+        "Use the map context to help assess low soil-test phosphorus and uneven barley growth. What should I do next?",
+        trace,
+    )
+
+    assert answer is None
+
+
+def test_canadian_public_data_tools_are_relevance_gated() -> None:
+    field_context = {"crop": "barley", "jurisdiction": "Alberta", "concern": "uneven early growth"}
+
+    assert not _should_call_aafc_crop_inventory("How should I interpret Olsen phosphorus?", field_context)
+    assert not _should_call_statcan_crop_statistics("How should I interpret Olsen phosphorus?", field_context)
+    assert _should_call_aafc_crop_inventory("What crop history does the annual crop inventory show?", field_context)
+    assert _should_call_statcan_crop_statistics("How does my yield compare with average provincial yield?", field_context)
+
+
+def test_crop_stress_fallback_preserves_named_phosphorus_decision() -> None:
+    question = (
+        "Use this Alberta barley field and map context to assess low soil-test phosphorus "
+        "and uneven early growth. What should I do next?"
+    )
+    state = build_decision_route_state(question, "fertility_rate")
+
+    assert state.decision == "crop_stress_differential"
+    answer = _decision_route_failure_answer(state)
+
+    assert answer is not None
+    assert "soil-test phosphorus" in answer
+    assert "Olsen, Bray and Mehlich" in answer
+    assert "current crop-specific provincial calibration" in answer
+    assert "rescue nitrogen or sulphur" not in answer
+
+
+def test_white_crust_salinity_question_is_not_reframed_as_mechanical_crusting() -> None:
+    question = (
+        "This Saskatchewan spring wheat field has patchy emergence and white crusting in low areas. "
+        "What should I compare and sample before deciding whether salinity is the cause or changing next year's crop plan?"
+    )
+    state = build_decision_route_state(question, "soil_water")
+
+    assert state.decision == "salinity_management"
+    answer = _decision_route_failure_answer(state)
+
+    assert answer is not None
+    assert "cannot separate salinity from sodicity" in answer
+    assert "root-zone soil test" in answer
+    assert "rotary hoe" not in answer
+
+
+def test_salinity_output_repairs_term_expansions_and_conditional_water_sampling() -> None:
+    answer = enforce_answer_safety_postconditions(
+        "Measure Sodium Absorption Ratio (SAR) and Electrical Saturation Percentage (ESP). "
+        "Sample the irrigation water being used and analyze EC.",
+        question="Could white crusting in this dryland field be salinity?",
+        route={"question_type": "soil_water"},
+    )
+
+    assert "sodium adsorption ratio (SAR)" in answer
+    assert "exchangeable sodium percentage (ESP)" in answer
+    assert "If irrigation water is used, sample it" in answer
+
+
+def test_appended_trace_evidence_is_a_separate_markdown_section() -> None:
+    answer = _append_to_labeled_line(
+        "Compare affected and normal areas before choosing a treatment.",
+        "Field read",
+        "The mapped soil unit is a regional prior, not a field measurement.",
+    )
+
+    assert answer == (
+        "Compare affected and normal areas before choosing a treatment.\n\n"
+        "**Field read**\n\n"
+        "The mapped soil unit is a regional prior, not a field measurement."
+    )
+
+    combined = _append_to_labeled_line(
+        answer,
+        "Field read",
+        "Current public weather context was also checked.",
+    )
+
+    assert combined.count("**Field read**") == 1
+    assert combined.endswith(
+        "The mapped soil unit is a regional prior, not a field measurement. "
+        "Current public weather context was also checked."
+    )

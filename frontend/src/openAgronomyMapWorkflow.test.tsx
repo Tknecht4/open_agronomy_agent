@@ -508,6 +508,42 @@ const bcPriors = {
   ],
 }
 
+const abPriors = {
+  ...bcPriors,
+  location_text: 'Alberta Leduc County barley boundary 4 vertices 160 acres',
+  candidate_regions: [{
+    label: 'Alberta detailed soil map unit MMNV9/U1l',
+    name: 'Alberta detailed soil map unit MMNV9/U1l',
+    layer: 'ab_detailed_soil',
+    system: 'AAFC Alberta Detailed Soil Survey',
+    code: 'AB_SOIL_ABD192014361',
+    confidence: 1,
+  }],
+  regional_intersections: [{
+    layer_id: 'ab_detailed_soil',
+    layer_label: 'AAFC Alberta Detailed Soil Survey',
+    system: 'AAFC Alberta Detailed Soil Survey',
+    code: 'AB_SOIL_ABD192014361',
+    name: 'Alberta detailed soil map unit MMNV9/U1l',
+    label: 'Alberta detailed soil map unit MMNV9/U1l',
+    confidence: 1,
+    coverage_estimate: 1,
+    match_reason: 'Bundled official geospatial layer intersection',
+    source: 'bundled_official_geospatial_layer',
+    soil_summary: '35% Malmo; 35% Navarre; 15% Ponoka',
+    drainage_class: 'well to imperfectly drained',
+    slope_class: '1%',
+  }],
+  official_layer_status: [{
+    layer_id: 'ab_detailed_soil',
+    label: 'AAFC Alberta Detailed Soil Survey',
+    system: 'AAFC Alberta Detailed Soil Survey',
+    status: 'matched',
+    match_count: 1,
+    message: 'matched bundled official polygon',
+  }],
+}
+
 const skPriors = {
   location_text: 'Saskatchewan Regina Plain spring wheat boundary 4 vertices 96 acres',
   candidate_regions: [
@@ -751,7 +787,8 @@ const installFetchMock = (
       const body = JSON.parse(String(init?.body || '{}'))
       if (body.geometry?.type === 'Point') return jsonResponse(pointPriors)
       const firstLongitude = body.geometry?.coordinates?.[0]?.[0]?.[0]
-      if (firstLongitude < -110) return jsonResponse(bcPriors)
+      if (firstLongitude < -120) return jsonResponse(bcPriors)
+      if (firstLongitude < -110) return jsonResponse(abPriors)
       if (firstLongitude < -100) return jsonResponse(skPriors)
       if (firstLongitude < -95) return jsonResponse(mbPriors)
       return jsonResponse(southPriors)
@@ -785,7 +822,7 @@ const installConversationFetchMock = () => {
         {
           session_id: 'session-conversation',
           name: 'Conference field review',
-          context: { field_conversation_key: 'sample:abbotsford-capability' },
+          context: { field_conversation_key: 'sample:central-alberta-barley' },
           turns: [
             {
               turn_id: 'turn-conversation',
@@ -864,21 +901,21 @@ describe('Open Agronomy map upload workflow', () => {
     expect(more.closest('details')).not.toHaveAttribute('open')
   })
 
-  it('hydrates the default BC sample as live geometry and intersects it before the first question', async () => {
+  it('hydrates the default Alberta sample as live geometry and intersects it before the first question', async () => {
     const fetchMock = installFetchMock()
     render(<OpenAgronomyApp />)
 
-    expect(await screen.findByText(/Matched BC Agriculture Capability CAPABILITY_2 at 100% confidence/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Matched AAFC Alberta Detailed Soil Survey AB_SOIL_ABD192014361 at 100% confidence/i)).toBeInTheDocument()
     expect(screen.getByTestId('mock-leaflet-map')).toHaveAttribute('data-geometry-kind', 'polygon')
-    expect(screen.getByTestId('mock-leaflet-map')).toHaveAttribute('data-first-lon', '-122.305')
+    expect(screen.getByTestId('mock-leaflet-map')).toHaveAttribute('data-first-lon', '-113.608')
     openPrimaryPage('Fields')
-    expect(screen.getAllByText(/BC agriculture capability: 70% class 2; 30% class 2/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Alberta detailed soil map unit MMNV9\/U1l/i).length).toBeGreaterThan(0)
     expect(await screen.findByTestId('agroclimate-spi')).toHaveTextContent('13 wk SPI0.43')
 
     const priorsCall = fetchMock.mock.calls.find(([url, init]) => {
       if (String(url) !== '/api/geo/priors' || init?.method !== 'POST') return false
       const body = JSON.parse(String(init.body || '{}'))
-      return body.geometry?.coordinates?.[0]?.[0]?.[0] === -122.305
+      return body.geometry?.coordinates?.[0]?.[0]?.[0] === -113.608
     })
     expect(priorsCall).toBeTruthy()
   })
@@ -1184,7 +1221,7 @@ describe('Open Agronomy map upload workflow', () => {
     fireEvent.click(screen.getByRole('button', { name: /save field/i }))
 
     await waitFor(() =>
-      expect(screen.getByText('mixed cropping · Fraser Valley')).toBeInTheDocument(),
+      expect(screen.getByText('barley · Leduc County')).toBeInTheDocument(),
     )
     const saveCall = fetchMock.mock.calls.find(
       ([url, init]) => String(url) === '/api/demo/fields' && init?.method === 'POST',
@@ -1305,7 +1342,7 @@ describe('Open Agronomy map upload workflow', () => {
   it('starts a new conversation identity instead of rebinding old answers to a saved field', async () => {
     const fetchMock = installFetchMock(emptyDemoFields, uploadPayload, [{
       session_id: 'session-old-sample',
-      context: { field_conversation_key: 'sample:abbotsford-capability' },
+      context: { field_conversation_key: 'sample:central-alberta-barley' },
       turns: [{
         turn_id: 'turn-old-sample',
         user_message: 'Old BC field question',
@@ -1368,7 +1405,7 @@ describe('Open Agronomy map upload workflow', () => {
 
     await waitFor(() => expect(container.querySelector('.stored-fields-disclosure summary span')).toHaveTextContent('14'))
     expect(screen.getByText('Existing field 13')).toBeInTheDocument()
-    expect(screen.getByText('mixed cropping · Fraser Valley')).toBeInTheDocument()
+    expect(screen.getByText('barley · Leduc County')).toBeInTheDocument()
   })
 
   it('adds an immutable field record to the selected field timeline', async () => {
@@ -1778,7 +1815,7 @@ describe('Open Agronomy map upload workflow', () => {
     installFetchMock()
     const firstRender = render(<OpenAgronomyApp />)
 
-    expect(await screen.findByText('Local runtime · live sources enabled')).toBeInTheDocument()
+    expect(await screen.findByText('Local runtime · connected mode')).toBeInTheDocument()
     const question = screen.getByLabelText('Ask about this field')
     fireEvent.change(question, { target: { value: 'What should I inspect in the wet patch tomorrow?' } })
     fireEvent(window, new Event('offline'))
@@ -1808,7 +1845,7 @@ describe('Open Agronomy map upload workflow', () => {
     installFetchMock()
     render(<OpenAgronomyApp />)
 
-    expect(await screen.findByText('Local runtime · live sources enabled')).toBeInTheDocument()
+    expect(await screen.findByText('Local runtime · connected mode')).toBeInTheDocument()
     openPrimaryPage('Fields')
     const notice = await screen.findByTestId('offline-storage-recovery-notice')
     expect(notice).toHaveTextContent('Unreadable local data was preserved')
@@ -1825,7 +1862,7 @@ describe('Open Agronomy map upload workflow', () => {
         return jsonResponse([
           {
             session_id: 'session-bc',
-            context: { field_conversation_key: 'sample:abbotsford-capability' },
+            context: { field_conversation_key: 'sample:central-alberta-barley' },
             turns: [{
               turn_id: 'turn-bc',
               user_message: 'BC field history only',
@@ -1909,7 +1946,7 @@ describe('Open Agronomy map upload workflow', () => {
     releaseSessions(jsonResponse([
       {
         session_id: 'session-long-answer',
-        context: { field_conversation_key: 'sample:abbotsford-capability' },
+        context: { field_conversation_key: 'sample:central-alberta-barley' },
         turns: [
           {
             turn_id: 'turn-long-answer',

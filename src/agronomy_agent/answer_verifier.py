@@ -3466,6 +3466,12 @@ def _decision_route_failure_answer(state: Any) -> str | None:
             "Use an on-site field observation of rain timing, crop condition, and target activity plus the current product label and actual application record to decide whether to wait, reassess efficacy, or make a labeled follow-up. The current PMRA label controls. Do not substitute advice about an unnamed pest or product."
         )
     if decision == "crop_stress_differential":
+        if re.search(r"\b(?:phosphorus|phosphate|soil[- ]test p|low p)\b", lower):
+            crop = state.crop or "crop"
+            return (
+                f"Treat low soil-test phosphorus and uneven {crop} growth as two observations to reconcile, not proof that phosphorus alone caused the pattern. Confirm the soil-test method, units, sampling depth and date, pH, and whether affected and normal zones were sampled separately; Olsen, Bray and Mehlich results are not interchangeable without a valid local calibration. Map the weak and normal areas, count the stand, dig roots, and compare moisture, drainage, compaction, seed-row condition, rooting depth, and injury or disease signs. "
+                "Reconstruct phosphorus source, rate, timing and placement, including seed-row placement and any skips or overlaps, plus previous crops, manure and fertilizer history. Use the detailed soil polygon only to stratify inspection and sampling; it does not establish current phosphorus status or a rate. Decide whether to change the plan only after the field pattern and current measurements agree with a phosphorus response, and use current crop-specific provincial calibration, a realistic yield goal, placement safety and economics. Do not convert methods or infer a rescue rate from colour, mapped soil, or the words 'low soil test' alone."
+            )
         if state.crop == "potato" and re.search(r"\b(?:boundary|polygon|low areas?|drainage)\b", lower):
             return (
                 "Treat the heavy regional soil polygon as screening context, not proof of this field's texture, drainage, or nitrogen need. Because yellowing follows low areas after rain, first test an excess-water and root-zone oxygen problem: map ponding and recovery, compare affected and normal plants, dig intact roots, stolons and developing tubers, and record rooting depth, discoloration, decay, soil saturation by depth, ponding duration, compaction, topographic inflow, existing drainage and outlet condition. "

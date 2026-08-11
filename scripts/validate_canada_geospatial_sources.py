@@ -250,9 +250,15 @@ def main() -> int:
         type=Path,
         default=ROOT / "data/manifests/canada_geospatial_sources.json",
     )
+    parser.add_argument(
+        "--asset-root",
+        type=Path,
+        default=ROOT,
+        help="root containing raw and derived geospatial assets; may differ from the source checkout",
+    )
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    report = validate(args.manifest.resolve(), root=ROOT)
+    report = validate(args.manifest.resolve(), root=args.asset_root.resolve())
     rendered = json.dumps(report, indent=2) + "\n"
     if args.output:
         output = args.output if args.output.is_absolute() else ROOT / args.output

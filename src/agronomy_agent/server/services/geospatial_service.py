@@ -72,6 +72,20 @@ class RegionLayer:
     boundary: str = "Official regional map context; not field truth or a legal boundary."
 
 
+def _local_database_path(*, environment_variable: str, filename: str) -> str:
+    explicit = os.getenv(environment_variable)
+    if explicit:
+        return explicit
+    spatial_pack_root = os.getenv("AGRONOMY_AGENT_SPATIAL_PACK_ROOT")
+    if spatial_pack_root:
+        return str(Path(spatial_pack_root).expanduser() / filename)
+    return str(repo_path(f"data/derived/geo_layers/{filename}"))
+
+
+def _local_layer_installed(layer: RegionLayer) -> bool:
+    return layer.query_backend == "local_sqlite" and Path(str(layer.local_database or "")).is_file()
+
+
 REGION_LAYERS: dict[str, RegionLayer] = {
     "nrcs_mlra": RegionLayer(
         id="nrcs_mlra",
@@ -113,15 +127,38 @@ REGION_LAYERS: dict[str, RegionLayer] = {
         code_fields=("code",),
         name_fields=("capability_summary", "capability_label"),
         query_backend="local_sqlite",
-        local_database=os.getenv(
-            "AGRONOMY_AGENT_BC_AG_CAP_DB_PATH",
-            str(repo_path("data/derived/geo_layers/bc_agriculture_capability.sqlite3")),
+        local_database=_local_database_path(
+            environment_variable="AGRONOMY_AGENT_BC_AG_CAP_DB_PATH",
+            filename="bc_agriculture_capability.sqlite3",
         ),
         local_match_reason="Bundled OGL-BC polygon intersection",
         boundary=(
             "Legacy generalized capability mapping from the 1960s through 1990s. It does not establish "
             "crop-specific suitability, yield, required inputs, feasible improvements, current field condition, "
             "or field truth. Confirm with current local evidence before management decisions."
+        ),
+    ),
+    "sk_detailed_soil": RegionLayer(
+        id="sk_detailed_soil",
+        label="Saskatchewan Detailed Soil Survey (DSS v3, 1:100,000)",
+        system="AAFC Saskatchewan Detailed Soil Survey",
+        service_url="",
+        source_url="https://open.canada.ca/data/en/dataset/3734623c-25c5-4e69-936d-26f764a2807f",
+        color="#637d68",
+        code_fields=("code",),
+        name_fields=("soil_summary",),
+        query_backend="local_sqlite",
+        local_database=_local_database_path(
+            environment_variable="AGRONOMY_AGENT_SK_DETAILED_SOIL_DB_PATH",
+            filename="sk_detailed_soil.sqlite3",
+        ),
+        local_match_reason="Installed OGL-Canada Saskatchewan DSS v3 intersection",
+        boundary=(
+            "Historical 1:100,000 soil-landscape mapping for nearly all agricultural areas in southern "
+            "Saskatchewan. A polygon and its listed components are mapped priors, not proof of soil at a "
+            "point or present nutrient supply, pH, drainage performance, compaction, salinity, crop "
+            "suitability, or a management rate. Ground-truth mapped differences and use current soil tests "
+            "and Saskatchewan guidance."
         ),
     ),
     "sk_thematic_soil": RegionLayer(
@@ -134,9 +171,9 @@ REGION_LAYERS: dict[str, RegionLayer] = {
         code_fields=("code",),
         name_fields=("soil_summary",),
         query_backend="local_sqlite",
-        local_database=os.getenv(
-            "AGRONOMY_AGENT_SK_THEMATIC_SOIL_DB_PATH",
-            str(repo_path("data/derived/geo_layers/sk_thematic_soil.sqlite3")),
+        local_database=_local_database_path(
+            environment_variable="AGRONOMY_AGENT_SK_THEMATIC_SOIL_DB_PATH",
+            filename="sk_thematic_soil.sqlite3",
         ),
         local_match_reason="Bundled OGL-Canada thematic-soil intersection",
         boundary=(
@@ -157,9 +194,9 @@ REGION_LAYERS: dict[str, RegionLayer] = {
         code_fields=("code",),
         name_fields=("soil_summary",),
         query_backend="local_sqlite",
-        local_database=os.getenv(
-            "AGRONOMY_AGENT_AB_DETAILED_SOIL_DB_PATH",
-            str(repo_path("data/derived/geo_layers/ab_detailed_soil.sqlite3")),
+        local_database=_local_database_path(
+            environment_variable="AGRONOMY_AGENT_AB_DETAILED_SOIL_DB_PATH",
+            filename="ab_detailed_soil.sqlite3",
         ),
         local_match_reason="Bundled OGL-Canada Alberta DSS v3 intersection",
         boundary=(
@@ -179,9 +216,9 @@ REGION_LAYERS: dict[str, RegionLayer] = {
         code_fields=("code",),
         name_fields=("soil_summary",),
         query_backend="local_sqlite",
-        local_database=os.getenv(
-            "AGRONOMY_AGENT_MB_DETAILED_SOIL_DB_PATH",
-            str(repo_path("data/derived/geo_layers/mb_detailed_soil.sqlite3")),
+        local_database=_local_database_path(
+            environment_variable="AGRONOMY_AGENT_MB_DETAILED_SOIL_DB_PATH",
+            filename="mb_detailed_soil.sqlite3",
         ),
         local_match_reason="Bundled OGL-Canada Manitoba DSS v3 intersection",
         boundary=(
@@ -202,9 +239,9 @@ REGION_LAYERS: dict[str, RegionLayer] = {
         code_fields=("code",),
         name_fields=("soil_summary",),
         query_backend="local_sqlite",
-        local_database=os.getenv(
-            "AGRONOMY_AGENT_PEI_DETAILED_SOIL_DB_PATH",
-            str(repo_path("data/derived/geo_layers/pei_detailed_soil.sqlite3")),
+        local_database=_local_database_path(
+            environment_variable="AGRONOMY_AGENT_PEI_DETAILED_SOIL_DB_PATH",
+            filename="pei_detailed_soil.sqlite3",
         ),
         local_match_reason="Bundled OGL-Canada PEI detailed-soil intersection",
         boundary=(
@@ -224,9 +261,9 @@ REGION_LAYERS: dict[str, RegionLayer] = {
         code_fields=("code",),
         name_fields=("soil_summary",),
         query_backend="local_sqlite",
-        local_database=os.getenv(
-            "AGRONOMY_AGENT_NS_PICTOU_DETAILED_SOIL_DB_PATH",
-            str(repo_path("data/derived/geo_layers/ns_pictou_detailed_soil.sqlite3")),
+        local_database=_local_database_path(
+            environment_variable="AGRONOMY_AGENT_NS_PICTOU_DETAILED_SOIL_DB_PATH",
+            filename="ns_pictou_detailed_soil.sqlite3",
         ),
         local_match_reason="Bundled OGL-Canada Pictou County detailed-soil intersection",
         boundary=(
@@ -246,9 +283,9 @@ REGION_LAYERS: dict[str, RegionLayer] = {
         code_fields=("code",),
         name_fields=("name",),
         query_backend="local_sqlite",
-        local_database=os.getenv(
-            "AGRONOMY_AGENT_CA_EROSION_RISK_DB_PATH",
-            str(repo_path("data/derived/geo_layers/ca_soil_erosion_risk.sqlite3")),
+        local_database=_local_database_path(
+            environment_variable="AGRONOMY_AGENT_CA_EROSION_RISK_DB_PATH",
+            filename="ca_soil_erosion_risk.sqlite3",
         ),
         local_match_reason="Bundled OGL-Canada soil-erosion-risk intersection",
         boundary=(
@@ -274,8 +311,20 @@ def layer_catalog(*, network_mode: str = "online") -> dict[str, Any]:
                 "color": layer.color,
                 "source_mode": layer.query_backend,
                 "available_in_current_mode": (
-                    network_mode == "online" or layer.query_backend == "local_sqlite"
+                    network_mode == "online"
+                    if layer.query_backend != "local_sqlite"
+                    else _local_layer_installed(layer)
                 ),
+                "installation_status": (
+                    "installed"
+                    if _local_layer_installed(layer)
+                    else "not_installed"
+                    if layer.query_backend == "local_sqlite"
+                    else "remote"
+                ),
+                "local_asset": Path(str(layer.local_database or "")).name
+                if layer.query_backend == "local_sqlite"
+                else None,
                 "boundary": layer.boundary,
             }
             for layer in REGION_LAYERS.values()
@@ -539,7 +588,15 @@ def attach_region_intersections_to_upload(
 
 def _selected_layers(layer_ids: list[str] | None) -> list[RegionLayer]:
     if not layer_ids:
-        return list(REGION_LAYERS.values())
+        selected = [
+            layer
+            for layer in REGION_LAYERS.values()
+            if layer.query_backend != "local_sqlite" or _local_layer_installed(layer)
+        ]
+        selected_ids = {layer.id for layer in selected}
+        if "sk_detailed_soil" in selected_ids and "sk_thematic_soil" in selected_ids:
+            selected = [layer for layer in selected if layer.id != "sk_thematic_soil"]
+        return selected
     selected: list[RegionLayer] = []
     for layer_id in layer_ids:
         if layer_id not in REGION_LAYERS:
