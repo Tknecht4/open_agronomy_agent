@@ -1,0 +1,7 @@
+suite_path: data/eval/agronomy_mvp_eval.jsonl
+output_root: outputs/evals
+max_samples: null
+scoring:
+  required_weight: 0.55
+  forbidden_weight: 0.2
+  ask_weight: 0.25

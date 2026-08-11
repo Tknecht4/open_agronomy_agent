@@ -1,0 +1,14 @@
+model_id: mlx-community/Qwen3.5-0.8B-OptiQ-4bit
+model_revision: ef60586933bd2cc02b763f77eb8839a5114bbec1
+license: apache-2.0
+max_tokens: 480
+temperature: 0.0
+top_p: 0.9
+top_k: 0
+seed: 42
+answer_verification:
+  enabled: true
+  mode: conference_selective
+  model_id: mlx-community/Qwen3.5-0.8B-OptiQ-4bit
+  max_tokens: 180
+  max_evidence_chars: 9000

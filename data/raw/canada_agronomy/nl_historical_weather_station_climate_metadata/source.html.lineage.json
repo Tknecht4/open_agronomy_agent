@@ -1,0 +1,9 @@
+{
+  "canonical_url": "https://opendata.gov.nl.ca/public/opendata/page/?id=341&page-id=datasetdetails",
+  "download_url": "https://opendata.gov.nl.ca/public/opendata/page/?id=341&page-id=datasetdetails",
+  "fetched_at": "2026-07-21T03:34:05+00:00",
+  "raw_bytes": 12131,
+  "raw_path": "data/raw/canada_agronomy/nl_historical_weather_station_climate_metadata/source.html",
+  "raw_sha256": "c4429b147feabfc35d035fff75ccfcd7581ba5afc2b94468ab955c644c1591ab",
+  "source_id": "nl_historical_weather_station_climate_metadata"
+}

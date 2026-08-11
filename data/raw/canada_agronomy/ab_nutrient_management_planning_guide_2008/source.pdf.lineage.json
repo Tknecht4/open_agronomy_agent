@@ -1,0 +1,9 @@
+{
+  "canonical_url": "https://open.alberta.ca/dataset/f9172961-13a9-404e-89c0-12211c014152",
+  "download_url": "https://open.alberta.ca/dataset/f9172961-13a9-404e-89c0-12211c014152/resource/2474c06a-25c9-4dbe-8be3-7940c14a5805/download/7086752-2008-nutrient-management-planning-guide1.pdf",
+  "fetched_at": "2026-07-19T05:11:12+00:00",
+  "raw_bytes": 14932463,
+  "raw_path": "data/raw/canada_agronomy/ab_nutrient_management_planning_guide_2008/source.pdf",
+  "raw_sha256": "18a745b04aad4f419b5a8961a957ff62db0a0c965c87e1e81effe9315eec176e",
+  "source_id": "ab_nutrient_management_planning_guide_2008"
+}

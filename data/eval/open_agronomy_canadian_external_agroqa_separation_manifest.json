@@ -1,0 +1,189 @@
+{
+  "internal": {
+    "benchmark_id": "open_agronomy_canadian_performance_v1",
+    "contract_path": "configs/open_agronomy_canadian_performance_v1.json",
+    "contract_sha256": "ad7accc107400ea6bcdd8e27660508fb724640e9e7fdc59389463642f4c0614e",
+    "rows": 241,
+    "suite_path": "data/eval/open_agronomy_canadian_performance_v1.jsonl",
+    "suite_sha256": "5c3ce59195ac603d2dd8ec5f36f3672b3ee0c20227cdb4fd301dfe3848a83c63"
+  },
+  "policy": {
+    "internal_for_model_selection": true,
+    "public_for_finalist_verification_only": true,
+    "public_questions_may_not_enter_training_rag_prompts_or_repairs": true,
+    "public_results_may_not_drive_changes_retested_on_same_version": true
+  },
+  "public": {
+    "benchmark_id": "open_agronomy_external_agroqa_v1",
+    "contract_path": "configs/open_agronomy_external_agroqa_v1.json",
+    "contract_sha256": "42692bc3eb638ca77768b67b4954722d449127c812c147808ab06ec77c99f6b7",
+    "dataset_ids": [
+      "JonaOmara/AgroQA-Dataset"
+    ],
+    "rows": 256,
+    "suite_path": "data/eval/open_agronomy_external_agroqa_v1.jsonl",
+    "suite_sha256": "d15888bb4cf0ea339380a71abecdb5a5fa770829e67e616765d2d140c9365e93"
+  },
+  "question_overlap": {
+    "exact_match_count": 0,
+    "exact_matches": [],
+    "maximum_token_jaccard": 0.3333,
+    "near_duplicate_count": 0,
+    "near_duplicate_threshold": 0.8,
+    "nearest_pairs": [
+      {
+        "internal_eval_id": "oacp1::canadian_advisory_transfer::conf_v1_ca_unknown_spray",
+        "public_eval_id": "oabe1::external_real_farmer_agronomy_qa::agroqa_2411",
+        "token_jaccard": 0.3333
+      },
+      {
+        "internal_eval_id": "oacp1::official_source_answer_boundary::v11_soileri_limitations",
+        "public_eval_id": "oabe1::external_real_farmer_agronomy_qa::agroqa_1665",
+        "token_jaccard": 0.2667
+      },
+      {
+        "internal_eval_id": "oacp1::official_source_answer_boundary::v11_soileri_limitations",
+        "public_eval_id": "oabe1::external_real_farmer_agronomy_qa::agroqa_1668",
+        "token_jaccard": 0.2667
+      },
+      {
+        "internal_eval_id": "oacp1::official_source_answer_boundary::v11_soileri_limitations",
+        "public_eval_id": "oabe1::external_real_farmer_agronomy_qa::agroqa_1675",
+        "token_jaccard": 0.2667
+      },
+      {
+        "internal_eval_id": "oacp1::official_source_answer_boundary::v11_soileri_limitations",
+        "public_eval_id": "oabe1::external_real_farmer_agronomy_qa::agroqa_1701",
+        "token_jaccard": 0.2667
+      },
+      {
+        "internal_eval_id": "oacp1::canadian_advisory_transfer::conf_v1_ca_unknown_spray",
+        "public_eval_id": "oabe1::external_real_farmer_agronomy_qa::agroqa_0009",
+        "token_jaccard": 0.25
+      },
+      {
+        "internal_eval_id": "oacp1::canadian_decision_quality::ca_v2_prince_edward_island_water_07",
+        "public_eval_id": "oabe1::external_real_farmer_agronomy_qa::agroqa_0339",
+        "token_jaccard": 0.25
+      },
+      {
+        "internal_eval_id": "oacp1::canadian_advisory_transfer::conf_v1_ca_unknown_spray",
+        "public_eval_id": "oabe1::external_real_farmer_agronomy_qa::agroqa_0352",
+        "token_jaccard": 0.25
+      },
+      {
+        "internal_eval_id": "oacp1::canadian_advisory_transfer::conf_v1_ca_unknown_spray",
+        "public_eval_id": "oabe1::external_real_farmer_agronomy_qa::agroqa_0737",
+        "token_jaccard": 0.25
+      },
+      {
+        "internal_eval_id": "oacp1::canadian_advisory_transfer::conf_v1_ca_unknown_spray",
+        "public_eval_id": "oabe1::external_real_farmer_agronomy_qa::agroqa_0855",
+        "token_jaccard": 0.25
+      },
+      {
+        "internal_eval_id": "oacp1::official_source_answer_boundary::v11_soileri_limitations",
+        "public_eval_id": "oabe1::external_real_farmer_agronomy_qa::agroqa_1672",
+        "token_jaccard": 0.25
+      },
+      {
+        "internal_eval_id": "oacp1::official_source_answer_boundary::v11_soileri_limitations",
+        "public_eval_id": "oabe1::external_real_farmer_agronomy_qa::agroqa_1729",
+        "token_jaccard": 0.25
+      },
+      {
+        "internal_eval_id": "oacp1::canadian_advisory_transfer::conf_v1_ca_unknown_spray",
+        "public_eval_id": "oabe1::external_real_farmer_agronomy_qa::agroqa_2542",
+        "token_jaccard": 0.25
+      },
+      {
+        "internal_eval_id": "oacp1::canadian_decision_quality::ca_v2_prince_edward_island_water_07",
+        "public_eval_id": "oabe1::external_real_farmer_agronomy_qa::agroqa_0327",
+        "token_jaccard": 0.2381
+      },
+      {
+        "internal_eval_id": "oacp1::official_source_answer_boundary::v9_bc_vegetable_n_rate_control",
+        "public_eval_id": "oabe1::external_real_farmer_agronomy_qa::agroqa_1506",
+        "token_jaccard": 0.2353
+      },
+      {
+        "internal_eval_id": "oacp1::canadian_decision_quality::ca_v2_newfoundland_and_labrador_nutrition_02",
+        "public_eval_id": "oabe1::external_real_farmer_agronomy_qa::agroqa_1162",
+        "token_jaccard": 0.2308
+      },
+      {
+        "internal_eval_id": "oacp1::official_source_answer_boundary::v12_ordinary_canola_harvest_control",
+        "public_eval_id": "oabe1::external_real_farmer_agronomy_qa::agroqa_1545",
+        "token_jaccard": 0.2308
+      },
+      {
+        "internal_eval_id": "oacp1::canadian_decision_quality::ca_v2_saskatchewan_soils_05",
+        "public_eval_id": "oabe1::external_real_farmer_agronomy_qa::agroqa_0156",
+        "token_jaccard": 0.2273
+      },
+      {
+        "internal_eval_id": "oacp1::canadian_decision_quality::ca_v2_saskatchewan_soils_05",
+        "public_eval_id": "oabe1::external_real_farmer_agronomy_qa::agroqa_1186",
+        "token_jaccard": 0.2273
+      },
+      {
+        "internal_eval_id": "oacp1::official_source_answer_boundary::v12_slc_yield_forecast_misuse",
+        "public_eval_id": "oabe1::external_real_farmer_agronomy_qa::agroqa_0140",
+        "token_jaccard": 0.2222
+      }
+    ],
+    "normalization": "lowercase_ascii_alphanumeric_tokens"
+  },
+  "rag_contamination": {
+    "exact_public_question_match_count": 0,
+    "matching_public_eval_ids": [],
+    "records_scanned": 28565,
+    "scanned_paths": [
+      "data/derived/rag/canada_agronomy_distributable_v13.jsonl",
+      "data/derived/rag/canada_agronomy_ontario_context_v1.jsonl",
+      "data/derived/rag/canada_agronomy_regional_context_v1.jsonl",
+      "data/derived/rag/canada_agronomy_supplement_v1.jsonl",
+      "data/derived/rag/canada_agronomy_supplement_v2.jsonl",
+      "data/derived/rag/document_expansion_rag_corpus.jsonl",
+      "data/derived/rag/forum_agricultivation_communities_agrictalk_forum_threads_rag_corpus.jsonl",
+      "data/derived/rag/forum_agricultureinformation_forum_threads_rag_corpus.jsonl",
+      "data/derived/rag/forum_agriville_forum_threads_rag_corpus.jsonl",
+      "data/derived/rag/forum_farmchat_forum_threads_rag_corpus.jsonl",
+      "data/derived/rag/forum_farmnest_india_forum_threads_rag_corpus.jsonl",
+      "data/derived/rag/forum_forum4farming_forum_threads_rag_corpus.jsonl",
+      "data/derived/rag/forum_newagtalk_forum_threads_rag_corpus.jsonl",
+      "data/derived/rag/forum_soilforwater_forum_threads_rag_corpus.jsonl",
+      "data/derived/rag/nrcs_esd_rag_corpus_compact.jsonl",
+      "data/derived/rag/soilwise_knowledge_graph.json",
+      "data/derived/rag/soilwise_rag_corpus.jsonl",
+      "data/seed/agronomy_knowledge_graph.json",
+      "data/seed/agronomy_rag_corpus.jsonl",
+      "data/seed/aiagribench_public_gap_corpus.jsonl",
+      "data/seed/aiagribench_transfer_v2_source_corpus.jsonl",
+      "data/seed/boundary_rag_corpus.jsonl",
+      "data/seed/cca_objective_rag_corpus.jsonl",
+      "data/seed/final_mvp_gap_repair_corpus.jsonl"
+    ]
+  },
+  "schema_version": "open_agronomy_agent.benchmark_separation.v1",
+  "source_overlap": {
+    "public_dataset_id_overlap": [],
+    "source_path_overlap": []
+  },
+  "status": "pass",
+  "training_contamination": {
+    "exact_public_question_match_count": 0,
+    "matching_public_eval_ids": [],
+    "records_scanned": 6110,
+    "scanned_paths": [
+      "data/training/agxqa_grounded_answer_lora_v1/test.jsonl",
+      "data/training/agxqa_grounded_answer_lora_v1/train.jsonl",
+      "data/training/agxqa_grounded_answer_lora_v1/valid.jsonl",
+      "data/training/agxqa_grounded_answer_lora_v2_positive4to1/test.jsonl",
+      "data/training/agxqa_grounded_answer_lora_v2_positive4to1/train.jsonl",
+      "data/training/agxqa_grounded_answer_lora_v2_positive4to1/valid.jsonl",
+      "data/training/canadian_task_rabbit_v1/train.jsonl",
+      "data/training/canadian_task_rabbit_v1/valid.jsonl"
+    ]
+  }
+}

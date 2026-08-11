@@ -1,0 +1,9 @@
+{
+  "canonical_url": "https://open.canada.ca/data/en/dataset/c5c29149-4a38-47a8-beeb-3456c33fd877",
+  "download_url": "https://agriculture.canada.ca/atlas/data_donnees/historicalEstimatedCropYieldSlc/supportdocument_documentdesupport/en/ISO_19131_Estimated_historical_crop_yeild_by_SLC_-_Data_Product_Specification.pdf",
+  "fetched_at": "2026-07-21T00:05:40+00:00",
+  "raw_bytes": 479882,
+  "raw_path": "data/raw/canada_agronomy/ca_aafc_historical_crop_yield_slc_specification/source.pdf",
+  "raw_sha256": "e991a9c10c21f1ddfe0a84cd7135442dea5a7d0b5dd07d76054ccb9c941726fc",
+  "source_id": "ca_aafc_historical_crop_yield_slc_specification"
+}

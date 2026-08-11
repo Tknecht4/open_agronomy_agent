@@ -1,0 +1,28 @@
+ocr:
+  local_default:
+    model_id: ibm-granite/granite-docling-258M
+    role: local throughput default for document conversion on 16 GB Mac Mini
+    reason: 258M parameter document model with OCR, layout, localization, table/formula support and Apache-2.0 posture.
+  local_alternative:
+    model_id: docling-project/SmolDocling-256M-preview
+    role: fallback / comparison model
+    reason: 256M document conversion model; predecessor to Granite Docling, Apache-2.0.
+  higher_quality_not_default:
+    - model_id: PaddlePaddle/PaddleOCR-VL
+      reason: strong 0.9B OCR/document parser, Apache-2.0, but official model card recommends Docker setup for macOS and transformers path is element-level.
+    - model_id: allenai/olmOCR-2-7B-1025
+      reason: strong benchmark and Apache-2.0, but 8B BF16 class is not realistic for local bulk OCR on 16 GB.
+  pipeline:
+    input_dir: data/raw/documents
+    output_dir: data/derived/ocr
+    page_image_dpi: 160
+    max_pages_per_batch: 25
+    keep_page_images: false
+    output_formats:
+      - markdown
+      - json
+    quality_gate:
+      sample_pages_per_document: 3
+      require_source_url: true
+      require_license_status: true
+      reject_if_tables_unparsed: true

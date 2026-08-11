@@ -1,0 +1,63 @@
+{
+  "schema_version": "open_agronomy_agent.benchmark_contract.v1",
+  "benchmark_id": "open_agronomy_external_agroqa_v1",
+  "benchmark_namespace": "oabe1",
+  "evaluation_partition": "public",
+  "status": "frozen_external_transfer_diagnostic",
+  "created_at": "2026-08-09T00:00:00Z",
+  "suite_path": "data/eval/open_agronomy_external_agroqa_v1.jsonl",
+  "manifest_path": "data/eval/open_agronomy_external_agroqa_v1_manifest.json",
+  "answer_profile": "benchmark",
+  "rubric": "reference_answer",
+  "rag_config": "configs/rag_final_mvp.yaml",
+  "max_tokens": 256,
+  "default_modes": ["raw_model", "agronomic_rag"],
+  "primary_comparison": "paired_model_only_vs_full_system_reference_overlap_diagnostic",
+  "claim_eligible": false,
+  "sources": [
+    {
+      "path": "data/eval/public/agroqa_external_256_v1_source.jsonl",
+      "sha256": "f329f00a184cfb36cc4032141fb148fa1b2c01503077da96278d5cb50b0df5d1",
+      "rows": 256,
+      "lane": "external_real_farmer_agronomy_qa",
+      "metric_role": "deterministic_reference_overlap_diagnostic",
+      "origin_class": "public_benchmark",
+      "claim_eligible": false,
+      "primary": true,
+      "review_policy": {
+        "automated_judge_role": "optional_blinded_triage_only",
+        "deterministic_proxy_role": "normalized_token_overlap_diagnostic_only",
+        "independent_agronomist_review_required": true
+      }
+    }
+  ],
+  "evaluation_policy": {
+    "primary_metric": "none_claim_eligible",
+    "reported_diagnostic": "normalized_reference_token_f1",
+    "automated_judge_role": "optional_blinded_triage_only",
+    "report_lanes_separately": true,
+    "single_composite_score_allowed": false,
+    "run_only_after_internal_selection": true,
+    "finalist_only": true,
+    "claim_boundary": "A fixed 256-question sample of real farmer questions from the peer-reviewed AgroQA collection. Published answers are retained for transparent resemblance diagnostics but were not independently revalidated. This is not a Canadian field-advice, CCA-exam, or certification-readiness score."
+  },
+  "contamination_policy": {
+    "exclude_questions_from_training": true,
+    "exclude_questions_from_rag": true,
+    "exclude_questions_from_prompt_examples": true,
+    "exclude_questions_from_deterministic_answer_repair": true,
+    "never_use_public_results_to_tune_then_retest_same_version": true,
+    "new_public_set_version_required_after_any_result_driven_change": true,
+    "record_every_exposure_after_freeze": true,
+    "geographic_transfer_boundary": "Uganda source setting; do not interpret source answers as Canadian recommendations."
+  },
+  "result_contract": {
+    "capture_exact_messages": true,
+    "capture_context_packets": true,
+    "store_model_identity": true,
+    "store_model_only_and_full_system_arms": true,
+    "store_answers_before_scoring": true,
+    "database": "full_system_benchmark.sqlite3",
+    "distribution_scope": "MIT"
+  }
+}

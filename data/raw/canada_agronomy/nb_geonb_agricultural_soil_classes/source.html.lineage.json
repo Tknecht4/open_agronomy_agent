@@ -1,0 +1,9 @@
+{
+  "canonical_url": "https://gis-erd-der.gnb.ca/gisserver/rest/services/FarmLand/Soil_Classes/MapServer/0",
+  "download_url": "https://gis-erd-der.gnb.ca/gisserver/rest/services/FarmLand/Soil_Classes/MapServer/0",
+  "fetched_at": "2026-07-21T03:34:00+00:00",
+  "raw_bytes": 7770,
+  "raw_path": "data/raw/canada_agronomy/nb_geonb_agricultural_soil_classes/source.html",
+  "raw_sha256": "1798c88d325817da09d26498114ba7cec6e76c62574fc83ff5b41bd392a816a0",
+  "source_id": "nb_geonb_agricultural_soil_classes"
+}

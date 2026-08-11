@@ -1,0 +1,66 @@
+{
+  "schema_version": "open_agronomy_agent.benchmark_contract.v1",
+  "benchmark_id": "open_agronomy_public_verification_v3",
+  "benchmark_namespace": "oabp3",
+  "evaluation_partition": "public",
+  "status": "quarantined_upstream_answer_key_defects_20260809",
+  "created_at": "2026-08-03T00:00:00Z",
+  "suite_path": "data/eval/open_agronomy_public_verification_v3.jsonl",
+  "manifest_path": "data/eval/open_agronomy_public_verification_v3_manifest.json",
+  "answer_profile": "multiple_choice",
+  "rubric": "multiple_choice",
+  "rag_config": "configs/rag_final_mvp.yaml",
+  "max_tokens": 24,
+  "default_modes": ["baseline", "agronomic_rag"],
+  "primary_comparison": "paired_model_only_vs_full_system_objective_accuracy",
+  "claim_eligible": false,
+  "sources": [
+    {
+      "path": "data/eval/public/crop_benchmark_english_180_v3_source.jsonl",
+      "sha256": "c22924d4330ff82d92c9c7cea3f878a3a551675ecc0643611252d875ae78079a",
+      "rows": 180,
+      "lane": "public_crop_science_mcq",
+      "metric_role": "objective_multiple_choice_accuracy",
+      "origin_class": "public_benchmark",
+      "claim_eligible": false,
+      "primary": true,
+      "review_policy": {
+        "automated_judge_role": "not_used",
+        "deterministic_proxy_role": "primary_exact_match",
+        "independent_agronomist_review_required": false
+      }
+    }
+  ],
+  "evaluation_policy": {
+    "primary_metric": "exact_multiple_choice_accuracy",
+    "automated_judge_role": "not_used",
+    "report_lanes_separately": true,
+    "single_composite_score_allowed": false,
+    "run_only_after_internal_selection": true,
+    "finalist_only": true,
+    "claim_boundary": "Controlled English CROP subset measuring crop-science MCQ knowledge transfer only; comparison with the paper's full English split is indirect, not score-equivalent, and does not establish Canadian advisory safety or grower usefulness."
+  },
+  "contamination_policy": {
+    "exclude_questions_from_training": true,
+    "exclude_questions_from_rag": true,
+    "exclude_questions_from_prompt_examples": true,
+    "exclude_questions_from_deterministic_answer_repair": true,
+    "never_use_public_results_to_tune_then_retest_same_version": true,
+    "new_public_set_version_required_after_any_result_driven_change": true,
+    "record_every_exposure_after_freeze": true,
+    "quarantine_audit": "data/eval/public/crop_v3_answer_key_audit_20260809.json",
+    "retired_profile": "data/eval/public/crop_benchmark_english_216_v2_source.jsonl",
+    "retired_profile_sha256": "4b9bcfbcbf2215f41dea0e7206521c4632a9c75149d017181c599d88a9b3a2dd",
+    "excluded_prior_profile_rows": 216,
+    "excluded_exposed_source_rows": [4669, 4754, 5008, 5024]
+  },
+  "result_contract": {
+    "capture_exact_messages": true,
+    "capture_context_packets": true,
+    "store_model_identity": true,
+    "store_model_only_and_full_system_arms": true,
+    "store_answers_before_scoring": true,
+    "database": "full_system_benchmark.sqlite3",
+    "distribution_scope": "redistributable_only_under_CC_BY_NC_4_0"
+  }
+}

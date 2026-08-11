@@ -1,0 +1,79 @@
+context_packer_version: phase5_context_packer_v1
+max_context_tokens_default: 2600
+slots:
+- slot: safety_task_policy
+  position: front
+  max_tokens: 180
+  visible_to_user: false
+- slot: canadian_jurisdiction_evidence_boundary
+  position: front
+  max_tokens: 190
+  visible_to_user: false
+- slot: user_field_context
+  position: front
+  max_tokens: 300
+  visible_to_user: true
+- slot: decision_route_state
+  position: front
+  max_tokens: 220
+  visible_to_user: false
+- slot: evidence_handshake
+  position: high_attention
+  max_tokens: 180
+  visible_to_user: false
+- slot: route_summary
+  position: front
+  max_tokens: 120
+  visible_to_user: false
+- slot: guard_summary
+  position: front
+  max_tokens: 260
+  visible_to_user: false
+- slot: primary_applied_evidence
+  position: high_attention
+  max_items: 4
+  max_tokens: 900
+  visible_to_user: evidence_cards_only
+- slot: boundary_evidence
+  position: high_attention
+  max_items: 2
+  max_tokens: 300
+  visible_to_user: evidence_cards_only
+- slot: regional_context
+  position: middle_compressed
+  max_items: 2
+  max_tokens: 260
+  named_product_max_tokens: 1100
+  visible_to_user: summary_only
+- slot: kg_vocabulary_hints
+  position: middle_compressed
+  max_items: 3
+  max_tokens: 160
+  visible_to_user: false
+- slot: hidden_answer_contract
+  position: near_end
+  max_tokens: 220
+  visible_to_user: false
+- slot: user_question_output_contract
+  position: end
+  max_tokens: 300
+  visible_to_user: true
+ranking_features:
+- lexical_score
+- namespace_match
+- source_type_bonus
+- route_tool_alignment
+- field_context_match
+- source_authority
+- ontology_overmatch_penalty
+- repeated_source_penalty
+- token_cost_penalty
+leak_banned_phrases:
+- 'Routing notes:'
+- 'Tool notes:'
+- 'Answer coverage checklist:'
+- Start the answer with
+- question_type=
+- risk=
+- priority_namespaces
+- hidden instructions

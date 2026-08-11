@@ -1,0 +1,86 @@
+{
+  "schema_version": "open_agronomy_agent.full_system_model_matrix.v1",
+  "suite": {
+    "path": "outputs/evals/canadian_v7_development_v1/canadian_v7_development.jsonl",
+    "sha256": "08e85db3dda0a48b642707fff3a2013c8163527cc7442ac472d615fcb448e6a3",
+    "rows": 45,
+    "claim_eligible": false,
+    "semantic_judgment_primary": true
+  },
+  "rag_config": "configs/rag_final_mvp.yaml",
+  "answer_profile": "benchmark",
+  "max_tokens": 480,
+  "arms": [
+    {
+      "id": "gemma3_270m",
+      "model_id": "mlx-community/gemma-3-270m-it-4bit",
+      "model_revision": "ff1143e3a10547c9f2129e94ca37059b096b23f4",
+      "model_config": "configs/benchmark_models/gemma3_270m.yaml",
+      "historical_full_v7": true
+    },
+    {
+      "id": "qwen3_06b",
+      "model_id": "mlx-community/Qwen3-0.6B-4bit",
+      "model_revision": "73e3e38d981303bc594367cd910ea6eb48349da8",
+      "model_config": "configs/benchmark_models/qwen3_06b.yaml",
+      "historical_full_v7": true
+    },
+    {
+      "id": "qwen35_08b",
+      "model_id": "mlx-community/Qwen3.5-0.8B-OptiQ-4bit",
+      "model_revision": "ef60586933bd2cc02b763f77eb8839a5114bbec1",
+      "model_config": "configs/benchmark_models/qwen35_08b.yaml",
+      "historical_full_v7": true
+    },
+    {
+      "id": "lfm25_12b",
+      "model_id": "LiquidAI/LFM2.5-1.2B-Instruct-MLX-4bit",
+      "model_revision": "c30e30c5efac705771e1f37df38a32115718dd5d",
+      "model_config": "configs/benchmark_models/lfm25_12b.yaml",
+      "historical_full_v7": false
+    },
+    {
+      "id": "qwen35_2b",
+      "model_id": "mlx-community/Qwen3.5-2B-OptiQ-4bit",
+      "model_revision": "e101bad3c807a11566388c4bf1f741c014f01121",
+      "model_config": "configs/benchmark_models/qwen35_2b.yaml",
+      "historical_full_v7": false
+    },
+    {
+      "id": "gemma4_e2b",
+      "model_id": "mlx-community/gemma-4-e2b-it-4bit",
+      "model_revision": "238767527555cb75a05732a84dff5d6ba0dd6809",
+      "model_config": "configs/benchmark_models/gemma4_e2b.yaml",
+      "historical_full_v7": true
+    },
+    {
+      "id": "qwen35_4b",
+      "model_id": "mlx-community/Qwen3.5-4B-MLX-4bit",
+      "model_revision": "32f3e8ecf65426fc3306969496342d504bfa13f3",
+      "model_config": "configs/benchmark_models/qwen35_4b.yaml",
+      "historical_full_v7": false
+    }
+  ],
+  "paired_variants": [
+    {
+      "mode": "baseline",
+      "label": "model_only_baseline",
+      "router": false,
+      "retrieval": false,
+      "knowledge_graph": false,
+      "tool_guards": false,
+      "answer_verifier": false
+    },
+    {
+      "mode": "agronomic_rag",
+      "label": "full_system",
+      "router": true,
+      "retrieval": true,
+      "knowledge_graph": true,
+      "tool_guards": true,
+      "answer_verifier": true,
+      "private_knowledge_overlay": true
+    }
+  ],
+  "privacy_boundary": "Exact context packets may include locally restricted source text. Raw runs and the SQLite database are machine-local and excluded from distributable packages."
+}

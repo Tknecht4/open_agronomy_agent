@@ -1,0 +1,9 @@
+{
+  "canonical_url": "https://open.alberta.ca/dataset/109a381d-f8f7-45f3-88ad-73ca78eb8746",
+  "download_url": "https://open.alberta.ca/dataset/109a381d-f8f7-45f3-88ad-73ca78eb8746/resource/f85cf467-0adc-407b-97aa-23fd1cbe57fe/download/2004-100-25-1.pdf",
+  "fetched_at": "2026-07-18T04:59:44+00:00",
+  "raw_bytes": 4798495,
+  "raw_path": "data/raw/canada_agronomy/ab_crop_producer_bmp_manual_2004/source.pdf",
+  "raw_sha256": "edfbe9e19ea074eedc1aeffff6cdadc8edeb36fe4bfb8add5dd4de53b00f1b91",
+  "source_id": "ab_crop_producer_bmp_manual_2004"
+}

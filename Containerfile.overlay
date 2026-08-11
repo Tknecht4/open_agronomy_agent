@@ -1,0 +1,45 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+ARG BASE_IMAGE
+ARG BASE_RUNTIME_CONTRACT_SHA256
+ARG RUNTIME_MANIFEST_SHA256
+ARG RELEASE_VERSION
+
+WORKDIR /app
+
+# Replace complete governed trees so deleted or renamed files from the base
+# cannot survive as untracked runtime content.
+RUN rm -rf /app/src/agronomy_agent /app/scripts /app/container /app/frontend/dist \
+    && mkdir -p /app/src /app/frontend
+
+COPY src/agronomy_agent ./src/agronomy_agent
+COPY scripts ./scripts
+COPY container ./container
+COPY frontend/dist ./frontend/dist
+
+RUN chmod 755 /app/container/entrypoint.sh \
+    && chmod -R a+rX \
+         /app/src/agronomy_agent \
+         /app/scripts \
+         /app/container \
+         /app/frontend/dist
+
+LABEL org.opencontainers.image.version="${RELEASE_VERSION}" \
+      io.openagronomy.runtime-manifest-sha256="${RUNTIME_MANIFEST_SHA256}" \
+      io.openagronomy.overlay-base-image="${BASE_IMAGE}" \
+      io.openagronomy.overlay-base-runtime-contract-sha256="${BASE_RUNTIME_CONTRACT_SHA256}"
+
+# Apple Container's OCI overlay builder does not currently preserve these
+# inherited image-config fields, so restate the complete runtime contract.
+EXPOSE 8080
+VOLUME ["/state"]
+HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=4 \
+    CMD if [ "${AGRONOMY_AGENT_FIELD_LAN:-false}" = "true" ]; then \
+          curl --insecure --fail --silent https://127.0.0.1:8080/health >/dev/null; \
+        else \
+          curl --fail --silent http://127.0.0.1:8080/health >/dev/null; \
+        fi || exit 1
+
+ENTRYPOINT ["/app/container/entrypoint.sh"]
+CMD ["uvicorn", "agronomy_agent.server.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8080"]

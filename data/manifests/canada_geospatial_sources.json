@@ -1,0 +1,291 @@
+{
+  "schema_version": "open_agronomy_agent.canada_geospatial_sources.v1",
+  "generated_at": "2026-08-09T00:00:00Z",
+  "intended_distribution_profile": "Official Canadian geospatial context that may be redistributed and adapted inside the local agent. Every bundled layer must retain record-level licence evidence, raw hashes, derivation metadata, source scale, and field-truth boundaries.",
+  "national_soil_context_gate": {
+    "required_scope": "Cropland in every Canadian province where annual, perennial, horticultural, orchard, vineyard, forage, or pasture production occurs, plus a spatial buffer around the agricultural mask.",
+    "required_provinces": ["British Columbia", "Alberta", "Saskatchewan", "Manitoba", "Ontario", "Quebec", "New Brunswick", "Nova Scotia", "Prince Edward Island", "Newfoundland and Labrador"],
+    "status": "blocked_pending_national_cropland_masked_prior",
+    "release_eligible": false,
+    "detailed_overlay_policy": "Detailed and thematic surveys may ship as explicitly regional overlays, but they do not satisfy or substitute for the national soil-context gate.",
+    "candidate_national_prior": {
+      "source_id": "ca_aafc_soil_landscape_grids_100m",
+      "product_role": "modelled national screening prior with pixel uncertainty, never field truth",
+      "required_layers": ["soil_great_group_probability", "ph_quantiles", "texture_quantiles", "soil_organic_carbon_quantiles", "bulk_density_quantiles", "cation_exchange_capacity_quantiles"],
+      "mask_policy": "Union of recent AAFC Annual Crop Inventory crop classes and the AAFC 2020 land-use agricultural classes, buffered 500 metres and tiled by province.",
+      "promotion_gates": [
+        "all required provinces have nonempty agricultural-mask coverage",
+        "every tile has source version, checksum, units, depth, quantile, nodata, and licence lineage",
+        "field queries return uncertainty and mapped-prior boundaries",
+        "retrieval A/B shows incremental utility on frozen spatial agronomy cases without increasing unsupported prescriptions",
+        "portable size and cold-query latency remain within the edge-runtime budget"
+      ]
+    },
+    "currently_available_regional_overlays": ["bc_agriculture_capability_mapping", "ca_sk_thematic_soil_maps", "ca_aafc_pei_detailed_soil_survey", "ca_aafc_ns_detailed_soil_survey", "ca_aafc_ab_detailed_soil_survey", "ca_aafc_mb_detailed_soil_survey"]
+  },
+  "sources": [
+    {
+      "id": "bc_agriculture_capability_mapping",
+      "title": "Agriculture Capability Mapping",
+      "publisher": "Government of British Columbia",
+      "jurisdiction": ["British Columbia"],
+      "canonical_url": "https://catalogue.data.gov.bc.ca/dataset/agriculture-capability-mapping",
+      "catalogue_api_url": "https://catalogue.data.gov.bc.ca/api/3/action/package_show?id=582a6147-4e24-468c-a048-762302139afc",
+      "download_url": "https://www.env.gov.bc.ca/esd/distdata/ecosystems/Soil_Data/AgricultureCapability/AgCap_Map_SHP_20150923.zip",
+      "source_record_id": "582a6147-4e24-468c-a048-762302139afc",
+      "format": "zipped_shapefile",
+      "source_crs": "EPSG:3005",
+      "source_scale": "1:20,000 to 1:100,000",
+      "currency": "legacy_1960s_to_1990s_mapping",
+      "license": {
+        "identifier": "Open Government Licence - British Columbia",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "reviewed_on": "2026-07-18",
+        "attribution": "Contains information licensed under the Open Government Licence - British Columbia from the Government of British Columbia."
+      },
+      "runtime": {
+        "status": "bundled",
+        "raw_path": "data/raw/canada_agronomy/bc_agriculture_capability_mapping/source.zip",
+        "lineage_path": "data/raw/canada_agronomy/bc_agriculture_capability_mapping/source.zip.lineage.json",
+        "derived_path": "data/derived/geo_layers/bc_agriculture_capability.sqlite3",
+        "derived_manifest_path": "data/derived/geo_layers/bc_agriculture_capability_manifest.json",
+        "layer_id": "bc_agriculture_capability",
+        "query_backend": "local_sqlite_rtree"
+      },
+      "boundary": "Legacy generalized capability mapping derived from soil and climate. It does not establish crop-specific suitability, yield, management inputs, feasible improvements, current field conditions, or field truth."
+    },
+    {
+      "id": "ca_sk_thematic_soil_maps",
+      "title": "Thematic Soil Maps of Saskatchewan",
+      "publisher": "Agriculture and Agri-Food Canada, Canadian Soil Information Service",
+      "jurisdiction": ["Canada", "Saskatchewan"],
+      "canonical_url": "https://open.canada.ca/data/en/dataset/ed36f4f3-2fb9-4241-8e29-6741e8b9e400",
+      "catalogue_api_url": "https://open.canada.ca/data/api/action/package_show?id=ed36f4f3-2fb9-4241-8e29-6741e8b9e400",
+      "download_url": "https://agriculture.canada.ca/atlas/data_donnees/soilOfCanadaDerived/data_donnees/gpkg/sk_derived_soil.gpkg",
+      "source_record_id": "ed36f4f3-2fb9-4241-8e29-6741e8b9e400",
+      "format": "geopackage",
+      "source_crs": "EPSG:3857",
+      "source_scale": "Derived from the Saskatchewan Detailed Soils Database; display scale is not stated in the 2013 specification",
+      "currency": "2013_product_specification_with_2026_catalogue_resource",
+      "license": {
+        "identifier": "Open Government Licence - Canada",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "reviewed_on": "2026-07-18",
+        "attribution": "Contains information licensed under the Open Government Licence - Canada from Agriculture and Agri-Food Canada, Canadian Soil Information Service."
+      },
+      "runtime": {
+        "status": "bundled",
+        "raw_path": "data/raw/canada_agronomy/ca_sk_thematic_soil_maps/source.gpkg",
+        "lineage_path": "data/raw/canada_agronomy/ca_sk_thematic_soil_maps/source.gpkg.lineage.json",
+        "derived_path": "data/derived/geo_layers/sk_thematic_soil.sqlite3",
+        "derived_manifest_path": "data/derived/geo_layers/sk_thematic_soil_manifest.json",
+        "layer_id": "sk_thematic_soil",
+        "query_backend": "local_sqlite_rtree"
+      },
+      "boundary": "Dominant generalized thematic values derived from the Saskatchewan Detailed Soils Database. A polygon can contain variation and does not establish current field condition, an exact soil component at a point, crop-specific suitability, nutrient status, drainage performance, erosion outcome, or a management rate."
+    },
+    {
+      "id": "ca_aafc_soil_erosion_risk_2021",
+      "title": "Agri-Environmental Indicator - Risk of Soil Erosion",
+      "publisher": "Agriculture and Agri-Food Canada, Science and Technology Branch",
+      "jurisdiction": ["Canada"],
+      "canonical_url": "https://open.canada.ca/data/en/dataset/b52b3c91-e0eb-47d1-aea5-fa5428254512",
+      "catalogue_api_url": "https://open.canada.ca/data/api/action/package_show?id=b52b3c91-e0eb-47d1-aea5-fa5428254512",
+      "download_url": "https://agriculture.canada.ca/atlas/data_donnees/agriEnvironmentalIndicators/data_donnees/fgdb/AEI_SOIL_ERI_GDB.zip",
+      "source_record_id": "b52b3c91-e0eb-47d1-aea5-fa5428254512",
+      "format": "zipped_file_geodatabase",
+      "source_crs": "EPSG:3857",
+      "source_scale": "Generalized Soil Landscapes of Canada agricultural polygons; not a field-scale erosion survey",
+      "currency": "modelled_1981_to_2021_series_current_2026_catalogue",
+      "license": {
+        "identifier": "Open Government Licence - Canada",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "reviewed_on": "2026-07-21",
+        "attribution": "Contains information licensed under the Open Government Licence - Canada from Agriculture and Agri-Food Canada."
+      },
+      "runtime": {
+        "status": "bundled",
+        "raw_path": "data/raw/canada_agronomy/ca_aafc_soil_erosion_risk_2021/source.zip",
+        "lineage_path": "data/raw/canada_agronomy/ca_aafc_soil_erosion_risk_2021/source.zip.lineage.json",
+        "derived_path": "data/derived/geo_layers/ca_soil_erosion_risk.sqlite3",
+        "derived_manifest_path": "data/derived/geo_layers/ca_soil_erosion_risk_manifest.json",
+        "layer_id": "ca_soil_erosion_risk",
+        "query_backend": "local_sqlite_rtree"
+      },
+      "boundary": "AAFC modelled combined wind, water, and tillage erosion risk for agricultural Soil Landscapes of Canada through 2021. It is regional historical context, not current erosion observation, event prediction, field diagnosis, measured field loss, or management-prescription authority."
+    },
+    {
+      "id": "ca_aafc_pei_detailed_soil_survey",
+      "title": "Prince Edward Island Detailed Soil Survey",
+      "publisher": "Agriculture and Agri-Food Canada, Canadian Soil Information Service",
+      "jurisdiction": ["Canada", "Prince Edward Island"],
+      "canonical_url": "https://open.canada.ca/data/en/dataset/7fa18ce7-6c14-438a-95c6-bb0906ddfb30",
+      "catalogue_api_url": "https://open.canada.ca/data/api/action/package_show?id=7fa18ce7-6c14-438a-95c6-bb0906ddfb30",
+      "download_url": "https://agriculture.canada.ca/atlas/data_donnees/detailedSoilSurvey/data_donnees/geoPackage/pe_dtl_soil.gpkg",
+      "support_download_urls": [
+        "https://agriculture.canada.ca/atlas/data_donnees/detailedSoilSurvey/data_donnees/csv/pe_dtl_soil_sol/pe_dtl_75k.csv",
+        "https://agriculture.canada.ca/atlas/data_donnees/detailedSoilSurvey/data_donnees/csv/pe_dtl_soil_sol/pe_dtl_cmp.csv",
+        "https://agriculture.canada.ca/atlas/data_donnees/detailedSoilSurvey/data_donnees/csv/pe_dtl_soil_sol/pe_dtl_slf.csv",
+        "https://agriculture.canada.ca/atlas/data_donnees/detailedSoilSurvey/data_donnees/csv/pe_dtl_soil_sol/pe_dtl_snf.csv"
+      ],
+      "source_record_id": "7fa18ce7-6c14-438a-95c6-bb0906ddfb30",
+      "format": "geopackage_plus_csv_relational_tables",
+      "source_crs": "EPSG:3857",
+      "source_scale": "1:75,000",
+      "currency": "historical_soil_information_compiled_over_prior_decades_current_2026_catalogue",
+      "license": {
+        "identifier": "Open Government Licence - Canada",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "reviewed_on": "2026-07-24",
+        "attribution": "Contains information licensed under the Open Government Licence - Canada from Agriculture and Agri-Food Canada, Canadian Soil Information Service."
+      },
+      "runtime": {
+        "status": "bundled",
+        "raw_path": "data/raw/canada_agronomy/ca_aafc_pei_detailed_soil_survey/source.gpkg",
+        "lineage_path": "data/raw/canada_agronomy/ca_aafc_pei_detailed_soil_survey/source.gpkg.lineage.json",
+        "derived_path": "data/derived/geo_layers/pei_detailed_soil.sqlite3",
+        "derived_manifest_path": "data/derived/geo_layers/pei_detailed_soil_manifest.json",
+        "layer_id": "pei_detailed_soil",
+        "query_backend": "local_sqlite_rtree"
+      },
+      "boundary": "Historical 1:75,000 soil-landscape mapping with linked map-unit components, soil names, and layer attributes. A polygon is a mapped prior, not proof of the soil at a point or of present nutrient supply, pH, drainage performance, compaction, erosion, crop suitability, or a management rate."
+    },
+    {
+      "id": "ca_aafc_ns_detailed_soil_survey",
+      "title": "Nova Scotia Detailed Soil Survey",
+      "publisher": "Agriculture and Agri-Food Canada, Canadian Soil Information Service",
+      "jurisdiction": ["Canada", "Nova Scotia", "Pictou County"],
+      "canonical_url": "https://open.canada.ca/data/en/dataset/083534ca-d5b0-46f5-b540-f3a706dbc2de",
+      "catalogue_api_url": "https://open.canada.ca/data/api/action/package_show?id=083534ca-d5b0-46f5-b540-f3a706dbc2de",
+      "download_url": "https://agriculture.canada.ca/atlas/data_donnees/detailedSoilSurvey/data_donnees/geoPackage/ns_dtl_soil.gpkg",
+      "support_download_urls": [
+        "https://agriculture.canada.ca/atlas/data_donnees/detailedSoilSurvey/data_donnees/csv/ns_dtl_soil_sol/ns_dtl_50k.csv",
+        "https://agriculture.canada.ca/atlas/data_donnees/detailedSoilSurvey/data_donnees/csv/ns_dtl_soil_sol/ns_dtl_cmp.csv",
+        "https://agriculture.canada.ca/atlas/data_donnees/detailedSoilSurvey/data_donnees/csv/ns_dtl_soil_sol/ns_dtl_slf.csv",
+        "https://agriculture.canada.ca/atlas/data_donnees/detailedSoilSurvey/data_donnees/csv/ns_dtl_soil_sol/ns_dtl_snf.csv"
+      ],
+      "source_record_id": "083534ca-d5b0-46f5-b540-f3a706dbc2de",
+      "format": "geopackage_plus_csv_relational_tables",
+      "source_crs": "EPSG:3857",
+      "source_scale": "1:50,000",
+      "currency": "historical_pictou_county_version_1_completed_no_updates_planned_current_2026_catalogue",
+      "license": {
+        "identifier": "Open Government Licence - Canada",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "reviewed_on": "2026-07-24",
+        "attribution": "Contains information licensed under the Open Government Licence - Canada from Agriculture and Agri-Food Canada, Canadian Soil Information Service."
+      },
+      "runtime": {
+        "status": "bundled",
+        "raw_path": "data/raw/canada_agronomy/ca_aafc_ns_detailed_soil_survey/source.gpkg",
+        "lineage_path": "data/raw/canada_agronomy/ca_aafc_ns_detailed_soil_survey/source.gpkg.lineage.json",
+        "derived_path": "data/derived/geo_layers/ns_pictou_detailed_soil.sqlite3",
+        "derived_manifest_path": "data/derived/geo_layers/ns_pictou_detailed_soil_manifest.json",
+        "layer_id": "ns_pictou_detailed_soil",
+        "query_backend": "local_sqlite_rtree"
+      },
+      "boundary": "Historical Version 1 soil-landscape mapping at 1:50,000 for Pictou County only. It is not province-wide Nova Scotia coverage. A polygon is a mapped prior, not proof of the soil at a point or of present nutrient supply, pH, drainage performance, crop suitability, or a management rate."
+    },
+    {
+      "id": "ca_aafc_ab_detailed_soil_survey",
+      "title": "Alberta Detailed Soil Survey Compilation (DSS v3)",
+      "publisher": "Agriculture and Agri-Food Canada, Canadian Soil Information Service",
+      "jurisdiction": ["Canada", "Alberta"],
+      "canonical_url": "https://open.canada.ca/data/en/dataset/9150ad66-73f7-444f-a67c-4be5cf676453",
+      "catalogue_api_url": "https://open.canada.ca/data/api/action/package_show?id=9150ad66-73f7-444f-a67c-4be5cf676453",
+      "download_url": "https://sis.agr.gc.ca/cansis/nsdb/dss/v3/dss_v3_ab_20140529.zip",
+      "source_record_id": "9150ad66-73f7-444f-a67c-4be5cf676453",
+      "format": "versioned_zip_shapefile_plus_dbf_relational_tables",
+      "source_crs": "EPSG:3400",
+      "source_scale": "1:100,000",
+      "currency": "dss_v3_compilation_2014_current_dss_availability_page_2025",
+      "license": {
+        "identifier": "Open Government Licence - Canada",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "reviewed_on": "2026-08-09",
+        "attribution": "Contains information licensed under the Open Government Licence - Canada from Agriculture and Agri-Food Canada, Canadian Soil Information Service."
+      },
+      "runtime": {
+        "status": "bundled",
+        "raw_path": "data/raw/canada_agronomy/ca_aafc_ab_detailed_soil_survey_dss_v3/source.zip",
+        "lineage_path": "data/raw/canada_agronomy/ca_aafc_ab_detailed_soil_survey_dss_v3/source.zip.lineage.json",
+        "derived_path": "data/derived/geo_layers/ab_detailed_soil.sqlite3",
+        "derived_manifest_path": "data/derived/geo_layers/ab_detailed_soil_manifest.json",
+        "layer_id": "ab_detailed_soil",
+        "query_backend": "local_sqlite_rtree"
+      },
+      "boundary": "Historical AGRASID 3.0 soil-landscape mapping at 1:100,000 for Alberta's agricultural region. A polygon and listed components are mapped priors, not proof of the soil at a point or of present nutrient supply, pH, drainage performance, compaction, salinity, crop suitability, or a management rate."
+    },
+    {
+      "id": "ca_aafc_mb_detailed_soil_survey",
+      "title": "Manitoba Detailed Soil Survey Compilation (DSS v3)",
+      "publisher": "Agriculture and Agri-Food Canada, Canadian Soil Information Service",
+      "jurisdiction": ["Canada", "Manitoba"],
+      "canonical_url": "https://open.canada.ca/data/en/dataset/741a06a2-718f-4da9-9adf-6e95c8c37f3d",
+      "catalogue_api_url": "https://open.canada.ca/data/api/action/package_show?id=741a06a2-718f-4da9-9adf-6e95c8c37f3d",
+      "download_url": "https://sis.agr.gc.ca/cansis/nsdb/dss/v3/dss_v3_mb_20161207.zip",
+      "source_record_id": "741a06a2-718f-4da9-9adf-6e95c8c37f3d",
+      "format": "versioned_zip_shapefile_plus_dbf_relational_tables",
+      "source_crs": "EPSG:26914",
+      "source_scale": "Per-polygon published scales from 1:20,000 to 1:126,720",
+      "currency": "dss_v3_compilation_2016_current_dss_availability_page_2025",
+      "license": {
+        "identifier": "Open Government Licence - Canada",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "reviewed_on": "2026-08-09",
+        "attribution": "Contains information licensed under the Open Government Licence - Canada from Agriculture and Agri-Food Canada, Canadian Soil Information Service."
+      },
+      "runtime": {
+        "status": "bundled",
+        "raw_path": "data/raw/canada_agronomy/ca_aafc_mb_detailed_soil_survey_dss_v3/source.zip",
+        "lineage_path": "data/raw/canada_agronomy/ca_aafc_mb_detailed_soil_survey_dss_v3/source.zip.lineage.json",
+        "derived_path": "data/derived/geo_layers/mb_detailed_soil.sqlite3",
+        "derived_manifest_path": "data/derived/geo_layers/mb_detailed_soil_manifest.json",
+        "layer_id": "mb_detailed_soil",
+        "query_backend": "local_sqlite_rtree"
+      },
+      "boundary": "Historical detailed soil-landscape mapping at per-polygon scales from 1:20,000 to 1:126,720, concentrated in southern agricultural Manitoba with additional mapped areas. A polygon and listed components are mapped priors, not proof of the soil at a point or of present nutrient supply, pH, drainage performance, compaction, salinity, crop suitability, or a management rate."
+    },
+    {
+      "id": "bc_soil_mapping_data_packages",
+      "title": "Soil Mapping Data Packages",
+      "publisher": "Government of British Columbia",
+      "jurisdiction": ["British Columbia"],
+      "canonical_url": "https://catalogue.data.gov.bc.ca/dataset/soil-mapping-data-packages",
+      "catalogue_api_url": "https://catalogue.data.gov.bc.ca/api/3/action/package_show?id=4e205b8d-f259-44a2-89ab-4d02d287136f",
+      "download_url": "https://www.env.gov.bc.ca/esd/distdata/ecosystems/Soil_Data/Soil_Data_Pkgs/Soil_Map_SHP_20160331a.zip",
+      "source_record_id": "4e205b8d-f259-44a2-89ab-4d02d287136f",
+      "format": "zipped_shapefile",
+      "source_crs": "varies_by_package",
+      "source_scale": "1:20,000 to 1:250,000",
+      "currency": "best_available_legacy_soil_mapping",
+      "license": {
+        "identifier": "Open Government Licence - British Columbia",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "reviewed_on": "2026-07-18",
+        "attribution": "Contains information licensed under the Open Government Licence - British Columbia from the Government of British Columbia."
+      },
+      "runtime": {
+        "status": "candidate_not_bundled",
+        "reason": "The 279 MB source archive and multi-component soil semantics require a separate bounded derivation and validation pass."
+      },
+      "boundary": "A polygon may contain up to three expected soils plus unmapped minor soils, boundaries are approximate, and the mapped soil is not guaranteed at a point."
+    }
+  ]
+}

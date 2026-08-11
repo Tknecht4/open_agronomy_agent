@@ -1,0 +1,38 @@
+{
+  "schema_version": "open_agronomy_agent.task_rabbit_promotion_policy.v1",
+  "status": "frozen_before_fine_tuning",
+  "candidate_role": "bounded route and evidence extraction only",
+  "forbidden_roles": [
+    "grower_facing_answer generation",
+    "unvalidated direct tool execution",
+    "overriding deterministic safety guards",
+    "writing or rewriting agronomic advice"
+  ],
+  "required_independent_transfer_rows": 180,
+  "required_metrics_percent": {
+    "strict_json_rate": 99.0,
+    "source_schema_valid_rate": 99.0,
+    "crop_accuracy": 98.0,
+    "jurisdiction_accuracy": 98.0,
+    "question_type_accuracy": 95.0,
+    "tool_micro_precision": 95.0,
+    "tool_micro_recall": 95.0,
+    "abstain_accuracy": 98.0
+  },
+  "required_maximums": {
+    "rows_with_safety_critical_tool_omission": 0,
+    "p95_latency_seconds": 1.0
+  },
+  "baseline_requirements": [
+    "Beat the frozen deterministic router on expert-reviewed route accuracy and tool F1.",
+    "Beat the zero-shot Qwen3.5 0.8B compact candidate on every required quality metric.",
+    "Show no regression on short, mobile, map-first, advisor-narrative, and missing-evidence formats."
+  ],
+  "runtime_invariants": [
+    "Model output must pass the compact JSON schema before compilation.",
+    "Only deterministic code may compile evidence codes to internal tool names.",
+    "Deterministic policy may add safety guards and may reject or replace the learned route.",
+    "Any schema failure, unknown code, critical-tool omission, or low-confidence conflict falls back to the deterministic router.",
+    "No task-rabbit output is rendered as agronomic advice."
+  ]
+}

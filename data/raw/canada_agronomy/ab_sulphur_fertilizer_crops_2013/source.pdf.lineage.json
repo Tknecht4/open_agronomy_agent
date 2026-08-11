@@ -1,0 +1,9 @@
+{
+  "canonical_url": "https://open.alberta.ca/dataset/534269d1-74ad-4b61-b449-33c25be30a5d",
+  "download_url": "https://open.alberta.ca/dataset/534269d1-74ad-4b61-b449-33c25be30a5d/resource/46ddf3b0-0063-4d79-940f-0a74ba83a32d/download/6043490-2013-agri-facts-sulphur-fertilizer-application-crop-production.-revised-542-10-2013-02.pdf",
+  "fetched_at": "2026-07-18T04:59:46+00:00",
+  "raw_bytes": 812668,
+  "raw_path": "data/raw/canada_agronomy/ab_sulphur_fertilizer_crops_2013/source.pdf",
+  "raw_sha256": "734b490ee358ca5a2392b855ed1a0c01612e6ef0f2ec7efab96099cf92d67b2d",
+  "source_id": "ab_sulphur_fertilizer_crops_2013"
+}

@@ -1,0 +1,94 @@
+{
+  "generated_from": "https://api.github.com/orgs/soilwise-he/repos?per_page=100",
+  "reviewed_at": "2026-05-23",
+  "priority_sources": [
+    {
+      "repo": "soil-vocabs",
+      "url": "https://github.com/soilwise-he/soil-vocabs",
+      "why_it_matters": "Published soil terminology/vocabulary assets, including SoilVoc.ttl, SoilVoc_agrovoc.ttl, concept CSV, soil-health benchmark glossary conversion, viewer, and API.",
+      "ingestion_priority": "high",
+      "candidate_files": [
+        "SoilVoc.ttl",
+        "SoilVoc_agrovoc.ttl",
+        "SoilVoc_concepts.csv",
+        "soil_health_benchmarks/"
+      ],
+      "use": "RAG/query expansion/soil observation terminology; likely not direct SFT until license review."
+    },
+    {
+      "repo": "soil-observation-data-encodings",
+      "url": "https://github.com/soilwise-he/soil-observation-data-encodings",
+      "why_it_matters": "Explores OMS, SensorThings API, RDF, CSVW, GPKG, and tabular encodings for soil observation data. This is directly relevant to field data tools and soil-test/observation normalization.",
+      "ingestion_priority": "high",
+      "candidate_files": [
+        "COMMON/",
+        "CSVW/",
+        "RDF/",
+        "STA/",
+        "SimpleCSV/"
+      ],
+      "use": "Tool schemas and RAG docs for soil observation ingestion, units, procedures, feature-of-interest modeling, and uncertainty."
+    },
+    {
+      "repo": "KG-decision-support",
+      "url": "https://github.com/soilwise-he/KG-decision-support",
+      "why_it_matters": "Includes KG decision-support notebook, soil degradation dashboard assets, a soil_health_KG.ttl copy, and soil_prop_thres.json threshold file.",
+      "ingestion_priority": "high",
+      "candidate_files": [
+        "soil_health_KG.ttl",
+        "soil_prop_thres.json",
+        "KG_DS_system.ipynb",
+        "soil_degradation_dashboard/"
+      ],
+      "use": "Threshold-aware soil health decision support and evaluation cases."
+    },
+    {
+      "repo": "metadata-augmentation",
+      "url": "https://github.com/soilwise-he/metadata-augmentation",
+      "why_it_matters": "Contains NER augmentation, keyword matching, PDF initialization, deduplication, spatial metadata extraction, and high-value dataset modules. Useful for our OCR/RAG ingestion pipeline design.",
+      "ingestion_priority": "medium",
+      "candidate_files": [
+        "NER augmentation/",
+        "keyword-matcher/",
+        "pdf-init/",
+        "deduplication/",
+        "spatial-metadata-NER/",
+        "high-value-dataset/"
+      ],
+      "use": "Ingestion architecture patterns and metadata-enrichment tools, not directly as agronomic answer content."
+    },
+    {
+      "repo": "natural-language-querying",
+      "url": "https://github.com/soilwise-he/natural-language-querying",
+      "why_it_matters": "NLQ service for graph-database knowledge access, including QA_soil_health_KG. Relevant for tiny router/tool-calling and graph QA patterns.",
+      "ingestion_priority": "medium",
+      "candidate_files": [
+        "QA_soil_health_KG/",
+        "README.md"
+      ],
+      "use": "Design reference for graph query tools and benchmark prompts."
+    },
+    {
+      "repo": "soilwise-soil-companion",
+      "url": "https://github.com/soilwise-he/soilwise-soil-companion",
+      "why_it_matters": "SoilWise AI-powered chatbot for exploring the catalogue using natural language.",
+      "ingestion_priority": "medium",
+      "candidate_files": [
+        "chatbot/",
+        "data/",
+        "docs/"
+      ],
+      "use": "Design reference for catalogue conversation, retrieval UX, and soil-specific assistant patterns."
+    },
+    {
+      "repo": "soilwise-ontology",
+      "url": "https://github.com/soilwise-he/soilwise-ontology",
+      "why_it_matters": "Archived pointer repo: topics moved to metadata-validator, soil-vocabs, and soil-observation-data-encodings.",
+      "ingestion_priority": "low",
+      "candidate_files": [
+        "README.md"
+      ],
+      "use": "Pointer only; do not prioritize direct ingestion."
+    }
+  ]
+}

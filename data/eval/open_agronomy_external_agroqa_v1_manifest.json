@@ -1,0 +1,73 @@
+{
+  "benchmark_id": "open_agronomy_external_agroqa_v1",
+  "claim_eligible": false,
+  "contamination_policy": {
+    "exclude_questions_from_deterministic_answer_repair": true,
+    "exclude_questions_from_prompt_examples": true,
+    "exclude_questions_from_rag": true,
+    "exclude_questions_from_training": true,
+    "geographic_transfer_boundary": "Uganda source setting; do not interpret source answers as Canadian recommendations.",
+    "never_use_public_results_to_tune_then_retest_same_version": true,
+    "new_public_set_version_required_after_any_result_driven_change": true,
+    "record_every_exposure_after_freeze": true
+  },
+  "contract_path": "configs/open_agronomy_external_agroqa_v1.json",
+  "contract_sha256": "42692bc3eb638ca77768b67b4954722d449127c812c147808ab06ec77c99f6b7",
+  "default_modes": [
+    "raw_model",
+    "agronomic_rag"
+  ],
+  "evaluation_partition": "public",
+  "evaluation_policy": {
+    "automated_judge_role": "optional_blinded_triage_only",
+    "claim_boundary": "A fixed 256-question sample of real farmer questions from the peer-reviewed AgroQA collection. Published answers are retained for transparent resemblance diagnostics but were not independently revalidated. This is not a Canadian field-advice, CCA-exam, or certification-readiness score.",
+    "finalist_only": true,
+    "primary_metric": "none_claim_eligible",
+    "report_lanes_separately": true,
+    "reported_diagnostic": "normalized_reference_token_f1",
+    "run_only_after_internal_selection": true,
+    "single_composite_score_allowed": false
+  },
+  "exact_duplicate_questions": 0,
+  "lane_counts": {
+    "external_real_farmer_agronomy_qa": 256
+  },
+  "primary_comparison": "paired_model_only_vs_full_system_reference_overlap_diagnostic",
+  "question_origin_counts": {
+    "real_user_farmer_question_from_peer_reviewed_external_dataset": 256
+  },
+  "result_contract": {
+    "capture_context_packets": true,
+    "capture_exact_messages": true,
+    "database": "full_system_benchmark.sqlite3",
+    "distribution_scope": "MIT",
+    "store_answers_before_scoring": true,
+    "store_model_identity": true,
+    "store_model_only_and_full_system_arms": true
+  },
+  "rows": 256,
+  "schema_version": "open_agronomy_agent.benchmark_manifest.v1",
+  "sources": [
+    {
+      "actual_sha256": "f329f00a184cfb36cc4032141fb148fa1b2c01503077da96278d5cb50b0df5d1",
+      "claim_eligible": false,
+      "lane": "external_real_farmer_agronomy_qa",
+      "metric_role": "deterministic_reference_overlap_diagnostic",
+      "origin_class": "public_benchmark",
+      "path": "data/eval/public/agroqa_external_256_v1_source.jsonl",
+      "primary": true,
+      "review_policy": {
+        "automated_judge_role": "optional_blinded_triage_only",
+        "deterministic_proxy_role": "normalized_token_overlap_diagnostic_only",
+        "independent_agronomist_review_required": true
+      },
+      "rows": 256,
+      "sha256": "f329f00a184cfb36cc4032141fb148fa1b2c01503077da96278d5cb50b0df5d1"
+    }
+  ],
+  "status": "frozen_external_transfer_diagnostic",
+  "suite_path": "data/eval/open_agronomy_external_agroqa_v1.jsonl",
+  "suite_sha256": "d15888bb4cf0ea339380a71abecdb5a5fa770829e67e616765d2d140c9365e93",
+  "traceable_real_user_questions": 256,
+  "unique_questions": 256
+}

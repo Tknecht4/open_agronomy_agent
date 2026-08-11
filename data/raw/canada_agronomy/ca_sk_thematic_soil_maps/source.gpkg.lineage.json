@@ -1,0 +1,39 @@
+{
+  "schema_version": "open_agronomy_agent.canada_raw_source_lineage.v1",
+  "source_id": "ca_sk_thematic_soil_maps",
+  "source_record_id": "ed36f4f3-2fb9-4241-8e29-6741e8b9e400",
+  "canonical_url": "https://open.canada.ca/data/en/dataset/ed36f4f3-2fb9-4241-8e29-6741e8b9e400",
+  "download_url": "https://agriculture.canada.ca/atlas/data_donnees/soilOfCanadaDerived/data_donnees/gpkg/sk_derived_soil.gpkg",
+  "fetched_at": "2026-07-18T09:27:39Z",
+  "raw_path": "data/raw/canada_agronomy/ca_sk_thematic_soil_maps/source.gpkg",
+  "raw_bytes": 274079744,
+  "raw_sha256": "467b5ae2e3e73408356ea20e4cd76bdfb8151a9e36f122b350fabd7c262312f9",
+  "specification_path": "data/raw/canada_agronomy/ca_sk_thematic_soil_maps/specification.pdf",
+  "specification_bytes": 501657,
+  "specification_sha256": "8b91e9aad80278c98cdc7d85b1ea26328ac6ca1ac58dbecb6648950f21d9de8b",
+  "source_registry_path": "data/manifests/canada_geospatial_sources.json",
+  "source_registry_sha256": "cd9c8cac045ce12251f77a0cdc5c64f3b8cfa61c14436776e5030cdc94c23859",
+  "format": "geopackage",
+  "source_crs": "EPSG:3857",
+  "language": [
+    "en-CA",
+    "fr-CA"
+  ],
+  "jurisdiction": [
+    "Canada",
+    "Saskatchewan"
+  ],
+  "currency": "2013_product_specification_with_2026_catalogue_resource",
+  "license_snapshot": {
+    "status": "redistributable",
+    "identifier": "Open Government Licence - Canada",
+    "evidence_url": "https://open.canada.ca/data/en/dataset/ed36f4f3-2fb9-4241-8e29-6741e8b9e400",
+    "reviewed_on": "2026-07-18",
+    "permits_modification": true,
+    "permits_commercial": true,
+    "permits_redistribution": true,
+    "attribution": "Contains information licensed under the Open Government Licence - Canada from Agriculture and Agri-Food Canada, Canadian Soil Information Service."
+  },
+  "boundary": "Dominant generalized thematic values derived from the Saskatchewan Detailed Soils Database. A polygon can contain variation and does not establish current field condition, an exact soil component at a point, crop-specific suitability, nutrient status, drainage performance, erosion outcome, or a management rate.",
+  "source_entry_sha256": "0ef65908c6138f2f9f710acc7bc84322e5e94f4366265880df3736eb179caace"
+}

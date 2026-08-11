@@ -1,0 +1,65 @@
+{
+  "schema_version": "open_agronomy_agent.benchmark_contract.v1",
+  "benchmark_id": "open_agronomy_benchmark_v1",
+  "status": "frozen_synthetic_and_external_diagnostic",
+  "created_at": "2026-08-02T00:00:00Z",
+  "suite_path": "data/eval/open_agronomy_benchmark_v1.jsonl",
+  "manifest_path": "data/eval/open_agronomy_benchmark_v1_manifest.json",
+  "answer_profile": "benchmark",
+  "rag_config": "configs/rag_final_mvp.yaml",
+  "max_tokens": 480,
+  "default_modes": ["baseline", "agronomic_rag"],
+  "primary_comparison": "paired_model_only_vs_full_system",
+  "claim_eligible": false,
+  "sources": [
+    {
+      "path": "data/eval/canadian_semantic_reserve_v2.jsonl",
+      "sha256": "d8f0db931a284821e0a9c032616d6b94a5dcb8534531b190f0719b017995b004",
+      "rows": 90,
+      "lane": "canadian_decision_quality",
+      "metric_role": "blinded_multidimensional_answer_review",
+      "primary": true
+    },
+    {
+      "path": "data/eval/semantic_route_regression_31.jsonl",
+      "sha256": "74bc75860c8b3643489f70c4157c714c2053d5a2e58ed3538ad67831acc9b12a",
+      "rows": 31,
+      "lane": "known_failure_regression",
+      "metric_role": "deterministic_lexical_and_trace_regression",
+      "primary": false
+    },
+    {
+      "path": "data/eval/agxqa_external_transfer_20_eval.jsonl",
+      "sha256": "3f274297bc41cdc93ef06ebc07efd8351146a67bbfc4a54885e979ffa791b96a",
+      "rows": 20,
+      "lane": "external_knowledge_transfer",
+      "metric_role": "external_extractive_faithfulness_diagnostic",
+      "primary": false
+    }
+  ],
+  "evaluation_policy": {
+    "automated_judge_role": "triage_only_until_calibrated_against_independent_agronomists",
+    "deterministic_proxy_role": "regression_only_never_answer_quality",
+    "report_lanes_separately": true,
+    "single_composite_score_allowed": false,
+    "human_review_required_for_external_claim": true,
+    "question_external_validity_status": "not_established",
+    "real_user_confirmation_set_required_for_external_claim": true
+  },
+  "contamination_policy": {
+    "exclude_questions_from_training": true,
+    "exclude_questions_from_rag": true,
+    "exclude_questions_from_prompt_examples": true,
+    "exclude_questions_from_deterministic_answer_repair": true,
+    "record_every_exposure_after_freeze": true
+  },
+  "result_contract": {
+    "capture_exact_messages": true,
+    "capture_context_packets": true,
+    "store_model_identity": true,
+    "store_model_only_and_full_system_arms": true,
+    "store_answers_before_scoring": true,
+    "database": "full_system_benchmark.sqlite3",
+    "distribution_scope": "machine_local_private_benchmark_only"
+  }
+}

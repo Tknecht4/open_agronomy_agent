@@ -1,0 +1,9 @@
+{
+  "canonical_url": "https://open.alberta.ca/dataset/6174c99d-1456-4c58-a63d-658d6a71b403",
+  "download_url": "https://open.alberta.ca/dataset/6174c99d-1456-4c58-a63d-658d6a71b403/resource/6ea7befe-3ef6-47da-80d6-4b3dc87c271e/download/zz-2664167-2013-agri-facts-fall-applied-nitrogen-risks-benefits-revised-542-11-2013-11.pdf",
+  "fetched_at": "2026-07-18T04:59:47+00:00",
+  "raw_bytes": 184542,
+  "raw_path": "data/raw/canada_agronomy/ab_fall_applied_nitrogen_2013/source.pdf",
+  "raw_sha256": "f3968c29e46d8328336a7ceb9311624aee2e3923baa4e3382adb99fd50bfd7c1",
+  "source_id": "ab_fall_applied_nitrogen_2013"
+}

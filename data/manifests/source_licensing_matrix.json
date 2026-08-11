@@ -1,0 +1,95 @@
+{
+  "policy": "Pre-SFT source-use registry. RAG sources may be usable for retrieval while still being unsuitable for model training. Anything marked citation_only must not be copied into SFT rows.",
+  "sources": [
+    {
+      "id": "soilwise_soil_health_kg",
+      "name": "SoilWise Soil Health Knowledge Graph",
+      "url": "https://zenodo.org/records/15593868",
+      "category": "knowledge_graph",
+      "license": "CC-BY-4.0",
+      "rag_use": "approved_with_attribution",
+      "sft_use": "allowed_after_attribution_review",
+      "notes": "Open RDF KG; keep provenance on each retrieved document."
+    },
+    {
+      "id": "agrovoc",
+      "name": "AGROVOC",
+      "url": "https://aims.fao.org/standards/agrovoc/access-agrovoc",
+      "category": "controlled_vocabulary",
+      "license": "CC-BY-IGO-3.0 for listed languages",
+      "rag_use": "candidate",
+      "sft_use": "allowed_after_license_review",
+      "notes": "FAO vocabulary; large multilingual SKOS source. Prefer concept labels, synonyms, and relations for RAG/query expansion."
+    },
+    {
+      "id": "crop_ontology",
+      "name": "Crop Ontology",
+      "url": "https://cropontology.org/about",
+      "category": "trait_ontology",
+      "license": "CC-BY-4.0",
+      "rag_use": "candidate",
+      "sft_use": "allowed_after_license_review",
+      "notes": "Crop trait/variable ontologies; useful for crop phenotyping, trait names, growth stages, and breeding/variety context."
+    },
+    {
+      "id": "nal_thesaurus",
+      "name": "USDA NAL Agricultural Thesaurus",
+      "url": "https://lod.nal.usda.gov/",
+      "category": "controlled_vocabulary",
+      "license": "public_us_government_or_open_terms_to_verify",
+      "rag_use": "candidate",
+      "sft_use": "needs_license_review",
+      "notes": "Useful for agriculture term normalization. Verify exact current license terms before SFT use."
+    },
+    {
+      "id": "ssurgo_sda",
+      "name": "USDA NRCS SSURGO / Soil Data Access",
+      "url": "https://www.nrcs.usda.gov/resources/data-and-reports/soil-survey-geographic-database-ssurgo",
+      "category": "soil_database",
+      "license": "US government data; cite NRCS/Web Soil Survey",
+      "rag_use": "candidate_for_tool_backed_field_context",
+      "sft_use": "not_raw_text_training_without_review",
+      "notes": "Better as a live/geospatial tool than static training data. Must preserve scale limitations and map-unit uncertainty."
+    },
+    {
+      "id": "cca_objectives",
+      "name": "Certified Crop Adviser Performance Objectives",
+      "url": "https://wwwtest.certifiedcropadviser.org/files/certifiedcropadviser/international-performance-objectives.pdf",
+      "category": "exam_objectives",
+      "license": "copyrighted",
+      "rag_use": "citation_only_topic_map",
+      "sft_use": "not_allowed_as_copied_text",
+      "notes": "Use to design original eval items and coverage maps. Do not train on copied passages."
+    },
+    {
+      "id": "public_hf_agrillm",
+      "name": "AI71 AgriLLM training and eval datasets",
+      "url": "https://huggingface.co/datasets/AI71ai/agrillm-train-146k",
+      "category": "instruction_dataset",
+      "license": "dataset_card_review_required",
+      "rag_use": "not_primary_rag",
+      "sft_use": "candidate_after_license_and_quality_review",
+      "notes": "Schema supported. Needs row-quality filters and commercial-use review before serious training."
+    },
+    {
+      "id": "public_hf_digigreen",
+      "name": "DigiGreen Kenya agriculture queries",
+      "url": "https://huggingface.co/datasets/DigiGreen/Kenya_Agri_queries",
+      "category": "instruction_dataset",
+      "license": "dataset_card_review_required",
+      "rag_use": "not_primary_rag",
+      "sft_use": "candidate_after_license_and_quality_review",
+      "notes": "Custom CSV loader required because hosted files have inconsistent columns through datasets.load_dataset."
+    },
+    {
+      "id": "product_labels",
+      "name": "Product labels and registrations",
+      "url": "internal_or_regulatory_sources_tbd",
+      "category": "regulated_product_corpus",
+      "license": "must_be_approved",
+      "rag_use": "required_before_product_recommendations",
+      "sft_use": "not_until_legal_review",
+      "notes": "Keep as retrieval/tool source with date, jurisdiction, crop/site, and label version. Avoid baking label text into adapters."
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+model: mlx-community/gemma-3-270m-it-4bit
+train: true
+data: data/training/canadian_task_rabbit_v1
+fine_tune_type: lora
+mask_prompt: true
+num_layers: -1
+batch_size: 4
+iters: 800
+val_batches: -1
+learning_rate: 0.00005
+steps_per_report: 20
+steps_per_eval: 100
+save_every: 100
+max_seq_length: 512
+adapter_path: outputs/models/gemma3_270m_task_rabbit_lora_v1
+lora_parameters:
+  rank: 8
+  dropout: 0.05
+  scale: 16.0

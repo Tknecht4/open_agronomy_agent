@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Agronomy Agent</title>
+  <desc id="desc">A field row and evidence mark for the Agronomy Agent demo app.</desc>
+  <rect width="512" height="512" rx="96" fill="#315c48"/>
+  <path d="M104 356c64-56 112-136 152-240 40 104 88 184 152 240" fill="none" stroke="#f7faf6" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M136 382c72-34 152-52 240-52" fill="none" stroke="#d7e9ce" stroke-width="26" stroke-linecap="round"/>
+  <circle cx="356" cy="164" r="44" fill="#f4c95d"/>
+  <path d="M196 260h120" fill="none" stroke="#f7faf6" stroke-width="24" stroke-linecap="round"/>
+</svg>

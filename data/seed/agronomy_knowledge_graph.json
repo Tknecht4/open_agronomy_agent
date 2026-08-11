@@ -1,0 +1,24 @@
+{
+  "nodes": [
+    {"id": "crop_corn", "name": "corn", "kind": "crop", "description": "Major row crop with fertility, disease, insect, and herbicide decisions tied to growth stage.", "aliases": ["maize"]},
+    {"id": "crop_soybean", "name": "soybean", "kind": "crop", "description": "Legume crop where variety, disease pressure, iron chlorosis risk, and herbicide tolerance traits often shape advice.", "aliases": ["soybeans"]},
+    {"id": "nutrient_n", "name": "nitrogen", "kind": "nutrient", "description": "Mobile macronutrient; recommendations depend on crop uptake timing, credits, yield goal, and loss risk.", "aliases": ["N", "nitrate"]},
+    {"id": "nutrient_p", "name": "phosphorus", "kind": "nutrient", "description": "Relatively immobile nutrient interpreted through calibrated soil-test methods and crop removal.", "aliases": ["P", "phosphate"]},
+    {"id": "soil_ph", "name": "soil pH", "kind": "soil property", "description": "Controls nutrient availability, herbicide behavior, and risks such as soybean iron deficiency chlorosis.", "aliases": ["pH"]},
+    {"id": "constraint_label", "name": "current local product label", "kind": "constraint", "description": "Legal and stewardship source for crop, site, pest, rate, timing, buffer, and restriction decisions.", "aliases": ["label", "registration"]},
+    {"id": "constraint_weather", "name": "spray weather window", "kind": "constraint", "description": "Wind, rain, temperature, and inversion context affecting application safety and efficacy.", "aliases": ["wind", "rainfast", "drift"]},
+    {"id": "disease_gls", "name": "gray leaf spot", "kind": "disease", "description": "Corn foliar disease with rectangular lesions; fungicide decisions require stage, severity, hybrid risk, and weather.", "aliases": ["GLS"]},
+    {"id": "issue_idc", "name": "iron deficiency chlorosis", "kind": "plant health issue", "description": "Soybean chlorosis risk associated with high pH, carbonate, wet soils, nitrate, salinity, and variety susceptibility.", "aliases": ["IDC"]},
+    {"id": "workflow_vra", "name": "variable-rate prescription", "kind": "workflow", "description": "Data workflow that converts validated field layers and zones into auditable application recommendations.", "aliases": ["VRA", "prescription"]}
+  ],
+  "edges": [
+    {"source": "crop_corn", "target": "nutrient_n", "relation": "requires_fertility_planning_for"},
+    {"source": "crop_corn", "target": "disease_gls", "relation": "can_be_affected_by"},
+    {"source": "crop_soybean", "target": "issue_idc", "relation": "can_be_affected_by"},
+    {"source": "issue_idc", "target": "soil_ph", "relation": "risk_increases_with"},
+    {"source": "nutrient_p", "target": "soil_ph", "relation": "interpretation_depends_on"},
+    {"source": "constraint_label", "target": "constraint_weather", "relation": "may_define_limits_for"},
+    {"source": "workflow_vra", "target": "nutrient_n", "relation": "can_generate_prescription_for"},
+    {"source": "workflow_vra", "target": "nutrient_p", "relation": "can_generate_prescription_for"}
+  ]
+}

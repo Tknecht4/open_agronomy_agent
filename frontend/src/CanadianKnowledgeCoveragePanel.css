@@ -1,0 +1,203 @@
+.canadian-knowledge-coverage {
+  display: grid;
+  gap: 16px;
+  border: 1px solid rgb(85 107 76 / 24%);
+  border-radius: 14px;
+  background: #f8faf4;
+}
+
+.canadian-knowledge-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.canadian-knowledge-heading h2,
+.canadian-knowledge-coverage p {
+  margin: 0;
+}
+
+.knowledge-gate-blocked,
+.knowledge-gate-ready {
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.knowledge-gate-blocked {
+  color: #7b2f22;
+  background: #f8ddd5;
+}
+
+.knowledge-gate-ready {
+  color: #23552d;
+  background: #d9ebd7;
+}
+
+.knowledge-coverage-summary,
+.knowledge-province-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.knowledge-coverage-summary article,
+.knowledge-province-grid article {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid rgb(85 107 76 / 18%);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 72%);
+}
+
+.knowledge-coverage-summary strong {
+  font-size: 22px;
+}
+
+.knowledge-coverage-summary span,
+.knowledge-province-grid small,
+.knowledge-coverage-boundary {
+  color: #5b685f;
+}
+
+.knowledge-province-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.knowledge-province-grid article {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.knowledge-province-grid article strong {
+  color: #7b4a2d;
+  font-size: 12px;
+}
+
+.knowledge-coverage-boundary,
+.knowledge-coverage-error {
+  padding-top: 12px;
+  border-top: 1px solid rgb(85 107 76 / 18%);
+  font-size: 13px;
+}
+
+.knowledge-discovery {
+  display: grid;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid rgb(85 107 76 / 18%);
+}
+
+.knowledge-discovery-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.knowledge-discovery-heading h3,
+.knowledge-discovery p {
+  margin: 0;
+}
+
+.knowledge-discovery-heading > strong {
+  color: #7b4a2d;
+  font-size: 13px;
+}
+
+.knowledge-discovery > p {
+  color: #5b685f;
+  font-size: 13px;
+}
+
+.knowledge-acquisition-funnel {
+  margin: 0;
+  padding: 10px;
+  border: 1px solid rgb(85 107 76 / 18%);
+  border-radius: 9px;
+  background: rgb(255 255 255 / 72%);
+  color: #5b685f;
+  font-size: 13px;
+}
+
+.knowledge-discovery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.knowledge-discovery-grid > * {
+  padding: 12px;
+  border: 1px solid rgb(85 107 76 / 18%);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 72%);
+}
+
+.knowledge-discovery-grid summary,
+.knowledge-discovery-grid article {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.knowledge-discovery-grid summary {
+  cursor: pointer;
+}
+
+.knowledge-discovery-grid strong {
+  color: #7b4a2d;
+  font-size: 12px;
+}
+
+.knowledge-review-packets {
+  display: grid;
+  gap: 8px;
+}
+
+.knowledge-review-packets > summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.knowledge-review-packets h4 {
+  margin: 0;
+}
+
+.knowledge-review-packets details > small {
+  display: block;
+  margin-top: 6px;
+  color: #5b685f;
+  font-size: 12px;
+}
+
+.knowledge-review-packets details > .knowledge-review-warning {
+  color: #7b2f22;
+  font-weight: 700;
+}
+
+.knowledge-discovery-boundary {
+  padding-top: 10px;
+  border-top: 1px solid rgb(85 107 76 / 14%);
+}
+
+@media (max-width: 760px) {
+  .canadian-knowledge-heading,
+  .knowledge-discovery-heading,
+  .knowledge-coverage-summary,
+  .knowledge-province-grid,
+  .knowledge-discovery-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .canadian-knowledge-heading > span,
+  .knowledge-discovery-heading > strong {
+    justify-self: start;
+    text-align: left;
+  }
+}

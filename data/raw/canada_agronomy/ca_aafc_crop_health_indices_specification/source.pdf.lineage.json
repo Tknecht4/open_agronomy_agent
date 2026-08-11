@@ -1,0 +1,9 @@
+{
+  "canonical_url": "https://open.canada.ca/data/en/dataset/84d1ff0d-4689-466c-b792-f860a1fb1603",
+  "download_url": "https://agriculture.canada.ca/atlas/data_donnees/cropHealthIndices/supportdocument_documentdesupport/en/ISO_19131_Crop_Health_Indices_-_Data_Product_specification.pdf",
+  "fetched_at": "2026-07-19T06:24:47+00:00",
+  "raw_bytes": 82361,
+  "raw_path": "data/raw/canada_agronomy/ca_aafc_crop_health_indices_specification/source.pdf",
+  "raw_sha256": "06d23451384e55bdc70a853e881365191b69e988e40419ebabc34de57e67df1a",
+  "source_id": "ca_aafc_crop_health_indices_specification"
+}

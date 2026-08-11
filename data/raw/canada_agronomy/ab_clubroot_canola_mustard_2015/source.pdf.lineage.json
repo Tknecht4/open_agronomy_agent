@@ -1,0 +1,9 @@
+{
+  "canonical_url": "https://open.alberta.ca/dataset/849d770e-37e7-4a71-976e-a0143fc13d5b",
+  "download_url": "https://open.alberta.ca/dataset/849d770e-37e7-4a71-976e-a0143fc13d5b/resource/46d4382f-c08d-4ed9-83be-04394269cf11/download/5420474-2015-09-agri-facts-clubroot-disease-canola-mustard.pdf",
+  "fetched_at": "2026-07-18T04:59:48+00:00",
+  "raw_bytes": 507326,
+  "raw_path": "data/raw/canada_agronomy/ab_clubroot_canola_mustard_2015/source.pdf",
+  "raw_sha256": "248c1e496de08df06aedd982f28db096cd9285555c0a9d49ca3e1265bdde0e7a",
+  "source_id": "ab_clubroot_canola_mustard_2015"
+}

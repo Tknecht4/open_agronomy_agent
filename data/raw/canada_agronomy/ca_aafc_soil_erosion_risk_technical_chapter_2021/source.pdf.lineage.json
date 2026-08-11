@@ -1,0 +1,9 @@
+{
+  "canonical_url": "https://open.canada.ca/data/en/dataset/b52b3c91-e0eb-47d1-aea5-fa5428254512",
+  "download_url": "https://publications.gc.ca/collections/collection_2026/aac-aafc/A59-126-2026-eng.pdf",
+  "fetched_at": "2026-07-21T04:48:07Z",
+  "raw_bytes": 15769660,
+  "raw_path": "data/raw/canada_agronomy/ca_aafc_soil_erosion_risk_technical_chapter_2021/source.pdf",
+  "raw_sha256": "f05b76fe135726f989c71fd3427e3f2941e303e8b88bfe525b5779b341a75cc9",
+  "source_id": "ca_aafc_soil_erosion_risk_technical_chapter_2021"
+}

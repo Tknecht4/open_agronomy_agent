@@ -1,0 +1,187 @@
+{
+  "schema_version": "open_agronomy_agent.canada_agronomy_sources.v1",
+  "generated_at": "2026-07-24T00:00:00Z",
+  "intended_distribution_profile": "A provenance-complete, French-language, context-only supplement to the sealed RC13 Canadian corpus. These federal data-product specifications explain modelled regional products; they are not field measurements, current forecasts, or agronomic prescriptions.",
+  "required_jurisdictions": [
+    "Canada"
+  ],
+  "lineage_requirements": [
+    "source_id",
+    "canonical_url",
+    "download_url",
+    "fetched_at",
+    "raw_sha256",
+    "extracted_text_sha256",
+    "chunk_sha256",
+    "manifest_sha256",
+    "license_snapshot",
+    "language",
+    "jurisdiction",
+    "currency",
+    "extractor"
+  ],
+  "sources": [
+    {
+      "id": "ca_aafc_crop_health_indices_specification_fr",
+      "title": "Indices de santé des cultures - Spécifications de contenu informationnel",
+      "publisher": "Agriculture et Agroalimentaire Canada, Direction générale des sciences et de la technologie",
+      "authority_type": "federal_government",
+      "jurisdiction": [
+        "Canada"
+      ],
+      "language": [
+        "fr-CA"
+      ],
+      "url": "https://open.canada.ca/data/fr/dataset/84d1ff0d-4689-466c-b792-f860a1fb1603",
+      "download_url": "https://agriculture.canada.ca/atlas/data_donnees/cropHealthIndices/supportdocument_documentdesupport/fr/Indices_de%20sant%c3%a9_des_cultures_SPC.pdf",
+      "source_record_id": "84d1ff0d-4689-466c-b792-f860a1fb1603; resource 1d8fbe5b-42f4-4ab6-a040-b6f9c6227903",
+      "format": "pdf",
+      "content_mode": "corpus_document",
+      "runtime_source_type": "regional_environment_profile",
+      "runtime_document_type": "regional_data_product_specification",
+      "default_retrieval_policy": "context_only",
+      "crops": [
+        "wheat",
+        "barley",
+        "corn",
+        "soybean",
+        "small grains"
+      ],
+      "buckets": [
+        "regional_environment_context",
+        "soil_water",
+        "crop_management",
+        "field_data"
+      ],
+      "priority": "critical",
+      "currency": {
+        "status": "current_2026_catalogue_model_specification",
+        "review_interval_days": 180,
+        "volatile": false
+      },
+      "regulatory": {
+        "regulated_advice": false,
+        "require_live_authority": false
+      },
+      "license": {
+        "status": "redistributable",
+        "identifier": "Licence du gouvernement ouvert - Canada",
+        "evidence_url": "https://open.canada.ca/data/api/action/package_show?id=84d1ff0d-4689-466c-b792-f860a1fb1603",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "third_party_risk": false,
+        "reviewed_on": "2026-07-23",
+        "attribution": "Contient des informations visées par la Licence du gouvernement ouvert - Canada provenant d'Agriculture et Agroalimentaire Canada.",
+        "notes": "Le registre officiel associe la ressource française exacte à la Licence du gouvernement ouvert - Canada. Le document décrit des indices modélisés et interpolés à une résolution de 5 km; il ne constitue ni une mesure du champ, ni un diagnostic, ni une recommandation de gestion."
+      },
+      "ingest_policy": {
+        "include_page_ranges": [
+          [
+            4,
+            7
+          ],
+          [
+            10,
+            12
+          ]
+        ],
+        "notes": "Conserver la définition du modèle, des indices, des attributs, de la résolution, de la qualité et du lignage. Exclure la table des matières et les pages sans contenu interprétatif."
+      },
+      "use_policy": {
+        "discover": true,
+        "download": true,
+        "local_rag": true,
+        "distributable_bundle": true,
+        "training": false,
+        "live_retrieval": true
+      }
+    },
+    {
+      "id": "ca_aafc_canadian_crop_yields_specification_fr",
+      "title": "Rendement des cultures au Canada - Spécifications de contenu informationnel",
+      "publisher": "Agriculture et Agroalimentaire Canada, Direction générale des sciences et de la technologie",
+      "authority_type": "federal_government",
+      "jurisdiction": [
+        "Canada"
+      ],
+      "language": [
+        "fr-CA"
+      ],
+      "url": "https://open.canada.ca/data/fr/dataset/9253a01b-f1d9-4b67-ba98-857667827c7b",
+      "download_url": "https://agriculture.canada.ca/atlas/data_donnees/canadianCropYield/supportdocument_documentdesupport/fr/Rendement_des_cultures_au_Canada_SPC.pdf",
+      "source_record_id": "9253a01b-f1d9-4b67-ba98-857667827c7b; resource 4f8ccc56-e977-415e-93aa-adeb7e38fe41",
+      "format": "pdf",
+      "content_mode": "corpus_document",
+      "runtime_source_type": "regional_environment_profile",
+      "runtime_document_type": "regional_data_product_specification",
+      "default_retrieval_policy": "context_only",
+      "crops": [
+        "canola",
+        "spring wheat",
+        "durum wheat",
+        "winter wheat",
+        "barley",
+        "oat",
+        "flax",
+        "grain corn",
+        "field pea",
+        "lentil",
+        "soybean"
+      ],
+      "buckets": [
+        "regional_environment_context",
+        "crop_management",
+        "field_data",
+        "precision_economics"
+      ],
+      "priority": "critical",
+      "currency": {
+        "status": "current_2025_catalogue_model_specification",
+        "review_interval_days": 180,
+        "volatile": false
+      },
+      "regulatory": {
+        "regulated_advice": false,
+        "require_live_authority": false
+      },
+      "license": {
+        "status": "redistributable",
+        "identifier": "Licence du gouvernement ouvert - Canada",
+        "evidence_url": "https://open.canada.ca/data/api/action/package_show?id=9253a01b-f1d9-4b67-ba98-857667827c7b",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "third_party_risk": false,
+        "reviewed_on": "2026-07-23",
+        "attribution": "Contient des informations visées par la Licence du gouvernement ouvert - Canada provenant d'Agriculture et Agroalimentaire Canada.",
+        "notes": "Le registre officiel associe la ressource française exacte à la Licence du gouvernement ouvert - Canada. Le produit combine des rendements historiques, le climat et l'IVDN dans des modèles régionaux. Les estimations ne sont pas des rendements mesurés au champ, un potentiel de rendement, une garantie de rendement ou une prescription."
+      },
+      "ingest_policy": {
+        "include_page_ranges": [
+          [
+            4,
+            4
+          ],
+          [
+            6,
+            10
+          ],
+          [
+            12,
+            20
+          ]
+        ],
+        "notes": "Conserver la description, la distinction entre rendements historiques et prévus, la géographie, les attributs, la qualité, le lignage et la livraison. Exclure les pages liminaires et les diagrammes sans texte interprétatif."
+      },
+      "use_policy": {
+        "discover": true,
+        "download": true,
+        "local_rag": true,
+        "distributable_bundle": true,
+        "training": false,
+        "live_retrieval": true
+      }
+    }
+  ]
+}

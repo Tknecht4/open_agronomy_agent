@@ -1,0 +1,62 @@
+{
+  "schema_version": "open_agronomy_agent.canada_raw_source_lineage.v1",
+  "source_id": "ca_aafc_pei_detailed_soil_survey",
+  "source_record_id": "7fa18ce7-6c14-438a-95c6-bb0906ddfb30",
+  "canonical_url": "https://open.canada.ca/data/en/dataset/7fa18ce7-6c14-438a-95c6-bb0906ddfb30",
+  "download_url": "https://agriculture.canada.ca/atlas/data_donnees/detailedSoilSurvey/data_donnees/geoPackage/pe_dtl_soil.gpkg",
+  "fetched_at": "2026-07-24T23:18:00Z",
+  "raw_path": "data/raw/canada_agronomy/ca_aafc_pei_detailed_soil_survey/source.gpkg",
+  "raw_bytes": 6701056,
+  "raw_sha256": "c60046f6339475c9cef14a190b37d537830353f1962d24e15140ca75269a819f",
+  "support_files": [
+    {
+      "path": "data/raw/canada_agronomy/ca_aafc_pei_detailed_soil_survey/pe_dtl_75k.csv",
+      "download_url": "https://agriculture.canada.ca/atlas/data_donnees/detailedSoilSurvey/data_donnees/csv/pe_dtl_soil_sol/pe_dtl_75k.csv",
+      "bytes": 146144,
+      "sha256": "905ad454ef8809eeee76cc8c4df929f9013d197f5ad741ee7aa8e52d467ee05a"
+    },
+    {
+      "path": "data/raw/canada_agronomy/ca_aafc_pei_detailed_soil_survey/pe_dtl_cmp.csv",
+      "download_url": "https://agriculture.canada.ca/atlas/data_donnees/detailedSoilSurvey/data_donnees/csv/pe_dtl_soil_sol/pe_dtl_cmp.csv",
+      "bytes": 143780,
+      "sha256": "74cfa073fc08d17f331df195aaf2b44922a56d5257b86b63c3b0352d97477b14"
+    },
+    {
+      "path": "data/raw/canada_agronomy/ca_aafc_pei_detailed_soil_survey/pe_dtl_slf.csv",
+      "download_url": "https://agriculture.canada.ca/atlas/data_donnees/detailedSoilSurvey/data_donnees/csv/pe_dtl_soil_sol/pe_dtl_slf.csv",
+      "bytes": 47007,
+      "sha256": "08c9abf8431c54bfb02f8ba3f8834af8359c7d38638c45c3122b3b7f919002a7"
+    },
+    {
+      "path": "data/raw/canada_agronomy/ca_aafc_pei_detailed_soil_survey/pe_dtl_snf.csv",
+      "download_url": "https://agriculture.canada.ca/atlas/data_donnees/detailedSoilSurvey/data_donnees/csv/pe_dtl_soil_sol/pe_dtl_snf.csv",
+      "bytes": 4211,
+      "sha256": "d7868acf5706da6388e18806567a67cab0c2ae89aa5d625bbffc98c1fe8a0811"
+    }
+  ],
+  "source_registry_path": "data/manifests/canada_geospatial_sources.json",
+  "source_registry_sha256": "cd9c8cac045ce12251f77a0cdc5c64f3b8cfa61c14436776e5030cdc94c23859",
+  "format": "geopackage_plus_csv_relational_tables",
+  "source_crs": "EPSG:3857",
+  "language": [
+    "en-CA",
+    "fr-CA"
+  ],
+  "jurisdiction": [
+    "Canada",
+    "Prince Edward Island"
+  ],
+  "currency": "historical_soil_information_compiled_over_prior_decades_current_2026_catalogue",
+  "license_snapshot": {
+    "status": "redistributable",
+    "identifier": "Open Government Licence - Canada",
+    "evidence_url": "https://open.canada.ca/data/api/action/package_show?id=7fa18ce7-6c14-438a-95c6-bb0906ddfb30",
+    "reviewed_on": "2026-07-24",
+    "permits_modification": true,
+    "permits_commercial": true,
+    "permits_redistribution": true,
+    "attribution": "Contains information licensed under the Open Government Licence - Canada from Agriculture and Agri-Food Canada, Canadian Soil Information Service."
+  },
+  "boundary": "Historical 1:75,000 soil-landscape mapping with linked map-unit components, soil names, and layer attributes. A polygon is a mapped prior, not proof of the soil at a point or of present nutrient supply, pH, drainage performance, compaction, erosion, crop suitability, or a management rate.",
+  "source_entry_sha256": "562888656f063496d032b1f4a701f33bfd90b36d8341005763350216272d2fcd"
+}

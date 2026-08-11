@@ -1,0 +1,56 @@
+{
+  "schema_version": "open_agronomy_agent.canada_raw_source_lineage.v1",
+  "source_id": "ca_aafc_mb_detailed_soil_survey",
+  "source_record_id": "741a06a2-718f-4da9-9adf-6e95c8c37f3d",
+  "canonical_url": "https://open.canada.ca/data/en/dataset/741a06a2-718f-4da9-9adf-6e95c8c37f3d",
+  "download_url": "https://agriculture.canada.ca/atlas/data_donnees/detailedSoilSurvey/data_donnees/geoPackage/mb_dtl_soil.gpkg",
+  "fetched_at": "2026-08-09T15:28:00Z",
+  "raw_path": "data/raw/canada_agronomy/ca_aafc_mb_detailed_soil_survey/source.gpkg",
+  "raw_bytes": 522735616,
+  "raw_sha256": "f9f216e6bc43233867704987f226e2356f176350747523bb3c5b861bbafa4bf5",
+  "support_files": [
+    {
+      "path": "data/raw/canada_agronomy/ca_aafc_mb_detailed_soil_survey/mb_dtl_100k.csv",
+      "download_url": "https://agriculture.canada.ca/atlas/data_donnees/detailedSoilSurvey/data_donnees/csv/mb_dtl_soil_sol/mb_dtl_100k.csv",
+      "bytes": 19648880,
+      "sha256": "0fff7dc0deceabc80f808edd77ed63cce5a8b39f1a48dcc62edcb311bce21af4"
+    },
+    {
+      "path": "data/raw/canada_agronomy/ca_aafc_mb_detailed_soil_survey/mb_dtl_cmp.csv",
+      "download_url": "https://agriculture.canada.ca/atlas/data_donnees/detailedSoilSurvey/data_donnees/csv/mb_dtl_soil_sol/mb_dtl_cmp.csv",
+      "bytes": 34596405,
+      "sha256": "880e1b62d73b5adf4c007bbc4e689bd090fdcca67decca60c9240dfca22ce3bb"
+    },
+    {
+      "path": "data/raw/canada_agronomy/ca_aafc_mb_detailed_soil_survey/mb_dtl_slf.csv",
+      "download_url": "https://agriculture.canada.ca/atlas/data_donnees/detailedSoilSurvey/data_donnees/csv/mb_dtl_soil_sol/mb_dtl_slf.csv",
+      "bytes": 2638452,
+      "sha256": "049d875f9ba7559fede0ccbf9851a12c5ffdeb918359327ede88614560a59606"
+    },
+    {
+      "path": "data/raw/canada_agronomy/ca_aafc_mb_detailed_soil_survey/mb_dtl_snf.csv",
+      "download_url": "https://agriculture.canada.ca/atlas/data_donnees/detailedSoilSurvey/data_donnees/csv/mb_dtl_soil_sol/mb_dtl_snf.csv",
+      "bytes": 203193,
+      "sha256": "51a7a75709610afdd390f2e674f71a450f22d90bedda05180908e7b826ff4e2b"
+    }
+  ],
+  "source_registry_path": "data/manifests/canada_geospatial_sources.json",
+  "source_registry_sha256": "c48d9bdb49dd68b4a7e65700a9a41cebdc4834073dda54b1e31114ef024eb17c",
+  "source_entry_sha256": "96641e7f515328cdb34e4d456fd5a575c95adafb96c31218909e876bf16e56b2",
+  "format": "geopackage_plus_csv_relational_tables",
+  "source_crs": "EPSG:3857",
+  "language": ["en-CA", "fr-CA"],
+  "jurisdiction": ["Canada", "Manitoba"],
+  "currency": "historical_detailed_soil_compilation_current_2026_catalogue",
+  "license_snapshot": {
+    "status": "redistributable",
+    "identifier": "Open Government Licence - Canada",
+    "evidence_url": "https://open.canada.ca/data/api/action/package_show?id=741a06a2-718f-4da9-9adf-6e95c8c37f3d",
+    "reviewed_on": "2026-08-09",
+    "permits_modification": true,
+    "permits_commercial": true,
+    "permits_redistribution": true,
+    "attribution": "Contains information licensed under the Open Government Licence - Canada from Agriculture and Agri-Food Canada, Canadian Soil Information Service."
+  },
+  "boundary": "Historical detailed soil-landscape mapping at published per-polygon scales from 1:20,000 to 1:126,720. A polygon and listed components are mapped priors, not proof of current field conditions or management-rate authority."
+}

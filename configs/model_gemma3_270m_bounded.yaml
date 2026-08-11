@@ -1,0 +1,43 @@
+# Ultra-light, text-only MLX profile. The model supplies the draft; governed
+# routing, bounded-process admission, decision capsules, and verification supply
+# capabilities that the 270M model cannot reliably perform in a long prompt.
+model_id: mlx-community/gemma-3-270m-it-4bit
+serving_model_id: mlx-community/gemma-3-270m-it-4bit
+serving_label: Gemma 3 270M · bounded capabilities
+serving_role: offline_ultralight
+serving_quality_gate: bounded_process_capsules_v1
+assistant_model_id: mlx-community/gemma-3-270m-it-4bit
+assistant_label: Gemma 3 270M
+assistant_role: offline_ultralight
+assistant_quality_gate: bounded_process_capsules_v1
+vlm_model_id:
+model_revision: ff1143e3a10547c9f2129e94ca37059b096b23f4
+license: gemma
+max_tokens: 480
+serving_max_tokens: 480
+assistant_max_tokens: 180
+temperature: 0.0
+top_p: 0.9
+top_k: 0
+seed: 42
+use_stream_generate: true
+prompt_profile: default
+intervention_profile: constrained
+prompt_cache_enabled: false
+prompt_cache_entries: 4
+prompt_cache_max_bytes_mb: 128
+prompt_cache_min_prefix_tokens: 64
+prefill_step_size: 2048
+kv_bits:
+kv_group_size: 64
+quantized_kv_start: 0
+max_kv_size:
+draft_model_id:
+num_draft_tokens: 4
+answer_verification:
+  enabled: true
+  mode: model_agnostic_selective_v2
+  model_id: mlx-community/gemma-3-270m-it-4bit
+  model_revision: ff1143e3a10547c9f2129e94ca37059b096b23f4
+  max_tokens: 180
+  max_evidence_chars: 9000

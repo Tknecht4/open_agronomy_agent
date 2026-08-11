@@ -1,0 +1,146 @@
+{
+  "archive_members": [
+    {
+      "bytes": 624150,
+      "crc32": "613e55fa",
+      "name": "dss_v3_ab.dbf"
+    },
+    {
+      "bytes": 428,
+      "crc32": "bb25fcf6",
+      "name": "dss_v3_ab.prj"
+    },
+    {
+      "bytes": 270308,
+      "crc32": "652b5d46",
+      "name": "dss_v3_ab.sbn"
+    },
+    {
+      "bytes": 13540,
+      "crc32": "47ac45a0",
+      "name": "dss_v3_ab.sbx"
+    },
+    {
+      "bytes": 44716228,
+      "crc32": "027ba062",
+      "name": "dss_v3_ab.shp"
+    },
+    {
+      "bytes": 11470,
+      "crc32": "1f0200eb",
+      "name": "dss_v3_ab.shp.xml"
+    },
+    {
+      "bytes": 227028,
+      "crc32": "e19121b5",
+      "name": "dss_v3_ab.shx"
+    },
+    {
+      "bytes": 5572288,
+      "crc32": "6208f3eb",
+      "name": "dss_v3_ab_cmp.dbf"
+    },
+    {
+      "bytes": 20319,
+      "crc32": "27e69199",
+      "name": "dss_v3_ab_cmp.dbf.xml"
+    },
+    {
+      "bytes": 2539210,
+      "crc32": "8fbf7fac",
+      "name": "dss_v3_ab_crt.dbf"
+    },
+    {
+      "bytes": 2269410,
+      "crc32": "ccafe2b1",
+      "name": "dss_v3_ab_prt.dbf"
+    },
+    {
+      "bytes": 2165200,
+      "crc32": "19bd26dc",
+      "name": "soil_layer_ab_v2.dbf"
+    },
+    {
+      "bytes": 43051,
+      "crc32": "2bc042f2",
+      "name": "soil_layer_ab_v2.dbf.xml"
+    },
+    {
+      "bytes": 211958,
+      "crc32": "16bd44ff",
+      "name": "soil_name_ab_v2.dbf"
+    },
+    {
+      "bytes": 91907,
+      "crc32": "1b013d4d",
+      "name": "soil_name_ab_v2.dbf.xml"
+    }
+  ],
+  "area_change_fraction": 5.47e-06,
+  "coordinate_precision_degrees": 1e-06,
+  "derived_invalid_geometries": 0,
+  "derived_vertices": 2122166,
+  "distribution_boundary": "Derived OGL-Canada historical soil-map context only; not current field truth, present soil-test evidence, crop-specific suitability, drainage diagnosis, or management-rate authority.",
+  "drainage_component_counts": {
+    "imperfectly drained": 1832,
+    "moderately well drained": 4010,
+    "poorly drained": 8889,
+    "rapidly drained": 2591,
+    "unclassified": 1100,
+    "very poorly drained": 4035,
+    "well drained": 48073
+  },
+  "feature_count": 28366,
+  "generated_at": "2026-08-09T15:44:00Z",
+  "license_snapshot": {
+    "attribution": "Contains information licensed under the Open Government Licence - Canada from Agriculture and Agri-Food Canada, Canadian Soil Information Service.",
+    "evidence_url": "https://open.canada.ca/data/api/action/package_show?id=9150ad66-73f7-444f-a67c-4be5cf676453",
+    "identifier": "Open Government Licence - Canada",
+    "permits_commercial": true,
+    "permits_modification": true,
+    "permits_redistribution": true,
+    "reviewed_on": "2026-08-09",
+    "status": "redistributable"
+  },
+  "lineage_path": "data/raw/canada_agronomy/ca_aafc_ab_detailed_soil_survey_dss_v3/source.zip.lineage.json",
+  "lineage_sha256": "f92592f8ba5ee4f37bba17c072ac9ebf902bacd6562383b4bd2ee398d602874c",
+  "map_units_without_components": 0,
+  "output_bytes": 59871232,
+  "output_crs": "EPSG:4326",
+  "output_path": "data/derived/geo_layers/ab_detailed_soil.sqlite3",
+  "output_sha256": "992c5b7d2d3bb562c391a373c795351ba9319773e8a1a7669566d0f8d49a655a",
+  "relational_table_repairs": {
+    "dbf_fixed_width_repair": {
+      "member": "dss_v3_ab_prt.dbf",
+      "normalized_bytes": 2269410,
+      "original_bytes": 2269410,
+      "repair_offset": null,
+      "utf8_nbsp_fixed_width_repairs": 0
+    },
+    "prt_mismatched_rows": 0,
+    "prt_shift_repaired_rows": 0
+  },
+  "reprojection_repair_area_change_fraction": 0.0,
+  "reprojection_repaired_feature_count": 0,
+  "reprojection_repaired_feature_ids": [],
+  "schema_version": "open_agronomy_agent.local_geo_layer.v1",
+  "simplification_tolerance_metres": 10.0,
+  "source_bytes": 27057261,
+  "source_crs": "EPSG:3400",
+  "source_entry_sha256": "9fcd300bf7cd9656874ce8b26681dc431d6ea632dbe6a1e2f2dda9e6d37690e3",
+  "source_id": "ca_aafc_ab_detailed_soil_survey",
+  "source_invalid_geometries": 1,
+  "source_path": "data/raw/canada_agronomy/ca_aafc_ab_detailed_soil_survey_dss_v3/source.zip",
+  "source_registry_path": "data/manifests/canada_geospatial_sources.json",
+  "source_registry_sha256": "7b3e47218bc9f609c8c79be9da7966dc65c914b3ace23d851b07393db600a9ae",
+  "source_repair_area_change_fraction": 0.0,
+  "source_repaired_feature_count": 1,
+  "source_repaired_feature_ids": [
+    "ABD192026204"
+  ],
+  "source_scale_range": "1:100,000",
+  "source_sha256": "44db35220db8f3b8edb8c1d6c383b822cc2fcf937bd3a48388accf3a1ba883ab",
+  "source_vertices": 2695283,
+  "support_files": [],
+  "vertex_reduction_fraction": 0.212637
+}

@@ -1,0 +1,9 @@
+{
+  "canonical_url": "https://open.canada.ca/data/en/dataset/adf4d26a-9fc0-44c9-ba38-620531ca0dbe",
+  "download_url": "https://agriculture.canada.ca/atlas/data_donnees/detailedSoilSurvey/supportdocument_documentdesupport/en/ISO_19131_Detailed_Soil_Surveys_Data_Product_Specifications.pdf",
+  "fetched_at": "2026-07-21T02:08:01+00:00",
+  "raw_bytes": 1997105,
+  "raw_path": "data/raw/canada_agronomy/ca_aafc_bc_detailed_soil_survey_specification/source.pdf",
+  "raw_sha256": "f71591620b34c6ad4fc55a8d0ddb3d32d943dd82b82fd882c14c7ac003c72d2f",
+  "source_id": "ca_aafc_bc_detailed_soil_survey_specification"
+}

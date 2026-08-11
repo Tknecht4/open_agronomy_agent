@@ -1,0 +1,9 @@
+{
+  "canonical_url": "https://open.canada.ca/data/en/dataset/bd7689d5-c2ce-4671-b009-6502c89aab64",
+  "download_url": "https://agriculture.canada.ca/atlas/data_donnees/soilOfCanadaDerived/supportdocument_documentdesupport/en/ISO_19131_Soils_of_Canada_Derived_Data_Product_Specification.pdf",
+  "fetched_at": "2026-07-21T03:34:00+00:00",
+  "raw_bytes": 501657,
+  "raw_path": "data/raw/canada_agronomy/ca_aafc_qc_agropedological_atlas_specification/source.pdf",
+  "raw_sha256": "8b91e9aad80278c98cdc7d85b1ea26328ac6ca1ac58dbecb6648950f21d9de8b",
+  "source_id": "ca_aafc_qc_agropedological_atlas_specification"
+}

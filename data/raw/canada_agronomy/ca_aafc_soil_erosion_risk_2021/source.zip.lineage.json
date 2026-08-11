@@ -1,0 +1,35 @@
+{
+  "schema_version": "open_agronomy_agent.canada_raw_source_lineage.v1",
+  "source_id": "ca_aafc_soil_erosion_risk_2021",
+  "source_record_id": "b52b3c91-e0eb-47d1-aea5-fa5428254512",
+  "canonical_url": "https://open.canada.ca/data/en/dataset/b52b3c91-e0eb-47d1-aea5-fa5428254512",
+  "download_url": "https://agriculture.canada.ca/atlas/data_donnees/agriEnvironmentalIndicators/data_donnees/fgdb/AEI_SOIL_ERI_GDB.zip",
+  "fetched_at": "2026-07-21T04:07:15Z",
+  "raw_path": "data/raw/canada_agronomy/ca_aafc_soil_erosion_risk_2021/source.zip",
+  "raw_bytes": 25539550,
+  "raw_sha256": "461e231d856cf7504f73d1a7fc2dd046ca89e4fae64fe211bca3761dc567fa54",
+  "source_registry_path": "data/manifests/canada_geospatial_sources.json",
+  "source_registry_sha256": "cd9c8cac045ce12251f77a0cdc5c64f3b8cfa61c14436776e5030cdc94c23859",
+  "format": "zipped_file_geodatabase",
+  "source_crs": "EPSG:3857",
+  "language": [
+    "en-CA",
+    "fr-CA"
+  ],
+  "jurisdiction": [
+    "Canada"
+  ],
+  "currency": "modelled_1981_to_2021_series_current_2026_catalogue",
+  "license_snapshot": {
+    "status": "redistributable",
+    "identifier": "Open Government Licence - Canada",
+    "evidence_url": "https://open.canada.ca/data/en/dataset/b52b3c91-e0eb-47d1-aea5-fa5428254512",
+    "reviewed_on": "2026-07-21",
+    "permits_modification": true,
+    "permits_commercial": true,
+    "permits_redistribution": true,
+    "attribution": "Contains information licensed under the Open Government Licence - Canada from Agriculture and Agri-Food Canada."
+  },
+  "boundary": "AAFC modelled combined wind, water, and tillage erosion risk for agricultural Soil Landscapes of Canada through 2021. It is regional historical context, not current erosion observation, event prediction, field diagnosis, measured field loss, or management-prescription authority.",
+  "source_entry_sha256": "fa5e18da3e40a37b3e827142500126fb320f947e3dff90fa7be1b669cc10f97c"
+}

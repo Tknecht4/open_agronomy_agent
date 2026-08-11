@@ -1,0 +1,218 @@
+{
+  "schema_version": "open_agronomy_agent.canada_agronomy_sources.v1",
+  "generated_at": "2026-07-23T00:00:00Z",
+  "intended_distribution_profile": "A provenance-complete, context-only supplement to the sealed RC13 Canadian corpus. Sources remain subject to row-level currency and live-authority gates.",
+  "required_jurisdictions": [
+    "Alberta"
+  ],
+  "lineage_requirements": [
+    "source_id",
+    "canonical_url",
+    "download_url",
+    "fetched_at",
+    "raw_sha256",
+    "extracted_text_sha256",
+    "chunk_sha256",
+    "manifest_sha256",
+    "license_snapshot",
+    "language",
+    "jurisdiction",
+    "currency",
+    "extractor"
+  ],
+  "sources": [
+    {
+      "id": "ab_russet_burbank_potato_nutrients_2011",
+      "title": "Nutrient Recommendations for Russet Burbank Potatoes in Southern Alberta",
+      "publisher": "Government of Alberta",
+      "authority_type": "provincial_government",
+      "jurisdiction": [
+        "Alberta"
+      ],
+      "language": [
+        "en-CA"
+      ],
+      "url": "https://open.alberta.ca/dataset/6bd8f2a0-31d7-45a2-9e9c-489e1cf96d6c",
+      "download_url": "https://open.alberta.ca/dataset/6bd8f2a0-31d7-45a2-9e9c-489e1cf96d6c/resource/a31a5fa3-bba5-4edf-a441-c6d11ffad7a3/download/zz-5332172-2011-agri-facts-nutrient-russet-burbank-potatoes-southern-alberta-revised-258-541-1.pdf",
+      "source_record_id": "6bd8f2a0-31d7-45a2-9e9c-489e1cf96d6c; Agdex 258/541-1",
+      "format": "pdf",
+      "content_mode": "corpus_document",
+      "runtime_source_type": "applied_guidance",
+      "runtime_document_type": "extension_document",
+      "default_retrieval_policy": "context_only",
+      "crops": [
+        "potato",
+        "Russet Burbank"
+      ],
+      "buckets": [
+        "nutrient_management",
+        "crop_management",
+        "horticulture",
+        "soil_water"
+      ],
+      "priority": "high",
+      "currency": {
+        "status": "historical_2011_requires_current_validation",
+        "review_interval_days": 180,
+        "volatile": true
+      },
+      "regulatory": {
+        "regulated_advice": false,
+        "require_live_authority": false
+      },
+      "license": {
+        "status": "redistributable",
+        "identifier": "Open Government Licence - Alberta",
+        "evidence_url": "https://open.alberta.ca/api/3/action/package_show?id=6bd8f2a0-31d7-45a2-9e9c-489e1cf96d6c",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "third_party_risk": false,
+        "reviewed_on": "2026-07-23",
+        "attribution": "Contains information licensed under the Open Government Licence - Alberta.",
+        "notes": "The official registry identifies this exact PDF under OGL-Alberta. Retain only potato nutrition concepts and soil-test framing. All numeric rates are historical, cultivar- and region-specific, and require current southern-Alberta calibration, soil tests, yield/economic context, and professional review."
+      },
+      "use_policy": {
+        "discover": true,
+        "download": true,
+        "local_rag": true,
+        "distributable_bundle": true,
+        "training": false,
+        "live_retrieval": true
+      }
+    },
+    {
+      "id": "ab_beginning_berry_production_2016",
+      "title": "Beginning Berry Production",
+      "publisher": "Government of Alberta",
+      "authority_type": "provincial_government",
+      "jurisdiction": [
+        "Alberta"
+      ],
+      "language": [
+        "en-CA"
+      ],
+      "url": "https://open.alberta.ca/dataset/32a87164-a154-47b2-ad42-6345f35c4eb9",
+      "download_url": "https://open.alberta.ca/dataset/32a87164-a154-47b2-ad42-6345f35c4eb9/resource/802f1921-b09c-441c-a077-99d00c3fc34e/download/2016-beginning-berry-production-agdex-230-20-3-revised-november-2016.pdf",
+      "source_record_id": "32a87164-a154-47b2-ad42-6345f35c4eb9; Agdex 230/20-3",
+      "format": "pdf",
+      "content_mode": "corpus_document",
+      "runtime_source_type": "applied_guidance",
+      "runtime_document_type": "extension_document",
+      "default_retrieval_policy": "context_only",
+      "crops": [
+        "berry crops",
+        "strawberry",
+        "raspberry",
+        "saskatoon berry",
+        "black currant",
+        "sour cherry",
+        "haskap"
+      ],
+      "buckets": [
+        "crop_management",
+        "horticulture",
+        "precision_economics"
+      ],
+      "priority": "high",
+      "currency": {
+        "status": "historical_2016_requires_current_validation",
+        "review_interval_days": 365,
+        "volatile": false
+      },
+      "regulatory": {
+        "regulated_advice": false,
+        "require_live_authority": false
+      },
+      "license": {
+        "status": "redistributable",
+        "identifier": "Open Government Licence - Alberta",
+        "evidence_url": "https://open.alberta.ca/api/3/action/package_show?id=32a87164-a154-47b2-ad42-6345f35c4eb9",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "third_party_risk": false,
+        "reviewed_on": "2026-07-23",
+        "attribution": "Contains information licensed under the Open Government Licence - Alberta.",
+        "notes": "The official registry identifies the revised 2016 PDF under OGL-Alberta. Use for enterprise-planning questions and candidate information needs, not current cultivar, market, input, labour, or financial recommendations."
+      },
+      "ingest_policy": {
+        "include_page_ranges": [
+          [
+            1,
+            1
+          ]
+        ],
+        "notes": "Keep durable site, shelter, access, equipment, and water-planning context. Exclude pages 2-3 because their cultivar, yield, contact, and market references are dated."
+      },
+      "use_policy": {
+        "discover": true,
+        "download": true,
+        "local_rag": true,
+        "distributable_bundle": true,
+        "training": false,
+        "live_retrieval": true
+      }
+    },
+    {
+      "id": "ab_land_application_manure_nutrients_2026",
+      "title": "Land Application Requirements for Manure and Other Nutrient Sources",
+      "publisher": "Government of Alberta",
+      "authority_type": "provincial_government",
+      "jurisdiction": [
+        "Alberta"
+      ],
+      "language": [
+        "en-CA"
+      ],
+      "url": "https://open.alberta.ca/dataset/044b4739-f321-4f98-b2d9-d798c62a40b2",
+      "download_url": "https://open.alberta.ca/dataset/044b4739-f321-4f98-b2d9-d798c62a40b2/resource/47ce8a06-b8c5-4785-adb6-30bdacd99732/download/agi-land-application-requirements-manure-nutrient-sources-2026-06.pdf",
+      "source_record_id": "044b4739-f321-4f98-b2d9-d798c62a40b2; Agdex 096-5",
+      "format": "pdf",
+      "content_mode": "corpus_document",
+      "runtime_source_type": "applied_guidance",
+      "runtime_document_type": "regulatory_guidance",
+      "default_retrieval_policy": "context_only",
+      "crops": [
+        "all"
+      ],
+      "buckets": [
+        "nutrient_management",
+        "manure_management",
+        "soil_water",
+        "regulatory_boundary",
+        "recordkeeping"
+      ],
+      "priority": "critical",
+      "currency": {
+        "status": "current_regulatory_snapshot_2026_06",
+        "review_interval_days": 60,
+        "volatile": true
+      },
+      "regulatory": {
+        "regulated_advice": true,
+        "require_live_authority": true
+      },
+      "license": {
+        "status": "redistributable",
+        "identifier": "Open Government Licence - Alberta",
+        "evidence_url": "https://open.alberta.ca/api/3/action/package_show?id=044b4739-f321-4f98-b2d9-d798c62a40b2",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "third_party_risk": false,
+        "reviewed_on": "2026-07-23",
+        "attribution": "Contains information licensed under the Open Government Licence - Alberta.",
+        "notes": "The official registry lists the June 2026 PDF under OGL-Alberta and identifies contributions from the Natural Resources Conservation Board. This is an offline snapshot for issue recognition only. Current AOPA/NRCB requirements and the official source control any legal or operational decision."
+      },
+      "use_policy": {
+        "discover": true,
+        "download": true,
+        "local_rag": true,
+        "distributable_bundle": true,
+        "training": false,
+        "live_retrieval": true
+      }
+    }
+  ]
+}

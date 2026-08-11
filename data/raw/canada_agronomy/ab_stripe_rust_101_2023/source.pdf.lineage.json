@@ -1,0 +1,9 @@
+{
+  "canonical_url": "https://open.alberta.ca/dataset/d02dd5ef-c2cf-4e7c-b020-16344057ed85",
+  "download_url": "https://open.alberta.ca/dataset/d02dd5ef-c2cf-4e7c-b020-16344057ed85/resource/58fb90bb-fafb-46e8-af3c-272bf5ce0dcc/download/agi-stripe-rust-101-2023.pdf",
+  "fetched_at": "2026-07-18T04:59:47+00:00",
+  "raw_bytes": 90465,
+  "raw_path": "data/raw/canada_agronomy/ab_stripe_rust_101_2023/source.pdf",
+  "raw_sha256": "76e9535c185b41ac73e7fef774a0b491979524fc6918e35a3a48e88276b9c1f7",
+  "source_id": "ab_stripe_rust_101_2023"
+}

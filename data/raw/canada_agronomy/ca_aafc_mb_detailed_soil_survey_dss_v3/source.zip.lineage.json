@@ -1,0 +1,31 @@
+{
+  "schema_version": "open_agronomy_agent.canada_raw_source_lineage.v1",
+  "source_id": "ca_aafc_mb_detailed_soil_survey",
+  "source_record_id": "741a06a2-718f-4da9-9adf-6e95c8c37f3d",
+  "canonical_url": "https://open.canada.ca/data/en/dataset/741a06a2-718f-4da9-9adf-6e95c8c37f3d",
+  "download_url": "https://sis.agr.gc.ca/cansis/nsdb/dss/v3/dss_v3_mb_20161207.zip",
+  "fetched_at": "2026-08-09T15:44:00Z",
+  "raw_path": "data/raw/canada_agronomy/ca_aafc_mb_detailed_soil_survey_dss_v3/source.zip",
+  "raw_bytes": 258496198,
+  "raw_sha256": "b092f46188cecd74489690b6a43f5bde11c0dc79d0182785c30294b7b803adc2",
+  "support_files": [],
+  "source_registry_path": "data/manifests/canada_geospatial_sources.json",
+  "source_registry_sha256": "7b3e47218bc9f609c8c79be9da7966dc65c914b3ace23d851b07393db600a9ae",
+  "source_entry_sha256": "d864cbedbd1aa2f81e419dc67bbae2bc0c53bb4dd083bd0e2de99e234610a295",
+  "format": "versioned_zip_shapefile_plus_dbf_relational_tables",
+  "source_crs": "EPSG:26914",
+  "language": ["en-CA", "fr-CA"],
+  "jurisdiction": ["Canada", "Manitoba"],
+  "currency": "dss_v3_compilation_2016_current_dss_availability_page_2025",
+  "license_snapshot": {
+    "status": "redistributable",
+    "identifier": "Open Government Licence - Canada",
+    "evidence_url": "https://open.canada.ca/data/api/action/package_show?id=741a06a2-718f-4da9-9adf-6e95c8c37f3d",
+    "reviewed_on": "2026-08-09",
+    "permits_modification": true,
+    "permits_commercial": true,
+    "permits_redistribution": true,
+    "attribution": "Contains information licensed under the Open Government Licence - Canada from Agriculture and Agri-Food Canada, Canadian Soil Information Service."
+  },
+  "boundary": "Versioned 2016 DSS v3 stitched Manitoba compilation at multiple published scales; mapped context, not current field truth or management-rate authority."
+}

@@ -1,0 +1,45 @@
+{
+  "schema_version": "open_agronomy_agent.system_interface_contract.v1",
+  "benchmark_id": "open_agronomy_internal_v2",
+  "suite_contract": "configs/open_agronomy_internal_v2.json",
+  "status": "frozen_project_owned_internal_interface_contract",
+  "created_at": "2026-08-03T00:00:00Z",
+  "single_composite_score_allowed": false,
+  "coverage_snapshot": {
+    "cases": 319,
+    "benchmark_lanes": 8,
+    "task_families": 75,
+    "cases_with_field_context": 301,
+    "cases_with_expected_tools": 229,
+    "french_cases": 12
+  },
+  "workflow_coverage": {
+    "field_context_and_history": ["canadian_decision_quality", "field_history_lineage"],
+    "diagnosis_scouting_and_management": ["canadian_decision_quality", "canadian_advisory_transfer"],
+    "regulated_product_and_weather_boundaries": ["canadian_decision_quality", "known_failure_regression"],
+    "public_source_facts_and_scope": ["official_source_answer_boundary", "field_context_source_boundary"],
+    "retrieval_and_evidence_lineage": ["retrieval_lineage", "field_history_lineage"],
+    "format_and_language_robustness": ["prompt_format_robustness"]
+  },
+  "dimensions": {
+    "generation_input_lineage": "Exact messages and the context actually admitted to generation are captured.",
+    "generation_arm_identity": "Raw-model, kernel-only, and full-system arms are explicit; a kernel-bearing baseline cannot be reported as model-only.",
+    "field_context_binding": "Configured field context is preserved in the run record and admitted prompt.",
+    "language_preservation": "French interface questions remain French after model generation, holds, verification, and fallback.",
+    "route_trace": "Question type, risk, namespaces, and tool requirements are traceable.",
+    "required_tool_trace": "Implemented local guards, unexecuted online adapters, and legacy tool expectations are reported separately.",
+    "service_orchestration_boundary": "The core-agent generation harness declares that it does not execute online service adapters.",
+    "retrieval_admission": "Candidate retrieval is distinct from evidence admitted to generation.",
+    "evidence_lineage": "The evidence fabric and its content hash are captured for every full-system response.",
+    "answer_origin": "Model drafts, rewrites, deterministic holds, and fallbacks remain separately countable.",
+    "output_contract": "Benchmark answers satisfy the frozen length and paragraph-shape contract."
+  },
+  "gates": {
+    "weak_retrieval_admitted": 0,
+    "generation_input_lineage_rate": 1.0,
+    "non_english_language_preservation_rate": 1.0,
+    "route_trace_rate": 1.0,
+    "evidence_lineage_rate": 1.0
+  },
+  "interpretation": "Interface metrics are deterministic system-contract diagnostics, not agronomic answer accuracy. Report every dimension separately."
+}

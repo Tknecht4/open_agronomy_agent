@@ -1,0 +1,7 @@
+# Optional shadow experiment only; not part of the default local runtime.
+# The model revision itself is pinned and verified by the preparation receipt.
+torch>=2.7,<3
+transformers>=5.0,<6
+safetensors>=0.6,<1
+huggingface-hub>=1.0,<2
+

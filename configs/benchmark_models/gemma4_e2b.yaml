@@ -1,0 +1,15 @@
+model_id: mlx-community/gemma-4-e2b-it-4bit
+model_revision: 238767527555cb75a05732a84dff5d6ba0dd6809
+license: apache-2.0
+max_tokens: 480
+temperature: 0.0
+top_p: 0.9
+top_k: 0
+intervention_profile: balanced
+seed: 42
+answer_verification:
+  enabled: true
+  mode: model_agnostic_selective_v2
+  model_id: mlx-community/gemma-4-e2b-it-4bit
+  max_tokens: 220
+  max_evidence_chars: 9000

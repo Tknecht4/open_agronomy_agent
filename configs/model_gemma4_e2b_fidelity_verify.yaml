@@ -1,0 +1,37 @@
+model_id: mlx-community/gemma-4-e2b-it-4bit
+serving_model_id: mlx-community/gemma-4-e2b-it-4bit
+serving_label: Gemma 4 E2B · Canadian fidelity candidate
+serving_role: conference_candidate
+serving_quality_gate: named_product_fidelity_verification
+assistant_model_id: mlx-community/Qwen3.5-0.8B-OptiQ-4bit
+assistant_label: Qwen3.5 0.8B OptiQ Fast
+assistant_role: fast
+assistant_quality_gate: fast_repaired
+vlm_model_id: mlx-community/gemma-4-e2b-it-4bit
+model_revision: 238767527555cb75a05732a84dff5d6ba0dd6809
+license: apache-2.0
+max_tokens: 480
+serving_max_tokens: 480
+assistant_max_tokens: 35
+temperature: 0.0
+top_p: 0.9
+top_k: 0
+seed: 42
+use_stream_generate: true
+prompt_cache_enabled: false
+prompt_cache_entries: 8
+prompt_cache_max_bytes_mb: 256
+prompt_cache_min_prefix_tokens: 64
+prefill_step_size: 2048
+kv_bits:
+kv_group_size: 64
+quantized_kv_start: 0
+max_kv_size:
+draft_model_id:
+num_draft_tokens: 4
+answer_verification:
+  enabled: true
+  mode: named_product_fidelity
+  model_id: mlx-community/gemma-4-e2b-it-4bit
+  max_tokens: 220
+  max_evidence_chars: 9000

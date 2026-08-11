@@ -1,0 +1,75 @@
+{
+  "area_change_fraction": 8.59e-06,
+  "coordinate_precision_degrees": 1e-06,
+  "coverage_area": "Pictou County only",
+  "derived_invalid_geometries": 0,
+  "derived_vertices": 169322,
+  "distribution_boundary": "Derived OGL-Canada historical soil-map context for Pictou County only; not province-wide coverage, current field truth, present soil-test evidence, crop-specific suitability, drainage diagnosis, or management-rate authority.",
+  "drainage_component_counts": {
+    "imperfectly drained": 775,
+    "moderately well drained": 106,
+    "poorly drained": 463,
+    "rapidly drained": 196,
+    "unclassified": 463,
+    "very poorly drained": 159,
+    "well drained": 618
+  },
+  "feature_count": 1565,
+  "generated_at": "2026-07-25T00:43:00Z",
+  "license_snapshot": {
+    "attribution": "Contains information licensed under the Open Government Licence - Canada from Agriculture and Agri-Food Canada, Canadian Soil Information Service.",
+    "evidence_url": "https://open.canada.ca/data/api/action/package_show?id=083534ca-d5b0-46f5-b540-f3a706dbc2de",
+    "identifier": "Open Government Licence - Canada",
+    "permits_commercial": true,
+    "permits_modification": true,
+    "permits_redistribution": true,
+    "reviewed_on": "2026-07-24",
+    "status": "redistributable"
+  },
+  "lineage_path": "data/raw/canada_agronomy/ca_aafc_ns_detailed_soil_survey/source.gpkg.lineage.json",
+  "lineage_sha256": "db19ac2ddbbd1e7e9336633357344c92cdd7782a4eda2c75600288ade1ed2cdf",
+  "map_units_without_components": 0,
+  "output_bytes": 7344128,
+  "output_crs": "EPSG:4326",
+  "output_path": "data/derived/geo_layers/ns_pictou_detailed_soil.sqlite3",
+  "output_sha256": "e0ab8e9e05d8f85c3728dc947f458e9cac5fa899bca880ce2754aa672c862d77",
+  "schema_version": "open_agronomy_agent.local_geo_layer.v1",
+  "simplification_tolerance_metres": 5.0,
+  "source_bytes": 7143424,
+  "source_crs": "EPSG:3857",
+  "source_entry_sha256": "aea1bccedc5470950383d21ad01c04ce2a42dd045363b2ca42713404e0ae0c88",
+  "source_id": "ca_aafc_ns_detailed_soil_survey",
+  "source_invalid_geometries": 0,
+  "source_path": "data/raw/canada_agronomy/ca_aafc_ns_detailed_soil_survey/source.gpkg",
+  "source_registry_path": "data/manifests/canada_geospatial_sources.json",
+  "source_registry_sha256": "cd9c8cac045ce12251f77a0cdc5c64f3b8cfa61c14436776e5030cdc94c23859",
+  "source_sha256": "328e9514af97e38dcefe10fbe35b1a62c1f22fda932255ed799ca763e4cfaffb",
+  "source_vertices": 372177,
+  "support_files": [
+    {
+      "bytes": 137967,
+      "download_url": "https://agriculture.canada.ca/atlas/data_donnees/detailedSoilSurvey/data_donnees/csv/ns_dtl_soil_sol/ns_dtl_50k.csv",
+      "path": "data/raw/canada_agronomy/ca_aafc_ns_detailed_soil_survey/ns_dtl_50k.csv",
+      "sha256": "85507301bd43a0c9c0ced4cb12af1ee607137421a0f5fd68e26a64d1a0d0b459"
+    },
+    {
+      "bytes": 26244,
+      "download_url": "https://agriculture.canada.ca/atlas/data_donnees/detailedSoilSurvey/data_donnees/csv/ns_dtl_soil_sol/ns_dtl_cmp.csv",
+      "path": "data/raw/canada_agronomy/ca_aafc_ns_detailed_soil_survey/ns_dtl_cmp.csv",
+      "sha256": "58a0033b497ace9c57d9681842c58646d6fc8c91359e62cd6f6e7e14868ea10d"
+    },
+    {
+      "bytes": 45639,
+      "download_url": "https://agriculture.canada.ca/atlas/data_donnees/detailedSoilSurvey/data_donnees/csv/ns_dtl_soil_sol/ns_dtl_slf.csv",
+      "path": "data/raw/canada_agronomy/ca_aafc_ns_detailed_soil_survey/ns_dtl_slf.csv",
+      "sha256": "d66d943b882d16a39241c2e2d8d68b3cd537e24f2a72137dcb415e49db83161d"
+    },
+    {
+      "bytes": 6486,
+      "download_url": "https://agriculture.canada.ca/atlas/data_donnees/detailedSoilSurvey/data_donnees/csv/ns_dtl_soil_sol/ns_dtl_snf.csv",
+      "path": "data/raw/canada_agronomy/ca_aafc_ns_detailed_soil_survey/ns_dtl_snf.csv",
+      "sha256": "fca51286580bbd61972a003dc5f2aff7e2607e5c88756e0d51895dfd63523cc0"
+    }
+  ],
+  "vertex_reduction_fraction": 0.54505
+}

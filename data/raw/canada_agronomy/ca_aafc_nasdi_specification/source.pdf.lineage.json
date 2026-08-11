@@ -1,0 +1,9 @@
+{
+  "canonical_url": "https://open.canada.ca/data/en/dataset/2b72996a-2905-4cea-a565-8bfb85cd42ac",
+  "download_url": "https://agriculture.canada.ca/atlas/data_donnees/nasdi/supportdocument_documentdesupport/en/ISO_19131_NASDI_-_Data_Product_Specification.pdf",
+  "fetched_at": "2026-07-18T16:41:04+00:00",
+  "raw_bytes": 376683,
+  "raw_path": "data/raw/canada_agronomy/ca_aafc_nasdi_specification/source.pdf",
+  "raw_sha256": "81b510113263c21ca22f4ecf69e35874d4aa85273f49262dd9ac44b9b7d3b34d",
+  "source_id": "ca_aafc_nasdi_specification"
+}

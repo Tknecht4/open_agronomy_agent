@@ -1,0 +1,65 @@
+[
+  {
+    "name": "Certified Crop Adviser performance objectives",
+    "url": "https://www.certifiedcropadviser.org/exams/performance-objectives",
+    "domain_fit": "US/Canadian nutrient, soil-water, pest, crop-management competency coverage",
+    "use": "coverage map and scenario taxonomy; do not copy exam text into training rows",
+    "license_notes": "copyrighted professional exam material; use for topic mapping and citation only"
+  },
+  {
+    "name": "AgXQA",
+    "url": "https://huggingface.co/datasets/msu-ceco/agxqa_v1",
+    "domain_fit": "extension-style agricultural QA",
+    "use": "open QA style and retrieval grounding examples; validate regional fit before gold promotion",
+    "license_notes": "check dataset card before redistribution or training"
+  },
+  {
+    "name": "AI AgriBench",
+    "url": "https://aiagribench.org/leaderboard/",
+    "domain_fit": "expert-curated agricultural QA benchmark for advisory responses",
+    "use": "benchmark design reference and possible external comparison if access/terms permit",
+    "license_notes": "check site terms and dataset availability"
+  },
+  {
+    "name": "AgThoughts",
+    "url": "https://huggingface.co/datasets/BGLab/AgThoughts",
+    "domain_fit": "large expert-guided agricultural reasoning QA across agronomic categories",
+    "use": "candidate hard reasoning prompts and answer-style review; treat reasoning traces carefully",
+    "license_notes": "check dataset card before training or redistribution"
+  },
+  {
+    "name": "AgriGPT / AgriBench-13K",
+    "url": "https://arxiv.org/abs/2508.08632",
+    "domain_fit": "agriculture LLM benchmark/tasks and hybrid retrieval direction",
+    "use": "benchmark taxonomy and retrieval architecture comparison",
+    "license_notes": "paper; check linked assets before use"
+  },
+  {
+    "name": "AgriEval",
+    "url": "https://arxiv.org/abs/2507.21773",
+    "domain_fit": "large agricultural benchmark organized by knowledge and reasoning categories",
+    "use": "eval design reference for memorization, understanding, inference, and generation bands",
+    "license_notes": "paper; check linked assets before use"
+  },
+  {
+    "name": "PlantInquiryVQA",
+    "url": "https://huggingface.co/datasets/SyedNazmusSakib/PlantInquiryVQA",
+    "domain_fit": "multi-turn plant pathology visual QA",
+    "use": "future VLM and multi-turn image diagnosis evaluation",
+    "license_notes": "check dataset card before training or redistribution"
+  },
+  {
+    "name": "AgriBench multimodal / MM-LUCAS",
+    "url": "https://arxiv.org/abs/2412.00465",
+    "domain_fit": "multimodal land-use/agriculture benchmark",
+    "use": "future VLM/geospatial eval design; less direct for crop-adviser text advice",
+    "license_notes": "paper and GitHub-linked assets; check license"
+  },
+  {
+    "name": "PlantVillageVQA",
+    "url": "https://arxiv.org/abs/2508.17117",
+    "domain_fit": "plant disease VQA over PlantVillage-style imagery",
+    "use": "future VLM disease-diagnosis benchmark; not sufficient for field-level agronomy alone",
+    "license_notes": "paper; check linked Hugging Face dataset card"
+  }
+]

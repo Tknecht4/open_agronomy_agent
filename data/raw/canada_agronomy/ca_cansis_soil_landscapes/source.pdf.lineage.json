@@ -1,0 +1,9 @@
+{
+  "canonical_url": "https://open.canada.ca/data/en/dataset/4b0ae142-9ff0-4d8f-abf5-36b2b4edd52d",
+  "download_url": "https://agriculture.canada.ca/atlas/data_donnees/soilLandscapesOfCanada2_2/supportdocument_documentdesupport/en/ISO_19131_Soil_Landscapes_of_Canada_Data_Product_Specification.pdf",
+  "fetched_at": "2026-07-18T07:26:09+00:00",
+  "raw_bytes": 689904,
+  "raw_path": "data/raw/canada_agronomy/ca_cansis_soil_landscapes/source.pdf",
+  "raw_sha256": "5c83b3ad272cd2352f2a032a348c738a087d46eee221abb7a2c75834cb102f62",
+  "source_id": "ca_cansis_soil_landscapes"
+}

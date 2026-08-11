@@ -1,0 +1,519 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.agronomy-agent/schemas/phase3_trace_schema_v0.json",
+  "title": "Agronomy Agent Phase 3 Trace Bundle",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "session",
+    "turns",
+    "export_manifest"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "phase3.trace.v0"
+    },
+    "session": {
+      "type": "object",
+      "required": [
+        "session_id",
+        "created_at",
+        "consent",
+        "context"
+      ],
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "user_pseudonym": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "consent": {
+          "type": "object",
+          "required": [
+            "local_trace_capture",
+            "research_export_allowed",
+            "training_export_allowed"
+          ],
+          "properties": {
+            "local_trace_capture": {
+              "type": "boolean"
+            },
+            "research_export_allowed": {
+              "type": "boolean"
+            },
+            "training_export_allowed": {
+              "type": "boolean"
+            },
+            "redaction_required": {
+              "type": "boolean"
+            }
+          }
+        },
+        "context": {
+          "type": "object",
+          "properties": {
+            "crop": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "region": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "jurisdiction": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "soil_context": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "season": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "turns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "turn_id",
+          "user_message",
+          "answer",
+          "system_state",
+          "trace",
+          "feedback"
+        ],
+        "properties": {
+          "turn_id": {
+            "type": "string"
+          },
+          "parent_turn_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "user_message": {
+            "type": "string"
+          },
+          "answer": {
+            "type": "string"
+          },
+          "answer_status": {
+            "enum": [
+              "draft",
+              "reviewed",
+              "approved",
+              "rejected",
+              "exported"
+            ]
+          },
+          "system_state": {
+            "type": "object",
+            "required": [
+              "mode",
+              "model_id",
+              "rag_config",
+              "prompt_version"
+            ],
+            "properties": {
+              "mode": {
+                "enum": [
+                  "baseline",
+                  "agronomic_rag",
+                  "mock"
+                ]
+              },
+              "model_id": {
+                "type": "string"
+              },
+              "rag_config": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "model_config_hash": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "rag_config_hash": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "prompt_version": {
+                "type": "string"
+              },
+              "corpus_audit_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "latency_ms": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": true
+          },
+          "trace": {
+            "type": "object",
+            "required": [
+              "route",
+              "retrieved_docs",
+              "graph_hits",
+              "tool_invocations"
+            ],
+            "properties": {
+              "route": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "coverage_checklist": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "retrieved_docs": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "graph_hits": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "tool_invocations": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "prompt_messages": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "metadata": {
+                "type": "object"
+              }
+            },
+            "additionalProperties": true
+          },
+          "feedback": {
+            "type": "object",
+            "properties": {
+              "rating": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 1,
+                "maximum": 5
+              },
+              "accepted": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "failure_tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "correction": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "ideal_answer": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "reviewer_notes": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "route_correct": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "evidence_feedback": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            },
+            "additionalProperties": true
+          },
+          "reflection": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "observation": {
+                "type": "string"
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "failure_hypothesis": {
+                "type": "string"
+              },
+              "proposed_rule": {
+                "type": "string"
+              },
+              "affected_component": {
+                "enum": [
+                  "router",
+                  "retriever",
+                  "knowledge_graph",
+                  "tool",
+                  "system_prompt",
+                  "answer_planning",
+                  "corpus",
+                  "eval",
+                  "generation",
+                  "unknown"
+                ]
+              },
+              "counterexample_risk": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "confidence": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "review_status": {
+                "enum": [
+                  "candidate",
+                  "approved",
+                  "rejected",
+                  "needs_more_examples",
+                  "promoted"
+                ]
+              }
+            },
+            "additionalProperties": true
+          },
+          "objectives": {
+            "type": "object",
+            "properties": {
+              "safety": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              },
+              "correctness": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              },
+              "completeness": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              },
+              "relevance": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              },
+              "conciseness": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              },
+              "retrieval_support": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              },
+              "route_correctness": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              },
+              "tool_use": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              },
+              "latency_ms": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "data_sources": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "export_manifest": {
+      "type": "object",
+      "required": [
+        "export_id",
+        "created_at",
+        "redaction_mode",
+        "training_eligible",
+        "files"
+      ],
+      "properties": {
+        "export_id": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "redaction_mode": {
+          "enum": [
+            "none",
+            "identifiers",
+            "snippets_hashed",
+            "training_safe"
+          ]
+        },
+        "training_eligible": {
+          "type": "boolean"
+        },
+        "training_exclusion_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "checksums": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

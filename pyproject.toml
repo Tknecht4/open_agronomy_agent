@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agronomy-agent"
+version = "0.1.0"
+description = "Local-first agronomist agent MVP with RAG, tools, and evals."
+requires-python = ">=3.11"
+dependencies = [
+    "agno>=2.6,<2.7",
+    "cryptography>=45,<47",
+]
+
+[project.optional-dependencies]
+agno-rag = [
+    "pgvector>=0.4",
+]
+geospatial-prep = [
+    "geopandas>=1.0,<2",
+    "pyogrio>=0.10,<1",
+    "pyproj>=3.6,<4",
+    "shapely>=2.0,<3",
+]
+
+[project.scripts]
+agronomy-agent = "agronomy_agent.cli:main"
+agronomy-tool = "agronomy_agent.tool_cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

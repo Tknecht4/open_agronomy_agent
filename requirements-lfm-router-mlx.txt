@@ -1,0 +1,6 @@
+# Preferred Apple-Silicon shadow backend. Not part of the default runtime.
+mlx>=0.31,<0.32
+mlx-lm>=0.31,<0.32
+transformers>=5.0,<6
+safetensors>=0.6,<1
+

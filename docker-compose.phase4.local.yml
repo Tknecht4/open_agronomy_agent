@@ -1,0 +1,137 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: agronomy
+      POSTGRES_PASSWORD: agronomy
+      POSTGRES_DB: agronomy_agent
+    ports:
+      - "5432:5432"
+    volumes:
+      - phase4_postgres:/var/lib/postgresql/data
+      - ./plans/agronomy_agent_phase4_hosted_platform_packet_final/phase4_postgres_schema_starter.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agronomy -d agronomy_agent"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - phase4_minio:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.api
+    environment:
+      AGRONOMY_AGENT_DB_BACKEND: sqlite
+      AGRONOMY_AGENT_DATABASE_URL: postgresql://agronomy:agronomy@postgres:5432/agronomy_agent
+      AGRONOMY_AGENT_DB_PATH: /app/state/phase4.sqlite3
+      AGRONOMY_AGENT_ARTIFACT_ROOT: /app/state/artifacts
+      AGRONOMY_AGENT_OTEL_ENABLED: "true"
+      AGRONOMY_AGENT_OTEL_SERVICE_NAME: agronomy-agent-api
+      AGRONOMY_AGENT_REDIS_URL: redis://redis:6379/0
+      AGRONOMY_AGENT_RATE_LIMIT_BACKEND: memory
+      AGRONOMY_AGENT_RATE_LIMIT_FAIL_OPEN: "false"
+      AGRONOMY_AGENT_JOB_QUEUE_BACKEND: local
+      AGRONOMY_AGENT_JOB_QUEUE_NAME: agronomy:jobs:ingest
+      AGRONOMY_AGENT_EVAL_QUEUE_NAME: agronomy:jobs:eval
+      AGRONOMY_AGENT_EXPORT_QUEUE_NAME: agronomy:jobs:exports
+      AGRONOMY_AGENT_EMBEDDING_QUEUE_NAME: agronomy:jobs:embedding
+      AGRONOMY_AGENT_IMAGE_QUEUE_NAME: agronomy:jobs:image
+      AGRONOMY_AGENT_JOB_QUEUE_FAIL_OPEN: "false"
+      AGRONOMY_AGENT_JWT_ISSUER: ""
+      AGRONOMY_AGENT_JWT_AUDIENCE: ""
+      AGRONOMY_AGENT_JWT_JWKS_URL: ""
+      AGRONOMY_AGENT_OIDC_AUTHORIZATION_ENDPOINT: ""
+      AGRONOMY_AGENT_OIDC_TOKEN_ENDPOINT: ""
+      AGRONOMY_AGENT_OIDC_CLIENT_ID: ""
+      AGRONOMY_AGENT_OIDC_CLIENT_SECRET: ""
+      AGRONOMY_AGENT_OIDC_REDIRECT_URI: ""
+      AGRONOMY_AGENT_OIDC_SESSION_SECRET: ""
+      AGRONOMY_AGENT_OIDC_SCOPES: openid email profile
+      AGRONOMY_AGENT_OBJECT_STORE_BACKEND: local
+      AGRONOMY_AGENT_OBJECT_STORE_ENDPOINT: http://minio:9000
+      AGRONOMY_AGENT_OBJECT_STORE_BUCKET: agronomy-agent-local
+      AGRONOMY_AGENT_OBJECT_STORE_ACCESS_KEY: minio
+      AGRONOMY_AGENT_OBJECT_STORE_SECRET_KEY: minio123
+      AGRONOMY_AGENT_STRUCTURED_ACCESS_LOGS: "true"
+    ports:
+      - "8000:8000"
+    volumes:
+      - phase4_api_state:/app/state
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  worker:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.api
+    command: ["python", "-m", "agronomy_agent.server.worker", "--interval-seconds", "30", "--run-queued-ingest", "--run-queued-evals", "--run-queued-exports", "--run-queued-embeddings", "--run-queued-images", "--max-jobs", "5"]
+    environment:
+      AGRONOMY_AGENT_DB_BACKEND: sqlite
+      AGRONOMY_AGENT_DATABASE_URL: postgresql://agronomy:agronomy@postgres:5432/agronomy_agent
+      AGRONOMY_AGENT_REDIS_URL: redis://redis:6379/0
+      AGRONOMY_AGENT_JOB_QUEUE_BACKEND: local
+      AGRONOMY_AGENT_JOB_QUEUE_NAME: agronomy:jobs:ingest
+      AGRONOMY_AGENT_EVAL_QUEUE_NAME: agronomy:jobs:eval
+      AGRONOMY_AGENT_EXPORT_QUEUE_NAME: agronomy:jobs:exports
+      AGRONOMY_AGENT_EMBEDDING_QUEUE_NAME: agronomy:jobs:embedding
+      AGRONOMY_AGENT_IMAGE_QUEUE_NAME: agronomy:jobs:image
+      AGRONOMY_AGENT_DB_PATH: /app/state/phase4.sqlite3
+      AGRONOMY_AGENT_ARTIFACT_ROOT: /app/state/artifacts
+    volumes:
+      - phase4_api_state:/app/state
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      VITE_API_TARGET: http://api:8000
+    ports:
+      - "5173:5173"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  phase4_postgres:
+  phase4_minio:
+  phase4_api_state:

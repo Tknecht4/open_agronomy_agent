@@ -1,0 +1,29 @@
+:root {
+  --phase6-font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  --phase6-font-size-body: 14px;
+  --phase6-font-size-heading: 26px;
+  --phase6-font-size-subheading: 17px;
+  --phase6-line-height-tight: 1.2;
+
+  --phase6-color-text: #1f2a24;
+  --phase6-color-heading: #314137;
+  --phase6-color-page: #f6f7f3;
+  --phase6-color-surface: #ffffff;
+  --phase6-color-border: #d9ded4;
+  --phase6-color-control: #eef3ea;
+  --phase6-color-control-hover: #e0eadb;
+  --phase6-color-control-text: #173326;
+  --phase6-color-disabled-text: #8b9489;
+  --phase6-color-disabled-bg: #f1f2ef;
+  --phase6-color-input-bg: #fbfcfa;
+
+  --phase6-color-success: #2f6f4e;
+  --phase6-color-caution: #9a5b19;
+  --phase6-color-regulated: #8a3324;
+  --phase6-color-regulated-bg: #fff1ea;
+  --phase6-color-missing-data: #6b5b95;
+  --phase6-color-evidence: #2e5e75;
+  --phase6-color-source: #436b38;
+  --phase6-color-internal-debug: #4d5663;
+  --phase6-color-internal-debug-bg: #f6f8f4;
+}

@@ -1,0 +1,9 @@
+{
+  "canonical_url": "https://open.alberta.ca/dataset/e44b3c7a-17ac-4caf-853c-3f810fa8c5fa",
+  "download_url": "https://open.alberta.ca/dataset/e44b3c7a-17ac-4caf-853c-3f810fa8c5fa/resource/2232c271-5c0d-4548-908b-71a9dc6e4f02/download/af-red-lentil-management-2020.pdf",
+  "fetched_at": "2026-07-18T04:59:47+00:00",
+  "raw_bytes": 1817652,
+  "raw_path": "data/raw/canada_agronomy/ab_red_lentil_management_2020/source.pdf",
+  "raw_sha256": "181019bfe4149b3830cf60893bb4f79107df3df6654058fa86c272ec954fd042",
+  "source_id": "ab_red_lentil_management_2020"
+}

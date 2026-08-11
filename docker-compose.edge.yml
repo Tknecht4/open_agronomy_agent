@@ -1,0 +1,31 @@
+name: open-agronomy-agent
+
+services:
+  app:
+    image: ${AGRONOMY_AGENT_IMAGE:-open-agronomy-agent:edge}
+    init: true
+    restart: unless-stopped
+    cpus: ${AGRONOMY_AGENT_CONTAINER_CPUS:-4}
+    mem_limit: ${AGRONOMY_AGENT_CONTAINER_MEMORY:-4g}
+    ports:
+      - "127.0.0.1:${AGRONOMY_AGENT_APP_PORT:-8080}:${AGRONOMY_AGENT_CONTAINER_PORT:-8080}"
+    volumes:
+      - "${AGRONOMY_AGENT_STATE_DIR:-${HOME}/Library/Application Support/OpenAgronomyAgent/state}:${AGRONOMY_AGENT_CONTAINER_STATE_MOUNT:-/state}"
+      - "${AGRONOMY_AGENT_MODEL_STATE_DIR:-${HOME}/Library/Application Support/OpenAgronomyAgent/model-host}:/model-host:ro"
+    environment:
+      AGRONOMY_AGENT_MODEL_BASE_URL: http://host.docker.internal:${AGRONOMY_AGENT_MODEL_PORT:-8081}/v1
+      AGRONOMY_AGENT_MODEL_IDENTITY_RECEIPT: /model-host/model-host.identity.json
+      AGRONOMY_AGENT_MODEL_IDENTITY_REQUIRED: "true"
+      AGRONOMY_AGENT_NETWORK_MODE: ${AGRONOMY_AGENT_NETWORK_MODE:-online}
+      AGRONOMY_AGENT_RUNTIME_ENGINE: ${AGRONOMY_AGENT_RUNTIME_ENGINE:-docker}
+      AGRONOMY_AGENT_RUNTIME_PROFILE: ${AGRONOMY_AGENT_RUNTIME_PROFILE:-default}
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 4

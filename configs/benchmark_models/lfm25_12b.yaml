@@ -1,0 +1,14 @@
+model_id: LiquidAI/LFM2.5-1.2B-Instruct-MLX-4bit
+model_revision: c30e30c5efac705771e1f37df38a32115718dd5d
+license: other
+max_tokens: 480
+temperature: 0.0
+top_p: 0.9
+top_k: 0
+seed: 42
+answer_verification:
+  enabled: true
+  mode: conference_selective
+  model_id: LiquidAI/LFM2.5-1.2B-Instruct-MLX-4bit
+  max_tokens: 180
+  max_evidence_chars: 9000

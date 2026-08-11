@@ -1,0 +1,36 @@
+{
+  "schema_version": "open_agronomy_agent.canada_raw_source_lineage.v1",
+  "source_id": "bc_agriculture_capability_mapping",
+  "source_record_id": "582a6147-4e24-468c-a048-762302139afc",
+  "canonical_url": "https://catalogue.data.gov.bc.ca/dataset/agriculture-capability-mapping",
+  "download_url": "https://www.env.gov.bc.ca/esd/distdata/ecosystems/Soil_Data/AgricultureCapability/AgCap_Map_SHP_20150923.zip",
+  "fetched_at": "2026-07-18T08:17:47Z",
+  "raw_path": "data/raw/canada_agronomy/bc_agriculture_capability_mapping/source.zip",
+  "raw_bytes": 114930188,
+  "raw_sha256": "527e5e473e8353abfc95eebeb0eefa8d0864ff3ae14bab7eed3ec89447453a60",
+  "catalogue_snapshot_path": "data/raw/canada_agronomy/bc_agriculture_capability_mapping/catalogue_record.json",
+  "catalogue_snapshot_sha256": "68a2113a2ca08a1a02cf692ab2c476961b9067dfafae96e3721086e26cfc7d0a",
+  "source_registry_path": "data/manifests/canada_geospatial_sources.json",
+  "source_registry_sha256": "cd9c8cac045ce12251f77a0cdc5c64f3b8cfa61c14436776e5030cdc94c23859",
+  "format": "zipped_shapefile",
+  "source_crs": "EPSG:3005",
+  "language": [
+    "en-CA"
+  ],
+  "jurisdiction": [
+    "British Columbia"
+  ],
+  "currency": "legacy_1960s_to_1990s_mapping",
+  "license_snapshot": {
+    "status": "redistributable",
+    "identifier": "Open Government Licence - British Columbia",
+    "evidence_url": "https://catalogue.data.gov.bc.ca/api/3/action/package_show?id=582a6147-4e24-468c-a048-762302139afc",
+    "reviewed_on": "2026-07-18",
+    "permits_modification": true,
+    "permits_commercial": true,
+    "permits_redistribution": true,
+    "attribution": "Contains information licensed under the Open Government Licence - British Columbia from the Government of British Columbia."
+  },
+  "boundary": "Legacy generalized capability mapping derived from soil and climate. It does not establish crop-specific suitability, yield, management inputs, feasible improvements, current field conditions, or field truth.",
+  "source_entry_sha256": "97012cc28f25ebb3d05664d538532682f4156098b1a6f4c1f258708193e249db"
+}

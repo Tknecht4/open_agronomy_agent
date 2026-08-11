@@ -1,0 +1,20 @@
+{
+  "schema_version": "open_agronomy_agent.system_interface_contract.v1",
+  "benchmark_id": "open_agronomy_canadian_performance_v1",
+  "suite_contract": "configs/open_agronomy_canadian_performance_v1.json",
+  "generation_scope": "core_agent_text_only",
+  "service_orchestration_exercised": false,
+  "arms": {
+    "raw_model": "Question only; local backends have no Open Agronomy system instruction. App-server transports retain their declared text-only transport control.",
+    "baseline": "Production Open Agronomy kernel and answer handling without structured field context, retrieval, tools, evidence intervention, or verifier.",
+    "kernel_field_context": "Baseline plus exactly crop_current, region_text, province_state, and management_notes when present; no retrieval, tools, evidence intervention, or verifier.",
+    "agronomic_rag": "Core text-agent path with governed retrieval, evidence fabric, intervention policy, verifier when configured, and answer post-processing. Expected live adapters are traced but not executed by this interface."
+  },
+  "claim_boundaries": [
+    "This interface measures response generation and governed retrieval behaviour, not live public-adapter execution.",
+    "A textual source or tool mention is never evidence that a provider was called.",
+    "The benchmark contains project-authored scenarios and is not an estimate of the distribution of real grower questions.",
+    "Automated semantic judging is triage, not independent agronomist validation.",
+    "No single composite score is permitted across semantic, retrieval, lineage, and objective calculation lanes."
+  ]
+}

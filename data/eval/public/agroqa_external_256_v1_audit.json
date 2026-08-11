@@ -1,0 +1,37 @@
+{
+  "claim_boundary": "This frozen sample measures response resemblance and cross-region transfer behavior. It does not measure CCA exam readiness or Canadian field-advisory validity.",
+  "eligible_by_crop": {
+    "beans": 337,
+    "cassava": 488,
+    "general": 185,
+    "maize": 295
+  },
+  "exclusions": {
+    "answer_length": 1214,
+    "direct_chemical_or_pesticide_advice": 429,
+    "duplicate_question": 69,
+    "near_duplicate_question": 175,
+    "non_answer": 1,
+    "question_length": 189
+  },
+  "reference_answer_status": "published_dataset_reference_not_independently_verified",
+  "sample_seed": "open-agronomy-agroqa-external-v1",
+  "schema_version": "open_agronomy_agent.external_source_audit.v1",
+  "selected_by_cca_alignment": {
+    "crop_management": 103,
+    "nutrient_management": 47,
+    "pest_management": 62,
+    "soil_and_water_management": 44
+  },
+  "selected_by_crop": {
+    "beans": 64,
+    "cassava": 64,
+    "general": 64,
+    "maize": 64
+  },
+  "selected_rows": 256,
+  "source_dataset": "JonaOmara/AgroQA-Dataset",
+  "source_revision": "91b5ae1c4a3779646907bf4dc5e507ae1efe366b",
+  "source_rows": 3044,
+  "source_sha256": "05f2775ce7ebfbe85cf24c86910f5761eefb1c1c12504233399231fca26d0e3f"
+}

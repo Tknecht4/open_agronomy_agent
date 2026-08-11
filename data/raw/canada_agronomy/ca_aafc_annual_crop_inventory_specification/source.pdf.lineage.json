@@ -1,0 +1,9 @@
+{
+  "canonical_url": "https://open.canada.ca/data/en/dataset/ba2645d5-4458-414d-b196-6303ac06c1c9",
+  "download_url": "https://agriculture.canada.ca/atlas/data_donnees/annualCropInventory/supportdocument_documentdesupport/en/ISO%2019131_AAFC_Annual_Crop_Inventory_Data_Product_Specifications.pdf",
+  "fetched_at": "2026-07-21T00:08:27+00:00",
+  "raw_bytes": 491061,
+  "raw_path": "data/raw/canada_agronomy/ca_aafc_annual_crop_inventory_specification/source.pdf",
+  "raw_sha256": "b8aeff19eb36dfbb83b99a4029c00419ebe325daaf2e32a842136689ba507959",
+  "source_id": "ca_aafc_annual_crop_inventory_specification"
+}

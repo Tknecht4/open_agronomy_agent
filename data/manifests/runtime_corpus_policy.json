@@ -1,0 +1,188 @@
+{
+  "schema_version": "open_agronomy_agent.runtime_corpus_policy.v1",
+  "policy_id": "rc20_rights_scope_ontario_context_20260725",
+  "default_eligibility": "quarantined",
+  "rules": {
+    "decisive": "May support an action only within its jurisdiction, currency, retrieval-policy, and field-fit limits.",
+    "context_only": "May explain concepts or frame questions, but cannot support a high-consequence action.",
+    "quarantined": "Must not enter runtime model context; retained only for research provenance pending rights and quality review."
+  },
+  "corpora": [
+    {
+      "path": "data/seed/agronomy_rag_corpus.jsonl",
+      "sha256": "45f22cf8380007661c9ba3109ff1e6254f031b39a78bcaa09b11c1ba3c858ba5",
+      "runtime_eligibility": "context_only",
+      "evidence_tier": "internal_synthesis",
+      "rights_status": "project_authored",
+      "reason": "Useful conceptual scaffolding, but most rows lack document-level source lineage."
+    },
+    {
+      "path": "data/seed/boundary_rag_corpus.jsonl",
+      "sha256": "d6210d1db7efe7cd7814c4a51acd85d778c2e490f274726b47c9d14334a0ddb6",
+      "runtime_eligibility": "decisive",
+      "evidence_tier": "project_safety_policy",
+      "rights_status": "project_authored",
+      "reason": "Project-authored fail-closed safety boundaries; not a substitute for external agronomic authority."
+    },
+    {
+      "path": "data/seed/cca_objective_rag_corpus.jsonl",
+      "sha256": "4f46706317afd16765c84b82f1a1aefd374bbd6d8b89c752853060cce935b02f",
+      "runtime_eligibility": "quarantined",
+      "evidence_tier": "topic_map_only",
+      "rights_status": "copyrighted_citation_only",
+      "reason": "Competency objectives are useful for coverage design but are not approved as copied runtime text."
+    },
+    {
+      "path": "data/derived/rag/soilwise_rag_corpus.jsonl",
+      "sha256": "eef95a5d2dbc11183a6f8061fe91fe7387e9568112e45d8b62c2cf835bd1d737",
+      "runtime_eligibility": "context_only",
+      "evidence_tier": "open_ontology",
+      "rights_status": "CC-BY-4.0",
+      "reason": "Open soil-health concepts and relations; not field-specific management authority."
+    },
+    {
+      "path": "data/derived/rag/document_expansion_rag_corpus.jsonl",
+      "sha256": "26baf409f1e377d0d91e5ab9252c3d63fba47246c204623d4333db1e77a16a9b",
+      "runtime_eligibility": "quarantined",
+      "evidence_tier": "government_publication",
+      "rights_status": "redistribution_review_required",
+      "reason": "The source is public but the current rows do not carry the required licence snapshot and lineage."
+    },
+    {
+      "path": "data/derived/rag/canada_agronomy_distributable_v13.jsonl",
+      "sha256": "461cdf59627b684123e02fb712d72cffd21ff04fdef7b76bd0b9a17d86b4c2de",
+      "runtime_eligibility": "decisive",
+      "evidence_tier": "government_applied_guidance",
+      "rights_status": "redistributable_with_item_scope_evidence",
+      "reason": "Rights-repaired rebuild: every row carries source, item-scope evidence, licence, currency, language, jurisdiction, and hash lineage. Ontario Publication 811/811F is excluded; row-level live-authority restrictions still apply."
+    },
+    {
+      "path": "data/derived/rag/canada_agronomy_ontario_context_v1.jsonl",
+      "sha256": "72df2be18c87ef62dcc286201ad5274f1d0a9d8f74518a463487d696a83cb152",
+      "runtime_eligibility": "context_only",
+      "evidence_tier": "provincial_crop_statistics",
+      "rights_status": "Ontario_OGL_and_Statistics_Canada_Open_Licence",
+      "reason": "Bilingual Ontario crop-area, yield, production, price, and value statistics for 2018-2026 with exact workbook lineage. These rows may frame regional history and data questions, but are not field truth, crop calibration, or management authority."
+    },
+    {
+      "path": "data/derived/rag/canada_agronomy_supplement_v1.jsonl",
+      "sha256": "c8293511e27d034528ce41c4754bbaccac0bc98b1afe0fb08cf346a9f5211810",
+      "runtime_eligibility": "context_only",
+      "evidence_tier": "government_applied_guidance_supplement",
+      "rights_status": "redistributable_with_attribution",
+      "reason": "Provenance-complete Alberta potato, berry-enterprise, and 2026 manure-regulatory context. Historical rows require current local calibration; every regulatory row requires live authority and cannot independently support an action."
+    },
+    {
+      "path": "data/derived/rag/canada_agronomy_supplement_v2.jsonl",
+      "sha256": "d0ed46ffb8fc153f4fb8c60dab2b74706c89bdf144eeb01142c8677eece41988",
+      "runtime_eligibility": "context_only",
+      "evidence_tier": "government_bilingual_regional_context",
+      "rights_status": "redistributable_with_attribution",
+      "reason": "Provenance-complete French AAFC specifications for crop-health indices and Canadian crop-yield products. They explain modelled regional data and vocabulary, but cannot establish field condition, current forecast values, or a management prescription."
+    },
+    {
+      "path": "data/derived/rag/canada_agronomy_regional_context_v1.jsonl",
+      "sha256": "863a97ac599c15c7699300284d9d3af8e9bbe0d875016facdf1362458abd48f1",
+      "runtime_eligibility": "context_only",
+      "evidence_tier": "government_regional_context_subset",
+      "rights_status": "redistributable_with_attribution",
+      "reason": "Exact eight-source subset of the unpromoted V12 candidate: rights- and lineage-audited federal/provincial regional product descriptions for BC, NB, NL, NS, PEI, Quebec, and Canada. Context-only admission does not promote V12, establish field condition, or supply province-specific applied guidance."
+    },
+    {
+      "path": "data/derived/rag/nrcs_esd_rag_corpus_compact.jsonl",
+      "sha256": "05802c7fcf75c4175bcd2a298651abe583fddf29fd15d3b90e21142cfb7b5545",
+      "runtime_eligibility": "context_only",
+      "evidence_tier": "government_regional_profile",
+      "rights_status": "US_government_public_source",
+      "reason": "Regional ecological-site descriptions can frame context but cannot establish field condition or prescribe action."
+    },
+    {
+      "path": "data/derived/rag/forum_newagtalk_forum_threads_rag_corpus.jsonl",
+      "sha256": "d5fad73f2db3318b632580f15c2a5f7c79f894a0d89df6abc7aa34a7b6b43629",
+      "runtime_eligibility": "quarantined",
+      "evidence_tier": "unverified_experience",
+      "rights_status": "permission_not_established",
+      "reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified."
+    },
+    {
+      "path": "data/derived/rag/forum_agricultivation_communities_agrictalk_forum_threads_rag_corpus.jsonl",
+      "sha256": "84714c7361e0523d0e7ccb7f0575a9746ae59a22cc5a80780099e07495211024",
+      "runtime_eligibility": "quarantined",
+      "evidence_tier": "unverified_experience",
+      "rights_status": "permission_not_established",
+      "reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified."
+    },
+    {
+      "path": "data/derived/rag/forum_agriville_forum_threads_rag_corpus.jsonl",
+      "sha256": "53d39aced68807a300b76b44ac7ac8482eee9a6e0156e8ae28d1fd7806bfe0f2",
+      "runtime_eligibility": "quarantined",
+      "evidence_tier": "unverified_experience",
+      "rights_status": "permission_not_established",
+      "reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified."
+    },
+    {
+      "path": "data/derived/rag/forum_farmchat_forum_threads_rag_corpus.jsonl",
+      "sha256": "ddaceb8bb9c483a0266b1747fbcc4bb2e4441289f2cfa90c3a36c4e20e507ff7",
+      "runtime_eligibility": "quarantined",
+      "evidence_tier": "unverified_experience",
+      "rights_status": "permission_not_established",
+      "reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified."
+    },
+    {
+      "path": "data/derived/rag/forum_agricultureinformation_forum_threads_rag_corpus.jsonl",
+      "sha256": "d5befa1509494cade443a481187e9c866c691d64370504613587ee68e508ac6e",
+      "runtime_eligibility": "quarantined",
+      "evidence_tier": "unverified_experience",
+      "rights_status": "permission_not_established",
+      "reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified."
+    },
+    {
+      "path": "data/derived/rag/forum_forum4farming_forum_threads_rag_corpus.jsonl",
+      "sha256": "d6e81583045ccfdbda9d23931936bf005ea173c7d78d25f57086177068c81980",
+      "runtime_eligibility": "quarantined",
+      "evidence_tier": "unverified_experience",
+      "rights_status": "permission_not_established",
+      "reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified."
+    },
+    {
+      "path": "data/derived/rag/forum_farmnest_india_forum_threads_rag_corpus.jsonl",
+      "sha256": "b5b2e4768084dfccecba51d6ba5709717bb579ffd81ce2c06ef19ab6c38de73f",
+      "runtime_eligibility": "quarantined",
+      "evidence_tier": "unverified_experience",
+      "rights_status": "permission_not_established",
+      "reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified."
+    },
+    {
+      "path": "data/derived/rag/forum_soilforwater_forum_threads_rag_corpus.jsonl",
+      "sha256": "ed356c1b055cfcf533f7b164f4dc487fbbd292b87fd31d8841eac8aa1e4d3960",
+      "runtime_eligibility": "quarantined",
+      "evidence_tier": "unverified_experience",
+      "rights_status": "permission_not_established",
+      "reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified."
+    },
+    {
+      "path": "data/seed/final_mvp_gap_repair_corpus.jsonl",
+      "sha256": "092f7131e657c87bdffb67a780d19ed6194c01b56a0748b678031049584e6746",
+      "runtime_eligibility": "quarantined",
+      "evidence_tier": "eval_gap_synthesis",
+      "rights_status": "mixed_and_unverified",
+      "reason": "Answer-gap synthesis risks eval-shaped behavior and includes rows explicitly awaiting reviewed-source replacement."
+    },
+    {
+      "path": "data/seed/aiagribench_public_gap_corpus.jsonl",
+      "sha256": "2b0baf1ce96f23b8811f751506bf026a2a4015ba38161c71e49fd407b1191e81",
+      "runtime_eligibility": "quarantined",
+      "evidence_tier": "eval_gap_synthesis",
+      "rights_status": "source_rights_not_row_audited",
+      "reason": "Public benchmark-gap summaries are excluded from runtime to prevent benchmark-shaped retrieval and unverifiable source paraphrases."
+    },
+    {
+      "path": "data/seed/aiagribench_transfer_v2_source_corpus.jsonl",
+      "sha256": "474749f9ffa3696b8edbdaf05541f1c199e6e24a651552bfcafd34c10656e612",
+      "runtime_eligibility": "quarantined",
+      "evidence_tier": "eval_transfer_synthesis",
+      "rights_status": "source_rights_not_row_audited",
+      "reason": "Transfer-suite source summaries remain evaluation research and are excluded from the production answer path."
+    }
+  ]
+}

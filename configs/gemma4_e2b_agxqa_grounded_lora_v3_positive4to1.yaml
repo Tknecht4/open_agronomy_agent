@@ -1,0 +1,23 @@
+model: mlx-community/gemma-4-e2b-it-4bit
+train: true
+data: data/training/agxqa_grounded_answer_lora_v2_positive4to1
+fine_tune_type: lora
+optimizer: adamw
+batch_size: 1
+grad_accumulation_steps: 2
+iters: 200
+learning_rate: 1.0e-5
+num_layers: 4
+max_seq_length: 1280
+mask_prompt: true
+grad_checkpoint: true
+steps_per_report: 10
+steps_per_eval: 25
+val_batches: 32
+save_every: 25
+adapter_path: outputs/models/gemma4_e2b_agxqa_grounded_lora_v3_positive4to1
+seed: 42
+lora_parameters:
+  rank: 8
+  dropout: 0.05
+  scale: 16.0

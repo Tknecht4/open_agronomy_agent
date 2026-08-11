@@ -1,0 +1,50 @@
+retrieval:
+  top_k: 7
+  min_score: 0.03
+  corpus_paths:
+    - data/seed/agronomy_rag_corpus.jsonl
+    - data/seed/boundary_rag_corpus.jsonl
+    - data/seed/cca_objective_rag_corpus.jsonl
+    - data/derived/rag/soilwise_rag_corpus.jsonl
+    - data/derived/rag/document_expansion_rag_corpus.jsonl
+    - data/derived/rag/canada_agronomy_distributable_v10_candidate.jsonl
+    - data/derived/rag/nrcs_esd_rag_corpus_compact.jsonl
+    - data/derived/rag/forum_newagtalk_forum_threads_rag_corpus.jsonl
+    - data/derived/rag/forum_agricultivation_communities_agrictalk_forum_threads_rag_corpus.jsonl
+    - data/derived/rag/forum_agriville_forum_threads_rag_corpus.jsonl
+    - data/derived/rag/forum_farmchat_forum_threads_rag_corpus.jsonl
+    - data/derived/rag/forum_agricultureinformation_forum_threads_rag_corpus.jsonl
+    - data/derived/rag/forum_forum4farming_forum_threads_rag_corpus.jsonl
+    - data/derived/rag/forum_farmnest_india_forum_threads_rag_corpus.jsonl
+    - data/derived/rag/forum_soilforwater_forum_threads_rag_corpus.jsonl
+    - data/seed/final_mvp_gap_repair_corpus.jsonl
+    - data/seed/aiagribench_public_gap_corpus.jsonl
+    - data/seed/aiagribench_transfer_v2_source_corpus.jsonl
+  graph_paths:
+    - data/seed/agronomy_knowledge_graph.json
+    - data/derived/rag/soilwise_knowledge_graph.json
+tools:
+  label_guard: true
+  fertility_guard: true
+  weather_guard: true
+  field_data_guard: true
+agent_runtime:
+  mode: agno
+  agno_enabled: true
+agno:
+  version_pin: ">=2.6,<2.7"
+  knowledge:
+    default_base: agronomy_public
+    contents_table: agno_knowledge_contents
+    vector_table: agno_knowledge_vectors
+    search_type: hybrid
+    embedder_profile: local_default
+    reranker: coverage
+  retrieval:
+    top_k: 7
+    final_context_k: 6
+    enable_agentic_search: true
+    max_agentic_subqueries: 2
+    agentic_candidate_multiplier: 2
+    min_agentic_candidates: 16
+    use_custom_retriever: true

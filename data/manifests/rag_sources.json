@@ -1,0 +1,355 @@
+{
+  "sources": [
+    {
+      "id": "soilwise_soil_health_kg",
+      "kind": "rdf_kg",
+      "name": "SoilWise Soil Health Knowledge Graph",
+      "url": "https://zenodo.org/records/15593868/files/soil_health_KG.ttl?download=1",
+      "record_url": "https://zenodo.org/records/15593868",
+      "license": "CC-BY-4.0",
+      "notes": "European soil health KG from SoilWise/Wageningen/ISRIC. Zenodo notes 10,996 RDF triples and 2,023 entities, with links to AGROVOC, GloSIS, ISO 11074, GEMET, and INRAE."
+    },
+    {
+      "id": "cca_international_objectives",
+      "kind": "exam_objectives",
+      "name": "International Certified Crop Adviser Performance Objectives",
+      "url": "https://wwwtest.certifiedcropadviser.org/files/certifiedcropadviser/international-performance-objectives.pdf",
+      "license": "copyrighted objectives; use as evaluation-topic map, not as copied training text",
+      "notes": "Official public competency outline for Nutrient Management, Soil and Water Management, Pest Management, and Crop Management."
+    },
+    {
+      "id": "cca_exam_faq",
+      "kind": "exam_context",
+      "name": "CCA Exam FAQ",
+      "url": "https://www.sciencesocieties.org/certified-crop-adviser/exams/faq",
+      "license": "copyrighted web page; use as citation/context only",
+      "notes": "Official exam structure and credentialing context."
+    },
+    {
+      "id": "forum_newagtalk",
+      "kind": "forum_board",
+      "name": "NewAgTalk Community Forum",
+      "url": "https://talk.newagtalk.com/",
+      "seed_urls": [
+        "https://talk.newagtalk.com/category-view.asp"
+      ],
+      "thread_link_regex": "/thread-view\\.asp\\?[^\"'\\s>]+",
+      "thread_urls": [
+        "https://talk.newagtalk.com/forums/thread-view.asp?tid=1221139&posts=21",
+        "https://talk.newagtalk.com/forums/thread-view.asp?tid=1110210",
+        "https://talk.newagtalk.com/forums/thread-view.asp?tid=624393",
+        "https://talk.newagtalk.com/forums/thread-view.asp?tid=726201",
+        "https://talk.newagtalk.com/forums/thread-view.asp?tid=371279"
+      ],
+      "source_type": "community_forum",
+      "allowed_roles": [
+        "farmer",
+        "crop_adviser"
+      ],
+      "license": "public_forum",
+      "tags": [
+        "forum",
+        "threaded_conversation",
+        "practical_farm_issues"
+      ],
+      "max_threads": 150,
+      "max_words": 260,
+      "overlap_words": 30,
+      "max_seed_pages": 14,
+      "max_seed_urls": 40,
+      "fetch_timeout_seconds": 12,
+      "fetch_retries": 1,
+      "notes": "Active practitioner forum with crop, livestock, and equipment troubleshooting threads.",
+      "knowledge_bucket": "farmer_knowledge",
+      "crawl_delay_seconds": 1.6,
+      "crawl_jitter_seconds": 0.6,
+      "knowledge_domains": [
+        "farmer_knowledge",
+        "problem_solving",
+        "crop_management",
+        "livestock",
+        "machinery",
+        "operations"
+      ]
+    },
+    {
+      "id": "forum_agricultivation_communities_agrictalk",
+      "kind": "forum_board",
+      "name": "AgriTalk",
+      "url": "https://www.agrictalk.com/",
+      "thread_link_regex": "/threads/[^\"'\\s>]+\\.\\d+/?",
+      "source_type": "community_forum",
+      "allowed_roles": [
+        "farmer",
+        "crop_adviser"
+      ],
+      "license": "user-generated_community_forum",
+      "tags": [
+        "forum",
+        "agriculture_discussion",
+        "crop_practice"
+      ],
+      "max_threads": 140,
+      "max_words": 260,
+      "overlap_words": 30,
+      "max_seed_pages": 14,
+      "max_seed_urls": 40,
+      "fetch_timeout_seconds": 12,
+      "fetch_retries": 1,
+      "notes": "Large agriculture discussion forum with broad crop/livestock and farm operations coverage.",
+      "knowledge_bucket": "farmer_knowledge",
+      "crawl_delay_seconds": 1.6,
+      "crawl_jitter_seconds": 0.6,
+      "knowledge_domains": [
+        "farmer_knowledge",
+        "crop_management",
+        "operations",
+        "soil_health",
+        "livestock"
+      ]
+    },
+    {
+      "id": "forum_agriville",
+      "kind": "forum_board",
+      "name": "Agriville Forums",
+      "url": "https://www.agriville.com/forum",
+      "thread_link_regex": "/forum/[a-z0-9-]+/\\d+-[a-z0-9-]+",
+      "source_type": "community_forum",
+      "allowed_roles": [
+        "farmer",
+        "crop_adviser"
+      ],
+      "license": "user-generated_community_forum",
+      "tags": [
+        "forum",
+        "farm_management",
+        "machinery",
+        "crop_and_livestock"
+      ],
+      "max_threads": 140,
+      "max_words": 260,
+      "overlap_words": 30,
+      "max_seed_pages": 14,
+      "max_seed_urls": 40,
+      "fetch_timeout_seconds": 12,
+      "fetch_retries": 1,
+      "notes": "Active boards for crop, livestock, machinery, and farm-management issues.",
+      "knowledge_bucket": "farmer_knowledge",
+      "crawl_delay_seconds": 1.6,
+      "crawl_jitter_seconds": 0.6,
+      "knowledge_domains": [
+        "farmer_knowledge",
+        "farm_management",
+        "machinery",
+        "operations",
+        "livestock"
+      ]
+    },
+    {
+      "id": "forum_farmchat",
+      "kind": "forum_board",
+      "name": "FarmChat",
+      "url": "https://www.farmchat.com/",
+      "thread_link_regex": "/threads/[^\"'\\s>]+\\.\\d+/?",
+      "seed_rss_urls": [
+        "https://www.farmchat.com/forums/-/index.rss"
+      ],
+      "source_type": "community_forum",
+      "allowed_roles": [
+        "farmer",
+        "crop_adviser"
+      ],
+      "license": "public_community_forum",
+      "tags": [
+        "forum",
+        "agriculture_experiential",
+        "farm_operations"
+      ],
+      "max_threads": 140,
+      "max_words": 260,
+      "overlap_words": 30,
+      "max_seed_pages": 16,
+      "max_seed_urls": 40,
+      "fetch_timeout_seconds": 12,
+      "fetch_retries": 1,
+      "notes": "High-volume practical farming forum with strong machinery and livestock discussion.",
+      "knowledge_bucket": "farmer_knowledge",
+      "crawl_delay_seconds": 1.6,
+      "crawl_jitter_seconds": 0.6,
+      "knowledge_domains": [
+        "farmer_knowledge",
+        "farm_management",
+        "operations",
+        "crop_management",
+        "livestock"
+      ]
+    },
+    {
+      "id": "forum_forum4farming",
+      "kind": "forum_board",
+      "name": "Forum4Farming",
+      "url": "https://www.forum4farming.com/forum/index.php?forums/",
+      "thread_link_regex": "/forum/index\\.php\\?threads/[^\"'\\s>]+\\.\\d+/?",
+      "seed_rss_urls": [
+        "https://www.forum4farming.com/forum/index.php?forums/-/index.rss"
+      ],
+      "source_type": "community_forum",
+      "allowed_roles": [
+        "farmer",
+        "crop_adviser"
+      ],
+      "license": "public_forum",
+      "tags": [
+        "forum",
+        "crop_management",
+        "soil_and_water",
+        "livestock",
+        "machinery"
+      ],
+      "max_threads": 150,
+      "max_words": 260,
+      "overlap_words": 30,
+      "max_seed_pages": 20,
+      "max_seed_urls": 50,
+      "fetch_timeout_seconds": 12,
+      "fetch_retries": 1,
+      "notes": "Britain and Ireland-focused discussion forum with active forums on crops, soil, machinery, weather, and farm operations.",
+      "knowledge_bucket": "farmer_knowledge",
+      "crawl_delay_seconds": 1.6,
+      "crawl_jitter_seconds": 0.6,
+      "knowledge_domains": [
+        "farmer_knowledge",
+        "machinery",
+        "operations",
+        "crop_management",
+        "soil_health",
+        "livestock"
+      ]
+    },
+    {
+      "id": "forum_farmnest_india",
+      "kind": "forum_board",
+      "name": "FarmNest India Agriculture Community",
+      "url": "https://discuss.farmnest.com/",
+      "thread_link_regex": "/t/[^\"'\\s>]+/\\d+/?",
+      "seed_rss_urls": [
+        "https://discuss.farmnest.com/posts.rss",
+        "https://discuss.farmnest.com/latest.rss"
+      ],
+      "source_type": "community_forum",
+      "allowed_roles": [
+        "farmer",
+        "crop_adviser"
+      ],
+      "license": "user-generated_community_forum",
+      "tags": [
+        "forum",
+        "farm_management",
+        "crop_practice",
+        "farm_inputs",
+        "livestock",
+        "markets"
+      ],
+      "max_threads": 140,
+      "max_words": 260,
+      "overlap_words": 30,
+      "max_seed_pages": 12,
+      "max_seed_urls": 30,
+      "fetch_timeout_seconds": 12,
+      "fetch_retries": 1,
+      "notes": "Indian farming community with practical production, farm business, and crop/livestock questions.",
+      "knowledge_bucket": "farmer_knowledge",
+      "crawl_delay_seconds": 1.6,
+      "crawl_jitter_seconds": 0.6,
+      "thread_jitter_seconds": 0.35,
+      "knowledge_domains": [
+        "farmer_knowledge",
+        "farm_management",
+        "market",
+        "crop_management",
+        "livestock"
+      ]
+    },
+    {
+      "id": "forum_soilforwater",
+      "kind": "forum_board",
+      "name": "SoilforWater Forum",
+      "url": "https://forum.soilforwater.org/",
+      "thread_link_regex": "/threads/[^\"'\\s>]+/?",
+      "seed_rss_urls": [
+        "https://forum.soilforwater.org/forums/-/index.rss"
+      ],
+      "source_type": "community_forum",
+      "allowed_roles": [
+        "farmer",
+        "crop_adviser"
+      ],
+      "license": "community_forum",
+      "tags": [
+        "forum",
+        "soil_health",
+        "water_management",
+        "soil_water",
+        "conservation"
+      ],
+      "max_threads": 140,
+      "max_words": 260,
+      "overlap_words": 30,
+      "max_seed_pages": 20,
+      "max_seed_urls": 50,
+      "fetch_timeout_seconds": 12,
+      "fetch_retries": 1,
+      "notes": "Soil, water, irrigation, and conservation practitioner community with practical field-management threads.",
+      "knowledge_bucket": "farmer_knowledge",
+      "crawl_delay_seconds": 1.6,
+      "crawl_jitter_seconds": 0.6,
+      "knowledge_domains": [
+        "farmer_knowledge",
+        "soil_water",
+        "soil_health",
+        "conservation",
+        "water_management"
+      ]
+    },
+    {
+      "id": "forum_agricultureinformation",
+      "kind": "forum_board",
+      "name": "Agriculture Information Forums",
+      "url": "https://www.agricultureinformation.com/forums/",
+      "thread_link_regex": "/forums/threads/[^\"'\\s>]+\\.\\d+/?",
+      "seed_rss_urls": [
+        "https://www.agricultureinformation.com/forums/forums/-/index.rss"
+      ],
+      "source_type": "community_forum",
+      "allowed_roles": [
+        "farmer",
+        "crop_adviser"
+      ],
+      "license": "public_community_forum",
+      "tags": [
+        "forum",
+        "soil_and_water",
+        "agri_business",
+        "crop_practice"
+      ],
+      "max_threads": 140,
+      "max_words": 260,
+      "overlap_words": 30,
+      "max_seed_pages": 20,
+      "max_seed_urls": 50,
+      "fetch_timeout_seconds": 12,
+      "fetch_retries": 1,
+      "notes": "Large Indian agronomy/community ecosystem spanning practical soil, crop, and market topics.",
+      "knowledge_bucket": "farmer_knowledge",
+      "crawl_delay_seconds": 1.6,
+      "crawl_jitter_seconds": 0.6,
+      "knowledge_domains": [
+        "farmer_knowledge",
+        "crop_management",
+        "soil_water",
+        "farm_management",
+        "market"
+      ]
+    }
+  ]
+}

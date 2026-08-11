@@ -1,0 +1,15 @@
+model_id: mlx-community/gemma-3-270m-it-4bit
+model_revision: ff1143e3a10547c9f2129e94ca37059b096b23f4
+license: gemma
+max_tokens: 480
+temperature: 0.0
+top_p: 0.9
+top_k: 0
+intervention_profile: constrained
+seed: 42
+answer_verification:
+  enabled: true
+  mode: model_agnostic_selective_v2
+  model_id: mlx-community/gemma-3-270m-it-4bit
+  max_tokens: 180
+  max_evidence_chars: 9000

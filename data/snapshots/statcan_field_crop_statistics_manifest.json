@@ -1,0 +1,90 @@
+{
+  "decision_boundary": "This portable snapshot is dated regional statistical context. It is not field-specific yield prediction, a market forecast, grower records, or a rate recommendation. Check the release date, reference period, status/symbol codes, and local farm records before acting.",
+  "license": {
+    "attribution": "Adapted from Statistics Canada, Estimated areas, yield, production, average farm price and total farm value of principal field crops, in metric and imperial units, 2026-06-30. This does not constitute an endorsement by Statistics Canada of this product.",
+    "identifier": "Statistics Canada Open Licence",
+    "permits_commercial": true,
+    "permits_modification": true,
+    "permits_redistribution": true,
+    "url": "https://www.statcan.gc.ca/en/terms-conditions/open-licence"
+  },
+  "schema_version": "open_agronomy_agent.portable_statcan_field_crop_snapshot.v1",
+  "snapshot": {
+    "bytes": 1866074,
+    "crop_aliases": {
+      "barley": "barley",
+      "beans": "beans",
+      "buckwheat": "buckwheat",
+      "canola": "canola",
+      "canola rapeseed": "canola",
+      "chickpeas": "chickpeas",
+      "corn": "corn grain",
+      "corn grain": "corn grain",
+      "dry peas": "dry peas",
+      "flax": "flaxseed",
+      "flaxseed": "flaxseed",
+      "lentils": "lentils",
+      "mustard": "mustard",
+      "oats": "oats",
+      "peas": "dry peas",
+      "soybean": "soybeans",
+      "soybeans": "soybeans",
+      "sunflower": "sunflower",
+      "wheat": "wheat"
+    },
+    "crop_counts": {
+      "barley": 212,
+      "beans": 210,
+      "buckwheat": 207,
+      "canola": 205,
+      "chickpeas": 179,
+      "corn grain": 215,
+      "dry peas": 214,
+      "flaxseed": 200,
+      "lentils": 176,
+      "mustard": 174,
+      "oats": 217,
+      "soybeans": 201,
+      "sunflower": 175,
+      "wheat": 215
+    },
+    "latest_periods_per_series": 5,
+    "path": "statcan_field_crop_statistics.jsonl",
+    "province_counts": {
+      "AB": 268,
+      "BC": 244,
+      "CANADA": 280,
+      "MB": 275,
+      "NB": 252,
+      "NL": 210,
+      "NS": 245,
+      "ON": 260,
+      "PE": 241,
+      "QC": 245,
+      "SK": 280
+    },
+    "row_count": 2800,
+    "scope": "Latest available national/provincial metric area, yield, and production observations for crops supported by the local adapter. Missing and suppressed values are not imputed.",
+    "sha256": "879d46060de2aeb4c44b744da526daa7f0f77ee3c8ecb54e0a4f795ba70af9ff",
+    "statistic_counts": {
+      "average_yield_kg_per_hectare": 551,
+      "harvested_area_hectares": 742,
+      "production_metric_tonnes": 748,
+      "seeded_area_hectares": 759
+    }
+  },
+  "source": {
+    "archive_bytes": 5158169,
+    "archive_sha256": "2bb147c88faf4f4a292d51eb3d1e3717562690e537fa807370c660ef9908a8b0",
+    "archive_url": "https://www150.statcan.gc.ca/n1/tbl/csv/32100359-eng.zip",
+    "csv_member": "32100359.csv",
+    "doi": "https://doi.org/10.25318/3210035901-eng",
+    "metadata_member": "32100359_MetaData.csv",
+    "product_id": 32100359,
+    "provider": "Statistics Canada",
+    "release_date": "2026-06-30",
+    "table": "32-10-0359-01",
+    "table_url": "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3210035901",
+    "title": "Estimated areas, yield, production, average farm price and total farm value of principal field crops, in metric and imperial units"
+  }
+}

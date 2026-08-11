@@ -1,0 +1,23 @@
+model: mlx-community/gemma-4-e2b-it-4bit
+train: true
+data: data/training/canadian_task_rabbit_v1
+fine_tune_type: lora
+optimizer: adamw
+batch_size: 1
+grad_accumulation_steps: 2
+iters: 5
+learning_rate: 1.0e-5
+num_layers: 2
+max_seq_length: 512
+mask_prompt: true
+grad_checkpoint: true
+steps_per_report: 1
+steps_per_eval: 5
+val_batches: 2
+save_every: 5
+adapter_path: outputs/models/gemma4_e2b_lora_feasibility_smoke_20260723
+seed: 42
+lora_parameters:
+  rank: 4
+  dropout: 0.05
+  scale: 8.0

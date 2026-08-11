@@ -1,0 +1,9 @@
+{
+  "canonical_url": "https://open.alberta.ca/dataset/11c7f4cf-972d-437e-9b6a-4ce0a6d0f763",
+  "download_url": "https://open.alberta.ca/dataset/11c7f4cf-972d-437e-9b6a-4ce0a6d0f763/resource/7c314fad-3df0-4f28-aeff-0a6d7d72910b/download/6060438-2013-agri-facts-potassium-fertilizer-application-crop-production-revised-542-9-2013-01.pdf",
+  "fetched_at": "2026-07-18T04:59:46+00:00",
+  "raw_bytes": 263420,
+  "raw_path": "data/raw/canada_agronomy/ab_potassium_fertilizer_crops_2013/source.pdf",
+  "raw_sha256": "90c94a2c79aaf57f2c9c8ddf8723101ef420099859b2c7bb82f4f6643edce4ff",
+  "source_id": "ab_potassium_fertilizer_crops_2013"
+}
