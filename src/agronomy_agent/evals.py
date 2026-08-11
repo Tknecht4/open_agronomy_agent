@@ -25,6 +25,10 @@ from agronomy_agent.agent import (
     load_model_config,
 )
 from agronomy_agent.codex_app_server import CodexAppServerGenerator
+from agronomy_agent.corpus_governance import (
+    load_corpus_policy,
+    partition_runtime_corpus_paths,
+)
 from agronomy_agent.paths import repo_path
 from agronomy_agent.model_identity import sha256_path
 from agronomy_agent.router import classify_query, refine_query_route
@@ -96,10 +100,16 @@ def build_rag_artifact_identity(resources: Any) -> list[dict[str, Any]]:
     configured: list[tuple[str, str]] = []
     corpus_paths = retrieval.get("corpus_paths") or [retrieval.get("corpus_path")]
     graph_paths = retrieval.get("graph_paths") or [retrieval.get("graph_path")]
-    configured.extend(("corpus", str(value)) for value in corpus_paths if value)
+    policy_path = retrieval.get("corpus_policy_manifest")
+    policy = load_corpus_policy(repo_path("."), policy_path) if policy_path else {}
+    loadable_corpora, _ = partition_runtime_corpus_paths(
+        (value for value in corpus_paths if value),
+        policy,
+    )
+    configured.extend(("corpus", str(value)) for value in loadable_corpora)
     configured.extend(("graph", str(value)) for value in graph_paths if value)
-    if retrieval.get("corpus_policy_manifest"):
-        configured.append(("corpus_policy", str(retrieval["corpus_policy_manifest"])))
+    if policy_path:
+        configured.append(("corpus_policy", str(policy_path)))
 
     records: list[dict[str, Any]] = []
     for kind, configured_path in configured:

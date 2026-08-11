@@ -1,5 +1,5 @@
 {
-  "built_at": "2026-08-11T18:38:43+00:00",
+  "built_at": "2026-08-11T20:43:43+00:00",
   "file_count": 526,
   "files": [
     {
@@ -118,9 +118,9 @@
       "sha256": "9f2f748b6b688c57c21bd7f909f31fbdaaaa4a595258bc8224a40905a37fc48f"
     },
     {
-      "bytes": 4509,
+      "bytes": 4521,
       "path": "configs/final_benchmark_round_rc1.json",
-      "sha256": "03567e5cda523f6c4e1fbbb96509c80a21eba2e66d94945a5972c42038655bec"
+      "sha256": "0369c6cf53fc241d01b4f6cd2982676d0f3fe281b67cd1baac3362800d792fc5"
     },
     {
       "bytes": 1907,
@@ -390,7 +390,7 @@
     {
       "bytes": 18952,
       "path": "container/runtime_manifest.json",
-      "sha256": "2532349256331b8bdb38a7b1dc426e4fd095ed8a8ff69f05b68ea92ccae2d57d"
+      "sha256": "76201f173e43d37deb3903744be6a24ca4dd6e93bffe83c16c6c711be5901cf8"
     },
     {
       "bytes": 4553,
@@ -1958,9 +1958,9 @@
       "sha256": "f3f4ede4f3b9b09e4e10ec8b5f69e8df98400f33b709d50db0124718135ae943"
     },
     {
-      "bytes": 64695,
+      "bytes": 65021,
       "path": "src/agronomy_agent/evals.py",
-      "sha256": "640af04719d8ee0bb0fb783f9c19ba882808430e43711dd5674572c704c9eb23"
+      "sha256": "bce0c15ec1e0440574c1253171b938b4834944b651971ab820e13a79cbd62f48"
     },
     {
       "bytes": 12601,
@@ -2558,9 +2558,9 @@
       "sha256": "ed034f3b2c4fc4459179a0411cfd212fd4b4af909a459747f9480534713c1003"
     },
     {
-      "bytes": 39569,
+      "bytes": 42377,
       "path": "tests/test_evals.py",
-      "sha256": "de9af671d434f186978728362908024ec09e35a40de6460f6bd5401ee317d118"
+      "sha256": "0ec42b75f03246b9a4bf5bad81fe9604f4646506e5fe62af4daa5b113608c8b2"
     },
     {
       "bytes": 2062,
@@ -2637,5 +2637,5 @@
   "manifest_sha256": "c32316d87c8df255ba0e956cdd648033a2e9c9af69a56c1a9331c8cf23108848",
   "release_id": "conference_release_candidate_20260811",
   "schema_version": "open_agronomy_agent.public_repository_receipt.v1",
-  "total_bytes": 145361827
+  "total_bytes": 145364973
 }
