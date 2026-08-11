@@ -12,8 +12,10 @@ import argparse
 import datetime as dt
 import fnmatch
 import hashlib
+import importlib.util
 import json
 import shutil
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -79,6 +81,28 @@ def _validate_scope(files: list[Path], manifest: dict[str, Any]) -> None:
         raise ValueError("invalid public repository scope: " + ", ".join(errors[:20]))
 
 
+def _regenerate_runtime_manifest(destination: Path) -> None:
+    """Bind the generated manifest to the curated tree, not the source checkout."""
+
+    builder_path = destination / "scripts/build_edge_runtime_manifest.py"
+    if not builder_path.is_file():
+        return
+    destination_src = str(destination / "src")
+    if destination_src not in sys.path:
+        sys.path.insert(0, destination_src)
+    spec = importlib.util.spec_from_file_location(
+        "_public_edge_runtime_manifest_builder",
+        builder_path,
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load runtime manifest builder: {builder_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    runtime_manifest = module.build_manifest(destination)
+    output = destination / "container/runtime_manifest.json"
+    output.write_text(json.dumps(runtime_manifest, indent=2) + "\n", encoding="utf-8")
+
+
 def build(destination: Path, manifest_path: Path = DEFAULT_MANIFEST) -> dict[str, Any]:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     if manifest.get("schema_version") != "open_agronomy_agent.public_repository_manifest.v1":
@@ -92,13 +116,18 @@ def build(destination: Path, manifest_path: Path = DEFAULT_MANIFEST) -> dict[str
     files = _collect(manifest)
     _validate_scope(files, manifest)
 
-    records: list[dict[str, Any]] = []
-    total_bytes = 0
     for source in files:
         relative = _relative(source)
         target = destination / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
+    _regenerate_runtime_manifest(destination)
+
+    records: list[dict[str, Any]] = []
+    total_bytes = 0
+    for source in files:
+        relative = _relative(source)
+        target = destination / relative
         size = target.stat().st_size
         total_bytes += size
         records.append({"path": relative, "bytes": size, "sha256": _sha256(target)})

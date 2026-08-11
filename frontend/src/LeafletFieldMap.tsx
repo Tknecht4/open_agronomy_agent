@@ -96,6 +96,10 @@ export function LeafletFieldMap({
     () => visibleFeatures.features.some((feature) => feature.properties?.layer_id === 'sk_thematic_soil'),
     [visibleFeatures],
   )
+  const hasSkDetailedSoil = useMemo(
+    () => visibleFeatures.features.some((feature) => feature.properties?.layer_id === 'sk_detailed_soil'),
+    [visibleFeatures],
+  )
   const hasPeiDetailedSoil = useMemo(
     () => visibleFeatures.features.some((feature) => feature.properties?.layer_id === 'pei_detailed_soil'),
     [visibleFeatures],
@@ -238,6 +242,8 @@ export function LeafletFieldMap({
                 ? '5 3'
                 : properties.layer_id === 'sk_thematic_soil'
                   ? '3 3'
+                : properties.layer_id === 'sk_detailed_soil'
+                  ? undefined
                 : properties.layer_id === 'pei_detailed_soil'
                   ? '2 4'
                 : properties.layer_id === 'ns_pictou_detailed_soil'
@@ -359,6 +365,7 @@ export function LeafletFieldMap({
         <span><i className="legend-mlra" /> MLRA</span>
         <span><i className="legend-eco" /> Ecoregion</span>
         {hasBcCapability ? <span><i className="legend-bc-capability" /> BC capability</span> : null}
+        {hasSkDetailedSoil ? <span><i className="legend-sk-soil" /> SK detailed soil</span> : null}
         {hasSkThematicSoil ? <span><i className="legend-sk-soil" /> SK thematic soil</span> : null}
         {hasPeiDetailedSoil ? <span><i className="legend-pei-soil" /> PEI mapped soil</span> : null}
         {hasNsPictouDetailedSoil ? <span><i className="legend-ns-pictou-soil" /> Pictou County soil</span> : null}

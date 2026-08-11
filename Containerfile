@@ -45,68 +45,22 @@ RUN pip install --no-cache-dir -r requirements-container.txt \
     && pip install --no-cache-dir --no-deps .
 
 COPY configs ./configs
-COPY plans ./plans
 COPY data/seed ./data/seed
 COPY data/manifests ./data/manifests
 COPY data/eval ./data/eval
-COPY data/evals/canadian_applied_guidance_admission_eval_contract_20260726.json ./data/evals/canadian_applied_guidance_admission_eval_contract_20260726.json
 COPY data/snapshots ./data/snapshots
 COPY data/derived/rag ./data/derived/rag
 COPY data/derived/geo_cache ./data/derived/geo_cache
-COPY data/derived/geo_layers ./data/derived/geo_layers
-COPY docs/canadian_corpus_v8_coverage_20260720.md \
-     docs/canadian_agronomy_corpus_promotion_audit_v8_20260720.json \
-     docs/canadian_agronomy_corpus_promotion_audit_v8_20260720.md \
-     docs/canadian_v8_promotion_full_path_gate.md \
-     docs/canadian_crop_health_indices_v7_direct_semantic_review_20260719.json \
-     docs/canadian_crop_health_indices_v7_direct_semantic_review_20260719.md \
-     docs/canadian_conference_transfer_gate_20260720.md \
-     docs/canadian_conference_source_validation_v1_rc8_20260721.json \
-     docs/canadian_conference_source_validation_v1_rc8_20260721.md \
-     docs/canadian_ab_nutrient_planning_v6_direct_semantic_review_20260719.json \
-     docs/canadian_ab_nutrient_planning_v6_direct_semantic_review_20260719.md \
-     docs/canadian_geospatial_sources_validation_20260721.json \
-     docs/canadian_geospatial_sources_coverage_20260721.md \
-     docs/canadian_applied_guidance_rights_audit_20260721.md \
-     docs/canadian_agronomy_corpus_promotion_audit_v13_20260725.json \
-     docs/canadian_agronomy_corpus_promotion_audit_v13_20260725.md \
-     docs/canada_agronomy_ontario_context_v1_audit_20260725.md \
-     docs/conference_freeze_knowledge_gap_matrix_20260725.md \
-     docs/runtime_knowledge_sufficiency_audit_20260725.md \
-     docs/french_applied_guidance_source_disposition_20260726.md \
-     docs/applied_guidance_source_preflight_registry_20260726.md \
-     docs/provincial_applied_guidance_admission_queue_20260724.md \
-     docs/canadian_conference_semantic_review_v3_20260725.json \
-     docs/canadian_conference_semantic_review_v3_20260725.md \
-     ./docs/
-COPY docs/open_agronomy_agent_whitepaper_20260709 ./docs/open_agronomy_agent_whitepaper_20260709
-COPY docs/alberta_applied_guidance_validation_20260725 ./docs/alberta_applied_guidance_validation_20260725
-COPY docs/bc_aem_nutrient_application_plan_validation_20260727 ./docs/bc_aem_nutrient_application_plan_validation_20260727
-COPY docs/manitoba_applied_guidance_validation_20260725 ./docs/manitoba_applied_guidance_validation_20260725
-COPY docs/manitoba_fertilizer_check_stamp_validation_20260726 ./docs/manitoba_fertilizer_check_stamp_validation_20260726
-COPY docs/manitoba_stored_grain_monitoring_validation_20260726 ./docs/manitoba_stored_grain_monitoring_validation_20260726
-COPY docs/french_applied_guidance_validation_20260725 ./docs/french_applied_guidance_validation_20260725
-COPY outputs/knowledge_freeze_readiness_20260725/runtime_corpus_audit_final_mvp.json \
-     outputs/knowledge_freeze_readiness_20260725/conference_freeze_gap_matrix.json \
-     outputs/knowledge_freeze_readiness_20260725/runtime_knowledge_sufficiency.json \
-     outputs/knowledge_freeze_readiness_20260725/backend_pytest.xml \
-     outputs/knowledge_freeze_readiness_20260725/frontend_vitest.json \
-     ./outputs/knowledge_freeze_readiness_20260725/
-COPY outputs/tool_smoke/ppls_adapter_modes_latest.json \
-     outputs/tool_smoke/keyed_public_adapters_latest.json \
-     outputs/tool_smoke/public_adapter_regional_matrix_latest.json \
-     ./outputs/tool_smoke/
-COPY outputs/evals/aiagribench_proxy_iter17_full_live_precision_economics_cleanup ./outputs/evals/aiagribench_proxy_iter17_full_live_precision_economics_cleanup
-COPY outputs/evals/expert_review_807_blinded_semantic_20260718 ./outputs/evals/expert_review_807_blinded_semantic_20260718
-COPY outputs/evals/canadian_semantic_reserve_v1_qwen2b ./outputs/evals/canadian_semantic_reserve_v1_qwen2b
-COPY outputs/evals/public_domain_coverage_full_live_1056_current_rescore_contract_repairs_final ./outputs/evals/public_domain_coverage_full_live_1056_current_rescore_contract_repairs_final
-COPY outputs/evals/public_claim_stress_focus_full_live_20260710_submission_hygiene_rescore ./outputs/evals/public_claim_stress_focus_full_live_20260710_submission_hygiene_rescore
-COPY outputs/evals/public_shadow_heldout ./outputs/evals/public_shadow_heldout
-COPY outputs/evals/agentic_gap_matrix ./outputs/evals/agentic_gap_matrix
-COPY outputs/evals/general_agent_semantic_control_v5_240/agronomic_rag_20260715T031940Z ./outputs/evals/general_agent_semantic_control_v5_240/agronomic_rag_20260715T031940Z
-COPY outputs/evals/canadian_conference_transfer_gate_gemma4_generalized_v5/agronomic_rag_20260720T224916Z ./outputs/evals/canadian_conference_transfer_gate_gemma4_generalized_v5/agronomic_rag_20260720T224916Z
-COPY outputs/evals/canadian_conference_preflight_v2_rc20_final_20260725 ./outputs/evals/canadian_conference_preflight_v2_rc20_final_20260725
-COPY outputs/evals/canadian_conference_transfer_gate_v2_rc20_release_candidate_v2_gemma4_20260725/agronomic_rag_20260725T035257Z ./outputs/evals/canadian_conference_transfer_gate_v2_rc20_release_candidate_v2_gemma4_20260725/agronomic_rag_20260725T035257Z
+COPY data/derived/geo_layers/bc_agriculture_capability_manifest.json \
+     data/derived/geo_layers/sk_thematic_soil_manifest.json \
+     data/derived/geo_layers/sk_detailed_soil_manifest.json \
+     data/derived/geo_layers/ca_soil_erosion_risk_manifest.json \
+     data/derived/geo_layers/pei_detailed_soil_manifest.json \
+     data/derived/geo_layers/ns_pictou_detailed_soil_manifest.json \
+     data/derived/geo_layers/ab_detailed_soil_manifest.json \
+     data/derived/geo_layers/mb_detailed_soil_manifest.json \
+     ./data/derived/geo_layers/
+COPY docs/public ./docs/public
 COPY scripts ./scripts
 COPY container ./container
 COPY --from=frontend-build /build/frontend/dist ./frontend/dist

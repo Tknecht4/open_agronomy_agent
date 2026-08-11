@@ -1,0 +1,182 @@
+{
+  "schema_version": "open_agronomy_agent.canada_agronomy_sources.v1",
+  "generated_at": "2026-07-24T00:00:00Z",
+  "intended_distribution_profile": "A provenance-complete Manitoba 2026 field-scouting supplement. It preserves current, province-specific monitoring and decision-threshold evidence while excluding pesticide product tables, rates, logos, and unreviewed third-party material. A threshold is not product authorization; current PMRA labels remain authoritative for any pesticide action.",
+  "required_jurisdictions": [
+    "Manitoba"
+  ],
+  "lineage_requirements": [
+    "source_id",
+    "canonical_url",
+    "download_url",
+    "fetched_at",
+    "raw_sha256",
+    "extracted_text_sha256",
+    "chunk_sha256",
+    "manifest_sha256",
+    "license_snapshot",
+    "language",
+    "jurisdiction",
+    "currency",
+    "extractor"
+  ],
+  "sources": [
+    {
+      "id": "mb_2026_crop_disease_scouting",
+      "title": "Guide to Crop Protection 2026: Plant Disease Control (reviewed scouting subset)",
+      "publisher": "Manitoba Agriculture",
+      "authority_type": "provincial_government",
+      "jurisdiction": [
+        "Manitoba"
+      ],
+      "language": [
+        "en-CA"
+      ],
+      "url": "https://www.gov.mb.ca/agriculture/crops/guides-and-publications/",
+      "download_url": "https://www.gov.mb.ca/agriculture/crops/guides-and-publications/pubs/guide-crop-protection-diseases-2026.pdf",
+      "source_record_id": "Manitoba Guide to Crop Protection 2026; Plant Disease Control section; PDF modified 2026-03-17",
+      "format": "pdf",
+      "content_mode": "corpus_document",
+      "runtime_source_type": "applied_guidance",
+      "runtime_document_type": "current_provincial_crop_scouting_guide",
+      "default_retrieval_policy": "standard",
+      "crops": [
+        "canola",
+        "wheat",
+        "barley",
+        "oat",
+        "cereal",
+        "potato",
+        "field pea",
+        "dry bean",
+        "lentil",
+        "chickpea",
+        "soybean"
+      ],
+      "buckets": [
+        "crop_management",
+        "pest_disease",
+        "field_data"
+      ],
+      "priority": "critical",
+      "currency": {
+        "status": "current_2026_edition",
+        "review_interval_days": 90,
+        "volatile": true
+      },
+      "regulatory": {
+        "regulated_advice": false,
+        "require_live_authority": false
+      },
+      "license": {
+        "status": "redistributable",
+        "identifier": "OpenMB Information and Data Use Licence",
+        "evidence_url": "https://www.gov.mb.ca/legal/copyright.html",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "third_party_risk": true,
+        "reviewed_on": "2026-07-24",
+        "attribution": "Contains information from the Manitoba government, licensed under the OpenMB Information and Data Use Licence (Manitoba.ca/OpenMB).",
+        "notes": "OpenMB covers most publicly available Manitoba government information for commercial and non-commercial copying, modification, adaptation, and redistribution. This source contains product names, label-derived tables, links, logos, and credited third-party material. Only the manually reviewed government-authored scouting and diagnostic companion records are emitted. Product tables, application rates, logos, images, and separately credited material are excluded."
+      },
+      "ingest_policy": {
+        "include_page_ranges": [
+          [
+            1,
+            3
+          ]
+        ],
+        "exclude_page_ranges": [],
+        "exclude_line_patterns": [],
+        "emit_source_chunks": false,
+        "semantic_companion_path": "data/curated/canada_agronomy/mb_2026_crop_disease_scouting.semantic.json",
+        "notes": "Source extraction is limited to the reviewed introductory disease-management pages. Runtime emission is companion-only so product-specific and unreviewed raw text cannot enter model context."
+      },
+      "use_policy": {
+        "discover": true,
+        "download": true,
+        "local_rag": true,
+        "distributable_bundle": true,
+        "training": false,
+        "live_retrieval": true
+      }
+    },
+    {
+      "id": "mb_2026_canola_insect_scouting",
+      "title": "Guide to Crop Protection 2026: Insect Control (reviewed canola scouting subset)",
+      "publisher": "Manitoba Agriculture",
+      "authority_type": "provincial_government",
+      "jurisdiction": [
+        "Manitoba"
+      ],
+      "language": [
+        "en-CA"
+      ],
+      "url": "https://www.gov.mb.ca/agriculture/crops/guides-and-publications/",
+      "download_url": "https://www.gov.mb.ca/agriculture/crops/guides-and-publications/pubs/guide-crop-protection-insects-2026.pdf",
+      "source_record_id": "Manitoba Guide to Crop Protection 2026; Insect Control section; PDF modified 2026-03-17",
+      "format": "pdf",
+      "content_mode": "corpus_document",
+      "runtime_source_type": "applied_guidance",
+      "runtime_document_type": "current_provincial_crop_scouting_guide",
+      "default_retrieval_policy": "standard",
+      "crops": [
+        "canola"
+      ],
+      "buckets": [
+        "crop_management",
+        "pest_disease",
+        "field_data",
+        "precision_economics"
+      ],
+      "priority": "critical",
+      "currency": {
+        "status": "current_2026_edition",
+        "review_interval_days": 90,
+        "volatile": true
+      },
+      "regulatory": {
+        "regulated_advice": false,
+        "require_live_authority": false
+      },
+      "license": {
+        "status": "redistributable",
+        "identifier": "OpenMB Information and Data Use Licence",
+        "evidence_url": "https://www.gov.mb.ca/legal/copyright.html",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "third_party_risk": true,
+        "reviewed_on": "2026-07-24",
+        "attribution": "Contains information from the Manitoba government, licensed under the OpenMB Information and Data Use Licence (Manitoba.ca/OpenMB).",
+        "notes": "OpenMB covers most publicly available Manitoba government information for commercial and non-commercial copying, modification, adaptation, and redistribution. This source contains product names, label-derived tables, links, logos, images, and credited third-party material. Only the manually reviewed government-authored field-scouting companion records are emitted. Product tables, application rates, logos, images, and separately credited material are excluded."
+      },
+      "ingest_policy": {
+        "include_page_ranges": [
+          [
+            1,
+            1
+          ],
+          [
+            12,
+            13
+          ]
+        ],
+        "exclude_page_ranges": [],
+        "exclude_line_patterns": [],
+        "emit_source_chunks": false,
+        "semantic_companion_path": "data/curated/canada_agronomy/mb_2026_canola_insect_scouting.semantic.json",
+        "notes": "Source extraction is limited to general field-scouting concepts and the canola scouting pages. Runtime emission is companion-only; adjacent product and rate tables are not emitted."
+      },
+      "use_policy": {
+        "discover": true,
+        "download": true,
+        "local_rag": true,
+        "distributable_bundle": true,
+        "training": false,
+        "live_retrieval": true
+      }
+    }
+  ]
+}

@@ -60,6 +60,7 @@ data/derived/rag/*
 !data/derived/rag/canada_agronomy_ontario_context_v1.jsonl
 !data/derived/rag/canada_agronomy_supplement_v1.jsonl
 !data/derived/rag/canada_agronomy_supplement_v2.jsonl
+!data/derived/rag/canada_agronomy_supplement_v3.jsonl
 !data/derived/rag/canada_agronomy_regional_context_v1.jsonl
 !data/derived/rag/nrcs_esd_rag_corpus_compact.jsonl
 !data/derived/rag/forum_newagtalk_forum_threads_rag_corpus.jsonl
@@ -80,4 +81,9 @@ data/derived/geo_layers/*
 !data/derived/geo_layers/sk_thematic_soil_manifest.json
 !data/derived/geo_layers/ca_soil_erosion_risk.sqlite3
 !data/derived/geo_layers/ca_soil_erosion_risk_manifest.json
+!data/derived/geo_layers/pei_detailed_soil_manifest.json
+!data/derived/geo_layers/ns_pictou_detailed_soil_manifest.json
+!data/derived/geo_layers/ab_detailed_soil_manifest.json
+!data/derived/geo_layers/sk_detailed_soil_manifest.json
+!data/derived/geo_layers/mb_detailed_soil_manifest.json
 container/.env

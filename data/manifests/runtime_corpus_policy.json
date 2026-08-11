@@ -81,6 +81,14 @@
       "reason": "Provenance-complete French AAFC specifications for crop-health indices and Canadian crop-yield products. They explain modelled regional data and vocabulary, but cannot establish field condition, current forecast values, or a management prescription."
     },
     {
+      "path": "data/derived/rag/canada_agronomy_supplement_v3.jsonl",
+      "sha256": "f175130e4dbd635ecd7142ce47e996a05a9d1671aaea4041e67187f0cea22e21",
+      "runtime_eligibility": "context_only",
+      "evidence_tier": "current_provincial_scouting_candidate",
+      "rights_status": "OpenMB_reviewed_companion_only",
+      "reason": "Six provenance-complete Manitoba 2026 field-scouting companion rows add current insect and disease observations while excluding product tables, rates, logos, images, and credited third-party material. They remain context-only pending independent agronomic review; thresholds do not authorize a pesticide and volatile-source rows require a currency check."
+    },
+    {
       "path": "data/derived/rag/canada_agronomy_regional_context_v1.jsonl",
       "sha256": "863a97ac599c15c7699300284d9d3af8e9bbe0d875016facdf1362458abd48f1",
       "runtime_eligibility": "context_only",

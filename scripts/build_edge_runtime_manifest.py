@@ -52,102 +52,15 @@ CONTROL_PATHS = (
     "container/docker.sh",
     "container/import-release.sh",
     "container/release.sh",
+    "scripts/stage_edge_build_context.py",
     "scripts/verify_edge_release.py",
-    "scripts/repair_edge_oci_archive.py",
     "scripts/validate_edge_runtime_translation.py",
     "data/manifests/canada_agronomy_sources.json",
     "data/manifests/canada_geospatial_sources.json",
     "data/manifests/source_licensing_matrix.json",
-    "data/manifests/advisory_blocker_baseline_v1.json",
-    "data/manifests/canadian_official_source_census_20260724.json",
-    "data/manifests/canadian_applied_guidance_slate_20260726.json",
-    "data/manifests/applied_guidance_review_packet_registry_20260726.json",
-    "data/manifests/french_applied_guidance_source_disposition_20260726.json",
-    "data/manifests/model_adaptation_decision_20260727.json",
-    (
-        "data/manifests/source_asset_access_receipts/"
-        "aafc_western_field_crop_pest_guide_fr_2018.json"
-    ),
-    (
-        "data/manifests/source_asset_access_receipts/"
-        "aafc_western_field_crop_pest_guide_2018_archive_continuation.json"
-    ),
-    (
-        "data/manifests/source_asset_access_receipts/"
-        "aafc_prairie_cutworms_guide_fr_2017.json"
-    ),
-    (
-        "data/manifests/source_asset_access_receipts/"
-        "aafc_prairie_cutworms_guide_2017_archive_continuation.json"
-    ),
-    (
-        "data/manifests/source_asset_access_receipts/"
-        "aafc_prairie_wireworms_guide_fr_2021.json"
-    ),
-    (
-        "data/manifests/source_asset_access_receipts/"
-        "aafc_prairie_wireworms_guide_2021_archive_continuation.json"
-    ),
-    "data/manifests/applied_guidance_source_preflight_registry_20260726.json",
-    "data/evals/canadian_applied_guidance_admission_eval_contract_20260726.json",
-    "docs/canadian_corpus_v8_coverage_20260720.md",
-    "docs/canadian_agronomy_corpus_promotion_audit_v8_20260720.json",
-    "docs/canadian_agronomy_corpus_promotion_audit_v8_20260720.md",
-    "docs/canadian_v8_promotion_full_path_gate.md",
-    "docs/canadian_crop_health_indices_v7_direct_semantic_review_20260719.json",
-    "docs/canadian_crop_health_indices_v7_direct_semantic_review_20260719.md",
-    "docs/canadian_conference_transfer_gate_20260720.md",
-    "docs/canadian_conference_source_validation_v1_rc8_20260721.json",
-    "docs/canadian_conference_source_validation_v1_rc8_20260721.md",
-    "docs/canadian_ab_nutrient_planning_v6_direct_semantic_review_20260719.json",
-    "docs/canadian_ab_nutrient_planning_v6_direct_semantic_review_20260719.md",
-    "data/derived/geo_layers/bc_agriculture_capability_manifest.json",
-    "data/derived/geo_layers/sk_thematic_soil_manifest.json",
-    "data/derived/geo_layers/ca_soil_erosion_risk_manifest.json",
-    "data/derived/geo_layers/pei_detailed_soil_manifest.json",
-    "data/derived/geo_layers/ns_pictou_detailed_soil_manifest.json",
-    "data/derived/geo_layers/ab_detailed_soil_manifest.json",
-    "data/derived/geo_layers/mb_detailed_soil_manifest.json",
-    "docs/canadian_geospatial_sources_validation_20260721.json",
-    "docs/canadian_geospatial_sources_coverage_20260721.md",
-    "docs/canadian_applied_guidance_rights_audit_20260721.md",
-    "docs/canadian_agronomy_corpus_promotion_audit_v13_20260725.json",
-    "docs/canadian_agronomy_corpus_promotion_audit_v13_20260725.md",
-    "docs/canada_agronomy_ontario_context_v1_audit_20260725.md",
-    "docs/conference_freeze_knowledge_gap_matrix_20260725.md",
-    "docs/runtime_knowledge_sufficiency_audit_20260725.md",
-    "docs/french_applied_guidance_source_disposition_20260726.md",
-    "docs/applied_guidance_source_preflight_registry_20260726.md",
-    "docs/provincial_applied_guidance_admission_queue_20260724.md",
-    "docs/canadian_conference_semantic_review_v3_20260725.json",
-    "docs/canadian_conference_semantic_review_v3_20260725.md",
-    "outputs/knowledge_freeze_readiness_20260725/runtime_corpus_audit_final_mvp.json",
-    "outputs/knowledge_freeze_readiness_20260725/conference_freeze_gap_matrix.json",
-    "outputs/knowledge_freeze_readiness_20260725/runtime_knowledge_sufficiency.json",
-    "outputs/knowledge_freeze_readiness_20260725/backend_pytest.xml",
-    "outputs/knowledge_freeze_readiness_20260725/frontend_vitest.json",
-    "outputs/tool_smoke/ppls_adapter_modes_latest.json",
-    "outputs/tool_smoke/keyed_public_adapters_latest.json",
-    "outputs/tool_smoke/public_adapter_regional_matrix_latest.json",
 )
-BENCHMARK_ROOTS = (
-    "outputs/evals/aiagribench_proxy_iter17_full_live_precision_economics_cleanup",
-    "outputs/evals/expert_review_807_blinded_semantic_20260718",
-    "outputs/evals/canadian_semantic_reserve_v1_qwen2b",
-    "outputs/evals/public_domain_coverage_full_live_1056_current_rescore_contract_repairs_final",
-    "outputs/evals/public_claim_stress_focus_full_live_20260710_submission_hygiene_rescore",
-    "outputs/evals/public_shadow_heldout",
-    "outputs/evals/agentic_gap_matrix",
-    "outputs/evals/general_agent_semantic_control_v5_240/agronomic_rag_20260715T031940Z",
-    "outputs/evals/canadian_conference_transfer_gate_gemma4_generalized_v5/agronomic_rag_20260720T224916Z",
-    "outputs/evals/canadian_conference_preflight_v2_rc20_final_20260725",
-    (
-        "outputs/evals/"
-        "canadian_conference_transfer_gate_v2_rc20_release_candidate_v2_gemma4_20260725/"
-        "agronomic_rag_20260725T035257Z"
-    ),
-)
-RUNTIME_POLICY_ROOTS = ("plans",)
+BENCHMARK_ROOTS: tuple[str, ...] = ()
+RUNTIME_POLICY_ROOTS: tuple[str, ...] = ()
 RUNTIME_ASSET_ROOTS = (
     "src/agronomy_agent",
     "frontend/src",
@@ -157,13 +70,7 @@ RUNTIME_ASSET_ROOTS = (
     "data/manifests",
     "data/eval",
     "data/snapshots",
-    "docs/open_agronomy_agent_whitepaper_20260709",
-    "docs/alberta_applied_guidance_validation_20260725",
-    "docs/bc_aem_nutrient_application_plan_validation_20260727",
-    "docs/manitoba_applied_guidance_validation_20260725",
-    "docs/manitoba_fertilizer_check_stamp_validation_20260726",
-    "docs/manitoba_stored_grain_monitoring_validation_20260726",
-    "docs/french_applied_guidance_validation_20260725",
+    "docs/public",
 )
 IGNORED_TREE_NAMES = {".DS_Store", ".pytest_cache", "__pycache__", "dist", "node_modules"}
 
@@ -185,13 +92,14 @@ def _file_entry(root: Path, path: Path, role: str) -> dict[str, Any]:
     }
 
 
-def _tree_digest(root: Path, path: Path) -> dict[str, Any]:
+def _tree_digest(root: Path, path: Path, *, manifests_only: bool = False) -> dict[str, Any]:
     files = sorted(
         item
         for item in path.rglob("*")
         if item.is_file()
         and not any(part in IGNORED_TREE_NAMES for part in item.relative_to(path).parts)
         and item.suffix != ".pyc"
+        and (not manifests_only or item.name.endswith("_manifest.json"))
     )
     digest = hashlib.sha256()
     total_bytes = 0
@@ -258,7 +166,11 @@ def build_manifest(root: Path) -> dict[str, Any]:
         )
     control_entries = [_file_entry(root, root / value, "runtime_control") for value in required if value not in knowledge_values]
     geo_cache = _tree_digest(root, root / "data/derived/geo_cache")
-    bundled_geo_layers = _tree_digest(root, root / "data/derived/geo_layers")
+    bundled_geo_layers = _tree_digest(
+        root,
+        root / "data/derived/geo_layers",
+        manifests_only=True,
+    )
     benchmark_entries = [_tree_digest(root, root / value) for value in BENCHMARK_ROOTS]
     policy_entries = [_tree_digest(root, root / value) for value in RUNTIME_POLICY_ROOTS]
     asset_entries = [_tree_digest(root, root / value) for value in RUNTIME_ASSET_ROOTS]

@@ -8,7 +8,7 @@ The runtime knowledge base is selected by `data/manifests/runtime_corpus_policy.
 |---|---:|---|---|
 | Canadian distributable v13 | 718 | 706 context-only; 12 require live authority | No row is currently admitted as standard applied authority; uneven provincial depth; Ontario Publication 811/811F excluded |
 | Ontario context v1 | 234 | Context only | Regional statistics, not field truth or calibration |
-| Canadian supplements v1/v2 | 56 | Context only | Historical/regional and data-product context |
+| Canadian supplements v1/v2/v3 | 62 | Context only | Historical/regional, data-product, and six current Manitoba scouting companion records; the scouting rows remain non-decisive pending independent agronomic review |
 | Canadian regional context v1 | 38 | Context only | Data-product descriptions, not local applied guidance |
 | SoilWise RAG + KG | 1,784 RAG rows | Context only | Soil-health concepts and relations, not a soil test |
 | Compact NRCS ESD | 24,396 | Context only | United States regional profiles; never Canadian soil authority |
@@ -47,7 +47,11 @@ Evaluation data is not agronomic knowledge. `cca_aligned_eval.jsonl` and `cca_lo
 
 ## Geospatial data
 
-Regional soil and crop layers are useful for locating priors, not for replacing soil sampling or grower records. Large generated SQLite indexes and raw downloads are excluded from Git. Small manifests and lineage receipts define what can be rebuilt or packaged in a separately verified offline bundle.
+Regional soil and crop layers are useful for locating priors, not for replacing soil sampling or grower records. Large generated SQLite indexes and raw downloads are excluded from Git. The portable Prairie pack consolidates Alberta, Saskatchewan, and Manitoba Detailed Soil Survey SQLite/RTree layers with the national 2021 soil-erosion-risk layer. Its pack manifest binds every database and derivation manifest by hash; a runtime probe checks installed-layer discovery and fixed offline field intersections in all three provinces.
+
+The Saskatchewan DSS integration preserves all 67,166 source map polygons and their component tables. Source geometries are repaired before simplification, simplification occurs in EPSG:3347 metres rather than geographic degrees, and the build fails if aggregate area changes by more than 0.01%. The layer remains a historical 1:100,000 mapped prior. It cannot establish a point soil, current nutrient supply, salinity, compaction, drainage performance, crop suitability, or a rate.
+
+The 2025 national 100 m Soil Landscape Grids of Canada are tracked as a candidate, not an installed authority layer. The federal record describes the product as under evaluation and review. Promotion therefore requires cropland tiling/size measurements, uncertainty handling, province-edge and northern-coverage tests, and a demonstrated retrieval or decision-quality benefit over the survey layers.
 
 ## Admission checklist
 

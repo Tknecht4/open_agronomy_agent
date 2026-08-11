@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Build compact Alberta or Manitoba detailed-soil runtime layers.
+"""Build compact Alberta, Saskatchewan, or Manitoba detailed-soil runtime layers.
 
-The two AAFC products share a spatial-plus-relational publication pattern but
+The AAFC products share a spatial-plus-relational publication pattern but
 not one relational schema. Province profiles below make those differences
 explicit. The output is a WGS84 SQLite/RTree context layer for offline field
 intersection; it is deliberately not a fertility or prescription product.
@@ -30,8 +30,10 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_VERSION = "open_agronomy_agent.local_geo_layer.v1"
 OUTPUT_CRS = "EPSG:4326"
+CANADA_METRIC_CRS = "EPSG:3347"
 DEFAULT_TOLERANCE_METRES = 10.0
 DEFAULT_COORDINATE_PRECISION = 0.000001
+MAX_SIMPLIFICATION_AREA_CHANGE_FRACTION = 0.0001
 
 DRAINAGE = {
     "VR": "very rapidly drained",
@@ -178,6 +180,39 @@ PROFILES = {
         ),
         mapping_basis="Manitoba detailed soil surveys compiled across published map sheets and scales",
         color="#7d8875",
+    ),
+    "sk": ProvinceProfile(
+        province="Saskatchewan",
+        source_id="ca_aafc_sk_detailed_soil_survey",
+        source_dir="data/raw/canada_agronomy/ca_aafc_sk_detailed_soil_survey_dss_v3",
+        source_layer="dss_v3_sk.shp",
+        source_crs="EPSG:4269",
+        source_url="https://open.canada.ca/data/en/dataset/3734623c-25c5-4e69-936d-26f764a2807f",
+        source_record_id="3734623c-25c5-4e69-936d-26f764a2807f",
+        polygon_id="POLY_ID",
+        map_unit_field=None,
+        component_file="dss_v3_sk_cmp.dbf",
+        component_join_field="POLY_ID",
+        component_soil_field="SOIL_ID",
+        component_slope_field="SLOPE_P",
+        name_file="soil_name_sk_v2.dbf",
+        name_soil_field="SOIL_ID",
+        layer_file="soil_layer_sk_v2.dbf",
+        layer_soil_field="SOIL_ID",
+        polygon_table_file="dss_v3_sk.dbf",
+        extra_table_file="dss_v3_sk_prt.dbf",
+        component_detail_file="dss_v3_sk_crt.dbf",
+        output_file="data/derived/geo_layers/sk_detailed_soil.sqlite3",
+        output_manifest="data/derived/geo_layers/sk_detailed_soil_manifest.json",
+        code_prefix="SK_SOIL",
+        summary_prefix="Saskatchewan detailed soil map unit",
+        source_scale_range="1:100,000",
+        source_scale_note=(
+            "Seamless DSS v3 coverage for nearly all agricultural areas in southern Saskatchewan "
+            "at 1:100,000. The soil survey is a historical mapped prior, not a current field measurement."
+        ),
+        mapping_basis="Saskatchewan agricultural-region detailed soil survey compilation",
+        color="#6f8170",
     ),
 }
 
@@ -652,10 +687,18 @@ def build_layer(
         raise ValueError("source geometry repair exceeded the one-part-per-million area boundary")
 
     source_vertices = int(shapely.get_num_coordinates(frame.geometry.array).sum())
-    source_area = float(frame.geometry.area.sum())
-    simplified = frame.geometry.simplify(tolerance_metres, preserve_topology=True)
+    simplification_crs = CANADA_METRIC_CRS if frame.crs.is_geographic else str(frame.crs)
+    metric_frame = frame.to_crs(simplification_crs) if frame.crs.is_geographic else frame
+    source_area = float(metric_frame.geometry.area.sum())
+    simplified = metric_frame.geometry.simplify(tolerance_metres, preserve_topology=True)
     simplified_area = float(simplified.area.sum())
-    frame = frame.set_geometry(simplified).to_crs(OUTPUT_CRS)
+    area_change_fraction = abs(simplified_area - source_area) / source_area
+    if area_change_fraction > MAX_SIMPLIFICATION_AREA_CHANGE_FRACTION:
+        raise ValueError(
+            "simplification changed mapped area beyond the fail-closed threshold: "
+            f"{area_change_fraction:.8f} > {MAX_SIMPLIFICATION_AREA_CHANGE_FRACTION:.8f}"
+        )
+    frame = metric_frame.set_geometry(simplified).to_crs(OUTPUT_CRS)
     invalid_after_reprojection = ~frame.geometry.is_valid
     repaired_feature_ids: list[str] = []
     repair_area_before = 0.0
@@ -888,7 +931,9 @@ def build_layer(
         "reprojection_repair_area_change_fraction": round(
             reprojection_repair_area_change_fraction, 12
         ),
-        "area_change_fraction": round(abs(simplified_area - source_area) / source_area, 8),
+        "area_change_fraction": round(area_change_fraction, 8),
+        "simplification_metric_crs": simplification_crs,
+        "max_simplification_area_change_fraction": MAX_SIMPLIFICATION_AREA_CHANGE_FRACTION,
         "simplification_tolerance_metres": tolerance_metres,
         "coordinate_precision_degrees": coordinate_precision,
         "lineage_path": str(lineage_path.relative_to(ROOT)),

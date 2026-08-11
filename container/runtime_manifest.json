@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-08-11T01:05:48+00:00",
+  "generated_at": "2026-08-11T03:16:28+00:00",
   "status": "pass",
-  "contract_sha256": "7f33c4606e955c748dd1a969959c936620cde3510eed3bce740a2cb95e9880bb",
+  "contract_sha256": "4ae981eda5452ffa129965873d8daa130a9ef41a60e37b433443a5e9e715ebe9",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -16,15 +16,15 @@
     "docker_compose": "docker-compose.edge.yml"
   },
   "model": {
-    "config_path": "configs/model_gemma4_e2b_interface_v1.yaml",
+    "config_path": "configs/model_gemma4_e2b_interface_v2.yaml",
     "configured_model_id": "mlx-community/gemma-4-e2b-it-4bit",
     "included": false,
     "reason": "MLX and Metal run natively on the macOS host; the Linux image calls the host over loopback-only HTTP."
   },
   "rag_config": "configs/rag_governed_runtime_v1.yaml",
   "corpus_policy_manifest": "data/manifests/runtime_corpus_policy.json",
-  "configured_corpus_count": 22,
-  "included_corpus_count": 9,
+  "configured_corpus_count": 23,
+  "included_corpus_count": 10,
   "excluded_corpus_count": 13,
   "excluded_corpora": [
     {
@@ -189,6 +189,12 @@
       "sha256": "d0ed46ffb8fc153f4fb8c60dab2b74706c89bdf144eeb01142c8677eece41988"
     },
     {
+      "path": "data/derived/rag/canada_agronomy_supplement_v3.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 37455,
+      "sha256": "f175130e4dbd635ecd7142ce47e996a05a9d1671aaea4041e67187f0cea22e21"
+    },
+    {
       "path": "data/derived/rag/canada_agronomy_regional_context_v1.jsonl",
       "role": "runtime_knowledge",
       "bytes": 206821,
@@ -213,27 +219,20 @@
       "sha256": "9e73db954212216241b4b77d63088d4671fa017539e5309ee71e444b086a618b"
     }
   ],
-  "runtime_knowledge_bytes": 67726510,
-  "runtime_policies": [
-    {
-      "path": "plans",
-      "file_count": 76,
-      "bytes": 2975995,
-      "sha256": "ebde64056932e6e6889241b7d306a5235fe8e98c40cf45685cc5b2102e8a4064"
-    }
-  ],
+  "runtime_knowledge_bytes": 67763965,
+  "runtime_policies": [],
   "runtime_assets": [
     {
       "path": "src/agronomy_agent",
       "file_count": 154,
-      "bytes": 5145194,
-      "sha256": "f8760e74d39a3305a69abadfbed90af64c1c29ce4f1101ee076d478f567853db"
+      "bytes": 5158412,
+      "sha256": "20592c99e258ca7ded8321dc34783cb5444529af6dcbbc1464f3f48529f7fb9e"
     },
     {
       "path": "frontend/src",
       "file_count": 70,
-      "bytes": 1078530,
-      "sha256": "6d6a1e85e09fe98974c73fb10d20743365f18414902797a877b4975ed2ab2875"
+      "bytes": 1083097,
+      "sha256": "3ba439bb2b33c05067eac915e92c4b17eb688628d90e82639cec635491692274"
     },
     {
       "path": "frontend/public",
@@ -243,27 +242,27 @@
     },
     {
       "path": "scripts",
-      "file_count": 364,
-      "bytes": 5143973,
-      "sha256": "2f9e196d943553b1731770bfda59ebeee8930666dfe912e3ba31c8fd6d7a3062"
+      "file_count": 79,
+      "bytes": 968180,
+      "sha256": "aff829e2c206312ee5f5a7931610da80022320098fb7fc29d09a04975c8db147"
     },
     {
       "path": "configs",
-      "file_count": 56,
-      "bytes": 102066,
-      "sha256": "c29267c1519aa3464f413079a776d94a138a47774f44b23d30d0caf60ed84b0e"
+      "file_count": 57,
+      "bytes": 103842,
+      "sha256": "d9d387fcf6a5558495200ef48cbdc7aab74f74312260313c1866c129bb070732"
     },
     {
       "path": "data/manifests",
-      "file_count": 59,
-      "bytes": 42562916,
-      "sha256": "a2aa3b46e93808664269edd34b0adf765f4e0a19e13a944d7f5496e612e3d9f5"
+      "file_count": 10,
+      "bytes": 173718,
+      "sha256": "a21da06cdc739c1b13bf40f001193be0cc3ed5ea8f789162af526c756108b696"
     },
     {
       "path": "data/eval",
-      "file_count": 148,
-      "bytes": 19275620,
-      "sha256": "c89a4d6bfce65241aa782a4ff206799c9da9bf0608ce6538d1b8e3d486c9e154"
+      "file_count": 26,
+      "bytes": 2361185,
+      "sha256": "82352b80e1ae3f6a8afa296b5a63d3837562e1b83b783d0e8fcc9a5101bc0903"
     },
     {
       "path": "data/snapshots",
@@ -272,146 +271,43 @@
       "sha256": "5e6455c12f13ede4e12cd4755dad1c5c726cf2bdf98dd85baf3e863bff84d027"
     },
     {
-      "path": "docs/open_agronomy_agent_whitepaper_20260709",
-      "file_count": 133,
-      "bytes": 15170010,
-      "sha256": "3574cbbefee5c53cd1e7eaa3e4b1da39b7867ff3acb0f44e05d89695a2c5fa56"
-    },
-    {
-      "path": "docs/alberta_applied_guidance_validation_20260725",
+      "path": "docs/public",
       "file_count": 4,
-      "bytes": 29806,
-      "sha256": "bf974494b9ac790ef3f6871d2b7e41fa4abfcc5a7d60724af1269207af67edb3"
-    },
-    {
-      "path": "docs/bc_aem_nutrient_application_plan_validation_20260727",
-      "file_count": 4,
-      "bytes": 12450,
-      "sha256": "f77e0bd3a76b9f9b6e8eda92cd35129fba47152f9ae2de9b4038825efa9a4c6d"
-    },
-    {
-      "path": "docs/manitoba_applied_guidance_validation_20260725",
-      "file_count": 4,
-      "bytes": 25671,
-      "sha256": "9f6a93333c56cb6487ff47aff94e6fb5559110dea76be3475b796b0d4bed3801"
-    },
-    {
-      "path": "docs/manitoba_fertilizer_check_stamp_validation_20260726",
-      "file_count": 4,
-      "bytes": 8449,
-      "sha256": "6c40d0af43f510bb27f446703e23d0a14307edb861b9dedfdb65f2f25cdb8ac4"
-    },
-    {
-      "path": "docs/manitoba_stored_grain_monitoring_validation_20260726",
-      "file_count": 4,
-      "bytes": 9055,
-      "sha256": "7073a1e77bfb82ab9cb93b0b18b12d6794b9352536abad2d754f0c2176389839"
-    },
-    {
-      "path": "docs/french_applied_guidance_validation_20260725",
-      "file_count": 4,
-      "bytes": 20206,
-      "sha256": "9acaee2c6e38f108be0fc6807a0570b9eb7fb7dffd3a7df35797c25876bc28ad"
+      "bytes": 13685,
+      "sha256": "893b8338554489c17db17fab9f6223c6b5d594814825c858d482ab3863a73f45"
     }
   ],
   "geo_cache_seed": {
     "path": "data/derived/geo_cache",
-    "file_count": 412,
-    "bytes": 17439735,
-    "sha256": "6ca983440048393e852e3ddc742a889707e9ce573468bf87b7713b2d24d10e37"
+    "file_count": 57,
+    "bytes": 1188193,
+    "sha256": "5d992391101c047416a39db2d3d8047003ca75b1bac43ef81547be73c4bdb2c9"
   },
   "bundled_geo_layers": {
     "path": "data/derived/geo_layers",
-    "file_count": 14,
-    "bytes": 639966268,
-    "sha256": "2179e40db046c06f799bfb4b5e9e322c45586ca8edb1dc024c1ab6be68b3c909"
+    "file_count": 8,
+    "bytes": 32805,
+    "sha256": "de958f674e8a5818d0c9c841033b9cb8be6e05e4d8f77634f98cbbadf96e84c7"
   },
-  "benchmark_evidence": [
-    {
-      "path": "outputs/evals/aiagribench_proxy_iter17_full_live_precision_economics_cleanup",
-      "file_count": 3,
-      "bytes": 4134281,
-      "sha256": "56af3e8d3a76d93080411a6afc9239720b5b5d5d85de771a91fe305192a8a9f5"
-    },
-    {
-      "path": "outputs/evals/expert_review_807_blinded_semantic_20260718",
-      "file_count": 177,
-      "bytes": 9514801,
-      "sha256": "6575ed249c677b82f820eadb54e7c73d6729e815405b8f313a6afb637483addf"
-    },
-    {
-      "path": "outputs/evals/canadian_semantic_reserve_v1_qwen2b",
-      "file_count": 19,
-      "bytes": 625353,
-      "sha256": "66631f901a70ab1b0c45fe4f141be66e13c099385a37e3954343881208be13a6"
-    },
-    {
-      "path": "outputs/evals/public_domain_coverage_full_live_1056_current_rescore_contract_repairs_final",
-      "file_count": 4,
-      "bytes": 5943507,
-      "sha256": "9291260fd3ae6c066502f25b9c699e027eda90e60662cdcf5ed7b87e541c44c0"
-    },
-    {
-      "path": "outputs/evals/public_claim_stress_focus_full_live_20260710_submission_hygiene_rescore",
-      "file_count": 4,
-      "bytes": 870032,
-      "sha256": "def6a17026a18af5220f07c906865ef7db6c7cf7042337ce34f59a14d1c916bc"
-    },
-    {
-      "path": "outputs/evals/public_shadow_heldout",
-      "file_count": 7,
-      "bytes": 555801,
-      "sha256": "7e396648dcc3e3064266c93ad024f22ad959fb23e4e4bc1d5b69d1ae4373d93a"
-    },
-    {
-      "path": "outputs/evals/agentic_gap_matrix",
-      "file_count": 3,
-      "bytes": 3140613,
-      "sha256": "e65a31a87e190679bf9fff426ca307b8d3245ecf9c7885dd4129b399439c6b7d"
-    },
-    {
-      "path": "outputs/evals/general_agent_semantic_control_v5_240/agronomic_rag_20260715T031940Z",
-      "file_count": 3,
-      "bytes": 310314,
-      "sha256": "b6603df87a607b304e824bb54949f74aa8a405edf2cd2ce13749f5d1ade8a320"
-    },
-    {
-      "path": "outputs/evals/canadian_conference_transfer_gate_gemma4_generalized_v5/agronomic_rag_20260720T224916Z",
-      "file_count": 15,
-      "bytes": 933751,
-      "sha256": "669cce8193029e828d2af20b398d8d54ce92ff7aeff344fa5ecc794368f3d0bf"
-    },
-    {
-      "path": "outputs/evals/canadian_conference_preflight_v2_rc20_final_20260725",
-      "file_count": 2,
-      "bytes": 145959,
-      "sha256": "a158c99329ece85350f805330d37b10c82ead4d4a5c7d251d306c7448baa21f7"
-    },
-    {
-      "path": "outputs/evals/canadian_conference_transfer_gate_v2_rc20_release_candidate_v2_gemma4_20260725/agronomic_rag_20260725T035257Z",
-      "file_count": 4,
-      "bytes": 725729,
-      "sha256": "2c4c4a6678d253e4ccbcb9e8ab6285637f29e45a44ecf60cc0c5657332b6c85f"
-    }
-  ],
+  "benchmark_evidence": [],
   "control_files": [
     {
       "path": "configs/rag_governed_runtime_v1.yaml",
       "role": "runtime_control",
-      "bytes": 2338,
-      "sha256": "7ca0fbe545f19dd6959f794f70e0da0f1bf5e0bdd470b677e8006a48c27bc0f6"
+      "bytes": 2397,
+      "sha256": "ea04348fc109b028fcc98acabec3ce38ce5bfabf507a6321f87870ef086f0abc"
     },
     {
-      "path": "configs/model_gemma4_e2b_interface_v1.yaml",
+      "path": "configs/model_gemma4_e2b_interface_v2.yaml",
       "role": "runtime_control",
-      "bytes": 1293,
-      "sha256": "0d2a2343b0056517d50bb32574a00706223d3a68135f04649789bf5de468d1a0"
+      "bytes": 1359,
+      "sha256": "3a078b5351c3655bff793c44c6edbb488f655f6ca623a2d8f03a8954d818d20e"
     },
     {
       "path": "Containerfile",
       "role": "runtime_control",
-      "bytes": 8303,
-      "sha256": "fc16c6326cd54cf12a772292bb535a112e105938138066ae852fb38f85e320df"
+      "bytes": 3891,
+      "sha256": "bf14a76d8d99fc61fff5825b4526d6deba2e067fa09accb3705522b49b7dcc75"
     },
     {
       "path": "Containerfile.overlay",
@@ -422,8 +318,8 @@
     {
       "path": ".dockerignore",
       "role": "runtime_control",
-      "bytes": 3438,
-      "sha256": "b3bd84ddc8dd81951ec53fd8fb5001b51b2e65c7fdcba02ec0f0175f100c5934"
+      "bytes": 3780,
+      "sha256": "ac004a12f51ea75c2501514b420f97486788f9769425cb474b8597abe7405b0c"
     },
     {
       "path": "requirements-container.txt",
@@ -440,20 +336,20 @@
     {
       "path": "docker-compose.edge.yml",
       "role": "runtime_control",
-      "bytes": 1410,
-      "sha256": "e999981134de2489a5112536483a7aa257ed06c8699737742c2738c2e85207e9"
+      "bytes": 1507,
+      "sha256": "3cf9ea40c44f29a46f4af6f467b30603e8c9e76008cd2d4277947bbbc810f6c7"
     },
     {
       "path": "frontend/package.json",
       "role": "runtime_control",
-      "bytes": 765,
-      "sha256": "3d637b57038c248ad91865c854214f32934a505b6f3255c4c0a3e18f067cb451"
+      "bytes": 798,
+      "sha256": "5a240150c345bb8049b23896a4526c81238477fcc3bc77de9150dbd257112302"
     },
     {
       "path": "frontend/package-lock.json",
       "role": "runtime_control",
-      "bytes": 115961,
-      "sha256": "be09cefbd76db65f530d7d4e154f8b955d5cdb198f28ec227e6083bd80bc4e08"
+      "bytes": 160597,
+      "sha256": "4e1087387b14511c20eebb69ccc2dfe5606cefd270b742e6dda09f095e013018"
     },
     {
       "path": "frontend/index.html",
@@ -476,26 +372,26 @@
     {
       "path": "container/.env.example",
       "role": "runtime_control",
-      "bytes": 1840,
-      "sha256": "8cb298a4e932d449e413ebc2db3a0b069905ab94b8c04b914f42301eafe1b39b"
+      "bytes": 1893,
+      "sha256": "1cd9cce5c4f2710b8e3493277efc448a291e75ccc9030b0e96addd1f76a482a7"
     },
     {
       "path": "container/runtime-defaults.env",
       "role": "runtime_control",
-      "bytes": 303,
-      "sha256": "a5828abafffc63ecc34d1fa5c7a65762b8161ab44e3ca6be0e48f60f8fbd95e4"
+      "bytes": 356,
+      "sha256": "3fa6d8899b1ba72460e3d2d77df038d21aba8d13688d6ed6181fa01c896b0dd6"
     },
     {
       "path": "container/README.md",
       "role": "runtime_control",
-      "bytes": 8300,
-      "sha256": "0a363c85a054d2698dcdf3b70711386ed614b62826f299c9bb7aa44f3c892179"
+      "bytes": 8638,
+      "sha256": "8a73f827e84a388b078c28973ee8e70a62ffd385f4b2dc07da8bb51b6ba9fc73"
     },
     {
       "path": "container/runtime-common.sh",
       "role": "runtime_control",
-      "bytes": 4844,
-      "sha256": "98f925d6b9a45bfaa9e530380b38880e83f2113032d6b0940a2003a6a9390641"
+      "bytes": 4982,
+      "sha256": "d6c9219b793b51bdb85b0ba279111e6efd27bfc311eda50c1bb9e2d8436777b1"
     },
     {
       "path": "container/build-image.sh",
@@ -524,8 +420,8 @@
     {
       "path": "container/apple.sh",
       "role": "runtime_control",
-      "bytes": 10725,
-      "sha256": "b58f919726a37ca89b05fc77a65bd46a5fc5b7893386775de8c44c009c710464"
+      "bytes": 10861,
+      "sha256": "69014de84f25e444d1d20077c663eb26b1079cab221a381e3057720801cc8606"
     },
     {
       "path": "container/docker.sh",
@@ -546,16 +442,16 @@
       "sha256": "56c8ef46b98896a6c50fa2228be139593668e89b3d70283c2bbe4684c31756dc"
     },
     {
+      "path": "scripts/stage_edge_build_context.py",
+      "role": "runtime_control",
+      "bytes": 4389,
+      "sha256": "a605436c7eb77e1279b3c8fbd12d6e4b5bc7c61018a1c0cb4fe4d8c86f76ebd3"
+    },
+    {
       "path": "scripts/verify_edge_release.py",
       "role": "runtime_control",
       "bytes": 10254,
       "sha256": "c2e674152e077b873f1bbbf41dfb932f1963ce3020f9f05d6bc0d3d3efd706fc"
-    },
-    {
-      "path": "scripts/repair_edge_oci_archive.py",
-      "role": "runtime_control",
-      "bytes": 21995,
-      "sha256": "23889f3a3229b772f14696bd7367f7882bbcbaf69c1ae937a7dcf7f47c5128eb"
     },
     {
       "path": "scripts/validate_edge_runtime_translation.py",
@@ -572,8 +468,8 @@
     {
       "path": "data/manifests/canada_geospatial_sources.json",
       "role": "runtime_control",
-      "bytes": 20072,
-      "sha256": "4c6579f5ec103d401d2034a1ba20891d4c3d9e779117674447896d5684e963f9"
+      "bytes": 22240,
+      "sha256": "3ec2c4efbb7eb55996588b71931e5dd156b68f08107231ccd21c6c35d7b89f6e"
     },
     {
       "path": "data/manifests/source_licensing_matrix.json",
@@ -582,328 +478,10 @@
       "sha256": "929329e1516fb1c1a5477d22b1c518563b39cb8cc8d78383285a9e56edf10f2a"
     },
     {
-      "path": "data/manifests/advisory_blocker_baseline_v1.json",
-      "role": "runtime_control",
-      "bytes": 785,
-      "sha256": "9568c5be0876b5d4596450fe322b02b8ffbd24685019a97e7aa85dcbe1c23e6d"
-    },
-    {
-      "path": "data/manifests/canadian_official_source_census_20260724.json",
-      "role": "runtime_control",
-      "bytes": 39509607,
-      "sha256": "57913408ff8fe8a77046782f78deab0244534915570c8529e22c49040c451abc"
-    },
-    {
-      "path": "data/manifests/canadian_applied_guidance_slate_20260726.json",
-      "role": "runtime_control",
-      "bytes": 252954,
-      "sha256": "ff32e7fe8ee42e5608e7cee40241b3722e9e30fd827ab8c122b82017365a7b7d"
-    },
-    {
-      "path": "data/manifests/applied_guidance_review_packet_registry_20260726.json",
-      "role": "runtime_control",
-      "bytes": 17925,
-      "sha256": "327b76ecd3af0fe80a312f9b206fe7d6a6e3f3b1345ac70ab49dceb6773abe12"
-    },
-    {
-      "path": "data/manifests/french_applied_guidance_source_disposition_20260726.json",
-      "role": "runtime_control",
-      "bytes": 41898,
-      "sha256": "58858d80544381f069f8215e4fbdc370a3f287a4507ead960730fdc29c93cdc5"
-    },
-    {
-      "path": "data/manifests/model_adaptation_decision_20260727.json",
-      "role": "runtime_control",
-      "bytes": 9354,
-      "sha256": "a747e943ca18234895c5b43cc3b1637f517e71bc35060de8c5ea725abd19dc56"
-    },
-    {
-      "path": "data/manifests/source_asset_access_receipts/aafc_western_field_crop_pest_guide_fr_2018.json",
-      "role": "runtime_control",
-      "bytes": 1954,
-      "sha256": "97dd716bf1e8bb5bf723a42b4ab6376bca3112506128b466d6a96b671ae55891"
-    },
-    {
-      "path": "data/manifests/source_asset_access_receipts/aafc_western_field_crop_pest_guide_2018_archive_continuation.json",
-      "role": "runtime_control",
-      "bytes": 6247,
-      "sha256": "d357d5174dea94b348d68ff2f571b684cf454fd09472e92caff676e9ea31d074"
-    },
-    {
-      "path": "data/manifests/source_asset_access_receipts/aafc_prairie_cutworms_guide_fr_2017.json",
-      "role": "runtime_control",
-      "bytes": 3719,
-      "sha256": "50d52af312a4721d99c2d910e241f7bf44daf8250a3d4c7f3e49efc4c9ab59b4"
-    },
-    {
-      "path": "data/manifests/source_asset_access_receipts/aafc_prairie_cutworms_guide_2017_archive_continuation.json",
-      "role": "runtime_control",
-      "bytes": 5099,
-      "sha256": "5755ba325751470967c9aa3712c6ba7f8e9799a86a930fcea90ac8887e5c9143"
-    },
-    {
-      "path": "data/manifests/source_asset_access_receipts/aafc_prairie_wireworms_guide_fr_2021.json",
-      "role": "runtime_control",
-      "bytes": 3732,
-      "sha256": "7210cb82ba7f34ca8df48c3156c81c4066bb2fa9135608800dbb06180230d4f2"
-    },
-    {
-      "path": "data/manifests/source_asset_access_receipts/aafc_prairie_wireworms_guide_2021_archive_continuation.json",
-      "role": "runtime_control",
-      "bytes": 5111,
-      "sha256": "1f15732902aad002d4f48774bcf20103e41bfbe3dbe81b3a8f0f73a0f51f0a14"
-    },
-    {
-      "path": "data/manifests/applied_guidance_source_preflight_registry_20260726.json",
-      "role": "runtime_control",
-      "bytes": 341734,
-      "sha256": "20a1919b0e0d24630f941ae821ece6a2843483366fba7bc6badfb4f65b6fe73d"
-    },
-    {
-      "path": "data/evals/canadian_applied_guidance_admission_eval_contract_20260726.json",
-      "role": "runtime_control",
-      "bytes": 12175,
-      "sha256": "b01ae7460c30f2d8bba91a93228a0239892cd9a7747aac956eb545cd425a3661"
-    },
-    {
-      "path": "docs/canadian_corpus_v8_coverage_20260720.md",
-      "role": "runtime_control",
-      "bytes": 2335,
-      "sha256": "b6308fd0eff6cf327235e31f6671babaf77b30fb3838b1aa2df0dc2d412a26cb"
-    },
-    {
-      "path": "docs/canadian_agronomy_corpus_promotion_audit_v8_20260720.json",
-      "role": "runtime_control",
-      "bytes": 13904,
-      "sha256": "81573f0fe29a3ccc3db36e75e160038c6fd7812cbd8153437e3282c4805acc4f"
-    },
-    {
-      "path": "docs/canadian_agronomy_corpus_promotion_audit_v8_20260720.md",
-      "role": "runtime_control",
-      "bytes": 3241,
-      "sha256": "7e4e6aa654699c1fb91594a6306f03a6475563aefd1d8af3eeda44c7e9ab5f40"
-    },
-    {
-      "path": "docs/canadian_v8_promotion_full_path_gate.md",
-      "role": "runtime_control",
-      "bytes": 1285,
-      "sha256": "d28835c2244c7507df59f576927b863c68287ca5938a1976668e0353aa18107a"
-    },
-    {
-      "path": "docs/canadian_crop_health_indices_v7_direct_semantic_review_20260719.json",
-      "role": "runtime_control",
-      "bytes": 928,
-      "sha256": "6caf9ba49b8664aeefe25c346e5b59722d3e51ebf43c5e674395c3dc382fa796"
-    },
-    {
-      "path": "docs/canadian_crop_health_indices_v7_direct_semantic_review_20260719.md",
-      "role": "runtime_control",
-      "bytes": 809,
-      "sha256": "ef3d90a6f4fd512485da8ac74b0e09c727ba9cbececc30f978b65559166c7061"
-    },
-    {
-      "path": "docs/canadian_conference_transfer_gate_20260720.md",
-      "role": "runtime_control",
-      "bytes": 5788,
-      "sha256": "f9ae80b016717c8508fa0fcd5c2ef1b702616930713c418b65e82ec66179c9a5"
-    },
-    {
-      "path": "docs/canadian_conference_source_validation_v1_rc8_20260721.json",
-      "role": "runtime_control",
-      "bytes": 24244,
-      "sha256": "8149bee7c7666d74ffceeaafe2694c0f873e6f12cd66520d0be61943dabc463f"
-    },
-    {
-      "path": "docs/canadian_conference_source_validation_v1_rc8_20260721.md",
-      "role": "runtime_control",
-      "bytes": 5537,
-      "sha256": "b9e60a551760d32115503480d3bddda1ee946dcb70f92d09a37e6eaf89f14cd1"
-    },
-    {
-      "path": "docs/canadian_ab_nutrient_planning_v6_direct_semantic_review_20260719.json",
-      "role": "runtime_control",
-      "bytes": 1799,
-      "sha256": "e0cdb64192e25c6080f196e088e404f4050e46b659e892ad316b18b58357e998"
-    },
-    {
-      "path": "docs/canadian_ab_nutrient_planning_v6_direct_semantic_review_20260719.md",
-      "role": "runtime_control",
-      "bytes": 2194,
-      "sha256": "c57710a69afab0eb62f36c3e7f1dcce626f9a898483e8c550b6cbedf1f3c8062"
-    },
-    {
-      "path": "data/derived/geo_layers/bc_agriculture_capability_manifest.json",
-      "role": "runtime_control",
-      "bytes": 2409,
-      "sha256": "e58b18183f8b8b519b19f3ab76e96f4e2b43b62c46cc58c5728bf3706ae22cb3"
-    },
-    {
-      "path": "data/derived/geo_layers/sk_thematic_soil_manifest.json",
-      "role": "runtime_control",
-      "bytes": 2269,
-      "sha256": "b5d6a8d9dc5d69a0ccbf88feb4db81f5af33034999fa7579dad66073bb5fe797"
-    },
-    {
-      "path": "data/derived/geo_layers/ca_soil_erosion_risk_manifest.json",
-      "role": "runtime_control",
-      "bytes": 2214,
-      "sha256": "2955eae33820a262c8bba76cee32cffc2cddb522c2eff1ef93ef6c9d739a8cc3"
-    },
-    {
-      "path": "data/derived/geo_layers/pei_detailed_soil_manifest.json",
-      "role": "runtime_control",
-      "bytes": 3855,
-      "sha256": "8832c57f3f2e7241583bb823a9e7dd122ac9efddf2d25e81c7f0c216b1e010d1"
-    },
-    {
-      "path": "data/derived/geo_layers/ns_pictou_detailed_soil_manifest.json",
-      "role": "runtime_control",
-      "bytes": 3901,
-      "sha256": "4b38f18d78ccdc89312ded2a21683e4383f14d7477a72e690cb79e10fd052d15"
-    },
-    {
-      "path": "data/derived/geo_layers/ab_detailed_soil_manifest.json",
-      "role": "runtime_control",
-      "bytes": 4553,
-      "sha256": "b6d345f7a978126edd81ea88d0c076a0eb23de2e40b32e8d2d4305290d2dc9d6"
-    },
-    {
-      "path": "data/derived/geo_layers/mb_detailed_soil_manifest.json",
-      "role": "runtime_control",
-      "bytes": 8507,
-      "sha256": "71f7bb435616471456eff2941faacb6313b9bbd26117b88b6c6feb0ebae838d1"
-    },
-    {
-      "path": "docs/canadian_geospatial_sources_validation_20260721.json",
-      "role": "runtime_control",
-      "bytes": 1153,
-      "sha256": "b83b624d9009fb6fcece5dc9f895217da2e16914a4effcda9c4be99813368421"
-    },
-    {
-      "path": "docs/canadian_geospatial_sources_coverage_20260721.md",
-      "role": "runtime_control",
-      "bytes": 2688,
-      "sha256": "0925bbd4088f0876bcfa3ef5f940f2c98df6486d765ac9293794f84f87ed6cd7"
-    },
-    {
-      "path": "docs/canadian_applied_guidance_rights_audit_20260721.md",
-      "role": "runtime_control",
-      "bytes": 3109,
-      "sha256": "5f43274fe17dca93c18aada72a1ac7a16318033dc70c149df261d566a855ea51"
-    },
-    {
-      "path": "docs/canadian_agronomy_corpus_promotion_audit_v13_20260725.json",
-      "role": "runtime_control",
-      "bytes": 14036,
-      "sha256": "2bd42739c83418e9e456b750f95e4630216878fe51f3168df9b0f2cef42b96af"
-    },
-    {
-      "path": "docs/canadian_agronomy_corpus_promotion_audit_v13_20260725.md",
-      "role": "runtime_control",
-      "bytes": 3154,
-      "sha256": "a66453c6e7a0cde42e734ca4589957b5f1d9d831890452569b140ea9f0866592"
-    },
-    {
-      "path": "docs/canada_agronomy_ontario_context_v1_audit_20260725.md",
-      "role": "runtime_control",
-      "bytes": 2482,
-      "sha256": "8213e07ed53048073ae98f48cefbba9cd0abab63fb24a252dae7c0cd3a144c62"
-    },
-    {
-      "path": "docs/conference_freeze_knowledge_gap_matrix_20260725.md",
-      "role": "runtime_control",
-      "bytes": 3994,
-      "sha256": "43462d48ecb3db7fcd6b5ae3195c2f668e41ef64bb8cbf6a01bf64cb173d54ec"
-    },
-    {
-      "path": "docs/runtime_knowledge_sufficiency_audit_20260725.md",
-      "role": "runtime_control",
-      "bytes": 3166,
-      "sha256": "1462d800aa8dfc2b7d3f97b2eb289df61d2730f2807a051f647427183f46a57f"
-    },
-    {
-      "path": "docs/french_applied_guidance_source_disposition_20260726.md",
-      "role": "runtime_control",
-      "bytes": 7308,
-      "sha256": "a1bfa89ce551c579fda90fbf3efd1a175c177ad5a6b3b3112677fb52d46db21c"
-    },
-    {
-      "path": "docs/applied_guidance_source_preflight_registry_20260726.md",
-      "role": "runtime_control",
-      "bytes": 67162,
-      "sha256": "4ad76756193f326b8e1fb206615dc5cf6f13b3fc53d24ce5e0b8c275df88244e"
-    },
-    {
-      "path": "docs/provincial_applied_guidance_admission_queue_20260724.md",
-      "role": "runtime_control",
-      "bytes": 16531,
-      "sha256": "4056ae6d2a73fcf5e0e96ce3618d88248049df7fbf2ba4cc3c2a783ad92bedaa"
-    },
-    {
-      "path": "docs/canadian_conference_semantic_review_v3_20260725.json",
-      "role": "runtime_control",
-      "bytes": 24130,
-      "sha256": "8d60aa364ad3966b9a7fdb83ee7c0bd46e33d6911bb2b2ee4a9c44ff69ed7fb2"
-    },
-    {
-      "path": "docs/canadian_conference_semantic_review_v3_20260725.md",
-      "role": "runtime_control",
-      "bytes": 6793,
-      "sha256": "0a0898af36cfa9bdc0253842b32b79f95e264c646cd02974bfc9c224ef27a0fb"
-    },
-    {
-      "path": "outputs/knowledge_freeze_readiness_20260725/runtime_corpus_audit_final_mvp.json",
-      "role": "runtime_control",
-      "bytes": 17986,
-      "sha256": "ae10439edba930a98c4b0cf860c2167dec943e1d499d76f5020bb3741cfd3181"
-    },
-    {
-      "path": "outputs/knowledge_freeze_readiness_20260725/conference_freeze_gap_matrix.json",
-      "role": "runtime_control",
-      "bytes": 11202,
-      "sha256": "8167bbee25e82e9f9c8c25c5e918fe77327583b99b03077f48e47aecbf487f43"
-    },
-    {
-      "path": "outputs/knowledge_freeze_readiness_20260725/runtime_knowledge_sufficiency.json",
-      "role": "runtime_control",
-      "bytes": 32259,
-      "sha256": "03ca569bd1dcb7c0e30419b6a111237555419b0fecb2338badaa1349469f214a"
-    },
-    {
-      "path": "outputs/knowledge_freeze_readiness_20260725/backend_pytest.xml",
-      "role": "runtime_control",
-      "bytes": 266530,
-      "sha256": "a011883ddb6047a0261ab81ba1724c175642610f39d44fc6d0cf6191bf448984"
-    },
-    {
-      "path": "outputs/knowledge_freeze_readiness_20260725/frontend_vitest.json",
-      "role": "runtime_control",
-      "bytes": 53674,
-      "sha256": "4bb1f0b8de61f2256fc082850d79c7ceb3abcd4feb442d044e736194f3cf7757"
-    },
-    {
-      "path": "outputs/tool_smoke/ppls_adapter_modes_latest.json",
-      "role": "runtime_control",
-      "bytes": 4375,
-      "sha256": "e42187e798ce7aae55773ac3889a7e2767388bdafae5a0945f381d01a639a31e"
-    },
-    {
-      "path": "outputs/tool_smoke/keyed_public_adapters_latest.json",
-      "role": "runtime_control",
-      "bytes": 5794,
-      "sha256": "5ca9bfefa4d30a808603320dc633b1c87c5106f4d52a1e8396b8fb4b4f6f4624"
-    },
-    {
-      "path": "outputs/tool_smoke/public_adapter_regional_matrix_latest.json",
-      "role": "runtime_control",
-      "bytes": 116094,
-      "sha256": "b01bd01bdd147d69e921072dfb12b058d253c919b7df71f7a049351040fc8432"
-    },
-    {
       "path": "data/manifests/runtime_corpus_policy.json",
       "role": "runtime_control",
-      "bytes": 11082,
-      "sha256": "b7d46e04c25304c4a3ea5eb77c2d38ec11c5e1edbe54817fd172e7d5cb87f18d"
+      "bytes": 11788,
+      "sha256": "b70ac7a809a288114b7fbbde4f265d0ade5b3269d7860da60ed03c48b54b899c"
     }
   ]
 }

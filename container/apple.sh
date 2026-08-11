@@ -177,6 +177,7 @@ start_stack() {
       --env AGRONOMY_AGENT_MODEL_IDENTITY_RECEIPT="/model-host/model-host.identity.json" \
       --env AGRONOMY_AGENT_MODEL_IDENTITY_REQUIRED="true" \
       --env AGRONOMY_AGENT_NETWORK_MODE=offline \
+      --env AGRONOMY_AGENT_SPATIAL_PACK_ROOT="$SPATIAL_PACK_ROOT" \
       --env AGRONOMY_AGENT_FIELD_LAN=true \
       --env AGRONOMY_AGENT_ALLOW_LOCAL_DEV_AUTH=false \
       --env AGRONOMY_AGENT_LOCAL_PAIRING_TOKEN_SHA256 \
@@ -205,6 +206,7 @@ start_stack() {
       --env AGRONOMY_AGENT_MODEL_IDENTITY_RECEIPT="/model-host/model-host.identity.json" \
       --env AGRONOMY_AGENT_MODEL_IDENTITY_REQUIRED="true" \
       --env AGRONOMY_AGENT_NETWORK_MODE="$NETWORK_MODE" \
+      --env AGRONOMY_AGENT_SPATIAL_PACK_ROOT="$SPATIAL_PACK_ROOT" \
       "$IMAGE"
   fi
   if [ "$NETWORK_MODE" = "offline" ]; then

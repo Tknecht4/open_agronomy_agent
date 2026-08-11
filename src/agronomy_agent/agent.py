@@ -1641,7 +1641,7 @@ def build_context(
                     for item in (query_signals.field_context.get("regional_intersections") or [])
                     if isinstance(item, dict)
                     and str(item.get("layer_id") or "").lower()
-                    in {"ab_detailed_soil", "mb_detailed_soil"}
+                    in {"ab_detailed_soil", "sk_detailed_soil", "mb_detailed_soil"}
                 }
             ),
             "allowlisted_terms": list(field_graph_terms),

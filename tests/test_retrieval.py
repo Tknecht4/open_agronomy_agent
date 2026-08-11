@@ -1,9 +1,13 @@
 import json
+from pathlib import Path
 
 from agronomy_agent.agno_runtime.knowledge_graph import KnowledgeGraph
 from agronomy_agent.agno_runtime.knowledge_factory import build_knowledge
 from agronomy_agent.agno_runtime.local_index import LexicalRetriever, infer_namespaces, infer_source_type, tokenize
 from agronomy_agent.router import classify_query
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_specialized_guidance_source_types_are_canonicalized_for_retrieval() -> None:
@@ -125,6 +129,27 @@ def test_weighted_expansion_does_not_overpower_direct_query_terms() -> None:
     hits = retriever.search("Corn is pale on sandy knolls after heavy rain. Is sulfur deficiency likely?", query_expansion=route.query_expansion)
 
     assert hits[0].doc_id == "sulfur"
+
+
+def test_manitoba_2026_scouting_supplement_retrieves_for_field_question() -> None:
+    rows = [
+        json.loads(line)
+        for line in (ROOT / "data/derived/rag/canada_agronomy_supplement_v3.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+        if line.strip()
+    ]
+    retriever = LexicalRetriever(rows)
+
+    hits = retriever.search(
+        "In Manitoba seedling canola, how should I scout flea beetle leaf damage?",
+        jurisdictions=("Manitoba",),
+        strict_jurisdictions=True,
+        top_k=3,
+    )
+
+    assert hits
+    assert hits[0].doc_id == "mb_2026_canola_insect_scouting_semantic_0002"
 
 
 def test_strict_jurisdiction_filter_excludes_unscoped_general_documents() -> None:

@@ -21,7 +21,7 @@
         "portable size and cold-query latency remain within the edge-runtime budget"
       ]
     },
-    "currently_available_regional_overlays": ["bc_agriculture_capability_mapping", "ca_sk_thematic_soil_maps", "ca_aafc_pei_detailed_soil_survey", "ca_aafc_ns_detailed_soil_survey", "ca_aafc_ab_detailed_soil_survey", "ca_aafc_mb_detailed_soil_survey"]
+    "currently_available_regional_overlays": ["bc_agriculture_capability_mapping", "ca_aafc_sk_detailed_soil_survey", "ca_sk_thematic_soil_maps", "ca_aafc_pei_detailed_soil_survey", "ca_aafc_ns_detailed_soil_survey", "ca_aafc_ab_detailed_soil_survey", "ca_aafc_mb_detailed_soil_survey"]
   },
   "sources": [
     {
@@ -87,6 +87,38 @@
         "query_backend": "local_sqlite_rtree"
       },
       "boundary": "Dominant generalized thematic values derived from the Saskatchewan Detailed Soils Database. A polygon can contain variation and does not establish current field condition, an exact soil component at a point, crop-specific suitability, nutrient status, drainage performance, erosion outcome, or a management rate."
+    },
+    {
+      "id": "ca_aafc_sk_detailed_soil_survey",
+      "title": "Saskatchewan Detailed Soil Survey Compilation (DSS v3)",
+      "publisher": "Agriculture and Agri-Food Canada, Canadian Soil Information Service",
+      "jurisdiction": ["Canada", "Saskatchewan"],
+      "canonical_url": "https://open.canada.ca/data/en/dataset/3734623c-25c5-4e69-936d-26f764a2807f",
+      "catalogue_api_url": "https://open.canada.ca/data/api/action/package_show?id=3734623c-25c5-4e69-936d-26f764a2807f",
+      "download_url": "https://sis.agr.gc.ca/cansis/nsdb/dss/v3/dss_v3_sk_20170111.zip",
+      "source_record_id": "3734623c-25c5-4e69-936d-26f764a2807f",
+      "format": "versioned_zip_shapefile_plus_dbf_relational_tables",
+      "source_crs": "EPSG:4269",
+      "source_scale": "1:100,000",
+      "currency": "dss_v3_compilation_2017_current_catalogue_record_2026",
+      "license": {
+        "identifier": "Open Government Licence - Canada",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "reviewed_on": "2026-08-10",
+        "attribution": "Contains information licensed under the Open Government Licence - Canada from Agriculture and Agri-Food Canada, Canadian Soil Information Service."
+      },
+      "runtime": {
+        "status": "bundled",
+        "raw_path": "data/raw/canada_agronomy/ca_aafc_sk_detailed_soil_survey_dss_v3/source.zip",
+        "lineage_path": "data/raw/canada_agronomy/ca_aafc_sk_detailed_soil_survey_dss_v3/source.zip.lineage.json",
+        "derived_path": "data/derived/geo_layers/sk_detailed_soil.sqlite3",
+        "derived_manifest_path": "data/derived/geo_layers/sk_detailed_soil_manifest.json",
+        "layer_id": "sk_detailed_soil",
+        "query_backend": "local_sqlite_rtree"
+      },
+      "boundary": "Historical 1:100,000 detailed soil-landscape mapping for nearly all agricultural areas in southern Saskatchewan. A polygon and listed components are mapped priors, not proof of the soil at a point or of present nutrient supply, pH, drainage performance, compaction, salinity, crop suitability, or a management rate."
     },
     {
       "id": "ca_aafc_soil_erosion_risk_2021",

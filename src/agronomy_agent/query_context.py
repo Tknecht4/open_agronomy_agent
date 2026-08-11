@@ -40,7 +40,7 @@ _CANADIAN_REGIONAL_CONTEXT_PRODUCT_PATTERN = (
 )
 _GENERIC_CROP_CONTEXT = {"crop", "crops", "field crop", "field crops", "annual crop", "annual crops"}
 _CROP_SCOPE_WILDCARDS = {"all"}
-_DETAILED_SOIL_LAYER_IDS = {"ab_detailed_soil", "mb_detailed_soil"}
+_DETAILED_SOIL_LAYER_IDS = {"ab_detailed_soil", "sk_detailed_soil", "mb_detailed_soil"}
 
 
 US_STATE_NAME_TO_ALPHA = {

@@ -1039,8 +1039,8 @@ const sampleProfiles: SampleProfile[] = [
     acres: '96',
     concern: 'how the mapped soil constraints should change scouting and crop planning',
     notes: 'Use mapped drainage, capability, erosion, slope, and surface texture as regional screening context. Confirm field variability, soil profile, nutrient status, salinity, compaction, drainage performance, and current Saskatchewan guidance before choosing a crop or rate.',
-    mlra: 'Saskatchewan thematic soil context',
-    geometry: 'Local Saskatchewan soil intersection when the Prairie soil package is installed.',
+    mlra: 'Saskatchewan detailed soil context with thematic fallback',
+    geometry: 'Local Saskatchewan detailed-soil intersection when the Prairie spatial pack is installed.',
     initialGeometry: sampleBoundary(96, 50.447, -104.734, 50.453, -104.726),
   },
   {

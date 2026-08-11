@@ -24,7 +24,7 @@ flowchart LR
 The release knowledge path includes:
 
 - 718 lineage-bearing chunks of redistributed Canadian applied guidance, principally Alberta and Manitoba, plus federal and Saskatchewan material;
-- 328 Canadian regional/context chunks covering Ontario statistics and federal or provincial data-product descriptions across crop-producing provinces;
+- 334 Canadian regional/context chunks covering Ontario statistics, current Manitoba scouting context, and federal or provincial data-product descriptions across crop-producing provinces;
 - the SoilWise soil-health knowledge graph and 1,784 derived retrieval records under CC BY 4.0;
 - a compact USDA NRCS ecological-site corpus used only as regional context, never as Canadian soil authority;
 - project-authored safety boundaries and conceptual agronomy scaffolding.
@@ -86,7 +86,20 @@ The local model, admitted RAG/KG artifacts, field/session database, and determin
 
 The field-LAN launch path requires HTTPS and one-time client pairing. It intentionally blocks public adapters. See [Offline operation](docs/public/offline-operation.md).
 
-Large generated Prairie soil indexes are also excluded from Git. The Alberta, Saskatchewan, and Manitoba demonstration fields use detailed local soil intersections only when the separately built offline spatial package is installed; otherwise the UI reports the missing layer and the normal retrieval/model path continues. Manifests in `data/derived/geo_layers/` preserve the build and source lineage.
+Large generated Prairie soil indexes are also excluded from Git. The Alberta, Saskatchewan, and Manitoba demonstration fields use detailed local soil intersections only when the separately built offline spatial pack is installed; otherwise the layer catalog reports `not_installed` and the normal retrieval/model path continues. The pack contains the three AAFC Detailed Soil Survey indexes plus the national 2021 soil-erosion-risk layer. Manifests in `data/derived/geo_layers/` preserve exact source, build, licence, geometry-repair, scale, and checksum lineage.
+
+Verify an extracted release pack and exercise real offline intersections in all three Prairie provinces:
+
+```bash
+python scripts/build_prairie_spatial_pack.py \
+  --destination /absolute/path/to/prairie-spatial-pack \
+  --verify-only
+PYTHONPATH=src python scripts/verify_prairie_spatial_pack.py \
+  --pack-root /absolute/path/to/prairie-spatial-pack
+export AGRONOMY_AGENT_SPATIAL_PACK_ROOT=/absolute/path/to/prairie-spatial-pack
+```
+
+Maintainers can assemble the same pack from a validated asset tree with `--asset-root /absolute/path/to/assets` and a new empty `--destination`. Container launches look for the pack at `/state/spatial-pack`, inside the existing per-profile state mount.
 
 ## Structured agronomic calculator
 

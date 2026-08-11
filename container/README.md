@@ -12,6 +12,12 @@ and call the same native OpenAI-compatible MLX model service. Apple Container
 also has an explicit fail-closed field-LAN mode described below. Model weights
 and user data are not included in the image.
 
+The optional Prairie spatial pack is also outside the image. Verify it with
+`scripts/build_prairie_spatial_pack.py --verify-only` and
+`scripts/verify_prairie_spatial_pack.py`, then extract it to `spatial-pack/`
+inside the selected profile's host state directory. Both launchers expose that
+directory to the app as `/state/spatial-pack`.
+
 ## Release state
 
 Versioned OCI archives are immutable. Do not relabel or overwrite one after it

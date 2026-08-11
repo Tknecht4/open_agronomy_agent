@@ -24,33 +24,17 @@ REQUIRED_RUNTIME_ENV = {
 }
 
 BUNDLED_GEO_ASSETS = (
-    "data/derived/geo_layers/bc_agriculture_capability.sqlite3",
     "data/derived/geo_layers/bc_agriculture_capability_manifest.json",
-    "data/derived/geo_layers/sk_thematic_soil.sqlite3",
     "data/derived/geo_layers/sk_thematic_soil_manifest.json",
-    "data/derived/geo_layers/ca_soil_erosion_risk.sqlite3",
+    "data/derived/geo_layers/sk_detailed_soil_manifest.json",
     "data/derived/geo_layers/ca_soil_erosion_risk_manifest.json",
+    "data/derived/geo_layers/pei_detailed_soil_manifest.json",
+    "data/derived/geo_layers/ns_pictou_detailed_soil_manifest.json",
+    "data/derived/geo_layers/ab_detailed_soil_manifest.json",
+    "data/derived/geo_layers/mb_detailed_soil_manifest.json",
 )
-REQUIRED_DISCOVERY_CONTROL_FILES = (
-    "data/evals/canadian_applied_guidance_admission_eval_contract_20260726.json",
-)
-REQUIRED_PUBLIC_ADAPTER_SMOKE_RECEIPTS = {
-    "outputs/tool_smoke/ppls_adapter_modes_latest.json": {
-        "schema_version": "open_agronomy_agent.ppls_adapter_smoke.v1",
-        "mode": "offline_fixture",
-        "case_count": 4,
-    },
-    "outputs/tool_smoke/keyed_public_adapters_latest.json": {
-        "schema_version": "open_agronomy_agent.keyed_public_adapter_smoke.v1",
-        "mode": "offline_fixture",
-        "case_count": 4,
-    },
-    "outputs/tool_smoke/public_adapter_regional_matrix_latest.json": {
-        "schema_version": "open_agronomy_agent.public_adapter_regional_matrix.v1",
-        "mode": "offline_fixture",
-        "case_count": 63,
-    },
-}
+REQUIRED_DISCOVERY_CONTROL_FILES: tuple[str, ...] = ()
+REQUIRED_PUBLIC_ADAPTER_SMOKE_RECEIPTS: dict[str, dict[str, Any]] = {}
 RUNTIME_MANIFEST_BOUND_FIELDS = (
     "schema_version",
     "status",
@@ -158,9 +142,6 @@ def validate(root: Path, runtime_manifest_path: Path | None = None) -> dict[str,
     overlay_builder = (root / "container/build-overlay-image.sh").read_text(
         encoding="utf-8"
     )
-    archive_repair = (root / "scripts/repair_edge_oci_archive.py").read_text(
-        encoding="utf-8"
-    )
     model_host = (root / "container/model-host.sh").read_text(encoding="utf-8")
     dockerignore = (root / ".dockerignore").read_text(encoding="utf-8")
     compose_text = (root / "docker-compose.edge.yml").read_text(encoding="utf-8")
@@ -218,18 +199,6 @@ def validate(root: Path, runtime_manifest_path: Path | None = None) -> dict[str,
                     "Overlay Containerfile must restate runtime image metadata: "
                     + contract_fragment
                 )
-    for repair_fragment in (
-        "EXPECTED_BASE_ERRORS",
-        ".wh..wh..opq",
-        "refusing to overwrite output archive",
-        "validate_archive(",
-        "current-source-opaque-overlay.v1",
-    ):
-        if repair_fragment not in archive_repair:
-            errors.append(
-                "OCI archive repair must remain fail-closed and deterministic: "
-                + repair_fragment
-            )
     if "Library/Caches/OpenAgronomyAgent" not in image_builder:
         errors.append("Shared image builder must stage inputs on the internal user filesystem")
     if "docker-compose.edge.yml" not in docker_script:
@@ -267,6 +236,7 @@ def validate(root: Path, runtime_manifest_path: Path | None = None) -> dict[str,
         "AGRONOMY_AGENT_CONTAINER_MEMORY": "4g",
         "AGRONOMY_AGENT_CONTAINER_PORT": "8080",
         "AGRONOMY_AGENT_CONTAINER_STATE_MOUNT": "/state",
+        "AGRONOMY_AGENT_SPATIAL_PACK_ROOT": "/state/spatial-pack",
         "AGRONOMY_AGENT_NETWORK_MODE": "online",
     }
     if runtime_defaults != expected_defaults:
@@ -294,10 +264,9 @@ def validate(root: Path, runtime_manifest_path: Path | None = None) -> dict[str,
         errors.append("Linux image must not install MLX")
     if "requirements-container.txt" not in containerfile:
         errors.append("Containerfile must use the container-specific dependencies")
-    if "COPY plans ./plans" not in containerfile:
-        errors.append("Containerfile must include the runtime policy tree")
-    if "COPY data/derived/geo_layers ./data/derived/geo_layers" not in containerfile:
-        errors.append("Containerfile must include bundled official geospatial layers")
+    for path in BUNDLED_GEO_ASSETS:
+        if not _containerfile_copies_path(root, containerfile, path):
+            errors.append(f"Containerfile does not copy geospatial lineage manifest: {path}")
     if "chmod -R a+rX /app" not in containerfile:
         errors.append("Containerfile must make bundled runtime assets readable by the app user")
     for value in REQUIRED_RUNTIME_ENV:
@@ -390,8 +359,6 @@ def validate(root: Path, runtime_manifest_path: Path | None = None) -> dict[str,
         if path and not _containerfile_copies_path(root, containerfile, path):
             errors.append(f"Containerfile does not copy manifested benchmark evidence: {path}")
     policies = manifest.get("runtime_policies") or []
-    if not policies or not any(entry.get("path") == "plans" for entry in policies):
-        errors.append("runtime manifest does not hash the plans policy tree")
     runtime_assets = manifest.get("runtime_assets") or []
     required_asset_roots = {"src/agronomy_agent", "frontend/src", "scripts"}
     hashed_asset_roots = {str(entry.get("path")) for entry in runtime_assets}
@@ -402,10 +369,10 @@ def validate(root: Path, runtime_manifest_path: Path | None = None) -> dict[str,
         bundled_geo_layers.get("path") != "data/derived/geo_layers"
         or int(bundled_geo_layers.get("file_count") or 0) < len(BUNDLED_GEO_ASSETS)
     ):
-        errors.append("runtime manifest does not hash the bundled geospatial layer package")
+        errors.append("runtime manifest does not hash the geospatial lineage package")
     for path in BUNDLED_GEO_ASSETS:
         if not (root / path).is_file():
-            errors.append(f"bundled geospatial asset is missing: {path}")
+            errors.append(f"geospatial lineage manifest is missing: {path}")
         if f"!{path}" not in dockerignore.splitlines():
             errors.append(f"Docker context excludes bundled geospatial asset: {path}")
 

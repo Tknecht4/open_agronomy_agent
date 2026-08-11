@@ -15,6 +15,11 @@ corpus rows.
   `data/manifests/runtime_corpus_policy.json` and the source manifests permits
   it. The governed rows preserve source URL, licence, language, jurisdiction,
   currency, and checksum lineage. Ontario Publication 811/811F is excluded.
+- **Manitoba 2026 scouting companions** — six manually reviewed, project-
+  authored companion records derived from the Manitoba Guide to Crop
+  Protection under the OpenMB Information and Data Use Licence. Product
+  tables, rates, logos, images, and separately credited material are excluded;
+  these records are context-only pending independent agronomic review.
 - **Ontario and Statistics Canada context** — subject to the Ontario Open
   Government Licence and Statistics Canada Open Licence as identified in the
   row-level source records.
