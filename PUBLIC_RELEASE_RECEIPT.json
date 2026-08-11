@@ -1,6 +1,6 @@
 {
-  "built_at": "2026-08-11T17:25:40+00:00",
-  "file_count": 520,
+  "built_at": "2026-08-11T18:02:30+00:00",
+  "file_count": 525,
   "files": [
     {
       "bytes": 3780,
@@ -23,9 +23,9 @@
       "sha256": "75b8aef9353f63b5bcbd56fcb03b6e261cc92650d6003c9fffb6f18811887d74"
     },
     {
-      "bytes": 10040,
+      "bytes": 11019,
       "path": "README.md",
-      "sha256": "7afc15611b88c7070e4ed2eaaf40559c0757812972bb1b5a2901bf042240b0b0"
+      "sha256": "e1c551821f943f5f9f790d35f5dba32a577d67045f54fb7bb33b650127bf17e0"
     },
     {
       "bytes": 3185,
@@ -111,6 +111,11 @@
       "bytes": 167,
       "path": "configs/eval.yaml",
       "sha256": "9f2f748b6b688c57c21bd7f909f31fbdaaaa4a595258bc8224a40905a37fc48f"
+    },
+    {
+      "bytes": 4509,
+      "path": "configs/final_benchmark_round_rc1.json",
+      "sha256": "03567e5cda523f6c4e1fbbb96509c80a21eba2e66d94945a5972c42038655bec"
     },
     {
       "bytes": 1907,
@@ -243,9 +248,9 @@
       "sha256": "66a78dd56288cc0b7e9b88519def2be7ef89be93a9e2a562aa6ade29f9967aeb"
     },
     {
-      "bytes": 8903,
+      "bytes": 9200,
       "path": "configs/public_repository_manifest.json",
-      "sha256": "5f4fc521087a5eef712380894035f617d31d60613fdcde93a546da7635ede7e2"
+      "sha256": "8cbc941ca1b25ae8e7db4999a0e173c607bed31fbd51eacf0265567f0a71ebd0"
     },
     {
       "bytes": 450,
@@ -378,9 +383,9 @@
       "sha256": "3fa6d8899b1ba72460e3d2d77df038d21aba8d13688d6ed6181fa01c896b0dd6"
     },
     {
-      "bytes": 18585,
+      "bytes": 18586,
       "path": "container/runtime_manifest.json",
-      "sha256": "36906157d71f0ea35a4cd9c8707779c82b6feeaa942c89008e133ca32c95b5f4"
+      "sha256": "48c71534ef85864656664118351fe6d319844287a6c162ade9785a6f2e08b7fb"
     },
     {
       "bytes": 4553,
@@ -556,6 +561,16 @@
       "bytes": 508432,
       "path": "data/eval/open_agronomy_canadian_performance_v1.jsonl",
       "sha256": "5c3ce59195ac603d2dd8ec5f36f3672b3ee0c20227cdb4fd301dfe3848a83c63"
+    },
+    {
+      "bytes": 4865,
+      "path": "data/eval/open_agronomy_canadian_performance_v1_construct_audit.json",
+      "sha256": "c4297000bd1c2344dcedb8e0e2dd9ea4087eef8a74ed5334ae8c8de28b76fd9f"
+    },
+    {
+      "bytes": 1816,
+      "path": "data/eval/open_agronomy_canadian_performance_v1_construct_audit.md",
+      "sha256": "9b6e6d1ac3c4db06ffc3fac721d26e84a3d8dd34343b52d4cdb0137fb547b02f"
     },
     {
       "bytes": 9629,
@@ -883,9 +898,9 @@
       "sha256": "b3f378c5248efa69ae9c316ba3c3730591505ef0d009878b93ebfe6b295c8d46"
     },
     {
-      "bytes": 2617,
+      "bytes": 5127,
       "path": "docs/public/evaluation.md",
-      "sha256": "03b3e9c8c36821005e73928044c54ce957d9a17ded0787338ae81f853f2e627b"
+      "sha256": "d550aa61dfab8ea80b000513c2a3f5348575d981588beee6a5cac899a2b9b836"
     },
     {
       "bytes": 6471,
@@ -1373,9 +1388,9 @@
       "sha256": "ad9a8321da2d67cfdd9336982074b792ffba96fafdea0f19d1d994b064135328"
     },
     {
-      "bytes": 17553,
+      "bytes": 18661,
       "path": "scripts/audit_canadian_field_benchmark.py",
-      "sha256": "be57759ebedfaeaa2c1eebefc7ac1d4e5c9cfcaa63d8242e3bbc34ddc289e5fa"
+      "sha256": "700e80dd89515d7c110d6b9f70089b83b3f2b0a57ab74aa24e09d8675faaf54e"
     },
     {
       "bytes": 4940,
@@ -1396,6 +1411,11 @@
       "bytes": 17205,
       "path": "scripts/audit_field_offline_topology.py",
       "sha256": "792d3ecfb2f5d85b465125d3460a9c2e1a2d19173f11b4b724552201947d2ff6"
+    },
+    {
+      "bytes": 22166,
+      "path": "scripts/audit_final_benchmark_readiness.py",
+      "sha256": "b5f45d678c22a754f80c5b668ba2105d1da48ed699a1e0a0a5e0773bf6dce122"
     },
     {
       "bytes": 1217,
@@ -2563,6 +2583,11 @@
       "sha256": "bbff883e660a31b9b220fe1c52ee2600acdeaf551f924f42de1f9606fbf188f6"
     },
     {
+      "bytes": 2838,
+      "path": "tests/test_final_benchmark_readiness.py",
+      "sha256": "81522e91bd0fcdcd1c6ee0646a5a5c3972a361c27720f8ad9de3cf59a62baedf"
+    },
+    {
       "bytes": 5545,
       "path": "tests/test_geospatial_service.py",
       "sha256": "ce070f22053ec655ab3558ff6f4f45d712dab05e7eb294a9c72d02beb5caed63"
@@ -2604,8 +2629,8 @@
     }
   ],
   "manifest_path": "configs/public_repository_manifest.json",
-  "manifest_sha256": "5f4fc521087a5eef712380894035f617d31d60613fdcde93a546da7635ede7e2",
-  "release_id": "conference_public_review_20260810",
+  "manifest_sha256": "8cbc941ca1b25ae8e7db4999a0e173c607bed31fbd51eacf0265567f0a71ebd0",
+  "release_id": "conference_release_candidate_20260811",
   "schema_version": "open_agronomy_agent.public_repository_receipt.v1",
-  "total_bytes": 145308554
+  "total_bytes": 145349643
 }

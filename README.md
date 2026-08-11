@@ -26,7 +26,7 @@ The release knowledge path includes:
 - 718 lineage-bearing chunks of redistributed Canadian applied guidance, principally Alberta and Manitoba, plus federal and Saskatchewan material;
 - 334 Canadian regional/context chunks covering Ontario statistics, current Manitoba scouting context, and federal or provincial data-product descriptions across crop-producing provinces;
 - the SoilWise soil-health knowledge graph and 1,784 derived retrieval records under CC BY 4.0;
-- a compact USDA NRCS ecological-site corpus used only as regional context, never as Canadian soil authority;
+- a compact USDA NRCS ecological-site corpus available only for explicit cross-border analogue questions, as regional context and never as Canadian soil authority;
 - project-authored safety boundaries and conceptual agronomy scaffolding.
 
 The corpus policy is authoritative. A file being present does not make it admissible: unlicensed forum text, rights-unresolved OCR, evaluation-shaped answer material, and copied certification objectives are quarantined before indexing. See [Knowledge and data governance](docs/public/knowledge-and-data.md).
@@ -123,7 +123,23 @@ The main internal benchmark contains 241 Canadian cases across four frozen causa
 
 The 16 objective calculation cases are scored with numeric tolerances. Decision-quality cases remain development evidence and are not equivalent to blinded agronomist review. The held-out 256-question AgroQA set is an external transfer diagnostic, not a Canadian certification claim. The 28 CCA-aligned/local-style questions are project-authored coverage probes; they are not copied professional-exam questions and never enter runtime retrieval.
 
-Run a no-model contract check:
+Before a final comparison round, run the release-candidate readiness gate. It
+performs no generation, judging, or network requests. It verifies the exact
+suite and model profiles, both local model snapshots, corpus and package
+receipts, the internal/external separation boundary, explicit egress authority,
+available disk, and deterministic Saskatchewan/NRCS interface probes:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/audit_final_benchmark_readiness.py \
+  --hub-cache /absolute/path/to/huggingface/hub \
+  --egress-authorization /absolute/path/to/egress_authorization.json
+```
+
+The audit emits the three exact internal-round commands defined by
+`configs/final_benchmark_round_rc1.json`. A `ready` result means the checkpoint
+is prepared to start evaluation; it is not a benchmark result.
+
+For a quick identity-only runner check during development:
 
 ```bash
 PYTHONPATH=src .venv/bin/python scripts/run_open_agronomy_benchmark.py \
@@ -134,7 +150,7 @@ PYTHONPATH=src .venv/bin/python scripts/run_open_agronomy_benchmark.py \
   --preflight-only
 ```
 
-For a real run, remove `--preflight-only`. Add `--resume-partial-runs` only when you want the runner to resume an identity-matched partial arm. Exact prompts, responses, context packets, run identities, and judgments remain under ignored `outputs/`. See [Evaluation contract](docs/public/evaluation.md).
+For a real run, remove `--preflight-only`. Add `--resume-partial-runs` only when you want the runner to resume an identity-matched partial arm. Exact prompts, responses, context packets, run identities, and judgments remain under ignored `outputs/`. The runner preflight freezes identities but does not replace the release-candidate readiness gate. See [Evaluation contract](docs/public/evaluation.md).
 
 ## Verification
 

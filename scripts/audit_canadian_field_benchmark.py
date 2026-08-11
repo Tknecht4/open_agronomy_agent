@@ -17,12 +17,12 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_CURRENT = ROOT / "data/eval/open_agronomy_internal_v2.jsonl"
-DEFAULT_PROXY = ROOT / "data/eval/agribench_proxy_eval.jsonl"
-DEFAULT_SEMANTIC_V1 = ROOT / "data/eval/canadian_agronomy_semantic_reserve_v1.jsonl"
+DEFAULT_CURRENT = ROOT / "data/eval/open_agronomy_canadian_performance_v1.jsonl"
+DEFAULT_PROXY: Path | None = None
+DEFAULT_SEMANTIC_V1: Path | None = None
 DEFAULT_TRANSFER = ROOT / "data/eval/canadian_conference_transfer_gate_v2.jsonl"
-DEFAULT_OUTPUT = ROOT / "data/eval/canadian_field_benchmark_audit_20260809.json"
-DEFAULT_RETENTION = ROOT / "data/eval/canadian_field_benchmark_retention_20260809.jsonl"
+DEFAULT_OUTPUT = ROOT / "data/eval/open_agronomy_canadian_performance_v1_construct_audit.json"
+DEFAULT_RETENTION: Path | None = None
 
 CANADIAN_JURISDICTIONS = {
     "canada",
@@ -64,6 +64,10 @@ META_TERMS = re.compile(
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def read_optional_jsonl(path: Path | None) -> list[dict[str, Any]]:
+    return read_jsonl(path) if path is not None and path.is_file() else []
 
 
 def normalized_question(value: Any) -> str:
@@ -231,6 +235,7 @@ def audit(
             },
         },
         "legacy_proxy": {
+            "available_in_checkout": bool(proxy_rows),
             "rows": len(proxy_rows),
             "unique_questions": len(set(normalized_question(row.get("question")) for row in proxy_rows)),
             "duplicate_rows": len(proxy_rows) - len(set(normalized_question(row.get("question")) for row in proxy_rows)),
@@ -243,6 +248,14 @@ def audit(
                 for signature, count in signatures.most_common(12)
             ],
             "gold_reference_status": "keyword_contract_summary_not_independent_agronomic_ground_truth",
+        },
+        "legacy_input_inventory": {
+            "proxy_rows": len(proxy_rows),
+            "semantic_v1_rows": len(semantic_v1_rows),
+            "standalone_transfer_rows": len(transfer_rows),
+            "note": (
+                "Legacy banks are optional research inputs. Their absence does not block auditing the consolidated suite."
+            ),
         },
         "construct_verdict": {
             "what_it_measures": [
@@ -274,8 +287,12 @@ def audit(
         },
         "required_benchmark_roles": {
             "raw_model": "user question only",
-            "kernel_only": "raw model plus the Open Agronomy kernel and answer contract",
-            "full_system": "kernel plus governed evidence, tools actually executed for the case, and verifier policy",
+            "baseline": "raw model plus the Open Agronomy kernel and answer contract",
+            "kernel_field_context": "kernel plus the same structured field context admitted to the full-system arm",
+            "agronomic_rag": (
+                "kernel, governed evidence, deterministic in-process tools and guards, and verifier policy; "
+                "external service orchestration remains a separate product gate"
+            ),
         },
         "promotion_rule": (
             "Do not promote a legacy proxy row into the semantic capability lane without answer-blind source review, "
@@ -305,10 +322,18 @@ def render_markdown(report: dict[str, Any]) -> str:
         "",
         "## Original proxy recovery",
         "",
-        f"- {proxy['rows']} rows but only {proxy['unique_questions']} unique questions; {proxy['duplicate_rows']} duplicate rows.",
-        f"- {proxy['canadian_rows']} Canadian rows and {proxy['canadian_unique_questions']} unique Canadian questions.",
-        f"- Retention decisions: `{json.dumps(proxy['retention_decisions'], sort_keys=True)}`.",
-        f"- Reference boundary: {proxy['gold_reference_status']}.",
+        *(
+            [
+                f"- {proxy['rows']} rows but only {proxy['unique_questions']} unique questions; {proxy['duplicate_rows']} duplicate rows.",
+                f"- {proxy['canadian_rows']} Canadian rows and {proxy['canadian_unique_questions']} unique Canadian questions.",
+                f"- Retention decisions: `{json.dumps(proxy['retention_decisions'], sort_keys=True)}`.",
+                f"- Reference boundary: {proxy['gold_reference_status']}.",
+            ]
+            if proxy["available_in_checkout"]
+            else [
+                "- Legacy proxy banks are not packaged in this public checkout. The consolidated 241-case suite remains independently auditable.",
+            ]
+        ),
         "",
         "## Claims",
         "",
@@ -344,9 +369,9 @@ def main() -> int:
     args = parser.parse_args()
     report, retention = audit(
         read_jsonl(args.current),
-        read_jsonl(args.proxy),
-        read_jsonl(args.semantic_v1),
-        read_jsonl(args.transfer),
+        read_optional_jsonl(args.proxy),
+        read_optional_jsonl(args.semantic_v1),
+        read_optional_jsonl(args.transfer),
     )
     expected_json = json.dumps(report, indent=2, sort_keys=True) + "\n"
     expected_retention = "".join(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n" for row in retention)
@@ -355,13 +380,14 @@ def main() -> int:
     if args.check:
         if args.output.read_text(encoding="utf-8") != expected_json:
             raise SystemExit("benchmark audit drift; rebuild without --check")
-        if args.retention.read_text(encoding="utf-8") != expected_retention:
+        if args.retention is not None and args.retention.read_text(encoding="utf-8") != expected_retention:
             raise SystemExit("benchmark retention drift; rebuild without --check")
         if markdown_path.read_text(encoding="utf-8") != expected_markdown:
             raise SystemExit("benchmark audit markdown drift; rebuild without --check")
     else:
         args.output.write_text(expected_json, encoding="utf-8")
-        args.retention.write_text(expected_retention, encoding="utf-8")
+        if args.retention is not None:
+            args.retention.write_text(expected_retention, encoding="utf-8")
         markdown_path.write_text(expected_markdown, encoding="utf-8")
     print(json.dumps({"status": report["status"], "retention_rows": len(retention)}))
     return 0
