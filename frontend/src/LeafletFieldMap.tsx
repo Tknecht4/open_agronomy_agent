@@ -120,7 +120,7 @@ export function LeafletFieldMap({
     const layersControl = L.control.layers(
       { 'Esri World Imagery': imageryLayer },
       { 'Field geometry': drawLayer },
-      { collapsed: false, position: 'topright' },
+      { collapsed: true, position: 'topright' },
     ).addTo(map)
     layersControl.getContainer()?.setAttribute('aria-label', 'Map layers')
     drawLayerRef.current = drawLayer
