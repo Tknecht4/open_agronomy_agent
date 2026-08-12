@@ -1905,82 +1905,58 @@ pre,
   font-size: 10px;
 }
 
-.leaflet-mode-hint,
-.layer-legend {
+.leaflet-mode-hint {
   position: absolute;
   z-index: 500;
+  left: 14px;
+  bottom: 14px;
+  max-width: min(390px, calc(100% - 28px));
   border: 1px solid rgb(49 92 72 / 26%);
+  padding: 8px 10px;
+  border-radius: 999px;
   color: #213129;
   background: rgb(255 255 252 / 90%);
   box-shadow: 0 8px 18px rgb(32 42 35 / 14%);
   backdrop-filter: blur(8px);
-}
-
-.leaflet-mode-hint {
-  left: 14px;
-  bottom: 14px;
-  max-width: min(390px, calc(100% - 28px));
-  padding: 8px 10px;
-  border-radius: 999px;
   font-size: 13px;
   font-weight: 760;
 }
 
-.layer-legend {
-  top: 14px;
-  right: 14px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 8px 10px;
+.leaflet-map .leaflet-control-layers {
+  max-width: min(280px, calc(100vw - 28px));
+  border: 1px solid rgb(49 92 72 / 26%);
   border-radius: 8px;
-  font-size: 12px;
-  font-weight: 760;
+  color: #213129;
+  background: rgb(255 255 252 / 90%);
+  box-shadow: 0 8px 18px rgb(32 42 35 / 14%);
+  backdrop-filter: blur(8px);
+  font: 760 12px/1.35 var(--font-sans, system-ui, sans-serif);
 }
 
-.layer-legend span {
-  display: inline-flex;
+.leaflet-map .leaflet-control-layers-expanded {
+  padding: 8px 10px;
+}
+
+.leaflet-map .leaflet-control-layers-base,
+.leaflet-map .leaflet-control-layers-overlays {
+  display: grid;
+  gap: 6px;
+}
+
+.leaflet-map .leaflet-control-layers-separator {
+  margin: 7px 0;
+  border-top-color: rgb(49 92 72 / 22%);
+}
+
+.leaflet-map .leaflet-control-layers label {
+  display: flex;
   align-items: center;
   gap: 6px;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
-.layer-legend i {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-}
-
-.legend-mlra {
-  background: #f1c84b;
-}
-
-.legend-eco {
-  background: #65a9d4;
-}
-
-.legend-bc-capability {
-  background: #cc9d45;
-}
-
-.legend-sk-soil {
-  background: #6f8f70;
-}
-
-.legend-pei-soil {
-  background: #7c8b72;
-}
-
-.legend-ns-pictou-soil {
-  background: #667f8c;
-}
-
-.legend-ca-erosion {
-  background: #df823f;
-}
-
-.legend-field {
-  background: #ffe07a;
+.leaflet-map .leaflet-control-layers input {
+  margin: 0;
 }
 
 .field-vertex-icon {
@@ -3569,12 +3545,6 @@ pre,
 
   .leaflet-map-shell {
     min-height: 390px;
-  }
-
-  .layer-legend {
-    left: 12px;
-    right: auto;
-    max-width: calc(100% - 24px);
   }
 
   .leaflet-tooltip.regional-layer-tooltip {

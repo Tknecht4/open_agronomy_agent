@@ -905,7 +905,7 @@ describe('Open Agronomy map upload workflow', () => {
     const fetchMock = installFetchMock()
     render(<OpenAgronomyApp />)
 
-    expect(await screen.findByText(/Matched AAFC Alberta Detailed Soil Survey AB_SOIL_ABD192014361 at 100% confidence/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Regional context refreshed: AAFC Alberta Detailed Soil Survey AB_SOIL_ABD192014361 matched at 100% confidence/i)).toBeInTheDocument()
     expect(screen.getByTestId('mock-leaflet-map')).toHaveAttribute('data-geometry-kind', 'polygon')
     expect(screen.getByTestId('mock-leaflet-map')).toHaveAttribute('data-first-lon', '-113.608')
     openPrimaryPage('Fields')
@@ -1118,7 +1118,7 @@ describe('Open Agronomy map upload workflow', () => {
     fireEvent.click(await screen.findByRole('button', { name: /mock draw boundary/i }))
     fireEvent.click(screen.getByRole('button', { name: /check map context/i }))
 
-    expect(await screen.findByText(/Matched EPA Level III Ecoregion 47 at 92% confidence/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Regional context refreshed: EPA Level III Ecoregion 47 matched at 92% confidence/i)).toBeInTheDocument()
     openPrimaryPage('Fields')
     expect(screen.getByText('Southern Iowa Drift Plain')).toBeInTheDocument()
     expect(screen.getByText(/EPA Level III Ecoregion 47/i)).toBeInTheDocument()
@@ -1138,7 +1138,7 @@ describe('Open Agronomy map upload workflow', () => {
     fireEvent.click(screen.getByRole('button', { name: /mock drop point/i }))
     fireEvent.click(screen.getByRole('button', { name: /check map context/i }))
 
-    expect(await screen.findByText(/Matched NRCS MLRA MLRA_103 at 94% confidence/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Regional context refreshed: NRCS MLRA MLRA_103 matched at 94% confidence/i)).toBeInTheDocument()
     const mapContextBar = screen
       .getByRole('button', { name: 'Open field details' })
       .closest('.map-context-bar')
@@ -1182,7 +1182,7 @@ describe('Open Agronomy map upload workflow', () => {
     expect(selectedPanel).not.toBeNull()
     expect(within(selectedPanel as HTMLElement).getByText('South field')).toBeInTheDocument()
     openPrimaryPage('Map')
-    expect(await screen.findByText(/Matched EPA Level III Ecoregion 47/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Regional context refreshed: EPA Level III Ecoregion 47 matched/i)).toBeInTheDocument()
     expect(screen.getByTestId('mock-leaflet-map')).toHaveAttribute('data-first-lon', '-93.68')
     openPrimaryPage('Fields')
     expect(screen.getByText(/Use this as regional guidance for retrieval and source checks/i)).toBeInTheDocument()

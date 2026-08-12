@@ -63,7 +63,8 @@ export function LeafletFieldMap({
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<L.Map | null>(null)
   const drawLayerRef = useRef<L.LayerGroup | null>(null)
-  const regionLayerRef = useRef<L.LayerGroup | null>(null)
+  const regionLayersRef = useRef(new Map<string, L.LayerGroup>())
+  const layersControlRef = useRef<L.Control.Layers | null>(null)
   const modeRef = useRef(mode)
   const geometryRef = useRef<FieldGeometry>(geometry)
   const onGeometryChangeRef = useRef(onGeometryChange)
@@ -88,31 +89,6 @@ export function LeafletFieldMap({
     }
     return { type: 'FeatureCollection' as const, features }
   }, [regionalFeatureCollection, viewportFeatures])
-  const hasBcCapability = useMemo(
-    () => visibleFeatures.features.some((feature) => feature.properties?.layer_id === 'bc_agriculture_capability'),
-    [visibleFeatures],
-  )
-  const hasSkThematicSoil = useMemo(
-    () => visibleFeatures.features.some((feature) => feature.properties?.layer_id === 'sk_thematic_soil'),
-    [visibleFeatures],
-  )
-  const hasSkDetailedSoil = useMemo(
-    () => visibleFeatures.features.some((feature) => feature.properties?.layer_id === 'sk_detailed_soil'),
-    [visibleFeatures],
-  )
-  const hasPeiDetailedSoil = useMemo(
-    () => visibleFeatures.features.some((feature) => feature.properties?.layer_id === 'pei_detailed_soil'),
-    [visibleFeatures],
-  )
-  const hasNsPictouDetailedSoil = useMemo(
-    () => visibleFeatures.features.some((feature) => feature.properties?.layer_id === 'ns_pictou_detailed_soil'),
-    [visibleFeatures],
-  )
-  const hasCaErosionRisk = useMemo(
-    () => visibleFeatures.features.some((feature) => feature.properties?.layer_id === 'ca_soil_erosion_risk'),
-    [visibleFeatures],
-  )
-
   useEffect(() => {
     modeRef.current = mode
   }, [mode])
@@ -136,14 +112,19 @@ export function LeafletFieldMap({
       attributionControl: true,
     }).setView(view.center, view.zoom)
     L.control.zoom({ position: 'bottomright' }).addTo(map)
-    L.tileLayer(ESRI_WORLD_IMAGERY, {
+    const imageryLayer = L.tileLayer(ESRI_WORLD_IMAGERY, {
       maxZoom: 19,
       attribution: 'Tiles © Esri',
     }).addTo(map)
-    const regionLayer = L.layerGroup().addTo(map)
     const drawLayer = L.layerGroup().addTo(map)
-    regionLayerRef.current = regionLayer
+    const layersControl = L.control.layers(
+      { 'Esri World Imagery': imageryLayer },
+      { 'Field geometry': drawLayer },
+      { collapsed: false, position: 'topright' },
+    ).addTo(map)
+    layersControl.getContainer()?.setAttribute('aria-label', 'Map layers')
     drawLayerRef.current = drawLayer
+    layersControlRef.current = layersControl
     mapRef.current = map
 
     map.on('click', (event: L.LeafletMouseEvent) => {
@@ -203,7 +184,8 @@ export function LeafletFieldMap({
       map.remove()
       mapRef.current = null
       drawLayerRef.current = null
-      regionLayerRef.current = null
+      regionLayersRef.current.clear()
+      layersControlRef.current = null
     }
   }, [])
 
@@ -217,48 +199,74 @@ export function LeafletFieldMap({
   }, [scenarioId, geometry.kind])
 
   useEffect(() => {
-    const layer = regionLayerRef.current
-    if (!layer) {
+    const map = mapRef.current
+    const layersControl = layersControlRef.current
+    if (!map || !layersControl) {
       return
     }
-    layer.clearLayers()
+    const featuresByLayer = new Map<string, Array<GeoJsonFeatureCollection['features'][number]>>()
     visibleFeatures.features.forEach((feature) => {
-      const properties = feature.properties || {}
-      const code = String(properties.code || '')
-      const selected = selectedCodes.has(code)
-      const color = String(properties.fill || properties.stroke || '#65a9d4')
-      const geoJsonLayer = L.geoJSON(feature as GeoJSON.Feature, {
-        interactive: mode === 'inspect',
-        style: {
-          color,
-          fillColor: color,
-          fillOpacity: selected ? 0.3 : 0.14,
-          opacity: selected ? 0.95 : 0.65,
-          weight: selected ? 3 : 2,
-          dashArray:
-            properties.layer_id === 'epa_l3_us' || properties.layer_id === 'canada_ecozones'
-              ? '8 5'
-              : properties.layer_id === 'bc_agriculture_capability'
-                ? '5 3'
-                : properties.layer_id === 'sk_thematic_soil'
-                  ? '3 3'
-                : properties.layer_id === 'sk_detailed_soil'
-                  ? undefined
-                : properties.layer_id === 'pei_detailed_soil'
-                  ? '2 4'
-                : properties.layer_id === 'ns_pictou_detailed_soil'
-                  ? '7 3 2 3'
-                : undefined,
-        },
-      })
-      if (mode === 'inspect') {
-        const system = String(properties.system || 'Regional layer')
-        const name = String(properties.name || properties.label || 'Unnamed region')
-        geoJsonLayer
-          .bindTooltip(`${system} ${code}`, { sticky: true, className: 'regional-layer-tooltip' })
-          .bindPopup(`<strong>${name}</strong>`)
+      const layerId = String(feature.properties?.layer_id || feature.properties?.system || 'regional_context')
+      const entries = featuresByLayer.get(layerId) || []
+      entries.push(feature)
+      featuresByLayer.set(layerId, entries)
+    })
+    for (const [layerId, layer] of regionLayersRef.current) {
+      if (!featuresByLayer.has(layerId)) {
+        layersControl.removeLayer(layer)
+        map.removeLayer(layer)
+        regionLayersRef.current.delete(layerId)
+      } else {
+        layer.clearLayers()
       }
-      geoJsonLayer.addTo(layer)
+    }
+    featuresByLayer.forEach((features, layerId) => {
+      const firstProperties = features[0]?.properties || {}
+      let layer = regionLayersRef.current.get(layerId)
+      if (!layer) {
+        layer = L.layerGroup().addTo(map)
+        regionLayersRef.current.set(layerId, layer)
+        const label = String(firstProperties.layer_label || firstProperties.system || layerId)
+        layersControl.addOverlay(layer, label)
+      }
+      features.forEach((feature) => {
+        const properties = feature.properties || {}
+        const code = String(properties.code || '')
+        const selected = selectedCodes.has(code)
+        const color = String(properties.fill || properties.stroke || '#65a9d4')
+        const geoJsonLayer = L.geoJSON(feature as GeoJSON.Feature, {
+          interactive: mode === 'inspect',
+          style: {
+            color,
+            fillColor: color,
+            fillOpacity: selected ? 0.3 : 0.14,
+            opacity: selected ? 0.95 : 0.65,
+            weight: selected ? 3 : 2,
+            dashArray:
+              properties.layer_id === 'epa_l3_us' || properties.layer_id === 'canada_ecozones'
+                ? '8 5'
+                : properties.layer_id === 'bc_agriculture_capability'
+                  ? '5 3'
+                  : properties.layer_id === 'sk_thematic_soil'
+                    ? '3 3'
+                  : properties.layer_id === 'sk_detailed_soil'
+                    ? undefined
+                  : properties.layer_id === 'pei_detailed_soil'
+                    ? '2 4'
+                  : properties.layer_id === 'ns_pictou_detailed_soil'
+                    ? '7 3 2 3'
+                  : undefined,
+          },
+        })
+        if (mode === 'inspect') {
+          const system = String(properties.system || 'Regional layer')
+          const name = String(properties.name || properties.label || 'Unnamed region')
+          geoJsonLayer
+            .bindTooltip(`${system} ${code}`, { sticky: true, className: 'regional-layer-tooltip' })
+            .bindPopup(`<strong>${name}</strong>`)
+        }
+        geoJsonLayer.addTo(layer)
+      })
     })
   }, [mode, selectedCodes, visibleFeatures])
 
@@ -352,26 +360,15 @@ export function LeafletFieldMap({
   return (
     <div className="leaflet-map-shell">
       <div ref={containerRef} className="leaflet-map" aria-label="Field map with Esri imagery and regional overlays" />
-      <div className="leaflet-mode-hint">
-        {mode === 'inspect'
-          ? 'Inspect regional layers or choose a drawing tool.'
-          : mode === 'point'
+      {mode === 'inspect' ? null : (
+        <div className="leaflet-mode-hint">
+          {mode === 'point'
             ? 'Click the field location.'
             : mode === 'boundary'
               ? 'Click around the field edge.'
               : 'Drag boundary vertices.'}
-      </div>
-      <div className="layer-legend" aria-label="Map legend">
-        <span><i className="legend-mlra" /> MLRA</span>
-        <span><i className="legend-eco" /> Ecoregion</span>
-        {hasBcCapability ? <span><i className="legend-bc-capability" /> BC capability</span> : null}
-        {hasSkDetailedSoil ? <span><i className="legend-sk-soil" /> SK detailed soil</span> : null}
-        {hasSkThematicSoil ? <span><i className="legend-sk-soil" /> SK thematic soil</span> : null}
-        {hasPeiDetailedSoil ? <span><i className="legend-pei-soil" /> PEI mapped soil</span> : null}
-        {hasNsPictouDetailedSoil ? <span><i className="legend-ns-pictou-soil" /> Pictou County soil</span> : null}
-        {hasCaErosionRisk ? <span><i className="legend-ca-erosion" /> Erosion risk</span> : null}
-        <span><i className="legend-field" /> Field</span>
-      </div>
+        </div>
+      )}
     </div>
   )
 }

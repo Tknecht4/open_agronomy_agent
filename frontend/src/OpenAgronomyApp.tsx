@@ -1867,6 +1867,7 @@ export function OpenAgronomyApp() {
   const [field, setField] = useState<FieldProfile>(sampleProfiles[0])
   const [scenarioId, setScenarioId] = useState(sampleProfiles[0].id)
   const [boundaryStatus, setBoundaryStatus] = useState('Sample boundary loaded.')
+  const [isMapContextChecking, setIsMapContextChecking] = useState(false)
   const [mapMode, setMapMode] = useState<MapMode>('inspect')
   const [fieldGeometry, setFieldGeometry] = useState<FieldGeometry>(() => geometryForScenario(sampleProfiles[0]))
   const [uploadContext, setUploadContext] = useState<BoundaryUploadResponse | null>(null)
@@ -2686,6 +2687,8 @@ export function OpenAgronomyApp() {
       .filter(Boolean)
       .join(' ')
     const geometry = fieldGeometryToGeoJson(geometryForLookup)
+    setIsMapContextChecking(true)
+    setBoundaryStatus('Checking official regional layers…')
     setStatus('Intersecting regional layers')
     try {
       const priors = await apiPost<GeoPriors>('/api/geo/priors', { location_text: locationText, geometry })
@@ -2696,8 +2699,8 @@ export function OpenAgronomyApp() {
       const candidate = primaryRegionalCandidate(priors)
       setBoundaryStatus(
         candidate
-          ? `Matched ${candidate.system} ${candidate.code} at ${Math.round(candidate.confidence * 100)}% confidence.`
-          : 'No regional candidate matched.',
+          ? `Regional context refreshed: ${candidate.system} ${candidate.code} matched at ${Math.round(candidate.confidence * 100)}% confidence.`
+          : 'Regional context refreshed: no regional candidate matched.',
       )
       setStatus('Regional context ready')
     } catch (err) {
@@ -2705,7 +2708,12 @@ export function OpenAgronomyApp() {
         return
       }
       setStatus('Needs attention')
+      setBoundaryStatus('Could not refresh regional context. Review the error and retry.')
       setError(String((err as Error).message || err))
+    } finally {
+      if (requestId === regionalLookupRequestRef.current) {
+        setIsMapContextChecking(false)
+      }
     }
   }
 
@@ -3374,9 +3382,9 @@ export function OpenAgronomyApp() {
                   className="map-primary-action"
                   aria-label="Check map context"
                   onClick={() => void lookupRegionalContext()}
-                  disabled={!geometryReady}
+                  disabled={!geometryReady || isMapContextChecking}
                 >
-                  <Layers3 size={16} /> Check map context
+                  <Layers3 size={16} /> {isMapContextChecking ? 'Checking map context…' : 'Check map context'}
                 </button>
                 <details className="map-advanced-tools map-field-tools">
                   <summary title="Set or edit the field" aria-label="Set field">
@@ -3456,7 +3464,7 @@ export function OpenAgronomyApp() {
             </Suspense>
             <div className="map-context-bar" aria-label="Current field context">
               <div>
-                <span>{boundaryStatus}</span>
+                <span aria-live="polite">{boundaryStatus}</span>
                 <strong>
                   {geometrySummary(fieldGeometry, activeScenario.geometry)}
                   {primaryGeoCandidate
