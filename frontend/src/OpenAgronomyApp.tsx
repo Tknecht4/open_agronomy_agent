@@ -14,6 +14,7 @@ import {
   Send,
   Settings2,
   Sparkles,
+  CloudSun,
   Upload,
   X,
 } from 'lucide-react'
@@ -90,6 +91,30 @@ type AgroclimateResponse = {
 type AgroclimateState = {
   status: 'idle' | 'loading' | 'available' | 'partial_available' | 'unavailable' | 'error'
   payload?: AgroclimateResponse
+  message?: string
+}
+
+type NasaPowerMetric = {
+  days?: number
+  mean?: number
+  sum?: number
+}
+
+type NasaPowerResponse = {
+  tool: 'nasa_power_daily'
+  source: string
+  cache_hit?: boolean
+  latitude: number
+  longitude: number
+  start: string
+  end: string
+  parameter_summary?: Record<string, NasaPowerMetric>
+  boundary?: string
+}
+
+type NasaPowerState = {
+  status: 'idle' | 'loading' | 'available' | 'error'
+  payload?: NasaPowerResponse
   message?: string
 }
 
@@ -1330,6 +1355,31 @@ const formatAgroclimateValue = (key: string, indicator: AgroclimateIndicator | u
   return value.toFixed(2)
 }
 
+const fieldWeatherPoint = (geometry: FieldGeometry): FieldPoint | null => {
+  if (geometry.kind === 'point') return geometry.point
+  if (geometry.kind !== 'polygon' || geometry.points.length === 0) return null
+  return geometry.points.reduce(
+    (center, point) => ({
+      lat: center.lat + point.lat / geometry.points.length,
+      lon: center.lon + point.lon / geometry.points.length,
+    }),
+    { lat: 0, lon: 0 },
+  )
+}
+
+const powerMetricValue = (metric: NasaPowerMetric | undefined, key: 'mean' | 'sum', digits = 1): string => {
+  const value = metric?.[key]
+  return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : '—'
+}
+
+const powerWindowDates = (): { start: string; end: string } => {
+  const end = new Date()
+  const start = new Date(end)
+  start.setUTCDate(start.getUTCDate() - 2)
+  const format = (date: Date) => date.toISOString().slice(0, 10).replace(/-/g, '')
+  return { start: format(start), end: format(end) }
+}
+
 const regionalContextSummary = (priors: GeoPriors): string => {
   const count = priors.regional_intersections?.length || 0
   if (!count) {
@@ -1863,6 +1913,7 @@ export function OpenAgronomyApp() {
   const completedTurnPendingRef = useRef(false)
   const regionalLookupRequestRef = useRef(0)
   const agroclimateRequestRef = useRef(0)
+  const nasaPowerRequestRef = useRef(0)
   const [page, setPage] = useState<Page>(() => currentHashPage())
   const [sessions, setSessions] = useState<SessionRecord[]>([])
   const [sessionId, setSessionId] = useState('')
@@ -1897,6 +1948,8 @@ export function OpenAgronomyApp() {
   const [geoPriors, setGeoPriors] = useState<GeoPriors | null>(null)
   const [agroclimate, setAgroclimate] = useState<AgroclimateState>({ status: 'idle' })
   const [agroclimateRefresh, setAgroclimateRefresh] = useState(0)
+  const [nasaPower, setNasaPower] = useState<NasaPowerState>({ status: 'idle' })
+  const [nasaPowerRefresh, setNasaPowerRefresh] = useState(0)
   const [message, setMessage] = useState(defaultQuestion(sampleProfiles[0]))
   const [mode] = useState<DemoMode>('agronomic_rag')
   const [modelId, setModelId] = useState('mock')
@@ -1932,6 +1985,7 @@ export function OpenAgronomyApp() {
   const primaryGeoCandidate = primaryRegionalCandidate(geoPriors)
   const mapGeometry = geometryDraft || fieldGeometry
   const isEditingGeometry = geometryEditSnapshot !== null
+  const committedWeatherPoint = fieldWeatherPoint(fieldGeometry)
   const geometryIssue = fieldGeometryIssue(fieldGeometry)
   const geometryReady = isUsableFieldGeometry(fieldGeometry)
   const activeArea = fieldGeometry.kind === 'polygon' ? Math.round(fieldGeometry.acres).toLocaleString() : field.acres
@@ -2847,6 +2901,37 @@ export function OpenAgronomyApp() {
     })()
   }, [agroclimateRefresh, field.crop, field.jurisdiction, fieldGeometry, geoPriors, geometryReady])
 
+  useEffect(() => {
+    const requestId = nasaPowerRequestRef.current + 1
+    nasaPowerRequestRef.current = requestId
+    if (!committedWeatherPoint) {
+      setNasaPower({ status: 'idle' })
+      return
+    }
+
+    const { start, end } = powerWindowDates()
+    setNasaPower({ status: 'loading' })
+    ;(async () => {
+      try {
+        const payload = await apiPost<NasaPowerResponse>('/api/tools/weather-power', {
+          lat: committedWeatherPoint.lat,
+          lon: committedWeatherPoint.lon,
+          start,
+          end,
+          parameters: ['T2M', 'PRECTOTCORR', 'WS2M'],
+        })
+        if (requestId !== nasaPowerRequestRef.current) return
+        setNasaPower({ status: 'available', payload })
+      } catch (err) {
+        if (requestId !== nasaPowerRequestRef.current) return
+        setNasaPower({
+          status: 'error',
+          message: String((err as Error).message || err),
+        })
+      }
+    })()
+  }, [committedWeatherPoint?.lat, committedWeatherPoint?.lon, nasaPowerRefresh])
+
   const selectUploadedFeature = async (featureId: string) => {
     const feature = uploadFeatureById(uploadContext, featureId)
     if (!feature) {
@@ -3479,6 +3564,57 @@ export function OpenAgronomyApp() {
                       <Save size={16} /> {isMapContextChecking ? 'Saving…' : 'Save edits'}
                     </button>
                   </div>
+                ) : null}
+                {committedWeatherPoint ? (
+                  <details className="map-weather-pill">
+                    <summary aria-label="NASA POWER field weather" title="Recent NASA POWER gridded weather">
+                      <CloudSun size={16} />
+                      <span>NASA POWER</span>
+                      {nasaPower.status === 'loading' ? (
+                        <small>loading</small>
+                      ) : nasaPower.status === 'available' ? (
+                        <small data-testid="map-nasa-power-summary">
+                          {powerMetricValue(nasaPower.payload?.parameter_summary?.PRECTOTCORR, 'sum')} mm · {powerMetricValue(nasaPower.payload?.parameter_summary?.WS2M, 'mean')} m/s
+                        </small>
+                      ) : (
+                        <small>unavailable</small>
+                      )}
+                    </summary>
+                    <section className="map-weather-popover" aria-label="NASA POWER recent field weather">
+                      <div className="map-weather-heading">
+                        <div>
+                          <strong>Recent gridded weather</strong>
+                          <span>3-day point summary</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="icon-button map-weather-refresh"
+                          title="Refresh NASA POWER field weather"
+                          aria-label="Refresh NASA POWER field weather"
+                          disabled={nasaPower.status === 'loading'}
+                          onClick={() => setNasaPowerRefresh((value) => value + 1)}
+                        >
+                          <RefreshCw size={15} className={nasaPower.status === 'loading' ? 'spin' : ''} />
+                        </button>
+                      </div>
+                      {nasaPower.status === 'available' ? (
+                        <>
+                          <div className="map-weather-metrics">
+                            <div><span>Mean air temp.</span><strong>{powerMetricValue(nasaPower.payload?.parameter_summary?.T2M, 'mean')} °C</strong></div>
+                            <div><span>Precipitation</span><strong>{powerMetricValue(nasaPower.payload?.parameter_summary?.PRECTOTCORR, 'sum')} mm</strong></div>
+                            <div><span>Mean wind</span><strong>{powerMetricValue(nasaPower.payload?.parameter_summary?.WS2M, 'mean')} m/s</strong></div>
+                          </div>
+                          <p>UTC {nasaPower.payload?.start}–{nasaPower.payload?.end}{nasaPower.payload?.cache_hit ? ' · local cache' : ''}</p>
+                          <p>{nasaPower.payload?.boundary || 'NASA POWER is gridded weather context, not an on-field sensor.'}</p>
+                          {nasaPower.payload?.source ? (
+                            <a href={nasaPower.payload.source} target="_blank" rel="noreferrer">Official NASA POWER response</a>
+                          ) : null}
+                        </>
+                      ) : (
+                        <p>{nasaPower.status === 'loading' ? 'Fetching recent gridded weather…' : nasaPower.message || 'NASA POWER weather is unavailable for this field.'}</p>
+                      )}
+                    </section>
+                  </details>
                 ) : null}
                 <details
                   className="map-advanced-tools map-field-tools"

@@ -681,6 +681,22 @@ const nasdiConditions = {
   boundary: 'Regional grid context, not a field measurement or prescription.',
 }
 
+const nasaPowerConditions = {
+  tool: 'nasa_power_daily',
+  source: 'https://power.larc.nasa.gov/api/temporal/daily/point?example=true',
+  cache_hit: true,
+  latitude: 53.25,
+  longitude: -113.6,
+  start: '20260809',
+  end: '20260811',
+  parameter_summary: {
+    T2M: { days: 3, mean: 19.25, sum: 57.75 },
+    PRECTOTCORR: { days: 3, mean: 1.075, sum: 3.225 },
+    WS2M: { days: 3, mean: 2.875, sum: 8.625 },
+  },
+  boundary: 'NASA POWER is gridded weather context, not an on-field sensor.',
+}
+
 const privateKnowledgeInspection = {
   schema_version: 'open_agronomy_agent.ephemeral_private_knowledge.v1',
   filename: 'manitoba-note.txt',
@@ -783,6 +799,7 @@ const installFetchMock = (
     }
     if (url === '/api/geo/boundary-upload?intersect=true') return jsonResponse(boundaryUpload)
     if (url === '/api/private-knowledge/inspect') return jsonResponse(privateKnowledgeInspection)
+    if (url === '/api/tools/weather-power') return jsonResponse(nasaPowerConditions)
     if (url === '/api/geo/priors') {
       const body = JSON.parse(String(init?.body || '{}'))
       if (body.geometry?.type === 'Point') return jsonResponse(pointPriors)
@@ -918,6 +935,35 @@ describe('Open Agronomy map upload workflow', () => {
       return body.geometry?.coordinates?.[0]?.[0]?.[0] === -113.608
     })
     expect(priorsCall).toBeTruthy()
+  })
+
+  it('shows recent NASA POWER field weather beside Set field and refreshes it on demand', async () => {
+    const fetchMock = installFetchMock()
+    render(<OpenAgronomyApp />)
+
+    expect(await screen.findByTestId('map-nasa-power-summary')).toHaveTextContent('3.2 mm · 2.9 m/s')
+    const weatherSummary = screen.getByLabelText('NASA POWER field weather')
+    fireEvent.click(weatherSummary)
+    expect(screen.getByText('Recent gridded weather')).toBeInTheDocument()
+    expect(screen.getByText('19.3 °C')).toBeInTheDocument()
+    expect(screen.getByText('3.2 mm')).toBeInTheDocument()
+    expect(screen.getByText('2.9 m/s')).toBeInTheDocument()
+    expect(screen.getByText(/NASA POWER is gridded weather context, not an on-field sensor/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Official NASA POWER response' })).toHaveAttribute('href', nasaPowerConditions.source)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh NASA POWER field weather' }))
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.filter(([url]) => String(url) === '/api/tools/weather-power'),
+      ).toHaveLength(2)
+    })
+    const weatherCall = fetchMock.mock.calls.find(([url]) => String(url) === '/api/tools/weather-power')
+    const weatherBody = JSON.parse(String(weatherCall?.[1]?.body || '{}'))
+    expect(weatherBody).toMatchObject({
+      parameters: ['T2M', 'PRECTOTCORR', 'WS2M'],
+    })
+    expect(weatherBody.lat).toBeCloseTo(53.3, 6)
+    expect(weatherBody.lon).toBeCloseTo(-113.6, 6)
   })
 
   it('keeps regional evidence available but collapsed by default on the Fields page', async () => {
