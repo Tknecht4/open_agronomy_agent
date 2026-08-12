@@ -15,6 +15,7 @@ import {
   Settings2,
   Sparkles,
   Upload,
+  X,
 } from 'lucide-react'
 import { apiDelete, apiGet, apiPatch, apiPost, apiUpload } from './api'
 import { clearPhase6ChatDraft, loadPhase6ChatDraft, savePhase6ChatDraft } from './offlineDrafts'
@@ -285,6 +286,12 @@ type BoundaryUploadResponse = {
   official_layer_status?: OfficialLayerStatus[]
   status_message: string
   boundary: string
+}
+
+type GeometryEditSnapshot = {
+  geoPriors: GeoPriors | null
+  uploadContext: BoundaryUploadResponse | null
+  selectedUploadFeatureId: string
 }
 
 type ConfigResponse = {
@@ -1868,6 +1875,9 @@ export function OpenAgronomyApp() {
   const [scenarioId, setScenarioId] = useState(sampleProfiles[0].id)
   const [boundaryStatus, setBoundaryStatus] = useState('Sample boundary loaded.')
   const [isMapContextChecking, setIsMapContextChecking] = useState(false)
+  const [geometryDraft, setGeometryDraft] = useState<FieldGeometry | null>(null)
+  const [geometryEditSnapshot, setGeometryEditSnapshot] = useState<GeometryEditSnapshot | null>(null)
+  const [fieldToolsOpen, setFieldToolsOpen] = useState(false)
   const [mapMode, setMapMode] = useState<MapMode>('inspect')
   const [fieldGeometry, setFieldGeometry] = useState<FieldGeometry>(() => geometryForScenario(sampleProfiles[0]))
   const [uploadContext, setUploadContext] = useState<BoundaryUploadResponse | null>(null)
@@ -1920,6 +1930,8 @@ export function OpenAgronomyApp() {
   const evidenceSourceSummary = buildSourceCheckSummary(evidenceLiveToolCards, evidenceMapCards)
   const evidenceTraceGroups = buildTraceToolGroups(evidenceTurn, evidenceMapCards)
   const primaryGeoCandidate = primaryRegionalCandidate(geoPriors)
+  const mapGeometry = geometryDraft || fieldGeometry
+  const isEditingGeometry = geometryEditSnapshot !== null
   const geometryIssue = fieldGeometryIssue(fieldGeometry)
   const geometryReady = isUsableFieldGeometry(fieldGeometry)
   const activeArea = fieldGeometry.kind === 'polygon' ? Math.round(fieldGeometry.acres).toLocaleString() : field.acres
@@ -2152,6 +2164,9 @@ export function OpenAgronomyApp() {
     setField(scenario)
     setBoundaryStatus('Sample boundary loaded.')
     setFieldGeometry(geometryForScenario(scenario))
+    setGeometryDraft(null)
+    setGeometryEditSnapshot(null)
+    setFieldToolsOpen(false)
     setUploadContext(null)
     setSelectedUploadFeatureId('')
     setGeoPriors(null)
@@ -2374,6 +2389,9 @@ export function OpenAgronomyApp() {
         throw new Error('Uploaded boundary did not contain a map-ready point or polygon.')
       }
       setFieldGeometry(geometry)
+      setGeometryDraft(null)
+      setGeometryEditSnapshot(null)
+      setFieldToolsOpen(false)
       setUploadContext(parsed)
       setSelectedUploadFeatureId(parsed.selected_feature_id || parsed.feature_summaries?.[0]?.id || '')
       setMapMode(geometry.kind === 'polygon' ? 'edit' : 'inspect')
@@ -2403,25 +2421,89 @@ export function OpenAgronomyApp() {
     }
   }
 
-  const onMapGeometryChange = (geometry: FieldGeometry) => {
+  const beginGeometryEdit = (nextMode: 'point' | 'boundary' | 'edit') => {
+    if (!geometryEditSnapshot) {
+      setGeometryEditSnapshot({
+        geoPriors,
+        uploadContext,
+        selectedUploadFeatureId,
+      })
+    }
+    setGeometryDraft(nextMode === 'point' || nextMode === 'boundary' ? emptyGeometry : geometryDraft || fieldGeometry)
     regionalLookupRequestRef.current += 1
-    setFieldGeometry(geometry)
+    setIsMapContextChecking(false)
     setUploadContext(null)
     setSelectedUploadFeatureId('')
     setGeoPriors(null)
-    if (geometry.kind !== 'none') {
-      setBoundaryStatus('Geometry changed; run layer intersection to refresh regional context.')
-    }
+    setFieldToolsOpen(false)
+    setMapMode(nextMode)
+    setBoundaryStatus(
+      nextMode === 'point'
+        ? 'Choose a point, then save edits or cancel.'
+        : nextMode === 'boundary'
+          ? 'Draw the field boundary, then save edits or cancel.'
+          : 'Drag boundary vertices, then save edits or cancel.',
+    )
   }
 
-  const clearDrawnGeometry = () => {
+  const onMapGeometryChange = (geometry: FieldGeometry) => {
+    if (!isEditingGeometry) {
+      return
+    }
     regionalLookupRequestRef.current += 1
-    setFieldGeometry(emptyGeometry)
-    setUploadContext(null)
-    setSelectedUploadFeatureId('')
-    setGeoPriors(null)
+    setGeometryDraft(geometry)
+    setBoundaryStatus('Draft geometry updated. Save edits or cancel.')
+  }
+
+  const onMapStatusChange = (message: string) => {
+    setBoundaryStatus(isEditingGeometry ? `${message} Save edits or cancel.` : message)
+  }
+
+  const resetGeometryDraft = () => {
+    if (!isEditingGeometry) {
+      return
+    }
+    regionalLookupRequestRef.current += 1
+    setGeometryDraft(emptyGeometry)
+    setMapMode('boundary')
+    setBoundaryStatus('Draw a new field boundary, then save edits or cancel.')
+  }
+
+  const cancelGeometryEdits = () => {
+    if (!geometryEditSnapshot) {
+      return
+    }
+    regionalLookupRequestRef.current += 1
+    setGeometryDraft(null)
+    setGeoPriors(geometryEditSnapshot.geoPriors)
+    setUploadContext(geometryEditSnapshot.uploadContext)
+    setSelectedUploadFeatureId(geometryEditSnapshot.selectedUploadFeatureId)
+    setGeometryEditSnapshot(null)
+    setFieldToolsOpen(false)
     setMapMode('inspect')
-    setBoundaryStatus('Sample boundary loaded.')
+    setBoundaryStatus('Field edits cancelled. The prior geometry and map context were restored.')
+  }
+
+  const saveGeometryEdits = async () => {
+    if (!geometryDraft) {
+      return
+    }
+    const issue = fieldGeometryIssue(geometryDraft)
+    if (issue) {
+      setBoundaryStatus(issue)
+      return
+    }
+    const geometry = geometryDraft
+    setFieldGeometry(geometry)
+    if (geometry.kind === 'polygon') {
+      setField((current) => ({ ...current, acres: String(Math.round(geometry.acres)) }))
+    }
+    setGeometryDraft(null)
+    setGeometryEditSnapshot(null)
+    setFieldToolsOpen(false)
+    setMapMode('inspect')
+    setBoundaryStatus('Field edits saved. Refreshing regional context…')
+    await lookupRegionalContext(geometry)
   }
 
   const refreshFieldHistory = async (fieldContextId: string) => {
@@ -2615,6 +2697,9 @@ export function OpenAgronomyApp() {
       notes: stored.notes,
     })
     setFieldGeometry(stored.geometry)
+    setGeometryDraft(null)
+    setGeometryEditSnapshot(null)
+    setFieldToolsOpen(false)
     setUploadContext(null)
     setSelectedUploadFeatureId('')
     setGeoPriors(stored.geoPriors || null)
@@ -2775,6 +2860,9 @@ export function OpenAgronomyApp() {
     }
     setSelectedUploadFeatureId(featureId)
     setFieldGeometry(geometry)
+    setGeometryDraft(null)
+    setGeometryEditSnapshot(null)
+    setFieldToolsOpen(false)
     setMapMode(geometry.kind === 'polygon' ? 'edit' : 'inspect')
     if (geometry.kind === 'polygon') {
       setField((current) => ({ ...current, acres: String(Math.round(geometry.acres)) }))
@@ -3024,7 +3112,7 @@ export function OpenAgronomyApp() {
                   ) : null}
                   {geoErrorCount ? (
                     <p className="geo-error-note">
-                      {geoErrorCount} regional layer request failed. Retry Check map context; answers should treat regional context as incomplete.
+                      {geoErrorCount} regional layer request failed. Edit and save the field geometry to retry; answers should treat regional context as incomplete.
                     </p>
                   ) : null}
                 </div>
@@ -3377,16 +3465,26 @@ export function OpenAgronomyApp() {
                 <span>{field.region || 'Unknown region'} · {field.jurisdiction || 'Unknown jurisdiction'}</span>
               </div>
               <div className="map-actions" aria-label="Map tools">
-                <button
-                  type="button"
-                  className="map-primary-action"
-                  aria-label="Check map context"
-                  onClick={() => void lookupRegionalContext()}
-                  disabled={!geometryReady || isMapContextChecking}
+                {isEditingGeometry ? (
+                  <div className="map-draft-actions" role="group" aria-label="Field edit actions">
+                    <button type="button" className="map-secondary-action" onClick={cancelGeometryEdits}>
+                      <X size={16} /> Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="map-primary-action"
+                      onClick={() => void saveGeometryEdits()}
+                      disabled={fieldGeometryIssue(mapGeometry) !== null || isMapContextChecking}
+                    >
+                      <Save size={16} /> {isMapContextChecking ? 'Saving…' : 'Save edits'}
+                    </button>
+                  </div>
+                ) : null}
+                <details
+                  className="map-advanced-tools map-field-tools"
+                  open={fieldToolsOpen}
+                  onToggle={(event) => setFieldToolsOpen((event.target as HTMLDetailsElement).open)}
                 >
-                  <Layers3 size={16} /> {isMapContextChecking ? 'Checking map context…' : 'Check map context'}
-                </button>
-                <details className="map-advanced-tools map-field-tools">
                   <summary title="Set or edit the field" aria-label="Set field">
                     <MapPin size={16} /> <span>Set field</span>
                   </summary>
@@ -3396,7 +3494,7 @@ export function OpenAgronomyApp() {
                       className={mapMode === 'point' ? 'active' : ''}
                       aria-pressed={mapMode === 'point'}
                       aria-label="Select point"
-                      onClick={() => setMapMode('point')}
+                      onClick={() => beginGeometryEdit('point')}
                     >
                       <MapPin size={15} /> Select one location
                     </button>
@@ -3405,7 +3503,7 @@ export function OpenAgronomyApp() {
                       className={mapMode === 'boundary' ? 'active' : ''}
                       aria-pressed={mapMode === 'boundary'}
                       aria-label="Draw boundary"
-                      onClick={() => setMapMode('boundary')}
+                      onClick={() => beginGeometryEdit('boundary')}
                     >
                       <Pencil size={15} /> Draw field boundary
                     </button>
@@ -3415,25 +3513,25 @@ export function OpenAgronomyApp() {
                       aria-pressed={mapMode === 'inspect'}
                       onClick={() => setMapMode('inspect')}
                     >
-                      <MousePointer2 size={15} /> Move and inspect map
+                      <MousePointer2 size={15} /> Pause editing
                     </button>
                     <button
                       type="button"
                       className={mapMode === 'edit' ? 'active' : ''}
                       aria-pressed={mapMode === 'edit'}
                       aria-label="Edit boundary vertices"
-                      onClick={() => setMapMode('edit')}
-                      disabled={fieldGeometry.kind !== 'polygon'}
+                      onClick={() => beginGeometryEdit('edit')}
+                      disabled={mapGeometry.kind !== 'polygon'}
                     >
                       <Pencil size={15} /> Edit boundary
                     </button>
                     <button
                       type="button"
-                      aria-label="Clear geometry"
-                      onClick={clearDrawnGeometry}
-                      disabled={fieldGeometry.kind === 'none'}
+                      aria-label="Start over"
+                      onClick={resetGeometryDraft}
+                      disabled={!isEditingGeometry}
                     >
-                      <Eraser size={15} /> Clear geometry
+                      <Eraser size={15} /> Start over
                     </button>
                     <button type="button" onClick={() => navigateToPage('fields')}>
                       <Database size={15} /> Field details & history
@@ -3455,19 +3553,21 @@ export function OpenAgronomyApp() {
                 mode={mapMode}
                 scenarioId={scenarioId}
                 fieldLabel={`${field.crop || 'Field'} ${field.region || field.jurisdiction}`}
-                geometry={fieldGeometry}
+                geometry={mapGeometry}
                 regionalCandidates={geoPriors?.candidate_regions || []}
                 regionalFeatureCollection={geoPriors?.regional_feature_collection || null}
                 onGeometryChange={onMapGeometryChange}
-                onStatusChange={setBoundaryStatus}
+                onStatusChange={onMapStatusChange}
               />
             </Suspense>
             <div className="map-context-bar" aria-label="Current field context">
               <div>
                 <span aria-live="polite">{boundaryStatus}</span>
                 <strong>
-                  {geometrySummary(fieldGeometry, activeScenario.geometry)}
-                  {primaryGeoCandidate
+                  {geometrySummary(mapGeometry, activeScenario.geometry)}
+                  {isEditingGeometry
+                    ? ' · draft changes'
+                    : primaryGeoCandidate
                     ? ` · ${primaryGeoCandidate.system} ${primaryGeoCandidate.code}`
                     : geometryReady
                       ? ' · layers not checked'

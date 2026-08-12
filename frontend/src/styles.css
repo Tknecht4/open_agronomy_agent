@@ -1791,6 +1791,16 @@ pre,
   gap: 6px;
 }
 
+.map-draft-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.map-actions .map-secondary-action {
+  color: #234332;
+  background: #f7faf5;
+}
+
 .map-advanced-tools {
   position: relative;
 }

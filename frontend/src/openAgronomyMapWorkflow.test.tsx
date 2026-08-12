@@ -1115,8 +1115,11 @@ describe('Open Agronomy map upload workflow', () => {
     const fetchMock = installFetchMock()
     render(<OpenAgronomyApp />)
 
+    fireEvent.click(screen.getByLabelText('Set field'))
+    fireEvent.click(screen.getByRole('button', { name: 'Draw boundary' }))
     fireEvent.click(await screen.findByRole('button', { name: /mock draw boundary/i }))
-    fireEvent.click(screen.getByRole('button', { name: /check map context/i }))
+    expect(screen.getByRole('button', { name: 'Save edits' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Save edits' }))
 
     expect(await screen.findByText(/Regional context refreshed: EPA Level III Ecoregion 47 matched at 92% confidence/i)).toBeInTheDocument()
     openPrimaryPage('Fields')
@@ -1135,8 +1138,11 @@ describe('Open Agronomy map upload workflow', () => {
     })
     expect(boundaryPriorsCall).toBeTruthy()
 
+    fireEvent.click(screen.getByLabelText('Set field'))
+    fireEvent.click(screen.getByRole('button', { name: 'Select point' }))
     fireEvent.click(screen.getByRole('button', { name: /mock drop point/i }))
-    fireEvent.click(screen.getByRole('button', { name: /check map context/i }))
+    expect(screen.getByRole('button', { name: 'Save edits' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Save edits' }))
 
     expect(await screen.findByText(/Regional context refreshed: NRCS MLRA MLRA_103 matched at 94% confidence/i)).toBeInTheDocument()
     const mapContextBar = screen
@@ -1158,6 +1164,28 @@ describe('Open Agronomy map upload workflow', () => {
       return body.geometry?.type === 'Point'
     })
     expect(pointPriorsCall).toBeTruthy()
+  })
+
+  it('keeps map edits as a cancellable draft until they are saved', async () => {
+    installFetchMock()
+    render(<OpenAgronomyApp />)
+
+    await screen.findByText(/Regional context refreshed: AAFC Alberta Detailed Soil Survey AB_SOIL_ABD192014361 matched at 100% confidence/i)
+    const map = await screen.findByTestId('mock-leaflet-map')
+    expect(map).toHaveAttribute('data-first-lon', '-113.608')
+
+    fireEvent.click(screen.getByLabelText('Set field'))
+    fireEvent.click(screen.getByRole('button', { name: 'Draw boundary' }))
+    fireEvent.click(screen.getByRole('button', { name: /mock draw boundary/i }))
+
+    expect(screen.getByRole('button', { name: 'Save edits' })).toBeEnabled()
+    expect(screen.getByTestId('mock-leaflet-map')).toHaveAttribute('data-first-lon', '-93.68')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.queryByRole('button', { name: 'Save edits' })).not.toBeInTheDocument()
+    expect(screen.getByTestId('mock-leaflet-map')).toHaveAttribute('data-first-lon', '-113.608')
+    expect(screen.getByText(/Field edits cancelled\. The prior geometry and map context were restored\./i)).toBeInTheDocument()
   })
 
   it('lets reviewers select a different uploaded feature and refreshes regional context from that geometry', async () => {
@@ -1739,7 +1767,7 @@ describe('Open Agronomy map upload workflow', () => {
 
     expect(await screen.findByText(/1 regional layer request failed/i)).toBeInTheDocument()
     expect(screen.getByText(/NRCS MLRA: NRCS MLRA FeatureServer timeout/i)).toBeInTheDocument()
-    expect(screen.getByText(/Retry Check map context; answers should treat regional context as incomplete/i)).toBeInTheDocument()
+    expect(screen.getByText(/Edit and save the field geometry to retry; answers should treat regional context as incomplete/i)).toBeInTheDocument()
     expect(screen.getAllByText(/Device-only fallback; backend field storage is unavailable/i).length).toBeGreaterThanOrEqual(1)
   })
 
@@ -1770,11 +1798,11 @@ describe('Open Agronomy map upload workflow', () => {
 
     expect(await screen.findByRole('button', { name: 'Select point' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Draw boundary' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: 'Check map context' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: 'Check map context' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByLabelText('Set field'))
-    expect(screen.getByRole('button', { name: 'Move and inspect map' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Pause editing' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'Edit boundary vertices' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: 'Clear geometry' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Start over' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Field details & history' })).toBeEnabled()
     expect(within(screen.getByRole('navigation', { name: 'Primary' })).getByRole('button', { name: 'Fields' })).toBeEnabled()
 
