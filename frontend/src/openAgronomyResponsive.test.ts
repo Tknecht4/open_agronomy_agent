@@ -37,7 +37,7 @@ describe('Open Agronomy mobile layout CSS', () => {
 
     expect(source).toMatch(/\.conversation-thread \{[^}]*overflow-x: hidden;[^}]*overflow-y: auto/)
     expect(source).toMatch(/\.chat-message \{[^}]*box-sizing: border-box;[^}]*overflow-wrap: anywhere/)
-    expect(source).toMatch(/\.map-toolbar \.map-actions \{[^}]*grid-template-columns: minmax\(0, 1fr\) 44px/)
+    expect(source).toMatch(/\.map-toolbar \.map-actions \{[^}]*grid-template-columns: minmax\(0, 1fr\) auto/)
     expect(source).toMatch(/\.map-toolbar \.map-mode-control \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/)
     expect(source).toMatch(/\.map-primary-action \{[^}]*min-height: 44px/)
     expect(source).toMatch(/@media \(max-width: 420px\) \{[^}]*\.map-toolbar \.map-mode-control button \{[^}]*min-width: 0;[^}]*gap: 3px;[^}]*padding: 0 3px/)

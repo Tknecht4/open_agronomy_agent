@@ -14,7 +14,9 @@ import {
   Send,
   Settings2,
   Sparkles,
+  CloudSun,
   Upload,
+  X,
 } from 'lucide-react'
 import { apiDelete, apiGet, apiPatch, apiPost, apiUpload } from './api'
 import { clearPhase6ChatDraft, loadPhase6ChatDraft, savePhase6ChatDraft } from './offlineDrafts'
@@ -89,6 +91,30 @@ type AgroclimateResponse = {
 type AgroclimateState = {
   status: 'idle' | 'loading' | 'available' | 'partial_available' | 'unavailable' | 'error'
   payload?: AgroclimateResponse
+  message?: string
+}
+
+type NasaPowerMetric = {
+  days?: number
+  mean?: number
+  sum?: number
+}
+
+type NasaPowerResponse = {
+  tool: 'nasa_power_daily'
+  source: string
+  cache_hit?: boolean
+  latitude: number
+  longitude: number
+  start: string
+  end: string
+  parameter_summary?: Record<string, NasaPowerMetric>
+  boundary?: string
+}
+
+type NasaPowerState = {
+  status: 'idle' | 'loading' | 'available' | 'error'
+  payload?: NasaPowerResponse
   message?: string
 }
 
@@ -285,6 +311,12 @@ type BoundaryUploadResponse = {
   official_layer_status?: OfficialLayerStatus[]
   status_message: string
   boundary: string
+}
+
+type GeometryEditSnapshot = {
+  geoPriors: GeoPriors | null
+  uploadContext: BoundaryUploadResponse | null
+  selectedUploadFeatureId: string
 }
 
 type ConfigResponse = {
@@ -1323,6 +1355,31 @@ const formatAgroclimateValue = (key: string, indicator: AgroclimateIndicator | u
   return value.toFixed(2)
 }
 
+const fieldWeatherPoint = (geometry: FieldGeometry): FieldPoint | null => {
+  if (geometry.kind === 'point') return geometry.point
+  if (geometry.kind !== 'polygon' || geometry.points.length === 0) return null
+  return geometry.points.reduce(
+    (center, point) => ({
+      lat: center.lat + point.lat / geometry.points.length,
+      lon: center.lon + point.lon / geometry.points.length,
+    }),
+    { lat: 0, lon: 0 },
+  )
+}
+
+const powerMetricValue = (metric: NasaPowerMetric | undefined, key: 'mean' | 'sum', digits = 1): string => {
+  const value = metric?.[key]
+  return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : '—'
+}
+
+const powerWindowDates = (): { start: string; end: string } => {
+  const end = new Date()
+  const start = new Date(end)
+  start.setUTCDate(start.getUTCDate() - 2)
+  const format = (date: Date) => date.toISOString().slice(0, 10).replace(/-/g, '')
+  return { start: format(start), end: format(end) }
+}
+
 const regionalContextSummary = (priors: GeoPriors): string => {
   const count = priors.regional_intersections?.length || 0
   if (!count) {
@@ -1856,6 +1913,7 @@ export function OpenAgronomyApp() {
   const completedTurnPendingRef = useRef(false)
   const regionalLookupRequestRef = useRef(0)
   const agroclimateRequestRef = useRef(0)
+  const nasaPowerRequestRef = useRef(0)
   const [page, setPage] = useState<Page>(() => currentHashPage())
   const [sessions, setSessions] = useState<SessionRecord[]>([])
   const [sessionId, setSessionId] = useState('')
@@ -1867,6 +1925,10 @@ export function OpenAgronomyApp() {
   const [field, setField] = useState<FieldProfile>(sampleProfiles[0])
   const [scenarioId, setScenarioId] = useState(sampleProfiles[0].id)
   const [boundaryStatus, setBoundaryStatus] = useState('Sample boundary loaded.')
+  const [isMapContextChecking, setIsMapContextChecking] = useState(false)
+  const [geometryDraft, setGeometryDraft] = useState<FieldGeometry | null>(null)
+  const [geometryEditSnapshot, setGeometryEditSnapshot] = useState<GeometryEditSnapshot | null>(null)
+  const [fieldToolsOpen, setFieldToolsOpen] = useState(false)
   const [mapMode, setMapMode] = useState<MapMode>('inspect')
   const [fieldGeometry, setFieldGeometry] = useState<FieldGeometry>(() => geometryForScenario(sampleProfiles[0]))
   const [uploadContext, setUploadContext] = useState<BoundaryUploadResponse | null>(null)
@@ -1886,6 +1948,8 @@ export function OpenAgronomyApp() {
   const [geoPriors, setGeoPriors] = useState<GeoPriors | null>(null)
   const [agroclimate, setAgroclimate] = useState<AgroclimateState>({ status: 'idle' })
   const [agroclimateRefresh, setAgroclimateRefresh] = useState(0)
+  const [nasaPower, setNasaPower] = useState<NasaPowerState>({ status: 'idle' })
+  const [nasaPowerRefresh, setNasaPowerRefresh] = useState(0)
   const [message, setMessage] = useState(defaultQuestion(sampleProfiles[0]))
   const [mode] = useState<DemoMode>('agronomic_rag')
   const [modelId, setModelId] = useState('mock')
@@ -1919,6 +1983,9 @@ export function OpenAgronomyApp() {
   const evidenceSourceSummary = buildSourceCheckSummary(evidenceLiveToolCards, evidenceMapCards)
   const evidenceTraceGroups = buildTraceToolGroups(evidenceTurn, evidenceMapCards)
   const primaryGeoCandidate = primaryRegionalCandidate(geoPriors)
+  const mapGeometry = geometryDraft || fieldGeometry
+  const isEditingGeometry = geometryEditSnapshot !== null
+  const committedWeatherPoint = fieldWeatherPoint(fieldGeometry)
   const geometryIssue = fieldGeometryIssue(fieldGeometry)
   const geometryReady = isUsableFieldGeometry(fieldGeometry)
   const activeArea = fieldGeometry.kind === 'polygon' ? Math.round(fieldGeometry.acres).toLocaleString() : field.acres
@@ -2151,6 +2218,9 @@ export function OpenAgronomyApp() {
     setField(scenario)
     setBoundaryStatus('Sample boundary loaded.')
     setFieldGeometry(geometryForScenario(scenario))
+    setGeometryDraft(null)
+    setGeometryEditSnapshot(null)
+    setFieldToolsOpen(false)
     setUploadContext(null)
     setSelectedUploadFeatureId('')
     setGeoPriors(null)
@@ -2373,6 +2443,9 @@ export function OpenAgronomyApp() {
         throw new Error('Uploaded boundary did not contain a map-ready point or polygon.')
       }
       setFieldGeometry(geometry)
+      setGeometryDraft(null)
+      setGeometryEditSnapshot(null)
+      setFieldToolsOpen(false)
       setUploadContext(parsed)
       setSelectedUploadFeatureId(parsed.selected_feature_id || parsed.feature_summaries?.[0]?.id || '')
       setMapMode(geometry.kind === 'polygon' ? 'edit' : 'inspect')
@@ -2402,25 +2475,89 @@ export function OpenAgronomyApp() {
     }
   }
 
-  const onMapGeometryChange = (geometry: FieldGeometry) => {
+  const beginGeometryEdit = (nextMode: 'point' | 'boundary' | 'edit') => {
+    if (!geometryEditSnapshot) {
+      setGeometryEditSnapshot({
+        geoPriors,
+        uploadContext,
+        selectedUploadFeatureId,
+      })
+    }
+    setGeometryDraft(nextMode === 'point' || nextMode === 'boundary' ? emptyGeometry : geometryDraft || fieldGeometry)
     regionalLookupRequestRef.current += 1
-    setFieldGeometry(geometry)
+    setIsMapContextChecking(false)
     setUploadContext(null)
     setSelectedUploadFeatureId('')
     setGeoPriors(null)
-    if (geometry.kind !== 'none') {
-      setBoundaryStatus('Geometry changed; run layer intersection to refresh regional context.')
-    }
+    setFieldToolsOpen(false)
+    setMapMode(nextMode)
+    setBoundaryStatus(
+      nextMode === 'point'
+        ? 'Choose a point, then save edits or cancel.'
+        : nextMode === 'boundary'
+          ? 'Draw the field boundary, then save edits or cancel.'
+          : 'Drag boundary vertices, then save edits or cancel.',
+    )
   }
 
-  const clearDrawnGeometry = () => {
+  const onMapGeometryChange = (geometry: FieldGeometry) => {
+    if (!isEditingGeometry) {
+      return
+    }
     regionalLookupRequestRef.current += 1
-    setFieldGeometry(emptyGeometry)
-    setUploadContext(null)
-    setSelectedUploadFeatureId('')
-    setGeoPriors(null)
+    setGeometryDraft(geometry)
+    setBoundaryStatus('Draft geometry updated. Save edits or cancel.')
+  }
+
+  const onMapStatusChange = (message: string) => {
+    setBoundaryStatus(isEditingGeometry ? `${message} Save edits or cancel.` : message)
+  }
+
+  const resetGeometryDraft = () => {
+    if (!isEditingGeometry) {
+      return
+    }
+    regionalLookupRequestRef.current += 1
+    setGeometryDraft(emptyGeometry)
+    setMapMode('boundary')
+    setBoundaryStatus('Draw a new field boundary, then save edits or cancel.')
+  }
+
+  const cancelGeometryEdits = () => {
+    if (!geometryEditSnapshot) {
+      return
+    }
+    regionalLookupRequestRef.current += 1
+    setGeometryDraft(null)
+    setGeoPriors(geometryEditSnapshot.geoPriors)
+    setUploadContext(geometryEditSnapshot.uploadContext)
+    setSelectedUploadFeatureId(geometryEditSnapshot.selectedUploadFeatureId)
+    setGeometryEditSnapshot(null)
+    setFieldToolsOpen(false)
     setMapMode('inspect')
-    setBoundaryStatus('Sample boundary loaded.')
+    setBoundaryStatus('Field edits cancelled. The prior geometry and map context were restored.')
+  }
+
+  const saveGeometryEdits = async () => {
+    if (!geometryDraft) {
+      return
+    }
+    const issue = fieldGeometryIssue(geometryDraft)
+    if (issue) {
+      setBoundaryStatus(issue)
+      return
+    }
+    const geometry = geometryDraft
+    setFieldGeometry(geometry)
+    if (geometry.kind === 'polygon') {
+      setField((current) => ({ ...current, acres: String(Math.round(geometry.acres)) }))
+    }
+    setGeometryDraft(null)
+    setGeometryEditSnapshot(null)
+    setFieldToolsOpen(false)
+    setMapMode('inspect')
+    setBoundaryStatus('Field edits saved. Refreshing regional context…')
+    await lookupRegionalContext(geometry)
   }
 
   const refreshFieldHistory = async (fieldContextId: string) => {
@@ -2614,6 +2751,9 @@ export function OpenAgronomyApp() {
       notes: stored.notes,
     })
     setFieldGeometry(stored.geometry)
+    setGeometryDraft(null)
+    setGeometryEditSnapshot(null)
+    setFieldToolsOpen(false)
     setUploadContext(null)
     setSelectedUploadFeatureId('')
     setGeoPriors(stored.geoPriors || null)
@@ -2686,6 +2826,8 @@ export function OpenAgronomyApp() {
       .filter(Boolean)
       .join(' ')
     const geometry = fieldGeometryToGeoJson(geometryForLookup)
+    setIsMapContextChecking(true)
+    setBoundaryStatus('Checking official regional layers…')
     setStatus('Intersecting regional layers')
     try {
       const priors = await apiPost<GeoPriors>('/api/geo/priors', { location_text: locationText, geometry })
@@ -2696,8 +2838,8 @@ export function OpenAgronomyApp() {
       const candidate = primaryRegionalCandidate(priors)
       setBoundaryStatus(
         candidate
-          ? `Matched ${candidate.system} ${candidate.code} at ${Math.round(candidate.confidence * 100)}% confidence.`
-          : 'No regional candidate matched.',
+          ? `Regional context refreshed: ${candidate.system} ${candidate.code} matched at ${Math.round(candidate.confidence * 100)}% confidence.`
+          : 'Regional context refreshed: no regional candidate matched.',
       )
       setStatus('Regional context ready')
     } catch (err) {
@@ -2705,7 +2847,12 @@ export function OpenAgronomyApp() {
         return
       }
       setStatus('Needs attention')
+      setBoundaryStatus('Could not refresh regional context. Review the error and retry.')
       setError(String((err as Error).message || err))
+    } finally {
+      if (requestId === regionalLookupRequestRef.current) {
+        setIsMapContextChecking(false)
+      }
     }
   }
 
@@ -2754,6 +2901,37 @@ export function OpenAgronomyApp() {
     })()
   }, [agroclimateRefresh, field.crop, field.jurisdiction, fieldGeometry, geoPriors, geometryReady])
 
+  useEffect(() => {
+    const requestId = nasaPowerRequestRef.current + 1
+    nasaPowerRequestRef.current = requestId
+    if (!committedWeatherPoint) {
+      setNasaPower({ status: 'idle' })
+      return
+    }
+
+    const { start, end } = powerWindowDates()
+    setNasaPower({ status: 'loading' })
+    ;(async () => {
+      try {
+        const payload = await apiPost<NasaPowerResponse>('/api/tools/weather-power', {
+          lat: committedWeatherPoint.lat,
+          lon: committedWeatherPoint.lon,
+          start,
+          end,
+          parameters: ['T2M', 'PRECTOTCORR', 'WS2M'],
+        })
+        if (requestId !== nasaPowerRequestRef.current) return
+        setNasaPower({ status: 'available', payload })
+      } catch (err) {
+        if (requestId !== nasaPowerRequestRef.current) return
+        setNasaPower({
+          status: 'error',
+          message: String((err as Error).message || err),
+        })
+      }
+    })()
+  }, [committedWeatherPoint?.lat, committedWeatherPoint?.lon, nasaPowerRefresh])
+
   const selectUploadedFeature = async (featureId: string) => {
     const feature = uploadFeatureById(uploadContext, featureId)
     if (!feature) {
@@ -2767,6 +2945,9 @@ export function OpenAgronomyApp() {
     }
     setSelectedUploadFeatureId(featureId)
     setFieldGeometry(geometry)
+    setGeometryDraft(null)
+    setGeometryEditSnapshot(null)
+    setFieldToolsOpen(false)
     setMapMode(geometry.kind === 'polygon' ? 'edit' : 'inspect')
     if (geometry.kind === 'polygon') {
       setField((current) => ({ ...current, acres: String(Math.round(geometry.acres)) }))
@@ -3016,7 +3197,7 @@ export function OpenAgronomyApp() {
                   ) : null}
                   {geoErrorCount ? (
                     <p className="geo-error-note">
-                      {geoErrorCount} regional layer request failed. Retry Check map context; answers should treat regional context as incomplete.
+                      {geoErrorCount} regional layer request failed. Edit and save the field geometry to retry; answers should treat regional context as incomplete.
                     </p>
                   ) : null}
                 </div>
@@ -3369,16 +3550,77 @@ export function OpenAgronomyApp() {
                 <span>{field.region || 'Unknown region'} · {field.jurisdiction || 'Unknown jurisdiction'}</span>
               </div>
               <div className="map-actions" aria-label="Map tools">
-                <button
-                  type="button"
-                  className="map-primary-action"
-                  aria-label="Check map context"
-                  onClick={() => void lookupRegionalContext()}
-                  disabled={!geometryReady}
+                {isEditingGeometry ? (
+                  <div className="map-draft-actions" role="group" aria-label="Field edit actions">
+                    <button type="button" className="map-secondary-action" onClick={cancelGeometryEdits}>
+                      <X size={16} /> Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="map-primary-action"
+                      onClick={() => void saveGeometryEdits()}
+                      disabled={fieldGeometryIssue(mapGeometry) !== null || isMapContextChecking}
+                    >
+                      <Save size={16} /> {isMapContextChecking ? 'Saving…' : 'Save edits'}
+                    </button>
+                  </div>
+                ) : null}
+                {committedWeatherPoint ? (
+                  <details className="map-weather-pill">
+                    <summary aria-label="NASA POWER field weather" title="Recent NASA POWER gridded weather">
+                      <CloudSun size={16} />
+                      <span>NASA POWER</span>
+                      {nasaPower.status === 'loading' ? (
+                        <small>loading</small>
+                      ) : nasaPower.status === 'available' ? (
+                        <small data-testid="map-nasa-power-summary">
+                          {powerMetricValue(nasaPower.payload?.parameter_summary?.PRECTOTCORR, 'sum')} mm · {powerMetricValue(nasaPower.payload?.parameter_summary?.WS2M, 'mean')} m/s
+                        </small>
+                      ) : (
+                        <small>unavailable</small>
+                      )}
+                    </summary>
+                    <section className="map-weather-popover" aria-label="NASA POWER recent field weather">
+                      <div className="map-weather-heading">
+                        <div>
+                          <strong>Recent gridded weather</strong>
+                          <span>3-day point summary</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="icon-button map-weather-refresh"
+                          title="Refresh NASA POWER field weather"
+                          aria-label="Refresh NASA POWER field weather"
+                          disabled={nasaPower.status === 'loading'}
+                          onClick={() => setNasaPowerRefresh((value) => value + 1)}
+                        >
+                          <RefreshCw size={15} className={nasaPower.status === 'loading' ? 'spin' : ''} />
+                        </button>
+                      </div>
+                      {nasaPower.status === 'available' ? (
+                        <>
+                          <div className="map-weather-metrics">
+                            <div><span>Mean air temp.</span><strong>{powerMetricValue(nasaPower.payload?.parameter_summary?.T2M, 'mean')} °C</strong></div>
+                            <div><span>Precipitation</span><strong>{powerMetricValue(nasaPower.payload?.parameter_summary?.PRECTOTCORR, 'sum')} mm</strong></div>
+                            <div><span>Mean wind</span><strong>{powerMetricValue(nasaPower.payload?.parameter_summary?.WS2M, 'mean')} m/s</strong></div>
+                          </div>
+                          <p>UTC {nasaPower.payload?.start}–{nasaPower.payload?.end}{nasaPower.payload?.cache_hit ? ' · local cache' : ''}</p>
+                          <p>{nasaPower.payload?.boundary || 'NASA POWER is gridded weather context, not an on-field sensor.'}</p>
+                          {nasaPower.payload?.source ? (
+                            <a href={nasaPower.payload.source} target="_blank" rel="noreferrer">Official NASA POWER response</a>
+                          ) : null}
+                        </>
+                      ) : (
+                        <p>{nasaPower.status === 'loading' ? 'Fetching recent gridded weather…' : nasaPower.message || 'NASA POWER weather is unavailable for this field.'}</p>
+                      )}
+                    </section>
+                  </details>
+                ) : null}
+                <details
+                  className="map-advanced-tools map-field-tools"
+                  open={fieldToolsOpen}
+                  onToggle={(event) => setFieldToolsOpen((event.target as HTMLDetailsElement).open)}
                 >
-                  <Layers3 size={16} /> Check map context
-                </button>
-                <details className="map-advanced-tools map-field-tools">
                   <summary title="Set or edit the field" aria-label="Set field">
                     <MapPin size={16} /> <span>Set field</span>
                   </summary>
@@ -3388,7 +3630,7 @@ export function OpenAgronomyApp() {
                       className={mapMode === 'point' ? 'active' : ''}
                       aria-pressed={mapMode === 'point'}
                       aria-label="Select point"
-                      onClick={() => setMapMode('point')}
+                      onClick={() => beginGeometryEdit('point')}
                     >
                       <MapPin size={15} /> Select one location
                     </button>
@@ -3397,7 +3639,7 @@ export function OpenAgronomyApp() {
                       className={mapMode === 'boundary' ? 'active' : ''}
                       aria-pressed={mapMode === 'boundary'}
                       aria-label="Draw boundary"
-                      onClick={() => setMapMode('boundary')}
+                      onClick={() => beginGeometryEdit('boundary')}
                     >
                       <Pencil size={15} /> Draw field boundary
                     </button>
@@ -3407,25 +3649,25 @@ export function OpenAgronomyApp() {
                       aria-pressed={mapMode === 'inspect'}
                       onClick={() => setMapMode('inspect')}
                     >
-                      <MousePointer2 size={15} /> Move and inspect map
+                      <MousePointer2 size={15} /> Pause editing
                     </button>
                     <button
                       type="button"
                       className={mapMode === 'edit' ? 'active' : ''}
                       aria-pressed={mapMode === 'edit'}
                       aria-label="Edit boundary vertices"
-                      onClick={() => setMapMode('edit')}
-                      disabled={fieldGeometry.kind !== 'polygon'}
+                      onClick={() => beginGeometryEdit('edit')}
+                      disabled={mapGeometry.kind !== 'polygon'}
                     >
                       <Pencil size={15} /> Edit boundary
                     </button>
                     <button
                       type="button"
-                      aria-label="Clear geometry"
-                      onClick={clearDrawnGeometry}
-                      disabled={fieldGeometry.kind === 'none'}
+                      aria-label="Start over"
+                      onClick={resetGeometryDraft}
+                      disabled={!isEditingGeometry}
                     >
-                      <Eraser size={15} /> Clear geometry
+                      <Eraser size={15} /> Start over
                     </button>
                     <button type="button" onClick={() => navigateToPage('fields')}>
                       <Database size={15} /> Field details & history
@@ -3447,19 +3689,21 @@ export function OpenAgronomyApp() {
                 mode={mapMode}
                 scenarioId={scenarioId}
                 fieldLabel={`${field.crop || 'Field'} ${field.region || field.jurisdiction}`}
-                geometry={fieldGeometry}
+                geometry={mapGeometry}
                 regionalCandidates={geoPriors?.candidate_regions || []}
                 regionalFeatureCollection={geoPriors?.regional_feature_collection || null}
                 onGeometryChange={onMapGeometryChange}
-                onStatusChange={setBoundaryStatus}
+                onStatusChange={onMapStatusChange}
               />
             </Suspense>
             <div className="map-context-bar" aria-label="Current field context">
               <div>
-                <span>{boundaryStatus}</span>
+                <span aria-live="polite">{boundaryStatus}</span>
                 <strong>
-                  {geometrySummary(fieldGeometry, activeScenario.geometry)}
-                  {primaryGeoCandidate
+                  {geometrySummary(mapGeometry, activeScenario.geometry)}
+                  {isEditingGeometry
+                    ? ' · draft changes'
+                    : primaryGeoCandidate
                     ? ` · ${primaryGeoCandidate.system} ${primaryGeoCandidate.code}`
                     : geometryReady
                       ? ' · layers not checked'

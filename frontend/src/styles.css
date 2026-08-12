@@ -1791,6 +1791,147 @@ pre,
   gap: 6px;
 }
 
+.map-draft-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.map-actions .map-secondary-action {
+  color: #234332;
+  background: #f7faf5;
+}
+
+.map-weather-pill {
+  position: relative;
+}
+
+.map-weather-pill > summary {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  gap: 5px;
+  padding: 0 9px;
+  border: 1px solid #b8c8b4;
+  border-radius: 999px;
+  color: #315c48;
+  background: #f8faf6;
+  cursor: pointer;
+  list-style: none;
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.map-weather-pill > summary::-webkit-details-marker {
+  display: none;
+}
+
+.map-weather-pill > summary small {
+  color: #607068;
+  font-size: 11px;
+  font-weight: 720;
+  white-space: nowrap;
+}
+
+.map-weather-pill[open] {
+  z-index: 30;
+}
+
+.map-weather-popover {
+  position: absolute;
+  top: 46px;
+  right: 0;
+  z-index: 30;
+  display: grid;
+  width: 300px;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #bdcbb8;
+  border-radius: 8px;
+  color: #405045;
+  background: #fff;
+  box-shadow: 0 10px 24px rgb(32 42 35 / 18%);
+}
+
+.map-weather-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 8px;
+}
+
+.map-weather-heading > div {
+  display: grid;
+  gap: 2px;
+}
+
+.map-weather-heading strong {
+  color: #17251d;
+  font-size: 13px;
+}
+
+.map-weather-heading span,
+.map-weather-popover p {
+  margin: 0;
+  color: #607068;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.map-weather-refresh {
+  width: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-color: #b8c8b4;
+  color: #315c48;
+  background: #f8faf6;
+}
+
+.map-weather-refresh:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.map-weather-refresh .spin {
+  animation: agroclimate-spin 900ms linear infinite;
+}
+
+.map-weather-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.map-weather-metrics > div {
+  display: grid;
+  gap: 4px;
+  padding: 7px;
+  border-left: 3px solid #6c8138;
+  background: #f4f7ef;
+}
+
+.map-weather-metrics span {
+  color: #627068;
+  font-size: 10px;
+  font-weight: 720;
+}
+
+.map-weather-metrics strong {
+  color: #20382a;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.map-weather-popover a {
+  color: #315c48;
+  font-size: 11px;
+  font-weight: 780;
+  text-decoration: none;
+}
+
+.map-weather-popover a:hover {
+  text-decoration: underline;
+}
+
 .map-advanced-tools {
   position: relative;
 }
@@ -1905,82 +2046,58 @@ pre,
   font-size: 10px;
 }
 
-.leaflet-mode-hint,
-.layer-legend {
+.leaflet-mode-hint {
   position: absolute;
   z-index: 500;
+  left: 14px;
+  bottom: 14px;
+  max-width: min(390px, calc(100% - 28px));
   border: 1px solid rgb(49 92 72 / 26%);
+  padding: 8px 10px;
+  border-radius: 999px;
   color: #213129;
   background: rgb(255 255 252 / 90%);
   box-shadow: 0 8px 18px rgb(32 42 35 / 14%);
   backdrop-filter: blur(8px);
-}
-
-.leaflet-mode-hint {
-  left: 14px;
-  bottom: 14px;
-  max-width: min(390px, calc(100% - 28px));
-  padding: 8px 10px;
-  border-radius: 999px;
   font-size: 13px;
   font-weight: 760;
 }
 
-.layer-legend {
-  top: 14px;
-  right: 14px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 8px 10px;
+.leaflet-map .leaflet-control-layers {
+  max-width: min(280px, calc(100vw - 28px));
+  border: 1px solid rgb(49 92 72 / 26%);
   border-radius: 8px;
-  font-size: 12px;
-  font-weight: 760;
+  color: #213129;
+  background: rgb(255 255 252 / 90%);
+  box-shadow: 0 8px 18px rgb(32 42 35 / 14%);
+  backdrop-filter: blur(8px);
+  font: 760 12px/1.35 var(--font-sans, system-ui, sans-serif);
 }
 
-.layer-legend span {
-  display: inline-flex;
+.leaflet-map .leaflet-control-layers-expanded {
+  padding: 8px 10px;
+}
+
+.leaflet-map .leaflet-control-layers-base,
+.leaflet-map .leaflet-control-layers-overlays {
+  display: grid;
+  gap: 6px;
+}
+
+.leaflet-map .leaflet-control-layers-separator {
+  margin: 7px 0;
+  border-top-color: rgb(49 92 72 / 22%);
+}
+
+.leaflet-map .leaflet-control-layers label {
+  display: flex;
   align-items: center;
   gap: 6px;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
-.layer-legend i {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-}
-
-.legend-mlra {
-  background: #f1c84b;
-}
-
-.legend-eco {
-  background: #65a9d4;
-}
-
-.legend-bc-capability {
-  background: #cc9d45;
-}
-
-.legend-sk-soil {
-  background: #6f8f70;
-}
-
-.legend-pei-soil {
-  background: #7c8b72;
-}
-
-.legend-ns-pictou-soil {
-  background: #667f8c;
-}
-
-.legend-ca-erosion {
-  background: #df823f;
-}
-
-.legend-field {
-  background: #ffe07a;
+.leaflet-map .leaflet-control-layers input {
+  margin: 0;
 }
 
 .field-vertex-icon {
@@ -3571,12 +3688,6 @@ pre,
     min-height: 390px;
   }
 
-  .layer-legend {
-    left: 12px;
-    right: auto;
-    max-width: calc(100% - 24px);
-  }
-
   .leaflet-tooltip.regional-layer-tooltip {
     display: none;
   }
@@ -3678,7 +3789,27 @@ pre,
 
   .map-toolbar .map-actions {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 44px;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .map-toolbar .map-draft-actions {
+    grid-column: 1 / -1;
+  }
+
+  .map-toolbar .map-weather-pill {
+    min-width: 0;
+  }
+
+  .map-toolbar .map-weather-pill > summary {
+    justify-content: center;
+  }
+
+  .map-toolbar .map-field-tools {
+    grid-column: 2;
+  }
+
+  .map-weather-popover {
+    width: min(300px, calc(100vw - 32px));
   }
 
   .map-toolbar .map-mode-control {
