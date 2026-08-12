@@ -1,0 +1,32 @@
+{
+  "schema_version": "open_agronomy_agent.final_paper_validation.v1",
+  "completed_at": "2026-08-12T06:30:00Z",
+  "implementation_commit": "76644dcab85ac635cb9f976ff6c769b4a6cd4da8",
+  "internal": {
+    "responses": 2892,
+    "judgments": 2892,
+    "database_integrity": "ok",
+    "database_sha256": "6e155a7ff1e40fae34741a9a81fd96b6576886c0ed1de9ba92a1a5db0faa9c6b"
+  },
+  "external": {
+    "responses": 512,
+    "paired_cases": 256,
+    "database_integrity": "ok",
+    "database_sha256": "8a2acb8ebc8bf01a3d81006a899bb3edd76bf5c35fbcceeb04be5a69a066bf4b",
+    "same_version_retest_allowed": false
+  },
+  "paper": {
+    "pages": 4,
+    "pdf_sha256": "61779cbee5a4f12f55550e4dafdab10616aa8d4e00c9fc2072edc58c5419cbc0",
+    "visual_review": "pass_all_pages",
+    "visual_pages": "visual_qa/pdf_pages_final4"
+  },
+  "validators": {
+    "paper_audit_errors": 0,
+    "paper_audit_warnings": 0,
+    "evidence_manifest_errors": 0,
+    "framing_boundary_errors": 0,
+    "clean_archive_compile": "pass_four_pages"
+  },
+  "claim_boundary": "Controlled development evidence only; no agronomist-equivalence, Canadian population-validity, certification-readiness, or field-outcome claim."
+}

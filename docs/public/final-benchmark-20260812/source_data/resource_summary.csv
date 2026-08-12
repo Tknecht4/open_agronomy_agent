@@ -1,0 +1,13 @@
+model_key,model_label,system_variant,arm_label,n,latency_median_seconds,latency_mean_seconds,generation_tps_median,prompt_tokens_mean,generation_tokens_mean,answer_characters_mean
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,241,3.631,2.8227,153.8673,1075.4,379.7,660.09
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,241,0.59,1.3876,155.267,547.18,152.98,421.48
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,241,1.324,1.959,157.7932,526.69,248.29,740.68
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,241,3.241,3.1091,160.365,39.69,450.73,1952.46
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,241,2.215,2.6641,53.7396,1078.32,90.01,655.02
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,241,3.931,4.4557,53.2571,551.18,209.69,998.17
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,241,4.016,4.6146,52.7155,530.69,216.15,1020.85
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,241,16.817,13.847,28.1518,39.69,372.77,1692.13
+luna_high_rc1,Luna High,full_system,Governed agent,241,14.479,14.2693,,12945.81,509.56,677.5
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,241,15.181,16.1307,,12424.75,719.75,1215.27
+luna_high_rc1,Luna High,kernel_only,Kernel,241,14.221,15.8236,,12407.16,697.56,1139.13
+luna_high_rc1,Luna High,raw_model,Raw model,241,13.35,14.6822,,11920.9,629.05,986.75

@@ -1,0 +1,238 @@
+model_key,model_label,system_variant,arm_label,material_error,count,case_count
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,nonresponsive,11,121
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,irrelevant_response,8,121
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,nonsensical_response,5,121
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,map_overinterpretation,3,121
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,wrong_task_domain,3,121
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,domain_mismatch,3,121
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,question_misread,3,121
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,unsupported_numeric_rate,3,121
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,unsupported_rate,2,121
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,omitted_label_check,2,121
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,unsupported_herbicide_recommendation,2,121
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,no_label_verification,2,121
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,unsupported_herbicide_selection,2,121
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,source_mismatch,2,121
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,incoherent_content,2,121
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,no_scouting_or_threshold,2,121
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,single_trial_overgeneralization,2,121
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,premature_diagnosis,2,121
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,missing_label_safety_boundary,2,121
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,hallucinated_disease,1,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,non_answer,41,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,nonresponsive,17,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,nonresponsive_answer,14,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,irrelevant_response,5,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,failure_to_answer,5,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,repetition_loop,3,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,generic_filler,3,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,wrong_crop,3,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,repetition,3,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,non_answer_repetition,3,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,nonanswer,2,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,missing_context_recovery,2,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,missing_label_check,2,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,nonresponsive_repetitive_output,2,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,question_restated,2,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,missing_critical_inputs,2,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,irrelevant_meta_response,2,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,missing_field_risk_assessment,2,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,missing_local_guidance,2,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,wrong_task_family,1,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,non_answer,26,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,nonresponsive,19,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,nonresponsive_answer,4,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,nonresponsive_gibberish,4,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,fails_to_answer_central_decision,3,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,irrelevant_response,2,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,nonresponsive_repetition,2,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,question_repeated_without_answer,2,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,missing_pest_identification,2,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,garbled_non_answer,2,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,off_topic,2,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,hallucinated_diagnosis,2,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,failure_to_diagnose_root_zone,2,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,diagnosis_and_spray_decision_omitted,1,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,unsupported_reframing,1,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,storage_decision_omitted,1,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,wrong_nutrient_framing,1,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,unsupported_source_recommendation,1,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,rescue_rate_omitted,1,121
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,threshold_assessment_omitted,1,121
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,wrong_jurisdiction_guidance,2,121
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,missing_context_recovery,2,121
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,central_decision_not_answered,2,121
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,wrong_decision_domain,2,121
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,treatment_requires_diagnosis_before_any_action,1,121
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,missing_urgent_local_alert_check,1,121
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,omitted_economic_return_inputs,1,121
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,nonresponsive_to_map_scale_question,1,121
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,omitted_component_proportion_limitation,1,121
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,omitted_field_ground_truthing,1,121
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,omitted_soilERI_current_loss_limitation,1,121
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,no_explicit_no_to_specific_loss_claim,1,121
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,omitted_regional_anomaly_limitation,1,121
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,omitted_field_weather_requirements,1,121
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,map_does_not_explicitly_rule_out_drought_diagnosis,1,121
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,nitrogen_decision_logic_omitted,1,121
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,weed_identity_and_density_omitted,1,121
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,nonchemical_and_resistance_options_omitted,1,121
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,irrelevant_forecast_premise,1,121
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,rotation_persistence_question_unanswered,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,incomplete_answer,18,121
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,truncated_answer,9,121
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,answer_truncated,6,121
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,generic_referral,4,121
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,non_actionable_refusal,2,121
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,missing_label_verification,2,121
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,overbroad_refusal,2,121
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,failure_to_answer_central_decision,2,121
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,premature_diagnosis,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,misleading_inoculum_claim,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,overgeneralized_immediate_ventilation,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,missing_storage_conditions,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,unnecessary_food_safety_claim,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,missing_field_comparison,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,missing_nutrient_credit_reconstruction,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,map_pin_as_sample,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,generic_threshold_logic,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,missing_multi_year_multi_location,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,missing_maturity_heat_fit,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,regional_map_as_soil_sample,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,generic_information_request,4,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,central_decision_unanswered,2,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,insufficient_field_diagnostics,2,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,truncated_answer,2,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,preventive_late_blight_overstatement,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,differential_omission,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,aggressive_airflow_risk,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,storage_stage_omission,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,diagnostic_omission,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,nitrogen_credit_omission,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,threshold_sampling_omission,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,maturity_and_harvest_fit_omission,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,trait_system_omission,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,map_as_sample,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,component_scale_error,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,historical_indicator_omission,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,generic_practice_recommendation,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,local_weather_checks_omission,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,anomaly_card_context_omission,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,map_overinterpretation_unaddressed,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,central_decision_unanswered,2,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,insufficient_scouting_scope,2,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,overrestrictive_fungicide_gate,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,noncommittal_handling_guidance,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,missing_diagnostic_triage,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,incomplete_n_credit_reconstruction,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,product_label_misframing,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,missing_representative_sampling,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,insufficient_multi_environment_evidence,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,map_sample_mischaracterization,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,incomplete_eri_context,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,missing_field_weather_boundary,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,blind_composite_sampling,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,ignores_supplied_values,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,fails_central_decision,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,missing_fall_nitrogen_decision_logic,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,incomplete_context_recovery,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,map_as_diagnosis_not_rejected,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,vegetable_guidance_wrongly_left_open,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,missing_threshold_based_field_scouting,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,central_decision_unanswered,2,121
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,insufficient_differential_diagnosis,2,121
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,missing_nonchemical_options,2,121
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,missing_immediate_containment_guidance,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,wrong_jurisdiction_guidance,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,fails_to_explicitly_reject_current_loss_quantification,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,missing_local_weather_and_field_conditions,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,map_signal_overinterpretation_not_explicitly_rejected,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,nitrogen_decision_logic_omitted,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,jurisdiction_mismatch,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,rotation_question_unanswered,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,sulfur_differential_not_explained,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,sulfate_sulfur_evidence_not_specified,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,representativeness_not_established,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,unsupported_refusal,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,root_zone_context_incomplete,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,seasonal_monitoring_plan_omitted,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,does_not_answer_current_safety_directly,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,omits_missing_context_recovery,1,121
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,missing_map_diagnostic_limitations,1,121
+luna_high_rc1,Luna High,raw_model,Raw model,unsupported_rescue_rate,2,121
+luna_high_rc1,Luna High,raw_model,Raw model,regional_risk_as_standalone_spray_trigger,1,121
+luna_high_rc1,Luna High,raw_model,Raw model,incomplete_label_weather_gate,1,121
+luna_high_rc1,Luna High,raw_model,Raw model,one_size_fits_all_cure_targets,1,121
+luna_high_rc1,Luna High,raw_model,Raw model,insufficient_condition_market_context,1,121
+luna_high_rc1,Luna High,raw_model,Raw model,unsupported_numeric_rescue_rate,1,121
+luna_high_rc1,Luna High,raw_model,Raw model,symptom_only_diagnosis,1,121
+luna_high_rc1,Luna High,raw_model,Raw model,missing_stage_calibration,1,121
+luna_high_rc1,Luna High,raw_model,Raw model,overreliance_on_nearest_trial_mean,1,121
+luna_high_rc1,Luna High,raw_model,Raw model,omits_maturity_and_market_constraints,1,121
+luna_high_rc1,Luna High,raw_model,Raw model,unsupported_soil_temperature_cutoff,1,121
+luna_high_rc1,Luna High,raw_model,Raw model,omits_nitrogen_form_and_placement,1,121
+luna_high_rc1,Luna High,raw_model,Raw model,source_mismatch,1,121
+luna_high_rc1,Luna High,raw_model,Raw model,unsupported_best_cultivar_claim,1,121
+luna_high_rc1,Luna High,raw_model,Raw model,missing_site_and_market_context,1,121
+luna_high_rc1,Luna High,raw_model,Raw model,insufficient_field_ground_truth,1,121
+luna_high_rc1,Luna High,raw_model,Raw model,conflates_digging_with_plowing,1,121
+luna_high_rc1,Luna High,raw_model,Raw model,incomplete_sampling_and_resistance_checks,1,121
+luna_high_rc1,Luna High,raw_model,Raw model,omits_nonchemical_iwm_options,1,121
+luna_high_rc1,Luna High,raw_model,Raw model,overgeneralizes_lime_efficacy_and_economics,1,121
+luna_high_rc1,Luna High,kernel_only,Kernel,indicator_semantics_incomplete,1,121
+luna_high_rc1,Luna High,kernel_only,Kernel,sulfur_sampling_depth_overgeneralized,1,121
+luna_high_rc1,Luna High,kernel_only,Kernel,fertilizer_rate_source_misstated,1,121
+luna_high_rc1,Luna High,kernel_only,Kernel,missing_density_distribution,1,121
+luna_high_rc1,Luna High,kernel_only,Kernel,missing_resistance_history,1,121
+luna_high_rc1,Luna High,kernel_only,Kernel,missing_action_threshold,1,121
+luna_high_rc1,Luna High,kernel_only,Kernel,missing_natural_enemy_context,1,121
+luna_high_rc1,Luna High,kernel_only,Kernel,unsupported_best_cultivar,1,121
+luna_high_rc1,Luna High,kernel_only,Kernel,wrong_source_basis,1,121
+luna_high_rc1,Luna High,kernel_only,Kernel,missing_site_market_fit,1,121
+luna_high_rc1,Luna High,kernel_only,Kernel,insufficient_pollinizer_guidance,1,121
+luna_high_rc1,Luna High,kernel_only,Kernel,omits_integrated_weed_management_and_resistance_options,1,121
+luna_high_rc1,Luna High,kernel_only,Kernel,premature_generic_frequency,1,121
+luna_high_rc1,Luna High,kernel_only,Kernel,ontario_table_transfer_overstated,1,121
+luna_high_rc1,Luna High,kernel_only,Kernel,signal_scope_overgeneralized,1,121
+luna_high_rc1,Luna High,kernel_only,Kernel,missing_crop_specific_window_inputs,1,121
+luna_high_rc1,Luna High,kernel_only,Kernel,single_year_yield_overgeneralization,1,121
+luna_high_rc1,Luna High,kernel_only,Kernel,unqualified_plain_water_recommendation,1,121
+luna_high_rc1,Luna High,kernel_only,Kernel,premature_variety_preference,1,121
+luna_high_rc1,Luna High,kernel_only,Kernel,omits_irrigation_efficiency,1,121
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,condensation_airflow_logic,1,121
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,missing_action_threshold_context,1,121
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,source_mismatch_not_rejected,1,121
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,missing_site_market_context,1,121
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,integrated_weed_management_omitted,1,121
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,resistance_management_omitted,1,121
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,generic_interval_given_before_clarification,1,121
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,invented_field_history,1,121
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,incomplete_water_balance,1,121
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,incomplete_replant_context,1,121
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,incomplete_pest_context,1,121
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,missing_action_threshold,1,121
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,incomplete_seed_quality_check,1,121
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,incomplete_local_adaptation_context,1,121
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,pesticide_label_authority_misstated,1,121
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,source_authority_conflation,1,121
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,missing_metric_verification,1,121
+luna_high_rc1,Luna High,full_system,Governed agent,historical_model_limitation_omitted,1,121
+luna_high_rc1,Luna High,full_system,Governed agent,field_risk_factors_underdeveloped,1,121
+luna_high_rc1,Luna High,full_system,Governed agent,regional_anomaly_limit_omitted,1,121
+luna_high_rc1,Luna High,full_system,Governed agent,local_spray_conditions_omitted,1,121
+luna_high_rc1,Luna High,full_system,Governed agent,fails_to_answer_whole_field_decision,1,121
+luna_high_rc1,Luna High,full_system,Governed agent,wrong_jurisdiction_guidance,1,121
+luna_high_rc1,Luna High,full_system,Governed agent,one_year_rotation_not_explicitly_rejected,1,121
+luna_high_rc1,Luna High,full_system,Governed agent,insufficient_direct_decision,1,121
+luna_high_rc1,Luna High,full_system,Governed agent,missing_context_recovery,1,121
+luna_high_rc1,Luna High,full_system,Governed agent,omits_resistance_options,1,121
+luna_high_rc1,Luna High,full_system,Governed agent,fails_to_address_nondiagnostic_map,1,121
+luna_high_rc1,Luna High,full_system,Governed agent,fails_field_diagnosis,1,121
+luna_high_rc1,Luna High,full_system,Governed agent,insufficient_decision_logic,1,121
+luna_high_rc1,Luna High,full_system,Governed agent,source_mismatch_unaddressed,1,121
+luna_high_rc1,Luna High,full_system,Governed agent,no_direct_crop_recommendation,1,121
+luna_high_rc1,Luna High,full_system,Governed agent,wrong_jurisdiction_source,1,121
+luna_high_rc1,Luna High,full_system,Governed agent,no_alfalfa_decision,1,121
+luna_high_rc1,Luna High,full_system,Governed agent,missing_sampling_and_species_context,1,121
+luna_high_rc1,Luna High,full_system,Governed agent,missing_resistance_and_nonchemical_context,1,121
+luna_high_rc1,Luna High,full_system,Governed agent,insufficient_test_interpretation_context,1,121

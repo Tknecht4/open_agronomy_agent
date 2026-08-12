@@ -1,0 +1,601 @@
+model_key,model_label,system_variant,arm_label,benchmark_lane,task_family,n,semantic_mean,semantic_pass,semantic_revise,semantic_fail,objective_accuracy,latency_median_seconds
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_agroclimate_model,1,68.75,0,1,0,,0.292
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_diseases,4,96.25,3,1,0,,3.6145
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_nutrition,11,97.6136,10,1,0,,3.712
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_pests,3,93.3333,2,1,0,,0.053
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_plant_health,1,100.0,1,0,0,,3.604
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_regional_environment,1,100.0,1,0,0,,3.843
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_seed_hybrids,1,100.0,1,0,0,,3.723
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_soils,3,96.25,2,1,0,,3.615
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_water,1,100.0,1,0,0,,3.729
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_weather,2,84.375,1,1,0,,1.879
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_weeds,3,93.3333,2,1,0,,0.051
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,canadian_decision_quality,diseases,10,60.812,0,6,4,,0.0625
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,canadian_decision_quality,horticulture,10,55.5,1,3,6,,4.586
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,canadian_decision_quality,nutrition,10,80.125,3,7,0,,0.678
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,canadian_decision_quality,pests,10,69.0,2,5,3,,1.2955
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,canadian_decision_quality,seed_hybrids,10,85.75,4,5,1,,3.902
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,canadian_decision_quality,soils,10,71.125,4,2,4,,3.86
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,canadian_decision_quality,water,10,87.625,6,3,1,,3.4655
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,canadian_decision_quality,weather,10,67.0,0,9,1,,3.3415
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,canadian_decision_quality,weeds,10,81.25,1,9,0,,0.0575
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,field_history_lineage,field_history_lineage,32,55.6641,9,6,17,,3.7155
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,objective_agronomic_calculation,agroclimate_calculation,2,13.75,0,0,2,0.0,5.3125
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,objective_agronomic_calculation,fertilizer_calculation,6,18.5417,0,0,6,0.0,0.061
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,objective_agronomic_calculation,seeding_calculation,2,33.75,0,0,2,0.0,3.6685
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,objective_agronomic_calculation,sprayer_calculation,2,19.375,0,0,2,0.0,5.222
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,objective_agronomic_calculation,stand_calculation,1,13.75,0,0,1,0.0,5.144
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,objective_agronomic_calculation,unit_conversion,2,13.75,0,0,2,0.0,0.0515
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,objective_agronomic_calculation,yield_calculation,1,18.75,0,0,1,0.0,1.158
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,official_source_answer_boundary,canadian_regional_crop_health_context,6,100.0,6,0,0,,1.006
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,official_source_answer_boundary,canadian_v10_current_weather_control,1,71.25,0,1,0,,0.053
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,official_source_answer_boundary,canadian_v10_historical_context,1,100.0,1,0,0,,3.916
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,official_source_answer_boundary,canadian_v10_prescriptive_control,2,95.0,1,1,0,,0.06
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,official_source_answer_boundary,canadian_v10_regional_context,2,100.0,2,0,0,,3.966
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,official_source_answer_boundary,canadian_v11_evidence_conflict,1,22.5,0,0,1,,5.189
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,official_source_answer_boundary,canadian_v11_format_transfer,2,25.0,0,0,2,,3.648
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,official_source_answer_boundary,canadian_v11_map_interpretation,4,40.0,0,1,3,,3.871
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,official_source_answer_boundary,canadian_v11_operational_control,1,100.0,1,0,0,,3.657
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,official_source_answer_boundary,canadian_v11_prescriptive_control,1,78.75,0,1,0,,0.061
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,official_source_answer_boundary,canadian_v11_regulated_control,1,76.25,0,1,0,,0.104
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,official_source_answer_boundary,canadian_v11_temporal_boundary,1,22.5,0,0,1,,5.22
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,official_source_answer_boundary,canadian_v12_evidence_conflict,1,43.75,0,0,1,,5.244
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,official_source_answer_boundary,canadian_v12_format_transfer,2,43.75,0,0,2,,3.6285
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,official_source_answer_boundary,canadian_v12_operational_control,1,100.0,1,0,0,,3.624
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,official_source_answer_boundary,canadian_v12_prescriptive_control,1,73.75,0,1,0,,0.244
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,official_source_answer_boundary,canadian_v12_regulated_control,1,81.25,0,1,0,,0.111
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,official_source_answer_boundary,canadian_v12_slc_yield_interpretation,4,16.875,0,0,4,,3.474
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,official_source_answer_boundary,canadian_v12_temporal_boundary,1,43.75,0,0,1,,5.201
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,official_source_answer_boundary,canadian_v9_map_context,3,100.0,3,0,0,,0.98
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,official_source_answer_boundary,canadian_v9_prescriptive_control,2,95.0,0,2,0,,0.0575
+gemma3_270m_rc1,Gemma 3 270M,full_system,Governed agent,retrieval_lineage,retrieval_lineage,33,78.9394,17,7,9,,3.653
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_agroclimate_model,1,10.0,0,0,1,,0.477
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_diseases,4,3.75,0,0,4,,0.5315
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_nutrition,11,3.0682,0,0,11,,0.67
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_pests,3,22.9167,0,1,2,,0.5
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_plant_health,1,0.0,0,0,1,,0.496
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_regional_environment,1,77.5,0,1,0,,0.446
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_seed_hybrids,1,3.75,0,0,1,,0.513
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_soils,3,0.0,0,0,3,,0.453
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_water,1,15.0,0,0,1,,0.492
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_weather,2,7.5,0,0,2,,0.443
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_weeds,3,5.0,0,0,3,,0.822
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,canadian_decision_quality,diseases,10,10.5,0,1,9,,0.6425
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,canadian_decision_quality,horticulture,10,12.875,0,1,9,,0.5215
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,canadian_decision_quality,nutrition,10,15.75,0,1,9,,0.6505
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,canadian_decision_quality,pests,10,11.875,0,1,9,,0.6185
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,canadian_decision_quality,seed_hybrids,10,14.625,0,1,9,,0.627
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,canadian_decision_quality,soils,10,4.5,0,0,10,,2.953
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,canadian_decision_quality,water,10,5.75,0,0,10,,0.5935
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,canadian_decision_quality,weather,10,7.25,0,0,10,,0.594
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,canadian_decision_quality,weeds,10,8.25,0,0,10,,0.5105
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,field_history_lineage,field_history_lineage,32,8.0859,0,0,32,,0.547
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,objective_agronomic_calculation,agroclimate_calculation,2,33.75,0,0,2,0.0,2.2575
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,objective_agronomic_calculation,fertilizer_calculation,6,15.8333,0,0,6,0.0,0.521
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,objective_agronomic_calculation,seeding_calculation,2,6.875,0,0,2,0.0,2.207
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,objective_agronomic_calculation,sprayer_calculation,2,19.375,0,0,2,0.0,1.249
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,objective_agronomic_calculation,stand_calculation,1,33.75,0,0,1,0.0,3.563
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,objective_agronomic_calculation,unit_conversion,2,31.875,0,0,2,0.0,1.9095
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,objective_agronomic_calculation,yield_calculation,1,11.25,0,0,1,0.0,3.452
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_regional_crop_health_context,6,36.25,2,0,4,,0.714
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v10_current_weather_control,1,2.5,0,0,1,,0.576
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v10_historical_context,1,18.75,0,0,1,,0.532
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v10_prescriptive_control,2,2.5,0,0,2,,1.986
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v10_regional_context,2,7.5,0,0,2,,0.537
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v11_evidence_conflict,1,6.25,0,0,1,,0.594
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v11_format_transfer,2,8.125,0,0,2,,1.941
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v11_map_interpretation,4,8.75,0,0,4,,0.6785
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v11_operational_control,1,6.25,0,0,1,,3.448
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v11_prescriptive_control,1,2.5,0,0,1,,0.525
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v11_regulated_control,1,2.5,0,0,1,,0.549
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v11_temporal_boundary,1,2.5,0,0,1,,0.453
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v12_evidence_conflict,1,7.5,0,0,1,,3.443
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v12_format_transfer,2,10.0,0,0,2,,0.603
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v12_operational_control,1,6.25,0,0,1,,0.545
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v12_prescriptive_control,1,6.25,0,0,1,,0.577
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v12_regulated_control,1,2.5,0,0,1,,0.59
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v12_slc_yield_interpretation,4,7.1875,0,0,4,,2.1355
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v12_temporal_boundary,1,10.0,0,0,1,,0.463
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v9_map_context,3,6.25,0,0,3,,0.414
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v9_prescriptive_control,2,11.25,0,0,2,,0.7745
+gemma3_270m_rc1,Gemma 3 270M,kernel_field_context,Kernel + field,retrieval_lineage,retrieval_lineage,33,14.4697,1,2,30,,0.659
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_agroclimate_model,1,10.0,0,0,1,,0.437
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_diseases,4,7.8125,0,0,4,,2.6435
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_nutrition,11,11.5909,0,1,10,,1.287
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_pests,3,3.3333,0,0,3,,0.612
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_plant_health,1,3.75,0,0,1,,0.463
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_regional_environment,1,63.75,0,1,0,,0.411
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_seed_hybrids,1,18.75,0,0,1,,3.12
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_soils,3,5.0,0,0,3,,0.612
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_water,1,2.5,0,0,1,,3.647
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_weather,2,8.125,0,0,2,,1.9155
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_weeds,3,9.5833,0,0,3,,0.51
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,canadian_decision_quality,diseases,10,3.125,0,0,10,,0.63
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,canadian_decision_quality,horticulture,10,9.25,0,1,9,,0.567
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,canadian_decision_quality,nutrition,10,7.75,0,1,9,,1.8655
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,canadian_decision_quality,pests,10,7.125,0,1,9,,2.9735
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,canadian_decision_quality,seed_hybrids,10,4.125,0,0,10,,0.648
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,canadian_decision_quality,soils,10,2.75,0,0,10,,3.1725
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,canadian_decision_quality,water,10,8.25,0,1,9,,2.141
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,canadian_decision_quality,weather,10,4.125,0,0,10,,0.6305
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,canadian_decision_quality,weeds,10,4.5,0,0,10,,0.627
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,field_history_lineage,field_history_lineage,32,7.1094,0,0,32,,3.3
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,objective_agronomic_calculation,agroclimate_calculation,2,23.75,0,0,2,0.0,0.4935
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,objective_agronomic_calculation,fertilizer_calculation,6,5.8333,0,0,6,0.0,0.788
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,objective_agronomic_calculation,seeding_calculation,2,0.0,0,0,2,0.0,1.921
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,objective_agronomic_calculation,sprayer_calculation,2,4.375,0,0,2,0.0,3.4405
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,objective_agronomic_calculation,stand_calculation,1,23.75,0,0,1,0.0,3.396
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,objective_agronomic_calculation,unit_conversion,2,23.75,0,0,2,0.0,3.4095
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,objective_agronomic_calculation,yield_calculation,1,11.25,0,0,1,0.0,1.249
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,official_source_answer_boundary,canadian_regional_crop_health_context,6,37.0833,2,0,4,,3.3495
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,official_source_answer_boundary,canadian_v10_current_weather_control,1,7.5,0,0,1,,0.527
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,official_source_answer_boundary,canadian_v10_historical_context,1,18.75,0,0,1,,0.529
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,official_source_answer_boundary,canadian_v10_prescriptive_control,2,26.25,0,1,1,,2.355
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,official_source_answer_boundary,canadian_v10_regional_context,2,22.5,0,0,2,,0.9855
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,official_source_answer_boundary,canadian_v11_evidence_conflict,1,2.5,0,0,1,,0.494
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,official_source_answer_boundary,canadian_v11_format_transfer,2,1.875,0,0,2,,2.045
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,official_source_answer_boundary,canadian_v11_map_interpretation,4,8.4375,0,0,4,,1.0155
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,official_source_answer_boundary,canadian_v11_operational_control,1,0.0,0,0,1,,3.364
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,official_source_answer_boundary,canadian_v11_prescriptive_control,1,2.5,0,0,1,,0.448
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,official_source_answer_boundary,canadian_v11_regulated_control,1,0.0,0,0,1,,3.436
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,official_source_answer_boundary,canadian_v11_temporal_boundary,1,2.5,0,0,1,,0.567
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,official_source_answer_boundary,canadian_v12_evidence_conflict,1,0.0,0,0,1,,2.016
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,official_source_answer_boundary,canadian_v12_format_transfer,2,0.0,0,0,2,,2.978
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,official_source_answer_boundary,canadian_v12_operational_control,1,0.0,0,0,1,,3.417
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,official_source_answer_boundary,canadian_v12_prescriptive_control,1,0.0,0,0,1,,0.535
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,official_source_answer_boundary,canadian_v12_regulated_control,1,0.0,0,0,1,,3.398
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,official_source_answer_boundary,canadian_v12_slc_yield_interpretation,4,9.0625,0,1,3,,1.539
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,official_source_answer_boundary,canadian_v12_temporal_boundary,1,0.0,0,0,1,,0.441
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,official_source_answer_boundary,canadian_v9_map_context,3,11.25,0,0,3,,3.395
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,official_source_answer_boundary,canadian_v9_prescriptive_control,2,1.25,0,0,2,,0.67
+gemma3_270m_rc1,Gemma 3 270M,kernel_only,Kernel,retrieval_lineage,retrieval_lineage,33,12.3106,1,2,30,,3.353
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_agroclimate_model,1,0.0,0,0,1,,3.229
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_diseases,4,0.0,0,0,4,,2.9015
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_nutrition,11,1.4773,0,0,11,,3.232
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_pests,3,0.0,0,0,3,,3.089
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_plant_health,1,0.0,0,0,1,,3.226
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_regional_environment,1,0.0,0,0,1,,3.184
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_seed_hybrids,1,0.0,0,0,1,,2.972
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_soils,3,0.0,0,0,3,,3.329
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_water,1,0.0,0,0,1,,3.256
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_weather,2,0.0,0,0,2,,3.2865
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_weeds,3,0.8333,0,0,3,,2.81
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,canadian_decision_quality,diseases,10,4.5,0,1,9,,3.2145
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,canadian_decision_quality,horticulture,10,5.0,0,1,9,,3.229
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,canadian_decision_quality,nutrition,10,1.375,0,0,10,,3.244
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,canadian_decision_quality,pests,10,0.5,0,0,10,,3.2215
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,canadian_decision_quality,seed_hybrids,10,5.875,0,0,10,,3.2345
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,canadian_decision_quality,soils,10,1.25,0,0,10,,3.24
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,canadian_decision_quality,water,10,0.5,0,0,10,,3.2325
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,canadian_decision_quality,weather,10,2.625,0,0,10,,3.2275
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,canadian_decision_quality,weeds,10,0.875,0,0,10,,3.2615
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,field_history_lineage,field_history_lineage,32,1.9531,0,0,32,,3.2415
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,objective_agronomic_calculation,agroclimate_calculation,2,15.625,0,0,2,0.0,1.8865
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,objective_agronomic_calculation,fertilizer_calculation,6,2.9167,0,0,6,0.0,3.3295
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,objective_agronomic_calculation,seeding_calculation,2,0.0,0,0,2,0.0,3.233
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,objective_agronomic_calculation,sprayer_calculation,2,4.375,0,0,2,0.0,3.2165
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,objective_agronomic_calculation,stand_calculation,1,18.75,0,0,1,0.0,0.323
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,objective_agronomic_calculation,unit_conversion,2,15.0,0,0,2,0.0,1.877
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,objective_agronomic_calculation,yield_calculation,1,2.5,0,0,1,0.0,3.271
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,official_source_answer_boundary,canadian_regional_crop_health_context,6,3.9583,0,0,6,,3.2445
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,official_source_answer_boundary,canadian_v10_current_weather_control,1,0.0,0,0,1,,3.344
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,official_source_answer_boundary,canadian_v10_historical_context,1,0.0,0,0,1,,3.036
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,official_source_answer_boundary,canadian_v10_prescriptive_control,2,1.25,0,0,2,,3.244
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,official_source_answer_boundary,canadian_v10_regional_context,2,7.5,0,0,2,,3.13
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,official_source_answer_boundary,canadian_v11_evidence_conflict,1,0.0,0,0,1,,3.247
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,official_source_answer_boundary,canadian_v11_format_transfer,2,0.0,0,0,2,,3.2295
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,official_source_answer_boundary,canadian_v11_map_interpretation,4,0.9375,0,0,4,,3.2265
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,official_source_answer_boundary,canadian_v11_operational_control,1,2.5,0,0,1,,3.489
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,official_source_answer_boundary,canadian_v11_prescriptive_control,1,0.0,0,0,1,,3.229
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,official_source_answer_boundary,canadian_v11_regulated_control,1,0.0,0,0,1,,3.338
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,official_source_answer_boundary,canadian_v11_temporal_boundary,1,0.0,0,0,1,,3.218
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,official_source_answer_boundary,canadian_v12_evidence_conflict,1,0.0,0,0,1,,3.263
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,official_source_answer_boundary,canadian_v12_format_transfer,2,0.0,0,0,2,,3.257
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,official_source_answer_boundary,canadian_v12_operational_control,1,0.0,0,0,1,,3.238
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,official_source_answer_boundary,canadian_v12_prescriptive_control,1,0.0,0,0,1,,3.237
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,official_source_answer_boundary,canadian_v12_regulated_control,1,0.0,0,0,1,,3.244
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,official_source_answer_boundary,canadian_v12_slc_yield_interpretation,4,0.0,0,0,4,,3.2705
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,official_source_answer_boundary,canadian_v12_temporal_boundary,1,0.0,0,0,1,,3.223
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,official_source_answer_boundary,canadian_v9_map_context,3,5.8333,0,0,3,,3.274
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,official_source_answer_boundary,canadian_v9_prescriptive_control,2,1.25,0,0,2,,3.282
+gemma3_270m_rc1,Gemma 3 270M,raw_model,Raw model,retrieval_lineage,retrieval_lineage,33,3.5227,0,0,33,,3.242
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_agroclimate_model,1,100.0,1,0,0,,3.128
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_diseases,4,92.8125,3,1,0,,2.9785
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_nutrition,11,97.8409,9,2,0,,2.745
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_pests,3,90.8333,1,2,0,,0.058
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_plant_health,1,100.0,1,0,0,,1.662
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_regional_environment,1,100.0,1,0,0,,3.786
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_seed_hybrids,1,100.0,1,0,0,,1.055
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_soils,3,100.0,3,0,0,,2.011
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_water,1,100.0,1,0,0,,2.11
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_weather,2,100.0,2,0,0,,3.3535
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_weeds,3,98.3333,3,0,0,,0.062
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,canadian_decision_quality,diseases,10,67.563,0,6,4,,0.811
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,canadian_decision_quality,horticulture,10,81.375,2,7,1,,1.67
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,canadian_decision_quality,nutrition,10,77.5,2,6,2,,1.9555
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,canadian_decision_quality,pests,10,75.875,2,6,2,,1.122
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,canadian_decision_quality,seed_hybrids,10,90.562,6,3,1,,3.4985
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,canadian_decision_quality,soils,10,67.125,3,2,5,,2.4975
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,canadian_decision_quality,water,10,82.5,4,6,0,,2.9145
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,canadian_decision_quality,weather,10,74.375,0,10,0,,2.6985
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,canadian_decision_quality,weeds,10,84.5,1,9,0,,0.054
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,field_history_lineage,field_history_lineage,32,67.3047,9,12,11,,2.267
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,objective_agronomic_calculation,agroclimate_calculation,2,16.875,0,0,2,0.0,3.91
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,objective_agronomic_calculation,fertilizer_calculation,6,10.0,0,0,6,0.0,0.5005
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,objective_agronomic_calculation,seeding_calculation,2,12.5,0,0,2,0.0,4.4635
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,objective_agronomic_calculation,sprayer_calculation,2,11.25,0,0,2,0.0,2.298
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,objective_agronomic_calculation,stand_calculation,1,13.75,0,0,1,0.0,1.667
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,objective_agronomic_calculation,unit_conversion,2,13.75,0,0,2,0.0,2.099
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,objective_agronomic_calculation,yield_calculation,1,13.75,0,0,1,0.0,1.974
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,official_source_answer_boundary,canadian_regional_crop_health_context,6,100.0,6,0,0,,3.217
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,official_source_answer_boundary,canadian_v10_current_weather_control,1,85.0,0,1,0,,0.048
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,official_source_answer_boundary,canadian_v10_historical_context,1,100.0,1,0,0,,10.304
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,official_source_answer_boundary,canadian_v10_prescriptive_control,2,95.0,0,2,0,,0.052
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,official_source_answer_boundary,canadian_v10_regional_context,2,100.0,2,0,0,,5.713
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,official_source_answer_boundary,canadian_v11_evidence_conflict,1,90.0,0,1,0,,1.286
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,official_source_answer_boundary,canadian_v11_format_transfer,2,56.25,1,0,1,,2.3875
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,official_source_answer_boundary,canadian_v11_map_interpretation,4,56.25,0,2,2,,1.858
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,official_source_answer_boundary,canadian_v11_operational_control,1,100.0,1,0,0,,4.868
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,official_source_answer_boundary,canadian_v11_prescriptive_control,1,100.0,1,0,0,,0.053
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,official_source_answer_boundary,canadian_v11_regulated_control,1,95.0,0,1,0,,0.104
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,official_source_answer_boundary,canadian_v11_temporal_boundary,1,76.25,0,1,0,,1.571
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,official_source_answer_boundary,canadian_v12_evidence_conflict,1,7.5,0,0,1,,2.905
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,official_source_answer_boundary,canadian_v12_format_transfer,2,56.25,0,1,1,,2.6625
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,official_source_answer_boundary,canadian_v12_operational_control,1,100.0,1,0,0,,10.616
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,official_source_answer_boundary,canadian_v12_prescriptive_control,1,83.75,0,1,0,,2.515
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,official_source_answer_boundary,canadian_v12_regulated_control,1,95.0,0,1,0,,0.101
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,official_source_answer_boundary,canadian_v12_slc_yield_interpretation,4,54.0625,0,1,3,,1.6935
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,official_source_answer_boundary,canadian_v12_temporal_boundary,1,68.75,0,1,0,,1.38
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,official_source_answer_boundary,canadian_v9_map_context,3,98.3333,2,1,0,,4.119
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,official_source_answer_boundary,canadian_v9_prescriptive_control,2,95.0,0,2,0,,0.0555
+gemma4_e2b_rc1,Gemma 4 E2B,full_system,Governed agent,retrieval_lineage,retrieval_lineage,33,84.7348,20,7,6,,3.433
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_agroclimate_model,1,47.5,0,0,1,,1.329
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_diseases,4,83.125,2,2,0,,5.658
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_nutrition,11,63.4091,0,11,0,,5.067
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_pests,3,85.0,1,2,0,,2.524
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_plant_health,1,57.5,0,1,0,,4.893
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_regional_environment,1,100.0,1,0,0,,2.701
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_seed_hybrids,1,73.75,0,1,0,,0.944
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_soils,3,67.5,0,3,0,,3.412
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_water,1,73.75,0,1,0,,6.342
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_weather,2,63.125,0,1,1,,5.518
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_weeds,3,74.1667,0,3,0,,3.173
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,canadian_decision_quality,diseases,10,68.625,0,8,2,,4.588
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,canadian_decision_quality,horticulture,10,70.625,1,8,1,,3.3365
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,canadian_decision_quality,nutrition,10,72.625,1,9,0,,3.654
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,canadian_decision_quality,pests,10,69.75,1,8,1,,3.2675
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,canadian_decision_quality,seed_hybrids,10,76.625,2,8,0,,3.7195
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,canadian_decision_quality,soils,10,65.875,2,4,4,,5.6665
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,canadian_decision_quality,water,10,67.25,1,8,1,,4.849
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,canadian_decision_quality,weather,10,63.5,0,9,1,,3.175
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,canadian_decision_quality,weeds,10,80.625,2,8,0,,3.115
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,field_history_lineage,field_history_lineage,32,62.1094,5,18,9,,3.5645
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,objective_agronomic_calculation,agroclimate_calculation,2,62.5,1,0,1,50.0,3.3855
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,objective_agronomic_calculation,fertilizer_calculation,6,71.0417,3,1,2,33.3333,2.773
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,objective_agronomic_calculation,seeding_calculation,2,11.25,0,0,2,0.0,9.524
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,objective_agronomic_calculation,sprayer_calculation,2,56.875,1,0,1,50.0,6.384
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,objective_agronomic_calculation,stand_calculation,1,82.5,0,1,0,0.0,6.99
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,objective_agronomic_calculation,unit_conversion,2,100.0,2,0,0,0.0,1.477
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,objective_agronomic_calculation,yield_calculation,1,47.5,0,0,1,0.0,9.584
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_regional_crop_health_context,6,51.25,2,1,3,,3.29
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v10_current_weather_control,1,46.25,0,0,1,,1.804
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v10_historical_context,1,45.0,0,0,1,,1.756
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v10_prescriptive_control,2,75.625,0,2,0,,3.799
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v10_regional_context,2,70.0,0,2,0,,5.69
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v11_evidence_conflict,1,95.0,1,0,0,,3.441
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v11_format_transfer,2,55.625,0,1,1,,3.221
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v11_map_interpretation,4,70.0,0,3,1,,3.8245
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v11_operational_control,1,87.5,0,1,0,,5.187
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v11_prescriptive_control,1,95.0,0,1,0,,4.394
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v11_regulated_control,1,42.5,0,0,1,,2.941
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v11_temporal_boundary,1,83.75,0,1,0,,4.476
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v12_evidence_conflict,1,72.5,0,1,0,,5.434
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v12_format_transfer,2,43.75,0,1,1,,3.4795
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v12_operational_control,1,76.25,0,1,0,,6.559
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v12_prescriptive_control,1,76.25,0,1,0,,4.311
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v12_regulated_control,1,81.25,0,1,0,,3.642
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v12_slc_yield_interpretation,4,62.8125,1,1,2,,2.1785
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v12_temporal_boundary,1,33.75,0,0,1,,2.828
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v9_map_context,3,55.0,0,2,1,,4.833
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v9_prescriptive_control,2,78.125,0,2,0,,3.8935
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_field_context,Kernel + field,retrieval_lineage,retrieval_lineage,33,67.3485,7,17,9,,6.307
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_agroclimate_model,1,61.25,0,1,0,,2.39
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_diseases,4,63.4375,0,3,1,,5.1555
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_nutrition,11,64.4318,1,9,1,,7.347
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_pests,3,90.0,1,2,0,,2.713
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_plant_health,1,63.75,0,1,0,,5.797
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_regional_environment,1,100.0,1,0,0,,5.601
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_seed_hybrids,1,80.0,0,1,0,,0.944
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_soils,3,67.5,0,3,0,,3.054
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_water,1,78.75,0,1,0,,7.06
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_weather,2,65.0,0,2,0,,6.1965
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_weeds,3,80.4167,1,2,0,,3.186
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,canadian_decision_quality,diseases,10,68.75,0,9,1,,5.1305
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,canadian_decision_quality,horticulture,10,68.0,1,9,0,,3.723
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,canadian_decision_quality,nutrition,10,71.125,0,10,0,,3.259
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,canadian_decision_quality,pests,10,65.625,0,9,1,,3.296
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,canadian_decision_quality,seed_hybrids,10,66.875,1,8,1,,3.6215
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,canadian_decision_quality,soils,10,62.375,0,9,1,,6.54
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,canadian_decision_quality,water,10,62.625,1,6,3,,3.4765
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,canadian_decision_quality,weather,10,58.75,0,9,1,,3.4725
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,canadian_decision_quality,weeds,10,73.625,1,9,0,,3.2345
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,field_history_lineage,field_history_lineage,32,58.5547,7,12,13,,3.361
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,objective_agronomic_calculation,agroclimate_calculation,2,100.0,2,0,0,100.0,4.441
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,objective_agronomic_calculation,fertilizer_calculation,6,87.0833,4,1,1,33.3333,2.54
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,objective_agronomic_calculation,seeding_calculation,2,24.375,0,0,2,0.0,9.0685
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,objective_agronomic_calculation,sprayer_calculation,2,65.625,1,0,1,50.0,6.2265
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,objective_agronomic_calculation,stand_calculation,1,100.0,1,0,0,100.0,2.478
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,objective_agronomic_calculation,unit_conversion,2,100.0,2,0,0,0.0,1.3435
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,objective_agronomic_calculation,yield_calculation,1,15.0,0,0,1,0.0,9.6
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,official_source_answer_boundary,canadian_regional_crop_health_context,6,54.7917,2,1,3,,3.575
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,official_source_answer_boundary,canadian_v10_current_weather_control,1,31.25,0,0,1,,4.116
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,official_source_answer_boundary,canadian_v10_historical_context,1,46.25,0,0,1,,2.902
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,official_source_answer_boundary,canadian_v10_prescriptive_control,2,75.625,0,2,0,,4.511
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,official_source_answer_boundary,canadian_v10_regional_context,2,48.125,0,1,1,,5.78
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,official_source_answer_boundary,canadian_v11_evidence_conflict,1,77.5,0,1,0,,8.415
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,official_source_answer_boundary,canadian_v11_format_transfer,2,13.125,0,0,2,,4.5615
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,official_source_answer_boundary,canadian_v11_map_interpretation,4,70.3125,0,4,0,,5.1355
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,official_source_answer_boundary,canadian_v11_operational_control,1,87.5,1,0,0,,9.108
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,official_source_answer_boundary,canadian_v11_prescriptive_control,1,57.5,0,1,0,,5.373
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,official_source_answer_boundary,canadian_v11_regulated_control,1,71.25,0,1,0,,3.115
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,official_source_answer_boundary,canadian_v11_temporal_boundary,1,68.75,0,1,0,,4.418
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,official_source_answer_boundary,canadian_v12_evidence_conflict,1,86.25,0,1,0,,4.66
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,official_source_answer_boundary,canadian_v12_format_transfer,2,28.75,0,0,2,,1.58
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,official_source_answer_boundary,canadian_v12_operational_control,1,61.25,0,1,0,,7.283
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,official_source_answer_boundary,canadian_v12_prescriptive_control,1,56.25,0,1,0,,3.881
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,official_source_answer_boundary,canadian_v12_regulated_control,1,36.25,0,0,1,,2.795
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,official_source_answer_boundary,canadian_v12_slc_yield_interpretation,4,47.1875,1,1,2,,2.172
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,official_source_answer_boundary,canadian_v12_temporal_boundary,1,28.75,0,0,1,,2.785
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,official_source_answer_boundary,canadian_v9_map_context,3,42.0833,0,2,1,,2.167
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,official_source_answer_boundary,canadian_v9_prescriptive_control,2,82.5,0,2,0,,3.902
+gemma4_e2b_rc1,Gemma 4 E2B,kernel_only,Kernel,retrieval_lineage,retrieval_lineage,33,64.5833,10,15,8,,6.752
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_agroclimate_model,1,70.62,0,1,0,,17.716
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_diseases,4,63.4375,0,3,1,,16.8165
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_nutrition,11,50.91,0,5,6,,16.834
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_pests,3,69.3733,1,1,1,,3.923
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_plant_health,1,58.75,0,1,0,,17.064
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_regional_environment,1,70.0,0,1,0,,17.768
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_seed_hybrids,1,51.25,0,1,0,,6.969
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_soils,3,51.6667,0,2,1,,17.722
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_water,1,70.0,0,1,0,,16.853
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_weather,2,52.5,0,1,1,,17.6835
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_weeds,3,68.75,0,3,0,,14.46
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,canadian_decision_quality,diseases,10,43.25,0,4,6,,16.991
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,canadian_decision_quality,horticulture,10,55.375,1,7,2,,14.89
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,canadian_decision_quality,nutrition,10,67.437,0,9,1,,12.492
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,canadian_decision_quality,pests,10,51.563,0,5,5,,11.211
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,canadian_decision_quality,seed_hybrids,10,66.25,2,7,1,,8.698
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,canadian_decision_quality,soils,10,54.75,0,6,4,,16.879
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,canadian_decision_quality,water,10,55.812,0,6,4,,11.8655
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,canadian_decision_quality,weather,10,45.875,0,5,5,,11.288
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,canadian_decision_quality,weeds,10,52.063,0,6,4,,15.0385
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,field_history_lineage,field_history_lineage,32,40.625,2,11,19,,16.4035
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,objective_agronomic_calculation,agroclimate_calculation,2,95.625,1,1,0,0.0,11.73
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,objective_agronomic_calculation,fertilizer_calculation,6,85.0,4,1,1,50.0,10.6555
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,objective_agronomic_calculation,seeding_calculation,2,23.75,0,0,2,0.0,17.9505
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,objective_agronomic_calculation,sprayer_calculation,2,78.75,1,0,1,50.0,12.6895
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,objective_agronomic_calculation,stand_calculation,1,43.75,0,0,1,0.0,7.819
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,objective_agronomic_calculation,unit_conversion,2,100.0,2,0,0,50.0,9.038
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,objective_agronomic_calculation,yield_calculation,1,53.75,0,1,0,0.0,17.964
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,official_source_answer_boundary,canadian_regional_crop_health_context,6,39.5833,0,2,4,,17.349
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,official_source_answer_boundary,canadian_v10_current_weather_control,1,68.75,0,1,0,,11.275
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,official_source_answer_boundary,canadian_v10_historical_context,1,42.5,0,0,1,,17.337
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,official_source_answer_boundary,canadian_v10_prescriptive_control,2,71.875,0,2,0,,14.67
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,official_source_answer_boundary,canadian_v10_regional_context,2,21.875,0,0,2,,11.861
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,official_source_answer_boundary,canadian_v11_evidence_conflict,1,75.0,0,1,0,,17.055
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,official_source_answer_boundary,canadian_v11_format_transfer,2,31.25,0,0,2,,17.0535
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,official_source_answer_boundary,canadian_v11_map_interpretation,4,45.3125,0,1,3,,13.7665
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,official_source_answer_boundary,canadian_v11_operational_control,1,75.0,0,1,0,,17.016
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,official_source_answer_boundary,canadian_v11_prescriptive_control,1,83.75,0,1,0,,13.853
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,official_source_answer_boundary,canadian_v11_regulated_control,1,73.75,0,1,0,,9.763
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,official_source_answer_boundary,canadian_v11_temporal_boundary,1,66.25,0,1,0,,11.821
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,official_source_answer_boundary,canadian_v12_evidence_conflict,1,50.0,0,0,1,,19.227
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,official_source_answer_boundary,canadian_v12_format_transfer,2,26.875,0,0,2,,12.531
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,official_source_answer_boundary,canadian_v12_operational_control,1,70.0,0,1,0,,19.524
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,official_source_answer_boundary,canadian_v12_prescriptive_control,1,83.75,1,0,0,,18.414
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,official_source_answer_boundary,canadian_v12_regulated_control,1,28.75,0,0,1,,5.554
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,official_source_answer_boundary,canadian_v12_slc_yield_interpretation,4,31.875,0,1,3,,14.014
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,official_source_answer_boundary,canadian_v12_temporal_boundary,1,78.75,0,1,0,,12.75
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,official_source_answer_boundary,canadian_v9_map_context,3,45.0,0,1,2,,17.38
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,official_source_answer_boundary,canadian_v9_prescriptive_control,2,66.25,0,2,0,,15.1965
+gemma4_e2b_rc1,Gemma 4 E2B,raw_model,Raw model,retrieval_lineage,retrieval_lineage,33,51.25,2,12,19,,17.912
+luna_high_rc1,Luna High,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_agroclimate_model,1,100.0,1,0,0,,9.172
+luna_high_rc1,Luna High,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_diseases,4,90.3125,2,2,0,,13.447
+luna_high_rc1,Luna High,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_nutrition,11,100.0,11,0,0,,13.437
+luna_high_rc1,Luna High,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_pests,3,90.0,1,2,0,,0.069
+luna_high_rc1,Luna High,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_plant_health,1,100.0,1,0,0,,11.769
+luna_high_rc1,Luna High,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_regional_environment,1,100.0,1,0,0,,9.534
+luna_high_rc1,Luna High,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_seed_hybrids,1,100.0,1,0,0,,14.508
+luna_high_rc1,Luna High,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_soils,3,94.5833,2,1,0,,14.361
+luna_high_rc1,Luna High,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_water,1,100.0,1,0,0,,13.918
+luna_high_rc1,Luna High,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_weather,2,100.0,2,0,0,,14.133
+luna_high_rc1,Luna High,full_system,Governed agent,canadian_advisory_transfer,canadian_conference_weeds,3,98.3333,3,0,0,,0.072
+luna_high_rc1,Luna High,full_system,Governed agent,canadian_decision_quality,diseases,10,67.375,2,4,4,,8.735
+luna_high_rc1,Luna High,full_system,Governed agent,canadian_decision_quality,horticulture,10,90.625,5,5,0,,14.2045
+luna_high_rc1,Luna High,full_system,Governed agent,canadian_decision_quality,nutrition,10,89.937,6,4,0,,12.389
+luna_high_rc1,Luna High,full_system,Governed agent,canadian_decision_quality,pests,10,74.625,3,6,1,,7.054
+luna_high_rc1,Luna High,full_system,Governed agent,canadian_decision_quality,seed_hybrids,10,90.063,7,2,1,,16.183
+luna_high_rc1,Luna High,full_system,Governed agent,canadian_decision_quality,soils,10,81.937,4,5,1,,16.9885
+luna_high_rc1,Luna High,full_system,Governed agent,canadian_decision_quality,water,10,91.563,5,5,0,,24.1305
+luna_high_rc1,Luna High,full_system,Governed agent,canadian_decision_quality,weather,10,82.875,2,8,0,,14.0515
+luna_high_rc1,Luna High,full_system,Governed agent,canadian_decision_quality,weeds,10,81.375,2,7,1,,0.061
+luna_high_rc1,Luna High,full_system,Governed agent,field_history_lineage,field_history_lineage,32,78.1641,16,9,7,,15.683
+luna_high_rc1,Luna High,full_system,Governed agent,objective_agronomic_calculation,agroclimate_calculation,2,83.125,1,1,0,0.0,14.7695
+luna_high_rc1,Luna High,full_system,Governed agent,objective_agronomic_calculation,fertilizer_calculation,6,17.2917,0,0,6,0.0,8.1815
+luna_high_rc1,Luna High,full_system,Governed agent,objective_agronomic_calculation,seeding_calculation,2,37.5,0,0,2,0.0,6.7455
+luna_high_rc1,Luna High,full_system,Governed agent,objective_agronomic_calculation,sprayer_calculation,2,56.875,1,0,1,0.0,10.436
+luna_high_rc1,Luna High,full_system,Governed agent,objective_agronomic_calculation,stand_calculation,1,43.75,0,0,1,0.0,14.706
+luna_high_rc1,Luna High,full_system,Governed agent,objective_agronomic_calculation,unit_conversion,2,13.75,0,0,2,0.0,16.581
+luna_high_rc1,Luna High,full_system,Governed agent,objective_agronomic_calculation,yield_calculation,1,100.0,1,0,0,0.0,13.028
+luna_high_rc1,Luna High,full_system,Governed agent,official_source_answer_boundary,canadian_regional_crop_health_context,6,100.0,6,0,0,,14.8875
+luna_high_rc1,Luna High,full_system,Governed agent,official_source_answer_boundary,canadian_v10_current_weather_control,1,76.25,0,1,0,,0.053
+luna_high_rc1,Luna High,full_system,Governed agent,official_source_answer_boundary,canadian_v10_historical_context,1,100.0,1,0,0,,16.87
+luna_high_rc1,Luna High,full_system,Governed agent,official_source_answer_boundary,canadian_v10_prescriptive_control,2,95.0,2,0,0,,0.0585
+luna_high_rc1,Luna High,full_system,Governed agent,official_source_answer_boundary,canadian_v10_regional_context,2,100.0,2,0,0,,11.526
+luna_high_rc1,Luna High,full_system,Governed agent,official_source_answer_boundary,canadian_v11_evidence_conflict,1,95.0,0,1,0,,22.856
+luna_high_rc1,Luna High,full_system,Governed agent,official_source_answer_boundary,canadian_v11_format_transfer,2,97.5,2,0,0,,16.2295
+luna_high_rc1,Luna High,full_system,Governed agent,official_source_answer_boundary,canadian_v11_map_interpretation,4,78.75,1,2,1,,24.935
+luna_high_rc1,Luna High,full_system,Governed agent,official_source_answer_boundary,canadian_v11_operational_control,1,97.5,1,0,0,,12.131
+luna_high_rc1,Luna High,full_system,Governed agent,official_source_answer_boundary,canadian_v11_prescriptive_control,1,95.0,0,1,0,,0.061
+luna_high_rc1,Luna High,full_system,Governed agent,official_source_answer_boundary,canadian_v11_regulated_control,1,95.0,0,1,0,,0.1
+luna_high_rc1,Luna High,full_system,Governed agent,official_source_answer_boundary,canadian_v11_temporal_boundary,1,95.0,0,1,0,,22.272
+luna_high_rc1,Luna High,full_system,Governed agent,official_source_answer_boundary,canadian_v12_evidence_conflict,1,95.0,0,1,0,,27.868
+luna_high_rc1,Luna High,full_system,Governed agent,official_source_answer_boundary,canadian_v12_format_transfer,2,50.0,0,1,1,,19.997
+luna_high_rc1,Luna High,full_system,Governed agent,official_source_answer_boundary,canadian_v12_operational_control,1,95.0,0,1,0,,16.095
+luna_high_rc1,Luna High,full_system,Governed agent,official_source_answer_boundary,canadian_v12_prescriptive_control,1,100.0,1,0,0,,4.306
+luna_high_rc1,Luna High,full_system,Governed agent,official_source_answer_boundary,canadian_v12_regulated_control,1,95.0,0,1,0,,0.112
+luna_high_rc1,Luna High,full_system,Governed agent,official_source_answer_boundary,canadian_v12_slc_yield_interpretation,4,46.25,0,1,3,,19.8115
+luna_high_rc1,Luna High,full_system,Governed agent,official_source_answer_boundary,canadian_v12_temporal_boundary,1,95.0,1,0,0,,13.472
+luna_high_rc1,Luna High,full_system,Governed agent,official_source_answer_boundary,canadian_v9_map_context,3,95.8333,2,1,0,,11.833
+luna_high_rc1,Luna High,full_system,Governed agent,official_source_answer_boundary,canadian_v9_prescriptive_control,2,95.0,0,2,0,,0.059
+luna_high_rc1,Luna High,full_system,Governed agent,retrieval_lineage,retrieval_lineage,33,83.9585,21,7,5,,17.233
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_agroclimate_model,1,92.5,0,1,0,,13.353
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_diseases,4,100.0,4,0,0,,18.0645
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_nutrition,11,100.0,11,0,0,,16.488
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_pests,3,100.0,3,0,0,,9.211
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_plant_health,1,100.0,1,0,0,,17.367
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_regional_environment,1,100.0,1,0,0,,11.691
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_seed_hybrids,1,96.25,1,0,0,,18.911
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_soils,3,100.0,3,0,0,,16.741
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_water,1,100.0,1,0,0,,13.082
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_weather,2,100.0,2,0,0,,21.0995
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,canadian_advisory_transfer,canadian_conference_weeds,3,97.5,2,1,0,,12.586
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,canadian_decision_quality,diseases,10,99.25,10,0,0,,17.1575
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,canadian_decision_quality,horticulture,10,92.937,7,3,0,,14.961
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,canadian_decision_quality,nutrition,10,100.0,10,0,0,,15.1145
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,canadian_decision_quality,pests,10,96.375,7,3,0,,13.6425
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,canadian_decision_quality,seed_hybrids,10,93.062,8,2,0,,12.129
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,canadian_decision_quality,soils,10,100.0,10,0,0,,15.2765
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,canadian_decision_quality,water,10,99.0,9,1,0,,13.4595
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,canadian_decision_quality,weather,10,97.0,9,1,0,,16.32
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,canadian_decision_quality,weeds,10,97.0,8,2,0,,11.2795
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,field_history_lineage,field_history_lineage,32,96.0938,23,9,0,,16.561
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,objective_agronomic_calculation,agroclimate_calculation,2,100.0,2,0,0,100.0,3.449
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,objective_agronomic_calculation,fertilizer_calculation,6,100.0,6,0,0,83.3333,3.9275
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,objective_agronomic_calculation,seeding_calculation,2,100.0,2,0,0,100.0,7.343
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,objective_agronomic_calculation,sprayer_calculation,2,70.0,1,0,1,100.0,4.037
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,objective_agronomic_calculation,stand_calculation,1,100.0,1,0,0,100.0,3.355
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,objective_agronomic_calculation,unit_conversion,2,100.0,2,0,0,100.0,3.642
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,objective_agronomic_calculation,yield_calculation,1,100.0,1,0,0,100.0,3.538
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_regional_crop_health_context,6,66.6667,2,1,3,,20.865
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v10_current_weather_control,1,100.0,1,0,0,,10.654
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v10_historical_context,1,68.75,0,1,0,,16.406
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v10_prescriptive_control,2,100.0,2,0,0,,13.3305
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v10_regional_context,2,68.125,0,0,2,,17.3645
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v11_evidence_conflict,1,100.0,1,0,0,,14.311
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v11_format_transfer,2,100.0,2,0,0,,12.4
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v11_map_interpretation,4,94.0625,1,3,0,,18.3115
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v11_operational_control,1,100.0,1,0,0,,17.788
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v11_prescriptive_control,1,100.0,1,0,0,,14.523
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v11_regulated_control,1,100.0,1,0,0,,10.442
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v11_temporal_boundary,1,100.0,1,0,0,,8.795
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v12_evidence_conflict,1,100.0,1,0,0,,14.21
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v12_format_transfer,2,100.0,2,0,0,,14.1085
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v12_operational_control,1,100.0,1,0,0,,18.241
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v12_prescriptive_control,1,100.0,1,0,0,,15.105
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v12_regulated_control,1,100.0,1,0,0,,10.187
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v12_slc_yield_interpretation,4,72.8125,1,3,0,,20.2655
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v12_temporal_boundary,1,100.0,1,0,0,,17.425
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v9_map_context,3,96.6667,2,1,0,,21.015
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,official_source_answer_boundary,canadian_v9_prescriptive_control,2,95.0,0,2,0,,14.633
+luna_high_rc1,Luna High,kernel_field_context,Kernel + field,retrieval_lineage,retrieval_lineage,33,98.4091,30,2,1,,17.335
+luna_high_rc1,Luna High,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_agroclimate_model,1,83.75,0,1,0,,9.354
+luna_high_rc1,Luna High,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_diseases,4,100.0,4,0,0,,13.1415
+luna_high_rc1,Luna High,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_nutrition,11,99.5455,11,0,0,,15.681
+luna_high_rc1,Luna High,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_pests,3,100.0,3,0,0,,9.402
+luna_high_rc1,Luna High,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_plant_health,1,95.0,0,1,0,,16.942
+luna_high_rc1,Luna High,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_regional_environment,1,100.0,1,0,0,,8.659
+luna_high_rc1,Luna High,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_seed_hybrids,1,71.25,0,1,0,,21.83
+luna_high_rc1,Luna High,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_soils,3,100.0,3,0,0,,11.156
+luna_high_rc1,Luna High,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_water,1,100.0,1,0,0,,16.489
+luna_high_rc1,Luna High,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_weather,2,100.0,2,0,0,,16.189
+luna_high_rc1,Luna High,kernel_only,Kernel,canadian_advisory_transfer,canadian_conference_weeds,3,100.0,3,0,0,,12.045
+luna_high_rc1,Luna High,kernel_only,Kernel,canadian_decision_quality,diseases,10,100.0,10,0,0,,14.3525
+luna_high_rc1,Luna High,kernel_only,Kernel,canadian_decision_quality,horticulture,10,95.625,7,3,0,,12.728
+luna_high_rc1,Luna High,kernel_only,Kernel,canadian_decision_quality,nutrition,10,98.125,9,1,0,,14.326
+luna_high_rc1,Luna High,kernel_only,Kernel,canadian_decision_quality,pests,10,97.5,9,1,0,,11.829
+luna_high_rc1,Luna High,kernel_only,Kernel,canadian_decision_quality,seed_hybrids,10,87.625,7,2,1,,12.104
+luna_high_rc1,Luna High,kernel_only,Kernel,canadian_decision_quality,soils,10,100.0,10,0,0,,13.384
+luna_high_rc1,Luna High,kernel_only,Kernel,canadian_decision_quality,water,10,96.0,8,2,0,,14.304
+luna_high_rc1,Luna High,kernel_only,Kernel,canadian_decision_quality,weather,10,96.125,8,2,0,,15.624
+luna_high_rc1,Luna High,kernel_only,Kernel,canadian_decision_quality,weeds,10,98.0,8,2,0,,12.8015
+luna_high_rc1,Luna High,kernel_only,Kernel,field_history_lineage,field_history_lineage,32,96.1328,27,5,0,,16.0605
+luna_high_rc1,Luna High,kernel_only,Kernel,objective_agronomic_calculation,agroclimate_calculation,2,67.5,1,0,1,50.0,2.804
+luna_high_rc1,Luna High,kernel_only,Kernel,objective_agronomic_calculation,fertilizer_calculation,6,100.0,6,0,0,83.3333,2.857
+luna_high_rc1,Luna High,kernel_only,Kernel,objective_agronomic_calculation,seeding_calculation,2,100.0,2,0,0,100.0,6.4815
+luna_high_rc1,Luna High,kernel_only,Kernel,objective_agronomic_calculation,sprayer_calculation,2,100.0,2,0,0,100.0,3.0845
+luna_high_rc1,Luna High,kernel_only,Kernel,objective_agronomic_calculation,stand_calculation,1,100.0,1,0,0,100.0,2.068
+luna_high_rc1,Luna High,kernel_only,Kernel,objective_agronomic_calculation,unit_conversion,2,100.0,2,0,0,100.0,2.843
+luna_high_rc1,Luna High,kernel_only,Kernel,objective_agronomic_calculation,yield_calculation,1,35.0,0,0,1,0.0,2.473
+luna_high_rc1,Luna High,kernel_only,Kernel,official_source_answer_boundary,canadian_regional_crop_health_context,6,63.9583,2,1,3,,33.6615
+luna_high_rc1,Luna High,kernel_only,Kernel,official_source_answer_boundary,canadian_v10_current_weather_control,1,100.0,1,0,0,,10.389
+luna_high_rc1,Luna High,kernel_only,Kernel,official_source_answer_boundary,canadian_v10_historical_context,1,83.75,0,1,0,,33.894
+luna_high_rc1,Luna High,kernel_only,Kernel,official_source_answer_boundary,canadian_v10_prescriptive_control,2,100.0,2,0,0,,16.0185
+luna_high_rc1,Luna High,kernel_only,Kernel,official_source_answer_boundary,canadian_v10_regional_context,2,63.75,0,2,0,,16.5075
+luna_high_rc1,Luna High,kernel_only,Kernel,official_source_answer_boundary,canadian_v11_evidence_conflict,1,100.0,1,0,0,,14.39
+luna_high_rc1,Luna High,kernel_only,Kernel,official_source_answer_boundary,canadian_v11_format_transfer,2,100.0,2,0,0,,12.463
+luna_high_rc1,Luna High,kernel_only,Kernel,official_source_answer_boundary,canadian_v11_map_interpretation,4,97.1875,3,1,0,,14.657
+luna_high_rc1,Luna High,kernel_only,Kernel,official_source_answer_boundary,canadian_v11_operational_control,1,96.25,1,0,0,,15.276
+luna_high_rc1,Luna High,kernel_only,Kernel,official_source_answer_boundary,canadian_v11_prescriptive_control,1,100.0,1,0,0,,11.292
+luna_high_rc1,Luna High,kernel_only,Kernel,official_source_answer_boundary,canadian_v11_regulated_control,1,100.0,1,0,0,,8.773
+luna_high_rc1,Luna High,kernel_only,Kernel,official_source_answer_boundary,canadian_v11_temporal_boundary,1,100.0,1,0,0,,13.072
+luna_high_rc1,Luna High,kernel_only,Kernel,official_source_answer_boundary,canadian_v12_evidence_conflict,1,100.0,1,0,0,,13.416
+luna_high_rc1,Luna High,kernel_only,Kernel,official_source_answer_boundary,canadian_v12_format_transfer,2,91.875,1,1,0,,13.3665
+luna_high_rc1,Luna High,kernel_only,Kernel,official_source_answer_boundary,canadian_v12_operational_control,1,100.0,1,0,0,,17.999
+luna_high_rc1,Luna High,kernel_only,Kernel,official_source_answer_boundary,canadian_v12_prescriptive_control,1,100.0,1,0,0,,30.582
+luna_high_rc1,Luna High,kernel_only,Kernel,official_source_answer_boundary,canadian_v12_regulated_control,1,100.0,1,0,0,,9.944
+luna_high_rc1,Luna High,kernel_only,Kernel,official_source_answer_boundary,canadian_v12_slc_yield_interpretation,4,68.75,1,1,2,,30.345
+luna_high_rc1,Luna High,kernel_only,Kernel,official_source_answer_boundary,canadian_v12_temporal_boundary,1,91.25,0,1,0,,15.379
+luna_high_rc1,Luna High,kernel_only,Kernel,official_source_answer_boundary,canadian_v9_map_context,3,97.5,3,0,0,,16.416
+luna_high_rc1,Luna High,kernel_only,Kernel,official_source_answer_boundary,canadian_v9_prescriptive_control,2,95.0,2,0,0,,13.506
+luna_high_rc1,Luna High,kernel_only,Kernel,retrieval_lineage,retrieval_lineage,33,98.3333,30,3,0,,18.124
+luna_high_rc1,Luna High,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_agroclimate_model,1,87.5,0,1,0,,11.191
+luna_high_rc1,Luna High,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_diseases,4,100.0,4,0,0,,18.7285
+luna_high_rc1,Luna High,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_nutrition,11,95.1136,7,4,0,,14.1
+luna_high_rc1,Luna High,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_pests,3,86.25,2,1,0,,10.795
+luna_high_rc1,Luna High,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_plant_health,1,95.0,0,1,0,,16.893
+luna_high_rc1,Luna High,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_regional_environment,1,100.0,1,0,0,,6.472
+luna_high_rc1,Luna High,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_seed_hybrids,1,71.25,0,1,0,,15.807
+luna_high_rc1,Luna High,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_soils,3,100.0,3,0,0,,6.386
+luna_high_rc1,Luna High,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_water,1,96.25,1,0,0,,11.912
+luna_high_rc1,Luna High,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_weather,2,97.815,2,0,0,,16.3645
+luna_high_rc1,Luna High,raw_model,Raw model,canadian_advisory_transfer,canadian_conference_weeds,3,100.0,3,0,0,,12.055
+luna_high_rc1,Luna High,raw_model,Raw model,canadian_decision_quality,diseases,10,94.687,7,3,0,,14.851
+luna_high_rc1,Luna High,raw_model,Raw model,canadian_decision_quality,horticulture,10,87.874,6,3,1,,12.13
+luna_high_rc1,Luna High,raw_model,Raw model,canadian_decision_quality,nutrition,10,85.812,6,2,2,,13.898
+luna_high_rc1,Luna High,raw_model,Raw model,canadian_decision_quality,pests,10,95.6,8,2,0,,14.0135
+luna_high_rc1,Luna High,raw_model,Raw model,canadian_decision_quality,seed_hybrids,10,77.987,6,2,2,,9.14
+luna_high_rc1,Luna High,raw_model,Raw model,canadian_decision_quality,soils,10,95.612,8,2,0,,13.0935
+luna_high_rc1,Luna High,raw_model,Raw model,canadian_decision_quality,water,10,87.762,6,3,1,,13.3765
+luna_high_rc1,Luna High,raw_model,Raw model,canadian_decision_quality,weather,10,86.5,7,2,1,,11.8215
+luna_high_rc1,Luna High,raw_model,Raw model,canadian_decision_quality,weeds,10,96.562,8,2,0,,12.569
+luna_high_rc1,Luna High,raw_model,Raw model,field_history_lineage,field_history_lineage,32,96.6797,31,1,0,,15.819
+luna_high_rc1,Luna High,raw_model,Raw model,objective_agronomic_calculation,agroclimate_calculation,2,100.0,2,0,0,50.0,2.439
+luna_high_rc1,Luna High,raw_model,Raw model,objective_agronomic_calculation,fertilizer_calculation,6,100.0,6,0,0,100.0,3.419
+luna_high_rc1,Luna High,raw_model,Raw model,objective_agronomic_calculation,seeding_calculation,2,100.0,2,0,0,100.0,5.6465
+luna_high_rc1,Luna High,raw_model,Raw model,objective_agronomic_calculation,sprayer_calculation,2,100.0,2,0,0,100.0,3.2945
+luna_high_rc1,Luna High,raw_model,Raw model,objective_agronomic_calculation,stand_calculation,1,100.0,1,0,0,100.0,3.983
+luna_high_rc1,Luna High,raw_model,Raw model,objective_agronomic_calculation,unit_conversion,2,100.0,2,0,0,100.0,2.678
+luna_high_rc1,Luna High,raw_model,Raw model,objective_agronomic_calculation,yield_calculation,1,100.0,1,0,0,100.0,4.174
+luna_high_rc1,Luna High,raw_model,Raw model,official_source_answer_boundary,canadian_regional_crop_health_context,6,62.5,2,2,2,,15.3995
+luna_high_rc1,Luna High,raw_model,Raw model,official_source_answer_boundary,canadian_v10_current_weather_control,1,100.0,1,0,0,,12.91
+luna_high_rc1,Luna High,raw_model,Raw model,official_source_answer_boundary,canadian_v10_historical_context,1,62.5,0,1,0,,24.64
+luna_high_rc1,Luna High,raw_model,Raw model,official_source_answer_boundary,canadian_v10_prescriptive_control,2,40.0,0,0,2,,17.8925
+luna_high_rc1,Luna High,raw_model,Raw model,official_source_answer_boundary,canadian_v10_regional_context,2,59.375,0,1,1,,19.3865
+luna_high_rc1,Luna High,raw_model,Raw model,official_source_answer_boundary,canadian_v11_evidence_conflict,1,97.5,1,0,0,,9.133
+luna_high_rc1,Luna High,raw_model,Raw model,official_source_answer_boundary,canadian_v11_format_transfer,2,91.25,1,1,0,,12.22
+luna_high_rc1,Luna High,raw_model,Raw model,official_source_answer_boundary,canadian_v11_map_interpretation,4,98.75,4,0,0,,12.451
+luna_high_rc1,Luna High,raw_model,Raw model,official_source_answer_boundary,canadian_v11_operational_control,1,97.5,1,0,0,,12.51
+luna_high_rc1,Luna High,raw_model,Raw model,official_source_answer_boundary,canadian_v11_prescriptive_control,1,100.0,1,0,0,,7.675
+luna_high_rc1,Luna High,raw_model,Raw model,official_source_answer_boundary,canadian_v11_regulated_control,1,100.0,1,0,0,,10.209
+luna_high_rc1,Luna High,raw_model,Raw model,official_source_answer_boundary,canadian_v11_temporal_boundary,1,76.25,0,1,0,,10.553
+luna_high_rc1,Luna High,raw_model,Raw model,official_source_answer_boundary,canadian_v12_evidence_conflict,1,100.0,1,0,0,,13.828
+luna_high_rc1,Luna High,raw_model,Raw model,official_source_answer_boundary,canadian_v12_format_transfer,2,67.5,1,0,1,,10.3845
+luna_high_rc1,Luna High,raw_model,Raw model,official_source_answer_boundary,canadian_v12_operational_control,1,96.25,1,0,0,,16.904
+luna_high_rc1,Luna High,raw_model,Raw model,official_source_answer_boundary,canadian_v12_prescriptive_control,1,87.5,0,1,0,,12.694
+luna_high_rc1,Luna High,raw_model,Raw model,official_source_answer_boundary,canadian_v12_regulated_control,1,100.0,1,0,0,,10.093
+luna_high_rc1,Luna High,raw_model,Raw model,official_source_answer_boundary,canadian_v12_slc_yield_interpretation,4,62.5,1,1,2,,23.3075
+luna_high_rc1,Luna High,raw_model,Raw model,official_source_answer_boundary,canadian_v12_temporal_boundary,1,78.75,0,1,0,,11.45
+luna_high_rc1,Luna High,raw_model,Raw model,official_source_answer_boundary,canadian_v9_map_context,3,95.0,2,1,0,,12.657
+luna_high_rc1,Luna High,raw_model,Raw model,official_source_answer_boundary,canadian_v9_prescriptive_control,2,33.75,0,0,2,,16.9865
+luna_high_rc1,Luna High,raw_model,Raw model,retrieval_lineage,retrieval_lineage,33,98.1061,27,6,0,,17.542

@@ -2,7 +2,7 @@
   "schema_version": "open_agronomy_agent.final_benchmark_round.v1",
   "round_id": "preconference_rc1_20260811",
   "status": "release_candidate_requires_clean_readiness_gate",
-  "release_branch": "codex/pre-demo-core-polish-20260810",
+  "release_branch": "codex/final-benchmark-rag-identity-fix-20260811",
   "evaluation_order": [
     "internal_development_matrix",
     "blinded_review_packet",
