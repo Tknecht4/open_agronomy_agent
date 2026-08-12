@@ -85,3 +85,35 @@ Run the internal matrix first, build the blinded raw-model versus full-system
 review packet, freeze a finalist, and only then run the 256-item external
 diagnostic once. Do not use that external result to repair and rerun the same
 benchmark version.
+
+## Final RC1 result — 2026-08-12
+
+The completed internal database contains 2,892 responses and 2,892 advisory
+judgments: three candidates by four arms by 241 cases. On the 90-case primary
+Canadian decision-quality lane, the frozen raw-versus-governed comparison was:
+
+| Candidate | Raw model | Governed system | Paired change (95% interval) |
+|---|---:|---:|---:|
+| Gemma 3 270M 4-bit | 2.50 | 73.13 | +70.63 (+65.46 to +75.71) |
+| Gemma 4 E2B 4-bit | 54.71 | 77.93 | +23.22 (+17.60 to +28.59) |
+| Luna High | 89.82 | 83.38 | -6.45 (-11.52 to -1.18) |
+
+These are automated development scores, not agronomist ratings. The negative
+Luna result and intermediate-arm analysis show that system intervention must
+be calibrated to generator capability rather than assumed to help every model.
+The benchmark path also failed to call the typed calculator, leaving all three
+governed candidates at 0/16 objective calculation cases. That failure is
+preserved as an orchestration defect for the next development round.
+
+The one-time held-out AgroQA diagnostic used the frozen Gemma 4 full-system
+finalist. Normalized reference-token F1 changed from 0.0508 raw to 0.0595 with
+the governed system. Because the source questions are Ugandan and the answers
+were not revalidated for Canadian practice, this is geographic transfer
+evidence only and the exposed implementation must not be tuned and rerun on the
+same set version.
+
+The [technical paper and public evidence package](final-benchmark-20260812/README.md)
+contain the full interpretation, task-family summaries, paired intervals,
+orchestration diagnostics, frozen finalist receipt, and plotting inputs. Exact
+answers and SQLite databases remain local, with checksums and counts retained
+for separately transferred artifact verification.

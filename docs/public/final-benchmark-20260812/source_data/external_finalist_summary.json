@@ -1,0 +1,92 @@
+{
+  "schema_version": "open_agronomy_agent.external_finalist_summary.v1",
+  "status": "one_time_held_out_transfer_diagnostic_complete",
+  "rows": 256,
+  "finalist": {
+    "schema_version": "open_agronomy_agent.external_finalist_freeze.v1",
+    "status": "frozen_before_first_external_run",
+    "frozen_at": "2026-08-12T05:24:00Z",
+    "selection_role": "offline_diagnostic_finalist_not_production_promotion",
+    "model_key": "gemma4_e2b_rc1",
+    "model_label": "Gemma 4 E2B",
+    "model_id": "mlx-community/gemma-4-e2b-it-4bit",
+    "model_revision": "238767527555cb75a05732a84dff5d6ba0dd6809",
+    "model_config": "configs/benchmark_models/gemma4_e2b.yaml",
+    "model_config_sha256": "c6e1e37e86542d0af8e77831a6c97db6413f13eeff82b3170bd207954b2d45de",
+    "selected_system_variant": "full_system",
+    "external_comparison_variants": [
+      "raw_model",
+      "full_system"
+    ],
+    "implementation_commit": "76644dcab85ac635cb9f976ff6c769b4a6cd4da8",
+    "implementation_sha256": "200a2b5a97bbc8f9691cf3dbc09526a84a8e1c342e522dfa3c7e77246d2fc24b",
+    "internal_suite_sha256": "5c3ce59195ac603d2dd8ec5f36f3672b3ee0c20227cdb4fd301dfe3848a83c63",
+    "internal_database_sha256": "6e155a7ff1e40fae34741a9a81fd96b6576886c0ed1de9ba92a1a5db0faa9c6b",
+    "external_suite_sha256": "d15888bb4cf0ea339380a71abecdb5a5fa770829e67e616765d2d140c9365e93",
+    "selection_evidence": {
+      "primary_lane_cases": 90,
+      "raw_advisory_semantic_mean": 54.7083,
+      "full_system_advisory_semantic_mean": 77.9306,
+      "paired_delta_points": 23.2222,
+      "paired_case_bootstrap_ci95": [
+        17.5973,
+        28.5907
+      ],
+      "improved_unchanged_worse_cases": [
+        76,
+        2,
+        12
+      ],
+      "full_system_pass_revise_fail_cases": [
+        20,
+        55,
+        15
+      ],
+      "full_system_median_generation_seconds": 2.147
+    },
+    "selection_rationale": [
+      "Strongest governed-agent advisory score among the offline local models.",
+      "Material paired improvement over its own raw-model arm on the frozen Canadian primary lane.",
+      "Better retained standalone model capability and fewer governed primary failures than Gemma 3 270M.",
+      "Preserves the project's offline and private operating objective; Luna High is a remote comparator, not the offline finalist."
+    ],
+    "known_failures": [
+      "Automated Luna judging is uncalibrated and cannot promote this model.",
+      "Fifteen of ninety governed primary cases received an advisory fail disposition.",
+      "The benchmark path did not invoke the registered typed calculator; governed calculation accuracy was zero of sixteen.",
+      "The external AgroQA set is geographically mismatched and cannot validate Canadian agronomic reliability."
+    ],
+    "post_external_policy": "Do not repair or retest this implementation on the same external-set version."
+  },
+  "arms": {
+    "raw_model": {
+      "responses": 256,
+      "mean_reference_token_f1": 0.050809,
+      "median_reference_token_f1": 0.0449,
+      "median_latency_seconds": 15.811
+    },
+    "full_system": {
+      "responses": 256,
+      "mean_reference_token_f1": 0.05949,
+      "median_reference_token_f1": 0.0522,
+      "median_latency_seconds": 8.655
+    }
+  },
+  "paired_comparison": {
+    "mean_full_system_minus_raw": 0.008681,
+    "fixed_suite_bootstrap_ci95": [
+      0.004206,
+      0.013208
+    ],
+    "bootstrap_draws": 10000,
+    "bootstrap_seed": 20260812,
+    "improved_cases": 152,
+    "unchanged_cases": 4,
+    "worse_cases": 100,
+    "uncertainty_boundary": "Case-resampling sensitivity for this fixed geographically mismatched diagnostic only; not a population-generalization interval."
+  },
+  "database": "outputs/open_agronomy_external_agroqa_v1_rc1/full_system_benchmark.sqlite3 (local artifact; not distributed through Git)",
+  "database_sha256": "8a2acb8ebc8bf01a3d81006a899bb3edd76bf5c35fbcceeb04be5a69a066bf4b",
+  "claim_boundary": "Uganda-source normalized reference-token overlap diagnostic only; not Canadian validation or agronomist review.",
+  "same_version_repair_allowed": false
+}

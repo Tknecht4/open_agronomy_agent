@@ -1,0 +1,30 @@
+{
+  "schema_version": "open_agronomy_agent.paper_source_data.v1",
+  "database": "outputs/open_agronomy_canadian_performance_v1_rc1/full_system_benchmark.sqlite3 (local artifact; not distributed through Git)",
+  "canonical_responses": 2892,
+  "canonical_judgments": 2892,
+  "models": [
+    "gemma3_270m_rc1",
+    "gemma4_e2b_rc1",
+    "luna_high_rc1"
+  ],
+  "arms": [
+    "raw_model",
+    "kernel_only",
+    "kernel_field_context",
+    "full_system"
+  ],
+  "bootstrap_draws": 10000,
+  "bootstrap_seed_family": 20260811,
+  "uncertainty_boundary": "Case-resampling intervals describe this fixed development suite; they are not population-generalization intervals.",
+  "files": [
+    "response_level_metrics.csv",
+    "arm_lane_summary.csv",
+    "paired_semantic_deltas.csv",
+    "resource_summary.csv",
+    "task_family_summary.csv",
+    "orchestration_summary.csv",
+    "material_error_taxonomy.csv",
+    "../figures/benchmark_results.pdf"
+  ]
+}

@@ -1,0 +1,19 @@
+model_key,model_label,benchmark_lane,n,intervention_triggered,fallback_or_degraded,accept_rewrite,preserve_draft,no_action
+gemma3_270m_rc1,Gemma 3 270M,canadian_advisory_transfer,31,21,21,0,0,10
+gemma3_270m_rc1,Gemma 3 270M,canadian_decision_quality,90,55,55,0,1,34
+gemma3_270m_rc1,Gemma 3 270M,field_history_lineage,32,27,27,0,2,3
+gemma3_270m_rc1,Gemma 3 270M,objective_agronomic_calculation,16,8,8,0,1,7
+gemma3_270m_rc1,Gemma 3 270M,official_source_answer_boundary,39,28,27,1,1,10
+gemma3_270m_rc1,Gemma 3 270M,retrieval_lineage,33,29,29,0,1,3
+gemma4_e2b_rc1,Gemma 4 E2B,canadian_advisory_transfer,31,24,23,0,2,6
+gemma4_e2b_rc1,Gemma 4 E2B,canadian_decision_quality,90,46,38,8,18,26
+gemma4_e2b_rc1,Gemma 4 E2B,field_history_lineage,32,16,13,2,14,3
+gemma4_e2b_rc1,Gemma 4 E2B,objective_agronomic_calculation,16,11,10,1,2,3
+gemma4_e2b_rc1,Gemma 4 E2B,official_source_answer_boundary,39,16,15,1,15,8
+gemma4_e2b_rc1,Gemma 4 E2B,retrieval_lineage,33,25,22,2,8,1
+luna_high_rc1,Luna High,canadian_advisory_transfer,31,23,23,0,2,6
+luna_high_rc1,Luna High,canadian_decision_quality,90,54,35,19,10,26
+luna_high_rc1,Luna High,field_history_lineage,32,21,14,7,8,3
+luna_high_rc1,Luna High,objective_agronomic_calculation,16,13,8,5,0,3
+luna_high_rc1,Luna High,official_source_answer_boundary,39,26,17,9,5,8
+luna_high_rc1,Luna High,retrieval_lineage,33,31,23,8,1,1

@@ -123,6 +123,8 @@ The main internal benchmark contains 241 Canadian cases across four frozen causa
 
 The 16 objective calculation cases are scored with numeric tolerances. Decision-quality cases remain development evidence and are not equivalent to blinded agronomist review. The held-out 256-question AgroQA set is an external transfer diagnostic, not a Canadian certification claim. The 28 CCA-aligned/local-style questions are project-authored coverage probes; they are not copied professional-exam questions and never enter runtime retrieval.
 
+The completed pre-conference round is published as a [four-page technical paper with plot-ready result data](docs/public/final-benchmark-20260812/README.md). On the 90-case primary semantic lane, the governed system changed the advisory score relative to the raw model by +70.63 points for Gemma 3 270M, +23.22 for Gemma 4 E2B, and -6.45 for Luna High. This model-dependent interaction is the central result: the harness can rescue limited local generators, but its full intervention can over-constrain an already capable model. The same round also exposed a calculator-routing failure, retained as an explicit negative result.
+
 Before a final comparison round, run the release-candidate readiness gate. It
 performs no generation, judging, or network requests. It verifies the exact
 suite and model profiles, both local model snapshots, corpus and package
@@ -183,6 +185,7 @@ PYTHONPATH=src .venv/bin/python scripts/run_eval.py --mode agronomic_rag --mock 
 - `scripts/` — ingestion, audit, benchmark, packaging and operator utilities;
 - `tests/` — deterministic contract, service and interface tests;
 - `docs/public/` — maintained public documentation.
+- `docs/public/final-benchmark-20260812/` — final controlled benchmark paper and plot-ready public evidence.
 
 The React cockpit is the supported interface; the old prototype Gradio UI has been removed.
 

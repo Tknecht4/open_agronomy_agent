@@ -124,7 +124,21 @@ def test_rag_artifact_identity_binds_corpus_graph_and_policy_bytes(tmp_path: Pat
     policy = tmp_path / "policy.json"
     corpus.write_text('{"doc_id":"one"}\n', encoding="utf-8")
     graph.write_text('{"nodes":[]}\n', encoding="utf-8")
-    policy.write_text('{"corpora":[]}\n', encoding="utf-8")
+    policy.write_text(
+        json.dumps(
+            {
+                "schema_version": "open_agronomy_agent.runtime_corpus_policy.v1",
+                "default_eligibility": "quarantined",
+                "corpora": [
+                    {
+                        "path": str(corpus),
+                        "runtime_eligibility": "context_only",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
 
     class Resources:
         rag_config = {
@@ -140,6 +154,82 @@ def test_rag_artifact_identity_binds_corpus_graph_and_policy_bytes(tmp_path: Pat
     assert [record["kind"] for record in records] == ["corpus", "graph", "corpus_policy"]
     assert all(len(record["sha256"]) == 64 for record in records)
     assert all(record["size"] > 0 for record in records)
+
+
+def test_rag_artifact_identity_excludes_quarantined_missing_corpora(tmp_path: Path) -> None:
+    admitted = tmp_path / "admitted.jsonl"
+    quarantined = tmp_path / "not-redistributed.jsonl"
+    graph = tmp_path / "graph.json"
+    policy = tmp_path / "policy.json"
+    admitted.write_text('{"doc_id":"one"}\n', encoding="utf-8")
+    graph.write_text('{"nodes":[]}\n', encoding="utf-8")
+    policy.write_text(
+        json.dumps(
+            {
+                "schema_version": "open_agronomy_agent.runtime_corpus_policy.v1",
+                "default_eligibility": "quarantined",
+                "corpora": [
+                    {
+                        "path": str(admitted),
+                        "runtime_eligibility": "context_only",
+                    },
+                    {
+                        "path": str(quarantined),
+                        "runtime_eligibility": "quarantined",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    class Resources:
+        rag_config = {
+            "retrieval": {
+                "corpus_paths": [str(admitted), str(quarantined)],
+                "graph_paths": [str(graph)],
+                "corpus_policy_manifest": str(policy),
+            }
+        }
+
+    records = build_rag_artifact_identity(Resources())
+
+    assert [record["path"] for record in records] == [
+        str(admitted),
+        str(graph),
+        str(policy),
+    ]
+
+
+def test_rag_artifact_identity_rejects_missing_admitted_corpus(tmp_path: Path) -> None:
+    admitted = tmp_path / "missing-admitted.jsonl"
+    policy = tmp_path / "policy.json"
+    policy.write_text(
+        json.dumps(
+            {
+                "schema_version": "open_agronomy_agent.runtime_corpus_policy.v1",
+                "default_eligibility": "quarantined",
+                "corpora": [
+                    {
+                        "path": str(admitted),
+                        "runtime_eligibility": "context_only",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    class Resources:
+        rag_config = {
+            "retrieval": {
+                "corpus_paths": [str(admitted)],
+                "corpus_policy_manifest": str(policy),
+            }
+        }
+
+    with pytest.raises(FileNotFoundError, match="configured RAG corpus artifact is missing"):
+        build_rag_artifact_identity(Resources())
 
 
 def test_implementation_identity_binds_the_agent_source_tree() -> None:
