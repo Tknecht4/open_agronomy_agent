@@ -1,0 +1,142 @@
+\documentclass[9pt,twocolumn]{article}
+
+\usepackage[letterpaper,margin=0.66in,columnsep=0.24in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{siunitx}
+\usepackage{xcolor}
+\usepackage{xurl}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[colorlinks=true,linkcolor=blue!55!black,citecolor=blue!55!black,urlcolor=blue!55!black]{hyperref}
+\usepackage[font=small,labelfont=bf]{caption}
+
+\sisetup{detect-all=true}
+\setlength{\parindent}{1em}
+\setlength{\parskip}{0pt}
+\setlength{\bibsep}{0pt}
+\newcommand{\system}{Open Agronomy Agent}
+\IfFileExists{generated_results.tex}{\input{generated_results.tex}}{
+  \newcommand{\ResultAbstract}{Final benchmark results pending.}
+  \newcommand{\ResultPrimary}{Final benchmark results pending.}
+  \newcommand{\ResultAblation}{Final benchmark results pending.}
+  \newcommand{\ResultIntervention}{Final intervention accounting pending.}
+  \newcommand{\ResultCalculation}{Final benchmark results pending.}
+  \newcommand{\ResultExternal}{External finalist diagnostic pending.}
+  \newcommand{\ResultCost}{Final resource accounting pending.}
+}
+
+\title{A Local-First Evidence-Governed Agronomy Agent:\\Controlled Evaluation on Canadian Field Questions}
+\author{Tyler Knecht}
+\date{12 August 2026}
+
+\begin{document}
+\raggedbottom
+\maketitle
+
+\begin{abstract}
+Small language models can run privately on field hardware, but their compact size and fixed parameters are poorly matched to region-specific agronomy, changing authority, and decisions that require traceable evidence. We present \system{}, a model-agnostic local-first harness that combines a stable instruction kernel, structured field context, policy-governed retrieval, a soil-health knowledge graph, typed calculators, evidence-aware validation, and persistent answer traces. We evaluate three candidate models---Gemma 3 270M and Gemma 4 E2B locally with MLX, and remotely served Luna High---on a frozen 241-case Canadian development suite. Four causal arms separate raw model capability from kernel, field-context, and full governed-system effects; all exact inputs, context packets, outputs, identities, and judgments are retained. \ResultAbstract{} The study is a controlled development comparison, not evidence of agronomist equivalence or field outcomes. Its principal contribution is an auditable method for determining when a small private model gains useful agronomic behavior from the surrounding evidence system, and when it does not.
+\end{abstract}
+
+\section{Introduction}
+
+Agronomic advice is both knowledge-intensive and situated. A useful answer depends on crop and growth stage, field history, soil and weather observations, jurisdiction, product label, and the date at which an authority was current. In-field connectivity may be absent, while disclosure of farm records to a remote service may be unacceptable. A local language model can satisfy availability and privacy constraints, but model parameters alone cannot provide current legal authority, field measurements, or transparent provenance.
+
+Retrieval-augmented generation (RAG) can condition generation on external evidence \citep{lewis2020rag}, but ordinary RAG does not establish whether a source is licensed, current, jurisdictionally applicable, or suitable for a consequential recommendation. Knowledge graphs can add structured conceptual relationships, while deterministic tools can remove arithmetic from unconstrained text generation. The remaining engineering problem is to combine these components without allowing retrieved context, model confidence, or an automated evaluator to masquerade as authority.
+
+\subsection{Related work}
+
+Our design builds on RAG for knowledge-intensive generation \citep{lewis2020rag}, the SoilWise soil-health graph \citep{soilwisekg2025}, and work on calibrated reliance in automation \citep{lee2004trust}. We use large-language-model judging only as a development instrument because prior work identifies agreement with human preference in some settings alongside position, verbosity, and self-preference biases \citep{zheng2023judge,wataoka2024selfpreference}. Unlike an end-to-end model benchmark, the present experiment isolates instructions, field context, and governed orchestration as separate causal arms.
+
+We therefore treat the language model as a replaceable reasoning and communication component inside an evidence-governed pipeline. The system distinguishes field truth, decisive guidance, contextual evidence, and quarantined material; missing facts remain unknown; and each answer is linked to its exact evidence and execution trace. The contributions of this work are:
+
+\begin{itemize}
+  \item a portable local-first architecture that combines governed Canadian guidance, SoilWise-derived soil-health relations \citep{soilwisekg2025}, typed tools, and explicit online/offline boundaries;
+  \item a frozen four-arm evaluation design that identifies kernel, field-context, and knowledge-orchestration effects separately from underlying model ability; and
+  \item a response-level benchmark database and blinded review packet that preserve every model input, context packet, output, score, and identity for later expert review.
+\end{itemize}
+
+\section{System architecture}
+
+For each request, the question frame binds available field identity, crop, jurisdiction, time, management history, geometry, and observations. The router selects retrieval and tool capabilities while preserving missing values. Corpus policy removes quarantined artifacts before indexing; admitted evidence is represented as capsules with source, scope, currency, applicability, and limitations. A bounded context packet, together with the stable Open Agronomy kernel, is passed to the selected model. Validation then checks evidence use, high-consequence boundaries, missing inputs, and required escalation before storing the answer and trace.
+
+The release corpus contains 718 redistributed Canadian applied-guidance chunks, 334 Canadian regional or contextual chunks, and 1,784 SoilWise-derived retrieval records. Coverage is uneven: 706 of the 718 Canadian rows are admitted only as context and the other 12 require live authority, so corpus size must not be read as a count of decisive recommendations. A compact United States Department of Agriculture Natural Resources Conservation Service (USDA NRCS) corpus is available only for explicitly labelled cross-border analogy, never as Canadian soil authority. Rights-unresolved optical-character-recognition artifacts, evaluation-shaped answer material, and copied certification objectives are quarantined before runtime indexing. Detailed Prairie soil intersections are provided by an optional offline spatial pack; absence of that pack is surfaced rather than silently approximated.
+
+The application can operate with the local model, knowledge artifacts, field database, and calculator entirely offline. Network adapters declare online status and preserve cache provenance. Current weather, legal labels, and regulations are never simulated from stale local text. The trace store uses stable field, session, evidence, and implementation identifiers, allowing later questions to reuse verified field history without rewriting historical answers.
+
+\section{Experimental design}
+
+\subsection{Frozen benchmark and causal arms}
+
+The internal benchmark contains 241 project-authored Canadian cases. Ninety primary cases cover field-decision quality across nine task categories with balanced Prairie-province representation; 31 secondary cases probe advisory transfer. The remaining 120 cases test system interfaces: field-history lineage (32), source and answer boundaries (39), retrieval lineage (33), and objective calculations (16). These three tiers are reported separately and are never collapsed into a single ``agronomy intelligence'' score.
+
+Each model is evaluated on the same four arms: (1) \textit{raw model}, receiving only the user question; (2) \textit{kernel only}, adding the shared instruction and answer contract; (3) \textit{kernel + field context}, adding the same structured crop, region, jurisdiction, and management context available to the full system; and (4) \textit{governed agent}, adding policy-admitted retrieval, the evidence intervention, configured validation, and output processing. Paired comparisons isolate kernel, field-context, and knowledge-orchestration increments.
+
+The candidates are 4-bit MLX builds of Gemma 3 270M and Gemma 4 E2B, plus Luna High at high reasoning effort. Local inference uses an Apple M4 Mac mini with 16~GB unified memory, Python~3.12.0, MLX~0.31.2, and MLX-LM~0.31.3. Model revisions, suite hashes, executable implementation hash, RAG artifact identities, exact messages, and response digests are frozen in every run manifest. Gemma 3 and Gemma 4 are described in their respective technical reports \citep{gemma3report,gemma4report}; MLX provides the Apple-silicon execution layer \citep{mlxframework}.
+
+\subsection{Metrics and evaluation boundaries}
+
+For primary and secondary semantic cases, a blinded Luna High judge assigns rubric-constrained answer-quality scores after candidate answers have been durably stored. These scores are advisory triage: LLM judges can agree with human preferences in some settings \citep{zheng2023judge}, but exhibit position, verbosity, and self-preference biases \citep{wataoka2024selfpreference}. In particular, the Luna candidate and judge share a model identity, so no automated score can promote a model. The 16 calculation cases instead use deterministic value, unit, and tolerance checks. Interface lanes use their explicit route, retrieval, evidence, and answer-contract assertions.
+
+Means are reported at the case level. Paired raw-versus-agent differences on fixed semantic sets receive 95\% case-bootstrap intervals (10,000 resamples); these intervals describe sensitivity within this suite, not sampling uncertainty for Canadian growers. Latency and token usage are descriptive. App-server token costs use a date-stamped official pricing index and are reported as API-equivalent estimates because actual ChatGPT-authenticated billing is not observed.
+
+After internal results and the implementation are frozen, exactly one finalist is run once on 256 held-out AgroQA farmer questions \citep{omara2023agroqa}. This external set originates in Uganda and uses published answers that were not independently revalidated. We measure normalized reference-token F1 for the two finalist arms; this free-generation diagnostic is not comparable to the original paper's disease-classification or recommender metrics. It is therefore a transfer diagnostic, not Canadian validation, and cannot trigger repair and retesting on the same version.
+
+\section{Results}
+
+\subsection{Does the governed system improve answer quality?}
+
+\ResultPrimary{}
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=0.96\textwidth]{figures/benchmark_results.pdf}
+  \caption{\textbf{Controlled model and system comparison.} Left: advisory semantic-answer quality by model and arm on the 90-case primary Canadian decision-quality lane (mean and fixed-suite 95\% case-bootstrap interval). Right: deterministic accuracy on the 16 objective calculation cases. Automated semantic scores are triage evidence only; objective calculations are not scored by the LLM judge.}
+  \label{fig:main-result}
+\end{figure*}
+
+\input{generated_table.tex}
+
+\subsection{Which component changes behavior?}
+
+\ResultAblation{}
+
+\ResultIntervention{}
+
+The intermediate arms prevent a common attribution error: a difference between raw model and full system may result from formatting instructions, supplied field facts, retrieved agronomy knowledge, validation, or their interaction. We therefore interpret the raw-to-kernel, kernel-to-context, and context-to-agent increments separately, including null or negative changes.
+
+\subsection{Calculations, transfer, and resource use}
+
+\ResultCalculation{} \ResultExternal{} \ResultCost{}
+
+\section{Error analysis and discussion}
+
+The response-level database supports stratification by task, province, evidence status, answer boundary, and arm. We classify failures into unsupported specificity, missing material question or observation, regional or jurisdictional mismatch, evidence non-use, over-abstention, arithmetic or unit error, and answer-contract failure. This taxonomy distinguishes a weak generator from a retrieval miss or policy intervention that correctly refuses unsafe precision. Task-family analysis shows that the Gemma 4 governed arm improved on its raw result in all nine primary families, while Luna's governed arm lost most heavily on diseases, pests, weeds, and soils. The simpler Luna field-context arm was stronger than its governed arm, indicating over-intervention rather than a weak frontier generator.
+
+The central design claim is not that retrieval always improves a model. It is that a governed harness makes the source and consequence of changes inspectable. The 270M result is principally a system-level result: the validator replaced or degraded a majority of its primary outputs, so it does not demonstrate that the tiny generator independently acquired agronomic competence. A larger model may already contain broad agronomic priors yet still need local evidence for lineage and current authority. The next architecture should therefore select intervention intensity from observed model capability: retain evidence and lineage for every model, but reserve answer replacement for detected failures. Trust depends on calibrated behavior and visible provenance, not fluency alone \citep{lee2004trust}.
+
+\section{Limitations}
+
+The internal suite is project-authored and contains neither verified real-user Canadian questions nor independent agronomist adjudication. The evaluation measures written answers, not crop outcomes, diagnosis accuracy under field observation, regulatory compliance, or professional competence. Primary cases are single-turn and do not exercise executable field geometry. The advisory judge is uncalibrated against agronomists and shares identity with one candidate. Bootstrap intervals do not justify population generalization. The external diagnostic is geographically mismatched and its overlap metric has no published comparator. Corpus counts indicate coverage, not source quality or decision sufficiency; current labels, regulations, and field measurements still require live or human authority. These constraints limit the conference claim to a reproducible controlled development comparison.
+
+\section{Reproducibility and availability}
+
+The public repository records the exact benchmark contract, model profiles, source and rights manifests, tests, and release receipt. Model weights and generated spatial packs are separately downloaded under their own terms. The final result package includes a SQLite database with every response and judgment, machine-readable summaries and source tables, a price-versioned token ledger, model manifests, blinded review packets, and the scripts used to regenerate this paper. No farmer records or private field histories are included in the benchmark egress.
+
+\section{Conclusion}
+
+\system{} operationalizes a narrow but important proposition: private local inference becomes more useful when model output is constrained by governed evidence, typed tools, explicit uncertainty, and durable lineage. The final benchmark quantifies where that proposition holds across a very small local model, a larger local model, and a frontier remote model, while retaining negative effects and construct limits. Independent blinded agronomist review and prospective field evaluation are the next evidence required before any claim of agronomic reliability.
+
+\paragraph{Acknowledgements.} We acknowledge the Canadian public agencies and research communities that publish reusable agronomic and soil information, and the AgroQA and SoilWise contributors.
+
+\paragraph{Competing interests.} No competing interests are declared.
+
+\bibliographystyle{unsrtnat}
+{\footnotesize\bibliography{references}}
+
+\end{document}

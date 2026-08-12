@@ -1,0 +1,15 @@
+\begin{table*}[t]
+  \centering
+  \caption{\textbf{Raw-model versus governed-agent results.} Semantic scores are Luna High advisory judgments on 90 primary Canadian cases; brackets are 95\% fixed-suite case-bootstrap intervals for the paired agent-minus-raw difference. Calculation accuracy is deterministic on 16 cases. Latency is median candidate-generation time per case; it excludes judging.}
+  \label{tab:benchmark}
+  \small
+  \begin{tabular}{lrrrrrr}
+    \toprule
+    Model & Raw sem. & Agent sem. & Paired $\Delta$ [95\% CI] & Raw calc. (\%) & Agent calc. (\%) & Agent latency (s) \\
+    \midrule
+Gemma 3 270M & 2.5 & 73.1 & +70.6 [65.5, 75.7] & 0 & 0 & 3.6 \\
+Gemma 4 E2B & 54.7 & 77.9 & +23.2 [17.6, 28.6] & 31 & 0 & 2.2 \\
+Luna High & 89.8 & 83.4 & -6.4 [-11.5, -1.2] & 94 & 0 & 14.5 \\
+    \bottomrule
+  \end{tabular}
+\end{table*}

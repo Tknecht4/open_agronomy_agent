@@ -1,0 +1,19 @@
+Paper source-data package
+
+- analysis_manifest.json: completeness gate, model/arm identities, bootstrap settings, and file inventory.
+- response_level_metrics.csv: one row per canonical response; outputs remain in the SQLite result database.
+- arm_lane_summary.csv: arm-by-lane aggregates; objective accuracy appears only in the objective lane.
+- paired_semantic_deltas.csv: paired arm-minus-raw changes on the two semantic lanes.
+- task_family_summary.csv: task-family heterogeneity for every model and arm.
+- orchestration_summary.csv: intervention and fallback counts for governed runs.
+- resource_summary.csv: generation latency and token diagnostics.
+- material_error_taxonomy.csv: judge-supplied material-error labels, retained as advisory data.
+- external_finalist_freeze.json: pre-exposure finalist identity and selection rationale.
+- external_finalist_summary.json: one-time held-out result, generated after both external arms complete.
+- external_response_metrics.csv: paired per-question raw and governed overlap values for independent plotting.
+- protocol.md: frozen experiment contract and execution environment.
+- final_validation_receipt.json: database, PDF, page-review, and validator completion receipt.
+
+Generator: ../scripts/analyze_final_benchmark.py
+Canonical internal database: outputs/open_agronomy_canadian_performance_v1_rc1/full_system_benchmark.sqlite3 (local artifact; not distributed through Git)
+Public boundary: the summary tables are suitable for conference figures; exact generated answers and private benchmark databases remain local artifacts.

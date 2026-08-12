@@ -1,0 +1,19 @@
+model_key,model_label,benchmark_lane,comparison,n_paired_cases,mean_delta_points,ci95_low,ci95_high,improved_cases,unchanged_cases,worse_cases
+gemma3_270m_rc1,Gemma 3 270M,canadian_decision_quality,kernel_only_minus_raw_model,90,3.1667,0.6667,5.9722,43,27,20
+gemma3_270m_rc1,Gemma 3 270M,canadian_decision_quality,kernel_field_context_minus_raw_model,90,7.6528,4.8333,10.7917,66,12,12
+gemma3_270m_rc1,Gemma 3 270M,canadian_decision_quality,full_system_minus_raw_model,90,70.6319,65.4583,75.7082,89,0,1
+gemma3_270m_rc1,Gemma 3 270M,canadian_advisory_transfer,kernel_only_minus_raw_model,31,9.9597,6.0484,15.0,28,3,0
+gemma3_270m_rc1,Gemma 3 270M,canadian_advisory_transfer,kernel_field_context_minus_raw_model,31,7.5806,2.379,14.2742,15,12,4
+gemma3_270m_rc1,Gemma 3 270M,canadian_advisory_transfer,full_system_minus_raw_model,31,94.3952,90.8871,97.4194,31,0,0
+gemma4_e2b_rc1,Gemma 4 E2B,canadian_decision_quality,kernel_only_minus_raw_model,90,11.7083,7.7639,15.7987,64,5,21
+gemma4_e2b_rc1,Gemma 4 E2B,canadian_decision_quality,kernel_field_context_minus_raw_model,90,15.9028,11.3888,20.5348,70,2,18
+gemma4_e2b_rc1,Gemma 4 E2B,canadian_decision_quality,full_system_minus_raw_model,90,23.2222,17.5973,28.5907,76,2,12
+gemma4_e2b_rc1,Gemma 4 E2B,canadian_advisory_transfer,kernel_only_minus_raw_model,31,12.2984,5.9677,18.8707,24,0,7
+gemma4_e2b_rc1,Gemma 4 E2B,canadian_advisory_transfer,kernel_field_context_minus_raw_model,31,12.2581,6.1886,18.5884,20,1,10
+gemma4_e2b_rc1,Gemma 4 E2B,canadian_advisory_transfer,full_system_minus_raw_model,31,38.9113,32.2581,46.1894,31,0,0
+luna_high_rc1,Luna High,canadian_decision_quality,kernel_only_minus_raw_model,90,6.7338,4.124,9.6687,48,32,10
+luna_high_rc1,Luna High,canadian_decision_quality,kernel_field_context_minus_raw_model,90,7.3587,4.4434,10.6228,44,36,10
+luna_high_rc1,Luna High,canadian_decision_quality,full_system_minus_raw_model,90,-6.4468,-11.5186,-1.1761,29,11,50
+luna_high_rc1,Luna High,canadian_advisory_transfer,kernel_only_minus_raw_model,31,3.0442,0.7055,6.149,11,18,2
+luna_high_rc1,Luna High,canadian_advisory_transfer,kernel_field_context_minus_raw_model,31,4.2135,1.4516,7.5603,15,15,1
+luna_high_rc1,Luna High,canadian_advisory_transfer,full_system_minus_raw_model,31,1.9152,-2.0365,6.0277,14,10,7

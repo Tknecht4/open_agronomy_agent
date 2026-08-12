@@ -1,0 +1,8 @@
+benchmark_results.pdf
+- display item: fig:main-result
+- source: ../source_data/arm_lane_summary.csv
+- generator: ../scripts/analyze_final_benchmark.py
+- metric panels: 90-case advisory semantic score; 16-case deterministic calculation accuracy
+- bootstrap: 10,000 fixed-suite case resamples using the 20260811 seed family
+- format: vector PDF
+- claim boundary: automated semantic triage and deterministic interface evaluation; no agronomist or field-outcome claim
