@@ -474,6 +474,18 @@ const publicSourceCardFacts = (summary: JsonRecord): string[] => {
 
 const canadaSourceLaneFacts = (summary: JsonRecord): string[] => {
   const facts: string[] = []
+  const landscapes = asArray(summary.landscapes).map(asRecord)
+  if (landscapes.length) {
+    landscapes.slice(0, 2).forEach((landscape) => {
+      const bits = [
+        asString(landscape.slc_id) ? `SLC ${asString(landscape.slc_id)}` : '',
+        asString(landscape.soil_order) ? `order ${asString(landscape.soil_order)}` : '',
+        asString(landscape.soil_great_group) ? `great group ${asString(landscape.soil_great_group)}` : '',
+        asString(landscape.drainage_code) ? `drainage ${asString(landscape.drainage_code)}` : '',
+      ].filter(Boolean)
+      if (bits.length) facts.push(bits.join(' · '))
+    })
+  }
   const sourceName = asString(summary.source_name)
   if (sourceName) facts.push(sourceName)
   const coverage = asString(summary.coverage)

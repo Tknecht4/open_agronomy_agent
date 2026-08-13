@@ -768,6 +768,32 @@ const installFetchMock = (
         },
       })
     }
+    if (url.startsWith('/api/demo/fields/') && init?.method === 'PATCH') {
+      const body = JSON.parse(String(init.body || '{}'))
+      const fieldContextId = url.split('/').pop() || 'field-context-1'
+      return jsonResponse({
+        schema_version: 'open_agronomy_agent.demo_field_updated.v1',
+        storage: emptyDemoFields.storage,
+        field: {
+          id: fieldContextId,
+          field_context_id: fieldContextId,
+          name: body.name,
+          crop: body.field.crop,
+          region: body.field.region,
+          jurisdiction: body.field.jurisdiction,
+          acres: body.field.acres,
+          concern: body.field.concern,
+          notes: body.field.notes,
+          geometry: body.geometry,
+          regionalContext: body.regionalContext,
+          geoPriors: body.geoPriors,
+          sourceBoundary: body.sourceBoundary,
+          createdAt: '2026-07-10T18:00:00Z',
+          updatedAt: '2026-08-12T18:00:00Z',
+          storageMode: 'account_workspace',
+        },
+      })
+    }
     if (
       url.endsWith('/context-packs/quebec-lidar/plan')
       && init?.method === 'POST'
@@ -1339,7 +1365,6 @@ describe('Open Agronomy map upload workflow', () => {
 
     openPrimaryPage('Fields')
     await screen.findAllByText(/Saved to My agronomy workspace/i)
-    fireEvent.click(screen.getByText('Saved fields'))
     fireEvent.click(screen.getAllByRole('button', { name: /Quebec field/i })[0])
     fireEvent.click(await screen.findByText('Offline terrain context'))
     fireEvent.click(await screen.findByRole('button', { name: 'Check saved field' }))
@@ -1413,6 +1438,121 @@ describe('Open Agronomy map upload workflow', () => {
     expect(window.localStorage.getItem('open-agronomy-agent.active-field.v1')).toBe('field-restored')
   })
 
+  it('uses the field library to load, update, and start a clean field without crossing chat context', async () => {
+    const northField = {
+      id: 'field-north', field_context_id: 'field-north', name: 'North field', crop: 'canola',
+      region: 'Leduc County', jurisdiction: 'Alberta', acres: '80', concern: 'wet spots', notes: '',
+      geometry: { kind: 'point', point: { lat: 53.3, lon: -113.6 } }, regionalContext: 'Alberta soil context',
+      geoPriors: null, sourceBoundary: 'Regional context is not field truth.',
+      createdAt: '2026-07-10T12:00:00Z', updatedAt: '2026-08-10T12:00:00Z', storageMode: 'account_workspace',
+    }
+    const southField = {
+      ...northField,
+      id: 'field-south', field_context_id: 'field-south', name: 'South field', crop: 'barley',
+      region: 'Beaumont', updatedAt: '2026-08-11T12:00:00Z',
+    }
+    const fetchMock = installFetchMock(
+      { ...emptyDemoFields, fields: [northField, southField] },
+      uploadPayload,
+      [
+        {
+          session_id: 'north-session',
+          context: { field_context_id: 'field-north', field_conversation_key: 'field:field-north' },
+          turns: [{ turn_id: 'north-turn', user_message: 'North question', answer: 'North answer', trace: { retrieved_docs: [], graph_hits: [], tool_invocations: [] } }],
+        },
+        {
+          session_id: 'south-session',
+          context: { field_context_id: 'field-south', field_conversation_key: 'field:field-south' },
+          turns: [{ turn_id: 'south-turn', user_message: 'South question', answer: 'South answer', trace: { retrieved_docs: [], graph_hits: [], tool_invocations: [] } }],
+        },
+      ],
+    )
+    render(<OpenAgronomyApp />)
+
+    openPrimaryPage('Fields')
+    await screen.findByText('North field')
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search saved fields' }), { target: { value: 'south' } })
+    expect(screen.queryByText('North field')).not.toBeInTheDocument()
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search saved fields' }), { target: { value: '' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /^North field/ }))
+    openPrimaryPage('Map')
+    expect(await screen.findByText('North answer')).toBeInTheDocument()
+    openPrimaryPage('Fields')
+    fireEvent.change(screen.getByLabelText('Crop'), { target: { value: 'peas' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save field' }))
+    await waitFor(() => expect(fetchMock.mock.calls.some(
+      ([url, init]) => String(url) === '/api/demo/fields/field-north' && init?.method === 'PATCH',
+    )).toBe(true))
+    openPrimaryPage('Map')
+    expect(screen.getByText('North answer')).toBeInTheDocument()
+
+    openPrimaryPage('Fields')
+    fireEvent.click(screen.getByRole('button', { name: 'Save as new field' }))
+    await waitFor(() => expect(fetchMock.mock.calls.some(
+      ([url, init]) => String(url) === '/api/demo/fields' && init?.method === 'POST'
+        && JSON.parse(String(init.body || '{}')).name === 'North field copy',
+    )).toBe(true))
+    fireEvent.click(screen.getByRole('button', { name: /^South field/ }))
+    openPrimaryPage('Map')
+    expect(await screen.findByText('South answer')).toBeInTheDocument()
+    expect(screen.queryByText('North answer')).not.toBeInTheDocument()
+
+    openPrimaryPage('Fields')
+    fireEvent.click(screen.getByRole('button', { name: 'New field' }))
+    expect(screen.getByLabelText('Field name')).toHaveValue('')
+    expect(screen.getByText('New field setup')).toBeInTheDocument()
+    expect(screen.getByText(/1\. Add details/i)).toBeInTheDocument()
+    expect(screen.queryByText('South answer')).not.toBeInTheDocument()
+  })
+
+  it('creates a blank field through the guided boundary workflow before storing it', async () => {
+    const fetchMock = installFetchMock()
+    render(<OpenAgronomyApp />)
+
+    openPrimaryPage('Fields')
+    fireEvent.click(screen.getByRole('button', { name: 'New field' }))
+    fireEvent.change(screen.getByLabelText('Field name'), { target: { value: 'West quarter' } })
+    fireEvent.change(screen.getByLabelText('Crop'), { target: { value: 'oats' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Draw boundary on map' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Mock draw boundary' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save edits' })).toBeEnabled())
+    fireEvent.click(screen.getByRole('button', { name: 'Save edits' }))
+
+    openPrimaryPage('Fields')
+    fireEvent.click(screen.getByRole('button', { name: 'Save field' }))
+    await waitFor(() => expect(fetchMock.mock.calls.some(
+      ([url, init]) => String(url) === '/api/demo/fields' && init?.method === 'POST'
+        && JSON.parse(String(init.body || '{}')).name === 'West quarter',
+    )).toBe(true))
+    expect(screen.getByText('West quarter')).toBeInTheDocument()
+  })
+
+  it('keeps the active field selected when deleting another field and clears context when deleting the active field', async () => {
+    const northField = {
+      id: 'field-north', field_context_id: 'field-north', name: 'North field', crop: 'canola',
+      region: 'Leduc County', jurisdiction: 'Alberta', acres: '80', concern: '', notes: '',
+      geometry: { kind: 'point', point: { lat: 53.3, lon: -113.6 } }, regionalContext: 'Alberta soil context',
+      geoPriors: null, sourceBoundary: 'Regional context is not field truth.',
+      createdAt: '2026-07-10T12:00:00Z', storageMode: 'account_workspace',
+    }
+    const southField = { ...northField, id: 'field-south', field_context_id: 'field-south', name: 'South field' }
+    const fetchMock = installFetchMock({ ...emptyDemoFields, fields: [northField, southField] })
+    render(<OpenAgronomyApp />)
+
+    openPrimaryPage('Fields')
+    fireEvent.click(await screen.findByRole('button', { name: /^North field/ }))
+    expect(screen.getByLabelText('Field name')).toHaveValue('North field')
+    fireEvent.click(screen.getByRole('button', { name: 'Delete South field' }))
+    await waitFor(() => expect(screen.queryByText('South field')).not.toBeInTheDocument())
+    expect(screen.getByLabelText('Field name')).toHaveValue('North field')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete North field' }))
+    await waitFor(() => expect(screen.getByLabelText('Field name')).toHaveValue(''))
+    expect(screen.getByText('New field setup')).toBeInTheDocument()
+    expect(fetchMock.mock.calls.filter(([url, init]) => String(url).startsWith('/api/demo/fields/') && init?.method === 'DELETE')).toHaveLength(2)
+  })
+
   it('starts a new conversation identity instead of rebinding old answers to a saved field', async () => {
     const fetchMock = installFetchMock(emptyDemoFields, uploadPayload, [{
       session_id: 'session-old-sample',
@@ -1468,7 +1608,7 @@ describe('Open Agronomy map upload workflow', () => {
     const { container } = render(<OpenAgronomyApp />)
 
     openPrimaryPage('Fields')
-    await waitFor(() => expect(container.querySelector('.stored-fields-disclosure summary span')).toHaveTextContent('13'))
+    await waitFor(() => expect(container.querySelectorAll('.field-library-list article')).toHaveLength(13))
     expect(screen.queryByText('stale-device-1')).not.toBeInTheDocument()
     const fileInput = await screen.findByLabelText('Boundary upload')
     fireEvent.change(fileInput, {
@@ -1477,7 +1617,7 @@ describe('Open Agronomy map upload workflow', () => {
     await screen.findByTestId('upload-feature-geojson:0')
     fireEvent.click(screen.getByRole('button', { name: /save field/i }))
 
-    await waitFor(() => expect(container.querySelector('.stored-fields-disclosure summary span')).toHaveTextContent('14'))
+    await waitFor(() => expect(container.querySelectorAll('.field-library-list article')).toHaveLength(14))
     expect(screen.getByText('Existing field 13')).toBeInTheDocument()
     expect(screen.getByText('barley · Leduc County')).toBeInTheDocument()
   })
@@ -1863,7 +2003,10 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.queryByText('Evidence checks')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Model settings')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Ask about this field' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Ask about this field')).toBeInTheDocument()
+    expect(screen.getByLabelText('Ask about this field')).toHaveAttribute(
+      'placeholder',
+      'Ask a field question, compare observations, or request an evidence check…',
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Review evidence' }))
     expect(screen.getByText('Crop stress')).toHaveAttribute('title', 'fertility_diagnostic')
     expect(screen.getByText('Moderate')).toHaveAttribute('title', 'medium')
@@ -1883,6 +2026,23 @@ describe('Open Agronomy map upload workflow', () => {
     expect(checksDisclosure).toHaveAttribute('open')
     expect(screen.getByText('Showing 4 of 6 documents.')).toBeInTheDocument()
     expect(screen.queryByText('fertility_diagnostic')).not.toBeInTheDocument()
+  })
+
+  it('resets the current field chat to a fresh local conversation without deleting the saved history', async () => {
+    installConversationFetchMock()
+    render(<OpenAgronomyApp />)
+
+    expect(await screen.findByText('Should I add nitrogen after this wet spring?')).toBeInTheDocument()
+    const input = screen.getByLabelText('Ask about this field') as HTMLTextAreaElement
+    fireEvent.change(input, { target: { value: 'Keep this only in the old draft.' } })
+    fireEvent.click(screen.getByTestId('reset-chat'))
+
+    await waitFor(() => {
+      expect(screen.queryByText('Should I add nitrogen after this wet spring?')).not.toBeInTheDocument()
+      expect(screen.getByText('Start with a field question')).toBeInTheDocument()
+      expect(input).toHaveValue('')
+    })
+    expect(screen.getByTestId('reset-chat')).toBeEnabled()
   })
 
   it('keeps disconnected field work on-device and never presents the browser shell as an offline answer engine', async () => {

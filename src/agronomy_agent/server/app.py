@@ -2889,6 +2889,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             "regionalContext": open_metadata.get("regional_context_label") or record.get("region_text") or "",
             "geoPriors": open_metadata.get("geo_priors"),
             "geoContextLineage": open_metadata.get("geo_context_lineage"),
+            "fieldRevision": open_metadata.get("field_revision"),
             "sourceBoundary": open_metadata.get("source_boundary"),
             "createdAt": record.get("created_at"),
             "updatedAt": record.get("updated_at"),
@@ -3167,6 +3168,92 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             ),
         }
         return governed, lineage
+
+    def _demo_field_write_payload(
+        payload: dict[str, Any],
+        *,
+        previous_open_metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Normalize a map field write and bind a new source-aware context snapshot."""
+
+        field = payload.get("field") if isinstance(payload.get("field"), dict) else {}
+        geometry = _validate_demo_field_geometry(payload.get("geometry"))
+        name = _field_payload_text(
+            payload.get("name"),
+            fallback=f"{field.get('crop') or 'Field'} map context",
+            max_length=160,
+        )
+        crop = _field_payload_text(field.get("crop"), max_length=120)
+        jurisdiction = _field_payload_text(field.get("jurisdiction"), max_length=120)
+        region = _field_payload_text(field.get("region"), max_length=160)
+        regional_context = _field_payload_text(
+            payload.get("regionalContext"),
+            fallback="regional context pending",
+            max_length=240,
+        )
+        concern = _field_payload_text(field.get("concern"), max_length=500)
+        notes = _field_payload_text(field.get("notes"), max_length=1000)
+        acres = _field_payload_text(field.get("acres"), max_length=40)
+        source_boundary = _field_payload_text(
+            payload.get("sourceBoundary"),
+            fallback="Map and public-source context are decision-support priors, not field truth.",
+            max_length=500,
+        )
+        geo_priors, geo_context_lineage = _governed_demo_geo_priors(
+            geometry,
+            payload.get("geoPriors"),
+        )
+        snapshot = {
+            "field": {
+                "crop": crop,
+                "region": region,
+                "jurisdiction": jurisdiction,
+                "acres": acres,
+                "concern": concern,
+                "notes": notes,
+            },
+            "geometry": geometry,
+            "regional_context_label": regional_context,
+            "geo_priors": geo_priors,
+            "geo_context_lineage": geo_context_lineage,
+            "source_boundary": source_boundary,
+        }
+        previous_revision = (
+            previous_open_metadata.get("field_revision")
+            if isinstance(previous_open_metadata, dict)
+            and isinstance(previous_open_metadata.get("field_revision"), dict)
+            else {}
+        )
+        metadata = {
+            "open_agronomy_agent": {
+                "schema_version": "open_agronomy_agent.demo_field_metadata.v2",
+                "kind": "map_field",
+                **snapshot,
+                "field_revision": {
+                    "schema_version": "open_agronomy_agent.demo_field_revision.v1",
+                    "snapshot_sha256": _hash_payload(snapshot),
+                    "previous_snapshot_sha256": previous_revision.get("snapshot_sha256"),
+                    "update_kind": "updated" if previous_open_metadata is not None else "created",
+                },
+                "created_from": "map_first_public_demo",
+                "not_training_data": True,
+            }
+        }
+        return {
+            "display_name": name,
+            "region_text": regional_context,
+            "country": _demo_country_for_jurisdiction(jurisdiction),
+            "province_state": jurisdiction or None,
+            "crop_current": crop or None,
+            "management_notes": notes or concern or None,
+            "known_constraints": [
+                "regional context is prior-only",
+                "not cadastral boundary evidence",
+                "not benchmark/training data",
+            ],
+            "sensitivity": "medium",
+            "metadata": metadata,
+        }
 
     def workspace_quota_report(workspace: dict[str, Any]) -> dict[str, Any]:
         return _quota_report(workspace, store.phase4_workspace_usage(workspace["id"]))
@@ -6212,64 +6299,11 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             raise HTTPException(status_code=413, detail="demo field payload is too large")
         user = _demo_field_user(request)
         workspace = _demo_field_workspace(user)
-        field = payload.get("field") if isinstance(payload.get("field"), dict) else {}
-        geometry = _validate_demo_field_geometry(payload.get("geometry"))
-        name = _field_payload_text(payload.get("name"), fallback=f"{field.get('crop') or 'Field'} map context", max_length=160)
-        crop = _field_payload_text(field.get("crop"), max_length=120)
-        jurisdiction = _field_payload_text(field.get("jurisdiction"), max_length=120)
-        region = _field_payload_text(field.get("region"), max_length=160)
-        regional_context = _field_payload_text(payload.get("regionalContext"), fallback="regional context pending", max_length=240)
-        concern = _field_payload_text(field.get("concern"), max_length=500)
-        notes = _field_payload_text(field.get("notes"), max_length=1000)
-        acres = _field_payload_text(field.get("acres"), max_length=40)
-        source_boundary = _field_payload_text(
-            payload.get("sourceBoundary"),
-            fallback="Map and public-source context are decision-support priors, not field truth.",
-            max_length=500,
-        )
-        geo_priors, geo_context_lineage = _governed_demo_geo_priors(
-            geometry,
-            payload.get("geoPriors"),
-        )
-        metadata = {
-            "open_agronomy_agent": {
-                "schema_version": "open_agronomy_agent.demo_field_metadata.v1",
-                "kind": "map_field",
-                "field": {
-                    "crop": crop,
-                    "region": region,
-                    "jurisdiction": jurisdiction,
-                    "acres": acres,
-                    "concern": concern,
-                    "notes": notes,
-                },
-                "geometry": geometry,
-                "regional_context_label": regional_context,
-                "geo_priors": geo_priors,
-                "geo_context_lineage": geo_context_lineage,
-                "source_boundary": source_boundary,
-                "created_from": "map_first_public_demo",
-                "not_training_data": True,
-            }
-        }
+        normalized = _demo_field_write_payload(payload)
         record = store.create_phase4_field_context(
             workspace=workspace,
             created_by_user_id=user["id"],
-            payload={
-                "display_name": name,
-                "region_text": regional_context,
-                "country": _demo_country_for_jurisdiction(jurisdiction),
-                "province_state": jurisdiction or None,
-                "crop_current": crop or None,
-                "management_notes": notes or concern or None,
-                "known_constraints": [
-                    "regional context is prior-only",
-                    "not cadastral boundary evidence",
-                    "not benchmark/training data",
-                ],
-                "sensitivity": "medium",
-                "metadata": metadata,
-            },
+            payload=normalized,
         )
         return {
             "schema_version": "open_agronomy_agent.demo_field_saved.v1",
@@ -6280,6 +6314,42 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 "user_id": user["id"],
             },
             "field": _demo_field_record(record),
+        }
+
+    @app.patch("/api/demo/fields/{field_context_id}")
+    async def update_public_demo_field(
+        field_context_id: str,
+        payload: dict[str, Any],
+        request: Request,
+    ) -> dict[str, Any]:
+        """Update one workspace field without changing its identity or history."""
+
+        if len(json.dumps(payload, default=str)) > 200_000:
+            raise HTTPException(status_code=413, detail="demo field payload is too large")
+        user = _demo_field_user(request)
+        current = store.get_phase4_field_context(field_context_id)
+        if not current or _demo_field_metadata(current).get("kind") != "map_field":
+            raise HTTPException(status_code=404, detail="demo field not found")
+        workspace = require_workspace_role(user, current["workspace_id"], WORKSPACE_WRITE_ROLES)
+        updated = store.update_phase4_field_context(
+            field_context_id=field_context_id,
+            actor_user_id=user["id"],
+            payload=_demo_field_write_payload(
+                payload,
+                previous_open_metadata=_demo_field_metadata(current),
+            ),
+        )
+        if not updated:
+            raise HTTPException(status_code=404, detail="demo field not found")
+        return {
+            "schema_version": "open_agronomy_agent.demo_field_updated.v1",
+            "storage": {
+                "mode": "account_workspace",
+                "workspace_id": workspace["id"],
+                "workspace_name": workspace["name"],
+                "user_id": user["id"],
+            },
+            "field": _demo_field_record(updated),
         }
 
     @app.delete("/api/demo/fields/{field_context_id}")

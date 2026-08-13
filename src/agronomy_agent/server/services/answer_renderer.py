@@ -7,6 +7,7 @@ from typing import Any
 
 from agronomy_agent.answer_safety import normalize_general_answer, normalize_public_answer
 from agronomy_agent.canada_sources import apply_canadian_coverage_disclosure
+from agronomy_agent.map_component_interpretation import is_map_component_explanation_question
 from agronomy_agent.server.services.leak_guard import detect_prompt_leaks
 
 
@@ -65,12 +66,13 @@ def render_structured_answer(
         clean_answer = normalize_general_answer(sanitized, question=question, route=trace.get("route"))
     else:
         clean_answer = normalize_public_answer(sanitized)
-    map_interpretation = _map_interpretation_answer(question, trace)
+    map_interpretation = _map_component_explanation_answer(question, trace) or _map_interpretation_answer(question, trace)
     if map_interpretation:
         clean_answer = map_interpretation
-    elif not _keep_supporting_provenance_in_evidence_drawer(trace, question=question):
-        clean_answer = _merge_map_context_into_answer(clean_answer, trace)
-        clean_answer = _merge_public_adapter_context_into_answer(clean_answer, trace)
+    # Map and public-source receipts remain attached to the saved trace and are
+    # rendered in the evidence UI.  Appending them to every conversational
+    # answer made the answer body repetitive and blurred a source receipt with
+    # the model's decision-specific explanation.
     clean_answer = _complete_named_regional_product_boundary(clean_answer, question=question, trace=trace)
     agno_runtime = metadata.get("agno_runtime") if isinstance(metadata.get("agno_runtime"), dict) else {}
     coverage_boundaries = (
@@ -112,6 +114,12 @@ def render_map_interpretation_answer(question: str, trace: dict[str, Any]) -> st
     """Return a complete answer only when map evidence satisfies the strict tool-grounded contract."""
 
     return _map_interpretation_answer(question, trace)
+
+
+def render_map_component_explanation_answer(question: str, trace: dict[str, Any]) -> str | None:
+    """Render a factual explanation from supplied mapped component attributes only."""
+
+    return _map_component_explanation_answer(question, trace)
 
 
 def _complete_named_regional_product_boundary(
@@ -363,6 +371,96 @@ def _merge_map_context_into_answer(answer_text: str, trace: dict[str, Any]) -> s
     if limitation_sentence:
         answer_text = _append_to_labeled_line(answer_text, "Evidence that changes the decision", limitation_sentence)
     return answer_text
+
+
+def _map_component_explanation_answer(question: str | None, trace: dict[str, Any]) -> str | None:
+    if not is_map_component_explanation_question(question):
+        return None
+    field_context = _trace_field_context(trace)
+    intersections = field_context.get("regional_intersections") if isinstance(field_context, dict) else None
+    if not isinstance(intersections, list):
+        return None
+
+    selected: dict[str, Any] | None = None
+    components: list[dict[str, Any]] = []
+    for intersection in intersections:
+        if not isinstance(intersection, dict):
+            continue
+        candidate_components = [
+            component
+            for component in (intersection.get("dominant_components") or [])
+            if isinstance(component, dict) and str(component.get("soil_name") or "").strip()
+        ]
+        if candidate_components:
+            selected = intersection
+            components = candidate_components[:4]
+            break
+    if selected is None or not components:
+        return None
+
+    source = str(selected.get("system") or selected.get("name") or "the mapped soil source").strip()
+    map_unit = str(selected.get("map_unit") or selected.get("code") or "").strip()
+    scale = str(selected.get("source_scale_range") or selected.get("source_scale") or "").strip()
+    coverage = selected.get("coverage_estimate")
+    coverage_text = ""
+    if isinstance(coverage, (int, float)) and not isinstance(coverage, bool):
+        coverage_text = f" over about {round(float(coverage) * 100)}% of the selected boundary"
+
+    unit_text = f" map unit {map_unit}" if map_unit else " mapped area"
+    opening = (
+        f"**What this map unit represents**\n{source} describes{unit_text}{coverage_text}. "
+        "The listed soils are mapped components of that composite unit, not separate soil tests or confirmed zones on the ground."
+    )
+
+    component_lines: list[str] = []
+    for component in components:
+        name = str(component.get("soil_name") or "Unnamed component").strip()
+        facts: list[str] = []
+        proportion = component.get("proportion_percent")
+        if isinstance(proportion, (int, float)) and not isinstance(proportion, bool):
+            facts.append(f"about {round(float(proportion))}% of the mapped unit")
+        drainage = str(component.get("drainage_class") or "").strip()
+        if drainage:
+            facts.append(drainage)
+        slope = component.get("predominant_slope_percent")
+        if isinstance(slope, (int, float)) and not isinstance(slope, bool):
+            facts.append(f"{float(slope):g}% mapped slope")
+        order = str(component.get("soil_order_code") or "").strip()
+        if order:
+            facts.append(f"soil-order code {order}")
+
+        surface = component.get("surface_layer") if isinstance(component.get("surface_layer"), dict) else {}
+        profile_bits: list[str] = []
+        horizon = str(surface.get("horizon") or "").strip()
+        upper = surface.get("upper_depth_cm")
+        lower = surface.get("lower_depth_cm")
+        if horizon and isinstance(upper, (int, float)) and isinstance(lower, (int, float)):
+            profile_bits.append(f"{horizon}, {float(upper):g}–{float(lower):g} cm")
+        texture = []
+        for label, key in (("sand", "sand_percent_by_weight"), ("silt", "silt_percent_by_weight"), ("clay", "clay_percent_by_weight")):
+            value = surface.get(key)
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                texture.append(f"{float(value):g}% {label}")
+        if texture:
+            profile_bits.append(", ".join(texture))
+        stoniness = str(component.get("surface_stoniness") or "").strip()
+        if stoniness:
+            profile_bits.append(f"{stoniness} surface")
+
+        line = f"- **{name}** — " + ("; ".join(facts) if facts else "mapped component") + "."
+        if profile_bits:
+            line += " The source lists a representative surface profile: " + "; ".join(profile_bits) + "."
+        component_lines.append(line)
+
+    scale_text = f" at {scale}" if scale else ""
+    limitation = (
+        "**What remains uncertain**\n"
+        f"This is generalized mapping{scale_text}. The component percentages do not locate each soil within the field, "
+        "and any representative profile attributes are source values rather than current point measurements. They do not "
+        "establish the present texture, pH, nutrient supply, compaction, salinity, rooting depth, or drainage performance "
+        "at a particular spot. Use a soil pit or probe and separate, representative zone samples when those distinctions matter."
+    )
+    return "\n\n".join((opening, "**Mapped components**\n" + "\n".join(component_lines), limitation))
 
 
 def _map_interpretation_answer(question: str | None, trace: dict[str, Any]) -> str | None:

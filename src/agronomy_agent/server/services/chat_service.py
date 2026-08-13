@@ -42,7 +42,12 @@ from agronomy_agent.field_measurements import (
     soil_measurements_comparable,
 )
 
-from agronomy_agent.server.services.answer_renderer import render_map_interpretation_answer, render_structured_answer
+from agronomy_agent.server.services.answer_renderer import (
+    render_map_component_explanation_answer,
+    render_map_interpretation_answer,
+    render_structured_answer,
+)
+from agronomy_agent.server.services.field_context_compiler import compile_field_context
 from agronomy_agent.server.settings import ServerSettings
 from agronomy_agent.server.storage.db import TraceStore
 
@@ -379,6 +384,11 @@ def run_turn(
     context: Any | None = None
     source_grounded = False
     evidence_conflicts = _detect_evidence_conflicts(field_context, [])
+    compiled_field_context = compile_field_context(
+        field_context if isinstance(field_context, dict) else None,
+        [],
+        safe_field_summary=_safe_field_context_summary,
+    )
     start = perf_counter()
 
     if mode in {"baseline", "mock"}:
@@ -410,12 +420,22 @@ def run_turn(
         if trace_options.get("store_prompt_messages"):
             prompt_messages = messages
     else:
-        map_interpretation_answer = render_map_interpretation_answer(
+        map_component_answer = render_map_component_explanation_answer(
             message,
             {
                 "route": _normalize_route(route_payload),
                 "metadata": {"field_context": _safe_field_context_summary(field_context)},
             },
+        )
+        map_interpretation_answer = map_component_answer or render_map_interpretation_answer(
+            message,
+            {
+                "route": _normalize_route(route_payload),
+                "metadata": {"field_context": _safe_field_context_summary(field_context)},
+            },
+        )
+        tool_grounded_renderer = (
+            "map_component_explanation.v1" if map_component_answer else "map_interpretation.v1"
         )
         source_grounded = is_source_grounded_question(message)
         public_adapter_records = (
@@ -427,6 +447,11 @@ def run_turn(
                 profiler=profiler,
                 network_mode=settings.network_mode,
             )
+        )
+        compiled_field_context = compile_field_context(
+            field_context if isinstance(field_context, dict) else None,
+            public_adapter_records,
+            safe_field_summary=_safe_field_context_summary,
         )
         structured_public_adapter_answer = _render_explicit_statcan_answer(
             message,
@@ -441,7 +466,7 @@ def run_turn(
                     "agent.tools.run_guard_notes",
                     "agent.plan.coverage_checklist",
                 ):
-                    profiler.add_skipped(stage, reason="tool_grounded_map_interpretation")
+                    profiler.add_skipped(stage, reason=f"tool_grounded_{tool_grounded_renderer}")
         else:
             context = build_context(
                 message,
@@ -459,7 +484,12 @@ def run_turn(
                 else _append_public_adapter_context(
                     _append_evidence_conflict_context(
                         _append_workspace_evidence(
-                            _append_field_context_prompt(_build_context_block(context), field_context),
+                            "\n\n".join(
+                                (
+                                    _append_field_context_prompt(_build_context_block(context), field_context),
+                                    str(compiled_field_context["prompt"]),
+                                )
+                            ),
                             workspace_docs,
                         ),
                         evidence_conflicts,
@@ -471,7 +501,7 @@ def run_turn(
         with prompt_span:
             if map_interpretation_answer:
                 messages = [
-                    {"role": "system", "content": "No model call: tool-grounded map interpretation renderer."},
+                    {"role": "system", "content": f"No model call: tool-grounded {tool_grounded_renderer}."},
                     {"role": "user", "content": message},
                 ]
             elif structured_public_adapter_answer:
@@ -500,12 +530,12 @@ def run_turn(
             profiler.add_skipped("model.prefill_to_first_token", reason="not_observable_from_generator")
         if map_interpretation_answer:
             if profiler:
-                profiler.add_skipped("model.decode_stream", reason="tool_grounded_map_interpretation")
+                profiler.add_skipped("model.decode_stream", reason=f"tool_grounded_{tool_grounded_renderer}")
             answer = map_interpretation_answer
             generation_metadata = {
                 "generation_bypass": {
-                    "reason": "tool_grounded_map_interpretation",
-                    "renderer": "map_interpretation.v1",
+                    "reason": f"tool_grounded_{tool_grounded_renderer}",
+                    "renderer": tool_grounded_renderer,
                 }
             }
         elif structured_public_adapter_answer:
@@ -579,6 +609,7 @@ def run_turn(
                 "retrieval_policy": bypass_reason,
                 "answer_policy_profile": "general_agronomy",
                 "field_context": _safe_field_context_summary(field_context),
+                "field_context_compiler": compiled_field_context["receipt"],
                 "public_adapter_tools": [],
                 "public_adapter_summary": public_adapter_summary,
                 "public_adapter_status_counts": public_adapter_summary["status_counts"],
@@ -631,6 +662,7 @@ def run_turn(
                 "retrieval_policy": (context.runtime_metadata or {}).get("retrieval_policy", "fit_filtered_rag"),
                 "answer_policy_profile": "source_grounded" if source_grounded else "general_agronomy",
                 "field_context": _safe_field_context_summary(field_context),
+                "field_context_compiler": compiled_field_context["receipt"],
                 "public_adapter_tools": [record["name"] for record in public_adapter_records],
                 "public_adapter_summary": public_adapter_summary,
                 "public_adapter_status_counts": public_adapter_summary["status_counts"],
@@ -728,6 +760,9 @@ def run_turn(
         )
 
     trace_store_payload["prompt_messages"] = prompt_messages or []
+    trace_store_payload["metadata"].setdefault(
+        "field_context_compiler", compiled_field_context["receipt"]
+    )
     if generation_metadata:
         trace_store_payload["metadata"].update(generation_metadata)
     field_lineage = _field_lineage_record(session_context, field_context)
@@ -1302,7 +1337,19 @@ def _call_cansis_soil_landscapes(
         crop=crop,
         province=province,
     )
-    text = "Canadian soil source lane identified: CanSIS National Soil Database / Soil Landscapes of Canada."
+    landscapes = payload.get("landscapes") if isinstance(payload.get("landscapes"), list) else []
+    first = landscapes[0] if landscapes and isinstance(landscapes[0], dict) else {}
+    parts = [
+        f"SLC {first.get('slc_id')}" if first.get("slc_id") else "",
+        f"soil order {first.get('soil_order')}" if first.get("soil_order") else "",
+        f"great group {first.get('soil_great_group')}" if first.get("soil_great_group") else "",
+    ]
+    detail = "; ".join(part for part in parts if part)
+    text = (
+        f"CanSIS Soil Landscapes of Canada returned broad mapped context: {detail}."
+        if detail
+        else "Canadian soil source lane identified: CanSIS National Soil Database / Soil Landscapes of Canada."
+    )
     return _public_tool_record("cansis_soil_landscapes_canada", text, payload, status=str(payload.get("status")))
 
 
@@ -2014,6 +2061,17 @@ def _adapter_summary(payload: dict[str, Any]) -> dict[str, Any]:
         }
     if payload.get("tool") == "nasa_power_daily":
         return {"parameter_summary": payload.get("parameter_summary") or {}}
+    if payload.get("tool") == "cansis_soil_landscapes_canada":
+        return {
+            "status": payload.get("status"),
+            "source_name": payload.get("source_name"),
+            "provider": payload.get("provider"),
+            "coverage": payload.get("coverage"),
+            "landscape_count": payload.get("landscape_count"),
+            "landscapes": (payload.get("landscapes") or [])[:3],
+            "context": payload.get("context") or {},
+            "provenance": payload.get("provenance"),
+        }
     if payload.get("tool") == "daymet_single_pixel_daily":
         return {
             "status": payload.get("status"),

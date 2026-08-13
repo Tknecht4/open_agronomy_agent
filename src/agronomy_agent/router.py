@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from agronomy_agent.map_component_interpretation import is_map_component_explanation_question
+
 
 _AAFC_CROP_HEALTH_PRODUCT_PATTERN = (
     r"(?:\baafc\b.{0,80}\b(?:crop[- ]health (?:index|indices)|crop stress index|crop development stage|growth[- ]stage raster)\b|"
@@ -2208,6 +2210,18 @@ def classify_query(question: str) -> QueryRoute:
         guidance = (
             "For EPA PPLS or product metadata, ask for exact product identity and EPA registration number, separate candidate metadata from label interpretation, "
             "and state that the current local label controls."
+        )
+
+    if is_map_component_explanation_question(question):
+        namespaces = {"regional_environment", "field_data_boundary", "soil_health"}
+        required_tools = {"field_data_guard"}
+        expansions = {"soil map", "map unit", "soil component", "representative profile", "mapping scale"}
+        qtype = "field_data"
+        risk = "low"
+        guidance = (
+            "Explain only the mapped component attributes supplied by the source. Distinguish a composite map unit "
+            "from a point sample, name missing profile attributes explicitly, and do not add a management prescription "
+            "unless the user asks for one."
         )
 
     if has(r"\b(farmer|grower)\b", q):

@@ -13,8 +13,8 @@ assistant_quality_gate: fast_repaired
 vlm_model_id: mlx-community/gemma-4-e2b-it-4bit
 model_revision: 238767527555cb75a05732a84dff5d6ba0dd6809
 license: apache-2.0
-max_tokens: 480
-serving_max_tokens: 480
+max_tokens: 640
+serving_max_tokens: 640
 assistant_max_tokens: 35
 temperature: 0.0
 top_p: 0.9
