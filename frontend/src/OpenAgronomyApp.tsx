@@ -914,6 +914,11 @@ type StoredField = FieldProfile & {
   storageMode?: 'account_workspace' | 'device' | string
   geoPriors?: GeoPriors | null
   sourceBoundary?: string | null
+  fieldRevision?: {
+    snapshot_sha256?: string
+    previous_snapshot_sha256?: string | null
+    update_kind?: string
+  } | null
 }
 
 type DemoFieldsResponse = {
@@ -1028,6 +1033,15 @@ type DemoFieldEventResponse = {
 }
 
 const emptyGeometry: FieldGeometry = { kind: 'none' }
+
+const emptyFieldProfile: FieldProfile = {
+  crop: '',
+  region: '',
+  jurisdiction: '',
+  acres: '',
+  concern: '',
+  notes: '',
+}
 
 type SampleProfile = FieldProfile & {
   id: string
@@ -1926,6 +1940,7 @@ export function OpenAgronomyApp() {
   )
   const [activeFieldRecordUpdatedAt, setActiveFieldRecordUpdatedAt] = useState('')
   const [field, setField] = useState<FieldProfile>(sampleProfiles[0])
+  const [fieldName, setFieldName] = useState(sampleProfiles[0].name)
   const [scenarioId, setScenarioId] = useState(sampleProfiles[0].id)
   const [boundaryStatus, setBoundaryStatus] = useState('Sample boundary loaded.')
   const [isMapContextChecking, setIsMapContextChecking] = useState(false)
@@ -1937,6 +1952,10 @@ export function OpenAgronomyApp() {
   const [uploadContext, setUploadContext] = useState<BoundaryUploadResponse | null>(null)
   const [selectedUploadFeatureId, setSelectedUploadFeatureId] = useState('')
   const [storedFields, setStoredFields] = useState<StoredField[]>([])
+  const [fieldLibraryQuery, setFieldLibraryQuery] = useState('')
+  const [fieldLibrarySort, setFieldLibrarySort] = useState<'updated' | 'name' | 'crop' | 'region'>('updated')
+  const [renamingFieldId, setRenamingFieldId] = useState('')
+  const [renameValue, setRenameValue] = useState('')
   const [fieldsHydrated, setFieldsHydrated] = useState(false)
   const [storedFieldRestoreAttempted, setStoredFieldRestoreAttempted] = useState(false)
   const [fieldStorageMode, setFieldStorageMode] = useState<'account_workspace' | 'device'>('device')
@@ -2219,6 +2238,7 @@ export function OpenAgronomyApp() {
     setTurns(matchingSession?.turns || [])
     setEvidenceTurnId('')
     setField(scenario)
+    setFieldName(scenario.name)
     setBoundaryStatus('Sample boundary loaded.')
     setFieldGeometry(geometryForScenario(scenario))
     setGeometryDraft(null)
@@ -2229,6 +2249,35 @@ export function OpenAgronomyApp() {
     setGeoPriors(null)
     setMessage(defaultQuestion(scenario))
     setMapMode('inspect')
+  }
+
+  const startNewField = () => {
+    regionalLookupRequestRef.current += 1
+    setIsMapContextChecking(false)
+    persistActiveStoredFieldId('')
+    setActiveFieldContextId('')
+    setActiveFieldConversationKey(freshConversationKey('new-field'))
+    setActiveFieldRecordUpdatedAt('')
+    setSessionId('')
+    setTurns([])
+    setEvidenceTurnId('')
+    setMessage('')
+    setScratchpadNotes('')
+    setFieldName('')
+    setField({ ...emptyFieldProfile })
+    setFieldGeometry(emptyGeometry)
+    setGeometryDraft(emptyGeometry)
+    setGeometryEditSnapshot({ geoPriors: null, uploadContext: null, selectedUploadFeatureId: '' })
+    setUploadContext(null)
+    setSelectedUploadFeatureId('')
+    setGeoPriors(null)
+    setFieldHistory(null)
+    setFieldHistoryStatus('Save this new field to begin a durable field timeline.')
+    setAgroclimate({ status: 'idle' })
+    setNasaPower({ status: 'idle' })
+    setFieldToolsOpen(true)
+    setMapMode('boundary')
+    setBoundaryStatus('Start with field details, then draw or upload a boundary. Save the geometry to retrieve regional context.')
   }
 
   const ensureSession = async (): Promise<string> => {
@@ -2685,7 +2734,7 @@ export function OpenAgronomyApp() {
     }
   }
 
-  const storeCurrentField = async () => {
+  const storeCurrentField = async (saveAsNew = false) => {
     if (!geometryReady) {
       setBoundaryStatus(geometryIssue || 'Draw a boundary or add a point before storing the field.')
       return
@@ -2693,46 +2742,61 @@ export function OpenAgronomyApp() {
     const candidate = primaryGeoCandidate
       ? `${primaryGeoCandidate.system} ${primaryGeoCandidate.code}`
       : activeScenario.mlra
+    const selectedName = fieldName.trim() || `${field.crop || 'Field'} · ${field.region || field.jurisdiction || 'new field'}`
+    const name = saveAsNew && activeFieldContextId ? `${selectedName} copy` : selectedName
+    const sourceBoundary = geoPriors?.disclaimer || 'Map and public-source context are decision-support priors, not field truth.'
+    const payload = {
+      name,
+      field: {
+        crop: field.crop,
+        region: field.region,
+        jurisdiction: field.jurisdiction,
+        acres: activeArea || field.acres,
+        concern: field.concern,
+        notes: field.notes,
+      },
+      geometry: fieldGeometry,
+      regionalContext: candidate,
+      geoPriors,
+      sourceBoundary,
+    }
     const stored: StoredField = {
       ...field,
       id: `${Date.now()}`,
-      name: `${field.crop || 'Field'} · ${field.region || field.jurisdiction || 'new field'}`,
+      name,
       geometry: fieldGeometry,
       acres: activeArea || field.acres,
       regionalContext: candidate,
       createdAt: new Date().toISOString(),
       storageMode: fieldStorageMode,
       geoPriors,
-      sourceBoundary: geoPriors?.disclaimer || 'Map and public-source context are decision-support priors, not field truth.',
+      sourceBoundary,
     }
+    const updatingCurrentField = Boolean(activeFieldContextId) && !saveAsNew
     try {
       if (fieldStorageMode === 'account_workspace') {
-        const saved = await apiPost<DemoFieldSavedResponse>('/api/demo/fields', {
-          name: stored.name,
-          field: {
-            crop: stored.crop,
-            region: stored.region,
-            jurisdiction: stored.jurisdiction,
-            acres: stored.acres,
-            concern: stored.concern,
-            notes: stored.notes,
-          },
-          geometry: stored.geometry,
-          regionalContext: stored.regionalContext,
-          geoPriors,
-          sourceBoundary: stored.sourceBoundary,
-        })
+        const saved = updatingCurrentField
+          ? await apiPatch<DemoFieldSavedResponse>(`/api/demo/fields/${encodeURIComponent(activeFieldContextId)}`, payload)
+          : await apiPost<DemoFieldSavedResponse>('/api/demo/fields', payload)
         setStoredFields((current) => [saved.field, ...current.filter((item) => item.id !== saved.field.id)])
         const savedFieldId = saved.field.field_context_id || saved.field.id
-        const nextConversationKey = storedFieldConversationKey(savedFieldId)
         setActiveFieldContextId(savedFieldId)
         persistActiveStoredFieldId(savedFieldId)
-        setActiveFieldConversationKey(nextConversationKey)
         setActiveFieldRecordUpdatedAt(saved.field.updatedAt || '')
-        setSessionId('')
-        setTurns([])
-        setEvidenceTurnId('')
-        setBoundaryStatus(`Stored ${saved.field.name} in the local workspace.`)
+        setFieldName(saved.field.name)
+        if (!updatingCurrentField) {
+          setActiveFieldConversationKey(storedFieldConversationKey(savedFieldId))
+          setSessionId('')
+          setTurns([])
+          setEvidenceTurnId('')
+          setMessage('')
+          setScratchpadNotes('')
+        }
+        setBoundaryStatus(
+          updatingCurrentField
+            ? `Saved changes to ${saved.field.name} in the local workspace.`
+            : `Stored ${saved.field.name} in the local workspace.`,
+        )
         setFieldStorageStatus(saved.storage.workspace_name ? `Saved to ${saved.storage.workspace_name}.` : 'Saved to the local account workspace.')
         void refreshFieldHistory(savedFieldId)
         return
@@ -2742,14 +2806,31 @@ export function OpenAgronomyApp() {
       setFieldStorageMode('device')
       setFieldStorageStatus('Device-only fallback; workspace save failed.')
     }
-    setStoredFields((current) => [stored, ...current].slice(0, 12))
-    setActiveFieldContextId(stored.id)
-    persistActiveStoredFieldId(stored.id)
-    setActiveFieldConversationKey(storedFieldConversationKey(stored.id))
-    setActiveFieldRecordUpdatedAt(stored.updatedAt || stored.createdAt)
+    const localStored = updatingCurrentField
+      ? {
+          ...stored,
+          id: activeFieldContextId,
+          createdAt: storedFields.find((item) => (item.field_context_id || item.id) === activeFieldContextId)?.createdAt || stored.createdAt,
+          updatedAt: stored.createdAt,
+          storageMode: 'device' as const,
+        }
+      : { ...stored, storageMode: 'device' as const }
+    setStoredFields((current) => [localStored, ...current.filter((item) => item.id !== localStored.id)].slice(0, 12))
+    setActiveFieldContextId(localStored.id)
+    persistActiveStoredFieldId(localStored.id)
+    setFieldName(localStored.name)
+    if (!updatingCurrentField) {
+      setActiveFieldConversationKey(storedFieldConversationKey(localStored.id))
+      setSessionId('')
+      setTurns([])
+      setEvidenceTurnId('')
+      setMessage('')
+      setScratchpadNotes('')
+    }
+    setActiveFieldRecordUpdatedAt(localStored.updatedAt || localStored.createdAt)
     setFieldHistory(null)
     setFieldHistoryStatus('Device-only field: timeline is not saved.')
-    setBoundaryStatus(`Stored ${stored.name} on this device.`)
+    setBoundaryStatus(updatingCurrentField ? `Saved changes to ${localStored.name} on this device.` : `Stored ${localStored.name} on this device.`)
   }
 
   const loadStoredField = (stored: StoredField) => {
@@ -2773,6 +2854,7 @@ export function OpenAgronomyApp() {
       concern: stored.concern,
       notes: stored.notes,
     })
+    setFieldName(stored.name)
     setFieldGeometry(stored.geometry)
     setGeometryDraft(null)
     setGeometryEditSnapshot(null)
@@ -2810,16 +2892,60 @@ export function OpenAgronomyApp() {
         await apiDelete<DemoFieldSavedResponse>(`/api/demo/fields/${encodeURIComponent(target.field_context_id || target.id)}`)
       } catch (err) {
         setError(String((err as Error).message || err))
+        return
       }
     }
     setStoredFields((current) => current.filter((stored) => stored.id !== id))
     if (target && (target.field_context_id || target.id) === activeFieldContextId) {
-      persistActiveStoredFieldId('')
-      setActiveFieldContextId('')
-      setActiveFieldConversationKey(sampleConversationKey(scenarioId))
-      setActiveFieldRecordUpdatedAt('')
-      setFieldHistory(null)
+      startNewField()
       setFieldHistoryStatus('The selected field was deleted. Save or load another field to build durable history.')
+      setBoundaryStatus('The selected field was deleted. Start a new field or load another saved field.')
+    }
+  }
+
+  const renameStoredField = async (stored: StoredField) => {
+    const name = renameValue.trim()
+    if (!name || name === stored.name) {
+      setRenamingFieldId('')
+      return
+    }
+    const storedFieldId = stored.field_context_id || stored.id
+    try {
+      let renamed: StoredField
+      if (stored.storageMode === 'account_workspace' || fieldStorageMode === 'account_workspace') {
+        const saved = await apiPatch<DemoFieldSavedResponse>(
+          `/api/demo/fields/${encodeURIComponent(storedFieldId)}`,
+          {
+            name,
+            field: {
+              crop: stored.crop,
+              region: stored.region,
+              jurisdiction: stored.jurisdiction,
+              acres: stored.acres,
+              concern: stored.concern,
+              notes: stored.notes,
+            },
+            geometry: stored.geometry,
+            regionalContext: stored.regionalContext,
+            geoPriors: stored.geoPriors,
+            sourceBoundary: stored.sourceBoundary,
+          },
+        )
+        renamed = saved.field
+        setFieldStorageMode('account_workspace')
+        setFieldStorageStatus(saved.storage.workspace_name ? `Saved to ${saved.storage.workspace_name}.` : 'Saved to the local account workspace.')
+      } else {
+        renamed = { ...stored, name, updatedAt: new Date().toISOString(), storageMode: 'device' }
+      }
+      setStoredFields((current) => current.map((item) => item.id === stored.id ? renamed : item))
+      if (storedFieldId === activeFieldContextId) {
+        setFieldName(renamed.name)
+        setActiveFieldRecordUpdatedAt(renamed.updatedAt || activeFieldRecordUpdatedAt)
+      }
+      setBoundaryStatus(`Renamed field to ${renamed.name}.`)
+      setRenamingFieldId('')
+    } catch (err) {
+      setError(String((err as Error).message || err))
     }
   }
 
@@ -3043,6 +3169,20 @@ export function OpenAgronomyApp() {
     setStatus('Reviewer report downloaded')
   }
 
+  const visibleStoredFields = useMemo(() => {
+    const query = fieldLibraryQuery.trim().toLocaleLowerCase()
+    const filtered = query
+      ? storedFields.filter((stored) => [stored.name, stored.crop, stored.region, stored.jurisdiction]
+        .some((value) => value.toLocaleLowerCase().includes(query)))
+      : storedFields
+    return [...filtered].sort((left, right) => {
+      if (fieldLibrarySort === 'updated') {
+        return String(right.updatedAt || right.createdAt).localeCompare(String(left.updatedAt || left.createdAt))
+      }
+      return String(left[fieldLibrarySort] || '').localeCompare(String(right[fieldLibrarySort] || ''))
+    })
+  }, [fieldLibraryQuery, fieldLibrarySort, storedFields])
+
   return (
     <main className="demo-app">
       <DemoHeader page={page} setPage={navigateToPage} answerCapability={answerCapability} />
@@ -3056,24 +3196,115 @@ export function OpenAgronomyApp() {
           </nav> : null}
           {page === 'fields' ? (
           <aside id="field-context-panel" className="field-panel" aria-label="Field context">
+            <section className="field-library" aria-labelledby="field-library-heading">
+              <div className="field-library-heading">
+                <div>
+                  <span className="panel-kicker">Workspace</span>
+                  <h2 id="field-library-heading">My fields</h2>
+                </div>
+                <span className={`field-storage-badge ${fieldStorageMode}`}>
+                  {fieldStorageMode === 'account_workspace' ? 'Workspace' : 'This device'}
+                </span>
+              </div>
+              <p className="field-library-status">{fieldStorageStatus}</p>
+              <div className="field-library-controls">
+                <input
+                  aria-label="Search saved fields"
+                  placeholder="Search name, crop, or region"
+                  value={fieldLibraryQuery}
+                  onChange={(event) => setFieldLibraryQuery(event.target.value)}
+                />
+                <select
+                  aria-label="Sort saved fields"
+                  value={fieldLibrarySort}
+                  onChange={(event) => setFieldLibrarySort(event.target.value as typeof fieldLibrarySort)}
+                >
+                  <option value="updated">Last updated</option>
+                  <option value="name">Name</option>
+                  <option value="crop">Crop</option>
+                  <option value="region">Region</option>
+                </select>
+              </div>
+              <button type="button" className="map-primary-action new-field-action" onClick={startNewField}>
+                <MapPin size={16} /> New field
+              </button>
+              {visibleStoredFields.length === 0 ? (
+                <p className="field-library-empty">{storedFields.length ? 'No fields match this search.' : 'Create a field to store its boundary, context, chats, and timeline.'}</p>
+              ) : (
+                <div className="field-library-list" aria-label="Saved field library">
+                  {visibleStoredFields.map((stored) => {
+                    const storedFieldId = stored.field_context_id || stored.id
+                    const active = storedFieldId === activeFieldContextId
+                    const renaming = renamingFieldId === storedFieldId
+                    return (
+                      <article key={stored.id} className={active ? 'active' : ''}>
+                        {renaming ? (
+                          <div className="field-rename-editor">
+                            <input
+                              aria-label={`Rename ${stored.name}`}
+                              value={renameValue}
+                              onChange={(event) => setRenameValue(event.target.value)}
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter') void renameStoredField(stored)
+                                if (event.key === 'Escape') setRenamingFieldId('')
+                              }}
+                            />
+                            <button type="button" onClick={() => void renameStoredField(stored)}>Save</button>
+                            <button type="button" onClick={() => setRenamingFieldId('')}>Cancel</button>
+                          </div>
+                        ) : (
+                          <button type="button" className="field-library-load" onClick={() => loadStoredField(stored)}>
+                            <strong>{stored.name}</strong>
+                            <span>{[stored.crop, stored.region || stored.jurisdiction].filter(Boolean).join(' · ') || stored.regionalContext}</span>
+                            <small>{active ? 'Active field' : `Updated ${new Date(stored.updatedAt || stored.createdAt).toLocaleDateString()}`}</small>
+                          </button>
+                        )}
+                        <div className="field-library-actions">
+                          {!renaming ? (
+                            <button
+                              type="button"
+                              className="icon-button"
+                              title={`Rename ${stored.name}`}
+                              aria-label={`Rename ${stored.name}`}
+                              onClick={() => {
+                                setRenamingFieldId(storedFieldId)
+                                setRenameValue(stored.name)
+                              }}
+                            >
+                              <Pencil size={15} />
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            className="icon-button danger"
+                            title={`Delete ${stored.name}`}
+                            aria-label={`Delete ${stored.name}`}
+                            onClick={() => void deleteStoredField(stored.id)}
+                          >
+                            <Eraser size={15} />
+                          </button>
+                        </div>
+                      </article>
+                    )
+                  })}
+                </div>
+              )}
+            </section>
             <div className="workspace-panel-heading">
               <div>
                 <span className="panel-kicker">Field</span>
-                <h2>Field context</h2>
+                <h2>{activeFieldContextId ? 'Edit field' : 'New field setup'}</h2>
               </div>
               <span className={`context-state ${geometryReady ? 'ready' : 'pending'}`}>
-                {fieldGeometry.kind === 'none' ? 'Add a field' : geometryReady ? 'Geometry ready' : 'Fix geometry'}
+                {activeFieldContextId ? 'Saved field' : fieldGeometry.kind === 'none' ? 'Add a boundary' : geometryReady ? 'Ready to save' : 'Fix geometry'}
               </span>
             </div>
-            <button
-              type="button"
-              className="map-primary-action field-save-action"
-              aria-label="Save field"
-              onClick={() => void storeCurrentField()}
-              disabled={!geometryReady}
-            >
-              <Save size={16} /> Save field
-            </button>
+            <p className="field-workflow-hint">1. Add details  2. Draw or upload the boundary  3. Save edits to refresh map context  4. Save the field</p>
+            {!geometryReady ? (
+              <button type="button" className="field-copy-action field-draw-action" onClick={() => navigateToPage('analyze')}>
+                <MapPin size={15} /> Draw boundary on map
+              </button>
+            ) : null}
             <details className="workspace-disclosure sample-disclosure">
               <summary><Sparkles size={16} /> Load a demonstration field</summary>
               <label>
@@ -3087,6 +3318,15 @@ export function OpenAgronomyApp() {
                 </select>
               </label>
             </details>
+            <label>
+              Field name
+              <input
+                aria-label="Field name"
+                placeholder="e.g. North quarter"
+                value={fieldName}
+                onChange={(event) => setFieldName(event.target.value)}
+              />
+            </label>
             <div className="field-grid">
               <label>
                 Crop
@@ -3175,6 +3415,27 @@ export function OpenAgronomyApp() {
                 <span>Storage</span>
                 <strong>{fieldStorageMode === 'account_workspace' ? 'Workspace' : 'Device'}</strong>
               </div>
+            </div>
+            <div className="field-save-actions">
+              <button
+                type="button"
+                className="map-primary-action field-save-action"
+                aria-label="Save field"
+                onClick={() => void storeCurrentField()}
+                disabled={!geometryReady}
+              >
+                <Save size={16} /> {activeFieldContextId ? 'Save changes' : 'Save new field'}
+              </button>
+              {activeFieldContextId ? (
+                <button
+                  type="button"
+                  className="field-copy-action"
+                  onClick={() => void storeCurrentField(true)}
+                  disabled={!geometryReady}
+                >
+                  Save as new field
+                </button>
+              ) : null}
             </div>
             {geoPriors ? (
               <details className="workspace-disclosure regional-context-disclosure">
@@ -3289,33 +3550,6 @@ export function OpenAgronomyApp() {
                 </section>
               </details>
             ) : null}
-            <details className="workspace-disclosure stored-fields-disclosure">
-              <summary><Database size={16} /> Saved fields <span>{storedFields.length}</span></summary>
-              <div className="stored-fields">
-                <small className="stored-fields-status">{fieldStorageStatus}</small>
-                {storedFields.length === 0 ? (
-                  <p>No fields stored yet.</p>
-                ) : (
-                  storedFields.map((stored) => (
-                    <article key={stored.id}>
-                      <button type="button" onClick={() => loadStoredField(stored)}>
-                        <strong>{stored.name}</strong>
-                        <span>{stored.regionalContext}</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="icon-button danger"
-                        title={`Delete ${stored.name}`}
-                        aria-label={`Delete ${stored.name}`}
-                        onClick={() => void deleteStoredField(stored.id)}
-                      >
-                        <Eraser size={16} />
-                      </button>
-                    </article>
-                  ))
-                )}
-              </div>
-            </details>
             <Suspense fallback={null}>
               <OfflineTerrainContextPanel
                 id={activeFieldContextId}

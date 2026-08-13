@@ -1715,6 +1715,159 @@ pre,
   padding-top: 2px;
 }
 
+.field-library {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #cdd7c7;
+  border-radius: 10px;
+  background: #f6f9f3;
+}
+
+.field-library-heading,
+.field-library-controls,
+.field-library-list article,
+.field-library-actions,
+.field-save-actions,
+.field-rename-editor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field-library-heading {
+  justify-content: space-between;
+}
+
+.field-library-heading h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.field-storage-badge {
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #dcebd8;
+  color: #315c48;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.field-storage-badge.device {
+  background: #faedca;
+  color: #765717;
+}
+
+.field-library-status,
+.field-workflow-hint,
+.field-library-empty {
+  margin: 0;
+  color: #5d6b62;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.field-library-controls input {
+  min-width: 0;
+  flex: 1;
+}
+
+.field-library-controls select {
+  flex: 0 0 120px;
+}
+
+.new-field-action {
+  width: 100%;
+}
+
+.field-library-list {
+  display: grid;
+  max-height: 300px;
+  gap: 7px;
+  overflow: auto;
+}
+
+.field-library-list article {
+  padding: 7px;
+  border: 1px solid #d5ded0;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.field-library-list article.active {
+  border-color: #5f7d49;
+  box-shadow: inset 3px 0 #5f7d49;
+}
+
+.field-library-load {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  justify-items: start;
+  gap: 2px;
+  padding: 3px;
+  border: 0;
+  color: #243129;
+  background: transparent;
+  text-align: left;
+}
+
+.field-library-load span,
+.field-library-load small {
+  overflow: hidden;
+  max-width: 100%;
+  color: #66736a;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.field-library-load small {
+  color: #4d654b;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.field-library-actions {
+  align-self: stretch;
+}
+
+.field-library-actions .icon-button {
+  min-width: 34px;
+}
+
+.field-rename-editor {
+  flex: 1;
+  min-width: 0;
+}
+
+.field-rename-editor input {
+  min-width: 0;
+  flex: 1;
+}
+
+.field-rename-editor button,
+.field-copy-action {
+  padding: 7px 9px;
+  border: 1px solid #b9c9b3;
+  border-radius: 7px;
+  color: #315c48;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.field-save-actions {
+  flex-wrap: wrap;
+}
+
+.field-copy-action:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
 .stored-fields-header {
   display: flex;
   align-items: center;
