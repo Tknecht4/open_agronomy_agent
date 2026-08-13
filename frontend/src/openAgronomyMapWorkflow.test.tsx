@@ -1885,6 +1885,23 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.queryByText('fertility_diagnostic')).not.toBeInTheDocument()
   })
 
+  it('resets the current field chat to a fresh local conversation without deleting the saved history', async () => {
+    installConversationFetchMock()
+    render(<OpenAgronomyApp />)
+
+    expect(await screen.findByText('Should I add nitrogen after this wet spring?')).toBeInTheDocument()
+    const input = screen.getByLabelText('Ask about this field') as HTMLTextAreaElement
+    fireEvent.change(input, { target: { value: 'Keep this only in the old draft.' } })
+    fireEvent.click(screen.getByTestId('reset-chat'))
+
+    await waitFor(() => {
+      expect(screen.queryByText('Should I add nitrogen after this wet spring?')).not.toBeInTheDocument()
+      expect(screen.getByText('Start with a field question')).toBeInTheDocument()
+      expect(input).toHaveValue('')
+    })
+    expect(screen.getByTestId('reset-chat')).toBeEnabled()
+  })
+
   it('keeps disconnected field work on-device and never presents the browser shell as an offline answer engine', async () => {
     installFetchMock()
     const firstRender = render(<OpenAgronomyApp />)

@@ -1092,6 +1092,10 @@ const sampleProfiles: SampleProfile[] = [
 
 const sampleConversationKey = (scenarioId: string) => `sample:${scenarioId}`
 const storedFieldConversationKey = (fieldId: string) => `field:${fieldId}`
+const freshConversationKey = (base: string) => {
+  const suffix = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  return `${base}:chat:${suffix}`
+}
 
 const sessionContextValue = (session: SessionRecord, key: string): string => {
   const direct = session.context?.[key]
@@ -1111,10 +1115,9 @@ const sessionForField = (
   candidates.find((session) => {
     const sessionFieldId = sessionContextValue(session, 'field_context_id')
     const sessionKey = sessionContextValue(session, 'field_conversation_key')
-    return Boolean(
-      (fieldContextId && sessionFieldId === fieldContextId) ||
-        (fieldConversationKey && sessionKey === fieldConversationKey),
-    )
+    return fieldConversationKey
+      ? sessionKey === fieldConversationKey
+      : Boolean(fieldContextId && sessionFieldId === fieldContextId)
   })
 
 const fallbackAdapterReadiness: PublicAdapterReadiness = {
@@ -2268,6 +2271,26 @@ export function OpenAgronomyApp() {
     setSessionId(created.session_id)
     setTurns(created.turns || [])
     return created.session_id
+  }
+
+  const resetChat = () => {
+    if (isAnalyzing) return
+    const baseConversationKey = activeFieldContextId
+      ? storedFieldConversationKey(activeFieldContextId)
+      : sampleConversationKey(scenarioId)
+    clearPhase6ChatDraft(activeFieldConversationKey)
+    clearPhase6Scratchpad(activeFieldConversationKey)
+    setActiveFieldConversationKey(freshConversationKey(baseConversationKey))
+    setSessionId('')
+    setTurns([])
+    setEvidenceTurnId('')
+    setMessage('')
+    setScratchpadNotes('')
+    setStreamDraft('')
+    setStreamProgress([])
+    setPendingQuestion('')
+    setError('')
+    setStatus('Fresh chat ready')
   }
 
   const sendQuestion = async (event: FormEvent) => {
@@ -3725,6 +3748,16 @@ export function OpenAgronomyApp() {
               <span className={`agent-state ${isAnalyzing ? 'working' : 'ready'}`}>
                 {isAnalyzing ? status : 'Ready'}
               </span>
+              <button
+                type="button"
+                className="chat-reset-button"
+                onClick={resetChat}
+                disabled={isAnalyzing}
+                data-testid="reset-chat"
+                title="Start a fresh chat for this field"
+              >
+                <Eraser size={15} /> Reset chat
+              </button>
             </div>
             <div className={`network-answer-state ${answerCapability.state}`}>
               <strong title={answerCapability.detail}>
@@ -4029,6 +4062,43 @@ function EvidenceDisclosure({
   )
 }
 
+function CompiledFieldContextPanel({ receipt }: { receipt: Record<string, unknown> | undefined }) {
+  const mapContext = Array.isArray(receipt?.map_context) ? receipt.map_context : []
+  const liveContext = Array.isArray(receipt?.live_context) ? receipt.live_context : []
+  const field = receipt?.field && typeof receipt.field === 'object' ? receipt.field as Record<string, unknown> : {}
+  const fieldLabel = ['crop', 'region', 'jurisdiction', 'concern']
+    .map((key) => typeof field[key] === 'string' ? field[key] : '')
+    .filter(Boolean)
+    .join(' · ')
+  return (
+    <section className="compiled-field-context" data-testid="compiled-field-context">
+      <p>{fieldLabel || 'No bounded field details were supplied for this turn.'}</p>
+      {mapContext.map((value, index) => {
+        const item = value && typeof value === 'object' ? value as Record<string, unknown> : {}
+        const components = Array.isArray(item.dominant_components) ? item.dominant_components : []
+        return (
+          <article key={`map-${index}`}>
+            <strong>{String(item.label || item.layer_id || 'Mapped context')}</strong>
+            <p>{String(item.soil_summary || item.map_unit || 'Mapped prior used.')}</p>
+            {components.length ? <small>{components.length} dominant mapped component{components.length === 1 ? '' : 's'} retained</small> : null}
+          </article>
+        )
+      })}
+      {liveContext.map((value, index) => {
+        const item = value && typeof value === 'object' ? value as Record<string, unknown> : {}
+        const facts = Array.isArray(item.facts) ? item.facts.map(String).filter(Boolean) : []
+        return (
+          <article key={`live-${index}`}>
+            <strong>{String(item.label || item.adapter || 'Public source')}</strong>
+            <p>{facts.join(' · ') || 'No usable value returned.'}</p>
+          </article>
+        )
+      })}
+      {typeof receipt?.boundary === 'string' ? <small>{receipt.boundary}</small> : null}
+    </section>
+  )
+}
+
 function knowledgeCoverageView(coverage?: AnswerTimeKnowledgeCoverage): [string, boolean] {
   const statuses = coverage?.boundaries.map((boundary) => boundary.status) || []
   if (!statuses.length) {
@@ -4100,6 +4170,7 @@ function EvidencePage({
       }
     }
     | undefined
+  const compiledFieldContext = latestTurn?.trace?.metadata?.field_context_compiler as Record<string, unknown> | undefined
   return (
     <div className="evidence-page">
       <section className="evidence-summary">
@@ -4213,6 +4284,11 @@ function EvidencePage({
           cards={mapEvidenceCards}
           emptyLabel="None."
         />
+      </EvidenceDisclosure>
+      <EvidenceDisclosure
+        heading={['Compiled field context', compiledFieldContext?.status === 'available' ? 'source-bound values retained' : 'limited context']}
+      >
+        <CompiledFieldContextPanel receipt={compiledFieldContext} />
       </EvidenceDisclosure>
       <EvidenceDisclosure
         heading={['Live public sources', summarizePublicToolCards(liveToolCards)]}

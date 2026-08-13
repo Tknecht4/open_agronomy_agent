@@ -43,6 +43,7 @@ from agronomy_agent.field_measurements import (
 )
 
 from agronomy_agent.server.services.answer_renderer import render_map_interpretation_answer, render_structured_answer
+from agronomy_agent.server.services.field_context_compiler import compile_field_context
 from agronomy_agent.server.settings import ServerSettings
 from agronomy_agent.server.storage.db import TraceStore
 
@@ -379,6 +380,11 @@ def run_turn(
     context: Any | None = None
     source_grounded = False
     evidence_conflicts = _detect_evidence_conflicts(field_context, [])
+    compiled_field_context = compile_field_context(
+        field_context if isinstance(field_context, dict) else None,
+        [],
+        safe_field_summary=_safe_field_context_summary,
+    )
     start = perf_counter()
 
     if mode in {"baseline", "mock"}:
@@ -428,6 +434,11 @@ def run_turn(
                 network_mode=settings.network_mode,
             )
         )
+        compiled_field_context = compile_field_context(
+            field_context if isinstance(field_context, dict) else None,
+            public_adapter_records,
+            safe_field_summary=_safe_field_context_summary,
+        )
         structured_public_adapter_answer = _render_explicit_statcan_answer(
             message,
             public_adapter_records,
@@ -459,7 +470,12 @@ def run_turn(
                 else _append_public_adapter_context(
                     _append_evidence_conflict_context(
                         _append_workspace_evidence(
-                            _append_field_context_prompt(_build_context_block(context), field_context),
+                            "\n\n".join(
+                                (
+                                    _append_field_context_prompt(_build_context_block(context), field_context),
+                                    str(compiled_field_context["prompt"]),
+                                )
+                            ),
                             workspace_docs,
                         ),
                         evidence_conflicts,
@@ -579,6 +595,7 @@ def run_turn(
                 "retrieval_policy": bypass_reason,
                 "answer_policy_profile": "general_agronomy",
                 "field_context": _safe_field_context_summary(field_context),
+                "field_context_compiler": compiled_field_context["receipt"],
                 "public_adapter_tools": [],
                 "public_adapter_summary": public_adapter_summary,
                 "public_adapter_status_counts": public_adapter_summary["status_counts"],
@@ -631,6 +648,7 @@ def run_turn(
                 "retrieval_policy": (context.runtime_metadata or {}).get("retrieval_policy", "fit_filtered_rag"),
                 "answer_policy_profile": "source_grounded" if source_grounded else "general_agronomy",
                 "field_context": _safe_field_context_summary(field_context),
+                "field_context_compiler": compiled_field_context["receipt"],
                 "public_adapter_tools": [record["name"] for record in public_adapter_records],
                 "public_adapter_summary": public_adapter_summary,
                 "public_adapter_status_counts": public_adapter_summary["status_counts"],
@@ -728,6 +746,9 @@ def run_turn(
         )
 
     trace_store_payload["prompt_messages"] = prompt_messages or []
+    trace_store_payload["metadata"].setdefault(
+        "field_context_compiler", compiled_field_context["receipt"]
+    )
     if generation_metadata:
         trace_store_payload["metadata"].update(generation_metadata)
     field_lineage = _field_lineage_record(session_context, field_context)
@@ -1302,7 +1323,19 @@ def _call_cansis_soil_landscapes(
         crop=crop,
         province=province,
     )
-    text = "Canadian soil source lane identified: CanSIS National Soil Database / Soil Landscapes of Canada."
+    landscapes = payload.get("landscapes") if isinstance(payload.get("landscapes"), list) else []
+    first = landscapes[0] if landscapes and isinstance(landscapes[0], dict) else {}
+    parts = [
+        f"SLC {first.get('slc_id')}" if first.get("slc_id") else "",
+        f"soil order {first.get('soil_order')}" if first.get("soil_order") else "",
+        f"great group {first.get('soil_great_group')}" if first.get("soil_great_group") else "",
+    ]
+    detail = "; ".join(part for part in parts if part)
+    text = (
+        f"CanSIS Soil Landscapes of Canada returned broad mapped context: {detail}."
+        if detail
+        else "Canadian soil source lane identified: CanSIS National Soil Database / Soil Landscapes of Canada."
+    )
     return _public_tool_record("cansis_soil_landscapes_canada", text, payload, status=str(payload.get("status")))
 
 
@@ -2014,6 +2047,17 @@ def _adapter_summary(payload: dict[str, Any]) -> dict[str, Any]:
         }
     if payload.get("tool") == "nasa_power_daily":
         return {"parameter_summary": payload.get("parameter_summary") or {}}
+    if payload.get("tool") == "cansis_soil_landscapes_canada":
+        return {
+            "status": payload.get("status"),
+            "source_name": payload.get("source_name"),
+            "provider": payload.get("provider"),
+            "coverage": payload.get("coverage"),
+            "landscape_count": payload.get("landscape_count"),
+            "landscapes": (payload.get("landscapes") or [])[:3],
+            "context": payload.get("context") or {},
+            "provenance": payload.get("provenance"),
+        }
     if payload.get("tool") == "daymet_single_pixel_daily":
         return {
             "status": payload.get("status"),
