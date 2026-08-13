@@ -42,7 +42,11 @@ from agronomy_agent.field_measurements import (
     soil_measurements_comparable,
 )
 
-from agronomy_agent.server.services.answer_renderer import render_map_interpretation_answer, render_structured_answer
+from agronomy_agent.server.services.answer_renderer import (
+    render_map_component_explanation_answer,
+    render_map_interpretation_answer,
+    render_structured_answer,
+)
 from agronomy_agent.server.services.field_context_compiler import compile_field_context
 from agronomy_agent.server.settings import ServerSettings
 from agronomy_agent.server.storage.db import TraceStore
@@ -416,12 +420,22 @@ def run_turn(
         if trace_options.get("store_prompt_messages"):
             prompt_messages = messages
     else:
-        map_interpretation_answer = render_map_interpretation_answer(
+        map_component_answer = render_map_component_explanation_answer(
             message,
             {
                 "route": _normalize_route(route_payload),
                 "metadata": {"field_context": _safe_field_context_summary(field_context)},
             },
+        )
+        map_interpretation_answer = map_component_answer or render_map_interpretation_answer(
+            message,
+            {
+                "route": _normalize_route(route_payload),
+                "metadata": {"field_context": _safe_field_context_summary(field_context)},
+            },
+        )
+        tool_grounded_renderer = (
+            "map_component_explanation.v1" if map_component_answer else "map_interpretation.v1"
         )
         source_grounded = is_source_grounded_question(message)
         public_adapter_records = (
@@ -452,7 +466,7 @@ def run_turn(
                     "agent.tools.run_guard_notes",
                     "agent.plan.coverage_checklist",
                 ):
-                    profiler.add_skipped(stage, reason="tool_grounded_map_interpretation")
+                    profiler.add_skipped(stage, reason=f"tool_grounded_{tool_grounded_renderer}")
         else:
             context = build_context(
                 message,
@@ -487,7 +501,7 @@ def run_turn(
         with prompt_span:
             if map_interpretation_answer:
                 messages = [
-                    {"role": "system", "content": "No model call: tool-grounded map interpretation renderer."},
+                    {"role": "system", "content": f"No model call: tool-grounded {tool_grounded_renderer}."},
                     {"role": "user", "content": message},
                 ]
             elif structured_public_adapter_answer:
@@ -516,12 +530,12 @@ def run_turn(
             profiler.add_skipped("model.prefill_to_first_token", reason="not_observable_from_generator")
         if map_interpretation_answer:
             if profiler:
-                profiler.add_skipped("model.decode_stream", reason="tool_grounded_map_interpretation")
+                profiler.add_skipped("model.decode_stream", reason=f"tool_grounded_{tool_grounded_renderer}")
             answer = map_interpretation_answer
             generation_metadata = {
                 "generation_bypass": {
-                    "reason": "tool_grounded_map_interpretation",
-                    "renderer": "map_interpretation.v1",
+                    "reason": f"tool_grounded_{tool_grounded_renderer}",
+                    "renderer": tool_grounded_renderer,
                 }
             }
         elif structured_public_adapter_answer:

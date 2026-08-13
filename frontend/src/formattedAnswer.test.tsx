@@ -1,7 +1,7 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 
-import { FormattedAnswer } from './OpenAgronomyApp'
+import { AnswerContextDisclosure, FormattedAnswer } from './OpenAgronomyApp'
 
 
 describe('FormattedAnswer', () => {
@@ -49,5 +49,27 @@ describe('FormattedAnswer', () => {
     expect(container.querySelector('code')).toHaveTextContent('EC')
     expect(container.querySelector('script')).toBeNull()
     expect(screen.queryByText('alert(1)')).not.toBeInTheDocument()
+  })
+
+  it('keeps source context compact until a reader expands it', () => {
+    const onReviewEvidence = vi.fn()
+    render(
+      <AnswerContextDisclosure
+        receipt={{
+          map_context: [{ label: 'AAFC Alberta Detailed Soil Survey' }],
+          live_context: [{ label: 'NASA POWER daily weather' }],
+        }}
+        onReviewEvidence={onReviewEvidence}
+      />,
+    )
+
+    expect(screen.getByText('Context used')).toBeInTheDocument()
+    expect(screen.getByText('AAFC Alberta Detailed Soil Survey · NASA POWER daily weather')).toBeInTheDocument()
+    expect(screen.queryByText(/These map and public-source values/)).not.toBeVisible()
+
+    fireEvent.click(screen.getByText('Context used'))
+    expect(screen.getByText(/These map and public-source values/)).toBeVisible()
+    fireEvent.click(screen.getByRole('link', { name: 'View sources and freshness' }))
+    expect(onReviewEvidence).toHaveBeenCalledOnce()
   })
 })

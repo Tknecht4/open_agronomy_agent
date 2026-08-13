@@ -1619,6 +1619,43 @@ export function FormattedAnswer({ text }: { text: string }) {
   )
 }
 
+export function AnswerContextDisclosure({
+  receipt,
+  onReviewEvidence,
+}: {
+  receipt: Record<string, unknown> | undefined
+  onReviewEvidence: () => void
+}) {
+  const mapContext = Array.isArray(receipt?.map_context) ? receipt.map_context : []
+  const liveContext = Array.isArray(receipt?.live_context) ? receipt.live_context : []
+  const labels = [...mapContext, ...liveContext]
+    .map((value) => {
+      const item = value && typeof value === 'object' ? value as Record<string, unknown> : {}
+      return typeof item.label === 'string' ? item.label.trim() : ''
+    })
+    .filter((label, index, values) => Boolean(label) && values.indexOf(label) === index)
+    .slice(0, 3)
+
+  if (!labels.length) {
+    return null
+  }
+
+  return (
+    <details className="answer-context-disclosure">
+      <summary>
+        <span>Context used</span>
+        <small>{labels.join(' · ')}</small>
+      </summary>
+      <div>
+        <p>
+          These map and public-source values informed this turn as regional or gridded context. They are not field measurements.
+        </p>
+        <a href="#evidence" onClick={onReviewEvidence}>View sources and freshness</a>
+      </div>
+    </details>
+  )
+}
+
 const primaryRegionalCandidate = (priors: GeoPriors | null): GeoPriorCandidate | null => {
   const candidates = priors?.candidate_regions || []
   return candidates.find((candidate) =>
@@ -4040,6 +4077,13 @@ export function OpenAgronomyApp() {
                   >
                     <span>Open Agronomy Agent</span>
                     <FormattedAnswer text={turn.answer} />
+                    <AnswerContextDisclosure
+                      receipt={turn.trace?.metadata?.field_context_compiler as Record<string, unknown> | undefined}
+                      onReviewEvidence={() => {
+                        setEvidenceTurnId(turn.turn_id)
+                        navigateToPage('evidence')
+                      }}
+                    />
                   </article>
                 </Fragment>
               ))}
@@ -4084,6 +4128,8 @@ export function OpenAgronomyApp() {
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
                 disabled={isAnalyzing}
+                placeholder="Ask a field question, compare observations, or request an evidence check…"
+                rows={3}
               />
               <div className="composer-actions">
                 <details className="model-settings-disclosure">

@@ -7,12 +7,14 @@ from agronomy_agent.server.services.chat_service import (
 )
 from agronomy_agent.server.services.answer_renderer import (
     _append_to_labeled_line,
+    render_map_component_explanation_answer,
     render_map_interpretation_answer,
     render_structured_answer,
 )
 from agronomy_agent.answer_verifier import _decision_route_failure_answer
 from agronomy_agent.answer_safety import enforce_answer_safety_postconditions
 from agronomy_agent.decision_route import build_decision_route_state
+from agronomy_agent.router import classify_query
 
 
 def test_pei_mapped_soil_context_keeps_bounded_lineage_fields() -> None:
@@ -198,6 +200,83 @@ def test_management_question_with_map_context_does_not_bypass_retrieval_and_mode
     assert answer is None
 
 
+def test_mapped_component_explanation_is_source_bound_and_not_a_management_recipe() -> None:
+    question = "Can you explain these soil components and what the percentages mean?"
+    trace = {
+        "metadata": {
+            "field_context": {
+                "regional_intersections": [
+                    {
+                        "system": "Example Provincial Detailed Soil Survey",
+                        "map_unit": "Cedar-Ridge Complex",
+                        "coverage_estimate": 0.9,
+                        "source_scale": "1:50,000",
+                        "dominant_components": [
+                            {
+                                "soil_name": "CEDAR",
+                                "proportion_percent": 55,
+                                "drainage_class": "well drained",
+                                "predominant_slope_percent": 2,
+                                "soil_order_code": "CH",
+                                "surface_stoniness": "nonstony",
+                                "surface_layer": {
+                                    "horizon": "Ap",
+                                    "upper_depth_cm": 0,
+                                    "lower_depth_cm": 20,
+                                    "sand_percent_by_weight": 20,
+                                    "silt_percent_by_weight": 50,
+                                    "clay_percent_by_weight": 30,
+                                },
+                            },
+                            {
+                                "soil_name": "RIDGE",
+                                "proportion_percent": 45,
+                                "drainage_class": "moderately well drained",
+                                "predominant_slope_percent": 4,
+                            },
+                        ],
+                    }
+                ]
+            }
+        }
+    }
+
+    answer = render_map_component_explanation_answer(question, trace)
+
+    assert answer is not None
+    assert "mapped components of that composite unit" in answer
+    assert "**CEDAR**" in answer
+    assert "55% of the mapped unit" in answer
+    assert "20% sand, 50% silt, 30% clay" in answer
+    assert "1:50,000" in answer
+    assert "not separate soil tests" in answer
+    assert "terrace" not in answer.lower()
+    assert "no-till" not in answer.lower()
+
+    route = classify_query(question)
+    assert route.question_type == "field_data"
+    assert route.risk_level == "low"
+    assert "soil_water" not in route.namespaces
+
+
+def test_mapped_component_renderer_does_not_take_over_a_management_question() -> None:
+    trace = {
+        "field_context": {
+            "regional_intersections": [
+                {
+                    "system": "Example Detailed Soil Survey",
+                    "dominant_components": [{"soil_name": "CEDAR", "proportion_percent": 100}],
+                }
+            ]
+        }
+    }
+
+    assert render_map_component_explanation_answer(
+        "What crop should I plant in these soil types?",
+        trace,
+    ) is None
+
+
 def test_canadian_public_data_tools_are_relevance_gated() -> None:
     field_context = {"crop": "barley", "jurisdiction": "Alberta", "concern": "uneven early growth"}
 
@@ -277,3 +356,45 @@ def test_appended_trace_evidence_is_a_separate_markdown_section() -> None:
         "The mapped soil unit is a regional prior, not a field measurement. "
         "Current public weather context was also checked."
     )
+
+
+def test_context_receipts_stay_out_of_the_conversational_answer_body() -> None:
+    trace = {
+        "metadata": {"answer_policy_profile": "general_agronomy"},
+        "field_context": {
+            "regional_intersections": [
+                {
+                    "system": "AAFC Alberta Detailed Soil Survey",
+                    "code": "AB_SOIL_1",
+                    "name": "Mapped soil unit",
+                    "coverage_estimate": 1,
+                }
+            ]
+        },
+        "tool_invocations": [
+            {
+                "name": "nasa_power_daily",
+                "payload": {
+                    "kind": "public_adapter",
+                    "status": "available",
+                    "summary": {
+                        "parameter_summary": {
+                            "PRECTOTCORR": {"sum": 5.6},
+                            "WS2M": {"mean": 1.0},
+                        }
+                    },
+                },
+            }
+        ],
+    }
+
+    rendered = render_structured_answer(
+        "Compare affected and normal areas before changing phosphorus placement.",
+        trace=trace,
+        question="What should I compare before changing phosphorus placement?",
+    )
+
+    assert "Map context checked" not in rendered.answer
+    assert "Checked public context" not in rendered.answer
+    assert "Treat map context as a prior" not in rendered.answer
+    assert "Treat the public context as a prior" not in rendered.answer

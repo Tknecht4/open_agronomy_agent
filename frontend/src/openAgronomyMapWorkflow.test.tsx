@@ -2003,7 +2003,10 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.queryByText('Evidence checks')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Model settings')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Ask about this field' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Ask about this field')).toBeInTheDocument()
+    expect(screen.getByLabelText('Ask about this field')).toHaveAttribute(
+      'placeholder',
+      'Ask a field question, compare observations, or request an evidence check…',
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Review evidence' }))
     expect(screen.getByText('Crop stress')).toHaveAttribute('title', 'fertility_diagnostic')
     expect(screen.getByText('Moderate')).toHaveAttribute('title', 'medium')
