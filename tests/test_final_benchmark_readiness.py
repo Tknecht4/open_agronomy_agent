@@ -5,7 +5,12 @@ import datetime as dt
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
+from types import SimpleNamespace
+
+import yaml
+import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,7 +40,7 @@ def _internal_contract(plan: dict | None = None) -> dict:
 def _valid_egress(tmp_path: Path, **overrides: object) -> Path:
     plan = _plan()
     payload = {
-        "schema_version": "open_agronomy_agent.benchmark_egress_authorization.v2",
+        "schema_version": plan["egress"]["authorization_schema"],
         "authorization_decision": "authorized",
         "benchmark_id": _internal_contract(plan)["benchmark_id"],
         "benchmark_suite_sha256": plan["internal_benchmark"]["suite_sha256"],
@@ -43,8 +48,20 @@ def _valid_egress(tmp_path: Path, **overrides: object) -> Path:
         "authorized_by_key_id": "benchmark-authority-key-7",
         "authorized_at": "2026-08-14T11:00:00Z",
         "expires_at": "2026-08-14T13:00:00Z",
+        "recipient_backend": plan["egress"]["recipient_backend"],
+        "model_id": plan["egress"]["recipient_model_id"],
+        "reasoning_effort": plan["egress"]["recipient_reasoning_effort"],
+        "model_config_sha256": plan["egress"]["recipient_model_config_sha256"],
+        "suite_case_contract_sha256": plan["egress"]["suite_case_contract_sha256"],
+        "egress_artifact_contract_sha256": plan["egress"][
+            "egress_artifact_contract_sha256"
+        ],
+        "static_prompt_contract_sha256": plan["egress"][
+            "static_prompt_contract_sha256"
+        ],
         "authorized_payload_classes": plan["egress"]["authorized_payload_classes_exact"],
         "excluded_payload_classes": plan["egress"]["excluded_payload_classes_exact"],
+        "payload_classes_by_phase_and_arm": plan["egress"]["payload_classes_by_phase_and_arm"],
     }
     payload.update(overrides)
     path = tmp_path / "egress.json"
@@ -56,10 +73,29 @@ def _verify_egress(module, path: Path) -> dict:
     plan = _plan()
     return module.verify_egress_authorization(
         path,
+        authorization_schema=plan["egress"]["authorization_schema"],
         benchmark_id=_internal_contract(plan)["benchmark_id"],
         suite_sha256=plan["internal_benchmark"]["suite_sha256"],
         required_payloads=plan["egress"]["authorized_payload_classes_exact"],
         forbidden_payloads=plan["egress"]["excluded_payload_classes_exact"],
+        required_phase_arm_map=plan["egress"]["payload_classes_by_phase_and_arm"],
+        required_recipient={
+            "recipient_backend": plan["egress"]["recipient_backend"],
+            "model_id": plan["egress"]["recipient_model_id"],
+            "reasoning_effort": plan["egress"]["recipient_reasoning_effort"],
+            "model_config_sha256": plan["egress"]["recipient_model_config_sha256"],
+        },
+        required_contract_bindings={
+            "suite_case_contract_sha256": plan["egress"][
+                "suite_case_contract_sha256"
+            ],
+            "egress_artifact_contract_sha256": plan["egress"][
+                "egress_artifact_contract_sha256"
+            ],
+            "static_prompt_contract_sha256": plan["egress"][
+                "static_prompt_contract_sha256"
+            ],
+        },
         checked_at=dt.datetime(2026, 8, 14, 12, tzinfo=dt.UTC),
     )
 
@@ -88,6 +124,141 @@ def test_rc3_is_append_only_nonclaim_master_runtime_with_retired_external_v1() -
     assert runtime["knowledge_release_rows"] == 969
     assert _internal_contract(plan)["rag_config"] == runtime["rag_config_path"]
     assert _internal_contract(plan)["contamination_policy"]["exclude_questions_from_deterministic_answer_repair"] is False
+    assert plan["egress"]["authorization_schema"] == module.BENCHMARK_EGRESS_AUTHORIZATION_SCHEMA
+    assert plan["egress"]["authorized_payload_classes_exact"] == list(
+        module.BENCHMARK_EGRESS_AUTHORIZED_PAYLOAD_CLASSES
+    )
+    assert plan["egress"]["excluded_payload_classes_exact"] == list(
+        module.BENCHMARK_EGRESS_FORBIDDEN_PAYLOAD_CLASSES
+    )
+    runtime_phase_arm_map = json.loads(
+        json.dumps(module.BENCHMARK_EGRESS_PAYLOAD_CLASSES_BY_PHASE_AND_ARM)
+    )
+    assert plan["egress"]["payload_classes_by_phase_and_arm"] == runtime_phase_arm_map
+    assert plan["egress"]["recipient_backend"] == "codex_app_server_chatgpt_auth"
+    assert plan["egress"]["recipient_model_id"] == "gpt-5.6-luna"
+    assert plan["egress"]["recipient_reasoning_effort"] == "high"
+    assert plan["egress"]["recipient_model_config_sha256"] == plan["models"][2][
+        "config_sha256"
+    ]
+    assert plan["judge"] == {
+        "default_enabled": False,
+        "execution_allowed": False,
+        "payload_class_present": False,
+        "role_boundary": "RC3 performs no automated semantic judging. Human review remains a separate post-run activity and is not an egress payload class.",
+        "roles": [],
+        "status": "disabled_for_rc3",
+    }
+    assert plan["replication"]["judge_seed_application"] == "not_requested"
+    assert plan["private_knowledge_policy"]["policy_id"] == "disabled_for_all_benchmark_arms"
+
+
+def test_rc3_v4_contract_bindings_rebuild_exactly_from_current_release() -> None:
+    from agronomy_agent.agent import (
+        build_benchmark_egress_artifact_contract,
+        load_agent_resources,
+    )
+    from agronomy_agent.codex_app_server import build_benchmark_static_prompt_contract
+    from agronomy_agent.evals import build_benchmark_suite_case_contract, load_jsonl
+
+    module = _module()
+    plan = _plan()
+    runtime_phase_arm_map = json.loads(
+        json.dumps(module.BENCHMARK_EGRESS_PAYLOAD_CLASSES_BY_PHASE_AND_ARM)
+    )
+    contract = _internal_contract(plan)
+    remote_model = next(
+        model for model in plan["models"] if model["backend"] == "codex_app_server"
+    )
+    remote_config = yaml.safe_load(
+        (ROOT / remote_model["config_path"]).read_text(encoding="utf-8")
+    ) or {}
+    rag_config = ROOT / contract["rag_config"]
+    suite_case = build_benchmark_suite_case_contract(
+        load_jsonl(ROOT / contract["suite_path"]),
+        benchmark_suite_sha256=plan["internal_benchmark"]["suite_sha256"],
+        answer_profile=contract["answer_profile"],
+        prompt_profile=remote_config.get("prompt_profile") or "default",
+        rag_resources=load_agent_resources(rag_config),
+        use_eval_field_context=True,
+    )
+    artifact = build_benchmark_egress_artifact_contract(rag_config)
+    static = build_benchmark_static_prompt_contract()
+
+    assert len(suite_case["cases"]) == plan["internal_benchmark"]["rows"]
+    assert plan["egress"]["suite_case_contract_sha256"] == suite_case["sha256"]
+    assert plan["egress"]["egress_artifact_contract_sha256"] == artifact["sha256"]
+    assert plan["egress"]["static_prompt_contract_sha256"] == static["sha256"]
+    assert plan["private_knowledge_policy"]["child_cli_value"] == "disabled"
+    assert plan["private_knowledge_policy"]["required_process_environment"] == {
+        "AGRONOMY_AGENT_PRIVATE_KNOWLEDGE": "disabled"
+    }
+    assert plan["readiness"]["require_private_knowledge_disabled"] is True
+
+    template = json.loads(
+        (ROOT / "configs/benchmark_egress_authorization.template.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert template["benchmark_id"] == "open_agronomy_canadian_performance_v1_runtime_v2"
+    assert template["schema_version"] == module.BENCHMARK_EGRESS_AUTHORIZATION_SCHEMA
+    assert template["authorized_payload_classes"] == list(
+        module.BENCHMARK_EGRESS_AUTHORIZED_PAYLOAD_CLASSES
+    )
+    assert template["excluded_payload_classes"] == list(
+        module.BENCHMARK_EGRESS_FORBIDDEN_PAYLOAD_CLASSES
+    )
+    assert template["payload_classes_by_phase_and_arm"] == runtime_phase_arm_map
+    assert template["recipient_backend"] == plan["egress"]["recipient_backend"]
+    assert template["model_id"] == plan["egress"]["recipient_model_id"]
+    assert template["reasoning_effort"] == plan["egress"]["recipient_reasoning_effort"]
+    assert template["model_config_sha256"] == plan["egress"][
+        "recipient_model_config_sha256"
+    ]
+    assert template["suite_case_contract_sha256"] == suite_case["sha256"]
+    assert template["egress_artifact_contract_sha256"] == artifact["sha256"]
+    assert template["static_prompt_contract_sha256"] == static["sha256"]
+
+
+def test_readiness_contract_resource_load_forces_private_overlay_off_and_restores_env(
+    monkeypatch,
+) -> None:
+    module = _module()
+    observed: list[str | None] = []
+
+    def fake_load(_path: Path):
+        observed.append(os.environ.get("AGRONOMY_AGENT_PRIVATE_KNOWLEDGE"))
+        return SimpleNamespace(private_knowledge_overlay=None)
+
+    monkeypatch.setenv("AGRONOMY_AGENT_PRIVATE_KNOWLEDGE", "auto")
+    monkeypatch.setattr(module, "load_agent_resources", fake_load)
+
+    result = module.load_public_benchmark_resources(Path("fixture-rag.yaml"))
+
+    assert result.private_knowledge_overlay is None
+    assert observed == ["disabled"]
+    assert os.environ["AGRONOMY_AGENT_PRIVATE_KNOWLEDGE"] == "auto"
+
+    monkeypatch.setattr(
+        module,
+        "load_agent_resources",
+        lambda _path: SimpleNamespace(private_knowledge_overlay=object()),
+    )
+    with pytest.raises(ValueError, match="private knowledge overlay loaded"):
+        module.load_public_benchmark_resources(Path("fixture-rag.yaml"))
+
+
+def test_rc2_plan_is_byte_retained_but_legacy_schema_cannot_pass_current_readiness() -> None:
+    module = _module()
+    plan = json.loads(
+        (ROOT / "configs/final_benchmark_round_rc2.json").read_text(encoding="utf-8")
+    )
+
+    result = module.validate_plan_semantics(plan)
+
+    assert plan["status"] == "candidate_generation_requires_clean_preflight"
+    assert result["status"] == "blocked"
+    assert "historical_plan_non_executable" in result["failures"]
 
 
 def test_plan_rejects_any_attempt_to_reenable_exposed_agroqa_v1() -> None:
@@ -120,6 +291,27 @@ def test_rc3_plan_rejects_unbound_or_pristine_runtime_claims() -> None:
     assert "master_profile_id_invalid" in result["failures"]
 
 
+def test_rc3_plan_rejects_egress_judge_or_private_knowledge_drift() -> None:
+    module = _module()
+    plan = _plan()
+    plan["egress"]["authorization_schema"] = module.EGRESS_SCHEMA_V2
+    plan["egress"]["payload_classes_by_phase_and_arm"]["candidate_generation"]["baseline"].append(
+        "synthetic_eval_field_context"
+    )
+    plan["judge"]["execution_allowed"] = True
+    plan["replication"]["judge_seed_application"] = "applied"
+    plan["private_knowledge_policy"]["child_cli_value"] = "enabled"
+
+    result = module.validate_plan_semantics(plan)
+
+    assert result["status"] == "blocked"
+    assert "egress_v4_schema_required" in result["failures"]
+    assert "rc3_payload_phase_arm_map_mismatch" in result["failures"]
+    assert "rc3_judge_execution_must_be_false" in result["failures"]
+    assert "rc3_judge_seed_application_must_be_not_requested" in result["failures"]
+    assert "rc3_private_knowledge_policy_mismatch" in result["failures"]
+
+
 def test_commands_bind_every_trial_identity_and_isolate_outputs(tmp_path: Path) -> None:
     module = _module()
     plan = _plan()
@@ -144,15 +336,17 @@ def test_commands_bind_every_trial_identity_and_isolate_outputs(tmp_path: Path) 
     assert local_one[local_one.index("--top-k") + 1] == "0"
     assert local_one[local_one.index("--process-isolation-policy") + 1] == "fresh_process_per_run"
     assert local_one[local_one.index("--cache-policy") + 1] == "no_prompt_cache"
+    assert local_one[local_one.index("--private-knowledge-policy") + 1] == "disabled"
     assert local_one[local_one.index("--output-dir") + 1] != local_two[local_two.index("--output-dir") + 1]
     assert "--judge" not in local_one
     assert "--codex-app-server" not in local_one
     assert "--codex-app-server" in remote
     assert "--build-review-packet" in local_one
     assert "--resume-partial-runs" in local_one
+    assert "--reuse-complete-runs" in local_one
 
 
-def test_calibrated_judge_is_never_same_exact_candidate_model(tmp_path: Path) -> None:
+def test_rc3_never_emits_judge_even_if_legacy_flag_is_requested(tmp_path: Path) -> None:
     module = _module()
     plan = _plan()
     egress = tmp_path / "egress.json"
@@ -165,8 +359,7 @@ def test_calibrated_judge_is_never_same_exact_candidate_model(tmp_path: Path) ->
         plan, plan["models"][2], egress, trial, calibrated_judge=True
     )
 
-    assert "--judge" in gemma
-    assert gemma[gemma.index("--judge-model") + 1] == "gpt-5.6-luna"
+    assert "--judge" not in gemma
     assert "--judge" not in luna
 
 
@@ -188,7 +381,7 @@ def test_no_generated_rc3_command_can_rerun_external_agroqa(tmp_path: Path) -> N
         assert "agroqa" not in joined
 
 
-def test_egress_v2_accepts_only_exact_current_human_authority(tmp_path: Path) -> None:
+def test_egress_v4_accepts_only_exact_current_human_authority(tmp_path: Path) -> None:
     module = _module()
     receipt = _valid_egress(tmp_path)
 
@@ -210,15 +403,22 @@ def test_checked_egress_template_is_not_authorization() -> None:
     assert "human_authority_provenance_missing_or_placeholder" in result["failures"]
 
 
-def test_egress_rejects_v1_placeholder_expired_and_non_utc_receipts(tmp_path: Path) -> None:
+def test_egress_rejects_wrong_schema_placeholder_expired_and_non_utc_receipts(tmp_path: Path) -> None:
     module = _module()
     cases = [
-        ({"schema_version": "open_agronomy_agent.benchmark_egress_authorization.v1"}, "schema_mismatch"),
+        ({"schema_version": "open_agronomy_agent.benchmark_egress_authorization.v2"}, "schema_mismatch"),
         ({"authorization_decision": "template_not_authorized"}, "authorization_decision_not_authorized"),
         ({"authorization_source": "replace-with-human-authority"}, "human_authority_provenance_missing_or_placeholder"),
         ({"authorized_by_key_id": "example-authorizer"}, "human_authority_provenance_missing_or_placeholder"),
         ({"expires_at": "2026-08-14T11:30:00Z"}, "authorization_expired"),
         ({"authorized_at": "2026-08-14T11:00:00-06:00"}, "authorized_at_must_be_utc"),
+        ({"model_id": "gpt-5.6-other"}, "recipient_identity_not_exact"),
+        ({"reasoning_effort": "medium"}, "recipient_identity_not_exact"),
+        ({"suite_case_contract_sha256": "0" * 64}, "contract_bindings_not_exact"),
+        ({"egress_artifact_contract_sha256": "1" * 64}, "contract_bindings_not_exact"),
+        ({"static_prompt_contract_sha256": "2" * 64}, "contract_bindings_not_exact"),
+        ({"unexpected_extension": "not authorized"}, "unknown_authorization_fields_present"),
+        ({"boundary": ""}, "authorization_boundary_empty"),
     ]
     for index, (overrides, expected) in enumerate(cases):
         case_dir = tmp_path / str(index)
@@ -252,89 +452,45 @@ def test_egress_rejects_missing_extra_duplicate_or_overlapping_payload_classes(t
         assert expected in result["failures"]
 
 
-def _calibration_payload() -> dict:
-    payload = json.loads(
-        (ROOT / "configs/benchmark_judge_calibration.template.json").read_text(encoding="utf-8")
+def test_egress_rejects_any_phase_arm_payload_map_drift(tmp_path: Path) -> None:
+    module = _module()
+    plan = _plan()
+    wrong = copy.deepcopy(plan["egress"]["payload_classes_by_phase_and_arm"])
+    wrong["candidate_generation"]["baseline"].append("synthetic_eval_field_context")
+
+    result = _verify_egress(
+        module,
+        _valid_egress(tmp_path, payload_classes_by_phase_and_arm=wrong),
     )
-    payload.update(
-        {
-            "calibration_id": "oaa_judge_calibration_rc3_fixture",
-            "status": "calibrated_pass",
-            "created_at": "2026-08-14T00:00:00Z",
-        }
-    )
-    payload["judge"] = {
-        "backend": "codex_app_server",
-        "model_id": "gpt-5.6-luna",
-        "revision": None,
-        "role": "semantic_answer_quality",
-        "sampling": {"temperature": 0, "seed_policy": "backend_seed_unsupported_receipted"},
-    }
-    payload["human_review"] = {
-        "reviewer_count": 2,
-        "case_count": 20,
-        "blinded": True,
-        "disagreements_preserved": True,
-    }
-    payload["artifacts"] = {
-        key: hashlib.sha256(key.encode("utf-8")).hexdigest()
-        for key in payload["artifacts"]
-    }
-    payload["probe_counts"] = {key: 4 for key in payload["probe_counts"]}
-    payload["observed"] = {
-        "macro_f1": 0.9,
-        "false_positive_rate": 0.1,
-        "false_negative_rate": 0.1,
-        "order_flip_rate": 0.05,
-    }
-    return payload
+
+    assert result["status"] == "blocked"
+    assert "payload_classes_by_phase_and_arm_not_exact" in result["failures"]
 
 
-def test_judge_stays_blocked_without_real_calibration_and_template_fails() -> None:
+def test_rc3_judge_is_disabled_when_no_calibration_is_requested() -> None:
     module = _module()
     plan = _plan()
 
     absent = module.verify_judge_calibration(None, root=ROOT, judge_contract=plan["judge"])
-    template = module.verify_judge_calibration(
-        ROOT / "configs/benchmark_judge_calibration.template.json",
-        root=ROOT,
-        judge_contract=plan["judge"],
-    )
 
-    assert absent["status"] == "blocked_not_requested"
+    assert absent["status"] == "pass_disabled"
     assert absent["judge_execution_enabled"] is False
-    assert template["status"] == "blocked"
-    assert template["judge_execution_enabled"] is False
-    assert "judge_calibration_not_passed" in template["failures"]
+    assert absent["judge_seed_application"] == "not_requested"
+    assert absent["failures"] == []
 
 
-def test_real_passing_calibration_can_enable_advisory_judging(tmp_path: Path) -> None:
+def test_rc3_rejects_even_a_supplied_calibration_without_reading_it(tmp_path: Path) -> None:
     module = _module()
     plan = _plan()
     path = tmp_path / "calibration.json"
-    path.write_text(json.dumps(_calibration_payload()), encoding="utf-8")
-
-    result = module.verify_judge_calibration(path, root=ROOT, judge_contract=plan["judge"])
-
-    assert result["status"] == "pass"
-    assert result["judge_execution_enabled"] is True
-    assert result["metrics_pass"] is True
-
-
-def test_malformed_judge_metrics_fail_closed_without_enabling_execution(tmp_path: Path) -> None:
-    module = _module()
-    plan = _plan()
-    payload = _calibration_payload()
-    payload["observed"]["macro_f1"] = "not-a-number"
-    path = tmp_path / "malformed-calibration.json"
-    path.write_text(json.dumps(payload), encoding="utf-8")
+    path.write_text("not even parsed in RC3\n", encoding="utf-8")
 
     result = module.verify_judge_calibration(path, root=ROOT, judge_contract=plan["judge"])
 
     assert result["status"] == "blocked"
     assert result["judge_execution_enabled"] is False
-    assert "judge_calibration_schema_invalid" in result["failures"]
-    assert "judge_calibration_metrics_below_threshold" in result["failures"]
+    assert result["judge_seed_application"] == "not_requested"
+    assert result["failures"] == ["judge_calibration_forbidden_for_rc3"]
 
 
 def test_output_start_state_rejects_existing_benchmark_results(tmp_path: Path) -> None:

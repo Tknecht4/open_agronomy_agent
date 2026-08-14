@@ -14,6 +14,12 @@ from typing import Any
 import pytest
 
 from agronomy_agent.agent import MLXGenerator
+from agronomy_agent.codex_app_server import (
+    BENCHMARK_EGRESS_AUTHORIZED_PAYLOAD_CLASSES,
+    BENCHMARK_EGRESS_AUTHORIZATION_SCHEMA,
+    BENCHMARK_EGRESS_FORBIDDEN_PAYLOAD_CLASSES,
+    BENCHMARK_EGRESS_PAYLOAD_CLASSES_BY_PHASE_AND_ARM,
+)
 from agronomy_agent.evals import (
     allocate_run_directory,
     build_observation_replication_receipt,
@@ -25,10 +31,17 @@ from agronomy_agent.evals import (
 )
 from scripts.run_open_agronomy_benchmark import _eval_command
 from scripts.run_open_agronomy_benchmark import _load_egress_authorization
+from scripts.run_open_agronomy_benchmark import _validate_external_execution_boundary
 from scripts.run_open_agronomy_benchmark import _write_invocation
+from scripts.run_codex_semantic_answer_judge import AppServerJudgeRunner, validate_judge_transport
 from scripts.run_local_mlx_semantic_answer_judge import LocalMLXRunner
 from scripts.build_benchmark_cost_ledger import build_ledger
 from scripts.build_full_system_benchmark_database import build_database
+
+
+_SUITE_CASE_CONTRACT_SHA256 = "c" * 64
+_EGRESS_ARTIFACT_CONTRACT_SHA256 = "d" * 64
+_STATIC_PROMPT_CONTRACT_SHA256 = "e" * 64
 
 
 class _Tokenizer:
@@ -129,16 +142,27 @@ def _write_egress_authorization(
     benchmark_id = "fixture-benchmark"
     suite_sha256 = "a" * 64
     payload: dict[str, Any] = {
-        "schema_version": "open_agronomy_agent.benchmark_egress_authorization.v2",
+        "schema_version": BENCHMARK_EGRESS_AUTHORIZATION_SCHEMA,
         "authorization_decision": "authorized",
         "benchmark_id": benchmark_id,
         "benchmark_suite_sha256": suite_sha256,
+        "recipient_backend": "codex_app_server_chatgpt_auth",
+        "model_id": "gpt-5.6-luna",
+        "reasoning_effort": "high",
+        "model_config_sha256": "b" * 64,
+        "suite_case_contract_sha256": _SUITE_CASE_CONTRACT_SHA256,
+        "egress_artifact_contract_sha256": _EGRESS_ARTIFACT_CONTRACT_SHA256,
+        "static_prompt_contract_sha256": _STATIC_PROMPT_CONTRACT_SHA256,
         "authorization_source": "human-review-receipt-20260813",
         "authorized_by_key_id": "benchmark-authority-key-7",
         "authorized_at": (now - dt.timedelta(minutes=1)).isoformat().replace("+00:00", "Z"),
         "expires_at": (now + dt.timedelta(hours=1)).isoformat().replace("+00:00", "Z"),
-        "authorized_payload_classes": ["benchmark_questions", "candidate_answers"],
-        "excluded_payload_classes": ["farmer_records", "private_field_history"],
+        "authorized_payload_classes": list(BENCHMARK_EGRESS_AUTHORIZED_PAYLOAD_CLASSES),
+        "excluded_payload_classes": list(BENCHMARK_EGRESS_FORBIDDEN_PAYLOAD_CLASSES),
+        "payload_classes_by_phase_and_arm": {
+            phase: {arm: list(classes) for arm, classes in arms.items()}
+            for phase, arms in BENCHMARK_EGRESS_PAYLOAD_CLASSES_BY_PHASE_AND_ARM.items()
+        },
     }
     payload.update(overrides)
     path = tmp_path / "egress-authorization.json"
@@ -412,6 +436,8 @@ def test_canonical_benchmark_launcher_threads_replication_and_sampling_options(t
         codex_app_server=False,
         reasoning_effort="high",
         model_identity_receipt=None,
+        egress_authorization=None,
+        private_knowledge_policy="disabled",
         trial_id="trial-4",
         process_isolation_policy="fresh_process_per_run",
         cache_policy="no_prompt_cache",
@@ -426,6 +452,7 @@ def test_canonical_benchmark_launcher_threads_replication_and_sampling_options(t
     command = _eval_command(
         args=args,
         contract={
+            "benchmark_id": "fixture-benchmark",
             "suite_path": "suite.jsonl",
             "max_tokens": 100,
             "rubric": "pattern",
@@ -451,8 +478,101 @@ def test_canonical_benchmark_launcher_threads_replication_and_sampling_options(t
         "--top-k 30",
         "--process-isolation-policy fresh_process_per_run",
         "--cache-policy no_prompt_cache",
+        "--private-knowledge-policy disabled",
     ):
         assert expected in rendered
+
+
+def test_canonical_launcher_threads_codex_egress_identity_and_private_policy(
+    tmp_path: Path,
+) -> None:
+    authorization = tmp_path / "egress.json"
+    args = argparse.Namespace(
+        mock=False,
+        max_samples=None,
+        model_base_url=None,
+        request_model_id="default_model",
+        codex_app_server=True,
+        reasoning_effort="high",
+        model_identity_receipt=None,
+        egress_authorization=authorization,
+        private_knowledge_policy="disabled",
+        trial_id="trial-4",
+        process_isolation_policy="fresh_process_per_run",
+        cache_policy="no_prompt_cache",
+        generation_seed=None,
+        verification_seed=None,
+        case_order_seed=None,
+        judge_seed=None,
+        temperature=None,
+        top_p=None,
+        top_k=None,
+    )
+
+    command = _eval_command(
+        args=args,
+        contract={
+            "benchmark_id": "fixture-benchmark",
+            "suite_path": "suite.jsonl",
+            "max_tokens": 100,
+            "rubric": "pattern",
+            "answer_profile": "benchmark",
+            "evaluation_partition": "internal",
+            "rag_config": "rag.yaml",
+        },
+        model_config=tmp_path / "model.yaml",
+        model_id="gpt-5.6-luna",
+        mode="baseline",
+        output_dir=tmp_path / "runs",
+    )
+
+    assert command[command.index("--egress-authorization") + 1] == str(authorization)
+    assert command[command.index("--benchmark-id") + 1] == "fixture-benchmark"
+    assert command[command.index("--private-knowledge-policy") + 1] == "disabled"
+    assert command[command.index("--rag-config") + 1] == "rag.yaml"
+
+
+def test_runner_rejects_codex_judge_and_private_overlay_egress() -> None:
+    base = {
+        "judge": False,
+        "judge_backend": "mlx_local",
+        "codex_app_server": True,
+        "private_knowledge_policy": "disabled",
+    }
+    _validate_external_execution_boundary(argparse.Namespace(**base))
+
+    with pytest.raises(ValueError, match="semantic judging is forbidden"):
+        _validate_external_execution_boundary(
+            argparse.Namespace(
+                **{
+                    **base,
+                    "judge": True,
+                    "judge_backend": "codex_app_server",
+                }
+            )
+        )
+    with pytest.raises(ValueError, match="private-knowledge-policy disabled"):
+        _validate_external_execution_boundary(
+            argparse.Namespace(**{**base, "private_knowledge_policy": "as_configured"})
+        )
+
+    with pytest.raises(ValueError, match="disabled by the selected benchmark contract"):
+        _validate_external_execution_boundary(
+            argparse.Namespace(**{**base, "judge": True}),
+            contract={"judge": {"execution_allowed": False}},
+        )
+    _validate_external_execution_boundary(
+        argparse.Namespace(**{**base, "judge": True}),
+        contract={"judge": {"execution_allowed": True}},
+    )
+
+
+def test_standalone_app_server_judge_requires_a_future_dedicated_authorization() -> None:
+    for transport in ("app-server", "exec"):
+        with pytest.raises(ValueError, match="no dedicated judge-egress authorization"):
+            validate_judge_transport(argparse.Namespace(transport=transport))
+    with pytest.raises(RuntimeError, match="dedicated judge-egress authorization"):
+        AppServerJudgeRunner()
 
 
 def test_two_trials_remain_distinct_in_database_views_and_invocation_receipts(
@@ -622,7 +742,7 @@ def test_completed_trial_receipt_cannot_be_silently_reused_or_overwritten(
     ).get("status") is None
 
 
-def test_egress_authorization_v2_requires_explicit_current_human_authority(
+def test_egress_authorization_v4_requires_exact_current_human_authority(
     tmp_path: Path,
 ) -> None:
     path, benchmark_id, suite_sha256 = _write_egress_authorization(tmp_path)
@@ -631,19 +751,26 @@ def test_egress_authorization_v2_requires_explicit_current_human_authority(
         path,
         benchmark_id=benchmark_id,
         benchmark_suite_sha256=suite_sha256,
+        recipient_backend="codex_app_server_chatgpt_auth",
+        model_id="gpt-5.6-luna",
+        reasoning_effort="high",
+        model_config_sha256="b" * 64,
+        suite_case_contract_sha256=_SUITE_CASE_CONTRACT_SHA256,
+        egress_artifact_contract_sha256=_EGRESS_ARTIFACT_CONTRACT_SHA256,
+        static_prompt_contract_sha256=_STATIC_PROMPT_CONTRACT_SHA256,
     )
 
     assert receipt["authorization_decision"] == "authorized"
     assert receipt["authorization_source"] == "human-review-receipt-20260813"
     assert receipt["authorized_by_key_id"] == "benchmark-authority-key-7"
-    assert receipt["authorized_payload_classes"] == [
-        "benchmark_questions",
-        "candidate_answers",
-    ]
-    assert receipt["excluded_payload_classes"] == [
-        "farmer_records",
-        "private_field_history",
-    ]
+    assert receipt["schema_version"] == BENCHMARK_EGRESS_AUTHORIZATION_SCHEMA
+    assert receipt["authorized_payload_classes"] == list(
+        BENCHMARK_EGRESS_AUTHORIZED_PAYLOAD_CLASSES
+    )
+    assert receipt["excluded_payload_classes"] == list(
+        BENCHMARK_EGRESS_FORBIDDEN_PAYLOAD_CLASSES
+    )
+    assert "path" not in receipt
     assert receipt["sha256"]
 
 
@@ -679,19 +806,23 @@ def test_egress_authorization_v2_requires_explicit_current_human_authority(
         ),
         (
             {"authorized_payload_classes": []},
-            "no authorized payload classes",
+            "payload classes do not match the runtime contract",
         ),
         (
             {"authorized_payload_classes": "benchmark_questions"},
-            "no authorized payload classes",
+            "payload classes do not match the runtime contract",
         ),
         (
             {"excluded_payload_classes": ["farmer_records", ""]},
-            "invalid excluded payload classes",
+            "excluded classes do not match the runtime contract",
+        ),
+        (
+            {"payload_classes_by_phase_and_arm": {}},
+            "phase/arm payload map does not match runtime",
         ),
     ],
 )
-def test_egress_authorization_v2_fails_closed(
+def test_egress_authorization_v4_fails_closed(
     tmp_path: Path,
     overrides: dict[str, Any],
     expected_error: str,
@@ -703,4 +834,11 @@ def test_egress_authorization_v2_fails_closed(
             path,
             benchmark_id=benchmark_id,
             benchmark_suite_sha256=suite_sha256,
+            recipient_backend="codex_app_server_chatgpt_auth",
+            model_id="gpt-5.6-luna",
+            reasoning_effort="high",
+            model_config_sha256="b" * 64,
+            suite_case_contract_sha256=_SUITE_CASE_CONTRACT_SHA256,
+            egress_artifact_contract_sha256=_EGRESS_ARTIFACT_CONTRACT_SHA256,
+            static_prompt_contract_sha256=_STATIC_PROMPT_CONTRACT_SHA256,
         )

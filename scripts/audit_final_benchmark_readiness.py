@@ -34,8 +34,19 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT))
 
-from agronomy_agent.agent import build_context  # noqa: E402
+from agronomy_agent.agent import (  # noqa: E402
+    build_benchmark_egress_artifact_contract,
+    build_context,
+    load_agent_resources,
+)
 from agronomy_agent.benchmark_contract import validate_benchmark  # noqa: E402
+from agronomy_agent.codex_app_server import (  # noqa: E402
+    BENCHMARK_EGRESS_AUTHORIZATION_SCHEMA,
+    BENCHMARK_EGRESS_AUTHORIZED_PAYLOAD_CLASSES,
+    BENCHMARK_EGRESS_FORBIDDEN_PAYLOAD_CLASSES,
+    BENCHMARK_EGRESS_PAYLOAD_CLASSES_BY_PHASE_AND_ARM,
+    build_benchmark_static_prompt_contract,
+)
 from agronomy_agent.corpus_governance import audit_runtime_corpora  # noqa: E402
 from scripts.audit_benchmark_separation import build_audit as build_separation_audit  # noqa: E402
 from scripts.capture_release_environment import dependency_input_receipts  # noqa: E402
@@ -48,13 +59,12 @@ PLAN_SCHEMAS = {
     "open_agronomy_agent.final_benchmark_round.v2",
     "open_agronomy_agent.final_benchmark_round.v3",
 }
-EGRESS_SCHEMA = "open_agronomy_agent.benchmark_egress_authorization.v2"
+EGRESS_SCHEMA_V2 = "open_agronomy_agent.benchmark_egress_authorization.v2"
 ENVIRONMENT_SCHEMA = "open_agronomy_agent.release_environment_receipt.v1"
 PUBLIC_PACKAGE_SCHEMA = "open_agronomy_agent.public_repository_receipt.v1"
 JUDGE_CALIBRATION_SCHEMA = "open_agronomy_agent.benchmark_judge_calibration.v1"
 PLACEHOLDER_MARKERS = ("replace-with", "replace_me", "placeholder", "template", "example")
 SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
-
 
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
@@ -62,6 +72,25 @@ def sha256(path: Path) -> str:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def load_public_benchmark_resources(rag_config_path: Path) -> Any:
+    """Load the RC3 runtime with private overlays forced off and restore caller state."""
+
+    previous_private_policy = os.environ.get("AGRONOMY_AGENT_PRIVATE_KNOWLEDGE")
+    os.environ["AGRONOMY_AGENT_PRIVATE_KNOWLEDGE"] = "disabled"
+    try:
+        resources = load_agent_resources(rag_config_path)
+    finally:
+        if previous_private_policy is None:
+            os.environ.pop("AGRONOMY_AGENT_PRIVATE_KNOWLEDGE", None)
+        else:
+            os.environ["AGRONOMY_AGENT_PRIVATE_KNOWLEDGE"] = previous_private_policy
+    if resources.private_knowledge_overlay is not None:
+        raise ValueError(
+            "private knowledge overlay loaded while rebuilding RC3 egress contract"
+        )
+    return resources
 
 
 def _check(
@@ -148,6 +177,8 @@ def validate_plan_semantics(plan: Mapping[str, Any]) -> dict[str, Any]:
     schema = plan.get("schema_version")
     if schema not in PLAN_SCHEMAS:
         failures.append("unsupported_plan_schema")
+    if schema != "open_agronomy_agent.final_benchmark_round.v3":
+        failures.append("historical_plan_non_executable")
     if schema in {
         "open_agronomy_agent.final_benchmark_round.v2",
         "open_agronomy_agent.final_benchmark_round.v3",
@@ -185,10 +216,22 @@ def validate_plan_semantics(plan: Mapping[str, Any]) -> dict[str, Any]:
         judge = plan.get("judge") or {}
         if judge.get("default_enabled") is not False:
             failures.append("semantic_judge_must_default_disabled")
-        if judge.get("status") != "blocked_until_real_calibrated_receipt":
-            failures.append("judge_calibration_gate_missing")
-        if judge.get("self_judgment_policy") != "never_score_candidate_with_same_exact_model":
-            failures.append("candidate_self_judgment_policy_missing")
+        if schema == "open_agronomy_agent.final_benchmark_round.v3":
+            if judge.get("status") != "disabled_for_rc3":
+                failures.append("rc3_judge_status_must_be_disabled")
+            if judge.get("execution_allowed") is not False:
+                failures.append("rc3_judge_execution_must_be_false")
+            if judge.get("payload_class_present") is not False:
+                failures.append("rc3_judge_payload_class_must_be_absent")
+            if list(judge.get("roles") or []) != []:
+                failures.append("rc3_judge_roles_must_be_empty")
+            if any(key in judge for key in ("backend", "model", "reasoning_effort")):
+                failures.append("rc3_judge_backend_identity_must_be_absent")
+        else:
+            if judge.get("status") != "blocked_until_real_calibrated_receipt":
+                failures.append("judge_calibration_gate_missing")
+            if judge.get("self_judgment_policy") != "never_score_candidate_with_same_exact_model":
+                failures.append("candidate_self_judgment_policy_missing")
 
         replication = plan.get("replication") or {}
         trials = replication.get("trials") or []
@@ -223,6 +266,11 @@ def validate_plan_semantics(plan: Mapping[str, Any]) -> dict[str, Any]:
             failures.append("fresh_process_per_run_required")
         if replication.get("cache_policy") != "no_prompt_cache":
             failures.append("no_prompt_cache_required")
+        if (
+            schema == "open_agronomy_agent.final_benchmark_round.v3"
+            and replication.get("judge_seed_application") != "not_requested"
+        ):
+            failures.append("rc3_judge_seed_application_must_be_not_requested")
         sampling = replication.get("sampling") or {}
         if not {"temperature", "top_p", "top_k"} <= set(sampling):
             failures.append("sampling_overrides_incomplete")
@@ -249,8 +297,17 @@ def validate_plan_semantics(plan: Mapping[str, Any]) -> dict[str, Any]:
         egress = plan.get("egress") or {}
         authorized = list(egress.get("authorized_payload_classes_exact") or [])
         excluded = list(egress.get("excluded_payload_classes_exact") or [])
-        if egress.get("authorization_schema") != EGRESS_SCHEMA:
-            failures.append("egress_v2_schema_required")
+        expected_egress_schema = (
+            BENCHMARK_EGRESS_AUTHORIZATION_SCHEMA
+            if schema == "open_agronomy_agent.final_benchmark_round.v3"
+            else EGRESS_SCHEMA_V2
+        )
+        if egress.get("authorization_schema") != expected_egress_schema:
+            failures.append(
+                "egress_v4_schema_required"
+                if schema == "open_agronomy_agent.final_benchmark_round.v3"
+                else "egress_v2_schema_required"
+            )
         if not authorized or len(authorized) != len(set(authorized)):
             failures.append("exact_authorized_payload_classes_invalid")
         if not excluded or len(excluded) != len(set(excluded)):
@@ -259,6 +316,64 @@ def validate_plan_semantics(plan: Mapping[str, Any]) -> dict[str, Any]:
             failures.append("egress_payload_classes_overlap")
 
         if schema == "open_agronomy_agent.final_benchmark_round.v3":
+            if authorized != list(BENCHMARK_EGRESS_AUTHORIZED_PAYLOAD_CLASSES):
+                failures.append("rc3_authorized_payload_taxonomy_mismatch")
+            if excluded != list(BENCHMARK_EGRESS_FORBIDDEN_PAYLOAD_CLASSES):
+                failures.append("rc3_excluded_payload_taxonomy_mismatch")
+            phase_arm_map = egress.get("payload_classes_by_phase_and_arm")
+            runtime_phase_arm_map = json.loads(
+                json.dumps(BENCHMARK_EGRESS_PAYLOAD_CLASSES_BY_PHASE_AND_ARM)
+            )
+            if phase_arm_map != runtime_phase_arm_map:
+                failures.append("rc3_payload_phase_arm_map_mismatch")
+            if any("judge" in value for value in authorized):
+                failures.append("rc3_judge_payload_class_present")
+            recipient = {
+                "recipient_backend": egress.get("recipient_backend"),
+                "model_id": egress.get("recipient_model_id"),
+                "reasoning_effort": egress.get("recipient_reasoning_effort"),
+                "model_config_sha256": egress.get("recipient_model_config_sha256"),
+            }
+            app_server_models = [
+                model
+                for model in (plan.get("models") or [])
+                if isinstance(model, Mapping) and model.get("backend") == "codex_app_server"
+            ]
+            expected_recipient = (
+                {
+                    "recipient_backend": "codex_app_server_chatgpt_auth",
+                    "model_id": app_server_models[0].get("model_id"),
+                    "reasoning_effort": app_server_models[0].get("reasoning_effort"),
+                    "model_config_sha256": app_server_models[0].get("config_sha256"),
+                }
+                if len(app_server_models) == 1
+                else None
+            )
+            if expected_recipient is None or recipient != expected_recipient:
+                failures.append("rc3_egress_recipient_identity_mismatch")
+            for field in (
+                "suite_case_contract_sha256",
+                "egress_artifact_contract_sha256",
+                "static_prompt_contract_sha256",
+            ):
+                if not re.fullmatch(r"[0-9a-f]{64}", str(egress.get(field) or "")):
+                    failures.append(f"rc3_{field}_invalid")
+
+            private_policy = plan.get("private_knowledge_policy") or {}
+            expected_private_policy = {
+                "applies_to_arms": list(internal.get("arms") or []),
+                "child_cli_argument": "--private-knowledge-policy",
+                "child_cli_value": "disabled",
+                "egress_allowed": False,
+                "policy_id": "disabled_for_all_benchmark_arms",
+                "required_process_environment": {
+                    "AGRONOMY_AGENT_PRIVATE_KNOWLEDGE": "disabled"
+                },
+            }
+            if private_policy != expected_private_policy:
+                failures.append("rc3_private_knowledge_policy_mismatch")
+            if (plan.get("readiness") or {}).get("require_private_knowledge_disabled") is not True:
+                failures.append("rc3_private_knowledge_readiness_gate_missing")
             if internal.get("suite_exposure_status") != "exposed_and_used_for_system_tuning":
                 failures.append("internal_suite_exposure_status_missing")
             runtime_profile = internal.get("runtime_profile") or {}
@@ -615,10 +730,14 @@ def verify_output_schedule(root: Path, plan: Mapping[str, Any]) -> dict[str, Any
 def verify_egress_authorization(
     path: Path | None,
     *,
+    authorization_schema: str,
     benchmark_id: str,
     suite_sha256: str,
     required_payloads: list[str],
     forbidden_payloads: list[str],
+    required_phase_arm_map: Mapping[str, Any] | None = None,
+    required_recipient: Mapping[str, Any] | None = None,
+    required_contract_bindings: Mapping[str, Any] | None = None,
     checked_at: dt.datetime | None = None,
 ) -> dict[str, Any]:
     if path is None or not path.is_file():
@@ -628,7 +747,34 @@ def verify_egress_authorization(
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         return {"status": "blocked", "path": str(path), "failures": [f"egress_authorization_unreadable:{type(exc).__name__}"]}
     failures: list[str] = []
-    if payload.get("schema_version") != EGRESS_SCHEMA:
+    required_fields = {
+        "schema_version",
+        "authorization_decision",
+        "benchmark_id",
+        "benchmark_suite_sha256",
+        "suite_case_contract_sha256",
+        "egress_artifact_contract_sha256",
+        "static_prompt_contract_sha256",
+        "authorization_source",
+        "authorized_by_key_id",
+        "authorized_at",
+        "expires_at",
+        "recipient_backend",
+        "model_id",
+        "reasoning_effort",
+        "model_config_sha256",
+        "authorized_payload_classes",
+        "excluded_payload_classes",
+        "payload_classes_by_phase_and_arm",
+    }
+    optional_fields = {"boundary"}
+    if not required_fields <= set(payload):
+        failures.append("required_authorization_fields_missing")
+    if set(payload) - required_fields - optional_fields:
+        failures.append("unknown_authorization_fields_present")
+    if "boundary" in payload and not str(payload.get("boundary") or "").strip():
+        failures.append("authorization_boundary_empty")
+    if payload.get("schema_version") != authorization_schema:
         failures.append("schema_mismatch")
     if payload.get("authorization_decision") != "authorized":
         failures.append("authorization_decision_not_authorized")
@@ -642,14 +788,34 @@ def verify_egress_authorization(
         failures.append("human_authority_provenance_missing_or_placeholder")
     authorized = list(payload.get("authorized_payload_classes") or [])
     excluded = list(payload.get("excluded_payload_classes") or [])
-    if len(authorized) != len(set(authorized)) or set(authorized) != set(required_payloads):
+    if len(authorized) != len(set(authorized)) or authorized != required_payloads:
         failures.append("authorized_payload_classes_not_exact")
-    if len(excluded) != len(set(excluded)) or set(excluded) != set(forbidden_payloads):
+    if len(excluded) != len(set(excluded)) or excluded != forbidden_payloads:
         failures.append("excluded_payload_classes_not_exact")
     if set(authorized) & set(excluded):
         failures.append("authorized_and_excluded_payload_classes_overlap")
     if set(forbidden_payloads) & set(authorized):
         failures.append("forbidden_payload_class_authorized")
+    phase_arm_map = payload.get("payload_classes_by_phase_and_arm")
+    if required_phase_arm_map is not None and phase_arm_map != required_phase_arm_map:
+        failures.append("payload_classes_by_phase_and_arm_not_exact")
+    recipient = {
+        "recipient_backend": payload.get("recipient_backend"),
+        "model_id": payload.get("model_id"),
+        "reasoning_effort": payload.get("reasoning_effort"),
+        "model_config_sha256": payload.get("model_config_sha256"),
+    }
+    if required_recipient is not None and recipient != dict(required_recipient):
+        failures.append("recipient_identity_not_exact")
+    contract_bindings = {
+        "suite_case_contract_sha256": payload.get("suite_case_contract_sha256"),
+        "egress_artifact_contract_sha256": payload.get("egress_artifact_contract_sha256"),
+        "static_prompt_contract_sha256": payload.get("static_prompt_contract_sha256"),
+    }
+    if required_contract_bindings is not None and contract_bindings != dict(
+        required_contract_bindings
+    ):
+        failures.append("contract_bindings_not_exact")
     try:
         authorized_at = _parse_utc(payload.get("authorized_at"), field="authorized_at")
     except ValueError as exc:
@@ -679,6 +845,9 @@ def verify_egress_authorization(
         "expires_at": payload.get("expires_at"),
         "authorized_payload_classes": authorized,
         "excluded_payload_classes": excluded,
+        "payload_classes_by_phase_and_arm": phase_arm_map,
+        "recipient": recipient,
+        "contract_bindings": contract_bindings,
         "failures": failures,
     }
 
@@ -689,6 +858,21 @@ def verify_judge_calibration(
     root: Path,
     judge_contract: Mapping[str, Any],
 ) -> dict[str, Any]:
+    if judge_contract.get("status") == "disabled_for_rc3":
+        if path is None:
+            return {
+                "status": "pass_disabled",
+                "judge_execution_enabled": False,
+                "judge_seed_application": "not_requested",
+                "failures": [],
+            }
+        return {
+            "status": "blocked",
+            "judge_execution_enabled": False,
+            "judge_seed_application": "not_requested",
+            "path": str(path.resolve()),
+            "failures": ["judge_calibration_forbidden_for_rc3"],
+        }
     if path is None:
         return {
             "status": "blocked_not_requested",
@@ -873,19 +1057,30 @@ def build_benchmark_command(
     _append_option(command, "--top-k", sampling.get("top_k"))
     _append_option(command, "--process-isolation-policy", replication.get("process_isolation_policy"))
     _append_option(command, "--cache-policy", replication.get("cache_policy"))
+    private_policy = plan.get("private_knowledge_policy") or {}
+    _append_option(
+        command,
+        str(private_policy.get("child_cli_argument") or "--private-knowledge-policy"),
+        private_policy.get("child_cli_value"),
+    )
     command.extend(
         [
             "--egress-authorization",
             str(egress_authorization.resolve()),
             "--build-review-packet",
             "--resume-partial-runs",
+            "--reuse-complete-runs",
         ]
     )
     if model.get("backend") == "codex_app_server":
         command.extend(["--codex-app-server", "--reasoning-effort", str(model.get("reasoning_effort") or "high")])
     judge = plan.get("judge") or {}
     same_exact_model = model.get("model_id") == judge.get("model")
-    if calibrated_judge and not same_exact_model:
+    judge_allowed = (
+        judge.get("status") != "disabled_for_rc3"
+        and judge.get("execution_allowed") is not False
+    )
+    if calibrated_judge and judge_allowed and not same_exact_model:
         command.extend(
             [
                 "--judge",
@@ -1200,6 +1395,37 @@ def audit(
         output_start,
     )
 
+    is_rc3 = plan.get("schema_version") == "open_agronomy_agent.final_benchmark_round.v3"
+    private_policy = plan.get("private_knowledge_policy") or {}
+    expected_private_policy = {
+        "applies_to_arms": list(internal_record.get("arms") or []),
+        "child_cli_argument": "--private-knowledge-policy",
+        "child_cli_value": "disabled",
+        "egress_allowed": False,
+        "policy_id": "disabled_for_all_benchmark_arms",
+        "required_process_environment": {
+            "AGRONOMY_AGENT_PRIVATE_KNOWLEDGE": "disabled"
+        },
+    }
+    private_policy_ok = (
+        not is_rc3
+        or (
+            private_policy == expected_private_policy
+            and (plan.get("readiness") or {}).get("require_private_knowledge_disabled") is True
+        )
+    )
+    _check(
+        checks,
+        "private_knowledge_disabled_for_all_benchmark_arms",
+        private_policy_ok,
+        "RC3 forces private knowledge off in the runner environment and every child evaluation process",
+        {
+            "applies": is_rc3,
+            "declared_policy": private_policy,
+            "expected_policy": expected_private_policy if is_rc3 else None,
+        },
+    )
+
     disk = shutil.disk_usage(root)
     minimum_free = int((plan.get("readiness") or {}).get("minimum_free_disk_bytes") or 0)
     _check(
@@ -1248,6 +1474,87 @@ def audit(
     )
 
     egress_contract = plan["egress"]
+    declared_contract_bindings = {
+        "suite_case_contract_sha256": egress_contract.get(
+            "suite_case_contract_sha256"
+        ),
+        "egress_artifact_contract_sha256": egress_contract.get(
+            "egress_artifact_contract_sha256"
+        ),
+        "static_prompt_contract_sha256": egress_contract.get(
+            "static_prompt_contract_sha256"
+        ),
+    }
+    expected_contract_bindings: dict[str, Any] = {
+        key: None for key in declared_contract_bindings
+    }
+    contract_binding_evidence: dict[str, Any] = {
+        "declared": declared_contract_bindings
+    }
+    contract_binding_error: str | None = None
+    if is_rc3:
+        try:
+            from agronomy_agent.evals import (  # noqa: E402
+                build_benchmark_suite_case_contract,
+                load_jsonl,
+            )
+
+            app_server_models = [
+                model
+                for model in plan["models"]
+                if model.get("backend") == "codex_app_server"
+            ]
+            if len(app_server_models) != 1:
+                raise ValueError("RC3 requires exactly one App Server model")
+            app_server_config = yaml.safe_load(
+                _relative_file(root, app_server_models[0]["config_path"]).read_text(
+                    encoding="utf-8"
+                )
+            ) or {}
+            static_prompt_contract = build_benchmark_static_prompt_contract()
+            artifact_contract = build_benchmark_egress_artifact_contract(
+                rag_config_path
+            )
+            public_resources = load_public_benchmark_resources(rag_config_path)
+            suite_case_contract = build_benchmark_suite_case_contract(
+                load_jsonl(_relative_file(root, internal_record["suite_path"])),
+                benchmark_suite_sha256=str(internal_manifest["suite_sha256"]),
+                answer_profile=str(internal_contract["answer_profile"]),
+                prompt_profile=str(app_server_config.get("prompt_profile") or "default"),
+                rag_resources=public_resources,
+                use_eval_field_context=True,
+            )
+            expected_contract_bindings = {
+                "suite_case_contract_sha256": suite_case_contract["sha256"],
+                "egress_artifact_contract_sha256": artifact_contract["sha256"],
+                "static_prompt_contract_sha256": static_prompt_contract["sha256"],
+            }
+            contract_binding_evidence.update(
+                {
+                    "expected": expected_contract_bindings,
+                    "suite_case_count": len(suite_case_contract.get("cases") or {}),
+                    "allowed_corpus_count": len(
+                        artifact_contract.get("allowed_corpora") or {}
+                    ),
+                    "allowed_graph_count": len(
+                        artifact_contract.get("allowed_graphs") or {}
+                    ),
+                }
+            )
+        except (KeyError, OSError, TypeError, ValueError) as exc:
+            contract_binding_error = f"{type(exc).__name__}:{exc}"
+            contract_binding_evidence["error"] = contract_binding_error
+    _check(
+        checks,
+        "rc3_egress_contract_bindings",
+        not is_rc3
+        or (
+            contract_binding_error is None
+            and declared_contract_bindings == expected_contract_bindings
+        ),
+        "RC3 authorization is bound to the independently rebuilt suite-case, public-artifact, and static-prompt contracts",
+        contract_binding_evidence,
+    )
     required_payloads = list(
         egress_contract.get("authorized_payload_classes_exact")
         or egress_contract.get("authorized_payload_classes_required")
@@ -1260,17 +1567,32 @@ def audit(
     )
     egress = verify_egress_authorization(
         egress_authorization,
+        authorization_schema=str(egress_contract.get("authorization_schema") or ""),
         benchmark_id=str(internal_manifest["benchmark_id"]),
         suite_sha256=str(internal_manifest["suite_sha256"]),
         required_payloads=required_payloads,
         forbidden_payloads=forbidden_payloads,
+        required_phase_arm_map=egress_contract.get("payload_classes_by_phase_and_arm"),
+        required_recipient={
+            "recipient_backend": egress_contract.get("recipient_backend"),
+            "model_id": egress_contract.get("recipient_model_id"),
+            "reasoning_effort": egress_contract.get("recipient_reasoning_effort"),
+            "model_config_sha256": egress_contract.get("recipient_model_config_sha256"),
+        }
+        if is_rc3
+        else None,
+        required_contract_bindings=expected_contract_bindings if is_rc3 else None,
         checked_at=checked_at,
     )
     _check(
         checks,
-        "suite_bound_egress_authorization_v2",
+        (
+            "suite_bound_egress_authorization_v4"
+            if is_rc3
+            else "suite_bound_egress_authorization_v2"
+        ),
         egress["status"] == "pass",
-        "a current human authority exactly allows benchmark payloads and excludes private/corpus payloads",
+        "a current human authority binds the exact v4 contracts, allows each phase/arm payload, and excludes private/corpus payloads",
         egress,
     )
 
@@ -1279,19 +1601,33 @@ def audit(
         root=root,
         judge_contract=plan.get("judge") or {},
     )
+    judge_contract = plan.get("judge") or {}
     judge_requested = judge_calibration is not None
-    judge_gate_passed = judge["status"] == "pass" if judge_requested else (
-        (plan.get("judge") or {}).get("default_enabled") is False
-        and judge["status"] == "blocked_not_requested"
+    rc3_judge_disabled = judge_contract.get("status") == "disabled_for_rc3"
+    judge_gate_passed = (
+        judge["status"] == "pass_disabled" and not judge_requested
+        if rc3_judge_disabled
+        else (
+            judge["status"] == "pass"
+            if judge_requested
+            else (
+                judge_contract.get("default_enabled") is False
+                and judge["status"] == "blocked_not_requested"
+            )
+        )
     )
     _check(
         checks,
-        "semantic_judge_calibration_gate",
+        "semantic_judge_disabled_for_rc3" if rc3_judge_disabled else "semantic_judge_calibration_gate",
         judge_gate_passed,
         (
-            "a supplied real calibration receipt permits advisory judging"
-            if judge_requested
-            else "no calibration was supplied, so semantic judging remains safely omitted from every command"
+            "RC3 rejects judge calibration and emits no automated semantic-judge command"
+            if rc3_judge_disabled
+            else (
+                "a supplied real calibration receipt permits advisory judging"
+                if judge_requested
+                else "no calibration was supplied, so semantic judging remains safely omitted from every command"
+            )
         ),
         judge,
     )
@@ -1332,6 +1668,9 @@ def audit(
         "--top-k",
         "--process-isolation-policy",
         "--cache-policy",
+        "--private-knowledge-policy",
+        "--resume-partial-runs",
+        "--reuse-complete-runs",
     }
     command_contract_ok = (
         len(commands) == len(plan["models"]) * len(_trials(plan))
@@ -1375,7 +1714,11 @@ def audit(
         "generation_performed": False,
         "judging_performed": False,
         "judge_execution_enabled": calibrated_judge,
-        "judge_same_model_exclusion": "a Luna candidate command never asks the same exact Luna model to judge itself",
+        "judge_boundary": (
+            "RC3 automated semantic judging is disabled; judge_seed is inert identity with judge_seed_application=not_requested"
+            if rc3_judge_disabled
+            else "a candidate command never asks the same exact candidate model to judge itself"
+        ),
         "v3_boundary": plan.get("v3_boundary"),
         "checks": checks,
         "failure_count": len(failures),
@@ -1398,7 +1741,7 @@ def main() -> int:
     parser.add_argument(
         "--judge-calibration",
         type=Path,
-        help="Optional real calibrated-pass receipt. Without it, no emitted command enables semantic judging.",
+        help="Legacy-round calibration receipt only. RC3 rejects this option and never emits --judge.",
     )
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()

@@ -260,6 +260,7 @@
     "tests/test_capability_registry_api.py",
     "tests/test_chat_service_field_context.py",
     "tests/test_canada_context_boundary_layer.py",
+    "tests/test_codex_app_server_egress.py",
     "tests/test_corpus_governance.py",
     "tests/test_curated_canada_master_release.py",
     "tests/test_curated_knowledge_store.py",

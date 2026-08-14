@@ -98,9 +98,23 @@ frontend presentation, image-research routes, or the legacy
 without generation or judging. It requires a clean committed checkout, matching
 environment/public-package receipts, model snapshots, source/corpus gates,
 fresh per-model/per-trial destinations, and a real suite-bound egress receipt.
-The checked-in egress template cannot pass. With no real calibrated judge
-receipt, emitted commands keep semantic judging disabled. A passing preflight
-authorizes only the declared exposed-and-tuned-suite
+The checked-in egress template cannot pass. RC3 requires the schema-v4 exact
+global taxonomy and phase/arm payload map plus exact suite-case,
+runtime-artifact, and static-prompt contract hashes: raw gets only the frozen
+question; baseline adds the prompt; kernel adds synthetic field context; the
+RAG candidate adds selected public document excerpts and public graph evidence;
+only RAG verification is admitted, with question, prompt, selected documents,
+candidate draft, and verifier evidence. Deterministic tools stay local and
+bypass Luna. Farmer records, private field
+history, credentials, and whole local corpus files remain forbidden.
+
+The runner forces private knowledge disabled in its environment and in every
+child evaluation. RC3 has no judge payload class, rejects judge calibration,
+and never emits `--judge`; `judge_seed` is inert identity with application
+`not_requested`. Each planned run command includes both
+`--resume-partial-runs` and `--reuse-complete-runs`, which remain bound to exact
+run identity and durable receipts. A passing preflight authorizes only the
+declared exposed-and-tuned-suite
 `development_rerun_nonclaim`. RC1 and RC2 remain frozen historical identities.
 
 `audit_open_agronomy_benchmark_v3_readiness.py` validates the public v3

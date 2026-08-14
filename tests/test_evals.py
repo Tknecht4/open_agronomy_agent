@@ -24,6 +24,7 @@ from agronomy_agent.evals import (
     eval_question,
     forbidden_contains,
     load_partial_outputs,
+    is_local_model_endpoint,
     run_eval,
     parse_multiple_choice_answer,
     score_item,
@@ -35,6 +36,68 @@ from agronomy_agent.evals import (
     validate_resume_identity,
     validate_resume_prefix,
 )
+
+
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        "http://localhost:8080/v1",
+        "http://127.42.0.1:8080/v1",
+        "http://[::1]:8080/v1",
+        "unix:///tmp/model.sock",
+    ],
+)
+def test_local_model_endpoint_accepts_only_loopback_or_unix(endpoint: str) -> None:
+    assert is_local_model_endpoint(endpoint) is True
+
+
+@pytest.mark.parametrize(
+    "endpoint",
+    ["https://models.example/v1", "http://10.0.0.7:8080/v1", "not-a-url"],
+)
+def test_local_model_endpoint_rejects_external_or_ambiguous_hosts(endpoint: str) -> None:
+    assert is_local_model_endpoint(endpoint) is False
+
+
+def test_internal_eval_rejects_non_loopback_model_endpoint_before_generation(
+    tmp_path: Path,
+) -> None:
+    suite = tmp_path / "suite.jsonl"
+    suite.write_text(
+        json.dumps(
+            {
+                "eval_id": "internal-1",
+                "task_family": "internal",
+                "question": "What should be checked?",
+                "evaluation_partition": "internal",
+                "required_patterns": [],
+                "forbidden_patterns": [],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    model_config = tmp_path / "model.yaml"
+    model_config.write_text("model_id: fixture/model\nmax_tokens: 32\n", encoding="utf-8")
+    args = build_parser().parse_args(
+        [
+            "--mode",
+            "baseline",
+            "--suite",
+            str(suite),
+            "--model-config",
+            str(model_config),
+            "--output-dir",
+            str(tmp_path / "outputs"),
+            "--model-base-url",
+            "https://models.example/v1",
+            "--private-knowledge-policy",
+            "disabled",
+            "--mock",
+        ]
+    )
+    with pytest.raises(ValueError, match="non-loopback --model-base-url"):
+        run_eval(args)
 
 
 def test_eval_field_context_normalizes_legacy_canadian_aliases() -> None:
@@ -291,11 +354,28 @@ def test_eval_can_use_chatgpt_authenticated_codex_app_server(monkeypatch) -> Non
             "--codex-app-server",
             "--reasoning-effort",
             "high",
+            "--egress-authorization",
+            "/tmp/fixture-egress.json",
+            "--benchmark-id",
+            "fixture-benchmark",
+            "--private-knowledge-policy",
+            "disabled",
         ]
     )
     model_cfg = {"answer_verification": {"enabled": False}}
+    artifact_contract = {"schema_version": "fixture", "sha256": "b" * 64}
+    suite_case_contract = {"schema_version": "fixture", "sha256": "c" * 64}
+    static_prompt_contract = {"schema_version": "fixture", "sha256": "e" * 64}
 
-    generator, verifier, model_id, backend, request_model_id = build_eval_generators(args, model_cfg)
+    generator, verifier, model_id, backend, request_model_id = build_eval_generators(
+        args,
+        model_cfg,
+        benchmark_suite_sha256="a" * 64,
+        egress_artifact_contract=artifact_contract,
+        suite_case_contract=suite_case_contract,
+        static_prompt_contract=static_prompt_contract,
+        model_config_sha256="d" * 64,
+    )
 
     assert isinstance(generator, FakeAppServerGenerator)
     assert verifier is None
@@ -304,11 +384,66 @@ def test_eval_can_use_chatgpt_authenticated_codex_app_server(monkeypatch) -> Non
             "model_id": "gpt-5.6-luna",
             "reasoning_effort": "high",
             "timeout_seconds": 360.0,
+            "egress_authorization": "/tmp/fixture-egress.json",
+            "benchmark_id": "fixture-benchmark",
+            "benchmark_suite_sha256": "a" * 64,
+            "benchmark_arm": "baseline",
+            "egress_artifact_contract": artifact_contract,
+            "suite_case_contract": suite_case_contract,
+            "static_prompt_contract": static_prompt_contract,
+            "model_config_sha256": "d" * 64,
+            "egress_phase": "candidate_generation",
         }
     ]
     assert model_id == "gpt-5.6-luna"
     assert backend == "codex_app_server_chatgpt_auth"
     assert request_model_id == "gpt-5.6-luna"
+
+
+def test_codex_app_server_verifier_uses_the_verification_egress_phase(monkeypatch) -> None:
+    created: list[dict[str, object]] = []
+
+    class FakeAppServerGenerator:
+        def __init__(self, **kwargs: object) -> None:
+            created.append(dict(kwargs))
+
+    monkeypatch.setattr("agronomy_agent.evals.CodexAppServerGenerator", FakeAppServerGenerator)
+    args = build_parser().parse_args(
+        [
+            "--mode",
+            "agronomic_rag",
+            "--model",
+            "gpt-5.6-luna",
+            "--codex-app-server",
+            "--egress-authorization",
+            "/tmp/fixture-egress.json",
+            "--benchmark-id",
+            "fixture-benchmark",
+            "--private-knowledge-policy",
+            "disabled",
+        ]
+    )
+    contract = {"schema_version": "fixture", "sha256": "b" * 64}
+    suite_case_contract = {"schema_version": "fixture", "sha256": "c" * 64}
+    static_prompt_contract = {"schema_version": "fixture", "sha256": "e" * 64}
+
+    generator, verifier, *_ = build_eval_generators(
+        args,
+        {"answer_verification": {"enabled": True}},
+        benchmark_suite_sha256="a" * 64,
+        egress_artifact_contract=contract,
+        suite_case_contract=suite_case_contract,
+        static_prompt_contract=static_prompt_contract,
+        model_config_sha256="d" * 64,
+    )
+
+    assert isinstance(generator, FakeAppServerGenerator)
+    assert isinstance(verifier, FakeAppServerGenerator)
+    assert [item["egress_phase"] for item in created] == [
+        "candidate_generation",
+        "verification",
+    ]
+    assert all(item["benchmark_arm"] == "agronomic_rag" for item in created)
 
 
 def test_raw_model_arm_has_no_kernel_and_preserves_unformatted_output() -> None:

@@ -99,13 +99,48 @@ PYTHONPATH=src .venv/bin/python scripts/audit_final_benchmark_readiness.py \
   --environment-receipt outputs/release/release_environment.json
 ```
 
-The checked-in egress file is a non-authorizing template. A real human-issued
-schema-v2 receipt must be suite-bound, currently valid in UTC, and may cover
-only project-owned benchmark questions, benchmark field context, candidate
-answers, and the reference/rubric needed for judging. Farmer records, private
-field history, credentials, and local corpus files remain excluded. Supplying
-no real calibrated judge receipt keeps Luna judging disabled in every emitted
-command; deterministic calculation and interface checks retain their own
+The checked-in egress file is a non-authorizing template for benchmark ID
+`open_agronomy_canadian_performance_v1_runtime_v2`. A real human-issued
+schema-v4 receipt must be bound to that benchmark, exact suite hash, exact
+241-case application-message contract, active public runtime-artifact contract,
+and static-prompt contract. It must be currently valid in UTC and reproduce
+the frozen phase/arm map. Its exact
+authorized class list is:
+
+- `project_owned_frozen_benchmark_questions`
+- `benchmark_system_and_answer_contract_prompts`
+- `synthetic_eval_field_context`
+- `selected_public_release_runtime_document_source_excerpts`
+- `public_release_runtime_graph_evidence`
+- `candidate_drafts_for_verification`
+- `verifier_evidence`
+
+The corresponding map is candidate raw = question only; baseline = question
+and prompt; kernel = question, prompt, and synthetic context; RAG candidate =
+question, prompt, synthetic context, selected public document excerpts, and
+public graph evidence; and RAG verification = question, prompt, selected public
+document excerpts, candidate draft, and verifier evidence. Verification has no raw, baseline, or
+kernel entry. The exact excluded classes are `farmer_records`,
+`private_field_history`, `credentials`, and
+`whole_local_knowledge_corpus_files`.
+
+For candidate generation, authorization v4 freezes the exact application-layer
+message hash for every suite case and arm. The transport independently rebuilds
+that message shape before the App Server call, so appended text or a changed
+prompt invalidates authorization. App Server's text-only control remains a
+separate transport receipt; no tokenizer-level equivalence with local MLX is
+claimed. Runtime envelope and hash-only receipt semantics are versioned as v2.
+Deterministic tools stay local and bypass Luna, and RC3 authorizes no tool-result
+or semantic-judge payload class.
+
+Private knowledge is disabled for every arm: the runner forces
+`AGRONOMY_AGENT_PRIVATE_KNOWLEDGE=disabled` and invokes each child evaluation
+with `--private-knowledge-policy disabled`. Private knowledge is neither an
+authorized payload nor an optional benchmark feature. RC3 also has no judge
+payload class and rejects `--judge-calibration`; every emitted command omits
+`--judge`. The declared `judge_seed` remains an inert replication-identity
+field with `judge_seed_application=not_requested` and grants no judge authority.
+Deterministic calculation and interface checks retain their contract-defined
 scorers.
 
 The preflight validates the exact source, suite/model profiles, local snapshots,
@@ -113,15 +148,20 @@ environment and public-package receipts, corpus/source retention, payload
 authority, interface probes, free disk, and fresh per-model/per-trial outputs.
 It performs no generation or judging. A `ready` result emits nine internal
 commands: three model candidates by three declared trials, each with its own
-output and invocation receipt. It authorizes only that non-claim development
+output and invocation receipt. Every command carries both
+`--resume-partial-runs` and `--reuse-complete-runs`; reuse still requires exact
+substantive identity and a valid completion receipt. The preflight authorizes
+only that non-claim development
 rerun; it is not a benchmark outcome, a v3 readiness result, or permission to
 publish.
 
 The template egress receipt is deliberately unauthorized and expired. The
 checked-in judge calibration and v3 holdout commitment are also non-authorizing
-templates. Human egress authorization, real judge calibration, and an
-independently authored/reviewed sealed v3 commitment must never be inferred
-from a passing code test or filled in by an implementation agent.
+templates. RC3 rejects judge calibration entirely; the separate sealed-v3
+protocol still has its own human judge-calibration gate. Human egress
+authorization and an independently authored/reviewed sealed v3 commitment must
+never be inferred from a passing code test or filled in by an implementation
+agent.
 
 The public-safe [RC2 implementation and readiness record](https://github.com/Tknecht4/open_agronomy_agent/blob/main/docs/reviews/open-agronomy-benchmark-rc2-readiness-record-20260814.md)
 separates implemented contracts, diagnostic observations, interpretations, and

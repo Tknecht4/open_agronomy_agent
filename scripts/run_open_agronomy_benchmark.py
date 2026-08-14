@@ -17,17 +17,30 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT))
 
-from agronomy_agent.agent import load_yaml  # noqa: E402
+from agronomy_agent.agent import (  # noqa: E402
+    build_benchmark_egress_artifact_contract,
+    load_agent_resources,
+    load_yaml,
+)
 from agronomy_agent.benchmark_contract import read_json, sha256, validate_benchmark  # noqa: E402
 from agronomy_agent.benchmark_report import write_report  # noqa: E402
-from agronomy_agent.evals import build_implementation_identity  # noqa: E402
+from agronomy_agent.codex_app_server import (  # noqa: E402
+    build_benchmark_static_prompt_contract,
+    load_benchmark_egress_authorization,
+)
+from agronomy_agent.evals import (  # noqa: E402
+    build_benchmark_suite_case_contract,
+    build_implementation_identity,
+    load_jsonl,
+    order_eval_suite,
+)
 from scripts.build_full_system_benchmark_database import build_database  # noqa: E402
 from scripts.build_benchmark_cost_ledger import build_ledger  # noqa: E402
 from scripts.build_benchmark_retention_bundle import (  # noqa: E402
@@ -77,6 +90,11 @@ TRIAL_INVOCATION_IDENTITY_KEYS = (
     "judge_model_id",
     "judge_reasoning_effort",
     "judge_roles",
+    "egress_authorization",
+    "egress_artifact_contract_sha256",
+    "suite_case_contract_sha256",
+    "static_prompt_contract_sha256",
+    "private_knowledge_policy",
     "generation_harness_scope",
 )
 
@@ -95,6 +113,17 @@ def _nested_value(payload: dict[str, Any], dotted_key: str) -> Any:
             return None
         current = current.get(part)
     return current
+
+
+def _canonical_sha256(value: Any) -> str:
+    return hashlib.sha256(
+        json.dumps(
+            value,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
 
 
 def _replication_expectations(
@@ -194,86 +223,49 @@ def _load_egress_authorization(
     *,
     benchmark_id: str,
     benchmark_suite_sha256: str,
+    recipient_backend: str,
+    model_id: str,
+    reasoning_effort: str,
+    model_config_sha256: str,
+    suite_case_contract_sha256: str,
+    egress_artifact_contract_sha256: str,
+    static_prompt_contract_sha256: str,
 ) -> dict[str, Any]:
-    if path is None:
+    return load_benchmark_egress_authorization(
+        path,
+        benchmark_id=benchmark_id,
+        benchmark_suite_sha256=benchmark_suite_sha256,
+        recipient_backend=recipient_backend,
+        model_id=model_id,
+        reasoning_effort=reasoning_effort,
+        model_config_sha256=model_config_sha256,
+        suite_case_contract_sha256=suite_case_contract_sha256,
+        egress_artifact_contract_sha256=egress_artifact_contract_sha256,
+        static_prompt_contract_sha256=static_prompt_contract_sha256,
+    )
+
+
+def _validate_external_execution_boundary(
+    args: argparse.Namespace,
+    *,
+    contract: Mapping[str, Any] | None = None,
+) -> None:
+    if args.judge and args.judge_backend == "codex_app_server":
         raise ValueError(
-            "external App Server execution of the machine-local internal benchmark requires "
-            "--egress-authorization"
+            "the benchmark egress v4 contract authorizes candidate generation and "
+            "answer verification only; Codex App Server semantic judging is forbidden"
         )
-    resolved = path.resolve()
-    payload = read_json(resolved)
-    if payload.get("schema_version") != "open_agronomy_agent.benchmark_egress_authorization.v2":
-        raise ValueError(f"invalid benchmark egress authorization schema: {resolved}")
-    if payload.get("authorization_decision") != "authorized":
-        raise ValueError(f"benchmark egress authorization is not authorized: {resolved}")
-    if payload.get("benchmark_id") != benchmark_id:
-        raise ValueError(f"egress authorization benchmark mismatch: {resolved}")
-    if payload.get("benchmark_suite_sha256") != benchmark_suite_sha256:
-        raise ValueError(f"egress authorization suite hash mismatch: {resolved}")
-    authorization_source = str(payload.get("authorization_source") or "").strip()
-    authorized_by_key_id = str(payload.get("authorized_by_key_id") or "").strip()
-    placeholder_markers = ("replace-with", "placeholder", "template", "example")
+    if args.codex_app_server and args.private_knowledge_policy != "disabled":
+        raise ValueError(
+            "Codex App Server benchmark generation requires "
+            "--private-knowledge-policy disabled"
+        )
     if (
-        not authorization_source
-        or not authorized_by_key_id
-        or any(marker in authorization_source.lower() for marker in placeholder_markers)
-        or any(marker in authorized_by_key_id.lower() for marker in placeholder_markers)
+        args.judge
+        and isinstance(contract, Mapping)
+        and (contract.get("judge") or {}).get("execution_allowed") is not True
     ):
-        raise ValueError(f"egress authorization is missing non-placeholder provenance: {resolved}")
-
-    def parse_utc(field: str) -> dt.datetime:
-        raw = str(payload.get(field) or "").strip()
-        try:
-            parsed = dt.datetime.fromisoformat(raw.replace("Z", "+00:00"))
-        except ValueError as exc:
-            raise ValueError(f"egress authorization has invalid {field}: {resolved}") from exc
-        if parsed.tzinfo is None or parsed.utcoffset() != dt.timedelta(0):
-            raise ValueError(f"egress authorization {field} must be UTC: {resolved}")
-        return parsed.astimezone(dt.UTC)
-
-    authorized_at = parse_utc("authorized_at")
-    expires_at = parse_utc("expires_at")
-    checked_at = dt.datetime.now(dt.UTC)
-    if authorized_at > checked_at:
-        raise ValueError(f"egress authorization is not yet valid: {resolved}")
-    if expires_at <= checked_at or expires_at <= authorized_at:
-        raise ValueError(f"egress authorization is expired or has an invalid interval: {resolved}")
-    raw_authorized_payload_classes = payload.get("authorized_payload_classes")
-    raw_excluded_payload_classes = payload.get("excluded_payload_classes")
-    if (
-        not isinstance(raw_authorized_payload_classes, list)
-        or not raw_authorized_payload_classes
-        or any(
-            not isinstance(value, str) or not value.strip()
-            for value in raw_authorized_payload_classes
-        )
-    ):
-        raise ValueError(f"egress authorization has no authorized payload classes: {resolved}")
-    if raw_excluded_payload_classes is not None and (
-        not isinstance(raw_excluded_payload_classes, list)
-        or any(
-            not isinstance(value, str) or not value.strip()
-            for value in raw_excluded_payload_classes
-        )
-    ):
-        raise ValueError(f"egress authorization has invalid excluded payload classes: {resolved}")
-    authorized_payload_classes = [value.strip() for value in raw_authorized_payload_classes]
-    excluded_payload_classes = [value.strip() for value in (raw_excluded_payload_classes or [])]
-    if len(set(authorized_payload_classes)) != len(authorized_payload_classes):
-        raise ValueError(f"egress authorization has duplicate authorized payload classes: {resolved}")
-    if len(set(excluded_payload_classes)) != len(excluded_payload_classes):
-        raise ValueError(f"egress authorization has duplicate excluded payload classes: {resolved}")
-    return {
-        "path": str(resolved),
-        "sha256": sha256(resolved),
-        "authorization_decision": "authorized",
-        "authorized_at": authorized_at.isoformat().replace("+00:00", "Z"),
-        "expires_at": expires_at.isoformat().replace("+00:00", "Z"),
-        "authorization_source": authorization_source,
-        "authorized_by_key_id": authorized_by_key_id,
-        "authorized_payload_classes": authorized_payload_classes,
-        "excluded_payload_classes": excluded_payload_classes,
-    }
+        raise ValueError("semantic judging is disabled by the selected benchmark contract")
 
 
 def _run(command: list[str], *, log_path: Path, environment: dict[str, str]) -> None:
@@ -443,6 +435,9 @@ def _eval_command(
     *, args: argparse.Namespace, contract: dict[str, Any], model_config: Path,
     model_id: str, mode: str, output_dir: Path, resume_run_dir: Path | None = None,
 ) -> list[str]:
+    private_knowledge_policy = str(
+        getattr(args, "private_knowledge_policy", "disabled") or "disabled"
+    )
     command = [
         str(PYTHON), "scripts/run_eval.py", "--mode", mode,
         "--suite", str(contract["suite_path"]), "--output-dir", str(output_dir),
@@ -453,6 +448,7 @@ def _eval_command(
         "--trial-id", args.trial_id,
         "--process-isolation-policy", args.process_isolation_policy,
         "--cache-policy", args.cache_policy,
+        "--private-knowledge-policy", private_knowledge_policy,
     ]
     if resume_run_dir is not None:
         command.extend(["--resume-run-dir", str(resume_run_dir)])
@@ -462,7 +458,7 @@ def _eval_command(
         command.append("--mock")
     else:
         command.extend(["--model", model_id])
-    if mode == "agronomic_rag":
+    if mode == "agronomic_rag" or args.codex_app_server:
         command.extend(["--rag-config", str(contract["rag_config"])])
     if args.max_samples is not None:
         command.extend(["--max-samples", str(args.max_samples)])
@@ -480,7 +476,19 @@ def _eval_command(
     if args.model_base_url:
         command.extend(["--model-base-url", args.model_base_url, "--request-model-id", args.request_model_id])
     if args.codex_app_server:
-        command.extend(["--codex-app-server", "--reasoning-effort", args.reasoning_effort])
+        if args.egress_authorization is None:
+            raise ValueError("Codex App Server benchmark generation requires --egress-authorization")
+        command.extend(
+            [
+                "--codex-app-server",
+                "--reasoning-effort",
+                args.reasoning_effort,
+                "--egress-authorization",
+                str(args.egress_authorization),
+                "--benchmark-id",
+                str(contract["benchmark_id"]),
+            ]
+        )
     if args.model_identity_receipt:
         command.extend(["--model-identity-receipt", args.model_identity_receipt, "--require-model-identity"])
     return command
@@ -538,6 +546,15 @@ def main() -> int:
         type=Path,
         help="Explicit authorization receipt required when internal benchmark data leaves the device.",
     )
+    parser.add_argument(
+        "--private-knowledge-policy",
+        choices=["as_configured", "disabled"],
+        default="disabled",
+        help=(
+            "Use configured private knowledge or force it off for every child arm. "
+            "Codex App Server benchmark generation requires disabled."
+        ),
+    )
     parser.add_argument("--judge", action="store_true", help="Run uncalibrated semantic triage after generation.")
     parser.add_argument(
         "--judge-backend",
@@ -594,6 +611,7 @@ def main() -> int:
 
     if args.codex_app_server and args.model_base_url:
         raise ValueError("--codex-app-server and --model-base-url are mutually exclusive")
+    _validate_external_execution_boundary(args)
     if not args.trial_id.strip() or len(args.trial_id.strip()) > 128:
         raise ValueError("--trial-id must contain between 1 and 128 characters")
     if args.temperature is not None and args.temperature < 0:
@@ -618,6 +636,7 @@ def main() -> int:
 
     contract_path = (args.contract or CONTRACTS[args.evaluation_set]).resolve()
     contract = read_json(contract_path)
+    _validate_external_execution_boundary(args, contract=contract)
     interface_contract = ROOT / str(
         contract.get("system_interface_contract") or LEGACY_INTERFACE_CONTRACT.relative_to(ROOT)
     )
@@ -626,17 +645,14 @@ def main() -> int:
             f"benchmark contract is retired or quarantined and cannot be executed: {contract.get('benchmark_id')}"
         )
     frozen = validate_benchmark(ROOT, contract_path)
-    uses_external_app_server = bool(
-        (not args.mock and args.codex_app_server)
-        or (args.judge and args.judge_backend == "codex_app_server")
-    )
+    uses_external_app_server = bool(not args.mock and args.codex_app_server)
     egress_authorization = None
-    if frozen.get("evaluation_partition") == "internal" and uses_external_app_server:
-        egress_authorization = _load_egress_authorization(
-            args.egress_authorization,
-            benchmark_id=str(frozen["benchmark_id"]),
-            benchmark_suite_sha256=str(frozen["suite_sha256"]),
-        )
+    egress_artifact_contract: dict[str, Any] | None = None
+    egress_artifact_contract_sha256: str | None = None
+    suite_case_contract: dict[str, Any] | None = None
+    suite_case_contract_sha256: str | None = None
+    static_prompt_contract: dict[str, Any] | None = None
+    static_prompt_contract_sha256: str | None = None
     if contract.get("evaluation_partition") == "public":
         from scripts.audit_benchmark_separation import build_audit
 
@@ -647,11 +663,60 @@ def main() -> int:
             raise ValueError("the public multiple-choice verifier uses objective exact match; --judge is not allowed")
     model_config = args.model_config.resolve()
     config = load_yaml(model_config)
+    model_config_sha256 = sha256(model_config)
     identity_expectations = _replication_expectations(args, config)
     identity_expectations["generation_config.max_tokens"] = int(contract["max_tokens"])
     identity_expectations["answer_profile"] = str(contract["answer_profile"])
     identity_expectations["rubric"] = str(contract.get("rubric") or "agribench_proxy")
     model_id = str(args.model or config.get("model_id") or "mock")
+    if uses_external_app_server:
+        # The child evaluator will independently rebuild and validate these
+        # contracts.  Building them here freezes the exact same authorization
+        # identity into the outer invocation before any App Server client can
+        # be created.
+        os.environ["AGRONOMY_AGENT_PRIVATE_KNOWLEDGE"] = "disabled"
+        static_prompt_contract = build_benchmark_static_prompt_contract()
+        static_prompt_contract_sha256 = str(static_prompt_contract.get("sha256") or "")
+        egress_artifact_contract = build_benchmark_egress_artifact_contract(
+            str(contract["rag_config"])
+        )
+        egress_artifact_contract_sha256 = str(egress_artifact_contract.get("sha256") or "")
+        if not re.fullmatch(r"[0-9a-f]{64}", egress_artifact_contract_sha256):
+            raise ValueError("benchmark egress artifact contract lacks a valid SHA-256 identity")
+        if _canonical_sha256(
+            {
+                key: value
+                for key, value in egress_artifact_contract.items()
+                if key != "sha256"
+            }
+        ) != egress_artifact_contract_sha256:
+            raise ValueError("benchmark egress artifact contract SHA-256 is inconsistent")
+        suite_rows = load_jsonl(ROOT / str(contract["suite_path"]), args.max_samples)
+        suite_rows, _ = order_eval_suite(
+            suite_rows,
+            case_order_seed=args.case_order_seed,
+        )
+        suite_case_contract = build_benchmark_suite_case_contract(
+            suite_rows,
+            benchmark_suite_sha256=str(frozen["suite_sha256"]),
+            answer_profile=str(contract["answer_profile"]),
+            prompt_profile=str(config.get("prompt_profile") or "default"),
+            rag_resources=load_agent_resources(str(contract["rag_config"])),
+            use_eval_field_context=contract.get("evaluation_partition") != "public",
+        )
+        suite_case_contract_sha256 = str(suite_case_contract.get("sha256") or "")
+        egress_authorization = _load_egress_authorization(
+            args.egress_authorization,
+            benchmark_id=str(frozen["benchmark_id"]),
+            benchmark_suite_sha256=str(frozen["suite_sha256"]),
+            recipient_backend="codex_app_server_chatgpt_auth",
+            model_id=model_id,
+            reasoning_effort=str(args.reasoning_effort),
+            model_config_sha256=model_config_sha256,
+            suite_case_contract_sha256=suite_case_contract_sha256,
+            egress_artifact_contract_sha256=egress_artifact_contract_sha256,
+            static_prompt_contract_sha256=static_prompt_contract_sha256,
+        )
     model_key = _safe_key(args.model_key or model_id)
     candidate_model_backend = (
         "mock"
@@ -700,6 +765,23 @@ def main() -> int:
         else args.request_model_id
         if args.model_base_url
         else None
+    )
+    identity_expectations["private_knowledge_policy.effective"] = (
+        args.private_knowledge_policy
+    )
+    if args.private_knowledge_policy == "disabled":
+        identity_expectations["private_knowledge_policy.overlay_loaded"] = False
+    identity_expectations["benchmark_egress.authorization.sha256"] = (
+        egress_authorization["sha256"] if egress_authorization is not None else None
+    )
+    identity_expectations["benchmark_egress.artifact_contract_sha256"] = (
+        egress_artifact_contract_sha256
+    )
+    identity_expectations["benchmark_egress.suite_case_contract_sha256"] = (
+        suite_case_contract_sha256
+    )
+    identity_expectations["benchmark_egress.static_prompt_contract_sha256"] = (
+        static_prompt_contract_sha256
     )
     configured_modes = args.modes or ",".join(str(mode) for mode in contract.get("default_modes") or [])
     modes = [part.strip() for part in configured_modes.split(",") if part.strip()]
@@ -751,7 +833,7 @@ def main() -> int:
         "model_id": model_id,
         "model_revision": config.get("model_revision"),
         "model_config": str(model_config),
-        "model_config_sha256": sha256(model_config),
+        "model_config_sha256": model_config_sha256,
         "modes": modes,
         "arm_contract": arm_contract,
         "expected_rows_per_arm": expected_rows,
@@ -796,6 +878,18 @@ def main() -> int:
             else []
         ),
         "egress_authorization": egress_authorization,
+        "egress_artifact_contract_sha256": egress_artifact_contract_sha256,
+        "suite_case_contract_sha256": suite_case_contract_sha256,
+        "static_prompt_contract_sha256": static_prompt_contract_sha256,
+        "private_knowledge_policy": {
+            "requested": args.private_knowledge_policy,
+            "child_cli_value": args.private_knowledge_policy,
+            "process_environment": (
+                {"AGRONOMY_AGENT_PRIVATE_KNOWLEDGE": "disabled"}
+                if args.private_knowledge_policy == "disabled"
+                else {}
+            ),
+        },
         "reuse_complete_runs": bool(args.reuse_complete_runs),
         "resume_partial_runs": bool(args.resume_partial_runs),
         "generation_harness_scope": "core_agent_text_only",
@@ -832,7 +926,15 @@ def main() -> int:
         return 0
 
     environment = dict(os.environ)
-    environment.update({"PYTHONPATH": "src", "HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1", "AGRONOMY_AGENT_PRIVATE_KNOWLEDGE": "auto"})
+    environment.update(
+        {
+            "PYTHONPATH": "src",
+            "HF_HUB_OFFLINE": "1",
+            "TRANSFORMERS_OFFLINE": "1",
+        }
+    )
+    if args.private_knowledge_policy == "disabled":
+        environment["AGRONOMY_AGENT_PRIVATE_KNOWLEDGE"] = "disabled"
     completed: list[dict[str, Any]] = []
     for mode in modes:
         arm_root = experiment / "runs" / model_key / mode

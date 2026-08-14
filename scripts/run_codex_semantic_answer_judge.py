@@ -367,6 +367,10 @@ class AppServerJudgeRunner:
         server_cwd: Path = Path("/private/tmp"),
         judge_role: str = "semantic_answer_quality",
     ) -> None:
+        raise RuntimeError(
+            "App Server semantic judging is disabled until a dedicated judge-egress "
+            "authorization contract is implemented"
+        )
         self.command = command
         self.timeout_seconds = timeout_seconds
         self.collect_protocol_identity = collect_protocol_identity
@@ -962,8 +966,18 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def validate_judge_transport(args: argparse.Namespace) -> None:
+    """Fail closed until a dedicated semantic-judge egress contract exists."""
+
+    raise ValueError(
+        f"Codex semantic judging via {args.transport} is disabled because no dedicated "
+        "judge-egress authorization contract is implemented"
+    )
+
+
 def main() -> None:
     args = parse_args()
+    validate_judge_transport(args)
     if args.batch_size < 1:
         raise SystemExit("--batch-size must be at least 1")
     if args.workers < 1:

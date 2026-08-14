@@ -25,6 +25,33 @@ payloads intentionally absent from the public package. `benchmark_models/`,
 versions are evaluation or historical artifacts. Do not switch production
 behavior because a newer-looking filename exists.
 
+## RC3 egress and execution boundary
+
+`final_benchmark_round_rc3.json` requires
+`open_agronomy_agent.benchmark_egress_authorization.v4`. The checked-in
+`benchmark_egress_authorization.template.json` is deliberately unauthorized and
+is bound to benchmark ID
+`open_agronomy_canadian_performance_v1_runtime_v2`. A human authorization must
+match the exact global class taxonomy, the exact
+`payload_classes_by_phase_and_arm` mapping, and the plan's suite-case,
+runtime-artifact, and static-prompt contract hashes. Raw receives only the
+frozen question; baseline adds the system/answer-contract prompt; kernel adds
+synthetic field context; the RAG candidate additionally receives selected
+public runtime document excerpts and public runtime graph evidence. RAG
+verification receives question, prompt, selected public document excerpts,
+candidate draft, and verifier evidence. No other verification arm is admitted.
+Deterministic tool results remain local and bypass Luna; governed guard notes
+are frozen prompt components, not a tool-result payload class.
+
+The exact forbidden classes are `farmer_records`, `private_field_history`,
+`credentials`, and `whole_local_knowledge_corpus_files`. RC3 forces private
+knowledge off for all four arms through
+`AGRONOMY_AGENT_PRIVATE_KNOWLEDGE=disabled` and child
+`--private-knowledge-policy disabled`. Its judge is `disabled_for_rc3`; there is
+no judge payload class, a supplied judge calibration is rejected, and generated
+commands never contain `--judge`. The declared judge seed is identity-only and
+has `judge_seed_application=not_requested`.
+
 ## Inputs and outputs
 
 Inputs are YAML/JSON records consumed by launchers, resource loaders, audits, or benchmark runners. Outputs are deterministic runtime identities and selected artifacts. Exact config bytes and referenced artifact hashes must be bound into benchmark/release receipts.

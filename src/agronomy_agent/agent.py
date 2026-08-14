@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import pickle
@@ -7,6 +8,9 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import nullcontext
 from dataclasses import dataclass, replace
+from difflib import SequenceMatcher
+from fnmatch import fnmatchcase
+from functools import lru_cache
 from pathlib import Path
 from threading import RLock, current_thread
 from time import perf_counter
@@ -38,6 +42,13 @@ from agronomy_agent.answerability import (
 from agronomy_agent.answer_verifier import context_evidence_text, verify_answer
 from agronomy_agent.canada_sources import apply_canadian_coverage_disclosure, build_canadian_coverage_boundary
 from agronomy_agent.capability_registry import CAPABILITY_REGISTRY_SCHEMA_VERSION, capability_catalog
+from agronomy_agent.codex_app_server import (
+    BENCHMARK_EGRESS_ARTIFACT_CONTRACT_SCHEMA,
+    BENCHMARK_EGRESS_AUTHORIZED_PAYLOAD_CLASSES,
+    BENCHMARK_EGRESS_ENVELOPE_SCHEMA,
+    BENCHMARK_EGRESS_PAYLOAD_CLASSES_BY_PHASE_AND_ARM,
+    BENCHMARK_EGRESS_SAFE_FIELD_CONTEXT_KEYS,
+)
 from agronomy_agent.context_packer import PackedContext, default_context_packer, format_user_field_context
 from agronomy_agent.decision_capsule import DecisionCapsule, build_decision_capsule
 from agronomy_agent.decision_contract import (
@@ -61,7 +72,7 @@ from agronomy_agent.evidence_contracts import (
     validated_answer_from_runtime,
 )
 from agronomy_agent.high_consequence import classify_high_consequence_domains
-from agronomy_agent.paths import repo_path
+from agronomy_agent.paths import minimized_path_reference, repo_path
 from agronomy_agent.phase5_cache import CacheResult, Phase5LRUCache, file_fingerprint, stable_digest
 from agronomy_agent.private_knowledge import (
     PrivateKnowledgeOverlay,
@@ -75,7 +86,11 @@ from agronomy_agent.query_context import (
     filter_graph_hits_for_query,
     is_source_grounded_question,
 )
-from agronomy_agent.agno_runtime.knowledge_graph import KnowledgeGraph, graph_artifact_paths
+from agronomy_agent.agno_runtime.knowledge_graph import (
+    KnowledgeGraph,
+    graph_artifact_paths,
+    load_graph_manifests,
+)
 from agronomy_agent.agno_runtime.local_index import LexicalRetriever, RetrievedDoc
 from agronomy_agent.router import QueryRoute, classify_query, refine_query_route
 from agronomy_agent.runtime_profiles import DEFAULT_MODEL_CONFIG, DEFAULT_RAG_CONFIG
@@ -437,6 +452,296 @@ def mlx_prompt_cache_stats() -> dict[str, Any]:
 
 def load_yaml(path: str | Path) -> dict[str, Any]:
     return yaml.safe_load(repo_path(path).read_text(encoding="utf-8")) or {}
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _repository_relative_path(path: str | Path) -> str:
+    root = repo_path(".").resolve()
+    resolved = repo_path(path).resolve()
+    try:
+        return resolved.relative_to(root).as_posix()
+    except ValueError as exc:
+        raise ValueError(f"benchmark egress artifact is outside the repository: {resolved}") from exc
+
+
+@lru_cache(maxsize=8)
+def _public_release_selected_paths(
+    manifest_path_text: str,
+    manifest_sha256: str,
+) -> frozenset[str]:
+    """Materialize the builder's exact public allowlist without copying files."""
+
+    manifest_path = Path(manifest_path_text).resolve()
+    if _sha256_file(manifest_path) != manifest_sha256:
+        raise ValueError("public repository manifest changed while resolving egress artifacts")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("schema_version") != "open_agronomy_agent.public_repository_manifest.v1":
+        raise ValueError("unsupported public repository manifest schema for benchmark egress")
+    root = repo_path(".").resolve()
+    exclusions = tuple(str(value) for value in manifest.get("exclude_globs") or ())
+
+    def excluded(relative: str) -> bool:
+        return any(fnmatchcase(relative, pattern) for pattern in exclusions)
+
+    selected: set[str] = set()
+    for value in manifest.get("paths") or ():
+        relative = str(value)
+        path = (root / relative).resolve()
+        if not path.is_file() or not path.is_relative_to(root):
+            raise ValueError(f"public repository input is missing or unsafe: {relative}")
+        if not excluded(relative):
+            selected.add(relative)
+    for value in manifest.get("trees") or ():
+        tree = (root / str(value)).resolve()
+        if not tree.is_dir() or not tree.is_relative_to(root):
+            raise ValueError(f"public repository tree is missing or unsafe: {value}")
+        for path in tree.rglob("*"):
+            if path.is_file() and not path.is_symlink():
+                relative = path.relative_to(root).as_posix()
+                if not excluded(relative):
+                    selected.add(relative)
+    for pattern in manifest.get("globs") or ():
+        matches = [
+            path.resolve()
+            for path in root.glob(str(pattern))
+            if path.is_file() and not path.is_symlink()
+        ]
+        if not matches:
+            raise ValueError(f"public repository glob matched no files: {pattern}")
+        for path in matches:
+            relative = path.relative_to(root).as_posix()
+            if not excluded(relative):
+                selected.add(relative)
+    return frozenset(selected)
+
+
+def build_benchmark_egress_artifact_contract(
+    rag_config: dict[str, Any] | str | Path | None = None,
+) -> dict[str, Any]:
+    """Bind App Server egress to the exact active public runtime artifacts.
+
+    This contract is intentionally built from the repository bytes rather than
+    accepted from an evaluator-provided envelope.  The transport uses it as the
+    allowlist for every selected document and graph hint.
+    """
+
+    root = repo_path(".").resolve()
+    manifest_path = repo_path("configs/public_repository_manifest.json").resolve()
+    manifest_sha256 = _sha256_file(manifest_path)
+    public_paths = _public_release_selected_paths(str(manifest_path), manifest_sha256)
+
+    config_path: Path | None = None
+    if rag_config is None:
+        config_path = repo_path(DEFAULT_RAG_CONFIG).resolve()
+        config = load_yaml(config_path)
+    elif isinstance(rag_config, (str, Path)):
+        config_path = repo_path(rag_config).resolve()
+        config = load_yaml(config_path)
+    elif isinstance(rag_config, dict):
+        config = dict(rag_config)
+    else:
+        raise TypeError("rag_config must be a mapping, path, or None")
+    config = _resolve_configured_artifacts(config, config_path)
+    rag_config_sha256 = (
+        _sha256_file(config_path)
+        if config_path is not None
+        else sha256_text(canonical_json(config))
+    )
+    if config_path is not None and _repository_relative_path(config_path) not in public_paths:
+        raise ValueError("benchmark RAG configuration is absent from the public release manifest")
+
+    retrieval = config.get("retrieval")
+    if not isinstance(retrieval, dict):
+        raise ValueError("benchmark RAG configuration is missing retrieval settings")
+    policy_value = retrieval.get("corpus_policy_manifest")
+    if not policy_value:
+        raise ValueError("benchmark App Server egress requires an explicit runtime corpus policy")
+    policy_path = repo_path(str(policy_value)).resolve()
+    policy_relative = _repository_relative_path(policy_path)
+    if policy_relative not in public_paths:
+        raise ValueError("runtime corpus policy is absent from the public release manifest")
+    runtime_policy_sha256 = _sha256_file(policy_path)
+    corpus_policy = load_corpus_policy(root, policy_path)
+
+    configured_corpora = list(
+        retrieval.get("corpus_paths")
+        or [retrieval.get("corpus_path", "data/seed/agronomy_rag_corpus.jsonl")]
+    )
+    allowed_corpora: dict[str, dict[str, Any]] = {}
+    for configured_path in configured_corpora:
+        artifact_path = repo_path(str(configured_path)).resolve()
+        relative = _repository_relative_path(artifact_path)
+        if relative not in public_paths:
+            raise ValueError(f"benchmark corpus is absent from the public release: {relative}")
+        policy_entry = corpus_policy_for_path(relative, corpus_policy)
+        if policy_entry is None:
+            raise ValueError(f"benchmark corpus lacks an exact runtime-policy entry: {relative}")
+        runtime_eligibility = str(policy_entry.get("runtime_eligibility") or "")
+        if runtime_eligibility not in {"decisive", "context_only"}:
+            raise ValueError(f"benchmark corpus is not runtime-loadable: {relative}")
+        artifact_sha256 = _sha256_file(artifact_path)
+        if artifact_sha256 != str(policy_entry.get("sha256") or "").lower():
+            raise ValueError(f"benchmark corpus checksum disagrees with runtime policy: {relative}")
+        corpus_path_sha256 = sha256_text(relative)
+        allowed_documents: dict[str, dict[str, Any]] = {}
+        with artifact_path.open("r", encoding="utf-8") as handle:
+            for line_number, line in enumerate(handle, start=1):
+                if not line.strip():
+                    continue
+                row = json.loads(line)
+                if not isinstance(row, dict):
+                    raise ValueError(
+                        f"benchmark corpus row is not an object: {relative}:{line_number}"
+                    )
+                doc_id = str(row.get("doc_id") or f"doc_{line_number - 1}")
+                source_id = str(row.get("source_id") or row.get("source") or "")
+                source_text = str(row.get("text") or "")
+                if not doc_id or not source_id or not source_text:
+                    raise ValueError(
+                        f"benchmark corpus row lacks document identity: {relative}:{line_number}"
+                    )
+                lineage = row.get("lineage") if isinstance(row.get("lineage"), dict) else {}
+                source_document_sha256 = next(
+                    (
+                        str(value).lower()
+                        for value in (
+                            lineage.get("raw_sha256"),
+                            lineage.get("manifest_sha256"),
+                            lineage.get("chunk_sha256"),
+                        )
+                        if re.fullmatch(r"[0-9a-fA-F]{64}", str(value or ""))
+                    ),
+                    sha256_text(source_text),
+                )
+                identity_payload = {
+                    "doc_id": doc_id,
+                    "source_id": source_id,
+                    "source_document_sha256": source_document_sha256,
+                    "source_text_sha256": sha256_text(source_text),
+                }
+                document_identity_sha256 = sha256_text(canonical_json(identity_payload))
+                member = {
+                    **identity_payload,
+                    "title": str(row.get("title") or ""),
+                    "source": str(row.get("source") or source_id),
+                    "row_sha256": sha256_text(canonical_json(row)),
+                }
+                previous = allowed_documents.get(document_identity_sha256)
+                if previous is not None and previous != member:
+                    raise ValueError(
+                        f"benchmark corpus has a document identity collision: {relative}:{doc_id}"
+                    )
+                allowed_documents[document_identity_sha256] = member
+        allowed_corpora[corpus_path_sha256] = {
+            "artifact_sha256": artifact_sha256,
+            "policy_entry_sha256": sha256_text(canonical_json(policy_entry)),
+            "public_manifest_match_sha256": sha256_text(
+                canonical_json(
+                    {
+                        "public_repository_manifest_sha256": manifest_sha256,
+                        "path": relative,
+                        "artifact_sha256": artifact_sha256,
+                    }
+                )
+            ),
+            "policy_rights_status": str(policy_entry.get("rights_status") or ""),
+            "runtime_eligibility": runtime_eligibility,
+            "allowed_documents": dict(sorted(allowed_documents.items())),
+        }
+
+    graph_paths = [repo_path(path) for path in _configured_graph_paths(retrieval)]
+    graph_manifests = load_graph_manifests(
+        graph_paths,
+        require_manifests=bool(retrieval.get("require_graph_manifests", False)),
+    )
+    allowed_graphs: dict[str, dict[str, Any]] = {}
+    for manifest in graph_manifests:
+        if not manifest.manifest_declared or manifest.manifest_path is None:
+            raise ValueError("benchmark App Server egress requires manifest-backed knowledge graphs")
+        data_relative = _repository_relative_path(manifest.data_path)
+        manifest_relative = _repository_relative_path(manifest.manifest_path)
+        if data_relative not in public_paths or manifest_relative not in public_paths:
+            raise ValueError(f"benchmark graph is absent from the public release: {manifest.graph_id}")
+        allowed_graphs[manifest.sha256] = {
+            "graph_id": manifest.graph_id,
+            "version": manifest.version,
+            "source_sha256": sha256_text(manifest.source),
+            "license": manifest.license,
+            "public_manifest_match_sha256": sha256_text(
+                canonical_json(
+                    {
+                        "public_repository_manifest_sha256": manifest_sha256,
+                        "data_path": data_relative,
+                        "manifest_path": manifest_relative,
+                        "graph_sha256": manifest.sha256,
+                    }
+                )
+            ),
+            "allowed_nodes": {},
+        }
+        graph_payload = json.loads(manifest.data_path.read_text(encoding="utf-8"))
+        for row in graph_payload.get("nodes") or ():
+            if not isinstance(row, dict):
+                raise ValueError(f"benchmark graph contains a non-object node: {manifest.graph_id}")
+            node_id = str(row.get("id") or "")
+            name = str(row.get("name") or "")
+            kind = str(row.get("kind") or "")
+            evidence = str(row.get("description") or "")
+            if not node_id or not name or not kind:
+                raise ValueError(f"benchmark graph node identity is incomplete: {manifest.graph_id}")
+            identity_payload = {
+                "node_id": node_id,
+                "name": name,
+                "kind": kind,
+                "evidence_sha256": sha256_text(evidence),
+            }
+            node_identity_sha256 = sha256_text(canonical_json(identity_payload))
+            member = {
+                **identity_payload,
+                "node_row_sha256": sha256_text(canonical_json(row)),
+            }
+            previous = allowed_graphs[manifest.sha256]["allowed_nodes"].get(
+                node_identity_sha256
+            )
+            if previous is not None and previous != member:
+                raise ValueError(
+                    f"benchmark graph has a node identity collision: {manifest.graph_id}:{node_id}"
+                )
+            allowed_graphs[manifest.sha256]["allowed_nodes"][
+                node_identity_sha256
+            ] = member
+        allowed_graphs[manifest.sha256]["allowed_nodes"] = dict(
+            sorted(allowed_graphs[manifest.sha256]["allowed_nodes"].items())
+        )
+
+    corpus_bundle_sha256 = sha256_text(
+        canonical_json(
+            {
+                "rag_config_sha256": rag_config_sha256,
+                "runtime_policy_sha256": runtime_policy_sha256,
+                "allowed_corpora": allowed_corpora,
+                "allowed_graphs": allowed_graphs,
+            }
+        )
+    )
+    contract: dict[str, Any] = {
+        "schema_version": BENCHMARK_EGRESS_ARTIFACT_CONTRACT_SCHEMA,
+        "public_repository_manifest_sha256": manifest_sha256,
+        "runtime_policy_sha256": runtime_policy_sha256,
+        "rag_config_sha256": rag_config_sha256,
+        "corpus_bundle_sha256": corpus_bundle_sha256,
+        "allowed_corpora": allowed_corpora,
+        "allowed_graphs": allowed_graphs,
+    }
+    contract["sha256"] = sha256_text(canonical_json(contract))
+    return contract
 
 
 def _resolve_configured_artifacts(cfg: dict[str, Any], config_path: Path | None) -> dict[str, Any]:
@@ -3491,6 +3796,555 @@ def deterministic_tool_response(
     return None, None
 
 
+def _benchmark_outbound_text(messages: list[dict[str, str]]) -> str:
+    return "\n\n".join(str(message.get("content") or "") for message in messages)
+
+
+def benchmark_rendered_field_context_fragment(
+    messages: list[dict[str, str]],
+) -> str:
+    """Return the exact field-context line present in candidate messages."""
+
+    user_text = "\n".join(
+        str(message.get("content") or "")
+        for message in messages
+        if message.get("role") == "user"
+    )
+    prompt_prefix = user_text.split("\n\nField question:\n", 1)[0]
+    matches = [
+        line.strip()
+        for line in prompt_prefix.splitlines()
+        if line.strip().startswith("Field context:")
+    ]
+    if len(matches) > 1:
+        raise ValueError("benchmark candidate messages contain multiple field-context lines")
+    return matches[0] if matches else ""
+
+
+def _matching_outbound_line(
+    outbound_text: str,
+    *,
+    identity: str,
+    title: str = "",
+    text: str = "",
+) -> str | None:
+    normalized_title = title.strip()
+    normalized_text = re.sub(r"\s+", " ", text).strip()
+    text_prefix = normalized_text[:48]
+    truncated_text_prefix = normalized_text[:12]
+    for raw_line in outbound_text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        normalized_line = re.sub(r"\s+", " ", line)
+        identity_match = bool(identity and identity in line)
+        title_match = bool(normalized_title and normalized_title in line)
+        text_match = bool(
+            (text_prefix and text_prefix in normalized_line)
+            or (
+                truncated_text_prefix
+                and truncated_text_prefix in normalized_line
+            )
+        )
+        if identity_match and ("Excerpt:" in line or "Source:" in line or text_match):
+            return line
+        if title_match and text_match:
+            return line
+    return None
+
+
+def _shared_outbound_fragment(source_text: str, outbound_text: str, *, field: str) -> str:
+    if source_text and source_text in outbound_text:
+        return source_text
+    match = SequenceMatcher(None, source_text, outbound_text, autojunk=False).find_longest_match()
+    fragment = source_text[match.a : match.a + match.size].strip()
+    if len(fragment) < 8 or fragment not in outbound_text:
+        raise ValueError(f"benchmark egress could not bind {field} to final outbound messages")
+    return fragment
+
+
+def _benchmark_document_egress_records(
+    *,
+    context: AgentContext | None,
+    outbound_text: str,
+    artifact_contract: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if context is None:
+        return []
+    allowed_corpora = artifact_contract.get("allowed_corpora") or {}
+    records: list[dict[str, Any]] = []
+    for doc in context.retrieved_docs:
+        exact_source_projection = f"Source: {doc.title}: {doc.text}"
+        fragment = (
+            exact_source_projection
+            if exact_source_projection in outbound_text
+            else _matching_outbound_line(
+                outbound_text,
+                identity=f"[{doc.doc_id}]",
+                title=doc.title,
+                text=doc.text,
+            )
+        )
+        if fragment is None:
+            continue
+        relative = _repository_relative_path(doc.corpus_path)
+        corpus_path_sha256 = sha256_text(relative)
+        allowed = allowed_corpora.get(corpus_path_sha256)
+        if not isinstance(allowed, Mapping):
+            raise ValueError(f"outbound benchmark document is outside public artifacts: {doc.doc_id}")
+        source_document_sha256 = next(
+            (
+                str(value).lower()
+                for value in (doc.raw_sha256, doc.manifest_sha256, doc.chunk_sha256)
+                if re.fullmatch(r"[0-9a-fA-F]{64}", str(value or ""))
+            ),
+            sha256_text(doc.text),
+        )
+        identity_payload = {
+            "doc_id": doc.doc_id,
+            "source_id": doc.source_id or doc.source,
+            "source_document_sha256": source_document_sha256,
+            "source_text_sha256": sha256_text(doc.text),
+        }
+        document_identity_sha256 = sha256_text(canonical_json(identity_payload))
+        member = (allowed.get("allowed_documents") or {}).get(
+            document_identity_sha256
+        )
+        if not isinstance(member, Mapping):
+            raise ValueError(
+                f"outbound benchmark document is not a member of its corpus: {doc.doc_id}"
+            )
+        source_text_fragment = _shared_outbound_fragment(
+            doc.text,
+            fragment,
+            field=f"document {doc.doc_id}",
+        )
+        records.append(
+            {
+                "doc_id": doc.doc_id,
+                "source_id": doc.source_id or doc.source,
+                "title": doc.title,
+                "source": doc.source,
+                "document_identity_sha256": document_identity_sha256,
+                "document_row_sha256": member["row_sha256"],
+                "source_text": doc.text,
+                "source_text_sha256": sha256_text(doc.text),
+                "source_text_fragment": source_text_fragment,
+                "source_text_fragment_sha256": sha256_text(source_text_fragment),
+                "content_fragment": fragment,
+                "content_sha256": sha256_text(fragment),
+                "source_document_sha256": source_document_sha256,
+                "corpus_artifact_sha256": allowed["artifact_sha256"],
+                "corpus_path_sha256": corpus_path_sha256,
+                "policy_entry_sha256": allowed["policy_entry_sha256"],
+                "public_manifest_match_sha256": allowed["public_manifest_match_sha256"],
+                "policy_rights_status": allowed["policy_rights_status"],
+                "runtime_eligibility": allowed["runtime_eligibility"],
+                "excerpt_chars": len(fragment),
+            }
+        )
+    return records
+
+
+def _benchmark_graph_egress_records(
+    *,
+    context: AgentContext | None,
+    outbound_text: str,
+    artifact_contract: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if context is None:
+        return []
+    allowed_graphs = artifact_contract.get("allowed_graphs") or {}
+    records: list[dict[str, Any]] = []
+    for hit in context.graph_hits:
+        fragment = _matching_outbound_line(
+            outbound_text,
+            identity=str(getattr(hit, "node_id", "") or ""),
+            title=str(getattr(hit, "name", "") or ""),
+            text=str(getattr(hit, "evidence", "") or ""),
+        )
+        if fragment is None:
+            continue
+        graph_sha256 = str(getattr(hit, "graph_sha256", "") or "").lower()
+        allowed = allowed_graphs.get(graph_sha256)
+        if not isinstance(allowed, Mapping):
+            raise ValueError("outbound benchmark graph evidence is outside public artifacts")
+        node_evidence_text = str(getattr(hit, "evidence", "") or "")
+        identity_payload = {
+            "node_id": str(getattr(hit, "node_id", "") or ""),
+            "name": str(getattr(hit, "name", "") or ""),
+            "kind": str(getattr(hit, "kind", "") or ""),
+            "evidence_sha256": sha256_text(node_evidence_text),
+        }
+        node_identity_sha256 = sha256_text(canonical_json(identity_payload))
+        member = (allowed.get("allowed_nodes") or {}).get(node_identity_sha256)
+        if not isinstance(member, Mapping):
+            raise ValueError("outbound benchmark graph node is not a member of its graph")
+        node_evidence_fragment = _shared_outbound_fragment(
+            node_evidence_text,
+            fragment,
+            field=f"graph node {identity_payload['node_id']}",
+        )
+        records.append(
+            {
+                "graph_id": str(getattr(hit, "graph_id", "") or ""),
+                "graph_version": str(getattr(hit, "graph_version", "") or ""),
+                "graph_sha256": graph_sha256,
+                "source_sha256": sha256_text(str(getattr(hit, "graph_source", "") or "")),
+                "license": str(getattr(hit, "graph_license", "") or ""),
+                "public_manifest_match_sha256": allowed["public_manifest_match_sha256"],
+                "node_id": identity_payload["node_id"],
+                "node_name": identity_payload["name"],
+                "node_kind": identity_payload["kind"],
+                "node_identity_sha256": node_identity_sha256,
+                "node_row_sha256": member["node_row_sha256"],
+                "node_evidence_text": node_evidence_text,
+                "node_evidence_text_sha256": identity_payload["evidence_sha256"],
+                "node_evidence_fragment": node_evidence_fragment,
+                "node_evidence_fragment_sha256": sha256_text(node_evidence_fragment),
+                "evidence_fragment": fragment,
+                "evidence_sha256": sha256_text(fragment),
+            }
+        )
+    return records
+
+
+def _benchmark_guard_note_egress_records(
+    *,
+    context: AgentContext | None,
+    outbound_text: str,
+) -> list[dict[str, Any]]:
+    if context is None:
+        return []
+    records: list[dict[str, Any]] = []
+    for note in context.tool_notes:
+        if not note.name.endswith("_guard"):
+            continue
+        fragment = _matching_outbound_line(
+            outbound_text,
+            identity=note.name,
+            title=note.name,
+            text=note.text,
+        )
+        if fragment is None:
+            continue
+        metadata = {
+            "skill_id": note.skill_id,
+            "provenance": list(note.provenance),
+            "boundary": note.boundary,
+            "risk_class": note.risk_class,
+            "eval_tags": list(note.eval_tags),
+        }
+        records.append(
+            {
+                "name": note.name,
+                "skill_contract_sha256": sha256_text(canonical_json(metadata)),
+                **metadata,
+                "text": note.text,
+                "text_sha256": sha256_text(note.text),
+                "outbound_fragment": fragment,
+                "outbound_fragment_sha256": sha256_text(fragment),
+            }
+        )
+    return records
+
+
+def _build_benchmark_egress_envelope(
+    *,
+    generator: Any,
+    messages: list[dict[str, str]],
+    eval_id: str,
+    question: str,
+    field_context: dict[str, Any] | None,
+    context: AgentContext | None,
+    resources: AgentResources | None,
+    candidate_draft: str | None = None,
+    verifier_evidence_text: str | None = None,
+    candidate_generation_output_sha256: str | None = None,
+) -> dict[str, Any]:
+    artifact_contract = getattr(generator, "expected_artifact_contract", None)
+    if not isinstance(artifact_contract, Mapping):
+        raise ValueError("App Server generator is missing its validated artifact contract")
+    phase = str(getattr(generator, "egress_phase", "") or "")
+    arm = str(getattr(generator, "benchmark_arm", "") or "")
+    outbound_text = _benchmark_outbound_text(messages)
+    if not eval_id.strip():
+        raise ValueError("App Server benchmark generation requires the current eval_id")
+    if question not in outbound_text:
+        raise ValueError("benchmark question is absent from final outbound messages")
+
+    supplied_field_context = dict(field_context or {})
+    unknown_field_keys = sorted(set(supplied_field_context) - BENCHMARK_EGRESS_SAFE_FIELD_CONTEXT_KEYS)
+    if unknown_field_keys:
+        raise ValueError(f"benchmark field context contains non-synthetic keys: {unknown_field_keys}")
+    permitted_classes = set(
+        BENCHMARK_EGRESS_PAYLOAD_CLASSES_BY_PHASE_AND_ARM.get(phase, {}).get(arm, ())
+    )
+    field_context_permitted = "synthetic_eval_field_context" in permitted_classes
+    rendered_field_context = benchmark_rendered_field_context_fragment(messages)
+    if (
+        not field_context_permitted
+        and rendered_field_context
+    ):
+        raise ValueError(
+            f"synthetic field context reached a benchmark arm that forbids it: {phase}/{arm}"
+        )
+    synthetic_values = {
+        key: supplied_field_context[key]
+        for key in sorted(supplied_field_context)
+        if supplied_field_context[key] not in (None, "", [], {})
+    } if field_context_permitted else {}
+    rendered_outbound_context = rendered_field_context if field_context_permitted else ""
+    synthetic_field_context = {
+        "supplied": bool(synthetic_values),
+        "safe_keys": sorted(synthetic_values),
+        "safe_values": synthetic_values,
+        "safe_values_sha256": (
+            sha256_text(canonical_json(synthetic_values)) if synthetic_values else None
+        ),
+        "present": bool(rendered_outbound_context),
+        "rendered_text": rendered_outbound_context,
+        "rendered_sha256": (
+            sha256_text(rendered_outbound_context) if rendered_outbound_context else None
+        ),
+        "rendered_chars": len(rendered_outbound_context),
+    }
+    selected_documents = _benchmark_document_egress_records(
+        context=context,
+        outbound_text=outbound_text,
+        artifact_contract=artifact_contract,
+    )
+    graph_evidence = _benchmark_graph_egress_records(
+        context=context,
+        outbound_text=outbound_text,
+        artifact_contract=artifact_contract,
+    )
+    runtime_tool_results = (
+        []
+        if context is None
+        else [
+            row
+            for row in (context.runtime_metadata or {}).get("tool_results") or ()
+            if isinstance(row, Mapping)
+        ]
+    )
+    model_bound_tool_results: list[Mapping[str, Any]] = []
+    for row in runtime_tool_results:
+        payload = row.get("payload") if isinstance(row.get("payload"), Mapping) else {}
+        claim = str(row.get("claim_text") or payload.get("answer") or "").strip()
+        if claim and claim in outbound_text:
+            model_bound_tool_results.append(row)
+    if model_bound_tool_results or "Typed capability evidence:" in outbound_text:
+        raise ValueError(
+            "executed tool-result evidence is not authorized for benchmark model egress"
+        )
+    governed_guard_notes = _benchmark_guard_note_egress_records(
+        context=context,
+        outbound_text=outbound_text,
+    )
+    actual_classes = {"project_owned_frozen_benchmark_questions"}
+    if any(message.get("role") == "system" for message in messages):
+        actual_classes.add("benchmark_system_and_answer_contract_prompts")
+    if rendered_outbound_context:
+        actual_classes.add("synthetic_eval_field_context")
+    if selected_documents:
+        actual_classes.add("selected_public_release_runtime_document_source_excerpts")
+    if graph_evidence:
+        actual_classes.add("public_release_runtime_graph_evidence")
+
+    envelope: dict[str, Any] = {
+        "schema_version": BENCHMARK_EGRESS_ENVELOPE_SCHEMA,
+        "eval_id": eval_id,
+        "suite_case_contract_sha256": str(
+            getattr(generator, "expected_suite_case_contract_sha256", "") or ""
+        ),
+        "egress_artifact_contract_sha256": str(
+            getattr(generator, "expected_artifact_contract_sha256", "") or ""
+        ),
+        "static_prompt_contract_sha256": str(
+            getattr(generator, "expected_static_prompt_contract_sha256", "") or ""
+        ),
+        "phase": phase,
+        "arm": arm,
+        "payload_classes": [],
+        "private_knowledge_policy": "disabled",
+        "private_knowledge_overlay_loaded": bool(
+            resources is not None and resources.private_knowledge_overlay is not None
+        ),
+        "question_fragment": question,
+        "question_sha256": sha256_text(question),
+        "outbound_messages_sha256": sha256_text(canonical_json(messages)),
+        "corpus_bundle_sha256": artifact_contract["corpus_bundle_sha256"],
+        "runtime_policy_sha256": artifact_contract["runtime_policy_sha256"],
+        "rag_config_sha256": artifact_contract["rag_config_sha256"],
+        "public_repository_manifest_sha256": artifact_contract[
+            "public_repository_manifest_sha256"
+        ],
+        "synthetic_field_context": synthetic_field_context,
+        "governed_guard_notes": governed_guard_notes,
+        "selected_document_excerpts": selected_documents,
+        "graph_evidence": graph_evidence,
+        "whole_corpus_included": False,
+    }
+    if phase == "verification":
+        if not candidate_draft or not verifier_evidence_text:
+            raise ValueError("verification egress requires candidate draft and verifier evidence")
+        envelope.update(
+            {
+                "candidate_generation_output_sha256": (
+                    candidate_generation_output_sha256
+                    or sha256_text(candidate_draft)
+                ),
+                "candidate_draft_text": candidate_draft,
+                "candidate_draft_fragment": _shared_outbound_fragment(
+                    candidate_draft, outbound_text, field="candidate draft"
+                ),
+                "candidate_draft_sha256": sha256_text(candidate_draft),
+                "verifier_evidence_text": verifier_evidence_text,
+                "verifier_evidence_fragment": _shared_outbound_fragment(
+                    verifier_evidence_text, outbound_text, field="verifier evidence"
+                ),
+                "verifier_evidence_sha256": sha256_text(verifier_evidence_text),
+            }
+        )
+        actual_classes.update(("candidate_drafts_for_verification", "verifier_evidence"))
+    envelope["payload_classes"] = [
+        value
+        for value in BENCHMARK_EGRESS_AUTHORIZED_PAYLOAD_CLASSES
+        if value in actual_classes
+    ]
+    return envelope
+
+
+def _generate_with_benchmark_egress(
+    generator: Any,
+    messages: list[dict[str, str]],
+    *,
+    eval_id: str | None,
+    question: str,
+    field_context: dict[str, Any] | None,
+    context: AgentContext | None,
+    resources: AgentResources | None,
+) -> str:
+    generate_with_egress = getattr(generator, "generate_with_egress", None)
+    if not callable(generate_with_egress):
+        if bool(getattr(generator, "transport_control_active", False)):
+            raise ValueError(
+                "transport-controlled benchmark generation requires callable "
+                "generate_with_egress"
+            )
+        return str(generator.generate(messages))
+    if not eval_id:
+        raise ValueError("App Server benchmark generation requires eval_id")
+    envelope = _build_benchmark_egress_envelope(
+        generator=generator,
+        messages=messages,
+        eval_id=eval_id,
+        question=question,
+        field_context=field_context,
+        context=context,
+        resources=resources,
+    )
+    return str(generate_with_egress(messages, envelope))
+
+
+def build_benchmark_candidate_application_messages(
+    question: str,
+    mode: str,
+    *,
+    resources: AgentResources | None = None,
+    field_context: dict[str, Any] | None = None,
+    prompt_profile: str = "default",
+) -> list[dict[str, str]]:
+    """Render the exact candidate messages that ``generate_answer`` will submit.
+
+    This pure benchmark seam mirrors the deterministic admission projection in
+    ``generate_answer`` so the suite can authorize byte-identical application
+    messages before any model backend is selected.
+    """
+
+    messages, context = build_messages(
+        question,
+        mode,
+        resources=resources,
+        field_context=field_context,
+        prompt_profile=prompt_profile,
+    )
+    objective_multiple_choice = (
+        os.environ.get("AGRONOMY_AGENT_OBJECTIVE_RESPONSE_MODE", "").strip().lower()
+        == "multiple_choice"
+    )
+    context_runtime = {} if context is None else (context.runtime_metadata or {})
+    context_tool_plan = (
+        context_runtime.get("tool_plan")
+        if isinstance(context_runtime.get("tool_plan"), Mapping)
+        else None
+    )
+    context_tool_results = tuple(
+        item
+        for item in (context_runtime.get("tool_results") or ())
+        if isinstance(item, Mapping)
+    )
+    typed_tool_result_available = validated_deterministic_tool_execution(
+        question,
+        context_tool_plan,
+        context_tool_results,
+    )
+    objective_context_rejected = bool(
+        objective_multiple_choice
+        and mode == "agronomic_rag"
+        and (
+            context is None
+            or (
+                not typed_tool_result_available
+                and (
+                    context.evidence_handshake is None
+                    or not context.evidence_handshake.has_strong_primary
+                )
+            )
+        )
+    )
+    if objective_context_rejected:
+        messages, _ = build_messages(
+            question,
+            "baseline",
+            resources=None,
+            field_context=field_context,
+            prompt_profile=prompt_profile,
+        )
+    source_grounded = is_source_grounded_question(question)
+    weak_retrieval_rejected = bool(
+        mode == "agronomic_rag"
+        and not source_grounded
+        and not objective_multiple_choice
+        and not _allows_context_only_regional_interpretation(context, question=question)
+        and context is not None
+        and not typed_tool_result_available
+        and (
+            context.evidence_handshake is None
+            or not context.evidence_handshake.has_strong_primary
+        )
+    )
+    if weak_retrieval_rejected:
+        admitted_context_block = _format_no_primary_context(
+            context,
+            field_context=field_context,
+        )
+        selected_system_prompt = (
+            TINY_ANCHOR_SYSTEM_PROMPT
+            if prompt_profile == "tiny_anchor_v1"
+            else system_prompt()
+        )
+        messages = [
+            {"role": "system", "content": selected_system_prompt},
+            {
+                "role": "user",
+                "content": build_answer_prompt(admitted_context_block, question),
+            },
+        ]
+    return messages
+
+
 def generate_answer(
     question: str,
     mode: str,
@@ -3503,6 +4357,7 @@ def generate_answer(
     capture_context_packet: bool = False,
     prompt_profile: str = "default",
     intervention_profile: str | None = None,
+    eval_id: str | None = None,
 ) -> tuple[str, dict[str, Any]]:
     raw_model_arm = mode == "raw_model"
     objective_response_mode = os.environ.get("AGRONOMY_AGENT_OBJECTIVE_RESPONSE_MODE", "").strip().lower()
@@ -3612,7 +4467,15 @@ def generate_answer(
         if deterministic_output is not None
         else evidence_hold
         if evidence_hold is not None
-        else generator.generate(messages)
+        else _generate_with_benchmark_egress(
+            generator,
+            messages,
+            eval_id=eval_id,
+            question=question,
+            field_context=field_context,
+            context=context,
+            resources=resources,
+        )
     )
     draft_output = raw_output
     generation_stats = (
@@ -3628,6 +4491,7 @@ def generate_answer(
             "no",
             "off",
         }
+    verification_generator = verifier or generator
     if (
         mode == "agronomic_rag"
         and evidence_hold is None
@@ -3636,6 +4500,41 @@ def generate_answer(
         and not objective_multiple_choice
         and not isinstance(generator, MockGenerator)
     ):
+        if (
+            bool(getattr(verification_generator, "transport_control_active", False))
+            and not callable(
+                getattr(verification_generator, "generate_with_egress", None)
+            )
+        ):
+            raise ValueError(
+                "transport-controlled benchmark verification requires callable "
+                "generate_with_egress"
+            )
+        candidate_generation_output_sha256 = sha256_text(raw_output)
+        if bool(getattr(generator, "transport_control_active", False)):
+            candidate_receipt = dict(
+                (getattr(generator, "last_generation_stats", {}) or {}).get(
+                    "benchmark_egress_receipt"
+                )
+                or {}
+            )
+            if (
+                candidate_receipt.get("model_output_sha256")
+                != candidate_generation_output_sha256
+            ):
+                raise ValueError(
+                    "transport-controlled verifier requires the prior candidate output receipt"
+                )
+        bind_candidate_output = getattr(
+            verification_generator,
+            "bind_candidate_generation_output",
+            None,
+        )
+        if callable(bind_candidate_output):
+            bind_candidate_output(
+                eval_id=eval_id or "",
+                output_sha256=candidate_generation_output_sha256,
+            )
         verification = verify_answer(
             raw_output,
             question=question,
@@ -3646,7 +4545,7 @@ def generate_answer(
             ),
             question_type="source_grounded" if source_grounded or context is None else context.route.question_type,
             risk_level="low" if context is None else context.route.risk_level,
-            editor=verifier or generator,
+            editor=verification_generator,
             evidence_docs=(
                 ()
                 if context is None or weak_retrieval_rejected
@@ -3672,10 +4571,31 @@ def generate_answer(
                 if context is not None
                 else None
             ),
+            egress_envelope_factory=(
+                lambda *, messages, candidate_draft, verifier_evidence_text: (
+                    _build_benchmark_egress_envelope(
+                        generator=verification_generator,
+                        messages=messages,
+                        eval_id=eval_id or "",
+                        question=question,
+                        field_context=None,
+                        context=context,
+                        resources=resources,
+                        candidate_draft=candidate_draft,
+                        verifier_evidence_text=verifier_evidence_text,
+                        candidate_generation_output_sha256=(
+                            candidate_generation_output_sha256
+                        ),
+                    )
+                )
+                if callable(
+                    getattr(verification_generator, "generate_with_egress", None)
+                )
+                else None
+            ),
         )
         raw_output = verification.answer
     post_verification_output = raw_output
-    verification_generator = verifier or generator
     verification_generation_stats = (
         dict(getattr(verification_generator, "last_generation_stats", {}) or {})
         if verification is not None and verification.editor_output is not None

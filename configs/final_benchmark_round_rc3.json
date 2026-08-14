@@ -3,20 +3,62 @@
   "claim_eligible": false,
   "egress": {
     "authorization_required": true,
-    "authorization_schema": "open_agronomy_agent.benchmark_egress_authorization.v2",
+    "authorization_schema": "open_agronomy_agent.benchmark_egress_authorization.v4",
     "authorized_payload_classes_exact": [
       "project_owned_frozen_benchmark_questions",
-      "benchmark_field_context",
-      "candidate_answers",
-      "benchmark_reference_and_rubric_for_judging"
+      "benchmark_system_and_answer_contract_prompts",
+      "synthetic_eval_field_context",
+      "selected_public_release_runtime_document_source_excerpts",
+      "public_release_runtime_graph_evidence",
+      "candidate_drafts_for_verification",
+      "verifier_evidence"
     ],
     "excluded_payload_classes_exact": [
       "farmer_records",
       "private_field_history",
       "credentials",
-      "local_knowledge_corpus_files"
+      "whole_local_knowledge_corpus_files"
     ],
     "human_authority_required": true,
+    "payload_classes_by_phase_and_arm": {
+      "candidate_generation": {
+        "raw_model": [
+          "project_owned_frozen_benchmark_questions"
+        ],
+        "baseline": [
+          "project_owned_frozen_benchmark_questions",
+          "benchmark_system_and_answer_contract_prompts"
+        ],
+        "kernel_field_context": [
+          "project_owned_frozen_benchmark_questions",
+          "benchmark_system_and_answer_contract_prompts",
+          "synthetic_eval_field_context"
+        ],
+        "agronomic_rag": [
+          "project_owned_frozen_benchmark_questions",
+          "benchmark_system_and_answer_contract_prompts",
+          "synthetic_eval_field_context",
+          "selected_public_release_runtime_document_source_excerpts",
+          "public_release_runtime_graph_evidence"
+        ]
+      },
+      "verification": {
+        "agronomic_rag": [
+          "project_owned_frozen_benchmark_questions",
+          "benchmark_system_and_answer_contract_prompts",
+          "selected_public_release_runtime_document_source_excerpts",
+          "candidate_drafts_for_verification",
+          "verifier_evidence"
+        ]
+      }
+    },
+    "egress_artifact_contract_sha256": "df0e6b5d77a8ade022b075541046fefc07059ac0b14e36f1593130354a0c75ba",
+    "recipient_backend": "codex_app_server_chatgpt_auth",
+    "recipient_model_config_sha256": "abeae5a6cdb37a11980c9ccb02e62c3257a6739b666a8cc6b8b8e195ec54a0b3",
+    "recipient_model_id": "gpt-5.6-luna",
+    "recipient_reasoning_effort": "high",
+    "static_prompt_contract_sha256": "a6b2788d4751ae809f363cc7fa0f8a5d775212a2977208ddd52cce5550e7c47e",
+    "suite_case_contract_sha256": "a326d87eb559ac6c6569eacf02b2412c102000979b2c2dc6d074f6188bb267d7",
     "utc_validity_window_required": true
   },
   "evaluation_order": [
@@ -54,15 +96,15 @@
     "runtime_profile": {
       "knowledge_release_id": "curated-canada-2026-08-14",
       "knowledge_release_manifest_path": "data/derived/rag/curated_canada/releases/2026-08-14/store_manifest.json",
-        "knowledge_release_manifest_sha256": "9000eebb6c33d1997f4bdc463f51842e460ad4f9432ed8a9576f06626d56c583",
-        "knowledge_release_rows": 969,
+      "knowledge_release_manifest_sha256": "9000eebb6c33d1997f4bdc463f51842e460ad4f9432ed8a9576f06626d56c583",
+      "knowledge_release_rows": 969,
       "master_profile_id": "canada-offline-master",
       "policy_path": "data/manifests/runtime_corpus_policy_v2.json",
-        "policy_sha256": "9f7c38640ef9f9a31106c0f50dd6de35abe7fee9e96191f8ab7c128b919a8f82",
+      "policy_sha256": "9f7c38640ef9f9a31106c0f50dd6de35abe7fee9e96191f8ab7c128b919a8f82",
       "rag_config_path": "configs/rag_governed_runtime_v2.yaml",
       "rag_config_sha256": "2a7f9cca000629dd7e6a74b2828cbf6324159b0b212a538df4c22e1d20992653",
       "registry_path": "configs/runtime_profiles.json",
-        "registry_sha256": "aeb1583448294a998fe8e9873d0ffd17ad17d86824194fb398e1909f49cdc39a",
+      "registry_sha256": "aeb1583448294a998fe8e9873d0ffd17ad17d86824194fb398e1909f49cdc39a",
       "status": "active_release_candidate"
     },
     "service_orchestration_exercised": false,
@@ -72,26 +114,12 @@
     "v3_harness_component_matrix_exercised": false
   },
   "judge": {
-    "backend": "codex_app_server",
-    "calibration_schema_path": "configs/schemas/benchmark_judge_calibration_v1.schema.json",
     "default_enabled": false,
-    "model": "gpt-5.6-luna",
-    "reasoning_effort": "high",
-    "required_controls": [
-      "answers_stored_before_scoring",
-      "frozen_nonplaceholder_calibration_receipt",
-      "exact_prompts_and_context_packets_retained",
-      "lane_level_reporting",
-      "no_single_composite_score",
-      "blinded_human_review_packet",
-      "human_adjudication_authoritative"
-    ],
-    "role_boundary": "Advisory triage only after human calibration; never promotion authority or sole evidence.",
-    "roles": [
-      "semantic_answer_quality"
-    ],
-    "self_judgment_policy": "never_score_candidate_with_same_exact_model",
-    "status": "blocked_until_real_calibrated_receipt"
+    "execution_allowed": false,
+    "payload_class_present": false,
+    "role_boundary": "RC3 performs no automated semantic judging. Human review remains a separate post-run activity and is not an egress payload class.",
+    "roles": [],
+    "status": "disabled_for_rc3"
   },
   "models": [
     {
@@ -127,6 +155,21 @@
     "permitted_claim": "non-claim exposed development regression comparison under the cumulative runtime-v2 knowledge profile",
     "single_composite_score_allowed": false
   },
+  "private_knowledge_policy": {
+    "applies_to_arms": [
+      "raw_model",
+      "baseline",
+      "kernel_field_context",
+      "agronomic_rag"
+    ],
+    "child_cli_argument": "--private-knowledge-policy",
+    "child_cli_value": "disabled",
+    "egress_allowed": false,
+    "policy_id": "disabled_for_all_benchmark_arms",
+    "required_process_environment": {
+      "AGRONOMY_AGENT_PRIVATE_KNOWLEDGE": "disabled"
+    }
+  },
   "readiness": {
     "minimum_free_disk_bytes": 2147483648,
     "require_benchmark_construct_audit": true,
@@ -137,6 +180,7 @@
     "require_internal_external_separation": true,
     "require_local_model_snapshots": true,
     "require_nrcs_explicit_analogue_probe": true,
+    "require_private_knowledge_disabled": true,
     "require_runtime_corpus_audit": true,
     "require_saskatchewan_fail_closed_probe": true,
     "require_source_retention_receipt": true
@@ -150,6 +194,7 @@
   },
   "replication": {
     "cache_policy": "no_prompt_cache",
+    "judge_seed_application": "not_requested",
     "process_isolation_policy": "fresh_process_per_run",
     "required_identity_fields": [
       "trial_id",

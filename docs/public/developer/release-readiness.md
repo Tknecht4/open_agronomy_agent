@@ -96,6 +96,11 @@ no prompt cache, and a unique output/invocation identity. AgroQA v1 is retired
 after RC1 exposure and the preflight must emit no external-diagnostic command.
 RC1 and RC2 remain frozen historical identities.
 
+The judge seed is retained only as an inert replication identity;
+`judge_seed_application=not_requested`. RC3 disables automated semantic judging,
+has no judge egress class, rejects any supplied judge calibration, and emits no
+`--judge` option.
+
 After the clean-checkout, environment, public-package, full-test, documentation,
 and source-retention gates pass, run:
 
@@ -111,18 +116,53 @@ PYTHONPATH=src .venv/bin/python scripts/audit_final_benchmark_readiness.py \
 
 The checked-in `configs/benchmark_egress_authorization.template.json` is
 intentionally unauthorized and expired; it cannot be used to make this gate
-pass. A human-controlled schema-v2 receipt must be bound to the exact internal
-suite, contain only the allowlisted benchmark payload classes, explicitly
-exclude farmer/private/corpus/credential material, and be currently valid in
-UTC. Do not supply `--judge-calibration` unless a real, non-placeholder,
-human-calibrated receipt exists. Without one, all emitted commands must omit
-semantic judging.
+pass. A human-controlled schema-v4 receipt must be bound to benchmark ID
+`open_agronomy_canadian_performance_v1_runtime_v2`, the exact internal suite,
+the exact suite-case application-message contract, the active public
+runtime-artifact contract, and the static-prompt contract. It must be currently
+valid in UTC and exactly match the plan's
+`payload_classes_by_phase_and_arm` map:
+
+| Phase and arm | Authorized payload classes, in order |
+|---|---|
+| candidate raw | project-owned frozen question |
+| candidate baseline | project-owned frozen question; system/answer-contract prompt |
+| candidate kernel | project-owned frozen question; system/answer-contract prompt; synthetic field context |
+| candidate RAG | project-owned frozen question; system/answer-contract prompt; synthetic field context; selected public runtime document excerpts; public runtime graph evidence |
+| verification RAG | project-owned frozen question; system/answer-contract prompt; selected public runtime document excerpts; candidate draft; verifier evidence |
+
+The receipt's global authorized taxonomy uses the exact machine names
+`project_owned_frozen_benchmark_questions`,
+`benchmark_system_and_answer_contract_prompts`, `synthetic_eval_field_context`,
+`selected_public_release_runtime_document_source_excerpts`,
+`public_release_runtime_graph_evidence`, `candidate_drafts_for_verification`,
+and `verifier_evidence`. It must exactly
+exclude `farmer_records`, `private_field_history`, `credentials`, and
+`whole_local_knowledge_corpus_files`.
+
+The preflight independently rebuilds all three v4 contract hashes and rejects
+a plan or human receipt that merely supplies self-consistent labels. Candidate
+application messages must match the case-and-arm hash byte-for-byte before the
+App Server starts. The App Server text-only transport control is receipted
+separately from those application messages. Deterministic tools remain local
+and bypass Luna; governed guard notes are static prompt content, not an
+authorized tool-result class.
+
+The preflight also requires the plan's private-knowledge policy. The runner
+forces `AGRONOMY_AGENT_PRIVATE_KNOWLEDGE=disabled` and passes
+`--private-knowledge-policy disabled` to every child evaluation. A configured
+runtime profile that permits private knowledge outside this benchmark does not
+override this benchmark invariant. Supplying `--judge-calibration` is an RC3
+failure, not a way to enable advisory judging.
 
 A successful audit emits nine unique internal commands: three models by three
-trials. It performs no generation or judging and authorizes only the declared
-non-claim rerun. Do not execute a planned command if the preflight status is not
-`ready`, if any output destination is no longer fresh, or if source/config/model
-identity changed after the receipt.
+trials. Each emitted command includes `--resume-partial-runs` and
+`--reuse-complete-runs`; either path still fails unless the stored invocation
+has exact substantive identity, and reuse additionally requires a valid
+complete-run receipt. The audit performs no generation or judging and
+authorizes only the declared non-claim rerun. Do not execute a planned command
+if the preflight status is not `ready`, if an output has an incompatible or
+unreceipted state, or if source/config/model identity changed after the receipt.
 
 Before an expensive matrix, retain one claim-ineligible rehearsal through the
 same typed server core used by the cockpit and validate all 17 ordered stage

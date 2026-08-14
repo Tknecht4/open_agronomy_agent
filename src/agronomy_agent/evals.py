@@ -4,6 +4,7 @@ import argparse
 import datetime as dt
 import fcntl
 import hashlib
+import ipaddress
 import json
 import os
 import platform
@@ -19,17 +20,27 @@ from dataclasses import asdict
 from pathlib import Path
 from threading import RLock
 from typing import Any
+from urllib.parse import urlparse
 
 from agronomy_agent.agent import (
     AGENT_KERNEL_PROMPT,
     MLXGenerator,
     MockGenerator,
     OpenAICompatibleGenerator,
+    build_benchmark_egress_artifact_contract,
+    build_benchmark_candidate_application_messages,
+    benchmark_rendered_field_context_fragment,
     generate_answer,
     load_agent_resources,
     load_model_config,
 )
-from agronomy_agent.codex_app_server import CodexAppServerGenerator
+from agronomy_agent.codex_app_server import (
+    BENCHMARK_EGRESS_SAFE_FIELD_CONTEXT_KEYS,
+    BENCHMARK_EGRESS_SUITE_CASE_CONTRACT_SCHEMA,
+    CodexAppServerGenerator,
+    build_benchmark_static_prompt_contract,
+    load_benchmark_egress_authorization,
+)
 from agronomy_agent.corpus_governance import (
     load_corpus_policy,
     partition_runtime_corpus_paths,
@@ -808,6 +819,97 @@ def build_eval_field_context(item: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in context.items() if value is not None}
 
 
+def build_benchmark_suite_case_contract(
+    suite: list[dict[str, Any]],
+    *,
+    benchmark_suite_sha256: str,
+    answer_profile: str = "public",
+    prompt_profile: str = "default",
+    rag_resources: Any | None = None,
+    use_eval_field_context: bool = True,
+) -> dict[str, Any]:
+    """Freeze exact case inputs and all cross-backend candidate messages."""
+
+    cases: dict[str, dict[str, Any]] = {}
+    for item in suite:
+        eval_id = str(item.get("eval_id") or "").strip()
+        if not eval_id or eval_id in cases:
+            raise ValueError("benchmark suite-case contract requires unique non-empty eval IDs")
+        field_context = build_eval_field_context(item) if use_eval_field_context else {}
+        safe_values = {
+            key: value
+            for key, value in sorted(field_context.items())
+            if key in BENCHMARK_EGRESS_SAFE_FIELD_CONTEXT_KEYS
+            and value not in (None, "", [], {})
+        }
+        question = eval_question(item)
+        with answer_profile_environment(answer_profile):
+            application_messages = {
+                arm: build_benchmark_candidate_application_messages(
+                    question,
+                    arm,
+                    resources=rag_resources if arm == "agronomic_rag" else None,
+                    field_context=field_context or None,
+                    prompt_profile=prompt_profile,
+                )
+                for arm in (
+                    "raw_model",
+                    "baseline",
+                    "kernel_field_context",
+                    "agronomic_rag",
+                )
+            }
+        message_hashes = {
+            arm: canonical_sha256(messages)
+            for arm, messages in application_messages.items()
+        }
+        rendered_field_hashes = {
+            arm: (
+                hashlib.sha256(fragment.encode("utf-8")).hexdigest()
+                if (
+                    fragment := benchmark_rendered_field_context_fragment(messages)
+                )
+                else None
+            )
+            for arm, messages in application_messages.items()
+        }
+        cases[eval_id] = {
+            "question_sha256": hashlib.sha256(
+                question.encode("utf-8")
+            ).hexdigest(),
+            "safe_field_context_present": bool(safe_values),
+            "safe_field_context_sha256": (
+                canonical_sha256(safe_values) if safe_values else None
+            ),
+            "rendered_field_context_sha256_by_arm": rendered_field_hashes,
+            "candidate_application_messages_sha256_by_arm": message_hashes,
+        }
+    contract: dict[str, Any] = {
+        "schema_version": BENCHMARK_EGRESS_SUITE_CASE_CONTRACT_SCHEMA,
+        "benchmark_suite_sha256": benchmark_suite_sha256,
+        "cases": dict(sorted(cases.items())),
+    }
+    contract["sha256"] = canonical_sha256(contract)
+    return contract
+
+
+def is_local_model_endpoint(base_url: str) -> bool:
+    """Return true only for an explicitly loopback or local Unix endpoint."""
+
+    parsed = urlparse(str(base_url or "").strip())
+    if parsed.scheme in {"unix", "http+unix"}:
+        return True
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        return False
+    hostname = parsed.hostname.rstrip(".").casefold()
+    if hostname == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(hostname).is_loopback
+    except ValueError:
+        return False
+
+
 def validate_eval_item(item: dict[str, Any], source: str) -> None:
     eval_id = item.get("eval_id")
     if not isinstance(eval_id, str) or not eval_id:
@@ -1246,7 +1348,16 @@ def _clamp(value: float, low: float = 0.0, high: float = 100.0) -> float:
     return max(low, min(high, value))
 
 
-def build_eval_generators(args: argparse.Namespace, model_cfg: dict[str, Any]) -> tuple[Any, Any, str, str, str | None]:
+def build_eval_generators(
+    args: argparse.Namespace,
+    model_cfg: dict[str, Any],
+    *,
+    benchmark_suite_sha256: str | None = None,
+    egress_artifact_contract: dict[str, Any] | None = None,
+    suite_case_contract: dict[str, Any] | None = None,
+    static_prompt_contract: dict[str, Any] | None = None,
+    model_config_sha256: str | None = None,
+) -> tuple[Any, Any, str, str, str | None]:
     """Build one local or host-native generation contract for an eval run."""
 
     model_id = args.model or str(model_cfg.get("model_id"))
@@ -1254,6 +1365,11 @@ def build_eval_generators(args: argparse.Namespace, model_cfg: dict[str, Any]) -
     request_model_id = str(getattr(args, "request_model_id", "default_model") or "default_model")
     model_base_url = str(getattr(args, "model_base_url", "") or "").strip()
     codex_app_server = bool(getattr(args, "codex_app_server", False))
+    if model_base_url and not is_local_model_endpoint(model_base_url):
+        raise ValueError(
+            "non-loopback --model-base-url is forbidden for project benchmark execution "
+            "until a recipient-specific egress envelope exists"
+        )
     if args.mock:
         return MockGenerator(), None, model_id, "mock", None
 
@@ -1269,18 +1385,65 @@ def build_eval_generators(args: argparse.Namespace, model_cfg: dict[str, Any]) -
     verifier_model_id = str(verification_cfg.get("model_id") or model_id)
     verifier_model_revision = str(verification_cfg.get("model_revision") or model_cfg.get("model_revision") or "") or None
     if codex_app_server:
+        private_knowledge_policy = str(
+            getattr(args, "private_knowledge_policy", "as_configured") or "as_configured"
+        )
+        if private_knowledge_policy != "disabled":
+            raise ValueError(
+                "Codex App Server benchmark generation requires "
+                "--private-knowledge-policy disabled"
+            )
+        benchmark_id = str(getattr(args, "benchmark_id", "") or "").strip()
+        if not benchmark_id:
+            raise ValueError("Codex App Server benchmark generation requires --benchmark-id")
+        if not benchmark_suite_sha256:
+            raise ValueError("Codex App Server benchmark generation requires a frozen suite hash")
+        if not isinstance(egress_artifact_contract, dict) or not egress_artifact_contract:
+            raise ValueError(
+                "Codex App Server benchmark generation requires an egress artifact contract"
+            )
+        if not isinstance(suite_case_contract, dict) or not suite_case_contract:
+            raise ValueError(
+                "Codex App Server benchmark generation requires a suite-case contract"
+            )
+        if not isinstance(static_prompt_contract, dict) or not static_prompt_contract:
+            raise ValueError(
+                "Codex App Server benchmark generation requires a static prompt contract"
+            )
+        if not re.fullmatch(r"[0-9a-f]{64}", str(model_config_sha256 or "")):
+            raise ValueError(
+                "Codex App Server benchmark generation requires an exact model config SHA-256"
+            )
+        if verifier_enabled and verifier_model_id != model_id:
+            raise ValueError(
+                "Codex App Server candidate and verifier must use the single authorized model ID"
+            )
         reasoning_effort = str(getattr(args, "reasoning_effort", "high") or "high")
         timeout_seconds = float(getattr(args, "model_timeout_seconds", 360.0))
+        transport = {
+            "egress_authorization": getattr(args, "egress_authorization", None),
+            "benchmark_id": benchmark_id,
+            "benchmark_suite_sha256": benchmark_suite_sha256,
+            "benchmark_arm": args.mode,
+            "egress_artifact_contract": egress_artifact_contract,
+            "suite_case_contract": suite_case_contract,
+            "static_prompt_contract": static_prompt_contract,
+            "model_config_sha256": model_config_sha256,
+        }
         generator = CodexAppServerGenerator(
             model_id=model_id,
             reasoning_effort=reasoning_effort,
             timeout_seconds=timeout_seconds,
+            egress_phase="candidate_generation",
+            **transport,
         )
         verifier = (
             CodexAppServerGenerator(
                 model_id=verifier_model_id,
                 reasoning_effort=reasoning_effort,
                 timeout_seconds=timeout_seconds,
+                egress_phase="verification",
+                **transport,
             )
             if verifier_enabled
             else None
@@ -1363,6 +1526,8 @@ def run_eval(args: argparse.Namespace) -> int:
     register_process_isolation(process_policy)
     process_identity = build_process_identity()
     model_cfg = load_model_config(args.model_config)
+    model_config_path = repo_path(args.model_config)
+    model_config_sha256 = sha256_path(model_config_path)
     verification_cfg = model_cfg.get("answer_verification") or {}
     sampling = effective_sampling_config(args, model_cfg)
     if not 0.0 <= float(sampling["top_p"]) <= 1.0:
@@ -1373,6 +1538,7 @@ def run_eval(args: argparse.Namespace) -> int:
         raise ValueError("top_k must be non-negative")
 
     suite_path = repo_path(args.suite)
+    suite_sha256 = sha256_path(suite_path)
     suite = load_jsonl(suite_path, args.max_samples)
     eval_ids_raw = str(getattr(args, "eval_ids", "") or "").strip()
     requested_ids: set[str] = set()
@@ -1388,11 +1554,83 @@ def run_eval(args: argparse.Namespace) -> int:
         suite,
         case_order_seed=int(case_order_seed) if case_order_seed is not None else None,
     )
+    model_base_url = str(getattr(args, "model_base_url", "") or "").strip()
+    if model_base_url and not is_local_model_endpoint(model_base_url):
+        raise ValueError(
+            "non-loopback --model-base-url is forbidden for project benchmark execution "
+            "until a recipient-specific egress envelope exists"
+        )
     trial_id = str(getattr(args, "trial_id", "trial-000") or "").strip()
     if not trial_id or len(trial_id) > 128:
         raise ValueError("trial_id must contain between 1 and 128 characters")
     judge_seed = getattr(args, "judge_seed", None)
     judge_seed = int(judge_seed) if judge_seed is not None else None
+    codex_app_server = bool(getattr(args, "codex_app_server", False)) and not bool(args.mock)
+    private_knowledge_policy = str(
+        getattr(args, "private_knowledge_policy", "as_configured") or "as_configured"
+    )
+    if codex_app_server and private_knowledge_policy != "disabled":
+        raise ValueError(
+            "Codex App Server benchmark generation requires "
+            "--private-knowledge-policy disabled"
+        )
+    if private_knowledge_policy == "disabled":
+        os.environ["AGRONOMY_AGENT_PRIVATE_KNOWLEDGE"] = "disabled"
+
+    benchmark_egress_authorization: dict[str, Any] | None = None
+    egress_artifact_contract: dict[str, Any] | None = None
+    egress_artifact_contract_sha256: str | None = None
+    suite_case_contract: dict[str, Any] | None = None
+    suite_case_contract_sha256: str | None = None
+    static_prompt_contract: dict[str, Any] | None = None
+    static_prompt_contract_sha256: str | None = None
+    contract_resources = load_agent_resources(args.rag_config) if codex_app_server else None
+    resources = (
+        contract_resources
+        if args.mode == "agronomic_rag" and codex_app_server
+        else load_agent_resources(args.rag_config)
+        if args.mode == "agronomic_rag"
+        else None
+    )
+    if codex_app_server:
+        benchmark_id = str(getattr(args, "benchmark_id", "") or "").strip()
+        if not benchmark_id:
+            raise ValueError("Codex App Server benchmark generation requires --benchmark-id")
+        static_prompt_contract = build_benchmark_static_prompt_contract()
+        static_prompt_contract_sha256 = str(static_prompt_contract["sha256"])
+        egress_artifact_contract = build_benchmark_egress_artifact_contract(args.rag_config)
+        egress_artifact_contract_sha256 = str(egress_artifact_contract.get("sha256") or "")
+        if not re.fullmatch(r"[0-9a-f]{64}", egress_artifact_contract_sha256):
+            raise ValueError("benchmark egress artifact contract lacks a valid SHA-256 identity")
+        if canonical_sha256(
+            {
+                key: value
+                for key, value in egress_artifact_contract.items()
+                if key != "sha256"
+            }
+        ) != egress_artifact_contract_sha256:
+            raise ValueError("benchmark egress artifact contract SHA-256 is inconsistent")
+        suite_case_contract = build_benchmark_suite_case_contract(
+            suite,
+            benchmark_suite_sha256=suite_sha256,
+            answer_profile=str(args.answer_profile),
+            prompt_profile=str(model_cfg.get("prompt_profile") or "default"),
+            rag_resources=contract_resources,
+            use_eval_field_context=bool(getattr(args, "use_eval_field_context", False)),
+        )
+        suite_case_contract_sha256 = str(suite_case_contract["sha256"])
+        benchmark_egress_authorization = load_benchmark_egress_authorization(
+            getattr(args, "egress_authorization", None),
+            benchmark_id=benchmark_id,
+            benchmark_suite_sha256=suite_sha256,
+            recipient_backend="codex_app_server_chatgpt_auth",
+            model_id=str(args.model or model_cfg.get("model_id") or ""),
+            reasoning_effort=str(getattr(args, "reasoning_effort", "high") or "high"),
+            model_config_sha256=model_config_sha256,
+            suite_case_contract_sha256=suite_case_contract_sha256,
+            egress_artifact_contract_sha256=egress_artifact_contract_sha256,
+            static_prompt_contract_sha256=static_prompt_contract_sha256,
+        )
 
     resume_run_dir = getattr(args, "resume_run_dir", None)
     if resume_run_dir:
@@ -1416,12 +1654,24 @@ def run_eval(args: argparse.Namespace) -> int:
         )
         identity_path = out_dir / "resumable_run_identity.json"
 
-    generator, verifier, model_id, model_backend, request_model_id = build_eval_generators(
-        args, model_cfg
-    )
-    model_config_path = repo_path(args.model_config)
     rag_config_path = repo_path(args.rag_config) if args.mode == "agronomic_rag" else None
-    resources = load_agent_resources(args.rag_config) if args.mode == "agronomic_rag" else None
+    if (
+        private_knowledge_policy == "disabled"
+        and resources is not None
+        and resources.private_knowledge_overlay is not None
+    ):
+        raise RuntimeError(
+            "benchmark private knowledge policy is disabled but an overlay was loaded"
+        )
+    generator, verifier, model_id, model_backend, request_model_id = build_eval_generators(
+        args,
+        model_cfg,
+        benchmark_suite_sha256=suite_sha256,
+        egress_artifact_contract=egress_artifact_contract,
+        suite_case_contract=suite_case_contract,
+        static_prompt_contract=static_prompt_contract,
+        model_config_sha256=model_config_sha256,
+    )
     rag_artifacts = build_rag_artifact_identity(resources) if resources is not None else []
     effective_prompt_cache = bool(getattr(generator, "prompt_cache_enabled", False))
     cache_contract = {
@@ -1500,7 +1750,7 @@ def run_eval(args: argparse.Namespace) -> int:
         "generation_config": sampling,
         "replication_contract": replication_contract,
         "suite": args.suite,
-        "suite_sha256": sha256_path(suite_path),
+        "suite_sha256": suite_sha256,
         "suite_selection": {
             "max_samples": args.max_samples,
             "requested_eval_ids": sorted(requested_ids),
@@ -1515,6 +1765,24 @@ def run_eval(args: argparse.Namespace) -> int:
         "rag_config_sha256": sha256_path(rag_config_path) if rag_config_path is not None else None,
         "rag_artifacts": rag_artifacts,
         "corpus_bundle_version": resources.corpus_bundle_version if resources is not None else None,
+        "private_knowledge_policy": {
+            "requested": private_knowledge_policy,
+            "effective": private_knowledge_policy,
+            "process_environment": (
+                "disabled"
+                if private_knowledge_policy == "disabled"
+                else "as_configured"
+            ),
+            "overlay_loaded": bool(
+                resources is not None and resources.private_knowledge_overlay is not None
+            ),
+        },
+        "benchmark_egress": {
+            "authorization": benchmark_egress_authorization,
+            "artifact_contract_sha256": egress_artifact_contract_sha256,
+            "suite_case_contract_sha256": suite_case_contract_sha256,
+            "static_prompt_contract_sha256": static_prompt_contract_sha256,
+        },
         "runner": str(Path(__file__).resolve()),
         "runner_sha256": sha256_path(Path(__file__).resolve()),
         "implementation": build_implementation_identity(),
@@ -1614,6 +1882,7 @@ def run_eval(args: argparse.Namespace) -> int:
                     capture_context_packet=bool(getattr(args, "capture_context_packets", False)),
                     prompt_profile=str(model_cfg.get("prompt_profile") or "default"),
                     intervention_profile=str(model_cfg.get("intervention_profile") or "") or None,
+                    eval_id=str(item["eval_id"]),
                 )
                 metadata = enrich_eval_metadata_with_expected_source_trace(metadata, item)
                 metadata["tool_execution_audit"] = tool_trace_audit(item, metadata)
@@ -1817,6 +2086,26 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Generate through the local ChatGPT-authenticated Codex App Server. "
             "Turns are ephemeral, read-only, network-disabled, and fail closed on model rerouting."
+        ),
+    )
+    parser.add_argument(
+        "--egress-authorization",
+        help=(
+            "Current human authorization receipt required for every Codex App Server "
+            "benchmark generation turn."
+        ),
+    )
+    parser.add_argument(
+        "--benchmark-id",
+        help="Frozen benchmark identity bound into the App Server egress authorization.",
+    )
+    parser.add_argument(
+        "--private-knowledge-policy",
+        choices=["as_configured", "disabled"],
+        default="as_configured",
+        help=(
+            "Use the configured local overlay policy or force private knowledge off. "
+            "Codex App Server benchmark generation requires disabled."
         ),
     )
     parser.add_argument(
