@@ -145,7 +145,7 @@ class RuntimeCaseProfile:
 def profile_agno_vs_legacy(
     *,
     cases: Iterable[dict[str, Any]] | None = None,
-    rag_config: str | Path = "configs/rag.yaml",
+    rag_config: str | Path = "configs/rag_governed_runtime_v2.yaml",
     repetitions: int = 20,
     max_latency_ratio_for_support_gain: float = 1.25,
     max_latency_delta_ms_for_support_gain: float = 5.0,

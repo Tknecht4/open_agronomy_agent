@@ -1,0 +1,77 @@
+{
+  "schema_version": "open_agronomy_agent.benchmark_v2_contract.v1",
+  "benchmark_id": "open_agronomy_benchmark_v2",
+  "status": "exposed_tuning_internal_development_regression",
+  "created_at": "2026-08-13T00:00:00Z",
+  "claim_eligible": false,
+  "evaluation_partition": "internal_development",
+  "suite_path": "data/eval/open_agronomy_benchmark_v2_cases.jsonl",
+  "manifest_path": "data/eval/open_agronomy_benchmark_v2_manifest.json",
+  "case_schema_path": "configs/schemas/benchmark_v2_case.schema.json",
+  "system_interface_contract": "configs/open_agronomy_benchmark_v2_interface.json",
+  "preregistration_path": "configs/open_agronomy_benchmark_v2_preregistration.json",
+  "exposure_amendment_path": "data/eval/open_agronomy_benchmark_v2_exposure_amendment_20260813.json",
+  "harness_contract_path": "configs/open_agronomy_benchmark_v2_harness_contract.json",
+  "harness_amendment_path": "data/eval/open_agronomy_benchmark_v2_harness_amendment_20260813.json",
+  "audit_command": "python scripts/audit_open_agronomy_benchmark_v2.py",
+  "design": {
+    "unit_of_analysis": "matched_project_authored_case",
+    "matching_axis": "agronomic_topic_group",
+    "factor_1": "risk_and_response_authority",
+    "factor_2": "evidence_completeness",
+    "required_strata_per_group": [
+      "benign_explanation",
+      "fully_specified_calculation",
+      "fully_specified_action_plan",
+      "one_critical_input_missing",
+      "high_consequence_authority"
+    ],
+    "minimum_matched_groups": 5,
+    "current_matched_groups": 6,
+    "current_cases": 30,
+    "caution_case_counterpart_rule": "Every missing-input and authority-boundary case must share a topic group with benign, complete-calculation, and complete-action counterparts."
+  },
+  "review_policy": {
+    "question_author": "project_team",
+    "answer_key_author": "project_team",
+    "independent_agronomist_review_status": "not_received",
+    "automated_judge_role": "advisory_triage_only",
+    "same_author_results_role": "development_diagnostic_only",
+    "real_user_lane_status": "not_present",
+    "external_validity_status": "not_established_and_holdout_invalidated_by_exact_case_tuning",
+    "single_composite_score_allowed": false,
+    "claim_gate": "Independent agronomist review, a consented real-user confirmation lane, frozen scoring, and a fresh untouched evaluation version are required before any external capability claim."
+  },
+  "reporting_policy": {
+    "report_every_metric_with_eligible_denominator": true,
+    "report_by_stratum": true,
+    "report_by_risk_level": true,
+    "report_matched_group_failures": true,
+    "report_answer_origin_and_fallback": true,
+    "report_draft_and_final_outputs_separately": true,
+    "single_composite_score_allowed": false,
+    "small_sample_inference": "descriptive_only"
+  },
+  "contamination_policy": {
+    "exclude_questions_from_training": true,
+    "exclude_questions_from_rag": true,
+    "exclude_questions_from_prompt_examples": true,
+    "exclude_questions_from_deterministic_answer_repairs": true,
+    "record_every_exposure_after_freeze": true,
+    "new_version_required_after_behavior_tuning_on_v2_results": true,
+    "observed_status": "violated_by_exact_case_inspection_and_behavior_tuning_20260813",
+    "current_permitted_role": "development_regression_only",
+    "fresh_untouched_v3_required_for_evaluation": true
+  },
+  "result_contract": {
+    "capture_exact_messages_privately": true,
+    "capture_context_packets_privately": true,
+    "capture_tool_plan_invocation_and_result_ids": true,
+    "capture_answerability_state": true,
+    "capture_draft_post_verifier_and_final_stages": true,
+    "capture_answer_origin_and_fallback": true,
+    "capture_model_and_component_versions": true,
+    "content_addressed_retention_required": true,
+    "public_export_must_exclude_questions_answers_context_and_rationales": true
+  }
+}

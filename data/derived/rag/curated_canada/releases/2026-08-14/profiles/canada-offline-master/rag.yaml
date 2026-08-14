@@ -1,0 +1,7 @@
+retrieval:
+  artifact_root: ../..
+  corpus_policy_manifest: profiles/canada-offline-master/runtime_corpus_policy.json
+  corpus_paths:
+  - shards/context_only-canada-offline-master-0001.jsonl
+  - shards/requires_live_authority-canada-offline-master-0001.jsonl
+  graph_paths: []

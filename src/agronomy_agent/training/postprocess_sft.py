@@ -5,7 +5,7 @@ import hashlib
 import json
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 from transformers import AutoTokenizer
 
@@ -69,16 +69,24 @@ def is_license_allowed(row: dict[str, Any], allow_unknown: bool) -> bool:
     return BLOCKED_LICENSE_PATTERNS.search(license_value) is None
 
 
-def main() -> int:
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Deduplicate, license-filter, and token-cap MLX chat SFT splits.")
     parser.add_argument("--input-dir", required=True)
     parser.add_argument("--output-dir", required=True)
-    parser.add_argument("--model", default="mlx-community/Qwen3.5-2B-OptiQ-4bit")
+    parser.add_argument(
+        "--model",
+        required=True,
+        help="Explicit tokenizer/model ID for this task-specific SFT dataset.",
+    )
     parser.add_argument("--max-tokens", type=int, default=2048)
     parser.add_argument("--allow-unknown-license", action="store_true")
     parser.add_argument("--include-regex", help="Keep rows whose concatenated text matches this regex.")
     parser.add_argument("--exclude-regex", help="Drop rows whose concatenated text matches this regex.")
-    args = parser.parse_args()
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
 
     tokenizer = AutoTokenizer.from_pretrained(args.model)
     include_re = re.compile(args.include_regex, re.I) if args.include_regex else None

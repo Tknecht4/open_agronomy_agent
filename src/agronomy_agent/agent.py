@@ -10,7 +10,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from threading import RLock, current_thread
 from time import perf_counter
-from typing import Any
+from typing import Any, Mapping
 
 import httpx
 import yaml
@@ -27,8 +27,17 @@ from agronomy_agent.corpus_governance import (
 )
 from agronomy_agent.agno_runtime.runtime import resolve_agent_runtime
 from agronomy_agent.answer_safety import enforce_answer_safety_postconditions, normalize_general_answer
+from agronomy_agent.answerability import (
+    AnswerabilityState,
+    assess_answerability,
+    has_recognized_regulated_product,
+    summarize_field_context_for_answerability,
+    validated_deterministic_tool_clarification,
+    validated_deterministic_tool_execution,
+)
 from agronomy_agent.answer_verifier import context_evidence_text, verify_answer
 from agronomy_agent.canada_sources import apply_canadian_coverage_disclosure, build_canadian_coverage_boundary
+from agronomy_agent.capability_registry import CAPABILITY_REGISTRY_SCHEMA_VERSION, capability_catalog
 from agronomy_agent.context_packer import PackedContext, default_context_packer, format_user_field_context
 from agronomy_agent.decision_capsule import DecisionCapsule, build_decision_capsule
 from agronomy_agent.decision_contract import (
@@ -66,9 +75,12 @@ from agronomy_agent.query_context import (
     filter_graph_hits_for_query,
     is_source_grounded_question,
 )
-from agronomy_agent.agno_runtime.knowledge_graph import KnowledgeGraph
+from agronomy_agent.agno_runtime.knowledge_graph import KnowledgeGraph, graph_artifact_paths
 from agronomy_agent.agno_runtime.local_index import LexicalRetriever, RetrievedDoc
 from agronomy_agent.router import QueryRoute, classify_query, refine_query_route
+from agronomy_agent.runtime_profiles import DEFAULT_MODEL_CONFIG, DEFAULT_RAG_CONFIG
+from agronomy_agent.skill_registry import skill_metadata
+from agronomy_agent.tool_planner import plan_and_execute_tools
 from agronomy_agent.tools.registry import ToolNote, run_tools
 
 
@@ -362,6 +374,12 @@ class AgentResources:
     private_retriever: LexicalRetriever | None = None
 
 
+@dataclass(frozen=True)
+class _EmptyAgnoSearchResult:
+    docs: tuple[Any, ...] = ()
+    knowledge: tuple[Any, ...] = ()
+
+
 _RESOURCE_LOCK = RLock()
 _RESOURCE_CACHE: dict[str, AgentResources] = {}
 _ROUTE_CACHE: Phase5LRUCache[QueryRoute] = Phase5LRUCache(max_entries=512)
@@ -376,6 +394,19 @@ _MLX_GENERATION_LOCKS: dict[str, RLock] = {}
 _MLX_PREFIX_CACHES: dict[tuple[str, int, int], Any] = {}
 _MLX_EXECUTOR_THREAD_PREFIX = "agronomy-mlx"
 _MLX_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix=_MLX_EXECUTOR_THREAD_PREFIX)
+
+RETRIEVAL_COMPONENT_RECEIPT_SCHEMA_VERSION = (
+    "open_agronomy_agent.retrieval_component_receipt.v1"
+)
+RETRIEVAL_CONTROL_SCHEMA_VERSION = "open_agronomy_agent.retrieval_controls.v1"
+_DOCUMENT_CONTEXT_SLOTS = frozenset(
+    {
+        "primary_applied_evidence",
+        "boundary_evidence",
+        "regional_context",
+        "ontology_reference",
+    }
+)
 
 
 def _run_on_mlx_thread(operation: Any) -> Any:
@@ -444,6 +475,27 @@ def _resolve_configured_artifacts(cfg: dict[str, Any], config_path: Path | None)
     return normalized
 
 
+def _configured_graph_paths(retrieval_cfg: dict[str, Any]) -> list[str]:
+    """Resolve graph paths while preserving an explicit no-graph profile.
+
+    Legacy configurations that omit both graph keys retain the project seed
+    graph.  A generated curated-store profile sets ``graph_paths: []``
+    deliberately: silently restoring the seed graph would make its declared
+    offline knowledge scope false.
+    """
+
+    if "graph_paths" in retrieval_cfg:
+        values = retrieval_cfg.get("graph_paths")
+        if values is None:
+            return []
+        if not isinstance(values, list):
+            raise ValueError("retrieval.graph_paths must be a list when provided")
+        return [str(value) for value in values if str(value)]
+    if retrieval_cfg.get("graph_path"):
+        return [str(retrieval_cfg["graph_path"])]
+    return ["data/seed/agronomy_knowledge_graph.json"]
+
+
 def _resource_key(cfg: dict[str, Any]) -> str:
     retrieval_cfg = cfg.get("retrieval", {})
     public_corpus_paths = list(
@@ -451,7 +503,8 @@ def _resource_key(cfg: dict[str, Any]) -> str:
         or [retrieval_cfg.get("corpus_path", "data/seed/agronomy_rag_corpus.jsonl")]
     )
     corpus_paths = list(public_corpus_paths)
-    graph_paths = retrieval_cfg.get("graph_paths") or [retrieval_cfg.get("graph_path", "data/seed/agronomy_knowledge_graph.json")]
+    graph_paths = _configured_graph_paths(retrieval_cfg)
+    require_graph_manifests = bool(retrieval_cfg.get("require_graph_manifests", False))
     policy_path = retrieval_cfg.get("corpus_policy_manifest")
     policy_paths = [policy_path] if policy_path else []
     private_overlay = load_private_knowledge_overlay(
@@ -472,17 +525,21 @@ def _resource_key(cfg: dict[str, Any]) -> str:
     # Quarantined corpus bytes are intentionally optional in a distributable
     # runtime. Fingerprinting them here made a rights-safe package fail before
     # the load-time governance partition could exclude them.
+    graph_artifacts = graph_artifact_paths(
+        [repo_path(path) for path in graph_paths],
+        require_manifests=require_graph_manifests,
+    )
     fingerprints = [
         file_fingerprint(repo_path(path))
-        for path in [*indexed_corpus_paths, *graph_paths, *policy_paths]
-    ]
+        for path in [*indexed_corpus_paths, *policy_paths]
+    ] + [file_fingerprint(path) for path in graph_artifacts]
     return stable_digest(
         {
             "rag_config": cfg,
             "artifacts": fingerprints,
             # Invalidate indexes built before quarantined corpora were pruned
             # at load time. The policy file hash alone cannot distinguish them.
-            "runtime_corpus_loader_contract": "fail_closed_v4_effective_policy",
+            "runtime_corpus_loader_contract": "fail_closed_v4_effective_policy_graph_manifest_v1",
         }
     )
 
@@ -490,7 +547,7 @@ def _resource_key(cfg: dict[str, Any]) -> str:
 def load_agent_resources(rag_config: dict[str, Any] | str | Path | None = None) -> AgentResources:
     config_path: Path | None = None
     if rag_config is None:
-        config_path = repo_path("configs/rag.yaml")
+        config_path = repo_path(DEFAULT_RAG_CONFIG)
         cfg = load_yaml(config_path)
     elif isinstance(rag_config, (str, Path)):
         config_path = repo_path(rag_config)
@@ -509,7 +566,7 @@ def load_agent_resources(rag_config: dict[str, Any] | str | Path | None = None) 
         or [retrieval_cfg.get("corpus_path", "data/seed/agronomy_rag_corpus.jsonl")]
     )
     corpus_paths = list(public_corpus_paths)
-    graph_paths = retrieval_cfg.get("graph_paths") or [retrieval_cfg.get("graph_path", "data/seed/agronomy_knowledge_graph.json")]
+    graph_paths = _configured_graph_paths(retrieval_cfg)
     private_overlay = load_private_knowledge_overlay(
         repo_path("."),
         cfg.get("private_knowledge"),
@@ -548,7 +605,10 @@ def load_agent_resources(rag_config: dict[str, Any] | str | Path | None = None) 
         index_cache_path = ";".join(
             value for value in (index_cache_path, private_cache_path) if value
         ) or None
-    graph = KnowledgeGraph.from_paths([repo_path(path) for path in graph_paths])
+    graph = KnowledgeGraph.from_paths(
+        [repo_path(path) for path in graph_paths],
+        require_manifests=bool(retrieval_cfg.get("require_graph_manifests", False)),
+    )
     resources = AgentResources(
         rag_config=cfg,
         retriever=retriever,
@@ -690,6 +750,126 @@ def reset_phase5_query_caches() -> None:
     _KG_CACHE.clear()
     with _RESOURCE_LOCK:
         _AGNO_KNOWLEDGE_CACHE.clear()
+
+
+def _retrieval_control_record(
+    *,
+    document_retrieval_enabled: bool,
+    graph_retrieval_enabled: bool,
+) -> dict[str, Any]:
+    base = {
+        "schema_version": RETRIEVAL_CONTROL_SCHEMA_VERSION,
+        "document_retrieval_enabled": document_retrieval_enabled,
+        "graph_retrieval_enabled": graph_retrieval_enabled,
+    }
+    return {**base, "control_sha256": stable_digest(base)}
+
+
+def _retrieval_component_receipt(
+    component_id: str,
+    *,
+    enabled: bool,
+    output_ids: list[str],
+) -> dict[str, Any]:
+    state = (
+        "disabled_by_arm"
+        if not enabled
+        else "completed"
+        if output_ids
+        else "completed_no_result"
+    )
+    base = {
+        "schema_version": RETRIEVAL_COMPONENT_RECEIPT_SCHEMA_VERSION,
+        "component_id": component_id,
+        "enabled": enabled,
+        "executed": enabled,
+        "state": state,
+        "output_count": len(output_ids),
+        "output_ids": list(output_ids),
+        "output_ids_sha256": stable_digest(output_ids),
+    }
+    return {**base, "receipt_sha256": stable_digest(base)}
+
+
+def _validate_retrieval_context_identity(
+    context: AgentContext,
+    *,
+    document_retrieval_enabled: bool,
+    graph_retrieval_enabled: bool,
+) -> None:
+    """Fail closed if a cached or newly built context crosses retrieval arms."""
+
+    metadata = context.runtime_metadata
+    if not isinstance(metadata, dict):
+        raise ValueError("retrieval-arm context is missing runtime metadata")
+    expected_control = _retrieval_control_record(
+        document_retrieval_enabled=document_retrieval_enabled,
+        graph_retrieval_enabled=graph_retrieval_enabled,
+    )
+    if metadata.get("retrieval_controls") != expected_control:
+        raise ValueError("cached context retrieval controls mismatch")
+
+    component_receipts = metadata.get("retrieval_component_receipts")
+    if not isinstance(component_receipts, dict):
+        raise ValueError("retrieval-arm context is missing component receipts")
+    component_specs = (
+        (
+            "document_retrieval",
+            document_retrieval_enabled,
+            [str(doc.doc_id) for doc in context.retrieved_docs],
+        ),
+        (
+            "graph_retrieval",
+            graph_retrieval_enabled,
+            [str(hit.node_id) for hit in context.graph_hits],
+        ),
+    )
+    for component_id, enabled, output_ids in component_specs:
+        expected_receipt = _retrieval_component_receipt(
+            component_id,
+            enabled=enabled,
+            output_ids=output_ids,
+        )
+        if component_receipts.get(component_id) != expected_receipt:
+            raise ValueError(f"cached context {component_id} receipt/output mismatch")
+        if not enabled and output_ids:
+            raise ValueError(f"cached context contains disabled {component_id} output")
+
+    packed_context = context.packed_context
+    if packed_context is not None:
+        slots = {str(section.slot) for section in packed_context.sections}
+        if not document_retrieval_enabled and slots & _DOCUMENT_CONTEXT_SLOTS:
+            raise ValueError("cached context contains disabled document evidence slots")
+        if not graph_retrieval_enabled and "kg_vocabulary_hints" in slots:
+            raise ValueError("cached context contains disabled graph evidence slots")
+
+    evidence_packet = (
+        (metadata.get("evidence_fabric") or {}).get("evidence_packet")
+        if isinstance(metadata.get("evidence_fabric"), dict)
+        else None
+    )
+    if isinstance(evidence_packet, dict):
+        if not document_retrieval_enabled and any(
+            evidence_packet.get(key)
+            for key in (
+                "source_assets",
+                "source_versions",
+                "spans",
+                "applicability",
+                "capsules",
+                "selected_document_order",
+            )
+        ):
+            raise ValueError("cached context evidence packet contains disabled documents")
+        if not graph_retrieval_enabled:
+            graph_records = [
+                row
+                for row in (evidence_packet.get("capability_evidence") or [])
+                if isinstance(row, dict)
+                and str(row.get("evidence_kind") or "") == "graph_assertion"
+            ]
+            if graph_records:
+                raise ValueError("cached context evidence packet contains disabled graph output")
 
 
 def _load_agno_knowledge(resources: AgentResources) -> Any:
@@ -950,12 +1130,20 @@ def build_context(
     use_search_cache: bool = True,
     field_context: dict[str, Any] | None = None,
     use_decision_contract: bool = False,
+    document_retrieval_enabled: bool = True,
+    graph_retrieval_enabled: bool = True,
 ) -> AgentContext:
+    if not isinstance(document_retrieval_enabled, bool):
+        raise TypeError("document_retrieval_enabled must be a bool")
+    if not isinstance(graph_retrieval_enabled, bool):
+        raise TypeError("graph_retrieval_enabled must be a bool")
     loaded = resources or load_agent_resources(rag_config)
     cfg = loaded.rag_config
     retrieval_cfg = cfg.get("retrieval", {})
     runtime_mode = resolve_agent_runtime(cfg, explicit=agent_runtime)
     query_signals = analyze_query_context(question, field_context)
+    capability_registry_snapshot = capability_catalog()
+    capability_registry_sha256 = stable_digest(capability_registry_snapshot)
     field_graph_terms = extract_field_graph_terms(query_signals.field_context)
     decision_capsule = build_decision_capsule(question, crop=query_signals.primary_crop)
     agno_context_key = (
@@ -965,15 +1153,28 @@ def build_context(
         loaded.agno_search_config_key,
         question.strip().lower(),
         stable_digest(query_signals.field_context),
+        capability_registry_sha256,
         bool(use_decision_contract),
+        document_retrieval_enabled,
+        graph_retrieval_enabled,
     )
     if runtime_mode == "agno" and profiler is None and use_context_cache and use_search_cache:
         cached_context = _AGNO_CONTEXT_CACHE.get(agno_context_key)
         if cached_context is not None:
-            return replace(
+            context = replace(
                 cached_context.value,
-                cache_status={"route": "hit", "agno": "hit", "kg": "hit"},
+                cache_status={
+                    "route": "hit",
+                    "agno": "hit" if document_retrieval_enabled else "disabled_by_arm",
+                    "kg": "hit" if graph_retrieval_enabled else "disabled_by_arm",
+                },
             )
+            _validate_retrieval_context_identity(
+                context,
+                document_retrieval_enabled=document_retrieval_enabled,
+                graph_retrieval_enabled=graph_retrieval_enabled,
+            )
+            return context
     route_key = ("route", loaded.corpus_bundle_version, question.strip().lower())
     route_span = (
         profiler.span("agent.route.classify", input_size=len(question))
@@ -1005,6 +1206,13 @@ def build_context(
     runtime_metadata: dict[str, Any] = {
         "agent_runtime": runtime_mode,
         "selected_retriever": "agno",
+        "retrieval_controls": _retrieval_control_record(
+            document_retrieval_enabled=document_retrieval_enabled,
+            graph_retrieval_enabled=graph_retrieval_enabled,
+        ),
+        "answerability_field_context": summarize_field_context_for_answerability(
+            query_signals.field_context
+        ),
         "query_context": {
             "crops": list(query_signals.crops),
             "jurisdictions": list(query_signals.jurisdictions),
@@ -1013,8 +1221,14 @@ def build_context(
             "topics": list(query_signals.topics),
             "country": query_signals.country,
             "source_grounded": query_signals.source_grounded,
+            "regional_context_requested": query_signals.regional_context_requested,
         },
         "decision_capsule": decision_capsule.as_record(),
+        "capability_registry": {
+            "schema_version": CAPABILITY_REGISTRY_SCHEMA_VERSION,
+            "catalog_sha256": capability_registry_sha256,
+            "capability_count": capability_registry_snapshot["capability_count"],
+        },
         "decision_contract": (
             {
                 **decision_contract.to_dict(),
@@ -1045,6 +1259,18 @@ def build_context(
             {
                 "retrieval_policy": "user_grounded_bypass",
                 "evidence_filter": {"kept_doc_ids": [], "dropped": []},
+                "retrieval_component_receipts": {
+                    "document_retrieval": _retrieval_component_receipt(
+                        "document_retrieval",
+                        enabled=document_retrieval_enabled,
+                        output_ids=[],
+                    ),
+                    "graph_retrieval": _retrieval_component_receipt(
+                        "graph_retrieval",
+                        enabled=graph_retrieval_enabled,
+                        output_ids=[],
+                    ),
+                },
             }
         )
         return AgentContext(
@@ -1058,16 +1284,26 @@ def build_context(
             runtime_metadata=runtime_metadata,
         )
     agno_retrieval_cfg = (cfg.get("agno") or {}).get("retrieval", {})
-    agno_result, agno_cache_status, filters = _search_agno(
-        question=question,
-        resources=loaded,
-        retrieval_cfg=retrieval_cfg,
-        route=route,
-        profiler=profiler,
-        use_search_cache=use_search_cache,
-        region=query_signals.primary_region,
-        crop=query_signals.primary_crop,
-    )
+    if document_retrieval_enabled:
+        agno_result, agno_cache_status, filters = _search_agno(
+            question=question,
+            resources=loaded,
+            retrieval_cfg=retrieval_cfg,
+            route=route,
+            profiler=profiler,
+            use_search_cache=use_search_cache,
+            region=query_signals.primary_region,
+            crop=query_signals.primary_crop,
+        )
+    else:
+        if profiler:
+            profiler.add_skipped(
+                "agent.rag.lexical_search",
+                reason="document_retrieval_disabled_by_arm",
+            )
+        agno_result = _EmptyAgnoSearchResult()
+        agno_cache_status = "disabled_by_arm"
+        filters = {}
     final_k = int(agno_retrieval_cfg.get("final_context_k", retrieval_cfg.get("top_k", 5)))
     raw_candidate_k = max(
         final_k * 3,
@@ -1076,13 +1312,18 @@ def build_context(
     field_query_expansion = tuple(
         value for value in (query_signals.primary_region, query_signals.primary_crop) if value
     )
-    raw_docs = loaded.retriever.search(
-        question,
-        top_k=raw_candidate_k,
-        allowed_roles=filters.get("audience") or (),
-        source_types=filters.get("source_type") or (),
-        retrieval_policies=filters.get("retrieval_policy") or ("standard", "context_only"),
-        query_expansion=field_query_expansion,
+    raw_docs = (
+        loaded.retriever.search(
+            question,
+            top_k=raw_candidate_k,
+            allowed_roles=filters.get("audience") or (),
+            source_types=filters.get("source_type") or (),
+            retrieval_policies=filters.get("retrieval_policy")
+            or ("standard", "context_only"),
+            query_expansion=field_query_expansion,
+        )
+        if document_retrieval_enabled
+        else []
     )
     private_raw_docs = (
         loaded.private_retriever.search(
@@ -1093,7 +1334,7 @@ def build_context(
             retrieval_policies=filters.get("retrieval_policy") or ("standard", "context_only"),
             query_expansion=field_query_expansion,
         )
-        if loaded.private_retriever is not None
+        if document_retrieval_enabled and loaded.private_retriever is not None
         else []
     )
     local_jurisdiction_docs = (
@@ -1106,7 +1347,7 @@ def build_context(
             query_expansion=field_query_expansion,
             jurisdictions=query_signals.target_jurisdictions,
         )
-        if query_signals.target_jurisdictions
+        if document_retrieval_enabled and query_signals.target_jurisdictions
         else []
     )
     private_local_jurisdiction_docs = (
@@ -1119,7 +1360,9 @@ def build_context(
             query_expansion=field_query_expansion,
             jurisdictions=query_signals.target_jurisdictions,
         )
-        if loaded.private_retriever is not None and query_signals.target_jurisdictions
+        if document_retrieval_enabled
+        and loaded.private_retriever is not None
+        and query_signals.target_jurisdictions
         else []
     )
     regional_docs = (
@@ -1131,7 +1374,7 @@ def build_context(
             retrieval_policies=filters.get("retrieval_policy") or ("standard", "context_only"),
             query_expansion=tuple(dict.fromkeys((*field_query_expansion, *route.query_expansion))),
         )
-        if "regional_environment" in route.namespaces
+        if document_retrieval_enabled and "regional_environment" in route.namespaces
         else []
     )
     country_regional_docs = (
@@ -1145,7 +1388,9 @@ def build_context(
             jurisdictions=(query_signals.country,),
             strict_jurisdictions=True,
         )
-        if "regional_environment" in route.namespaces and query_signals.country
+        if document_retrieval_enabled
+        and "regional_environment" in route.namespaces
+        and query_signals.country
         else []
     )
     capsule_docs = (
@@ -1157,18 +1402,25 @@ def build_context(
             retrieval_policies=filters.get("retrieval_policy") or ("standard", "context_only"),
             query_expansion=field_query_expansion,
         )
-        if decision_capsule.is_specific and decision_capsule.retrieval_query != question
+        if document_retrieval_enabled
+        and decision_capsule.is_specific
+        and decision_capsule.retrieval_query != question
         else []
     )
-    named_regional_product_docs = _retrieve_named_regional_product_specification(
-        question,
-        loaded.retriever,
-        allowed_roles=filters.get("audience") or (),
-        retrieval_policies=filters.get("retrieval_policy") or ("standard", "context_only"),
-        top_k=raw_candidate_k,
+    named_regional_product_docs = (
+        _retrieve_named_regional_product_specification(
+            question,
+            loaded.retriever,
+            allowed_roles=filters.get("audience") or (),
+            retrieval_policies=filters.get("retrieval_policy")
+            or ("standard", "context_only"),
+            top_k=raw_candidate_k,
+        )
+        if document_retrieval_enabled
+        else []
     )
     contract_query_docs: dict[str, list[RetrievedDoc]] = {}
-    if decision_contract is not None:
+    if document_retrieval_enabled and decision_contract is not None:
         for contract_query in decision_contract.retrieval_queries[:8]:
             contract_query_docs[contract_query] = loaded.retriever.search(
                 contract_query,
@@ -1592,97 +1844,180 @@ def build_context(
     }
     runtime_metadata.update(agno_metadata)
     cache_status["agno"] = agno_cache_status
-    kg_key = (
-        "kg",
-        loaded.corpus_bundle_version,
-        stable_digest(
-            {
-                "question": question.strip().lower(),
-                "namespaces": route.namespaces,
-                "query_expansion": route.query_expansion,
-                "field_graph_terms": field_graph_terms,
-            }
-        ),
-    )
-    kg_span = profiler.span("agent.kg.search", input_size=len(question)) if profiler else nullcontext()
-    with kg_span as span:
-        def search_graph() -> tuple[list[Any], tuple[str, ...]]:
-            primary_hits = loaded.graph.search(
-                question,
-                limit=5,
-                namespaces=route.namespaces,
-                query_expansion=route.query_expansion,
-            )
-            bridge_hits = (
-                loaded.graph.lookup_names(field_graph_terms)
-                if field_graph_terms
-                else []
-            )
-            combined: list[Any] = []
-            seen: set[str] = set()
-            for hit in (*primary_hits, *bridge_hits):
-                node_id = str(getattr(hit, "node_id", ""))
-                if not node_id or node_id in seen:
-                    continue
-                seen.add(node_id)
-                combined.append(hit)
-            return combined, tuple(str(hit.node_id) for hit in bridge_hits)
+    runtime_metadata["retrieval_component_receipts"] = {
+        "document_retrieval": _retrieval_component_receipt(
+            "document_retrieval",
+            enabled=document_retrieval_enabled,
+            output_ids=[str(doc.doc_id) for doc in docs],
+        )
+    }
+    if graph_retrieval_enabled:
+        kg_key = (
+            "kg",
+            loaded.corpus_bundle_version,
+            stable_digest(
+                {
+                    "question": question.strip().lower(),
+                    "namespaces": route.namespaces,
+                    "query_expansion": route.query_expansion,
+                    "field_graph_terms": field_graph_terms,
+                    "graph_retrieval_enabled": True,
+                }
+            ),
+        )
+        kg_span = (
+            profiler.span("agent.kg.search", input_size=len(question))
+            if profiler
+            else nullcontext()
+        )
+        with kg_span as span:
 
-        kg_result: CacheResult[tuple[list[Any], tuple[str, ...]]] = _KG_CACHE.get_or_compute(
-            kg_key,
-            search_graph,
-        )
-        if span is not None:
-            span.cache_status = kg_result.cache_status
-        graph_candidates, bridge_candidate_ids = kg_result.value
-        graph_required_terms = tuple(
-            term
-            for obligation in (decision_contract.evidence_obligations if decision_contract is not None else ())
-            for term in obligation.retrieval_terms
-        )
-        graph_fit = filter_graph_hits_for_query(
-            graph_candidates,
-            query_signals,
-            required_terms=graph_required_terms,
-            route_namespaces=route.namespaces,
-            field_terms=field_graph_terms,
-        )
-        graph_hits = list(graph_fit.docs)[:5]
-        bridge_candidate_set = set(bridge_candidate_ids)
-        kept_bridge_ids = [
-            hit.node_id for hit in graph_hits if hit.node_id in bridge_candidate_set
-        ]
+            def search_graph() -> tuple[list[Any], tuple[str, ...]]:
+                primary_hits = loaded.graph.search(
+                    question,
+                    limit=5,
+                    namespaces=route.namespaces,
+                    query_expansion=route.query_expansion,
+                )
+                bridge_hits = (
+                    loaded.graph.lookup_names(field_graph_terms)
+                    if field_graph_terms
+                    else []
+                )
+                combined: list[Any] = []
+                seen: set[str] = set()
+                for hit in (*primary_hits, *bridge_hits):
+                    node_id = str(getattr(hit, "node_id", ""))
+                    if not node_id or node_id in seen:
+                        continue
+                    seen.add(node_id)
+                    combined.append(hit)
+                return combined, tuple(str(hit.node_id) for hit in bridge_hits)
+
+            kg_result: CacheResult[
+                tuple[list[Any], tuple[str, ...]]
+            ] = _KG_CACHE.get_or_compute(
+                kg_key,
+                search_graph,
+            )
+            if span is not None:
+                span.cache_status = kg_result.cache_status
+            graph_candidates, bridge_candidate_ids = kg_result.value
+            graph_required_terms = tuple(
+                term
+                for obligation in (
+                    decision_contract.evidence_obligations
+                    if decision_contract is not None
+                    else ()
+                )
+                for term in obligation.retrieval_terms
+            )
+            graph_fit = filter_graph_hits_for_query(
+                graph_candidates,
+                query_signals,
+                required_terms=graph_required_terms,
+                route_namespaces=route.namespaces,
+                field_terms=field_graph_terms,
+            )
+            graph_hits = list(graph_fit.docs)[:5]
+            bridge_candidate_set = set(bridge_candidate_ids)
+            kept_bridge_ids = [
+                hit.node_id for hit in graph_hits if hit.node_id in bridge_candidate_set
+            ]
+            runtime_metadata["graph_filter"] = {
+                "kept_node_ids": [hit.node_id for hit in graph_hits],
+                "dropped": list(graph_fit.dropped),
+            }
+            runtime_metadata["field_graph_bridge"] = {
+                "schema_version": "open_agronomy_agent.field_graph_bridge.v1",
+                "status": (
+                    "active" if kept_bridge_ids else "active_no_substantive_match"
+                )
+                if field_graph_terms
+                else "not_applicable",
+                "source_layer_ids": sorted(
+                    {
+                        str(item.get("layer_id"))
+                        for item in (
+                            query_signals.field_context.get("regional_intersections")
+                            or []
+                        )
+                        if isinstance(item, dict)
+                        and str(item.get("layer_id") or "").lower()
+                        in {
+                            "ab_detailed_soil",
+                            "sk_detailed_soil",
+                            "mb_detailed_soil",
+                        }
+                    }
+                ),
+                "allowlisted_terms": list(field_graph_terms),
+                "candidate_node_ids": list(bridge_candidate_ids),
+                "kept_node_ids": kept_bridge_ids,
+                "evidence_role": "vocabulary_and_relationship_hint_only",
+                "boundary": (
+                    "DSS attributes are historical mapped priors; SoilWise concepts do not "
+                    "validate the mapped component, current field condition, diagnosis, or "
+                    "management action."
+                ),
+            }
+        cache_status["kg"] = kg_result.cache_status
+    else:
+        if profiler:
+            profiler.add_skipped(
+                "agent.kg.search",
+                reason="graph_retrieval_disabled_by_arm",
+            )
+        graph_hits = []
+        cache_status["kg"] = "disabled_by_arm"
         runtime_metadata["graph_filter"] = {
-            "kept_node_ids": [hit.node_id for hit in graph_hits],
-            "dropped": list(graph_fit.dropped),
+            "kept_node_ids": [],
+            "dropped": [],
+            "status": "disabled_by_arm",
         }
         runtime_metadata["field_graph_bridge"] = {
             "schema_version": "open_agronomy_agent.field_graph_bridge.v1",
-            "status": (
-                "active" if kept_bridge_ids else "active_no_substantive_match"
-            ) if field_graph_terms else "not_applicable",
-            "source_layer_ids": sorted(
-                {
-                    str(item.get("layer_id"))
-                    for item in (query_signals.field_context.get("regional_intersections") or [])
-                    if isinstance(item, dict)
-                    and str(item.get("layer_id") or "").lower()
-                    in {"ab_detailed_soil", "sk_detailed_soil", "mb_detailed_soil"}
-                }
-            ),
+            "status": "disabled_by_arm",
+            "source_layer_ids": [],
             "allowlisted_terms": list(field_graph_terms),
-            "candidate_node_ids": list(bridge_candidate_ids),
-            "kept_node_ids": kept_bridge_ids,
-            "evidence_role": "vocabulary_and_relationship_hint_only",
-            "boundary": (
-                "DSS attributes are historical mapped priors; SoilWise concepts do not validate "
-                "the mapped component, current field condition, diagnosis, or management action."
-            ),
+            "candidate_node_ids": [],
+            "kept_node_ids": [],
+            "evidence_role": "disabled_by_benchmark_arm",
+            "boundary": "Graph retrieval was not executed in this controlled arm.",
         }
-    cache_status["kg"] = kg_result.cache_status
+    runtime_metadata["retrieval_component_receipts"]["graph_retrieval"] = (
+        _retrieval_component_receipt(
+            "graph_retrieval",
+            enabled=graph_retrieval_enabled,
+            output_ids=[str(hit.node_id) for hit in graph_hits],
+        )
+    )
     tool_span = profiler.span("agent.tools.run_guard_notes", input_size=len(question)) if profiler else nullcontext()
     with tool_span:
         tool_notes = run_tools(question, effective_route.required_tools)
+        tool_plan, tool_results = plan_and_execute_tools(
+            question,
+            field_context=query_signals.field_context,
+        )
+        if tool_results:
+            calculator_metadata = skill_metadata("agronomic_calculator")
+            tool_notes.extend(
+                ToolNote(
+                    name="agronomic_calculator",
+                    text=result.answer,
+                    skill_id=str(calculator_metadata["skill_id"]),
+                    provenance=tuple(str(item) for item in calculator_metadata["provenance"]),
+                    boundary=str(calculator_metadata["boundary"]),
+                    risk_class=str(calculator_metadata["risk_class"]),
+                    eval_tags=tuple(str(item) for item in calculator_metadata["eval_tags"]),
+                )
+                for result in tool_results
+            )
+        runtime_metadata["tool_plan"] = tool_plan.to_dict()
+        runtime_metadata["tool_invocations"] = [
+            invocation.to_dict() for invocation in tool_plan.invocations
+        ]
+        runtime_metadata["tool_results"] = [result.to_dict() for result in tool_results]
     checklist_span = profiler.span("agent.plan.coverage_checklist", input_size=len(question)) if profiler else nullcontext()
     with checklist_span:
         checklist_key = (
@@ -1803,12 +2138,76 @@ def build_context(
             "question_compiler": "decision_contract_v1_shadow_rejected_for_retrieval_promotion",
             "coverage_policy": "lexical_shadow_diagnostic_not_user_facing",
             "claim_validator": "legacy_answer_verifier_adapter_no_claim_attestation",
-            "tool_registry": "current_registry_version_not_exposed",
+            "tool_registry": {
+                "schema_version": CAPABILITY_REGISTRY_SCHEMA_VERSION,
+                "catalog_sha256": capability_registry_sha256,
+                "capability_count": capability_registry_snapshot["capability_count"],
+            },
         },
+        capability_records=[
+            *(
+                (context.runtime_metadata or {}).get("tool_results")
+                or []
+            ),
+            *(
+                {
+                    "evidence_kind": "graph_assertion",
+                    "capability_id": hit.graph_id,
+                    "capability_version": hit.graph_version,
+                    "result_id": f"graph_hit:{hit.graph_id}:{hit.node_id}",
+                    "status": "retrieved_hint",
+                    "claim_text": hit.evidence,
+                    "payload": {
+                        "node_id": hit.node_id,
+                        "name": hit.name,
+                        "kind": hit.kind,
+                        "evidence": hit.evidence,
+                        "neighbors": list(hit.neighbors),
+                        "namespaces": list(hit.namespaces),
+                        "relation_paths": list(hit.relation_paths),
+                    },
+                    "authority_role": hit.authority_role,
+                    "freshness_status": "not_declared",
+                    "provenance": hit.graph_source,
+                    "limitations": (
+                        "knowledge-graph hits are routing and relationship context, not field truth",
+                    ),
+                    "graph_id": hit.graph_id,
+                    "graph_sha256": hit.graph_sha256,
+                    "node_id": hit.node_id,
+                    "relation_paths": list(hit.relation_paths),
+                    "license": hit.graph_license,
+                }
+                for hit in context.graph_hits
+            ),
+            *(
+                [
+                    {
+                        "evidence_kind": "field_observation",
+                        "capability_id": "user_field_context",
+                        "capability_version": "v1",
+                        "status": "user_supplied",
+                        "claim_text": "User-supplied field context was captured for this request.",
+                        "authority_role": "user_supplied_observation_not_independently_verified",
+                        "freshness_status": "as_supplied",
+                        "provenance": "request_field_context",
+                        "field_snapshot_sha256": question_frame.field_snapshot_sha256,
+                        "payload": query_signals.field_context,
+                    }
+                ]
+                if query_signals.field_context
+                else []
+            ),
+        ],
     )
     runtime_metadata["evidence_fabric"] = build_evidence_fabric_record(
         question_frame=question_frame,
         evidence_packet=evidence_packet,
+    )
+    _validate_retrieval_context_identity(
+        context,
+        document_retrieval_enabled=document_retrieval_enabled,
+        graph_retrieval_enabled=graph_retrieval_enabled,
     )
     if runtime_mode == "agno" and profiler is None and use_context_cache and use_search_cache:
         _AGNO_CONTEXT_CACHE.put(agno_context_key, context)
@@ -2003,6 +2402,7 @@ class MLXGenerator:
         top_p: float = 0.9,
         top_k: int = 0,
         *,
+        seed: int | None = None,
         model_revision: str | None = None,
         draft_model_id: str | None = None,
         num_draft_tokens: int = 4,
@@ -2022,6 +2422,7 @@ class MLXGenerator:
         self.temperature = temperature
         self.top_p = top_p
         self.top_k = top_k
+        self.seed = int(seed) if seed is not None else None
         self.model_revision = str(model_revision or "").strip() or None
         self.draft_model_id = draft_model_id
         self.num_draft_tokens = max(1, num_draft_tokens)
@@ -2205,8 +2606,38 @@ class MLXGenerator:
     def _generate_locked(self, messages: list[dict[str, str]]) -> str:
         from mlx_lm import generate, stream_generate
         from mlx_lm.sample_utils import make_sampler
+        import mlx.core as mx
 
         assert self._model is not None and self._tokenizer is not None
+        seed_application = {
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "requested_seed": self.seed,
+            "applied_seed": None,
+            "status": "not_configured",
+            "backend": "mlx_local",
+            "application_point": "serialized_generation_lock_before_sampler",
+            "implementation": "mlx.core.random.seed",
+            "sampler": {
+                "factory": "mlx_lm.sample_utils.make_sampler",
+                "temperature": self.temperature,
+                "top_p": self.top_p,
+                "top_k": self.top_k,
+                "sampling_mode": "argmax" if self.temperature == 0 else "stochastic",
+            },
+            "application_count": 0,
+        }
+        if self.seed is not None:
+            # MLX exposes one process-global RNG state.  Applying the requested
+            # seed before acquiring this lock would permit a concurrent request
+            # to replace it between seeding and the first sampled token.
+            mx.random.seed(self.seed)
+            seed_application.update(
+                {
+                    "applied_seed": self.seed,
+                    "status": "applied",
+                    "application_count": 1,
+                }
+            )
         prompt = self._tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True, enable_thinking=False)
         sampler = make_sampler(temp=self.temperature, top_p=self.top_p, top_k=self.top_k)
         if not self.use_stream_generate and self._draft_model is None:
@@ -2230,6 +2661,7 @@ class MLXGenerator:
                 "draft_model_id": None,
                 "prompt_cache_enabled": False,
                 "prompt_cache_reason": "stream_generation_required",
+                "seed_application": seed_application,
             }
             return output
 
@@ -2282,6 +2714,12 @@ class MLXGenerator:
             final_response = None
             from_draft = 0
             total_tokens = 0
+            if self.seed is not None:
+                # The failed speculative attempt may have advanced the global
+                # RNG.  Reset it before the non-speculative retry so the
+                # fallback has its own explicit, replayable sampling boundary.
+                mx.random.seed(self.seed)
+                seed_application["application_count"] = 2
             for response in stream_generate(
                 self._model,
                 self._tokenizer,
@@ -2317,6 +2755,7 @@ class MLXGenerator:
             "kv_group_size": self.kv_group_size if self.kv_bits is not None else None,
             "quantized_kv_start": self.quantized_kv_start if self.kv_bits is not None else None,
             "max_kv_size": self.max_kv_size,
+            "seed_application": seed_application,
         }
         return "".join(chunks).strip()
 
@@ -2508,6 +2947,10 @@ class EvidenceInterventionDecision:
     direct_commitment: bool
     coverage_statuses: tuple[str, ...]
     hold_text: str | None = None
+    answerability_state: str = AnswerabilityState.ANSWER_WITH_BOUNDED_UNCERTAINTY.value
+    rule_pack_id: str = "general.bounded_assistance.v1"
+    failed_claim: str | None = None
+    required_authority: str | None = None
 
     def as_record(self) -> dict[str, Any]:
         return {
@@ -2518,31 +2961,135 @@ class EvidenceInterventionDecision:
             "high_consequence": self.high_consequence,
             "direct_commitment": self.direct_commitment,
             "coverage_statuses": list(self.coverage_statuses),
+            "answerability_state": self.answerability_state,
+            "rule_pack_id": self.rule_pack_id,
+            "failed_claim": self.failed_claim,
+            "required_authority": self.required_authority,
         }
 
 
 def infer_intervention_profile(generator: Any, explicit_profile: str | None = None) -> str:
-    requested = str(explicit_profile or "").strip().lower()
+    requested = str(
+        explicit_profile
+        or getattr(generator, "measured_capability_profile", "")
+        or getattr(generator, "intervention_profile", "")
+        or ""
+    ).strip().lower()
     if requested:
         if requested not in {"constrained", "balanced", "frontier"}:
             raise ValueError(f"unknown intervention profile: {explicit_profile}")
         return requested
-    model_id = " ".join(
-        str(getattr(generator, key, "") or "")
-        for key in ("model_id", "request_model_id")
-    ).lower()
-    if "270m" in model_id:
-        return "constrained"
-    if any(token in model_id for token in ("gpt-", "luna", "openai")):
-        return "frontier"
-    if model_id:
-        return "balanced"
-    # Preserve historical behavior for fixtures and custom generators unless a
-    # caller declares their capability explicitly.
+    # Unmeasured/custom generators use the conservative compatibility profile.
+    # Production model configs declare the measured profile explicitly; model
+    # names are not used as a capability proxy.
     return "constrained"
 
 
 def decide_evidence_intervention(
+    context: AgentContext | None,
+    *,
+    question: str,
+    profile: str,
+) -> EvidenceInterventionDecision:
+    """Apply the explicit answerability state before legacy evidence thresholds."""
+
+    baseline = _legacy_decide_evidence_intervention(
+        context,
+        question=question,
+        profile=profile,
+    )
+    runtime = {} if context is None else (context.runtime_metadata or {})
+    question_frame = ((runtime.get("evidence_fabric") or {}).get("question_frame") or {})
+    answerability_field_context = dict(
+        runtime.get("answerability_field_context")
+        if isinstance(runtime.get("answerability_field_context"), Mapping)
+        else {}
+    )
+    if isinstance(question_frame, Mapping):
+        answerability_field_context.update(
+            {
+                "field_snapshot_sha256": question_frame.get("field_snapshot_sha256"),
+                "crop_scope": tuple(question_frame.get("crop_scope") or answerability_field_context.get("crop_scope") or ()),
+                "jurisdiction_scope": tuple(
+                    question_frame.get("jurisdiction_scope")
+                    or answerability_field_context.get("jurisdiction_scope")
+                    or ()
+                ),
+            }
+        )
+    plan = runtime.get("tool_plan") if isinstance(runtime.get("tool_plan"), Mapping) else None
+    results = tuple(
+        item for item in (runtime.get("tool_results") or ()) if isinstance(item, Mapping)
+    )
+    decision = assess_answerability(
+        question,
+        route=None if context is None else context.route,
+        tool_plan=plan,
+        tool_results=results,
+        field_context=answerability_field_context or None,
+        available_authorities=_validated_answer_authorities(runtime),
+    )
+    common = {
+        "answerability_state": decision.state.value,
+        "rule_pack_id": decision.rule_pack_id,
+        "failed_claim": decision.failed_claim,
+        "required_authority": decision.required_authority,
+    }
+    if decision.state == AnswerabilityState.ANSWER_DIRECTLY:
+        has_typed_result = validated_deterministic_tool_execution(question, plan, results)
+        has_primary = bool(
+            context is not None
+            and context.evidence_handshake is not None
+            and context.evidence_handshake.has_strong_primary
+        )
+        return replace(
+            baseline,
+            status="generate_with_evidence" if has_typed_result or has_primary else "generate_bounded",
+            reason=decision.reason,
+            hold_text=None,
+            **common,
+        )
+    if decision.state in {
+        AnswerabilityState.ASK_ONE_DISCRIMINATING_QUESTION,
+        AnswerabilityState.REQUIRE_AUTHORITY,
+        AnswerabilityState.REFUSE_UNSAFE_ACTION,
+    }:
+        return replace(
+            baseline,
+            status="held",
+            reason=decision.reason,
+            hold_text=decision.response_text or baseline.hold_text,
+            **common,
+        )
+    if baseline.status == "held" and not baseline.direct_commitment:
+        baseline = replace(
+            baseline,
+            status="generate_bounded",
+            reason=decision.reason,
+            hold_text=None,
+        )
+    return replace(baseline, **common)
+
+
+def _validated_answer_authorities(
+    runtime: Mapping[str, Any],
+) -> tuple[Mapping[str, Any], ...]:
+    """Return structured authority receipts for question-bound validation.
+
+    A strong applied-guidance document can support a bounded action within its
+    recorded scope, but it is not interchangeable with a current regulated
+    product label.  Future label readers can satisfy this seam by emitting a
+    typed receipt; ordinary retrieval scores and metadata searches cannot.
+    """
+
+    return tuple(
+        dict(raw)
+        for raw in (runtime.get("validated_authorities") or ())
+        if isinstance(raw, Mapping)
+    )
+
+
+def _legacy_decide_evidence_intervention(
     context: AgentContext | None,
     *,
     question: str,
@@ -2878,6 +3425,72 @@ def _non_decisive_evidence_hold(
     )
 
 
+def _allows_context_only_regional_interpretation(
+    context: AgentContext | None,
+    *,
+    question: str,
+) -> bool:
+    """Admit reviewed regional context for interpretation, never as action authority."""
+
+    if context is None or context.route.question_type != "regional_context":
+        return False
+    if classify_high_consequence_domains(question):
+        return False
+    query_context = (context.runtime_metadata or {}).get("query_context")
+    if not isinstance(query_context, Mapping):
+        return False
+    if query_context.get("regional_context_requested") is not True:
+        return False
+    return any(
+        str(doc.retrieval_policy or "standard").strip().lower() == "context_only"
+        for doc in context.retrieved_docs
+    )
+
+
+def deterministic_tool_response(
+    context: AgentContext | None,
+    *,
+    question: str = "",
+) -> tuple[str | None, str | None]:
+    """Return a typed tool result or one minimal clarification, never a chosen target."""
+
+    runtime = {} if context is None else (context.runtime_metadata or {})
+    plan = runtime.get("tool_plan") if isinstance(runtime.get("tool_plan"), Mapping) else {}
+    results = tuple(
+        item
+        for item in (runtime.get("tool_results") or ())
+        if isinstance(item, Mapping)
+    )
+    if validated_deterministic_tool_execution(question, plan, results):
+        payload = results[0].get("payload") if isinstance(results[0], Mapping) else None
+        answer = str((payload or {}).get("answer") or "").strip() if isinstance(payload, Mapping) else ""
+        if answer:
+            invocation = tuple((plan or {}).get("invocations") or ())
+            named_product_conversion = bool(
+                invocation
+                and isinstance(invocation[0], Mapping)
+                and invocation[0].get("operation") == "unit_conversion"
+                and has_recognized_regulated_product(question)
+                and re.search(r"\bfor\s+(?:the\s+)?[a-z0-9][a-z0-9 .®™'/-]*[?.!]*\s*$", question, re.I)
+            )
+            if named_product_conversion or re.search(
+                r"\b(?:product|herbicide|fungicide|insecticide|pesticide)\b.{0,40}\b(?:label|rate)\b",
+                question,
+                re.IGNORECASE,
+            ):
+                answer += (
+                    " This only converts the user-supplied number; it does not establish that a label is "
+                    "current or applicable, does not establish label authority or product applicability, "
+                    "and does not authorize use."
+                )
+            return answer, "deterministic_tool_result"
+    if validated_deterministic_tool_clarification(question, plan, results) is not None:
+        clarification = str(plan.get("clarification") or "").strip()
+        if clarification:
+            return clarification, "deterministic_tool_clarification"
+    return None, None
+
+
 def generate_answer(
     question: str,
     mode: str,
@@ -2901,13 +3514,34 @@ def generate_answer(
         field_context=field_context,
         prompt_profile=prompt_profile,
     )
+    context_runtime = {} if context is None else (context.runtime_metadata or {})
+    context_tool_plan = (
+        context_runtime.get("tool_plan")
+        if isinstance(context_runtime.get("tool_plan"), Mapping)
+        else None
+    )
+    context_tool_results = tuple(
+        item
+        for item in (context_runtime.get("tool_results") or ())
+        if isinstance(item, Mapping)
+    )
+    typed_tool_result_available = validated_deterministic_tool_execution(
+        question,
+        context_tool_plan,
+        context_tool_results,
+    )
     objective_context_rejected = bool(
         objective_multiple_choice
         and mode == "agronomic_rag"
         and (
             context is None
-            or context.evidence_handshake is None
-            or not context.evidence_handshake.has_strong_primary
+            or (
+                not typed_tool_result_available
+                and (
+                    context.evidence_handshake is None
+                    or not context.evidence_handshake.has_strong_primary
+                )
+            )
         )
     )
     if objective_context_rejected:
@@ -2922,11 +3556,17 @@ def generate_answer(
             prompt_profile=prompt_profile,
         )
     source_grounded = is_source_grounded_question(question)
+    context_only_regional_interpretation = _allows_context_only_regional_interpretation(
+        context,
+        question=question,
+    )
     weak_retrieval_rejected = bool(
         mode == "agronomic_rag"
         and not source_grounded
         and not objective_multiple_choice
+        and not context_only_regional_interpretation
         and context is not None
+        and not typed_tool_result_available
         and (
             context.evidence_handshake is None
             or not context.evidence_handshake.has_strong_primary
@@ -2957,11 +3597,27 @@ def generate_answer(
             profile=effective_intervention_profile,
         )
     )
-    evidence_hold = intervention.hold_text if intervention is not None else None
-    raw_output = evidence_hold if evidence_hold is not None else generator.generate(messages)
+    deterministic_output, deterministic_generation_path = (
+        deterministic_tool_response(context, question=question)
+        if mode == "agronomic_rag" and not source_grounded and not objective_multiple_choice
+        else (None, None)
+    )
+    evidence_hold = (
+        intervention.hold_text
+        if deterministic_output is None and intervention is not None
+        else None
+    )
+    raw_output = (
+        deterministic_output
+        if deterministic_output is not None
+        else evidence_hold
+        if evidence_hold is not None
+        else generator.generate(messages)
+    )
+    draft_output = raw_output
     generation_stats = (
         {}
-        if evidence_hold is not None
+        if evidence_hold is not None or deterministic_output is not None
         else dict(getattr(generator, "last_generation_stats", {}) or {})
     )
     verification = None
@@ -2975,6 +3631,7 @@ def generate_answer(
     if (
         mode == "agronomic_rag"
         and evidence_hold is None
+        and deterministic_output is None
         and verification_enabled
         and not objective_multiple_choice
         and not isinstance(generator, MockGenerator)
@@ -3002,8 +3659,22 @@ def generate_answer(
             if context is None or context.evidence_handshake is None
             else context.evidence_handshake.required_entities,
             review_mode=verification_mode,
+            jurisdiction=(
+                next(
+                    iter(
+                        (
+                            (context.runtime_metadata or {}).get("query_context") or {}
+                        ).get("target_jurisdictions")
+                        or ()
+                    ),
+                    None,
+                )
+                if context is not None
+                else None
+            ),
         )
         raw_output = verification.answer
+    post_verification_output = raw_output
     verification_generator = verifier or generator
     verification_generation_stats = (
         dict(getattr(verification_generator, "last_generation_stats", {}) or {})
@@ -3011,13 +3682,13 @@ def generate_answer(
         else {}
     )
     contract_input = raw_output
-    if not source_grounded and not raw_model_arm:
+    if not source_grounded and not raw_model_arm and deterministic_output is None:
         raw_output = format_answer_for_output_contract(raw_output)
-    if raw_model_arm or source_grounded or os.environ.get("AGRONOMY_AGENT_DISABLE_ANSWER_NORMALIZATION", "").lower() in {"1", "true", "yes", "on"}:
+    if deterministic_output is not None or raw_model_arm or source_grounded or os.environ.get("AGRONOMY_AGENT_DISABLE_ANSWER_NORMALIZATION", "").lower() in {"1", "true", "yes", "on"}:
         output = raw_output.strip()
     else:
         output = normalize_general_answer(raw_output, question=question, route=context.route if context is not None else None)
-    if not raw_model_arm and not source_grounded and not objective_multiple_choice:
+    if deterministic_output is None and not raw_model_arm and not source_grounded and not objective_multiple_choice:
         output = enforce_answer_safety_postconditions(
             output,
             question=question,
@@ -3028,7 +3699,7 @@ def generate_answer(
         if context is None
         else list((context.runtime_metadata or {}).get("canadian_coverage_boundaries") or [])
     )
-    if not raw_model_arm and not objective_multiple_choice:
+    if deterministic_output is None and not raw_model_arm and not objective_multiple_choice:
         output = apply_canadian_coverage_disclosure(
             output,
             question=question,
@@ -3037,6 +3708,16 @@ def generate_answer(
         output = format_answer_for_output_contract(output)
     metadata: dict[str, Any] = {
         "mode": mode,
+        "answer_stages": {
+            "schema_version": "open_agronomy_agent.answer_stages.v1",
+            "distribution_scope": "machine_local_trace",
+            "draft": {"text": draft_output, "sha256": sha256_text(draft_output)},
+            "post_verification": {
+                "text": post_verification_output,
+                "sha256": sha256_text(post_verification_output),
+            },
+            "final": {"text": output, "sha256": sha256_text(output)},
+        },
         "transport_control": {
             "active": bool(getattr(generator, "transport_control_active", False)),
             "boundary": (
@@ -3095,6 +3776,14 @@ def generate_answer(
                         "kind": hit.kind,
                         "evidence": hit.evidence,
                         "neighbors": list(hit.neighbors),
+                        "namespaces": list(hit.namespaces),
+                        "graph_id": hit.graph_id,
+                        "graph_version": hit.graph_version,
+                        "graph_source": hit.graph_source,
+                        "graph_license": hit.graph_license,
+                        "graph_sha256": hit.graph_sha256,
+                        "authority_role": hit.authority_role,
+                        "relation_paths": list(hit.relation_paths),
                     }
                     for rank, hit in enumerate(context.graph_hits, start=1)
                 ]
@@ -3118,7 +3807,9 @@ def generate_answer(
                 and not weak_retrieval_rejected
             ),
             "policy": (
-                "bounded_action_primary"
+                "typed_capability_result"
+                if typed_tool_result_available
+                else "bounded_action_primary"
                 if context is not None
                 and context.evidence_handshake is not None
                 and context.evidence_handshake.has_field_action_primary
@@ -3126,6 +3817,8 @@ def generate_answer(
                 if context is not None
                 and context.evidence_handshake is not None
                 and context.evidence_handshake.has_strong_primary
+                else "explicit_regional_context_interpretation"
+                if context_only_regional_interpretation
                 else "kernel_and_field_context_only"
             ),
             "rejection_reason": (
@@ -3144,7 +3837,42 @@ def generate_answer(
                 else None
             ),
         }
-    if evidence_hold is not None:
+    if deterministic_generation_path is not None:
+        metadata["generation_path"] = deterministic_generation_path
+        deterministic_result_ids = [
+            str(item.get("result_id") or "")
+            for item in ((context.runtime_metadata or {}).get("tool_results") or [])
+            if isinstance(item, dict) and str(item.get("result_id") or "")
+        ] if context is not None else []
+        if deterministic_generation_path == "deterministic_tool_result" and deterministic_result_ids:
+            metadata["answer_verification"] = {
+                "schema_version": "open_agronomy_agent.typed_capability_validation.v1",
+                "selection_policy": "typed_capability_identity_v1",
+                "status": "validated",
+                "triggered": False,
+                "intervention_action": "preserve_deterministic_result",
+                "result_ids": deterministic_result_ids,
+                "final_assessment": {"requires_review": False, "reasons": []},
+            }
+        else:
+            metadata["answer_verification"] = {
+                "schema_version": "open_agronomy_agent.typed_capability_validation.v1",
+                "selection_policy": "typed_capability_identity_v1",
+                "status": "needs_input",
+                "triggered": False,
+                "intervention_action": "request_missing_tool_input",
+                "result_ids": [],
+                "final_assessment": {
+                    "requires_review": True,
+                    "reasons": ["typed capability did not execute because a required input is missing"],
+                },
+            }
+        metadata["tool_execution"] = {
+            "plan": (context.runtime_metadata or {}).get("tool_plan") if context is not None else None,
+            "invocations": (context.runtime_metadata or {}).get("tool_invocations") if context is not None else [],
+            "results": (context.runtime_metadata or {}).get("tool_results") if context is not None else [],
+        }
+    elif evidence_hold is not None:
         metadata["generation_path"] = "deterministic_evidence_sufficiency_hold"
         metadata["evidence_sufficiency_gate"] = {
             "status": "held",
@@ -3175,13 +3903,18 @@ def generate_answer(
             validated_answer = validated_answer_from_runtime(
                 answer=output,
                 evidence_packet=fabric_record.get("evidence_packet"),
-                verifier_record=verification.as_record() if verification is not None else None,
+                verifier_record=(
+                    verification.as_record()
+                    if verification is not None
+                    else metadata.get("answer_verification")
+                ),
             )
             fabric_record["validated_answer"] = validated_answer.to_dict()
             fabric_record.pop("record_sha256", None)
             fabric_record["record_sha256"] = sha256_text(canonical_json(fabric_record))
             metadata["evidence_fabric"] = fabric_record
         metadata["query_context"] = (context.runtime_metadata or {}).get("query_context") or {}
+        metadata["cache_status"] = dict(context.cache_status or {})
         metadata["retrieved_doc_ids"] = [doc.doc_id for doc in context.retrieved_docs]
         metadata["retrieved_source_types"] = [doc.source_type for doc in context.retrieved_docs]
         metadata["retrieved_source_roles"] = [doc.allowed_roles for doc in context.retrieved_docs]
@@ -3195,6 +3928,9 @@ def generate_answer(
         )
         metadata["graph_filter"] = (context.runtime_metadata or {}).get("graph_filter") or {}
         metadata["tool_notes"] = [note.name for note in context.tool_notes]
+        metadata["tool_plan"] = (context.runtime_metadata or {}).get("tool_plan") or {}
+        metadata["tool_invocations"] = (context.runtime_metadata or {}).get("tool_invocations") or []
+        metadata["tool_results"] = (context.runtime_metadata or {}).get("tool_results") or []
         metadata["graph_nodes"] = [hit.node_id for hit in context.graph_hits]
         metadata["route"] = {
             "question_type": context.route.question_type,
@@ -3220,11 +3956,11 @@ def generate_answer(
     return output, metadata
 
 
-def config_model_id(config_path: str | Path = "configs/model.yaml") -> str:
-    return str(load_yaml(config_path).get("model_id", "mlx-community/Qwen3.5-2B-OptiQ-4bit"))
+def config_model_id(config_path: str | Path = DEFAULT_MODEL_CONFIG) -> str:
+    return str(load_yaml(config_path).get("model_id", "mlx-community/gemma-4-e2b-it-4bit"))
 
 
-def load_model_config(config_path: str | Path = "configs/model.yaml") -> dict[str, Any]:
+def load_model_config(config_path: str | Path = DEFAULT_MODEL_CONFIG) -> dict[str, Any]:
     return load_yaml(config_path)
 
 

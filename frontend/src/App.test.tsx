@@ -372,10 +372,10 @@ const createBaseMock = (overrides: Record<string, FetchHandler> = {}) => {
     'GET /api/configs': async () =>
       mkOk({
         modes: ['baseline', 'agronomic_rag', 'mock'],
-        rag_configs: ['configs/rag_final_mvp.yaml', 'configs/rag.yaml'],
+        rag_configs: ['configs/rag_governed_runtime_v2.yaml'],
         models: ['mlx-community/Qwen3.5-2B-OptiQ-4bit', 'mlx-community/Qwen3.5-2B-8bit'],
         prompt_versions: ['phase3_default_v0'],
-        default_rag_config: 'configs/rag_final_mvp.yaml',
+        default_rag_config: 'configs/rag_governed_runtime_v2.yaml',
       }),
     'GET /api/data-sources': async () => mkOk(sourceState),
     'POST /api/data-sources': async (reqInit?: RequestInit) => {
@@ -1591,7 +1591,7 @@ describe('cockpit app', () => {
       target: { value: 'mlx-community/Qwen3.5-2B-8bit' },
     })
     fireEvent.change(await screen.findByTestId('chat-rag-config'), {
-      target: { value: 'configs/rag.yaml' },
+      target: { value: 'configs/rag_governed_runtime_v2.yaml' },
     })
 
     fireEvent.click(screen.getByTestId('send-turn'))
@@ -1604,7 +1604,7 @@ describe('cockpit app', () => {
       const payload = JSON.parse(String(lastCall?.[1]?.body || '{}'))
       expect(payload).toMatchObject({
         model_id: 'mlx-community/Qwen3.5-2B-8bit',
-        rag_config: 'configs/rag.yaml',
+        rag_config: 'configs/rag_governed_runtime_v2.yaml',
         mode: 'agronomic_rag',
       })
     })

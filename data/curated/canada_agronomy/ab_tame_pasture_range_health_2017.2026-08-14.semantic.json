@@ -1,0 +1,33 @@
+{
+  "schema_version": "open_agronomy_agent.reviewed_semantic_companion.v1",
+  "source_id": "ab_tame_pasture_range_health_2017",
+  "source_raw_sha256": "1cd9179add78838adc6c5343e4bb413dfa9be4a60788a4ce40bb231aba9290a0",
+  "reviewed_on": "2026-08-14",
+  "review_method": "Manual visual and text comparison against both pages of the May 2017 Alberta tame-pasture worksheet. Retained only qualitative observation-domain, spatial-unit, and interpretation-boundary context. Excluded all scores, numerical ranges, plant lists, noxious-weed and legal content, management directions, visual material, government marks, and cited external material.",
+  "records": [
+    {
+      "title": "Alberta tame-pasture assessment scope and field-unit context",
+      "source_pages": [1],
+      "tags": ["tame pasture", "site potential", "field observations"],
+      "text": "Use this historical Alberta assessment context only where an area was intentionally established and remains managed as tame pasture. Organize observations within a management unit of reasonably uniform site potential. When land differs materially within the pasture, keep its observations separate rather than merging them. This context helps frame direct inspection; it does not classify a site, diagnose a cause, or prescribe a management response."
+    },
+    {
+      "title": "Alberta tame-pasture ecological-function observation context",
+      "source_pages": [1],
+      "tags": ["pasture health", "soil stability", "water function"],
+      "text": "For tame pasture, record observable context around plant vigour and forage production, soil and site stability, water capture and release, and nutrient and energy cycling. Repeating observations over time can help distinguish a persistent concern from a transient disturbance. These dimensions support questions for local interpretation; they do not prove a cause, predict production, or establish an individual field outcome."
+    },
+    {
+      "title": "Alberta tame-pasture spatial variability and monitoring context",
+      "source_pages": [1, 2],
+      "tags": ["field variability", "pasture monitoring", "soil protection"],
+      "text": "Describe portions of a pasture separately when vegetation or site potential differ, and preserve the location of each direct observation. Compare current plant composition, litter, exposed soil, invasive-plant presence, and woody regrowth with conditions appropriate to that site. This historic worksheet supplies monitoring context only; it is not a remote assessment, a formal classification, or a specific response plan."
+    },
+    {
+      "title": "Alberta tame-pasture interpretation boundary",
+      "source_pages": [1, 2],
+      "tags": ["historical context", "direct observation", "decision boundary"],
+      "text": "Interpret field observations with current local conditions and the history of use or disturbance. Differences in vegetation or soil-surface condition can have more than one explanation and warrant an on-site assessment when consequences are material. This historical worksheet is limited to background context and cannot replace current records, qualified local interpretation, or a pasture-specific decision."
+    }
+  ]
+}

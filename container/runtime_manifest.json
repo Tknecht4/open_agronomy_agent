@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-08-12T07:11:45+00:00",
+  "generated_at": "2026-08-14T00:00:00+00:00",
   "status": "pass",
-  "contract_sha256": "a12f1e91902dcd66f461f7d3019672ee0bde71864eb40313af27c19eaf4772a4",
+  "contract_sha256": "c10ec4a8579455d65ba5a232ccb372d275de31cddda2d51293621877d346a91e",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -21,130 +21,12 @@
     "included": false,
     "reason": "MLX and Metal run natively on the macOS host; the Linux image calls the host over loopback-only HTTP."
   },
-  "rag_config": "configs/rag_governed_runtime_v1.yaml",
-  "corpus_policy_manifest": "data/manifests/runtime_corpus_policy.json",
-  "configured_corpus_count": 23,
-  "included_corpus_count": 10,
-  "excluded_corpus_count": 13,
-  "excluded_corpora": [
-    {
-      "path": "data/seed/cca_objective_rag_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "Competency objectives are useful for coverage design but are not approved as copied runtime text.",
-      "rights_status": "copyrighted_citation_only",
-      "expected_sha256": "4f46706317afd16765c84b82f1a1aefd374bbd6d8b89c752853060cce935b02f",
-      "included": false
-    },
-    {
-      "path": "data/derived/rag/document_expansion_rag_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "The source is public but the current rows do not carry the required licence snapshot and lineage.",
-      "rights_status": "redistribution_review_required",
-      "expected_sha256": "26baf409f1e377d0d91e5ab9252c3d63fba47246c204623d4333db1e77a16a9b",
-      "included": false
-    },
-    {
-      "path": "data/derived/rag/forum_newagtalk_forum_threads_rag_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified.",
-      "rights_status": "permission_not_established",
-      "expected_sha256": "d5fad73f2db3318b632580f15c2a5f7c79f894a0d89df6abc7aa34a7b6b43629",
-      "included": false
-    },
-    {
-      "path": "data/derived/rag/forum_agricultivation_communities_agrictalk_forum_threads_rag_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified.",
-      "rights_status": "permission_not_established",
-      "expected_sha256": "84714c7361e0523d0e7ccb7f0575a9746ae59a22cc5a80780099e07495211024",
-      "included": false
-    },
-    {
-      "path": "data/derived/rag/forum_agriville_forum_threads_rag_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified.",
-      "rights_status": "permission_not_established",
-      "expected_sha256": "53d39aced68807a300b76b44ac7ac8482eee9a6e0156e8ae28d1fd7806bfe0f2",
-      "included": false
-    },
-    {
-      "path": "data/derived/rag/forum_farmchat_forum_threads_rag_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified.",
-      "rights_status": "permission_not_established",
-      "expected_sha256": "ddaceb8bb9c483a0266b1747fbcc4bb2e4441289f2cfa90c3a36c4e20e507ff7",
-      "included": false
-    },
-    {
-      "path": "data/derived/rag/forum_agricultureinformation_forum_threads_rag_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified.",
-      "rights_status": "permission_not_established",
-      "expected_sha256": "d5befa1509494cade443a481187e9c866c691d64370504613587ee68e508ac6e",
-      "included": false
-    },
-    {
-      "path": "data/derived/rag/forum_forum4farming_forum_threads_rag_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified.",
-      "rights_status": "permission_not_established",
-      "expected_sha256": "d6e81583045ccfdbda9d23931936bf005ea173c7d78d25f57086177068c81980",
-      "included": false
-    },
-    {
-      "path": "data/derived/rag/forum_farmnest_india_forum_threads_rag_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified.",
-      "rights_status": "permission_not_established",
-      "expected_sha256": "b5b2e4768084dfccecba51d6ba5709717bb579ffd81ce2c06ef19ab6c38de73f",
-      "included": false
-    },
-    {
-      "path": "data/derived/rag/forum_soilforwater_forum_threads_rag_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified.",
-      "rights_status": "permission_not_established",
-      "expected_sha256": "ed356c1b055cfcf533f7b164f4dc487fbbd292b87fd31d8841eac8aa1e4d3960",
-      "included": false
-    },
-    {
-      "path": "data/seed/final_mvp_gap_repair_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "Answer-gap synthesis risks eval-shaped behavior and includes rows explicitly awaiting reviewed-source replacement.",
-      "rights_status": "mixed_and_unverified",
-      "expected_sha256": "092f7131e657c87bdffb67a780d19ed6194c01b56a0748b678031049584e6746",
-      "included": false
-    },
-    {
-      "path": "data/seed/aiagribench_public_gap_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "Public benchmark-gap summaries are excluded from runtime to prevent benchmark-shaped retrieval and unverifiable source paraphrases.",
-      "rights_status": "source_rights_not_row_audited",
-      "expected_sha256": "2b0baf1ce96f23b8811f751506bf026a2a4015ba38161c71e49fd407b1191e81",
-      "included": false
-    },
-    {
-      "path": "data/seed/aiagribench_transfer_v2_source_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "Transfer-suite source summaries remain evaluation research and are excluded from the production answer path.",
-      "rights_status": "source_rights_not_row_audited",
-      "expected_sha256": "474749f9ffa3696b8edbdaf05541f1c199e6e24a651552bfcafd34c10656e612",
-      "included": false
-    }
-  ],
+  "rag_config": "configs/rag_governed_runtime_v2.yaml",
+  "corpus_policy_manifest": "data/manifests/runtime_corpus_policy_v2.json",
+  "configured_corpus_count": 6,
+  "included_corpus_count": 6,
+  "excluded_corpus_count": 0,
+  "excluded_corpora": [],
   "runtime_knowledge": [
     {
       "path": "data/seed/agronomy_rag_corpus.jsonl",
@@ -165,46 +47,22 @@
       "sha256": "eef95a5d2dbc11183a6f8061fe91fe7387e9568112e45d8b62c2cf835bd1d737"
     },
     {
-      "path": "data/derived/rag/canada_agronomy_distributable_v13.jsonl",
+      "path": "data/derived/rag/curated_canada/releases/2026-08-14/shards/context_only-canada-offline-master-0001.jsonl",
       "role": "runtime_knowledge",
-      "bytes": 4437330,
-      "sha256": "461cdf59627b684123e02fb712d72cffd21ff04fdef7b76bd0b9a17d86b4c2de"
+      "bytes": 5518525,
+      "sha256": "373146ad55a26503292f8e8f252cf52b830774302ecf54c0b4511c3093347810"
     },
     {
-      "path": "data/derived/rag/canada_agronomy_ontario_context_v1.jsonl",
+      "path": "data/derived/rag/curated_canada/releases/2026-08-14/shards/requires_live_authority-canada-offline-master-0001.jsonl",
       "role": "runtime_knowledge",
-      "bytes": 1348287,
-      "sha256": "72df2be18c87ef62dcc286201ad5274f1d0a9d8f74518a463487d696a83cb152"
+      "bytes": 85319,
+      "sha256": "5379329ecefe50d5b7d32cb5ff79a993277cab1fdb1e9351898f8c0717fdc05c"
     },
     {
-      "path": "data/derived/rag/canada_agronomy_supplement_v1.jsonl",
+      "path": "data/derived/rag/nrcs_esd_rag_corpus_compact_v2.jsonl",
       "role": "runtime_knowledge",
-      "bytes": 128051,
-      "sha256": "c8293511e27d034528ce41c4754bbaccac0bc98b1afe0fb08cf346a9f5211810"
-    },
-    {
-      "path": "data/derived/rag/canada_agronomy_supplement_v2.jsonl",
-      "role": "runtime_knowledge",
-      "bytes": 166353,
-      "sha256": "d0ed46ffb8fc153f4fb8c60dab2b74706c89bdf144eeb01142c8677eece41988"
-    },
-    {
-      "path": "data/derived/rag/canada_agronomy_supplement_v3.jsonl",
-      "role": "runtime_knowledge",
-      "bytes": 37455,
-      "sha256": "f175130e4dbd635ecd7142ce47e996a05a9d1671aaea4041e67187f0cea22e21"
-    },
-    {
-      "path": "data/derived/rag/canada_agronomy_regional_context_v1.jsonl",
-      "role": "runtime_knowledge",
-      "bytes": 206821,
-      "sha256": "863a97ac599c15c7699300284d9d3af8e9bbe0d875016facdf1362458abd48f1"
-    },
-    {
-      "path": "data/derived/rag/nrcs_esd_rag_corpus_compact.jsonl",
-      "role": "runtime_knowledge",
-      "bytes": 92050082,
-      "sha256": "d86786e7e3dffd6a41be8e7c76e0d1a3c60d8b026741f19e2e742fee7aecd16d"
+      "bytes": 89208598,
+      "sha256": "0fffaa61e9b6d7986de1a02eff470adbdc7227d8b4ecc95b50c6075d3a837b7b"
     },
     {
       "path": "data/seed/agronomy_knowledge_graph.json",
@@ -219,20 +77,20 @@
       "sha256": "9e73db954212216241b4b77d63088d4671fa017539e5309ee71e444b086a618b"
     }
   ],
-  "runtime_knowledge_bytes": 99925375,
+  "runtime_knowledge_bytes": 96363438,
   "runtime_policies": [],
   "runtime_assets": [
     {
       "path": "src/agronomy_agent",
-      "file_count": 154,
-      "bytes": 5162639,
-      "sha256": "27a8b01c52554bde3890ab888ce8c20eda7d616d7b12a68edb1d4a4a51975886"
+      "file_count": 149,
+      "bytes": 5234622,
+      "sha256": "5a7a7191303cad056048618eb0fe9a019861a2a29f2456e334fb44ed4e563c86"
     },
     {
       "path": "frontend/src",
-      "file_count": 70,
-      "bytes": 1083097,
-      "sha256": "3ba439bb2b33c05067eac915e92c4b17eb688628d90e82639cec635491692274"
+      "file_count": 73,
+      "bytes": 1142562,
+      "sha256": "1f4235d5d773fc302de920c56e3108e6861724e434fcb8cc52ce15d9f0e0fe65"
     },
     {
       "path": "frontend/public",
@@ -242,66 +100,69 @@
     },
     {
       "path": "scripts",
-      "file_count": 81,
-      "bytes": 1021550,
-      "sha256": "41d269c828d8db774cb4ddc4f596e25e9c12bb6e4725799eba4ddba176937d5c"
+      "file_count": 99,
+      "bytes": 1421810,
+      "sha256": "b23a7b99a5414a17f983472a5ca16387d20bc40936a92fb95b252b0116c894f6"
     },
     {
       "path": "configs",
-      "file_count": 58,
-      "bytes": 108856,
-      "sha256": "00f702658a32633e2555f58be03c15e9b83759ca623ee1ce35807fddadeb1de0"
+      "file_count": 69,
+      "bytes": 196569,
+      "sha256": "bbdadb4ab702b3eea803f7b68b4258093d6cd3002ab5f03afd05a28e6b583cdd"
     },
     {
       "path": "data/manifests",
-      "file_count": 11,
-      "bytes": 190194,
-      "sha256": "c06aa0ff70f97ea78fec3bc94fcaa8da02e8f521527830544bd746692f2b802b"
+      "file_count": 20,
+      "bytes": 280304,
+      "sha256": "4398232ea87eca8efdb9e59224438c02e69b90819d935c652e18139c99800991"
     },
     {
       "path": "data/eval",
-      "file_count": 28,
-      "bytes": 2366457,
-      "sha256": "1a7e6d006543aeb60a41ee1513fd44b33af05c690dc3ca345b2ce550e26dfd78"
+      "file_count": 33,
+      "bytes": 2437900,
+      "sha256": "4f96009d2962c00aabf369ab0c20585c905188b1f9c5fbbe7cbf7e1f3f46f144"
     },
     {
       "path": "data/snapshots",
       "file_count": 4,
-      "bytes": 34829467,
-      "sha256": "5e6455c12f13ede4e12cd4755dad1c5c726cf2bdf98dd85baf3e863bff84d027"
+      "bytes": 34829439,
+      "sha256": "6bb57f95a1d4d62ed3c096ee66fc64480134ba430c88d3585e1c0aced848df45"
     },
     {
       "path": "docs/public",
-      "file_count": 31,
-      "bytes": 1478912,
-      "sha256": "a873acb2c1403e349fcce462c94afc38e8afcab002b7d43bff9835caf61b1e96"
+      "file_count": 49,
+      "bytes": 2009850,
+      "sha256": "192f00cc38873b2e48e42b47da9177060c1855a6891b537c27841cea4b010c78"
     }
   ],
   "geo_cache_seed": {
     "path": "data/derived/geo_cache",
-    "file_count": 0,
-    "bytes": 0,
-    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    "file_count": 603,
+    "bytes": 10815464,
+    "sha256": "dd92fa88439898835ca8a290b72e1bdd384f9cd4efd511bfee49ce20606436f2"
   },
   "bundled_geo_layers": {
     "path": "data/derived/geo_layers",
     "file_count": 8,
     "bytes": 32805,
-    "sha256": "de958f674e8a5818d0c9c841033b9cb8be6e05e4d8f77634f98cbbadf96e84c7"
+    "sha256": "de958f674e8a5818d0c9c841033b9cb8be6e05e4d8f77634f98cbbadf96e84c7",
+    "content_class": "lineage_manifests_only",
+    "runtime_layer_assets_included": false,
+    "install_authority": "data/manifests/offline_spatial_profiles_v1.json"
   },
   "benchmark_evidence": [],
   "control_files": [
     {
-      "path": "configs/rag_governed_runtime_v1.yaml",
+      "path": "configs/rag_governed_runtime_v2.yaml",
       "role": "runtime_control",
-      "bytes": 2397,
-      "sha256": "ea04348fc109b028fcc98acabec3ce38ce5bfabf507a6321f87870ef086f0abc"
+      "bytes": 1575,
+      "sha256": "2a7f9cca000629dd7e6a74b2828cbf6324159b0b212a538df4c22e1d20992653"
     },
     {
       "path": "configs/model_gemma4_e2b_interface_v2.yaml",
       "role": "runtime_control",
       "bytes": 1359,
-      "sha256": "3a078b5351c3655bff793c44c6edbb488f655f6ca623a2d8f03a8954d818d20e"
+      "sha256": "48647c02fc9a06ffba40ca7037b8758b33faf8e42b2e18220cad516df0826896"
     },
     {
       "path": "LICENSE",
@@ -319,7 +180,7 @@
       "path": "Containerfile",
       "role": "runtime_control",
       "bytes": 3921,
-      "sha256": "a621bd01e04562133ce58fb767e2d69cb08aacb78e100e8395f20fafb994f60f"
+      "sha256": "0fe7ebf225817f3516530fda57b7b6f542bdc833e936c8e83e42c4b6066501a2"
     },
     {
       "path": "Containerfile.overlay",
@@ -330,8 +191,8 @@
     {
       "path": ".dockerignore",
       "role": "runtime_control",
-      "bytes": 3780,
-      "sha256": "ac004a12f51ea75c2501514b420f97486788f9769425cb474b8597abe7405b0c"
+      "bytes": 4012,
+      "sha256": "971dc479d347e07a967a995f04f032bf9e9a436afc3ca50a8b676f5f1b6fe501"
     },
     {
       "path": "requirements-container.txt",
@@ -342,8 +203,8 @@
     {
       "path": "pyproject.toml",
       "role": "runtime_control",
-      "bytes": 808,
-      "sha256": "4a4365c4580a24220f72afd537501d8b8465bbea58d6c1c04a90ec3a75fca99f"
+      "bytes": 1015,
+      "sha256": "b64b04a88df2e5af83e829bba8c309a53bc1749e4cb36a561ee5473e957c120d"
     },
     {
       "path": "docker-compose.edge.yml",
@@ -378,14 +239,14 @@
     {
       "path": "frontend/vite.config.ts",
       "role": "runtime_control",
-      "bytes": 1161,
-      "sha256": "42cc63899ff37019fa4afc1ff36726ec7732ed3630872dba99a9f11474ad573a"
+      "bytes": 1435,
+      "sha256": "9437b51d9bd845c0e5bbcdd504f7c9ad463d72bd07166638b9e7e99bda0d02fe"
     },
     {
       "path": "container/.env.example",
       "role": "runtime_control",
-      "bytes": 1893,
-      "sha256": "1cd9cce5c4f2710b8e3493277efc448a291e75ccc9030b0e96addd1f76a482a7"
+      "bytes": 1906,
+      "sha256": "e471bbb3587708214a441d0e6d09fa6f4db929f110edf1e139856fce4d1c7e52"
     },
     {
       "path": "container/runtime-defaults.env",
@@ -396,8 +257,8 @@
     {
       "path": "container/README.md",
       "role": "runtime_control",
-      "bytes": 8638,
-      "sha256": "8a73f827e84a388b078c28973ee8e70a62ffd385f4b2dc07da8bb51b6ba9fc73"
+      "bytes": 4718,
+      "sha256": "1e5d9fa221747f97f034a70680b801f47f83105d3517f12fc9c37281d0432ba0"
     },
     {
       "path": "container/runtime-common.sh",
@@ -427,7 +288,7 @@
       "path": "container/model-host.sh",
       "role": "runtime_control",
       "bytes": 8132,
-      "sha256": "9b75e28eb91ed4743e097c06c6fa276e9223b6b55b4c8fe17a654400a95b1092"
+      "sha256": "b3a453217ae86a17914a1865c63372e8af548ba8d5e83366aa40e64cae771415"
     },
     {
       "path": "container/apple.sh",
@@ -474,14 +335,14 @@
     {
       "path": "data/manifests/canada_agronomy_sources.json",
       "role": "runtime_control",
-      "bytes": 93983,
-      "sha256": "d00074a6aab76678a5f21bc4839b1594d60f0f6ebd908349f8a2488f37827829"
+      "bytes": 108568,
+      "sha256": "f539619f941d10e1650123d274291beffaf29b4016ae5d2d552671d66cdd8ee2"
     },
     {
       "path": "data/manifests/canada_geospatial_sources.json",
       "role": "runtime_control",
-      "bytes": 22240,
-      "sha256": "3ec2c4efbb7eb55996588b71931e5dd156b68f08107231ccd21c6c35d7b89f6e"
+      "bytes": 29540,
+      "sha256": "fd0850224615baba61b86841d41466bac16cbaa03907307d51230a2b996ea17f"
     },
     {
       "path": "data/manifests/source_licensing_matrix.json",
@@ -490,10 +351,10 @@
       "sha256": "929329e1516fb1c1a5477d22b1c518563b39cb8cc8d78383285a9e56edf10f2a"
     },
     {
-      "path": "data/manifests/runtime_corpus_policy.json",
+      "path": "data/manifests/runtime_corpus_policy_v2.json",
       "role": "runtime_control",
-      "bytes": 12118,
-      "sha256": "80a8d9413129fe2b04606771e899abb06dcb4d9b731f5f75b9d66008566b155f"
+      "bytes": 5522,
+      "sha256": "9f7c38640ef9f9a31106c0f50dd6de35abe7fee9e96191f8ab7c128b919a8f82"
     }
   ]
 }

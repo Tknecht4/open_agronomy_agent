@@ -23,7 +23,7 @@ REQUIRED_RUNTIME_ENV = {
     "AGRONOMY_AGENT_TOOL_CACHE_ROOT=/state/cache/public_tools",
 }
 
-BUNDLED_GEO_ASSETS = (
+GEOSPATIAL_LINEAGE_MANIFESTS = (
     "data/derived/geo_layers/bc_agriculture_capability_manifest.json",
     "data/derived/geo_layers/sk_thematic_soil_manifest.json",
     "data/derived/geo_layers/sk_detailed_soil_manifest.json",
@@ -264,7 +264,7 @@ def validate(root: Path, runtime_manifest_path: Path | None = None) -> dict[str,
         errors.append("Linux image must not install MLX")
     if "requirements-container.txt" not in containerfile:
         errors.append("Containerfile must use the container-specific dependencies")
-    for path in BUNDLED_GEO_ASSETS:
+    for path in GEOSPATIAL_LINEAGE_MANIFESTS:
         if not _containerfile_copies_path(root, containerfile, path):
             errors.append(f"Containerfile does not copy geospatial lineage manifest: {path}")
     if "chmod -R a+rX /app" not in containerfile:
@@ -367,14 +367,18 @@ def validate(root: Path, runtime_manifest_path: Path | None = None) -> dict[str,
     bundled_geo_layers = manifest.get("bundled_geo_layers") or {}
     if (
         bundled_geo_layers.get("path") != "data/derived/geo_layers"
-        or int(bundled_geo_layers.get("file_count") or 0) < len(BUNDLED_GEO_ASSETS)
+        or int(bundled_geo_layers.get("file_count") or 0) < len(GEOSPATIAL_LINEAGE_MANIFESTS)
+        or bundled_geo_layers.get("content_class") != "lineage_manifests_only"
+        or bundled_geo_layers.get("runtime_layer_assets_included") is not False
     ):
-        errors.append("runtime manifest does not hash the geospatial lineage package")
-    for path in BUNDLED_GEO_ASSETS:
+        errors.append(
+            "runtime manifest must bind geospatial lineage manifests without claiming external layer assets"
+        )
+    for path in GEOSPATIAL_LINEAGE_MANIFESTS:
         if not (root / path).is_file():
             errors.append(f"geospatial lineage manifest is missing: {path}")
         if f"!{path}" not in dockerignore.splitlines():
-            errors.append(f"Docker context excludes bundled geospatial asset: {path}")
+            errors.append(f"Docker context excludes geospatial lineage manifest: {path}")
 
     try:
         manifest_display = str(resolved_runtime_manifest.relative_to(root))
@@ -401,6 +405,10 @@ def validate(root: Path, runtime_manifest_path: Path | None = None) -> dict[str,
         "runtime_asset_file_count": sum(int(entry.get("file_count") or 0) for entry in runtime_assets),
         "bundled_geo_layer_file_count": int(bundled_geo_layers.get("file_count") or 0),
         "bundled_geo_layer_bytes": int(bundled_geo_layers.get("bytes") or 0),
+        "geospatial_content_class": bundled_geo_layers.get("content_class"),
+        "geospatial_runtime_layer_assets_included": bundled_geo_layers.get(
+            "runtime_layer_assets_included"
+        ),
     }
 
 

@@ -10,6 +10,7 @@ from typing import Any
 import yaml
 
 from agronomy_agent.decision_route import build_decision_route_state
+from agronomy_agent.geographic_context import format_trusted_geographic_context
 from agronomy_agent.paths import repo_path
 
 
@@ -145,6 +146,37 @@ class ContextPacker:
         rendered_field_context = format_user_field_context(field_context)
         if rendered_field_context:
             self._append(sections, "user_field_context", rendered_field_context)
+        rendered_geographic_context = format_trusted_geographic_context(field_context)
+        if rendered_geographic_context:
+            self._append(sections, "trusted_geographic_context", rendered_geographic_context)
+        runtime_metadata = getattr(context, "runtime_metadata", {}) or {}
+        capability_rows = (
+            runtime_metadata.get("evidence_fabric", {})
+            .get("evidence_packet", {})
+            .get("capability_evidence", [])
+        ) or runtime_metadata.get("tool_results", [])
+        capability_lines = []
+        capability_source_ids = []
+        for row in capability_rows:
+            if not isinstance(row, dict):
+                continue
+            payload = row.get("payload") if isinstance(row.get("payload"), dict) else {}
+            claim = str(row.get("claim_text") or payload.get("answer") or "").strip()
+            if not claim:
+                continue
+            capability_source_ids.append(str(row.get("result_id") or ""))
+            capability_lines.append(
+                f"- [{str(row.get('evidence_kind') or 'capability').upper()}] "
+                f"result_id={row.get('result_id')}; capability={row.get('capability_id') or row.get('tool_id')}@{row.get('capability_version') or row.get('tool_version')}; "
+                f"authority={row.get('authority_role')}; result={claim}; limitations={'; '.join(row.get('limitations') or []) or 'none declared'}"
+            )
+        if capability_lines:
+            self._append(
+                sections,
+                "capability_evidence",
+                "Typed capability evidence:\n" + "\n".join(capability_lines),
+                source_ids=tuple(value for value in capability_source_ids if value),
+            )
         decision_state = build_decision_route_state(question, getattr(context.route, "question_type", ""))
         self._append(sections, "decision_route_state", decision_state.prompt_block())
         evidence_handshake = getattr(context, "evidence_handshake", None)
@@ -543,7 +575,9 @@ class ContextPacker:
                 "route_summary",
                 "decision_route_state",
                 "evidence_handshake",
+                "capability_evidence",
                 "canadian_jurisdiction_evidence_boundary",
+                "trusted_geographic_context",
                 "hidden_answer_contract",
                 "user_question_output_contract",
             }:
@@ -640,7 +674,9 @@ def _field_terms(field_context: dict[str, Any] | None) -> set[str]:
     return {
         str(value).strip().lower()
         for value in (field_context or {}).values()
-        if value is not None and str(value).strip()
+        if isinstance(value, (str, int, float))
+        and not isinstance(value, bool)
+        and str(value).strip()
     }
 
 

@@ -1,0 +1,210 @@
+{
+  "benchmark_layer": "development_regression",
+  "claim_eligible": false,
+  "egress": {
+    "authorization_required": true,
+    "authorization_schema": "open_agronomy_agent.benchmark_egress_authorization.v2",
+    "authorized_payload_classes_exact": [
+      "project_owned_frozen_benchmark_questions",
+      "benchmark_field_context",
+      "candidate_answers",
+      "benchmark_reference_and_rubric_for_judging"
+    ],
+    "excluded_payload_classes_exact": [
+      "farmer_records",
+      "private_field_history",
+      "credentials",
+      "local_knowledge_corpus_files"
+    ],
+    "human_authority_required": true,
+    "utc_validity_window_required": true
+  },
+  "evaluation_order": [
+    "clean_release_candidate_preflight",
+    "internal_development_matrix",
+    "blinded_review_packet",
+    "human_adjudication"
+  ],
+  "external_diagnostic": {
+    "claim_boundary": "Historical different-geography transfer diagnostic only; retained for provenance, not executable in RC3.",
+    "contract_path": "configs/open_agronomy_external_agroqa_v1.json",
+    "contract_sha256": "42692bc3eb638ca77768b67b4954722d449127c812c147808ab06ec77c99f6b7",
+    "execution_allowed": false,
+    "lifecycle": "retired_after_rc1_exposure",
+    "replacement_required_for_future_transfer_evaluation": true,
+    "rerun_command_emitted": false,
+    "rows": 256,
+    "suite_path": "data/eval/open_agronomy_external_agroqa_v1.jsonl",
+    "suite_sha256": "d15888bb4cf0ea339380a71abecdb5a5fa770829e67e616765d2d140c9365e93",
+    "use_policy": "Do not rerun AgroQA v1 after RC1 exposure or use its results for same-version repair. A newly versioned, independently governed transfer set is required for any future transfer diagnostic."
+  },
+  "internal_benchmark": {
+    "arms": [
+      "raw_model",
+      "baseline",
+      "kernel_field_context",
+      "agronomic_rag"
+    ],
+    "claim_boundary": "Exposed project-owned Canadian development regression evidence under the active cumulative runtime-v2 knowledge profile only. Exact suite cases have been inspected during development. This is not an unbiased holdout, observed product-service parity proof, agronomist equivalence, field-outcome validation, or a v3 performance claim.",
+    "contract_path": "configs/open_agronomy_canadian_performance_v1_runtime_v2.json",
+    "contract_sha256": "ab1acf105da04e08dd8d1c35ae63f3dd0f70c940aba44135db1d477c86b7707a",
+    "output_layout": "{output_root}/{model_key}/{trial_id}",
+    "output_root": "outputs/open_agronomy_canadian_performance_v1_runtime_v2_rc3",
+    "rows": 241,
+    "runtime_profile": {
+      "knowledge_release_id": "curated-canada-2026-08-14",
+      "knowledge_release_manifest_path": "data/derived/rag/curated_canada/releases/2026-08-14/store_manifest.json",
+        "knowledge_release_manifest_sha256": "9000eebb6c33d1997f4bdc463f51842e460ad4f9432ed8a9576f06626d56c583",
+        "knowledge_release_rows": 969,
+      "master_profile_id": "canada-offline-master",
+      "policy_path": "data/manifests/runtime_corpus_policy_v2.json",
+        "policy_sha256": "9f7c38640ef9f9a31106c0f50dd6de35abe7fee9e96191f8ab7c128b919a8f82",
+      "rag_config_path": "configs/rag_governed_runtime_v2.yaml",
+      "rag_config_sha256": "2a7f9cca000629dd7e6a74b2828cbf6324159b0b212a538df4c22e1d20992653",
+      "registry_path": "configs/runtime_profiles.json",
+        "registry_sha256": "aeb1583448294a998fe8e9873d0ffd17ad17d86824194fb398e1909f49cdc39a",
+      "status": "active_release_candidate"
+    },
+    "service_orchestration_exercised": false,
+    "suite_exposure_status": "exposed_and_used_for_system_tuning",
+    "suite_path": "data/eval/open_agronomy_canadian_performance_v1.jsonl",
+    "suite_sha256": "5c3ce59195ac603d2dd8ec5f36f3672b3ee0c20227cdb4fd301dfe3848a83c63",
+    "v3_harness_component_matrix_exercised": false
+  },
+  "judge": {
+    "backend": "codex_app_server",
+    "calibration_schema_path": "configs/schemas/benchmark_judge_calibration_v1.schema.json",
+    "default_enabled": false,
+    "model": "gpt-5.6-luna",
+    "reasoning_effort": "high",
+    "required_controls": [
+      "answers_stored_before_scoring",
+      "frozen_nonplaceholder_calibration_receipt",
+      "exact_prompts_and_context_packets_retained",
+      "lane_level_reporting",
+      "no_single_composite_score",
+      "blinded_human_review_packet",
+      "human_adjudication_authoritative"
+    ],
+    "role_boundary": "Advisory triage only after human calibration; never promotion authority or sole evidence.",
+    "roles": [
+      "semantic_answer_quality"
+    ],
+    "self_judgment_policy": "never_score_candidate_with_same_exact_model",
+    "status": "blocked_until_real_calibrated_receipt"
+  },
+  "models": [
+    {
+      "backend": "mlx_local",
+      "config_path": "configs/benchmark_models/gemma3_270m.yaml",
+      "config_sha256": "9e330974dad5a651fc6eccdac46320f8d2ca81425ca6f98a2f17b28bc5b111d0",
+      "model_id": "mlx-community/gemma-3-270m-it-4bit",
+      "model_key": "gemma3_270m_rc3",
+      "revision": "ff1143e3a10547c9f2129e94ca37059b096b23f4"
+    },
+    {
+      "backend": "mlx_local",
+      "config_path": "configs/benchmark_models/gemma4_e2b.yaml",
+      "config_sha256": "c6e1e37e86542d0af8e77831a6c97db6413f13eeff82b3170bd207954b2d45de",
+      "model_id": "mlx-community/gemma-4-e2b-it-4bit",
+      "model_key": "gemma4_e2b_rc3",
+      "revision": "238767527555cb75a05732a84dff5d6ba0dd6809"
+    },
+    {
+      "backend": "codex_app_server",
+      "config_path": "configs/benchmark_models/openai_luna_high_app_server.yaml",
+      "config_sha256": "abeae5a6cdb37a11980c9ccb02e62c3257a6739b666a8cc6b8b8e195ec54a0b3",
+      "model_id": "gpt-5.6-luna",
+      "model_key": "luna_high_rc3",
+      "reasoning_effort": "high",
+      "revision": null
+    }
+  ],
+  "promotion_policy": {
+    "automated_judge_can_promote": false,
+    "external_diagnostic_can_drive_same_version_repairs": false,
+    "independent_agronomist_review_available": false,
+    "permitted_claim": "non-claim exposed development regression comparison under the cumulative runtime-v2 knowledge profile",
+    "single_composite_score_allowed": false
+  },
+  "readiness": {
+    "minimum_free_disk_bytes": 2147483648,
+    "require_benchmark_construct_audit": true,
+    "require_clean_git": true,
+    "require_environment_receipt_for_same_clean_commit": true,
+    "require_exact_public_package_receipt": true,
+    "require_fresh_per_model_trial_output": true,
+    "require_internal_external_separation": true,
+    "require_local_model_snapshots": true,
+    "require_nrcs_explicit_analogue_probe": true,
+    "require_runtime_corpus_audit": true,
+    "require_saskatchewan_fail_closed_probe": true,
+    "require_source_retention_receipt": true
+  },
+  "release_branch": "codex/test-suite-qaqc",
+  "release_receipts": {
+    "environment_schema": "open_agronomy_agent.release_environment_receipt.v1",
+    "public_package_schema": "open_agronomy_agent.public_repository_receipt.v1",
+    "public_repository_manifest": "configs/public_repository_manifest.json",
+    "source_retention_receipt": "data/manifests/source_retention_receipt.json"
+  },
+  "replication": {
+    "cache_policy": "no_prompt_cache",
+    "process_isolation_policy": "fresh_process_per_run",
+    "required_identity_fields": [
+      "trial_id",
+      "run_execution_id",
+      "process_execution_id",
+      "cache_epoch_id",
+      "sample_index",
+      "observation_id",
+      "matched_trial_key",
+      "generation_seed",
+      "verification_seed",
+      "case_order_seed",
+      "ordered_eval_id_sha256",
+      "judge_seed",
+      "process_isolation_policy",
+      "cache_policy"
+    ],
+    "sampling": {
+      "temperature": 0.0,
+      "top_k": 0,
+      "top_p": 0.9
+    },
+    "trial_interpretation": "repeated_trials_with_declared_seeds; temperature_zero is not described as independent stochastic sampling unless observed backend behavior supports that claim",
+    "trials": [
+      {
+        "case_order_seed": 15485863,
+        "generation_seed": 104729,
+        "judge_seed": 32452843,
+        "trial_id": "trial-001",
+        "verification_seed": 130363
+      },
+      {
+        "case_order_seed": 15485867,
+        "generation_seed": 104759,
+        "judge_seed": 32452867,
+        "trial_id": "trial-002",
+        "verification_seed": 130367
+      },
+      {
+        "case_order_seed": 15485869,
+        "generation_seed": 104761,
+        "judge_seed": 32452889,
+        "trial_id": "trial-003",
+        "verification_seed": 130369
+      }
+    ]
+  },
+  "round_class": "development_rerun_nonclaim",
+  "round_id": "open_agronomy_development_rc3_20260814",
+  "schema_version": "open_agronomy_agent.final_benchmark_round.v3",
+  "status": "candidate_generation_requires_clean_preflight",
+  "v3_boundary": {
+    "harness_component_effect_claim_eligible": false,
+    "next_gate": "A newly authored independent sealed holdout, observed product-path parity, frozen v3 component topology, and calibrated judging remain separate requirements after this runtime-v2 development rerun.",
+    "sealed_holdout_exercised": false,
+    "v3_performance_claim_eligible": false
+  }
+}

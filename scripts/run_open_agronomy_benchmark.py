@@ -30,6 +30,10 @@ from agronomy_agent.benchmark_report import write_report  # noqa: E402
 from agronomy_agent.evals import build_implementation_identity  # noqa: E402
 from scripts.build_full_system_benchmark_database import build_database  # noqa: E402
 from scripts.build_benchmark_cost_ledger import build_ledger  # noqa: E402
+from scripts.build_benchmark_retention_bundle import (  # noqa: E402
+    OUTER_COMPLETION_RECEIPT,
+    build_retention_bundle,
+)
 
 
 CONTRACTS = {
@@ -46,10 +50,35 @@ PYTHON = _LOCAL_PYTHON if _LOCAL_PYTHON.is_file() else Path(sys.executable)
 BENCHMARK_EXECUTABLE_SCRIPTS = (
     "scripts/run_open_agronomy_benchmark.py",
     "scripts/run_codex_semantic_answer_judge.py",
+    "scripts/run_local_mlx_semantic_answer_judge.py",
     "scripts/build_full_system_benchmark_database.py",
     "scripts/build_benchmark_cost_ledger.py",
 )
 ARM_CONTRACT_VERSION = "open_agronomy_agent.benchmark_arms.v2"
+TRIAL_INVOCATION_IDENTITY_KEYS = (
+    "benchmark_id",
+    "evaluation_partition",
+    "benchmark_manifest_sha256",
+    "benchmark_suite_sha256",
+    "system_interface_contract_sha256",
+    "benchmark_source_snapshot_sha256",
+    "model_id",
+    "model_revision",
+    "model_config_sha256",
+    "modes",
+    "arm_contract",
+    "expected_rows_per_arm",
+    "replication_contract",
+    "effective_generation_config",
+    "candidate_model_backend",
+    "candidate_reasoning_effort",
+    "automated_judge_requested",
+    "judge_backend",
+    "judge_model_id",
+    "judge_reasoning_effort",
+    "judge_roles",
+    "generation_harness_scope",
+)
 
 
 def _safe_key(value: str) -> str:
@@ -57,6 +86,49 @@ def _safe_key(value: str) -> str:
     if not key:
         raise ValueError("model key is empty after normalization")
     return key
+
+
+def _nested_value(payload: dict[str, Any], dotted_key: str) -> Any:
+    current: Any = payload
+    for part in dotted_key.split("."):
+        if not isinstance(current, dict):
+            return None
+        current = current.get(part)
+    return current
+
+
+def _replication_expectations(
+    args: argparse.Namespace,
+    config: dict[str, Any],
+) -> dict[str, Any]:
+    configured_seed = config.get("seed")
+    generation_seed = (
+        args.generation_seed if args.generation_seed is not None else configured_seed
+    )
+    verification_config = config.get("answer_verification") or {}
+    verification_seed = (
+        args.verification_seed
+        if args.verification_seed is not None
+        else verification_config.get("seed", generation_seed)
+    )
+    return {
+        "replication_contract.trial_id": args.trial_id,
+        "replication_contract.generation_seed": generation_seed,
+        "replication_contract.verification_seed": verification_seed,
+        "replication_contract.judge_seed": args.judge_seed,
+        "replication_contract.case_order.case_order_seed": args.case_order_seed,
+        "replication_contract.process_isolation_policy": args.process_isolation_policy,
+        "replication_contract.cache_contract.policy": args.cache_policy,
+        "generation_config.temperature": (
+            args.temperature if args.temperature is not None else float(config.get("temperature", 0.0))
+        ),
+        "generation_config.top_p": (
+            args.top_p if args.top_p is not None else float(config.get("top_p", 0.9))
+        ),
+        "generation_config.top_k": (
+            args.top_k if args.top_k is not None else int(config.get("top_k", 0))
+        ),
+    }
 
 
 def _benchmark_source_snapshot() -> dict[str, Any]:
@@ -130,20 +202,77 @@ def _load_egress_authorization(
         )
     resolved = path.resolve()
     payload = read_json(resolved)
-    if payload.get("schema_version") != "open_agronomy_agent.benchmark_egress_authorization.v1":
+    if payload.get("schema_version") != "open_agronomy_agent.benchmark_egress_authorization.v2":
         raise ValueError(f"invalid benchmark egress authorization schema: {resolved}")
+    if payload.get("authorization_decision") != "authorized":
+        raise ValueError(f"benchmark egress authorization is not authorized: {resolved}")
     if payload.get("benchmark_id") != benchmark_id:
         raise ValueError(f"egress authorization benchmark mismatch: {resolved}")
     if payload.get("benchmark_suite_sha256") != benchmark_suite_sha256:
         raise ValueError(f"egress authorization suite hash mismatch: {resolved}")
-    if not payload.get("authorized_at") or not payload.get("authorization_source"):
-        raise ValueError(f"egress authorization is missing provenance: {resolved}")
+    authorization_source = str(payload.get("authorization_source") or "").strip()
+    authorized_by_key_id = str(payload.get("authorized_by_key_id") or "").strip()
+    placeholder_markers = ("replace-with", "placeholder", "template", "example")
+    if (
+        not authorization_source
+        or not authorized_by_key_id
+        or any(marker in authorization_source.lower() for marker in placeholder_markers)
+        or any(marker in authorized_by_key_id.lower() for marker in placeholder_markers)
+    ):
+        raise ValueError(f"egress authorization is missing non-placeholder provenance: {resolved}")
+
+    def parse_utc(field: str) -> dt.datetime:
+        raw = str(payload.get(field) or "").strip()
+        try:
+            parsed = dt.datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise ValueError(f"egress authorization has invalid {field}: {resolved}") from exc
+        if parsed.tzinfo is None or parsed.utcoffset() != dt.timedelta(0):
+            raise ValueError(f"egress authorization {field} must be UTC: {resolved}")
+        return parsed.astimezone(dt.UTC)
+
+    authorized_at = parse_utc("authorized_at")
+    expires_at = parse_utc("expires_at")
+    checked_at = dt.datetime.now(dt.UTC)
+    if authorized_at > checked_at:
+        raise ValueError(f"egress authorization is not yet valid: {resolved}")
+    if expires_at <= checked_at or expires_at <= authorized_at:
+        raise ValueError(f"egress authorization is expired or has an invalid interval: {resolved}")
+    raw_authorized_payload_classes = payload.get("authorized_payload_classes")
+    raw_excluded_payload_classes = payload.get("excluded_payload_classes")
+    if (
+        not isinstance(raw_authorized_payload_classes, list)
+        or not raw_authorized_payload_classes
+        or any(
+            not isinstance(value, str) or not value.strip()
+            for value in raw_authorized_payload_classes
+        )
+    ):
+        raise ValueError(f"egress authorization has no authorized payload classes: {resolved}")
+    if raw_excluded_payload_classes is not None and (
+        not isinstance(raw_excluded_payload_classes, list)
+        or any(
+            not isinstance(value, str) or not value.strip()
+            for value in raw_excluded_payload_classes
+        )
+    ):
+        raise ValueError(f"egress authorization has invalid excluded payload classes: {resolved}")
+    authorized_payload_classes = [value.strip() for value in raw_authorized_payload_classes]
+    excluded_payload_classes = [value.strip() for value in (raw_excluded_payload_classes or [])]
+    if len(set(authorized_payload_classes)) != len(authorized_payload_classes):
+        raise ValueError(f"egress authorization has duplicate authorized payload classes: {resolved}")
+    if len(set(excluded_payload_classes)) != len(excluded_payload_classes):
+        raise ValueError(f"egress authorization has duplicate excluded payload classes: {resolved}")
     return {
         "path": str(resolved),
         "sha256": sha256(resolved),
-        "authorized_at": payload["authorized_at"],
-        "authorization_source": payload["authorization_source"],
-        "authorized_payload_classes": list(payload.get("authorized_payload_classes") or []),
+        "authorization_decision": "authorized",
+        "authorized_at": authorized_at.isoformat().replace("+00:00", "Z"),
+        "expires_at": expires_at.isoformat().replace("+00:00", "Z"),
+        "authorization_source": authorization_source,
+        "authorized_by_key_id": authorized_by_key_id,
+        "authorized_payload_classes": authorized_payload_classes,
+        "excluded_payload_classes": excluded_payload_classes,
     }
 
 
@@ -157,14 +286,38 @@ def _run(command: list[str], *, log_path: Path, environment: dict[str, str]) -> 
         raise RuntimeError(f"benchmark command failed ({result.returncode}); see {log_path}")
 
 
-def _write_invocation(experiment: Path, model_key: str, invocation: dict[str, Any]) -> None:
+def _write_invocation(
+    experiment: Path,
+    model_key: str,
+    invocation: dict[str, Any],
+    *,
+    allow_completed_reuse: bool = False,
+) -> None:
     """Keep the latest convenience file without erasing prior model receipts."""
 
     payload = json.dumps(invocation, indent=2) + "\n"
-    (experiment / "benchmark_invocation.json").write_text(payload, encoding="utf-8")
     invocation_dir = experiment / "invocations"
     invocation_dir.mkdir(parents=True, exist_ok=True)
-    (invocation_dir / f"{model_key}.json").write_text(payload, encoding="utf-8")
+    replication = invocation.get("replication_contract") or {}
+    trial_key = _safe_key(str(replication.get("trial_id") or "legacy-trial-000"))
+    durable_path = invocation_dir / f"{model_key}__{trial_key}.json"
+    preserve_completed_durable_receipt = False
+    if durable_path.is_file():
+        existing = read_json(durable_path)
+        for identity_key in TRIAL_INVOCATION_IDENTITY_KEYS:
+            if existing.get(identity_key) != invocation.get(identity_key):
+                raise ValueError(
+                    f"trial invocation identity changed for {durable_path}: {identity_key}"
+                )
+        if existing.get("status") == "execution_complete" and invocation.get("status") != "execution_complete":
+            if not allow_completed_reuse:
+                raise ValueError(
+                    f"trial invocation is already complete: {durable_path}; use --reuse-complete-runs"
+                )
+            preserve_completed_durable_receipt = True
+    if not preserve_completed_durable_receipt:
+        durable_path.write_text(payload, encoding="utf-8")
+    (experiment / "benchmark_invocation.json").write_text(payload, encoding="utf-8")
 
 
 def _latest_run(root: Path, mode: str, expected_rows: int) -> Path:
@@ -189,33 +342,47 @@ def _reusable_run(
     suite_sha256: str,
     model_id: str,
     model_config_sha256: str,
+    identity_expectations: dict[str, Any] | None = None,
 ) -> Path:
-    run_dir = _latest_run(root, mode, expected_rows)
-    manifest_path = run_dir / "run_manifest.json"
-    if not manifest_path.is_file():
-        raise RuntimeError(f"complete run is missing identity manifest: {run_dir}")
-    manifest = read_json(manifest_path)
     expected = {
         "suite_sha256": suite_sha256,
         "model_id": model_id,
         "model_config_sha256": model_config_sha256,
         "implementation": build_implementation_identity(),
     }
-    mismatches = {
-        key: {"expected": value, "observed": manifest.get(key)}
-        for key, value in expected.items()
-        if manifest.get(key) != value
-    }
-    outputs_path = run_dir / "outputs.jsonl"
-    observed_outputs_sha256 = sha256(outputs_path)
-    if manifest.get("outputs_sha256") != observed_outputs_sha256:
-        mismatches["outputs_sha256"] = {
-            "expected": manifest.get("outputs_sha256"),
-            "observed": observed_outputs_sha256,
+    candidates: list[Path] = []
+    for run_dir in reversed(sorted(root.glob(f"{mode}_*"))):
+        summary_path = run_dir / "summary.json"
+        outputs_path = run_dir / "outputs.jsonl"
+        manifest_path = run_dir / "run_manifest.json"
+        if not summary_path.is_file() or not outputs_path.is_file() or not manifest_path.is_file():
+            continue
+        if int(read_json(summary_path).get("samples") or -1) != expected_rows:
+            continue
+        candidates.append(run_dir)
+        manifest = read_json(manifest_path)
+        mismatches = {
+            key: {"expected": value, "observed": manifest.get(key)}
+            for key, value in expected.items()
+            if manifest.get(key) != value
         }
-    if mismatches:
-        raise RuntimeError(f"complete run is not reusable: {run_dir}; mismatches={mismatches}")
-    return run_dir
+        for key, value in (identity_expectations or {}).items():
+            observed = _nested_value(manifest, key)
+            if observed != value:
+                mismatches[key] = {"expected": value, "observed": observed}
+        observed_outputs_sha256 = sha256(outputs_path)
+        if manifest.get("outputs_sha256") != observed_outputs_sha256:
+            mismatches["outputs_sha256"] = {
+                "expected": manifest.get("outputs_sha256"),
+                "observed": observed_outputs_sha256,
+            }
+        if not mismatches:
+            return run_dir
+    if not candidates:
+        raise RuntimeError(f"no complete {mode} run with {expected_rows} rows under {root}")
+    raise RuntimeError(
+        f"no complete {mode} run matches the requested trial/sampling identity under {root}"
+    )
 
 
 def _resumable_run(
@@ -226,6 +393,7 @@ def _resumable_run(
     suite_sha256: str,
     model_id: str,
     model_config_sha256: str,
+    identity_expectations: dict[str, Any] | None = None,
 ) -> Path | None:
     """Find a partial run whose substantive identity still matches exactly."""
 
@@ -242,6 +410,11 @@ def _resumable_run(
             continue
         identity = read_json(identity_path)
         if any(identity.get(key) != value for key, value in expected.items()):
+            continue
+        if any(
+            _nested_value(identity, key) != value
+            for key, value in (identity_expectations or {}).items()
+        ):
             continue
         rows = 0
         with partial.open("r", encoding="utf-8") as handle:
@@ -277,6 +450,9 @@ def _eval_command(
         "--capture-context-packets",
         "--rubric", str(contract.get("rubric") or "agribench_proxy"),
         "--answer-profile", str(contract["answer_profile"]),
+        "--trial-id", args.trial_id,
+        "--process-isolation-policy", args.process_isolation_policy,
+        "--cache-policy", args.cache_policy,
     ]
     if resume_run_dir is not None:
         command.extend(["--resume-run-dir", str(resume_run_dir)])
@@ -290,6 +466,17 @@ def _eval_command(
         command.extend(["--rag-config", str(contract["rag_config"])])
     if args.max_samples is not None:
         command.extend(["--max-samples", str(args.max_samples)])
+    for option, value in (
+        ("--generation-seed", args.generation_seed),
+        ("--verification-seed", args.verification_seed),
+        ("--case-order-seed", args.case_order_seed),
+        ("--judge-seed", args.judge_seed),
+        ("--temperature", args.temperature),
+        ("--top-p", args.top_p),
+        ("--top-k", args.top_k),
+    ):
+        if value is not None:
+            command.extend([option, str(value)])
     if args.model_base_url:
         command.extend(["--model-base-url", args.model_base_url, "--request-model-id", args.request_model_id])
     if args.codex_app_server:
@@ -309,6 +496,29 @@ def main() -> int:
     parser.add_argument("--modes", help="Comma-separated arm override; defaults to the frozen contract.")
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--max-samples", type=int)
+    parser.add_argument(
+        "--trial-id",
+        default="trial-000",
+        help="Stable trial identity shared by every requested benchmark arm.",
+    )
+    parser.add_argument("--generation-seed", type=int)
+    parser.add_argument("--verification-seed", type=int)
+    parser.add_argument("--case-order-seed", type=int)
+    parser.add_argument("--judge-seed", type=int)
+    parser.add_argument("--temperature", type=float)
+    parser.add_argument("--top-p", type=float)
+    parser.add_argument("--top-k", type=int)
+    parser.add_argument(
+        "--process-isolation-policy",
+        choices=["shared_process", "fresh_process_per_run"],
+        default="fresh_process_per_run",
+        help="Each arm is normally launched in its own fresh evaluator process.",
+    )
+    parser.add_argument(
+        "--cache-policy",
+        choices=["as_configured", "no_prompt_cache"],
+        default="as_configured",
+    )
     parser.add_argument("--mock", action="store_true")
     parser.add_argument("--model-base-url")
     parser.add_argument(
@@ -371,10 +581,27 @@ def main() -> int:
         action="store_true",
         help="Blind paired primary-lane answers for independent agronomist review.",
     )
+    parser.add_argument(
+        "--retention-root",
+        type=Path,
+        default=ROOT / "outputs" / "benchmark_retention",
+        help=(
+            "Private content-addressed retention root. A successful run is not marked complete "
+            "until the canonical database and public-safe derivative verify here."
+        ),
+    )
     args = parser.parse_args()
 
     if args.codex_app_server and args.model_base_url:
         raise ValueError("--codex-app-server and --model-base-url are mutually exclusive")
+    if not args.trial_id.strip() or len(args.trial_id.strip()) > 128:
+        raise ValueError("--trial-id must contain between 1 and 128 characters")
+    if args.temperature is not None and args.temperature < 0:
+        raise ValueError("--temperature must be non-negative")
+    if args.top_p is not None and not 0 <= args.top_p <= 1:
+        raise ValueError("--top-p must be between 0 and 1")
+    if args.top_k is not None and args.top_k < 0:
+        raise ValueError("--top-k must be non-negative")
     if args.judge_batch_size < 1:
         raise ValueError("--judge-batch-size must be at least 1")
     allowed_judge_roles = {
@@ -400,7 +627,8 @@ def main() -> int:
         )
     frozen = validate_benchmark(ROOT, contract_path)
     uses_external_app_server = bool(
-        args.codex_app_server or (args.judge and args.judge_backend == "codex_app_server")
+        (not args.mock and args.codex_app_server)
+        or (args.judge and args.judge_backend == "codex_app_server")
     )
     egress_authorization = None
     if frozen.get("evaluation_partition") == "internal" and uses_external_app_server:
@@ -419,8 +647,60 @@ def main() -> int:
             raise ValueError("the public multiple-choice verifier uses objective exact match; --judge is not allowed")
     model_config = args.model_config.resolve()
     config = load_yaml(model_config)
+    identity_expectations = _replication_expectations(args, config)
+    identity_expectations["generation_config.max_tokens"] = int(contract["max_tokens"])
+    identity_expectations["answer_profile"] = str(contract["answer_profile"])
+    identity_expectations["rubric"] = str(contract.get("rubric") or "agribench_proxy")
     model_id = str(args.model or config.get("model_id") or "mock")
     model_key = _safe_key(args.model_key or model_id)
+    candidate_model_backend = (
+        "mock"
+        if args.mock
+        else "codex_app_server_chatgpt_auth"
+        if args.codex_app_server
+        else "openai_compatible_http"
+        if args.model_base_url
+        else "mlx_local"
+    )
+    candidate_sampling_contract = {
+        "mlx_local": {
+            "sampling_parameters": "applied_by_native_mlx_sampler",
+            "generation_seed": "applied_before_each_serialized_generation",
+        },
+        "openai_compatible_http": {
+            "sampling_parameters": "sent_in_openai_compatible_request",
+            "generation_seed": "not_sent_backend_contract_has_no_seed_field",
+        },
+        "codex_app_server_chatgpt_auth": {
+            "sampling_parameters": "not_configurable_by_backend",
+            "generation_seed": "not_configurable_by_backend",
+        },
+        "mock": {
+            "sampling_parameters": "not_applicable_mock",
+            "generation_seed": "not_applicable_mock",
+        },
+    }[candidate_model_backend]
+    effective_judge_model = (
+        args.judge_model
+        or (
+            "mlx-community/Qwen3.5-4B-MLX-4bit"
+            if args.judge_backend == "mlx_local"
+            else "gpt-5.6-luna"
+        )
+        if args.judge
+        else None
+    )
+    expected_run_model_id = "mock" if args.mock else model_id
+    identity_expectations["model_backend"] = candidate_model_backend
+    identity_expectations["request_model_id"] = (
+        None
+        if args.mock
+        else model_id
+        if args.codex_app_server
+        else args.request_model_id
+        if args.model_base_url
+        else None
+    )
     configured_modes = args.modes or ",".join(str(mode) for mode in contract.get("default_modes") or [])
     modes = [part.strip() for part in configured_modes.split(",") if part.strip()]
     if not modes or not set(modes).issubset({"raw_model", "baseline", "kernel_field_context", "agronomic_rag"}):
@@ -466,21 +746,50 @@ def main() -> int:
             else None
         ),
         "benchmark_source_snapshot": source_snapshot,
+        "benchmark_source_snapshot_sha256": source_snapshot["aggregate_sha256"],
         "model_key": model_key,
         "model_id": model_id,
         "model_revision": config.get("model_revision"),
         "model_config": str(model_config),
+        "model_config_sha256": sha256(model_config),
         "modes": modes,
         "arm_contract": arm_contract,
         "expected_rows_per_arm": expected_rows,
+        "replication_contract": {
+            "schema_version": "open_agronomy_agent.benchmark_replication_request.v1",
+            "trial_id": args.trial_id,
+            "generation_seed": identity_expectations["replication_contract.generation_seed"],
+            "verification_seed": identity_expectations["replication_contract.verification_seed"],
+            "case_order_seed": args.case_order_seed,
+            "judge_seed": args.judge_seed,
+            "process_isolation_policy": args.process_isolation_policy,
+            "cache_policy": args.cache_policy,
+            "sampling_overrides": {
+                "temperature": args.temperature,
+                "top_p": args.top_p,
+                "top_k": args.top_k,
+            },
+            "candidate_sampling_backend_contract": candidate_sampling_contract,
+            "judge_seed_application": (
+                "applied_by_local_mlx_judge"
+                if args.judge and args.judge_backend == "mlx_local" and args.judge_seed is not None
+                else "unsupported_by_codex_app_server"
+                if args.judge and args.judge_backend == "codex_app_server" and args.judge_seed is not None
+                else "not_requested"
+            ),
+        },
+        "effective_generation_config": {
+            "max_tokens": int(contract["max_tokens"]),
+            "temperature": identity_expectations["generation_config.temperature"],
+            "top_p": identity_expectations["generation_config.top_p"],
+            "top_k": identity_expectations["generation_config.top_k"],
+        },
         "automated_judge_requested": bool(args.judge),
-        "candidate_model_backend": (
-            "codex_app_server_chatgpt_auth"
-            if args.codex_app_server
-            else "openai_compatible_http" if args.model_base_url else "mlx_local"
-        ),
+        "candidate_model_backend": candidate_model_backend,
         "candidate_reasoning_effort": args.reasoning_effort if args.codex_app_server else None,
         "judge_backend": args.judge_backend if args.judge else None,
+        "judge_model_id": effective_judge_model,
+        "judge_reasoning_effort": args.judge_reasoning_effort if args.judge else None,
         "judge_roles": (
             [value.strip() for value in args.judge_roles.split(",") if value.strip()]
             if args.judge
@@ -512,7 +821,12 @@ def main() -> int:
     if lock_path.is_file() and read_json(lock_path) != lock:
         raise ValueError(f"output directory is locked to a different benchmark: {lock_path}")
     lock_path.write_text(json.dumps(lock, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    _write_invocation(experiment, model_key, invocation)
+    _write_invocation(
+        experiment,
+        model_key,
+        invocation,
+        allow_completed_reuse=bool(args.reuse_complete_runs),
+    )
     if args.preflight_only:
         print(json.dumps(invocation, indent=2))
         return 0
@@ -522,6 +836,7 @@ def main() -> int:
     completed: list[dict[str, Any]] = []
     for mode in modes:
         arm_root = experiment / "runs" / model_key / mode
+        arm_identity_expectations = {**identity_expectations, "mode": mode}
         run_dir = None
         if args.reuse_complete_runs:
             try:
@@ -530,8 +845,9 @@ def main() -> int:
                     mode=mode,
                     expected_rows=expected_rows,
                     suite_sha256=str(frozen["suite_sha256"]),
-                    model_id=model_id,
+                    model_id=expected_run_model_id,
                     model_config_sha256=sha256(model_config),
+                    identity_expectations=arm_identity_expectations,
                 )
             except RuntimeError as exc:
                 if not str(exc).startswith("no complete "):
@@ -545,20 +861,29 @@ def main() -> int:
                     mode=mode,
                     expected_rows=expected_rows,
                     suite_sha256=str(frozen["suite_sha256"]),
-                    model_id=model_id,
+                    model_id=expected_run_model_id,
                     model_config_sha256=sha256(model_config),
+                    identity_expectations=arm_identity_expectations,
                 )
             command = _eval_command(
                 args=args,
                 contract=contract,
                 model_config=model_config,
-                model_id=model_id,
+                model_id=expected_run_model_id,
                 mode=mode,
                 output_dir=arm_root,
                 resume_run_dir=resume_run_dir,
             )
             _run(command, log_path=arm_root / "runner.log", environment=environment)
-            run_dir = _latest_run(arm_root, mode, expected_rows)
+            run_dir = _reusable_run(
+                arm_root,
+                mode=mode,
+                expected_rows=expected_rows,
+                suite_sha256=str(frozen["suite_sha256"]),
+                model_id=expected_run_model_id,
+                model_config_sha256=sha256(model_config),
+                identity_expectations=arm_identity_expectations,
+            )
         if args.judge:
             roles = [value.strip() for value in args.judge_roles.split(",") if value.strip()]
             if not roles:
@@ -568,7 +893,7 @@ def main() -> int:
             for role in roles:
                 judgment = run_dir / f"semantic_judge_{role}"
                 if args.judge_backend == "codex_app_server":
-                    judge_model = args.judge_model or "gpt-5.6-luna"
+                    judge_model = str(effective_judge_model)
                     judge_command = [
                         str(PYTHON), "scripts/run_codex_semantic_answer_judge.py",
                         "--outputs", str(run_dir / "outputs.jsonl"),
@@ -580,7 +905,7 @@ def main() -> int:
                         "--batch-size", str(args.judge_batch_size),
                     ]
                 else:
-                    judge_model = args.judge_model or "mlx-community/Qwen3.5-4B-MLX-4bit"
+                    judge_model = str(effective_judge_model)
                     judge_command = [
                         str(PYTHON), "scripts/run_local_mlx_semantic_answer_judge.py",
                         "--outputs", str(run_dir / "outputs.jsonl"),
@@ -589,6 +914,8 @@ def main() -> int:
                         "--batch-size", "1",
                         "--max-tokens", "900",
                     ]
+                    if args.judge_seed is not None:
+                        judge_command.extend(["--seed", str(args.judge_seed)])
                 _run(judge_command, log_path=judgment / "runner.log", environment=environment)
         completed.append({"mode": mode, "run_dir": str(run_dir)})
         build_database(experiment, experiment / "full_system_benchmark.sqlite3")
@@ -613,18 +940,54 @@ def main() -> int:
         ], log_path=review_dir / "builder.log", environment=environment)
         review_packet = str(review_dir / "manifest.json")
     report = write_report(experiment / "full_system_benchmark.sqlite3", frozen, experiment)
+    source_snapshot = _benchmark_source_snapshot()
     invocation.update(
         {
-            "status": "complete",
+            "status": "execution_complete",
             "completed": completed,
             "database": database,
             "cost_ledger": cost_ledger,
             "report": report,
             "review_packet": review_packet,
+            "retention_status": "pending",
+            "implementation_source_snapshot": source_snapshot,
         }
     )
-    _write_invocation(experiment, model_key, invocation)
-    print(json.dumps(invocation, indent=2))
+    # Freeze the terminal execution receipt before retention.  The immutable
+    # bundle therefore captures the actual completed experiment rather than an
+    # earlier in-progress invocation.
+    _write_invocation(
+        experiment,
+        model_key,
+        invocation,
+        allow_completed_reuse=bool(args.reuse_complete_runs),
+    )
+    terminal_invocation_sha256 = sha256(experiment / "benchmark_invocation.json")
+    retention = build_retention_bundle(
+        database=experiment / "full_system_benchmark.sqlite3",
+        bundle_root=args.retention_root,
+        experiment_dir=experiment,
+        implementation_commit=str(source_snapshot.get("git_commit") or "not_captured"),
+    )
+    if retention.get("status") != "verified":
+        raise RuntimeError("benchmark retention verification did not complete")
+    completion = {
+        "schema_version": "open_agronomy_agent.benchmark_retention_completion.v1",
+        "status": "complete",
+        "benchmark_id": frozen["benchmark_id"],
+        "model_key": model_key,
+        "terminal_invocation_sha256": terminal_invocation_sha256,
+        "retention": retention,
+        "boundary": (
+            "This outer receipt binds the terminal execution receipt to its immutable retention bundle. "
+            "It is excluded from that bundle's self-identity by construction."
+        ),
+    }
+    (experiment / OUTER_COMPLETION_RECEIPT).write_text(
+        json.dumps(completion, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    print(json.dumps(completion, indent=2))
     return 0
 
 

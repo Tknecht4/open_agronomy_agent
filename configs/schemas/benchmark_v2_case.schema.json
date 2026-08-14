@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-agronomy.example/schemas/benchmark_v2_case.schema.json",
+  "title": "Open Agronomy Benchmark v2 matched case",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "eval_id",
+    "match_group",
+    "stratum",
+    "topic",
+    "task_type",
+    "risk_level",
+    "evidence_completeness",
+    "question",
+    "jurisdiction",
+    "crop",
+    "field_context",
+    "question_origin",
+    "review_status",
+    "claim_eligible",
+    "independent_review_received",
+    "real_user_provenance",
+    "expected_response",
+    "expected_tools",
+    "tool_execution_expected",
+    "expected_tool_operation",
+    "scoring",
+    "contamination_controls"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "open_agronomy_agent.benchmark_v2_case.v1"
+    },
+    "eval_id": {
+      "type": "string",
+      "pattern": "^oab2::[a-z0-9_]+::(benign_explanation|fully_specified_calculation|fully_specified_action_plan|one_critical_input_missing|high_consequence_authority)$"
+    },
+    "match_group": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$"
+    },
+    "stratum": {
+      "enum": [
+        "benign_explanation",
+        "fully_specified_calculation",
+        "fully_specified_action_plan",
+        "one_critical_input_missing",
+        "high_consequence_authority"
+      ]
+    },
+    "topic": {
+      "type": "string",
+      "minLength": 3
+    },
+    "task_type": {
+      "enum": [
+        "explanation",
+        "calculation",
+        "action_plan",
+        "calculation_clarification",
+        "authority_boundary"
+      ]
+    },
+    "risk_level": {
+      "enum": ["low", "moderate", "high_consequence"]
+    },
+    "evidence_completeness": {
+      "enum": ["not_applicable", "complete", "one_critical_input_missing", "authority_not_supplied"]
+    },
+    "question": {
+      "type": "string",
+      "minLength": 20
+    },
+    "jurisdiction": {
+      "type": "string",
+      "minLength": 2
+    },
+    "crop": {
+      "type": "string",
+      "minLength": 2
+    },
+    "field_context": {
+      "type": "object",
+      "additionalProperties": {
+        "type": ["string", "number", "boolean", "null"]
+      }
+    },
+    "question_origin": {
+      "const": "project_authored_answer_blind_pending_independent_review"
+    },
+    "review_status": {
+      "const": "pending_independent_agronomist_review"
+    },
+    "claim_eligible": {
+      "const": false
+    },
+    "independent_review_received": {
+      "const": false
+    },
+    "real_user_provenance": {
+      "const": false
+    },
+    "expected_response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "acceptable_answerability_states",
+        "direct_answer_expected",
+        "abstention_expected",
+        "clarification_expected",
+        "clarification_fields",
+        "max_clarifying_questions",
+        "authority_required",
+        "verifier_should_intervene",
+        "bounded_useful_response_required",
+        "complete_refusal_allowed"
+      ],
+      "properties": {
+        "acceptable_answerability_states": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "answer_directly",
+              "answer_with_bounded_uncertainty",
+              "ask_one_discriminating_question",
+              "require_authority",
+              "refuse_unsafe_action"
+            ]
+          }
+        },
+        "direct_answer_expected": {"type": "boolean"},
+        "abstention_expected": {"type": "boolean"},
+        "clarification_expected": {"type": "boolean"},
+        "clarification_fields": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "max_clarifying_questions": {"type": "integer", "minimum": 0, "maximum": 2},
+        "authority_required": {"type": "boolean"},
+        "verifier_should_intervene": {"type": "boolean"},
+        "bounded_useful_response_required": {"type": "boolean"},
+        "complete_refusal_allowed": {"type": "boolean"}
+      }
+    },
+    "expected_tools": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "tool_execution_expected": {"type": "boolean"},
+    "expected_tool_operation": {
+      "type": ["string", "null"]
+    },
+    "scoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["metric_roles"],
+      "properties": {
+        "metric_roles": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "reference_numeric": {"type": "number"},
+        "reference_unit": {"type": "string"},
+        "absolute_tolerance": {"type": "number", "exclusiveMinimum": 0},
+        "calculation_contract": {"type": "string"}
+      }
+    },
+    "contamination_controls": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "exclude_from_training",
+        "exclude_from_rag",
+        "exclude_from_prompt_examples",
+        "exclude_from_deterministic_answer_repairs",
+        "record_post_freeze_exposure"
+      ],
+      "properties": {
+        "exclude_from_training": {"const": true},
+        "exclude_from_rag": {"const": true},
+        "exclude_from_prompt_examples": {"const": true},
+        "exclude_from_deterministic_answer_repairs": {"const": true},
+        "record_post_freeze_exposure": {"const": true}
+      }
+    }
+  }
+}

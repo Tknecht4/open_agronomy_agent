@@ -4,6 +4,7 @@ import hashlib
 from dataclasses import dataclass
 from typing import Any, Callable
 
+from agronomy_agent.capability_registry import capability_registry, load_executor
 from agronomy_agent.local_tools import (
     DEEP_PUBLIC_SOURCE_LANE_DEFINITIONS,
     aafc_annual_crop_inventory,
@@ -265,6 +266,17 @@ def load_agno_tool_adapters() -> dict[str, AgnoToolAdapter]:
             str(definition.get("boundary") or "deep_public_source_lane_card"),
             lambda source_lane_id=source_lane_id, **kwargs: public_source_lane_card(source_lane_id, **kwargs),
         )
+    for spec in capability_registry().for_surface("agno"):
+        for adapter_name in spec.surface_names("agno"):
+            if adapter_name in adapters:
+                continue
+            adapters[adapter_name] = AgnoToolAdapter(
+                adapter_name,
+                spec.version,
+                spec.planner.triggers,
+                spec.boundary,
+                load_executor(spec),
+            )
     return adapters
 
 

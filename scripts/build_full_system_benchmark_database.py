@@ -18,7 +18,7 @@ from typing import Any, Iterable
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_EXPERIMENT_DIR = ROOT / "outputs" / "full_system_model_matrix_20260801"
-SCHEMA_VERSION = "open_agronomy_agent.full_system_benchmark_db.v5"
+SCHEMA_VERSION = "open_agronomy_agent.full_system_benchmark_db.v6"
 
 
 def sha256(path: Path) -> str:
@@ -90,6 +90,11 @@ CREATE TABLE IF NOT EXISTS benchmark_run (
     model_key TEXT NOT NULL REFERENCES model(model_key),
     mode TEXT NOT NULL CHECK(mode IN ('raw_model', 'baseline', 'kernel_field_context', 'agronomic_rag')),
     system_variant TEXT NOT NULL CHECK(system_variant IN ('raw_model', 'kernel_only', 'kernel_field_context', 'full_system')),
+    trial_id TEXT NOT NULL DEFAULT 'legacy-trial-000',
+    generation_seed INTEGER,
+    case_order_seed INTEGER,
+    judge_seed INTEGER,
+    run_execution_id TEXT,
     outputs_path TEXT NOT NULL UNIQUE,
     outputs_sha256 TEXT NOT NULL,
     summary_path TEXT NOT NULL,
@@ -107,6 +112,8 @@ CREATE TABLE IF NOT EXISTS response (
     response_id TEXT PRIMARY KEY,
     run_id TEXT NOT NULL REFERENCES benchmark_run(run_id) ON DELETE CASCADE,
     eval_id TEXT NOT NULL REFERENCES benchmark_case(eval_id),
+    observation_id TEXT,
+    matched_trial_key TEXT,
     ordinal INTEGER NOT NULL,
     output TEXT NOT NULL,
     output_sha256 TEXT NOT NULL,
@@ -258,8 +265,12 @@ CREATE TABLE IF NOT EXISTS judge_assessment (
     PRIMARY KEY(judge_run_id, response_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_run_model_mode ON benchmark_run(model_key, mode);
+DROP INDEX IF EXISTS idx_run_model_mode;
+CREATE INDEX IF NOT EXISTS idx_run_model_mode ON benchmark_run(model_key, mode, trial_id);
 CREATE INDEX IF NOT EXISTS idx_response_eval ON response(eval_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_response_observation
+    ON response(observation_id) WHERE observation_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_response_matched_trial ON response(matched_trial_key);
 CREATE INDEX IF NOT EXISTS idx_doc_source ON retrieved_document(source_id, doc_id);
 CREATE INDEX IF NOT EXISTS idx_judgment_disposition ON semantic_judgment(answer_disposition);
 CREATE INDEX IF NOT EXISTS idx_judge_run_source ON judge_run(source_run_id, judge_role);
@@ -273,6 +284,8 @@ CREATE VIEW paired_response AS
 SELECT
     m.model_id,
     m.model_revision,
+    rb.trial_id,
+    rb.generation_seed,
     c.eval_id,
     c.task_family,
     c.question,
@@ -292,8 +305,11 @@ FROM model m
 JOIN benchmark_run rb ON rb.model_key = m.model_key AND rb.mode = 'raw_model' AND rb.is_canonical = 1
 JOIN response baseline ON baseline.run_id = rb.run_id
 JOIN benchmark_case c ON c.eval_id = baseline.eval_id
-JOIN benchmark_run rf ON rf.model_key = m.model_key AND rf.mode = 'agronomic_rag' AND rf.is_canonical = 1
+JOIN benchmark_run rf ON rf.model_key = m.model_key AND rf.mode = 'agronomic_rag'
+    AND rf.trial_id = rb.trial_id AND rf.generation_seed IS rb.generation_seed
+    AND rf.is_canonical = 1
 JOIN response fullresp ON fullresp.run_id = rf.run_id AND fullresp.eval_id = c.eval_id
+    AND (baseline.matched_trial_key IS NULL OR fullresp.matched_trial_key = baseline.matched_trial_key)
 LEFT JOIN semantic_judgment jb ON jb.response_id = baseline.response_id
 LEFT JOIN semantic_judgment jf ON jf.response_id = fullresp.response_id;
 
@@ -302,6 +318,8 @@ CREATE VIEW arm_response_matrix AS
 SELECT
     m.model_id,
     m.model_revision,
+    br.trial_id,
+    br.generation_seed,
     c.eval_id,
     c.task_family,
     c.question,
@@ -317,7 +335,7 @@ FROM model m
 JOIN benchmark_run br ON br.model_key = m.model_key AND br.is_canonical = 1
 JOIN response r ON r.run_id = br.run_id
 JOIN benchmark_case c ON c.eval_id = r.eval_id
-GROUP BY m.model_key, c.eval_id;
+GROUP BY m.model_key, br.trial_id, br.generation_seed, c.eval_id;
 
 DROP VIEW IF EXISTS model_arm_summary;
 CREATE VIEW model_arm_summary AS
@@ -326,6 +344,8 @@ SELECT
     m.model_revision,
     m.model_config_path,
     m.model_config_sha256,
+    r.trial_id,
+    r.generation_seed,
     r.system_variant,
     COUNT(resp.response_id) AS response_count,
     AVG(json_extract(resp.score_json, '$.score')) AS proxy_mean,
@@ -339,7 +359,7 @@ JOIN benchmark_run r ON r.model_key = m.model_key
 JOIN response resp ON resp.run_id = r.run_id
 LEFT JOIN semantic_judgment j ON j.response_id = resp.response_id
 WHERE r.is_canonical = 1
-GROUP BY m.model_key, r.system_variant;
+GROUP BY m.model_key, r.trial_id, r.generation_seed, r.system_variant;
 
 DROP VIEW IF EXISTS benchmark_lane_summary;
 CREATE VIEW benchmark_lane_summary AS
@@ -348,6 +368,8 @@ SELECT
     m.model_revision,
     m.model_config_path,
     m.model_config_sha256,
+    r.trial_id,
+    r.generation_seed,
     r.system_variant,
     COALESCE(json_extract(c.eval_metadata_json, '$.benchmark_lane'), 'legacy_unspecified') AS benchmark_lane,
     COALESCE(json_extract(c.eval_metadata_json, '$.metric_role'), 'legacy_unspecified') AS metric_role,
@@ -365,7 +387,7 @@ JOIN response resp ON resp.run_id = r.run_id
 JOIN benchmark_case c ON c.eval_id = resp.eval_id
 LEFT JOIN semantic_judgment j ON j.response_id = resp.response_id
 WHERE r.is_canonical = 1
-GROUP BY m.model_key, r.system_variant, benchmark_lane, metric_role;
+GROUP BY m.model_key, r.trial_id, r.generation_seed, r.system_variant, benchmark_lane, metric_role;
 """
 
 
@@ -381,6 +403,22 @@ def connect(database: Path) -> sqlite3.Connection:
         connection.execute(
             "ALTER TABLE benchmark_run ADD COLUMN is_canonical INTEGER NOT NULL DEFAULT 0"
         )
+        existing_run_columns.add("is_canonical")
+    for column, declaration in {
+        "trial_id": "TEXT NOT NULL DEFAULT 'legacy-trial-000'",
+        "generation_seed": "INTEGER",
+        "case_order_seed": "INTEGER",
+        "judge_seed": "INTEGER",
+        "run_execution_id": "TEXT",
+    }.items():
+        if existing_run_columns and column not in existing_run_columns:
+            connection.execute(f"ALTER TABLE benchmark_run ADD COLUMN {column} {declaration}")
+    existing_response_columns = {
+        str(row[1]) for row in connection.execute("PRAGMA table_info(response)")
+    }
+    for column in ("observation_id", "matched_trial_key"):
+        if existing_response_columns and column not in existing_response_columns:
+            connection.execute(f"ALTER TABLE response ADD COLUMN {column} TEXT")
     connection.executescript(DDL)
     judgment_columns = {
         str(row[1])
@@ -452,13 +490,17 @@ def ingest_run(connection: sqlite3.Connection, outputs_path: Path) -> tuple[str,
     )
     mode = str(rows[0].get("mode") or summary.get("mode") or "")
     run_id = str(summary.get("run_identity_sha256") or stable_id(display_path(outputs_path), sha256(outputs_path)))
+    replication = summary.get("replication_contract") or run_identity.get("replication_contract") or {}
+    case_order = replication.get("case_order") or {}
+    trial_id = str(replication.get("trial_id") or rows[0].get("trial_id") or "legacy-trial-000")
     connection.execute(
         """
         INSERT INTO benchmark_run(
-            run_id, model_key, mode, system_variant, outputs_path, outputs_sha256,
+            run_id, model_key, mode, system_variant, trial_id, generation_seed,
+            case_order_seed, judge_seed, run_execution_id, outputs_path, outputs_sha256,
             summary_path, summary_sha256, row_count, proxy_mean, elapsed_seconds,
             answer_profile, context_packet_capture, run_identity_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(run_id) DO UPDATE SET
             outputs_sha256=excluded.outputs_sha256,
             summary_sha256=excluded.summary_sha256,
@@ -477,6 +519,11 @@ def ingest_run(connection: sqlite3.Connection, outputs_path: Path) -> tuple[str,
                 "kernel_field_context": "kernel_field_context",
                 "agronomic_rag": "full_system",
             }[mode],
+            trial_id,
+            replication.get("generation_seed"),
+            case_order.get("case_order_seed"),
+            replication.get("judge_seed"),
+            run_identity.get("run_execution_id") or summary.get("run_execution_id"),
             display_path(outputs_path),
             sha256(outputs_path),
             display_path(summary_path),
@@ -524,17 +571,19 @@ def ingest_run(connection: sqlite3.Connection, outputs_path: Path) -> tuple[str,
         if not isinstance(messages, list) or not messages:
             raise ValueError(f"{outputs_path}:{eval_id}: missing exact model messages")
         context_block = packet.get("context_block")
-        response_id = stable_id(run_id, eval_id)
+        observation_id = str(row.get("observation_id") or "") or None
+        response_id = observation_id or stable_id(run_id, eval_id)
         output = str(row.get("output") or "")
         connection.execute(
             """
             INSERT INTO response(
-                response_id, run_id, eval_id, ordinal, output, output_sha256,
+                response_id, run_id, eval_id, observation_id, matched_trial_key,
+                ordinal, output, output_sha256,
                 elapsed_seconds, exact_messages_json, context_block,
                 context_block_sha256, field_context_json, score_json,
                 metadata_json, route_json, verification_json,
                 generation_stats_json, generation_path
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(response_id) DO UPDATE SET
                 output=excluded.output,
                 output_sha256=excluded.output_sha256,
@@ -553,6 +602,8 @@ def ingest_run(connection: sqlite3.Connection, outputs_path: Path) -> tuple[str,
                 response_id,
                 run_id,
                 eval_id,
+                observation_id,
+                row.get("matched_trial_key"),
                 ordinal,
                 output,
                 hashlib.sha256(output.encode("utf-8")).hexdigest(),
@@ -865,17 +916,26 @@ def build_database(experiment_dir: Path, database: Path) -> dict[str, Any]:
         run_records.append({"run_id": run_id, "path": display_path(outputs_path), "rows": rows})
     connection.execute("UPDATE benchmark_run SET is_canonical = 0")
     canonical_groups = connection.execute(
-        "SELECT model_key, mode FROM benchmark_run GROUP BY model_key, mode"
+        """
+        SELECT model_key, mode, trial_id, generation_seed
+        FROM benchmark_run
+        GROUP BY model_key, mode, trial_id, generation_seed
+        """
     ).fetchall()
     for group in canonical_groups:
         canonical = connection.execute(
             """
             SELECT run_id FROM benchmark_run
-            WHERE model_key = ? AND mode = ?
+            WHERE model_key = ? AND mode = ? AND trial_id = ? AND generation_seed IS ?
             ORDER BY outputs_path DESC
             LIMIT 1
             """,
-            (group["model_key"], group["mode"]),
+            (
+                group["model_key"],
+                group["mode"],
+                group["trial_id"],
+                group["generation_seed"],
+            ),
         ).fetchone()
         if canonical is not None:
             connection.execute(

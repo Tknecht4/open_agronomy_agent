@@ -19,11 +19,12 @@ from agronomy_agent.corpus_governance import (
     load_corpus_policy,
     partition_runtime_corpus_paths,
 )
+from agronomy_agent.agno_runtime.knowledge_graph import graph_artifact_paths
 from agronomy_agent.paths import repo_path
 
 
 SCHEMA_VERSION = "open_agronomy_agent.portable_runtime_bundle.v4"
-DEFAULT_RAG_CONFIG = "configs/rag_governed_runtime_v1.yaml"
+DEFAULT_RAG_CONFIG = "configs/rag_governed_runtime_v2.yaml"
 DEFAULT_MODEL_CONFIG = "configs/model_gemma4_e2b_interface_v2.yaml"
 DEFAULT_OUTPUT_DIR = "outputs/portable_agent"
 DEFAULT_BUNDLE_NAME = "open_agronomy_agent_portable_knowledge_latest.tar.gz"
@@ -111,8 +112,6 @@ ROOT_FILES = (
     "requirements-phase4-ci.txt",
     "requirements-container.txt",
     "docker-compose.edge.yml",
-    "docker-compose.phase4.local.yml",
-    "docker-compose.phase6.launch.yml",
     "frontend/Dockerfile",
     "frontend/Dockerfile.launch",
     "frontend/index.html",
@@ -161,6 +160,13 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _portable_output_reference(path: Path, repo_root: Path) -> str:
+    try:
+        return path.resolve().relative_to(repo_root.resolve()).as_posix()
+    except ValueError:
+        return f"<external>/{path.name}"
+
+
 def _line_count(path: Path) -> int | None:
     if path.suffix not in {".jsonl", ".json", ".yaml", ".yml", ".md", ".py", ".tsx", ".ts"}:
         return None
@@ -182,6 +188,7 @@ class RuntimeKnowledgeSelection:
 class RuntimeGeospatialSelection:
     included_paths: tuple[Path, ...]
     layer_ids: tuple[str, ...]
+    profile_ids: tuple[str, ...]
     source_manifest_path: Path | None
     national_soil_context_gate: dict[str, Any]
 
@@ -196,52 +203,76 @@ def _manifest_path(repo_root: Path, value: Any) -> Path:
     return path
 
 
+def _rag_artifact_root(
+    *,
+    repo_root: Path,
+    rag_config: Path,
+    retrieval: dict[str, Any],
+) -> Path:
+    """Resolve a profile-local RAG artifact root without escaping the bundle.
+
+    Curated-store profile configs deliberately live beside their shard and
+    policy artifacts rather than duplicating them into ``configs/``.  The
+    portable bundle must honor that explicit root in the same way as the
+    runtime loader and corpus audit, while refusing a profile that points
+    outside the repository being packaged.
+    """
+
+    configured = retrieval.get("artifact_root")
+    root = (
+        (rag_config.resolve().parent / str(configured)).resolve()
+        if configured
+        else repo_root.resolve()
+    )
+    try:
+        root.relative_to(repo_root.resolve())
+    except ValueError as exc:
+        raise ValueError(
+            f"RAG artifact_root escapes the portable repository: {configured!r}"
+        ) from exc
+    return root
+
+
 def select_runtime_geospatial(
     repo_root: Path,
     manifest_path: Path | None = None,
 ) -> RuntimeGeospatialSelection:
-    """Select verified redistributable local map indexes for the portable bundle."""
+    """Select tracked spatial contracts, never developer-local map databases.
+
+    The cloneable bundle now carries source registry/profile contracts and the
+    explicit installer.  Large SQLite/RTree files are prepared after cloning
+    in a user-selected external state root; their presence must not be inferred
+    from an old ``runtime.status == bundled`` registry field.
+    """
 
     source_manifest_path = manifest_path or repo_root / "data/manifests/canada_geospatial_sources.json"
     if not source_manifest_path.is_file():
-        return RuntimeGeospatialSelection((), (), None, {})
+        return RuntimeGeospatialSelection((), (), (), None, {})
     payload = json.loads(source_manifest_path.read_text(encoding="utf-8"))
     paths: set[Path] = {source_manifest_path}
-    layer_ids: list[str] = []
-    for source in payload.get("sources", []):
-        runtime = source.get("runtime") if isinstance(source, dict) else None
-        if not isinstance(runtime, dict) or runtime.get("status") != "bundled":
-            continue
-        if not bool((source.get("license") or {}).get("permits_redistribution")):
-            raise ValueError(f"bundled geospatial source is not redistributable: {source.get('id')}")
-        derived_path = _manifest_path(repo_root, runtime.get("derived_path"))
-        derived_manifest_path = _manifest_path(repo_root, runtime.get("derived_manifest_path"))
-        lineage_path = _manifest_path(repo_root, runtime.get("lineage_path"))
-        missing = [
-            str(path.relative_to(repo_root))
-            for path in (derived_path, derived_manifest_path, lineage_path)
-            if not path.is_file()
-        ]
-        if missing:
-            raise FileNotFoundError(
-                f"bundled geospatial runtime is incomplete for {source.get('id')}: {', '.join(missing)}"
-            )
-        derived_manifest = json.loads(derived_manifest_path.read_text(encoding="utf-8"))
-        if derived_manifest.get("output_path") != str(derived_path.relative_to(repo_root)):
-            raise ValueError(f"geospatial output path mismatch: {source.get('id')}")
-        if int(derived_manifest.get("output_bytes") or -1) != derived_path.stat().st_size:
-            raise ValueError(f"geospatial output byte count mismatch: {source.get('id')}")
-        if derived_manifest.get("output_sha256") != sha256(derived_path):
-            raise ValueError(f"geospatial output SHA-256 mismatch: {source.get('id')}")
-        if derived_manifest.get("lineage_sha256") != sha256(lineage_path):
-            raise ValueError(f"geospatial lineage SHA-256 mismatch: {source.get('id')}")
-        if (derived_manifest.get("license_snapshot") or {}).get("status") != "redistributable":
-            raise ValueError(f"geospatial derived licence is not redistributable: {source.get('id')}")
-        paths.update((derived_path, derived_manifest_path, lineage_path))
-        layer_ids.append(str(runtime.get("layer_id") or source.get("id")))
+    profile_manifest_path = repo_root / "data/manifests/offline_spatial_profiles_v1.json"
+    profile_ids: list[str] = []
+    if profile_manifest_path.is_file():
+        profile_payload = json.loads(profile_manifest_path.read_text(encoding="utf-8"))
+        if profile_payload.get("schema_version") != "open_agronomy_agent.offline_spatial_profiles.v1":
+            raise ValueError("unsupported offline spatial profile manifest schema")
+        profiles = profile_payload.get("profiles")
+        if not isinstance(profiles, list):
+            raise ValueError("offline spatial profile manifest profiles must be a list")
+        for profile in profiles:
+            if not isinstance(profile, dict):
+                raise ValueError("offline spatial profile manifest contains a malformed profile")
+            profile_id = str(profile.get("id") or "")
+            if not profile_id:
+                raise ValueError("offline spatial profile is missing an id")
+            profile_ids.append(profile_id)
+        if len(profile_ids) != len(set(profile_ids)):
+            raise ValueError("offline spatial profile manifest contains duplicate ids")
+        paths.add(profile_manifest_path)
     return RuntimeGeospatialSelection(
         included_paths=tuple(sorted(paths)),
-        layer_ids=tuple(sorted(layer_ids)),
+        layer_ids=(),
+        profile_ids=tuple(sorted(profile_ids)),
         source_manifest_path=source_manifest_path,
         national_soil_context_gate=dict(payload.get("national_soil_context_gate") or {}),
     )
@@ -250,18 +281,39 @@ def select_runtime_geospatial(
 def select_runtime_knowledge(repo_root: Path, rag_config: Path) -> RuntimeKnowledgeSelection:
     payload = yaml.safe_load(rag_config.read_text(encoding="utf-8")) or {}
     retrieval = payload.get("retrieval") or {}
+    if not isinstance(retrieval, dict):
+        raise ValueError("RAG retrieval configuration must be an object")
+    artifact_root = _rag_artifact_root(
+        repo_root=repo_root,
+        rag_config=rag_config,
+        retrieval=retrieval,
+    )
     configured_corpora = [str(value) for value in retrieval.get("corpus_paths") or []]
     configured_graphs = [str(value) for value in retrieval.get("graph_paths") or []]
     policy_value = retrieval.get("corpus_policy_manifest")
-    policy = load_corpus_policy(repo_root, policy_value)
+    policy = load_corpus_policy(artifact_root, policy_value)
     included_corpora, excluded = partition_runtime_corpus_paths(
         configured_corpora,
         policy,
     )
-    corpus_paths = tuple(repo_root / str(value) for value in included_corpora)
-    graph_paths = tuple(repo_root / value for value in configured_graphs)
-    paths = [*corpus_paths, *graph_paths]
-    missing = [str(path.relative_to(repo_root)) for path in paths if not path.is_file()]
+    corpus_paths = tuple(
+        Path(value).resolve() if Path(value).is_absolute() else (artifact_root / str(value)).resolve()
+        for value in included_corpora
+    )
+    graph_paths = tuple(
+        Path(value).resolve() if Path(value).is_absolute() else (artifact_root / value).resolve()
+        for value in configured_graphs
+    )
+    graph_artifacts = graph_artifact_paths(
+        graph_paths,
+        require_manifests=bool(retrieval.get("require_graph_manifests", False)),
+    )
+    paths = [*corpus_paths, *graph_artifacts]
+    missing = [
+        str(path.relative_to(repo_root)) if path.is_relative_to(repo_root) else str(path)
+        for path in paths
+        if not path.is_file()
+    ]
     if missing:
         raise FileNotFoundError(f"configured runtime knowledge is missing: {', '.join(missing)}")
     excluded_records: list[dict[str, Any]] = []
@@ -276,13 +328,24 @@ def select_runtime_knowledge(repo_root: Path, rag_config: Path) -> RuntimeKnowle
             }
         )
     for path in corpus_paths:
-        relative = str(path.relative_to(repo_root))
+        relative = str(path.relative_to(artifact_root))
         policy_row = corpus_policy_for_path(relative, policy)
         if policy_row and policy_row.get("sha256") != sha256(path):
             raise ValueError(f"runtime corpus failed policy SHA-256 validation: {relative}")
-    policy_path = repo_root / str(policy_value) if policy_value else None
+    policy_path = (
+        Path(policy_value).resolve()
+        if policy_value and Path(str(policy_value)).is_absolute()
+        else (artifact_root / str(policy_value)).resolve()
+        if policy_value
+        else None
+    )
     if policy_path is not None and not policy_path.is_file():
-        raise FileNotFoundError(f"runtime corpus policy is missing: {policy_path.relative_to(repo_root)}")
+        rendered = (
+            str(policy_path.relative_to(repo_root))
+            if policy_path.is_relative_to(repo_root)
+            else str(policy_path)
+        )
+        raise FileNotFoundError(f"runtime corpus policy is missing: {rendered}")
     return RuntimeKnowledgeSelection(
         included_paths=tuple(paths),
         included_corpus_paths=corpus_paths,
@@ -291,6 +354,83 @@ def select_runtime_knowledge(repo_root: Path, rag_config: Path) -> RuntimeKnowle
         configured_corpus_count=len(configured_corpora),
         policy_path=policy_path,
     )
+
+
+def _store_relative_path(store_root: Path, value: Any, *, label: str) -> Path:
+    """Resolve a store-manifest path without allowing an artifact escape."""
+
+    relative = Path(str(value or ""))
+    if not str(relative) or relative.is_absolute() or ".." in relative.parts:
+        raise ValueError(f"unsafe curated-store {label}: {value!r}")
+    path = (store_root / relative).resolve()
+    if not path.is_relative_to(store_root.resolve()):
+        raise ValueError(f"curated-store {label} escapes its store root: {value!r}")
+    return path
+
+
+def select_curated_store_artifacts(repo_root: Path, rag_config: Path) -> tuple[Path, ...]:
+    """Return exact curated-store proof sets referenced by a RAG config.
+
+    Both profile-local configs and the cumulative product config can reference
+    curated shards. Omitting the owning store manifest and receipts would
+    discard the provenance needed to audit those shards after transfer.
+    """
+
+    payload = yaml.safe_load(rag_config.read_text(encoding="utf-8")) or {}
+    retrieval = payload.get("retrieval") or {}
+    if not isinstance(retrieval, dict):
+        raise ValueError("RAG retrieval configuration must be an object")
+    artifact_root = _rag_artifact_root(
+        repo_root=repo_root,
+        rag_config=rag_config,
+        retrieval=retrieval,
+    )
+    store_roots: set[Path] = set()
+    if (artifact_root / "store_manifest.json").is_file():
+        store_roots.add(artifact_root)
+    for value in retrieval.get("corpus_paths") or []:
+        relative = Path(str(value))
+        corpus_path = (
+            relative.resolve()
+            if relative.is_absolute()
+            else (artifact_root / relative).resolve()
+        )
+        parent = corpus_path.parent
+        while parent.is_relative_to(repo_root.resolve()):
+            if (parent / "store_manifest.json").is_file():
+                store_roots.add(parent)
+                break
+            if parent == repo_root.resolve():
+                break
+            parent = parent.parent
+
+    paths: set[Path] = set()
+    for store_root in sorted(store_roots):
+        manifest_path = store_root / "store_manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if manifest.get("schema_version") != "open_agronomy_agent.curated_knowledge_store.v1":
+            raise ValueError("unsupported curated-store manifest schema")
+        paths.add(manifest_path.resolve())
+        for shard in manifest.get("shards") or []:
+            if not isinstance(shard, dict):
+                raise ValueError("curated-store manifest contains a malformed shard")
+            paths.add(_store_relative_path(store_root, shard.get("path"), label="shard path"))
+        for profile in manifest.get("profiles") or []:
+            if not isinstance(profile, dict):
+                raise ValueError("curated-store manifest contains a malformed profile")
+            for key in ("policy_manifest_path", "rag_config_path"):
+                paths.add(_store_relative_path(store_root, profile.get(key), label=key))
+        receipts = manifest.get("receipts")
+        if not isinstance(receipts, dict):
+            raise ValueError("curated-store manifest is missing receipts")
+        for key in ("ingest_summary_path", "source_coverage_path"):
+            paths.add(_store_relative_path(store_root, receipts.get(key), label=key))
+    missing = sorted(str(path.relative_to(repo_root)) for path in paths if not path.is_file())
+    if missing:
+        raise FileNotFoundError(
+            "curated-store proof artifacts are missing: " + ", ".join(missing)
+        )
+    return tuple(sorted(paths))
 
 
 def runtime_knowledge_paths(repo_root: Path, rag_config: Path) -> list[Path]:
@@ -307,7 +447,49 @@ def _tree_files(root: Path) -> Iterable[Path]:
     )
 
 
-def collect_bundle_files(repo_root: Path, rag_config: Path) -> list[Path]:
+def select_conference_eval_fixtures(
+    repo_root: Path,
+    *,
+    required: bool,
+) -> tuple[tuple[Path, ...], dict[str, Any]]:
+    """Select the all-or-nothing historical fixture set for a release.
+
+    A compact operational bundle must not fail merely because an optional
+    conference fixture set is incomplete, and it must never claim a partial
+    evaluation set is complete.  The caller can explicitly require it when
+    building an evaluation-bearing release.
+    """
+
+    paths = tuple(repo_root / value for value in CONFERENCE_EVAL_FILES)
+    missing = [str(path.relative_to(repo_root)) for path in paths if not path.is_file()]
+    if missing:
+        if required:
+            raise FileNotFoundError(
+                "required conference evaluation fixtures are incomplete: "
+                + ", ".join(missing)
+            )
+        return (), {
+            "included": False,
+            "complete": False,
+            "file_count": 0,
+            "bytes": 0,
+            "missing": missing,
+        }
+    return paths, {
+        "included": True,
+        "complete": True,
+        "file_count": len(paths),
+        "bytes": sum(path.stat().st_size for path in paths),
+        "missing": [],
+    }
+
+
+def collect_bundle_files(
+    repo_root: Path,
+    rag_config: Path,
+    *,
+    conference_eval_paths: Iterable[Path] = (),
+) -> list[Path]:
     files: set[Path] = set()
     for value in TREE_ROOTS:
         files.update(_tree_files(repo_root / value))
@@ -315,14 +497,11 @@ def collect_bundle_files(repo_root: Path, rag_config: Path) -> list[Path]:
         path = repo_root / value
         if path.is_file():
             files.add(path)
-    for value in CONFERENCE_EVAL_FILES:
-        path = repo_root / value
-        if not path.is_file():
-            raise FileNotFoundError(f"conference evaluation asset is missing: {value}")
-        files.add(path)
+    files.update(conference_eval_paths)
     files.add(rag_config)
     selection = select_runtime_knowledge(repo_root, rag_config)
     files.update(selection.included_paths)
+    files.update(select_curated_store_artifacts(repo_root, rag_config))
     files.update(select_runtime_geospatial(repo_root).included_paths)
     if selection.policy_path is not None:
         files.add(selection.policy_path)
@@ -488,6 +667,7 @@ def build_bundle(
     bundle_name: str,
     dry_run: bool = False,
     require_benchmark_evidence: bool = False,
+    include_conference_eval_fixtures: bool = False,
 ) -> dict[str, Any]:
     repo_root = repo_root.resolve()
     rag_config = rag_config.resolve()
@@ -496,6 +676,7 @@ def build_bundle(
     bundle_path = output_dir / bundle_name
     selection = select_runtime_knowledge(repo_root, rag_config)
     knowledge_paths = set(selection.included_paths)
+    curated_store_paths = set(select_curated_store_artifacts(repo_root, rag_config))
     geospatial_selection = select_runtime_geospatial(repo_root)
     geospatial_paths = set(geospatial_selection.included_paths)
     benchmark_evidence_selection, benchmark_evidence_sets = select_benchmark_evidence(
@@ -503,7 +684,15 @@ def build_bundle(
         required=require_benchmark_evidence,
     )
     benchmark_evidence_paths = set(benchmark_evidence_selection)
-    files = collect_bundle_files(repo_root, rag_config)
+    conference_eval_selection, conference_eval_status = select_conference_eval_fixtures(
+        repo_root,
+        required=include_conference_eval_fixtures,
+    )
+    files = collect_bundle_files(
+        repo_root,
+        rag_config,
+        conference_eval_paths=conference_eval_selection,
+    )
     files = sorted(
         {*files, model_config, *benchmark_evidence_paths},
         key=lambda path: str(path.relative_to(repo_root)),
@@ -525,7 +714,7 @@ def build_bundle(
         "created_at": dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat(),
         "status": "dry_run" if dry_run else "pass",
         "archive_root": ARCHIVE_ROOT,
-        "bundle_path": str(bundle_path.relative_to(repo_root)),
+        "bundle_path": _portable_output_reference(bundle_path, repo_root),
         "bundle_exists": False,
         "bundle_bytes": 0,
         "bundle_sha256": None,
@@ -533,16 +722,21 @@ def build_bundle(
         "uncompressed_bytes": sum(int(entry["bytes"]) for entry in entries),
         "runtime_knowledge_file_count": len(knowledge_paths),
         "runtime_knowledge_bytes": sum(path.stat().st_size for path in knowledge_paths),
+        "curated_store_file_count": len(curated_store_paths),
+        "curated_store_bytes": sum(path.stat().st_size for path in curated_store_paths),
         "offline_geospatial_layer_count": len(geospatial_selection.layer_ids),
         "offline_geospatial_layer_ids": list(geospatial_selection.layer_ids),
         "offline_geospatial_file_count": len(geospatial_paths),
         "offline_geospatial_bytes": sum(path.stat().st_size for path in geospatial_paths),
+        "offline_geospatial_profile_contract_ids": list(geospatial_selection.profile_ids),
+        "offline_geospatial_bundle_mode": "source_contract_only",
         "benchmark_evidence_required": require_benchmark_evidence,
         "benchmark_evidence_file_count": len(benchmark_evidence_paths),
         "benchmark_evidence_bytes": sum(
             path.stat().st_size for path in benchmark_evidence_paths
         ),
         "benchmark_evidence_sets": benchmark_evidence_sets,
+        "conference_eval_fixtures": conference_eval_status,
         "national_soil_context_gate": geospatial_selection.national_soil_context_gate,
         "configured_corpus_count": selection.configured_corpus_count,
         "included_corpus_count": len(selection.included_corpus_paths),
@@ -559,7 +753,8 @@ def build_bundle(
         "statcan_snapshot": statcan_snapshot,
         "model": _model_contract(repo_root, model_config),
         "runtime_boundary": (
-            "The archive is self-contained for application source, policy-approved RAG/KG knowledge, the frozen Canadian benchmark and external AgroQA diagnostic fixtures, governed derived offline geospatial indexes, and the "
+            "The archive is self-contained for application source, policy-approved RAG/KG knowledge, the frozen Canadian benchmark and external AgroQA diagnostic fixtures, and spatial source/profile contracts plus the explicit local installer. "
+            "It does not contain large generated spatial databases: after cloning, prepare a selected profile in a user-managed state directory and point AGRONOMY_AGENT_SPATIAL_PACK_ROOT at its verified pack. It also carries the "
             "offline USDA NASS and Statistics Canada snapshots. When requested, it also carries the frozen canonical internal and external benchmark databases and receipts used by the offline benchmark page. It excludes model weights, raw geospatial downloads, secrets, user data, mutable session/trace databases, caches, and non-canonical historical outputs. "
             "Historical plan archives, retired evaluation suites, and quarantined or rights-unresolved corpora are excluded; governed corpus exclusions remain named in lineage. "
             "The external conference release authority is published beside the archive rather than embedded, because it records the completed archive's SHA-256 and Git reference. "
@@ -600,6 +795,11 @@ def main() -> int:
         action="store_true",
         help="Fail unless both frozen conference result sets are complete and include them.",
     )
+    parser.add_argument(
+        "--include-conference-eval-fixtures",
+        action="store_true",
+        help="require and include the complete historical conference evaluation fixture set",
+    )
     args = parser.parse_args()
     manifest = build_bundle(
         repo_root=repo_path("."),
@@ -609,6 +809,7 @@ def main() -> int:
         bundle_name=args.bundle_name,
         dry_run=args.dry_run,
         require_benchmark_evidence=args.require_benchmark_evidence,
+        include_conference_eval_fixtures=args.include_conference_eval_fixtures,
     )
     print(
         json.dumps(
@@ -624,14 +825,19 @@ def main() -> int:
                     "uncompressed_bytes",
                     "runtime_knowledge_file_count",
                     "runtime_knowledge_bytes",
+                    "curated_store_file_count",
+                    "curated_store_bytes",
                     "offline_geospatial_layer_count",
                     "offline_geospatial_layer_ids",
                     "offline_geospatial_file_count",
                     "offline_geospatial_bytes",
+                    "offline_geospatial_profile_contract_ids",
+                    "offline_geospatial_bundle_mode",
                     "benchmark_evidence_required",
                     "benchmark_evidence_file_count",
                     "benchmark_evidence_bytes",
                     "benchmark_evidence_sets",
+                    "conference_eval_fixtures",
                     "national_soil_context_gate",
                     "snapshot",
                     "statcan_snapshot",

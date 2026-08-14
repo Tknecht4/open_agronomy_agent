@@ -13,6 +13,10 @@ slots:
   position: front
   max_tokens: 300
   visible_to_user: true
+- slot: trusted_geographic_context
+  position: front
+  max_tokens: 340
+  visible_to_user: true
 - slot: decision_route_state
   position: front
   max_tokens: 220
@@ -21,6 +25,11 @@ slots:
   position: high_attention
   max_tokens: 180
   visible_to_user: false
+- slot: capability_evidence
+  position: high_attention
+  max_items: 6
+  max_tokens: 360
+  visible_to_user: evidence_cards_only
 - slot: route_summary
   position: front
   max_tokens: 120

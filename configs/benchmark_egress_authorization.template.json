@@ -1,0 +1,23 @@
+{
+  "schema_version": "open_agronomy_agent.benchmark_egress_authorization.v2",
+  "authorization_decision": "template_not_authorized",
+  "benchmark_id": "open_agronomy_canadian_performance_v1",
+  "benchmark_suite_sha256": "5c3ce59195ac603d2dd8ec5f36f3672b3ee0c20227cdb4fd301dfe3848a83c63",
+  "authorization_source": "replace-with-human-authority-receipt-id",
+  "authorized_by_key_id": "replace-with-pseudonymous-authorizer-key-id",
+  "authorized_at": "2026-08-13T00:00:00Z",
+  "expires_at": "2026-08-14T00:00:00Z",
+  "authorized_payload_classes": [
+    "project_owned_frozen_benchmark_questions",
+    "benchmark_field_context",
+    "candidate_answers",
+    "benchmark_reference_and_rubric_for_judging"
+  ],
+  "excluded_payload_classes": [
+    "farmer_records",
+    "private_field_history",
+    "credentials",
+    "local_knowledge_corpus_files"
+  ],
+  "boundary": "This checked-in file is a non-authorizing template. A human-controlled, suite-bound authorization with authorization_decision=authorized is required before any App Server candidate or judge call."
+}

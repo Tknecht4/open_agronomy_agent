@@ -1,0 +1,59 @@
+{
+  "schema_version": "open_agronomy_agent.benchmark_v2_manifest.v1",
+  "benchmark_id": "open_agronomy_benchmark_v2",
+  "status": "exposed_tuning_internal_development_regression",
+  "created_at": "2026-08-13T00:00:00Z",
+  "claim_eligible": false,
+  "self_hash_policy": "manifest_not_self_hashed",
+  "artifacts": [
+    {"role":"suite","path":"data/eval/open_agronomy_benchmark_v2_cases.jsonl","sha256":"9785caf6ca8040b4bbe7906914aaa7c8c0375e48da90c30ec8a927a116daab32","bytes":51336,"rows":30},
+    {"role":"contract","path":"configs/open_agronomy_benchmark_v2.json","sha256":"346af6715f622e821743234756fc5529c3718bec227bf7bd3a6c8557443ff6a5","bytes":3859},
+    {"role":"case_schema","path":"configs/schemas/benchmark_v2_case.schema.json","sha256":"da3a21a1e071ae2139684baae7428aa770f752ce0c2802c0d65e58f23ea31a1d","bytes":5597},
+    {"role":"causal_interface","path":"configs/open_agronomy_benchmark_v2_interface.json","sha256":"739b148a79930eef7c0fb8cc50d4fec2c39381387a3e861763b70618f5590b6c","bytes":5189},
+    {"role":"preregistration","path":"configs/open_agronomy_benchmark_v2_preregistration.json","sha256":"310ac7d9cf5966ce95c79ea60532a7bf70becc43db4f6804845fbdf479de3c69","bytes":5500},
+    {"role":"exposure_amendment","path":"data/eval/open_agronomy_benchmark_v2_exposure_amendment_20260813.json","sha256":"4f9314d75353b7f7d2982ae64530d7021b158aa85a921ea72a81224f948b30a4","bytes":3214},
+    {"role":"metrics","path":"src/agronomy_agent/benchmark_v2_metrics.py","sha256":"62e4135c7ef5b857598c2bff0f9a3d9a5e40edabca8331f71cfa10e6d303ad02","bytes":47037},
+    {"role":"runner","path":"src/agronomy_agent/benchmark_v2_runner.py","sha256":"b73bfa0d4a6dec06f01f476f03f29c721e261f2fdf96e0889fe9e5f5b58b3a29","bytes":78022},
+    {"role":"runner_cli","path":"scripts/run_open_agronomy_benchmark_v2.py","sha256":"9bb850c35d0356e66078702b0d5c2df4d23ba83bbafe6bf24b950ada97cbb3de","bytes":5109},
+    {"role":"audit","path":"scripts/audit_open_agronomy_benchmark_v2.py","sha256":"b4d0f932f5aa249d2bf99c6e88830eb760beef75011f6edbe34d1a450fc78d3e","bytes":31886},
+    {"role":"test_metrics","path":"tests/test_benchmark_v2_metrics.py","sha256":"b2fc403bc81d714fb9c07ff0c25872c06ed7f2d953d921ac103b61cbeb80f119","bytes":21592},
+    {"role":"test_design_audit","path":"tests/test_open_agronomy_benchmark_v2_audit.py","sha256":"d9d1f2490b012fa5032173372cd5c1049d63343b0ccacef8b4567e5e9d2bf4c0","bytes":7955},
+    {"role":"test_tool_contract","path":"tests/test_open_agronomy_benchmark_v2_tool_contract.py","sha256":"5c5b8cfceb821e4ef25cd1344d328ede103778fc8742a4c66a6b698bca561774","bytes":1844},
+    {"role":"test_runner","path":"tests/test_open_agronomy_benchmark_v2_runner.py","sha256":"8228aabdf9eb5faa9ac5920685551b1ec044dec0e68ab0392be196fe41395ba9","bytes":31245},
+    {"role":"test_runtime_contract","path":"tests/test_open_agronomy_benchmark_v2_runtime_contract.py","sha256":"a95179e1f524bc74b3e186d56fb03d7023eecffd8c1c0d025676bcca08aa7096","bytes":4219},
+    {"role":"harness_contract","path":"configs/open_agronomy_benchmark_v2_harness_contract.json","sha256":"9353e8ded22ba7bbbd914bf35ca97851962e2bb99eee595d42a16500366044c8","bytes":7377},
+    {"role":"harness_amendment","path":"data/eval/open_agronomy_benchmark_v2_harness_amendment_20260813.json","sha256":"6442c0f5f8432c624bb8180014f8f6cbdf077a1b60e65e13ae4f00906330eb30","bytes":1317},
+    {"role":"harness_compatibility","path":"src/agronomy_agent/benchmark_harness_compatibility.py","sha256":"210a2a16f61b8f87d215c86c5a5b3d0650edd91fbaa3a6ef6db2ca7c773751de","bytes":40707},
+    {"role":"test_harness_compatibility","path":"tests/test_benchmark_harness_compatibility.py","sha256":"a190d166e7be960269ea521c0b1d2db103612d2aa44a436912a1b33284050e02","bytes":16381}
+  ],
+  "case_inventory": {
+    "rows": 30,
+    "unique_questions": 30,
+    "matched_groups": 6,
+    "cases_per_group": 5,
+    "group_counts": {"canola_nitrogen":5,"corn_heat_units":5,"potato_potash":5,"soybean_stand":5,"sprayer_calibration":5,"spring_wheat_stand":5},
+    "stratum_counts": {"benign_explanation":6,"fully_specified_action_plan":6,"fully_specified_calculation":6,"high_consequence_authority":6,"one_critical_input_missing":6},
+    "risk_counts": {"high_consequence":6,"low":12,"moderate":12},
+    "calculator_complete_cases": 6,
+    "calculator_clarification_cases": 6,
+    "traceable_real_user_questions": 0,
+    "independently_reviewed_questions": 0
+  },
+  "question_set_receipt": {
+    "normalization": "sort_by_eval_id_then_casefold_and_collapse_whitespace_then_newline_join",
+    "sha256": "85b6121cb8c1fe81a9e8770d3bc3c75b8fdeb7311c5e8d125be5cec269f62145",
+    "bytes": 6039
+  },
+  "provenance": {
+    "question_origin": "project_authored_answer_blind_pending_independent_review",
+    "review_status": "pending_independent_agronomist_review",
+    "independent_review_received": false,
+    "real_user_lane_present": false,
+    "external_validity_established": false,
+    "holdout_status": "invalidated_for_evaluation_by_exact_case_tuning",
+    "exposure_amendment_id": "oab2-exposure-20260813-01"
+  },
+  "permitted_role": "internal_development_regression_and_harness_contract_qa_only",
+  "required_successor": "freshly_authored_untouched_v3_preferably_independent",
+  "interpretation_boundary": "V2 exact cases and expectations were used to tune deterministic planner and answerability behavior. This manifest preserves an exposed regression and executable harness contract, not a holdout evaluation. Exact conformance and dry-run output do not measure post-tuning generalization or agronomic-agent ability; a freshly authored untouched v3 is required."
+}

@@ -1,0 +1,74 @@
+site_name: Open Agronomy Agent
+site_description: Governed local-first agronomic agent architecture, capabilities, evaluation, and developer documentation
+site_url: https://tknecht4.github.io/open_agronomy_agent/
+repo_url: https://github.com/Tknecht4/open_agronomy_agent
+repo_name: Tknecht4/open_agronomy_agent
+edit_uri: edit/main/docs/public/
+docs_dir: docs/public
+site_dir: build/docs-site
+strict: true
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - content.code.copy
+  palette:
+    primary: green
+    accent: amber
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+
+extra_css:
+  - stylesheets/extra.css
+
+plugins:
+  - search
+
+exclude_docs: |
+  final-benchmark-20260812/main.tex
+  final-benchmark-20260812/generated_results.tex
+  final-benchmark-20260812/generated_table.tex
+  final-benchmark-20260812/references.bib
+  final-benchmark-20260812/scripts/
+  final-benchmark-20260812/source_data/
+  open_agronomy_agent_conference_20260812.pptx
+
+nav:
+  - Home: index.md
+  - System:
+      - Architecture: architecture.md
+      - Capability status: capabilities.md
+      - Generated capability catalog: capability-catalog.md
+      - Generated graph catalog: graph-catalog.md
+  - Knowledge and evidence: knowledge-and-data.md
+  - Tools and adapters: tools-and-adapters.md
+  - Evaluation:
+      - Evaluation contract: evaluation.md
+      - RC1 public evidence package: final-benchmark-20260812/README.md
+  - Developer guide:
+      - Code and contracts: developer/index.md
+      - Extending the system: developer/extending.md
+      - Testing and claims: developer/testing.md
+      - Release-candidate gates: developer/release-readiness.md
+  - Operations:
+      - Native setup: operations/native-setup.md
+      - Compact offline data setup: operations/offline-data-setup.md
+      - Canadian source-admission queue: operations/canada-offline-source-admission.md
+      - Offline operation: offline-operation.md
+      - Containers: operations/containers.md
+      - Edge container runbook: operations/edge-container-runbook.md
+  - Governance: governance.md

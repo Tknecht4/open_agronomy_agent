@@ -1,0 +1,79 @@
+{
+  "schema_version": "open_agronomy_agent.reviewed_semantic_companion.v1",
+  "source_id": "ca_aafc_sk_detailed_soil_survey_specification",
+  "source_raw_sha256": "f71591620b34c6ad4fc55a8d0ddb3d32d943dd82b82fd882c14c7ac003c72d2f",
+  "reviewed_on": "2026-07-20",
+  "review_method": "Manual transcription and cross-check against source PDF pages 9, 12, 20-22, 59-60, 65, 69-75, and 87-92; no applied management recommendation added.",
+  "records": [
+    {
+      "title": "Saskatchewan Detailed Soil Survey: coverage, scale, and interpretation boundary",
+      "source_pages": [
+        9,
+        12,
+        20,
+        21,
+        22
+      ],
+      "tags": [
+        "Saskatchewan detailed soil survey",
+        "southern Saskatchewan",
+        "1 to 100000 scale",
+        "regional soil context",
+        "not current field test"
+      ],
+      "text": "The AAFC Saskatchewan Detailed Soil Survey is a compiled, georeferenced soil dataset covering nearly all agricultural areas in southern Saskatchewan at 1:100,000 scale. Its polygons link geographic locations to associated database tables. This scale and survey lineage make it useful for regional soil and landscape context, but the specification does not make it a current field soil test, a measurement of present nutrient supply, or a management prescription. Confirm current field conditions with representative observations and sampling before making an input-rate decision."
+    },
+    {
+      "title": "Saskatchewan Detailed Soil Survey: polygon, component, soil-name, and layer relationships",
+      "source_pages": [
+        20,
+        21,
+        22
+      ],
+      "tags": [
+        "PED_SK_DTL_100K",
+        "map unit",
+        "component table",
+        "soil name table",
+        "soil layer table",
+        "linked tables"
+      ],
+      "text": "The Saskatchewan survey uses four linked structures with different roles. The polygon layer, PED_SK_DTL_100K, links mapped locations to soil attributes. The component table identifies the soils that are components of a soil map unit. The soil-name table contains general information for soils. The soil-layer table stores attributes that vary vertically through the soil profile. A polygon intersection therefore identifies a mapped soil unit and its associated records; it should not be described as one uniform, directly measured soil profile across the entire field."
+    },
+    {
+      "title": "Saskatchewan Detailed Soil Survey: agronomically relevant attributes and observation counts",
+      "source_pages": [
+        59,
+        60,
+        65,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92
+      ],
+      "tags": [
+        "root restriction",
+        "water table",
+        "electrical conductivity",
+        "hydraulic conductivity",
+        "cation exchange capacity",
+        "pH",
+        "organic carbon",
+        "soil texture",
+        "salinity",
+        "slope",
+        "hydrologic soil group"
+      ],
+      "text": "The Detailed Soil Survey feature catalogue defines attributes relevant to field interpretation, including root-restricting layer and depth linkage, seasonal water-table presence, electrical conductivity, saturated hydraulic conductivity, cation exchange capacity, pH, organic carbon, clay, silt and sand fractions, salinity ratings, landscape position, slope class, and hydrologic soil group. Several measured-property fields have paired count fields recording the number of observations used to determine a value. These are survey attributes with their own definitions and lineage, not substitutes for current field measurements; use them to target scouting and sampling, then verify the actual field and root-zone conditions."
+    }
+  ]
+}

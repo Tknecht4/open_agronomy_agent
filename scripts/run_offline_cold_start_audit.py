@@ -226,7 +226,7 @@ def build_report(*, base_url: str, container_name: str, runtime_manifest_path: P
         "trace_declares_offline": adapter_network.get("mode") == "offline",
         "trace_records_zero_external_attempts": adapter_network.get("external_calls_attempted") == 0,
         "governed_runtime_config_used": (
-            turn.get("system_state", {}).get("rag_config") == "configs/rag_governed_runtime_v1.yaml"
+            turn.get("system_state", {}).get("rag_config") == "configs/rag_governed_runtime_v2.yaml"
         ),
         "no_generation_fallback": "generation_fallback" not in turn.get("system_state", {}),
     }

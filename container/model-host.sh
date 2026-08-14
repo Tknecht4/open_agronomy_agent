@@ -15,7 +15,7 @@ else
   STATE_DIR="$ROOT_DIR/.container-state/model-host"
 fi
 MODEL_ID=${AGRONOMY_AGENT_MODEL_ID:-mlx-community/gemma-4-e2b-it-4bit}
-MODEL_CONFIG=${AGRONOMY_AGENT_MODEL_CONFIG:-configs/model_gemma4_e2b_interface_v1.yaml}
+MODEL_CONFIG=${AGRONOMY_AGENT_MODEL_CONFIG:-configs/model_gemma4_e2b_interface_v2.yaml}
 MODEL_REVISION=${AGRONOMY_AGENT_MODEL_REVISION:-}
 case "$MODEL_CONFIG" in
   /*) MODEL_CONFIG_PATH=$MODEL_CONFIG ;;
@@ -28,7 +28,7 @@ else
   MODEL_PROBE_HOST=$MODEL_HOST
 fi
 MODEL_PORT=${AGRONOMY_AGENT_MODEL_PORT:-8081}
-MAX_TOKENS=${AGRONOMY_AGENT_MODEL_MAX_TOKENS:-512}
+MAX_TOKENS=${AGRONOMY_AGENT_MODEL_MAX_TOKENS:-640}
 PREFILL_STEP_SIZE=${AGRONOMY_AGENT_MODEL_PREFILL_STEP_SIZE:-2048}
 # Exact-request cache reuse can stall some Gemma/MLX-LM combinations. Keep the
 # stable release default at zero; advanced users can opt in per model.

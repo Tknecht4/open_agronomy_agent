@@ -129,13 +129,17 @@ class LocalMLXRunner:
         model_id: str,
         model_revision: str | None,
         max_tokens: int,
+        seed: int | None = None,
         shared_cache_dir: Path | None = None,
     ) -> None:
+        self.seed = seed
         self.model_revision = model_revision
         self.shared_cache_dir = shared_cache_dir
         self.shared_cache_hits = 0
         self.shared_cache_writes = 0
         self.schema_repair_attempts = 0
+        self.generation_calls = 0
+        self.seed_application_receipts: list[dict[str, Any]] = []
         self.generator = MLXGenerator(
             model_id,
             model_revision=model_revision,
@@ -143,9 +147,18 @@ class LocalMLXRunner:
             temperature=0.0,
             top_p=1.0,
             top_k=0,
+            seed=seed,
             use_stream_generate=False,
             prompt_cache_enabled=False,
         )
+
+    def _generate(self, messages: list[dict[str, str]]) -> str:
+        output = self.generator.generate(messages)
+        self.generation_calls += 1
+        receipt = (self.generator.last_generation_stats or {}).get("seed_application")
+        if isinstance(receipt, dict):
+            self.seed_application_receipts.append(dict(receipt))
+        return output
 
     def __call__(
         self,
@@ -198,6 +211,12 @@ class LocalMLXRunner:
                         "schema": "open_agronomy_agent.local_semantic_judge_cache.v1",
                         "model_id": self.generator.model_id,
                         "model_revision": self.model_revision,
+                        "seed": self.seed,
+                        "sampler": {
+                            "temperature": self.generator.temperature,
+                            "top_p": self.generator.top_p,
+                            "top_k": self.generator.top_k,
+                        },
                         "instruction": instruction,
                     },
                     ensure_ascii=False,
@@ -219,7 +238,7 @@ class LocalMLXRunner:
                 "and emit only schema-conforming JSON."
             ),
         }
-        raw = self.generator.generate([system_message, {"role": "user", "content": instruction}])
+        raw = self._generate([system_message, {"role": "user", "content": instruction}])
         raw_path = result_path.with_suffix(".raw.txt")
         raw_path.write_text(raw, encoding="utf-8")
         try:
@@ -232,7 +251,7 @@ class LocalMLXRunner:
                 "substantive judgment in compact strict JSON. Include at most 3 unique material_errors; "
                 "keep rationale under 35 words; do not repeat list items or analysis."
             )
-            raw = self.generator.generate(
+            raw = self._generate(
                 [system_message, {"role": "user", "content": repair_instruction}]
             )
             raw_path.write_text(raw, encoding="utf-8")
@@ -252,20 +271,34 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--outputs", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
-    parser.add_argument("--model", default="mlx-community/Qwen3.5-4B-MLX-4bit")
+    parser.add_argument("--model", required=True)
     parser.add_argument("--model-revision")
     parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument("--max-tokens", type=int, default=900)
+    parser.add_argument("--seed", type=int)
     parser.add_argument("--shared-cache-dir", type=Path)
     parser.add_argument("--limit", type=int)
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args()
     if args.batch_size < 1:
         raise SystemExit("--batch-size must be at least 1")
+    source_rows = BASE.load_jsonl(args.outputs)
+    declared_judge_seeds = {
+        int(row["judge_seed"])
+        for row in source_rows
+        if row.get("judge_seed") is not None
+    }
+    if len(declared_judge_seeds) > 1:
+        raise ValueError(f"source outputs declare multiple judge seeds: {sorted(declared_judge_seeds)}")
+    if declared_judge_seeds and declared_judge_seeds != {args.seed}:
+        raise ValueError(
+            f"local judge seed {args.seed!r} does not match source receipt {sorted(declared_judge_seeds)}"
+        )
     runner = LocalMLXRunner(
         model_id=args.model,
         model_revision=args.model_revision,
         max_tokens=args.max_tokens,
+        seed=args.seed,
         shared_cache_dir=args.shared_cache_dir,
     )
     evaluated_model, evaluated_revision = source_model_identity(args.outputs)
@@ -291,6 +324,7 @@ def main() -> int:
                 "evaluated_model_revision": evaluated_revision,
                 "judge_model_id": args.model,
                 "judge_model_revision": args.model_revision,
+                "judge_seed": args.seed,
                 "judge_generator_relationship": relationship,
                 "judge_model_family": model_family(args.model),
                 "evaluated_model_family": model_family(evaluated_model),
@@ -308,6 +342,30 @@ def main() -> int:
     summary["evaluated_model_id"] = evaluated_model
     summary["evaluated_model_revision"] = evaluated_revision
     summary["judge_model_revision"] = args.model_revision
+    summary["judge_seed"] = args.seed
+    if args.seed is None:
+        seed_status = "not_configured"
+    elif runner.generation_calls == 0:
+        seed_status = "not_applied_all_batches_reused_seed_bound_cache"
+    elif len(runner.seed_application_receipts) != runner.generation_calls:
+        seed_status = "application_receipt_incomplete"
+    elif all(
+        receipt.get("status") == "applied" and receipt.get("applied_seed") == args.seed
+        for receipt in runner.seed_application_receipts
+    ):
+        seed_status = "applied"
+    else:
+        seed_status = "application_receipt_mismatch"
+    summary["judge_seed_application"] = seed_status
+    summary["judge_seed_application_receipt"] = {
+        "schema_version": "open_agronomy_agent.local_judge_seed_application.v1",
+        "requested_seed": args.seed,
+        "backend": "mlx_local",
+        "status": seed_status,
+        "generation_calls": runner.generation_calls,
+        "seed_application_receipts": runner.seed_application_receipts,
+        "shared_cache_hits": runner.shared_cache_hits,
+    }
     summary["judge_generator_relationship"] = relationship
     summary["judge_model_family"] = model_family(args.model)
     summary["evaluated_model_family"] = model_family(evaluated_model)
@@ -316,7 +374,9 @@ def main() -> int:
         "path": str(args.shared_cache_dir) if args.shared_cache_dir is not None else None,
         "hits": runner.shared_cache_hits,
         "writes": runner.shared_cache_writes,
-        "key_boundary": "exact judge model revision and exact blinded prompt only",
+        "key_boundary": (
+            "exact judge model revision, seed, sampler configuration, and blinded prompt only"
+        ),
     }
     summary["schema_repair_attempts"] = runner.schema_repair_attempts
     summary_path = args.output_dir / "summary.json"

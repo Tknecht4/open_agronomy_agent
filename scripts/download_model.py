@@ -9,8 +9,9 @@ from typing import Sequence
 from huggingface_hub import snapshot_download
 import yaml
 
+from agronomy_agent.runtime_profiles import DEFAULT_MODEL_CONFIG
 
-DEFAULT_MODEL = "mlx-community/Qwen3.5-2B-OptiQ-4bit"
+REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CACHE_DIR = Path(__file__).resolve().parents[1] / ".hf_cache/hub"
 
 
@@ -28,7 +29,8 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help=(
             "YAML model profile. The serving model ID and model_revision are used, "
-            "and conflicting --model/--revision values are rejected."
+            "and conflicting --model/--revision values are rejected. When neither "
+            f"--model nor --model-config is supplied, {DEFAULT_MODEL_CONFIG} is used."
         ),
     )
     parser.add_argument(
@@ -42,8 +44,14 @@ def build_parser() -> argparse.ArgumentParser:
 def resolve_download_request(args: argparse.Namespace) -> tuple[str, str | None]:
     configured_model: str | None = None
     configured_revision: str | None = None
-    if args.model_config:
-        config_path = Path(args.model_config).resolve()
+    model_config = args.model_config
+    if not model_config and not args.model:
+        model_config = DEFAULT_MODEL_CONFIG
+    if model_config:
+        config_path = Path(model_config).expanduser()
+        if not config_path.is_absolute():
+            config_path = REPO_ROOT / config_path
+        config_path = config_path.resolve()
         config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
         if not isinstance(config, dict):
             raise ValueError("model configuration must contain a YAML mapping")
@@ -67,7 +75,7 @@ def resolve_download_request(args: argparse.Namespace) -> tuple[str, str | None]
                 f"--revision {args.revision} conflicts with configured revision "
                 f"{configured_revision}"
             )
-    model = str(args.model or configured_model or DEFAULT_MODEL).strip()
+    model = str(args.model or configured_model or "").strip()
     revision = str(args.revision or configured_revision or "").strip() or None
     if not model:
         raise ValueError("model ID must not be empty")

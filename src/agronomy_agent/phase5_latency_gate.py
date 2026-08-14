@@ -37,7 +37,7 @@ class Phase5LatencyGateResult:
 def evaluate_ci_latency_gate(
     *,
     questions: Iterable[str] = DEFAULT_GATE_QUESTIONS,
-    rag_config: str = "configs/rag.yaml",
+    rag_config: str = "configs/rag_governed_runtime_v2.yaml",
     max_warm_p95_ms: float = 2000.0,
     runtime_budget_path: str | Path = DEFAULT_RUNTIME_BUDGET_PATH,
 ) -> Phase5LatencyGateResult:

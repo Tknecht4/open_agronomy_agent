@@ -68,7 +68,11 @@ def source_id(row: dict[str, Any]) -> str:
     return str(row.get("source_id") or row.get("source") or "")
 
 
-def admitted_canadian_sources(root: Path, config: dict[str, Any], policy: dict[str, Any]) -> dict[str, Any]:
+def admitted_canadian_sources(
+    artifact_root: Path,
+    config: dict[str, Any],
+    policy: dict[str, Any],
+) -> dict[str, Any]:
     by_policy = {str(item["path"]): item for item in policy.get("corpora") or []}
     records: list[dict[str, Any]] = []
     paths: list[str] = []
@@ -76,9 +80,12 @@ def admitted_canadian_sources(root: Path, config: dict[str, Any], policy: dict[s
         item = by_policy.get(str(relative)) or {}
         if item.get("runtime_eligibility") not in {"decisive", "context_only"}:
             continue
-        if not str(relative).startswith("data/derived/rag/canada_agronomy_"):
+        if not (
+            item.get("evidence_tier") == "curated_canadian_source"
+            or item.get("store_profile_id") == "canada-offline-master"
+        ):
             continue
-        path = root / str(relative)
+        path = artifact_root / str(relative)
         if not path.is_file():
             continue
         paths.append(str(relative))
@@ -422,11 +429,22 @@ def portable_receipt(report: dict[str, Any]) -> dict[str, Any]:
     unadmitted = report["unadmitted_candidate_source_receipts"]
     nrcs = report["nrcs"]
     return {
-        "schema_version": "open_agronomy_agent.source_retention_receipt.v1",
+        "schema_version": "open_agronomy_agent.source_retention_receipt.v2",
         "status": report["status"],
         "deletion_authorized": False,
+        "evidence_boundary": {
+            "receipt_mode": "fresh_maintainer_source_workspace_audit",
+            "current_runtime_and_store_revalidated": True,
+            "raw_source_archive_mounted": True,
+            "raw_source_bytes_revalidated_in_this_audit": True,
+            "note": (
+                "This output is produced only after the requested maintainer source "
+                "workspace and full NRCS reference have been read and verified."
+            ),
+        },
         "checks": report["checks"],
         "governed_canadian_rag": {
+            "configured_paths": report["canadian_rag"]["paths"],
             "rows": report["canadian_rag"]["rows"],
             "sources": report["canadian_rag"]["unique_sources"],
             "lineage_complete_rate": report["canadian_rag"]["lineage_complete_rate"],
@@ -435,6 +453,7 @@ def portable_receipt(report: dict[str, Any]) -> dict[str, Any]:
                     "source_id": row["source_id"],
                     "expected_raw_hashes": row["expected_raw_hashes"],
                     "status": row["status"],
+                    "verification_basis": "fresh_exact_source_byte_match",
                 }
                 for row in source_rows
             ],
@@ -450,6 +469,7 @@ def portable_receipt(report: dict[str, Any]) -> dict[str, Any]:
                 "full_rows",
                 "full_sites",
                 "full_sha256",
+                "compact_path",
                 "compact_rows",
                 "compact_sites",
                 "compact_sha256",
@@ -497,7 +517,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--source-workspace", type=Path, default=DEFAULT_SOURCE_WORKSPACE)
-    parser.add_argument("--rag-config", default="configs/rag_governed_runtime_v1.yaml")
+    parser.add_argument("--rag-config", default="configs/rag_governed_runtime_v2.yaml")
     parser.add_argument("--json-output", type=Path, default=Path("outputs/pre_demo_core/source_retention_audit.json"))
     parser.add_argument("--markdown-output", type=Path, default=Path("outputs/pre_demo_core/source_retention_audit.md"))
     parser.add_argument(
@@ -511,14 +531,22 @@ def main() -> int:
     source_workspace = args.source_workspace.resolve()
     config_path = root / args.rag_config
     config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
-    policy = load_corpus_policy(root, config["retrieval"]["corpus_policy_manifest"])
+    retrieval = config["retrieval"]
+    artifact_root_value = retrieval.get("artifact_root")
+    artifact_root = (
+        (config_path.parent / str(artifact_root_value)).resolve()
+        if artifact_root_value
+        else root
+    )
+    policy = load_corpus_policy(artifact_root, retrieval["corpus_policy_manifest"])
     runtime_audit = audit_runtime_corpora(root=root, rag_config_path=config_path)
-    canadian = admitted_canadian_sources(root, config, policy)
+    canadian = admitted_canadian_sources(artifact_root, config, policy)
     source_bytes = verify_source_bytes(source_workspace, canadian["expected_raw_hashes"])
     nrcs = nrcs_projection_audit(
         source_workspace,
-        root / "data/derived/rag/nrcs_esd_rag_corpus_compact.jsonl",
+        root / "data/derived/rag/nrcs_esd_rag_corpus_compact_v2.jsonl",
     )
+    nrcs["compact_path"] = "data/derived/rag/nrcs_esd_rag_corpus_compact_v2.jsonl"
     historical = historical_candidate_audit(source_workspace, canadian["records"])
     unadmitted_receipts = unadmitted_candidate_source_receipts(
         source_workspace,

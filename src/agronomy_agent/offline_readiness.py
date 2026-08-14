@@ -1,19 +1,23 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
 import yaml
 
+from agronomy_agent.agno_runtime.knowledge_graph import graph_artifact_paths
 from agronomy_agent.corpus_governance import (
     load_corpus_policy,
     partition_runtime_corpus_paths,
 )
 
 from agronomy_agent.model_identity import sha256_path
+from agronomy_agent.runtime_profiles import DEFAULT_MODEL_CONFIG, DEFAULT_RAG_CONFIG
 
 
 OFFLINE_READINESS_SCHEMA = "open_agronomy_agent.offline_readiness.v1"
@@ -76,6 +80,57 @@ def _check(
     )
 
 
+def _resolve_profile_path(root: Path, value: Path | None, default: Path) -> Path:
+    """Resolve an optional profile artifact without treating cwd as authority."""
+
+    path = value or default
+    return path.resolve() if path.is_absolute() else (root / path).resolve()
+
+
+def _validate_external_spatial_pack(
+    *,
+    root: Path,
+    pack_root: Path,
+    profile_id: str,
+    profile_manifest_path: Path,
+) -> dict[str, Any]:
+    """Call the profile-bound pack validator without importing developer data.
+
+    Spatial profile construction lives in the checked-in setup scripts because
+    it is intentionally an explicit post-clone operation.  Readiness loads
+    only that deterministic validator and never downloads, derives, or alters
+    a selected pack.
+    """
+
+    script_path = root / "scripts" / "build_prairie_spatial_pack.py"
+    scripts_dir = script_path.parent
+    if not script_path.is_file():
+        raise FileNotFoundError(f"offline spatial pack validator is missing: {script_path}")
+    inserted = str(scripts_dir) not in sys.path
+    if inserted:
+        sys.path.insert(0, str(scripts_dir))
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "_offline_spatial_pack_validator",
+            script_path,
+        )
+        if spec is None or spec.loader is None:
+            raise RuntimeError(f"cannot load offline spatial pack validator: {script_path}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        validate_pack = getattr(module, "validate_pack", None)
+        if not callable(validate_pack):
+            raise RuntimeError("offline spatial pack validator does not expose validate_pack")
+        return validate_pack(
+            pack_root.resolve(),
+            profile_id=profile_id,
+            profile_manifest_path=profile_manifest_path.resolve(),
+        )
+    finally:
+        if inserted:
+            sys.path.remove(str(scripts_dir))
+
+
 def build_offline_readiness(
     *,
     root: Path,
@@ -84,6 +139,9 @@ def build_offline_readiness(
     rag_config_path: Path | None = None,
     hub_cache: Path | None = None,
     state_dir: Path | None = None,
+    spatial_pack_root: Path | None = None,
+    spatial_profile_id: str | None = None,
+    spatial_profile_manifest_path: Path | None = None,
 ) -> dict[str, Any]:
     """Verify the assets needed after internet connectivity is removed.
 
@@ -94,8 +152,8 @@ def build_offline_readiness(
 
     root = root.resolve()
     runtime_manifest_path = (runtime_manifest_path or root / "container/runtime_manifest.json").resolve()
-    model_config_path = (model_config_path or root / "configs/model_gemma4_e2b.yaml").resolve()
-    rag_config_path = (rag_config_path or root / "configs/rag_governed_runtime_v1.yaml").resolve()
+    model_config_path = (model_config_path or root / DEFAULT_MODEL_CONFIG).resolve()
+    rag_config_path = (rag_config_path or root / DEFAULT_RAG_CONFIG).resolve()
     hub_cache = (
         hub_cache
         or Path(os.getenv("HF_HUB_CACHE") or root / ".hf_cache/hub")
@@ -166,14 +224,35 @@ def build_offline_readiness(
     try:
         rag = yaml.safe_load(rag_config_path.read_text(encoding="utf-8")) or {}
         retrieval = rag.get("retrieval") if isinstance(rag.get("retrieval"), dict) else {}
-        corpus_policy = load_corpus_policy(root, retrieval.get("corpus_policy_manifest"))
+        artifact_root_value = retrieval.get("artifact_root")
+        artifact_root = (
+            (rag_config_path.resolve().parent / str(artifact_root_value)).resolve()
+            if artifact_root_value
+            else root
+        )
+        try:
+            artifact_root.relative_to(root)
+        except ValueError as exc:
+            raise ValueError(
+                f"RAG artifact_root escapes the offline repository: {artifact_root_value!r}"
+            ) from exc
+        corpus_policy = load_corpus_policy(artifact_root, retrieval.get("corpus_policy_manifest"))
         loadable_corpora, _ = partition_runtime_corpus_paths(
             retrieval.get("corpus_paths") or [],
             corpus_policy,
         )
+        graph_artifacts = graph_artifact_paths(
+            [artifact_root / str(value) for value in retrieval.get("graph_paths") or []],
+            require_manifests=bool(retrieval.get("require_graph_manifests", False)),
+        )
         knowledge_paths = [
-            *loadable_corpora,
-            *(retrieval.get("graph_paths") or []),
+            *[
+                Path(value).resolve()
+                if Path(str(value)).is_absolute()
+                else (artifact_root / str(value)).resolve()
+                for value in loadable_corpora
+            ],
+            *graph_artifacts,
         ]
         manifest_knowledge_rows = runtime_manifest.get("runtime_knowledge", [])
         if runtime_manifest.get("schema_version") == "open_agronomy_agent.portable_runtime_bundle.v2":
@@ -188,9 +267,12 @@ def build_offline_readiness(
             if isinstance(item, dict)
         }
         knowledge_failures: list[str] = []
-        for relative in knowledge_paths:
-            path = root / str(relative)
-            entry = manifest_knowledge.get(str(relative))
+        for path in knowledge_paths:
+            try:
+                relative = str(path.relative_to(root))
+            except ValueError:
+                relative = str(path)
+            entry = manifest_knowledge.get(relative)
             if not path.is_file():
                 knowledge_failures.append(f"missing:{relative}")
             elif not entry or entry.get("sha256") != sha256_path(path):
@@ -200,7 +282,11 @@ def build_offline_readiness(
             "local_knowledge",
             not knowledge_failures and bool(knowledge_paths),
             "all configured RAG and graph files match the runtime manifest",
-            evidence={"file_count": len(knowledge_paths), "failures": knowledge_failures},
+            evidence={
+                "artifact_root": str(artifact_root),
+                "file_count": len(knowledge_paths),
+                "failures": knowledge_failures,
+            },
         )
     except (OSError, ValueError) as exc:
         _check(checks, "local_knowledge", False, f"RAG configuration unreadable: {exc}")
@@ -237,45 +323,61 @@ def build_offline_readiness(
         evidence={"failures": runtime_tree_failures},
     )
 
-    geo_failures: list[str] = []
-    geospatial_manifest_path = root / "data/manifests/canada_geospatial_sources.json"
-    try:
-        geospatial = json.loads(geospatial_manifest_path.read_text(encoding="utf-8"))
-        bundled_sources = [
-            source
-            for source in geospatial.get("sources", [])
-            if isinstance(source, dict)
-            and isinstance(source.get("runtime"), dict)
-            and source["runtime"].get("status") == "bundled"
-        ]
-        for source in bundled_sources:
-            license_record = source.get("license") if isinstance(source.get("license"), dict) else {}
-            runtime = source["runtime"]
-            for key in ("derived_path", "derived_manifest_path"):
-                relative = str(runtime.get(key) or "")
-                if not relative or not (root / relative).is_file():
-                    geo_failures.append(f"{source.get('id')}:{key}")
-            if not license_record.get("identifier") or license_record.get("permits_redistribution") is not True:
-                geo_failures.append(f"{source.get('id')}:license")
-        geo_entry = runtime_manifest.get("bundled_geo_layers")
-        if isinstance(geo_entry, dict):
-            geo_path = root / str(geo_entry.get("path") or "")
-            actual_geo = _tree_digest(root, geo_path) if geo_path.is_dir() else {}
-            if actual_geo.get("sha256") != geo_entry.get("sha256"):
-                geo_failures.append("bundled_geo_layers:hash_mismatch")
+    selected_spatial_profile = str(spatial_profile_id or "").strip()
+    if spatial_pack_root is None and selected_spatial_profile:
         _check(
             checks,
             "map_packs_and_licenses",
-            not geo_failures and bool(bundled_sources),
-            "bundled map packs, lineage manifests, and redistribution records are present",
-            evidence={
-                "source_manifest_sha256": sha256_path(geospatial_manifest_path),
-                "bundled_source_count": len(bundled_sources),
-                "failures": geo_failures,
-            },
+            False,
+            "an offline spatial profile was selected without an installed spatial pack root",
+            evidence={"profile_id": selected_spatial_profile},
         )
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
-        _check(checks, "map_packs_and_licenses", False, f"geospatial manifest unreadable: {exc}")
+    elif spatial_pack_root is None:
+        _check(
+            checks,
+            "map_packs_and_licenses",
+            True,
+            "no optional spatial profile selected; offline map queries will report not_installed",
+            evidence={"profile_id": None, "optional": True},
+        )
+    else:
+        selected_spatial_profile = selected_spatial_profile or "prairie-dss-v1"
+        profile_manifest = _resolve_profile_path(
+            root,
+            spatial_profile_manifest_path,
+            root / "data/manifests/offline_spatial_profiles_v1.json",
+        )
+        try:
+            validation = _validate_external_spatial_pack(
+                root=root,
+                pack_root=spatial_pack_root,
+                profile_id=selected_spatial_profile,
+                profile_manifest_path=profile_manifest,
+            )
+            _check(
+                checks,
+                "map_packs_and_licenses",
+                validation.get("status") == "pass",
+                "selected external spatial pack matches its pinned profile and install receipt",
+                evidence={
+                    "profile_id": selected_spatial_profile,
+                    "pack_root": str(spatial_pack_root.resolve()),
+                    "profile_manifest": str(profile_manifest),
+                    "validation": validation,
+                },
+            )
+        except (OSError, ValueError, json.JSONDecodeError, RuntimeError) as exc:
+            _check(
+                checks,
+                "map_packs_and_licenses",
+                False,
+                f"selected external spatial pack is not ready: {exc}",
+                evidence={
+                    "profile_id": selected_spatial_profile,
+                    "pack_root": str(spatial_pack_root),
+                    "profile_manifest": str(profile_manifest),
+                },
+            )
 
     if state_dir is not None:
         state_dir = state_dir.resolve()

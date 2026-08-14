@@ -78,7 +78,8 @@
         "include_page_ranges": [[9, 9], [12, 12], [20, 22]],
         "exclude_page_ranges": [],
         "exclude_line_patterns": [],
-        "semantic_companion_path": "data/curated/canada_agronomy/ca_aafc_sk_detailed_soil_survey_specification.semantic.json"
+        "semantic_companion_path": "data/curated/canada_agronomy/ca_aafc_sk_detailed_soil_survey_specification.2026-07-20.semantic.json",
+        "semantic_companion_sha256": "2ecc6043f41a8130c79dae4e991c3d4a851f3bfe5f1533fd0117692d6ea1c9f4"
       }
     },
     {
@@ -121,7 +122,8 @@
         "include_page_ranges": [[4, 4], [7, 7], [24, 25], [27, 33]],
         "exclude_page_ranges": [],
         "exclude_line_patterns": [],
-        "semantic_companion_path": "data/curated/canada_agronomy/ca_aafc_annual_crop_inventory_specification.semantic.json"
+        "semantic_companion_path": "data/curated/canada_agronomy/ca_aafc_annual_crop_inventory_specification.2026-07-20.semantic.json",
+        "semantic_companion_sha256": "ba22f8846fa79ba57111d5cf049baebfe8cf22c40d7392ce54622f1a5aaad92c"
       }
     },
     {
@@ -275,7 +277,8 @@
         "include_page_ranges": [[5, 6], [9, 10]],
         "exclude_page_ranges": [],
         "exclude_line_patterns": [],
-        "semantic_companion_path": "data/curated/canada_agronomy/ca_aafc_crop_health_indices_specification.semantic.json"
+        "semantic_companion_path": "data/curated/canada_agronomy/ca_aafc_crop_health_indices_specification.2026-07-19.semantic.json",
+        "semantic_companion_sha256": "51c2cffddc159fd85d2cd259463813e4afa14a0c80f6fb2c96983baca54a7b40"
       }
     },
     {
@@ -527,6 +530,53 @@
         "notes": "Use as a discovery hub; current thresholds and product uses require authoritative source and label validation."
       },
       "use_policy": {"discover": true, "download": false, "local_rag": false, "distributable_bundle": false, "training": false, "live_retrieval": true}
+    },
+    {
+      "id": "ab_tame_pasture_range_health_2017",
+      "title": "Range health assessment: field worksheet for tame pasture (reviewed context subset)",
+      "publisher": "Government of Alberta, Agriculture and Forestry",
+      "authority_type": "provincial_government",
+      "jurisdiction": ["Alberta"],
+      "language": ["en-CA"],
+      "url": "https://open.alberta.ca/dataset/2d43720a-fa26-4be1-8838-c692c083e1d6",
+      "download_url": "https://open.alberta.ca/dataset/2d43720a-fa26-4be1-8838-c692c083e1d6/resource/bb00575e-48af-4551-a40b-1505411d4ce8/download/rangehealthworksheet-tamepasture-2017.pdf",
+      "source_record_id": "2d43720a-fa26-4be1-8838-c692c083e1d6; resource bb00575e-48af-4551-a40b-1505411d4ce8; May 2017",
+      "expected_raw_sha256": "1cd9179add78838adc6c5343e4bb413dfa9be4a60788a4ce40bb231aba9290a0",
+      "format": "pdf",
+      "content_mode": "corpus_document",
+      "runtime_source_type": "applied_guidance",
+      "runtime_document_type": "historical_provincial_tame_pasture_monitoring_context",
+      "default_retrieval_policy": "context_only",
+      "crops": ["forages", "pasture"],
+      "buckets": ["crop_management", "soil_water", "conservation", "field_data"],
+      "priority": "high",
+      "currency": {"status": "historical_2017_tame_pasture_assessment_tool", "review_interval_days": 365, "volatile": false},
+      "regulatory": {"regulated_advice": true, "require_live_authority": true},
+      "license": {
+        "status": "redistributable",
+        "identifier": "Open Government Licence - Alberta",
+        "evidence_url": "https://open.alberta.ca/api/3/action/package_show?id=range-health-assessment-field-worksheet-for-tame-pastures",
+        "scope_verified": true,
+        "scope_basis": "source_specific_record",
+        "scope_evidence_url": "https://open.alberta.ca/api/3/action/package_show?id=range-health-assessment-field-worksheet-for-tame-pastures",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "third_party_risk": true,
+        "reviewed_on": "2026-08-14",
+        "attribution": "Contains information licensed under the Open Government Licence - Alberta.",
+        "notes": "The exact Alberta catalogue record identifies the May 2017 worksheet as OGLA. The two-page source includes visual material, government marks, numerical scoring, named plants, and an Alberta Weed Control Act reference. The distributable corpus emits only hash-bound, manually reviewed semantic companion records. It is Alberta-specific historical observation context and cannot classify a site, assign a score, identify a regulated weed, establish a legal status, prescribe grazing or renovation, or replace direct assessment and current local interpretation."
+      },
+      "ingest_policy": {
+        "include_page_ranges": [[1, 2]],
+        "exclude_page_ranges": [],
+        "exclude_line_patterns": [],
+        "emit_source_chunks": false,
+        "semantic_companion_path": "data/curated/canada_agronomy/ab_tame_pasture_range_health_2017.2026-08-14.semantic.json",
+        "semantic_companion_sha256": "7561f1e6b686ae910f5b1ad295ed11c45ac031ed4b93fa14a05cf85e465aa42c",
+        "notes": "Both pages were manually inspected to bind qualitative observation-domain and field-unit context. Runtime emission is companion-only. Raw text, numerical scoring, plant lists, bare-soil or litter thresholds, noxious-weed content, Alberta Weed Control Act references, visual material, government marks, and management or renewal instructions are excluded."
+      },
+      "use_policy": {"discover": true, "download": true, "local_rag": true, "distributable_bundle": true, "training": false, "live_retrieval": false}
     },
     {
       "id": "ab_crop_producer_bmp_manual_2004",
@@ -975,6 +1025,147 @@
         "notes": "Do not bundle product tables as timeless guidance. Use the current guide for discovery and verify every recommendation against the current PMRA label."
       },
       "use_policy": {"discover": true, "download": false, "local_rag": false, "distributable_bundle": false, "training": false, "live_retrieval": true}
+    },
+    {
+      "id": "mb_2026_crop_disease_scouting",
+      "title": "Guide to Crop Protection 2026: Plant Disease Control (reviewed context subset)",
+      "publisher": "Manitoba Agriculture",
+      "authority_type": "provincial_government",
+      "jurisdiction": ["Manitoba"],
+      "language": ["en-CA"],
+      "url": "https://www.gov.mb.ca/agriculture/crops/guides-and-publications/",
+      "download_url": "https://www.gov.mb.ca/agriculture/crops/guides-and-publications/pubs/guide-crop-protection-diseases-2026.pdf",
+      "source_record_id": "Manitoba Guide to Crop Protection 2026; Plant Disease Control section; PDF modified 2026-03-17",
+      "expected_raw_sha256": "9552dd91b8bb7bbd20748c866e1ea691bb9b9507251a1a176e6b49d6c71d4483",
+      "format": "pdf",
+      "content_mode": "corpus_document",
+      "runtime_source_type": "applied_guidance",
+      "runtime_document_type": "current_provincial_crop_scouting_guide",
+      "default_retrieval_policy": "context_only",
+      "crops": ["canola", "wheat", "barley", "oat", "cereals", "potato"],
+      "buckets": ["crop_management", "pest_disease", "field_data"],
+      "priority": "high",
+      "currency": {"status": "current_2026_edition", "review_interval_days": 90, "volatile": true},
+      "regulatory": {"regulated_advice": true, "require_live_authority": true},
+      "license": {
+        "status": "redistributable",
+        "identifier": "OpenMB Information and Data Use Licence",
+        "evidence_url": "https://www.gov.mb.ca/legal/copyright.html",
+        "scope_verified": true,
+        "scope_basis": "jurisdiction_wide_open_licence",
+        "scope_evidence_url": "https://www.gov.mb.ca/legal/copyright.html",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "third_party_risk": true,
+        "reviewed_on": "2026-08-13",
+        "attribution": "Contains information from the Manitoba government, licensed under the OpenMB Information and Data Use Licence (Manitoba.ca/OpenMB).",
+        "notes": "The 2026 Plant Disease Control PDF contains product names, label directions, numeric advice, legal statements, third-party links, and government marks. The distributable corpus emits only the hash-bound, manually reviewed semantic companion. It is Manitoba-specific context only; it cannot authorize a pesticide, rate, timing, sanitation formula, regulatory interpretation, or field prescription."
+      },
+      "ingest_policy": {
+        "include_page_ranges": [[1, 3]],
+        "exclude_page_ranges": [],
+        "exclude_line_patterns": [],
+        "emit_source_chunks": false,
+        "semantic_companion_path": "data/curated/canada_agronomy/mb_2026_crop_disease_scouting.2026-08-13.semantic.json",
+        "semantic_companion_sha256": "2b138e7eb2c952e94461e2715a5266a628f071c397b5646346b1fe9be219516b",
+        "notes": "Pages 1-3 were manually inspected solely to bind the reviewed semantic records to source pages. Runtime emission is companion-only. Raw PDF text, product names, labels, rates, thresholds, weather cutoffs, rotation intervals, sanitation formulas, legal statements, logos, images, and third-party links are excluded."
+      },
+      "use_policy": {"discover": true, "download": true, "local_rag": true, "distributable_bundle": true, "training": false, "live_retrieval": true}
+    },
+    {
+      "id": "mb_2026_canola_insect_scouting",
+      "title": "Guide to Crop Protection 2026: Insect Control (reviewed canola scouting context subset)",
+      "publisher": "Manitoba Agriculture",
+      "authority_type": "provincial_government",
+      "jurisdiction": ["Manitoba"],
+      "language": ["en-CA"],
+      "url": "https://www.gov.mb.ca/agriculture/crops/guides-and-publications/",
+      "download_url": "https://www.gov.mb.ca/agriculture/crops/guides-and-publications/pubs/guide-crop-protection-insects-2026.pdf",
+      "source_record_id": "Manitoba Guide to Crop Protection 2026; Insect Control section; PDF modified 2026-03-17",
+      "expected_raw_sha256": "1faefa12d43bed5565c175bf41b672e9d437c7d0021a4db970e17d569ab9909c",
+      "format": "pdf",
+      "content_mode": "corpus_document",
+      "runtime_source_type": "applied_guidance",
+      "runtime_document_type": "current_provincial_crop_scouting_guide",
+      "default_retrieval_policy": "context_only",
+      "crops": ["canola"],
+      "buckets": ["crop_management", "pest_disease", "field_data", "precision_economics"],
+      "priority": "high",
+      "currency": {"status": "current_2026_edition", "review_interval_days": 90, "volatile": true},
+      "regulatory": {"regulated_advice": true, "require_live_authority": true},
+      "license": {
+        "status": "redistributable",
+        "identifier": "OpenMB Information and Data Use Licence",
+        "evidence_url": "https://www.gov.mb.ca/legal/copyright.html",
+        "scope_verified": true,
+        "scope_basis": "jurisdiction_wide_open_licence",
+        "scope_evidence_url": "https://www.gov.mb.ca/legal/copyright.html",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "third_party_risk": true,
+        "reviewed_on": "2026-08-14",
+        "attribution": "Contains information from the Manitoba government, licensed under the OpenMB Information and Data Use Licence (Manitoba.ca/OpenMB).",
+        "notes": "The official 2026 Insect Control PDF is publicly linked by Manitoba Agriculture and its 2026-08-14 download matches the pinned raw SHA-256. OpenMB permits commercial and non-commercial copying, modification, adaptation, and redistribution with attribution, but excludes third-party rights, official marks, and endorsement. Page 1 includes a separately credited North Dakota State University Extension image, and adjacent pages include product names, tables, rates, labels, links, and Manitoba marks. The distributable corpus emits only the hash-bound, manually reviewed semantic companion and excludes all of those materials. Scouting thresholds remain Manitoba-specific context only and require current Manitoba authority plus field observations before consequential use; pesticide selection and use require the current PMRA label."
+      },
+      "ingest_policy": {
+        "include_page_ranges": [[1, 1], [12, 13]],
+        "exclude_page_ranges": [],
+        "exclude_line_patterns": [],
+        "emit_source_chunks": false,
+        "semantic_companion_path": "data/curated/canada_agronomy/mb_2026_canola_insect_scouting.2026-08-14.semantic.json",
+        "semantic_companion_sha256": "15134245d1cb8467cbb1438fe95e64bca10ffe9a4823e8e957b7552219512612",
+        "notes": "Pages 1, 12, and 13 were manually inspected solely to bind the reviewed semantic records to the source. Runtime emission is companion-only. The separately credited defoliation image, raw PDF text, product tables, product names, pesticide labels, rates, application directions, legal statements, logos, marks, and third-party links are excluded."
+      },
+      "use_policy": {"discover": true, "download": true, "local_rag": true, "distributable_bundle": true, "training": false, "live_retrieval": true}
+    },
+    {
+      "id": "mb_2023_crop_rotation_context",
+      "title": "Crop Rotation Planning (reviewed historical context subset)",
+      "publisher": "Manitoba Agriculture",
+      "authority_type": "provincial_government",
+      "jurisdiction": ["Manitoba"],
+      "language": ["en-CA"],
+      "url": "https://www.gov.mb.ca/agriculture/crops/seasonal-reports/agronomy-topics.html",
+      "download_url": "https://www.gov.mb.ca/agriculture/crops/seasonal-reports/pubs/crop-rotation-planning.pdf",
+      "source_record_id": "Manitoba Agriculture Agronomy Topics / Crop Rotation Planning PDF (2023)",
+      "expected_raw_sha256": "920892c21ce1ddf6a4331b70b60540429f5547cbab4fc2f9eb44a525d1b6427f",
+      "format": "pdf",
+      "content_mode": "corpus_document",
+      "runtime_source_type": "applied_guidance",
+      "runtime_document_type": "historical_provincial_crop_rotation_context",
+      "default_retrieval_policy": "context_only",
+      "crops": ["field crops"],
+      "buckets": ["crop_management", "soil_water", "pest_disease", "field_data"],
+      "priority": "high",
+      "currency": {"status": "historical_2023_document_with_2011_2020_aggregate_observations", "review_interval_days": 365, "volatile": false},
+      "regulatory": {"regulated_advice": false, "require_live_authority": false},
+      "license": {
+        "status": "redistributable",
+        "identifier": "OpenMB Information and Data Use Licence",
+        "evidence_url": "https://www.gov.mb.ca/legal/copyright.html",
+        "scope_verified": true,
+        "scope_basis": "jurisdiction_wide_open_licence",
+        "scope_evidence_url": "https://www.gov.mb.ca/legal/copyright.html",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "third_party_risk": true,
+        "reviewed_on": "2026-08-13",
+        "attribution": "Contains information from the Manitoba government, licensed under the OpenMB Information and Data Use Licence (Manitoba.ca/OpenMB).",
+        "notes": "The two-page source contains historical aggregate material and may carry third-party-material exclusions. The distributable corpus emits only the hash-bound, manually reviewed semantic companion. It is Manitoba-specific historical context only; it does not predict a field outcome or authorize a crop sequence, product, nutrient action, rate, procedure, or regulatory interpretation."
+      },
+      "ingest_policy": {
+        "include_page_ranges": [[1, 2]],
+        "exclude_page_ranges": [],
+        "exclude_line_patterns": [],
+        "emit_source_chunks": false,
+        "semantic_companion_path": "data/curated/canada_agronomy/mb_2023_crop_rotation_context.2026-08-13.semantic.json",
+        "semantic_companion_sha256": "25c43833708717866ea2055c8fd8cc4f1b9265172d2f7f92fa7abe0d77ba8110",
+        "notes": "Both pages were manually inspected solely to bind the reviewed semantic records to the historical source. Runtime emission is companion-only. Raw tables, numeric values, percentages, named external datasets, visual material, crop-specific claims, product or chemical content, nutrient or rate content, procedures, and regulatory text are excluded."
+      },
+      "use_policy": {"discover": true, "download": true, "local_rag": true, "distributable_bundle": true, "training": false, "live_retrieval": true}
     },
     {
       "id": "on_field_crop_production_current",

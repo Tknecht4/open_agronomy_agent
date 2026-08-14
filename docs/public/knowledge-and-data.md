@@ -1,22 +1,62 @@
 # Knowledge and data governance
 
-The runtime knowledge base is selected by `data/manifests/runtime_corpus_policy.json` and loaded by `configs/rag_governed_runtime_v1.yaml`. Presence on disk is not admission.
+The runtime knowledge base is selected by an explicit policy manifest and an operator-selected RAG configuration. Presence on disk is not admission.
 
-## Admitted release knowledge
+## Cumulative clone-contained Canadian master
+
+The active Canadian document release is
+`data/derived/rag/curated_canada/releases/2026-08-14/`. Its sole profile,
+`canada-offline-master`, contains 969 rows from 20 admitted sources in two
+SHA-bound shards: 955 `context_only` rows and 14
+`requires_live_authority` rows. It replaces the former core/extended operator
+choice with one cumulative public corpus. The store is a deterministic derived
+release, not an archive of the raw documents and not a training dataset.
+
+The profile, store manifest, source-coverage receipt, ingest receipt, source
+registry, dated source-aware inputs, and reviewed semantic companions preserve
+the release lineage. Semantic companions are versioned by review date. A
+recovery receipt identifies companions reconstructed from hash-bound derived
+rows and does not claim recovery of missing original byte streams.
+
+The former `curated_canada/v1` through `v4` development payloads are removed
+from the current tree/package; compact manifests, review records, and Git
+history preserve their milestones. `configs/rag_governed_runtime_v1.yaml` and
+`configs/rag_final_mvp.yaml` remain only as frozen RC1/RC2 identity inputs; they
+are not selectable and may reference historical payloads intentionally absent
+from a current public checkout.
+
+## Active governed runtime composition
+
+`configs/rag_governed_runtime_v2.yaml` composes six explicitly hash-admitted
+corpora totaling 35,419 rows and two governed graphs totaling 1,794 nodes and
+1,458 edges. `configs/runtime_profiles.json` is the product-selection registry;
+adding a YAML file does not activate it.
 
 | Artifact | Rows | Runtime role | Boundary |
 |---|---:|---|---|
-| Canadian distributable v13 | 718 | 706 context-only; 12 require live authority | No row is currently admitted as standard applied authority; uneven provincial depth; Ontario Publication 811/811F excluded |
-| Ontario context v1 | 234 | Context only | Regional statistics, not field truth or calibration |
-| Canadian supplements v1/v2/v3 | 62 | Context only | Historical/regional, data-product, and six current Manitoba scouting companion records; the scouting rows remain non-decisive pending independent agronomic review |
-| Canadian regional context v1 | 38 | Context only | Data-product descriptions, not local applied guidance |
-| SoilWise RAG + KG | 1,784 RAG rows | Context only | Soil-health concepts and relations, not a soil test |
-| Compact NRCS ESD | 32,624 | Context only | Section-balanced projection of all 8,300 recovered USDA EDIT sites; explicit US analogue use only, never Canadian field truth or authority |
-| Project seed/boundary corpora | 42 | Context and safety policy | Project-authored synthesis, not independent evidence |
+| Canadian offline master | 969 | 955 context-only; 14 require live authority | Uneven Canadian coverage; no row becomes current field truth by retrieval |
+| SoilWise RAG + KG | 1,784 RAG rows; 1,784 graph nodes | Context only | Soil-health concepts and relations, not a soil test |
+| NRCS ESD compact v2 | 32,624 | Context only | Sanitized projection of 8,300 USDA EDIT sites; explicit US analogue only |
+| Project seed and boundary corpora | 42 | 36 context-only; 6 decisive project safety rows | Project-authored synthesis/policy, not independent agronomic evidence |
+| Project and SoilWise graphs | 1,794 nodes; 1,458 edges | Relationship context | A graph route is not a measurement, diagnosis, or source-authority promotion |
+
+The master source-coverage receipt records source-declared crop, topic, and
+jurisdiction applicability. This is routing metadata, not proof of a field
+condition. Five bounded Manitoba canola-insect semantic rows are admitted after
+source-specific OpenMB review; product tables and third-party material remain
+excluded. Discovery or a file on disk does not make content model-visible.
+
+The NASS QuickStats snapshot is not a RAG corpus. It is a typed, dated static
+tool snapshot with its own manifest and freshness boundary. It must not be
+described as live data or as Canadian evidence.
+
+See [offline data setup](operations/offline-data-setup.md) for validation and
+external-map preparation.
 
 ### Prairie applied-guidance coverage
 
-The main 718-row Canadian corpus is not provincially balanced. Its row-level jurisdiction counts are:
+The Canadian master is not provincially balanced. Its largest historical
+applied-guidance component has the following row-level jurisdiction counts:
 
 | Jurisdiction | Rows | Practical interpretation |
 |---|---:|---|
@@ -27,9 +67,17 @@ The main 718-row Canadian corpus is not provincially balanced. Its row-level jur
 
 SoilWise adds useful soil-process concepts across all three provinces, but it does not repair the Saskatchewan applied-guidance gap and must not be presented as if it does. The conference interface therefore treats Saskatchewan mapping as a regional prior and asks for current Saskatchewan guidance before locally calibrated decisions.
 
-Every admitted Canadian row carries source and lineage fields. The policy manifest also records a byte hash, evidence tier, rights status, admission reason, and runtime role for every configured corpus.
+Every admitted Canadian row carries source and lineage fields. The runtime v2
+policy records the byte hash, evidence tier, rights status, admission reason,
+and runtime role for every configured corpus.
 
-The maintainer-only retention audit verifies the governed rows against their exact raw-source byte hashes before any historical corpus can be considered redundant. It also compares the compact NRCS projection with the retained full corpus by site, exact source text, and section facet. Its path-sanitized evidence is committed as `data/manifests/source_retention_receipt.json`. Passing that audit is necessary but not sufficient for deletion: deletion requires a separate path- and hash-specific approval manifest.
+The maintainer-only retention audit can reverify governed rows against exact
+raw-source bytes when the source archive is mounted. The portable receipt
+records which observations are current hash/store validation and which raw-byte
+checks were carried forward from an earlier observed audit or source-intake
+receipt. It also binds NRCS compact v2 to the prior full/reference projection.
+Passing a receipt is necessary but never sufficient for deletion: deletion
+requires a separate path- and hash-specific approval manifest.
 
 ## Why processed material can be absent from runtime
 
@@ -39,7 +87,7 @@ Processing proves that bytes can be extracted; it does not prove that they shoul
 - OCR/document expansions whose item-level licence snapshot or lineage is incomplete;
 - copied certification competency objectives;
 - answer-gap and benchmark-shaped synthesis that could leak evaluation targets;
-- candidate corpus versions superseded by the rights-repaired v13 release.
+- discovered or historical source material not admitted by the active master policy.
 
 Ontario Publication 811 is the material exception inside the historical Canadian builds: its extracted rows remain quarantined while the original source bytes and rights-review record are preserved. Those historical files must not be removed until that separate receipt is bound into an explicitly approved archive or deletion plan.
 
@@ -51,11 +99,11 @@ Evaluation data is not agronomic knowledge. `cca_aligned_eval.jsonl` and `cca_lo
 
 ## Geospatial data
 
-Regional soil and crop layers are useful for locating priors, not for replacing soil sampling or grower records. Large generated SQLite indexes and raw downloads are excluded from Git. The portable Prairie pack consolidates Alberta, Saskatchewan, and Manitoba Detailed Soil Survey SQLite/RTree layers with the national 2021 soil-erosion-risk layer. Its pack manifest binds every database and derivation manifest by hash; a runtime probe checks installed-layer discovery and fixed offline field intersections in all three provinces.
+Regional soil and crop layers are useful for locating priors, not for replacing soil sampling or grower records. Large generated SQLite indexes and raw downloads are excluded from Git. The `prairie-dss-v1` external pack consolidates only Alberta, Saskatchewan, and Manitoba Detailed Soil Survey SQLite/RTree layers. Its pack and install receipts bind every database and derivation manifest by hash; a runtime probe checks installed-layer discovery and fixed offline field intersections in all three provinces. It is installed post-clone, never inferred from repository files.
 
 The Saskatchewan DSS integration preserves all 67,166 source map polygons and their component tables. Source geometries are repaired before simplification, simplification occurs in EPSG:3347 metres rather than geographic degrees, and the build fails if aggregate area changes by more than 0.01%. The layer remains a historical 1:100,000 mapped prior. It cannot establish a point soil, current nutrient supply, salinity, compaction, drainage performance, crop suitability, or a rate.
 
-The 2025 national 100 m Soil Landscape Grids of Canada are tracked as a candidate, not an installed authority layer. The federal record describes the product as under evaluation and review. Promotion therefore requires cropland tiling/size measurements, uncertainty handling, province-edge and northern-coverage tests, and a demonstrated retrieval or decision-quality benefit over the survey layers.
+The 2025 national 100 m Soil Landscape Grids of Canada are tracked as a candidate, not an installed authority layer. The federal record describes the product as under evaluation and review. Promotion therefore requires cropland tiling/size measurements, uncertainty handling, province-edge and northern-coverage tests, and a demonstrated retrieval or decision-quality benefit over the survey layers. Boundary, ecoregion, SLC, AESD/Census, and university-extension candidates are separately fail-closed in the source-admission queue until source bytes, rights, identifiers, and compactness tests are reviewed.
 
 ## Admission checklist
 

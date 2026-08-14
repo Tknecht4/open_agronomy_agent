@@ -1,39 +1,14 @@
 # Open Agronomy Agent
 
-Open Agronomy Agent is a local-first research system for evidence-grounded Canadian field questions. It combines a small downloadable language model with a governed agronomy corpus, a soil-health knowledge graph, structured field history, deterministic tools, and an auditable answer trace. The same application can run without internet access in the field and use current public services when it reconnects.
+Open Agronomy Agent is a local-first research system for evidence-grounded Canadian field questions. It combines a downloadable language model, governed retrieval and graph context, structured field history, deterministic capabilities, validation, and an auditable answer trace.
 
-This repository is a conference release candidate, not a finished agronomist replacement. It is designed to show its evidence, distinguish regional priors from field measurements, and stop when a safe recommendation requires a current label, laboratory result, local calibration, or professional review.
+It is **not** an agronomist replacement, diagnostic authority, pesticide-label authority, or proof that a recommendation will work in a field. It is a development system that makes source identity, missing evidence, assumptions, and intervention visible.
 
-> **Licence:** project-authored repository contents are licensed under the [Apache License 2.0](LICENSE) unless noted otherwise. Third-party datasets, evaluation material, dependencies, and separately downloaded model weights retain their own terms, recorded in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and the governed source manifests.
+> Project-authored contents are licensed under [Apache-2.0](LICENSE). Third-party data, evaluation material, dependencies, and model weights retain their own terms; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-## What is in the system
+## Quick start
 
-```mermaid
-flowchart LR
-    Q["Grower question + field context"] --> R["Router and question frame"]
-    R --> E["Governed retrieval + SoilWise KG"]
-    R --> T["Typed local tools"]
-    E --> P["Evidence packet"]
-    T --> P
-    P --> M["Downloadable local model"]
-    M --> V["Safety and evidence validation"]
-    V --> A["Answer + trace + field history"]
-    O["Optional online public services"] -. when connected .-> T
-```
-
-The release knowledge path includes:
-
-- 718 lineage-bearing chunks of redistributed Canadian applied guidance, principally Alberta and Manitoba, plus federal and Saskatchewan material;
-- 334 Canadian regional/context chunks covering Ontario statistics, current Manitoba scouting context, and federal or provincial data-product descriptions across crop-producing provinces;
-- the SoilWise soil-health knowledge graph and 1,784 derived retrieval records under CC BY 4.0;
-- a compact USDA NRCS ecological-site corpus available only for explicit cross-border analogue questions, as regional context and never as Canadian soil authority;
-- project-authored safety boundaries and conceptual agronomy scaffolding.
-
-The corpus policy is authoritative. A file being present does not make it admissible: unlicensed forum text, rights-unresolved OCR, evaluation-shaped answer material, and copied certification objectives are quarantined before indexing. See [Knowledge and data governance](docs/public/knowledge-and-data.md).
-
-## Quick start on Apple Silicon
-
-The tested local target is an Apple Silicon Mac with 16 GB unified memory. Python 3.11 or 3.12 and Node 20+ are recommended.
+The exercised local target is an Apple Silicon Mac with 16 GB unified memory. Use Python 3.11 or 3.12 and Node 20 or newer.
 
 ```bash
 git clone https://github.com/Tknecht4/open_agronomy_agent.git
@@ -43,30 +18,23 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
+python -m pip install -e .
 
 cd frontend
 npm ci
 cd ..
 ```
 
-Model weights are deliberately not committed. Download the pinned conference candidate, or replace the profile with another MLX-compatible local model:
+Model weights are not committed and are never downloaded while answering a question. Provision the exact pinned serving model:
 
 ```bash
 python scripts/download_model.py \
   --model-config configs/model_gemma4_e2b_interface_v2.yaml
 ```
 
-The optional fast profile is separately pinned. Install it only if you want it selectable in the UI:
+The profile currently pins `mlx-community/gemma-4-e2b-it-4bit` at revision `238767527555cb75a05732a84dff5d6ba0dd6809`. That snapshot occupied approximately 3.34 GiB in the exercised local cache; reserve additional disk and unified memory for dependencies, indexes, context, and generation.
 
-```bash
-python scripts/download_model.py \
-  --model mlx-community/Qwen3.5-0.8B-OptiQ-4bit \
-  --revision ef60586933bd2cc02b763f77eb8839a5114bbec1
-```
-
-The app never downloads a model during a question. Missing or incomplete weights are reported as setup-required and generation remains disabled until an operator provisions them explicitly.
-
-Run the API and frontend together:
+Launch the API and React cockpit:
 
 ```bash
 PYTHONPATH=src python scripts/run_cockpit.py \
@@ -75,90 +43,55 @@ PYTHONPATH=src python scripts/run_cockpit.py \
   --frontend \
   --frontend-port 5173 \
   --model-config configs/model_gemma4_e2b_interface_v2.yaml \
+  --rag-config configs/rag_governed_runtime_v2.yaml \
   --warm-model
 ```
 
-Open `http://127.0.0.1:5173`. Omit `--warm-model` during ordinary UI development.
-
-## Offline and connected operation
-
-The local model, admitted RAG/KG artifacts, field/session database, and deterministic calculator work without a network. Tools that require a live provider declare that requirement and are blocked before an external call in offline mode. Current weather, current legal labels, and live regulatory authority must never be simulated from stale local text.
-
-The field-LAN launch path requires HTTPS and one-time client pairing. It intentionally blocks public adapters. See [Offline operation](docs/public/offline-operation.md).
-
-Large generated Prairie soil indexes are also excluded from Git. The Alberta, Saskatchewan, and Manitoba demonstration fields use detailed local soil intersections only when the separately built offline spatial pack is installed; otherwise the layer catalog reports `not_installed` and the normal retrieval/model path continues. The pack contains the three AAFC Detailed Soil Survey indexes plus the national 2021 soil-erosion-risk layer. Manifests in `data/derived/geo_layers/` preserve exact source, build, licence, geometry-repair, scale, and checksum lineage.
-
-Verify an extracted release pack and exercise real offline intersections in all three Prairie provinces:
+Open `http://127.0.0.1:5173`. In another terminal, verify the API itself rather than inferring readiness from the page:
 
 ```bash
-python scripts/build_prairie_spatial_pack.py \
-  --destination /absolute/path/to/prairie-spatial-pack \
-  --verify-only
-PYTHONPATH=src python scripts/verify_prairie_spatial_pack.py \
-  --pack-root /absolute/path/to/prairie-spatial-pack
-export AGRONOMY_AGENT_SPATIAL_PACK_ROOT=/absolute/path/to/prairie-spatial-pack
+curl --fail --silent http://127.0.0.1:8000/api/health | python -m json.tool
 ```
 
-Maintainers can assemble the same pack from a validated asset tree with `--asset-root /absolute/path/to/assets` and a new empty `--destination`. Container launches look for the pack at `/state/spatial-pack`, inside the existing per-profile state mount.
-
-## Structured agronomic calculator
-
-Arithmetic is not delegated to free-text regexes or model intuition. The calculator accepts a named operation and explicit quantities, validates dimensions and ranges, uses decimal arithmetic, and returns the formula, inputs, units, assumptions, and safety boundary.
+The response must include `"status": "ok"`. Press **Ctrl+C** in the launch terminal to stop the API and frontend. Confirm both listeners are gone:
 
 ```bash
-PYTHONPATH=src python -m agronomy_agent.tool_cli calculate unit_conversion \
-  --inputs-json '{"value":100,"from_unit":"kg/ha","to_unit":"lb/ac"}'
+lsof -nP -iTCP:8000 -iTCP:5173 -sTCP:LISTEN
 ```
 
-Supported operations include unit conversion, seed-rate mass, fertilizer product mass, nutrient delivery, sprayer volume, tank coverage, growing degree days, row population, field totals, area-weighted averages, and partial budgets. The tool verifies arithmetic only; it does not choose a target rate or establish label compliance.
+No output means both development listeners have stopped.
 
-## Evaluation
+## Need to know
 
-The main internal benchmark contains 241 Canadian cases across four frozen causal arms:
+- **Local-first is not automatically offline.** The model, admitted corpus, graph, calculator, history, and traces can run locally. Weather, current labels, regulations, and other live adapters require an authorized connection and must report when unavailable.
+- **Regional data is not field truth.** Soil maps, statistics, and historical guidance are priors. They do not replace representative samples, current observations, verified geometry, or local calibration.
+- **Private state stays local by default.** Runtime databases, traces, model caches, raw benchmark answers, private overlays, and generated spatial databases are excluded from Git and the documentation site.
+- **Consequential decisions need authority.** Confirm current labels and regulations and involve a qualified local professional when a decision carries material agronomic, legal, environmental, safety, or financial consequences.
+- **Knowledge is cumulative but explicitly admitted.** Runtime v2 selects one dated Canadian master release plus hash-bound seed, SoilWise, graph, and NRCS-analogue assets. Adding a file does not make it model-visible; source rights, policy, registry admission, and corpus validation remain required.
+- **Benchmark claims are bounded.** RC1 and RC2 are frozen historical development identities. RC3 is the current exposed-and-tuned internal-suite rerun plan and remains a non-claim; sealed v3 evaluation is blocked on independent holdout, judge-calibration, egress, and release gates.
+- **Optional assets remain explicit.** Public adapters need provider/network availability; the Prairie spatial pack is a separately built local asset; unavailable capabilities must not be simulated.
 
-1. raw model;
-2. kernel only;
-3. kernel plus the same structured field context;
-4. governed retrieval/evidence path.
+## Documentation
 
-The 16 objective calculation cases are scored with numeric tolerances. Decision-quality cases remain development evidence and are not equivalent to blinded agronomist review. The held-out 256-question AgroQA set is an external transfer diagnostic, not a Canadian certification claim. The 28 CCA-aligned/local-style questions are project-authored coverage probes; they are not copied professional-exam questions and never enter runtime retrieval.
+- [Documentation home](docs/public/index.md) and the future [GitHub Pages site](https://tknecht4.github.io/open_agronomy_agent/)
+- [System architecture](docs/public/architecture.md)
+- [Knowledge and evidence governance](docs/public/knowledge-and-data.md)
+- [Tools and adapters](docs/public/tools-and-adapters.md)
+- [Evaluation contract](docs/public/evaluation.md)
+- [Academic benchmark and system review](docs/reviews/open-agronomy-benchmark-system-review-20260813.md)
+- [Upgrade implementation record](docs/reviews/open-agronomy-upgrade-implementation-20260813.md)
+- [Historical benchmark RC2 readiness record](docs/reviews/open-agronomy-benchmark-rc2-readiness-record-20260814.md)
+- [Developer guide](docs/public/developer/index.md)
+- [Release-candidate checkout gates](docs/public/developer/release-readiness.md)
+- [Native operations](docs/public/operations/native-setup.md), [offline operation](docs/public/offline-operation.md), and [containers](container/README.md)
 
-The completed pre-conference round is published as a [four-page technical paper with plot-ready result data](docs/public/final-benchmark-20260812/README.md). On the 90-case primary semantic lane, the governed system changed the advisory score relative to the raw model by +70.63 points for Gemma 3 270M, +23.22 for Gemma 4 E2B, and -6.45 for Luna High. This model-dependent interaction is the central result: the harness can rescue limited local generators, but its full intervention can over-constrain an already capable model. The same round also exposed a calculator-routing failure, retained as an explicit negative result.
+Subsystem extension contracts live beside the code: [Python package](src/agronomy_agent/README.md), [server](src/agronomy_agent/server/README.md), [Agno runtime](src/agronomy_agent/agno_runtime/README.md), [tools](src/agronomy_agent/tools/README.md), [frontend](frontend/README.md), [configuration](configs/README.md), [data](data/README.md), [manifests](data/manifests/README.md), [scripts](scripts/README.md), and [tests](tests/README.md).
 
-Before a final comparison round, run the release-candidate readiness gate. It
-performs no generation, judging, or network requests. It verifies the exact
-suite and model profiles, both local model snapshots, corpus and package
-receipts, the internal/external separation boundary, explicit egress authority,
-available disk, and deterministic Saskatchewan/NRCS interface probes:
-
-```bash
-PYTHONPATH=src .venv/bin/python scripts/audit_final_benchmark_readiness.py \
-  --hub-cache /absolute/path/to/huggingface/hub \
-  --egress-authorization /absolute/path/to/egress_authorization.json
-```
-
-The audit emits the three exact internal-round commands defined by
-`configs/final_benchmark_round_rc1.json`. A `ready` result means the checkpoint
-is prepared to start evaluation; it is not a benchmark result.
-
-For a quick identity-only runner check during development:
-
-```bash
-PYTHONPATH=src .venv/bin/python scripts/run_open_agronomy_benchmark.py \
-  --evaluation-set internal \
-  --model-config configs/benchmark_models/gemma4_e2b.yaml \
-  --model-key gemma4-e2b \
-  --output-dir outputs/open_agronomy_canadian_performance_v1 \
-  --preflight-only
-```
-
-For a real run, remove `--preflight-only`. Add `--resume-partial-runs` only when you want the runner to resume an identity-matched partial arm. Exact prompts, responses, context packets, run identities, and judgments remain under ignored `outputs/`. The runner preflight freezes identities but does not replace the release-candidate readiness gate. See [Evaluation contract](docs/public/evaluation.md).
-
-## Verification
+## Verify changes
 
 ```bash
 PYTHONPATH=src .venv/bin/python -m pytest -q
-PYTHONPATH=src .venv/bin/python -m compileall -q src scripts
+PYTHONPATH=src .venv/bin/python scripts/check_public_docs.py
 
 cd frontend
 npm run typecheck
@@ -166,33 +99,6 @@ npm test
 npm run build
 ```
 
-Fast deterministic checks:
+A focused check proves only its named contract. Do not describe a partial test run as full-system, field, agronomist, or release validation.
 
-```bash
-PYTHONPATH=src .venv/bin/python scripts/run_eval.py --mode baseline --mock --max-samples 3
-PYTHONPATH=src .venv/bin/python scripts/run_eval.py --mode agronomic_rag --mock --max-samples 3
-```
-
-## Repository map
-
-- `src/agronomy_agent/` — agent kernel, evidence fabric, retrieval, tools, trace and API services;
-- `frontend/` — map-first React interface;
-- `configs/` — model, RAG, benchmark and runtime contracts;
-- `data/seed/` — small project-authored knowledge and boundaries;
-- `data/derived/rag/` — only policy-admitted release RAG/KG artifacts;
-- `data/manifests/` — source, rights, hash and governance records;
-- `data/eval/` — internal and explicitly separated external evaluation data;
-- `scripts/` — ingestion, audit, benchmark, packaging and operator utilities;
-- `tests/` — deterministic contract, service and interface tests;
-- `docs/public/` — maintained public documentation.
-- `docs/public/final-benchmark-20260812/` — final controlled benchmark paper and plot-ready public evidence.
-
-The React cockpit is the supported interface; the old prototype Gradio UI has been removed.
-
-Historical research outputs, model caches, raw downloads, private overlays, mutable traces, benchmark responses, generated spatial databases, and internal planning notes are intentionally excluded from the public repository checkpoint.
-
-## Safety and contribution boundary
-
-Do not use the system as the sole basis for pesticide use, legal compliance, diagnosis, fertilizer prescription, financial commitment, or other high-consequence action. Confirm current labels and regulations, use representative field observations and laboratory data, and involve a qualified local professional when the decision warrants it.
-
-Before accepting a new knowledge source, record item-level rights, publisher, URL, jurisdiction, currency, checksum lineage, retrieval role, and limitations. Do not train on or retrieve from held-out evaluation answers. See [Architecture](docs/public/architecture.md), [Knowledge and data governance](docs/public/knowledge-and-data.md), and [Evaluation contract](docs/public/evaluation.md).
+Before a benchmark release candidate, use the [clean-checkout and environment-receipt procedure](docs/public/developer/release-readiness.md). Python dependencies are currently range-declared; the generated receipt records the exact exercised environment but is not a portable lock.

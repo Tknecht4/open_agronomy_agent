@@ -1,0 +1,176 @@
+{
+  "schema_version": "open_agronomy_agent.benchmark_v3_protocol.v1",
+  "benchmark_id": "open_agronomy_benchmark_v3",
+  "status": "protocol_candidate_holdout_not_supplied",
+  "evaluation_target": "governed agronomic assistance under a frozen evidence, tool, policy, model, asset, and runtime environment",
+  "claim_boundary": {
+    "allowed": [
+      "exact-set model comparisons under one frozen harness",
+      "exact-set harness-component contrasts with one frozen model",
+      "declared model-by-harness interactions",
+      "repeatability across declared trials",
+      "capability reachability, execution, final-use continuity, and fault recovery",
+      "selective-helpfulness trade-offs on the frozen scenario families"
+    ],
+    "prohibited": [
+      "agronomist equivalence",
+      "legal or product-label compliance in deployment",
+      "safe autonomous field action",
+      "causal agronomic efficacy",
+      "population-wide agronomic ability",
+      "generalization beyond the declared crops, regions, languages, cases, and runtime"
+    ],
+    "single_composite_score_allowed": false
+  },
+  "evaluation_layers": [
+    {
+      "id": "instrument_conformance",
+      "data_status": "public_deterministic",
+      "permitted_use": "continuous harness and scorer validation"
+    },
+    {
+      "id": "development_regression",
+      "data_status": "public_exposed",
+      "permitted_use": "engineering diagnosis and variance pilots only"
+    },
+    {
+      "id": "harness_capability_experiment",
+      "data_status": "public_exposed_or_synthetic",
+      "permitted_use": "component-effect evidence within the frozen harness"
+    },
+    {
+      "id": "sequestered_release_holdout",
+      "data_status": "private_independently_authored_hash_committed",
+      "permitted_use": "one authorized exact-set release comparison"
+    }
+  ],
+  "construct_strata": [
+    "benign_scientific_explanation",
+    "evidence_grounded_interpretation",
+    "field_context_sufficiency",
+    "typed_calculation",
+    "tool_selection_and_result_use",
+    "document_retrieval_and_claim_support",
+    "graph_path_use_and_contradiction",
+    "current_authority_boundary",
+    "diagnosis_or_action_requiring_observation",
+    "unavailable_capability_and_fault_recovery",
+    "selective_helpfulness"
+  ],
+  "active_stage_topology_version": "open_agronomy_agent.production_stage_topology.v3",
+  "active_stage_contract": [
+    "routing",
+    "typed_field_context",
+    "public_adapter_selection",
+    "document_retrieval",
+    "graph_retrieval",
+    "evidence_selection_packing",
+    "tool_planning",
+    "tool_execution",
+    "prompt_construction",
+    "pre_generation_answerability_risk_intervention",
+    "deterministic_bypass",
+    "draft_generation",
+    "verification",
+    "safety_normalization",
+    "high_consequence_policy",
+    "structured_rendering",
+    "fallback_origin"
+  ],
+  "component_contract": {
+    "document_retrieval": "separate_answer_affecting_component",
+    "graph_retrieval": "separate_answer_affecting_component",
+    "field_context": "typed_and_question_bound",
+    "typed_tools": "schema_validated_with_result_use_receipt",
+    "risk_intervention": "state_bound_to_observable_action",
+    "verifier": "draft_and_replacement_content_addressed",
+    "fallback": "failure_class_and_origin_receipted",
+    "public_adapter": "selection_and_payload_boundary_receipted",
+    "renderer": "final_text_and_structured_output_receipted"
+  },
+  "required_arm_families": [
+    "raw_model",
+    "kernel_only",
+    "production_full",
+    "full_minus_field_context",
+    "retrieval_neither",
+    "retrieval_document_only",
+    "retrieval_graph_only",
+    "retrieval_document_and_graph",
+    "full_minus_typed_tools",
+    "full_minus_risk_intervention_private_only",
+    "full_minus_verifier",
+    "full_minus_fallback"
+  ],
+  "sampling_contract": {
+    "required_identity_fields": [
+      "run_id",
+      "trial_id",
+      "sample_index",
+      "generation_seed",
+      "case_order_seed",
+      "judge_seed",
+      "process_isolation_policy",
+      "cache_policy"
+    ],
+    "seed_receipt_fields": [
+      "requested_seed",
+      "applied_seed",
+      "backend",
+      "sampler",
+      "temperature",
+      "top_p",
+      "top_k",
+      "implementation_sha256"
+    ],
+    "best_of_n_allowed": false,
+    "temperature_zero_label": "repeated_trial_unless_backend_determinism_is_proven",
+    "deterministic_tool_variance_pool": "separate_from_sampled_text"
+  },
+  "analysis_contract": {
+    "primary_estimand": "performance_on_the_exact_frozen_v3_holdout",
+    "pairing_keys": [
+      "scenario_family",
+      "eval_id",
+      "model_identity",
+      "system_fingerprint",
+      "trial_id",
+      "sample_index"
+    ],
+    "primary_uncertainty": "scenario_family_clustered_paired_bootstrap",
+    "missing_observation_policy": "retain_as_typed_failure_never_impute_or_silently_drop",
+    "required_reports": [
+      "per_model",
+      "per_system",
+      "per_construct_stratum",
+      "per_trial",
+      "component_effects",
+      "risk_coverage",
+      "latency_resource_and_failure_counts"
+    ]
+  },
+  "holdout_contract": {
+    "commitment_schema": "configs/schemas/benchmark_v3_holdout_commitment_v1.schema.json",
+    "plaintext_allowed_in_repository": false,
+    "independent_authorship_required": true,
+    "independent_review_required": true,
+    "author_may_be_sole_release_judge": false,
+    "minimum_french_cases": 1,
+    "exposure_retires_cohort": true,
+    "implementation_team_plaintext_access_before_freeze": false
+  },
+  "release_gates": [
+    "clean_committed_source_identity",
+    "full_backend_frontend_docs_and_public_package_pass",
+    "product_and_benchmark_receipt_equivalence",
+    "observed_system_nonclaim_rehearsal_retained",
+    "all_active_stages_frozen_and_fail_closed",
+    "seed_trial_process_cache_and_order_receipts",
+    "document_graph_two_by_two_executable",
+    "capability_certification_generated_from_registry",
+    "retention_privacy_and_recovery_pass",
+    "judge_calibration_frozen",
+    "private_holdout_commitment_valid_and_unexposed",
+    "no_open_priority_one_defects"
+  ]
+}

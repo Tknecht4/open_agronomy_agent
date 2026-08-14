@@ -1,0 +1,110 @@
+{
+  "schema_version": "open_agronomy_agent.benchmark_v2_preregistration.v1",
+  "benchmark_id": "open_agronomy_benchmark_v2",
+  "registered_at": "2026-08-13T00:00:00Z",
+  "registration_status": "historical_preregistration_amended_after_exact_case_exposure_and_tuning",
+  "outcome_data_status": "no_model_outcomes_attached_but_deterministic_case_probes_and_contract_qa_executed",
+  "holdout_status": "invalidated_for_evaluation_by_exact_case_tuning",
+  "current_role": "exposed_internal_development_regression",
+  "exposure_amendment_path": "data/eval/open_agronomy_benchmark_v2_exposure_amendment_20260813.json",
+  "claim_eligible": false,
+  "design_intent": "Measure whether the implemented system varies specificity, clarification, tool use, verification, and authority boundaries with risk and evidence completeness while retaining useful answers on benign and fully specified cases.",
+  "primary_estimands": [
+    {
+      "estimand_id": "unnecessary_abstention_delta",
+      "contrast": "risk_intervention",
+      "population": ["benign_explanation", "fully_specified_calculation", "fully_specified_action_plan"],
+      "metric": "unnecessary_abstention_rate",
+      "direction": "non_increasing",
+      "internal_engineering_margin": 0.05
+    },
+    {
+      "estimand_id": "missing_input_clarification_gain",
+      "contrast": "risk_intervention",
+      "population": ["one_critical_input_missing"],
+      "metric": "clarification_minimality_rate",
+      "direction": "increasing",
+      "internal_engineering_margin": 0.10
+    },
+    {
+      "estimand_id": "authority_calibration_gain",
+      "contrast": "risk_intervention",
+      "population": ["high_consequence_authority"],
+      "metric": "risk_calibration_rate",
+      "direction": "increasing",
+      "internal_engineering_margin": 0.10
+    },
+    {
+      "estimand_id": "calculator_selection_gain",
+      "contrast": "typed_tools",
+      "population": ["fully_specified_calculation", "one_critical_input_missing"],
+      "metric": "tool_selection_precision_recall_and_execution_reported_separately",
+      "direction": "increasing",
+      "internal_engineering_margin": 0.10
+    },
+    {
+      "estimand_id": "verifier_utility_delta",
+      "contrast": "verifier",
+      "population": "all_strata",
+      "metric": "final_utility_minus_draft_utility_with_false_positive_and_false_negative_rates",
+      "direction": "non_negative_with_error_rates_reported",
+      "internal_engineering_margin": 0.0
+    }
+  ],
+  "secondary_descriptive_metrics": [
+    "direct_answer_rate",
+    "clarification_question_count",
+    "clarification_field_precision",
+    "clarification_field_recall",
+    "tool_selection_precision",
+    "tool_selection_recall",
+    "tool_execution_success",
+    "verifier_false_positive_rate",
+    "verifier_false_negative_rate",
+    "draft_final_utility_delta",
+    "answer_origin_counts",
+    "fallback_rate",
+    "unexpected_fallback_rate",
+    "risk_calibration_rate"
+  ],
+  "analysis_plan": {
+    "unit": "case_arm_observation",
+    "paired_by": ["eval_id", "model_id", "model_revision"],
+    "stratify_by": ["stratum", "risk_level", "match_group"],
+    "eligible_denominator_required": true,
+    "missing_observation_policy": "report_missing_never_impute_zero",
+    "multiple_models_policy": "report_each_model_separately_before_any pooled descriptive summary",
+    "uncertainty": "exact counts and descriptive paired bootstrap intervals may be reported, but the small project-authored set is not powered for population inference",
+    "single_composite_score": "prohibited",
+    "stopping_rule": "run all frozen cases for every available declared arm; no early stopping based on observed performance"
+  },
+  "scoring_blindness": {
+    "store_answers_before_judging": true,
+    "hide_arm_and_model_identity_from_human_answer_reviewers": true,
+    "freeze_case_expectations_before_runs": true,
+    "same_model_judge_allowed_for_claims": false,
+    "automated_judge_role": "triage_only"
+  },
+  "limitations_declared_in_advance": [
+    "All cases and expectations are project-authored.",
+    "Independent agronomist review has not yet occurred.",
+    "There is no consented real-user lane.",
+    "Thirty matched cases support engineering diagnosis, not agronomist-equivalence or field-validity claims.",
+    "The calculator lane tests arithmetic contracts, not selection of agronomic targets.",
+    "Authority-boundary cases test policy calibration, not legal or agronomic correctness of a product recommendation.",
+    "The authority and missing-input prompts contain explicit cues and may overestimate boundary recognition relative to naturalistic user language.",
+    "Matching balances topic coverage; because strata intentionally use different task types, cross-stratum differences are descriptive and are not a causal estimate of risk alone."
+  ],
+  "amendment_policy": {
+    "append_only_after_first_run": true,
+    "record_reason_author_timestamp_and_changed_hashes": true,
+    "behavior_tuning_requires_new_benchmark_version": true,
+    "silent_relabeling_or_case_replacement": false
+  },
+  "methodology_amendment": {
+    "status": "v2_no_longer_eligible_as_an_untouched_evaluation",
+    "reason": "All exact questions and expectations were used to diagnose and tune deterministic planner and answerability behavior.",
+    "permitted_interpretation": "contract conformance and regression QA only",
+    "required_successor": "freshly authored untouched v3 preferably with independent authorship and review"
+  }
+}

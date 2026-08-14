@@ -1,0 +1,24 @@
+{
+  "schema_version": "open_agronomy_agent.benchmark_v2_harness_amendment.v1",
+  "amendment_id": "oab2-harness-20260813-01",
+  "benchmark_id": "open_agronomy_benchmark_v2",
+  "recorded_at": "2026-08-13T00:00:00Z",
+  "status": "harness_compatibility_contract_added_before_model_execution",
+  "append_only": true,
+  "claim_eligible": false,
+  "trigger": "Continued agent development can add stages, evidence types, tools, graphs, or policies that an older benchmark silently ignores or pools.",
+  "changes": [
+    "Added an executor feature and component-version handshake.",
+    "Added exact construct, cohort, and system fingerprints to observations and measurements.",
+    "Required component-specific execution state machines instead of generic available-not-used receipts.",
+    "Rejected undeclared observation fields and active stages before scoring.",
+    "Defined comparable, migration-required, and new-benchmark-required outcomes."
+  ],
+  "outcome_access": {
+    "model_outputs_inspected": false,
+    "judge_outputs_inspected": false,
+    "metric_outcomes_used": false,
+    "activity_class": "harness_contract_hardening_only"
+  },
+  "methodological_boundary": "This amendment improves regression-harness integrity but does not restore v2 holdout status or make its synthetic dry run a performance result."
+}

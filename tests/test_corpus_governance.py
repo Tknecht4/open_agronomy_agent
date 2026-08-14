@@ -32,27 +32,21 @@ def _doc(path: str, *, doc_id: str = "doc") -> RetrievedDoc:
 
 
 def test_runtime_corpus_manifest_hashes_and_rows_are_valid() -> None:
-    for config_name in ("rag_governed_runtime_v1.yaml", "rag_final_mvp.yaml"):
-        report = audit_runtime_corpora(root=ROOT, rag_config_path=ROOT / "configs" / config_name)
-        assert report["status"] == "pass", report["errors"]
-        assert report["configured_corpus_count"] == report["audited_corpus_count"] == 23
-        validate_implementation_binding(
-            report["implementation_binding"],
-            expected_paths=CORPUS_AUDIT_IMPLEMENTATION_PATHS,
-        )
-        assert report["corpus_file_counts_by_eligibility"]["quarantined"] > 0
-        assert report["row_counts_by_eligibility"]["decisive"] > 0
-        assert report["row_counts_by_eligibility"]["context_only"] > 0
-        assert report["row_counts_by_eligibility"]["requires_live_authority"] > 0
-        v13 = next(
-            row
-            for row in report["corpora"]
-            if row["path"] == "data/derived/rag/canada_agronomy_distributable_v13.jsonl"
-        )
-        assert v13["effective_eligibility_counts"] == {
-            "context_only": 706,
-            "requires_live_authority": 12,
-        }
+    report = audit_runtime_corpora(
+        root=ROOT,
+        rag_config_path=ROOT / "configs/rag_governed_runtime_v2.yaml",
+    )
+    assert report["status"] == "pass", report["errors"]
+    assert report["configured_corpus_count"] == report["audited_corpus_count"] == 6
+    validate_implementation_binding(
+        report["implementation_binding"],
+        expected_paths=CORPUS_AUDIT_IMPLEMENTATION_PATHS,
+    )
+    assert report["corpus_file_counts_by_eligibility"]["quarantined"] == 0
+    assert report["row_counts_by_eligibility"]["decisive"] > 0
+    assert report["row_counts_by_eligibility"]["context_only"] > 0
+    assert report["row_counts_by_eligibility"]["requires_live_authority"] > 0
+    assert not any("canada_agronomy_distributable" in row["path"] for row in report["corpora"])
 
 
 def test_quarantined_forum_and_eval_gap_rows_never_enter_context() -> None:

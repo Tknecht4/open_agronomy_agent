@@ -162,10 +162,13 @@ def test_weighted_expansion_does_not_overpower_direct_query_terms() -> None:
     assert hits[0].doc_id == "sulfur"
 
 
-def test_manitoba_2026_scouting_supplement_retrieves_for_field_question() -> None:
+def test_manitoba_2026_scouting_master_retrieves_context_only_method_for_field_question() -> None:
     rows = [
         json.loads(line)
-        for line in (ROOT / "data/derived/rag/canada_agronomy_supplement_v3.jsonl")
+        for line in (
+            ROOT
+            / "data/derived/rag/curated_canada/releases/2026-08-14/shards/context_only-canada-offline-master-0001.jsonl"
+        )
         .read_text(encoding="utf-8")
         .splitlines()
         if line.strip()
@@ -176,11 +179,13 @@ def test_manitoba_2026_scouting_supplement_retrieves_for_field_question() -> Non
         "In Manitoba seedling canola, how should I scout flea beetle leaf damage?",
         jurisdictions=("Manitoba",),
         strict_jurisdictions=True,
+        retrieval_policies=("context_only",),
         top_k=3,
     )
 
     assert hits
     assert hits[0].doc_id == "mb_2026_canola_insect_scouting_semantic_0002"
+    assert hits[0].retrieval_policy == "context_only"
 
 
 def test_strict_jurisdiction_filter_excludes_unscoped_general_documents() -> None:

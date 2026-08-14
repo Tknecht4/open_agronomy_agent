@@ -1,0 +1,51 @@
+{
+  "schema_version": "open_agronomy_agent.reviewed_semantic_companion.v1",
+  "source_id": "mb_2026_canola_insect_scouting",
+  "source_raw_sha256": "1faefa12d43bed5565c175bf41b672e9d437c7d0021a4db970e17d569ab9909c",
+  "reviewed_on": "2026-07-24",
+  "review_method": "Manual comparison against PDF pages 1, 12, and 13. Only Manitoba government field-scouting methods and current decision thresholds were retained. Product tables, application rates, logos, images, and separately credited content were excluded.",
+  "records": [
+    {
+      "title": "Manitoba 2026 field-scouting design and threshold meaning",
+      "source_pages": [
+        1
+      ],
+      "tags": [
+        "field scouting",
+        "sampling design",
+        "economic threshold",
+        "integrated pest management"
+      ],
+      "text": "Field scouting is a repeated measurement process, not a single look from the field edge. Manitoba's 2026 guide recommends weekly checks during the growing season and more frequent checks when populations approach economic levels or weather favours rapid development. Sample at least five sites in a typical field, using an X, Z, or W path for broadly distributed insects and extra edge sampling for pests that concentrate near margins. Combine sweep-net observations with direct plant and soil-surface inspection. An economic threshold is the population or injury level at which action is considered before damage reaches the economic injury level; a nominal threshold is an experience-based decision guide. Crop stage, moisture, temperature, stand density, expected crop value, and control cost can change the interpretation."
+    },
+    {
+      "title": "Manitoba 2026 early-season canola insect scouting",
+      "source_pages": [
+        12,
+        13
+      ],
+      "tags": [
+        "scouting",
+        "flea beetle",
+        "cutworm",
+        "stand reduction",
+        "defoliation"
+      ],
+      "text": "In Manitoba canola, scout early-season fields for flea beetles, cutworms, red turnip beetles, and diamondback moth. For cutworm, look in May and June for notched, wilted, dead, or cut-off seedlings and bare patches; larvae may be close to recently damaged plants. The 2026 guide gives a nominal cutworm decision point of 25 to 30 percent stand reduction and notes that patch treatment may be more economical than whole-field treatment when injury is localized. For flea beetles, examine ten randomly selected plants at each stop and estimate leaf-area loss. The guide's 25 percent leaf-area-destruction threshold applies while the canola is in the seedling stage and flea beetles are still present. If crop stage is unknown or the crop is beyond the seedling stage, do not treat 25 percent as a context-free action threshold. Threshold evidence supports a management decision but does not select or authorize a pesticide."
+    },
+    {
+      "title": "Manitoba 2026 canola sweep-net and area sampling for lygus bugs and diamondback moth",
+      "source_pages": [
+        13
+      ],
+      "tags": [
+        "sweep net",
+        "lygus bug",
+        "diamondback moth",
+        "area sampling",
+        "economic threshold"
+      ],
+      "text": "After canola flowering, sample lygus bugs with ten sweeps of a 38-centimetre net at each of at least five sites; if counts are concerning, the 2026 Manitoba guide calls for at least 15 samples before judging economics. Counts are most comparable on a sunny day above 20 degrees Celsius with a dry canopy. A range of 20 to 30 lygus bugs per ten sweeps is the guide's threshold under good conditions, with the lower end more relevant to stressed crops. For diamondback moth, shake plants from a 50 by 50 centimetre area onto a light surface, multiply the larval count by four for larvae per square metre, and repeat in at least five areas. The nominal range depends on crop stage and stand density, so record those factors instead of treating a count as context-free."
+    }
+  ]
+}

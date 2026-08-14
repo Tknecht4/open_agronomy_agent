@@ -1,0 +1,42 @@
+{
+  "schema_version": "open_agronomy_agent.runtime_profiles.v1",
+  "release_model": {
+    "path": "configs/model_gemma4_e2b_interface_v2.yaml",
+    "sha256": "48647c02fc9a06ffba40ca7037b8758b33faf8e42b2e18220cad516df0826896",
+    "status": "active"
+  },
+  "default_rag_config": "configs/rag_governed_runtime_v2.yaml",
+  "active_rag_profiles": [
+    {
+      "path": "configs/rag_governed_runtime_v2.yaml",
+      "sha256": "2a7f9cca000629dd7e6a74b2828cbf6324159b0b212a538df4c22e1d20992653",
+      "status": "active",
+      "runtime_corpus_audit_required": true,
+      "runtime_policy": {
+        "path": "data/manifests/runtime_corpus_policy_v2.json",
+        "sha256": "9f7c38640ef9f9a31106c0f50dd6de35abe7fee9e96191f8ab7c128b919a8f82"
+      },
+      "knowledge_release": {
+        "store_id": "curated-canada-2026-08-14",
+        "manifest_path": "data/derived/rag/curated_canada/releases/2026-08-14/store_manifest.json",
+        "manifest_sha256": "9000eebb6c33d1997f4bdc463f51842e460ad4f9432ed8a9576f06626d56c583"
+      }
+    }
+  ],
+  "historical_rag_profiles": [
+    {
+      "path": "configs/rag_governed_runtime_v1.yaml",
+      "sha256": "6b13caa1fd56c7b59afd05df5a8d4ea7f6b3985c47f9079aa88c79a72b7f650a",
+      "status": "frozen_historical",
+      "selectable": false,
+      "boundary": "Retained to verify prior release identities; historical corpus bytes are not required in the current checkout and this profile is not runnable or a product default."
+    },
+    {
+      "path": "configs/rag_final_mvp.yaml",
+      "sha256": "6b13caa1fd56c7b59afd05df5a8d4ea7f6b3985c47f9079aa88c79a72b7f650a",
+      "status": "frozen_historical",
+      "selectable": false,
+      "boundary": "Retained only for frozen benchmark contracts and historical receipts; historical corpus bytes are not required in the current checkout and this profile is not runnable."
+    }
+  ]
+}

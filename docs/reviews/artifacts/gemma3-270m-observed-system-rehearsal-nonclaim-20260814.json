@@ -1,0 +1,90 @@
+{
+  "schema_version": "open_agronomy_agent.public_observed_system_rehearsal_receipt.v1",
+  "receipt_id": "gemma3-270m-observed-system-rehearsal-nonclaim-20260814",
+  "recorded_at": "2026-08-14T07:07:28.897995+00:00",
+  "result_class": "observed_system_execution_nonclaim",
+  "claim_eligible": false,
+  "diagnostic_status": "exposed_internal_rehearsal",
+  "claim_boundary": "Observed server answer-path execution and receipt parity only; not HTTP/UI parity, legacy evaluator parity, model performance, agronomic validity, or benchmark outcome.",
+  "privacy_boundary": "Public-safe digest projection. Prompt text, draft text, final answer text, retrieved content, field context, tool payloads, session identifiers, and local filesystem paths are omitted.",
+  "source_receipt": {
+    "schema_version": "open_agronomy_agent.observed_system_rehearsal.v1",
+    "sha256": "d59e7cf66e403810e9b00035e924cee870824fb370b001014873bc3f7b80ca04",
+    "bytes": 275147,
+    "full_receipt_distribution": "not_in_public_repository",
+    "retained_projection": true,
+    "projection_policy": "explicit_structural_fields_and_content_digests_only"
+  },
+  "diagnostic_case": {
+    "case_class": "exposed_internal_benign_conceptual_diagnostic",
+    "question_sha256": "06941f7666e973df37c1b2fada6ec9dca964abfaaee709f031079e50bbcfc472",
+    "route": {
+      "question_type": "exam_review",
+      "risk_level": "low",
+      "route_sha256": "eb90a4b9d01a0953f31f414c19fd5f22b340956b71ebdf160b46eafebc3734e7"
+    }
+  },
+  "model": {
+    "backend": "mlx_local",
+    "model_id": "mlx-community/gemma-3-270m-it-4bit",
+    "revision": "ff1143e3a10547c9f2129e94ca37059b096b23f4",
+    "model_config_path": "configs/model_gemma3_270m_bounded.yaml",
+    "model_config_sha256": "b33c5fc00f612f76ec75d7502516e3223fcc209869abe2f0f93192985ec7efb2",
+    "identity_status": "verified_direct_loader",
+    "adaptation": "base_only"
+  },
+  "generation": {
+    "sampling_mode": "argmax",
+    "temperature": 0.0,
+    "top_p": 0.9,
+    "top_k": 0,
+    "max_generation_tokens_observed": 180,
+    "prompt_cache_enabled": false,
+    "seed_status": "not_configured",
+    "runtime_boundary": "Local MLX/Metal execution on the development device; not a portability or throughput claim."
+  },
+  "component_configuration": {
+    "configuration_id": "retrieval_both",
+    "document_retrieval": true,
+    "graph_retrieval": true,
+    "all_other_production_stages": true
+  },
+  "answer_lineage": {
+    "answer_integrity_receipt_sha256": "f8c20c145ab105f1b1615df4cf3468a7f2d2923dd8a30319eaa3397258dff6a8",
+    "draft_sha256": "3a765fe1c3783dde1fd59d2a1c42037a8d82d6c4bf6823660235aa59750d7733",
+    "post_verification_sha256": "714e80a3c5770579c88e9e5cd7d2b47d6ebb75595df15935c171b80fe0a58e56",
+    "final_sha256": "714e80a3c5770579c88e9e5cd7d2b47d6ebb75595df15935c171b80fe0a58e56",
+    "verification_receipt_sha256": "6e46f5b1b9a626b8369a19707a018bc2ef85c7e295d687444ab18fd7fb820637",
+    "fallback_origin_sha256": "87ee03fded3e5e4b0f97cbcbdd88c8e0f37490e9b478ea419e7b2b3c5339ff57",
+    "origin_class": "verifier_conservative_fallback",
+    "fallback_kind": "verification_conservative",
+    "fallback_used": true,
+    "verification_action": "conservative_fallback",
+    "replacement_used": true,
+    "rewrite_accepted": false
+  },
+  "stage_topology": {
+    "topology_version": "open_agronomy_agent.production_stage_topology.v3",
+    "stage_count": 17,
+    "ordered_receipts": [
+      {"position": 0, "stage_id": "routing", "state": "executed", "receipt_sha256": "cecb286970363741f7e93d765899475fd03111c32332853171d6dcfbb15b0bf9"},
+      {"position": 1, "stage_id": "typed_field_context", "state": "executed", "receipt_sha256": "b5658c543b84d04e8a4cd48ead16a9a980fa279df96f5db18b2e366cf58fdf2f"},
+      {"position": 2, "stage_id": "public_adapter_selection", "state": "executed", "receipt_sha256": "c5179c328110b4905a18a1d5788ffb5b2104fa35c4062fee7e462c743c07cb4f"},
+      {"position": 3, "stage_id": "document_retrieval", "state": "completed", "receipt_sha256": "dd698107c489a5ceb75bd23066cd7c5b3df6ed17bdd450b6ea8f5bebe432b8dd"},
+      {"position": 4, "stage_id": "graph_retrieval", "state": "completed", "receipt_sha256": "5afa1f3fde4b512a89d4dc5ba314a114e8841f6772ec38d94fb47fdcdc836eab"},
+      {"position": 5, "stage_id": "evidence_selection_packing", "state": "executed", "receipt_sha256": "26e86fb92336beea7a48cedf4fb04be0e4f677b4625afd3bcd8b6503887710aa"},
+      {"position": 6, "stage_id": "tool_planning", "state": "executed", "receipt_sha256": "21401ed0a05d273b3aa5e70b5300228822a3800b72b369da898c744593406b83"},
+      {"position": 7, "stage_id": "tool_execution", "state": "not_applicable", "receipt_sha256": "b1a273a2d72f6530e1b5fb4ccfa9a5dfafcd281c26f0b5d7eb9d3000d759ed2e"},
+      {"position": 8, "stage_id": "prompt_construction", "state": "executed", "receipt_sha256": "00871d2f98766654cee71176af8d8ccc2796222bdd340ef5d71d8ebd915543b9"},
+      {"position": 9, "stage_id": "pre_generation_answerability_risk_intervention", "state": "executed", "receipt_sha256": "5937599cbfe8bd2d447dce25eab7718ba178296c1334f658729fac0a82ccf513"},
+      {"position": 10, "stage_id": "deterministic_bypass", "state": "not_applicable", "receipt_sha256": "aa72544c4f071f2c8c08a37b5c5d398992158de3d04e40906ce493b2d0248f9f"},
+      {"position": 11, "stage_id": "draft_generation", "state": "executed", "receipt_sha256": "483f473a933371eaf043831dbad21890d4b13ee001ee2ba611a4738055381c5d"},
+      {"position": 12, "stage_id": "verification", "state": "executed", "receipt_sha256": "b47a20aa2eb8381cdb353f9b08fc79d2ca4686c6395771c909d5553e06d52c91"},
+      {"position": 13, "stage_id": "safety_normalization", "state": "executed", "receipt_sha256": "2164c4b7e6f51fc5d7397dc0c51d6f1018bc69e011855a7b26be8b1e9ebe2a21"},
+      {"position": 14, "stage_id": "high_consequence_policy", "state": "executed", "receipt_sha256": "bbbf2bcc1bbf419e574c8de8316513cd3541dd66fc055798b852524d00025259"},
+      {"position": 15, "stage_id": "structured_rendering", "state": "executed", "receipt_sha256": "eeb76df41f21c7ad67c22e37cd00f2a328c2e6ac1e640253415b5b9fe7528de7"},
+      {"position": 16, "stage_id": "fallback_origin", "state": "executed", "receipt_sha256": "d9fcbcef8e710cff727086d1e0fe339937aa715df28b547c2bc6a7c604d33252"}
+    ]
+  },
+  "interpretation": "This retained projection demonstrates one real local product-path execution and truthful stage provenance after the cited repairs. It does not estimate model quality, harness treatment effects, agronomic correctness, or release performance."
+}

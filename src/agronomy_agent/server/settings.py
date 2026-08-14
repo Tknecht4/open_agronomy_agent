@@ -13,14 +13,15 @@ from agronomy_agent.knowledge_update_trust import (
     VerifiedKnowledgeUpdateTrustPolicy,
     load_knowledge_update_trust_policy,
 )
+from agronomy_agent.runtime_profiles import DEFAULT_MODEL_CONFIG, DEFAULT_RAG_CONFIG
 
 
 @dataclass(frozen=True)
 class ServerSettings:
     db_path: Path
     artifact_root: Path
-    model_config_path: str = "configs/model.yaml"
-    default_rag_config: str = "configs/rag_governed_runtime_v1.yaml"
+    model_config_path: str = DEFAULT_MODEL_CONFIG
+    default_rag_config: str = DEFAULT_RAG_CONFIG
     prompt_version: str = "phase3_default_v0"
     corpus_audit_id: str | None = None
     redaction_mode_default: str = "snippets_hashed"
@@ -90,7 +91,14 @@ class ServerSettings:
     @property
     def default_model_id(self) -> str:
         config = load_model_config(self.model_config_path)
-        return config.get("serving_model_id") or config.get("model_id", "mlx-community/Qwen3.5-2B-OptiQ-4bit")
+        model_id = str(
+            config.get("serving_model_id") or config.get("model_id") or ""
+        ).strip()
+        if not model_id:
+            raise ValueError(
+                f"model configuration does not define a serving model ID: {self.model_config_path}"
+            )
+        return model_id
 
     @property
     def artifact_dir(self) -> Path:
@@ -328,14 +336,14 @@ def build_settings(
         raise ValueError("AGRONOMY_AGENT_MODEL_QUEUE_WAIT_MS_ESTIMATE must be >= 0")
     runtime_mode = resolve_agent_runtime(explicit=agent_runtime)
     resolved_model_config_path = (
-        model_config_path or os.getenv("AGRONOMY_AGENT_MODEL_CONFIG") or "configs/model.yaml"
+        model_config_path or os.getenv("AGRONOMY_AGENT_MODEL_CONFIG") or DEFAULT_MODEL_CONFIG
     ).strip()
     if not resolved_model_config_path:
         raise ValueError("AGRONOMY_AGENT_MODEL_CONFIG must be non-empty")
     fallback_rag_config = str(
         default_rag_config
         or os.getenv("AGRONOMY_AGENT_RAG_CONFIG")
-        or "configs/rag_governed_runtime_v1.yaml"
+        or DEFAULT_RAG_CONFIG
     ).strip()
     if not fallback_rag_config:
         raise ValueError("AGRONOMY_AGENT_RAG_CONFIG must be non-empty")

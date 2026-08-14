@@ -1,0 +1,71 @@
+:root {
+  --agronomy-deep: #0b3d2e;
+  --agronomy-leaf: #31745f;
+  --agronomy-field: #b28b24;
+  --agronomy-paper: #f8f7f1;
+}
+
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: var(--agronomy-deep);
+  --md-accent-fg-color: var(--agronomy-field);
+}
+
+.system-flow {
+  display: grid;
+  grid-template-columns: minmax(6rem, 1fr) auto minmax(6rem, 1fr) auto minmax(6rem, 1fr) auto minmax(6rem, 1fr) auto minmax(6rem, 1fr);
+  align-items: stretch;
+  gap: 0.45rem;
+  max-width: 44rem;
+  margin: 1.4rem 0 1.8rem;
+}
+
+.system-flow span {
+  display: flex;
+  min-height: 5rem;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--agronomy-leaf) 65%, transparent);
+  border-radius: 0.45rem;
+  background: linear-gradient(145deg, var(--agronomy-paper), #fff);
+  color: var(--agronomy-deep);
+  font-weight: 650;
+  text-align: center;
+}
+
+.system-flow small {
+  margin-top: 0.25rem;
+  color: #4b6159;
+  font-size: 0.68rem;
+  font-weight: 450;
+  line-height: 1.25;
+}
+
+.system-flow b {
+  align-self: center;
+  justify-self: center;
+  color: var(--agronomy-field);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+@media (max-width: 70rem) {
+  .system-flow {
+    grid-template-columns: 1fr;
+    max-width: none;
+  }
+
+  .system-flow b {
+    transform: rotate(90deg);
+  }
+
+  .system-flow span {
+    min-height: 3.4rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+  }
+}

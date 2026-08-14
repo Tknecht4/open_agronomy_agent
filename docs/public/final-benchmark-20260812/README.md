@@ -33,6 +33,7 @@ The result is model-dependent. Governed evidence and answer constraints substant
 - `source_data/response_level_metrics.csv` — response identities and metrics, without generated answer text;
 - `source_data/external_*` — frozen finalist identity and one-time external diagnostic;
 - `source_data/protocol.md` and `source_data/final_validation_receipt.json` — experiment contract and completion receipt;
+- `public_repository_receipt_rc1.json` — frozen inventory and hashes for the evaluated RC1 public boundary, retained here rather than at the repository root;
 - `scripts/` — deterministic analysis and manuscript-fragment generators.
 
 The full SQLite databases, exact model responses, exact judge exchanges, private field data, credentials, model weights, and local execution logs are intentionally excluded from Git. Database hashes and record counts are retained in the validation receipt so a separately transferred local artifact can be checked without making it public.

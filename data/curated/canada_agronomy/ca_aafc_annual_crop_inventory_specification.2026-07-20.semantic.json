@@ -1,0 +1,67 @@
+{
+  "schema_version": "open_agronomy_agent.reviewed_semantic_companion.v1",
+  "source_id": "ca_aafc_annual_crop_inventory_specification",
+  "source_raw_sha256": "b8aeff19eb36dfbb83b99a4029c00419ebe325daaf2e32a842136689ba507959",
+  "reviewed_on": "2026-07-20",
+  "review_method": "Manual transcription and cross-check against source PDF pages 4, 7, 24-25, and 27-33; no management recommendation added.",
+  "records": [
+    {
+      "title": "Annual Crop Inventory 2025: imagery, ground data, 30 m resolution, and confidence raster",
+      "source_pages": [
+        4,
+        7,
+        24,
+        25,
+        32,
+        33
+      ],
+      "tags": [
+        "AAFC Annual Crop Inventory",
+        "2025 crop map",
+        "satellite classification",
+        "ground data",
+        "30 m raster",
+        "confidence raster",
+        "classification uncertainty"
+      ],
+      "text": "The AAFC Annual Crop Inventory maps crop types from optical and radar satellite imagery acquired during one growing season, using known crop types from ground data to train a Decision Tree classification. The 2025 product covers Canadian provinces and Yukon at 30 m resolution. A new 0-to-100 confidence raster reports local variation in classification certainty, with higher values indicating greater certainty. The crop-class raster and its confidence layer are model outputs, not grower declarations, management records, or direct observations of every point in a field."
+    },
+    {
+      "title": "Annual Crop Inventory: prairie crop-class codes relevant to field intersections",
+      "source_pages": [
+        27,
+        28,
+        29,
+        30
+      ],
+      "tags": [
+        "crop class codes",
+        "barley 133",
+        "spring wheat 146",
+        "canola 153",
+        "peas 162",
+        "lentils 174",
+        "too wet to be seeded 130",
+        "fallow 131"
+      ],
+      "text": "The AAFC feature catalogue assigns integer classes to land cover and crops. Prairie-relevant examples include barley 133, wheat 140 when sub-wheat classes cannot be distinguished, winter wheat 145, spring wheat 146, canola or rapeseed 153, peas 162, chickpeas 163, lentils 174, pasture or forages 122, too wet to be seeded 130, and fallow 131. An intersected raster value is therefore a classified land-cover label for that year and pixel. It is evidence for crop-context screening, but it is not a complete rotation record and should be confirmed when a decision depends on exact field history."
+    },
+    {
+      "title": "Annual Crop Inventory: accuracy, lineage, and field-use boundary",
+      "source_pages": [
+        24,
+        25,
+        32,
+        33
+      ],
+      "tags": [
+        "overall target accuracy 85 percent",
+        "Saskatchewan crop accuracy 91.45 percent",
+        "classification error",
+        "local confidence",
+        "field boundary"
+      ],
+      "text": "AAFC states that the Annual Crop Inventory can consistently meet an overall target accuracy of at least 85% at 30 m resolution. For the 2025 inventory, the specification reports 91.45% overall provincial accuracy for crop classes in Saskatchewan. These aggregate accuracy figures do not guarantee that a particular field or pixel is correct. Use the year-specific confidence raster and spatial pattern to identify uncertainty, compare with known field history or scouting, and avoid treating one classified pixel as sufficient evidence for a crop-sensitive input or timing decision."
+    }
+  ]
+}

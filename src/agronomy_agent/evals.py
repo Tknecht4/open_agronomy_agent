@@ -2,17 +2,22 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import fcntl
 import hashlib
 import json
 import os
+import platform
+import random
 import re
 import string
 import sys
 import time
+import uuid
 from collections import Counter
 from contextlib import contextmanager
 from dataclasses import asdict
 from pathlib import Path
+from threading import RLock
 from typing import Any
 
 from agronomy_agent.agent import (
@@ -29,9 +34,11 @@ from agronomy_agent.corpus_governance import (
     load_corpus_policy,
     partition_runtime_corpus_paths,
 )
+from agronomy_agent.agno_runtime.knowledge_graph import load_graph_manifests
 from agronomy_agent.paths import repo_path
 from agronomy_agent.model_identity import sha256_path
 from agronomy_agent.router import classify_query, refine_query_route
+from agronomy_agent.runtime_profiles import DEFAULT_MODEL_CONFIG, DEFAULT_RAG_CONFIG
 from agronomy_agent.server.services.tool_service import PUBLIC_ADAPTER_SPECS
 from agronomy_agent.tools.registry import run_tools
 
@@ -72,11 +79,155 @@ ANSWER_PROFILE_ENV_VARS = (
     "AGRONOMY_AGENT_OBJECTIVE_RESPONSE_MODE",
 )
 
-DEFAULT_RAG_CONFIG = "configs/rag_final_mvp.yaml"
+_EVAL_PROCESS_STATE_LOCK = RLock()
+_EVAL_RUNS_STARTED = 0
 
 
 def now() -> str:
     return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat()
+
+
+def canonical_sha256(value: Any) -> str:
+    return hashlib.sha256(
+        json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
+def effective_sampling_config(args: argparse.Namespace, model_cfg: dict[str, Any]) -> dict[str, Any]:
+    """Resolve answer-affecting sampling overrides before generator creation."""
+
+    configured_seed = model_cfg.get("seed")
+    generation_seed = getattr(args, "generation_seed", None)
+    verification_seed = getattr(args, "verification_seed", None)
+    return {
+        "max_tokens": int(args.max_tokens or model_cfg.get("max_tokens", 360)),
+        "temperature": float(
+            getattr(args, "temperature", None)
+            if getattr(args, "temperature", None) is not None
+            else model_cfg.get("temperature", 0.0)
+        ),
+        "top_p": float(
+            getattr(args, "top_p", None)
+            if getattr(args, "top_p", None) is not None
+            else model_cfg.get("top_p", 0.9)
+        ),
+        "top_k": int(
+            getattr(args, "top_k", None)
+            if getattr(args, "top_k", None) is not None
+            else model_cfg.get("top_k", 0)
+        ),
+        "generation_seed": int(generation_seed if generation_seed is not None else configured_seed)
+        if generation_seed is not None or configured_seed is not None
+        else None,
+        "generation_seed_source": (
+            "cli_override"
+            if generation_seed is not None
+            else "model_config"
+            if configured_seed is not None
+            else "not_configured"
+        ),
+        "verification_seed": int(
+            verification_seed
+            if verification_seed is not None
+            else (model_cfg.get("answer_verification") or {}).get(
+                "seed",
+                generation_seed if generation_seed is not None else configured_seed,
+            )
+        )
+        if (
+            verification_seed is not None
+            or (model_cfg.get("answer_verification") or {}).get("seed") is not None
+            or generation_seed is not None
+            or configured_seed is not None
+        )
+        else None,
+        "verification_seed_source": (
+            "cli_override"
+            if verification_seed is not None
+            else "verification_config"
+            if (model_cfg.get("answer_verification") or {}).get("seed") is not None
+            else "generation_seed"
+            if generation_seed is not None or configured_seed is not None
+            else "not_configured"
+        ),
+    }
+
+
+def order_eval_suite(
+    suite: list[dict[str, Any]],
+    *,
+    case_order_seed: int | None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Return an explicitly ordered suite and its content-bound receipt."""
+
+    eval_ids = [str(item.get("eval_id") or "") for item in suite]
+    duplicate_ids = sorted(eval_id for eval_id, count in Counter(eval_ids).items() if count > 1)
+    if duplicate_ids:
+        raise ValueError(f"selected evaluation suite contains duplicate eval IDs: {duplicate_ids}")
+    ordered = list(suite)
+    if case_order_seed is not None:
+        random.Random(case_order_seed).shuffle(ordered)
+    ordered_ids = [str(item["eval_id"]) for item in ordered]
+    return ordered, {
+        "schema_version": "open_agronomy_agent.eval_case_order.v1",
+        "policy": "seeded_shuffle" if case_order_seed is not None else "manifest_order",
+        "case_order_seed": case_order_seed,
+        "selected_sample_count": len(ordered_ids),
+        "ordered_eval_ids_sha256": canonical_sha256(ordered_ids),
+    }
+
+
+def build_process_identity() -> dict[str, Any]:
+    return {
+        "schema_version": "open_agronomy_agent.eval_process_identity.v1",
+        "process_execution_id": f"proc_{uuid.uuid4().hex}",
+        "pid": os.getpid(),
+        "python_implementation": platform.python_implementation(),
+        "python_version": platform.python_version(),
+    }
+
+
+def register_process_isolation(policy: str) -> None:
+    """Fail closed when a caller declares a fresh process that is already reused."""
+
+    global _EVAL_RUNS_STARTED
+    with _EVAL_PROCESS_STATE_LOCK:
+        if policy == "fresh_process_per_run" and _EVAL_RUNS_STARTED:
+            raise RuntimeError(
+                "fresh_process_per_run was requested after another evaluation started in this process"
+            )
+        _EVAL_RUNS_STARTED += 1
+
+
+@contextmanager
+def exclusive_run_lock(run_dir: Path):
+    """Prevent two processes from resuming or finalizing the same run."""
+
+    lock_path = run_dir / ".eval_run.lock"
+    with lock_path.open("a+", encoding="utf-8") as handle:
+        try:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            raise RuntimeError(f"evaluation run is already active: {run_dir}") from exc
+        try:
+            yield
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+def allocate_run_directory(
+    output_root: Path,
+    *,
+    mode: str,
+    trial_id: str,
+    run_execution_id: str,
+) -> Path:
+    output_root.mkdir(parents=True, exist_ok=True)
+    timestamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    safe_trial = re.sub(r"[^A-Za-z0-9_.-]+", "_", trial_id).strip("_.-") or "trial"
+    candidate = output_root / f"{mode}_{timestamp}_{safe_trial}_{run_execution_id[-12:]}"
+    candidate.mkdir(parents=False, exist_ok=False)
+    return candidate
 
 
 def load_jsonl(path: Path, max_samples: int | None = None) -> list[dict[str, Any]]:
@@ -107,7 +258,22 @@ def build_rag_artifact_identity(resources: Any) -> list[dict[str, Any]]:
         policy,
     )
     configured.extend(("corpus", str(value)) for value in loadable_corpora)
-    configured.extend(("graph", str(value)) for value in graph_paths if value)
+    graph_manifests = load_graph_manifests(
+        (repo_path(value) for value in graph_paths if value),
+        require_manifests=bool(retrieval.get("require_graph_manifests", False)),
+    )
+    for graph_value, manifest in zip(
+        (value for value in graph_paths if value),
+        graph_manifests,
+        strict=True,
+    ):
+        configured.append(("graph", str(graph_value)))
+        if manifest.manifest_path is not None:
+            try:
+                manifest_reference = manifest.manifest_path.relative_to(repo_path(".").resolve()).as_posix()
+            except ValueError:
+                manifest_reference = str(manifest.manifest_path)
+            configured.append(("graph_manifest", manifest_reference))
     if policy_path:
         configured.append(("corpus_policy", str(policy_path)))
 
@@ -187,7 +353,144 @@ def load_partial_outputs(path: Path) -> list[dict[str, Any]]:
             if not isinstance(row, dict):
                 raise ValueError(f"{path}:{line_number}: partial output must be an object")
             rows.append(row)
+    observation_ids = [
+        str(row.get("observation_id") or "") for row in rows if row.get("observation_id")
+    ]
+    duplicate_observations = sorted(
+        observation_id
+        for observation_id, count in Counter(observation_ids).items()
+        if count > 1
+    )
+    if duplicate_observations:
+        raise ValueError(
+            f"{path}: duplicate observation IDs are not resumable: {duplicate_observations}"
+        )
     return rows
+
+
+def matched_trial_key(
+    *,
+    suite_sha256: str,
+    eval_id: str,
+    model_id: str,
+    model_revision: str | None,
+    trial_id: str,
+    generation_seed: int | None,
+) -> str:
+    """Pair the same model/case/trial across causal harness arms."""
+
+    return canonical_sha256(
+        {
+            "schema_version": "open_agronomy_agent.eval_matched_trial_key.v1",
+            "suite_sha256": suite_sha256,
+            "eval_id": eval_id,
+            "model_id": model_id,
+            "model_revision": model_revision,
+            "trial_id": trial_id,
+            "generation_seed": generation_seed,
+        }
+    )
+
+
+def build_observation_replication_receipt(
+    *,
+    eval_id: str,
+    sample_index: int,
+    run_execution_id: str,
+    run_identity_sha256: str,
+    matched_key: str,
+    replication_contract: dict[str, Any],
+    process_identity: dict[str, Any],
+    cache_identity: dict[str, Any],
+    model_backend: str,
+    metadata: dict[str, Any],
+) -> dict[str, Any]:
+    generation_path = str(metadata.get("generation_path") or "model_generation")
+    deterministic_path = generation_path.startswith("deterministic_")
+    generation_stats = metadata.get("generation_stats")
+    generation_stats = generation_stats if isinstance(generation_stats, dict) else {}
+    verification_stats = metadata.get("verification_generation_stats")
+    verification_stats = verification_stats if isinstance(verification_stats, dict) else {}
+    requested_seed = replication_contract.get("generation_seed")
+    requested_verification_seed = replication_contract.get("verification_seed")
+    seed_application = generation_stats.get("seed_application")
+    verification_seed_application = verification_stats.get("seed_application")
+    if deterministic_path:
+        seed_application = {
+            "schema_version": "open_agronomy_agent.seed_application_bypass.v1",
+            "requested_seed": requested_seed,
+            "applied_seed": None,
+            "status": "not_applied_generation_bypassed",
+            "backend": model_backend,
+            "bypass_path": generation_path,
+        }
+        verification_seed_application = {
+            "schema_version": "open_agronomy_agent.seed_application_bypass.v1",
+            "requested_seed": requested_verification_seed,
+            "applied_seed": None,
+            "status": "not_applied_verification_bypassed",
+            "backend": model_backend,
+            "bypass_path": generation_path,
+        }
+    elif not isinstance(seed_application, dict):
+        seed_application = {
+            "schema_version": "open_agronomy_agent.seed_application_unavailable.v1",
+            "requested_seed": requested_seed,
+            "applied_seed": None,
+            "status": (
+                "not_applicable_mock"
+                if model_backend == "mock"
+                else "not_receipted_by_backend"
+            ),
+            "backend": model_backend,
+        }
+    if not deterministic_path and not isinstance(verification_seed_application, dict):
+        verification_seed_application = {
+            "schema_version": "open_agronomy_agent.verification_seed_application_unavailable.v1",
+            "requested_seed": requested_verification_seed,
+            "applied_seed": None,
+            "status": (
+                "not_configured"
+                if requested_verification_seed is None
+                else "not_applied_verification_not_triggered"
+                if not verification_stats
+                else "not_receipted_by_backend"
+            ),
+            "backend": model_backend,
+        }
+    observation_id = canonical_sha256(
+        {
+            "schema_version": "open_agronomy_agent.eval_observation_identity.v1",
+            "run_execution_id": run_execution_id,
+            "run_identity_sha256": run_identity_sha256,
+            "eval_id": eval_id,
+            "sample_index": sample_index,
+        }
+    )
+    return {
+        "schema_version": "open_agronomy_agent.eval_observation_replication.v1",
+        "observation_id": observation_id,
+        "matched_trial_key": matched_key,
+        "trial_id": replication_contract["trial_id"],
+        "sample_index": sample_index,
+        "generation_seed": requested_seed,
+        "verification_seed": requested_verification_seed,
+        "case_order_seed": (replication_contract.get("case_order") or {}).get(
+            "case_order_seed"
+        ),
+        "judge_seed": replication_contract.get("judge_seed"),
+        "sampling_backend_contract": replication_contract.get("sampling_backend_contract"),
+        "execution_kind": "deterministic_bypass" if deterministic_path else "model_generation",
+        "generation_path": generation_path,
+        "seed_application": seed_application,
+        "verification_seed_application": verification_seed_application,
+        "process_identity": process_identity,
+        "cache_identity": {
+            **cache_identity,
+            "observation_cache_status": dict(metadata.get("cache_status") or {}),
+        },
+        "order_identity": replication_contract["case_order"],
+    }
 
 
 def validate_resume_prefix(
@@ -200,6 +503,9 @@ def validate_resume_prefix(
     rag_config: str | None = None,
     model_backend: str | None = None,
     request_model_id: str | None = None,
+    trial_id: str | None = None,
+    generation_seed: int | None = None,
+    run_execution_id: str | None = None,
 ) -> None:
     if len(outputs) > len(suite):
         raise ValueError(f"resume output has {len(outputs)} rows but suite has only {len(suite)}")
@@ -217,6 +523,12 @@ def validate_resume_prefix(
             expected["model_backend"] = model_backend
         if request_model_id is not None:
             expected["request_model_id"] = request_model_id
+        if trial_id is not None:
+            expected["trial_id"] = trial_id
+            expected["sample_index"] = index
+            expected["generation_seed"] = generation_seed
+        if run_execution_id is not None:
+            expected["run_execution_id"] = run_execution_id
         mismatches = {
             key: {"expected": value, "actual": row.get(key)}
             for key, value in expected.items()
@@ -948,10 +1260,11 @@ def build_eval_generators(args: argparse.Namespace, model_cfg: dict[str, Any]) -
     if codex_app_server and model_base_url:
         raise ValueError("--codex-app-server and --model-base-url are mutually exclusive")
 
-    max_tokens = int(args.max_tokens or model_cfg.get("max_tokens", 360))
-    temperature = float(model_cfg.get("temperature", 0.0))
-    top_p = float(model_cfg.get("top_p", 0.9))
-    top_k = int(model_cfg.get("top_k", 0))
+    sampling = effective_sampling_config(args, model_cfg)
+    max_tokens = int(sampling["max_tokens"])
+    temperature = float(sampling["temperature"])
+    top_p = float(sampling["top_p"])
+    top_k = int(sampling["top_k"])
     verifier_enabled = bool(verification_cfg.get("enabled", False)) and args.mode == "agronomic_rag"
     verifier_model_id = str(verification_cfg.get("model_id") or model_id)
     verifier_model_revision = str(verification_cfg.get("model_revision") or model_cfg.get("model_revision") or "") or None
@@ -1006,6 +1319,20 @@ def build_eval_generators(args: argparse.Namespace, model_cfg: dict[str, Any]) -
         temperature=temperature,
         top_p=top_p,
         top_k=top_k,
+        seed=sampling["generation_seed"],
+        draft_model_id=str(model_cfg.get("draft_model_id") or "") or None,
+        num_draft_tokens=int(model_cfg.get("num_draft_tokens", 4)),
+        use_stream_generate=bool(model_cfg.get("use_stream_generate", True)),
+        prompt_cache_enabled=bool(model_cfg.get("prompt_cache_enabled", False))
+        and str(getattr(args, "cache_policy", "as_configured")) != "no_prompt_cache",
+        prompt_cache_entries=int(model_cfg.get("prompt_cache_entries", 8)),
+        prompt_cache_max_bytes=int(model_cfg.get("prompt_cache_max_bytes_mb", 256)) * 1024 * 1024,
+        prompt_cache_min_prefix_tokens=int(model_cfg.get("prompt_cache_min_prefix_tokens", 64)),
+        prefill_step_size=int(model_cfg.get("prefill_step_size", 2048)),
+        kv_bits=(int(model_cfg["kv_bits"]) if model_cfg.get("kv_bits") is not None else None),
+        kv_group_size=int(model_cfg.get("kv_group_size", 64)),
+        quantized_kv_start=int(model_cfg.get("quantized_kv_start", 0)),
+        max_kv_size=(int(model_cfg["max_kv_size"]) if model_cfg.get("max_kv_size") is not None else None),
     )
     verifier = (
         MLXGenerator(
@@ -1015,6 +1342,14 @@ def build_eval_generators(args: argparse.Namespace, model_cfg: dict[str, Any]) -
             temperature=0.0,
             top_p=top_p,
             top_k=top_k,
+            seed=sampling["verification_seed"],
+            use_stream_generate=bool(model_cfg.get("use_stream_generate", True)),
+            prompt_cache_enabled=False,
+            prefill_step_size=int(model_cfg.get("prefill_step_size", 2048)),
+            kv_bits=(int(model_cfg["kv_bits"]) if model_cfg.get("kv_bits") is not None else None),
+            kv_group_size=int(model_cfg.get("kv_group_size", 64)),
+            quantized_kv_start=int(model_cfg.get("quantized_kv_start", 0)),
+            max_kv_size=(int(model_cfg["max_kv_size"]) if model_cfg.get("max_kv_size") is not None else None),
         )
         if verifier_enabled
         else None
@@ -1023,25 +1358,157 @@ def build_eval_generators(args: argparse.Namespace, model_cfg: dict[str, Any]) -
 
 
 def run_eval(args: argparse.Namespace) -> int:
+    process_policy = str(getattr(args, "process_isolation_policy", "shared_process"))
+    cache_policy = str(getattr(args, "cache_policy", "as_configured"))
+    register_process_isolation(process_policy)
+    process_identity = build_process_identity()
     model_cfg = load_model_config(args.model_config)
     verification_cfg = model_cfg.get("answer_verification") or {}
-    generator, verifier, model_id, model_backend, request_model_id = build_eval_generators(args, model_cfg)
+    sampling = effective_sampling_config(args, model_cfg)
+    if not 0.0 <= float(sampling["top_p"]) <= 1.0:
+        raise ValueError("top_p must be between 0 and 1")
+    if float(sampling["temperature"]) < 0.0:
+        raise ValueError("temperature must be non-negative")
+    if int(sampling["top_k"]) < 0:
+        raise ValueError("top_k must be non-negative")
+
     suite_path = repo_path(args.suite)
+    suite = load_jsonl(suite_path, args.max_samples)
+    eval_ids_raw = str(getattr(args, "eval_ids", "") or "").strip()
+    requested_ids: set[str] = set()
+    if eval_ids_raw:
+        requested_ids = {value.strip() for value in eval_ids_raw.split(",") if value.strip()}
+        available_ids = {str(item.get("eval_id") or "") for item in suite}
+        missing_ids = sorted(requested_ids - available_ids)
+        if missing_ids:
+            raise ValueError(f"requested eval IDs are not in the selected suite: {missing_ids}")
+        suite = [item for item in suite if str(item.get("eval_id") or "") in requested_ids]
+    case_order_seed = getattr(args, "case_order_seed", None)
+    suite, case_order = order_eval_suite(
+        suite,
+        case_order_seed=int(case_order_seed) if case_order_seed is not None else None,
+    )
+    trial_id = str(getattr(args, "trial_id", "trial-000") or "").strip()
+    if not trial_id or len(trial_id) > 128:
+        raise ValueError("trial_id must contain between 1 and 128 characters")
+    judge_seed = getattr(args, "judge_seed", None)
+    judge_seed = int(judge_seed) if judge_seed is not None else None
+
+    resume_run_dir = getattr(args, "resume_run_dir", None)
+    if resume_run_dir:
+        out_dir = repo_path(resume_run_dir)
+        if not out_dir.is_dir():
+            raise ValueError(f"resume run directory does not exist: {out_dir}")
+        identity_path = out_dir / "resumable_run_identity.json"
+        if not identity_path.is_file():
+            raise ValueError(f"resume run is missing identity receipt: {identity_path}")
+        stored_identity = json.loads(identity_path.read_text(encoding="utf-8"))
+        run_execution_id = str(stored_identity.get("run_execution_id") or "")
+        if not run_execution_id:
+            raise ValueError("resume run identity is missing run_execution_id")
+    else:
+        run_execution_id = f"run_{uuid.uuid4().hex}"
+        out_dir = allocate_run_directory(
+            repo_path(args.output_dir),
+            mode=args.mode,
+            trial_id=trial_id,
+            run_execution_id=run_execution_id,
+        )
+        identity_path = out_dir / "resumable_run_identity.json"
+
+    generator, verifier, model_id, model_backend, request_model_id = build_eval_generators(
+        args, model_cfg
+    )
     model_config_path = repo_path(args.model_config)
     rag_config_path = repo_path(args.rag_config) if args.mode == "agronomic_rag" else None
     resources = load_agent_resources(args.rag_config) if args.mode == "agronomic_rag" else None
     rag_artifacts = build_rag_artifact_identity(resources) if resources is not None else []
-    command_sha256 = hashlib.sha256(
-        json.dumps(sys.argv, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    ).hexdigest()
+    effective_prompt_cache = bool(getattr(generator, "prompt_cache_enabled", False))
+    cache_contract = {
+        "schema_version": "open_agronomy_agent.eval_cache_contract.v1",
+        "policy": cache_policy,
+        "model_weight_cache_scope": "process_local_reuse",
+        "prompt_cache_enabled": effective_prompt_cache,
+        "retrieval_query_cache_scope": (
+            "process_local_reuse" if args.mode == "agronomic_rag" else "not_applicable"
+        ),
+        "compiled_retrieval_index_cache": (
+            "as_configured" if args.mode == "agronomic_rag" else "not_applicable"
+        ),
+    }
+    cache_identity = {
+        **cache_contract,
+        "schema_version": "open_agronomy_agent.eval_cache_identity.v1",
+        "cache_epoch_id": f"cache_{process_identity['process_execution_id']}",
+        "process_execution_id": process_identity["process_execution_id"],
+        "compiled_retrieval_index_status": (
+            resources.index_cache_status if resources is not None else "not_applicable"
+        ),
+    }
+    if model_backend == "mlx_local":
+        sampling_backend_contract = {
+            "sampling_parameters": "applied_by_native_mlx_sampler",
+            "generation_seed": "applied_before_each_serialized_generation",
+        }
+    elif model_backend == "openai_compatible_http":
+        sampling_backend_contract = {
+            "sampling_parameters": "sent_in_openai_compatible_request",
+            "generation_seed": "not_sent_backend_contract_has_no_seed_field",
+        }
+    elif model_backend == "codex_app_server_chatgpt_auth":
+        sampling_backend_contract = {
+            "sampling_parameters": "not_configurable_by_backend",
+            "generation_seed": "not_configurable_by_backend",
+        }
+    else:
+        sampling_backend_contract = {
+            "sampling_parameters": "not_applicable_mock",
+            "generation_seed": "not_applicable_mock",
+        }
+    replication_contract = {
+        "schema_version": "open_agronomy_agent.eval_replication_contract.v1",
+        "trial_id": trial_id,
+        "generation_seed": sampling["generation_seed"],
+        "generation_seed_source": sampling["generation_seed_source"],
+        "verification_seed": sampling["verification_seed"],
+        "verification_seed_source": sampling["verification_seed_source"],
+        "judge_seed": judge_seed,
+        "generation_seed_backend_contract": (
+            "applied_before_each_serialized_generation"
+            if model_backend == "mlx_local"
+            else "not_applicable_mock"
+            if model_backend == "mock"
+            else "requested_identity_only_backend_does_not_receipt_application"
+        ),
+        "sampling_backend_contract": sampling_backend_contract,
+        "case_order": case_order,
+        "process_isolation_policy": process_policy,
+        "cache_contract": cache_contract,
+    }
+    command_sha256 = canonical_sha256(sys.argv)
     run_identity = {
-        "schema_version": "open_agronomy_agent.eval_run_identity.v2",
+        "schema_version": "open_agronomy_agent.eval_run_identity.v3",
+        "run_execution_id": run_execution_id,
+        "mode": args.mode,
+        "answer_profile": args.answer_profile,
+        "rubric": args.rubric,
+        "eval_field_context_used": bool(getattr(args, "use_eval_field_context", False)),
         "model_id": model_id if not args.mock else "mock",
         "model_revision": str(model_cfg.get("model_revision") or "") or None,
         "model_backend": model_backend,
         "request_model_id": request_model_id,
+        "generation_config": sampling,
+        "replication_contract": replication_contract,
         "suite": args.suite,
         "suite_sha256": sha256_path(suite_path),
+        "suite_selection": {
+            "max_samples": args.max_samples,
+            "requested_eval_ids": sorted(requested_ids),
+            "selected_sample_count": len(suite),
+            "selected_eval_ids_sha256": canonical_sha256(
+                sorted(str(item["eval_id"]) for item in suite)
+            ),
+        },
         "model_config": args.model_config,
         "model_config_sha256": sha256_path(model_config_path),
         "rag_config": args.rag_config if args.mode == "agronomic_rag" else None,
@@ -1057,8 +1524,7 @@ def run_eval(args: argparse.Namespace) -> int:
         "answer_verification": {
             "configured_enabled": bool(verification_cfg.get("enabled", False)),
             "effective_enabled": bool(
-                verification_cfg.get("enabled", False)
-                and args.mode == "agronomic_rag"
+                verification_cfg.get("enabled", False) and args.mode == "agronomic_rag"
             ),
             "mode": str(verification_cfg.get("mode") or "risk_gated"),
             "model_id": str(verification_cfg.get("model_id") or model_id),
@@ -1070,193 +1536,258 @@ def run_eval(args: argparse.Namespace) -> int:
             or None,
         },
     }
-    run_identity_sha256 = hashlib.sha256(
-        json.dumps(run_identity, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    ).hexdigest()
-    suite = load_jsonl(repo_path(args.suite), args.max_samples)
-    eval_ids_raw = str(getattr(args, "eval_ids", "") or "").strip()
-    if eval_ids_raw:
-        requested_ids = {value.strip() for value in eval_ids_raw.split(",") if value.strip()}
-        available_ids = {str(item.get("eval_id") or "") for item in suite}
-        missing_ids = sorted(requested_ids - available_ids)
-        if missing_ids:
-            raise ValueError(f"requested eval IDs are not in the selected suite: {missing_ids}")
-        suite = [item for item in suite if str(item.get("eval_id") or "") in requested_ids]
-    resume_run_dir = getattr(args, "resume_run_dir", None)
-    if resume_run_dir:
-        out_dir = repo_path(resume_run_dir)
-        if not out_dir.is_dir():
-            raise ValueError(f"resume run directory does not exist: {out_dir}")
-    else:
-        run_id = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        out_dir = repo_path(args.output_dir) / f"{args.mode}_{run_id}"
-        out_dir.mkdir(parents=True, exist_ok=True)
+    # The command identifies one invocation, not the resumable scientific run.
+    # Hashing only the command-independent receipt keeps every row stable when
+    # an interrupted run continues in a new process.
+    run_identity_sha256 = canonical_sha256(resumable_run_identity(run_identity))
     partial_path = out_dir / "outputs.partial.jsonl"
-    identity_path = out_dir / "resumable_run_identity.json"
-    if resume_run_dir:
-        if not partial_path.is_file():
-            raise ValueError(f"resume run is missing partial outputs: {partial_path}")
-        validate_resume_identity(identity_path, run_identity)
-        outputs = load_partial_outputs(partial_path)
-        validate_resume_prefix(
-            outputs,
-            suite,
-            mode=args.mode,
-            model_id=model_id if not args.mock else "mock",
-            answer_profile=args.answer_profile,
-            rag_config=args.rag_config if args.mode == "agronomic_rag" else None,
-            model_backend=model_backend,
-            request_model_id=request_model_id,
-        )
-        print(json.dumps({"resumed_rows": len(outputs), "remaining_rows": len(suite) - len(outputs), "run_dir": str(out_dir)}))
-    else:
-        identity_path.write_text(
-            json.dumps(resumable_run_identity(run_identity), indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
-        partial_path.write_text("", encoding="utf-8")
-        outputs = []
-    with answer_profile_environment(args.answer_profile):
-        for idx, item in enumerate(suite[len(outputs) :], start=len(outputs) + 1):
-            started = time.time()
-            field_context = None
-            if bool(getattr(args, "use_eval_field_context", False)):
-                field_context = build_eval_field_context(item)
-            output, metadata = generate_answer(
-                eval_question(item),
-                args.mode,
-                generator,
-                resources=resources,
-                verifier=verifier,
-                field_context=field_context,
-                verification_enabled=bool(verification_cfg.get("enabled", False)),
-                verification_mode=str(verification_cfg.get("mode") or "risk_gated"),
-                capture_context_packet=bool(getattr(args, "capture_context_packets", False)),
-                prompt_profile=str(model_cfg.get("prompt_profile") or "default"),
-                intervention_profile=str(model_cfg.get("intervention_profile") or "") or None,
+    invocations_path = out_dir / "invocations.jsonl"
+
+    with exclusive_run_lock(out_dir):
+        if resume_run_dir:
+            if not partial_path.is_file():
+                raise ValueError(f"resume run is missing partial outputs: {partial_path}")
+            validate_resume_identity(identity_path, run_identity)
+            outputs = load_partial_outputs(partial_path)
+            validate_resume_prefix(
+                outputs,
+                suite,
+                mode=args.mode,
+                model_id=model_id if not args.mock else "mock",
+                answer_profile=args.answer_profile,
+                rag_config=args.rag_config if args.mode == "agronomic_rag" else None,
+                model_backend=model_backend,
+                request_model_id=request_model_id,
+                trial_id=trial_id,
+                generation_seed=sampling["generation_seed"],
+                run_execution_id=run_execution_id,
             )
-            metadata = enrich_eval_metadata_with_expected_source_trace(metadata, item)
-            metadata["tool_execution_audit"] = tool_trace_audit(item, metadata)
-            if args.rubric == "mixed_capability" and item.get("scoring_method") == "numeric_tolerance":
-                score = score_item_numeric(output, item)
-            elif args.rubric == "mixed_external" and item.get("scoring_method") == "multiple_choice":
-                score = score_item_multiple_choice(output, item)
-            elif args.rubric in {"reference_answer", "mixed_external"}:
-                score = score_item_reference_answer(output, item)
-            elif args.rubric in {"agribench_proxy", "mixed_capability"}:
-                score = score_item_agribench_proxy(output, item, metadata)
-            elif args.rubric == "multiple_choice":
-                score = score_item_multiple_choice(output, item)
-            else:
-                score = score_item(output, item)
-            row = {
-                "eval_id": item["eval_id"],
-                "task_family": item.get("task_family", "unknown"),
-                "question": eval_question(item),
-                "semantic_reference": {
-                    "reference_answer": item.get("reference_answer") or item.get("expected_answer"),
-                    "expert_reference_points": list(item.get("expert_reference_points") or []),
-                    "material_errors": list(item.get("material_errors") or []),
-                    "critical_evidence": list(item.get("critical_evidence") or []),
-                    "safe_boundary": item.get("safe_boundary"),
-                    "acceptable_answer_variants": list(item.get("acceptable_answer_variants") or []),
-                },
-                "eval_metadata": {
-                    key: item[key]
-                    for key in (
-                        "difficulty",
-                        "hardness_bucket",
-                        "hardness_score",
-                        "region",
-                        "crop",
-                        "jurisdiction",
-                        "scenario_type",
-                        "expected_tools",
-                        "source_basis",
-                        "reasoning_mode",
-                        "is_multi_turn",
-                        "coverage_domain",
-                        "public_source_lane",
-                        "category",
-                        "partition",
-                        "question_style",
-                        "geometry_mode",
-                        "evidence_condition",
-                        "benchmark_lane",
-                        "metric_role",
-                        "primary_benchmark_lane",
-                        "question_origin",
-                        "support_mode",
-                        "language",
-                        "evaluation_partition",
-                        "public_dataset_id",
-                        "public_dataset_revision",
-                        "public_source_row_index",
-                        "correct_option_roman",
-                        "correct_option_word_length_rank",
-                        "original_difficulty_level",
-                        "source_url",
-                        "source_license",
-                        "source_revision",
-                        "cca_domain_alignment",
-                        "reference_answer_status",
+            print(
+                json.dumps(
+                    {
+                        "resumed_rows": len(outputs),
+                        "remaining_rows": len(suite) - len(outputs),
+                        "run_dir": str(out_dir),
+                    }
+                )
+            )
+        else:
+            identity_path.write_text(
+                json.dumps(resumable_run_identity(run_identity), indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            partial_path.write_text("", encoding="utf-8")
+            outputs = []
+
+        invocation = {
+            "schema_version": "open_agronomy_agent.eval_process_invocation.v1",
+            "invoked_at": now(),
+            "run_execution_id": run_execution_id,
+            "run_identity_sha256": run_identity_sha256,
+            "command_sha256": command_sha256,
+            "resume": bool(resume_run_dir),
+            "rows_present_before_invocation": len(outputs),
+            "process_identity": process_identity,
+            "cache_identity": cache_identity,
+        }
+        with invocations_path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(invocation, ensure_ascii=False) + "\n")
+
+        existing_observation_ids = {
+            str(row.get("observation_id")) for row in outputs if row.get("observation_id")
+        }
+        with answer_profile_environment(args.answer_profile):
+            for idx, item in enumerate(suite[len(outputs) :], start=len(outputs) + 1):
+                started = time.time()
+                field_context = None
+                if bool(getattr(args, "use_eval_field_context", False)):
+                    field_context = build_eval_field_context(item)
+                output, metadata = generate_answer(
+                    eval_question(item),
+                    args.mode,
+                    generator,
+                    resources=resources,
+                    verifier=verifier,
+                    field_context=field_context,
+                    verification_enabled=bool(verification_cfg.get("enabled", False)),
+                    verification_mode=str(verification_cfg.get("mode") or "risk_gated"),
+                    capture_context_packet=bool(getattr(args, "capture_context_packets", False)),
+                    prompt_profile=str(model_cfg.get("prompt_profile") or "default"),
+                    intervention_profile=str(model_cfg.get("intervention_profile") or "") or None,
+                )
+                metadata = enrich_eval_metadata_with_expected_source_trace(metadata, item)
+                metadata["tool_execution_audit"] = tool_trace_audit(item, metadata)
+                if args.rubric == "mixed_capability" and item.get("scoring_method") == "numeric_tolerance":
+                    score = score_item_numeric(output, item)
+                elif args.rubric == "mixed_external" and item.get("scoring_method") == "multiple_choice":
+                    score = score_item_multiple_choice(output, item)
+                elif args.rubric in {"reference_answer", "mixed_external"}:
+                    score = score_item_reference_answer(output, item)
+                elif args.rubric in {"agribench_proxy", "mixed_capability"}:
+                    score = score_item_agribench_proxy(output, item, metadata)
+                elif args.rubric == "multiple_choice":
+                    score = score_item_multiple_choice(output, item)
+                else:
+                    score = score_item(output, item)
+                match_key = matched_trial_key(
+                    suite_sha256=run_identity["suite_sha256"],
+                    eval_id=str(item["eval_id"]),
+                    model_id=run_identity["model_id"],
+                    model_revision=run_identity["model_revision"],
+                    trial_id=trial_id,
+                    generation_seed=sampling["generation_seed"],
+                )
+                replication = build_observation_replication_receipt(
+                    eval_id=str(item["eval_id"]),
+                    sample_index=idx,
+                    run_execution_id=run_execution_id,
+                    run_identity_sha256=run_identity_sha256,
+                    matched_key=match_key,
+                    replication_contract=replication_contract,
+                    process_identity=process_identity,
+                    cache_identity=cache_identity,
+                    model_backend=model_backend,
+                    metadata=metadata,
+                )
+                if replication["observation_id"] in existing_observation_ids:
+                    raise RuntimeError(
+                        f"duplicate observation would be appended: {replication['observation_id']}"
                     )
-                    if key in item
-                },
-                "mode": args.mode,
+                row = {
+                    "eval_id": item["eval_id"],
+                    "task_family": item.get("task_family", "unknown"),
+                    "question": eval_question(item),
+                    "semantic_reference": {
+                        "reference_answer": item.get("reference_answer") or item.get("expected_answer"),
+                        "expert_reference_points": list(item.get("expert_reference_points") or []),
+                        "material_errors": list(item.get("material_errors") or []),
+                        "critical_evidence": list(item.get("critical_evidence") or []),
+                        "safe_boundary": item.get("safe_boundary"),
+                        "acceptable_answer_variants": list(item.get("acceptable_answer_variants") or []),
+                    },
+                    "eval_metadata": {
+                        key: item[key]
+                        for key in (
+                            "difficulty", "hardness_bucket", "hardness_score", "region", "crop",
+                            "jurisdiction", "scenario_type", "expected_tools", "source_basis",
+                            "reasoning_mode", "is_multi_turn", "coverage_domain", "public_source_lane",
+                            "category", "partition", "question_style", "geometry_mode",
+                            "evidence_condition", "benchmark_lane", "metric_role",
+                            "primary_benchmark_lane", "question_origin", "support_mode", "language",
+                            "evaluation_partition", "public_dataset_id", "public_dataset_revision",
+                            "public_source_row_index", "correct_option_roman",
+                            "correct_option_word_length_rank", "original_difficulty_level", "source_url",
+                            "source_license", "source_revision", "cca_domain_alignment",
+                            "reference_answer_status",
+                        )
+                        if key in item
+                    },
+                    "mode": args.mode,
+                    "answer_profile": args.answer_profile,
+                    "eval_field_context_used": bool(getattr(args, "use_eval_field_context", False)),
+                    "eval_field_context": field_context,
+                    "model_id": model_id if not args.mock else "mock",
+                    "model_backend": model_backend,
+                    "request_model_id": request_model_id,
+                    "model_identity": dict(getattr(generator, "model_identity", {}) or {}),
+                    "run_execution_id": run_execution_id,
+                    "run_identity_sha256": run_identity_sha256,
+                    "observation_id": replication["observation_id"],
+                    "matched_trial_key": match_key,
+                    "trial_id": trial_id,
+                    "sample_index": idx,
+                    "generation_seed": sampling["generation_seed"],
+                    "verification_seed": sampling["verification_seed"],
+                    "case_order_seed": case_order["case_order_seed"],
+                    "judge_seed": judge_seed,
+                    "replication": replication,
+                    "model_config": args.model_config,
+                    "rag_config": args.rag_config if args.mode == "agronomic_rag" else None,
+                    "elapsed_seconds": round(time.time() - started, 3),
+                    "output": output,
+                    "score": score,
+                    "metadata": metadata,
+                }
+                outputs.append(row)
+                existing_observation_ids.add(replication["observation_id"])
+                with partial_path.open("a", encoding="utf-8") as handle:
+                    handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+                print(
+                    json.dumps(
+                        {
+                            "sample": idx,
+                            "eval_id": row["eval_id"],
+                            "observation_id": row["observation_id"],
+                            "score": score["score"],
+                            "seconds": row["elapsed_seconds"],
+                        }
+                    )
+                )
+
+        outputs_path = out_dir / "outputs.jsonl"
+        with outputs_path.open("w", encoding="utf-8") as handle:
+            for row in outputs:
+                handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+        invocation_rows = load_partial_outputs(invocations_path)
+        summary = aggregate(outputs, args.mode, model_id if not args.mock else "mock")
+        summary.update(
+            {
                 "answer_profile": args.answer_profile,
-                "eval_field_context_used": bool(getattr(args, "use_eval_field_context", False)),
-                "eval_field_context": field_context,
-                "model_id": model_id if not args.mock else "mock",
+                "suite": args.suite,
+                "model_config": args.model_config,
                 "model_backend": model_backend,
                 "request_model_id": request_model_id,
-                "model_identity": dict(getattr(generator, "model_identity", {}) or {}),
-                "run_identity_sha256": run_identity_sha256,
-                "model_config": args.model_config,
                 "rag_config": args.rag_config if args.mode == "agronomic_rag" else None,
-                "elapsed_seconds": round(time.time() - started, 3),
-                "output": output,
-                "score": score,
-                "metadata": metadata,
+                "rubric": args.rubric,
+                "max_tokens": sampling["max_tokens"],
+                "eval_field_context_used": bool(getattr(args, "use_eval_field_context", False)),
+                "context_packet_capture": bool(getattr(args, "capture_context_packets", False)),
+                "run_execution_id": run_execution_id,
+                "run_identity": run_identity,
+                "run_identity_sha256": run_identity_sha256,
+                "replication_contract": replication_contract,
+                "process_execution_ids": sorted(
+                    {
+                        str((row.get("replication") or {}).get("process_identity", {}).get("process_execution_id"))
+                        for row in outputs
+                        if (row.get("replication") or {}).get("process_identity", {}).get("process_execution_id")
+                    }
+                ),
+                "deterministic_bypass_samples": sum(
+                    1
+                    for row in outputs
+                    if (row.get("replication") or {}).get("execution_kind") == "deterministic_bypass"
+                ),
+                "model_generation_samples": sum(
+                    1
+                    for row in outputs
+                    if (row.get("replication") or {}).get("execution_kind") == "model_generation"
+                ),
+                "model_identity": dict(getattr(generator, "model_identity", {}) or {}),
+                "outputs_sha256": sha256_path(outputs_path),
+                "invocation_count": len(invocation_rows),
+                "invocations_sha256": sha256_path(invocations_path),
             }
-            outputs.append(row)
-            with partial_path.open("a", encoding="utf-8") as handle:
-                handle.write(json.dumps(row, ensure_ascii=False) + "\n")
-            print(json.dumps({"sample": idx, "eval_id": row["eval_id"], "score": score["score"], "seconds": row["elapsed_seconds"]}))
-    outputs_path = out_dir / "outputs.jsonl"
-    with outputs_path.open("w", encoding="utf-8") as handle:
-        for row in outputs:
-            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
-    summary = aggregate(outputs, args.mode, model_id if not args.mock else "mock")
-    summary["answer_profile"] = args.answer_profile
-    summary["suite"] = args.suite
-    summary["model_config"] = args.model_config
-    summary["model_backend"] = model_backend
-    summary["request_model_id"] = request_model_id
-    summary["rag_config"] = args.rag_config if args.mode == "agronomic_rag" else None
-    summary["rubric"] = args.rubric
-    summary["max_tokens"] = int(args.max_tokens or model_cfg.get("max_tokens", 360))
-    summary["eval_field_context_used"] = bool(getattr(args, "use_eval_field_context", False))
-    summary["context_packet_capture"] = bool(getattr(args, "capture_context_packets", False))
-    summary["run_identity"] = run_identity
-    summary["run_identity_sha256"] = run_identity_sha256
-    summary["model_identity"] = dict(getattr(generator, "model_identity", {}) or {})
-    summary["outputs_sha256"] = sha256_path(outputs_path)
-    (out_dir / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
-    run_manifest = {
-        **run_identity,
-        "run_identity_sha256": run_identity_sha256,
-        "model_identity": summary["model_identity"],
-        "outputs": str(outputs_path),
-        "outputs_sha256": summary["outputs_sha256"],
-        "summary": str(out_dir / "summary.json"),
-    }
-    (out_dir / "run_manifest.json").write_text(
-        json.dumps(run_manifest, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-    print(json.dumps(summary, indent=2))
-    return 0
+        )
+        summary_path = out_dir / "summary.json"
+        summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+        run_manifest = {
+            **run_identity,
+            "run_identity_sha256": run_identity_sha256,
+            "model_identity": summary["model_identity"],
+            "outputs": str(outputs_path),
+            "outputs_sha256": summary["outputs_sha256"],
+            "invocations": str(invocations_path),
+            "invocation_count": summary["invocation_count"],
+            "invocations_sha256": summary["invocations_sha256"],
+            "summary": str(summary_path),
+        }
+        (out_dir / "run_manifest.json").write_text(
+            json.dumps(run_manifest, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        print(json.dumps(summary, indent=2))
+        return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -1273,7 +1804,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--suite", default="data/eval/agronomy_mvp_eval.jsonl")
     parser.add_argument("--output-dir", default="outputs/evals")
-    parser.add_argument("--model-config", default="configs/model.yaml")
+    parser.add_argument("--model-config", default=DEFAULT_MODEL_CONFIG)
     parser.add_argument("--rag-config", default=DEFAULT_RAG_CONFIG)
     parser.add_argument("--model")
     parser.add_argument(
@@ -1312,6 +1843,58 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-samples", type=int)
     parser.add_argument("--eval-ids", help="Comma-separated eval IDs to run from the selected suite.")
     parser.add_argument("--max-tokens", type=int)
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        help="Override model-config temperature; the effective value is bound into run identity.",
+    )
+    parser.add_argument(
+        "--top-p",
+        type=float,
+        help="Override model-config nucleus sampling probability.",
+    )
+    parser.add_argument(
+        "--top-k",
+        type=int,
+        help="Override model-config top-k sampling cutoff.",
+    )
+    parser.add_argument(
+        "--trial-id",
+        default="trial-000",
+        help="Stable trial identity shared across matched causal arms.",
+    )
+    parser.add_argument(
+        "--generation-seed",
+        type=int,
+        help="Override the model-config seed and apply it immediately before serialized MLX generation.",
+    )
+    parser.add_argument(
+        "--verification-seed",
+        type=int,
+        help="Use a distinct seed for the answer-verification model; defaults to the generation seed.",
+    )
+    parser.add_argument(
+        "--case-order-seed",
+        type=int,
+        help="Deterministically shuffle the selected cases and bind the resulting order.",
+    )
+    parser.add_argument(
+        "--judge-seed",
+        type=int,
+        help="Reserve a distinct downstream semantic-judge seed in the run receipt.",
+    )
+    parser.add_argument(
+        "--process-isolation-policy",
+        choices=["shared_process", "fresh_process_per_run"],
+        default="shared_process",
+        help="Declare and receipt whether this runner process may host more than one eval run.",
+    )
+    parser.add_argument(
+        "--cache-policy",
+        choices=["as_configured", "no_prompt_cache"],
+        default="as_configured",
+        help="Freeze configured caches or force MLX prompt-prefix reuse off for this run.",
+    )
     parser.add_argument(
         "--use-eval-field-context",
         action="store_true",

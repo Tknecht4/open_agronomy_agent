@@ -4,6 +4,7 @@ import csv
 import hashlib
 import io
 import json
+import re
 import uuid
 import zipfile
 from datetime import datetime, timezone
@@ -2745,24 +2746,625 @@ def _write_text(path: Path, payload: str) -> None:
     path.write_text(payload, encoding="utf-8")
 
 
+_OMIT_EXPORT_VALUE = object()
+_EXPORT_REDACTION_MARKERS = {"[redacted]", "[training-safe]"}
+
+# Text retained by the privacy-preserving modes must be an explicitly named
+# schema field with a structurally valid value. Unknown extension keys are
+# content by default, even when their names resemble identifiers or statuses.
+_SAFE_EXPORT_ID_KEYS = {
+    "adapter_id",
+    "applicability_id",
+    "artifact_id",
+    "asset_id",
+    "attachment_id",
+    "base_model_id",
+    "batch_id",
+    "benchmark_id",
+    "bundle_id",
+    "candidate_id",
+    "capability_evidence_ids",
+    "capability_id",
+    "capability_ids",
+    "capsule_ids",
+    "case_id",
+    "case_ids",
+    "chunk_id",
+    "claim_id",
+    "client_id",
+    "conflict_id",
+    "corpus_audit_id",
+    "created_by_user_id",
+    "data_source_id",
+    "device_id",
+    "doc_id",
+    "doc_ids",
+    "eval_id",
+    "event_id",
+    "evidence_id",
+    "evidence_packet_id",
+    "evidence_capsule_ids",
+    "executor_id",
+    "export_id",
+    "field_context_id",
+    "graph_nodes",
+    "id",
+    "invocation_id",
+    "memory_id",
+    "message_id",
+    "model_id",
+    "model_profile_id",
+    "node_id",
+    "organization_id",
+    "packet_id",
+    "parent_span_id",
+    "parent_turn_id",
+    "question_frame_id",
+    "rag_config_id",
+    "recorded_by_user_id",
+    "result_id",
+    "result_ids",
+    "retrieved_doc_ids",
+    "reviewed_by_user_id",
+    "reviewer_user_id",
+    "route_id",
+    "session_id",
+    "source_device_id",
+    "source_doc_id",
+    "source_id",
+    "source_version_id",
+    "span_id",
+    "thread_id",
+    "tool_id",
+    "tool_invocation_ids",
+    "tool_result_ids",
+    "trace_id",
+    "trajectory_id",
+    "turn_id",
+    "user_id",
+    "validated_answer_id",
+    "workspace_id",
+}
+_SAFE_EXPORT_HASH_KEYS = {
+    "actual_sha256",
+    "answer_sha256",
+    "checksum",
+    "checksum_sha256",
+    "content_hash",
+    "content_sha256",
+    "exact_text_sha256",
+    "field_snapshot_sha256",
+    "hash",
+    "integrity_sha256",
+    "manifest_sha256",
+    "output_hash",
+    "packed_context_sha256",
+    "payload_sha256",
+    "prompt_hash",
+    "question_sha256",
+    "raw_sha256",
+    "receipt_sha256",
+    "record_sha256",
+    "sha256",
+    "source_hash",
+    "source_manifest_hashes",
+    "system_prompt_sha256",
+    "system_state_sha256",
+    "trace_sha256",
+    "user_agent_hash",
+}
+_SAFE_EXPORT_TIMESTAMP_KEYS = {
+    "created_at",
+    "finished_at",
+    "generated_at",
+    "started_at",
+    "updated_at",
+}
+_SAFE_EXPORT_TOKEN_KEYS = {
+    "actor",
+    "agent_runtime",
+    "answer_status",
+    "answer_policy_profile",
+    "authority_role",
+    "backend",
+    "cache_status",
+    "capture_status",
+    "distribution_scope",
+    "evidence_role",
+    "event_name",
+    "export_mode",
+    "failure_tags",
+    "format",
+    "freshness_status",
+    "human_review_status",
+    "license_state",
+    "license_status",
+    "method",
+    "mime_type",
+    "mode",
+    "model_revision",
+    "namespace",
+    "namespaces",
+    "operation",
+    "parse_status",
+    "planner_version",
+    "prompt_version",
+    "question_type",
+    "rag_config",
+    "redaction_status",
+    "reflection_status",
+    "required_tools",
+    "retention_policy",
+    "retrieval_policy",
+    "retrieved_source_types",
+    "review_status",
+    "reviewer_status",
+    "risk_level",
+    "role",
+    "schema_version",
+    "selected_tools",
+    "selection_policy",
+    "source_type",
+    "state",
+    "status",
+    "task_family",
+    "tool_version",
+    "tool_notes",
+    "trace_capture_level",
+    "transfer_status",
+    "type",
+    "unit",
+    "units",
+    "validation_policy",
+    "version",
+    "context_packer_version",
+    "public_adapter_tools",
+}
+_SAFE_EXPORT_TEXT_KEYS = (
+    _SAFE_EXPORT_ID_KEYS
+    | _SAFE_EXPORT_HASH_KEYS
+    | _SAFE_EXPORT_TIMESTAMP_KEYS
+    | _SAFE_EXPORT_TOKEN_KEYS
+)
+_SAFE_EXPORT_NUMERIC_KEYS = {
+    "confidence",
+    "correctness",
+    "completeness",
+    "conciseness",
+    "rank",
+    "rating",
+    "relevance",
+    "route_correctness",
+    "safety",
+    "score",
+    "sequence_no",
+    "top_k",
+    "uncertainty_calibration",
+}
+_SAFE_EXPORT_NUMERIC_KEYS.update(
+    {
+        "completion_tokens",
+        "doc_count",
+        "event_count",
+        "generation_tokens",
+        "id",
+        "latency_ms",
+        "prompt_tokens",
+        "prompt_tokens_est",
+        "source_diversity",
+        "top_doc_score",
+        "turn_count",
+    }
+)
+
+_EXPORT_ID_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}")
+_EXPORT_HASH_PATTERN = re.compile(r"[0-9a-fA-F]{32,128}")
+_EXPORT_TOKEN_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:/+-]{0,255}")
+
+# Each mapping names the only nested records allowed to retain structural
+# fields. A missing child mapping transitions permanently into ``content``;
+# descendants cannot regain trust by reusing a known field name.
+_EXPORT_SCHEMA_CHILDREN: dict[str, dict[str, str]] = {
+    "session": {
+        "consent": "consent",
+        "context": "content",
+        "turns": "turn",
+    },
+    "turn": {
+        "answer_integrity_receipt": "integrity_receipt",
+        "feedback": "feedback",
+        "metadata": "turn_metadata",
+        "objectives": "objectives",
+        "prompt_messages": "prompt_message",
+        "reflection": "reflection",
+        "system_state": "system_state",
+        "trace": "trace",
+    },
+    "trace": {
+        "graph_hits": "graph_hit",
+        "metadata": "trace_metadata",
+        "prompt_messages": "prompt_message",
+        "retrieved_docs": "retrieved_doc",
+        "route": "route",
+        "structured_answer": "content",
+        "tool_invocations": "tool_record",
+    },
+    "trace_metadata": {
+        "agent_kernel": "control_record",
+        "answer_stages": "answer_stages",
+        "answer_verification": "verification",
+        "cache_status": "control_record",
+        "evidence_fabric": "evidence_fabric",
+        "evidence_intervention": "control_record",
+        "field_context_compiler": "control_record",
+        "generation_stats": "generation_stats",
+        "high_consequence_policy": "control_record",
+        "model_identity": "model_identity",
+        "public_adapter_summary": "control_record",
+        "tool_plan": "tool_plan",
+        "tool_results": "tool_record",
+        "transport_control": "control_record",
+    },
+    "turn_metadata": {
+        "answer_integrity_receipt": "integrity_receipt",
+    },
+    "answer_stages": {
+        "draft": "answer_stage",
+        "final": "answer_stage",
+        "post_verification": "answer_stage",
+    },
+    "verification": {
+        "draft_assessment": "verification_assessment",
+        "final_assessment": "verification_assessment",
+        "generation_stats": "generation_stats",
+        "replacement_audit": "content",
+    },
+    "evidence_fabric": {
+        "evidence_packet": "evidence_packet",
+        "question_frame": "question_frame",
+        "validated_answer": "validated_answer",
+    },
+    "evidence_packet": {
+        "capability_evidence": "capability_evidence",
+        "claims": "claim",
+        "sources": "evidence_source",
+        "source_assets": "evidence_source",
+        "source_versions": "evidence_source",
+        "spans": "evidence_source",
+        "applicability": "evidence_source",
+        "capsules": "evidence_source",
+        "coverage": "control_record",
+        "version_ledger": "control_record",
+    },
+    "validated_answer": {
+        "claims": "claim",
+        "verifier_record": "verification",
+    },
+    "tool_plan": {
+        "invocations": "tool_record",
+        "results": "tool_record",
+    },
+    "control_record": {},
+    "generation_stats": {},
+    "model_identity": {},
+    "integrity_receipt": {},
+    "feedback": {},
+    "reflection": {},
+    "objectives": {},
+    "consent": {},
+    "system_state": {
+        "model_identity": "model_identity",
+    },
+    "route": {},
+    "retrieved_doc": {},
+    "graph_hit": {
+        "metadata": "content",
+    },
+    "tool_record": {
+        "inputs": "content",
+        "payload": "content",
+        "result": "tool_record",
+    },
+    "prompt_message": {},
+    "answer_stage": {},
+    "verification_assessment": {},
+    "question_frame": {},
+    "claim": {},
+    "evidence_source": {},
+    "capability_evidence": {},
+    "event": {
+        "payload": "content",
+    },
+    "data_source": {
+        "metadata": "content",
+    },
+    "content": {},
+    "unknown": {},
+}
+
+_EXPORT_SCHEMA_TEXT_KEYS: dict[str, set[str]] = {
+    "session": {"session_id", "created_at", "updated_at"},
+    "turn": {"turn_id", "session_id", "parent_turn_id", "answer_status", "created_at"},
+    "system_state": {
+        "mode",
+        "model_id",
+        "model_revision",
+        "rag_config",
+        "prompt_version",
+        "corpus_audit_id",
+        "context_packer_version",
+        "cache_status",
+    },
+    "route": {"route_id", "question_type", "risk_level", "namespaces", "required_tools", "mode"},
+    "retrieved_doc": {
+        "doc_id",
+        "source_id",
+        "evidence_id",
+        "source_type",
+        "status",
+        "namespaces",
+        "checksum",
+        "payload_sha256",
+    },
+    "graph_hit": {"node_id", "doc_id", "source_id", "status", "namespaces", "payload_sha256"},
+    "tool_record": {
+        "schema_version",
+        "invocation_id",
+        "result_id",
+        "capability_id",
+        "tool_id",
+        "planner_version",
+        "tool_version",
+        "operation",
+        "status",
+        "payload_sha256",
+        "authority_role",
+        "freshness_status",
+    },
+    "prompt_message": {"role"},
+    "trace_metadata": {
+        "retrieved_doc_ids",
+        "retrieved_source_types",
+        "tool_notes",
+        "tool_invocation_ids",
+        "tool_result_ids",
+        "graph_nodes",
+        "cache_status",
+        "context_packer_version",
+        "agent_runtime",
+        "retrieval_policy",
+        "answer_policy_profile",
+        "public_adapter_tools",
+    },
+    "answer_stages": {"schema_version", "distribution_scope"},
+    "answer_stage": {"sha256"},
+    "verification": {
+        "schema_version",
+        "status",
+        "selection_policy",
+        "result_ids",
+        "model_id",
+        "model_revision",
+    },
+    "verification_assessment": {"schema_version", "status"},
+    "evidence_fabric": {"schema_version", "status", "record_sha256"},
+    "evidence_packet": {
+        "schema_version",
+        "packet_id",
+        "question_frame_id",
+        "capability_evidence_ids",
+        "capsule_ids",
+        "doc_ids",
+        "capture_status",
+        "packed_context_sha256",
+    },
+    "question_frame": {"schema_version", "question_frame_id", "question_sha256", "field_snapshot_sha256"},
+    "claim": {"schema_version", "claim_id", "status", "evidence_capsule_ids"},
+    "evidence_source": {
+        "schema_version",
+        "id",
+        "asset_id",
+        "source_id",
+        "source_version_id",
+        "doc_id",
+        "evidence_id",
+        "span_id",
+        "applicability_id",
+        "status",
+        "capture_status",
+        "transfer_status",
+        "evidence_role",
+        "source_type",
+        "license_status",
+        "distribution_scope",
+        "raw_sha256",
+        "exact_text_sha256",
+        "manifest_sha256",
+        "payload_sha256",
+    },
+    "capability_evidence": {
+        "schema_version",
+        "evidence_id",
+        "capability_id",
+        "invocation_id",
+        "result_id",
+        "tool_version",
+        "status",
+        "authority_role",
+        "freshness_status",
+        "payload_sha256",
+    },
+    "validated_answer": {
+        "schema_version",
+        "validated_answer_id",
+        "answer_sha256",
+        "evidence_packet_id",
+        "answer_status",
+        "validation_policy",
+        "capture_status",
+    },
+    "tool_plan": {"schema_version", "planner_version", "status", "selected_tools"},
+    "control_record": _SAFE_EXPORT_TOKEN_KEYS | _SAFE_EXPORT_ID_KEYS | _SAFE_EXPORT_HASH_KEYS,
+    "generation_stats": {"schema_version", "status", "model_id", "model_revision"},
+    "model_identity": {
+        "schema_version",
+        "status",
+        "model_id",
+        "model_revision",
+        "payload_sha256",
+        "checksum",
+    },
+    "integrity_receipt": {
+        "schema_version",
+        "status",
+        "session_id",
+        "turn_id",
+        "created_at",
+        "question_sha256",
+        "answer_sha256",
+        "trace_sha256",
+        "system_state_sha256",
+        "field_snapshot_sha256",
+        "receipt_sha256",
+    },
+    "feedback": {"review_status", "failure_tags"},
+    "reflection": {"review_status", "status"},
+    "event": {"id", "event_id", "session_id", "turn_id", "event_name", "created_at"},
+    "data_source": {"id", "source_id", "source_type", "license_status", "status", "checksum", "sha256"},
+    "objectives": set(),
+    "consent": set(),
+    "content": set(),
+    "unknown": set(),
+    "turn_metadata": set(),
+    "trace": set(),
+}
+
+
+def _is_export_redaction_marker(value: str) -> bool:
+    if value in _EXPORT_REDACTION_MARKERS:
+        return True
+    if not (value.startswith("[redacted:") and value.endswith("]")):
+        return False
+    digest = value[len("[redacted:") : -1]
+    return len(digest) == 64 and all(character in "0123456789abcdef" for character in digest)
+
+
+def _is_safe_export_text_value(schema: str, key: str | None, value: str) -> bool:
+    if not key:
+        return False
+    normalized = key.lower()
+    if normalized not in _EXPORT_SCHEMA_TEXT_KEYS.get(schema, set()):
+        return False
+    if normalized in _SAFE_EXPORT_ID_KEYS:
+        return _EXPORT_ID_PATTERN.fullmatch(value) is not None
+    if normalized in _SAFE_EXPORT_HASH_KEYS:
+        return _EXPORT_HASH_PATTERN.fullmatch(value) is not None
+    if normalized in _SAFE_EXPORT_TIMESTAMP_KEYS:
+        try:
+            datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return False
+        return True
+    return _EXPORT_TOKEN_PATTERN.fullmatch(value) is not None
+
+
+def _is_safe_export_numeric_key(schema: str, key: str | None) -> bool:
+    if not key:
+        return False
+    if schema in {"content", "unknown"}:
+        return False
+    normalized = key.lower()
+    return normalized in _SAFE_EXPORT_NUMERIC_KEYS
+
+
+def _hashed_export_text(value: str) -> str:
+    if _is_export_redaction_marker(value):
+        return value
+    return f"[redacted:{_hash_text(value)}]"
+
+
+def _export_child_schema(schema: str, key: str, value: Any) -> str:
+    mapped = _EXPORT_SCHEMA_CHILDREN.get(schema, {}).get(key)
+    if mapped is not None:
+        return mapped
+    if isinstance(value, dict):
+        return "content"
+    if isinstance(value, list) and any(isinstance(item, (dict, list, tuple)) for item in value):
+        return "content"
+    return schema
+
+
+def _sanitize_export_value(
+    value: Any,
+    mode: str,
+    *,
+    key: str | None = None,
+    schema: str = "unknown",
+) -> Any:
+    """Recursively enforce the content boundary for a portable export.
+
+    ``snippets_hashed`` keeps the source shape and machine-readable identity,
+    state, hashes, booleans, and numeric values while replacing every other
+    string leaf with a stable digest marker. ``training_safe`` is stricter: it
+    removes content leaves and keeps only structural identity/control fields,
+    booleans, and explicitly named numeric metrics. Unknown extension metadata
+    is content by default rather than a new escape hatch.
+    """
+
+    if mode not in {"snippets_hashed", "training_safe"}:
+        return json.loads(json.dumps(value))
+    if isinstance(value, dict):
+        sanitized: dict[str, Any] = {}
+        for child_key, child_value in value.items():
+            child_key_text = str(child_key)
+            child = _sanitize_export_value(
+                child_value,
+                mode,
+                key=child_key_text,
+                schema=_export_child_schema(schema, child_key_text, child_value),
+            )
+            if child is not _OMIT_EXPORT_VALUE:
+                sanitized[child_key_text] = child
+        return sanitized
+    if isinstance(value, list):
+        sanitized_items = [_sanitize_export_value(item, mode, key=key, schema=schema) for item in value]
+        return [item for item in sanitized_items if item is not _OMIT_EXPORT_VALUE]
+    if isinstance(value, tuple):
+        sanitized_items = [_sanitize_export_value(item, mode, key=key, schema=schema) for item in value]
+        return [item for item in sanitized_items if item is not _OMIT_EXPORT_VALUE]
+    if isinstance(value, str):
+        if _is_export_redaction_marker(value):
+            return value
+        if _is_safe_export_text_value(schema, key, value):
+            return value
+        if mode == "snippets_hashed":
+            return _hashed_export_text(value)
+        return _OMIT_EXPORT_VALUE
+    if value is None:
+        return value
+    if isinstance(value, bool):
+        if mode == "snippets_hashed" or schema not in {"content", "unknown"}:
+            return value
+        return _OMIT_EXPORT_VALUE
+    if isinstance(value, (int, float)):
+        if mode == "snippets_hashed" or _is_safe_export_numeric_key(schema, key):
+            return value
+        return _OMIT_EXPORT_VALUE
+    if mode == "snippets_hashed":
+        return _hashed_export_text(str(value))
+    return _OMIT_EXPORT_VALUE
+
+
 def _redact_payload(payload: dict[str, Any], mode: str, *, training_safe: bool = False) -> dict[str, Any]:
     if not payload:
         return payload
     redacted = json.loads(json.dumps(payload))
-    if mode in {"identifiers", "snippets_hashed", "training_safe"}:
+    if mode in {"snippets_hashed", "training_safe"}:
+        sanitized = _sanitize_export_value(redacted, mode, schema="session")
+        return sanitized if isinstance(sanitized, dict) else {}
+    if mode == "identifiers":
         if "user_pseudonym" in redacted:
             redacted["user_pseudonym"] = "redacted"
-        if mode == "training_safe":
-            return redacted
-        if mode == "snippets_hashed":
-            for turn in redacted.get("turns", []):
-                if "user_message" in turn:
-                    turn["user_message"] = f"[redacted:{_hash_text(str(turn['user_message']))}]"
-                if "answer" in turn:
-                    turn["answer"] = f"[redacted:{_hash_text(str(turn['answer']))}]"
-                for doc in turn.get("trace", {}).get("retrieved_docs", []):
-                    if doc.get("snippet"):
-                        doc["snippet"] = f"[redacted:{_hash_text(str(doc['snippet']))}]"
     return redacted
 
 
@@ -2780,28 +3382,19 @@ def _redact_turn(turn: dict[str, Any], mode: str) -> dict[str, Any]:
     if mode == "identifiers":
         redacted["user_message"] = "[redacted]"
     elif mode == "snippets_hashed":
-        redacted["user_message"] = f"[redacted:{_hash_text(redacted.get('user_message', ''))}]"
-        redacted["answer"] = f"[redacted:{_hash_text(redacted.get('answer', ''))}]"
-        trace = redacted.get("trace", {})
-        for doc in trace.get("retrieved_docs", []):
-            if "snippet" in doc and doc["snippet"]:
-                doc["snippet"] = f"[redacted:{_hash_text(doc['snippet'])}]"
+        sanitized = _sanitize_export_value(redacted, mode, schema="turn")
+        redacted = sanitized if isinstance(sanitized, dict) else {}
     elif mode == "training_safe":
+        sanitized = _sanitize_export_value(redacted, mode, schema="turn")
+        redacted = sanitized if isinstance(sanitized, dict) else {}
         redacted["user_message"] = "[training-safe]"
         redacted["answer"] = "[training-safe]"
-        redacted["trace"] = _strip_sensitive_trace(redacted.get("trace", {}))
     return redacted
 
 
 def _strip_sensitive_trace(trace: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "route": trace.get("route"),
-        "coverage_checklist": trace.get("coverage_checklist", []),
-        "retrieved_doc_ids": [doc.get("doc_id") for doc in trace.get("retrieved_docs", [])],
-        "graph_nodes": [hit.get("node_id") for hit in trace.get("graph_hits", [])],
-        "tool_invocations": [tool.get("name") for tool in trace.get("tool_invocations", [])],
-        "metadata": trace.get("metadata", {}),
-    }
+    sanitized = _sanitize_export_value(trace, "training_safe", schema="trace")
+    return sanitized if isinstance(sanitized, dict) else {}
 
 
 def _build_feedback_rows(turns: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -3070,9 +3663,13 @@ def build_export_bundle(
     redacted_session["turns"] = redacted_turns
     redacted_session = _redact_payload(redacted_session, redaction_mode)
 
-    event_rows = store.list_events(session["session_id"]) if hasattr(store, "list_events") else []
+    raw_event_rows = store.list_events(session["session_id"]) if hasattr(store, "list_events") else []
+    sanitized_events = _sanitize_export_value(raw_event_rows, redaction_mode, schema="event")
+    event_rows = sanitized_events if isinstance(sanitized_events, list) else []
     traces = redacted_session.get("turns", [])
-    data_sources = _extract_data_sources(store, include_data_sources=include_data_sources)
+    raw_data_sources = _extract_data_sources(store, include_data_sources=include_data_sources)
+    sanitized_data_sources = _sanitize_export_value(raw_data_sources, redaction_mode, schema="data_source")
+    data_sources = sanitized_data_sources if isinstance(sanitized_data_sources, list) else []
 
     _write_json(export_dir / "session.json", redacted_session)
 
@@ -3091,7 +3688,10 @@ def build_export_bundle(
         _write_jsonl(export_dir / "reflexion_memory_candidates.jsonl", _build_reflection_rows(redacted_session.get("turns", [])))
         _write_jsonl(export_dir / "eval_items.jsonl", _build_eval_rows(redacted_session, traces))
         _write_json(export_dir / "retrieval_diagnostics.json", _build_retrieval_diagnostics_rows(traces))
-        _write_text(export_dir / "advisory_draft.md", _build_advisory_draft(session.get("title", "Session"), traces))
+        _write_text(
+            export_dir / "advisory_draft.md",
+            _build_advisory_draft(redacted_session.get("title", "Session"), traces),
+        )
 
     _write_json(export_dir / "evidence_manifest.json", {
         "session_id": session["session_id"],
@@ -3106,7 +3706,7 @@ def build_export_bundle(
     _write_json(export_dir / "sessions.json", {"sessions": [session.get("session_id")], "session": redacted_session})
 
     if include_artifacts:
-        transcript = _build_markdown_transcript(session.get("title", "Session"), redacted_session, traces)
+        transcript = _build_markdown_transcript(redacted_session.get("title", "Session"), redacted_session, traces)
         _write_text(export_dir / "transcript.md", transcript)
 
     first_turn = traces[0] if traces else {}
@@ -3122,9 +3722,9 @@ def build_export_bundle(
         "training_exclusion_reason": None
         if redaction_mode == "training_safe" and redacted_session.get("consent", {}).get("training_export_allowed", False)
         else "training export requires training_safe redaction and consent",
-        "contains_personal_data": bool(redacted_session.get("user_pseudonym")),
-        "contains_farm_identifiable_data": bool(redacted_session.get("context", {}).get("farm_id")),
-        "contains_private_attachment_text": _contains_private_attachment_text(data_sources),
+        "contains_personal_data": bool(session.get("user_pseudonym")),
+        "contains_farm_identifiable_data": bool(session.get("context", {}).get("farm_id")),
+        "contains_private_attachment_text": _contains_private_attachment_text(raw_data_sources),
         "files": [],
         "checksums": {},
         "model_id": first_turn.get("system_state", {}).get("model_id") if first_turn else None,

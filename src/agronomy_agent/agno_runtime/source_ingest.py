@@ -977,8 +977,33 @@ def ingest_soilwise(source: dict, raw_dir: Path, out_dir: Path, force: bool = Fa
                     edges.append({"source": source_id, "target": target_id, "relation": relation})
 
     write_jsonl(out_dir / "soilwise_rag_corpus.jsonl", docs)
-    (out_dir / "soilwise_knowledge_graph.json").write_text(
+    graph_path = out_dir / "soilwise_knowledge_graph.json"
+    graph_path.write_text(
         json.dumps({"nodes": nodes, "edges": edges}, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    graph_sha256 = hashlib.sha256(graph_path.read_bytes()).hexdigest()
+    graph_manifest_path = out_dir / "soilwise_knowledge_graph.manifest.json"
+    graph_manifest_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "open_agronomy_agent.knowledge_graph_manifest.v1",
+                "graph_id": "soilwise.soil_health",
+                "version": f"15593868+{graph_sha256[:12]}",
+                "data_path": graph_path.name,
+                "namespaces": ["fertility", "regional_environment", "soil_health", "soil_water"],
+                "source": source["record_url"],
+                "license": source["license"],
+                "sha256": graph_sha256,
+                "authority_role": "vocabulary_hint",
+                "priority": 50,
+                "collision_policy": "error",
+                "relation_vocabulary": ["broader", "exact_match", "narrower", "related_to"],
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+        + "\n",
         encoding="utf-8",
     )
     summary = {
@@ -989,7 +1014,8 @@ def ingest_soilwise(source: dict, raw_dir: Path, out_dir: Path, force: bool = Fa
         "nodes": len(nodes),
         "edges": len(edges),
         "corpus": str(out_dir / "soilwise_rag_corpus.jsonl"),
-        "graph": str(out_dir / "soilwise_knowledge_graph.json"),
+        "graph": str(graph_path),
+        "graph_manifest": str(graph_manifest_path),
     }
     return summary
 

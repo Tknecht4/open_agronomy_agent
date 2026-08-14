@@ -19,6 +19,7 @@ from agronomy_agent.agent import (
     build_answer_prompt,
     build_context,
     decide_evidence_intervention,
+    deterministic_tool_response,
     infer_intervention_profile,
     load_agent_resources,
     load_model_config,
@@ -28,12 +29,26 @@ from agronomy_agent.query_context import is_source_grounded_question
 from agronomy_agent.answer_verifier import context_evidence_text, verify_answer
 from agronomy_agent.answer_safety import enforce_answer_safety_postconditions
 from agronomy_agent.evidence_contracts import (
+    capability_evidence_from_records,
     canonical_json,
+    extend_evidence_fabric_capabilities,
     sha256_text,
     validated_answer_from_runtime,
 )
+from agronomy_agent.execution_core import (
+    AgentExecutionRequest,
+    AgentExecutionResult,
+    build_execution_stage_receipts,
+    classify_verification_origin,
+    stable_sha256 as execution_stable_sha256,
+)
 from agronomy_agent.model_identity import bind_response_identity, model_identity_contract
 from agronomy_agent.high_consequence import apply_high_consequence_boundary, evaluate_high_consequence_policy
+from agronomy_agent.geographic_context import (
+    TRUSTED_GEOGRAPHIC_LAYER_IDS,
+    attach_trusted_geographic_context,
+    has_trusted_geographic_context,
+)
 from agronomy_agent.source_freshness import assess_source_freshness
 from agronomy_agent.field_measurements import (
     safe_soil_measurement,
@@ -50,6 +65,7 @@ from agronomy_agent.server.services.answer_renderer import (
 from agronomy_agent.server.services.field_context_compiler import compile_field_context
 from agronomy_agent.server.settings import ServerSettings
 from agronomy_agent.server.storage.db import TraceStore
+from agronomy_agent.runtime_profiles import DEFAULT_MODEL_CONFIG
 
 
 ANALYSIS_UNAVAILABLE_ANSWER = (
@@ -242,7 +258,9 @@ def _build_mlx_generator(
     model_config_path: str | None = None,
 ) -> Any:
     backend = os.getenv("AGRONOMY_AGENT_MODEL_BACKEND", "mlx").strip().lower()
-    effective_config_path = model_config_path or os.getenv("AGRONOMY_AGENT_MODEL_CONFIG", "configs/model.yaml")
+    effective_config_path = model_config_path or os.getenv(
+        "AGRONOMY_AGENT_MODEL_CONFIG", DEFAULT_MODEL_CONFIG
+    )
     serving_model_id = str(model_config.get("serving_model_id") or model_config.get("model_id") or "")
     assistant_model_id = str(model_config.get("assistant_model_id") or "")
     if model_id == serving_model_id or model_id == str(model_config.get("model_id") or ""):
@@ -313,7 +331,7 @@ def _build_mlx_generator(
         return generator
 
 
-def run_turn(
+def _run_turn_impl(
     *,
     store: TraceStore,
     settings: ServerSettings,
@@ -327,6 +345,9 @@ def run_turn(
     session_context: dict[str, Any] | None = None,
     parent_turn_id: str | None = None,
     profiler: Any | None = None,
+    execution_class: str = "product_turn",
+    document_retrieval_enabled: bool = True,
+    graph_retrieval_enabled: bool = True,
 ) -> dict[str, Any]:
     if not store.get_session(session_id):
         raise ValueError("session not found")
@@ -376,10 +397,30 @@ def run_turn(
         session_context=session_context,
         field_context=field_context,
     )
-    workspace_docs = _workspace_retrieved_docs(session_context)
+    field_context = attach_trusted_geographic_context(
+        field_context if isinstance(field_context, dict) else None,
+        field_access_authorized=bool(
+            isinstance(session_context, dict)
+            and session_context.get("field_access_authorized") is True
+        ),
+        geo_context_binding_status=(
+            str(session_context.get("geo_context_binding_status") or "")
+            if isinstance(session_context, dict)
+            else None
+        ),
+    )
+    # Workspace documents are another document-context ingress.  Excluding
+    # them under the document-disabled arm prevents an apparently empty corpus
+    # retrieval from still affecting the prompt or trace through session state.
+    workspace_docs = (
+        _workspace_retrieved_docs(session_context)
+        if document_retrieval_enabled
+        else []
+    )
     prompt_messages: list[dict[str, Any]] | None = None
     generation_metadata: dict[str, Any] = {}
     verification_metadata: dict[str, Any] | None = None
+    verification: Any | None = None
     draft_generation_stats: dict[str, Any] | None = None
     context: Any | None = None
     source_grounded = False
@@ -448,6 +489,22 @@ def run_turn(
                 network_mode=settings.network_mode,
             )
         )
+        for record in public_adapter_records:
+            normalized = capability_evidence_from_records([record])
+            if not normalized:
+                continue
+            evidence = normalized[0]
+            record.update(
+                {
+                    "evidence_id": evidence.evidence_id,
+                    "result_id": evidence.result_id,
+                    "capability_id": evidence.capability_id,
+                    "capability_version": evidence.capability_version,
+                    "payload_sha256": evidence.payload_sha256,
+                    "authority_role": evidence.authority_role,
+                    "freshness_status": evidence.freshness_status,
+                }
+            )
         compiled_field_context = compile_field_context(
             field_context if isinstance(field_context, dict) else None,
             public_adapter_records,
@@ -475,7 +532,15 @@ def run_turn(
                 profiler=profiler,
                 agent_runtime=settings.agent_runtime,
                 field_context=field_context,
+                document_retrieval_enabled=document_retrieval_enabled,
+                graph_retrieval_enabled=graph_retrieval_enabled,
             )
+            fabric = dict((context.runtime_metadata or {}).get("evidence_fabric") or {})
+            if fabric and public_adapter_records:
+                context.runtime_metadata["evidence_fabric"] = extend_evidence_fabric_capabilities(
+                    fabric,
+                    public_adapter_records,
+                )
         pack_span = profiler.span("agent.context.pack", input_size=len(message), metadata={"mode": mode}) if profiler else nullcontext()
         with pack_span:
             context_block = (
@@ -528,6 +593,10 @@ def run_turn(
         if profiler:
             profiler.add_skipped("model.tokenizer.chat_template", reason="not_observable_from_generator")
             profiler.add_skipped("model.prefill_to_first_token", reason="not_observable_from_generator")
+        deterministic_answer, deterministic_generation_path = deterministic_tool_response(
+            context,
+            question=message,
+        )
         if map_interpretation_answer:
             if profiler:
                 profiler.add_skipped("model.decode_stream", reason=f"tool_grounded_{tool_grounded_renderer}")
@@ -550,6 +619,25 @@ def run_turn(
                     "reason": "tool_grounded_statcan_statistics",
                     "renderer": "statcan_field_crop_statistics.v1",
                 }
+            }
+        elif deterministic_answer is not None:
+            if profiler:
+                profiler.add_skipped(
+                    "model.decode_stream",
+                    reason=deterministic_generation_path or "deterministic_tool_result",
+                )
+            answer = deterministic_answer
+            generation_metadata = {
+                "generation_bypass": {
+                    "reason": deterministic_generation_path or "deterministic_tool_result",
+                    "renderer": "tool_planner.v1",
+                },
+                "generation_path": deterministic_generation_path,
+                "tool_execution": {
+                    "plan": (context.runtime_metadata or {}).get("tool_plan") if context is not None else None,
+                    "invocations": (context.runtime_metadata or {}).get("tool_invocations") if context is not None else [],
+                    "results": (context.runtime_metadata or {}).get("tool_results") if context is not None else [],
+                },
             }
         elif queue_circuit and queue_circuit.get("tripped"):
             if profiler:
@@ -631,9 +719,22 @@ def run_turn(
                 _build_graph_snapshot(idx, hit)
                 for idx, hit in enumerate(context.graph_hits, start=1)
             ]
-            trace_store_payload["tool_invocations"] = public_adapter_records + [
-                {"name": note.name, "text": note.text}
-                for note in context.tool_notes
+            typed_tool_invocations = list((context.runtime_metadata or {}).get("tool_invocations") or [])
+            typed_tool_results = list((context.runtime_metadata or {}).get("tool_results") or [])
+            typed_tool_names = {
+                str(item.get("tool_id") or "")
+                for item in typed_tool_invocations
+                if isinstance(item, dict)
+            }
+            trace_store_payload["tool_invocations"] = [
+                *public_adapter_records,
+                *typed_tool_invocations,
+                *typed_tool_results,
+                *(
+                    {"name": note.name, "text": note.text}
+                    for note in context.tool_notes
+                    if note.name not in typed_tool_names
+                ),
             ]
             trace_store_payload["metadata"] = {
                 "retrieved_doc_ids": [
@@ -651,6 +752,17 @@ def run_turn(
                     else "none"
                 ),
                 "tool_notes": [note.name for note in context.tool_notes],
+                "tool_plan": (context.runtime_metadata or {}).get("tool_plan") or {},
+                "tool_invocation_ids": [
+                    str(item.get("invocation_id") or "")
+                    for item in typed_tool_invocations
+                    if isinstance(item, dict)
+                ],
+                "tool_result_ids": [
+                    str(item.get("result_id") or "")
+                    for item in typed_tool_results
+                    if isinstance(item, dict)
+                ],
                 "graph_nodes": [hit.node_id for hit in context.graph_hits],
                 "query_expansion": list(context.route.query_expansion),
                 "route_query_expansion": list(context.route.query_expansion),
@@ -695,6 +807,23 @@ def run_turn(
                 "public_adapter_status_counts": public_adapter_summary["status_counts"],
             },
         )
+
+    draft_answer = answer
+    if generation_metadata.get("generation_path") == "deterministic_tool_result":
+        result_ids = [
+            str(item.get("result_id") or "")
+            for item in ((context.runtime_metadata or {}).get("tool_results") or [])
+            if isinstance(item, dict) and str(item.get("result_id") or "")
+        ] if context is not None else []
+        verification_metadata = {
+            "schema_version": "open_agronomy_agent.typed_capability_validation.v1",
+            "selection_policy": "typed_capability_identity_v1",
+            "status": "validated",
+            "triggered": False,
+            "intervention_action": "preserve_deterministic_result",
+            "result_ids": result_ids,
+            "final_assessment": {"requires_review": False, "reasons": []},
+        }
 
     verification_config = model_config.get("answer_verification") if isinstance(model_config.get("answer_verification"), dict) else {}
     verification_enabled = bool(verification_config.get("enabled", False))
@@ -744,6 +873,11 @@ def run_turn(
                 if context is None or context.evidence_handshake is None
                 else context.evidence_handshake.required_entities,
                 review_mode=str(verification_config.get("mode") or "risk_gated"),
+                jurisdiction=(
+                    _canadian_province_from_context(field_context)
+                    if isinstance(field_context, dict)
+                    else None
+                ),
             )
         answer = verification.answer
         verification_metadata = verification.as_record()
@@ -759,6 +893,7 @@ def run_turn(
             },
         )
 
+    post_verification_answer = answer
     trace_store_payload["prompt_messages"] = prompt_messages or []
     trace_store_payload["metadata"].setdefault(
         "field_context_compiler", compiled_field_context["receipt"]
@@ -799,18 +934,40 @@ def run_turn(
         question=message,
         route=None if context is None else context.route,
     )
-    if safety_answer != answer:
+    safety_output_sha256 = sha256_text(safety_answer)
+    safety_postconditions_changed = safety_answer != answer
+    if safety_postconditions_changed:
         trace_store_payload["metadata"]["answer_safety_normalized"] = True
         answer = safety_answer
-    high_consequence_policy = evaluate_high_consequence_policy(
-        question=message,
-        trace=trace_store_payload,
-        field_context=field_context if isinstance(field_context, dict) else None,
-        network_mode=settings.network_mode,
+    deterministic_calculation_path = generation_metadata.get("generation_path") in {
+        "deterministic_tool_result",
+        "deterministic_tool_clarification",
+    }
+    high_consequence_policy = (
+        {
+            "schema_version": "open_agronomy_agent.high_consequence_policy.v1",
+            "status": "not_applicable",
+            "reason": "supplied_input_arithmetic_or_clarification_only",
+            "domains": [],
+            "blocking_reasons": [],
+        }
+        if deterministic_calculation_path
+        else evaluate_high_consequence_policy(
+            question=message,
+            trace=trace_store_payload,
+            field_context=field_context if isinstance(field_context, dict) else None,
+            network_mode=settings.network_mode,
+        )
     )
     trace_store_payload["metadata"]["high_consequence_policy"] = high_consequence_policy
-    bounded_answer = apply_high_consequence_boundary(answer, high_consequence_policy)
-    if bounded_answer != answer:
+    bounded_answer = (
+        answer
+        if deterministic_calculation_path
+        else apply_high_consequence_boundary(answer, high_consequence_policy)
+    )
+    high_consequence_output_sha256 = sha256_text(bounded_answer)
+    high_consequence_boundary_changed = bounded_answer != answer
+    if high_consequence_boundary_changed:
         trace_store_payload["metadata"]["high_consequence_boundary_applied"] = True
         answer = bounded_answer
 
@@ -819,6 +976,16 @@ def run_turn(
         structured_answer = render_structured_answer(answer.strip(), trace=trace_store_payload, question=message)
         answer = structured_answer.answer
         trace_store_payload["structured_answer"] = structured_answer.as_record()
+    trace_store_payload["metadata"]["answer_stages"] = {
+        "schema_version": "open_agronomy_agent.answer_stages.v1",
+        "distribution_scope": "machine_local_trace",
+        "draft": {"text": draft_answer, "sha256": sha256_text(draft_answer)},
+        "post_verification": {
+            "text": post_verification_answer,
+            "sha256": sha256_text(post_verification_answer),
+        },
+        "final": {"text": answer, "sha256": sha256_text(answer)},
+    }
     if context is not None:
         fabric_record = dict((context.runtime_metadata or {}).get("evidence_fabric") or {})
         if fabric_record:
@@ -831,6 +998,32 @@ def run_turn(
             fabric_record.pop("record_sha256", None)
             fabric_record["record_sha256"] = sha256_text(canonical_json(fabric_record))
             trace_store_payload["metadata"]["evidence_fabric"] = fabric_record
+
+    trace_store_payload["metadata"]["execution_class"] = execution_class
+    trace_store_payload["metadata"]["execution_stage_receipts"] = list(
+        build_execution_stage_receipts(
+            _production_stage_observations(
+                mode=mode,
+                trace=trace_store_payload,
+                messages=messages,
+                context_present=context is not None,
+                source_grounded=source_grounded,
+                public_adapter_records=public_adapter_records
+                if mode not in {"baseline", "mock"}
+                else [],
+                generation_metadata=generation_metadata,
+                verification_enabled=verification_enabled,
+                verification_executed=verification is not None,
+                use_mock_generator=use_mock_generator,
+                safety_postconditions_changed=safety_postconditions_changed,
+                safety_output_sha256=safety_output_sha256,
+                high_consequence_boundary_changed=high_consequence_boundary_changed,
+                high_consequence_output_sha256=high_consequence_output_sha256,
+                document_retrieval_enabled=document_retrieval_enabled,
+                graph_retrieval_enabled=graph_retrieval_enabled,
+            )
+        )
+    )
 
     latency_ms = int((perf_counter() - start) * 1000)
     system_state = {
@@ -876,7 +1069,14 @@ def run_turn(
             trace=trace_store_payload,
             objectives=objectives,
             prompt_messages=prompt_messages,
-            metadata={"generated_with": "cockpit", "prompt_hash": _now_hash(messages)},
+            metadata={
+                "generated_with": (
+                    "cockpit"
+                    if execution_class == "product_turn"
+                    else execution_class
+                ),
+                "prompt_hash": _now_hash(messages),
+            },
             feedback={"rating": None, "accepted": None, "failure_tags": [], "evidence_feedback": []},
             event_stream=False,
         )
@@ -890,6 +1090,720 @@ def run_turn(
         "turn_id": turn_id,
         "parent_turn_id": parent_turn_id,
         "turn": stored_turn,
+    }
+
+
+def execute_agent_request(request: AgentExecutionRequest) -> AgentExecutionResult:
+    """Execute and validate one request through the production cockpit core."""
+
+    payload = _run_turn_impl(
+        store=request.store,
+        settings=request.settings,
+        session_id=request.session_id,
+        message=request.message,
+        mode=request.mode,
+        model_id=request.model_id,
+        rag_config=request.rag_config,
+        max_tokens=request.max_tokens,
+        trace_options=dict(request.trace_options),
+        session_context=(
+            dict(request.session_context)
+            if request.session_context is not None
+            else None
+        ),
+        parent_turn_id=request.parent_turn_id,
+        profiler=request.profiler,
+        execution_class=request.execution_class,
+        document_retrieval_enabled=request.document_retrieval_enabled,
+        graph_retrieval_enabled=request.graph_retrieval_enabled,
+    )
+    return AgentExecutionResult.from_run_turn_payload(request, payload)
+
+
+def run_turn(
+    *,
+    store: TraceStore,
+    settings: ServerSettings,
+    session_id: str,
+    message: str,
+    mode: str,
+    model_id: str | None,
+    rag_config: str,
+    max_tokens: int,
+    trace_options: dict[str, Any],
+    session_context: dict[str, Any] | None = None,
+    parent_turn_id: str | None = None,
+    profiler: Any | None = None,
+) -> dict[str, Any]:
+    """Compatibility facade used by the cockpit and replay services."""
+
+    request = AgentExecutionRequest(
+        store=store,
+        settings=settings,
+        session_id=session_id,
+        message=message,
+        mode=mode,
+        model_id=model_id,
+        rag_config=rag_config,
+        max_tokens=max_tokens,
+        trace_options=trace_options,
+        session_context=session_context,
+        parent_turn_id=parent_turn_id,
+        profiler=profiler,
+        execution_class="product_turn",
+    )
+    return execute_agent_request(request).to_run_turn_payload()
+
+
+def _production_stage_observations(
+    *,
+    mode: str,
+    trace: dict[str, Any],
+    messages: list[dict[str, Any]],
+    context_present: bool,
+    source_grounded: bool,
+    public_adapter_records: list[dict[str, Any]],
+    generation_metadata: dict[str, Any],
+    verification_enabled: bool,
+    verification_executed: bool,
+    use_mock_generator: bool,
+    safety_postconditions_changed: bool,
+    safety_output_sha256: str,
+    high_consequence_boundary_changed: bool,
+    high_consequence_output_sha256: str,
+    document_retrieval_enabled: bool,
+    graph_retrieval_enabled: bool,
+) -> dict[str, dict[str, Any]]:
+    """Build the explicit stage topology from observations made in this turn.
+
+    This function is intentionally strict.  A governed model-generated answer
+    without an intervention receipt, or an enabled verifier without an
+    adjudication receipt, is treated as instrumentation drift and aborts the
+    execution before it can be accepted by the benchmark adapter.
+    """
+
+    metadata = trace.get("metadata")
+    if not isinstance(metadata, dict):
+        raise ValueError("production execution trace metadata is missing")
+    route = trace.get("route")
+    if not isinstance(route, dict) or not route.get("question_type"):
+        raise ValueError("production routing receipt is missing")
+    field_context_receipt = metadata.get("field_context_compiler")
+    if not isinstance(field_context_receipt, dict):
+        raise ValueError("field-context compiler receipt is missing")
+    answer_stages = metadata.get("answer_stages")
+    if not isinstance(answer_stages, dict):
+        raise ValueError("answer-stage trace is missing")
+    structured_answer = trace.get("structured_answer")
+    if not isinstance(structured_answer, dict):
+        raise ValueError("structured answer renderer receipt is missing")
+
+    generation_path = str(generation_metadata.get("generation_path") or "model_generation")
+    generation_bypass = generation_metadata.get("generation_bypass")
+    generation_fallback = generation_metadata.get("generation_fallback")
+    generation_unavailable = generation_metadata.get("generation_unavailable")
+    bypass_reason = (
+        str(generation_bypass.get("reason") or "generation_bypass")
+        if isinstance(generation_bypass, dict)
+        else None
+    )
+
+    agno_runtime = metadata.get("agno_runtime")
+    retrieval_component_receipts = (
+        agno_runtime.get("retrieval_component_receipts")
+        if isinstance(agno_runtime, dict)
+        else None
+    )
+    if mode in {"baseline", "mock"}:
+        document_retrieval_state = "not_applicable"
+        graph_retrieval_state = "not_applicable"
+        retrieval_reason = "baseline_or_mock_mode"
+        document_component_receipt: dict[str, Any] = {}
+        graph_component_receipt: dict[str, Any] = {}
+    elif context_present:
+        if not isinstance(retrieval_component_receipts, dict):
+            raise ValueError("governed context has no retrieval-component receipts")
+        document_component_receipt = dict(
+            retrieval_component_receipts.get("document_retrieval") or {}
+        )
+        graph_component_receipt = dict(
+            retrieval_component_receipts.get("graph_retrieval") or {}
+        )
+        document_retrieval_state = str(
+            document_component_receipt.get("state") or ""
+        )
+        graph_retrieval_state = str(graph_component_receipt.get("state") or "")
+        retrieval_reason = "production_context_built"
+    elif source_grounded:
+        document_retrieval_state = (
+            "not_applicable"
+            if document_retrieval_enabled
+            else "disabled_by_arm"
+        )
+        graph_retrieval_state = (
+            "not_applicable" if graph_retrieval_enabled else "disabled_by_arm"
+        )
+        retrieval_reason = "user_grounded_bypass"
+        document_component_receipt = {}
+        graph_component_receipt = {}
+    elif isinstance(generation_bypass, dict):
+        document_retrieval_state = (
+            "not_applicable"
+            if document_retrieval_enabled
+            else "disabled_by_arm"
+        )
+        graph_retrieval_state = (
+            "not_applicable" if graph_retrieval_enabled else "disabled_by_arm"
+        )
+        retrieval_reason = bypass_reason or "deterministic_renderer_bypass"
+        document_component_receipt = {}
+        graph_component_receipt = {}
+    else:
+        raise ValueError("governed execution has no retrieval/context receipt")
+
+    tool_plan = metadata.get("tool_plan")
+    typed_tool_results = (
+        agno_runtime.get("tool_results")
+        if isinstance(agno_runtime, dict)
+        else None
+    )
+    if context_present and not isinstance(tool_plan, dict):
+        raise ValueError("governed execution context has no typed tool-plan receipt")
+    if context_present and not isinstance(typed_tool_results, list):
+        raise ValueError("governed execution context has no typed tool-result records")
+    tool_plan_record = dict(tool_plan) if isinstance(tool_plan, dict) else {}
+    tool_result_records = (
+        [dict(item) for item in typed_tool_results if isinstance(item, dict)]
+        if isinstance(typed_tool_results, list)
+        else []
+    )
+    tool_invocation_ids = list(metadata.get("tool_invocation_ids") or [])
+    tool_result_ids = list(metadata.get("tool_result_ids") or [])
+    plan_invocations = tool_plan_record.get("invocations") or []
+    if not isinstance(plan_invocations, (list, tuple)):
+        raise ValueError("typed tool-plan invocations must be a sequence")
+    planned_invocation_ids = [
+        str(item.get("invocation_id") or "")
+        for item in plan_invocations
+        if isinstance(item, dict)
+    ]
+    observed_result_ids = [
+        str(item.get("result_id") or "")
+        for item in tool_result_records
+    ]
+    if context_present and planned_invocation_ids != tool_invocation_ids:
+        raise ValueError("typed tool-plan/trace invocation identities diverge")
+    if context_present and observed_result_ids != tool_result_ids:
+        raise ValueError("typed tool-result/trace identities diverge")
+
+    if context_present:
+        tool_planning_state = "executed"
+        tool_planning_reason = "typed_planner_evaluated"
+        tool_plan_status = str(tool_plan_record.get("status") or "")
+        if tool_plan_status not in {
+            "ready",
+            "clarification_required",
+            "not_applicable",
+        }:
+            raise ValueError(
+                f"typed tool-plan has unsupported status: {tool_plan_status!r}"
+            )
+        if tool_plan_status == "ready":
+            if not tool_invocation_ids or not tool_result_ids:
+                raise ValueError("ready typed tool-plan has no executed result")
+            tool_execution_state = "executed"
+            tool_execution_reason = "typed_capability_execution_completed"
+        elif tool_plan_status == "clarification_required":
+            if not tool_invocation_ids or tool_result_ids:
+                raise ValueError(
+                    "clarification-required tool-plan has incompatible execution records"
+                )
+            tool_execution_state = "bypassed"
+            tool_execution_reason = "missing_typed_inputs"
+        else:
+            if tool_invocation_ids or tool_result_ids:
+                raise ValueError(
+                    "not-applicable tool-plan contains execution records"
+                )
+            tool_execution_state = "not_applicable"
+            tool_execution_reason = "no_supported_typed_operation_selected"
+    else:
+        tool_planning_state = "not_applicable"
+        tool_planning_reason = (
+            "baseline_or_mock_mode"
+            if mode in {"baseline", "mock"}
+            else retrieval_reason
+        )
+        tool_plan_status = "not_applicable"
+        tool_execution_state = "not_applicable"
+        tool_execution_reason = tool_planning_reason
+
+    intervention_record = generation_metadata.get("evidence_intervention")
+    if isinstance(intervention_record, dict):
+        risk_state = "executed"
+        risk_reason = str(intervention_record.get("reason") or "policy_evaluated")
+    elif mode in {"baseline", "mock"}:
+        risk_state = "not_applicable"
+        risk_reason = "baseline_or_mock_mode"
+    elif source_grounded:
+        risk_state = "not_applicable"
+        risk_reason = "user_grounded_bypass"
+    elif generation_path in {
+        "deterministic_tool_result",
+        "deterministic_tool_clarification",
+    }:
+        risk_state = "not_applicable"
+        risk_reason = "typed_capability_result_or_clarification"
+    elif isinstance(generation_bypass, dict):
+        risk_state = "not_applicable"
+        risk_reason = bypass_reason or "deterministic_renderer_bypass"
+    elif isinstance(generation_fallback, dict) or isinstance(
+        generation_unavailable, dict
+    ):
+        risk_state = "bypassed"
+        risk_reason = "generation_unavailable_before_intervention"
+    else:
+        raise ValueError(
+            "governed model generation has no evidence-intervention receipt"
+        )
+
+    if isinstance(generation_fallback, dict) or isinstance(generation_unavailable, dict):
+        draft_generation_state = "failed"
+        draft_generation_reason = "configured_generation_failed_or_unavailable"
+    elif isinstance(generation_bypass, dict):
+        draft_generation_state = "bypassed"
+        draft_generation_reason = bypass_reason or "deterministic_bypass_selected"
+    else:
+        draft_generation_state = "executed"
+        draft_generation_reason = "draft_generation_completed"
+
+    verification_record = metadata.get("answer_verification")
+    if verification_executed:
+        if not isinstance(verification_record, dict):
+            raise ValueError("executed verifier is missing its adjudication receipt")
+        verification_state = "executed"
+        verification_reason = "risk_gated_verifier_completed"
+    elif generation_path in {
+        "deterministic_tool_result",
+        "deterministic_tool_clarification",
+    }:
+        verification_state = "not_applicable"
+        verification_reason = "typed_capability_validation"
+    elif not verification_enabled:
+        verification_state = "not_applicable"
+        verification_reason = "verification_disabled_by_model_profile"
+    elif mode in {"baseline", "mock"} or use_mock_generator:
+        verification_state = "not_applicable"
+        verification_reason = "baseline_or_mock_execution"
+    elif draft_generation_state in {"failed", "bypassed"}:
+        verification_state = "bypassed"
+        verification_reason = f"draft_generation_{draft_generation_state}"
+    else:
+        raise ValueError("enabled verifier did not produce an adjudication receipt")
+
+    public_adapter_summary = metadata.get("public_adapter_summary")
+    if mode in {"baseline", "mock"}:
+        public_adapter_state = "not_applicable"
+        public_adapter_reason = "baseline_or_mock_mode"
+    elif isinstance(public_adapter_summary, dict):
+        public_adapter_state = "executed"
+        public_adapter_reason = "adapter_preflight_evaluated"
+    else:
+        raise ValueError("governed execution is missing public-adapter preflight receipt")
+
+    high_consequence_policy = metadata.get("high_consequence_policy")
+    if not isinstance(high_consequence_policy, dict):
+        raise ValueError("high-consequence policy receipt is missing")
+
+    all_document_ids = [
+        str(item.get("doc_id") or "")
+        for item in trace.get("retrieved_docs", [])
+        if isinstance(item, dict)
+    ]
+    workspace_document_count = int(metadata.get("workspace_doc_count") or 0)
+    if workspace_document_count < 0 or workspace_document_count > len(all_document_ids):
+        raise ValueError("workspace document count is incompatible with retrieval trace")
+    workspace_document_ids = all_document_ids[:workspace_document_count]
+    document_ids = all_document_ids[workspace_document_count:]
+    graph_node_ids = [
+        str(item.get("node_id") or "")
+        for item in trace.get("graph_hits", [])
+        if isinstance(item, dict)
+    ]
+    prompt_sha256 = execution_stable_sha256(messages)
+    draft_sha256 = str((answer_stages.get("draft") or {}).get("sha256") or "")
+    post_verification_sha256 = str(
+        (answer_stages.get("post_verification") or {}).get("sha256") or ""
+    )
+    final_sha256 = str((answer_stages.get("final") or {}).get("sha256") or "")
+    if not draft_sha256 or not post_verification_sha256 or not final_sha256:
+        raise ValueError("one or more answer-stage hashes are missing")
+
+    if context_present:
+        retrieval_specs = (
+            (
+                "document_retrieval",
+                document_retrieval_enabled,
+                document_component_receipt,
+                document_retrieval_state,
+                document_ids,
+            ),
+            (
+                "graph_retrieval",
+                graph_retrieval_enabled,
+                graph_component_receipt,
+                graph_retrieval_state,
+                graph_node_ids,
+            ),
+        )
+        for component_id, enabled, receipt, state, output_ids in retrieval_specs:
+            expected_state = (
+                "disabled_by_arm"
+                if not enabled
+                else "completed"
+                if output_ids
+                else "completed_no_result"
+            )
+            if state != expected_state:
+                raise ValueError(
+                    f"{component_id} component state mismatch: "
+                    f"expected={expected_state} observed={state!r}"
+                )
+            if receipt.get("enabled") is not enabled:
+                raise ValueError(f"{component_id} control/receipt mismatch")
+            if receipt.get("executed") is not enabled:
+                raise ValueError(f"{component_id} execution receipt mismatch")
+            if list(receipt.get("output_ids") or []) != output_ids:
+                raise ValueError(f"{component_id} output receipt mismatch")
+            if not enabled and output_ids:
+                raise ValueError(f"{component_id} disabled arm contains output")
+
+    public_status_counts = (
+        dict(public_adapter_summary.get("status_counts") or {})
+        if isinstance(public_adapter_summary, dict)
+        else {}
+    )
+    field_context_present = bool(metadata.get("field_context"))
+    evidence_fabric = metadata.get("evidence_fabric")
+    evidence_conflict_summary = metadata.get("evidence_conflict_summary")
+    selection_record = {
+        "context_present": context_present,
+        "source_grounded": source_grounded,
+        "field_context_present": field_context_present,
+        "public_adapter_record_count": len(public_adapter_records),
+        "document_ids": document_ids,
+        "workspace_document_ids": workspace_document_ids,
+        "graph_node_ids": graph_node_ids,
+        "retrieval_policy": metadata.get("retrieval_policy"),
+        "context_packer_version": metadata.get("context_packer_version"),
+        "context_tokens_est": metadata.get("context_tokens_est"),
+        "evidence_conflict_summary": evidence_conflict_summary,
+        "evidence_fabric_sha256": execution_stable_sha256(evidence_fabric or {}),
+    }
+    if context_present:
+        evidence_selection_state = "executed"
+        evidence_selection_reason = "production_context_selected_and_packed"
+    elif source_grounded:
+        evidence_selection_state = "executed"
+        evidence_selection_reason = "user_supplied_source_selected"
+    elif public_adapter_records:
+        evidence_selection_state = "executed"
+        evidence_selection_reason = "structured_public_adapter_evidence_selected"
+    elif field_context_present:
+        evidence_selection_state = "executed"
+        evidence_selection_reason = "typed_field_context_selected"
+    elif mode in {"baseline", "mock"}:
+        evidence_selection_state = "executed"
+        evidence_selection_reason = "question_only_context_selected"
+    else:
+        evidence_selection_state = "not_applicable"
+        evidence_selection_reason = retrieval_reason
+
+    intervention_payload = intervention_record or {}
+    intervention_decision = {
+        "state": risk_state,
+        "reason": risk_reason,
+        "receipt": intervention_payload,
+    }
+    bypass_payload = dict(generation_bypass) if isinstance(generation_bypass, dict) else {}
+    deterministic_bypass_state = (
+        "executed" if isinstance(generation_bypass, dict) else "not_applicable"
+    )
+    deterministic_bypass_reason = (
+        bypass_reason or "deterministic_bypass_selected"
+        if isinstance(generation_bypass, dict)
+        else "model_or_failure_path_selected"
+    )
+    bypass_decision = {
+        "selected": isinstance(generation_bypass, dict),
+        "reason": deterministic_bypass_reason,
+        "generation_path": generation_path,
+        "receipt": bypass_payload,
+    }
+    queue_circuit = generation_metadata.get("model_circuit_breaker")
+    model_call_executed = (
+        not isinstance(generation_bypass, dict)
+        and not isinstance(generation_unavailable, dict)
+        and not (
+            isinstance(queue_circuit, dict) and queue_circuit.get("tripped") is True
+        )
+    )
+
+    fallback_record = (
+        dict(generation_fallback)
+        if isinstance(generation_fallback, dict)
+        else dict(generation_unavailable)
+        if isinstance(generation_unavailable, dict)
+        else {}
+    )
+    verification_origin = classify_verification_origin(
+        verification_record if isinstance(verification_record, dict) else None,
+        draft_sha256=draft_sha256,
+        post_verification_sha256=post_verification_sha256,
+    )
+    verifier_fallback_applied = bool(
+        verification_origin["verification_fallback_applied"]
+    )
+    rewrite_accepted = bool(verification_origin["rewrite_accepted"])
+    fallback_used = bool(fallback_record) or verifier_fallback_applied
+    if verifier_fallback_applied:
+        origin_class = "verifier_conservative_fallback"
+        fallback_reason = "verification_conservative_fallback_origin"
+        fallback_kind = "verification_conservative"
+    elif rewrite_accepted:
+        origin_class = "verifier_editor_rewrite"
+        fallback_reason = "verification_editor_rewrite_origin"
+        fallback_kind = None
+    elif fallback_record:
+        origin_class = "analysis_unavailable_fallback"
+        fallback_reason = "generation_fallback_applied"
+        fallback_kind = "generation_unavailable"
+    elif isinstance(generation_bypass, dict):
+        origin_class = "deterministic_bypass"
+        fallback_reason = "deterministic_answer_origin"
+        fallback_kind = None
+    elif use_mock_generator:
+        origin_class = "mock_generator"
+        fallback_reason = "mock_generation_origin"
+        fallback_kind = None
+    else:
+        origin_class = "configured_model"
+        fallback_reason = "configured_model_origin"
+        fallback_kind = None
+    verification_receipt_sha256 = execution_stable_sha256(
+        verification_record if isinstance(verification_record, dict) else {}
+    )
+    origin_record = {
+        "origin_class": origin_class,
+        "fallback_used": fallback_used,
+        "fallback_kind": fallback_kind,
+        "generation_fallback": fallback_record,
+        "generation_path": generation_path,
+        "bypass_renderer": bypass_payload.get("renderer"),
+        "model_identity_sha256": execution_stable_sha256(
+            metadata.get("model_identity") or {}
+        ),
+        **verification_origin,
+        "verification_receipt_sha256": verification_receipt_sha256,
+        "replacement_audit_sha256": execution_stable_sha256(
+            (verification_record or {}).get("replacement_audit")
+            if isinstance(verification_record, dict)
+            else {}
+        ),
+        "draft_sha256": draft_sha256,
+        "post_verification_sha256": post_verification_sha256,
+        "final_sha256": final_sha256,
+    }
+
+    return {
+        "routing": {
+            "state": "executed",
+            "evidence": {
+                "reason": "route_computed",
+                "question_type": route.get("question_type"),
+                "risk_level": route.get("risk_level"),
+                "route_sha256": execution_stable_sha256(route),
+            },
+        },
+        "typed_field_context": {
+            "state": "executed",
+            "evidence": {
+                "reason": "typed_field_context_compiled",
+                "compiler_receipt_sha256": execution_stable_sha256(
+                    field_context_receipt
+                ),
+                "field_context_present": field_context_present,
+            },
+        },
+        "public_adapter_selection": {
+            "state": public_adapter_state,
+            "evidence": {
+                "reason": public_adapter_reason,
+                "record_count": len(public_adapter_records),
+                "records_sha256": execution_stable_sha256(public_adapter_records),
+                "status_counts": public_status_counts,
+                "status_counts_sha256": execution_stable_sha256(public_status_counts),
+            },
+        },
+        "document_retrieval": {
+            "state": document_retrieval_state,
+            "evidence": {
+                "reason": retrieval_reason,
+                "enabled": document_retrieval_enabled,
+                "executed": document_component_receipt.get("executed", False),
+                "document_count": len(document_ids),
+                "document_ids": document_ids,
+                "document_ids_sha256": execution_stable_sha256(document_ids),
+                "workspace_document_count": len(workspace_document_ids),
+                "workspace_document_ids_sha256": execution_stable_sha256(
+                    workspace_document_ids
+                ),
+                "component_receipt_sha256": document_component_receipt.get(
+                    "receipt_sha256"
+                ),
+            },
+        },
+        "graph_retrieval": {
+            "state": graph_retrieval_state,
+            "evidence": {
+                "reason": retrieval_reason,
+                "enabled": graph_retrieval_enabled,
+                "executed": graph_component_receipt.get("executed", False),
+                "graph_hit_count": len(graph_node_ids),
+                "graph_node_ids": graph_node_ids,
+                "graph_node_ids_sha256": execution_stable_sha256(graph_node_ids),
+                "component_receipt_sha256": graph_component_receipt.get(
+                    "receipt_sha256"
+                ),
+            },
+        },
+        "evidence_selection_packing": {
+            "state": evidence_selection_state,
+            "evidence": {
+                "reason": evidence_selection_reason,
+                **selection_record,
+                "selection_sha256": execution_stable_sha256(selection_record),
+            },
+        },
+        "tool_planning": {
+            "state": tool_planning_state,
+            "evidence": {
+                "reason": tool_planning_reason,
+                "plan_status": tool_plan_status,
+                "tool_plan_sha256": execution_stable_sha256(tool_plan_record),
+                "invocation_ids": tool_invocation_ids,
+                "invocation_ids_sha256": execution_stable_sha256(tool_invocation_ids),
+            },
+        },
+        "tool_execution": {
+            "state": tool_execution_state,
+            "evidence": {
+                "reason": tool_execution_reason,
+                "result_count": len(tool_result_ids),
+                "result_ids": tool_result_ids,
+                "result_ids_sha256": execution_stable_sha256(tool_result_ids),
+                "results_sha256": execution_stable_sha256(tool_result_records),
+            },
+        },
+        "prompt_construction": {
+            "state": "executed",
+            "evidence": {
+                "reason": "prompt_messages_constructed",
+                "message_count": len(messages),
+                "messages_sha256": prompt_sha256,
+                "raw_messages_retained": bool(trace.get("prompt_messages")),
+            },
+        },
+        "pre_generation_answerability_risk_intervention": {
+            "state": risk_state,
+            "evidence": {
+                "reason": risk_reason,
+                "decision_sha256": execution_stable_sha256(intervention_decision),
+                "intervention_receipt_sha256": execution_stable_sha256(
+                    intervention_payload
+                ),
+            },
+        },
+        "deterministic_bypass": {
+            "state": deterministic_bypass_state,
+            "evidence": {
+                "reason": deterministic_bypass_reason,
+                "bypass_selected": isinstance(generation_bypass, dict),
+                "renderer": bypass_payload.get("renderer"),
+                "generation_path": generation_path,
+                "decision_sha256": execution_stable_sha256(bypass_decision),
+            },
+        },
+        "draft_generation": {
+            "state": draft_generation_state,
+            "evidence": {
+                "reason": draft_generation_reason,
+                "generation_path": generation_path,
+                "model_call_executed": model_call_executed,
+                "fallback_used": bool(fallback_record),
+                "draft_sha256": draft_sha256,
+            },
+        },
+        "verification": {
+            "state": verification_state,
+            "evidence": {
+                "reason": verification_reason,
+                "configured": verification_enabled,
+                "executed": verification_executed,
+                "draft_sha256": draft_sha256,
+                "post_verification_sha256": post_verification_sha256,
+                "adjudication_sha256": execution_stable_sha256(
+                    verification_record or {}
+                ),
+            },
+        },
+        "safety_normalization": {
+            "state": "executed",
+            "evidence": {
+                "reason": "answer_safety_postconditions_evaluated",
+                "changed_answer": safety_postconditions_changed,
+                "input_sha256": post_verification_sha256,
+                "output_sha256": safety_output_sha256,
+            },
+        },
+        "high_consequence_policy": {
+            "state": "executed",
+            "evidence": {
+                "reason": "high_consequence_policy_evaluated",
+                "policy_status": high_consequence_policy.get("status"),
+                "boundary_changed_answer": high_consequence_boundary_changed,
+                "input_sha256": safety_output_sha256,
+                "output_sha256": high_consequence_output_sha256,
+                "policy_sha256": execution_stable_sha256(high_consequence_policy),
+            },
+        },
+        "structured_rendering": {
+            "state": "executed",
+            "evidence": {
+                "reason": "structured_answer_rendered",
+                "input_sha256": high_consequence_output_sha256,
+                "renderer_sha256": execution_stable_sha256(structured_answer),
+                "final_sha256": final_sha256,
+            },
+        },
+        "fallback_origin": {
+            "state": "executed",
+            "evidence": {
+                "reason": fallback_reason,
+                "origin_class": origin_class,
+                "fallback_used": fallback_used,
+                "fallback_kind": fallback_kind,
+                **verification_origin,
+                "from_model_id": fallback_record.get("from_model_id"),
+                "fallback_model_id": fallback_record.get("fallback_model_id"),
+                "draft_sha256": draft_sha256,
+                "post_verification_sha256": post_verification_sha256,
+                "final_sha256": final_sha256,
+                "verification_receipt_sha256": verification_receipt_sha256,
+                "origin_record": origin_record,
+                "origin_sha256": execution_stable_sha256(origin_record),
+            },
+        },
     }
 
 
@@ -2686,7 +3600,12 @@ def _append_public_adapter_context(context_block: str, records: list[dict[str, A
     for record in records:
         payload = record.get("payload") or {}
         status = payload.get("status", "unknown")
-        lines.append(f"- {record.get('name')}: {status}; {record.get('text')}")
+        result_identity = (
+            f" [result_id={record.get('result_id')}]"
+            if record.get("result_id")
+            else ""
+        )
+        lines.append(f"- {record.get('name')}{result_identity}: {status}; {record.get('text')}")
         boundary = payload.get("boundary")
         if boundary:
             lines.append(f"  Boundary: {boundary}")
@@ -2721,7 +3640,14 @@ def _append_field_context_prompt(context_block: str, field_context: Any) -> str:
             parts.append(f"{round(float(acres)):,} acres")
         if parts:
             lines.append(f"- Selected uploaded feature: {', '.join(parts)}")
-    intersections = _field_context_intersection_summaries(field_context.get("regional_intersections"))
+    raw_intersections = field_context.get("regional_intersections")
+    if has_trusted_geographic_context(field_context) and isinstance(raw_intersections, list):
+        raw_intersections = [
+            item
+            for item in raw_intersections
+            if not isinstance(item, dict) or item.get("layer_id") not in TRUSTED_GEOGRAPHIC_LAYER_IDS
+        ]
+    intersections = _field_context_intersection_summaries(raw_intersections)
     if intersections:
         lines.append("- Official regional polygon intersections:")
         lines.extend(f"  - {item}" for item in intersections[:6])
@@ -2861,6 +3787,10 @@ def _safe_field_context_summary(field_context: Any) -> dict[str, Any]:
             if selected_feature.get(key) not in (None, "")
         }
     intersections = _safe_field_context_intersections(field_context.get("regional_intersections"))
+    if has_trusted_geographic_context(field_context):
+        intersections = [
+            item for item in intersections if item.get("layer_id") not in TRUSTED_GEOGRAPHIC_LAYER_IDS
+        ]
     if intersections:
         summary["regional_intersections"] = intersections
     layer_status = _safe_field_context_layer_status(field_context.get("official_layer_status"))
@@ -3805,4 +4735,12 @@ def _build_graph_snapshot(idx: int, hit: Any) -> dict[str, Any]:
         "kind": hit.kind,
         "evidence": hit.evidence,
         "neighbors": list(hit.neighbors),
+        "namespaces": list(getattr(hit, "namespaces", ())),
+        "graph_id": getattr(hit, "graph_id", "legacy.unknown"),
+        "graph_version": getattr(hit, "graph_version", "0"),
+        "graph_source": getattr(hit, "graph_source", "unknown"),
+        "graph_license": getattr(hit, "graph_license", "NOASSERTION"),
+        "graph_sha256": getattr(hit, "graph_sha256", ""),
+        "authority_role": getattr(hit, "authority_role", "vocabulary_hint"),
+        "relation_paths": list(getattr(hit, "relation_paths", ())),
     }

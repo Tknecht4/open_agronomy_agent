@@ -29,6 +29,7 @@ retrieval:
   graph_paths:
     - data/seed/agronomy_knowledge_graph.json
     - data/derived/rag/soilwise_knowledge_graph.json
+  require_graph_manifests: true
 private_knowledge:
   enabled: true
   required: false

@@ -1,0 +1,31 @@
+{
+  "schema_version": "open_agronomy_agent.knowledge_graph_manifest.v1",
+  "graph_id": "open_agronomy.curated_seed",
+  "version": "1.0.0",
+  "data_path": "agronomy_knowledge_graph.json",
+  "namespaces": [
+    "crop_management",
+    "fertility",
+    "field_data_boundary",
+    "label_boundary",
+    "plant_health",
+    "precision_ag",
+    "product_stewardship",
+    "soil_health",
+    "soil_water"
+  ],
+  "source": "Open Agronomy Agent curated seed graph",
+  "license": "Apache-2.0",
+  "sha256": "e293a7327ed0763807a90d93f43dc65b6b7d67bc0d9c5791adcb26070df50dea",
+  "authority_role": "vocabulary_hint",
+  "priority": 100,
+  "collision_policy": "error",
+  "relation_vocabulary": [
+    "can_be_affected_by",
+    "can_generate_prescription_for",
+    "interpretation_depends_on",
+    "may_define_limits_for",
+    "requires_fertility_planning_for",
+    "risk_increases_with"
+  ]
+}

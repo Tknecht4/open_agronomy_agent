@@ -1,0 +1,169 @@
+{
+  "schema_version": "open_agronomy_agent.benchmark_harness_contract.v1",
+  "contract_id": "open_agronomy_benchmark_v2_harness_v1",
+  "benchmark_id": "open_agronomy_benchmark_v2",
+  "status": "frozen_exposed_regression_harness_contract",
+  "claim_eligible": false,
+  "observation_schema_version": "open_agronomy_agent.benchmark_v2_observation.v1",
+  "metric_schema_version": "open_agronomy_agent.benchmark_v2_case_measurements.v1",
+  "summary_schema_version": "open_agronomy_agent.benchmark_v2_measurement_summary.v1",
+  "stage_topology": ["draft", "post_verification", "final"],
+  "unknown_active_feature_policy": "new_benchmark_required",
+  "unknown_observation_field_policy": "migration_required_and_run_rejected",
+  "required_implementation_receipts": [
+    "capability_registry",
+    "tool_planner",
+    "graph_contract",
+    "evidence_contract",
+    "answerability_policy",
+    "verifier_policy",
+    "runtime_orchestrator",
+    "kernel_config",
+    "field_context_contract",
+    "retrieval_config_and_assets",
+    "tool_executor_bundle",
+    "fallback_policy"
+  ],
+  "migration_adapters": [],
+  "semantic_profile": {
+    "schema_version": "open_agronomy_agent.benchmark_v2_semantic_profile.v1",
+    "profile_id": "open_agronomy_benchmark_v2_construct_semantics",
+    "profile_version": "v1",
+    "tool_semantics": {
+      "plan_statuses": ["ready", "clarification_required", "not_applicable"],
+      "families": {
+        "supplied_input_arithmetic": {
+          "operations": [
+            "unit_conversion",
+            "seed_rate_mass",
+            "fertilizer_product_mass",
+            "nutrient_delivery",
+            "sprayer_application_volume",
+            "tank_coverage",
+            "daily_gdd",
+            "accumulated_gdd",
+            "row_population",
+            "field_product_total",
+            "area_weighted_average",
+            "partial_budget"
+          ],
+          "authority_roles": ["supplied_inputs_arithmetic_only"],
+          "invocation_statuses": ["planned", "clarification_required"],
+          "result_statuses": ["calculated"]
+        }
+      }
+    },
+    "evidence_semantics": {
+      "modalities": ["document", "knowledge_graph"],
+      "evidence_roles": ["decisive", "interpretive", "supporting", "boundary"],
+      "factual_authority_classes": [
+        "authoritative_for_source_meaning",
+        "constraint_only",
+        "supporting_context"
+      ],
+      "field_action_authority_classes": [
+        "bounded_source_support",
+        "not_authorized",
+        "requires_live_authority"
+      ],
+      "retrieval_statuses": [
+        "disabled_by_arm",
+        "synthetic_not_executed",
+        "completed",
+        "completed_no_result"
+      ]
+    },
+    "answerability_states": [
+      "answer_directly",
+      "answer_with_bounded_uncertainty",
+      "ask_one_discriminating_question",
+      "require_authority",
+      "refuse_unsafe_action"
+    ],
+    "verifier_semantics": {
+      "policy_id": "hard_safety_then_specificity",
+      "policy_version": "v2",
+      "decision_unit": "generated_draft_claim_risk",
+      "outcome_schema_version": "open_agronomy_agent.benchmark_v2_verifier_outcome.v1",
+      "outcomes": [
+        "not_applicable_disabled",
+        "not_applicable_pre_generation_prevention",
+        "accept_draft",
+        "intervene_on_acceptable_draft",
+        "miss_required_intervention",
+        "intervene_on_required_draft"
+      ]
+    }
+  },
+  "component_contracts": {
+    "kernel_prompt": {
+      "component_id": "governed_prompt_kernel",
+      "contract_version": "v1",
+      "applicability": "always_when_enabled",
+      "allowed_observed_statuses": ["completed"],
+      "features": ["governed_prompt_kernel"]
+    },
+    "field_context": {
+      "component_id": "typed_field_context",
+      "contract_version": "v1",
+      "applicability": "always_when_enabled",
+      "allowed_observed_statuses": ["completed", "completed_no_result"],
+      "features": ["typed_field_context_snapshot"]
+    },
+    "retrieval": {
+      "component_id": "governed_retrieval",
+      "contract_version": "v1",
+      "applicability": "always_when_enabled",
+      "allowed_observed_statuses": ["completed", "completed_no_result"],
+      "features": ["governed_document_retrieval", "governed_graph_retrieval"]
+    },
+    "typed_tools": {
+      "component_id": "typed_capability_execution",
+      "contract_version": "v1",
+      "applicability": "expected_tool_cases_only",
+      "allowed_observed_statuses": ["completed", "completed_no_result", "not_applicable_case"],
+      "features": ["typed_tool_plan", "typed_tool_result"]
+    },
+    "risk_intervention": {
+      "component_id": "answerability_intervention",
+      "contract_version": "v1",
+      "applicability": "always_when_enabled",
+      "allowed_observed_statuses": ["completed"],
+      "features": ["answerability_state"]
+    },
+    "verifier": {
+      "component_id": "claim_risk_verifier",
+      "contract_version": "v1",
+      "applicability": "generated_draft_only",
+      "allowed_observed_statuses": ["completed", "not_applicable_pre_generation_prevention"],
+      "features": ["draft_verification", "replacement_audit"]
+    },
+    "fallback": {
+      "component_id": "answer_fallback_policy",
+      "contract_version": "v1",
+      "applicability": "available_when_enabled",
+      "allowed_observed_statuses": ["completed", "available_not_used"],
+      "features": ["answer_origin", "fallback_receipt"]
+    }
+  },
+  "feature_contracts": {
+    "governed_prompt_kernel": {"component": "kernel_prompt", "contract_version": "v1", "effect_class": "answer_affecting"},
+    "typed_field_context_snapshot": {"component": "field_context", "contract_version": "v1", "effect_class": "answer_affecting"},
+    "governed_document_retrieval": {"component": "retrieval", "contract_version": "v1", "effect_class": "answer_affecting"},
+    "governed_graph_retrieval": {"component": "retrieval", "contract_version": "v1", "effect_class": "answer_affecting"},
+    "typed_tool_plan": {"component": "typed_tools", "contract_version": "v1", "effect_class": "answer_affecting"},
+    "typed_tool_result": {"component": "typed_tools", "contract_version": "v1", "effect_class": "answer_affecting"},
+    "answerability_state": {"component": "risk_intervention", "contract_version": "v1", "effect_class": "answer_affecting"},
+    "draft_verification": {"component": "verifier", "contract_version": "v1", "effect_class": "answer_affecting"},
+    "replacement_audit": {"component": "verifier", "contract_version": "v1", "effect_class": "trace_only"},
+    "answer_origin": {"component": "fallback", "contract_version": "v1", "effect_class": "answer_affecting"},
+    "fallback_receipt": {"component": "fallback", "contract_version": "v1", "effect_class": "trace_only"}
+  },
+  "compatibility_policy": {
+    "comparable": "Exact construct and harness-semantic fingerprints; system implementation identity may differ and is the comparison target.",
+    "migration_required": "The construct is unchanged but observation or trace representation changed through a declared, tested adapter; preserve raw and migrated records.",
+    "new_benchmark_required": "Cases, scoring denominators, arm meaning, stage topology, or an answer-affecting feature contract changed.",
+    "unknown_answer_affecting_features_fail_closed": true,
+    "pool_only_exact_cohort_and_system_identity": true
+  }
+}

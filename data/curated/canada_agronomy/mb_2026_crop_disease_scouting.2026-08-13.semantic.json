@@ -1,0 +1,33 @@
+{
+  "schema_version": "open_agronomy_agent.reviewed_semantic_companion.v1",
+  "source_id": "mb_2026_crop_disease_scouting",
+  "source_raw_sha256": "9552dd91b8bb7bbd20748c866e1ea691bb9b9507251a1a176e6b49d6c71d4483",
+  "reviewed_on": "2026-08-13",
+  "review_method": "Manual visual and text comparison against the 2026 Manitoba PDF pages 1-3. Retained only qualitative disease-observation, prevention, and biosecurity context. Excluded all product names, pesticide labels, application directions, rates, thresholds, weather cutoffs, rotation intervals, sanitation formulas, legal statements, logos, images, and third-party links.",
+  "records": [
+    {
+      "title": "Manitoba 2026 cereal disease observation and prevention context",
+      "source_pages": [1],
+      "tags": ["cereal disease", "scouting", "disease prevention"],
+      "text": "This reviewed Manitoba source frames cereal leaf-disease management as repeated observation and prevention rather than a one-time treatment choice. Scout crops through the period when upper leaves matter for grain fill, record symptoms and field distribution, and use crop sequence, residue awareness, and locally adapted disease-resistant varieties to reduce inoculum pressure where feasible. Weather and crop susceptibility can change risk. This context does not authorize a crop-protection action, rate, or timing; any such action must use current PMRA-authorized information and current Manitoba decision support."
+    },
+    {
+      "title": "Manitoba 2026 Fusarium head blight weather and crop-history context",
+      "source_pages": [1],
+      "tags": ["Fusarium head blight", "cereals", "weather risk", "crop history"],
+      "text": "The reviewed Manitoba guide treats Fusarium head blight risk as especially important around cereal flowering when warm, persistently wet conditions favour disease development. Crop sequence, residue context, and choosing locally adapted varieties with appropriate disease ratings may reduce exposure, but they do not guarantee control under favourable weather. Use field observations, current provincial varietal information, and independent grain or mycotoxin assessment when the decision is consequential. This is risk-framing context, not a fixed weather threshold or a treatment recommendation."
+    },
+    {
+      "title": "Manitoba 2026 potato disease sanitation and visit hygiene context",
+      "source_pages": [2],
+      "tags": ["potato disease", "sanitation", "biosecurity", "field visits"],
+      "text": "For potato disease risk, this reviewed Manitoba subset emphasizes local weather awareness and regular scouting alongside biosecurity practices that reduce movement of possible inoculum. Healthy planting material, removal of potential volunteer or cull sources, debris-first cleaning before sanitation, and clean equipment, footwear, and visit records can help reduce transfer between fields, storage, and farms. Specific sanitation approaches, timing, and crop-protection decisions are excluded from this context and must be checked against current authoritative guidance."
+    },
+    {
+      "title": "Manitoba 2026 canola clubroot recognition and soil-movement context",
+      "source_pages": [3],
+      "tags": ["canola clubroot", "diagnostic confirmation", "soil movement", "sanitation"],
+      "text": "The reviewed Manitoba guide distinguishes visible canola symptoms from a confirmed clubroot diagnosis: inspect roots for characteristic galls and seek qualified confirmation when the result will affect a consequential decision. It describes soil moved on equipment, footwear, water, animals, or field traffic as a potential pathway between sites. Limiting soil movement, careful sanitation, crop sequence, and appropriate variety choice are complementary risk-reduction concepts. This source does not define compliance duties, a sanitation method, a rotation interval, or a chemical intervention."
+    }
+  ]
+}

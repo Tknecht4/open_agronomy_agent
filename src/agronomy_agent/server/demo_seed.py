@@ -239,7 +239,7 @@ def _get_or_create_demo_thread(
         trace_capture_level="research_opt_in",
         field_context_id=field_context["id"],
         model_profile_id="mock",
-        rag_config_id="configs/rag_final_mvp.yaml",
+        rag_config_id="configs/rag_governed_runtime_v2.yaml",
         training_eligible=True,
         metadata={"demo_seed_id": "phase4_public_demo_v1", "source_ids": [source["source_id"] for source in data_sources]},
     )

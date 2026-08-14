@@ -1,0 +1,243 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-agronomy.local/schemas/curated_knowledge_store_manifest_v1.schema.json",
+  "title": "Open Agronomy Curated Knowledge Store Manifest v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "store_id",
+    "release_date",
+    "builder",
+    "source_registry",
+    "chunking",
+    "max_shard_bytes",
+    "training_authorization",
+    "shards",
+    "profiles",
+    "included_source_ids",
+    "excluded_source_ids",
+    "receipts",
+    "totals"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "open_agronomy_agent.curated_knowledge_store.v1"
+    },
+    "store_id": {
+      "$ref": "#/$defs/id"
+    },
+    "release_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "builder": {
+      "type": "object",
+      "required": ["name", "version", "packing_order"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "version": {"type": "integer", "minimum": 1},
+        "packing_order": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        }
+      },
+      "additionalProperties": false
+    },
+    "source_registry": {
+      "type": "object",
+      "required": ["schema_version", "sha256", "path_hint"],
+      "properties": {
+        "schema_version": {"type": "string", "minLength": 1},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "path_hint": {"$ref": "#/$defs/safe_relative_path"}
+      },
+      "additionalProperties": false
+    },
+    "chunking": {
+      "type": "object",
+      "required": ["extractors", "input_mode"],
+      "properties": {
+        "input_mode": {"const": "preextracted_jsonl"},
+        "extractors": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "schema_version", "max_words", "overlap_words"],
+            "properties": {
+              "name": {"type": "string", "minLength": 1},
+              "schema_version": {"type": "integer", "minimum": 1},
+              "max_words": {"type": ["integer", "null"], "minimum": 1},
+              "overlap_words": {"type": ["integer", "null"], "minimum": 0}
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "max_shard_bytes": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 25165824
+    },
+    "training_authorization": {
+      "$ref": "#/$defs/training_authorization"
+    },
+    "shards": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/shard"}
+    },
+    "profiles": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/profile"}
+    },
+    "included_source_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/id"}
+    },
+    "excluded_source_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/id"}
+    },
+    "receipts": {
+      "type": "object",
+      "required": [
+        "ingest_summary_path",
+        "ingest_summary_sha256",
+        "source_coverage_path",
+        "source_coverage_sha256"
+      ],
+      "properties": {
+        "ingest_summary_path": {"$ref": "#/$defs/safe_relative_path"},
+        "ingest_summary_sha256": {"$ref": "#/$defs/sha256"},
+        "source_coverage_path": {"$ref": "#/$defs/safe_relative_path"},
+        "source_coverage_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "additionalProperties": false
+    },
+    "totals": {
+      "type": "object",
+      "required": ["shards", "bytes", "rows", "unique_doc_ids", "unique_content_fingerprints"],
+      "properties": {
+        "shards": {"type": "integer", "minimum": 1},
+        "bytes": {"type": "integer", "minimum": 1},
+        "rows": {"type": "integer", "minimum": 1},
+        "unique_doc_ids": {"type": "integer", "minimum": 1},
+        "unique_content_fingerprints": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "safe_relative_path": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "training_authorization": {
+      "type": "object",
+      "required": ["granted", "statement"],
+      "properties": {
+        "granted": {"const": false},
+        "statement": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "shard": {
+      "type": "object",
+      "required": [
+        "id",
+        "path",
+        "sha256",
+        "bytes",
+        "rows",
+        "source_ids",
+        "languages",
+        "jurisdictions",
+        "policy_role",
+        "row_retrieval_policy_counts",
+        "unique_doc_ids",
+        "unique_content_fingerprints"
+      ],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "path": {"$ref": "#/$defs/safe_relative_path"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "bytes": {"type": "integer", "minimum": 1, "maximum": 25165824},
+        "rows": {"type": "integer", "minimum": 1},
+        "source_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/id"}
+        },
+        "languages": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "jurisdictions": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "policy_role": {
+          "enum": ["decisive", "context_only", "requires_live_authority"]
+        },
+        "row_retrieval_policy_counts": {"type": "object"},
+        "unique_doc_ids": {"type": "integer", "minimum": 1},
+        "unique_content_fingerprints": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
+    },
+    "profile": {
+      "type": "object",
+      "required": [
+        "profile_id",
+        "description",
+        "base_profile",
+        "source_ids",
+        "source_ids_added",
+        "corpus_paths",
+        "policy_manifest_path",
+        "policy_manifest_sha256",
+        "rag_config_path",
+        "rag_config_sha256"
+      ],
+      "properties": {
+        "profile_id": {"$ref": "#/$defs/id"},
+        "description": {"type": "string", "minLength": 1},
+        "base_profile": {"type": ["string", "null"]},
+        "source_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/id"}
+        },
+        "source_ids_added": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/id"}
+        },
+        "corpus_paths": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/safe_relative_path"}
+        },
+        "policy_manifest_path": {"$ref": "#/$defs/safe_relative_path"},
+        "policy_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "rag_config_path": {"$ref": "#/$defs/safe_relative_path"},
+        "rag_config_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "additionalProperties": false
+    }
+  }
+}

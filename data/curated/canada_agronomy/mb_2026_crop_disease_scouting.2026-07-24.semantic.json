@@ -1,0 +1,48 @@
+{
+  "schema_version": "open_agronomy_agent.reviewed_semantic_companion.v1",
+  "source_id": "mb_2026_crop_disease_scouting",
+  "source_raw_sha256": "9552dd91b8bb7bbd20748c866e1ea691bb9b9507251a1a176e6b49d6c71d4483",
+  "reviewed_on": "2026-07-24",
+  "review_method": "Manual comparison against PDF pages 1-3. Only Manitoba government scouting, diagnostic, prevention, and evidence-boundary content was retained. Product tables, rates, logos, images, and separately credited content were excluded.",
+  "records": [
+    {
+      "title": "Manitoba 2026 cereal leaf disease and Fusarium head blight scouting",
+      "source_pages": [
+        1
+      ],
+      "tags": [
+        "cereal disease",
+        "Fusarium head blight",
+        "scouting",
+        "mycotoxin risk"
+      ],
+      "text": "For Manitoba cereals in the 2026 season, inspect fields before, during, and after flag-leaf emergence because the flag and upper leaves supply at least half of grain fill. Fusarium head blight risk is driven strongly by weather during flowering: the guide identifies sustained moisture for roughly 48 to 60 hours with temperatures from 15 to 30 degrees Celsius as favourable conditions. Rotation away from cereals, grasses, and corn for at least one year and preferably two can reduce residue-borne risk, but cannot override conducive weather. Use clean seed and current provincial variety resistance ratings. Scouting and weather observations establish risk; they do not confirm mycotoxin concentration, authorize a product, or replace a current pesticide label."
+    },
+    {
+      "title": "Manitoba 2026 canola clubroot recognition and containment",
+      "source_pages": [
+        3
+      ],
+      "tags": [
+        "clubroot",
+        "root inspection",
+        "laboratory confirmation",
+        "sanitation"
+      ],
+      "text": "Suspect clubroot in Manitoba canola when patches show wilting, stunting, yellowing, premature ripening, or shrivelled seed, especially near field entrances where contaminated soil may first arrive. Confirm the field symptom by digging plants and checking roots for galls; submit symptomatic plants to a qualified laboratory when confirmation matters. Warm, wet, acidic soils favour disease, but clubroot can occur outside those conditions. Resting spores move with eroded soil, water, animals or manure, footwear, tires, and soil attached to equipment, and a small fraction can persist for up to 20 years. Rotation, resistant varieties, regular scouting, and preventing soil movement are complementary controls; no single observation establishes field-wide severity."
+    },
+    {
+      "title": "Manitoba 2026 potato late-blight prevention and farm biosecurity",
+      "source_pages": [
+        2
+      ],
+      "tags": [
+        "late blight",
+        "field scouting",
+        "sanitation",
+        "farm biosecurity"
+      ],
+      "text": "For Manitoba potato late-blight prevention, combine local weather monitoring with frequent scouting, giving extra attention to low, sheltered, or persistently wet parts of a field. Start with healthy seed, remove volunteer potatoes and susceptible weed hosts, manage cull piles so they cannot supply inoculum, and use rotation and irrigation timing to avoid unnecessarily extending leaf wetness. Clean soil and plant debris from storage areas, footwear, tools, and equipment before disinfection, and keep a log of field and storage visits to reduce farm-to-farm spread. These practices reduce introduction and spread; they do not prove the pathogen is present. Product selection, timing, rate, and rainfastness require the current PMRA label and current provincial disease information."
+    }
+  ]
+}

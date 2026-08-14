@@ -26,7 +26,7 @@ from agronomy_agent.corpus_governance import (  # noqa: E402
 
 
 SCHEMA_VERSION = "open_agronomy_agent.edge_runtime_manifest.v1"
-RAG_CONFIG = "configs/rag_governed_runtime_v1.yaml"
+RAG_CONFIG = "configs/rag_governed_runtime_v2.yaml"
 MODEL_CONFIG = "configs/model_gemma4_e2b_interface_v2.yaml"
 CONTROL_PATHS = (
     "LICENSE",
@@ -121,38 +121,75 @@ def _tree_digest(root: Path, path: Path, *, manifests_only: bool = False) -> dic
     }
 
 
-def build_manifest(root: Path) -> dict[str, Any]:
-    rag_path = root / RAG_CONFIG
+def _path_in_root(root: Path, path: Path, *, label: str) -> Path:
+    """Require a runtime artifact to remain in the release tree."""
+
+    resolved = path.resolve()
+    try:
+        resolved.relative_to(root.resolve())
+    except ValueError as exc:
+        raise ValueError(f"{label} escapes the runtime root: {path}") from exc
+    return resolved
+
+
+def _artifact_path(artifact_root: Path, value: str | Path) -> Path:
+    path = Path(value)
+    return path.resolve() if path.is_absolute() else (artifact_root / path).resolve()
+
+
+def build_manifest(root: Path, *, rag_config: str | Path = RAG_CONFIG) -> dict[str, Any]:
+    root = root.resolve()
+    rag_value = Path(rag_config)
+    rag_path = _path_in_root(
+        root,
+        rag_value if rag_value.is_absolute() else root / rag_value,
+        label="RAG configuration",
+    )
     rag = yaml.safe_load(rag_path.read_text(encoding="utf-8")) or {}
-    retrieval = rag.get("retrieval") or {}
+    retrieval = rag.get("retrieval") if isinstance(rag.get("retrieval"), dict) else {}
+    artifact_root_value = retrieval.get("artifact_root")
+    artifact_root = _path_in_root(
+        root,
+        (rag_path.parent / str(artifact_root_value)).resolve()
+        if artifact_root_value
+        else root,
+        label="RAG artifact_root",
+    )
     configured_corpora = [str(value) for value in retrieval.get("corpus_paths") or []]
     graph_values = [str(value) for value in retrieval.get("graph_paths") or []]
     policy_value = retrieval.get("corpus_policy_manifest")
-    policy = load_corpus_policy(root, policy_value)
+    policy = load_corpus_policy(artifact_root, policy_value)
     included_corpora, excluded_corpora = partition_runtime_corpus_paths(
         configured_corpora,
         policy,
     )
-    knowledge_values = [*map(str, included_corpora), *graph_values]
-    required = [
-        RAG_CONFIG,
-        MODEL_CONFIG,
-        *CONTROL_PATHS,
-        *([str(policy_value)] if policy_value else []),
-        *knowledge_values,
+    corpus_paths = [_artifact_path(artifact_root, value) for value in included_corpora]
+    graph_paths = [_artifact_path(artifact_root, value) for value in graph_values]
+    knowledge_paths = [*corpus_paths, *graph_paths]
+    policy_path = _artifact_path(artifact_root, str(policy_value)) if policy_value else None
+    required_paths = [
+        rag_path,
+        root / MODEL_CONFIG,
+        *(root / value for value in CONTROL_PATHS),
+        *([policy_path] if policy_path is not None else []),
+        *knowledge_paths,
     ]
-    missing = [value for value in required if not (root / value).is_file()]
+    missing = [
+        str(path)
+        for path in required_paths
+        if not path.is_file()
+    ]
     missing.extend(value for value in BENCHMARK_ROOTS if not (root / value).is_dir())
     missing.extend(value for value in RUNTIME_POLICY_ROOTS if not (root / value).is_dir())
     missing.extend(value for value in RUNTIME_ASSET_ROOTS if not (root / value).is_dir())
     if missing:
         raise FileNotFoundError("edge runtime inputs are missing: " + ", ".join(missing))
 
-    knowledge_entries = [_file_entry(root, root / value, "runtime_knowledge") for value in knowledge_values]
-    for value in included_corpora:
+    knowledge_entries = [_file_entry(root, path, "runtime_knowledge") for path in knowledge_paths]
+    for value, path in zip(included_corpora, corpus_paths):
         policy_row = corpus_policy_for_path(value, policy)
         expected_sha = str((policy_row or {}).get("sha256") or "")
-        actual_sha = _sha256(root / str(value))
+        actual_sha = _sha256(path)
         if expected_sha != actual_sha:
             raise ValueError(f"runtime corpus failed policy SHA-256 validation: {value}")
     excluded_entries = []
@@ -166,13 +203,22 @@ def build_manifest(root: Path) -> dict[str, Any]:
                 "included": False,
             }
         )
-    control_entries = [_file_entry(root, root / value, "runtime_control") for value in required if value not in knowledge_values]
+    control_entries = [
+        _file_entry(root, path, "runtime_control")
+        for path in required_paths
+        if path not in knowledge_paths
+    ]
     geo_cache = _tree_digest(root, root / "data/derived/geo_cache")
-    bundled_geo_layers = _tree_digest(
-        root,
-        root / "data/derived/geo_layers",
-        manifests_only=True,
-    )
+    bundled_geo_layers = {
+        **_tree_digest(
+            root,
+            root / "data/derived/geo_layers",
+            manifests_only=True,
+        ),
+        "content_class": "lineage_manifests_only",
+        "runtime_layer_assets_included": False,
+        "install_authority": "data/manifests/offline_spatial_profiles_v1.json",
+    }
     benchmark_entries = [_tree_digest(root, root / value) for value in BENCHMARK_ROOTS]
     policy_entries = [_tree_digest(root, root / value) for value in RUNTIME_POLICY_ROOTS]
     asset_entries = [_tree_digest(root, root / value) for value in RUNTIME_ASSET_ROOTS]
@@ -218,8 +264,10 @@ def build_manifest(root: Path) -> dict[str, Any]:
             "included": False,
             "reason": "MLX and Metal run natively on the macOS host; the Linux image calls the host over loopback-only HTTP.",
         },
-        "rag_config": RAG_CONFIG,
-        "corpus_policy_manifest": str(policy_value) if policy_value else None,
+        "rag_config": str(rag_path.relative_to(root)),
+        "corpus_policy_manifest": (
+            str(policy_path.relative_to(root)) if policy_path is not None else None
+        ),
         "configured_corpus_count": len(configured_corpora),
         "included_corpus_count": len(included_corpora),
         "excluded_corpus_count": len(excluded_entries),
@@ -249,11 +297,16 @@ def _preserve_generated_at(output: Path, manifest: dict[str, Any]) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument(
+        "--rag-config",
+        default=RAG_CONFIG,
+        help="operator-selected hash-bound RAG configuration to inventory",
+    )
     parser.add_argument("--output", type=Path, default=Path("container/runtime_manifest.json"))
     args = parser.parse_args()
     root = args.root.resolve()
     output = args.output if args.output.is_absolute() else root / args.output
-    manifest = build_manifest(root)
+    manifest = build_manifest(root, rag_config=args.rag_config)
     _preserve_generated_at(output, manifest)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")

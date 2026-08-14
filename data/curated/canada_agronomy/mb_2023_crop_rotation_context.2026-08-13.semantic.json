@@ -1,0 +1,33 @@
+{
+  "schema_version": "open_agronomy_agent.reviewed_semantic_companion.v1",
+  "source_id": "mb_2023_crop_rotation_context",
+  "source_raw_sha256": "920892c21ce1ddf6a4331b70b60540429f5547cbab4fc2f9eb44a525d1b6427f",
+  "reviewed_on": "2026-08-13",
+  "review_method": "Manual visual and text comparison against the two-page Manitoba Crop Rotation Planning PDF. Retained only qualitative, non-prescriptive field-history context. Omitted all source-specific data and visual material, crop-specific claims, input information, and legal content.",
+  "records": [
+    {
+      "title": "Manitoba historical field-history and stubble context",
+      "source_pages": [1],
+      "tags": ["field history", "previous crop", "stubble"],
+      "text": "Treat the previous crop and retained stubble as field-history context worth recording before interpreting a current crop issue. That history can help frame questions about soil cover, residue, moisture, and possible disease pressure, but it cannot replace field observation or locally current advice."
+    },
+    {
+      "title": "Manitoba historical crop carryover observation context",
+      "source_pages": [1],
+      "tags": ["field history", "disease scouting", "diagnostic context"],
+      "text": "Previous crop and retained stubble can be relevant context when possible disease carryover is being investigated. Scout the present field and seek diagnostic evidence when the cause or response would be consequential; field history alone does not establish cause or predict a disease outcome."
+    },
+    {
+      "title": "Manitoba historical water and residue establishment context",
+      "source_pages": [2],
+      "tags": ["soil water", "residue", "establishment"],
+      "text": "Previous water use and residue conditions can affect the context for emergence and establishment. Compare what is observed now with field records and local conditions rather than assuming a past crop pattern determines the result. This is only a prompt to inspect current conditions, not a forecast or instruction."
+    },
+    {
+      "title": "Manitoba historical aggregate-observation boundary",
+      "source_pages": [2],
+      "tags": ["historical context", "field variability", "decision boundary"],
+      "text": "This historic Manitoba aggregate context describes broad past observations only. It does not predict an individual field. It does not quantify an expected outcome. It does not prescribe a crop sequence. Pair it with current field records, observation, and locally current advice before a consequential decision."
+    }
+  ]
+}
