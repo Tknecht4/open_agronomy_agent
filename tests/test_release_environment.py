@@ -28,6 +28,7 @@ def test_environment_audit_rejects_dirty_or_stale_dependency_receipt(tmp_path) -
         "pyproject.toml",
         "requirements.txt",
         "requirements-phase4-ci.txt",
+        "requirements-benchmark-analysis.txt",
         "requirements-container.txt",
         "requirements-docs.txt",
         "frontend/package.json",
@@ -55,3 +56,28 @@ def test_environment_audit_rejects_dirty_or_stale_dependency_receipt(tmp_path) -
     assert "environment_receipt_commit_mismatch" in errors
     assert "environment_receipt_was_not_captured_from_clean_worktree" in errors
     assert any(error.startswith("environment_receipt_dependency_hash_mismatch:") for error in errors)
+
+
+def test_environment_receipt_binds_benchmark_analysis_dependencies(tmp_path) -> None:
+    for relative in (
+        "pyproject.toml",
+        "requirements.txt",
+        "requirements-phase4-ci.txt",
+        "requirements-benchmark-analysis.txt",
+        "requirements-container.txt",
+        "requirements-docs.txt",
+        "frontend/package.json",
+        "frontend/package-lock.json",
+    ):
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"fixture:{relative}\n", encoding="utf-8")
+
+    receipt = build_environment_receipt(
+        tmp_path,
+        captured_at="2026-08-15T00:00:00+00:00",
+    )
+
+    dependency_paths = {str(item["path"]) for item in receipt["dependency_inputs"]}
+    assert "requirements-benchmark-analysis.txt" in dependency_paths
+    assert receipt["missing_dependency_inputs"] == []

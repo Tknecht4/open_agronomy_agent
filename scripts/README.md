@@ -94,8 +94,9 @@ frontend presentation, image-research routes, or the legacy
 
 ## Benchmark release scripts
 
-`audit_final_benchmark_readiness.py` validates the RC3 development-rerun plan
-without generation or judging. It requires a clean committed checkout, matching
+`audit_final_benchmark_readiness.py` validates the frozen RC3 development-rerun
+plan without generation or judging. The completed checkpoint used a clean
+committed checkout, matching
 environment/public-package receipts, model snapshots, source/corpus gates,
 fresh per-model/per-trial destinations, and a real suite-bound egress receipt.
 The checked-in egress template cannot pass. RC3 requires the schema-v4 exact
@@ -108,14 +109,15 @@ candidate draft, and verifier evidence. Deterministic tools stay local and
 bypass Luna. Farmer records, private field
 history, credentials, and whole local corpus files remain forbidden.
 
-The runner forces private knowledge disabled in its environment and in every
-child evaluation. RC3 has no judge payload class, rejects judge calibration,
-and never emits `--judge`; `judge_seed` is inert identity with application
-`not_requested`. Each planned run command includes both
+The runner forced private knowledge disabled in its environment and in every
+child evaluation. RC3 had no judge payload class, rejected judge calibration,
+and never emitted `--judge`; `judge_seed` was inert identity with application
+`not_requested`. Each completed run command included both
 `--resume-partial-runs` and `--reuse-complete-runs`, which remain bound to exact
-run identity and durable receipts. A passing preflight authorizes only the
-declared exposed-and-tuned-suite
-`development_rerun_nonclaim`. RC1 and RC2 remain frozen historical identities.
+run identity and durable receipts. The preflight authorized only the declared
+exposed-and-tuned-suite `development_rerun_nonclaim`; it is not authorization to
+append observations to the completed identity. RC1, RC2, and RC3 now remain
+frozen historical identities.
 
 `audit_open_agronomy_benchmark_v3_readiness.py` validates the public v3
 protocol, exact 17-stage production topology, absence of plaintext holdout

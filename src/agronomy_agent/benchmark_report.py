@@ -83,7 +83,8 @@ def _system_interface_results(connection: sqlite3.Connection) -> list[dict[str, 
         route_present = exact_messages = evidence_lineage = 0
         field_context_cases = field_context_bound = 0
         non_english_cases = language_preserved = 0
-        context_admission_trace = strong_primary = weak_retrieval_admitted = 0
+        context_admission_trace = strong_primary = 0
+        admitted_without_strong_primary: Counter[str] = Counter()
         output_contract_eligible = output_contract_passes = 0
         local_guard_cases = local_guard_cases_complete = 0
         missing_local_guards: Counter[str] = Counter()
@@ -121,7 +122,14 @@ def _system_interface_results(connection: sqlite3.Connection) -> list[dict[str, 
                 )
             )
             strong_primary += has_strong
-            weak_retrieval_admitted += bool(admission.get("candidate_retrieval_admitted") and not has_strong)
+            if admission.get("candidate_retrieval_admitted") and not has_strong:
+                policy = str(admission.get("policy") or "")
+                if policy == "typed_capability_result":
+                    admitted_without_strong_primary["typed_capability_result"] += 1
+                elif policy == "explicit_regional_context_interpretation":
+                    admitted_without_strong_primary["explicit_regional_context_interpretation"] += 1
+                else:
+                    admitted_without_strong_primary["other"] += 1
             expected = set(metadata.get("expected_tools") or [])
             missing = set(metadata.get("missing_expected_tools") or [])
             expected_local = expected & _LOCAL_GUARD_IDS
@@ -178,9 +186,26 @@ def _system_interface_results(connection: sqlite3.Connection) -> list[dict[str, 
             },
             "context_admission_trace_rate": round(context_admission_trace / count, 4),
             "strong_primary_cases": strong_primary,
-            "weak_retrieval_admitted": (
-                weak_retrieval_admitted if context_admission_trace == count else None
-            ),
+            "context_admission_diagnostics": {
+                "schema_version": "open_agronomy_agent.context_admission_diagnostics.v2",
+                "trace_complete": context_admission_trace == count,
+                "admitted_without_strong_primary": (
+                    {
+                        "typed_capability_result": admitted_without_strong_primary[
+                            "typed_capability_result"
+                        ],
+                        "explicit_regional_context_interpretation": (
+                            admitted_without_strong_primary[
+                                "explicit_regional_context_interpretation"
+                            ]
+                        ),
+                        "other": admitted_without_strong_primary["other"],
+                        "total": sum(admitted_without_strong_primary.values()),
+                    }
+                    if context_admission_trace == count
+                    else None
+                ),
+            },
             "evidence_lineage_rate": round(evidence_lineage / count, 4),
             "answer_origin_counts": {
                 "generation_paths": dict(sorted(generation_paths.items())),
@@ -237,7 +262,7 @@ def build_report(database: Path, manifest: dict[str, Any]) -> dict[str, Any]:
         or "Public external diagnostic only; not Canadian field-advisory validity."
     )
     return {
-        "schema_version": "open_agronomy_agent.benchmark_report.v1",
+        "schema_version": "open_agronomy_agent.benchmark_report.v2",
         "benchmark_id": manifest["benchmark_id"],
         "suite_sha256": manifest["suite_sha256"],
         "suite_rows": manifest["rows"],
@@ -329,9 +354,11 @@ def render_markdown(report: dict[str, Any]) -> str:
             "",
             "These are deterministic interface-contract checks, not agronomic answer accuracy. The generation "
             "harness exercises the offline core agent; online service adapters are reported as unexecuted requirements, "
-            "not counted as missing local guards.",
+            "not counted as missing local guards. Admissions without strong primary evidence are separated by "
+            "their actual policy path; typed capability results and explicit regional-context interpretations are "
+            "not labelled as weak retrieval.",
             "",
-            "| Model | Exact input trace | Field context | Language | Route trace | Tool trace | Admission trace | Weak retrieval admitted | Evidence lineage | Output contract |",
+            "| Model | Exact input trace | Field context | Language | Route trace | Tool trace | Admission trace | Admitted without strong primary (typed / regional / other) | Evidence lineage | Output contract |",
             "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
         ])
         for row in report["system_interface_results"]:
@@ -339,13 +366,25 @@ def render_markdown(report: dict[str, Any]) -> str:
             field_rate = row["field_context_binding"]["rate"]
             language_rate = row["non_english_language_preservation"]["rate"]
             output_contract_rate = row["output_contract_pass_rate"]
+            admission_counts = row["context_admission_diagnostics"][
+                "admitted_without_strong_primary"
+            ]
+            admission_summary = (
+                "—"
+                if admission_counts is None
+                else (
+                    f"{admission_counts['typed_capability_result']} / "
+                    f"{admission_counts['explicit_regional_context_interpretation']} / "
+                    f"{admission_counts['other']}"
+                )
+            )
             lines.append(
                 f"| {row['model_id']} | {row['generation_input_lineage_rate']:.1%} | "
                 f"{'—' if field_rate is None else f'{field_rate:.1%}'} | "
                 f"{'—' if language_rate is None else f'{language_rate:.1%}'} | {row['route_trace_rate']:.1%} | "
                 f"{'—' if tool_rate is None else f'{tool_rate:.1%}'} | "
                 f"{row['context_admission_trace_rate']:.1%} | "
-                f"{'—' if row['weak_retrieval_admitted'] is None else row['weak_retrieval_admitted']} | "
+                f"{admission_summary} | "
                 f"{row['evidence_lineage_rate']:.1%} | "
                 f"{'n/a' if output_contract_rate is None else f'{output_contract_rate:.1%}'} |"
             )

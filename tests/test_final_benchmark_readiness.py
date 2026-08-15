@@ -16,6 +16,8 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/audit_final_benchmark_readiness.py"
 PLAN = ROOT / "configs/final_benchmark_round_rc3.json"
+LIFECYCLE = ROOT / "configs/benchmark_round_lifecycle_v1.json"
+FROZEN_PLAN_SHA256 = "f1fabf6ab5dca84acc41b8925663d11759ab9b86e8c5fa5ffeffe15e65e21ece"
 
 
 def _module():
@@ -104,9 +106,10 @@ def test_rc3_is_append_only_nonclaim_master_runtime_with_retired_external_v1() -
     module = _module()
     plan = _plan()
 
-    result = module.validate_plan_semantics(plan)
+    result = module.validate_plan_semantics(plan, root=ROOT, plan_path=PLAN)
 
-    assert result["status"] == "pass"
+    assert result["status"] == "blocked"
+    assert result["failures"] == ["completed_plan_non_executable"]
     assert plan["round_class"] == "development_rerun_nonclaim"
     assert plan["claim_eligible"] is False
     assert plan["v3_boundary"]["sealed_holdout_exercised"] is False
@@ -151,9 +154,73 @@ def test_rc3_is_append_only_nonclaim_master_runtime_with_retired_external_v1() -
     }
     assert plan["replication"]["judge_seed_application"] == "not_requested"
     assert plan["private_knowledge_policy"]["policy_id"] == "disabled_for_all_benchmark_arms"
+    assert plan["status"] == "candidate_generation_requires_clean_preflight"
+    assert "completion" not in plan
+    assert hashlib.sha256(PLAN.read_bytes()).hexdigest() == FROZEN_PLAN_SHA256
+    lifecycle = json.loads(LIFECYCLE.read_text(encoding="utf-8"))
+    assert lifecycle["schema_version"] == "open_agronomy_agent.benchmark_round_lifecycle.v1"
+    assert len(lifecycle["records"]) == 1
+    completion = lifecycle["records"][0]
+    assert completion == {
+        "artifact_manifest_path": "docs/public/development-benchmark-rc3-20260815/source_data/artifact_manifest.json",
+        "artifact_manifest_sha256": "47bff35a2a645327378dab65a6ae080f119b9f3feca604322e2e1a3af01a22d4",
+        "benchmark_source_commit": "3e30fb5de38105fa5bba3845411eb2174c21d3c4",
+        "canonical_arm_executions": 36,
+        "canonical_observations": 8676,
+        "canonical_trials": 9,
+        "checkpoint_receipt_path": "docs/public/development-benchmark-rc3-20260815/source_data/checkpoint_validation_receipt.json",
+        "checkpoint_receipt_sha256": "898b689b7e07378f09cb2b1e9f8d444e8c44301a82166e5f635f10f5d50e3ccc",
+        "completed_at": "2026-08-15",
+        "new_observations_allowed": False,
+        "plan_path": "configs/final_benchmark_round_rc3.json",
+        "plan_sha256": FROZEN_PLAN_SHA256,
+        "round_id": "open_agronomy_development_rc3_20260814",
+        "status": "completed_frozen_nonclaim",
+        "successor_round_required": True,
+    }
+    for path_key, sha_key in (
+        ("artifact_manifest_path", "artifact_manifest_sha256"),
+        ("checkpoint_receipt_path", "checkpoint_receipt_sha256"),
+    ):
+        artifact = ROOT / completion[path_key]
+        assert hashlib.sha256(artifact.read_bytes()).hexdigest() == completion[sha_key]
 
 
-def test_rc3_v4_contract_bindings_rebuild_exactly_from_current_release() -> None:
+def test_completed_rc3_lifecycle_fails_closed_on_plan_identity_drift(tmp_path: Path) -> None:
+    module = _module()
+    plan = _plan()
+    lifecycle = json.loads(LIFECYCLE.read_text(encoding="utf-8"))
+    lifecycle["records"][0]["plan_sha256"] = "0" * 64
+    altered = tmp_path / "benchmark_round_lifecycle_v1.json"
+    altered.write_text(json.dumps(lifecycle), encoding="utf-8")
+
+    result = module.validate_plan_semantics(
+        plan,
+        root=ROOT,
+        plan_path=PLAN,
+        lifecycle_path=altered,
+    )
+
+    assert result["status"] == "blocked"
+    assert "round_lifecycle_plan_sha256_mismatch" in result["failures"]
+    assert "completed_plan_non_executable" in result["failures"]
+
+
+def test_completed_rc3_lifecycle_is_required(tmp_path: Path) -> None:
+    module = _module()
+
+    result = module.validate_plan_semantics(
+        _plan(),
+        root=ROOT,
+        plan_path=PLAN,
+        lifecycle_path=tmp_path / "missing-lifecycle.json",
+    )
+
+    assert result["status"] == "blocked"
+    assert result["failures"] == ["round_lifecycle_missing"]
+
+
+def test_completed_rc3_contract_stays_frozen_when_current_public_release_advances() -> None:
     from agronomy_agent.agent import (
         build_benchmark_egress_artifact_contract,
         load_agent_resources,
@@ -187,7 +254,9 @@ def test_rc3_v4_contract_bindings_rebuild_exactly_from_current_release() -> None
 
     assert len(suite_case["cases"]) == plan["internal_benchmark"]["rows"]
     assert plan["egress"]["suite_case_contract_sha256"] == suite_case["sha256"]
-    assert plan["egress"]["egress_artifact_contract_sha256"] == artifact["sha256"]
+    frozen_artifact_sha256 = "df0e6b5d77a8ade022b075541046fefc07059ac0b14e36f1593130354a0c75ba"
+    assert plan["egress"]["egress_artifact_contract_sha256"] == frozen_artifact_sha256
+    assert artifact["sha256"] != frozen_artifact_sha256
     assert plan["egress"]["static_prompt_contract_sha256"] == static["sha256"]
     assert plan["private_knowledge_policy"]["child_cli_value"] == "disabled"
     assert plan["private_knowledge_policy"]["required_process_environment"] == {
@@ -216,7 +285,7 @@ def test_rc3_v4_contract_bindings_rebuild_exactly_from_current_release() -> None
         "recipient_model_config_sha256"
     ]
     assert template["suite_case_contract_sha256"] == suite_case["sha256"]
-    assert template["egress_artifact_contract_sha256"] == artifact["sha256"]
+    assert template["egress_artifact_contract_sha256"] == frozen_artifact_sha256
     assert template["static_prompt_contract_sha256"] == static["sha256"]
 
 

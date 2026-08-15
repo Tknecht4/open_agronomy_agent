@@ -298,6 +298,82 @@ _REPRESENTATIVE_SAMPLE_KEYS = (
     "tissue_sample",
 )
 
+_FRENCH_RESPONSE_ANCHORS = frozenset(
+    {
+        "à",
+        "au",
+        "aux",
+        "avant",
+        "avec",
+        "cela",
+        "ce",
+        "ces",
+        "comment",
+        "dans",
+        "de",
+        "des",
+        "dois",
+        "du",
+        "elle",
+        "en",
+        "est",
+        "et",
+        "je",
+        "la",
+        "le",
+        "les",
+        "ma",
+        "mes",
+        "mon",
+        "ne",
+        "pas",
+        "peux",
+        "pour",
+        "pourquoi",
+        "puis",
+        "que",
+        "quel",
+        "quelle",
+        "seulement",
+        "sur",
+        "un",
+        "une",
+    }
+)
+
+
+def preferred_response_language(question: str) -> str:
+    """Choose a supported response language from a conservative query signal.
+
+    This is not a general-purpose language classifier. It only distinguishes
+    strong French signals from the English default so deterministic policy
+    messages do not switch languages before model generation.
+    """
+
+    lowered = question.casefold()
+    tokens = {
+        token
+        for token in re.findall(r"[^\W\d_]+", lowered, re.UNICODE)
+        if token
+    }
+    anchor_count = len(tokens & _FRENCH_RESPONSE_ANCHORS)
+    has_french_diacritic = bool(re.search(r"[àâçéèêëîïôùûüÿœæ]", lowered))
+    has_french_contraction = bool(re.search(r"\b(?:j|l|qu|d|n|s|c)['’]", lowered))
+    if anchor_count >= 4 or (anchor_count >= 2 and has_french_diacritic) or (
+        anchor_count >= 3 and has_french_contraction
+    ):
+        return "fr"
+    return "en"
+
+
+def _response_in_question_language(
+    question: str,
+    *,
+    english: str,
+    french: str,
+) -> str:
+    return french if preferred_response_language(question) == "fr" else english
+
 
 def _sha256_text(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
@@ -959,9 +1035,17 @@ def assess_answerability(
             "regulated",
             failed_claim="product permission, rate, timing, or restriction",
             required_authority=pack.evidence_authority,
-            response_text=(
-                "I can explain the decision factors, but I can’t authorize a product, rate, or timing "
-                "without the current jurisdiction-specific label for the exact crop, target, site, and use."
+            response_text=_response_in_question_language(
+                question,
+                english=(
+                    "I can explain the decision factors, but I can’t authorize a product, rate, or timing "
+                    "without the current jurisdiction-specific label for the exact crop, target, site, and use."
+                ),
+                french=(
+                    "Je peux expliquer les facteurs de décision, mais je ne peux pas autoriser un produit, une dose "
+                    "ou un moment d'application sans l'étiquette actuelle propre à la juridiction.\n\nAvant d'agir, "
+                    "vérifier l'étiquette pour la culture, la cible, le site et l'usage exacts."
+                ),
             ),
         )
 

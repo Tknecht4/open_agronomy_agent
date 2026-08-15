@@ -68,7 +68,7 @@ No output means both development listeners have stopped.
 - **Private state stays local by default.** Runtime databases, traces, model caches, raw benchmark answers, private overlays, and generated spatial databases are excluded from Git and the documentation site.
 - **Consequential decisions need authority.** Confirm current labels and regulations and involve a qualified local professional when a decision carries material agronomic, legal, environmental, safety, or financial consequences.
 - **Knowledge is cumulative but explicitly admitted.** Runtime v2 selects one dated Canadian master release plus hash-bound seed, SoilWise, graph, and NRCS-analogue assets. Adding a file does not make it model-visible; source rights, policy, registry admission, and corpus validation remain required.
-- **Benchmark claims are bounded.** RC1 and RC2 are frozen historical development identities. RC3 is the current exposed-and-tuned internal-suite rerun plan and remains a non-claim; sealed v3 evaluation is blocked on independent holdout, judge-calibration, egress, and release gates.
+- **Benchmark claims are bounded.** RC1 and RC2 are frozen historical development identities. The completed RC3 development checkpoint contains 8,676 observations, but only 49 of 241 cases per arm have a defined deterministic score and zero automated semantic judgments were made. It is not a model leaderboard or Benchmark v3 result; sealed v3 evaluation remains blocked on independent holdout, judge-calibration, egress, and release gates.
 - **Optional assets remain explicit.** Public adapters need provider/network availability; the Prairie spatial pack is a separately built local asset; unavailable capabilities must not be simulated.
 
 ## Documentation
@@ -78,6 +78,7 @@ No output means both development listeners have stopped.
 - [Knowledge and evidence governance](docs/public/knowledge-and-data.md)
 - [Tools and adapters](docs/public/tools-and-adapters.md)
 - [Evaluation contract](docs/public/evaluation.md)
+- [RC3 development benchmark checkpoint and paper](docs/public/development-benchmark-rc3-20260815/README.md)
 - [Academic benchmark and system review](docs/reviews/open-agronomy-benchmark-system-review-20260813.md)
 - [Upgrade implementation record](docs/reviews/open-agronomy-upgrade-implementation-20260813.md)
 - [Historical benchmark RC2 readiness record](docs/reviews/open-agronomy-benchmark-rc2-readiness-record-20260814.md)
@@ -101,4 +102,4 @@ npm run build
 
 A focused check proves only its named contract. Do not describe a partial test run as full-system, field, agronomist, or release validation.
 
-Before a benchmark release candidate, use the [clean-checkout and environment-receipt procedure](docs/public/developer/release-readiness.md). Python dependencies are currently range-declared; the generated receipt records the exact exercised environment but is not a portable lock.
+Before a benchmark release candidate, use the [clean-checkout and environment-receipt procedure](docs/public/developer/release-readiness.md). Most Python dependencies are range-declared; the RC3 analysis file pins its direct plotting dependencies, and the generated receipt records the exact exercised environment. Neither is a complete portable lock.

@@ -33,14 +33,14 @@ Fields, sessions, answers, evidence packets, and tool runs use stable identifier
 
 ## Implementation status
 
-| Layer | Implemented | Tested | RC1 exercised | Known limit |
+| Layer | Implemented | Tested | Frozen benchmark evidence | Known limit |
 |---|---|---|---|---|
-| Question/field framing | Yes | Field context and route contracts | Structured field-context arm | Primary RC1 cases were single-turn and had no executable geometry |
-| Retrieval | Yes | Corpus, retrieval, and evidence tests | Governed text arm | Concrete resource composition is still being moved behind backend contracts |
+| Question/field framing | Yes | Field context and route contracts | RC3 input-lineage and field-binding traces were complete | Trace completeness is not a human answer-quality judgment; cases had no executable geometry |
+| Retrieval | Yes | Corpus, retrieval, and evidence tests | RC3 surfaced 22/26 expected positive sources and 46/50 required patterns | Retrieval presence is not answer use or quality; concrete resource composition is still being moved behind backend contracts |
 | Graph search | Yes, manifest-bound multi-path JSON composition | Manifest, checksum, collision, provenance, exact-name, and routed retrieval tests | Relationship hints in governed arm | Graph relationships remain vocabulary/context rather than field or decision evidence |
-| Capability execution | Mixed by capability/surface; calculator has a bounded chat planner | Calculator executor/service/registry and natural-language end-to-end tests; adapter fixtures | Live adapters not executed; RC1 calculator route failed | The repaired calculator path has no post-RC1 benchmark outcome; registration alone does not prove every capability is chat-available |
-| Validation/intervention | Yes | Evidence/safety regressions | Fully exercised | RC1 showed model-dependent over-intervention |
-| Trace/persistence | Yes locally | Storage, field-event, and trace tests | Regression/interface lanes | Public RC1 exports no longer retain exact answer/judgment records |
+| Capability execution | Mixed by capability/surface; calculator has a bounded chat planner | Calculator executor/service/registry and natural-language end-to-end tests; adapter fixtures | RC3 invoked 16 typed tool results per full-arm trial; frozen parser 14/16, typed-payload audit 16/16 | Parser sensitivity is not a replacement result; live adapters were not exercised and registration does not prove every capability is chat-available |
+| Validation/intervention | Yes | Evidence/safety regressions | RC3 retained verifier, hold, rewrite, fallback, and guard traces | RC3 made zero automated semantic judgments, so activation cannot be interpreted as improvement |
+| Trace/persistence | Yes locally | Storage, field-event, and trace tests | RC3 completed 8,676 observations with nine verified retention bundles | Public-safe projection excludes answers, prompts, context, and private identifiers |
 
 See [Capabilities](capabilities.md) for status vocabulary and the repository's
 [academic benchmark and system review](https://github.com/Tknecht4/open_agronomy_agent/blob/main/docs/reviews/open-agronomy-benchmark-system-review-20260813.md)

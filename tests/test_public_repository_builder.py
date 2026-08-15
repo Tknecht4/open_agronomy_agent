@@ -94,9 +94,20 @@ def test_public_repository_build_has_no_unreceipted_generated_files(
     assert public_tests <= actual
     assert "configs/runtime_profiles.json" in actual
     assert "configs/rag_governed_runtime_v2.yaml" in actual
+    assert "requirements-benchmark-analysis.txt" in actual
+    assert "tests/test_rc3_checkpoint_analysis.py" in actual
+    checkpoint_prefix = "docs/public/development-benchmark-rc3-20260815/"
+    assert {
+        checkpoint_prefix + "README.md",
+        checkpoint_prefix + "paper.pdf",
+        checkpoint_prefix + "scripts/analyze_rc3_checkpoint.py",
+        checkpoint_prefix + "source_data/public_safe_response_measurements.csv",
+    } <= actual
     assert "configs/eval.yaml" not in actual
     assert "configs/full_system_benchmark_matrix_v1.json" not in actual
     assert "scripts/run_full_system_model_matrix.py" not in actual
+    assert "scripts/analyze_full_system_model_matrix.py" not in actual
+    assert "scripts/analyze_open_agronomy_internal_comparison.py" not in actual
     assert not any(path.startswith("configs/rag_canada_v") for path in actual)
     assert not any(
         path.startswith("data/raw/") and not path.endswith(".lineage.json")

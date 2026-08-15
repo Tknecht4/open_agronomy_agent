@@ -752,14 +752,56 @@ def score_item_reference_answer(output: str, item: dict[str, Any]) -> dict[str, 
     }
 
 
+def _numeric_unit_aliases(item: dict[str, Any]) -> list[str]:
+    """Return the explicit unit contract plus a narrowly equivalent product-rate alias.
+
+    This is a post-RC3 scorer repair for future runs only. Frozen RC3 response
+    records and their preregistered scores remain unchanged. The generic alias
+    is admitted only when the case already identifies a fertilizer product-mass
+    rate through its task family, a product-qualified ``kg .../ha`` alias, and
+    a target-mass-by-analysis-fraction calculation contract; it must not
+    broaden seed, nutrient-mass, or unit-conversion cases.
+    """
+
+    unit = str(item.get("reference_unit") or "").strip()
+    aliases = [unit, *[str(value).strip() for value in item.get("unit_aliases") or []]]
+    has_product_specific_rate = any(
+        re.fullmatch(r"kg\s+[^/]+\s*/\s*ha", alias, flags=re.IGNORECASE)
+        for alias in aliases
+    )
+    is_product_mass_contract = bool(
+        re.fullmatch(
+            r"target_[A-Za-z0-9_]+_kg_ha\s*/\s*(?:0?\.\d+|1(?:\.0+)?)",
+            str(item.get("calculation_contract") or "").strip(),
+        )
+    )
+    if (
+        str(item.get("task_family") or "").strip().casefold() == "fertilizer_calculation"
+        and re.fullmatch(r"kg\s*/\s*ha", unit, flags=re.IGNORECASE)
+        and has_product_specific_rate
+        and is_product_mass_contract
+    ):
+        aliases.extend(
+            (
+                "kg product/ha",
+                "kg of product/ha",
+                "kg product ha-1",
+                "kg product ha⁻¹",
+                "kg product per hectare",
+                "kg of product per hectare",
+                "kilograms of product per hectare",
+            )
+        )
+    return [value for value in dict.fromkeys(aliases) if value]
+
+
 def score_item_numeric(output: str, item: dict[str, Any]) -> dict[str, Any]:
     """Score a frozen agronomic calculation with an explicit unit contract."""
 
     reference = float(item["reference_numeric"])
     tolerance = float(item.get("absolute_tolerance", 0.0))
     unit = str(item.get("reference_unit") or "").strip()
-    aliases = [unit, *[str(value) for value in item.get("unit_aliases") or []]]
-    aliases = [value for value in dict.fromkeys(aliases) if value]
+    aliases = _numeric_unit_aliases(item)
     candidates: list[float] = []
     if aliases:
         unit_pattern = "|".join(re.escape(value) for value in sorted(aliases, key=len, reverse=True))

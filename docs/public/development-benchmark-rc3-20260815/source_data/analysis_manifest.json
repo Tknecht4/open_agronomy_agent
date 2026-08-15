@@ -1,0 +1,201 @@
+{
+  "analysis_date": "2026-08-15",
+  "analysis_seed": 20260815,
+  "bootstrap_draws": 50000,
+  "boundaries": [
+    "No semantic answer-quality judgment is present.",
+    "No missing score is converted to zero.",
+    "The frozen 14/16 calculation parser result is preserved; 16/16 is separately labelled as a post-run tool-payload audit.",
+    "Retrieval, verifier, tool, stability, latency, and trace presence are not interpreted as agronomic correctness.",
+    "Only the nine completion-receipted bundles are inputs; the superseded unreferenced bundle is excluded."
+  ],
+  "inputs": {
+    "benchmark_source_snapshot_sha256": "25fb45e1d1ea7476a8d0b58ef563dc6afb7bc391e85f97a72324491cb6c273c3",
+    "benchmark_suite": {
+      "path": "data/eval/open_agronomy_canadian_performance_v1.jsonl",
+      "rows": 241,
+      "sha256": "5c3ce59195ac603d2dd8ec5f36f3672b3ee0c20227cdb4fd301dfe3848a83c63"
+    },
+    "canonical_trial_databases": [
+      {
+        "database_sha256": "9644b3fd00fa468cbcf93490dde1e44e6ef0a660eb375f7986dcca81bba747f6",
+        "model_key": "gemma3_270m_rc3",
+        "retention_bundle_id": "5ced49ebff820c83a329e985b7fc8589769f4a57d8b57468cc1e553a56ce6585",
+        "terminal_invocation_sha256": "5b4ea744b934746e7a3ff74f97b76a3d5334e101703018f3d2e4dd827ca8146e",
+        "trial_id": "trial-001"
+      },
+      {
+        "database_sha256": "20f002df440457597b5c0609afcc05dfba77788ead91b80889bb985a5da24d2c",
+        "model_key": "gemma3_270m_rc3",
+        "retention_bundle_id": "61e7ffbcb6f8a9d16392ae136d9797673e4e739eebe974d3e6e0c2b0e2b6928c",
+        "terminal_invocation_sha256": "7338c014f7e1c8f8dafd1accda71c663e029232f1a3c64b0d77fc4f9d9ca62a5",
+        "trial_id": "trial-002"
+      },
+      {
+        "database_sha256": "b3c53b1efb57d753711a7c142cc9cfdd30ef3673f54fef492d1a36a1578b985a",
+        "model_key": "gemma3_270m_rc3",
+        "retention_bundle_id": "40fbe1eaa8a6a67b0cdab353b0512a6e606fcb63e78199002f610fa502dd953d",
+        "terminal_invocation_sha256": "892079d67b9c95a4af1d71115acf1e9dbbbca6398bb49eca62ce6d20b52015b9",
+        "trial_id": "trial-003"
+      },
+      {
+        "database_sha256": "836f231012d9e824f0eb2279f806c4b1e1cd6d3709ac9856b323c1c315cfe56f",
+        "model_key": "gemma4_e2b_rc3",
+        "retention_bundle_id": "ca89abb053084c9149dbb46b0ad196e0ea6f04dd0e1864986a288b28020e7bd4",
+        "terminal_invocation_sha256": "fe916060876de3b6c68a961d8bc0b8f37aeb54fa2bec072ae38a5caf37a3f09b",
+        "trial_id": "trial-001"
+      },
+      {
+        "database_sha256": "2643182adf116328481a2574173d137e54f84bf88fee7b5474873a2d2d99c647",
+        "model_key": "gemma4_e2b_rc3",
+        "retention_bundle_id": "e073853c45751fbf38981a4fe597e9ddb530bead5e70f9a33641bc28116803fa",
+        "terminal_invocation_sha256": "8c1dfe695b86ec9752d46edecc8341109e62f480ea66557280b9a2c04571735a",
+        "trial_id": "trial-002"
+      },
+      {
+        "database_sha256": "0c0686b84a08cdfd3ac095c4438c1397077584b42b2c11374b041937a72c2875",
+        "model_key": "gemma4_e2b_rc3",
+        "retention_bundle_id": "5263acb55a506400b420d67010cd5e3c598b8443346e36703449bbc9ca44ad18",
+        "terminal_invocation_sha256": "6fe12db621ee8ce479bd92d7cfd9da53844c56264ff5936f29a5daa2649e2207",
+        "trial_id": "trial-003"
+      },
+      {
+        "database_sha256": "d44257a6435f6a488c167e01f918bbce59e30b87b0aed4954cebbbf5d0ffd91f",
+        "model_key": "luna_high_rc3",
+        "retention_bundle_id": "d1ccc1af9bc42787158fa83b2c94814f1536db0da3ae33eb7c178c82e0247fe9",
+        "terminal_invocation_sha256": "9ba8d09fb1ecac36a1c1c496048be7096c711d83f4c1441fd050db03dd837dfd",
+        "trial_id": "trial-001"
+      },
+      {
+        "database_sha256": "3aac0137e924663d80fe9188ba56833f8b344ea9ef2dc55637c98105f0fecee5",
+        "model_key": "luna_high_rc3",
+        "retention_bundle_id": "c0ef89e7718c33725ba73a6cdc0130179592fb43ddf572a5c3206df2afe982fd",
+        "terminal_invocation_sha256": "3becbcea9f81422e098ad9324f4949fb8bb89d17dffd0c07c54feaf690834c89",
+        "trial_id": "trial-002"
+      },
+      {
+        "database_sha256": "85578a253c97c9c1f1d85a763aa4f77a16263dfb1eb7aa097aa1748503d98b57",
+        "model_key": "luna_high_rc3",
+        "retention_bundle_id": "3c5fd6bdfed84420450440082db47da2419b83009295a33f7668374216a9e116",
+        "terminal_invocation_sha256": "c9e00fa4aebd99c2d9356382b7994bb4d14fe66f96a06834c3b57ea753ba1ca4",
+        "trial_id": "trial-003"
+      }
+    ],
+    "implementation_commit": "3e30fb5de38105fa5bba3845411eb2174c21d3c4"
+  },
+  "interval_definition": "95% case-resampling sensitivity intervals with shared resample indices across candidate and arm cells within each metric family; arm contrasts are paired within case; base seed 20260815 with metric-family offsets 0/1 and contrast offsets 1000/1001; not population or human-agreement confidence intervals",
+  "outputs": [
+    {
+      "bytes": 1702,
+      "path": "figures/manifest.json",
+      "sha256": "ba5c4e397ddeaa2239b74da3b8531f4687aa8675e5bca90a6fecae552e883f01"
+    },
+    {
+      "bytes": 31343,
+      "path": "figures/rc3_deterministic_metrics.pdf",
+      "sha256": "f73aededebb8d9064dcd34e42157e6f2c3a1512d8600afbe1a43904d58cdea49"
+    },
+    {
+      "bytes": 102623,
+      "path": "figures/rc3_deterministic_metrics.svg",
+      "sha256": "a4949ef34d522c1314010002d564395e13ba98e04897228d9574db08a86397ad"
+    },
+    {
+      "bytes": 16026,
+      "path": "figures/rc3_evidence_coverage.pdf",
+      "sha256": "c9ec395aa54bfcd67b6b3f87145941f8c231c758e863074e02be71461935c495"
+    },
+    {
+      "bytes": 70622,
+      "path": "figures/rc3_evidence_coverage.svg",
+      "sha256": "05397199e1ac174ce87647dd35c0b1a8f34934ba3435a5859b52dfc0532fc645"
+    },
+    {
+      "bytes": 18008,
+      "path": "figures/rc3_harness_behavior.pdf",
+      "sha256": "dd1cf4a8992842d60f6e088e03f1efbff6d037036203c763a799996ef98c5a22"
+    },
+    {
+      "bytes": 80469,
+      "path": "figures/rc3_harness_behavior.svg",
+      "sha256": "acbdb88c392721c989230f28e8404cd62c73644f95c0b24416c62927a150e014"
+    },
+    {
+      "bytes": 24076,
+      "path": "figures/rc3_repeatability_latency.pdf",
+      "sha256": "04a3a556e1fa580b835d81dfeaaca48ec03df5134a3db6d1116c029ed7a2c9bb"
+    },
+    {
+      "bytes": 90685,
+      "path": "figures/rc3_repeatability_latency.svg",
+      "sha256": "3d0701877a703e569e7325b0b2bb09ee9e6f75b5fc7cec7eca64b06568898d4a"
+    },
+    {
+      "bytes": 434,
+      "path": "generated_results.tex",
+      "sha256": "d62cae11a80c7ef8febe65592b1838102c315796ebe6ffb1a22ffdbd176602cd"
+    },
+    {
+      "bytes": 1233,
+      "path": "generated_tables.tex",
+      "sha256": "c2ed0f2420a5a6a0788c190eb9de384c7b2b126f06b1cbaffee9466d469595eb"
+    },
+    {
+      "bytes": 6877,
+      "path": "source_data/checkpoint_validation_receipt.json",
+      "sha256": "898b689b7e07378f09cb2b1e9f8d444e8c44301a82166e5f635f10f5d50e3ccc"
+    },
+    {
+      "bytes": 6412,
+      "path": "source_data/deterministic_metric_summary.csv",
+      "sha256": "a004172b03069dc1eb18217f8c81650ad544a3e308827c02096c8af32a49c9ae"
+    },
+    {
+      "bytes": 1106,
+      "path": "source_data/harness_activation_summary.csv",
+      "sha256": "38faeb638a30ea2a37c7faf3a4a6a4d3678527af57b0fde7fb148bf4630e81d2"
+    },
+    {
+      "bytes": 612,
+      "path": "source_data/interface_trace_summary.csv",
+      "sha256": "121cf4c3bd3f7fb387777d4b98d1e41431a4a54fe9ea3f4001124a54b7b61001"
+    },
+    {
+      "bytes": 709,
+      "path": "source_data/lane_coverage.csv",
+      "sha256": "7d10ff9b1e531853c80698863420fd5553b1547ee3c5b8258c6589acc4b7bba9"
+    },
+    {
+      "bytes": 5883,
+      "path": "source_data/paired_arm_effects.csv",
+      "sha256": "5625c774c6a8e8cd77aa63e7d9a6c2be6786e403fbd2ecf3ef91ad4c4e04f44c"
+    },
+    {
+      "bytes": 6134632,
+      "path": "source_data/public_safe_response_measurements.csv",
+      "sha256": "40fa9a4cff46046f09f59acb3fc3951b587e79a2058d1a947a8dfc8df8932d26"
+    },
+    {
+      "bytes": 2168,
+      "path": "source_data/repeatability_summary.csv",
+      "sha256": "16e7bf3cb80cc7992e1f67fb87916938b99cd02bd3d21f84b72ba5073fa5b2b1"
+    },
+    {
+      "bytes": 3583,
+      "path": "source_data/resource_summary.csv",
+      "sha256": "316e04f6625bf8a5b48d08e48d48e3df69e513fafae84ffe99748a8442c56d8d"
+    },
+    {
+      "bytes": 805,
+      "path": "source_data/retrieval_lineage_summary.csv",
+      "sha256": "d898be381f782950e2a3f70fb212ffa3aa0f6562faa606f5ed22b8da4aebc7a7"
+    },
+    {
+      "bytes": 4816,
+      "path": "source_data/trial_inventory.csv",
+      "sha256": "ffc30d4ed7ae81c45e2fdc01f7d0bb04726219d9d3557877848d3eb51e1378ad"
+    }
+  ],
+  "schema_version": "open_agronomy_agent.rc3_checkpoint_analysis.v1",
+  "unit_of_analysis": "benchmark case after averaging the three observed trials"
+}

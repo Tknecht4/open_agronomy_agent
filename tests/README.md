@@ -14,7 +14,7 @@
 | Field state/context | `test_field_events.py`, `test_field_measurements.py`, `test_field_context_compiler.py` |
 | Chat/answer path | `test_chat_service_field_context.py`, `test_agent_context_reservation.py` |
 | Execution parity | `test_execution_core.py`, `test_retrieval_component_arms.py`, `test_regional_context_admission.py`, `test_tool_planner_end_to_end.py` |
-| Models/evaluation | `test_model_profile_controls.py`, `test_evals.py`, `test_codex_app_server_egress.py`, `test_final_benchmark_readiness.py`, `test_eval_replication_contract.py`, v2 audit/metrics/runner/runtime-contract tests, v3 readiness and capability-conformance tests |
+| Models/evaluation | `test_model_profile_controls.py`, `test_evals.py`, `test_codex_app_server_egress.py`, `test_final_benchmark_readiness.py`, `test_eval_replication_contract.py`, `test_rc3_checkpoint_analysis.py`, v2 audit/metrics/runner/runtime-contract tests, v3 readiness and capability-conformance tests |
 | Geometry/offline | `test_geospatial_service.py`, `test_field_lan_launch.py` |
 | Security/release | `test_security_evidence.py`, `test_validate_conference_release_authority.py` |
 

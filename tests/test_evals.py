@@ -127,6 +127,109 @@ def test_numeric_agronomic_calculation_requires_value_and_unit_contract() -> Non
     assert score["metric_role"] == "objective_agronomic_calculation_accuracy"
 
 
+@pytest.mark.parametrize(
+    (
+        "eval_id",
+        "reference",
+        "tolerance",
+        "product_alias",
+        "calculation_contract",
+        "output",
+    ),
+    [
+        (
+            "ca_calc_urea_03",
+            217.4,
+            1.0,
+            "kg urea/ha",
+            "target_N_kg_ha / 0.46",
+            "Using 100 kg N/ha and 46% N, the calculator returns 217.391 kg product/ha.",
+        ),
+        (
+            "ca_calc_map_04",
+            86.5,
+            0.8,
+            "kg MAP/ha",
+            "target_P2O5_kg_ha / 0.52",
+            "Using 45 kg P2O5/ha and 52% P2O5, the calculator returns 86.538 kg product/ha.",
+        ),
+    ],
+)
+def test_post_rc3_numeric_scorer_accepts_generic_fertilizer_product_rate_unit(
+    eval_id: str,
+    reference: float,
+    tolerance: float,
+    product_alias: str,
+    calculation_contract: str,
+    output: str,
+) -> None:
+    """Future scoring fixes the RC3 parser defect without rescoring frozen artifacts."""
+
+    item = {
+        "eval_id": eval_id,
+        "task_family": "fertilizer_calculation",
+        "reference_numeric": reference,
+        "reference_unit": "kg/ha",
+        "unit_aliases": [product_alias, "kg ha-1", "kg ha⁻¹"],
+        "absolute_tolerance": tolerance,
+        "calculation_contract": calculation_contract,
+    }
+
+    score = score_item_numeric(output, item)
+
+    assert score["score"] == 100.0
+    assert score["parse_valid"] is True
+    assert score["parsed_value"] == pytest.approx(reference, abs=tolerance)
+
+
+@pytest.mark.parametrize(
+    "item",
+    [
+        {
+            "eval_id": "seeding-control",
+            "task_family": "seeding_calculation",
+            "reference_numeric": 122.8,
+            "reference_unit": "kg/ha",
+            "unit_aliases": ["kg ha-1", "kg ha⁻¹"],
+            "absolute_tolerance": 1.3,
+            "calculation_contract": (
+                "target_plants_per_m2 * TKW_g / "
+                "(germination_fraction * survival_fraction * 100)"
+            ),
+        },
+        {
+            "eval_id": "nutrient-mass-control",
+            "task_family": "fertilizer_calculation",
+            "reference_numeric": 51.0,
+            "reference_unit": "kg N/ha",
+            "unit_aliases": ["kg N ha-1", "kg N ha⁻¹"],
+            "absolute_tolerance": 0.3,
+            "calculation_contract": "product_rate_kg_ha * 0.34",
+        },
+        {
+            "eval_id": "unqualified-fertilizer-rate-control",
+            "task_family": "fertilizer_calculation",
+            "reference_numeric": 51.0,
+            "reference_unit": "kg/ha",
+            "unit_aliases": ["kg ha-1", "kg ha⁻¹"],
+            "absolute_tolerance": 0.3,
+            "calculation_contract": "target_N_kg_ha / 0.34",
+        },
+    ],
+)
+def test_post_rc3_generic_product_rate_alias_does_not_broaden_other_unit_contracts(
+    item: dict,
+) -> None:
+    score = score_item_numeric(
+        "Inputs 150 and 34 produce a final value of 51.0 kg product/ha.",
+        item,
+    )
+
+    assert score["score"] == 0.0
+    assert score["parse_valid"] is False
+    assert score["parsed_value"] is None
+
+
 def test_eval_run_writes_hash_bound_identity_manifest(tmp_path: Path) -> None:
     suite = tmp_path / "suite.jsonl"
     suite.write_text(

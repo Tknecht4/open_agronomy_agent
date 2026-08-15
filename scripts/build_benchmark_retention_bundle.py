@@ -31,8 +31,18 @@ from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_VERSION = "open_agronomy_agent.benchmark_retention_bundle.v1"
-PUBLIC_SCHEMA_VERSION = "open_agronomy_agent.benchmark_public_safe_response.v2"
-PUBLIC_TRANSFORM_POLICY_VERSION = "open_agronomy_agent.benchmark_public_safe_projection.v3"
+LEGACY_PUBLIC_SCHEMA_VERSION = "open_agronomy_agent.benchmark_public_safe_response.v2"
+LEGACY_PUBLIC_TRANSFORM_POLICY_VERSION = (
+    "open_agronomy_agent.benchmark_public_safe_projection.v3"
+)
+PUBLIC_SCHEMA_VERSION = "open_agronomy_agent.benchmark_public_safe_response.v3"
+PUBLIC_TRANSFORM_POLICY_VERSION = "open_agronomy_agent.benchmark_public_safe_projection.v4"
+SUPPORTED_PUBLIC_TRANSFORMS = frozenset(
+    {
+        (LEGACY_PUBLIC_SCHEMA_VERSION, LEGACY_PUBLIC_TRANSFORM_POLICY_VERSION),
+        (PUBLIC_SCHEMA_VERSION, PUBLIC_TRANSFORM_POLICY_VERSION),
+    }
+)
 OUTER_COMPLETION_RECEIPT = "benchmark_retention_completion.json"
 TRANSIENT_EXPERIMENT_FILENAMES = frozenset({".eval_run.lock"})
 PRIVACY_BOUNDARY = (
@@ -87,6 +97,24 @@ PUBLIC_CATEGORY_VALUES: dict[str, frozenset[str]] = {
             "source_specific_answer_and_scope_regression",
         }
     ),
+    "score_construct": frozenset(
+        {
+            "lexical_contract_coverage",
+            "objective_multiple_choice_exact_match",
+            "objective_numeric_tolerance",
+            "reference_answer_token_overlap",
+            "not_assessed",
+        }
+    ),
+    "score_rubric": frozenset(
+        {
+            "agribench_proxy",
+            "multiple_choice",
+            "numeric_tolerance",
+            "reference_answer_token_f1",
+            "not_assessed",
+        }
+    ),
     "system_variant": frozenset({"raw_model", "kernel_only", "kernel_field_context", "full_system"}),
     "mode": frozenset({"raw_model", "baseline", "kernel_field_context", "agronomic_rag"}),
     "generation_path": frozenset(
@@ -114,6 +142,20 @@ PUBLIC_CATEGORY_VALUES: dict[str, frozenset[str]] = {
     "judge_generator_relationship": frozenset(
         {"same_model", "cross_model", "human", "not_declared", "not_assessed"}
     ),
+}
+
+OBJECTIVE_SCORE_CONTRACTS = frozenset(
+    {
+        ("objective_agronomic_calculation_accuracy", "numeric_tolerance"),
+        ("objective_multiple_choice_accuracy", "multiple_choice"),
+    }
+)
+SCORE_CONSTRUCT_BY_RUBRIC = {
+    "agribench_proxy": "lexical_contract_coverage",
+    "multiple_choice": "objective_multiple_choice_exact_match",
+    "numeric_tolerance": "objective_numeric_tolerance",
+    "reference_answer_token_f1": "reference_answer_token_overlap",
+    "not_assessed": "not_assessed",
 }
 
 
@@ -206,6 +248,44 @@ def _public_bool(value: Any, *, field: str, sqlite_integer: bool = False) -> boo
     if sqlite_integer and isinstance(value, int) and not isinstance(value, bool) and value in {0, 1}:
         return bool(value)
     raise ValueError(f"public measurement {field} must be boolean or null")
+
+
+def _public_score_measurements(
+    score: dict[str, Any],
+    *,
+    metric_role: str | None,
+) -> dict[str, Any]:
+    """Project deterministic scores without laundering diagnostics into accuracy.
+
+    Public-safe response schema v3 separates objective accuracy from
+    deterministic diagnostics. Missing values remain missing and numeric zero
+    remains a measured zero.
+    """
+
+    rubric = _public_category("score_rubric", score.get("rubric") or "not_assessed")
+    construct = _public_category(
+        "score_construct",
+        SCORE_CONSTRUCT_BY_RUBRIC.get(str(rubric), "unclassified"),
+    )
+    accuracy = _public_number(
+        score.get("accuracy"),
+        field="score.accuracy",
+        maximum=100.0,
+    )
+    diagnostic_score = _public_number(
+        score.get("score"),
+        field="score.score",
+        maximum=100.0,
+    )
+    objective_contract = (metric_role, rubric) in OBJECTIVE_SCORE_CONTRACTS
+    return {
+        "score_construct": construct,
+        "score_rubric": rubric,
+        "deterministic_diagnostic_score": (
+            None if objective_contract else diagnostic_score
+        ),
+        "objective_accuracy": accuracy if objective_contract else None,
+    }
 
 
 def _validate_database_contract(connection: sqlite3.Connection) -> None:
@@ -383,7 +463,17 @@ def _artifact_class(relative: str) -> str:
     return "experiment_supporting_artifact"
 
 
-def _public_rows(database: Path) -> list[dict[str, Any]]:
+def _public_rows(
+    database: Path,
+    *,
+    public_schema_version: str | None = None,
+) -> list[dict[str, Any]]:
+    public_schema_version = public_schema_version or PUBLIC_SCHEMA_VERSION
+    if public_schema_version not in {
+        LEGACY_PUBLIC_SCHEMA_VERSION,
+        PUBLIC_SCHEMA_VERSION,
+    }:
+        raise ValueError("unsupported benchmark public-safe response schema")
     link_key = _database_link_key(database)
     connection = sqlite3.connect(database)
     connection.row_factory = sqlite3.Row
@@ -463,6 +553,14 @@ def _public_rows(database: Path) -> list[dict[str, Any]]:
         metadata = _json(row["eval_metadata_json"], {})
         dimensions = _json(row["dimensions_json"], {})
         errors = _json(row["material_errors_json"], [])
+        metric_role = _public_category(
+            "metric_role",
+            (
+                metadata.get("metric_role")
+                if public_schema_version == LEGACY_PUBLIC_SCHEMA_VERSION
+                else metadata.get("metric_role") or score.get("metric_role")
+            ),
+        )
         private_response_record = {
             "response_id": row["response_id"],
             "run_id": row["run_id"],
@@ -500,9 +598,8 @@ def _public_rows(database: Path) -> list[dict[str, Any]]:
             "judgment_json": row["judgment_json"],
         }
         final_assessment = verification.get("final_assessment") or verification.get("draft_assessment") or {}
-        output.append(
-            {
-                "schema_version": PUBLIC_SCHEMA_VERSION,
+        public_row = {
+                "schema_version": public_schema_version,
                 "response_id": _public_identity(
                     link_key,
                     domain="response_id",
@@ -539,7 +636,7 @@ def _public_rows(database: Path) -> list[dict[str, Any]]:
                 "run_id": _public_identity(link_key, domain="run_id", value=row["run_id"]),
                 "eval_id": _public_identity(link_key, domain="eval_id", value=row["eval_id"]),
                 "benchmark_lane": _public_category("benchmark_lane", metadata.get("benchmark_lane")),
-                "metric_role": _public_category("metric_role", metadata.get("metric_role")),
+                "metric_role": metric_role,
                 "task_family": _public_identity(
                     link_key,
                     domain="task_family",
@@ -637,11 +734,20 @@ def _public_rows(database: Path) -> list[dict[str, Any]]:
                     field="needs_source_validation",
                     sqlite_integer=True,
                 ),
-                "objective_accuracy": _public_number(
-                    score.get("accuracy"),
-                    field="score.accuracy",
-                    maximum=100.0,
-                ),
+        }
+        if public_schema_version == LEGACY_PUBLIC_SCHEMA_VERSION:
+            # Frozen v2 bundles retain the original projection, including its
+            # ambiguous objective_accuracy label, so their content addresses
+            # remain independently reproducible. New bundles are always v3.
+            public_row["objective_accuracy"] = _public_number(
+                score.get("accuracy"),
+                field="score.accuracy",
+                maximum=100.0,
+            )
+        else:
+            public_row.update(_public_score_measurements(score, metric_role=metric_role))
+        public_row.update(
+            {
                 "parse_valid": _public_bool(
                     score.get("parse_valid"),
                     field="score.parse_valid",
@@ -664,6 +770,7 @@ def _public_rows(database: Path) -> list[dict[str, Any]]:
                 ),
             }
         )
+        output.append(public_row)
     connection.close()
     return output
 
@@ -780,10 +887,19 @@ def _inventory(entries: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
-def _public_transform_identity(rows: list[dict[str, Any]]) -> dict[str, Any]:
+def _public_transform_identity(
+    rows: list[dict[str, Any]],
+    *,
+    public_schema_version: str | None = None,
+    policy_version: str | None = None,
+) -> dict[str, Any]:
+    public_schema_version = public_schema_version or PUBLIC_SCHEMA_VERSION
+    policy_version = policy_version or PUBLIC_TRANSFORM_POLICY_VERSION
+    if (public_schema_version, policy_version) not in SUPPORTED_PUBLIC_TRANSFORMS:
+        raise ValueError("unsupported benchmark public-safe transform")
     return {
-        "policy_version": PUBLIC_TRANSFORM_POLICY_VERSION,
-        "public_schema_version": PUBLIC_SCHEMA_VERSION,
+        "policy_version": policy_version,
+        "public_schema_version": public_schema_version,
         "privacy_boundary_sha256": _sha256_text(PRIVACY_BOUNDARY),
         "builder_sha256": sha256_file(Path(__file__).resolve()),
         "rows_sha256": hashlib.sha256(canonical_json(rows).encode("utf-8")).hexdigest(),
@@ -990,12 +1106,26 @@ def verify_retention_bundle(bundle_dir: Path) -> dict[str, Any]:
         actual_snapshot = _database_snapshot(database_path)
         if actual_snapshot != manifest.get("database"):
             errors.append("database_snapshot")
-        public_rows = _public_rows(database_path)
+        declared_public_transform = manifest.get("identity", {}).get("public_transform", {})
+        public_schema_version = str(
+            declared_public_transform.get("public_schema_version") or ""
+        )
+        policy_version = str(declared_public_transform.get("policy_version") or "")
+        if (public_schema_version, policy_version) not in SUPPORTED_PUBLIC_TRANSFORMS:
+            raise ValueError("unsupported benchmark public-safe transform")
+        public_rows = _public_rows(
+            database_path,
+            public_schema_version=public_schema_version,
+        )
         retained_builder = bundle_dir / "private/retention_contract/build_benchmark_retention_bundle.py"
         retained_schema = bundle_dir / "private/retention_contract/benchmark_retention_bundle_v1.schema.json"
         if not retained_builder.is_file() or not retained_schema.is_file():
             errors.append("retention_contract_artifacts")
-        public_transform = _public_transform_identity(public_rows)
+        public_transform = _public_transform_identity(
+            public_rows,
+            public_schema_version=public_schema_version,
+            policy_version=policy_version,
+        )
         if retained_builder.is_file():
             public_transform["builder_sha256"] = sha256_file(retained_builder)
         public_csv_path = bundle_dir / "public_safe/response_measurements.csv"

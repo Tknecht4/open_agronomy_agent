@@ -25,6 +25,7 @@ DEPENDENCY_INPUTS = (
     "pyproject.toml",
     "requirements.txt",
     "requirements-phase4-ci.txt",
+    "requirements-benchmark-analysis.txt",
     "requirements-container.txt",
     "requirements-docs.txt",
     "frontend/package.json",

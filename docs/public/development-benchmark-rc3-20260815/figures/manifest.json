@@ -1,0 +1,48 @@
+{
+  "analysis_seed": 20260815,
+  "artifacts": [
+    {
+      "bytes": 31343,
+      "path": "figures/rc3_deterministic_metrics.pdf",
+      "sha256": "f73aededebb8d9064dcd34e42157e6f2c3a1512d8600afbe1a43904d58cdea49"
+    },
+    {
+      "bytes": 102623,
+      "path": "figures/rc3_deterministic_metrics.svg",
+      "sha256": "a4949ef34d522c1314010002d564395e13ba98e04897228d9574db08a86397ad"
+    },
+    {
+      "bytes": 16026,
+      "path": "figures/rc3_evidence_coverage.pdf",
+      "sha256": "c9ec395aa54bfcd67b6b3f87145941f8c231c758e863074e02be71461935c495"
+    },
+    {
+      "bytes": 70622,
+      "path": "figures/rc3_evidence_coverage.svg",
+      "sha256": "05397199e1ac174ce87647dd35c0b1a8f34934ba3435a5859b52dfc0532fc645"
+    },
+    {
+      "bytes": 18008,
+      "path": "figures/rc3_harness_behavior.pdf",
+      "sha256": "dd1cf4a8992842d60f6e088e03f1efbff6d037036203c763a799996ef98c5a22"
+    },
+    {
+      "bytes": 80469,
+      "path": "figures/rc3_harness_behavior.svg",
+      "sha256": "acbdb88c392721c989230f28e8404cd62c73644f95c0b24416c62927a150e014"
+    },
+    {
+      "bytes": 24076,
+      "path": "figures/rc3_repeatability_latency.pdf",
+      "sha256": "04a3a556e1fa580b835d81dfeaaca48ec03df5134a3db6d1116c029ed7a2c9bb"
+    },
+    {
+      "bytes": 90685,
+      "path": "figures/rc3_repeatability_latency.svg",
+      "sha256": "3d0701877a703e569e7325b0b2bb09ee9e6f75b5fc7cec7eca64b06568898d4a"
+    }
+  ],
+  "bootstrap_draws": 50000,
+  "boundary": "Vector figures show deterministic diagnostics, trace activation, repeatability, and observed resources. They do not report semantic answer quality or a composite rank.",
+  "schema_version": "open_agronomy_agent.rc3_checkpoint_figures.v1"
+}

@@ -8,9 +8,21 @@ The agent has three materially different capability classes: deterministic local
 
 **Tested:** deterministic executor, API/adapter and registry contracts, plus a natural-language question through planner, tool receipt, evidence context, final answer, and trace-facing metadata.
 
-**Benchmark evidence:** RC1's 16 objective questions exercised natural-language routing, but the governed arm did not invoke the calculator and scored 0/16 for all candidates. The canonical registry therefore marks the calculator itself as **not benchmark-exercised**. This is a retained orchestration failure—not evidence that the arithmetic engine itself is wrong.
+**Benchmark evidence:** RC1's governed arm did not invoke the calculator and
+scored 0/16 for all candidates. In RC3, each full-system trial produced 16
+typed calculator results; the frozen parser scored 14/16, while a post-run audit
+found all 16 typed payloads within numeric tolerance. The two false negatives
+used the correct generic unit `kg product/ha`, which the frozen product-specific
+alias set rejected. RC3 therefore supplies execution evidence for the legacy
+four-arm path, but the 16/16 audit is parser sensitivity rather than a
+replacement benchmark result. It also does not automatically promote the
+canonical registry's per-capability benchmark flag, which requires its own
+frozen execution receipt.
 
-**Boundary:** the calculator uses supplied or explicitly stated inputs. It does not choose a target, diagnose a field, confirm a label, or establish suitability. The repaired path has focused automated coverage but has not completed a post-RC1 benchmark round.
+**Boundary:** the calculator uses supplied or explicitly stated inputs. It does
+not choose a target, diagnose a field, confirm a label, or establish suitability.
+RC3 made zero automated semantic judgments and does not validate agronomic
+decision quality.
 
 ```bash
 PYTHONPATH=src python -m agronomy_agent.tool_cli calculate unit_conversion \
@@ -19,7 +31,7 @@ PYTHONPATH=src python -m agronomy_agent.tool_cli calculate unit_conversion \
 
 ## Guard capabilities
 
-Guards add field-data, fertility, weather, label, product-safety, resistance, soil-structure, salinity/sodicity, or 4R decision checks. They supply boundaries and missing-input logic, not missing observations. RC1 showed that broad whole-answer intervention can reduce usefulness for capable models, so the upgrade policy applies safeguards according to claim/action consequence rather than simply the presence of any missing field evidence.
+Guards add field-data, fertility, weather, label, product-safety, resistance, soil-structure, salinity/sodicity, or 4R decision checks. They supply boundaries and missing-input logic, not missing observations. RC1 showed that broad whole-answer intervention can reduce usefulness for capable models, so the upgrade policy applies safeguards according to claim/action consequence rather than simply the presence of any missing field evidence. RC3 expected local guards were complete on 134/154 eligible case routes; that is a routing/trace diagnostic, not evidence that every intervention improved the answer.
 
 ## Public and local-data adapters
 

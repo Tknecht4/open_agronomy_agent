@@ -4,7 +4,13 @@ Run benchmark release candidates only from a clean committed checkout. The gate 
 
 ## Dependency boundary
 
-`frontend/package-lock.json` supplies an exact npm resolution. The Python requirement files currently declare compatible ranges rather than a complete, hash-locked transitive environment. Replacing those declarations with a lock generated from one Apple Silicon machine would overstate portability, so this release records the exact installed Python packages instead.
+`frontend/package-lock.json` supplies an exact npm resolution. Most Python
+requirement files declare compatible ranges rather than a complete, hash-locked
+transitive environment. `requirements-benchmark-analysis.txt` pins the two
+direct libraries used to regenerate the RC3 figures, but it is not a complete
+transitive application lock. Replacing the broader declarations with a lock
+generated from one Apple Silicon machine would overstate portability, so this
+release records the exact installed Python packages instead.
 
 `capture_release_environment.py` creates that observation receipt without filesystem paths or secrets. It must remain described as **one observed environment, not a portable Python lock**. A benchmark run must retain the receipt and its hash with the model, code, configuration, and run identities.
 
@@ -22,6 +28,7 @@ python3.12 -m venv .venv
 .venv/bin/python -m pip install \
   --requirement requirements.txt \
   --requirement requirements-phase4-ci.txt \
+  --requirement requirements-benchmark-analysis.txt \
   --requirement requirements-docs.txt
 .venv/bin/python -m pip install --editable .
 ```
@@ -61,6 +68,9 @@ PYTHONPATH=src .venv/bin/python scripts/check_public_docs.py
 PYTHONPATH=src .venv/bin/mkdocs build --strict
 PYTHONPATH=src .venv/bin/python scripts/check_public_docs.py \
   --site-dir build/docs-site
+PYTHONPATH=src .venv/bin/python \
+  docs/public/development-benchmark-rc3-20260815/scripts/analyze_rc3_checkpoint.py \
+  --verify-published
 ```
 
 Build the curated public tree and source-level dependency inventory into ignored outputs:
@@ -84,25 +94,32 @@ PYTHONPATH=src .venv/bin/python scripts/audit_release_candidate_checkout.py \
 
 Record the commit, environment-receipt SHA-256, public-package receipt, SBOM SHA-256, test counts, and any warnings in the benchmark release-candidate record. A later dependency, source, configuration, model, or code change requires a new receipt and a new gate run.
 
-## RC3 development-rerun preflight
+## Completed RC3 development checkpoint
 
-`configs/final_benchmark_round_rc3.json` is not a v3 release contract. It plans
+`configs/final_benchmark_round_rc3.json` is not a v3 release contract. It froze
 three declared trials for each of three candidates on the
 exposed-and-used-for-system-tuning 241-case internal suite under the active
 cumulative runtime-v2 knowledge contract and labels the round
 `development_rerun_nonclaim`. Every trial has explicit generation,
 verification, case-order, and judge seeds; the plan requires a fresh process,
 no prompt cache, and a unique output/invocation identity. AgroQA v1 is retired
-after RC1 exposure and the preflight must emit no external-diagnostic command.
+after RC1 exposure and the completed run emitted no external-diagnostic command.
 RC1 and RC2 remain frozen historical identities.
 
 The judge seed is retained only as an inert replication identity;
-`judge_seed_application=not_requested`. RC3 disables automated semantic judging,
-has no judge egress class, rejects any supplied judge calibration, and emits no
-`--judge` option.
+`judge_seed_application=not_requested`. RC3 disabled automated semantic judging,
+had no judge egress class, rejected supplied judge calibration, and emitted no
+`--judge` option. The completed matrix contains 8,676 canonical observations in
+36 arm executions and nine verified retention bundles. Only 49 of 241 cases per
+arm have a defined deterministic score, and the round contains zero automated
+semantic judgments. See the public-safe [checkpoint paper and evidence
+package](../development-benchmark-rc3-20260815/README.md).
 
-After the clean-checkout, environment, public-package, full-test, documentation,
-and source-retention gates pass, run:
+The following command records the frozen model-free launch gate used for RC3.
+The launch-plan bytes remain unchanged; the append-only lifecycle registry
+marks that exact plan hash complete. Readiness therefore fails closed with
+`completed_plan_non_executable`; it cannot authorize or append observations to
+the completed benchmark identity:
 
 ```bash
 PYTHONPATH=src .venv/bin/python scripts/audit_final_benchmark_readiness.py \
@@ -155,16 +172,16 @@ runtime profile that permits private knowledge outside this benchmark does not
 override this benchmark invariant. Supplying `--judge-calibration` is an RC3
 failure, not a way to enable advisory judging.
 
-A successful audit emits nine unique internal commands: three models by three
-trials. Each emitted command includes `--resume-partial-runs` and
+A successful launch audit emitted nine unique internal commands: three models
+by three trials. Each emitted command included `--resume-partial-runs` and
 `--reuse-complete-runs`; either path still fails unless the stored invocation
 has exact substantive identity, and reuse additionally requires a valid
-complete-run receipt. The audit performs no generation or judging and
-authorizes only the declared non-claim rerun. Do not execute a planned command
-if the preflight status is not `ready`, if an output has an incompatible or
-unreceipted state, or if source/config/model identity changed after the receipt.
+complete-run receipt. The audit itself performed no generation or judging and
+authorized only the declared non-claim rerun. A future run with changed source,
+configuration, model, cohort, or topology requires a successor benchmark
+identity, a fresh authorization, and new same-commit release receipts.
 
-Before an expensive matrix, retain one claim-ineligible rehearsal through the
+Before a future expensive matrix, retain one claim-ineligible rehearsal through the
 same typed server core used by the cockpit and validate all 17 ordered stage
 receipts. For retrieval isolation, execute the same fixed question under
 `retrieval_neither`, `retrieval_document_only`, `retrieval_graph_only`, and

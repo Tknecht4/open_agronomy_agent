@@ -53,7 +53,9 @@ from scripts.capture_release_environment import dependency_input_receipts  # noq
 
 
 DEFAULT_PLAN = ROOT / "configs/final_benchmark_round_rc3.json"
+DEFAULT_ROUND_LIFECYCLE = ROOT / "configs/benchmark_round_lifecycle_v1.json"
 DEFAULT_OUTPUT = ROOT / "outputs/release/final_benchmark_readiness_rc3.json"
+COMPLETED_RC3_ROUND_ID = "open_agronomy_development_rc3_20260814"
 PLAN_SCHEMAS = {
     "open_agronomy_agent.final_benchmark_round.v1",
     "open_agronomy_agent.final_benchmark_round.v2",
@@ -170,7 +172,118 @@ def _file_record(
     }
 
 
-def validate_plan_semantics(plan: Mapping[str, Any]) -> dict[str, Any]:
+def _round_lifecycle_record(
+    plan: Mapping[str, Any],
+    *,
+    root: Path,
+    plan_path: Path,
+    lifecycle_path: Path,
+) -> dict[str, Any]:
+    """Resolve and verify an append-only completion record for a frozen plan."""
+
+    failures: list[str] = []
+    requires_record = (
+        plan.get("round_id") == COMPLETED_RC3_ROUND_ID
+        or plan_path.name == DEFAULT_PLAN.name
+    )
+    if not lifecycle_path.is_file():
+        return {
+            "record": None,
+            "failures": ["round_lifecycle_missing"] if requires_record else [],
+        }
+    try:
+        lifecycle = _load_object(lifecycle_path)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        return {
+            "record": None,
+            "failures": [f"round_lifecycle_unreadable:{type(exc).__name__}"],
+        }
+    if lifecycle.get("schema_version") != "open_agronomy_agent.benchmark_round_lifecycle.v1":
+        failures.append("round_lifecycle_schema_mismatch")
+    records = lifecycle.get("records")
+    if not isinstance(records, list):
+        return {"record": None, "failures": [*failures, "round_lifecycle_records_invalid"]}
+    round_ids = [str(row.get("round_id") or "") for row in records if isinstance(row, dict)]
+    plan_paths = [str(row.get("plan_path") or "") for row in records if isinstance(row, dict)]
+    if len(round_ids) != len(records) or len(set(round_ids)) != len(round_ids):
+        failures.append("round_lifecycle_round_ids_invalid")
+    if len(plan_paths) != len(records) or len(set(plan_paths)) != len(plan_paths):
+        failures.append("round_lifecycle_plan_paths_invalid")
+
+    try:
+        relative_plan_path = plan_path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return {"record": None, "failures": [*failures, "round_lifecycle_plan_path_outside_root"]}
+    matches = [
+        row
+        for row in records
+        if isinstance(row, dict)
+        and (
+            row.get("round_id") == plan.get("round_id")
+            or row.get("plan_path") == relative_plan_path
+        )
+    ]
+    if not matches:
+        if requires_record:
+            failures.append("round_lifecycle_record_missing")
+        return {"record": None, "failures": failures}
+    if len(matches) != 1:
+        return {"record": None, "failures": [*failures, "round_lifecycle_record_ambiguous"]}
+    record = matches[0]
+    required_keys = {
+        "artifact_manifest_path",
+        "artifact_manifest_sha256",
+        "benchmark_source_commit",
+        "canonical_arm_executions",
+        "canonical_observations",
+        "canonical_trials",
+        "checkpoint_receipt_path",
+        "checkpoint_receipt_sha256",
+        "completed_at",
+        "new_observations_allowed",
+        "plan_path",
+        "plan_sha256",
+        "round_id",
+        "status",
+        "successor_round_required",
+    }
+    if set(record) != required_keys:
+        failures.append("round_lifecycle_record_fields_invalid")
+    if record.get("round_id") != plan.get("round_id"):
+        failures.append("round_lifecycle_round_id_mismatch")
+    if record.get("plan_path") != relative_plan_path:
+        failures.append("round_lifecycle_plan_path_mismatch")
+    actual_plan_sha256 = sha256(plan_path) if plan_path.is_file() else None
+    if record.get("plan_sha256") != actual_plan_sha256:
+        failures.append("round_lifecycle_plan_sha256_mismatch")
+    if (
+        record.get("status") != "completed_frozen_nonclaim"
+        or record.get("new_observations_allowed") is not False
+        or record.get("successor_round_required") is not True
+        or record.get("canonical_trials") != 9
+        or record.get("canonical_arm_executions") != 36
+        or record.get("canonical_observations") != 8676
+        or not re.fullmatch(r"[0-9a-f]{40}", str(record.get("benchmark_source_commit") or ""))
+        or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(record.get("completed_at") or ""))
+    ):
+        failures.append("round_lifecycle_completion_contract_invalid")
+    for path_key, hash_key in (
+        ("artifact_manifest_path", "artifact_manifest_sha256"),
+        ("checkpoint_receipt_path", "checkpoint_receipt_sha256"),
+    ):
+        exact, _ = _file_record(root, record, path_key=path_key, hash_key=hash_key)
+        if not exact:
+            failures.append(f"round_lifecycle_{path_key}_receipt_mismatch")
+    return {"record": dict(record), "failures": failures}
+
+
+def validate_plan_semantics(
+    plan: Mapping[str, Any],
+    *,
+    root: Path | None = None,
+    plan_path: Path | None = None,
+    lifecycle_path: Path | None = None,
+) -> dict[str, Any]:
     """Validate orchestration semantics without touching benchmark data."""
 
     failures: list[str] = []
@@ -179,6 +292,10 @@ def validate_plan_semantics(plan: Mapping[str, Any]) -> dict[str, Any]:
         failures.append("unsupported_plan_schema")
     if schema != "open_agronomy_agent.final_benchmark_round.v3":
         failures.append("historical_plan_non_executable")
+    if schema == "open_agronomy_agent.final_benchmark_round.v3":
+        status = plan.get("status")
+        if status != "candidate_generation_requires_clean_preflight":
+            failures.append("rc3_plan_status_invalid")
     if schema in {
         "open_agronomy_agent.final_benchmark_round.v2",
         "open_agronomy_agent.final_benchmark_round.v3",
@@ -392,10 +509,23 @@ def validate_plan_semantics(plan: Mapping[str, Any]) -> dict[str, Any]:
                 if not re.fullmatch(r"[0-9a-f]{64}", str(runtime_profile.get(hash_key) or "")):
                     failures.append(f"runtime_profile_{hash_key}_invalid")
 
+    lifecycle: dict[str, Any] = {"record": None, "failures": []}
+    if root is not None and plan_path is not None:
+        lifecycle = _round_lifecycle_record(
+            plan,
+            root=root,
+            plan_path=plan_path,
+            lifecycle_path=lifecycle_path or (root / "configs/benchmark_round_lifecycle_v1.json"),
+        )
+        failures.extend(lifecycle["failures"])
+        if (lifecycle.get("record") or {}).get("status") == "completed_frozen_nonclaim":
+            failures.append("completed_plan_non_executable")
+
     return {
         "status": "pass" if not failures else "blocked",
         "schema_version": schema,
         "round_id": plan.get("round_id"),
+        "lifecycle_record": lifecycle.get("record"),
         "failures": failures,
     }
 
@@ -1163,7 +1293,11 @@ def audit(
     root = root.resolve()
     plan = _load_object(plan_path)
     checks: list[dict[str, Any]] = []
-    plan_validation = validate_plan_semantics(plan)
+    plan_validation = validate_plan_semantics(
+        plan,
+        root=root,
+        plan_path=plan_path,
+    )
     _check(
         checks,
         "plan_contract",

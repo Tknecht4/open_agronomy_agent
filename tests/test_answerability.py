@@ -17,6 +17,7 @@ from agronomy_agent.answerability import (
     LABEL_AUTHORITY_RECORD_SCHEMA_VERSION,
     AnswerabilityState,
     assess_answerability,
+    preferred_response_language,
 )
 from agronomy_agent.evidence_handshake import EvidenceHandshake
 from agronomy_agent.tool_planner import plan_and_execute_tools
@@ -536,6 +537,103 @@ def test_intervention_wrapper_does_not_replace_a_benign_conceptual_answer() -> N
     assert decision.status == "generate_bounded"
     assert decision.hold_text is None
     assert decision.answerability_state == AnswerabilityState.ANSWER_DIRECTLY.value
+
+
+_QUEBEC_FRENCH_HOLD_CASES = (
+    pytest.param(
+        "Des lésions brunes apparaissent sur le soya au Québec. Puis-je copier directement le diagnostic et le traitement du guide ontarien?",
+        "plant_health",
+        ("field_data_guard", "label_guard", "pesticide_safety_guard", "weather_guard"),
+        id="ca_v2_quebec_diseases_01",
+    ),
+    pytest.param(
+        "Dose de fongicide pour les bleuets? J'ai seulement le guide des légumes de la C.-B.",
+        "product_label",
+        (
+            "field_data_guard",
+            "label_guard",
+            "pesticide_safety_guard",
+            "resistance_management_guard",
+            "weather_guard",
+        ),
+        id="ca_v2_quebec_horticulture_02",
+    ),
+    pytest.param(
+        "La carte montre un foyer d'insectes dans une bleuetière au Québec. Est-ce que je peux choisir un insecticide avant d'aller dépister?",
+        "product_label",
+        ("field_data_guard", "label_guard", "pesticide_safety_guard", "weather_guard"),
+        id="ca_v2_quebec_pests_04",
+    ),
+)
+
+
+def _regulated_route_context(question_type: str, required_tools: tuple[str, ...]) -> SimpleNamespace:
+    return SimpleNamespace(
+        runtime_metadata={"tool_plan": {"status": "not_applicable"}, "tool_results": []},
+        evidence_handshake=None,
+        route=SimpleNamespace(
+            risk_level="regulated",
+            question_type=question_type,
+            required_tools=required_tools,
+        ),
+    )
+
+
+@pytest.mark.parametrize(
+    ("question", "question_type", "required_tools"),
+    _QUEBEC_FRENCH_HOLD_CASES,
+)
+def test_observed_quebec_regulated_routes_preserve_french_in_deterministic_hold(
+    question: str,
+    question_type: str,
+    required_tools: tuple[str, ...],
+) -> None:
+    context = _regulated_route_context(question_type, required_tools)
+
+    decision = decide_evidence_intervention(context, question=question, profile="balanced")
+
+    assert preferred_response_language(question) == "fr"
+    assert decision.status == "held"
+    assert decision.answerability_state == AnswerabilityState.REQUIRE_AUTHORITY.value
+    assert decision.rule_pack_id == "regulated.product_action.v1"
+    assert decision.hold_text is not None
+    assert "Je peux expliquer les facteurs de décision" in decision.hold_text
+    assert "étiquette" in decision.hold_text
+    assert "\n\n" in decision.hold_text
+    assert "I can explain" not in decision.hold_text
+
+
+@pytest.mark.parametrize(
+    ("question", "question_type"),
+    (
+        (
+            "Brown lesions are appearing on soybeans in Quebec. Can I copy the Ontario diagnosis and treatment directly?",
+            "plant_health",
+        ),
+        ("Fungicide dose for blueberries? I only have the British Columbia vegetable guide.", "product_label"),
+        (
+            "The map shows an insect hotspot in a Quebec blueberry field. Can I choose an insecticide before scouting?",
+            "product_label",
+        ),
+    ),
+)
+def test_equivalent_english_regulated_routes_keep_english_deterministic_hold(
+    question: str,
+    question_type: str,
+) -> None:
+    context = _regulated_route_context(
+        question_type,
+        ("field_data_guard", "label_guard", "pesticide_safety_guard", "weather_guard"),
+    )
+
+    decision = decide_evidence_intervention(context, question=question, profile="balanced")
+
+    assert preferred_response_language(question) == "en"
+    assert decision.status == "held"
+    assert decision.answerability_state == AnswerabilityState.REQUIRE_AUTHORITY.value
+    assert decision.hold_text is not None
+    assert decision.hold_text.startswith("I can explain the decision factors")
+    assert "Je peux expliquer" not in decision.hold_text
 
 
 def test_unrelated_strong_guidance_cannot_satisfy_current_label_authority() -> None:

@@ -11,7 +11,8 @@
 | Native quick-start model | `model_gemma4_e2b_interface_v2.yaml` | Exact model/revision; local weights separately provisioned |
 | Governed runtime retrieval | `rag_governed_runtime_v2.yaml` | Active cumulative Canadian master plus explicitly admitted seed, SoilWise, graph, and NRCS analogue assets |
 | Product-selection registry | `runtime_profiles.json` | Sole active/default model and RAG admission surface; file presence is not activation |
-| RC3 development rerun | `final_benchmark_round_rc3.json` | Current exposed-and-tuned, three-trial `development_rerun_nonclaim` under runtime v2; not claim-eligible |
+| RC3 development checkpoint | `final_benchmark_round_rc3.json` | Completed and frozen exposed-and-tuned, three-trial `development_rerun_nonclaim` under runtime v2; not claim-eligible and not a Benchmark v3 result |
+| Benchmark lifecycle registry | `benchmark_round_lifecycle_v1.json` | Append-only completion status and checkpoint receipts; keeps frozen launch-plan bytes unchanged |
 | RC1 orchestration | `final_benchmark_round_rc1.json` | Frozen historical benchmark contract, not current-code validation |
 | RC2 development rerun | `final_benchmark_round_rc2.json` | Frozen historical planning/evidence identity; not the current default |
 | Benchmark v2 regression | `open_agronomy_benchmark_v2.json` | Exact cases were exposed and used for tuning; contract QA only, never claim-eligible; fresh untouched v3 required for evaluation |
@@ -25,9 +26,9 @@ payloads intentionally absent from the public package. `benchmark_models/`,
 versions are evaluation or historical artifacts. Do not switch production
 behavior because a newer-looking filename exists.
 
-## RC3 egress and execution boundary
+## RC3 egress and completed execution boundary
 
-`final_benchmark_round_rc3.json` requires
+The completed RC3 run was governed by `final_benchmark_round_rc3.json`, which requires
 `open_agronomy_agent.benchmark_egress_authorization.v4`. The checked-in
 `benchmark_egress_authorization.template.json` is deliberately unauthorized and
 is bound to benchmark ID
@@ -40,8 +41,15 @@ synthetic field context; the RAG candidate additionally receives selected
 public runtime document excerpts and public runtime graph evidence. RAG
 verification receives question, prompt, selected public document excerpts,
 candidate draft, and verifier evidence. No other verification arm is admitted.
-Deterministic tool results remain local and bypass Luna; governed guard notes
+Deterministic tool results remained local and bypassed Luna; governed guard notes
 are frozen prompt components, not a tool-result payload class.
+
+The plan is retained byte-for-byte as frozen launch evidence. Completion is
+recorded separately in `benchmark_round_lifecycle_v1.json`, which binds the
+plan hash, measured commit, public checkpoint receipts, nine trials, 36 arm
+executions, and 8,676 observations. Readiness combines those two records and
+fails closed; neither authorizes appending observations or reusing the completed
+identity for a successor run.
 
 The exact forbidden classes are `farmer_records`, `private_field_history`,
 `credentials`, and `whole_local_knowledge_corpus_files`. RC3 forces private

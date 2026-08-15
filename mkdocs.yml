@@ -45,6 +45,15 @@ exclude_docs: |
   final-benchmark-20260812/references.bib
   final-benchmark-20260812/scripts/
   final-benchmark-20260812/source_data/
+  development-benchmark-rc3-20260815/main.tex
+  development-benchmark-rc3-20260815/generated_results.tex
+  development-benchmark-rc3-20260815/generated_tables.tex
+  development-benchmark-rc3-20260815/references.bib
+  development-benchmark-rc3-20260815/paper_evidence_manifest.yaml
+  development-benchmark-rc3-20260815/figures/*.pdf
+  development-benchmark-rc3-20260815/figures/manifest.json
+  development-benchmark-rc3-20260815/scripts/
+  development-benchmark-rc3-20260815/source_data/
   open_agronomy_agent_conference_20260812.pptx
 
 nav:
@@ -58,6 +67,7 @@ nav:
   - Tools and adapters: tools-and-adapters.md
   - Evaluation:
       - Evaluation contract: evaluation.md
+      - RC3 development checkpoint: development-benchmark-rc3-20260815/README.md
       - RC1 public evidence package: final-benchmark-20260812/README.md
   - Developer guide:
       - Code and contracts: developer/index.md

@@ -46,13 +46,37 @@
           "additionalProperties": false,
           "required": ["policy_version", "public_schema_version", "privacy_boundary_sha256", "builder_sha256", "rows_sha256", "csv_sha256"],
           "properties": {
-            "policy_version": {"const": "open_agronomy_agent.benchmark_public_safe_projection.v3"},
-            "public_schema_version": {"const": "open_agronomy_agent.benchmark_public_safe_response.v2"},
+            "policy_version": {
+              "enum": [
+                "open_agronomy_agent.benchmark_public_safe_projection.v3",
+                "open_agronomy_agent.benchmark_public_safe_projection.v4"
+              ]
+            },
+            "public_schema_version": {
+              "enum": [
+                "open_agronomy_agent.benchmark_public_safe_response.v2",
+                "open_agronomy_agent.benchmark_public_safe_response.v3"
+              ]
+            },
             "privacy_boundary_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
             "builder_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
             "rows_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
             "csv_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
-          }
+          },
+          "oneOf": [
+            {
+              "properties": {
+                "policy_version": {"const": "open_agronomy_agent.benchmark_public_safe_projection.v3"},
+                "public_schema_version": {"const": "open_agronomy_agent.benchmark_public_safe_response.v2"}
+              }
+            },
+            {
+              "properties": {
+                "policy_version": {"const": "open_agronomy_agent.benchmark_public_safe_projection.v4"},
+                "public_schema_version": {"const": "open_agronomy_agent.benchmark_public_safe_response.v3"}
+              }
+            }
+          ]
         }
       }
     },

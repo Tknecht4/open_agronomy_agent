@@ -60,6 +60,17 @@ def test_script_reference_audit_rejects_missing_entrypoint(tmp_path: Path) -> No
     ]
 
 
+def test_script_reference_audit_accepts_nested_repository_entrypoint(tmp_path: Path) -> None:
+    page = tmp_path / "page.md"
+    page.write_text(
+        "Run `docs/public/development-benchmark-rc3-20260815/scripts/"
+        "analyze_rc3_checkpoint.py`.\n",
+        encoding="utf-8",
+    )
+
+    assert check_public_docs.audit_script_references([page]) == []
+
+
 def test_repository_link_audit_rejects_escape_and_forbidden_target(tmp_path: Path) -> None:
     page = ROOT / f".tmp_public_docs_link_audit_{tmp_path.name}.md"
     page.write_text(
@@ -90,6 +101,42 @@ def test_rendered_site_audit_rejects_private_runtime_artifact(tmp_path: Path) ->
     assert errors == [
         "rendered_site:forbidden_path:outputs/private.sqlite3",
         "rendered_site:forbidden_suffix:outputs/private.sqlite3",
+    ]
+
+
+def test_rendered_site_audit_rejects_rc3_reproducibility_sources(tmp_path: Path) -> None:
+    package = tmp_path / "development-benchmark-rc3-20260815"
+    source_data = package / "source_data/summary.csv"
+    analysis_script = package / "scripts/analyze_rc3_checkpoint.py"
+    latex_source = package / "main.tex"
+    figure_pdf = package / "figures/diagnostic.pdf"
+    figure_manifest = package / "figures/manifest.json"
+    evidence_manifest = package / "paper_evidence_manifest.yaml"
+    published_paper = package / "paper.pdf"
+    published_svg = package / "figures/diagnostic.svg"
+    for path in (
+        source_data,
+        analysis_script,
+        latex_source,
+        figure_pdf,
+        figure_manifest,
+        evidence_manifest,
+        published_paper,
+        published_svg,
+    ):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("fixture\n", encoding="utf-8")
+
+    errors, file_count = check_public_docs.audit_rendered_site(tmp_path)
+
+    assert file_count == 8
+    assert errors == [
+        "rendered_site:forbidden_figure_pdf:development-benchmark-rc3-20260815/figures/diagnostic.pdf",
+        "rendered_site:forbidden_name:development-benchmark-rc3-20260815/figures/manifest.json",
+        "rendered_site:forbidden_name:development-benchmark-rc3-20260815/main.tex",
+        "rendered_site:forbidden_name:development-benchmark-rc3-20260815/paper_evidence_manifest.yaml",
+        "rendered_site:forbidden_path:development-benchmark-rc3-20260815/scripts/analyze_rc3_checkpoint.py",
+        "rendered_site:forbidden_path:development-benchmark-rc3-20260815/source_data/summary.csv",
     ]
 
 

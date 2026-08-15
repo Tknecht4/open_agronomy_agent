@@ -42,6 +42,10 @@ PUBLIC_SUBSYSTEM_READMES = (
 )
 PUBLIC_REVIEW = ROOT / "docs/reviews/open-agronomy-benchmark-system-review-20260813.md"
 RC2_PUBLIC_REVIEW = ROOT / "docs/reviews/open-agronomy-benchmark-rc2-readiness-record-20260814.md"
+PUBLIC_BENCHMARK_PACKAGES = (
+    "final-benchmark-20260812",
+    "development-benchmark-rc3-20260815",
+)
 
 LINK_RE = re.compile(r"(?<!!)\[[^\]]*\]\((?P<target>[^)]+)\)")
 REFERENCE_LINK_RE = re.compile(r"^\s*\[[^\]]+\]:\s*(?P<target>\S+)", re.MULTILINE)
@@ -49,7 +53,7 @@ HTML_LINK_RE = re.compile(r"\b(?:href|src)=[\"'](?P<target>[^\"']+)[\"']", re.IG
 HEADING_RE = re.compile(r"^(?P<level>#{1,6})\s+(?P<text>.+?)\s*$", re.MULTILINE)
 CAPABILITY_DECL_RE = re.compile(r"<!--\s*capability:(?P<capability>[a-z0-9_.-]+)\s*-->")
 SCRIPT_REFERENCE_RE = re.compile(
-    r"(?<![A-Za-z0-9_.-])(?:\./)?(?P<path>scripts/[A-Za-z0-9_.-]+\.(?:py|sh))(?![A-Za-z0-9_.-])"
+    r"(?<![A-Za-z0-9_.-])(?:\./)?(?P<path>(?:[A-Za-z0-9_.-]+/)*scripts/[A-Za-z0-9_.-]+\.(?:py|sh))(?![A-Za-z0-9_.-])"
 )
 
 PUBLIC_FORBIDDEN_PREFIXES = (
@@ -223,7 +227,12 @@ def audit_scope(files: Iterable[Path], manifest_path: Path) -> list[str]:
         "data/manifests/runtime_corpus_policy_v2.json",
         "docs/reviews/open-agronomy-benchmark-system-review-20260813.md",
         "docs/reviews/open-agronomy-benchmark-rc2-readiness-record-20260814.md",
+        "docs/public/development-benchmark-rc3-20260815/README.md",
+        "docs/public/development-benchmark-rc3-20260815/paper.pdf",
+        "docs/public/development-benchmark-rc3-20260815/scripts/analyze_rc3_checkpoint.py",
+        "docs/public/development-benchmark-rc3-20260815/source_data/public_safe_response_measurements.csv",
         "mkdocs.yml",
+        "requirements-benchmark-analysis.txt",
         "requirements-docs.txt",
         "scripts/README.md",
         "scripts/audit_open_agronomy_benchmark_v2.py",
@@ -232,6 +241,7 @@ def audit_scope(files: Iterable[Path], manifest_path: Path) -> list[str]:
         "scripts/run_benchmark_capability_conformance.py",
         "scripts/run_observed_system_rehearsal.py",
         "tests/README.md",
+        "tests/test_rc3_checkpoint_analysis.py",
     }
     for required in sorted(required_public_paths):
         if required not in manifest_paths and not any(
@@ -282,8 +292,8 @@ def audit_rendered_site(site_dir: Path) -> tuple[list[str], int]:
         "models/",
         "adapters/",
         "private_knowledge/",
-        "final-benchmark-20260812/source_data/",
-        "final-benchmark-20260812/scripts/",
+        *(f"{package}/source_data/" for package in PUBLIC_BENCHMARK_PACKAGES),
+        *(f"{package}/scripts/" for package in PUBLIC_BENCHMARK_PACKAGES),
     )
     forbidden_rendered_names = {
         "open_agronomy_agent_conference_20260812.pptx",
@@ -295,6 +305,18 @@ def audit_rendered_site(site_dir: Path) -> tuple[list[str], int]:
         if any(relative.startswith(prefix) for prefix in forbidden_rendered_prefixes):
             errors.append(f"rendered_site:forbidden_path:{relative}")
         if path.name in forbidden_rendered_names:
+            errors.append(f"rendered_site:forbidden_name:{relative}")
+        if path.suffix == ".tex" and path.name not in forbidden_rendered_names:
+            errors.append(f"rendered_site:forbidden_suffix:{relative}")
+        if (
+            relative.startswith("development-benchmark-rc3-20260815/figures/")
+            and path.suffix.lower() == ".pdf"
+        ):
+            errors.append(f"rendered_site:forbidden_figure_pdf:{relative}")
+        if relative in {
+            "development-benchmark-rc3-20260815/paper_evidence_manifest.yaml",
+            "development-benchmark-rc3-20260815/figures/manifest.json",
+        }:
             errors.append(f"rendered_site:forbidden_name:{relative}")
         if relative.lower().endswith(PUBLIC_FORBIDDEN_SUFFIXES):
             errors.append(f"rendered_site:forbidden_suffix:{relative}")

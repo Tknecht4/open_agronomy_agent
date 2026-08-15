@@ -12,9 +12,14 @@ from pathlib import Path
 
 import pytest
 
+import scripts.build_benchmark_retention_bundle as retention_bundle
 from scripts.build_benchmark_retention_bundle import (
+    LEGACY_PUBLIC_SCHEMA_VERSION,
+    LEGACY_PUBLIC_TRANSFORM_POLICY_VERSION,
     OUTER_COMPLETION_RECEIPT,
     PUBLIC_MATERIAL_ERROR_CODES,
+    PUBLIC_SCHEMA_VERSION,
+    PUBLIC_TRANSFORM_POLICY_VERSION,
     _csv_bytes,
     build_retention_bundle,
     sha256_file,
@@ -154,6 +159,131 @@ def test_content_addressed_retention_bundle_keeps_private_database_and_safe_dime
     assert (bundle / "private/retention_contract/build_benchmark_retention_bundle.py").is_file()
     assert (bundle / "private/retention_contract/benchmark_retention_bundle_v1.schema.json").is_file()
     assert verify_retention_bundle(bundle)["canonical_response_count"] == 1
+
+
+@pytest.mark.parametrize(
+    ("metric_role", "score", "expected_construct", "expected_diagnostic", "expected_objective"),
+    [
+        (
+            "deterministic_lexical_and_trace_regression",
+            {
+                "rubric": "agribench_proxy",
+                "construct": "lexical_contract_coverage",
+                "score": 0.0,
+                "accuracy": 20.0,
+            },
+            "lexical_contract_coverage",
+            "0.0",
+            "",
+        ),
+        (
+            "deterministic_lexical_and_trace_regression",
+            {
+                "rubric": "agribench_proxy",
+                "construct": "lexical_contract_coverage",
+                "score": None,
+                "accuracy": 20.0,
+            },
+            "lexical_contract_coverage",
+            "",
+            "",
+        ),
+        (
+            "objective_agronomic_calculation_accuracy",
+            {
+                "rubric": "numeric_tolerance",
+                "score": 0.0,
+                "accuracy": 0.0,
+                "parse_valid": True,
+            },
+            "objective_numeric_tolerance",
+            "",
+            "0.0",
+        ),
+    ],
+)
+def test_public_safe_v3_separates_diagnostic_scores_from_objective_accuracy(
+    tmp_path,
+    metric_role: str,
+    score: dict,
+    expected_construct: str,
+    expected_diagnostic: str,
+    expected_objective: str,
+) -> None:
+    database = tmp_path / "full_system_benchmark.sqlite3"
+    _database(database)
+    connection = sqlite3.connect(database)
+    connection.execute(
+        "UPDATE benchmark_case SET eval_metadata_json = ?",
+        (
+            json.dumps(
+                {
+                    "benchmark_lane": "objective_agronomic_calculation",
+                    "metric_role": metric_role,
+                }
+            ),
+        ),
+    )
+    connection.execute("UPDATE response SET score_json = ?", (json.dumps(score),))
+    connection.commit()
+    connection.close()
+
+    report = build_retention_bundle(database=database, bundle_root=tmp_path / "retained")
+    bundle = tmp_path / "retained" / report["bundle_id"]
+    row = next(
+        csv.DictReader(
+            (bundle / "public_safe/response_measurements.csv")
+            .read_text(encoding="utf-8")
+            .splitlines()
+        )
+    )
+
+    assert row["schema_version"] == PUBLIC_SCHEMA_VERSION
+    assert row["score_construct"] == expected_construct
+    assert row["score_rubric"] == score["rubric"]
+    assert row["deterministic_diagnostic_score"] == expected_diagnostic
+    assert row["objective_accuracy"] == expected_objective
+
+
+def test_current_verifier_reproduces_frozen_v2_public_projection(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    """Append-only v3 generation must not strand already retained v2 bundles."""
+
+    database = tmp_path / "full_system_benchmark.sqlite3"
+    _database(database)
+    with monkeypatch.context() as patch:
+        patch.setattr(
+            retention_bundle,
+            "PUBLIC_SCHEMA_VERSION",
+            LEGACY_PUBLIC_SCHEMA_VERSION,
+        )
+        patch.setattr(
+            retention_bundle,
+            "PUBLIC_TRANSFORM_POLICY_VERSION",
+            LEGACY_PUBLIC_TRANSFORM_POLICY_VERSION,
+        )
+        report = build_retention_bundle(
+            database=database,
+            bundle_root=tmp_path / "retained",
+        )
+
+    bundle = tmp_path / "retained" / report["bundle_id"]
+    manifest = json.loads((bundle / "manifest.json").read_text(encoding="utf-8"))
+    public_csv = (bundle / "public_safe/response_measurements.csv").read_text(
+        encoding="utf-8"
+    )
+    row = next(csv.DictReader(public_csv.splitlines()))
+
+    public_transform = manifest["identity"]["public_transform"]
+    assert public_transform["policy_version"] == LEGACY_PUBLIC_TRANSFORM_POLICY_VERSION
+    assert public_transform["public_schema_version"] == LEGACY_PUBLIC_SCHEMA_VERSION
+    assert row["schema_version"] == LEGACY_PUBLIC_SCHEMA_VERSION
+    assert row["objective_accuracy"] == "100.0"
+    assert "score_construct" not in row
+    assert "deterministic_diagnostic_score" not in row
+    assert verify_retention_bundle(bundle)["status"] == "verified"
 
 
 def test_retention_verification_fails_if_canonical_database_is_removed(tmp_path) -> None:
@@ -527,7 +657,10 @@ def test_verifier_recomputes_content_address_identity_and_public_transform(tmp_p
     manifest_path = bundle / "manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
-    assert manifest["identity"]["public_transform"]["policy_version"].endswith("projection.v3")
+    assert (
+        manifest["identity"]["public_transform"]["policy_version"]
+        == PUBLIC_TRANSFORM_POLICY_VERSION
+    )
     assert manifest["identity"]["public_transform"]["builder_sha256"]
     assert manifest["identity"]["public_transform"]["rows_sha256"]
     manifest["identity"]["public_transform"]["rows_sha256"] = "0" * 64
