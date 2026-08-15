@@ -4,9 +4,11 @@ import csv
 import hashlib
 import io
 import json
+import shutil
 import sqlite3
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -371,6 +373,150 @@ def test_outer_completion_receipt_is_not_a_self_referential_bundle_input(tmp_pat
 
     assert retained_terminal.read_bytes() == terminal.read_bytes()
     assert not (bundle / f"private/experiment/{OUTER_COMPLETION_RECEIPT}").exists()
+
+
+def test_transient_run_lock_drift_does_not_change_retention_identity(tmp_path) -> None:
+    database = tmp_path / "full_system_benchmark.sqlite3"
+    _database(database)
+    experiment = tmp_path / "experiment"
+    run_dir = experiment / "runs/model/full"
+    run_dir.mkdir(parents=True)
+    terminal = run_dir / "summary.json"
+    terminal.write_text('{"status":"complete"}\n', encoding="utf-8")
+    lock = run_dir / ".eval_run.lock"
+    lock.write_text("worker=one\n", encoding="utf-8")
+
+    first = build_retention_bundle(
+        database=database,
+        bundle_root=tmp_path / "retained",
+        experiment_dir=experiment,
+    )
+    bundle = tmp_path / "retained" / first["bundle_id"]
+    manifest = json.loads((bundle / "manifest.json").read_text(encoding="utf-8"))
+
+    lock.write_text("worker=two-with-a-different-size\n", encoding="utf-8")
+    second = build_retention_bundle(
+        database=database,
+        bundle_root=tmp_path / "retained",
+        experiment_dir=experiment,
+    )
+
+    assert second["bundle_id"] == first["bundle_id"]
+    assert (
+        bundle / "private/experiment/runs/model/full/summary.json"
+    ).read_bytes() == terminal.read_bytes()
+    assert not (bundle / "private/experiment/runs/model/full/.eval_run.lock").exists()
+    assert all(
+        not entry["path"].endswith("/.eval_run.lock")
+        for entry in manifest["private_artifacts"]
+    )
+
+
+def test_retention_verifies_legitimate_zero_byte_experiment_artifact(tmp_path) -> None:
+    database = tmp_path / "full_system_benchmark.sqlite3"
+    _database(database)
+    experiment = tmp_path / "experiment"
+    experiment.mkdir()
+    empty_artifact = experiment / "empty.marker"
+    empty_artifact.touch()
+
+    report = build_retention_bundle(
+        database=database,
+        bundle_root=tmp_path / "retained",
+        experiment_dir=experiment,
+    )
+    bundle = tmp_path / "retained" / report["bundle_id"]
+    manifest = json.loads((bundle / "manifest.json").read_text(encoding="utf-8"))
+    retained = bundle / "private/experiment/empty.marker"
+    entry = next(
+        item
+        for item in manifest["private_artifacts"]
+        if item["path"] == "private/experiment/empty.marker"
+    )
+
+    assert report["status"] == "verified"
+    assert retained.is_file()
+    assert retained.stat().st_size == 0
+    assert entry["bytes"] == 0
+    assert entry["sha256"] == hashlib.sha256(b"").hexdigest()
+
+
+@pytest.mark.parametrize(
+    "link_kind",
+    ["experiment_root", "descendant_file", "descendant_directory"],
+)
+def test_retention_rejects_symlink_experiment_entries_without_creating_bundle(
+    tmp_path,
+    link_kind: str,
+) -> None:
+    database = tmp_path / "full_system_benchmark.sqlite3"
+    _database(database)
+    real_experiment = tmp_path / "real-experiment"
+    real_experiment.mkdir()
+    experiment = real_experiment
+    if link_kind == "experiment_root":
+        experiment = tmp_path / "experiment-link"
+        experiment.symlink_to(real_experiment, target_is_directory=True)
+    elif link_kind == "descendant_file":
+        target = tmp_path / "outside.txt"
+        target.write_text("outside", encoding="utf-8")
+        (experiment / "linked-file.txt").symlink_to(target)
+    else:
+        target = tmp_path / "outside-directory"
+        target.mkdir()
+        (target / "outside.txt").write_text("outside", encoding="utf-8")
+        (experiment / "linked-directory").symlink_to(target, target_is_directory=True)
+    bundle_root = tmp_path / "retained"
+
+    with pytest.raises(ValueError, match="symlink"):
+        build_retention_bundle(
+            database=database,
+            bundle_root=bundle_root,
+            experiment_dir=experiment,
+        )
+
+    assert not bundle_root.exists()
+
+
+def test_copy_drift_fails_before_atomic_bundle_publication(tmp_path, monkeypatch) -> None:
+    database = tmp_path / "full_system_benchmark.sqlite3"
+    _database(database)
+    experiment = tmp_path / "experiment"
+    experiment.mkdir()
+    artifact = experiment / "terminal.json"
+    artifact.write_text('{"status":"complete"}\n', encoding="utf-8")
+    bundle_root = tmp_path / "retained"
+    real_copy2 = shutil.copy2
+    drift_injected = False
+
+    def copy_with_source_drift(source, destination):  # noqa: ANN001, ANN202
+        nonlocal drift_injected
+        if Path(source) == artifact.resolve() and not drift_injected:
+            artifact.write_text(
+                '{"status":"mutated-after-inventory"}\n',
+                encoding="utf-8",
+            )
+            drift_injected = True
+        return real_copy2(source, destination)
+
+    monkeypatch.setattr(
+        "scripts.build_benchmark_retention_bundle.shutil.copy2",
+        copy_with_source_drift,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="size:private/experiment/terminal.json",
+    ):
+        build_retention_bundle(
+            database=database,
+            bundle_root=bundle_root,
+            experiment_dir=experiment,
+        )
+
+    assert drift_injected is True
+    assert bundle_root.is_dir()
+    assert list(bundle_root.iterdir()) == []
 
 
 def test_verifier_recomputes_content_address_identity_and_public_transform(tmp_path) -> None:

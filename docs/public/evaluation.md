@@ -69,6 +69,10 @@ CSV contains database-keyed linkage commitments and allowlisted structured
 measurements but excludes prompts, answer text, retrieved context, judge
 rationales, private field context, and raw private identifiers. Stored answer,
 question, and context hashes are recomputed before the bundle is accepted. This
+contract retains regular zero-byte evidence files, but excludes the reserved
+`.eval_run.lock` process-coordination file because it is not experiment evidence.
+Inputs containing symbolic links or other non-regular filesystem entries fail
+closed, and a complete staged bundle is verified before atomic publication. This
 retention path has focused automated tests against a synthetic database. It has
 not recovered the missing RC1 artifacts and has not yet been exercised by a new
 complete benchmark round.

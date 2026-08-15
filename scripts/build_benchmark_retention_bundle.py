@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import csv
 import datetime as dt
+import errno
 import hashlib
 import hmac
 import io
@@ -19,6 +20,7 @@ import json
 import math
 import shutil
 import sqlite3
+import stat
 import tempfile
 import unicodedata
 from pathlib import Path
@@ -32,6 +34,7 @@ SCHEMA_VERSION = "open_agronomy_agent.benchmark_retention_bundle.v1"
 PUBLIC_SCHEMA_VERSION = "open_agronomy_agent.benchmark_public_safe_response.v2"
 PUBLIC_TRANSFORM_POLICY_VERSION = "open_agronomy_agent.benchmark_public_safe_projection.v3"
 OUTER_COMPLETION_RECEIPT = "benchmark_retention_completion.json"
+TRANSIENT_EXPERIMENT_FILENAMES = frozenset({".eval_run.lock"})
 PRIVACY_BOUNDARY = (
     "Only public_safe artifacts may be published. The private directory contains exact prompts, "
     "answers, context, judgments, keyed-link material, and potentially private evidence."
@@ -301,19 +304,55 @@ def _database_snapshot(database: Path) -> dict[str, Any]:
     }
 
 
+def _regular_experiment_files(root: Path) -> list[Path]:
+    """Return regular descendants after rejecting links and special files."""
+
+    files: list[Path] = []
+    pending = [root]
+    while pending:
+        directory = pending.pop()
+        for path in sorted(directory.iterdir()):
+            mode = path.lstat().st_mode
+            if stat.S_ISLNK(mode):
+                raise ValueError(f"experiment directory contains a symlink: {path}")
+            if stat.S_ISDIR(mode):
+                pending.append(path)
+            elif stat.S_ISREG(mode):
+                files.append(path)
+            else:
+                raise ValueError(
+                    f"experiment directory contains a non-regular entry: {path}"
+                )
+    return sorted(files)
+
+
 def _experiment_entries(experiment_dir: Path | None) -> list[dict[str, Any]]:
     if experiment_dir is None:
         return []
-    root = experiment_dir.resolve()
-    if not root.is_dir():
-        raise ValueError(f"experiment directory does not exist: {root}")
+    provided_root = experiment_dir.expanduser()
+    try:
+        root_mode = provided_root.lstat().st_mode
+    except FileNotFoundError as exc:
+        raise ValueError(f"experiment directory does not exist: {provided_root}") from exc
+    if stat.S_ISLNK(root_mode):
+        raise ValueError(f"experiment directory must not be a symlink: {provided_root}")
+    if not stat.S_ISDIR(root_mode):
+        raise ValueError(f"experiment directory does not exist: {provided_root}")
+    root = provided_root.resolve(strict=True)
+    regular_files = _regular_experiment_files(root)
     entries: list[dict[str, Any]] = []
-    for path in sorted(item for item in root.rglob("*") if item.is_file()):
+    for path in regular_files:
         relative = path.relative_to(root).as_posix()
         # The canonical database is copied separately and must have one identity.
         # The outer completion receipt is written only after this immutable
         # bundle exists, so it is deliberately not an input to its own identity.
-        if path.name in {"full_system_benchmark.sqlite3", OUTER_COMPLETION_RECEIPT}:
+        # Run locks coordinate live processes; they are neither benchmark evidence
+        # nor stable experiment artifacts and may change during retention copying.
+        if path.name in {
+            "full_system_benchmark.sqlite3",
+            OUTER_COMPLETION_RECEIPT,
+            *TRANSIENT_EXPERIMENT_FILENAMES,
+        }:
             continue
         entries.append(
             {
@@ -880,7 +919,8 @@ def build_retention_bundle(
 
     bundle_root.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="benchmark-retention-", dir=bundle_root) as temporary:
-        staging = Path(temporary)
+        staging = Path(temporary) / bundle_id
+        staging.mkdir()
         for entry in (database_entry, *private_entries):
             target = staging / str(entry["path"])
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -912,7 +952,13 @@ def build_retention_bundle(
             json.dumps(manifest, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
-        staging.rename(destination)
+        verify_retention_bundle(staging)
+        try:
+            staging.rename(destination)
+        except OSError as exc:
+            if exc.errno not in {errno.EEXIST, errno.ENOTEMPTY} or not destination.is_dir():
+                raise
+            return verify_retention_bundle(destination)
     return verify_retention_bundle(destination)
 
 
@@ -933,7 +979,7 @@ def verify_retention_bundle(bundle_dir: Path) -> dict[str, Any]:
         if not path.is_file():
             errors.append(f"missing:{entry.get('path')}")
             continue
-        if path.stat().st_size != int(entry.get("bytes") or -1):
+        if path.stat().st_size != int(entry["bytes"]):
             errors.append(f"size:{entry.get('path')}")
         if sha256_file(path) != entry.get("sha256"):
             errors.append(f"sha256:{entry.get('path')}")

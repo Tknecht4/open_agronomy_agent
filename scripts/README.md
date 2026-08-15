@@ -128,6 +128,11 @@ and a minimized public-safe linkage export. `run_benchmark_capability_conformanc
 executes deterministic capability fixtures through the canonical registry.
 Neither tool establishes model quality or agronomic correctness.
 
+Retention accepts regular zero-byte evidence, excludes only the reserved
+`.eval_run.lock` coordination file, rejects symbolic links and non-regular
+experiment entries, and verifies the staged content-addressed bundle before it
+is atomically published.
+
 ## Failure modes
 
 Missing inputs, identity mismatch, non-empty destination, insufficient authority, unavailable network/provider, dirty release state, checksum drift, and insufficient disk should stop with a diagnostic. Do not automatically delete or overwrite evidence to make a rerun pass.
