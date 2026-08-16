@@ -1,0 +1,31 @@
+{
+  "schema_version": "open_agronomy_agent.rc3_posthoc_semantic_judge_egress_authorization.v1",
+  "authorization_decision": "authorized",
+  "authorization_source": "direct_repository_owner_authorization_20260816_posthoc_rc3_semantic_judging",
+  "authorized_by_key_id": "repository_owner",
+  "authorized_at": "2026-08-16T00:00:00Z",
+  "expires_at": "2026-08-18T00:00:00Z",
+  "recipient_backend": "codex_app_server_chatgpt_auth",
+  "model_id": "gpt-5.6-luna",
+  "reasoning_effort": "high",
+  "selection_manifest_sha256": "a16b168d836736a369185b4ecd7ecccff12dba26933934db624fac5966276cae",
+  "judge_prompt_sha256": "85e434b5b7565780ad118cd48a12affbdbf0bdc345f3ce7317de7ae71da533b2",
+  "judge_output_schema_sha256": "1a072c1ca1adb914ff1460b6fd091357df8b932024c017cbb5bb857d15627447",
+  "authorized_payload_classes": [
+    "project_owned_frozen_benchmark_questions",
+    "candidate_answers",
+    "benchmark_reference_and_rubric_for_judging"
+  ],
+  "excluded_payload_classes": [
+    "farmer_records",
+    "private_field_history",
+    "credentials",
+    "local_knowledge_corpus_files"
+  ],
+  "instruction_sources": [
+    "user_global_agents_md"
+  ],
+  "instruction_sources_sha256": "12783413af269bf02866c36df1b8f988b37f73e49b4804433773224c0bf0fc45",
+  "claim_eligible": false,
+  "boundary": "Authorizes a separately receipted, post-hoc, blinded automated semantic triage of the sealed 1,620 saved RC3 primary-lane answers. It does not authorize alteration or rerun of RC3 generation, corpus egress, private records, model promotion, or a performance claim."
+}
