@@ -26,9 +26,9 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping, Optional, Sequence, Union
 
 
-SCHEMA_VERSION = "open_agronomy_agent.rc3_checkpoint_analysis.v1"
-VALIDATION_SCHEMA = "open_agronomy_agent.rc3_checkpoint_validation.v1"
-ARTIFACT_SCHEMA = "open_agronomy_agent.rc3_checkpoint_artifacts.v1"
+SCHEMA_VERSION = "open_agronomy_agent.rc3_checkpoint_analysis.v2"
+VALIDATION_SCHEMA = "open_agronomy_agent.rc3_checkpoint_validation.v2"
+ARTIFACT_SCHEMA = "open_agronomy_agent.rc3_checkpoint_artifacts.v2"
 ARTIFACT_MANIFEST_RELATIVE = "source_data/artifact_manifest.json"
 ANALYSIS_DATE = "2026-08-15"
 ANALYSIS_SEED = 20260815
@@ -122,6 +122,9 @@ PUBLISHED_FILES = (
     "source_data/interface_trace_summary.csv",
     "source_data/repeatability_summary.csv",
     "source_data/resource_summary.csv",
+    "source_data/posthoc_semantic_review_summary.csv",
+    "source_data/posthoc_semantic_review_paired_effects.csv",
+    "source_data/posthoc_semantic_review_quality_controls.json",
     "source_data/checkpoint_validation_receipt.json",
     "source_data/analysis_manifest.json",
     "figures/rc3_evidence_coverage.svg",
@@ -132,6 +135,8 @@ PUBLISHED_FILES = (
     "figures/rc3_harness_behavior.pdf",
     "figures/rc3_repeatability_latency.svg",
     "figures/rc3_repeatability_latency.pdf",
+    "figures/rc3_posthoc_semantic_review.svg",
+    "figures/rc3_posthoc_semantic_review.pdf",
     "figures/manifest.json",
 )
 
@@ -147,6 +152,7 @@ ROOT = _repo_root()
 DEFAULT_PAPER_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_COMPLETION_ROOT = ROOT / "outputs/open_agronomy_canadian_performance_v1_runtime_v2_rc3"
 DEFAULT_RETENTION_ROOT = ROOT / "outputs/benchmark_retention"
+DEFAULT_POSTHOC_SEMANTIC_REVIEW_ROOT = ROOT / "outputs/open_agronomy_canadian_performance_v1_runtime_v2_rc3_posthoc_semantic_review"
 DEFAULT_SUITE = ROOT / "data/eval/open_agronomy_canadian_performance_v1.jsonl"
 DEFAULT_STORE_MANIFEST = ROOT / "data/derived/rag/curated_canada/releases/2026-08-14/store_manifest.json"
 
@@ -1146,6 +1152,172 @@ def _resource_summary(rows: Sequence[Mapping[str, Any]], completion_root: Path) 
     return output, usage
 
 
+SEMANTIC_DIMENSIONS = (
+    "agronomic_accuracy",
+    "decision_relevance",
+    "completeness_actionability",
+    "calibration_safety",
+    "crop_region_source_fit",
+)
+SEMANTIC_WEIGHTS = {
+    "agronomic_accuracy": 0.35,
+    "decision_relevance": 0.20,
+    "completeness_actionability": 0.20,
+    "calibration_safety": 0.15,
+    "crop_region_source_fit": 0.10,
+}
+
+
+def _posthoc_semantic_review(
+    review_root: Path,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
+    """Return public-safe aggregates for the separately authorized AI triage.
+
+    This intentionally consumes only the post-hoc review output.  It never
+    joins questions or answers into public files; all downstream artifacts are
+    aggregate-only.  The original RC3 database remains judge-free.
+    """
+
+    summary_path = review_root / "semantic_answer_quality/summary.json"
+    judgments_path = review_root / "semantic_answer_quality/judgments.jsonl"
+    selection_path = review_root / "selection_manifest.json"
+    authorization_path = review_root / "authorization_request.json"
+    for path in (summary_path, judgments_path, selection_path, authorization_path):
+        if not path.is_file():
+            raise ValueError(f"missing post-hoc semantic-review artifact: {path}")
+    summary = _load_object(summary_path)
+    selection = _load_object(selection_path)
+    authorization = _load_object(authorization_path)
+    judgments = _read_jsonl(judgments_path)
+    if len(judgments) != 1620 or len({str(row.get("review_id") or "") for row in judgments}) != 1620:
+        raise ValueError("post-hoc semantic-review identity topology mismatch")
+    if summary.get("promotion_eligible") is not False or summary.get("human_calibration_status") != "missing":
+        raise ValueError("post-hoc semantic review must remain uncalibrated and non-promotable")
+    if authorization.get("model_id") != "gpt-5.6-luna" or authorization.get("reasoning_effort") != "high":
+        raise ValueError("post-hoc semantic-review recipient identity mismatch")
+    provenance = [row.get("selection_provenance") or {} for row in judgments]
+    required = {"model_key", "trial_id", "eval_id", "source_label", "answer_sha256"}
+    if any(not required <= set(item) for item in provenance):
+        raise ValueError("post-hoc semantic-review provenance is incomplete")
+    if {str(item["source_label"]) for item in provenance} != {"model_only", "full_system"}:
+        raise ValueError("post-hoc semantic review does not contain raw/full pairs")
+
+    grouped: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    by_case: dict[tuple[str, str, str], dict[str, dict[str, Any]]] = defaultdict(dict)
+    answer_groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row, item in zip(judgments, provenance):
+        model_key = str(item["model_key"])
+        source_label = str(item["source_label"])
+        if model_key not in MODEL_SPECS:
+            raise ValueError(f"unexpected post-hoc semantic model: {model_key}")
+        score = row.get("semantic_score_0_to_100")
+        dimensions = row.get("dimensions") or {}
+        if not isinstance(score, (int, float)) or not 0 <= float(score) <= 100:
+            raise ValueError("invalid post-hoc semantic score")
+        if set(dimensions) != set(SEMANTIC_DIMENSIONS) or any(
+            not isinstance(dimensions[name], (int, float)) or not 0 <= float(dimensions[name]) <= 4
+            for name in SEMANTIC_DIMENSIONS
+        ):
+            raise ValueError("invalid post-hoc semantic dimension score")
+        grouped[(model_key, source_label)].append(row)
+        by_case[(model_key, str(item["trial_id"]), str(item["eval_id"]))][source_label] = row
+        answer_groups[str(item["answer_sha256"])].append(row)
+
+    summaries: list[dict[str, Any]] = []
+    for index, model_key in enumerate(MODEL_SPECS):
+        for source_label, arm_label in (("model_only", "Raw"), ("full_system", "Full system")):
+            rows = grouped[(model_key, source_label)]
+            if len(rows) != 270:
+                raise ValueError(f"post-hoc semantic review has {len(rows)} rows for {model_key}/{source_label}")
+            case_scores: dict[str, list[float]] = defaultdict(list)
+            for row in rows:
+                item = row["selection_provenance"]
+                case_scores[str(item["eval_id"])].append(float(row["semantic_score_0_to_100"]))
+            if len(case_scores) != 90 or set(map(len, case_scores.values())) != {3}:
+                raise ValueError("post-hoc semantic case/trial topology mismatch")
+            averaged = [statistics.mean(values) for _, values in sorted(case_scores.items())]
+            low, high = _bootstrap_case_mean(averaged, seed_offset=50 + index * 2 + (source_label == "full_system"))
+            row: dict[str, Any] = {
+                "model_key": model_key,
+                "candidate_configuration": MODEL_SPECS[model_key]["label"],
+                "source_label": source_label,
+                "arm_label": arm_label,
+                "responses": len(rows),
+                "cases": len(case_scores),
+                "semantic_score_mean_0_to_100": _round(statistics.mean(averaged)),
+                "sensitivity_interval_low": _round(low),
+                "sensitivity_interval_high": _round(high),
+                "pass_rate_percent": _round(100 * sum(str(item.get("answer_disposition")) == "pass" for item in rows) / len(rows)),
+                "needs_source_validation_percent": _round(100 * sum(item.get("needs_source_validation") is True for item in rows) / len(rows)),
+            }
+            for trial_id in TRIAL_IDS:
+                trial_rows = [item for item in rows if str(item["selection_provenance"]["trial_id"]) == trial_id]
+                row[f"{trial_id}_semantic_score_mean"] = _round(statistics.mean(float(item["semantic_score_0_to_100"]) for item in trial_rows))
+            for name in SEMANTIC_DIMENSIONS:
+                row[f"{name}_mean_0_to_4"] = _round(statistics.mean(float(item["dimensions"][name]) for item in rows))
+            summaries.append(row)
+
+    effects: list[dict[str, Any]] = []
+    for index, model_key in enumerate(MODEL_SPECS):
+        deltas: dict[str, list[float]] = defaultdict(list)
+        for (key, trial_id, eval_id), pair in by_case.items():
+            if key != model_key or set(pair) != {"model_only", "full_system"}:
+                continue
+            deltas[eval_id].append(float(pair["full_system"]["semantic_score_0_to_100"]) - float(pair["model_only"]["semantic_score_0_to_100"]))
+        if len(deltas) != 90 or set(map(len, deltas.values())) != {3}:
+            raise ValueError("post-hoc semantic raw/full pairing mismatch")
+        averaged = [statistics.mean(values) for _, values in sorted(deltas.items())]
+        low, high = _bootstrap_case_mean(averaged, seed_offset=60 + index)
+        effects.append({
+            "model_key": model_key,
+            "candidate_configuration": MODEL_SPECS[model_key]["label"],
+            "comparison": "Full system minus raw",
+            "paired_cases": 90,
+            "mean_semantic_score_delta": _round(statistics.mean(averaged)),
+            "median_semantic_score_delta": _round(statistics.median(averaged)),
+            "sensitivity_interval_low": _round(low),
+            "sensitivity_interval_high": _round(high),
+            "positive_case_count": sum(value > 0 for value in averaged),
+            "negative_case_count": sum(value < 0 for value in averaged),
+            "zero_case_count": sum(value == 0 for value in averaged),
+        })
+
+    duplicate_groups = [rows for rows in answer_groups.values() if len(rows) > 1]
+    receipt_paths = sorted((review_root / "semantic_answer_quality/batches").glob("*.receipt.json"))
+    controls = {
+        "schema_version": "open_agronomy_agent.rc3_posthoc_semantic_review_quality_controls.v1",
+        "status": "complete_uncalibrated_blinded_ai_triage_nonclaim",
+        "rows": len(judgments),
+        "paired_raw_full_cases_per_candidate_trial": 90,
+        "candidate_trial_packets": 9,
+        "batch_receipts": len(receipt_paths),
+        "judge": {"model_id": authorization["model_id"], "reasoning_effort": authorization["reasoning_effort"], "self_judges_luna_candidate_outputs": True},
+        "score_definition": {"scale": "0_to_100", "dimension_scale": "0_to_4", "weights": SEMANTIC_WEIGHTS},
+        "human_calibration_status": "missing",
+        "promotion_eligible": False,
+        "question_validity": summary.get("question_validity"),
+        "judge_self_reported_high_confidence_rate": summary.get("judge_self_reported_high_confidence_rate"),
+        "answer_length_semantic_pearson": summary.get("answer_length_semantic_pearson"),
+        "needs_source_validation": summary.get("needs_source_validation"),
+        "duplicate_answer_diagnostic": {
+            "groups": len(duplicate_groups),
+            "rows": sum(len(group) for group in duplicate_groups),
+            "same_score_groups": sum(len({float(item["semantic_score_0_to_100"]) for item in group}) == 1 for group in duplicate_groups),
+            "same_disposition_groups": sum(len({str(item["answer_disposition"]) for item in group}) == 1 for group in duplicate_groups),
+            "median_score_range": _round(statistics.median(max(float(item["semantic_score_0_to_100"]) for item in group) - min(float(item["semantic_score_0_to_100"]) for item in group) for group in duplicate_groups)),
+            "max_score_range": _round(max(max(float(item["semantic_score_0_to_100"]) for item in group) - min(float(item["semantic_score_0_to_100"]) for item in group) for group in duplicate_groups)),
+            "interpretation": "Repeated answer-text variation is an operational diagnostic, not an inter-rater reliability estimate.",
+        },
+        "input_identities": {
+            "selection_manifest_sha256": _sha256_path(selection_path),
+            "authorization_request_sha256": _sha256_path(authorization_path),
+            "judgments_sha256": _sha256_path(judgments_path),
+        },
+        "boundary": "This is a separately authorized, post-hoc, blinded AI triage of saved answers. It did not alter the frozen RC3 run, has no human calibration or adjudication, and cannot support answer-quality, safety, agronomic-correctness, ranking, or promotion claims.",
+    }
+    return summaries, effects, controls
+
+
 def _plot_setup() -> Any:
     import matplotlib
 
@@ -1496,6 +1668,63 @@ def _plot_repeatability_latency(
     return artifacts
 
 
+def _plot_posthoc_semantic_review(
+    paper_root: Path,
+    summaries: Sequence[Mapping[str, Any]],
+    effects: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    """Plot the uncalibrated post-hoc triage without implying a leaderboard."""
+
+    plt = _plot_setup()
+    fig, axes = plt.subplots(1, 2, figsize=(10.8, 4.55), gridspec_kw={"width_ratios": [1.42, 1.0]})
+    ax = axes[0]
+    positions = {"model_only": 0, "full_system": 1}
+    model_offsets = {-1: -0.21, 0: 0.0, 1: 0.21}
+    for model_index, model_key in enumerate(MODEL_SPECS):
+        offset = model_offsets[model_index - 1]
+        subset = [row for row in summaries if row["model_key"] == model_key]
+        subset.sort(key=lambda row: positions[str(row["source_label"])])
+        xs = [positions[str(row["source_label"])] + offset for row in subset]
+        means = [float(row["semantic_score_mean_0_to_100"]) for row in subset]
+        lows = [float(row["sensitivity_interval_low"]) for row in subset]
+        highs = [float(row["sensitivity_interval_high"]) for row in subset]
+        ax.plot(xs, means, color=COLORS[model_key], alpha=0.55, linewidth=1.2)
+        ax.errorbar(xs, means, yerr=[[mean - low for mean, low in zip(means, lows)], [high - mean for mean, high in zip(means, highs)]], color=COLORS[model_key], marker=MARKERS[model_key], markersize=5.7, capsize=2, linewidth=1.2, label=MODEL_SPECS[model_key]["label"])
+        for x, row in zip(xs, subset):
+            for trial_offset, trial_id in zip((-0.035, 0.0, 0.035), TRIAL_IDS):
+                ax.scatter(x + trial_offset, float(row[f"{trial_id}_semantic_score_mean"]), s=13, facecolors="white", edgecolors=COLORS[model_key], linewidths=0.8, zorder=4)
+    ax.set_xticks([0, 1], ["Raw", "Full system"])
+    ax.set_ylim(-3, 103)
+    ax.set_ylabel("Luna triage score (0–100)")
+    ax.set_title("A. Blinded post-hoc AI triage")
+    ax.grid(axis="y", color="#D5D8DC", linewidth=0.6)
+    ax.legend(loc="lower right", frameon=False)
+
+    ax = axes[1]
+    y = list(range(len(effects)))
+    means = [float(row["mean_semantic_score_delta"]) for row in effects]
+    lows = [float(row["sensitivity_interval_low"]) for row in effects]
+    highs = [float(row["sensitivity_interval_high"]) for row in effects]
+    colors = [COLORS[str(row["model_key"])] for row in effects]
+    ax.axvline(0, color="#6E6E6E", linewidth=0.8)
+    ax.errorbar(means, y, xerr=[[mean - low for mean, low in zip(means, lows)], [high - mean for mean, high in zip(means, highs)]], fmt="none", color="#333333", capsize=2, linewidth=1.1)
+    ax.scatter(means, y, c=colors, s=48, zorder=3)
+    for pos, row in enumerate(effects):
+        ax.text(float(row["mean_semantic_score_delta"]) + (1.8 if float(row["mean_semantic_score_delta"]) >= 0 else -1.8), pos, f"{float(row['mean_semantic_score_delta']):+.1f}", va="center", ha="left" if float(row["mean_semantic_score_delta"]) >= 0 else "right", fontsize=8.3)
+    ax.set_yticks(y, [MODEL_SPECS[str(row["model_key"])]["short_label"] for row in effects])
+    ax.invert_yaxis()
+    ax.set_xlabel("Full system minus raw (points)")
+    ax.set_title("B. Matched bundle contrast")
+    ax.grid(axis="x", color="#D5D8DC", linewidth=0.6)
+    fig.suptitle("Post-hoc Luna High triage: operationally bound, scientifically uncalibrated", y=1.01)
+    fig.text(0.5, -0.02, "Score = weighted 0–4 ratings (accuracy .35, relevance .20, completeness .20, safety .15, source/region fit .10). No human labels, calibration, or promotion authority; Luna also judges Luna candidate outputs.", ha="center", fontsize=7.6)
+    fig.tight_layout()
+    fig.subplots_adjust(bottom=0.20)
+    artifacts = _save_figure(fig, paper_root / "figures/rc3_posthoc_semantic_review", "RC3 post-hoc semantic review")
+    plt.close(fig)
+    return artifacts
+
+
 def _escape_tex(value: str) -> str:
     replacements = {
         "\\": r"\textbackslash{}",
@@ -1518,6 +1747,8 @@ def _write_generated_tex(
     harness: Sequence[Mapping[str, Any]],
     repeatability: Sequence[Mapping[str, Any]],
     usage: Mapping[str, Any],
+    semantic_summaries: Sequence[Mapping[str, Any]],
+    semantic_controls: Mapping[str, Any],
 ) -> None:
     objective = {(row["model_key"], row["system_variant"]): row for row in metrics if row["metric"] == "objective_numeric_tolerance"}
     lexical = {(row["model_key"], row["system_variant"]): row for row in metrics if row["metric"] == "official_source_lexical_regression"}
@@ -1528,7 +1759,8 @@ def _write_generated_tex(
             r"\newcommand{\RCObservations}{8,676}",
             r"\newcommand{\RCTrials}{nine}",
             r"\newcommand{\RCScoredCases}{49/241}",
-            r"\newcommand{\RCSemanticJudgments}{zero}",
+            r"\newcommand{\RCSemanticJudgments}{zero in the frozen generation run}",
+            r"\newcommand{\RCPosthocSemanticJudgments}{1,620}",
             rf"\newcommand{{\RCRetrievalSource}}{{{retrieval_row['expected_source_case_hits']}/{retrieval_row['expected_source_cases']}}}",
             rf"\newcommand{{\RCRetrievalPattern}}{{{retrieval_row['required_pattern_hits']}/{retrieval_row['required_patterns']}}}",
             rf"\newcommand{{\RCFieldAdmitted}}{{{field_row['admitted_expected_source_hits']}/{field_row['admitted_expected_source_cases']}}}",
@@ -1577,6 +1809,31 @@ def _write_generated_tex(
     for row in harness:
         lines.append(
             f"{_escape_tex(MODEL_SPECS[row['model_key']]['short_label'])} & {row['model_generations']} & {row['deterministic_evidence_holds']} & {row['verifier_triggered']} " + r"\\"
+        )
+    lines.extend([r"\bottomrule", r"\end{tabular}", r"\end{table}"])
+    lines.extend(
+        [
+            "",
+            r"\begin{table}[t]",
+            r"\centering",
+            r"\caption{Separately authorized post-hoc blinded Luna High triage of saved primary-lane answers. These are uncalibrated AI diagnostic scores, not answer-quality estimates or rankings.}",
+            r"\label{tab:posthoc-triage}",
+            r"\small",
+            r"\begin{tabular}{lrrr}",
+            r"\toprule",
+            r"Candidate configuration & Raw & Full system & Full -- raw \\",
+            r"\midrule",
+        ]
+    )
+    semantic_lookup = {(row["model_key"], row["source_label"]): row for row in semantic_summaries}
+    for model_key in MODEL_SPECS:
+        raw = semantic_lookup[(model_key, "model_only")]
+        full = semantic_lookup[(model_key, "full_system")]
+        lines.append(
+            f"{_escape_tex(MODEL_SPECS[model_key]['short_label'])} & "
+            f"{float(raw['semantic_score_mean_0_to_100']):.2f} & "
+            f"{float(full['semantic_score_mean_0_to_100']):.2f} & "
+            f"{float(full['semantic_score_mean_0_to_100']) - float(raw['semantic_score_mean_0_to_100']):+.2f} " + r"\\"
         )
     lines.extend([r"\bottomrule", r"\end{tabular}", r"\end{table}"])
     (paper_root / "generated_tables.tex").write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -1720,6 +1977,9 @@ def _verify_published(paper_root: Path) -> dict[str, Any]:
     validation = _load_object(paper_root / "source_data/checkpoint_validation_receipt.json")
     if validation.get("canonical_observations") != 8676 or validation.get("semantic_judgments") != 0:
         raise ValueError("checkpoint validation counts drift")
+    posthoc = validation.get("posthoc_semantic_review") or {}
+    if posthoc.get("rows") != 1620 or posthoc.get("promotion_eligible") is not False:
+        raise ValueError("post-hoc semantic-review validation counts drift")
     # Construct machine-local path sentinels without embedding those same
     # public-release-forbidden literals in this distributable verifier.
     forbidden = (
@@ -1743,6 +2003,7 @@ def _verify_published(paper_root: Path) -> dict[str, Any]:
         "aggregate_sha256": artifact_manifest["aggregate_sha256"],
         "canonical_observations": len(rows),
         "semantic_judgments": 0,
+        "posthoc_semantic_review_rows": 1620,
     }
     print(json.dumps(result, sort_keys=True))
     return result
@@ -1755,6 +2016,7 @@ def build_checkpoint(
     suite_path: Path,
     store_manifest_path: Path,
     paper_root: Path,
+    posthoc_semantic_review_root: Path,
 ) -> dict[str, Any]:
     if _sha256_path(suite_path) != EXPECTED_SUITE_SHA256:
         raise ValueError("suite bytes differ from the completed RC3 identity")
@@ -1791,6 +2053,7 @@ def build_checkpoint(
     interface_trace_rows = _interface_trace_summary(rows)
     repeatability_rows = _repeatability(rows)
     resource_rows, luna_usage = _resource_summary(rows, completion_root)
+    semantic_summaries, semantic_effects, semantic_controls = _posthoc_semantic_review(posthoc_semantic_review_root)
     successor_repairs = [
         {
             "repair": "objective_product_mass_unit_alias",
@@ -1848,22 +2111,26 @@ def build_checkpoint(
     )
     _write_csv(source_dir / "repeatability_summary.csv", repeatability_rows, list(repeatability_rows[0]))
     _write_csv(source_dir / "resource_summary.csv", resource_rows, list(resource_rows[0]))
+    _write_csv(source_dir / "posthoc_semantic_review_summary.csv", semantic_summaries, list(semantic_summaries[0]))
+    _write_csv(source_dir / "posthoc_semantic_review_paired_effects.csv", semantic_effects, list(semantic_effects[0]))
+    _write_json(source_dir / "posthoc_semantic_review_quality_controls.json", semantic_controls)
 
     figure_records: list[dict[str, Any]] = []
     figure_records.extend(_plot_evidence_coverage(paper_root, lane_rows))
     figure_records.extend(_plot_deterministic_metrics(paper_root, metric_rows, parser_audit))
     figure_records.extend(_plot_harness_behavior(paper_root, harness_rows, retrieval_rows))
     figure_records.extend(_plot_repeatability_latency(paper_root, repeatability_rows, resource_rows))
+    figure_records.extend(_plot_posthoc_semantic_review(paper_root, semantic_summaries, semantic_effects))
     figure_manifest = {
         "schema_version": "open_agronomy_agent.rc3_checkpoint_figures.v1",
         "analysis_seed": ANALYSIS_SEED,
         "bootstrap_draws": BOOTSTRAP_DRAWS,
         "artifacts": sorted(figure_records, key=lambda row: row["path"]),
-        "boundary": "Vector figures show deterministic diagnostics, trace activation, repeatability, and observed resources. They do not report semantic answer quality or a composite rank.",
+        "boundary": "Vector figures show deterministic diagnostics, trace activation, repeatability, observed resources, and a separately authorized post-hoc uncalibrated AI triage. None reports validated semantic answer quality or a composite rank.",
     }
     _write_json(paper_root / "figures/manifest.json", figure_manifest)
 
-    _write_generated_tex(paper_root, metric_rows, parser_audit, retrieval_rows, harness_rows, repeatability_rows, luna_usage)
+    _write_generated_tex(paper_root, metric_rows, parser_audit, retrieval_rows, harness_rows, repeatability_rows, luna_usage, semantic_summaries, semantic_controls)
     validation = {
         "schema_version": VALIDATION_SCHEMA,
         "status": "complete_nonclaim_development_checkpoint",
@@ -1882,6 +2149,14 @@ def build_checkpoint(
         "cases_per_arm": 241,
         "semantic_judgments": 0,
         "automated_semantic_judge_requested": False,
+        "posthoc_semantic_review": {
+            "status": semantic_controls["status"],
+            "rows": semantic_controls["rows"],
+            "promotion_eligible": False,
+            "human_calibration_status": semantic_controls["human_calibration_status"],
+            "judge": semantic_controls["judge"],
+            "boundary": semantic_controls["boundary"],
+        },
         "independent_human_reviews_completed": 0,
         "final_partial_identical_arms": sum(
             int(row["final_partial_identical_arms"]) for row in inventory
@@ -1930,6 +2205,12 @@ def build_checkpoint(
         "source_data/interface_trace_summary.csv",
         "source_data/repeatability_summary.csv",
         "source_data/resource_summary.csv",
+        "source_data/posthoc_semantic_review_summary.csv",
+        "source_data/posthoc_semantic_review_paired_effects.csv",
+        "source_data/posthoc_semantic_review_quality_controls.json",
+    "source_data/posthoc_semantic_review_summary.csv",
+    "source_data/posthoc_semantic_review_paired_effects.csv",
+    "source_data/posthoc_semantic_review_quality_controls.json",
         "source_data/checkpoint_validation_receipt.json",
         "figures/rc3_evidence_coverage.svg",
         "figures/rc3_evidence_coverage.pdf",
@@ -1939,6 +2220,10 @@ def build_checkpoint(
         "figures/rc3_harness_behavior.pdf",
         "figures/rc3_repeatability_latency.svg",
         "figures/rc3_repeatability_latency.pdf",
+        "figures/rc3_posthoc_semantic_review.svg",
+        "figures/rc3_posthoc_semantic_review.pdf",
+    "figures/rc3_posthoc_semantic_review.svg",
+    "figures/rc3_posthoc_semantic_review.pdf",
         "figures/manifest.json",
     ]
     analysis_manifest = {
@@ -1965,7 +2250,8 @@ def build_checkpoint(
         },
         "outputs": _manifest_records(paper_root, generated_relatives),
         "boundaries": [
-            "No semantic answer-quality judgment is present.",
+            "The frozen RC3 generation run contains no semantic answer-quality judgment.",
+            "A separate, post-hoc, blinded Luna High AI triage of 1,620 saved primary-lane answers is included only as an uncalibrated diagnostic; it has no human calibration, no promotion authority, and no answer-quality claim.",
             "No missing score is converted to zero.",
             "The frozen 14/16 calculation parser result is preserved; 16/16 is separately labelled as a post-run tool-payload audit.",
             "Retrieval, verifier, tool, stability, latency, and trace presence are not interpreted as agronomic correctness.",
@@ -1979,6 +2265,7 @@ def build_checkpoint(
         "trials": len(inventory),
         "figures": len(figure_records),
         "semantic_judgments": 0,
+        "posthoc_semantic_review_rows": semantic_controls["rows"],
         "analysis_manifest_sha256": _sha256_path(source_dir / "analysis_manifest.json"),
     }
     print(json.dumps(result, sort_keys=True))
@@ -1991,6 +2278,7 @@ def main() -> int:
     parser.add_argument("--retention-root", type=Path, default=DEFAULT_RETENTION_ROOT)
     parser.add_argument("--suite", type=Path, default=DEFAULT_SUITE)
     parser.add_argument("--store-manifest", type=Path, default=DEFAULT_STORE_MANIFEST)
+    parser.add_argument("--posthoc-semantic-review-root", type=Path, default=DEFAULT_POSTHOC_SEMANTIC_REVIEW_ROOT)
     parser.add_argument("--paper-root", type=Path, default=DEFAULT_PAPER_ROOT)
     parser.add_argument("--verify-published", action="store_true")
     parser.add_argument("--finalize-package", action="store_true")
@@ -2010,6 +2298,7 @@ def main() -> int:
             suite_path=args.suite.resolve(),
             store_manifest_path=args.store_manifest.resolve(),
             paper_root=paper_root,
+            posthoc_semantic_review_root=args.posthoc_semantic_review_root.resolve(),
         )
     return 0
 

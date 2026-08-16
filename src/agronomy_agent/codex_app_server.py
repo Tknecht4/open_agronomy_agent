@@ -455,6 +455,7 @@ class CodexAppServerClient:
         verify_catalog: bool = True,
         fail_on_reroute: bool = True,
         collect_protocol_identity: bool = True,
+        allowed_instruction_sources: Sequence[str] = (),
     ) -> None:
         if timeout_seconds <= 0:
             raise ValueError("timeout_seconds must be greater than zero")
@@ -478,6 +479,7 @@ class CodexAppServerClient:
         self.verify_catalog = bool(verify_catalog)
         self.fail_on_reroute = bool(fail_on_reroute)
         self.collect_protocol_identity = bool(collect_protocol_identity)
+        self.allowed_instruction_sources = tuple(str(value) for value in allowed_instruction_sources)
         self._next_id = 0
         self._stdout_queue: queue.Queue[str | None] = queue.Queue()
         self._stderr_lines: list[str] = []
@@ -720,8 +722,11 @@ class CodexAppServerClient:
             )
         if thread_result.get("runtimeWorkspaceRoots") != []:
             raise CodexAppServerError("thread/start returned unexpected runtime workspace roots")
-        if thread_result.get("instructionSources") != []:
-            raise CodexAppServerError("thread/start loaded unexpected instruction sources")
+        if thread_result.get("instructionSources") != list(self.allowed_instruction_sources):
+            raise CodexAppServerError(
+                "thread/start loaded unexpected instruction sources: "
+                f"{thread_result.get('instructionSources')!r}"
+            )
         turn_result = self._request(
             "turn/start",
             {

@@ -14,6 +14,20 @@ Only 49 of 241 cases per arm have a defined deterministic result:
 
 The deterministic results therefore diagnose calculation, prompt-contract, and harness behavior. They do not measure overall agronomic correctness.
 
+## Separate post-hoc Luna High triage
+
+After RC3 generation completed, a separately authorized, blinded Luna High process reviewed the 90 raw/full decision-quality pairs in each of the nine candidate trials: 1,620 saved answers in total. This did **not** modify the frozen RC3 observations, databases, or deterministic scores.
+
+The process reports an internal 0--100 weighted rubric: agronomic accuracy (0.35), decision relevance (0.20), completeness/actionability (0.20), calibration/safety (0.15), and crop/region/source fit (0.10); each dimension is rated 0--4. It is an uncalibrated AI triage diagnostic, not a semantic-quality estimate, composite score, ranking, or release criterion. There are no human labels, calibration cases, inter-rater statistics, or agronomic adjudications, and Luna judges saved Luna candidate answers. The public controls table records 1,620 terminal reviews, but also records 99.3% judge self-reported high confidence and nonzero score variation for repeated identical answer text; neither is a reliability estimate.
+
+| Candidate configuration | Triage raw | Triage full | Full minus raw |
+|---|---:|---:|---:|
+| Gemma 3 270M | 3.73 | 66.30 | +62.57 |
+| Gemma 4 E2B | 57.50 | 68.76 | +11.25 |
+| Luna High | 86.68 | 81.00 | -5.68 |
+
+These contrasts are hypotheses for independently calibrated agronomist review. They do not establish that the full system improved, that Luna is preferable, or that any answer is agronomically correct.
+
 | Candidate configuration | Objective: raw / kernel / field / full | Lexical proxy: raw / kernel / field / full |
 |---|---:|---:|
 | Gemma 3 270M | 0.00 / 0.00 / 0.00 / 87.50 | 43.33 / 36.63 / 38.94 / 48.91 |
@@ -41,6 +55,8 @@ The full-system calculation score is the frozen parser result: 14/16. A post-run
 
 ![Repeatability and robust latency](figures/rc3_repeatability_latency.svg)
 
+![Post-hoc blinded Luna High AI triage, explicitly uncalibrated](figures/rc3_posthoc_semantic_review.svg)
+
 ## Package map
 
 - `paper.pdf`, `main.tex`, `references.bib` — checkpoint paper and reproducible source;
@@ -49,6 +65,7 @@ The full-system calculation score is the frozen parser result: 14/16. A post-run
 - `figures/*.svg` and `figures/*.pdf` — vector scientific figures;
 - `source_data/public_safe_response_measurements.csv` — 8,676 answer-free, prompt-free observation measurements;
 - `source_data/*_summary.csv` — analysis-ready deterministic, retrieval, harness, repeatability, and resource tables;
+- `source_data/posthoc_semantic_review_*` — aggregate-only post-hoc Luna triage scores, matched contrasts, and uncalibrated quality controls;
 - `source_data/checkpoint_validation_receipt.json` — matrix, retention, and known-finding receipt;
 - `source_data/analysis_manifest.json` and `source_data/artifact_manifest.json` — input/output identities without machine-local paths;
 - `scripts/analyze_rc3_checkpoint.py` — the canonical regeneration and verification entry point.
@@ -81,4 +98,4 @@ The fixed-suite sensitivity intervals use 50,000 case resamples after averaging 
 
 ## Next evidence required
 
-Independent two-phase agronomist review of the retained packets is the next quality gate. Benchmark v3 additionally requires an untouched prospective holdout, a true component matrix, identical cross-candidate harness policies where causal comparison is intended, and preregistered promotion criteria. Until those gates are complete, RC3 remains a nonclaim development checkpoint.
+Independent two-phase agronomist review of the retained packets, with calibration and adjudication, is the next quality gate. Benchmark v3 additionally requires an untouched prospective holdout, a true component matrix, identical cross-candidate harness policies where causal comparison is intended, and preregistered promotion criteria. Until those gates are complete, RC3 remains a nonclaim development checkpoint.

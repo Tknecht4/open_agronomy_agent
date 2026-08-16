@@ -1,0 +1,4 @@
+model_key,candidate_configuration,comparison,paired_cases,mean_semantic_score_delta,median_semantic_score_delta,sensitivity_interval_low,sensitivity_interval_high,positive_case_count,negative_case_count,zero_case_count
+gemma3_270m_rc3,Gemma 3 270M,Full system minus raw,90,62.5685,68.2083,56.186,68.6351,89,1,0
+gemma4_e2b_rc3,Gemma 4 E2B,Full system minus raw,90,11.2523,12.2917,5.266,17.1134,59,30,1
+luna_high_rc3,Luna High,Full system minus raw,90,-5.6786,-2.395,-11.8769,0.4987,33,51,6

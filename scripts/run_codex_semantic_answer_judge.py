@@ -128,7 +128,10 @@ def blind_item(row: dict[str, Any]) -> dict[str, Any]:
         or []
     )
     return {
-        "review_id": _clean(row.get("eval_id") or row.get("review_id") or row.get("source_id")),
+        # A post-hoc packet can carry an opaque, per-answer review ID.  Prefer
+        # it to the repeated eval ID so paired raw/governed answers remain
+        # blinded and unambiguous in one judge batch.
+        "review_id": _clean(row.get("review_id") or row.get("eval_id") or row.get("source_id")),
         "question": _clean(row.get("question")),
         "answer": _clean(row.get("output") or row.get("answer") or row.get("saved_answer")),
         "crop": _clean(metadata.get("crop") or row.get("crop")),

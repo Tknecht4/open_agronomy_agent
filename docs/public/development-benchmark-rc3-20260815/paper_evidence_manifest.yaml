@@ -10,6 +10,7 @@ claim_boundary:
     - "The exact 3 candidate by 3 trial by 4 arm by 241 case matrix completed with receipt-bound retention."
     - "The frozen numeric scorer, source-lineage probes, structural activation, repeatability, and resource observations have the reported values."
     - "RC3 exposed specific parser, localization, guard-routing, reporting, and latency defects."
+    - "A separately authorized post-hoc blinded Luna High process produced the reported aggregate triage diagnostics for saved primary-lane answers."
   unsupported:
     - "Any candidate is agronomically superior."
     - "Retrieval or verification improved answer quality."
@@ -18,7 +19,7 @@ claim_boundary:
 
 claims:
   - id: C1
-    claim: "RC3 contains 8,676 unique canonical observations in 36 arm executions and nine verified retention bundles, with zero automated semantic judgments."
+    claim: "RC3 contains 8,676 unique canonical observations in 36 arm executions and nine verified retention bundles, with zero generation-time automated semantic judgments."
     evidence:
       - "source_data/checkpoint_validation_receipt.json"
       - "source_data/trial_inventory.csv"
@@ -82,9 +83,21 @@ claims:
     unit: "repository-relative implementation and regression-test file identity"
     limitation: "These repairs were not part of the measured RC3 system and do not alter its frozen observations or scores."
 
+  - id: C9
+    claim: "A separately authorized post-hoc blinded Luna High process reviewed 1,620 saved primary-lane answers and produced the reported aggregate weighted-rubric summaries and raw/full contrasts."
+    evidence:
+      - "source_data/posthoc_semantic_review_summary.csv"
+      - "source_data/posthoc_semantic_review_paired_effects.csv"
+      - "source_data/posthoc_semantic_review_quality_controls.json"
+      - "figures/rc3_posthoc_semantic_review.svg"
+      - "source_data/checkpoint_validation_receipt.json"
+    unit: "saved answer in the 90 raw/full decision-quality pairs per candidate trial"
+    limitation: "The triage has no human labels, calibration, independent adjudication, or promotion authority; Luna judges Luna candidate outputs. It is not semantic-quality validation, an agronomic ranking, or evidence that any component improved answers."
+
 methods:
   primary_estimand: "finite-suite case mean after averaging the three observed trials within each case"
   uncertainty: "95% case-resampling sensitivity intervals; 50,000 draws; shared indexes across candidate and arm cells within each metric family; base seed 20260815 with metric offsets 0/1; paired arm-contrast offsets 1000/1001"
   missingness: "preserved as missing; never converted to zero"
   multiplicity: "no p-values, significance tests, equivalence claims, or composite score"
   public_data_boundary: "answer text, questions, prompts, context, databases, logs, model weights, and machine-local paths excluded"
+  posthoc_ai_triage: "separately authorized after generation; blinded answer-only Luna High review; weighted 0--4 rubric mapped to 0--100; uncalibrated diagnostic only; not combined with deterministic endpoints"

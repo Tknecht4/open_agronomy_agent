@@ -85,6 +85,18 @@
     "post_run_tool_payload_cases": 16,
     "post_run_tool_payload_within_tolerance": 16
   },
+  "posthoc_semantic_review": {
+    "boundary": "This is a separately authorized, post-hoc, blinded AI triage of saved answers. It did not alter the frozen RC3 run, has no human calibration or adjudication, and cannot support answer-quality, safety, agronomic-correctness, ranking, or promotion claims.",
+    "human_calibration_status": "missing",
+    "judge": {
+      "model_id": "gpt-5.6-luna",
+      "reasoning_effort": "high",
+      "self_judges_luna_candidate_outputs": true
+    },
+    "promotion_eligible": false,
+    "rows": 1620,
+    "status": "complete_uncalibrated_blinded_ai_triage_nonclaim"
+  },
   "retention_bundle_ids": [
     "5ced49ebff820c83a329e985b7fc8589769f4a57d8b57468cc1e553a56ce6585",
     "61e7ffbcb6f8a9d16392ae136d9797673e4e739eebe974d3e6e0c2b0e2b6928c",
@@ -99,7 +111,7 @@
   "review_packet_rows": 1620,
   "review_packets": 9,
   "review_rows_completed": 0,
-  "schema_version": "open_agronomy_agent.rc3_checkpoint_validation.v1",
+  "schema_version": "open_agronomy_agent.rc3_checkpoint_validation.v2",
   "semantic_judgments": 0,
   "status": "complete_nonclaim_development_checkpoint",
   "successor_repairs": [

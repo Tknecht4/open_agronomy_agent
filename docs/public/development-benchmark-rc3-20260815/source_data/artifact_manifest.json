@@ -1,17 +1,17 @@
 {
-  "aggregate_sha256": "f14e36a406dc716e9e827bab29f871fe8f664e36ab9669c9801737b8e3d0ec56",
+  "aggregate_sha256": "6581ec77417fac88df6f834b20604281151cec9cf1d8ba24bdffa279729702a1",
   "analysis_date": "2026-08-15",
-  "artifact_count": 29,
+  "artifact_count": 34,
   "artifacts": [
     {
-      "bytes": 6343,
+      "bytes": 8098,
       "path": "README.md",
-      "sha256": "94c7b80c87455b6c6e6252f2840795381acc4942c59a8c0bf551db8900e57681"
+      "sha256": "d5ea41c8b9dab9009eaa1abeb1a3f990e6ac2b2dcf318abdb8b60d539e8345be"
     },
     {
-      "bytes": 1702,
+      "bytes": 2113,
       "path": "figures/manifest.json",
-      "sha256": "ba5c4e397ddeaa2239b74da3b8531f4687aa8675e5bca90a6fecae552e883f01"
+      "sha256": "d75c9ce8ae338aa801f916419c7e5a7d1f76182ed93514083d5da6dc7997d6cb"
     },
     {
       "bytes": 31343,
@@ -41,42 +41,52 @@
     {
       "bytes": 80469,
       "path": "figures/rc3_harness_behavior.svg",
-      "sha256": "acbdb88c392721c989230f28e8404cd62c73644f95c0b24416c62927a150e014"
+      "sha256": "09c234ae197c65b9229bec8ee46e7436cac1c5c7fec52b7f498fc651c564af7f"
     },
     {
-      "bytes": 24076,
+      "bytes": 20934,
+      "path": "figures/rc3_posthoc_semantic_review.pdf",
+      "sha256": "3c5f64b2a73c5ab6fec640f9204fbff1cc4fccf4f80458119ba32f138c7fb330"
+    },
+    {
+      "bytes": 77282,
+      "path": "figures/rc3_posthoc_semantic_review.svg",
+      "sha256": "8751ddb92a758499429f6b79c35a92f5a860cad6e114aac3398d3e6fd300b127"
+    },
+    {
+      "bytes": 24130,
       "path": "figures/rc3_repeatability_latency.pdf",
-      "sha256": "04a3a556e1fa580b835d81dfeaaca48ec03df5134a3db6d1116c029ed7a2c9bb"
+      "sha256": "cca4ffad64e2a6cf19a922818c1d534df69e02e79696f2a19ce83c0dd476f4c4"
     },
     {
       "bytes": 90685,
       "path": "figures/rc3_repeatability_latency.svg",
-      "sha256": "3d0701877a703e569e7325b0b2bb09ee9e6f75b5fc7cec7eca64b06568898d4a"
+      "sha256": "90ccd62da19dfa269d0cb7e955faa9e183e688bcb6575d1422572bc3bb830fb5"
     },
     {
-      "bytes": 434,
+      "bytes": 511,
       "path": "generated_results.tex",
-      "sha256": "d62cae11a80c7ef8febe65592b1838102c315796ebe6ffb1a22ffdbd176602cd"
+      "sha256": "68e908ef8041cac0a92701316dea5b867fdd75a2f13e64d76cd5a4f8c2a17f0a"
     },
     {
-      "bytes": 1233,
+      "bytes": 1722,
       "path": "generated_tables.tex",
-      "sha256": "c2ed0f2420a5a6a0788c190eb9de384c7b2b126f06b1cbaffee9466d469595eb"
+      "sha256": "22ed2fb84ac253bdc22af9fce54926f5b2a96097c50a9c13e89f812161751f97"
     },
     {
-      "bytes": 21062,
+      "bytes": 23798,
       "path": "main.tex",
-      "sha256": "a751a80e7227f592244b6a702234b0337c576756049083bff8db93f327bcd159"
+      "sha256": "6ffc9530f1b8b0b84782f18fa1016df0af3b005533da2535d92e9e9196b5b847"
     },
     {
-      "bytes": 172669,
+      "bytes": 194944,
       "path": "paper.pdf",
-      "sha256": "feb0a91f6667dd85279f47aef34a21ec6e5d82f6fcb3db0ae714af3ed7c87df1"
+      "sha256": "869ac11549219906964e08c0ad9a5db2ef85cd53553e790c8c9c06596dd21979"
     },
     {
-      "bytes": 5263,
+      "bytes": 6511,
       "path": "paper_evidence_manifest.yaml",
-      "sha256": "353c8c7c3347d4d2d1dd561c4d6862b0692f4a340f1e17939b006d28d9af923a"
+      "sha256": "947e70c6d6d28e6797512f8c728ae26c5c496d5f41c094f7c228d831151a7784"
     },
     {
       "bytes": 2593,
@@ -84,19 +94,19 @@
       "sha256": "3da178aa35c0b9adc7bc6825268cf17f648c244cefc2501967909eeda17d6b9f"
     },
     {
-      "bytes": 98625,
+      "bytes": 117018,
       "path": "scripts/analyze_rc3_checkpoint.py",
-      "sha256": "1d812ac2b087211c2b4338a25a6a742941548971a37bc13164bda989262c092a"
+      "sha256": "1271a968aa9ee9aad58292bf0cc86aacc70c5bd090ea82bec2c9dafdbb346a02"
     },
     {
-      "bytes": 8754,
+      "bytes": 9917,
       "path": "source_data/analysis_manifest.json",
-      "sha256": "dda05d8978c7b5b2b07cac26164749ecaafd1882e96d143da104b42985bae923"
+      "sha256": "ed0e307a704c1211b69e0fd807eaf1e36a1968ae80872d382f72c4d4c6739dae"
     },
     {
-      "bytes": 6877,
+      "bytes": 7484,
       "path": "source_data/checkpoint_validation_receipt.json",
-      "sha256": "898b689b7e07378f09cb2b1e9f8d444e8c44301a82166e5f635f10f5d50e3ccc"
+      "sha256": "99e343fdcb3923d1cb3ebd40f5625ab1ad1a1d4f48d2046c25d13e82e2019d62"
     },
     {
       "bytes": 6412,
@@ -122,6 +132,21 @@
       "bytes": 5883,
       "path": "source_data/paired_arm_effects.csv",
       "sha256": "5625c774c6a8e8cd77aa63e7d9a6c2be6786e403fbd2ecf3ef91ad4c4e04f44c"
+    },
+    {
+      "bytes": 489,
+      "path": "source_data/posthoc_semantic_review_paired_effects.csv",
+      "sha256": "4cbcc9b270c75ab05dbbd762a6031326fb30a624866610529bbeb6ffca08b81b"
+    },
+    {
+      "bytes": 1903,
+      "path": "source_data/posthoc_semantic_review_quality_controls.json",
+      "sha256": "5c39d63d1bd8bb9282a9e8b256c52a29047706bd8916c99b12f84b9f4f7791e2"
+    },
+    {
+      "bytes": 1351,
+      "path": "source_data/posthoc_semantic_review_summary.csv",
+      "sha256": "d3059bad9588924df4a5a7d4476eb7279c3199e2ceca1d738633bb88d8ff25f7"
     },
     {
       "bytes": 6134632,
@@ -151,5 +176,5 @@
   ],
   "boundary": "The manifest excludes itself to avoid self-reference. Raw answers, prompts, databases, logs, and model weights are not public package artifacts.",
   "package": "development-benchmark-rc3-20260815",
-  "schema_version": "open_agronomy_agent.rc3_checkpoint_artifacts.v1"
+  "schema_version": "open_agronomy_agent.rc3_checkpoint_artifacts.v2"
 }

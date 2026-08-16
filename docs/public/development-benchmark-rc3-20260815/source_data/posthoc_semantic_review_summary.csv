@@ -1,0 +1,7 @@
+model_key,candidate_configuration,source_label,arm_label,responses,cases,semantic_score_mean_0_to_100,sensitivity_interval_low,sensitivity_interval_high,pass_rate_percent,needs_source_validation_percent,trial-001_semantic_score_mean,trial-002_semantic_score_mean,trial-003_semantic_score_mean,agronomic_accuracy_mean_0_to_4,decision_relevance_mean_0_to_4,completeness_actionability_mean_0_to_4,calibration_safety_mean_0_to_4,crop_region_source_fit_mean_0_to_4
+gemma3_270m_rc3,Gemma 3 270M,model_only,Raw,270,90,3.7283,2.4667,5.251,0.0,78.8889,4.3889,3.1152,3.6807,0.1115,0.1167,0.0411,0.2585,0.3978
+gemma3_270m_rc3,Gemma 3 270M,full_system,Full system,270,90,66.2968,60.5264,71.908,23.3333,81.4815,65.3959,66.5111,66.9833,2.8304,2.2507,1.9411,3.5937,2.8381
+gemma4_e2b_rc3,Gemma 4 E2B,model_only,Raw,270,90,57.5023,53.6111,61.2731,3.3333,75.1852,58.4098,56.7153,57.3819,2.4315,2.1426,1.5685,3.1185,2.3907
+gemma4_e2b_rc3,Gemma 4 E2B,full_system,Full system,270,90,68.7547,63.9699,73.4399,21.4815,77.037,68.7152,70.7292,66.8196,2.9685,2.3722,1.9685,3.6907,2.8944
+luna_high_rc3,Luna High,model_only,Raw,270,90,86.6754,82.606,90.386,64.8148,78.8889,87.061,86.4652,86.5,3.5104,3.7019,3.1359,3.4344,3.5567
+luna_high_rc3,Luna High,full_system,Full system,270,90,80.9968,76.8357,84.9171,45.9259,70.3704,80.5668,80.625,81.7986,3.4737,2.9741,2.5648,3.837,3.4074

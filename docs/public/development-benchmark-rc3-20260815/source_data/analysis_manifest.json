@@ -3,7 +3,8 @@
   "analysis_seed": 20260815,
   "bootstrap_draws": 50000,
   "boundaries": [
-    "No semantic answer-quality judgment is present.",
+    "The frozen RC3 generation run contains no semantic answer-quality judgment.",
+    "A separate, post-hoc, blinded Luna High AI triage of 1,620 saved primary-lane answers is included only as an uncalibrated diagnostic; it has no human calibration, no promotion authority, and no answer-quality claim.",
     "No missing score is converted to zero.",
     "The frozen 14/16 calculation parser result is preserved; 16/16 is separately labelled as a post-run tool-payload audit.",
     "Retrieval, verifier, tool, stability, latency, and trace presence are not interpreted as agronomic correctness.",
@@ -86,9 +87,9 @@
   "interval_definition": "95% case-resampling sensitivity intervals with shared resample indices across candidate and arm cells within each metric family; arm contrasts are paired within case; base seed 20260815 with metric-family offsets 0/1 and contrast offsets 1000/1001; not population or human-agreement confidence intervals",
   "outputs": [
     {
-      "bytes": 1702,
+      "bytes": 2113,
       "path": "figures/manifest.json",
-      "sha256": "ba5c4e397ddeaa2239b74da3b8531f4687aa8675e5bca90a6fecae552e883f01"
+      "sha256": "d75c9ce8ae338aa801f916419c7e5a7d1f76182ed93514083d5da6dc7997d6cb"
     },
     {
       "bytes": 31343,
@@ -118,32 +119,42 @@
     {
       "bytes": 80469,
       "path": "figures/rc3_harness_behavior.svg",
-      "sha256": "acbdb88c392721c989230f28e8404cd62c73644f95c0b24416c62927a150e014"
+      "sha256": "09c234ae197c65b9229bec8ee46e7436cac1c5c7fec52b7f498fc651c564af7f"
     },
     {
-      "bytes": 24076,
+      "bytes": 20934,
+      "path": "figures/rc3_posthoc_semantic_review.pdf",
+      "sha256": "3c5f64b2a73c5ab6fec640f9204fbff1cc4fccf4f80458119ba32f138c7fb330"
+    },
+    {
+      "bytes": 77282,
+      "path": "figures/rc3_posthoc_semantic_review.svg",
+      "sha256": "8751ddb92a758499429f6b79c35a92f5a860cad6e114aac3398d3e6fd300b127"
+    },
+    {
+      "bytes": 24130,
       "path": "figures/rc3_repeatability_latency.pdf",
-      "sha256": "04a3a556e1fa580b835d81dfeaaca48ec03df5134a3db6d1116c029ed7a2c9bb"
+      "sha256": "cca4ffad64e2a6cf19a922818c1d534df69e02e79696f2a19ce83c0dd476f4c4"
     },
     {
       "bytes": 90685,
       "path": "figures/rc3_repeatability_latency.svg",
-      "sha256": "3d0701877a703e569e7325b0b2bb09ee9e6f75b5fc7cec7eca64b06568898d4a"
+      "sha256": "90ccd62da19dfa269d0cb7e955faa9e183e688bcb6575d1422572bc3bb830fb5"
     },
     {
-      "bytes": 434,
+      "bytes": 511,
       "path": "generated_results.tex",
-      "sha256": "d62cae11a80c7ef8febe65592b1838102c315796ebe6ffb1a22ffdbd176602cd"
+      "sha256": "68e908ef8041cac0a92701316dea5b867fdd75a2f13e64d76cd5a4f8c2a17f0a"
     },
     {
-      "bytes": 1233,
+      "bytes": 1722,
       "path": "generated_tables.tex",
-      "sha256": "c2ed0f2420a5a6a0788c190eb9de384c7b2b126f06b1cbaffee9466d469595eb"
+      "sha256": "22ed2fb84ac253bdc22af9fce54926f5b2a96097c50a9c13e89f812161751f97"
     },
     {
-      "bytes": 6877,
+      "bytes": 7484,
       "path": "source_data/checkpoint_validation_receipt.json",
-      "sha256": "898b689b7e07378f09cb2b1e9f8d444e8c44301a82166e5f635f10f5d50e3ccc"
+      "sha256": "99e343fdcb3923d1cb3ebd40f5625ab1ad1a1d4f48d2046c25d13e82e2019d62"
     },
     {
       "bytes": 6412,
@@ -171,6 +182,21 @@
       "sha256": "5625c774c6a8e8cd77aa63e7d9a6c2be6786e403fbd2ecf3ef91ad4c4e04f44c"
     },
     {
+      "bytes": 489,
+      "path": "source_data/posthoc_semantic_review_paired_effects.csv",
+      "sha256": "4cbcc9b270c75ab05dbbd762a6031326fb30a624866610529bbeb6ffca08b81b"
+    },
+    {
+      "bytes": 1903,
+      "path": "source_data/posthoc_semantic_review_quality_controls.json",
+      "sha256": "5c39d63d1bd8bb9282a9e8b256c52a29047706bd8916c99b12f84b9f4f7791e2"
+    },
+    {
+      "bytes": 1351,
+      "path": "source_data/posthoc_semantic_review_summary.csv",
+      "sha256": "d3059bad9588924df4a5a7d4476eb7279c3199e2ceca1d738633bb88d8ff25f7"
+    },
+    {
       "bytes": 6134632,
       "path": "source_data/public_safe_response_measurements.csv",
       "sha256": "40fa9a4cff46046f09f59acb3fc3951b587e79a2058d1a947a8dfc8df8932d26"
@@ -196,6 +222,6 @@
       "sha256": "ffc30d4ed7ae81c45e2fdc01f7d0bb04726219d9d3557877848d3eb51e1378ad"
     }
   ],
-  "schema_version": "open_agronomy_agent.rc3_checkpoint_analysis.v1",
+  "schema_version": "open_agronomy_agent.rc3_checkpoint_analysis.v2",
   "unit_of_analysis": "benchmark case after averaging the three observed trials"
 }

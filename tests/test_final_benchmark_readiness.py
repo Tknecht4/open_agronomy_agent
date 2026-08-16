@@ -163,13 +163,13 @@ def test_rc3_is_append_only_nonclaim_master_runtime_with_retired_external_v1() -
     completion = lifecycle["records"][0]
     assert completion == {
         "artifact_manifest_path": "docs/public/development-benchmark-rc3-20260815/source_data/artifact_manifest.json",
-        "artifact_manifest_sha256": "47bff35a2a645327378dab65a6ae080f119b9f3feca604322e2e1a3af01a22d4",
+        "artifact_manifest_sha256": "75a56d86162ec782042cebbe00cde453b327c00e80418d3b8cf04944bebec33c",
         "benchmark_source_commit": "3e30fb5de38105fa5bba3845411eb2174c21d3c4",
         "canonical_arm_executions": 36,
         "canonical_observations": 8676,
         "canonical_trials": 9,
         "checkpoint_receipt_path": "docs/public/development-benchmark-rc3-20260815/source_data/checkpoint_validation_receipt.json",
-        "checkpoint_receipt_sha256": "898b689b7e07378f09cb2b1e9f8d444e8c44301a82166e5f635f10f5d50e3ccc",
+        "checkpoint_receipt_sha256": "99e343fdcb3923d1cb3ebd40f5625ab1ad1a1d4f48d2046c25d13e82e2019d62",
         "completed_at": "2026-08-15",
         "new_observations_allowed": False,
         "plan_path": "configs/final_benchmark_round_rc3.json",

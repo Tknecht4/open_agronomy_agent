@@ -43,7 +43,7 @@
 \maketitle
 
 \begin{abstract}
-Evaluation of an evidence-governed agent must test more than its language model: routing, retrieval, authority policy, deterministic tools, answerability decisions, verification, retention, and analysis boundaries can dominate the final response. We report RC3, an exposed, nonclaim development regression for \system{}. Three candidate-system configurations were executed in three repeated trials across four arms and 241 project-authored Canadian cases, producing \RCObservations{} receipt-bound observations. The full matrix and nine content-addressed retention bundles passed structural and lineage audits. However, only \RCScoredCases{} cases per arm have a defined deterministic endpoint, and the run contains \RCSemanticJudgments{} automated or human semantic judgments. The frozen full-system calculation parser accepted \RCCanonicalCalc{} cases; a post-run audit found all \RCToolAudit{} typed tool payloads within numeric tolerance, exposing a unit-alias defect without rewriting the frozen result. Expected retrieval sources appeared in \RCRetrievalSource{} positive cases and \RCRetrievalPattern{} required patterns were present. Full-system behavior included deterministic holds, tool results, clarifications, and extensive answer verification, demonstrating harness reachability but not answer correctness. RC3 therefore supports a reproducible harness checkpoint and a concrete repair agenda, not a model ranking, agronomic reliability claim, or Benchmark v3 result.
+Evaluation of an evidence-governed agent must test more than its language model: routing, retrieval, authority policy, deterministic tools, answerability decisions, verification, retention, and analysis boundaries can dominate the final response. We report RC3, an exposed, nonclaim development regression for \system{}. Three candidate-system configurations were executed in three repeated trials across four arms and 241 project-authored Canadian cases, producing \RCObservations{} receipt-bound observations. The full matrix and nine content-addressed retention bundles passed structural and lineage audits. However, only \RCScoredCases{} cases per arm have a defined deterministic endpoint, and the frozen generation run contains \RCSemanticJudgments{}. A separate, post-hoc, blinded Luna High triage reviewed \RCPosthocSemanticJudgments{} saved primary-lane answers, but has no human calibration, adjudication, or promotion authority. The frozen full-system calculation parser accepted \RCCanonicalCalc{} cases; a post-run audit found all \RCToolAudit{} typed tool payloads within numeric tolerance, exposing a unit-alias defect without rewriting the frozen result. Expected retrieval sources appeared in \RCRetrievalSource{} positive cases and \RCRetrievalPattern{} required patterns were present. Full-system behavior included deterministic holds, tool results, clarifications, and extensive answer verification, demonstrating harness reachability but not answer correctness. RC3 therefore supports a reproducible harness checkpoint and a concrete repair agenda, not a model ranking, agronomic reliability claim, or Benchmark v3 result.
 \end{abstract}
 
 \section{Introduction}
@@ -85,7 +85,7 @@ Three fresh-process trials used distinct case-order and declared local generatio
 
 Figure~\ref{fig:coverage} states the most important boundary. The 16 calculation cases have an objective numeric/unit/tolerance scorer. Thirty-three official-source cases have a frozen lexical contract; six cases in that lane do not. The lexical proxy measures required and forbidden text-pattern coverage and is useful only for regression diagnostics. It is not semantic correctness. The remaining 192 cases per arm require trace interpretation or independent human review.
 
-Each trial contains a two-phase blinded packet for 90 raw/full decision-quality pairs, but no reviewer responses were populated. No automated semantic judge was run. This avoids granting an LLM judge promotion authority amid documented position, verbosity, limited-reasoning, and---in some models---self-preference risks \citep{zheng2023judge,wataoka2024selfpreference}; it also leaves RC3 unable to rank agronomic answer quality.
+Each trial contains a two-phase blinded packet for 90 raw/full decision-quality pairs. The frozen generation run requested no automated semantic judge and no independent reviewer responses were populated. After the run completed, a separately authorized Luna High process reviewed the 1,620 saved packet answers under a blinded, answer-only rubric. The process is an AI triage diagnostic, not an outcome authority: it has no human calibration or adjudication, Luna judges Luna candidate answers, and known position, verbosity, limited-reasoning, and self-preference risks remain \citep{zheng2023judge,wataoka2024selfpreference}. It cannot rank agronomic answer quality or promote a system.
 
 \begin{figure*}[t]
   \centering
@@ -107,7 +107,7 @@ Paired arm contrasts average within-case differences. Plotted intervals use 50,0
 
 \subsection{Execution and retention integrity}
 
-All \RCTrials{} candidate-trial commands completed four 241-row arms. The 36 execution IDs and all 8,676 observation IDs are unique. Each of 2,169 matched trial keys has exactly four arm observations. Final JSONL files equal their completed partial files byte-for-byte; all nine SQLite databases pass integrity and foreign-key checks; and their live hashes match the completion-referenced retention manifests. No automated semantic judge was requested or run; judge-related database tables contain zero rows, and no automated-judge output artifacts are present. These findings establish a coherent measurement substrate, not the validity of a response.
+All \RCTrials{} candidate-trial commands completed four 241-row arms. The 36 execution IDs and all 8,676 observation IDs are unique. Each of 2,169 matched trial keys has exactly four arm observations. Final JSONL files equal their completed partial files byte-for-byte; all nine SQLite databases pass integrity and foreign-key checks; and their live hashes match the completion-referenced retention manifests. No automated semantic judge was requested or run in the frozen generation run; judge-related database tables contain zero rows, and no generation-time automated-judge output artifacts are present. These findings establish a coherent measurement substrate, not the validity of a response.
 
 \subsection{Deterministic endpoints}
 
@@ -123,6 +123,19 @@ The official-source lexical proxy is defined on 33 cases. Its values can reveal 
 \end{figure*}
 
 \input{generated_tables.tex}
+
+\subsection{Post-hoc blinded AI triage (diagnostic only)}
+
+Figure~\ref{fig:posthoc-triage} and Table~\ref{tab:posthoc-triage} summarize a separately authorized Luna High review of the 90 raw/full decision-quality pairs in each of nine candidate trials (1,620 saved answers). The score is a weighted internal rubric: agronomic accuracy 0.35, decision relevance 0.20, completeness/actionability 0.20, calibration/safety 0.15, and crop/region/source fit 0.10; each dimension is rated 0--4 and the weighted result is reported on 0--100. It is not combined with the deterministic endpoints, retrieval traces, or any release decision.
+
+Operationally, all selected answers received one terminal review, and the public aggregate binds the selection manifest, authorization, and saved judgment file hashes. Scientifically, the judge is not validated: no human labels, calibration set, inter-rater study, or agronomic adjudication exist. Its self-reported high-confidence rate is 99.3\%, while repeated identical answer texts can receive different scores. The score also correlates negatively with answer length in this sample, and Luna judges outputs from the same Luna configuration. These diagnostics are reasons to treat the observed raw/full contrasts as hypotheses for independent review, not evidence that one configuration is safer, more correct, or better.
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=0.98\textwidth]{figures/rc3_posthoc_semantic_review.pdf}
+  \caption{\textbf{Separately authorized post-hoc blinded Luna High triage.} Filled marks are case-level trial-average means; open marks are the three observed trial means; whiskers are fixed-suite case-resampling sensitivity intervals. The right panel is the matched full-system minus raw contrast. These are uncalibrated AI rubric outputs, not validated semantic-quality scores, rankings, or promotion evidence.}
+  \label{fig:posthoc-triage}
+\end{figure*}
 
 \subsection{Retrieval, tools, holds, and verification}
 
@@ -168,13 +181,13 @@ The main scientific value of these findings is methodological: a benchmark harne
 
 \section{Limitations and next evidence}
 
-RC3 is intentionally nonclaim. The exposed suite was inspected and used for repair. It has no real-user cases, no untouched prospective holdout, no independent agronomist judgments, no field outcomes, and no legal-compliance adjudication. Retrieval presence does not prove relevance or use. Verification activity does not prove improvement. Exact repetition does not prove correctness. Latency and token observations do not compare local energy with remote cost. Candidate configurations use different verification profiles, so cross-candidate full-system contrasts are not pure model effects.
+RC3 is intentionally nonclaim. The exposed suite was inspected and used for repair. It has no real-user cases, no untouched prospective holdout, no independent agronomist judgments, no field outcomes, and no legal-compliance adjudication. The post-hoc AI triage adds an internally specified diagnostic, not a substitute: its rubric is uncalibrated, lacks reference labels and independent adjudication, and uses the Luna configuration to judge Luna outputs. Retrieval presence does not prove relevance or use. Verification activity does not prove improvement. Exact repetition does not prove correctness. Latency and token observations do not compare local energy with remote cost. Candidate configurations use different verification profiles, so cross-candidate full-system contrasts are not pure model effects.
 
 Benchmark v3 should preserve the now-tested identity and retention boundary while adding: (1) an untouched, access-controlled prospective set; (2) independent two-phase agronomist review with calibrated adjudication; (3) a true component matrix with independently switchable document retrieval, graph retrieval, tools, answerability, and verification; (4) identical harness profiles where causal candidate comparison is intended; (5) preregistered endpoint families and promotion thresholds; and (6) explicit scenario-family identifiers for clustered uncertainty analysis. Service-orchestration and public-adapter behavior also remain outside RC3.
 
 \section{Reproducibility and availability}
 
-The public checkpoint includes answer-free response measurements, trial inventory, summary tables, four vector figures, exact generated manuscript values, a claim-to-evidence manifest, and a self-verifying package manifest. The analysis reads only the nine completion-receipted trial databases; it does not glob the retention root. It verifies database hashes, suite and source identities, arm and observation cardinalities, zero semantic judgments, the two frozen parser defects, the retained latency outlier, and all paired keys before producing a result. Machine-local paths are not serialized.
+The public checkpoint includes answer-free response measurements, trial inventory, summary tables, five vector figures, exact generated manuscript values, a claim-to-evidence manifest, and a self-verifying package manifest. The analysis reads only the nine completion-receipted trial databases plus the separately named post-hoc judgment artifact; it does not glob the retention root. It verifies database hashes, suite and source identities, arm and observation cardinalities, zero generation-time semantic judgments, the post-hoc selection and authorization identities, the two frozen parser defects, the retained latency outlier, and all paired keys before producing a result. Machine-local paths are not serialized.
 
 Raw answers, questions, prompts, context packets, SQLite databases, logs, model weights, and credentials are excluded from Git. They remain in separately controlled content-addressed bundles. The analysis source, public tables, and validation receipt support the reported aggregates and parser audit without exposing those private artifacts.
 

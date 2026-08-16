@@ -33,6 +33,7 @@ def test_published_checkpoint_verifies_without_private_benchmark_outputs() -> No
     assert result["status"] == "verified"
     assert result["canonical_observations"] == 8_676
     assert result["semantic_judgments"] == 0
+    assert result["posthoc_semantic_review_rows"] == 1_620
 
 
 def test_public_response_projection_is_answer_free_and_score_typed() -> None:
@@ -73,6 +74,10 @@ def test_checkpoint_receipt_preserves_nonclaim_and_frozen_run_identity() -> None
     assert receipt["canonical_observations"] == 8_676
     assert receipt["semantic_judgments"] == 0
     assert receipt["automated_semantic_judge_requested"] is False
+    posthoc = receipt["posthoc_semantic_review"]
+    assert posthoc["rows"] == 1_620
+    assert posthoc["promotion_eligible"] is False
+    assert posthoc["human_calibration_status"] == "missing"
     assert receipt["independent_human_reviews_completed"] == 0
     assert receipt["final_partial_identical_arms"] == 36
     assert receipt["review_packets"] == 9
@@ -87,7 +92,7 @@ def test_checkpoint_paper_and_vector_figures_are_present() -> None:
     assert paper.stat().st_size > 100_000
 
     figures = sorted((CHECKPOINT / "figures").glob("*.svg"))
-    assert len(figures) == 4
+    assert len(figures) == 5
     for figure in figures:
         text = figure.read_text(encoding="utf-8")
         assert "<svg" in text
@@ -95,6 +100,21 @@ def test_checkpoint_paper_and_vector_figures_are_present() -> None:
 
     instructions = (CHECKPOINT / "README.md").read_text(encoding="utf-8")
     assert "tectonic main.tex\nmv main.pdf paper.pdf" in instructions
+
+
+def test_posthoc_semantic_projection_is_aggregate_only_and_explicitly_uncalibrated() -> None:
+    path = CHECKPOINT / "source_data/posthoc_semantic_review_summary.csv"
+    with path.open(encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    assert len(rows) == 6
+    assert {row["source_label"] for row in rows} == {"model_only", "full_system"}
+    assert all(int(row["responses"]) == 270 and int(row["cases"]) == 90 for row in rows)
+    assert all(0 <= float(row["semantic_score_mean_0_to_100"]) <= 100 for row in rows)
+    assert not {"answer", "question", "rationale", "review_id"}.intersection(rows[0])
+    controls = json.loads((CHECKPOINT / "source_data/posthoc_semantic_review_quality_controls.json").read_text(encoding="utf-8"))
+    assert controls["rows"] == 1_620
+    assert controls["promotion_eligible"] is False
+    assert controls["human_calibration_status"] == "missing"
 
 
 def test_published_verifier_rejects_an_unlisted_package_file(
