@@ -16,23 +16,19 @@
 | `eval/` | Internal and explicitly separated external evaluation material | Never runtime retrieval or training evidence |
 | `raw/` | Ignored source bytes with narrow lineage exceptions | Not automatically redistributable or admissible |
 
-## Cumulative Canadian master store
+## Active offline corpus
 
-The active clone-contained document corpus has one cumulative release:
-`data/derived/rag/curated_canada/releases/2026-08-14/`. Its sole profile,
-`canada-offline-master`, contains 969 source-bound rows from 20 admitted sources
-in two policy-segregated shards: 955 `context_only` rows and 14
-`requires_live_authority` rows. The store manifest, profile, source-coverage
-receipt, ingest receipt, and shard hashes form one immutable release unit.
+The active clone-contained document corpus is
+`data/derived/rag/offline_agronomy/active/`. It contains 3,086 source-exact
+rows in policy-segregated shards. Its store manifest, source receipt,
+duplicate-cluster receipt, quality ledger, and shard hashes form one immutable
+release unit.
 
-The release is built from source-aware inputs under
-`data/derived/rag/curated_canada/inputs/2026-08-14/` plus reviewed semantic
-companions under `data/curated/canada_agronomy/`. Companion filenames are
-review-date versioned; the companion README and recovery receipt distinguish
-reconstructed reviewed content from recovery of an original byte stream.
-Source registry records bind upstream raw hashes, rights, jurisdiction, and use
-limits. The raw PDFs themselves remain maintainer/operator evidence and are not
-required in the public runtime package.
+Canadian PDF records are reconstructed from raw page text with exact spans;
+Ontario workbook records retain structured table coordinates. Seed, boundary,
+and SoilWise records preserve exact source-record locators. Source receipts bind
+raw/source-record hashes, rights, jurisdiction, extraction methods, and use
+limits.
 
 The former `curated_canada/v1` through `v4` development stores are no longer
 current payload directories. Their milestones survive in compact profile
@@ -42,12 +38,16 @@ The Manitoba canola-insect companion is admitted only as five bounded semantic
 rows after source-specific OpenMB review; product tables and third-party
 material remain excluded. Discovery alone never makes content model-visible.
 
-To add documents, append or version the source registry and semantic companion,
-produce source-aware input shards, then build a new immutable dated release.
-Advance `configs/rag_governed_runtime_v2.yaml` and
-`configs/runtime_profiles.json` only after store validation, corpus-policy
-generation, licensing checks, and tests pass. Never edit an existing release
-shard or receipt in place.
+The full `offline_agronomy/us_nrcs/` pack contains 218,258 U.S. NRCS records in
+51 bounded JSONL shards plus persisted exact-token BM25 statistics. It is loaded
+only for an explicit MLRA-scoped U.S. analogue request and cannot establish
+Canadian decisive authority. Community and spatial archive candidates remain
+outside runtime until source-specific review.
+
+To add documents, update the source receipt and extraction adapter, rebuild the
+stable active store, then advance `configs/rag.yaml` and
+`configs/runtime_profiles.json` only after validation, policy generation,
+licensing checks, and tests pass.
 
 ## Inputs and outputs
 
@@ -85,14 +85,15 @@ Do not edit generated/public derivatives by hand when a source registry or build
 
 ```bash
 PYTHONPATH=src .venv/bin/python scripts/audit_runtime_corpus.py
-PYTHONPATH=src .venv/bin/python scripts/audit_source_retention.py
-PYTHONPATH=src .venv/bin/python scripts/validate_curated_knowledge_store.py \
-  --store-root data/derived/rag/curated_canada/releases/2026-08-14 \
-  --expect-profile canada-offline-master
+PYTHONPATH=src .venv/bin/python scripts/audit_offline_corpus_successor_quality.py --fail-on-gap
+PYTHONPATH=src .venv/bin/python scripts/evaluate_offline_corpus_retrieval.py
 PYTHONPATH=src .venv/bin/python -m pytest -q tests/test_corpus_governance.py
 ```
 
-Some audits require maintainer-only raw bytes and will report unavailable in a curated public checkout. That is not the same as pass or fail.
+`audit_source_retention.py` remains a historical compact-NRCS retention tool;
+run it only against its named legacy profile and mounted maintainer archive.
+Some archival audits require maintainer-only raw bytes and will report
+unavailable in a curated public checkout. That is not the same as pass or fail.
 
 ## Failure modes
 

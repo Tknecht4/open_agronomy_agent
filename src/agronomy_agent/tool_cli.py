@@ -52,7 +52,7 @@ def main(argv: list[str] | None = None) -> int:
     retrieve = sub.add_parser("retrieve", help="Return routed RAG/KG context for a question.")
     retrieve.add_argument("question")
     retrieve.add_argument("--top-k", type=int, default=5)
-    retrieve.add_argument("--rag-config", default="configs/rag_governed_runtime_v2.yaml")
+    retrieve.add_argument("--rag-config", default="configs/rag.yaml")
 
     soil = sub.add_parser("soil-context", help="Return regional soil/environment context from local corpora.")
     soil.add_argument("question")

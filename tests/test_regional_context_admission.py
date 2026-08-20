@@ -230,7 +230,7 @@ def test_regional_context_flag_does_not_admit_context_only_evidence_for_action_o
 def test_real_slc_context_persists_explicit_regional_signal_for_admission() -> None:
     context = build_context(
         SLC_QUESTION,
-        rag_config="configs/rag_final_mvp.yaml",
+        rag_config="configs/rag.yaml",
         use_context_cache=False,
         use_search_cache=False,
     )

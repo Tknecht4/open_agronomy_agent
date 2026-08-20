@@ -1,0 +1,69 @@
+{
+  "schema_version": "open_agronomy_agent.offline_corpus_release.v1",
+  "store_id": "offline-agronomy",
+  "profile": "active-development-offline-corpus",
+  "shards": [
+    {
+      "path": "shards/canadian_context-0001.jsonl",
+      "rows": 863,
+      "bytes": 3167773,
+      "sha256": "3a6d96394853ed8341c5c8df9ec6d208e12819736cc934ec2c9de7729a893245",
+      "retrieval_policies": [
+        "context_only"
+      ]
+    },
+    {
+      "path": "shards/canadian_live-0001.jsonl",
+      "rows": 398,
+      "bytes": 1473469,
+      "sha256": "c105e0284b30b954ee46449c6fb28413dbc9dcb0b2282167313cb4a7404258cf",
+      "retrieval_policies": [
+        "requires_live_authority"
+      ]
+    },
+    {
+      "path": "shards/project_context-0001.jsonl",
+      "rows": 36,
+      "bytes": 64253,
+      "sha256": "6a3eb04006b4dafdc9234cda826dd3de54397bb655b67394cac4300c6a4159e2",
+      "retrieval_policies": [
+        "context_only"
+      ]
+    },
+    {
+      "path": "shards/project_decisive-0001.jsonl",
+      "rows": 6,
+      "bytes": 10389,
+      "sha256": "6e31c3cbd1523963ec1007fe0c9b79499dd9f89f18e4977b9abffd9f1745f713",
+      "retrieval_policies": [
+        "decisive"
+      ]
+    },
+    {
+      "path": "shards/soilwise_context-0001.jsonl",
+      "rows": 1783,
+      "bytes": 2725686,
+      "sha256": "7d1a9a56c868e8aae544b210925a5e40c0bd98c3e453181cc5aa2685b3584645",
+      "retrieval_policies": [
+        "context_only"
+      ]
+    }
+  ],
+  "row_count": 3086,
+  "component_rows": {
+    "canadian_context": 863,
+    "canadian_live": 398,
+    "project_context": 36,
+    "project_decisive": 6,
+    "soilwise_context": 1783
+  },
+  "quality_ledger_path": "quality_ledger.json",
+  "quality_ledger_sha256": "b162c8e7cd5a818f602d5706a1c1e67d64f2d7164543b3c95aa03ad6cd9913ac",
+  "exact_duplicate_clusters_path": "exact_duplicate_clusters.json",
+  "exact_duplicate_clusters_sha256": "4f2998b958f6cf09beea968fd672b7846a8f1a2f8bb55682073ea8e4281386cc",
+  "source_receipt_path": "source_receipt.json",
+  "source_receipt_sha256": "a5554b3952e83cc7e6831614a4fc050df6266a70b55a796ab9b77157b8330c8a",
+  "unrecoverable_legacy_rows_excluded": 17,
+  "jurisdiction_policy": "Canadian official sources rank before U.S. analogue context; community sources are not loaded.",
+  "store_sha256": "48ec600b95132c412b5901c9af56e0cef3fae52fa71f47eb48a209cc5580dc0d"
+}

@@ -31,7 +31,7 @@ PYTHONPATH=src .venv/bin/python scripts/validate_curated_knowledge_store.py \
 Select the stable product runtime for a native launch:
 
 ```bash
-export AGRONOMY_AGENT_RAG_CONFIG=configs/rag_governed_runtime_v2.yaml
+export AGRONOMY_AGENT_RAG_CONFIG=configs/rag.yaml
 ```
 
 The stable runtime composes the cumulative Canadian master with the project
@@ -87,13 +87,13 @@ Build a runtime manifest for the exact selected RAG profile, then validate the c
 
 ```bash
 PYTHONPATH=src .venv/bin/python scripts/build_edge_runtime_manifest.py \
-  --rag-config configs/rag_governed_runtime_v2.yaml \
+  --rag-config configs/rag.yaml \
   --output /absolute/path/to/open-agronomy-state/runtime-v2-manifest.json
 
 PYTHONPATH=src .venv/bin/python scripts/prepare_offline_runtime.py \
   --runtime-manifest /absolute/path/to/open-agronomy-state/runtime-v2-manifest.json \
-  --model-config configs/model_gemma4_e2b_interface_v2.yaml \
-  --rag-config configs/rag_governed_runtime_v2.yaml \
+  --model-config configs/model.yaml \
+  --rag-config configs/rag.yaml \
   --spatial-pack-root "$AGRONOMY_AGENT_SPATIAL_PACK_ROOT" \
   --spatial-profile prairie-dss-v1 \
   --require-ready

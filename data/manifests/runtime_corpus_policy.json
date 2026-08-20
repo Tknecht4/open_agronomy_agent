@@ -1,196 +1,799 @@
 {
-  "schema_version": "open_agronomy_agent.runtime_corpus_policy.v1",
-  "policy_id": "rc21_nrcs_section_balanced_analogue_20260811",
-  "default_eligibility": "quarantined",
-  "rules": {
-    "decisive": "May support an action only within its jurisdiction, currency, retrieval-policy, and field-fit limits.",
-    "context_only": "May explain concepts or frame questions, but cannot support a high-consequence action.",
-    "quarantined": "Must not enter runtime model context; retained only for research provenance pending rights and quality review."
-  },
   "corpora": [
     {
-      "path": "data/seed/agronomy_rag_corpus.jsonl",
-      "sha256": "45f22cf8380007661c9ba3109ff1e6254f031b39a78bcaa09b11c1ba3c858ba5",
+      "evidence_tier": "curated_canadian_source",
+      "path": "data/derived/rag/offline_agronomy/active/shards/canadian_context-0001.jsonl",
+      "reason": "Source-exact active offline corpus shard.",
+      "rights_status": "redistributable_with_verified_source_scope",
       "runtime_eligibility": "context_only",
+      "sha256": "3a6d96394853ed8341c5c8df9ec6d208e12819736cc934ec2c9de7729a893245",
+      "shard_policy_role": [
+        "context_only"
+      ],
+      "source_ids": [],
+      "store_profile_id": "offline-agronomy",
+      "activation": "startup"
+    },
+    {
+      "evidence_tier": "curated_canadian_source",
+      "path": "data/derived/rag/offline_agronomy/active/shards/canadian_live-0001.jsonl",
+      "reason": "Source-exact active offline corpus shard.",
+      "rights_status": "redistributable_with_verified_source_scope",
+      "runtime_eligibility": "decisive",
+      "sha256": "c105e0284b30b954ee46449c6fb28413dbc9dcb0b2282167313cb4a7404258cf",
+      "shard_policy_role": [
+        "requires_live_authority"
+      ],
+      "source_ids": [],
+      "store_profile_id": "offline-agronomy",
+      "activation": "startup"
+    },
+    {
       "evidence_tier": "internal_synthesis",
+      "path": "data/derived/rag/offline_agronomy/active/shards/project_context-0001.jsonl",
+      "reason": "Source-exact active offline corpus shard.",
       "rights_status": "project_authored",
-      "reason": "Useful conceptual scaffolding, but most rows lack document-level source lineage."
+      "runtime_eligibility": "context_only",
+      "sha256": "6a3eb04006b4dafdc9234cda826dd3de54397bb655b67394cac4300c6a4159e2",
+      "shard_policy_role": [
+        "context_only"
+      ],
+      "source_ids": [],
+      "store_profile_id": "offline-agronomy",
+      "activation": "startup"
     },
     {
-      "path": "data/seed/boundary_rag_corpus.jsonl",
-      "sha256": "d6210d1db7efe7cd7814c4a51acd85d778c2e490f274726b47c9d14334a0ddb6",
-      "runtime_eligibility": "decisive",
       "evidence_tier": "project_safety_policy",
+      "path": "data/derived/rag/offline_agronomy/active/shards/project_decisive-0001.jsonl",
+      "reason": "Source-exact active offline corpus shard.",
       "rights_status": "project_authored",
-      "reason": "Project-authored fail-closed safety boundaries; not a substitute for external agronomic authority."
-    },
-    {
-      "path": "data/seed/cca_objective_rag_corpus.jsonl",
-      "sha256": "4f46706317afd16765c84b82f1a1aefd374bbd6d8b89c752853060cce935b02f",
-      "runtime_eligibility": "quarantined",
-      "evidence_tier": "topic_map_only",
-      "rights_status": "copyrighted_citation_only",
-      "reason": "Competency objectives are useful for coverage design but are not approved as copied runtime text."
-    },
-    {
-      "path": "data/derived/rag/soilwise_rag_corpus.jsonl",
-      "sha256": "eef95a5d2dbc11183a6f8061fe91fe7387e9568112e45d8b62c2cf835bd1d737",
-      "runtime_eligibility": "context_only",
-      "evidence_tier": "open_ontology",
-      "rights_status": "CC-BY-4.0",
-      "reason": "Open soil-health concepts and relations; not field-specific management authority."
-    },
-    {
-      "path": "data/derived/rag/document_expansion_rag_corpus.jsonl",
-      "sha256": "26baf409f1e377d0d91e5ab9252c3d63fba47246c204623d4333db1e77a16a9b",
-      "runtime_eligibility": "quarantined",
-      "evidence_tier": "government_publication",
-      "rights_status": "redistribution_review_required",
-      "reason": "The source is public but the current rows do not carry the required licence snapshot and lineage."
-    },
-    {
-      "path": "data/derived/rag/canada_agronomy_distributable_v13.jsonl",
-      "sha256": "461cdf59627b684123e02fb712d72cffd21ff04fdef7b76bd0b9a17d86b4c2de",
       "runtime_eligibility": "decisive",
-      "evidence_tier": "government_applied_guidance",
-      "rights_status": "redistributable_with_item_scope_evidence",
-      "reason": "Rights-repaired rebuild: every row carries source, item-scope evidence, licence, currency, language, jurisdiction, and hash lineage. Ontario Publication 811/811F is excluded; row-level live-authority restrictions still apply."
+      "sha256": "6e31c3cbd1523963ec1007fe0c9b79499dd9f89f18e4977b9abffd9f1745f713",
+      "shard_policy_role": [
+        "decisive"
+      ],
+      "source_ids": [],
+      "store_profile_id": "offline-agronomy",
+      "activation": "startup"
     },
     {
-      "path": "data/derived/rag/canada_agronomy_ontario_context_v1.jsonl",
-      "sha256": "72df2be18c87ef62dcc286201ad5274f1d0a9d8f74518a463487d696a83cb152",
+      "evidence_tier": "open_ontology",
+      "path": "data/derived/rag/offline_agronomy/active/shards/soilwise_context-0001.jsonl",
+      "reason": "Source-exact active offline corpus shard.",
+      "rights_status": "CC-BY-4.0",
       "runtime_eligibility": "context_only",
-      "evidence_tier": "provincial_crop_statistics",
-      "rights_status": "Ontario_OGL_and_Statistics_Canada_Open_Licence",
-      "reason": "Bilingual Ontario crop-area, yield, production, price, and value statistics for 2018-2026 with exact workbook lineage. These rows may frame regional history and data questions, but are not field truth, crop calibration, or management authority."
+      "sha256": "7d1a9a56c868e8aae544b210925a5e40c0bd98c3e453181cc5aa2685b3584645",
+      "shard_policy_role": [
+        "context_only"
+      ],
+      "source_ids": [],
+      "store_profile_id": "offline-agronomy",
+      "activation": "startup"
     },
     {
-      "path": "data/derived/rag/canada_agronomy_supplement_v1.jsonl",
-      "sha256": "c8293511e27d034528ce41c4754bbaccac0bc98b1afe0fb08cf346a9f5211810",
-      "runtime_eligibility": "context_only",
-      "evidence_tier": "government_applied_guidance_supplement",
-      "rights_status": "redistributable_with_attribution",
-      "reason": "Provenance-complete Alberta potato, berry-enterprise, and 2026 manure-regulatory context. Historical rows require current local calibration; every regulatory row requires live authority and cannot independently support an action."
-    },
-    {
-      "path": "data/derived/rag/canada_agronomy_supplement_v2.jsonl",
-      "sha256": "d0ed46ffb8fc153f4fb8c60dab2b74706c89bdf144eeb01142c8677eece41988",
-      "runtime_eligibility": "context_only",
-      "evidence_tier": "government_bilingual_regional_context",
-      "rights_status": "redistributable_with_attribution",
-      "reason": "Provenance-complete French AAFC specifications for crop-health indices and Canadian crop-yield products. They explain modelled regional data and vocabulary, but cannot establish field condition, current forecast values, or a management prescription."
-    },
-    {
-      "path": "data/derived/rag/canada_agronomy_supplement_v3.jsonl",
-      "sha256": "f175130e4dbd635ecd7142ce47e996a05a9d1671aaea4041e67187f0cea22e21",
-      "runtime_eligibility": "context_only",
-      "evidence_tier": "current_provincial_scouting_candidate",
-      "rights_status": "OpenMB_reviewed_companion_only",
-      "reason": "Six provenance-complete Manitoba 2026 field-scouting companion rows add current insect and disease observations while excluding product tables, rates, logos, images, and credited third-party material. They remain context-only pending independent agronomic review; thresholds do not authorize a pesticide and volatile-source rows require a currency check."
-    },
-    {
-      "path": "data/derived/rag/canada_agronomy_regional_context_v1.jsonl",
-      "sha256": "863a97ac599c15c7699300284d9d3af8e9bbe0d875016facdf1362458abd48f1",
-      "runtime_eligibility": "context_only",
-      "evidence_tier": "government_regional_context_subset",
-      "rights_status": "redistributable_with_attribution",
-      "reason": "Exact eight-source subset of the unpromoted V12 candidate: rights- and lineage-audited federal/provincial regional product descriptions for BC, NB, NL, NS, PEI, Quebec, and Canada. Context-only admission does not promote V12, establish field condition, or supply province-specific applied guidance."
-    },
-    {
-      "path": "data/derived/rag/nrcs_esd_rag_corpus_compact.jsonl",
-      "sha256": "d86786e7e3dffd6a41be8e7c76e0d1a3c60d8b026741f19e2e742fee7aecd16d",
-      "runtime_eligibility": "context_only",
-      "evidence_tier": "government_regional_profile",
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0001.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
       "rights_status": "US_government_public_source",
-      "reason": "Section-balanced projection of all 8,300 recovered USDA EDIT ecological sites. It preserves available site-context, soil/water, ecological-dynamics, and interpretation sections as explicit US cross-border analogues. Retrieval for Canadian questions requires an explicit NRCS, MLRA, or ecological-site analogue request; it cannot establish Canadian field condition, calibration, legal authority, product use, rate, threshold, or prescription."
+      "runtime_eligibility": "context_only",
+      "sha256": "88f2575abc2aca505e613149abeca54cd25ec9e798a1ae75358712bba76099a9",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
     },
     {
-      "path": "data/derived/rag/forum_newagtalk_forum_threads_rag_corpus.jsonl",
-      "sha256": "d5fad73f2db3318b632580f15c2a5f7c79f894a0d89df6abc7aa34a7b6b43629",
-      "runtime_eligibility": "quarantined",
-      "evidence_tier": "unverified_experience",
-      "rights_status": "permission_not_established",
-      "reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified."
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0002.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "3c0e52b1caf6d49c45b504241a4f10fb282495f403c1fd8f33428400f772b6fc",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
     },
     {
-      "path": "data/derived/rag/forum_agricultivation_communities_agrictalk_forum_threads_rag_corpus.jsonl",
-      "sha256": "84714c7361e0523d0e7ccb7f0575a9746ae59a22cc5a80780099e07495211024",
-      "runtime_eligibility": "quarantined",
-      "evidence_tier": "unverified_experience",
-      "rights_status": "permission_not_established",
-      "reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified."
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0003.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "208445837a3c7b0f64c1da13f6713494636b3495907d08c11a6baf04cf6b95fa",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
     },
     {
-      "path": "data/derived/rag/forum_agriville_forum_threads_rag_corpus.jsonl",
-      "sha256": "53d39aced68807a300b76b44ac7ac8482eee9a6e0156e8ae28d1fd7806bfe0f2",
-      "runtime_eligibility": "quarantined",
-      "evidence_tier": "unverified_experience",
-      "rights_status": "permission_not_established",
-      "reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified."
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0004.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "d39f38bf81539d554e5aefa4a26b8d0ff17f965735ce6104769658d522deaa82",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
     },
     {
-      "path": "data/derived/rag/forum_farmchat_forum_threads_rag_corpus.jsonl",
-      "sha256": "ddaceb8bb9c483a0266b1747fbcc4bb2e4441289f2cfa90c3a36c4e20e507ff7",
-      "runtime_eligibility": "quarantined",
-      "evidence_tier": "unverified_experience",
-      "rights_status": "permission_not_established",
-      "reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified."
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0005.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "1502a09e470dd7b373a0c0f605780112adf755a26b1e51702c0827ea727c84d8",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
     },
     {
-      "path": "data/derived/rag/forum_agricultureinformation_forum_threads_rag_corpus.jsonl",
-      "sha256": "d5befa1509494cade443a481187e9c866c691d64370504613587ee68e508ac6e",
-      "runtime_eligibility": "quarantined",
-      "evidence_tier": "unverified_experience",
-      "rights_status": "permission_not_established",
-      "reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified."
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0006.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "fb1c7ac65b280c2c7c82619ebe3151485362e6f6babe8f5802f101d502b34093",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
     },
     {
-      "path": "data/derived/rag/forum_forum4farming_forum_threads_rag_corpus.jsonl",
-      "sha256": "d6e81583045ccfdbda9d23931936bf005ea173c7d78d25f57086177068c81980",
-      "runtime_eligibility": "quarantined",
-      "evidence_tier": "unverified_experience",
-      "rights_status": "permission_not_established",
-      "reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified."
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0007.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "5d2d1cc40a823c32b0772917ae95010c28e88f4030330c33ccaec6188a151c71",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
     },
     {
-      "path": "data/derived/rag/forum_farmnest_india_forum_threads_rag_corpus.jsonl",
-      "sha256": "b5b2e4768084dfccecba51d6ba5709717bb579ffd81ce2c06ef19ab6c38de73f",
-      "runtime_eligibility": "quarantined",
-      "evidence_tier": "unverified_experience",
-      "rights_status": "permission_not_established",
-      "reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified."
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0008.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "c90148971312ae948bfe7931aff9eb179a2e772d60c80159ae0132816218174a",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
     },
     {
-      "path": "data/derived/rag/forum_soilforwater_forum_threads_rag_corpus.jsonl",
-      "sha256": "ed356c1b055cfcf533f7b164f4dc487fbbd292b87fd31d8841eac8aa1e4d3960",
-      "runtime_eligibility": "quarantined",
-      "evidence_tier": "unverified_experience",
-      "rights_status": "permission_not_established",
-      "reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified."
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0009.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "746f94f98f0a4d37f9180724fead83f6fab9773d594728be7430ddd01d682f0e",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
     },
     {
-      "path": "data/seed/final_mvp_gap_repair_corpus.jsonl",
-      "sha256": "092f7131e657c87bdffb67a780d19ed6194c01b56a0748b678031049584e6746",
-      "runtime_eligibility": "quarantined",
-      "evidence_tier": "eval_gap_synthesis",
-      "rights_status": "mixed_and_unverified",
-      "reason": "Answer-gap synthesis risks eval-shaped behavior and includes rows explicitly awaiting reviewed-source replacement."
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0010.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "d2a93d2cd7b334d0643e838ac5eb082c519e804ed370579fe323ad7b3899cdf2",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
     },
     {
-      "path": "data/seed/aiagribench_public_gap_corpus.jsonl",
-      "sha256": "2b0baf1ce96f23b8811f751506bf026a2a4015ba38161c71e49fd407b1191e81",
-      "runtime_eligibility": "quarantined",
-      "evidence_tier": "eval_gap_synthesis",
-      "rights_status": "source_rights_not_row_audited",
-      "reason": "Public benchmark-gap summaries are excluded from runtime to prevent benchmark-shaped retrieval and unverifiable source paraphrases."
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0011.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "cd0b596bd9ba9bbb47e9c9cf77ac4042601c4f5ac114a1a2132924708e9259b9",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
     },
     {
-      "path": "data/seed/aiagribench_transfer_v2_source_corpus.jsonl",
-      "sha256": "474749f9ffa3696b8edbdaf05541f1c199e6e24a651552bfcafd34c10656e612",
-      "runtime_eligibility": "quarantined",
-      "evidence_tier": "eval_transfer_synthesis",
-      "rights_status": "source_rights_not_row_audited",
-      "reason": "Transfer-suite source summaries remain evaluation research and are excluded from the production answer path."
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0012.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "be165b37898049240267c1565342afc828071421ce15fcd57ef2ddd205d87a42",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0013.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "432b9466cca1b9c3da6e28da6ae7d1c8f64edcc91795834fc2129a54bca2c8ac",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0014.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "f91953ed5ca24f961ed3a96cf5de00bd96e4330bdef072673e65d671a35ee68d",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0015.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "2c4c4569df23013b34a818bc22b8ee81981c249e1098d30da56e14910679abb9",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0016.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "2b33474b545184a9a2a57cdaee6f67d17599127211c76d02d4ca70077aa748b6",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0017.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "a09b984aa503398a89628027be198153646dd743acfe39ecffb10b8397950dc0",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0018.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "b1fdd0e6d5ace1589d70a9ce8e298b1dc5b319a5d56b21e8f6d11f7c8f9f1dc7",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0019.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "9e810ad4b8f9d76c356c2ba1294e9fa0f0ef77b6b8bd6b287102644c0721a7b1",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0020.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "9c2659b8a68fbc5b14338c96867bca099d9b0f692cfc08cc5612fc611976f37a",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0021.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "d3a49f8377ef4a336282a1a34c08d37d6dafebafcce785ecd350aee17e25e6eb",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0022.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "1a733ab7e09fbd9678e65b2ef7ec826a25d233623612e7b9f86fd2dad7a481d6",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0023.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "9bfb5be531e7af03828827b828e3510e990bbd1b85ef6bebabec456ac3f4ec4c",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0024.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "186baeb533120f2f4ab852d7fb4d2a3990a912a650ab9e0c93cc6145f0bc60a2",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0025.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "a192e147d86a512a3e95fcf9d958256795f7314d2e68e347e82ad222c68edb72",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0026.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "463397eb1eedb1fa2d97459af4f5b60aa0debed3b1c07d0b5003208cb90d033f",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0027.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "0c3278a55a06d448dba1a5a66e6dce906a79c1815c3a79043d07930f56cfb671",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0028.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "3ae2ec5a9e9e689af60de064b4208b9c3849cb2584d338c1bf844b8a667c8a58",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0029.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "acd0d612e5bfc2fec99f347d5ddec2a7e90a668a84e32a282d477052c3829f43",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0030.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "6739fe7622f3a6ac12e0b9d10dcd1051a082a794b790a5845df89b3e4061a307",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0031.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "2c20940989d79196b415682ca6a8f6e9a8ed9d0cadc45791fcffb86aed1ca1b5",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0032.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "09b9011f8bcb421bf8bd0502b1ec0d6a81689556a1a27faad45c352cab0bd731",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0033.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "4194aac34c81ec28eb95a2cc15e2d9a700d57d84cdc15489167a5d5a46f7e839",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0034.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "38843c4a55a770c20f44445d372d5a587f37a0556be5cce8ba35265dab25632c",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0035.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "d83ca8c4d79b3aea272463c9315c91a51108fc778118a4cd11a51eaf34d6b8d4",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0036.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "b093e87fdd7e081ec59dfc2a5f0b33b39e40156af2dac1750720593a2442b99b",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0037.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "53dff8843c422a0b0ad8e5a0808dad8a73a06c3e2185eec18b42a0e9eb629b4c",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0038.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "b9828c7418cefc64676f43555649243cb57f4c13a497d2985c0c6c497e6185b5",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0039.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "c324f7c0015f5114de2d2d2ae9765cd78172c05f406aa221a37817367a00dce4",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0040.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "4a8d4b7d837d77f2b7886a14ee63faa4636fd2a30a3701693c6617503534f85b",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0041.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "0eb8284f6938d3ad6e7889af50777b055e9b89b5e0a818594940fabeb6e1f2cf",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0042.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "83697c67d8bb9a96bdb1fcc3b4f859353363ab02c193d0ee3772ebb66054f3e1",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0043.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "cce212d4baf2cebc95b45fb302c3798d9ff6b490b133a2fc6022bd3369ffb78d",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0044.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "5efd678a1c6c22d9f32419f2daa0842321d59aecc3ecf75502b26511e10dd516",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0045.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "84236859ebed83cd89149f0841c60d5d382e71ab0371c0916bccb205864e6dcc",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0046.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "8a6626869e05eb4a42a0f73336ff170a98b80a1f8cb587214ac1199a0262d205",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0047.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "d13af8bf4b03ede5ed4918744b9633aead34d84d1f9819eccada91bf840cc5d9",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0048.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "29e64ff51109d98d276c06986b5d0026c3d52220adcb41ff8799863f0f066a94",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0049.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "bc548fe8851b2520f0b53b96957f8fdc840b3a4d2d1e182cf58ad8191528521a",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0050.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "feefd544fcaccab6c3b762ede0f1b829f4676180361cb32a41d0ec775d4f7dd5",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
+    },
+    {
+      "evidence_tier": "US_government_analogue_reference",
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0051.jsonl",
+      "reason": "Full portable USDA NRCS ecological-site archive. For Canadian questions, it is explicitly labelled U.S. analogue context and cannot establish Canadian labels, law, rates, thresholds, calibration, or field conditions.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "715d556f867415445d0b83e6ddea6bbe3b3f3e61587aae96dd504f66d90d5984",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "nrcs_edit_ecological_site_description_json"
+      ],
+      "store_profile_id": "us-nrcs-full-reference",
+      "activation": "explicit_us_nrcs_or_mlra"
     }
-  ]
+  ],
+  "policy_id": "open-agronomy-runtime",
+  "schema_version": "open_agronomy_agent.runtime_corpus_policy.v1",
+  "composite_release": {
+    "profile_id": "offline-agronomy",
+    "active_store": "data/derived/rag/offline_agronomy/active/store_manifest.json",
+    "active_store_sha256": "48ec600b95132c412b5901c9af56e0cef3fae52fa71f47eb48a209cc5580dc0d",
+    "us_reference_store": "data/derived/rag/offline_agronomy/us_nrcs/store_manifest.json",
+    "us_reference_store_sha256": "03db2d31b97f2cdef876b7f87a6500b3bf10bb36af1d930067fa0fc4edec2ead",
+    "canadian_authority_priority": true,
+    "community_sources_loaded": false
+  }
 }

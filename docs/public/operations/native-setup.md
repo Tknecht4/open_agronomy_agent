@@ -27,7 +27,7 @@ Provision the pinned model explicitly:
 
 ```bash
 python scripts/download_model.py \
-  --model-config configs/model_gemma4_e2b_interface_v2.yaml
+  --model-config configs/model.yaml
 ```
 
 The profile pins `mlx-community/gemma-4-e2b-it-4bit` revision `238767527555cb75a05732a84dff5d6ba0dd6809`. The exercised snapshot occupied approximately 3.34 GiB in the local Hugging Face cache. The download command requires network access; question answering never triggers it.
@@ -40,7 +40,7 @@ PYTHONPATH=src python scripts/run_cockpit.py \
   --port 8000 \
   --frontend \
   --frontend-port 5173 \
-  --model-config configs/model_gemma4_e2b_interface_v2.yaml \
+  --model-config configs/model.yaml \
   --warm-model
 ```
 

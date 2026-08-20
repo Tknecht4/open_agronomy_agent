@@ -1,25 +1,25 @@
 {
   "schema_version": "open_agronomy_agent.runtime_profiles.v1",
   "release_model": {
-    "path": "configs/model_gemma4_e2b_interface_v2.yaml",
-    "sha256": "48647c02fc9a06ffba40ca7037b8758b33faf8e42b2e18220cad516df0826896",
+    "path": "configs/model.yaml",
+    "sha256": "bee80fa9403b29bf1e42ec399a02bf895ca17fc6063ac7d5ee972cc496027afe",
     "status": "active"
   },
-  "default_rag_config": "configs/rag_governed_runtime_v2.yaml",
+  "default_rag_config": "configs/rag.yaml",
   "active_rag_profiles": [
     {
-      "path": "configs/rag_governed_runtime_v2.yaml",
-      "sha256": "2a7f9cca000629dd7e6a74b2828cbf6324159b0b212a538df4c22e1d20992653",
+      "path": "configs/rag.yaml",
+      "sha256": "8f45880dbadf368848d52251aaafb24e25b17d9baa7923aa7707f6880fc04b91",
       "status": "active",
       "runtime_corpus_audit_required": true,
       "runtime_policy": {
-        "path": "data/manifests/runtime_corpus_policy_v2.json",
-        "sha256": "9f7c38640ef9f9a31106c0f50dd6de35abe7fee9e96191f8ab7c128b919a8f82"
+        "path": "data/manifests/runtime_corpus_policy.json",
+        "sha256": "a322ee54efaf01496c48e346df472f273c348a33f31431022a56b05892d8dcfb"
       },
       "knowledge_release": {
-        "store_id": "curated-canada-2026-08-14",
-        "manifest_path": "data/derived/rag/curated_canada/releases/2026-08-14/store_manifest.json",
-        "manifest_sha256": "9000eebb6c33d1997f4bdc463f51842e460ad4f9432ed8a9576f06626d56c583"
+        "store_id": "offline-agronomy",
+        "manifest_path": "data/derived/rag/offline_agronomy/active/store_manifest.json",
+        "manifest_sha256": "b3bdb39187bf02bebbee3b34bea13f87fddeeef0eb5bb7162b0c4a59394b6616"
       }
     }
   ],

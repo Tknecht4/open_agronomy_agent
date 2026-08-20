@@ -17,7 +17,7 @@ DEFAULT_GATE_QUESTIONS = (
     "How should I reason about sulfur deficiency in corn?",
     "What field data are required before a variable-rate nitrogen prescription?",
 )
-DEFAULT_RUNTIME_BUDGET_PATH = "plans/agronomy_agent_phase5_optimization_hardening_packet/phase5_runtime_budget_targets.csv"
+DEFAULT_RUNTIME_BUDGET_PATH = "configs/runtime_latency_budgets.csv"
 STAGE_BUDGET_ALIASES = {
     "router_classify": ("agent.route.classify",),
     "lexical_retrieval": ("agent.rag.lexical_search",),
@@ -37,7 +37,7 @@ class Phase5LatencyGateResult:
 def evaluate_ci_latency_gate(
     *,
     questions: Iterable[str] = DEFAULT_GATE_QUESTIONS,
-    rag_config: str = "configs/rag_governed_runtime_v2.yaml",
+    rag_config: str = "configs/rag.yaml",
     max_warm_p95_ms: float = 2000.0,
     runtime_budget_path: str | Path = DEFAULT_RUNTIME_BUDGET_PATH,
 ) -> Phase5LatencyGateResult:

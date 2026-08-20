@@ -26,8 +26,8 @@ from agronomy_agent.corpus_governance import (  # noqa: E402
 
 
 SCHEMA_VERSION = "open_agronomy_agent.edge_runtime_manifest.v1"
-RAG_CONFIG = "configs/rag_governed_runtime_v2.yaml"
-MODEL_CONFIG = "configs/model_gemma4_e2b_interface_v2.yaml"
+RAG_CONFIG = "configs/rag.yaml"
+MODEL_CONFIG = "configs/model.yaml"
 CONTROL_PATHS = (
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
@@ -137,6 +137,62 @@ def _artifact_path(artifact_root: Path, value: str | Path) -> Path:
     return path.resolve() if path.is_absolute() else (artifact_root / path).resolve()
 
 
+def _on_demand_release_paths(
+    root: Path,
+    artifact_root: Path,
+    releases: list[dict[str, Any]],
+) -> list[Path]:
+    """Return the complete, self-contained payload for configured releases.
+
+    An on-demand release is still an offline runtime dependency: the agent only
+    opens its bounded shards after an explicit request, but a portable image
+    must carry the release manifest, deterministic lexical index, quality
+    ledger, duplicate disposition, and every hash-bound shard.  Inventory the
+    declared release rather than a directory glob so accidental scratch files
+    never become image inputs.
+    """
+
+    paths: list[Path] = []
+    for release in releases:
+        if not isinstance(release, dict):
+            raise ValueError("on-demand corpus release entry must be an object")
+        manifest_value = release.get("manifest_path")
+        if not isinstance(manifest_value, str) or not manifest_value:
+            raise ValueError("on-demand corpus release is missing manifest_path")
+        manifest_path = _artifact_path(artifact_root, manifest_value)
+        _path_in_root(root, manifest_path, label="on-demand release manifest")
+        if not manifest_path.is_file():
+            raise FileNotFoundError(f"on-demand release manifest is missing: {manifest_path}")
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"on-demand release manifest is invalid JSON: {manifest_path}") from exc
+        if str(manifest.get("release_id") or "") != str(release.get("release_id") or ""):
+            raise ValueError("on-demand release id does not match its manifest")
+
+        release_root = manifest_path.parent
+        declared: list[Path] = [manifest_path]
+        for key in ("quality_ledger", "near_duplicate_clusters", "bm25_statistics_index"):
+            value = manifest.get(key)
+            if not isinstance(value, dict) or not isinstance(value.get("path"), str):
+                raise ValueError(f"on-demand release manifest is missing {key}.path")
+            declared.append((release_root / value["path"]).resolve())
+        shards = manifest.get("shards")
+        if not isinstance(shards, list) or not shards:
+            raise ValueError("on-demand release manifest contains no shards")
+        for shard in shards:
+            if not isinstance(shard, dict) or not isinstance(shard.get("path"), str):
+                raise ValueError("on-demand release shard is missing path")
+            declared.append((release_root / shard["path"]).resolve())
+        for path in declared:
+            _path_in_root(root, path, label="on-demand release artifact")
+            if not path.is_file():
+                raise FileNotFoundError(f"on-demand release artifact is missing: {path}")
+            if path not in paths:
+                paths.append(path)
+    return paths
+
+
 def build_manifest(root: Path, *, rag_config: str | Path = RAG_CONFIG) -> dict[str, Any]:
     root = root.resolve()
     rag_value = Path(rag_config)
@@ -157,6 +213,9 @@ def build_manifest(root: Path, *, rag_config: str | Path = RAG_CONFIG) -> dict[s
     )
     configured_corpora = [str(value) for value in retrieval.get("corpus_paths") or []]
     graph_values = [str(value) for value in retrieval.get("graph_paths") or []]
+    on_demand_values = retrieval.get("on_demand_corpus_releases") or []
+    if not isinstance(on_demand_values, list):
+        raise ValueError("retrieval.on_demand_corpus_releases must be a list")
     policy_value = retrieval.get("corpus_policy_manifest")
     policy = load_corpus_policy(artifact_root, policy_value)
     included_corpora, excluded_corpora = partition_runtime_corpus_paths(
@@ -165,7 +224,8 @@ def build_manifest(root: Path, *, rag_config: str | Path = RAG_CONFIG) -> dict[s
     )
     corpus_paths = [_artifact_path(artifact_root, value) for value in included_corpora]
     graph_paths = [_artifact_path(artifact_root, value) for value in graph_values]
-    knowledge_paths = [*corpus_paths, *graph_paths]
+    on_demand_paths = _on_demand_release_paths(root, artifact_root, on_demand_values)
+    knowledge_paths = [*corpus_paths, *graph_paths, *on_demand_paths]
     policy_path = _artifact_path(artifact_root, str(policy_value)) if policy_value else None
     required_paths = [
         rag_path,
@@ -270,6 +330,7 @@ def build_manifest(root: Path, *, rag_config: str | Path = RAG_CONFIG) -> dict[s
         ),
         "configured_corpus_count": len(configured_corpora),
         "included_corpus_count": len(included_corpora),
+        "on_demand_release_count": len(on_demand_values),
         "excluded_corpus_count": len(excluded_entries),
         "excluded_corpora": excluded_entries,
         "runtime_knowledge": knowledge_entries,

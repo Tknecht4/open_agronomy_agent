@@ -12,7 +12,7 @@ from agronomy_agent.paths import repo_path
 def verify_runtime_rollback(
     *,
     question: str,
-    rag_config: str = "configs/rag_governed_runtime_v2.yaml",
+    rag_config: str = "configs/rag.yaml",
 ) -> dict[str, Any]:
     """Verify the Agno cutover has no serving-time legacy shadow path."""
 

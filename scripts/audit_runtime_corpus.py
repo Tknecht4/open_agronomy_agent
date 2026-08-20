@@ -11,7 +11,7 @@ from agronomy_agent.corpus_governance import audit_runtime_corpora
 def main() -> int:
     parser = argparse.ArgumentParser(description="Audit the configured runtime corpus against its rights and evidence policy.")
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
-    parser.add_argument("--rag-config", type=Path, default=Path("configs/rag_governed_runtime_v2.yaml"))
+    parser.add_argument("--rag-config", type=Path, default=Path("configs/rag.yaml"))
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     root = args.root.resolve()

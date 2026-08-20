@@ -1099,7 +1099,7 @@ def run_local_tool(
         return local_tools.retrieve_context(
             payload.get("question", ""),
             top_k=int(payload.get("top_k", 5)),
-            rag_config=payload.get("rag_config", "configs/rag_governed_runtime_v2.yaml"),
+            rag_config=payload.get("rag_config", "configs/rag.yaml"),
         )
 
     # Extension path: a new HTTP-bound capability can be added with one ToolSpec

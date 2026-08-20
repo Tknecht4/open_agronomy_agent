@@ -10,7 +10,7 @@ import yaml
 from agronomy_agent.paths import repo_path
 
 
-DEFAULT_SKILL_PLAN_PATH = "plans/agronomy_agent_phase5_optimization_hardening_packet/phase5_skill_optimization_plan.yaml"
+DEFAULT_SKILL_PLAN_PATH = "configs/skill_registry.yaml"
 REGISTRY_VERSION = "phase5_skill_registry_v1"
 DEFAULT_TOOL_BOUNDARY = "Decision-support guardrail only; do not convert this output into field-specific legal, label, rate, or calibration advice."
 DEFAULT_TOOL_PROVENANCE = ("deterministic_guard_rule", "phase5_skill_registry_v1")

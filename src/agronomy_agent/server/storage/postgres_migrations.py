@@ -9,12 +9,10 @@ from urllib.parse import urlparse, urlunparse
 from agronomy_agent.paths import repo_path
 
 
-PACKET_DIR = repo_path("plans/agronomy_agent_phase4_hosted_platform_packet_final")
-DEFAULT_SCHEMA_PATH = PACKET_DIR / "phase4_postgres_schema_starter.sql"
-DEFAULT_CHECKSUMS_PATH = PACKET_DIR / "checksums.sha256"
-PHASE5_PACKET_DIR = repo_path("plans/agronomy_agent_phase5_optimization_hardening_packet")
+STORAGE_DIR = repo_path("src/agronomy_agent/server/storage")
+DEFAULT_SCHEMA_PATH = STORAGE_DIR / "postgres_schema.sql"
+DEFAULT_CHECKSUMS_PATH = STORAGE_DIR / "postgres_schema.checksums"
 DEFAULT_PHASE5_OBSERVABILITY_SCHEMA_PATH = repo_path("src/agronomy_agent/server/storage/phase5_observability_tables.sql")
-PACKET_PHASE5_OBSERVABILITY_SCHEMA_PATH = PHASE5_PACKET_DIR / "phase5_observability_tables.sql"
 REQUIRED_OBJECT_CHECKS = {
     "users": "SELECT to_regclass('public.users')",
     "auth_sessions": "SELECT to_regclass('public.auth_sessions')",
@@ -145,8 +143,6 @@ def apply_postgres_schema(
     schema_sql = schema_path.read_text(encoding="utf-8")
     observability_schema_path = (
         DEFAULT_PHASE5_OBSERVABILITY_SCHEMA_PATH
-        if DEFAULT_PHASE5_OBSERVABILITY_SCHEMA_PATH.exists()
-        else PACKET_PHASE5_OBSERVABILITY_SCHEMA_PATH
     )
     observability_sql = observability_schema_path.read_text(encoding="utf-8") if observability_schema_path.exists() else ""
     connector = connect or psycopg_connect()

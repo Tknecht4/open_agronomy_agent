@@ -17,17 +17,15 @@ from agronomy_agent.runtime_profiles import (
 from agronomy_agent.server.app import create_app
 from agronomy_agent.server.settings import build_settings
 from scripts.build_portable_agent_bundle import select_curated_store_artifacts
-from scripts.build_runtime_corpus_policy import build_policy
 
 
 ROOT = Path(__file__).resolve().parents[1]
 ACTIVE_CORPORA = {
-    "data/seed/agronomy_rag_corpus.jsonl",
-    "data/seed/boundary_rag_corpus.jsonl",
-    "data/derived/rag/soilwise_rag_corpus.jsonl",
-    "data/derived/rag/curated_canada/releases/2026-08-14/shards/context_only-canada-offline-master-0001.jsonl",
-    "data/derived/rag/curated_canada/releases/2026-08-14/shards/requires_live_authority-canada-offline-master-0001.jsonl",
-    "data/derived/rag/nrcs_esd_rag_corpus_compact_v2.jsonl",
+    "data/derived/rag/offline_agronomy/active/shards/canadian_context-0001.jsonl",
+    "data/derived/rag/offline_agronomy/active/shards/canadian_live-0001.jsonl",
+    "data/derived/rag/offline_agronomy/active/shards/project_context-0001.jsonl",
+    "data/derived/rag/offline_agronomy/active/shards/project_decisive-0001.jsonl",
+    "data/derived/rag/offline_agronomy/active/shards/soilwise_context-0001.jsonl",
 }
 ACTIVE_GRAPHS = {
     "data/seed/agronomy_knowledge_graph.json",
@@ -45,41 +43,38 @@ def test_runtime_registry_has_one_explicit_active_product_profile() -> None:
         "configs/rag_final_mvp.yaml",
         "configs/rag_governed_runtime_v1.yaml",
     }
-    assert not (ROOT / "configs/rag.yaml").exists()
+    assert (ROOT / "configs/rag.yaml").is_file()
     assert not list((ROOT / "configs").glob("rag_canada_v*_candidate.yaml"))
 
 
-def test_active_product_profile_is_the_cumulative_master_without_legacy_duplicates() -> None:
+def test_active_product_profile_is_source_exact_without_legacy_duplicates() -> None:
     config = yaml.safe_load((ROOT / DEFAULT_RAG_CONFIG).read_text(encoding="utf-8"))
     retrieval = config["retrieval"]
 
-    assert retrieval["corpus_policy_manifest"] == "data/manifests/runtime_corpus_policy_v2.json"
+    assert retrieval["corpus_policy_manifest"] == "data/manifests/runtime_corpus_policy.json"
     assert set(retrieval["corpus_paths"]) == ACTIVE_CORPORA
     assert set(retrieval["graph_paths"]) == ACTIVE_GRAPHS
     assert retrieval["require_graph_manifests"] is True
     assert not any("canada_agronomy_distributable" in path for path in retrieval["corpus_paths"])
     assert not any("supplement" in path for path in retrieval["corpus_paths"])
     assert not any("forum" in path for path in retrieval["corpus_paths"])
+    assert not any("compact" in path for path in retrieval["corpus_paths"])
+    assert retrieval["on_demand_corpus_releases"][0]["release_id"] == "us-nrcs-full-reference"
 
 
-def test_composite_policy_is_reproducible_and_audits_cleanly() -> None:
-    expected = json.loads(
-        (ROOT / "data/manifests/runtime_corpus_policy_v2.json").read_text(encoding="utf-8")
-    )
-    rebuilt = build_policy(root=ROOT)
-
-    assert rebuilt == expected
-    assert {row["path"] for row in rebuilt["corpora"]} == ACTIVE_CORPORA
+def test_composite_policy_covers_active_and_on_demand_corpora() -> None:
+    policy = json.loads((ROOT / "data/manifests/runtime_corpus_policy.json").read_text(encoding="utf-8"))
+    assert ACTIVE_CORPORA <= {row["path"] for row in policy["corpora"]}
     report = audit_runtime_corpora(
         root=ROOT,
         rag_config_path=ROOT / DEFAULT_RAG_CONFIG,
     )
     assert report["status"] == "pass", report["errors"]
-    assert report["configured_corpus_count"] == 6
+    assert report["configured_corpus_count"] == 56
 
 
-def test_portable_bundle_carries_the_master_store_proof_set() -> None:
-    release_root = ROOT / "data/derived/rag/curated_canada/releases/2026-08-14"
+def test_portable_bundle_carries_the_active_store_proof_set() -> None:
+    release_root = ROOT / "data/derived/rag/offline_agronomy/active"
     selected = select_curated_store_artifacts(ROOT, ROOT / DEFAULT_RAG_CONFIG)
 
     assert {path.relative_to(ROOT).as_posix() for path in selected} == {
@@ -89,20 +84,18 @@ def test_portable_bundle_carries_the_master_store_proof_set() -> None:
     }
 
 
-def test_active_runtime_loads_master_additions_and_both_governed_graphs() -> None:
+def test_active_runtime_loads_source_exact_corpus_and_both_governed_graphs() -> None:
     resources = load_agent_resources(DEFAULT_RAG_CONFIG)
     source_counts: dict[str, int] = {}
     for row in resources.retriever.docs:
         source_id = str(row.get("source_id") or row.get("source") or "")
         source_counts[source_id] = source_counts.get(source_id, 0) + 1
 
-    assert len(resources.retriever.docs) == 35419
+    assert len(resources.retriever.docs) == 3086
     assert len(resources.graph.nodes) == 1794
     assert len(resources.graph.edges) == 1458
-    assert source_counts["mb_2026_crop_disease_scouting"] == 4
-    assert source_counts["mb_2023_crop_rotation_context"] == 4
-    assert source_counts["ab_tame_pasture_range_health_2017"] == 4
-    assert source_counts["mb_2026_canola_insect_scouting"] == 5
+    assert source_counts["ab_nutrient_management_planning_guide_2008"] > 0
+    assert source_counts["on_field_crop_production_current"] > 0
 
 
 def test_server_defaults_and_override_discovery_use_only_registered_profiles(tmp_path: Path) -> None:

@@ -64,6 +64,7 @@ nav:
       - Generated capability catalog: capability-catalog.md
       - Generated graph catalog: graph-catalog.md
   - Knowledge and evidence: knowledge-and-data.md
+  - Historical artifacts: historical-artifacts.md
   - Tools and adapters: tools-and-adapters.md
   - Evaluation:
       - Evaluation contract: evaluation.md

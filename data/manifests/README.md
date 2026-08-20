@@ -6,13 +6,14 @@
 
 ## Main contracts
 
-- `runtime_corpus_policy_v2.json` is the active product policy deciding which configured corpus rows/artifacts may enter runtime retrieval; the unversioned policy is historical.
-- `curated_canada_offline_master_v1.json` specifies the cumulative dated Canadian release and sole `canada-offline-master` profile.
+- `runtime_corpus_policy.json` is the active product policy deciding which configured corpus rows/artifacts may enter runtime retrieval.
+- `offline_corpus_quality_audit.json`, `offline_corpus_retrieval_suite.json`, and `offline_corpus_retrieval_evaluation.json` bind active-row coverage and the fixed retrieval baseline.
+- Historical Canadian-master records remain evidence of prior releases, not the active runtime contract.
 - `source_licensing_matrix.json` and source-specific manifests preserve rights and redistribution state.
 - `rag_sources.json` and Canadian supplement/source manifests preserve retrieval lineage.
 - `canada_geospatial_sources.json` preserves source/derivation boundaries for map layers.
 - `eval_benchmark_sources.json` records evaluation-source identity and separation.
-- `source_retention_receipt.json` is path-sanitized evidence that distinguishes current release/hash validation from carried-forward raw-source observations; it is not standing deletion authority.
+- `source_retention_receipt.json` is retained historical compact-NRCS evidence; it is not the active offline-corpus gate or standing deletion authority. The active source-exact gate is `offline_corpus_quality_audit.json` plus each active-store source receipt.
 
 ## Required source fields
 

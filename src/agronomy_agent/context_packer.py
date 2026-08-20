@@ -652,7 +652,10 @@ def _doc_policy_note(doc: Any) -> str:
             "rates, product uses, or timing into the answer; FIELD ACTION: NOT AUTHORIZED; "
             "validate against current local guidance"
         )
-    if str(getattr(doc, "transfer_scope", "") or "").strip().lower() == "cross_border_analogue":
+    if str(getattr(doc, "transfer_scope", "") or "").strip().lower() in {
+        "cross_border_analogue",
+        "us_analogue_context_only",
+    }:
         notes.append(
             "US CROSS-BORDER ANALOGUE: match climate, landscape, soil and ecological process; "
             "never treat as Canadian field truth, calibration, legal authority or prescription"

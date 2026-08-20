@@ -48,7 +48,7 @@ Implement the shared backend contract, preserve stable result fields, inject it 
 
 ## Configuration
 
-The active governed profile is `configs/rag_governed_runtime_v2.yaml`, admitted
+The active governed profile is `configs/rag.yaml`, admitted
 by `configs/runtime_profiles.json`. Frozen and candidate profiles are not
 selectable by file presence. The public v1/final-MVP files are historical
 benchmark identity inputs and may point to intentionally absent legacy payloads.

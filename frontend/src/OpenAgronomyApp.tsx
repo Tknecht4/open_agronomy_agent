@@ -2022,7 +2022,7 @@ export function OpenAgronomyApp() {
   const [offlineStorageRepair, setOfflineStorageRepair] =
     useState<Phase6OfflineStorageRepairDetail | null>(null)
   const [privateKnowledge, setPrivateKnowledge] = useState<PrivateKnowledgeInspection[]>([])
-  const [ragConfig, setRagConfig] = useState('configs/rag_governed_runtime_v2.yaml')
+  const [ragConfig, setRagConfig] = useState('configs/rag.yaml')
   const [adapterReadiness, setAdapterReadiness] = useState<PublicAdapterReadiness>(fallbackAdapterReadiness)
   const [turns, setTurns] = useState<Turn[]>([])
   const [evidenceTurnId, setEvidenceTurnId] = useState('')
@@ -2178,7 +2178,7 @@ export function OpenAgronomyApp() {
         const nextRagConfigs =
           configs.rag_configs.length > 0
             ? configs.rag_configs
-            : ['configs/rag_governed_runtime_v2.yaml']
+            : ['configs/rag.yaml']
         const nextProfiles = configs.model_profiles || []
         setModelProfiles(nextProfiles)
         setNetworkMode(

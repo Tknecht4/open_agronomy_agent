@@ -8,8 +8,8 @@
 
 | Purpose | Default or documented profile | Notes |
 |---|---|---|
-| Native quick-start model | `model_gemma4_e2b_interface_v2.yaml` | Exact model/revision; local weights separately provisioned |
-| Governed runtime retrieval | `rag_governed_runtime_v2.yaml` | Active cumulative Canadian master plus explicitly admitted seed, SoilWise, graph, and NRCS analogue assets |
+| Native quick-start model | `model.yaml` | Exact model/revision; local weights separately provisioned |
+| Governed runtime retrieval | `rag.yaml` | Active source-exact Canadian evidence plus explicit, bounded U.S. NRCS analogue access |
 | Product-selection registry | `runtime_profiles.json` | Sole active/default model and RAG admission surface; file presence is not activation |
 | RC3 development checkpoint | `final_benchmark_round_rc3.json` | Completed and frozen exposed-and-tuned, three-trial `development_rerun_nonclaim` under runtime v2; not claim-eligible and not a Benchmark v3 result |
 | Benchmark lifecycle registry | `benchmark_round_lifecycle_v1.json` | Append-only completion status and checkpoint receipts; keeps frozen launch-plan bytes unchanged |
@@ -67,7 +67,7 @@ Inputs are YAML/JSON records consumed by launchers, resource loaders, audits, or
 ## Invariants
 
 - Pin model IDs and revisions for reproducible runs.
-- Keep active runtime corpus admission in `data/manifests/runtime_corpus_policy_v2.json`; paths alone do not authorize use.
+- Keep active runtime corpus admission in `data/manifests/runtime_corpus_policy.json`; paths alone do not authorize use.
 - Admit an active profile through `runtime_profiles.json` only after corpus and configuration audits pass; a candidate/frozen file is never selectable by presence.
 - Separate internal evaluation, external diagnostics, runtime retrieval, and training material.
 - Version schemas/contracts when meaning changes; do not silently repurpose a field.

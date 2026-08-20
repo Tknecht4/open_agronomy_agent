@@ -43,7 +43,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--model-config",
         default=None,
-        help="model profile YAML; defaults to configs/model_gemma4_e2b_interface_v2.yaml",
+        help="model profile YAML; defaults to configs/model.yaml",
     )
     parser.add_argument("--frontend", action="store_true", help="launch npm dev server for the frontend")
     parser.add_argument("--frontend-dir", default="frontend")

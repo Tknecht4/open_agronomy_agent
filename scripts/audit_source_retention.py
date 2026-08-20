@@ -517,7 +517,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--source-workspace", type=Path, default=DEFAULT_SOURCE_WORKSPACE)
-    parser.add_argument("--rag-config", default="configs/rag_governed_runtime_v2.yaml")
+    parser.add_argument("--rag-config", default="configs/rag.yaml")
     parser.add_argument("--json-output", type=Path, default=Path("outputs/pre_demo_core/source_retention_audit.json"))
     parser.add_argument("--markdown-output", type=Path, default=Path("outputs/pre_demo_core/source_retention_audit.md"))
     parser.add_argument(

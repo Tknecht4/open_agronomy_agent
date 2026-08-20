@@ -131,13 +131,13 @@ def test_named_saskatchewan_soil_specification_survives_final_context_cutoff() -
 
 def test_explicit_nrcs_analogue_keeps_its_boundary_in_packed_context() -> None:
     context = build_context(
-        "For a Saskatchewan field, can an NRCS ecological site be used as a cross-border analogue for soil water and ecological dynamics?",
+        "For a Saskatchewan field, can NRCS MLRA 001X ecological-site material be used as a cross-border analogue for soil water and ecological dynamics?",
         rag_config=DEFAULT_RAG_CONFIG,
         use_context_cache=False,
         use_search_cache=False,
     )
 
-    assert any(doc.transfer_scope == "cross_border_analogue" for doc in context.retrieved_docs)
+    assert any(doc.transfer_scope == "US_analogue_context_only" for doc in context.retrieved_docs)
     assert context.packed_context is not None
     assert "US CROSS-BORDER ANALOGUE" in context.packed_context.text
     assert "never treat as Canadian field truth" in context.packed_context.text

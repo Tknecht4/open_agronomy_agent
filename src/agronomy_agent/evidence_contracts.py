@@ -490,6 +490,9 @@ def span_and_capsule_from_retrieved_doc(
         "doc_id": str(getattr(doc, "doc_id", "") or ""),
         "corpus_path": str(getattr(doc, "corpus_path", "") or ""),
     }
+    source_locator = getattr(doc, "source_locator", None)
+    if isinstance(source_locator, Mapping):
+        locator["source_locator"] = dict(source_locator)
     if page_match:
         locator["page"] = int(page_match.group(1))
     transformation_sha = _valid_sha(getattr(doc, "chunk_sha256", None))
@@ -516,7 +519,12 @@ def span_and_capsule_from_retrieved_doc(
             else "source_claim"
         ),
         review_state="retrieval_eligible_not_claim_reviewed",
-        capture_status="exact_chunk_text_source_offsets_not_captured",
+        capture_status=(
+            "source_document_and_chunk_locator_captured"
+            if isinstance(source_locator, Mapping)
+            and str(source_locator.get("precision") or "") == "json_document_chunk"
+            else "exact_chunk_text_source_offsets_not_captured"
+        ),
     )
     capsule_seed = {
         "span_id": span.span_id,

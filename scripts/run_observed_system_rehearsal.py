@@ -41,8 +41,8 @@ def build_parser() -> argparse.ArgumentParser:
         default="agronomic_rag",
     )
     parser.add_argument("--model-id", default="mock")
-    parser.add_argument("--model-config", default="configs/model_gemma4_e2b_interface_v2.yaml")
-    parser.add_argument("--rag-config", default="configs/rag_governed_runtime_v2.yaml")
+    parser.add_argument("--model-config", default="configs/model.yaml")
+    parser.add_argument("--rag-config", default="configs/rag.yaml")
     parser.add_argument("--max-tokens", type=int, default=180)
     parser.add_argument(
         "--retrieval-configuration",

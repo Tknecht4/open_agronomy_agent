@@ -1,0 +1,110 @@
+{
+  "schema_version": "open_agronomy_agent.historical_archive_admission_register.v1",
+  "decision_date": "2026-08-20",
+  "archive_inventory_path": "data/manifests/historical_archive_lexar_20260819.json",
+  "archive_inventory_sha256": "64111d0e2b2105436db3d6627152d0e67fd24eef95f9eb61feef8df072962b13",
+  "archive_scope_boundary": "The intake receipt covers the source, implementation, configuration, documentation, and selected historical-data roots recorded in that receipt. Unhashed operator caches, virtual environments, and volatile execution outputs are not evidence of source admission and remain excluded from this register.",
+  "status_semantics": {
+    "admitted": "Allowed only in the declared successor scope and under all listed policy boundaries.",
+    "candidate": "Observed but not allowed in runtime, public release, or benchmark claims.",
+    "quarantined": "Blocked pending a security, privacy, or manual-review disposition.",
+    "rejected": "Retained only as historical inventory, never a source-data input."
+  },
+  "records": [
+    {
+      "source_family": "usda_nrcs_ecological_site_json",
+      "status": "admitted",
+      "admission_scope": "offline-agronomy active explicit-U.S.-analogue component",
+      "jurisdiction": "United States",
+      "runtime_role": "context_only_us_analogue",
+      "rights_basis": "US_government_public_source_with_citation",
+      "reproducibility": "hash-bound raw JSON inventory to immutable 16 MiB-or-smaller JSONL shards",
+      "bound_artifacts": {
+        "raw_inventory_sha256": "d8590a32167473dcc468aba9e3d2f6f5af2d534d7a611f0bf9dc1ade93143ed4",
+        "successor_store_sha256": "03db2d31b97f2cdef876b7f87a6500b3bf10bb36af1d930067fa0fc4edec2ead",
+        "rows": 218258
+      },
+      "prohibitions": [
+        "Canadian legal authority",
+        "Canadian product-label authority",
+        "Canadian rates or thresholds",
+        "Canadian field calibration or field-condition authority"
+      ]
+    },
+    {
+      "source_family": "historical_aiagribench_style_proxy",
+      "status": "candidate",
+      "admission_scope": "failure-mode review and separately authored successor-case harvesting only",
+      "jurisdiction": "mixed_or_not_established",
+      "runtime_role": "not_runtime_data",
+      "rights_basis": "local historical proxy; upstream benchmark provenance and reuse rights not established",
+      "reproducibility": "hash-bound historical catalog only",
+      "bound_artifacts": {
+        "catalog_sha256": "eb20650323cb03b3839c542a2b7e3776f63392444881686cfb972b9b7c9af12a"
+      },
+      "prohibitions": [
+        "RC3 pooling",
+        "official benchmark comparison",
+        "leaderboard or model-promotion claim",
+        "evaluation-suite import without duplicate, split, and licence review"
+      ]
+    },
+    {
+      "source_family": "historical_forum_and_community_corpora",
+      "status": "candidate",
+      "admission_scope": "source-specific rights, privacy, attribution, and redistributability review required",
+      "jurisdiction": "mixed_or_not_established",
+      "runtime_role": "not_runtime_data",
+      "rights_basis": "unknown until each upstream source is reviewed",
+      "reproducibility": "archive hash alone is not redistribution permission",
+      "prohibitions": [
+        "prescription support",
+        "diagnosis support",
+        "legal or regulatory support",
+        "replacement of official Canadian guidance"
+      ]
+    },
+    {
+      "source_family": "historical_spatial_layers_and_caches",
+      "status": "candidate",
+      "admission_scope": "optional hash-bound install pack after source, portability, and field-boundary review",
+      "jurisdiction": "mixed_or_not_established",
+      "runtime_role": "not_runtime_data",
+      "rights_basis": "per-layer review required",
+      "reproducibility": "raw and derived spatial artifacts remain external install-pack candidates",
+      "prohibitions": [
+        "implicit local-machine path dependency",
+        "unresolved field-boundary inference"
+      ]
+    },
+    {
+      "source_family": "private_and_secret_pattern_archive_material",
+      "status": "quarantined",
+      "admission_scope": "manual security and fixture review only",
+      "jurisdiction": "not_applicable",
+      "runtime_role": "not_runtime_data",
+      "rights_basis": "not_applicable",
+      "reproducibility": "intake path and hash retained without contents in this register",
+      "prohibitions": [
+        "public release",
+        "runtime loading",
+        "benchmark payload use"
+      ]
+    },
+    {
+      "source_family": "macos_sidecars_caches_and_superseded_generated_outputs",
+      "status": "rejected",
+      "admission_scope": "historical inventory only",
+      "jurisdiction": "not_applicable",
+      "runtime_role": "not_runtime_data",
+      "rights_basis": "not_applicable",
+      "reproducibility": "not a source-data lineage basis",
+      "prohibitions": [
+        "runtime loading",
+        "public release",
+        "benchmark evidence substitution"
+      ]
+    }
+  ],
+  "register_sha256": "329f39c22a77057a4bbc2ffbdc3c8e5853eb7b3fdb4a5ed5cf0c2771eec00835"
+}

@@ -867,7 +867,7 @@ def route_question(question: str) -> dict[str, Any]:
     }
 
 
-def retrieve_context(question: str, top_k: int = 5, rag_config: str = "configs/rag_governed_runtime_v2.yaml") -> dict[str, Any]:
+def retrieve_context(question: str, top_k: int = 5, rag_config: str = "configs/rag.yaml") -> dict[str, Any]:
     resources = load_agent_resources(rag_config)
     context = build_context(question, resources=resources)
     return {

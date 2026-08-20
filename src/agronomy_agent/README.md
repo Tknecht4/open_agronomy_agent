@@ -59,8 +59,7 @@ The supported cockpit composes the system through `server/app.py`. A normal answ
 ## Configuration
 
 Runtime selection starts in `configs/`.
-`configs/model_gemma4_e2b_interface_v2.yaml` and
-`configs/rag_governed_runtime_v2.yaml` are the active release profiles;
+`configs/model.yaml` and `configs/rag.yaml` are the active release profiles;
 `configs/runtime_profiles.json` is the selectable/default registry. Adding a
 config file does not activate it. See [`configs/README.md`](../../configs/README.md)
 before changing an active profile.

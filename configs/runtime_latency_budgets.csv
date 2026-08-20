@@ -1,0 +1,6 @@
+stage,p50_target_ms,p95_target_ms,primary_optimization
+router_classify,100,500,deterministic_route_cache
+lexical_retrieval,500,1500,source_exact_shard_selection
+kg_lookup,300,1000,manifest_bound_graph_lookup
+deterministic_tools,100,500,typed_local_capabilities
+context_packing,300,1000,cited_evidence_budget

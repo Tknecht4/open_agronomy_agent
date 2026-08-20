@@ -11,8 +11,8 @@ from agronomy_agent.agent import (
 from agronomy_agent.phase5_cache import CacheResult
 
 
-QUESTION = "How does soybean iron deficiency chlorosis relate to soil pH?"
-RAG_CONFIG = "configs/rag_final_mvp.yaml"
+QUESTION = "What soil health evidence is relevant to soil erosion?"
+RAG_CONFIG = "configs/rag.yaml"
 
 
 @pytest.mark.parametrize(

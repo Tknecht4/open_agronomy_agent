@@ -1,0 +1,8 @@
+skill_registry_version: active_skill_registry
+optimization_ladder:
+  - deterministic_guard_before_generation
+  - source_bound_retrieval_before_model_context
+  - cache_only_after_semantic_equivalence
+global_constraints:
+  - No skill output establishes field conditions, labels, legal authority, rates, thresholds, or calibration.
+  - External tools remain disabled unless a separately governed capability admits them.

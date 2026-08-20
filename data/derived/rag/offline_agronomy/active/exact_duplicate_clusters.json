@@ -1,0 +1,809 @@
+{
+  "schema_version": "open_agronomy_agent.corpus_exact_duplicate_clusters.v1",
+  "clusters": [
+    {
+      "cluster_id": "exact-000145",
+      "normalized_text_sha256": "09c78920486f611e5da8122f7f776287ce3210c18a9690d28d24dd7c35b96d7a",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-1:row-110",
+        "on_field_crop_production_current:sheet-1:row-131",
+        "on_field_crop_production_current:sheet-1:row-152",
+        "on_field_crop_production_current:sheet-1:row-173",
+        "on_field_crop_production_current:sheet-1:row-26",
+        "on_field_crop_production_current:sheet-1:row-47",
+        "on_field_crop_production_current:sheet-1:row-5",
+        "on_field_crop_production_current:sheet-1:row-68",
+        "on_field_crop_production_current:sheet-1:row-89"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-1:row-110"
+    },
+    {
+      "cluster_id": "exact-000156",
+      "normalized_text_sha256": "0ac4f5873af394ec0800beacb740f26f4f32cd3abb61f595592c82ed3f551630",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-3:row-111",
+        "on_field_crop_production_current:sheet-3:row-130",
+        "on_field_crop_production_current:sheet-3:row-184",
+        "on_field_crop_production_current:sheet-3:row-199",
+        "on_field_crop_production_current:sheet-3:row-214",
+        "on_field_crop_production_current:sheet-3:row-229",
+        "on_field_crop_production_current:sheet-3:row-244",
+        "on_field_crop_production_current:sheet-3:row-92"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-3:row-111"
+    },
+    {
+      "cluster_id": "exact-000268",
+      "normalized_text_sha256": "14b4d0b361236f6f02f0fe06a1eb23de2d83d3879123125a156f032415b9fdea",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-152",
+        "on_field_crop_production_current:sheet-3:row-52"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-152"
+    },
+    {
+      "cluster_id": "exact-000369",
+      "normalized_text_sha256": "1db7f7b08192152bab8c3cf4849dec39ac0b4f58869661c01babfb9ab566bc3b",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-3:row-107",
+        "on_field_crop_production_current:sheet-3:row-126",
+        "on_field_crop_production_current:sheet-3:row-180",
+        "on_field_crop_production_current:sheet-3:row-195",
+        "on_field_crop_production_current:sheet-3:row-210",
+        "on_field_crop_production_current:sheet-3:row-225",
+        "on_field_crop_production_current:sheet-3:row-240",
+        "on_field_crop_production_current:sheet-3:row-88"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-3:row-107"
+    },
+    {
+      "cluster_id": "exact-000400",
+      "normalized_text_sha256": "1fda5640ceda41d025126d934e38778799ca4079141dcfbc7d62dd94ade89bba",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-184",
+        "on_field_crop_production_current:sheet-3:row-139",
+        "on_field_crop_production_current:sheet-3:row-251"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-184"
+    },
+    {
+      "cluster_id": "exact-000408",
+      "normalized_text_sha256": "214b21ceec64ce9b1659170a06490b923af519d1ecae0407178d9751c6554aab",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-3:row-118",
+        "on_field_crop_production_current:sheet-3:row-137",
+        "on_field_crop_production_current:sheet-3:row-187",
+        "on_field_crop_production_current:sheet-3:row-202",
+        "on_field_crop_production_current:sheet-3:row-217",
+        "on_field_crop_production_current:sheet-3:row-232",
+        "on_field_crop_production_current:sheet-3:row-247",
+        "on_field_crop_production_current:sheet-3:row-99"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-3:row-118"
+    },
+    {
+      "cluster_id": "exact-000520",
+      "normalized_text_sha256": "2b286652cffdb38ef9e705b0c1df00e634176b588073f12854e64a46b08215e4",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-172",
+        "on_field_crop_production_current:sheet-3:row-72"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-172"
+    },
+    {
+      "cluster_id": "exact-000521",
+      "normalized_text_sha256": "2b3ff0f13e7bc42af6d9bc18f0463800172da52f456c5dd2c2e5a7c44fd6f734",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-159",
+        "on_field_crop_production_current:sheet-3:row-59"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-159"
+    },
+    {
+      "cluster_id": "exact-000593",
+      "normalized_text_sha256": "31a8f28478fe10a6c632907d5567f700228857b82d777b3ad8b16845f139d510",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-176",
+        "on_field_crop_production_current:sheet-3:row-76"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-176"
+    },
+    {
+      "cluster_id": "exact-000643",
+      "normalized_text_sha256": "3591e187bd8d0aeb1f8e76c4aa45db0016a86273373615defc2e137183204ed5",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-3:row-115",
+        "on_field_crop_production_current:sheet-3:row-134",
+        "on_field_crop_production_current:sheet-3:row-186",
+        "on_field_crop_production_current:sheet-3:row-201",
+        "on_field_crop_production_current:sheet-3:row-216",
+        "on_field_crop_production_current:sheet-3:row-231",
+        "on_field_crop_production_current:sheet-3:row-246",
+        "on_field_crop_production_current:sheet-3:row-96"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-3:row-115"
+    },
+    {
+      "cluster_id": "exact-000700",
+      "normalized_text_sha256": "3bb2e901d2a64cb9b3a32a608309e72c9c6be8315465ad8eb9f81dc575dc0765",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-104",
+        "on_field_crop_production_current:sheet-2:row-124",
+        "on_field_crop_production_current:sheet-2:row-144",
+        "on_field_crop_production_current:sheet-2:row-24",
+        "on_field_crop_production_current:sheet-2:row-4",
+        "on_field_crop_production_current:sheet-2:row-44",
+        "on_field_crop_production_current:sheet-2:row-64",
+        "on_field_crop_production_current:sheet-2:row-84",
+        "on_field_crop_production_current:sheet-3:row-24",
+        "on_field_crop_production_current:sheet-3:row-4",
+        "on_field_crop_production_current:sheet-3:row-44"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-104"
+    },
+    {
+      "cluster_id": "exact-000707",
+      "normalized_text_sha256": "3c624011e4d77c0bd2f137820751ef910ec51b632cf5695c9771ac1632726286",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-163",
+        "on_field_crop_production_current:sheet-3:row-63"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-163"
+    },
+    {
+      "cluster_id": "exact-000742",
+      "normalized_text_sha256": "3e84ff60db8a27378bfcdad2f98d65a3b89ff1aa42939bbab457141fcf9ec568",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-170",
+        "on_field_crop_production_current:sheet-3:row-70"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-170"
+    },
+    {
+      "cluster_id": "exact-000833",
+      "normalized_text_sha256": "45c1e399b4ca578c6a2031dde68f9536b09d594c4d9138a1d37c3da437700436",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-139",
+        "on_field_crop_production_current:sheet-3:row-19",
+        "on_field_crop_production_current:sheet-3:row-39"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-139"
+    },
+    {
+      "cluster_id": "exact-000839",
+      "normalized_text_sha256": "461eda4f5485cbd7fa1bde9719d0f61ef72af8dcaa060be46f0c8bfed5625b94",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-155",
+        "on_field_crop_production_current:sheet-3:row-55"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-155"
+    },
+    {
+      "cluster_id": "exact-000854",
+      "normalized_text_sha256": "475ab45fc6c60fd0c3e1a4eb4ec706c5bb46347304b77913525fbbc62edc7774",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-135",
+        "on_field_crop_production_current:sheet-3:row-15",
+        "on_field_crop_production_current:sheet-3:row-35"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-135"
+    },
+    {
+      "cluster_id": "exact-000866",
+      "normalized_text_sha256": "489e6bc3ce7bcf9f3bb15c18486ed752c3470728fc2842bc9c99272a2a5d0b86",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-1:row-107",
+        "on_field_crop_production_current:sheet-1:row-128",
+        "on_field_crop_production_current:sheet-1:row-149",
+        "on_field_crop_production_current:sheet-1:row-170",
+        "on_field_crop_production_current:sheet-1:row-191",
+        "on_field_crop_production_current:sheet-1:row-23",
+        "on_field_crop_production_current:sheet-1:row-44",
+        "on_field_crop_production_current:sheet-1:row-65",
+        "on_field_crop_production_current:sheet-1:row-86"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-1:row-107"
+    },
+    {
+      "cluster_id": "exact-000882",
+      "normalized_text_sha256": "4a40d631ed037e2a86d3d3cb39f4b8df8e216d93ef69cf9c417448e321af22a7",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-147",
+        "on_field_crop_production_current:sheet-3:row-47"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-147"
+    },
+    {
+      "cluster_id": "exact-000901",
+      "normalized_text_sha256": "4ba656233530e6db6257f0dc93baa0cd7642412561dd08b5abd639a3366aaabd",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-3:row-100",
+        "on_field_crop_production_current:sheet-3:row-119",
+        "on_field_crop_production_current:sheet-3:row-138",
+        "on_field_crop_production_current:sheet-3:row-173",
+        "on_field_crop_production_current:sheet-3:row-188",
+        "on_field_crop_production_current:sheet-3:row-203",
+        "on_field_crop_production_current:sheet-3:row-218",
+        "on_field_crop_production_current:sheet-3:row-233",
+        "on_field_crop_production_current:sheet-3:row-248"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-3:row-100"
+    },
+    {
+      "cluster_id": "exact-001034",
+      "normalized_text_sha256": "557b0c33102d3047b8459eeaab58c880f447ac499f74c16ebc335fb10a9c979c",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-174",
+        "on_field_crop_production_current:sheet-3:row-74"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-174"
+    },
+    {
+      "cluster_id": "exact-001060",
+      "normalized_text_sha256": "579b316aca970f76e4ff3bd749e4e3341c4704e8e9e503f44309cae37c709a7b",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-158",
+        "on_field_crop_production_current:sheet-3:row-58"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-158"
+    },
+    {
+      "cluster_id": "exact-001097",
+      "normalized_text_sha256": "5bee31e8c07859a88ea19e72d29831a1b0704c02d37d480122d3a34187219ad1",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-1:row-104",
+        "on_field_crop_production_current:sheet-1:row-125",
+        "on_field_crop_production_current:sheet-1:row-146",
+        "on_field_crop_production_current:sheet-1:row-167",
+        "on_field_crop_production_current:sheet-1:row-188",
+        "on_field_crop_production_current:sheet-1:row-20",
+        "on_field_crop_production_current:sheet-1:row-41",
+        "on_field_crop_production_current:sheet-1:row-62",
+        "on_field_crop_production_current:sheet-1:row-83"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-1:row-104"
+    },
+    {
+      "cluster_id": "exact-001134",
+      "normalized_text_sha256": "5f982c7f3753ff7858233856d6c6206def7281fbdddb38fbd7602f6ad178183f",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-1:row-109",
+        "on_field_crop_production_current:sheet-1:row-130",
+        "on_field_crop_production_current:sheet-1:row-151",
+        "on_field_crop_production_current:sheet-1:row-172",
+        "on_field_crop_production_current:sheet-1:row-25",
+        "on_field_crop_production_current:sheet-1:row-4",
+        "on_field_crop_production_current:sheet-1:row-46",
+        "on_field_crop_production_current:sheet-1:row-67",
+        "on_field_crop_production_current:sheet-1:row-88"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-1:row-109"
+    },
+    {
+      "cluster_id": "exact-001221",
+      "normalized_text_sha256": "65830fb82ab6f6d66aa33439b40ecebbc5ac560ba37480e2d4bcae442a722c67",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-151",
+        "on_field_crop_production_current:sheet-3:row-51"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-151"
+    },
+    {
+      "cluster_id": "exact-001225",
+      "normalized_text_sha256": "65c980b9f27c75649e2739f9b6260589e749c1ef422aa45bb4acf7d146fa0f32",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-180",
+        "on_field_crop_production_current:sheet-3:row-80"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-180"
+    },
+    {
+      "cluster_id": "exact-001290",
+      "normalized_text_sha256": "6afd45209e9961195ec29f8c94240e99c1ee2e69206f129d4e6275b3b47e95dc",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-146",
+        "on_field_crop_production_current:sheet-3:row-46"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-146"
+    },
+    {
+      "cluster_id": "exact-001305",
+      "normalized_text_sha256": "6c3225d6f5a3b745fad75b93ee23d210308bf3a5f63cb30979f7ee310e92a958",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-123",
+        "on_field_crop_production_current:sheet-3:row-23"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-123"
+    },
+    {
+      "cluster_id": "exact-001482",
+      "normalized_text_sha256": "7aded9858e6def4ceb6225b3d8b5a005edf4543a05a05d56a003e821d3151df8",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-182",
+        "on_field_crop_production_current:sheet-3:row-249"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-182"
+    },
+    {
+      "cluster_id": "exact-001512",
+      "normalized_text_sha256": "7d65c8a20dc94206cf4c7d31b043c7bdf67054ba02195b8c7880311e34ac9afc",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-153",
+        "on_field_crop_production_current:sheet-3:row-53"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-153"
+    },
+    {
+      "cluster_id": "exact-001529",
+      "normalized_text_sha256": "7f10d0b68fce84ef108b09aed418beb477faa3bba2174cdfbab87e634f57e709",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-178",
+        "on_field_crop_production_current:sheet-3:row-78"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-178"
+    },
+    {
+      "cluster_id": "exact-001603",
+      "normalized_text_sha256": "853008fe6d646d18e1178afb77032090a2ca785d4970ff287edd1449ccfc5e04",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-3:row-114",
+        "on_field_crop_production_current:sheet-3:row-133",
+        "on_field_crop_production_current:sheet-3:row-185",
+        "on_field_crop_production_current:sheet-3:row-200",
+        "on_field_crop_production_current:sheet-3:row-215",
+        "on_field_crop_production_current:sheet-3:row-230",
+        "on_field_crop_production_current:sheet-3:row-245",
+        "on_field_crop_production_current:sheet-3:row-95"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-3:row-114"
+    },
+    {
+      "cluster_id": "exact-001607",
+      "normalized_text_sha256": "8582bd0f24beac50b21c367200a618a839b096446768e75bf8000f9c8bec455d",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-169",
+        "on_field_crop_production_current:sheet-3:row-69"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-169"
+    },
+    {
+      "cluster_id": "exact-001684",
+      "normalized_text_sha256": "8b4e723f83572621932b7244304e12b82baaf57a225354bcebe2ed25ccaf5c74",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-3:row-110",
+        "on_field_crop_production_current:sheet-3:row-129",
+        "on_field_crop_production_current:sheet-3:row-183",
+        "on_field_crop_production_current:sheet-3:row-198",
+        "on_field_crop_production_current:sheet-3:row-213",
+        "on_field_crop_production_current:sheet-3:row-228",
+        "on_field_crop_production_current:sheet-3:row-243",
+        "on_field_crop_production_current:sheet-3:row-91"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-3:row-110"
+    },
+    {
+      "cluster_id": "exact-001685",
+      "normalized_text_sha256": "8b550ab3ffc6a1e045ec9f155bb502a07dad1bb8f02dd90224ab9881a5d5d4cc",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-116",
+        "on_field_crop_production_current:sheet-2:row-136",
+        "on_field_crop_production_current:sheet-2:row-156",
+        "on_field_crop_production_current:sheet-2:row-16",
+        "on_field_crop_production_current:sheet-2:row-175",
+        "on_field_crop_production_current:sheet-2:row-36",
+        "on_field_crop_production_current:sheet-2:row-56",
+        "on_field_crop_production_current:sheet-2:row-76",
+        "on_field_crop_production_current:sheet-2:row-96",
+        "on_field_crop_production_current:sheet-3:row-113",
+        "on_field_crop_production_current:sheet-3:row-132",
+        "on_field_crop_production_current:sheet-3:row-16",
+        "on_field_crop_production_current:sheet-3:row-36",
+        "on_field_crop_production_current:sheet-3:row-56",
+        "on_field_crop_production_current:sheet-3:row-75",
+        "on_field_crop_production_current:sheet-3:row-94"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-116"
+    },
+    {
+      "cluster_id": "exact-001705",
+      "normalized_text_sha256": "8d020ed01394132e9cd153e86a5caa6ab52d918349d92d0ec11d98b251494409",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-166",
+        "on_field_crop_production_current:sheet-3:row-66"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-166"
+    },
+    {
+      "cluster_id": "exact-001812",
+      "normalized_text_sha256": "97d97fb290232b07f665e17617af52691ff6614dae6367233e7e45e40af94d60",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-150",
+        "on_field_crop_production_current:sheet-3:row-50"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-150"
+    },
+    {
+      "cluster_id": "exact-001926",
+      "normalized_text_sha256": "a1c5b50bb3eae684033f4c564bbfc6ebc8655739dd243fa08ba69674217d17d0",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-3:row-108",
+        "on_field_crop_production_current:sheet-3:row-127",
+        "on_field_crop_production_current:sheet-3:row-181",
+        "on_field_crop_production_current:sheet-3:row-196",
+        "on_field_crop_production_current:sheet-3:row-211",
+        "on_field_crop_production_current:sheet-3:row-226",
+        "on_field_crop_production_current:sheet-3:row-241",
+        "on_field_crop_production_current:sheet-3:row-89"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-3:row-108"
+    },
+    {
+      "cluster_id": "exact-002060",
+      "normalized_text_sha256": "adc18b1ebae0db743efe17971d6f0fcb37743d25511d7d78db71869aefa835e9",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-157",
+        "on_field_crop_production_current:sheet-3:row-57"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-157"
+    },
+    {
+      "cluster_id": "exact-002085",
+      "normalized_text_sha256": "afe53c9f3c94efb983857d60b0dd72863dba7b79d82f5657b8bef93793877a98",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-3:row-109",
+        "on_field_crop_production_current:sheet-3:row-128",
+        "on_field_crop_production_current:sheet-3:row-182",
+        "on_field_crop_production_current:sheet-3:row-197",
+        "on_field_crop_production_current:sheet-3:row-212",
+        "on_field_crop_production_current:sheet-3:row-227",
+        "on_field_crop_production_current:sheet-3:row-242",
+        "on_field_crop_production_current:sheet-3:row-90"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-3:row-109"
+    },
+    {
+      "cluster_id": "exact-002098",
+      "normalized_text_sha256": "b087d2348c38fe661160b774a7321cdb426ecc10671238bd6f92d5233aeb2300",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-105",
+        "on_field_crop_production_current:sheet-2:row-125",
+        "on_field_crop_production_current:sheet-2:row-145",
+        "on_field_crop_production_current:sheet-2:row-164",
+        "on_field_crop_production_current:sheet-2:row-25",
+        "on_field_crop_production_current:sheet-2:row-45",
+        "on_field_crop_production_current:sheet-2:row-5",
+        "on_field_crop_production_current:sheet-2:row-65",
+        "on_field_crop_production_current:sheet-2:row-85",
+        "on_field_crop_production_current:sheet-3:row-102",
+        "on_field_crop_production_current:sheet-3:row-121",
+        "on_field_crop_production_current:sheet-3:row-25",
+        "on_field_crop_production_current:sheet-3:row-45",
+        "on_field_crop_production_current:sheet-3:row-5",
+        "on_field_crop_production_current:sheet-3:row-64",
+        "on_field_crop_production_current:sheet-3:row-83"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-105"
+    },
+    {
+      "cluster_id": "exact-002151",
+      "normalized_text_sha256": "b4c98feb17b2c364da803b34dbc645fbb84a973847cd923edd8f2e8848359767",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-100",
+        "on_field_crop_production_current:sheet-2:row-120",
+        "on_field_crop_production_current:sheet-2:row-140",
+        "on_field_crop_production_current:sheet-2:row-160",
+        "on_field_crop_production_current:sheet-2:row-179",
+        "on_field_crop_production_current:sheet-2:row-20",
+        "on_field_crop_production_current:sheet-2:row-40",
+        "on_field_crop_production_current:sheet-2:row-60",
+        "on_field_crop_production_current:sheet-2:row-80",
+        "on_field_crop_production_current:sheet-3:row-117",
+        "on_field_crop_production_current:sheet-3:row-136",
+        "on_field_crop_production_current:sheet-3:row-20",
+        "on_field_crop_production_current:sheet-3:row-40",
+        "on_field_crop_production_current:sheet-3:row-60",
+        "on_field_crop_production_current:sheet-3:row-79",
+        "on_field_crop_production_current:sheet-3:row-98"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-100"
+    },
+    {
+      "cluster_id": "exact-002194",
+      "normalized_text_sha256": "b8c92091d40bff5ae5db9aaca00ca122e38ec6c28c9d7a49f2fa96f0d03ea022",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-177",
+        "on_field_crop_production_current:sheet-3:row-77"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-177"
+    },
+    {
+      "cluster_id": "exact-002252",
+      "normalized_text_sha256": "bd456997779154e84145ccd7f922a5da69d70d0dc4faf30facbe429025041aa9",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-3:row-106",
+        "on_field_crop_production_current:sheet-3:row-125",
+        "on_field_crop_production_current:sheet-3:row-179",
+        "on_field_crop_production_current:sheet-3:row-194",
+        "on_field_crop_production_current:sheet-3:row-209",
+        "on_field_crop_production_current:sheet-3:row-224",
+        "on_field_crop_production_current:sheet-3:row-239",
+        "on_field_crop_production_current:sheet-3:row-87"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-3:row-106"
+    },
+    {
+      "cluster_id": "exact-002313",
+      "normalized_text_sha256": "c139ff23ed0ecf2413d472ca597fc008f9867a0829e52dbea8430018004c3ead",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-149",
+        "on_field_crop_production_current:sheet-3:row-49"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-149"
+    },
+    {
+      "cluster_id": "exact-002381",
+      "normalized_text_sha256": "c68883f4b20169852dd6d9d7362e0806b63e8a09c47fb48fef2455be7dc88fad",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-167",
+        "on_field_crop_production_current:sheet-3:row-67"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-167"
+    },
+    {
+      "cluster_id": "exact-002389",
+      "normalized_text_sha256": "c717b7248f3eb7237a5114779c90f185c2792b3620e0c989c376ebc638889eed",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-161",
+        "on_field_crop_production_current:sheet-3:row-61"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-161"
+    },
+    {
+      "cluster_id": "exact-002399",
+      "normalized_text_sha256": "c805ff73c7e7e7f7698ec63a560e3a2acde10cfcacc1a533769ec148c0ff1caa",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-168",
+        "on_field_crop_production_current:sheet-3:row-68"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-168"
+    },
+    {
+      "cluster_id": "exact-002400",
+      "normalized_text_sha256": "c864c5c49cd0c0626dc6a1303f10c8f6065cfba4545d4aeecef6d35b77493a39",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-3:row-142",
+        "on_field_crop_production_current:sheet-3:row-2"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-3:row-142"
+    },
+    {
+      "cluster_id": "exact-002463",
+      "normalized_text_sha256": "cc67b15e7f6e27d250c0e717dcf81565e4c55c49f8a9bf88f4bd60c241255ae6",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-165",
+        "on_field_crop_production_current:sheet-3:row-65"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-165"
+    },
+    {
+      "cluster_id": "exact-002488",
+      "normalized_text_sha256": "ce18dca3ab870bed9c75fc81df8e04be544030efa57af52108dc3c6d1ff4f6ff",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-183",
+        "on_field_crop_production_current:sheet-3:row-250"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-183"
+    },
+    {
+      "cluster_id": "exact-002519",
+      "normalized_text_sha256": "d1d91d325b02d48b0267373af00b42dfd36a1a13473212c43813ceb3b3ad376c",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-3:row-103",
+        "on_field_crop_production_current:sheet-3:row-122",
+        "on_field_crop_production_current:sheet-3:row-176",
+        "on_field_crop_production_current:sheet-3:row-191",
+        "on_field_crop_production_current:sheet-3:row-206",
+        "on_field_crop_production_current:sheet-3:row-221",
+        "on_field_crop_production_current:sheet-3:row-236",
+        "on_field_crop_production_current:sheet-3:row-84"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-3:row-103"
+    },
+    {
+      "cluster_id": "exact-002565",
+      "normalized_text_sha256": "d64f68a0b0bac7ad3efa6c7b1b5fc5d3979b0444c0ed2cc4e39213e8139b16b6",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-3:row-104",
+        "on_field_crop_production_current:sheet-3:row-123",
+        "on_field_crop_production_current:sheet-3:row-177",
+        "on_field_crop_production_current:sheet-3:row-192",
+        "on_field_crop_production_current:sheet-3:row-207",
+        "on_field_crop_production_current:sheet-3:row-222",
+        "on_field_crop_production_current:sheet-3:row-237",
+        "on_field_crop_production_current:sheet-3:row-85"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-3:row-104"
+    },
+    {
+      "cluster_id": "exact-002572",
+      "normalized_text_sha256": "d6bd87495b0fa82506692bcdacc5c18dd3dc64351993cce98ff9db8a6865dadd",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-185",
+        "on_field_crop_production_current:sheet-3:row-140",
+        "on_field_crop_production_current:sheet-3:row-252"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-185"
+    },
+    {
+      "cluster_id": "exact-002578",
+      "normalized_text_sha256": "d74c3f76a64d5c99a29281d6804c997dc7373fce3e1a3935b7a59f3406cb556d",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-3:row-145",
+        "on_field_crop_production_current:sheet-3:row-160",
+        "on_field_crop_production_current:sheet-3:row-175",
+        "on_field_crop_production_current:sheet-3:row-190",
+        "on_field_crop_production_current:sheet-3:row-205",
+        "on_field_crop_production_current:sheet-3:row-220",
+        "on_field_crop_production_current:sheet-3:row-235"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-3:row-145"
+    },
+    {
+      "cluster_id": "exact-002645",
+      "normalized_text_sha256": "dc4c0b3128b7e7864ca5a15728ac70944a091f30041e73529b68c9a4d928d888",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-186",
+        "on_field_crop_production_current:sheet-3:row-253"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-186"
+    },
+    {
+      "cluster_id": "exact-002698",
+      "normalized_text_sha256": "e1b32227b8dd83fc83633b121bc3d55f5ce8e6532733f713048dc31f9b0f2a43",
+      "member_doc_ids": [
+        "soilwise_https_soilwise_he_github_io_soil_health_organiccompounds_c52164820e",
+        "soilwise_https_soilwise_he_github_io_soil_health_selectedorganiccompounds_85e1871ff4"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "soilwise_https_soilwise_he_github_io_soil_health_organiccompounds_c52164820e"
+    },
+    {
+      "cluster_id": "exact-002712",
+      "normalized_text_sha256": "e24dd8858a43fbff91272e96dfb39f330e057b8c094bc225bb8a22154b06f7db",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-3:row-105",
+        "on_field_crop_production_current:sheet-3:row-124",
+        "on_field_crop_production_current:sheet-3:row-178",
+        "on_field_crop_production_current:sheet-3:row-193",
+        "on_field_crop_production_current:sheet-3:row-208",
+        "on_field_crop_production_current:sheet-3:row-223",
+        "on_field_crop_production_current:sheet-3:row-238",
+        "on_field_crop_production_current:sheet-3:row-86"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-3:row-105"
+    },
+    {
+      "cluster_id": "exact-002808",
+      "normalized_text_sha256": "e86e6397a238b3fe180b720f4cff5bb732dedd0ca6de21b3c323e436cba03463",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-148",
+        "on_field_crop_production_current:sheet-3:row-48"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-148"
+    },
+    {
+      "cluster_id": "exact-002881",
+      "normalized_text_sha256": "ef21dd4395f83d06517aeb4aa614d118e17a9f18235f45be4205bd433ac5276f",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-143",
+        "on_field_crop_production_current:sheet-3:row-43"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-143"
+    },
+    {
+      "cluster_id": "exact-002919",
+      "normalized_text_sha256": "f1dac446cd250e02d4523d7b75e9e1b7d8709c88eb6c7e2b2277027c6bff7d3f",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-173",
+        "on_field_crop_production_current:sheet-3:row-73"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-173"
+    },
+    {
+      "cluster_id": "exact-002930",
+      "normalized_text_sha256": "f2e44ba65b74e4b9c6460b1437ded604b4ec0de91f379050bdeb2fbdf6af7c71",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-103",
+        "on_field_crop_production_current:sheet-3:row-3"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-103"
+    },
+    {
+      "cluster_id": "exact-003010",
+      "normalized_text_sha256": "f9bb88d6b0924c9ab43ead59afb38ea417b3bb9ee645002d868372461790995c",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-2:row-171",
+        "on_field_crop_production_current:sheet-3:row-71"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-2:row-171"
+    },
+    {
+      "cluster_id": "exact-003014",
+      "normalized_text_sha256": "fa129c3b6fd070125799438a0ca0d878d38c2e05bf6bfa7e0178eaca1eefa05e",
+      "member_doc_ids": [
+        "on_field_crop_production_current:sheet-1:row-100",
+        "on_field_crop_production_current:sheet-1:row-121",
+        "on_field_crop_production_current:sheet-1:row-142",
+        "on_field_crop_production_current:sheet-1:row-16",
+        "on_field_crop_production_current:sheet-1:row-163",
+        "on_field_crop_production_current:sheet-1:row-184",
+        "on_field_crop_production_current:sheet-1:row-37",
+        "on_field_crop_production_current:sheet-1:row-58",
+        "on_field_crop_production_current:sheet-1:row-79"
+      ],
+      "disposition": "retained_first_exact_normalized_text",
+      "retained_doc_id": "on_field_crop_production_current:sheet-1:row-100"
+    }
+  ]
+}

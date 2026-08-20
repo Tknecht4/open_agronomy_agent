@@ -24,7 +24,7 @@ from agronomy_agent.server.storage.db import TraceStore
 
 
 QUESTION = "Convert a fertilizer rate of 100 lb/ac to kg/ha."
-RETRIEVAL_QUESTION = "How does soybean iron deficiency chlorosis relate to soil pH?"
+RETRIEVAL_QUESTION = "What soil health evidence is relevant to soil erosion?"
 
 
 def _runtime(tmp_path, name: str):  # noqa: ANN001, ANN202
@@ -34,8 +34,8 @@ def _runtime(tmp_path, name: str):  # noqa: ANN001, ANN202
     settings = build_settings(
         db_path=database_path,
         artifact_root=tmp_path / f"{name}_artifacts",
-        model_config_path="configs/model_gemma4_e2b_interface_v2.yaml",
-        default_rag_config="configs/rag_final_mvp.yaml",
+        model_config_path="configs/model.yaml",
+        default_rag_config="configs/rag.yaml",
         network_mode="offline",
     )
     return store, session, settings
@@ -58,7 +58,7 @@ def _nonclaim_request(
         message=question,
         mode="agronomic_rag",
         model_id=model_id,
-        rag_config="configs/rag_final_mvp.yaml",
+        rag_config="configs/rag.yaml",
         max_tokens=100,
         trace_options={
             "store_prompt_messages": False,
@@ -79,7 +79,7 @@ def test_cockpit_and_nonclaim_adapter_share_the_production_stage_receipts(tmp_pa
         message=QUESTION,
         mode="agronomic_rag",
         model_id="mock",
-        rag_config="configs/rag_final_mvp.yaml",
+        rag_config="configs/rag.yaml",
         max_tokens=100,
         trace_options={
             "store_prompt_messages": False,
@@ -581,7 +581,7 @@ def test_execution_request_rejects_unknown_modes_before_side_effects(tmp_path) -
             message=QUESTION,
             mode="raw_model",
             model_id="mock",
-            rag_config="configs/rag_final_mvp.yaml",
+            rag_config="configs/rag.yaml",
             max_tokens=100,
             execution_class="observed_system_execution_nonclaim",
         )

@@ -125,7 +125,7 @@ def evaluate(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--reference-outputs", type=Path, required=True)
-    parser.add_argument("--rag-config", type=Path, default=ROOT / "configs/rag_governed_runtime_v2.yaml")
+    parser.add_argument("--rag-config", type=Path, default=ROOT / "configs/rag.yaml")
     parser.add_argument("--model-config", type=Path, required=True)
     parser.add_argument("--sample-count", type=int, default=40)
     parser.add_argument("--output", type=Path, required=True)

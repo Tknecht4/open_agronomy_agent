@@ -2,42 +2,40 @@
 
 The runtime knowledge base is selected by an explicit policy manifest and an operator-selected RAG configuration. Presence on disk is not admission.
 
-## Cumulative clone-contained Canadian master
+## Active clone-contained offline corpus
 
-The active Canadian document release is
-`data/derived/rag/curated_canada/releases/2026-08-14/`. Its sole profile,
-`canada-offline-master`, contains 969 rows from 20 admitted sources in two
-SHA-bound shards: 955 `context_only` rows and 14
-`requires_live_authority` rows. It replaces the former core/extended operator
-choice with one cumulative public corpus. The store is a deterministic derived
-release, not an archive of the raw documents and not a training dataset.
+`configs/rag.yaml` selects the stable `offline-agronomy` profile. Its direct
+startup store at `data/derived/rag/offline_agronomy/active/` contains 3,086
+source-exact rows: Canadian raw-page and table evidence, project policy, and
+SoilWise context. Every record has a raw/source-record hash, locator,
+jurisdiction, rights, policy, and quality-ledger fields. It is a deterministic
+derived release, not an archive of raw documents or a training dataset.
 
-The profile, store manifest, source-coverage receipt, ingest receipt, source
-registry, dated source-aware inputs, and reviewed semantic companions preserve
-the release lineage. Semantic companions are versioned by review date. A
-recovery receipt identifies companions reconstructed from hash-bound derived
-rows and does not claim recovery of missing original byte streams.
+The active store manifest, source receipt, duplicate-cluster receipt, and
+quality ledger are required evidence. A row that cannot be rebuilt with a
+source-exact locator is excluded from this active profile rather than admitted
+under a historical exception.
 
-The former `curated_canada/v1` through `v4` development payloads are removed
-from the current tree/package; compact manifests, review records, and Git
-history preserve their milestones. `configs/rag_governed_runtime_v1.yaml` and
+The former `curated_canada/v1` through `v4` development payloads are not
+active runtime inputs. Frozen receipt material and Git history preserve their
+milestones. `configs/rag_governed_runtime_v1.yaml` and
 `configs/rag_final_mvp.yaml` remain only as frozen RC1/RC2 identity inputs; they
 are not selectable and may reference historical payloads intentionally absent
 from a current public checkout.
 
 ## Active governed runtime composition
 
-`configs/rag_governed_runtime_v2.yaml` composes six explicitly hash-admitted
-corpora totaling 35,419 rows and two governed graphs totaling 1,794 nodes and
-1,458 edges. `configs/runtime_profiles.json` is the product-selection registry;
-adding a YAML file does not activate it.
+`configs/rag.yaml` composes five direct, explicitly hash-admitted corpus shards
+and two governed graphs totaling 1,794 nodes and 1,458 edges.
+`configs/runtime_profiles.json` is the product-selection registry; adding a
+YAML file does not activate it.
 
 | Artifact | Rows | Runtime role | Boundary |
 |---|---:|---|---|
-| Canadian offline master | 969 | 955 context-only; 14 require live authority | Uneven Canadian coverage; no row becomes current field truth by retrieval |
-| SoilWise RAG + KG | 1,784 RAG rows; 1,784 graph nodes | Context only | Soil-health concepts and relations, not a soil test |
-| NRCS ESD compact v2 | 32,624 | Context only | Sanitized projection of 8,300 USDA EDIT sites; explicit US analogue only |
-| Project seed and boundary corpora | 42 | 36 context-only; 6 decisive project safety rows | Project-authored synthesis/policy, not independent agronomic evidence |
+| Canadian source-exact evidence | 1,261 | 863 context-only; 398 require live authority | Canadian evidence remains bounded by source date and current-authority controls |
+| SoilWise + KG | 1,783 RAG rows; 1,784 graph nodes | Context only | Soil-health concepts and relations, not a soil test |
+| U.S. NRCS ESD full pack | 218,258 | Explicit U.S./NRCS/MLRA requests only | Source-exact U.S. analogue context; never Canadian decisive authority |
+| Project policy | 42 | 36 context-only; 6 decisive project safety rows | Project-authored synthesis/policy, not independent agronomic evidence |
 | Project and SoilWise graphs | 1,794 nodes; 1,458 edges | Relationship context | A graph route is not a measurement, diagnosis, or source-authority promotion |
 
 The master source-coverage receipt records source-declared crop, topic, and
@@ -49,6 +47,40 @@ excluded. Discovery or a file on disk does not make content model-visible.
 The NASS QuickStats snapshot is not a RAG corpus. It is a typed, dated static
 tool snapshot with its own manifest and freshness boundary. It must not be
 described as live data or as Canadian evidence.
+
+## U.S. analogue pack and retrieval baseline
+
+The active profile preserves Canadian evidence as the highest-priority
+authority and includes 218,258 hash-bound historical USDA NRCS records in 51
+deterministic JSONL shards (each capped at 16 MiB). The full U.S. pack is
+**not** loaded into ordinary Canadian startup retrieval: it is verified and
+opened on demand only for an explicit U.S./NRCS request that names an MLRA
+identifier. This keeps bounded shard loading available without crowding Canadian
+evidence or silently changing Canadian authority.
+
+The U.S. release carries a deterministic exact-token BM25 statistics index.
+The index stores document lengths and per-shard document frequencies, not a
+second copy of source text; policy selects the relevant shard before source
+JSONL is opened.
+
+Every successor U.S. row has a raw-source hash, portable archive path, source
+URL, extraction recipe, chunk index, exact text hash, duplicate disposition,
+jurisdiction, rights status, and `context_only` policy. For Canadian questions,
+it is labelled U.S. analogue context and cannot establish a Canadian label,
+law, rate, threshold, calibration, or field condition. Raw archive and spatial
+bytes remain separate hash-bound optional packs.
+
+The fixed retrieval baseline is evaluated by a source-grounded suite before any
+hybrid, dense, or reranking profile can be promoted. The repository records its
+protocol in `configs/offline_corpus_retrieval_preregistration.json`, its result
+in `data/manifests/offline_corpus_retrieval_evaluation.json`, and its
+primary-source methods review in
+`docs/reviews/offline-corpus-retrieval-methods-20260819.md`.
+
+The measured baseline is locator- and authority-compliant, but it is not a
+claim that a more complex retriever improves performance. Promotion requires a
+frozen held-out comparison and zero authority, jurisdiction, privacy, duplicate,
+or source-locator violations.
 
 See [offline data setup](operations/offline-data-setup.md) for validation and
 external-map preparation.
@@ -67,17 +99,17 @@ applied-guidance component has the following row-level jurisdiction counts:
 
 SoilWise adds useful soil-process concepts across all three provinces, but it does not repair the Saskatchewan applied-guidance gap and must not be presented as if it does. The conference interface therefore treats Saskatchewan mapping as a regional prior and asks for current Saskatchewan guidance before locally calibrated decisions.
 
-Every admitted Canadian row carries source and lineage fields. The runtime v2
-policy records the byte hash, evidence tier, rights status, admission reason,
-and runtime role for every configured corpus.
+Every admitted runtime row carries source and lineage fields. The active policy
+records the byte hash, evidence tier, rights status, admission reason, and
+runtime role for every configured corpus.
 
-The maintainer-only retention audit can reverify governed rows against exact
-raw-source bytes when the source archive is mounted. The portable receipt
-records which observations are current hash/store validation and which raw-byte
-checks were carried forward from an earlier observed audit or source-intake
-receipt. It also binds NRCS compact v2 to the prior full/reference projection.
-Passing a receipt is necessary but never sufficient for deletion: deletion
-requires a separate path- and hash-specific approval manifest.
+The historical maintainer-only retention receipt remains evidence for the
+former compact-NRCS profile; it is not a gate for this active profile. The
+current gate is the active-store source receipt plus the successor quality audit,
+which bind every runtime row to source-exact locator, rights, jurisdiction,
+policy, and quality fields. Passing either receipt is necessary but never
+sufficient for deletion: deletion requires a separate path- and hash-specific
+approval manifest.
 
 ## Why processed material can be absent from runtime
 

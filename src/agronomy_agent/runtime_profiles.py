@@ -13,8 +13,8 @@ from agronomy_agent.paths import REPO_ROOT
 
 RUNTIME_PROFILE_REGISTRY = Path("configs/runtime_profiles.json")
 RUNTIME_PROFILE_REGISTRY_SCHEMA = "open_agronomy_agent.runtime_profiles.v1"
-DEFAULT_MODEL_CONFIG = "configs/model_gemma4_e2b_interface_v2.yaml"
-DEFAULT_RAG_CONFIG = "configs/rag_governed_runtime_v2.yaml"
+DEFAULT_MODEL_CONFIG = "configs/model.yaml"
+DEFAULT_RAG_CONFIG = "configs/rag.yaml"
 
 
 @dataclass(frozen=True)

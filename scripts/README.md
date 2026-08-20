@@ -73,7 +73,7 @@ PYTHONPATH=src .venv/bin/python scripts/run_observed_system_rehearsal.py \
   --question "Convert a fertilizer rate of 100 lb/ac to kg/ha." \
   --mode agronomic_rag \
   --model-id mock \
-  --rag-config configs/rag_governed_runtime_v2.yaml
+  --rag-config configs/rag.yaml
 ```
 
 Supported product modes are `baseline`, `agronomic_rag`, and `mock` when both

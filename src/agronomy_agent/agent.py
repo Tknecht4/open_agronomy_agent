@@ -92,6 +92,7 @@ from agronomy_agent.agno_runtime.knowledge_graph import (
     load_graph_manifests,
 )
 from agronomy_agent.agno_runtime.local_index import LexicalRetriever, RetrievedDoc
+from agronomy_agent.on_demand_corpus import OnDemandCorpusRelease
 from agronomy_agent.router import QueryRoute, classify_query, refine_query_route
 from agronomy_agent.runtime_profiles import DEFAULT_MODEL_CONFIG, DEFAULT_RAG_CONFIG
 from agronomy_agent.skill_registry import skill_metadata
@@ -387,6 +388,7 @@ class AgentResources:
     load_time_excluded_corpora: tuple[dict[str, Any], ...] = ()
     private_knowledge_overlay: PrivateKnowledgeOverlay | None = None
     private_retriever: LexicalRetriever | None = None
+    on_demand_releases: tuple[OnDemandCorpusRelease, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -775,6 +777,21 @@ def _resolve_configured_artifacts(cfg: dict[str, Any], config_path: Path | None)
         normalized_retrieval["corpus_policy_manifest"] = str(
             value.resolve() if value.is_absolute() else (artifact_root / value).resolve()
         )
+    on_demand = normalized_retrieval.get("on_demand_corpus_releases")
+    if on_demand is not None:
+        if not isinstance(on_demand, list):
+            raise ValueError("retrieval.on_demand_corpus_releases must be a list")
+        normalized_entries: list[dict[str, Any]] = []
+        for entry in on_demand:
+            if not isinstance(entry, dict):
+                raise ValueError("on-demand corpus release entry must be an object")
+            normalized_entry = dict(entry)
+            value = Path(str(normalized_entry.get("manifest_path") or ""))
+            normalized_entry["manifest_path"] = str(
+                value.resolve() if value.is_absolute() else (artifact_root / value).resolve()
+            )
+            normalized_entries.append(normalized_entry)
+        normalized_retrieval["on_demand_corpus_releases"] = normalized_entries
     normalized_retrieval["resolved_artifact_root"] = str(artifact_root)
     normalized["retrieval"] = normalized_retrieval
     return normalized
@@ -812,6 +829,11 @@ def _resource_key(cfg: dict[str, Any]) -> str:
     require_graph_manifests = bool(retrieval_cfg.get("require_graph_manifests", False))
     policy_path = retrieval_cfg.get("corpus_policy_manifest")
     policy_paths = [policy_path] if policy_path else []
+    on_demand_paths = [
+        str(entry.get("manifest_path") or "")
+        for entry in retrieval_cfg.get("on_demand_corpus_releases") or []
+        if isinstance(entry, dict) and entry.get("manifest_path")
+    ]
     private_overlay = load_private_knowledge_overlay(
         repo_path("."),
         cfg.get("private_knowledge"),
@@ -836,7 +858,7 @@ def _resource_key(cfg: dict[str, Any]) -> str:
     )
     fingerprints = [
         file_fingerprint(repo_path(path))
-        for path in [*indexed_corpus_paths, *policy_paths]
+        for path in [*indexed_corpus_paths, *policy_paths, *on_demand_paths]
     ] + [file_fingerprint(path) for path in graph_artifacts]
     return stable_digest(
         {
@@ -881,6 +903,11 @@ def load_agent_resources(rag_config: dict[str, Any] | str | Path | None = None) 
     corpus_policy = merge_private_overlay_policy(
         load_corpus_policy(repo_path("."), retrieval_cfg.get("corpus_policy_manifest")),
         private_overlay,
+    )
+    on_demand_releases = tuple(
+        OnDemandCorpusRelease.from_config(entry)
+        for entry in retrieval_cfg.get("on_demand_corpus_releases") or []
+        if isinstance(entry, dict)
     )
     indexed_corpus_paths, load_time_excluded_corpora = partition_runtime_corpus_paths(
         corpus_paths,
@@ -939,6 +966,7 @@ def load_agent_resources(rag_config: dict[str, Any] | str | Path | None = None) 
         load_time_excluded_corpora=tuple(load_time_excluded_corpora),
         private_knowledge_overlay=private_overlay,
         private_retriever=private_retriever,
+        on_demand_releases=on_demand_releases,
     )
     with _RESOURCE_LOCK:
         _RESOURCE_CACHE[key] = resources
@@ -1642,6 +1670,18 @@ def build_context(
         if document_retrieval_enabled and loaded.private_retriever is not None
         else []
     )
+    on_demand_docs = [
+        doc
+        for release in loaded.on_demand_releases
+        for doc in release.search(
+            question,
+            top_k=raw_candidate_k,
+            allowed_roles=filters.get("audience") or (),
+            source_types=filters.get("source_type") or (),
+            retrieval_policies=filters.get("retrieval_policy") or ("standard", "context_only"),
+            query_expansion=field_query_expansion,
+        )
+    ] if document_retrieval_enabled else []
     local_jurisdiction_docs = (
         loaded.retriever.search(
             question,
@@ -1746,6 +1786,7 @@ def build_context(
     for doc in (
         *raw_docs,
         *private_raw_docs,
+        *on_demand_docs,
         *local_jurisdiction_docs,
         *private_local_jurisdiction_docs,
         *regional_docs,
@@ -1768,6 +1809,12 @@ def build_context(
     evidence_fit_docs.extend(
         doc for doc in named_regional_product_docs if doc.doc_id not in evidence_fit_doc_ids
     )
+    # The U.S. pack is admitted only through its explicit on-demand selector.
+    # Do not let Canadian-jurisdiction filtering erase that declared analogue
+    # context after activation; later policy packing preserves its boundary.
+    evidence_fit_docs.extend(
+        doc for doc in on_demand_docs if doc.doc_id not in evidence_fit_doc_ids
+    )
     evidence_fit_dropped = tuple(
         item
         for item in evidence_fit.dropped
@@ -1778,6 +1825,9 @@ def build_context(
     private_rank_offset = len(raw_docs)
     for rank, doc in enumerate(private_raw_docs, start=1):
         raw_query_ranks.setdefault(doc.doc_id, private_rank_offset + rank)
+    on_demand_rank_offset = len(raw_docs) + len(private_raw_docs)
+    for rank, doc in enumerate(on_demand_docs, start=1):
+        raw_query_ranks.setdefault(doc.doc_id, on_demand_rank_offset + rank)
     for rank, doc in enumerate(regional_docs, start=1):
         raw_query_ranks.setdefault(doc.doc_id, len(raw_docs) + rank)
     for rank, doc in enumerate(country_regional_docs, start=1):
@@ -1819,10 +1869,11 @@ def build_context(
         decision_contract=decision_contract,
     )
     decision_fit_docs, decision_dropped_docs = filter_decision_distractors(question, ranked_docs)
+    explicit_analogue_context = bool(on_demand_docs)
     policy_eligible_docs, policy_blocked_docs = _filter_docs_by_retrieval_policy(
         list(decision_fit_docs),
         question=question,
-        allow_context_only_support=decision_contract is not None,
+        allow_context_only_support=decision_contract is not None or explicit_analogue_context,
     )
     governance_eligible_docs, governance_blocked_docs = filter_docs_by_corpus_governance(
         question,
@@ -1830,6 +1881,7 @@ def build_context(
         loaded.corpus_policy or {},
         allow_context_only_support=(
             decision_contract is not None
+            or explicit_analogue_context
             or _requested_named_regional_product_source_id(question) is not None
         ),
     )

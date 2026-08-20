@@ -25,7 +25,7 @@ GENERATED_GRAPH_CATALOG = DOCS_ROOT / "graph-catalog.md"
 GENERATED_CAPABILITY_BEGIN = "<!-- BEGIN GENERATED CAPABILITY REGISTRY -->"
 GENERATED_CAPABILITY_END = "<!-- END GENERATED CAPABILITY REGISTRY -->"
 CAPABILITY_REGISTRY_SCHEMA = "open_agronomy_agent.capability_registry.v1"
-ACTIVE_RAG_CONFIG = ROOT / "configs/rag_governed_runtime_v2.yaml"
+ACTIVE_RAG_CONFIG = ROOT / "configs/rag.yaml"
 PUBLIC_SUBSYSTEM_READMES = (
     ROOT / "README.md",
     ROOT / "container/README.md",
@@ -213,7 +213,8 @@ def audit_scope(files: Iterable[Path], manifest_path: Path) -> list[str]:
         "configs/open_agronomy_benchmark_v3_protocol.json",
         "configs/open_agronomy_canadian_performance_v1_runtime_v2.json",
         "configs/public_repository_manifest.json",
-        "configs/rag_governed_runtime_v2.yaml",
+        "configs/model.yaml",
+        "configs/rag.yaml",
         "configs/runtime_profiles.json",
         "configs/schemas/benchmark_judge_calibration_v1.schema.json",
         "configs/schemas/benchmark_v2_case.schema.json",
@@ -224,7 +225,7 @@ def audit_scope(files: Iterable[Path], manifest_path: Path) -> list[str]:
         "data/eval/open_agronomy_canadian_performance_v1_runtime_v2_manifest.json",
         "data/manifests/README.md",
         "data/manifests/curated_canada_offline_master_v1.json",
-        "data/manifests/runtime_corpus_policy_v2.json",
+        "data/manifests/runtime_corpus_policy.json",
         "docs/reviews/open-agronomy-benchmark-system-review-20260813.md",
         "docs/reviews/open-agronomy-benchmark-rc2-readiness-record-20260814.md",
         "docs/public/development-benchmark-rc3-20260815/README.md",

@@ -49,6 +49,8 @@ data/derived/rag/curated_canada/*
 !data/derived/rag/curated_canada/inputs/**
 !data/derived/rag/curated_canada/releases/
 !data/derived/rag/curated_canada/releases/**
+!data/derived/rag/offline_agronomy/
+!data/derived/rag/offline_agronomy/**
 !data/derived/geo_layers/
 data/derived/geo_layers/*
 !data/derived/geo_layers/*_manifest.json

@@ -52,8 +52,8 @@ CANADIAN_PROVINCES = {
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", default="configs/rag_governed_runtime_v2.yaml")
-    parser.add_argument("--policy", default="data/manifests/runtime_corpus_policy_v2.json")
+    parser.add_argument("--config", default="configs/rag.yaml")
+    parser.add_argument("--policy", default="data/manifests/runtime_corpus_policy.json")
     parser.add_argument(
         "--candidate",
         help="Optional unpromoted corpus to inventory without activating it.",

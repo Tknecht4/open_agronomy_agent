@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Build the fail-closed policy for one active cumulative runtime profile."""
+"""Rebuild the frozen historical RC2 runtime policy when its evidence is audited.
+
+The active development policy is ``data/manifests/runtime_corpus_policy.json``
+and is assembled by ``build_offline_agronomy_composite_profile.py``.  This
+script intentionally keeps the historical RC2 bytes and identifiers separate.
+"""
 from __future__ import annotations
 
 import argparse

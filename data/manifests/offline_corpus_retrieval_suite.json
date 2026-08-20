@@ -1,0 +1,24 @@
+{
+  "schema_version": "open_agronomy_agent.source_grounded_retrieval_suite.v1",
+  "suite_id": "offline-agronomy-corpus-successor-retrieval-v1",
+  "status": "frozen_before_retriever_tuning",
+  "case_file": "data/eval/offline_corpus_retrieval.jsonl",
+  "case_count": 22,
+  "active_case_count": 21,
+  "blocked_case_count": 1,
+  "partitions": [
+    "canadian_official_source",
+    "community_boundary_negative",
+    "negative_retrieval",
+    "spatial_context_boundary",
+    "table_and_layout",
+    "us_analogue_context"
+  ],
+  "active_store": "data/derived/rag/offline_agronomy/active/store_manifest.json",
+  "active_store_sha256": "48ec600b95132c412b5901c9af56e0cef3fae52fa71f47eb48a209cc5580dc0d",
+  "us_reference_store": "data/derived/rag/offline_agronomy/us_nrcs/store_manifest.json",
+  "us_reference_store_sha256": "03db2d31b97f2cdef876b7f87a6500b3bf10bb36af1d930067fa0fc4edec2ead",
+  "case_file_sha256": "4de2f0a59bd4d7b0bd67c203f77bec475320ad02375e3e1fa771270137f0dbd9",
+  "interpretation": "Source-grounded retrieval and authority-boundary measurement only; no answer-quality, population, or agronomist-equivalence claim.",
+  "suite_sha256": "71e3b3c02b08b3bcb8d1e81da240867076cb2429b9c8e4447f50e21c0a693474"
+}

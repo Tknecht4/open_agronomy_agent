@@ -129,7 +129,24 @@ def _docker_context_root_allowline(path: str) -> str | None:
     parts = Path(path).parts
     if len(parts) >= 3 and parts[:2] == ("outputs", "evals"):
         return f"!outputs/evals/{parts[2]}/"
+    if len(parts) >= 4 and parts[:3] == ("data", "derived", "rag"):
+        return f"!data/derived/rag/{parts[3]}/"
     return None
+
+
+def _docker_context_includes_path(dockerignore: str, path: str) -> bool:
+    """Recognize exact and recursively reopened release-data directories."""
+
+    lines = set(dockerignore.splitlines())
+    if f"!{path}" in lines:
+        return True
+    return bool(
+        (allowline := _docker_context_root_allowline(path))
+        and (
+            allowline in lines
+            or f"{allowline}**" in lines
+        )
+    )
 
 
 def validate(root: Path, runtime_manifest_path: Path | None = None) -> dict[str, Any]:
@@ -336,7 +353,7 @@ def validate(root: Path, runtime_manifest_path: Path | None = None) -> dict[str,
         str(entry.get("path"))
         for entry in knowledge
         if str(entry.get("path")).startswith("data/derived/rag/")
-        and f"!{entry.get('path')}" not in dockerignore.splitlines()
+        and not _docker_context_includes_path(dockerignore, str(entry.get("path") or ""))
     ]
     if missing_docker_context:
         errors.append(

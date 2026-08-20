@@ -104,7 +104,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Inspect retrieval/tool context for an eval suite before generation.")
     parser.add_argument("--suite", required=True)
     parser.add_argument("--output-dir", default="outputs/retrieval_diagnostics")
-    parser.add_argument("--rag-config", default="configs/rag_governed_runtime_v2.yaml")
+    parser.add_argument("--rag-config", default="configs/rag.yaml")
     parser.add_argument("--max-samples", type=int)
     args = parser.parse_args()
     suite = load_jsonl(repo_path(args.suite), args.max_samples)

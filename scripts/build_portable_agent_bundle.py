@@ -24,8 +24,8 @@ from agronomy_agent.paths import repo_path
 
 
 SCHEMA_VERSION = "open_agronomy_agent.portable_runtime_bundle.v4"
-DEFAULT_RAG_CONFIG = "configs/rag_governed_runtime_v2.yaml"
-DEFAULT_MODEL_CONFIG = "configs/model_gemma4_e2b_interface_v2.yaml"
+DEFAULT_RAG_CONFIG = "configs/rag.yaml"
+DEFAULT_MODEL_CONFIG = "configs/model.yaml"
 DEFAULT_OUTPUT_DIR = "outputs/portable_agent"
 DEFAULT_BUNDLE_NAME = "open_agronomy_agent_portable_knowledge_latest.tar.gz"
 ARCHIVE_ROOT = "open_agronomy_agent"
@@ -178,6 +178,7 @@ def _line_count(path: Path) -> int | None:
 class RuntimeKnowledgeSelection:
     included_paths: tuple[Path, ...]
     included_corpus_paths: tuple[Path, ...]
+    on_demand_paths: tuple[Path, ...]
     graph_paths: tuple[Path, ...]
     excluded_corpora: tuple[dict[str, Any], ...]
     configured_corpus_count: int
@@ -231,6 +232,50 @@ def _rag_artifact_root(
             f"RAG artifact_root escapes the portable repository: {configured!r}"
         ) from exc
     return root
+
+
+def _on_demand_release_artifacts(
+    repo_root: Path,
+    artifact_root: Path,
+    releases: Any,
+) -> tuple[Path, ...]:
+    """Resolve each configured on-demand release to its sealed file inventory."""
+
+    if releases is None:
+        return ()
+    if not isinstance(releases, list):
+        raise ValueError("on_demand_corpus_releases must be a list")
+    selected: set[Path] = set()
+    for release in releases:
+        if not isinstance(release, dict):
+            raise ValueError("on-demand release entry must be an object")
+        manifest_value = release.get("manifest_path")
+        if not isinstance(manifest_value, str) or not manifest_value:
+            raise ValueError("on-demand release is missing manifest_path")
+        manifest_path = _manifest_path(repo_root, manifest_value)
+        if not manifest_path.is_file():
+            raise FileNotFoundError(f"on-demand release manifest is missing: {manifest_value}")
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if str(manifest.get("release_id") or "") != str(release.get("release_id") or ""):
+            raise ValueError("on-demand release id does not match manifest")
+        store_root = manifest_path.parent
+        selected.add(manifest_path)
+        for key in ("quality_ledger", "near_duplicate_clusters", "bm25_statistics_index"):
+            entry = manifest.get(key)
+            if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
+                raise ValueError(f"on-demand release is missing {key}.path")
+            selected.add(_store_relative_path(store_root, entry["path"], label=key))
+        shards = manifest.get("shards")
+        if not isinstance(shards, list) or not shards:
+            raise ValueError("on-demand release contains no shards")
+        for shard in shards:
+            if not isinstance(shard, dict) or not isinstance(shard.get("path"), str):
+                raise ValueError("on-demand release shard is missing path")
+            selected.add(_store_relative_path(store_root, shard["path"], label="shard"))
+    missing = [str(path) for path in selected if not path.is_file()]
+    if missing:
+        raise FileNotFoundError("on-demand runtime knowledge is missing: " + ", ".join(sorted(missing)))
+    return tuple(sorted(selected))
 
 
 def select_runtime_geospatial(
@@ -290,6 +335,11 @@ def select_runtime_knowledge(repo_root: Path, rag_config: Path) -> RuntimeKnowle
     )
     configured_corpora = [str(value) for value in retrieval.get("corpus_paths") or []]
     configured_graphs = [str(value) for value in retrieval.get("graph_paths") or []]
+    on_demand_paths = _on_demand_release_artifacts(
+        repo_root,
+        artifact_root,
+        retrieval.get("on_demand_corpus_releases"),
+    )
     policy_value = retrieval.get("corpus_policy_manifest")
     policy = load_corpus_policy(artifact_root, policy_value)
     included_corpora, excluded = partition_runtime_corpus_paths(
@@ -308,7 +358,7 @@ def select_runtime_knowledge(repo_root: Path, rag_config: Path) -> RuntimeKnowle
         graph_paths,
         require_manifests=bool(retrieval.get("require_graph_manifests", False)),
     )
-    paths = [*corpus_paths, *graph_artifacts]
+    paths = [*corpus_paths, *graph_artifacts, *on_demand_paths]
     missing = [
         str(path.relative_to(repo_root)) if path.is_relative_to(repo_root) else str(path)
         for path in paths
@@ -349,6 +399,7 @@ def select_runtime_knowledge(repo_root: Path, rag_config: Path) -> RuntimeKnowle
     return RuntimeKnowledgeSelection(
         included_paths=tuple(paths),
         included_corpus_paths=corpus_paths,
+        on_demand_paths=on_demand_paths,
         graph_paths=graph_paths,
         excluded_corpora=tuple(excluded_records),
         configured_corpus_count=len(configured_corpora),
@@ -408,23 +459,33 @@ def select_curated_store_artifacts(repo_root: Path, rag_config: Path) -> tuple[P
     for store_root in sorted(store_roots):
         manifest_path = store_root / "store_manifest.json"
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        if manifest.get("schema_version") != "open_agronomy_agent.curated_knowledge_store.v1":
+        schema = manifest.get("schema_version")
+        if schema not in {
+            "open_agronomy_agent.curated_knowledge_store.v1",
+            "open_agronomy_agent.offline_corpus_release.v1",
+        }:
             raise ValueError("unsupported curated-store manifest schema")
         paths.add(manifest_path.resolve())
         for shard in manifest.get("shards") or []:
             if not isinstance(shard, dict):
                 raise ValueError("curated-store manifest contains a malformed shard")
             paths.add(_store_relative_path(store_root, shard.get("path"), label="shard path"))
-        for profile in manifest.get("profiles") or []:
-            if not isinstance(profile, dict):
-                raise ValueError("curated-store manifest contains a malformed profile")
-            for key in ("policy_manifest_path", "rag_config_path"):
-                paths.add(_store_relative_path(store_root, profile.get(key), label=key))
-        receipts = manifest.get("receipts")
-        if not isinstance(receipts, dict):
-            raise ValueError("curated-store manifest is missing receipts")
-        for key in ("ingest_summary_path", "source_coverage_path"):
-            paths.add(_store_relative_path(store_root, receipts.get(key), label=key))
+        if schema == "open_agronomy_agent.curated_knowledge_store.v1":
+            for profile in manifest.get("profiles") or []:
+                if not isinstance(profile, dict):
+                    raise ValueError("curated-store manifest contains a malformed profile")
+                for key in ("policy_manifest_path", "rag_config_path"):
+                    paths.add(_store_relative_path(store_root, profile.get(key), label=key))
+            receipts = manifest.get("receipts")
+            if not isinstance(receipts, dict):
+                raise ValueError("curated-store manifest is missing receipts")
+            for key in ("ingest_summary_path", "source_coverage_path"):
+                paths.add(_store_relative_path(store_root, receipts.get(key), label=key))
+        else:
+            for key in ("quality_ledger_path", "exact_duplicate_clusters_path", "source_receipt_path"):
+                value = manifest.get(key)
+                if value:
+                    paths.add(_store_relative_path(store_root, value, label=key))
     missing = sorted(str(path.relative_to(repo_root)) for path in paths if not path.is_file())
     if missing:
         raise FileNotFoundError(
@@ -740,6 +801,7 @@ def build_bundle(
         "national_soil_context_gate": geospatial_selection.national_soil_context_gate,
         "configured_corpus_count": selection.configured_corpus_count,
         "included_corpus_count": len(selection.included_corpus_paths),
+        "on_demand_knowledge_file_count": len(selection.on_demand_paths),
         "included_graph_count": len(selection.graph_paths),
         "excluded_corpus_count": len(selection.excluded_corpora),
         "excluded_corpora": list(selection.excluded_corpora),

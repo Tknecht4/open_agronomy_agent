@@ -34,7 +34,7 @@ class RuntimeMeasurement:
 def build_agno_comparison_report(
     *,
     cases: Iterable[dict[str, Any]] | None = None,
-    rag_config: str = "configs/rag_governed_runtime_v2.yaml",
+    rag_config: str = "configs/rag.yaml",
     profile_repetitions: int = 20,
     include_rollback: bool = True,
     agentos_decision_path: str = "docs/agno_agentos_decision.md",

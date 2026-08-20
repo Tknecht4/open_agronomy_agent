@@ -9,6 +9,7 @@ from typing import Any, Iterable
 import yaml
 
 from agronomy_agent.high_consequence import classify_high_consequence_domains
+from agronomy_agent.corpus_release import quality_ledger_status, source_locator_status
 from agronomy_agent.security_evidence import build_implementation_binding
 
 
@@ -192,10 +193,29 @@ def audit_runtime_corpora(*, root: Path, rag_config_path: Path) -> dict[str, Any
         else root
     )
     configured_paths = [str(value) for value in retrieval.get("corpus_paths") or []]
+    on_demand_paths: list[str] = []
+    for release in retrieval.get("on_demand_corpus_releases") or []:
+        if not isinstance(release, dict):
+            raise ValueError("on-demand corpus release entry must be an object")
+        manifest_relative = str(release.get("manifest_path") or "")
+        manifest_path = artifact_root / manifest_relative
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise ValueError(f"invalid_on_demand_manifest:{manifest_relative}:{exc}") from exc
+        expected_release_id = str(release.get("release_id") or "")
+        if manifest.get("release_id") != expected_release_id:
+            raise ValueError(f"on_demand_release_id_mismatch:{manifest_relative}")
+        for shard in manifest.get("shards") or []:
+            if not isinstance(shard, dict) or not shard.get("path"):
+                raise ValueError(f"invalid_on_demand_shard:{manifest_relative}")
+            on_demand_paths.append((Path(manifest_relative).parent / str(shard["path"])).as_posix())
+    configured_paths = list(dict.fromkeys([*configured_paths, *on_demand_paths]))
     policy = load_corpus_policy(artifact_root, retrieval.get("corpus_policy_manifest"))
     by_path = {str(item["path"]): item for item in policy.get("corpora", [])}
     rows: list[dict[str, Any]] = []
     errors: list[str] = []
+    source_locator_failures: Counter[str] = Counter()
     provincial_standard_decisive_rows: Counter[str] = Counter()
     provincial_standard_decisive_sources: dict[str, set[str]] = {}
     for relative in configured_paths:
@@ -249,6 +269,20 @@ def audit_runtime_corpora(*, root: Path, rag_config_path: Path) -> dict[str, Any
                     continue
                 missing_doc_id += int(not row.get("doc_id"))
                 missing_source += int(not (row.get("source_id") or row.get("source")))
+                if str(item.get("evidence_tier") or "") == "US_government_analogue_reference":
+                    complete, locator_status = source_locator_status(row.get("source_locator"))
+                    if not complete:
+                        source_locator_failures[locator_status] += 1
+                    jurisdictions_for_policy = row.get("jurisdiction") or row.get("region") or []
+                    if isinstance(jurisdictions_for_policy, str):
+                        jurisdictions_for_policy = [jurisdictions_for_policy]
+                    if "United States" not in {str(value) for value in jurisdictions_for_policy}:
+                        source_locator_failures["missing_us_jurisdiction"] += 1
+                    if str(row.get("retrieval_policy") or "") != "context_only":
+                        source_locator_failures["not_context_only"] += 1
+                    quality_complete, quality_status = quality_ledger_status(row)
+                    if not quality_complete:
+                        source_locator_failures[quality_status] += 1
                 row_policy = str(row.get("retrieval_policy") or "standard").strip().lower()
                 row_retrieval_policies[row_policy] += 1
                 corpus_eligibility = str(item["runtime_eligibility"])
@@ -303,6 +337,10 @@ def audit_runtime_corpora(*, root: Path, rag_config_path: Path) -> dict[str, Any
     unconfigured = sorted(set(by_path) - set(configured_paths))
     if unconfigured:
         errors.extend(f"policy_path_not_configured:{path}" for path in unconfigured)
+    errors.extend(
+        f"invalid_source_locator:{status}:{count}"
+        for status, count in sorted(source_locator_failures.items())
+    )
     corpus_policy_counts = {
         eligibility: sum(row["rows"] for row in rows if row["runtime_eligibility"] == eligibility)
         for eligibility in sorted(ALLOWED_ELIGIBILITY)
@@ -378,6 +416,8 @@ def audit_runtime_corpora(*, root: Path, rag_config_path: Path) -> dict[str, Any
         "policy_manifest": retrieval.get("corpus_policy_manifest"),
         "artifact_root": str(artifact_root),
         "configured_corpus_count": len(configured_paths),
+        "direct_startup_corpus_count": len(retrieval.get("corpus_paths") or []),
+        "on_demand_corpus_count": len(on_demand_paths),
         "audited_corpus_count": len(rows),
         "row_counts_by_eligibility": counts,
         "corpus_policy_row_counts_by_eligibility": corpus_policy_counts,
@@ -414,6 +454,7 @@ def audit_runtime_corpora(*, root: Path, rag_config_path: Path) -> dict[str, Any
             ),
         },
         "errors": errors,
+        "source_locator_failures": dict(sorted(source_locator_failures.items())),
         "high_consequence_policy": (
             "Only rows that are decisive under both the corpus policy and row retrieval policy may support "
             "high-consequence answers; context-only and live-authority rows cannot become decisive."

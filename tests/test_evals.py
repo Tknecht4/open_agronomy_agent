@@ -280,7 +280,7 @@ def test_eval_run_writes_hash_bound_identity_manifest(tmp_path: Path) -> None:
 def test_eval_cli_defaults_to_active_master_rag_configuration() -> None:
     args = build_parser().parse_args(["--mode", "agronomic_rag"])
 
-    assert DEFAULT_RAG_CONFIG == "configs/rag_governed_runtime_v2.yaml"
+    assert DEFAULT_RAG_CONFIG == "configs/rag.yaml"
     assert args.rag_config == DEFAULT_RAG_CONFIG
 
 

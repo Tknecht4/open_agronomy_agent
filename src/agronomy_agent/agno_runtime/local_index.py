@@ -127,6 +127,7 @@ class RetrievedDoc:
     answer_role: str = ""
     transfer_scope: str = ""
     applicability_boundary: str = ""
+    source_locator: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -689,6 +690,7 @@ class LexicalRetriever:
                     answer_role=str(doc.get("answer_role") or ""),
                     transfer_scope=str(doc.get("transfer_scope") or ""),
                     applicability_boundary=str(doc.get("applicability_boundary") or ""),
+                    source_locator=(dict(doc.get("source_locator")) if isinstance(doc.get("source_locator"), dict) else None),
                 )
             )
         self._record_search_stats(

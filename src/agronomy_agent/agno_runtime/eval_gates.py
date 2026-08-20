@@ -8,7 +8,7 @@ from agronomy_agent.paths import repo_path
 from agronomy_agent.agno_runtime.rollback import load_agentos_decision
 
 
-DEFAULT_AGNO_GATE_MATRIX = "plans/agronomy_agent_agno_rag_foundation_packet/agno_rag_eval_gate_matrix.csv"
+DEFAULT_AGNO_GATE_MATRIX = "configs/agno_eval_gate_matrix.csv"
 
 
 def load_agno_eval_gate_matrix(path: str | Path = DEFAULT_AGNO_GATE_MATRIX) -> list[dict[str, str]]:

@@ -29,7 +29,7 @@ Model weights are not committed and are never downloaded while answering a quest
 
 ```bash
 python scripts/download_model.py \
-  --model-config configs/model_gemma4_e2b_interface_v2.yaml
+  --model-config configs/model.yaml
 ```
 
 The profile currently pins `mlx-community/gemma-4-e2b-it-4bit` at revision `238767527555cb75a05732a84dff5d6ba0dd6809`. That snapshot occupied approximately 3.34 GiB in the exercised local cache; reserve additional disk and unified memory for dependencies, indexes, context, and generation.
@@ -42,8 +42,8 @@ PYTHONPATH=src python scripts/run_cockpit.py \
   --port 8000 \
   --frontend \
   --frontend-port 5173 \
-  --model-config configs/model_gemma4_e2b_interface_v2.yaml \
-  --rag-config configs/rag_governed_runtime_v2.yaml \
+  --model-config configs/model.yaml \
+  --rag-config configs/rag.yaml \
   --warm-model
 ```
 
@@ -67,8 +67,8 @@ No output means both development listeners have stopped.
 - **Regional data is not field truth.** Soil maps, statistics, and historical guidance are priors. They do not replace representative samples, current observations, verified geometry, or local calibration.
 - **Private state stays local by default.** Runtime databases, traces, model caches, raw benchmark answers, private overlays, and generated spatial databases are excluded from Git and the documentation site.
 - **Consequential decisions need authority.** Confirm current labels and regulations and involve a qualified local professional when a decision carries material agronomic, legal, environmental, safety, or financial consequences.
-- **Knowledge is cumulative but explicitly admitted.** Runtime v2 selects one dated Canadian master release plus hash-bound seed, SoilWise, graph, and NRCS-analogue assets. Adding a file does not make it model-visible; source rights, policy, registry admission, and corpus validation remain required.
-- **Benchmark claims are bounded.** RC1 and RC2 are frozen historical development identities. The completed RC3 development checkpoint contains 8,676 observations, but only 49 of 241 cases per arm have a defined deterministic score and zero automated semantic judgments were made. It is not a model leaderboard or Benchmark v3 result; sealed v3 evaluation remains blocked on independent holdout, judge-calibration, egress, and release gates.
+- **Knowledge is cumulative but explicitly admitted.** The active offline profile contains source-exact Canadian evidence, project policy, and SoilWise context. A 218,258-row USDA NRCS pack is available only for an explicit MLRA-scoped U.S. analogue request; it never establishes Canadian decisive authority. Adding a file does not make it model-visible; source rights, policy, registry admission, and corpus validation remain required.
+- **Benchmark claims are bounded.** RC1 and RC2 are frozen historical development identities. The completed RC3 development checkpoint contains 8,676 observations, but only 49 of 241 cases per arm have a defined deterministic score. Its later Luna semantic review is advisory instrumentation, not agronomist ground truth or a model leaderboard; sealed successor evaluation remains blocked on an independent held-out retrieval suite and release gates.
 - **Optional assets remain explicit.** Public adapters need provider/network availability; the Prairie spatial pack is a separately built local asset; unavailable capabilities must not be simulated.
 
 ## Documentation
