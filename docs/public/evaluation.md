@@ -2,6 +2,14 @@
 
 The canonical internal benchmark is `open_agronomy_canadian_performance_v1`: 241 project-owned Canadian field questions. It is a development instrument, not a certification exam and not evidence of agronomist equivalence.
 
+`open_agronomy_successor_development` is the separate 256-case successor
+development suite for the active source-exact corpus. It retains the 241
+exposed project-authored cases and adds 12 U.S. NRCS MLRA retrieval probes, a
+Canadian table-retrieval control, and community/jurisdiction boundary controls.
+It is likewise exposed and non-claim-eligible: it measures source trace and
+authority-boundary regressions, not unbiased performance or agronomist quality.
+RC3 is not extended or rerun by this suite.
+
 ## Frozen arms
 
 | Arm | Input and behavior |

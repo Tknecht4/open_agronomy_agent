@@ -1,0 +1,20 @@
+{
+  "schema_version": "open_agronomy_agent.system_interface_contract.v1",
+  "benchmark_id": "open_agronomy_successor_development",
+  "suite_contract": "configs/open_agronomy_successor_development.json",
+  "generation_scope": "core_agent_text_only",
+  "service_orchestration_exercised": false,
+  "arms": {
+    "raw_model": "Question only; no Open Agronomy kernel, field context, retrieval, verifier, or answer post-processing.",
+    "baseline": "Production Open Agronomy kernel and answer handling without structured field context, retrieval, tools, evidence intervention, or verifier.",
+    "kernel_field_context": "Baseline plus declared benchmark field context; no retrieval, tools, evidence intervention, or verifier.",
+    "agronomic_rag": "Core text-agent path with the active source-exact corpus, jurisdiction-aware retrieval, evidence intervention, answer verification when configured, and answer post-processing. Live adapters are traced but not executed."
+  },
+  "claim_boundaries": [
+    "This is an exposed project-authored successor development regression, not a sealed holdout or estimate of real grower-question performance.",
+    "U.S. NRCS evidence is analogue/context only and cannot establish Canadian legal, label, rate, threshold, or field-calibration authority.",
+    "Source trace records distinguish candidate retrieval, governed admission, and final answer use.",
+    "No automated semantic judge is part of this run; deterministic source and boundary checks are regression diagnostics only.",
+    "No composite score is permitted across answer, retrieval, lineage, jurisdiction, and objective-calculation lanes."
+  ]
+}

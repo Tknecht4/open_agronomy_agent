@@ -1,0 +1,253 @@
+{
+  "benchmark_id": "open_agronomy_successor_development",
+  "claim_eligible": false,
+  "contamination_policy": {
+    "exclude_questions_from_deterministic_answer_repair": false,
+    "exclude_questions_from_prompt_examples": true,
+    "exclude_questions_from_rag": true,
+    "exclude_questions_from_training": true,
+    "future_unbiased_evaluation_requires_new_holdout": true,
+    "public_benchmark_sources_allowed": false,
+    "record_every_exposure_after_freeze": true,
+    "suite_exposure_status": "exposed_project_authored_successor_development_regression"
+  },
+  "contract_path": "configs/open_agronomy_successor_development.json",
+  "contract_sha256": "06ce20e3342c3028ca6c967457498010168323c846a29a51d9fb1121d90c4077",
+  "deduplication_policy": "keep_first_source_order",
+  "default_modes": [
+    "raw_model",
+    "baseline",
+    "kernel_field_context",
+    "agronomic_rag"
+  ],
+  "evaluation_partition": "internal",
+  "evaluation_policy": {
+    "automated_judge_role": "triage_only_until_calibrated_against_independent_agronomists",
+    "claim_boundary": "Development regression only. RC3 remains frozen historical evidence; this successor suite is exposed and project-authored, so it cannot estimate unbiased generalization.",
+    "deterministic_proxy_role": "regression_only_never_answer_quality",
+    "human_review_required_for_external_claim": true,
+    "objective_calculation_role": "separate_exact_capability_anchor",
+    "primary_answer_quality_lane": "canadian_decision_quality",
+    "real_user_confirmation_set_required_for_external_claim": true,
+    "report_lanes_separately": true,
+    "service_orchestration_lane_required_before_product_claim": true,
+    "single_composite_score_allowed": false,
+    "successor_source_trace_role": "Measure source-exact retrieval, U.S.-analogue boundary handling, and Canadian authority suppression; do not convert these diagnostics into answer-quality or agronomist-equivalence claims."
+  },
+  "exact_duplicate_questions": 0,
+  "lane_counts": {
+    "canadian_advisory_transfer": 31,
+    "canadian_decision_quality": 90,
+    "field_history_lineage": 32,
+    "objective_agronomic_calculation": 16,
+    "official_source_answer_boundary": 39,
+    "retrieval_lineage": 33,
+    "successor_retrieval_lineage": 15
+  },
+  "primary_comparison": "four_arm_exposed_successor_corpus_development_regression",
+  "question_origin_counts": {
+    "project_authored_answer_blind": 16,
+    "project_authored_or_legacy_synthetic_not_real_user": 240
+  },
+  "result_contract": {
+    "capture_context_packets": true,
+    "capture_exact_messages": true,
+    "database": "full_system_benchmark.sqlite3",
+    "distribution_scope": "machine_local_private_benchmark_only",
+    "store_answers_before_scoring": true,
+    "store_model_identity": true,
+    "store_raw_model_kernel_only_and_full_system_arms": false,
+    "store_raw_model_kernel_only_field_context_and_full_system_arms": true,
+    "store_source_trace": true
+  },
+  "rows": 256,
+  "schema_version": "open_agronomy_agent.benchmark_manifest.v1",
+  "sources": [
+    {
+      "actual_sha256": "d8f0db931a284821e0a9c032616d6b94a5dcb8534531b190f0719b017995b004",
+      "excluded_exact_duplicates": 0,
+      "included_rows": 90,
+      "lane": "canadian_decision_quality",
+      "metric_role": "blinded_multidimensional_answer_review",
+      "origin_class": "project_owned",
+      "path": "data/eval/canadian_semantic_reserve_v2.jsonl",
+      "primary": true,
+      "rows": 90,
+      "sha256": "d8f0db931a284821e0a9c032616d6b94a5dcb8534531b190f0719b017995b004"
+    },
+    {
+      "actual_sha256": "e049eedc2ee1d60875e986a1a073013916e2ee4784374f4b43a9c92424e79473",
+      "excluded_exact_duplicates": 0,
+      "included_rows": 31,
+      "lane": "canadian_advisory_transfer",
+      "metric_role": "decision_contract_and_human_review",
+      "origin_class": "project_owned",
+      "path": "data/eval/canadian_conference_transfer_gate_v2.jsonl",
+      "primary": false,
+      "rows": 31,
+      "sha256": "e049eedc2ee1d60875e986a1a073013916e2ee4784374f4b43a9c92424e79473"
+    },
+    {
+      "actual_sha256": "fa81a34430642e91650e2214d1aa721b3f8df5241a3ae949682a7eafe5b941f9",
+      "excluded_exact_duplicates": 0,
+      "included_rows": 32,
+      "lane": "field_history_lineage",
+      "metric_role": "decision_card_source_and_authority_trace",
+      "origin_class": "project_owned",
+      "path": "data/eval/decision_card_pilot_prospective_v1.jsonl",
+      "primary": false,
+      "rows": 32,
+      "sha256": "fa81a34430642e91650e2214d1aa721b3f8df5241a3ae949682a7eafe5b941f9"
+    },
+    {
+      "actual_sha256": "1666bb71e2e44ce66260e5fe1b03a5f78dadf8021ad7bad78636e822083c2274",
+      "excluded_exact_duplicates": 0,
+      "included_rows": 6,
+      "lane": "official_source_answer_boundary",
+      "metric_role": "source_specific_answer_and_scope_regression",
+      "origin_class": "project_owned",
+      "path": "data/eval/canadian_crop_health_indices_answer_gate_v1.jsonl",
+      "primary": false,
+      "rows": 6,
+      "sha256": "1666bb71e2e44ce66260e5fe1b03a5f78dadf8021ad7bad78636e822083c2274"
+    },
+    {
+      "actual_sha256": "df8fcee01945615cac79361c9a098dd879254aba6fa7b0a4c1f40e9c63b1058b",
+      "excluded_exact_duplicates": 0,
+      "included_rows": 5,
+      "lane": "official_source_answer_boundary",
+      "metric_role": "source_specific_answer_and_scope_regression",
+      "origin_class": "project_owned",
+      "path": "data/eval/canadian_v9_candidate_answer_gate.jsonl",
+      "primary": false,
+      "rows": 5,
+      "sha256": "df8fcee01945615cac79361c9a098dd879254aba6fa7b0a4c1f40e9c63b1058b"
+    },
+    {
+      "actual_sha256": "d30014167991cf8da2a1811131ab7c86164658927edbe89dfda8bf98784a1073",
+      "excluded_exact_duplicates": 0,
+      "included_rows": 6,
+      "lane": "official_source_answer_boundary",
+      "metric_role": "source_specific_answer_and_scope_regression",
+      "origin_class": "project_owned",
+      "path": "data/eval/canadian_v10_candidate_answer_gate.jsonl",
+      "primary": false,
+      "rows": 6,
+      "sha256": "d30014167991cf8da2a1811131ab7c86164658927edbe89dfda8bf98784a1073"
+    },
+    {
+      "actual_sha256": "0beffd6643808f03afbab49041141958130ff9fd2a0b3a21beb3315add0b6853",
+      "excluded_exact_duplicates": 0,
+      "included_rows": 11,
+      "lane": "official_source_answer_boundary",
+      "metric_role": "source_specific_answer_and_scope_regression",
+      "origin_class": "project_owned",
+      "path": "data/eval/canadian_v11_candidate_answer_gate.jsonl",
+      "primary": false,
+      "rows": 11,
+      "sha256": "0beffd6643808f03afbab49041141958130ff9fd2a0b3a21beb3315add0b6853"
+    },
+    {
+      "actual_sha256": "c6563aabd336d958092209cc753ff4b4818ae4c319b914a08c648f5c36f73645",
+      "excluded_exact_duplicates": 0,
+      "included_rows": 11,
+      "lane": "official_source_answer_boundary",
+      "metric_role": "source_specific_answer_and_scope_regression",
+      "origin_class": "project_owned",
+      "path": "data/eval/canadian_v12_candidate_answer_gate.jsonl",
+      "primary": false,
+      "rows": 11,
+      "sha256": "c6563aabd336d958092209cc753ff4b4818ae4c319b914a08c648f5c36f73645"
+    },
+    {
+      "actual_sha256": "6d074ea4ced67e497a776cdc48e90ac338b2d00f816759bc747b4d2d39db9dc2",
+      "excluded_exact_duplicates": 0,
+      "included_rows": 10,
+      "lane": "retrieval_lineage",
+      "metric_role": "expected_source_retrieval_regression",
+      "origin_class": "project_owned",
+      "path": "data/eval/canadian_ab_nutrient_planning_retrieval_probe_v1.jsonl",
+      "primary": false,
+      "rows": 10,
+      "sha256": "6d074ea4ced67e497a776cdc48e90ac338b2d00f816759bc747b4d2d39db9dc2"
+    },
+    {
+      "actual_sha256": "35449e5ea453054e29145cdf44eabfec8d481cea53bf33a7708a713ba399872c",
+      "excluded_exact_duplicates": 0,
+      "included_rows": 11,
+      "lane": "retrieval_lineage",
+      "metric_role": "expected_source_retrieval_regression",
+      "origin_class": "project_owned",
+      "path": "data/eval/canadian_alberta_retrieval_probe_v1.jsonl",
+      "primary": false,
+      "rows": 11,
+      "sha256": "35449e5ea453054e29145cdf44eabfec8d481cea53bf33a7708a713ba399872c"
+    },
+    {
+      "actual_sha256": "622eceacd2782b7d093eab0ec02a2d587bb8bb2842329de7d66a992794019e8c",
+      "excluded_exact_duplicates": 0,
+      "included_rows": 6,
+      "lane": "retrieval_lineage",
+      "metric_role": "expected_source_retrieval_regression",
+      "origin_class": "project_owned",
+      "path": "data/eval/canadian_nasdi_retrieval_probe_v1.jsonl",
+      "primary": false,
+      "rows": 6,
+      "sha256": "622eceacd2782b7d093eab0ec02a2d587bb8bb2842329de7d66a992794019e8c"
+    },
+    {
+      "actual_sha256": "1df1eb2280038051886b450db47c90cf2213bb54b95e3ea65e123d84d9169283",
+      "excluded_exact_duplicates": 0,
+      "included_rows": 6,
+      "lane": "retrieval_lineage",
+      "metric_role": "expected_source_retrieval_regression",
+      "origin_class": "project_owned",
+      "path": "data/eval/canadian_slc_retrieval_probe_v1.jsonl",
+      "primary": false,
+      "rows": 6,
+      "sha256": "1df1eb2280038051886b450db47c90cf2213bb54b95e3ea65e123d84d9169283"
+    },
+    {
+      "actual_sha256": "9cd02f6e7dad56c0755e579897d0cd8d7ffe3657589785ffc85b268886eb340f",
+      "claim_eligible": false,
+      "excluded_exact_duplicates": 0,
+      "included_rows": 16,
+      "lane": "objective_agronomic_calculation",
+      "metric_role": "objective_agronomic_calculation_accuracy",
+      "origin_class": "project_owned",
+      "path": "data/eval/canadian_agronomic_calculations_v1.jsonl",
+      "primary": false,
+      "review_policy": {
+        "automated_judge_role": "not_used",
+        "deterministic_proxy_role": "objective_numeric_tolerance",
+        "independent_agronomist_review_required": false
+      },
+      "rows": 16,
+      "sha256": "9cd02f6e7dad56c0755e579897d0cd8d7ffe3657589785ffc85b268886eb340f"
+    },
+    {
+      "actual_sha256": "567874522bb676f56e7cc5a4e7358e766244873678efccfa5f158f9be82fc353",
+      "claim_eligible": false,
+      "excluded_exact_duplicates": 0,
+      "included_rows": 15,
+      "lane": "successor_retrieval_lineage",
+      "metric_role": "source_exact_jurisdiction_and_authority_regression",
+      "origin_class": "project_owned",
+      "path": "data/eval/offline_corpus_successor_benchmark_extension.jsonl",
+      "primary": false,
+      "review_policy": {
+        "automated_judge_role": "not_used",
+        "deterministic_proxy_role": "source_trace_and_boundary_regression_only",
+        "independent_agronomist_review_required": false
+      },
+      "rows": 15,
+      "sha256": "567874522bb676f56e7cc5a4e7358e766244873678efccfa5f158f9be82fc353"
+    }
+  ],
+  "status": "frozen_exposed_successor_corpus_development_regression",
+  "suite_path": "data/eval/open_agronomy_successor_development.jsonl",
+  "suite_sha256": "37cd7396156041844bc561f0f02282a7252555e1a1c30735e6099604c9dc60b3",
+  "system_interface_contract": "configs/open_agronomy_successor_development_interface.json",
+  "traceable_real_user_questions": 0,
+  "unique_questions": 256
+}

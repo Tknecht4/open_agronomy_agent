@@ -258,6 +258,17 @@ def load_jsonl(path: Path, max_samples: int | None = None) -> list[dict[str, Any
 def build_rag_artifact_identity(resources: Any) -> list[dict[str, Any]]:
     """Return stable byte identities for every knowledge artifact used by a RAG run."""
 
+    repository_root = repo_path(".").resolve()
+
+    def artifact_reference(path: Path) -> str:
+        """Use a portable repository-relative receipt path when possible."""
+
+        resolved = path.resolve()
+        try:
+            return resolved.relative_to(repository_root).as_posix()
+        except ValueError:
+            return str(resolved)
+
     retrieval = (resources.rag_config or {}).get("retrieval") or {}
     configured: list[tuple[str, str]] = []
     corpus_paths = retrieval.get("corpus_paths") or [retrieval.get("corpus_path")]
@@ -281,12 +292,60 @@ def build_rag_artifact_identity(resources: Any) -> list[dict[str, Any]]:
         configured.append(("graph", str(graph_value)))
         if manifest.manifest_path is not None:
             try:
-                manifest_reference = manifest.manifest_path.relative_to(repo_path(".").resolve()).as_posix()
+                manifest_reference = manifest.manifest_path.relative_to(repository_root).as_posix()
             except ValueError:
                 manifest_reference = str(manifest.manifest_path)
             configured.append(("graph_manifest", manifest_reference))
     if policy_path:
         configured.append(("corpus_policy", str(policy_path)))
+
+    # An on-demand release does not affect ordinary startup retrieval, but it
+    # is still an answer-affecting artifact whenever a benchmark question
+    # activates it.  Bind its immutable manifest, persisted BM25 statistics,
+    # and every declared shard into the run identity.  Hashing only the
+    # manifest would make an accepted U.S.-analogue result ambiguous if a
+    # shard changed between otherwise identical runs.
+    for entry in retrieval.get("on_demand_corpus_releases") or []:
+        if not isinstance(entry, dict):
+            raise ValueError("on-demand corpus release entry must be an object")
+        manifest_path = repo_path(str(entry.get("manifest_path") or ""))
+        if not manifest_path.is_file():
+            raise FileNotFoundError(
+                f"configured on-demand corpus manifest is missing: {manifest_path}"
+            )
+        try:
+            manifest_reference = manifest_path.relative_to(repository_root).as_posix()
+        except ValueError:
+            manifest_reference = str(manifest_path)
+        configured.append(("on_demand_manifest", manifest_reference))
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                f"configured on-demand corpus manifest is invalid JSON: {manifest_path}"
+            ) from exc
+        statistics = manifest.get("bm25_statistics_index")
+        if not isinstance(statistics, dict) or not str(statistics.get("path") or "").strip():
+            raise ValueError(
+                f"configured on-demand corpus manifest lacks BM25 statistics: {manifest_path}"
+            )
+        configured.append(
+            (
+                "on_demand_bm25_statistics",
+                artifact_reference(manifest_path.parent / str(statistics["path"])),
+            )
+        )
+        for shard in manifest.get("shards") or []:
+            if not isinstance(shard, dict) or not str(shard.get("path") or "").strip():
+                raise ValueError(
+                    f"configured on-demand corpus manifest has an invalid shard: {manifest_path}"
+                )
+            configured.append(
+                (
+                    "on_demand_shard",
+                    artifact_reference(manifest_path.parent / str(shard["path"])),
+                )
+            )
 
     records: list[dict[str, Any]] = []
     for kind, configured_path in configured:
@@ -1167,6 +1226,51 @@ def enrich_eval_metadata_with_expected_source_trace(metadata: dict[str, Any], it
         "note": "Current refined-route expectations only. The tool_notes field records the generation path and must not be expanded by this refresh.",
     }
 
+    # Retain the source contract with the response, then record what the
+    # retrieval stage actually surfaced.  The latter is deliberately a trace,
+    # not a claim that a source was admitted into the final answer: candidate
+    # retrieval, governed admission, and answer evidence are distinct stages.
+    expected_source_ids = [
+        str(value)
+        for value in (item.get("preferred_source_ids") or item.get("expected_source_ids") or [])
+        if str(value).strip()
+    ]
+    forbidden_source_ids = [
+        str(value)
+        for value in (item.get("forbidden_source_ids") or [])
+        if str(value).strip()
+    ]
+    if expected_source_ids or forbidden_source_ids or item.get("source_use_boundary") is not None:
+        generation_input = enriched.get("benchmark_generation_input")
+        retrieved_documents = (
+            generation_input.get("retrieved_documents")
+            if isinstance(generation_input, dict)
+            else []
+        )
+        retrieved_source_ids = [
+            str(record.get("source_id"))
+            for record in (retrieved_documents or [])
+            if isinstance(record, dict) and str(record.get("source_id") or "").strip()
+        ]
+        admitted_doc_ids = (
+            (enriched.get("evidence_selection_trace") or {}).get("admitted_doc_ids")
+            if isinstance(enriched.get("evidence_selection_trace"), dict)
+            else []
+        )
+        enriched["expected_source_trace"] = {
+            "expected_source_ids": expected_source_ids,
+            "forbidden_source_ids": forbidden_source_ids,
+            "source_use_boundary": item.get("source_use_boundary"),
+            "candidate_retrieved_source_ids": sorted(set(retrieved_source_ids)),
+            "candidate_expected_source_hit": bool(set(expected_source_ids) & set(retrieved_source_ids)),
+            "candidate_forbidden_source_hit": bool(set(forbidden_source_ids) & set(retrieved_source_ids)),
+            "admitted_document_ids": [str(value) for value in (admitted_doc_ids or []) if str(value).strip()],
+            "interpretation": (
+                "Candidate retrieval is not equivalent to governed admission or answer use. "
+                "Use this trace with the evidence-selection and answer-stage receipts."
+            ),
+        }
+
     expected_adapters = [str(adapter) for adapter in item.get("expected_public_adapters") or [] if str(adapter).strip()]
     if expected_adapters:
         enriched["expected_public_adapters"] = expected_adapters
@@ -1990,6 +2094,15 @@ def run_eval(args: argparse.Namespace) -> int:
                             "correct_option_word_length_rank", "original_difficulty_level", "source_url",
                             "source_license", "source_revision", "cca_domain_alignment",
                             "reference_answer_status",
+                            # These values form the frozen source-use contract
+                            # for retrieval-lineage and jurisdiction controls.
+                            # Keep them in the compact eval metadata as well as
+                            # the full suite row so downstream reports can
+                            # distinguish an expected source from a retrieved
+                            # or admitted source.
+                            "preferred_source_ids", "forbidden_source_ids",
+                            "source_use_boundary", "wrong_jurisdiction_policy",
+                            "source_eval_id", "source_suite",
                         )
                         if key in item
                     },

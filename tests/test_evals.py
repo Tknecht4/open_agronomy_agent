@@ -367,6 +367,61 @@ def test_rag_artifact_identity_excludes_quarantined_missing_corpora(tmp_path: Pa
     ]
 
 
+def test_rag_artifact_identity_binds_every_on_demand_release_byte(tmp_path: Path) -> None:
+    release = tmp_path / "us-release"
+    shard = release / "shards" / "nrcs-0001.jsonl"
+    index = release / "bm25_statistics_index.json"
+    manifest = release / "store_manifest.json"
+    shard.parent.mkdir(parents=True)
+    shard.write_text('{"doc_id":"us-1"}\n', encoding="utf-8")
+    index.write_text('{"document_count":1}\n', encoding="utf-8")
+    manifest.write_text(
+        json.dumps(
+            {
+                "bm25_statistics_index": {"path": "bm25_statistics_index.json"},
+                "shards": [{"path": "shards/nrcs-0001.jsonl"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    class Resources:
+        rag_config = {
+            "retrieval": {
+                "on_demand_corpus_releases": [{"manifest_path": str(manifest)}],
+            }
+        }
+
+    records = build_rag_artifact_identity(Resources())
+
+    assert [record["kind"] for record in records] == [
+        "on_demand_manifest",
+        "on_demand_bm25_statistics",
+        "on_demand_shard",
+    ]
+    assert [Path(record["path"]).resolve() for record in records] == [
+        manifest.resolve(),
+        index.resolve(),
+        shard.resolve(),
+    ]
+
+
+def test_rag_artifact_identity_uses_portable_paths_for_repo_on_demand_release() -> None:
+    class Resources:
+        rag_config = {
+            "retrieval": {
+                "on_demand_corpus_releases": [
+                    {"manifest_path": "data/derived/rag/offline_agronomy/us_nrcs/store_manifest.json"}
+                ],
+            }
+        }
+
+    records = build_rag_artifact_identity(Resources())
+
+    assert all(not Path(str(record["path"])).is_absolute() for record in records)
+    assert records[0]["path"] == "data/derived/rag/offline_agronomy/us_nrcs/store_manifest.json"
+
+
 def test_rag_artifact_identity_rejects_missing_admitted_corpus(tmp_path: Path) -> None:
     admitted = tmp_path / "missing-admitted.jsonl"
     policy = tmp_path / "policy.json"
@@ -1114,6 +1169,37 @@ def test_eval_trace_refresh_uses_the_same_refined_route_as_generation() -> None:
     )
     assert "fertility_guard" not in metadata["route_tool_notes"]
     assert "nutrient_4r_guard" not in metadata["route_tool_notes"]
+
+
+def test_eval_metadata_retains_expected_source_contract_and_candidate_trace() -> None:
+    item = {
+        "eval_id": "us_analogue_trace",
+        "task_family": "retrieval_lineage",
+        "question": "Retrieve U.S. analogue context for MLRA 001X.",
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "expected_source_ids": ["nrcs_edit_ecological_site_description_json"],
+        "forbidden_source_ids": ["community_forum"],
+        "source_use_boundary": "U.S. context only; not Canadian decision authority.",
+    }
+    metadata = {
+        "benchmark_generation_input": {
+            "retrieved_documents": [
+                {"source_id": "nrcs_edit_ecological_site_description_json"},
+                {"source_id": "nrcs_edit_ecological_site_description_json"},
+            ]
+        },
+        "evidence_selection_trace": {"admitted_doc_ids": ["nrcs:001x:chunk-1"]},
+    }
+
+    enriched = enrich_eval_metadata_with_expected_source_trace(metadata, item)
+
+    trace = enriched["expected_source_trace"]
+    assert trace["expected_source_ids"] == ["nrcs_edit_ecological_site_description_json"]
+    assert trace["candidate_retrieved_source_ids"] == ["nrcs_edit_ecological_site_description_json"]
+    assert trace["candidate_expected_source_hit"] is True
+    assert trace["candidate_forbidden_source_hit"] is False
+    assert trace["admitted_document_ids"] == ["nrcs:001x:chunk-1"]
 
 
 def test_answer_profile_environment_switches_benchmark_contract(monkeypatch: pytest.MonkeyPatch) -> None:
