@@ -70,26 +70,35 @@ def audit(
         input_manifest,
     )
 
-    expected_external = (
-        int(config["external_dataset"]["rows"])
-        * len(config["external_arm_order"])
-        * len(config["trial_ids"])
-    )
-    expected_regional = (
-        int(config["regional_case_count"])
-        * len(config["regional_arm_order"])
-        * len(config["trial_ids"])
-    )
-    observed_counts: Counter[str] = Counter()
+    models = {str(row["model_key"]): row for row in config.get("candidate_models", [])}
+    expected_counts: Counter[tuple[str, str]] = Counter()
+    for model_key, model in models.items():
+        expected_counts[(model_key, "public_external_competence_candidate")] = (
+            int(config["external_dataset"]["rows"])
+            * len(model["external_arms"])
+            * len(config["trial_ids"])
+        )
+        expected_counts[(model_key, "canadian_regional_competence_candidate")] = (
+            int(config["regional_case_count"])
+            * len(model["regional_arms"])
+            * len(config["trial_ids"])
+        )
+    observed_counts: Counter[tuple[str, str]] = Counter()
     duplicate_observations: list[str] = []
-    seen: set[tuple[str, str, str, str]] = set()
+    seen: set[tuple[str, str, str, str, str]] = set()
     invalid_model_rows = 0
     incomplete_stage_rows = 0
+    invalid_arm_rows = 0
+    incomplete_fingerprint_rows = 0
+    invalid_disposition_rows = 0
+    incomplete_lineage_rows = 0
     if results is not None:
         for row in results:
             lane = str(row.get("lane") or "")
-            observed_counts[lane] += 1
+            model_key = str(row.get("model_key") or "")
+            observed_counts[(model_key, lane)] += 1
             key = (
+                model_key,
                 lane,
                 str(row.get("eval_id") or ""),
                 str(row.get("arm") or ""),
@@ -98,40 +107,62 @@ def audit(
             if key in seen:
                 duplicate_observations.append("|".join(key))
             seen.add(key)
-            if (
-                row.get("model_id") != config["candidate_model"]["model_id"]
-                or row.get("model_revision") != config["candidate_model"]["model_revision"]
-            ):
+            model = models.get(model_key)
+            if model is None or row.get("model_id") != model.get("model_id") or row.get("model_revision") != model.get("model_revision"):
                 invalid_model_rows += 1
-            if lane == "canadian_regional_competence_candidate" and row.get("arm") != "raw_model":
+            arm_key = "external_arms" if lane == "public_external_competence_candidate" else "regional_arms"
+            if model is None or row.get("arm") not in model.get(arm_key, []):
+                invalid_arm_rows += 1
+            if row.get("arm") != "raw_model":
                 if int(row.get("stage_receipt_count") or 0) != 17:
                     incomplete_stage_rows += 1
+                fingerprints = row.get("fingerprints") or {}
+                if not all(fingerprints.get(name) for name in ("topology", "harness", "arm", "model", "system")):
+                    incomplete_fingerprint_rows += 1
+            if row.get("row_disposition") not in {"accepted", "excluded", "terminal_failure"}:
+                invalid_disposition_rows += 1
+            if not row.get("private_retention_id") or not row.get("public_projection_id"):
+                incomplete_lineage_rows += 1
+    matrix_mismatches = {
+        f"{model_key}:{lane}": {"expected": expected, "observed": observed_counts[(model_key, lane)]}
+        for (model_key, lane), expected in expected_counts.items()
+        if observed_counts[(model_key, lane)] != expected
+    }
+    unexpected_matrix_cells = {
+        f"{model_key}:{lane}": observed
+        for (model_key, lane), observed in observed_counts.items()
+        if (model_key, lane) not in expected_counts
+    }
     check(
         "complete_execution_matrix",
         results is not None
-        and observed_counts["public_external_competence_candidate"] == expected_external
-        and observed_counts["canadian_regional_competence_candidate"] == expected_regional
+        and not matrix_mismatches
+        and not unexpected_matrix_cells
         and not duplicate_observations,
         "all declared arms and trials are present exactly once",
         {
-            "expected_external": expected_external,
-            "observed_external": observed_counts["public_external_competence_candidate"],
-            "expected_regional": expected_regional,
-            "observed_regional": observed_counts["canadian_regional_competence_candidate"],
+            "matrix_mismatches": matrix_mismatches,
+            "unexpected_matrix_cells": unexpected_matrix_cells,
             "duplicate_observations": duplicate_observations[:20],
         },
     )
     check(
         "candidate_identity",
         results is not None and invalid_model_rows == 0,
-        "every observation uses the one pinned production Gemma 4 identity",
-        {"invalid_rows": invalid_model_rows},
+        "every observation uses a declared, role-bound model identity and applicable arm",
+        {"invalid_model_rows": invalid_model_rows, "invalid_arm_rows": invalid_arm_rows},
     )
     check(
         "production_stage_receipts",
-        results is not None and incomplete_stage_rows == 0,
-        "each governed regional observation retains the ordered 17-stage receipt count",
-        {"incomplete_rows": incomplete_stage_rows},
+        results is not None and incomplete_stage_rows == 0 and incomplete_fingerprint_rows == 0,
+        "each governed observation retains the ordered 17-stage receipts and complete fingerprints",
+        {"incomplete_rows": incomplete_stage_rows, "incomplete_fingerprint_rows": incomplete_fingerprint_rows},
+    )
+    check(
+        "row_disposition_and_projection_continuity",
+        results is not None and invalid_disposition_rows == 0 and incomplete_lineage_rows == 0,
+        "every result has an explicit disposition and private/public lineage",
+        {"invalid_disposition_rows": invalid_disposition_rows, "incomplete_lineage_rows": incomplete_lineage_rows},
     )
 
     controls = (semantic_controls or {}).get("controls") or []

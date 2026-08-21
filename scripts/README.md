@@ -81,6 +81,12 @@ AI71 CSV, verifies its exact bytes and schema, retains all 800 row
 dispositions, derives the exposed 72-case regional lane, and writes ignored
 local input receipts. It never modifies or satisfies the sealed-v3 holdout.
 
+`run_v3_competence_candidate.py` deterministically expands those inputs into
+the frozen 17,640-observation Gemma/Luna matrix and emits its identity manifest.
+It deliberately refuses `--execute` until the production-core observation
+executor, exact model identities, and recipient-bound egress authorizations
+are supplied; planning the matrix does not generate or judge the cohort.
+
 `audit_guard_route_replay.py` replays the 154 guard-eligible exposed Canadian
 cases through the production execution core with the mock model, retains each
 17-stage trace, and fails if any required local guard is absent. It measures

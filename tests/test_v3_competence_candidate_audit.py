@@ -23,7 +23,7 @@ def _config() -> dict[str, object]:
         "status": "public_external_reference_candidate_frozen",
         "claim_eligible": False,
         "sealed_v3_satisfied": False,
-        "candidate_model": {"model_id": "gemma", "model_revision": "rev"},
+        "candidate_models": [{"model_key": "gemma", "model_id": "gemma", "model_revision": "rev", "external_arms": ["raw_model", "production_full"], "regional_arms": ["raw_model", "production_full"]}],
         "external_dataset": {"rows": 1},
         "regional_case_count": 1,
         "external_arm_order": ["raw_model", "production_full"],
@@ -43,12 +43,17 @@ def _results() -> list[dict[str, object]]:
             rows.append(
                 {
                     "lane": lane,
+                    "model_key": "gemma",
                     "eval_id": f"{lane}-1",
                     "arm": arm,
                     "trial_id": "trial-001",
                     "model_id": "gemma",
                     "model_revision": "rev",
                     "stage_receipt_count": 17,
+                    "fingerprints": {"topology": "t", "harness": "h", "arm": "a", "model": "m", "system": "s"},
+                    "row_disposition": "accepted",
+                    "private_retention_id": "private-1",
+                    "public_projection_id": "public-1",
                 }
             )
     return rows

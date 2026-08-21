@@ -9,6 +9,36 @@
     "model_id": "mlx-community/gemma-4-e2b-it-4bit",
     "model_revision": "238767527555cb75a05732a84dff5d6ba0dd6809"
   },
+  "candidate_models": [
+    {
+      "model_key": "gemma4_e2b_production",
+      "role": "production_candidate",
+      "model_config": "configs/model_gemma4_e2b_interface_v2.yaml",
+      "model_id": "mlx-community/gemma-4-e2b-it-4bit",
+      "model_revision": "238767527555cb75a05732a84dff5d6ba0dd6809",
+      "backend": "mlx_local",
+      "external_arms": ["raw_model", "kernel_only", "production_full"],
+      "regional_arms": ["raw_model", "kernel_only", "production_full", "full_minus_field_context", "retrieval_neither", "retrieval_document_only", "retrieval_graph_only", "retrieval_document_and_graph", "full_minus_typed_tools", "full_minus_risk_intervention_private_only", "full_minus_verifier", "full_minus_fallback"]
+    },
+    {
+      "model_key": "luna_remote_comparator",
+      "role": "remote_comparator_not_production_profile",
+      "model_config": "configs/benchmark_models/openai_luna_high_app_server.yaml",
+      "model_id": "gpt-5.6-luna",
+      "model_revision": null,
+      "backend": "codex_app_server_chatgpt_auth",
+      "identity_policy": "runtime_model_catalog_and_app_server_protocol_receipt",
+      "external_arms": ["raw_model", "kernel_only", "production_full"],
+      "regional_arms": ["raw_model", "kernel_only", "production_full"]
+    }
+  ],
+  "expected_observation_counts": {
+    "gemma_external": 7200,
+    "gemma_regional": 2592,
+    "luna_external": 7200,
+    "luna_regional": 648,
+    "total": 17640
+  },
   "external_dataset": {
     "dataset_id": "AI71ai/agrillm-qa-eval-800",
     "revision": "8221846561c9cf7fd4cb072b15b857f67e9ee90a",
