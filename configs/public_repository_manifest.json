@@ -40,6 +40,7 @@
     "configs/README.md",
     "configs/benchmark_capability_conformance_v1.json",
     "configs/benchmark_egress_authorization.template.json",
+    "configs/candidate_execution_authorization.template.json",
     "configs/benchmark_judge_calibration.template.json",
     "configs/rc3_posthoc_semantic_judge_authorization_20260816.json",
     "configs/semantic_judge_egress_authorization.template.json",

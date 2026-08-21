@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from agronomy_agent.v3_candidate_runner import AppendOnlyObservationLedger, build_matrix, matrix_manifest, run_matrix
+from agronomy_agent.v3_candidate_runner import AppendOnlyObservationLedger, build_matrix, execute_in_fresh_process, matrix_manifest, run_matrix
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -69,3 +69,25 @@ def test_matrix_runner_resumes_without_retrying_completed_rows(tmp_path: Path) -
 
     assert run_matrix(matrix=matrix, ledger=ledger, executor=execute) == 1
     assert calls == [matrix[1].observation_id]
+
+
+def test_fresh_process_executor_preserves_identity_and_bounds_stalls() -> None:
+    config = {
+        "benchmark_id": "fixture",
+        "candidate_models": [{"model_key": "m", "model_id": "id", "model_revision": "r", "backend": "mock", "external_arms": ["raw_model"], "regional_arms": []}],
+        "trial_ids": ["trial-001"],
+    }
+    request = build_matrix(config=config, external_cases=[{"eval_id": "one", "question": "q"}], regional_cases=[])[0]
+    completed = execute_in_fresh_process(
+        request,
+        executor_ref="agronomy_agent.mock_candidate_executor:echo_observation",
+        timeout_seconds=5,
+    )
+    assert completed["observation_id"] == request.observation_id
+    timed_out = execute_in_fresh_process(
+        request,
+        executor_ref="agronomy_agent.mock_candidate_executor:stalled_observation",
+        timeout_seconds=0.1,
+    )
+    assert timed_out["status"] == "terminal_failure"
+    assert timed_out["terminal_receipt"]["failure_class"] == "timeout"

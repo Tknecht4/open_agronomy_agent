@@ -156,6 +156,8 @@ def build_planner_input(
 def plan_capabilities(planner_input: PlannerInput) -> CapabilityPlan:
     if planner_input.phase == "public_adapter_selection":
         return _finish_plan(planner_input, (), clarification=None)
+    if planner_input.arm_id == "full_minus_typed_tools":
+        return _finish_plan(planner_input, (), clarification=None)
 
     registry = capability_registry()
     invocations: list[CapabilityInvocation] = []

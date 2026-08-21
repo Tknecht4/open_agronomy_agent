@@ -20,6 +20,9 @@ def test_all_twelve_arm_families_have_explicit_execution_controls() -> None:
     }
     assert execution_arm("full_minus_typed_tools").typed_tools_enabled is False
     assert execution_arm("raw_model").governed_topology is False
+    assert execution_arm("full_minus_verifier").request_controls()["verifier_enabled"] is False
+    with pytest.raises(ValueError, match="outside AgentExecutionRequest"):
+        execution_arm("raw_model").request_controls()
     assert execution_arm("full_minus_verifier").verifier_enabled is False
     assert execution_arm("retrieval_graph_only").document_retrieval_enabled is False
 

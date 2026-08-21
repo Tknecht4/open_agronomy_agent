@@ -221,11 +221,17 @@ def _normalize_route(route_payload: Any) -> dict[str, Any]:
     }
 
 
-def _generate_with_backend_fallback(generator: Any, messages: list[dict[str, str]], mode: str) -> tuple[str, dict[str, Any]]:
+def _generate_with_backend_fallback(
+    generator: Any,
+    messages: list[dict[str, str]],
+    mode: str,
+    *,
+    fallback_enabled: bool = True,
+) -> tuple[str, dict[str, Any]]:
     try:
         return str(generator.generate(messages)), {}
     except RuntimeError as exc:
-        if mode == "mock" or isinstance(generator, MockGenerator):
+        if mode == "mock" or isinstance(generator, MockGenerator) or not fallback_enabled:
             raise
         return ANALYSIS_UNAVAILABLE_ANSWER, {
             "generation_fallback": {
@@ -346,9 +352,15 @@ def _run_turn_impl(
     session_context: dict[str, Any] | None = None,
     parent_turn_id: str | None = None,
     profiler: Any | None = None,
+    generation_backend: Any | None = None,
     execution_class: str = "product_turn",
     document_retrieval_enabled: bool = True,
     graph_retrieval_enabled: bool = True,
+    field_context_enabled: bool = True,
+    typed_tools_enabled: bool = True,
+    risk_intervention_enabled: bool = True,
+    verifier_enabled: bool = True,
+    fallback_enabled: bool = True,
     arm_id: str = "production_full",
 ) -> dict[str, Any]:
     if not store.get_session(session_id):
@@ -357,7 +369,11 @@ def _run_turn_impl(
         raise ValueError("max_tokens must be greater than 0")
 
     model_to_use = model_id or settings.default_model_id
-    queue_circuit = _model_queue_circuit_breaker(settings, mode=mode, model_id=model_to_use)
+    queue_circuit = (
+        None
+        if generation_backend is not None
+        else _model_queue_circuit_breaker(settings, mode=mode, model_id=model_to_use)
+    )
     queue_span = profiler.span("model.queue_wait", metadata=queue_circuit) if profiler else nullcontext()
     with queue_span:
         pass
@@ -370,7 +386,7 @@ def _run_turn_impl(
     else:
         load_span = profiler.span("model.load_or_reuse", metadata={"model_id": model_to_use, "mode": mode}) if profiler else nullcontext()
         with load_span:
-            generator = (
+            generator = generation_backend or (
                 MockGenerator()
                 if use_mock_generator
                 else _build_mlx_generator(model_to_use, model_config, settings.model_config_path)
@@ -394,6 +410,8 @@ def _run_turn_impl(
         "metadata": {"answer_policy_profile": "general_agronomy"},
     }
     field_context = (session_context or {}).get("field_context") if isinstance(session_context, dict) else None
+    if not field_context_enabled:
+        field_context = None
     field_context = _with_stored_field_history(
         store,
         session_context=session_context,
@@ -536,6 +554,8 @@ def _run_turn_impl(
                 field_context=field_context,
                 document_retrieval_enabled=document_retrieval_enabled,
                 graph_retrieval_enabled=graph_retrieval_enabled,
+                typed_tools_enabled=typed_tools_enabled,
+                arm_id=arm_id,
             )
             fabric = dict((context.runtime_metadata or {}).get("evidence_fabric") or {})
             if fabric and public_adapter_records:
@@ -647,15 +667,19 @@ def _run_turn_impl(
             answer = ANALYSIS_UNAVAILABLE_ANSWER
             generation_metadata = _generation_unavailable_metadata(queue_circuit, model_to_use)
         else:
-            intervention = decide_evidence_intervention(
-                context,
-                question=message,
-                profile=infer_intervention_profile(
-                    generator,
-                    str(model_config.get("intervention_profile") or "") or None,
-                ),
+            intervention = (
+                decide_evidence_intervention(
+                    context,
+                    question=message,
+                    profile=infer_intervention_profile(
+                        generator,
+                        str(model_config.get("intervention_profile") or "") or None,
+                    ),
+                )
+                if risk_intervention_enabled
+                else None
             )
-            if intervention.status == "held" and intervention.hold_text:
+            if intervention is not None and intervention.status == "held" and intervention.hold_text:
                 if profiler:
                     profiler.add_skipped("model.decode_stream", reason=intervention.reason)
                 answer = intervention.hold_text
@@ -670,8 +694,14 @@ def _run_turn_impl(
             else:
                 decode_span = profiler.span("model.decode_stream", input_size=sum(len(item["content"]) for item in messages)) if profiler else nullcontext()
                 with decode_span:
-                    answer, generation_metadata = _generate_with_backend_fallback(generator, messages, mode)
-                generation_metadata["evidence_intervention"] = intervention.as_record()
+                    answer, generation_metadata = _generate_with_backend_fallback(
+                        generator,
+                        messages,
+                        mode,
+                        fallback_enabled=fallback_enabled,
+                    )
+                if intervention is not None:
+                    generation_metadata["evidence_intervention"] = intervention.as_record()
         if trace_options.get("store_prompt_messages"):
             prompt_messages = messages
 
@@ -828,7 +858,7 @@ def _run_turn_impl(
         }
 
     verification_config = model_config.get("answer_verification") if isinstance(model_config.get("answer_verification"), dict) else {}
-    verification_enabled = bool(verification_config.get("enabled", False))
+    verification_enabled = bool(verification_config.get("enabled", False)) and verifier_enabled
     if (
         mode not in {"baseline", "mock"}
         and verification_enabled
@@ -1008,6 +1038,11 @@ def _run_turn_impl(
         "mode": mode,
         "document_retrieval_enabled": document_retrieval_enabled,
         "graph_retrieval_enabled": graph_retrieval_enabled,
+        "field_context_enabled": field_context_enabled,
+        "typed_tools_enabled": typed_tools_enabled,
+        "risk_intervention_enabled": risk_intervention_enabled,
+        "verifier_enabled": verifier_enabled,
+        "fallback_enabled": fallback_enabled,
     }
     harness_record = {
         "capability_registry_sha256": (
@@ -1033,7 +1068,11 @@ def _run_turn_impl(
     model_record = {
         "model_id": model_to_use if mode != "mock" else "mock",
         "model_revision": model_config.get("model_revision"),
-        "backend": os.getenv("AGRONOMY_AGENT_MODEL_BACKEND", "mlx"),
+        "backend": (
+            str(getattr(generation_backend, "backend_id", ""))
+            if generation_backend is not None
+            else os.getenv("AGRONOMY_AGENT_MODEL_BACKEND", "mlx")
+        ),
     }
     trace_store_payload["metadata"]["execution_fingerprints"] = execution_fingerprints(
         arm=arm_record,
@@ -1061,6 +1100,11 @@ def _run_turn_impl(
                 high_consequence_output_sha256=high_consequence_output_sha256,
                 document_retrieval_enabled=document_retrieval_enabled,
                 graph_retrieval_enabled=graph_retrieval_enabled,
+                typed_tools_enabled=typed_tools_enabled,
+                risk_intervention_enabled=risk_intervention_enabled,
+                field_context_enabled=field_context_enabled,
+                verifier_enabled_by_arm=verifier_enabled,
+                fallback_enabled=fallback_enabled,
             )
         )
     )
@@ -1153,9 +1197,15 @@ def execute_agent_request(request: AgentExecutionRequest) -> AgentExecutionResul
         ),
         parent_turn_id=request.parent_turn_id,
         profiler=request.profiler,
+        generation_backend=request.generation_backend,
         execution_class=request.execution_class,
         document_retrieval_enabled=request.document_retrieval_enabled,
         graph_retrieval_enabled=request.graph_retrieval_enabled,
+        field_context_enabled=request.field_context_enabled,
+        typed_tools_enabled=request.typed_tools_enabled,
+        risk_intervention_enabled=request.risk_intervention_enabled,
+        verifier_enabled=request.verifier_enabled,
+        fallback_enabled=request.fallback_enabled,
         arm_id=request.arm_id,
     )
     return AgentExecutionResult.from_run_turn_payload(request, payload)
@@ -1214,6 +1264,11 @@ def _production_stage_observations(
     high_consequence_output_sha256: str,
     document_retrieval_enabled: bool,
     graph_retrieval_enabled: bool,
+    typed_tools_enabled: bool,
+    risk_intervention_enabled: bool,
+    field_context_enabled: bool,
+    verifier_enabled_by_arm: bool,
+    fallback_enabled: bool,
 ) -> dict[str, dict[str, Any]]:
     """Build the explicit stage topology from observations made in this turn.
 
@@ -1347,7 +1402,15 @@ def _production_stage_observations(
     if context_present and observed_result_ids != tool_result_ids:
         raise ValueError("typed tool-result/trace identities diverge")
 
-    if context_present:
+    if context_present and not typed_tools_enabled:
+        if tool_invocation_ids or tool_result_ids:
+            raise ValueError("typed-tool-disabled arm contains tool execution output")
+        tool_planning_state = "disabled_by_arm"
+        tool_planning_reason = "typed_tools_disabled_by_arm"
+        tool_plan_status = "disabled_by_arm"
+        tool_execution_state = "disabled_by_arm"
+        tool_execution_reason = "typed_tools_disabled_by_arm"
+    elif context_present:
         tool_planning_state = "executed"
         tool_planning_reason = "typed_planner_evaluated"
         tool_plan_status = str(tool_plan_record.get("status") or "")
@@ -1390,7 +1453,12 @@ def _production_stage_observations(
         tool_execution_reason = tool_planning_reason
 
     intervention_record = generation_metadata.get("evidence_intervention")
-    if isinstance(intervention_record, dict):
+    if not risk_intervention_enabled:
+        if isinstance(intervention_record, dict):
+            raise ValueError("risk-intervention-disabled arm contains an intervention receipt")
+        risk_state = "disabled_by_arm"
+        risk_reason = "risk_intervention_disabled_by_arm"
+    elif isinstance(intervention_record, dict):
         risk_state = "executed"
         risk_reason = str(intervention_record.get("reason") or "policy_evaluated")
     elif mode in {"baseline", "mock"}:
@@ -1429,7 +1497,12 @@ def _production_stage_observations(
         draft_generation_reason = "draft_generation_completed"
 
     verification_record = metadata.get("answer_verification")
-    if verification_executed:
+    if not verifier_enabled_by_arm:
+        if verification_executed:
+            raise ValueError("verifier-disabled arm contains verifier output")
+        verification_state = "disabled_by_arm"
+        verification_reason = "verifier_disabled_by_arm"
+    elif verification_executed:
         if not isinstance(verification_record, dict):
             raise ValueError("executed verifier is missing its adjudication receipt")
         verification_state = "executed"
@@ -1677,9 +1750,13 @@ def _production_stage_observations(
             },
         },
         "typed_field_context": {
-            "state": "executed",
+            "state": "executed" if field_context_enabled else "disabled_by_arm",
             "evidence": {
-                "reason": "typed_field_context_compiled",
+                "reason": (
+                    "typed_field_context_compiled"
+                    if field_context_enabled
+                    else "field_context_disabled_by_arm"
+                ),
                 "compiler_receipt_sha256": execution_stable_sha256(
                     field_context_receipt
                 ),
@@ -1844,7 +1921,7 @@ def _production_stage_observations(
             },
         },
         "fallback_origin": {
-            "state": "executed",
+            "state": "executed" if fallback_enabled else "disabled_by_arm",
             "evidence": {
                 "reason": fallback_reason,
                 "origin_class": origin_class,

@@ -44,6 +44,54 @@ class GenerationBackend(Protocol):
 
 
 @dataclass(frozen=True)
+class RawModelExecutionReceipt:
+    schema_version: str
+    arm_id: str
+    backend_id: str
+    prompt_sha256: str
+    answer_sha256: str
+    topology_receipts_present: bool
+    elapsed_seconds: float
+    receipt_sha256: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schema_version": self.schema_version,
+            "arm_id": self.arm_id,
+            "backend_id": self.backend_id,
+            "prompt_sha256": self.prompt_sha256,
+            "answer_sha256": self.answer_sha256,
+            "topology_receipts_present": self.topology_receipts_present,
+            "elapsed_seconds": self.elapsed_seconds,
+            "receipt_sha256": self.receipt_sha256,
+        }
+
+def execute_raw_model(
+    *,
+    question: str,
+    backend: GenerationBackend,
+) -> tuple[str, RawModelExecutionReceipt]:
+    """Execute the explicitly non-production raw arm with a minimal receipt."""
+
+    if not question.strip():
+        raise ValueError("raw-model question is required")
+    messages = ({"role": "user", "content": question},)
+    started = time.monotonic()
+    answer = str(backend.generate(messages))
+    elapsed = max(0.0, time.monotonic() - started)
+    base = {
+        "schema_version": "open_agronomy_agent.raw_model_execution_receipt.v1",
+        "arm_id": "raw_model",
+        "backend_id": str(backend.backend_id),
+        "prompt_sha256": stable_sha256(messages),
+        "answer_sha256": stable_sha256(answer),
+        "topology_receipts_present": False,
+        "elapsed_seconds": elapsed,
+    }
+    return answer, RawModelExecutionReceipt(**base, receipt_sha256=stable_sha256(base))
+
+
+@dataclass(frozen=True)
 class ExecutionArmConfiguration:
     arm_id: str = "production_full"
     governed_topology: bool = True
@@ -71,6 +119,13 @@ class ExecutionArmConfiguration:
             "verifier_enabled": self.verifier_enabled,
             "fallback_enabled": self.fallback_enabled,
         }
+
+    def request_controls(self) -> dict[str, Any]:
+        if not self.governed_topology:
+            raise ValueError("raw_model is outside AgentExecutionRequest topology")
+        record = self.to_dict()
+        record.pop("governed_topology")
+        return record
 
 
 @dataclass(frozen=True)
@@ -654,9 +709,15 @@ class AgentExecutionRequest:
     session_context: Mapping[str, Any] | None = None
     parent_turn_id: str | None = None
     profiler: Any | None = None
+    generation_backend: GenerationBackend | None = None
     execution_class: str = "product_turn"
     document_retrieval_enabled: bool = True
     graph_retrieval_enabled: bool = True
+    field_context_enabled: bool = True
+    typed_tools_enabled: bool = True
+    risk_intervention_enabled: bool = True
+    verifier_enabled: bool = True
+    fallback_enabled: bool = True
     arm_id: str = "production_full"
     schema_version: str = EXECUTION_REQUEST_SCHEMA_VERSION
 
@@ -681,6 +742,15 @@ class AgentExecutionRequest:
             raise TypeError("document_retrieval_enabled must be a bool")
         if not isinstance(self.graph_retrieval_enabled, bool):
             raise TypeError("graph_retrieval_enabled must be a bool")
+        for field_name in (
+            "field_context_enabled",
+            "typed_tools_enabled",
+            "risk_intervention_enabled",
+            "verifier_enabled",
+            "fallback_enabled",
+        ):
+            if not isinstance(getattr(self, field_name), bool):
+                raise TypeError(f"{field_name} must be a bool")
         if not self.arm_id.strip():
             raise ValueError("arm_id is required")
         if self.mode != "agronomic_rag" and (
@@ -696,6 +766,19 @@ class AgentExecutionRequest:
             "document_retrieval_enabled": self.document_retrieval_enabled,
             "graph_retrieval_enabled": self.graph_retrieval_enabled,
         }
+
+    @property
+    def arm_configuration(self) -> ExecutionArmConfiguration:
+        return ExecutionArmConfiguration(
+            arm_id=self.arm_id,
+            document_retrieval_enabled=self.document_retrieval_enabled,
+            graph_retrieval_enabled=self.graph_retrieval_enabled,
+            field_context_enabled=self.field_context_enabled,
+            typed_tools_enabled=self.typed_tools_enabled,
+            risk_intervention_enabled=self.risk_intervention_enabled,
+            verifier_enabled=self.verifier_enabled,
+            fallback_enabled=self.fallback_enabled,
+        )
 
 
 def build_execution_stage_receipts(
@@ -1109,11 +1192,13 @@ __all__ = [
     "AgentExecutionRequest",
     "AgentExecutionResult",
     "ExecutionArmConfiguration",
+    "RawModelExecutionReceipt",
     "GenerationBackend",
     "StageBudget",
     "ExecutionTerminalReceipt",
     "EXECUTION_TERMINAL_RECEIPT_SCHEMA_VERSION",
     "execution_fingerprints",
+    "execute_raw_model",
     "EXECUTION_REQUEST_SCHEMA_VERSION",
     "EXECUTION_RESULT_SCHEMA_VERSION",
     "EXECUTION_STAGE_IDS",

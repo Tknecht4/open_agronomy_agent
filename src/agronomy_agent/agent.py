@@ -97,7 +97,8 @@ from agronomy_agent.on_demand_corpus import OnDemandCorpusRelease
 from agronomy_agent.router import QueryRoute, classify_query, refine_query_route
 from agronomy_agent.runtime_profiles import DEFAULT_MODEL_CONFIG, DEFAULT_RAG_CONFIG
 from agronomy_agent.skill_registry import skill_metadata
-from agronomy_agent.tool_planner import plan_and_execute_tools
+from agronomy_agent.tool_planner import PLANNER_VERSION as TOOL_PLANNER_VERSION
+from agronomy_agent.tool_planner import TOOL_PLAN_SCHEMA_VERSION, ToolPlan, plan_and_execute_tools
 from agronomy_agent.tools.registry import ToolNote, run_tools
 
 
@@ -1473,11 +1474,15 @@ def build_context(
     use_decision_contract: bool = False,
     document_retrieval_enabled: bool = True,
     graph_retrieval_enabled: bool = True,
+    typed_tools_enabled: bool = True,
+    arm_id: str = "production_full",
 ) -> AgentContext:
     if not isinstance(document_retrieval_enabled, bool):
         raise TypeError("document_retrieval_enabled must be a bool")
     if not isinstance(graph_retrieval_enabled, bool):
         raise TypeError("graph_retrieval_enabled must be a bool")
+    if not isinstance(typed_tools_enabled, bool):
+        raise TypeError("typed_tools_enabled must be a bool")
     loaded = resources or load_agent_resources(rag_config)
     cfg = loaded.rag_config
     retrieval_cfg = cfg.get("retrieval", {})
@@ -1498,6 +1503,8 @@ def build_context(
         bool(use_decision_contract),
         document_retrieval_enabled,
         graph_retrieval_enabled,
+        typed_tools_enabled,
+        arm_id,
     )
     if runtime_mode == "agno" and profiler is None and use_context_cache and use_search_cache:
         cached_context = _AGNO_CONTEXT_CACHE.get(agno_context_key)
@@ -1608,7 +1615,7 @@ def build_context(
         question_frame=planning_question_frame.to_dict(),
         decision_contract=decision_contract.to_dict(),
         capability_registry_sha256=capability_registry_sha256,
-        arm_id=(
+        arm_id=arm_id or (
             "retrieval_document_and_graph"
             if document_retrieval_enabled and graph_retrieval_enabled
             else "retrieval_document_only"
@@ -2393,11 +2400,21 @@ def build_context(
             if capability_registry_snapshot
             and invocation.operation == "guard_note"
         )
-        tool_notes = run_tools(question, planned_guard_ids)
-        tool_plan, tool_results = plan_and_execute_tools(
-            question,
-            field_context=query_signals.field_context,
-        )
+        if typed_tools_enabled:
+            tool_notes = run_tools(question, planned_guard_ids)
+            tool_plan, tool_results = plan_and_execute_tools(
+                question,
+                field_context=query_signals.field_context,
+            )
+        else:
+            tool_notes = []
+            tool_plan = ToolPlan(
+                TOOL_PLAN_SCHEMA_VERSION,
+                TOOL_PLANNER_VERSION,
+                "disabled_by_arm",
+                (),
+            )
+            tool_results = ()
         if tool_results:
             calculator_metadata = skill_metadata("agronomic_calculator")
             tool_notes.extend(

@@ -16,6 +16,7 @@ from agronomy_agent.execution_core import (
     EXECUTION_STAGE_IDS,
     EXECUTION_STAGE_TOPOLOGY_VERSION,
     build_execution_stage_receipts,
+    execute_raw_model,
     stable_sha256,
 )
 from agronomy_agent.server.services.chat_service import execute_agent_request, run_turn
@@ -25,6 +26,17 @@ from agronomy_agent.server.storage.db import TraceStore
 
 QUESTION = "Convert a fertilizer rate of 100 lb/ac to kg/ha."
 RETRIEVAL_QUESTION = "What soil health evidence is relevant to soil erosion?"
+
+
+class _DeterministicBackend:
+    backend_id = "deterministic_test_backend_v1"
+
+    def __init__(self) -> None:
+        self.calls: list[list[dict[str, str]]] = []
+
+    def generate(self, messages):  # noqa: ANN001, ANN201
+        self.calls.append([dict(row) for row in messages])
+        return "Deterministic backend answer."
 
 
 def _runtime(tmp_path, name: str):  # noqa: ANN001, ANN202
@@ -49,6 +61,12 @@ def _nonclaim_request(
     model_id: str = "mock",
     document_retrieval_enabled: bool = True,
     graph_retrieval_enabled: bool = True,
+    typed_tools_enabled: bool = True,
+    field_context_enabled: bool = True,
+    risk_intervention_enabled: bool = True,
+    verifier_enabled: bool = True,
+    fallback_enabled: bool = True,
+    arm_id: str = "production_full",
 ) -> AgentExecutionRequest:
     store, session, settings = _runtime(tmp_path, name)
     return AgentExecutionRequest(
@@ -67,6 +85,12 @@ def _nonclaim_request(
         execution_class="observed_system_execution_nonclaim",
         document_retrieval_enabled=document_retrieval_enabled,
         graph_retrieval_enabled=graph_retrieval_enabled,
+        typed_tools_enabled=typed_tools_enabled,
+        field_context_enabled=field_context_enabled,
+        risk_intervention_enabled=risk_intervention_enabled,
+        verifier_enabled=verifier_enabled,
+        fallback_enabled=fallback_enabled,
+        arm_id=arm_id,
     )
 
 
@@ -106,6 +130,33 @@ def test_cockpit_and_nonclaim_adapter_share_the_production_stage_receipts(tmp_pa
     )
     assert adapter_result.claim_eligible is False
     assert adapter_result.result_class == "observed_system_execution_nonclaim"
+
+
+def test_shared_core_accepts_an_injected_generation_backend_without_topology_change(tmp_path) -> None:  # noqa: ANN001
+    backend = _DeterministicBackend()
+    request = _nonclaim_request(
+        tmp_path,
+        "injected_backend",
+        question="Explain crop rotation.",
+    )
+    request = AgentExecutionRequest(
+        **{
+            **request.__dict__,
+            "generation_backend": backend,
+        }
+    )
+    execution = execute_agent_request(request)
+    assert len(backend.calls) == 1
+    assert len(execution.stage_receipts) == 17
+    assert execution.turn["trace"]["metadata"]["execution_fingerprints"]["model_fingerprint"]
+
+
+def test_raw_model_arm_stays_outside_production_topology() -> None:
+    backend = _DeterministicBackend()
+    answer, receipt = execute_raw_model(question="Explain crop rotation.", backend=backend)
+    assert answer == "Deterministic backend answer."
+    assert receipt.arm_id == "raw_model"
+    assert receipt.topology_receipts_present is False
 
 
 def test_nonclaim_adapter_retains_all_answer_stages_and_persistence(tmp_path) -> None:  # noqa: ANN001
@@ -241,6 +292,45 @@ def test_nonclaim_adapter_keeps_non_retrieval_toggles_unsupported(tmp_path) -> N
             component_configuration_id="retrieval_both",
             components=components,
         )
+
+
+def test_shared_core_executes_typed_tool_disabled_arm_without_contamination(tmp_path) -> None:  # noqa: ANN001
+    execution = execute_agent_request(
+        _nonclaim_request(
+            tmp_path,
+            "typed_tools_disabled",
+            typed_tools_enabled=False,
+            arm_id="full_minus_typed_tools",
+        )
+    )
+    receipts = {row["stage_id"]: row for row in execution.stage_receipts}
+    trace = execution.turn["trace"]
+    assert receipts["tool_planning"]["state"] == "disabled_by_arm"
+    assert receipts["tool_execution"]["state"] == "disabled_by_arm"
+    assert trace["metadata"]["tool_invocation_ids"] == []
+    assert trace["metadata"]["tool_result_ids"] == []
+
+
+@pytest.mark.parametrize(
+    ("arm_id", "request_flags", "stage_id"),
+    [
+        ("full_minus_field_context", {"field_context_enabled": False}, "typed_field_context"),
+        ("full_minus_risk_intervention_private_only", {"risk_intervention_enabled": False}, "pre_generation_answerability_risk_intervention"),
+        ("full_minus_verifier", {"verifier_enabled": False}, "verification"),
+        ("full_minus_fallback", {"fallback_enabled": False}, "fallback_origin"),
+    ],
+)
+def test_shared_core_marks_each_disabled_diagnostic_stage(
+    tmp_path,  # noqa: ANN001
+    arm_id: str,
+    request_flags: dict[str, bool],
+    stage_id: str,
+) -> None:
+    execution = execute_agent_request(
+        _nonclaim_request(tmp_path, arm_id, arm_id=arm_id, **request_flags)
+    )
+    receipts = {row["stage_id"]: row for row in execution.stage_receipts}
+    assert receipts[stage_id]["state"] == "disabled_by_arm"
 
 
 def test_disabled_retrieval_trace_contamination_is_rejected(tmp_path) -> None:  # noqa: ANN001

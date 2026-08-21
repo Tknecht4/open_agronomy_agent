@@ -152,3 +152,18 @@ def test_retrieval_controls_require_real_booleans() -> None:
             rag_config=RAG_CONFIG,
             document_retrieval_enabled=0,  # type: ignore[arg-type]
         )
+
+
+def test_typed_tool_disabled_arm_proves_empty_plan_and_outputs() -> None:
+    context = build_context(
+        "Convert 100 lb/ac to kg/ha.",
+        rag_config=RAG_CONFIG,
+        typed_tools_enabled=False,
+        arm_id="full_minus_typed_tools",
+        use_context_cache=False,
+    )
+    metadata = context.runtime_metadata or {}
+    assert metadata["capability_plan"]["invocations"] == ()
+    assert metadata["tool_plan"]["status"] == "disabled_by_arm"
+    assert metadata["tool_invocations"] == []
+    assert metadata["tool_results"] == []

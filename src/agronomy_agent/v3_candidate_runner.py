@@ -4,8 +4,12 @@ from __future__ import annotations
 
 import fcntl
 import hashlib
+import importlib
 import json
+import multiprocessing
 import os
+import queue
+import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping
@@ -167,6 +171,102 @@ def run_matrix(
     return len(matrix) - start
 
 
+def _child_execute(executor_ref: str, request: Mapping[str, Any], result_queue: Any) -> None:
+    try:
+        module_name, attribute = executor_ref.split(":", 1)
+        executor = getattr(importlib.import_module(module_name), attribute)
+        result_queue.put({"kind": "result", "row": dict(executor(dict(request)))})
+    except BaseException as exc:  # noqa: BLE001
+        result_queue.put(
+            {
+                "kind": "error",
+                "error_type": type(exc).__name__,
+                "error": str(exc)[:1000],
+            }
+        )
+
+
+def execute_in_fresh_process(
+    request: CandidateObservationRequest,
+    *,
+    executor_ref: str,
+    timeout_seconds: float,
+) -> dict[str, Any]:
+    """Execute one observation in a killable spawned process with no retry."""
+
+    if timeout_seconds <= 0:
+        raise ValueError("observation timeout must be greater than zero")
+    context = multiprocessing.get_context("spawn")
+    result_queue = context.Queue(maxsize=1)
+    process = context.Process(
+        target=_child_execute,
+        args=(executor_ref, request.to_dict(), result_queue),
+        daemon=False,
+    )
+    started = time.monotonic()
+    process.start()
+    process.join(timeout_seconds)
+    cancellation = "not_required"
+    if process.is_alive():
+        process.terminate()
+        process.join(2.0)
+        cancellation = "terminated"
+        if process.is_alive():
+            process.kill()
+            process.join(2.0)
+            cancellation = "killed"
+        elapsed = max(0.0, time.monotonic() - started)
+        return {
+            **request.to_dict(),
+            "status": "terminal_failure",
+            "row_disposition": "terminal_failure",
+            "terminal_receipt": {
+                "schema_version": "open_agronomy_agent.candidate_process_terminal_receipt.v1",
+                "failed_stage": "observation_process",
+                "failure_class": "timeout",
+                "error_type": "ObservationTimeout",
+                "timeout_seconds": timeout_seconds,
+                "elapsed_seconds": elapsed,
+                "cancellation": cancellation,
+                "completed_stage_receipts": [],
+                "pending_stages": "retained_in_child_artifacts_if_emitted",
+                "partial_artifacts_retained": True,
+            },
+        }
+    elapsed = max(0.0, time.monotonic() - started)
+    try:
+        message = result_queue.get_nowait()
+    except queue.Empty:
+        message = {
+            "kind": "error",
+            "error_type": "ChildProcessExit",
+            "error": f"child exited {process.exitcode} without a result",
+        }
+    if message.get("kind") == "result":
+        row = dict(message["row"])
+        if row.get("observation_id") != request.observation_id:
+            raise ValueError("child executor returned a mismatched observation identity")
+        return row
+    return {
+        **request.to_dict(),
+        "status": "terminal_failure",
+        "row_disposition": "terminal_failure",
+        "terminal_receipt": {
+            "schema_version": "open_agronomy_agent.candidate_process_terminal_receipt.v1",
+            "failed_stage": "observation_process",
+            "failure_class": "error",
+            "error_type": str(message.get("error_type") or "ChildProcessError"),
+            "error": str(message.get("error") or "")[:1000],
+            "timeout_seconds": timeout_seconds,
+            "elapsed_seconds": elapsed,
+            "cancellation": cancellation,
+            "completed_stage_receipts": [],
+            "pending_stages": "retained_in_child_artifacts_if_emitted",
+            "partial_artifacts_retained": True,
+        },
+    }
+
+
 def matrix_manifest(matrix: tuple[CandidateObservationRequest, ...]) -> dict[str, Any]:
     counts: dict[str, int] = {}
     for item in matrix:
@@ -184,4 +284,4 @@ def matrix_manifest(matrix: tuple[CandidateObservationRequest, ...]) -> dict[str
     return {**record, "manifest_sha256": sha256(record)}
 
 
-__all__ = ["AppendOnlyObservationLedger", "CandidateObservationRequest", "build_matrix", "matrix_manifest", "run_matrix"]
+__all__ = ["AppendOnlyObservationLedger", "CandidateObservationRequest", "build_matrix", "execute_in_fresh_process", "matrix_manifest", "run_matrix"]

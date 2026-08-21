@@ -1,0 +1,19 @@
+{
+  "schema_version": "open_agronomy_agent.candidate_execution_authorization.v1",
+  "authorization_decision": "template_not_authorized",
+  "authorization_source": "replace-with-owner-controlled-receipt",
+  "benchmark_id": "open_agronomy_v3_competence_candidate",
+  "matrix_manifest_sha256": "71834dab3432d388823394407cdd7d8f7225cc35f57d2ce335f17d8280311d05",
+  "benchmark_contract_sha256": "fbdf53d6cea47a5cc712920ec265d973247bb90cb58bb1588c675fac53f7e691",
+  "candidate_models_sha256": "926f96c4374167bc8a6a37eabe4c6c9022514e9e00aff83d72c2af8ca8d5004d",
+  "authorized_at": "2026-08-21T00:00:00Z",
+  "expires_at": "2026-08-22T00:00:00Z",
+  "model_keys": ["gemma4_e2b_production", "luna_remote_comparator"],
+  "permitted_payload_classes": [
+    "public_external_competence_cases",
+    "synthetic_regional_competence_cases",
+    "public_release_evidence"
+  ],
+  "excluded_payload_classes": ["private_field_history", "farmer_records", "credentials"],
+  "boundary": "This checked-in template is not authorization and cannot start candidate generation."
+}

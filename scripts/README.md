@@ -83,9 +83,11 @@ local input receipts. It never modifies or satisfies the sealed-v3 holdout.
 
 `run_v3_competence_candidate.py` deterministically expands those inputs into
 the frozen 17,640-observation Gemma/Luna matrix and emits its identity manifest.
-It deliberately refuses `--execute` until the production-core observation
-executor, exact model identities, and recipient-bound egress authorizations
-are supplied; planning the matrix does not generate or judge the cohort.
+Its deterministic dry run exercises the complete append/resume matrix without
+making model claims. Real `--execute` requires an importable production-core
+executor, an append-only ledger, a current matrix-bound authorization, and runs
+every observation in a separately killable child process. Planning or dry
+running the matrix does not generate or judge the cohort.
 
 `audit_guard_route_replay.py` replays the 154 guard-eligible exposed Canadian
 cases through the production execution core with the mock model, retains each

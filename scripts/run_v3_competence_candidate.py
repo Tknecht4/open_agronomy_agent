@@ -4,16 +4,19 @@
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 from pathlib import Path
 
 from agronomy_agent.benchmark_arms import execution_arm
 from agronomy_agent.execution_core import EXECUTION_STAGE_IDS, execution_fingerprints
+from agronomy_agent.judge_authorization import canonical_sha256
 from agronomy_agent.v3_candidate_runner import (
     AppendOnlyObservationLedger,
     build_matrix,
     matrix_manifest,
     run_matrix,
+    execute_in_fresh_process,
 )
 
 
@@ -30,6 +33,10 @@ def main() -> int:
     parser.add_argument("--inputs", type=Path, default=ROOT / "outputs/v3_competence_candidate/inputs")
     parser.add_argument("--manifest-output", type=Path)
     parser.add_argument("--execute", action="store_true")
+    parser.add_argument("--executor-ref")
+    parser.add_argument("--execution-ledger", type=Path)
+    parser.add_argument("--execution-authorization", type=Path)
+    parser.add_argument("--observation-timeout-seconds", type=float, default=600.0)
     parser.add_argument("--dry-run-ledger", type=Path)
     args = parser.parse_args()
     config_path = args.config if args.config.is_absolute() else ROOT / args.config
@@ -75,7 +82,39 @@ def main() -> int:
         executed = run_matrix(matrix=matrix, ledger=ledger, executor=mock_executor)
         print(json.dumps({"dry_run_rows_appended": executed, "ledger": str(ledger_path)}, sort_keys=True))
     if args.execute:
-        raise SystemExit("real execution is blocked until production-core observation execution, model snapshots, and recipient-bound authorizations are supplied")
+        if not args.executor_ref or not args.execution_ledger or not args.execution_authorization:
+            raise SystemExit("--execute requires --executor-ref, --execution-ledger, and --execution-authorization")
+        authorization_path = args.execution_authorization if args.execution_authorization.is_absolute() else ROOT / args.execution_authorization
+        authorization = json.loads(authorization_path.read_text())
+        now = dt.datetime.now(dt.UTC)
+        expires = dt.datetime.fromisoformat(str(authorization.get("expires_at") or "").replace("Z", "+00:00"))
+        if (
+            authorization.get("authorization_decision") != "authorized"
+            or authorization.get("benchmark_id") != config["benchmark_id"]
+            or authorization.get("matrix_manifest_sha256") != manifest["manifest_sha256"]
+            or authorization.get("benchmark_contract_sha256") != canonical_sha256(config)
+            or authorization.get("candidate_models_sha256") != canonical_sha256(config["candidate_models"])
+            or set(authorization.get("permitted_payload_classes") or []) != {
+                "public_external_competence_cases",
+                "synthetic_regional_competence_cases",
+                "public_release_evidence",
+            }
+            or expires.tzinfo is None
+            or now >= expires
+        ):
+            raise SystemExit("candidate execution authorization is absent, expired, or identity-mismatched")
+        ledger_path = args.execution_ledger if args.execution_ledger.is_absolute() else ROOT / args.execution_ledger
+        ledger = AppendOnlyObservationLedger(ledger_path, matrix)
+        executed = run_matrix(
+            matrix=matrix,
+            ledger=ledger,
+            executor=lambda request: execute_in_fresh_process(
+                request,
+                executor_ref=args.executor_ref,
+                timeout_seconds=args.observation_timeout_seconds,
+            ),
+        )
+        print(json.dumps({"executed_rows": executed, "ledger": str(ledger_path)}, sort_keys=True))
     return 0
 
 
