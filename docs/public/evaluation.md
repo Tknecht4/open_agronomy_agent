@@ -114,3 +114,23 @@ Future claim-bearing work requires an independently authored and reviewed,
 untouched cohort; a sealed cohort commitment; predeclared reporting; and,
 where semantic judging is used, a human-calibrated judge record that passes its
 order-, length-, and candidate-sensitivity checks.
+
+## Public v3 competence candidate
+
+The repair round adds a separate `open_agronomy_v3_competence_candidate`
+instrument. It pins all 800 rows of the public Apache-2.0 AI71 AgriLLM
+evaluation set and a deterministic 72-case exposed Canadian regional
+projection (60 English, 12 French). Every external row is retained with an
+explicit disposition; geography is recorded only when it appears literally in
+the question. Exact duplicate auditing covers existing repository evaluation
+questions, while model-pretraining exposure remains unknown.
+
+This instrument can compare exact-set reference agreement and production-path
+behavior for the pinned Gemma 4 profile. It is not the private sealed v3
+holdout, does not satisfy independent authorship/review, and cannot establish
+current authority, field validity, agronomist equivalence, or population
+generalization. Build its verified inputs into ignored local outputs with:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/prepare_v3_competence_candidate.py --download
+```

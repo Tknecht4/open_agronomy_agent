@@ -76,6 +76,11 @@ PYTHONPATH=src .venv/bin/python scripts/run_observed_system_rehearsal.py \
   --rag-config configs/rag.yaml
 ```
 
+`prepare_v3_competence_candidate.py` downloads or accepts the revision-pinned
+AI71 CSV, verifies its exact bytes and schema, retains all 800 row
+dispositions, derives the exposed 72-case regional lane, and writes ignored
+local input receipts. It never modifies or satisfies the sealed-v3 holdout.
+
 Supported product modes are `baseline`, `agronomic_rag`, and `mock` when both
 retrieval components are enabled. `agronomic_rag` additionally supports the
 four named retrieval configurations `retrieval_neither`,
