@@ -1,0 +1,41 @@
+{
+  "schema_version": "open_agronomy_agent.harness_freeze_receipt.v1",
+  "freeze_id": "final_agent_harness_polish_pre_generation_20260821",
+  "recorded_at": "2026-08-21T00:00:00-06:00",
+  "git_commit": "03744d4",
+  "branch": "codex/benchmark-repair-upgrade",
+  "status": "pre_generation_reference_frozen_benchmark_blocked",
+  "claim_eligible": false,
+  "sealed_v3_satisfied": false,
+  "topology_version": "open_agronomy_agent.production_stage_topology.v3",
+  "system_reference_sha256": "eacaa6bb1c8db1f234813561a771579a606b5a9ac398d087417d84f4c24f832b",
+  "component_sha256": {
+    "planner": "4ff021aab13d8623d0d8db6907c4bcfb00d288726584aabe39c41fbb89a88eb7",
+    "capability_registry": "09c2e332b508d0245e1961fde2ee803943c925def9b4d6cde2628593f9f4f4ab",
+    "execution_core": "73626ce52bfb3edf20749de0bdf68aa8d344e80f17fc77c5e002664206f20cd2",
+    "answer_verifier": "23802b4af1cae8ef5c580782ab45bb521f51db74bb68bf5c79b50a04cdef18a8",
+    "intervention_profile": "46444af5ee436cf6ecfa5c804346f7b76ee9922f21c2d77a0d9d3b4d1f8d163d",
+    "candidate_contract": "afcda9dbc75a2d03f74cf81403f813661ca44b20a3a8b4b215e70c2a0d9aea43",
+    "guard_suite": "5c3ce59195ac603d2dd8ec5f36f3672b3ee0c20227cdb4fd301dfe3848a83c63"
+  },
+  "observed_pre_generation_checks": {
+    "guard_route_replay": "154/154",
+    "seventeen_stage_guard_cases": 154,
+    "candidate_matrix_dry_run_rows": 17640,
+    "candidate_matrix_manifest_sha256": "71834dab3432d388823394407cdd7d8f7225cc35f57d2ce335f17d8280311d05"
+  },
+  "generation_blockers": [
+    "exact production and comparator model snapshot receipts",
+    "fresh recipient-bound candidate and judge egress authorizations",
+    "five passing preregistered semantic controls",
+    "owner approval"
+  ],
+  "unfulfilled_claims": [
+    "sealed_v3",
+    "independent_agronomist_review",
+    "deployment_compliance",
+    "autonomous_action",
+    "field_outcomes",
+    "population_generalization"
+  ]
+}
