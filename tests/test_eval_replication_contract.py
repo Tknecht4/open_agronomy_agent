@@ -569,9 +569,9 @@ def test_runner_rejects_codex_judge_and_private_overlay_egress() -> None:
 
 def test_standalone_app_server_judge_requires_a_future_dedicated_authorization() -> None:
     for transport in ("app-server", "exec"):
-        with pytest.raises(ValueError, match="no dedicated judge-egress authorization"):
+        with pytest.raises(ValueError, match="dedicated judge-egress authorization requires"):
             validate_judge_transport(argparse.Namespace(transport=transport))
-    with pytest.raises(RuntimeError, match="dedicated judge-egress authorization"):
+    with pytest.raises(RuntimeError, match="recipient-bound judge authorization"):
         AppServerJudgeRunner()
 
 

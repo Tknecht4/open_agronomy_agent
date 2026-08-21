@@ -1,0 +1,28 @@
+{
+  "schema_version": "open_agronomy_agent.semantic_judge_egress_authorization.v1",
+  "authorization_decision": "template_not_authorized",
+  "authorization_source": "replace-with-owner-controlled-receipt",
+  "authorized_at": "2026-08-21T00:00:00Z",
+  "expires_at": "2026-08-22T00:00:00Z",
+  "benchmark_contract_sha256": "replace-with-sha256",
+  "selected_rows_sha256": "replace-with-sha256",
+  "judge_prompt_sha256": "replace-with-sha256",
+  "judge_output_schema_sha256": "replace-with-sha256",
+  "semantic_controls_sha256": "replace-with-sha256",
+  "recipient_backend": "codex_app_server_chatgpt_auth",
+  "model_id": "gpt-5.6-luna",
+  "generator_judge_relationship": "cross_model",
+  "promotion_eligible": false,
+  "authorized_payload_classes": [
+    "project_owned_frozen_benchmark_questions",
+    "candidate_answers",
+    "benchmark_reference_and_rubric_for_judging"
+  ],
+  "excluded_payload_classes": [
+    "farmer_records",
+    "private_field_history",
+    "credentials",
+    "local_knowledge_corpus_files"
+  ],
+  "boundary": "This template is not authorization. Luna-on-Gemma judging is cross-model advisory; Luna-on-Luna judging is a self-judged diagnostic and never promotion eligible."
+}

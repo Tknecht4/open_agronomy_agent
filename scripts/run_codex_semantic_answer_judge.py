@@ -23,6 +23,13 @@ from pathlib import Path
 from typing import Any, Callable, Iterable
 
 from agronomy_agent.codex_app_server import CodexAppServerClient, DEFAULT_APP_SERVER_COMMAND
+from agronomy_agent.judge_authorization import (
+    JudgeAuthorizationGrant,
+    canonical_sha256,
+    load_json_object,
+    validate_judge_authorization,
+    validate_semantic_controls,
+)
 
 
 SCHEMA_VERSION = "open_agronomy_agent.codex_semantic_answer_judge.v1"
@@ -369,16 +376,16 @@ class AppServerJudgeRunner:
         collect_protocol_identity: bool = True,
         server_cwd: Path = Path("/private/tmp"),
         judge_role: str = "semantic_answer_quality",
+        authorization_grant: JudgeAuthorizationGrant | None = None,
     ) -> None:
-        raise RuntimeError(
-            "App Server semantic judging is disabled until a dedicated judge-egress "
-            "authorization contract is implemented"
-        )
+        if authorization_grant is None or authorization_grant.recipient_backend != "codex_app_server_chatgpt_auth":
+            raise RuntimeError("App Server semantic judging requires a validated recipient-bound judge authorization")
         self.command = command
         self.timeout_seconds = timeout_seconds
         self.collect_protocol_identity = collect_protocol_identity
         self.server_cwd = server_cwd.resolve()
         self.judge_role = judge_role
+        self.authorization_grant = authorization_grant
         self._local = threading.local()
         self._clients: list[CodexAppServerClient] = []
         self._clients_lock = threading.Lock()
@@ -696,6 +703,7 @@ def run(
     judge_backend: str = "codex_exec",
     judge_role: str = "semantic_answer_quality",
     max_batch_attempts: int = 3,
+    authorization_grant: JudgeAuthorizationGrant | None = None,
 ) -> dict[str, Any]:
     if max_batch_attempts < 1:
         raise ValueError("max_batch_attempts must be at least 1")
@@ -924,6 +932,13 @@ def run(
             "source_model_ids": source_model_ids,
             "judge_generator_relationship": model_relationship,
             "same_model_judge_conflict": model_relationship == "same_exact_model",
+            "judge_evidence_class": (
+                "self_judged_diagnostic_nonpromotional"
+                if model_relationship == "same_exact_model"
+                else "cross_model_advisory"
+            ),
+            "promotion_eligible": bool(authorization_grant and authorization_grant.promotion_eligible),
+            "judge_authorization_sha256": authorization_grant.authorization_sha256 if authorization_grant else None,
             "recovered_batch_count": len(recovered_batch_numbers),
             "recovered_judgment_count": len(recovered_ids_from_artifacts),
         }
@@ -966,21 +981,50 @@ def parse_args() -> argparse.Namespace:
         help="Judge only rows containing output, answer, or saved_answer text.",
     )
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument("--benchmark-config", type=Path, default=Path("configs/open_agronomy_v3_competence_candidate.json"))
+    parser.add_argument("--egress-authorization", type=Path, required=True)
+    parser.add_argument("--semantic-controls", type=Path, required=True)
     return parser.parse_args()
 
 
-def validate_judge_transport(args: argparse.Namespace) -> None:
-    """Fail closed until a dedicated semantic-judge egress contract exists."""
+def validate_judge_transport(args: argparse.Namespace) -> JudgeAuthorizationGrant:
+    """Validate the exact selected rows, judge contract, recipient, and controls."""
 
-    raise ValueError(
-        f"Codex semantic judging via {args.transport} is disabled because no dedicated "
-        "judge-egress authorization contract is implemented"
+    for name in ("egress_authorization", "semantic_controls", "benchmark_config", "outputs"):
+        value = getattr(args, name, None)
+        if value is None:
+            raise ValueError(f"dedicated judge-egress authorization requires --{name.replace('_', '-')}")
+    authorization = load_json_object(Path(args.egress_authorization))
+    controls = load_json_object(Path(args.semantic_controls))
+    benchmark = load_json_object(Path(args.benchmark_config))
+    rows = load_jsonl(Path(args.outputs))
+    if getattr(args, "answered_only", False):
+        rows = [row for row in rows if _clean(row.get("output") or row.get("answer") or row.get("saved_answer"))]
+    limit = getattr(args, "limit", None)
+    if limit is not None:
+        rows = rows[: int(limit)]
+    selected = [blind_item(row) for row in rows]
+    source_model_ids = {
+        str(row.get("model_id") or (row.get("model") or {}).get("model_id") or "")
+        for row in rows
+    }
+    recipient = "codex_app_server_chatgpt_auth" if args.transport == "app-server" else "codex_exec"
+    return validate_judge_authorization(
+        authorization,
+        benchmark_contract_sha256=canonical_sha256(benchmark),
+        selected_rows_sha256=canonical_sha256(selected),
+        judge_prompt_sha256=_sha256_text(judge_instructions(args.judge_role)),
+        judge_output_schema_sha256=canonical_sha256(judge_schema()),
+        semantic_controls_sha256=validate_semantic_controls(controls),
+        recipient_backend=recipient,
+        model_id=args.model,
+        source_model_ids=source_model_ids,
     )
 
 
 def main() -> None:
     args = parse_args()
-    validate_judge_transport(args)
+    authorization_grant = validate_judge_transport(args)
     if args.batch_size < 1:
         raise SystemExit("--batch-size must be at least 1")
     if args.workers < 1:
@@ -988,7 +1032,7 @@ def main() -> None:
     if args.max_batch_attempts < 1:
         raise SystemExit("--max-batch-attempts must be at least 1")
     app_server_runner = (
-        AppServerJudgeRunner(timeout_seconds=args.timeout_seconds, judge_role=args.judge_role)
+        AppServerJudgeRunner(timeout_seconds=args.timeout_seconds, judge_role=args.judge_role, authorization_grant=authorization_grant)
         if args.transport == "app-server"
         else None
     )
@@ -1011,6 +1055,7 @@ def main() -> None:
             ),
             judge_role=args.judge_role,
             max_batch_attempts=args.max_batch_attempts,
+            authorization_grant=authorization_grant,
         )
     finally:
         if app_server_runner is not None:
