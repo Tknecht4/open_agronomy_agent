@@ -1,0 +1,14 @@
+{
+  "schema_version": "open_agronomy_agent.risk_conditioned_selective_v3.v1",
+  "profile_id": "risk_conditioned_selective_v3",
+  "status": "frozen_from_exposed_development_suites",
+  "model_conditioned": false,
+  "thresholds": {
+    "low": 3,
+    "medium": 2,
+    "high": 1,
+    "regulated": 1
+  },
+  "replacement_policy": "named_evidence_linked_defect_only",
+  "claim_boundary": "Engineering intervention policy calibrated on exposed project suites; not independent agronomist validation."
+}

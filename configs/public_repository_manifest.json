@@ -71,6 +71,7 @@
     "configs/open_agronomy_benchmark_v3_holdout_commitment.template.json",
     "configs/open_agronomy_benchmark_v3_protocol.json",
     "configs/open_agronomy_v3_competence_candidate.json",
+    "configs/risk_conditioned_selective_v3.json",
     "configs/open_agronomy_canadian_performance_interface_v1.json",
     "configs/open_agronomy_canadian_performance_v1.json",
     "configs/open_agronomy_canadian_performance_v1_runtime_v2.json",

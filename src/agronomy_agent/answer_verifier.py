@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from collections import Counter
 from dataclasses import dataclass
-from typing import Any, Iterable
+from typing import Any, Iterable, Mapping
 
 from agronomy_agent.agno_runtime.local_index import RetrievedDoc
 from agronomy_agent.decision_route import build_decision_route_state
@@ -227,6 +227,8 @@ class AnswerVerificationResult:
     draft_output: str | None = None
     editor_output: str | None = None
     fallback_applied: bool = False
+    selection_policy: str = "hard_safety_then_specificity_v2"
+    risk_threshold_receipt: Mapping[str, Any] | None = None
 
     def as_record(self) -> dict[str, Any]:
         failed_claims = _risk_excerpts(self.draft_output or "", self.draft_assessment)
@@ -252,7 +254,7 @@ class AnswerVerificationResult:
             else "preserve_draft"
         )
         return {
-            "selection_policy": "hard_safety_then_specificity_v2",
+            "selection_policy": self.selection_policy,
             "intervention_action": intervention_action,
             "triggered": self.triggered,
             "rewrite_accepted": self.rewrite_accepted,
@@ -279,6 +281,18 @@ class AnswerVerificationResult:
                     *self.draft_assessment.unsupported_named_pests,
                 ],
             },
+            "claim_edit_ledger": _claim_edit_ledger(
+                draft=self.draft_output or "",
+                final=self.answer,
+                defect_records=defect_records,
+                fallback_applied=self.fallback_applied,
+                rewrite_accepted=self.rewrite_accepted,
+            ),
+            "risk_threshold_receipt": (
+                dict(self.risk_threshold_receipt)
+                if self.risk_threshold_receipt is not None
+                else None
+            ),
         }
 
 
@@ -1237,7 +1251,7 @@ def assess_claim_risk(
     )
 
 
-def verify_answer(
+def _verify_answer_impl(
     draft: str,
     *,
     question: str,
@@ -1836,6 +1850,164 @@ def verify_answer(
         fallback_applied=not accepted and final_answer.strip() != draft.strip(),
         final_assessment=final_assessment,
     )
+
+
+RISK_CONDITIONED_SELECTIVE_V3_THRESHOLDS: Mapping[str, int] = {
+    "low": 3,
+    "medium": 2,
+    "high": 1,
+    "regulated": 1,
+}
+
+
+def verify_answer(
+    draft: str,
+    *,
+    question: str,
+    evidence_text: str,
+    question_type: str,
+    risk_level: str,
+    editor: Any,
+    max_evidence_chars: int = 9000,
+    evidence_docs: Iterable[RetrievedDoc] = (),
+    preserve_entities: Iterable[str] = (),
+    required_entities: Iterable[str] = (),
+    review_mode: str = "risk_gated",
+    jurisdiction: str | None = None,
+    egress_envelope_factory: Any | None = None,
+) -> AnswerVerificationResult:
+    """Apply model-independent consequence thresholds before editing."""
+
+    docs = tuple(evidence_docs)
+    entities = tuple(preserve_entities)
+    required = tuple(required_entities)
+    if review_mode == "risk_conditioned_selective_v3":
+        assessment = assess_claim_risk(
+            draft,
+            question=question,
+            evidence_text=evidence_text,
+            question_type=question_type,
+            risk_level=risk_level,
+            evidence_docs=docs,
+            preserve_entities=entities,
+            required_entities=required,
+        )
+        consequence_class = (
+            "regulated"
+            if risk_level == "regulated" or question_type == "product_label"
+            else "high"
+            if risk_level == "high" or question_type in {"plant_health", "fertility_rate"}
+            else "medium"
+            if risk_level == "medium"
+            else "low"
+        )
+        threshold = RISK_CONDITIONED_SELECTIVE_V3_THRESHOLDS[consequence_class]
+        blocking = _blocking_claim_reasons(assessment)
+        threshold_receipt = {
+            "schema_version": "open_agronomy_agent.risk_threshold_receipt.v1",
+            "profile": "risk_conditioned_selective_v3",
+            "consequence_class": consequence_class,
+            "threshold": threshold,
+            "observed_score": assessment.score,
+            "blocking_reasons": list(blocking),
+            "model_conditioned": False,
+            "development_basis": "exposed_successor_development_suites",
+        }
+        if not blocking and assessment.score < threshold:
+            return AnswerVerificationResult(
+                answer=draft.strip(),
+                triggered=False,
+                rewrite_accepted=False,
+                draft_assessment=assessment,
+                final_assessment=assessment,
+                draft_output=draft,
+                selection_policy="risk_conditioned_selective_v3",
+                risk_threshold_receipt=threshold_receipt,
+            )
+        result = _verify_answer_impl(
+            draft,
+            question=question,
+            evidence_text=evidence_text,
+            question_type=question_type,
+            risk_level=risk_level,
+            editor=editor,
+            max_evidence_chars=max_evidence_chars,
+            evidence_docs=docs,
+            preserve_entities=entities,
+            required_entities=required,
+            review_mode=review_mode,
+            jurisdiction=jurisdiction,
+            egress_envelope_factory=egress_envelope_factory,
+        )
+        return AnswerVerificationResult(
+            **{
+                **result.__dict__,
+                "selection_policy": "risk_conditioned_selective_v3",
+                "risk_threshold_receipt": threshold_receipt,
+            }
+        )
+    return _verify_answer_impl(
+        draft,
+        question=question,
+        evidence_text=evidence_text,
+        question_type=question_type,
+        risk_level=risk_level,
+        editor=editor,
+        max_evidence_chars=max_evidence_chars,
+        evidence_docs=docs,
+        preserve_entities=entities,
+        required_entities=required,
+        review_mode=review_mode,
+        jurisdiction=jurisdiction,
+        egress_envelope_factory=egress_envelope_factory,
+    )
+
+
+def _claim_edit_ledger(
+    *,
+    draft: str,
+    final: str,
+    defect_records: Iterable[Mapping[str, Any]],
+    fallback_applied: bool,
+    rewrite_accepted: bool,
+) -> dict[str, Any]:
+    import hashlib
+
+    defects = tuple(dict(item) for item in defect_records)
+    draft_claims = tuple(
+        value.strip()
+        for value in re.split(r"(?<=[.!?])\s+|\n+", draft)
+        if value.strip()
+    )
+    changed = tuple(value for value in draft_claims if value not in final)
+    return {
+        "schema_version": "open_agronomy_agent.claim_edit_ledger.v1",
+        "draft_claim_count": len(draft_claims),
+        "changed_claim_count": len(changed),
+        "changed_claims": [
+            {
+                "claim_sha256": hashlib.sha256(claim.encode("utf-8")).hexdigest(),
+                "defect_ids": [item["defect_id"] for item in defects],
+                "evidence_ids": sorted(
+                    {
+                        str(evidence_id)
+                        for item in defects
+                        for evidence_id in item.get("evidence_ids", ())
+                    }
+                ),
+            }
+            for claim in changed
+        ],
+        "replacement_kind": (
+            "deterministic_fallback"
+            if fallback_applied
+            else "evidence_editor"
+            if rewrite_accepted
+            else "none"
+        ),
+        "named_defect_required_for_replacement": True,
+        "replacement_has_named_defect": not changed or bool(defects),
+    }
 
 
 def _requires_phone_only_symptom_fallback(question_type: str, question: str) -> bool:

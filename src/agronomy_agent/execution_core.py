@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Mapping, Protocol, Sequence
 
@@ -24,6 +25,9 @@ EXECUTION_STAGE_RECEIPT_SCHEMA_VERSION = (
     "open_agronomy_agent.execution_stage_receipt.v2"
 )
 EXECUTION_STAGE_TOPOLOGY_VERSION = "open_agronomy_agent.production_stage_topology.v3"
+EXECUTION_TERMINAL_RECEIPT_SCHEMA_VERSION = (
+    "open_agronomy_agent.execution_terminal_receipt.v1"
+)
 
 SUPPORTED_EXECUTION_CLASSES = frozenset(
     {"product_turn", "observed_system_execution_nonclaim"}
@@ -65,6 +69,119 @@ class ExecutionArmConfiguration:
             "verifier_enabled": self.verifier_enabled,
             "fallback_enabled": self.fallback_enabled,
         }
+
+
+@dataclass(frozen=True)
+class StageBudget:
+    stage_id: str
+    timeout_seconds: float
+    started_monotonic: float = field(default_factory=time.monotonic)
+
+    def __post_init__(self) -> None:
+        if self.stage_id not in EXECUTION_STAGE_IDS:
+            raise ValueError(f"unknown execution stage: {self.stage_id}")
+        if self.timeout_seconds <= 0:
+            raise ValueError("stage timeout must be greater than zero")
+
+    @property
+    def elapsed_seconds(self) -> float:
+        return max(0.0, time.monotonic() - self.started_monotonic)
+
+    @property
+    def remaining_seconds(self) -> float:
+        return max(0.0, self.timeout_seconds - self.elapsed_seconds)
+
+    def check(self) -> None:
+        if self.remaining_seconds <= 0:
+            raise TimeoutError(
+                f"execution stage {self.stage_id} exceeded {self.timeout_seconds:g}s"
+            )
+
+
+@dataclass(frozen=True)
+class ExecutionTerminalReceipt:
+    schema_version: str
+    execution_id: str
+    status: str
+    failed_stage: str | None
+    completed_stage_receipts: tuple[Mapping[str, Any], ...]
+    pending_stage_ids: tuple[str, ...]
+    failure_class: str | None
+    error_type: str | None
+    timeout_seconds: float | None
+    elapsed_seconds: float
+    cancellation: str
+    partial_artifacts_retained: bool
+    receipt_sha256: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schema_version": self.schema_version,
+            "execution_id": self.execution_id,
+            "status": self.status,
+            "failed_stage": self.failed_stage,
+            "completed_stage_receipts": [
+                dict(item) for item in self.completed_stage_receipts
+            ],
+            "pending_stage_ids": list(self.pending_stage_ids),
+            "failure_class": self.failure_class,
+            "error_type": self.error_type,
+            "timeout_seconds": self.timeout_seconds,
+            "elapsed_seconds": self.elapsed_seconds,
+            "cancellation": self.cancellation,
+            "partial_artifacts_retained": self.partial_artifacts_retained,
+            "receipt_sha256": self.receipt_sha256,
+        }
+
+    @classmethod
+    def failure(
+        cls,
+        *,
+        execution_id: str,
+        failed_stage: str,
+        completed_stage_receipts: Sequence[Mapping[str, Any]],
+        failure_class: str,
+        error_type: str,
+        elapsed_seconds: float,
+        cancellation: str,
+        timeout_seconds: float | None = None,
+        partial_artifacts_retained: bool = True,
+    ) -> "ExecutionTerminalReceipt":
+        if failed_stage not in EXECUTION_STAGE_IDS:
+            raise ValueError(f"unknown failed stage: {failed_stage}")
+        completed = tuple(dict(item) for item in completed_stage_receipts)
+        expected_prefix = EXECUTION_STAGE_IDS[: len(completed)]
+        observed_prefix = tuple(str(item.get("stage_id") or "") for item in completed)
+        if observed_prefix != expected_prefix:
+            raise ValueError("completed stage receipts are not an ordered topology prefix")
+        if failed_stage in expected_prefix:
+            raise ValueError("failed stage is already marked completed")
+        failed_index = EXECUTION_STAGE_IDS.index(failed_stage)
+        if len(completed) != failed_index:
+            raise ValueError("completed stage prefix does not end before failed stage")
+        pending = EXECUTION_STAGE_IDS[failed_index + 1 :]
+        base = {
+            "schema_version": EXECUTION_TERMINAL_RECEIPT_SCHEMA_VERSION,
+            "execution_id": execution_id,
+            "status": "failed",
+            "failed_stage": failed_stage,
+            "completed_stage_receipts": list(completed),
+            "pending_stage_ids": list(pending),
+            "failure_class": failure_class,
+            "error_type": error_type,
+            "timeout_seconds": timeout_seconds,
+            "elapsed_seconds": elapsed_seconds,
+            "cancellation": cancellation,
+            "partial_artifacts_retained": partial_artifacts_retained,
+        }
+        return cls(
+            **{
+                **base,
+                "completed_stage_receipts": completed,
+                "pending_stage_ids": pending,
+                "receipt_sha256": stable_sha256(base),
+            }
+        )
 
 
 def execution_fingerprints(
@@ -991,6 +1108,9 @@ __all__ = [
     "AgentExecutionResult",
     "ExecutionArmConfiguration",
     "GenerationBackend",
+    "StageBudget",
+    "ExecutionTerminalReceipt",
+    "EXECUTION_TERMINAL_RECEIPT_SCHEMA_VERSION",
     "execution_fingerprints",
     "EXECUTION_REQUEST_SCHEMA_VERSION",
     "EXECUTION_RESULT_SCHEMA_VERSION",
