@@ -121,6 +121,8 @@ class AppendOnlyObservationLedger:
         self.matrix = matrix
         path.parent.mkdir(parents=True, exist_ok=True)
         path.touch(exist_ok=True)
+        self._next_index: int | None = None
+        self._validated_size: int | None = None
 
     def completed_prefix(self) -> int:
         rows = _jsonl(self.path) if self.path.stat().st_size else []
@@ -129,21 +131,27 @@ class AppendOnlyObservationLedger:
         for index, row in enumerate(rows):
             if row.get("observation_id") != self.matrix[index].observation_id:
                 raise ValueError("observation ledger is not an exact frozen-matrix prefix")
+        self._next_index = len(rows)
+        self._validated_size = self.path.stat().st_size
         return len(rows)
 
     def append(self, row: Mapping[str, Any]) -> None:
-        expected_index = self.completed_prefix()
+        expected_index = self._next_index if self._next_index is not None else self.completed_prefix()
         if expected_index >= len(self.matrix):
             raise ValueError("candidate matrix is already complete")
         if row.get("observation_id") != self.matrix[expected_index].observation_id:
             raise ValueError("executor returned an observation outside the next matrix position")
         with self.path.open("a", encoding="utf-8") as handle:
             fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
-            if self.completed_prefix() != expected_index:
-                raise RuntimeError("concurrent writer advanced the observation ledger")
+            current_size = self.path.stat().st_size
+            if self._validated_size is None or current_size != self._validated_size:
+                if self.completed_prefix() != expected_index:
+                    raise RuntimeError("concurrent writer advanced the observation ledger")
             handle.write(canonical_json(dict(row)) + "\n")
             handle.flush()
             os.fsync(handle.fileno())
+            self._next_index = expected_index + 1
+            self._validated_size = self.path.stat().st_size
             fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 

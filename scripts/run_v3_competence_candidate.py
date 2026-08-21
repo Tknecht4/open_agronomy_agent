@@ -7,7 +7,14 @@ import argparse
 import json
 from pathlib import Path
 
-from agronomy_agent.v3_candidate_runner import build_matrix, matrix_manifest
+from agronomy_agent.benchmark_arms import execution_arm
+from agronomy_agent.execution_core import EXECUTION_STAGE_IDS, execution_fingerprints
+from agronomy_agent.v3_candidate_runner import (
+    AppendOnlyObservationLedger,
+    build_matrix,
+    matrix_manifest,
+    run_matrix,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,6 +30,7 @@ def main() -> int:
     parser.add_argument("--inputs", type=Path, default=ROOT / "outputs/v3_competence_candidate/inputs")
     parser.add_argument("--manifest-output", type=Path)
     parser.add_argument("--execute", action="store_true")
+    parser.add_argument("--dry-run-ledger", type=Path)
     args = parser.parse_args()
     config_path = args.config if args.config.is_absolute() else ROOT / args.config
     inputs = args.inputs if args.inputs.is_absolute() else ROOT / args.inputs
@@ -38,6 +46,34 @@ def main() -> int:
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     print(json.dumps(manifest, indent=2, sort_keys=True))
+    if args.dry_run_ledger:
+        ledger_path = args.dry_run_ledger if args.dry_run_ledger.is_absolute() else ROOT / args.dry_run_ledger
+        ledger = AppendOnlyObservationLedger(ledger_path, matrix)
+
+        def mock_executor(request):
+            arm = execution_arm(request.arm)
+            fingerprints = execution_fingerprints(
+                arm=arm.to_dict(),
+                harness={"backend": "deterministic_matrix_dry_run_v1"},
+                model={"model_key": request.model_key, "backend": "deterministic_mock"},
+            )
+            return {
+                **request.to_dict(),
+                "status": "dry_run_complete",
+                "row_disposition": "accepted",
+                "dry_run_only": True,
+                "claim_eligible": False,
+                "stage_receipt_count": len(EXECUTION_STAGE_IDS) if arm.governed_topology else 0,
+                "fingerprints": {
+                    key.removesuffix("_fingerprint"): value
+                    for key, value in fingerprints.items()
+                },
+                "private_retention_id": f"dry_private_{request.observation_id}",
+                "public_projection_id": f"dry_public_{request.observation_id}",
+            }
+
+        executed = run_matrix(matrix=matrix, ledger=ledger, executor=mock_executor)
+        print(json.dumps({"dry_run_rows_appended": executed, "ledger": str(ledger_path)}, sort_keys=True))
     if args.execute:
         raise SystemExit("real execution is blocked until production-core observation execution, model snapshots, and recipient-bound authorizations are supplied")
     return 0

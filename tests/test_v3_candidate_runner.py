@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from agronomy_agent.v3_candidate_runner import AppendOnlyObservationLedger, build_matrix, matrix_manifest
+from agronomy_agent.v3_candidate_runner import AppendOnlyObservationLedger, build_matrix, matrix_manifest, run_matrix
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -50,3 +50,22 @@ def test_ledger_requires_an_exact_resume_prefix(tmp_path: Path) -> None:
     (tmp_path / "observations.jsonl").write_text('{"observation_id":"wrong"}\n')
     with pytest.raises(ValueError, match="exact frozen-matrix prefix"):
         ledger.completed_prefix()
+
+
+def test_matrix_runner_resumes_without_retrying_completed_rows(tmp_path: Path) -> None:
+    config = {
+        "benchmark_id": "fixture",
+        "candidate_models": [{"model_key": "m", "model_id": "id", "model_revision": "r", "backend": "mock", "external_arms": ["raw_model"], "regional_arms": []}],
+        "trial_ids": ["trial-001"],
+    }
+    matrix = build_matrix(config=config, external_cases=[{"eval_id": "one", "question": "q"}, {"eval_id": "two", "question": "q2"}], regional_cases=[])
+    ledger = AppendOnlyObservationLedger(tmp_path / "observations.jsonl", matrix)
+    ledger.append({"observation_id": matrix[0].observation_id, "status": "complete"})
+    calls: list[str] = []
+
+    def execute(request):
+        calls.append(request.observation_id)
+        return {"observation_id": request.observation_id, "status": "complete"}
+
+    assert run_matrix(matrix=matrix, ledger=ledger, executor=execute) == 1
+    assert calls == [matrix[1].observation_id]
