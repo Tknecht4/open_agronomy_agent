@@ -118,9 +118,11 @@ class PlannerMetadata:
     phases: tuple[str, ...] = ()
     obligation_keys: tuple[str, ...] = ()
     intent_ids: tuple[str, ...] = ()
+    risk_levels: tuple[str, ...] = ()
     arm_eligibility: tuple[str, ...] = ("governed",)
     priority: int = 100
     max_invocations: int = 1
+    automatic_intent_selection: bool = True
 
     def as_record(self) -> dict[str, Any]:
         return {
@@ -133,9 +135,11 @@ class PlannerMetadata:
             "phases": list(self.phases),
             "obligation_keys": list(self.obligation_keys),
             "intent_ids": list(self.intent_ids),
+            "risk_levels": list(self.risk_levels),
             "arm_eligibility": list(self.arm_eligibility),
             "priority": self.priority,
             "max_invocations": self.max_invocations,
+            "automatic_intent_selection": self.automatic_intent_selection,
         }
 
 
@@ -1070,6 +1074,17 @@ def _guard_specs() -> list[ToolSpec]:
     from agronomy_agent.skill_registry import SKILL_CONTRACTS
 
     specs: list[ToolSpec] = []
+    intent_applicability = {
+        "field_data_guard": ("field_data", "plant_health", "product_label", "fertility_rate", "fertility_diagnostic", "soil_water", "crop_management", "regional_context"),
+        "label_guard": ("product_label",),
+        "pesticide_safety_guard": ("product_label", "plant_health"),
+        "resistance_management_guard": ("product_label",),
+        "fertility_guard": ("fertility_rate", "fertility_diagnostic", "soil_water"),
+        "nutrient_4r_guard": ("fertility_rate", "fertility_diagnostic"),
+        "salinity_sodicity_guard": ("soil_water",),
+        "soil_structure_guard": ("soil_water", "crop_management", "fertility_rate", "fertility_diagnostic"),
+        "weather_guard": ("field_data", "plant_health", "product_label", "fertility_rate", "fertility_diagnostic", "soil_water", "crop_management", "regional_context"),
+    }
     for capability_id in ROUTE_REQUIRED_CAPABILITY_IDS:
         contract = SKILL_CONTRACTS[capability_id]
         specs.append(
@@ -1098,6 +1113,9 @@ def _guard_specs() -> list[ToolSpec]:
                     selector_ref="agronomy_agent.capability_planner:plan_capabilities",
                     phases=("tool_planning",),
                     obligation_keys=tuple(contract.eval_tags),
+                    intent_ids=intent_applicability.get(capability_id, ()),
+                    risk_levels=("regulated",) if capability_id in {"label_guard", "pesticide_safety_guard"} else (),
+                    automatic_intent_selection=capability_id != "resistance_management_guard",
                 ),
                 surfaces=SurfaceBindings(router=(capability_id,), agno=(capability_id,)),
                 verifier_adapter="guard_note_evidence",

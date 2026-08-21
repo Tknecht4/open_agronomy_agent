@@ -46,6 +46,7 @@ class GenerationBackend(Protocol):
 @dataclass(frozen=True)
 class ExecutionArmConfiguration:
     arm_id: str = "production_full"
+    governed_topology: bool = True
     document_retrieval_enabled: bool = True
     graph_retrieval_enabled: bool = True
     field_context_enabled: bool = True
@@ -61,6 +62,7 @@ class ExecutionArmConfiguration:
     def to_dict(self) -> dict[str, Any]:
         return {
             "arm_id": self.arm_id,
+            "governed_topology": self.governed_topology,
             "document_retrieval_enabled": self.document_retrieval_enabled,
             "graph_retrieval_enabled": self.graph_retrieval_enabled,
             "field_context_enabled": self.field_context_enabled,

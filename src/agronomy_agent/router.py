@@ -214,7 +214,9 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     benign_conceptual_explanation = _is_benign_conceptual_explanation(question)
     qtype = route.question_type
     namespaces = set(route.namespaces)
-    tools = set(route.required_tools)
+    # Capability ownership is intentionally outside the router. Planner v2
+    # derives guards and tools from this route's typed intent/risk output.
+    tools: set[str] = set()
     expansions = set(route.query_expansion)
     risk = route.risk_level
     guidance = route.guidance
@@ -266,7 +268,7 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     if classification_accuracy_prior and single_field_identity_claim and not explicit_agrochemical_context:
         qtype = "field_data"
         namespaces.update({"field_data_boundary", "crop_management", "regional_environment"})
-        tools.add("field_data_guard")
+        pass
         expansions.update({"classification uncertainty", "field record", "ground truth", "image date", "validation scope"})
         risk = "medium" if risk == "regulated" else risk
         guidance = (
@@ -290,7 +292,7 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     if soil_conductivity_evidence and nutrient_rate_from_conductivity and not explicit_agrochemical_context:
         qtype = "soil_water"
         namespaces.update({"soil_water", "soil_health", "fertility", "field_data_boundary"})
-        tools.update({"field_data_guard", "fertility_guard", "nutrient_4r_guard", "salinity_sodicity_guard"})
+        pass
         expansions.update({"soil EC", "salinity", "SAR", "ESP", "soil test", "crop need", "nutrient credits"})
         risk = "medium"
         guidance = (
@@ -304,7 +306,7 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     if irrigation_depth_request and not explicit_agrochemical_context:
         qtype = "soil_water"
         namespaces.update({"soil_water", "field_data_boundary"})
-        tools.update({"field_data_guard", "weather_guard"})
+        pass
         expansions.update({"crop stage", "root-zone moisture", "soil water holding", "recent rainfall", "system capacity"})
         risk = "medium" if risk == "regulated" else risk
         guidance = (
@@ -314,10 +316,10 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     if nutrient_terms and nutrient_action and not pesticide_terms:
         qtype = "fertility_diagnostic" if crop_stress else "fertility_rate"
         namespaces.update({"fertility", "soil_water", "field_data_boundary"})
-        tools.update({"fertility_guard", "field_data_guard", "nutrient_4r_guard"})
+        pass
         risk = "medium" if risk == "low" else risk
         if has(r"\b(?:rain|wet|weather|forecast|drought|dry|moisture|winter precipitation)\w*\b", q):
-            tools.add("weather_guard")
+            pass
         guidance = (
             "Treat the request as a calibrated nutrient decision. Separate crop stress from nutrient shortage, "
             "reconcile tests, credits, water and loss risk, and do not state a rate from symptoms, maps or weather alone."
@@ -330,9 +332,9 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     if nutrient_plan_decision and not pesticide_terms:
         qtype = "fertility_diagnostic" if crop_stress else "fertility_rate"
         namespaces.update({"fertility", "soil_water", "field_data_boundary"})
-        tools.update({"fertility_guard", "field_data_guard", "nutrient_4r_guard"})
+        pass
         if has(r"\b(?:field|soil|manure|seed[- ]placed|previous application|from before)\b", q):
-            tools.add("weather_guard")
+            pass
         risk = "medium" if risk in {"low", "regulated"} else risk
 
     variety_decision = (
@@ -344,7 +346,7 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     if variety_decision:
         qtype = "crop_management"
         namespaces.update({"crop_management", "field_data_boundary", "economics"})
-        tools.add("field_data_guard")
+        pass
         expansions.update({"local multi-year trials", "maturity", "disease ratings", "yield stability", "standability"})
         variety_guidance = (
             "Use replicated multi-year local trials to narrow varieties, then match maturity, disease package, "
@@ -369,12 +371,12 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     if biological_problem and biological_decision and qtype in {"conceptual", "exam_review", "plant_health"}:
         qtype = "plant_health"
         namespaces.update({"plant_health", "field_data_boundary"})
-        tools.add("field_data_guard")
+        pass
         if has(r"\b(?:rain|wet|humid|weather|forecast|tonight|wind|pluie)\w*\b", q):
-            tools.add("weather_guard")
+            pass
         if has(r"\b(?:spray|treat|fungicide|insecticide|pesticide|herbicide|traitement)\w*\b", q):
             namespaces.update({"product_stewardship", "label_boundary"})
-            tools.update({"label_guard", "pesticide_safety_guard"})
+            pass
             risk = "regulated"
         guidance = (
             "Diagnose and count before treatment: verify organism, field pattern, crop stage, severity or density, "
@@ -388,18 +390,16 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     if field_pest_action:
         qtype = "plant_health" if qtype != "product_label" else qtype
         namespaces.update({"plant_health", "field_data_boundary"})
-        tools.update({"field_data_guard", "pesticide_safety_guard"})
+        pass
         if has(r"\b(?:spray|treat|insecticide|herbicide|fungicide)\w*\b", q):
-            tools.update({"label_guard", "weather_guard"})
+            pass
             risk = "regulated"
 
     weed_action = has(r"\b(?:weed|weedy|lentils?)\w*\b", q) and has(
         r"\b(?:spray|herbicide|rate|choose|product|photo)\w*\b", q
     )
     if weed_action:
-        tools.update(
-            {"field_data_guard", "label_guard", "pesticide_safety_guard", "resistance_management_guard"}
-        )
+        pass
         risk = "regulated"
 
     underspecified_herbicide = has(
@@ -410,7 +410,7 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     if underspecified_herbicide:
         qtype = "product_label"
         namespaces.update({"plant_health", "product_stewardship", "label_boundary", "field_data_boundary"})
-        tools.update({"field_data_guard", "label_guard", "pesticide_safety_guard", "resistance_management_guard"})
+        pass
         risk = "regulated"
         guidance = (
             "Do not infer a usual herbicide or rate. Require weed identity and stage, crop stage, field and product "
@@ -418,22 +418,22 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
         )
 
     if qtype == "product_label" and has(r"\b(?:wild oats?|kochia|waterhemp|pigweed|ryegrass)\b", q):
-        tools.add("resistance_management_guard")
+        pass
     if qtype == "product_label" and has(
         r"\b(?:spray|fungicide|insecticide|pesticide|tonight|today|weather|forecast|wind|rain)\w*\b", q
     ):
-        tools.add("weather_guard")
+        pass
 
     if qtype.startswith("fertility"):
-        tools.update({"fertility_guard", "field_data_guard"})
+        pass
         if has(r"\b(?:rate|apply|application|fertilizer plan|nutrient plan|schedule|manure|starter|broadcast|banded)\b", q):
-            tools.add("nutrient_4r_guard")
+            pass
         if has(r"\b(?:fall[- ]applied nitrogen|fertilizer table|rate table)\b", q):
-            tools.add("nutrient_4r_guard")
+            pass
         if has(r"\b(?:rain|wet|dry|drought|weather|forecast|frost|moisture|temperature)\w*\b", q):
-            tools.add("weather_guard")
+            pass
         if has(r"\b(?:standing water|drainage|compaction|roots? turn|peat soil)\b", q):
-            tools.add("soil_structure_guard")
+            pass
 
     water_test_operation = has(r"\b(?:water test|\bEC\b|\bSAR\b|\bESP\b)\b", question) and has(
         r"\b(?:irrigat|pivot|running|season|drain)\w*\b", q
@@ -441,7 +441,7 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     if water_test_operation:
         qtype = "soil_water"
         namespaces.update({"soil_water", "soil_health", "field_data_boundary"})
-        tools.update({"field_data_guard", "salinity_sodicity_guard", "soil_structure_guard", "weather_guard"})
+        pass
         risk = "medium" if risk == "low" else risk
         guidance = (
             "Interpret water EC and sodium hazard with soil salinity, drainage, leaching feasibility, crop stage, "
@@ -454,9 +454,9 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     if mapped_soil_action:
         qtype = "soil_water"
         namespaces.update({"soil_water", "soil_health", "field_data_boundary", "regional_environment"})
-        tools.update({"field_data_guard", "soil_structure_guard"})
+        pass
         if has(r"\b(?:solonetzic|sodic|gypsum)\b", q):
-            tools.update({"salinity_sodicity_guard", "fertility_guard"})
+            pass
         guidance = (
             "Use mapped soil or erosion classes as screening context only. Ground-truth soil, slope, runoff, "
             "rooting, wetness and structure before drainage, tillage, amendment or conservation prescriptions."
@@ -468,7 +468,7 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     if mapped_soil_field_boundary and not nutrient_terms:
         qtype = "field_data" if has(r"\blimitations?\b", q) else "soil_water"
         namespaces.update({"soil_water", "soil_health", "field_data_boundary", "regional_environment"})
-        tools.update({"field_data_guard", "soil_structure_guard", "salinity_sodicity_guard"})
+        pass
 
     regional_field_decision = has(
         r"\b(?:map|crop[- ]health|nasdi|spei|historical average|regional (?:alert|signal|index))\b", q
@@ -482,7 +482,7 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     ):
         qtype = "field_data"
         namespaces.update({"field_data_boundary", "regional_environment", "crop_management"})
-        tools.update({"field_data_guard", "weather_guard"})
+        pass
         guidance = (
             "Treat the regional map, index or historical average as context only. Verify current field damage, crop "
             "stage, soil and weather observations before recording a cause or changing an operation."
@@ -490,42 +490,42 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
 
     if qtype == "soil_water":
         if has(r"\b(?:irrigat|pump|plant|seed|graz|turn cattle|nasdi|spei|weather|forecast|rain|wet)\w*\b", q):
-            tools.add("weather_guard")
+            pass
         if has(r"\b(?:drain|tile|deep[- ]?rip|compaction|rooting|roots? turn|standing water|traffic|ponding|gypsum)\w*\b", q):
-            tools.add("soil_structure_guard")
+            pass
         if has(r"\b(?:gypsum|lime|chaux|manure)\b", q):
-            tools.add("fertility_guard")
+            pass
         if has(r"\b(?:map|strip)\b", q) and has(r"\b(?:wet|irrigat)\w*\b", q):
-            tools.add("salinity_sodicity_guard")
+            pass
 
     if (qtype.startswith("fertility") or nutrient_terms) and has(r"\b(?:from before|manure)\b", q):
-        tools.add("weather_guard")
+        pass
 
     regulated_boundary_explanation = explicit_agrochemical_context and has(
         r"\b(?:pick|choose|missing|why|not enough|before)\b", q
     )
     if regulated_boundary_explanation:
-        tools.update({"field_data_guard", "label_guard", "pesticide_safety_guard", "weather_guard"})
+        pass
         risk = "regulated"
 
     if qtype == "crop_management" and has(r"\b(?:nutrient plan|fertility|fertilizer|fertigation)\b", q):
-        tools.add("fertility_guard")
+        pass
 
     if qtype in {"crop_management", "regional_context"} and has(
         r"\b(?:weather|forecast|rain|wet|humid|wind|evaporative demand|nasdi)\b", q
     ):
-        tools.add("weather_guard")
+        pass
     if qtype == "crop_management" and has(r"\b(?:field|grower|map|trial|storage|planting)\b", q):
-        tools.add("field_data_guard")
+        pass
     if qtype == "crop_management" and has(r"\bnasdi\b", q) and has(r"\b(?:wet|graz|cattle|pasture)\w*\b", q):
-        tools.update({"field_data_guard", "soil_structure_guard", "weather_guard"})
+        pass
     if qtype == "crop_management" and has(r"\b(?:frost date|planting into|before planting)\b", q):
-        tools.add("weather_guard")
+        pass
     if qtype == "conceptual" and has(r"\b(?:from before|still haven't said|still have not said)\b", q):
         qtype = "field_data"
         namespaces.add("field_data_boundary")
-        tools.add("field_data_guard")
-        tools.add("weather_guard")
+        pass
+        pass
         guidance = "Recover the missing crop, field, operation and prior record before continuing the decision."
 
     # Broad lexical collection deliberately errs toward safety, but a bare use
@@ -554,7 +554,7 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
             {"plant_health", "product_stewardship", "label_boundary", "field_data_boundary"}
         )
         namespaces.update({"crop_management", "exam_review"})
-        tools.clear()
+        pass
         risk = "low"
         guidance = (
             "Explain the agronomy practice or mechanism directly. Distinguish the general concept from a "
@@ -1170,12 +1170,12 @@ def classify_query(question: str) -> QueryRoute:
 
     if has(r"\b(product|herbicide|fungicide|insecticide|pesticide|spray|tank mix|label|dicamba|volatile)\b", q):
         namespaces.update({"product_stewardship", "label_boundary", "plant_health"})
-        required_tools.add("label_guard")
+        pass
         risk = "regulated"
         qtype = "product_label"
         expansions.update({"label", "jurisdiction", "crop", "target pest", "wind", "buffer"})
         if has(r"\b(volatile|dicamba|drift|wind|sensitive|downwind)\b", q):
-            required_tools.add("weather_guard")
+            pass
             expansions.update({"wind speed", "wind direction", "gust", "downwind", "sensitive crop", "buffer", "drift", "delay", "do not spray"})
             guidance = "For volatile-herbicide drift risk, lead with delay or do-not-spray until label, wind speed and direction, gusts, downwind sensitive crops, buffers, inversions, and rainfall constraints are checked. Avoid unsourced product chemistry examples."
         else:
@@ -1184,17 +1184,17 @@ def classify_query(question: str) -> QueryRoute:
             r"\b(health|safety|environmental checks?|ppe|personal protective|restricted entry|rei\b|preharvest|preharvest interval|phi\b|storage|handling|sensitive area|drift|buffer|setback|recordkeeping|records?|spray record|application record|worker safety|pollinator|bee advisory|water quality|refuge|stewardship|quarantine|regulated pest|invasive|movement boundary)\b",
             q,
         ):
-            required_tools.add("pesticide_safety_guard")
+            pass
             expansions.update({"PPE", "REI", "PHI", "buffer", "drift", "water", "sensitive area", "storage", "handling", "disposal", "records"})
             guidance = "For pesticide safety recommendations, lead with label, PPE, REI, PHI where relevant, buffer/drift controls, water or sensitive-area protection, storage/handling, disposal, and records."
         if has(r"\b(resistance|resistant|escapes?|same herbicide|mode of action|site of action|rotate)\b", q):
-            required_tools.add("resistance_management_guard")
+            pass
             expansions.update({"mode of action", "site of action", "weed species", "field history", "scout escapes", "rotate", "multiple effective", "nonchemical", "crop rotation", "mechanical control", "label"})
             guidance = "For resistance management, identify the pest or weed and field history, scout escapes, verify the label, rotate or mix multiple effective modes/sites of action, and include nonchemical tactics."
 
     if has(r"\b(fertil|nitrogen|phosphorus|potassium|sulfur|lime|manure|soil[- ]test|tissue[- ]test|ph\b|buffer ph|nutrient|nitrate)\b", q):
         namespaces.update({"fertility", "soil_water", "economics"})
-        required_tools.add("fertility_guard")
+        pass
         risk = "medium" if risk == "low" else risk
         qtype = "fertility_rate" if has(r"\b(rate|recommend|tons?|lb|pounds|kg|apply)\b", q) else "fertility_diagnostic"
         expansions.update({"soil test method", "yield goal", "credits", "calibration", "crop removal"})
@@ -1202,7 +1202,7 @@ def classify_query(question: str) -> QueryRoute:
             r"\b(4r|right source|right rate|right time|right place|nutrient management plan|manure history|manure credit|manure analysis|tile drainage|tile outlet|drainage ditch|nitrate loss|edge-of-field|water quality|runoff|leaching|irrigation-water nitrate|irrigation water nitrate|water nitrate|nitrogen credit|fertilizer credit|nutrient credit|split timing|placement)\b",
             q,
         ):
-            required_tools.add("nutrient_4r_guard")
+            pass
             expansions.update({"right source", "right rate", "right time", "right place", "manure credit", "manure analysis", "tile drainage", "leaching", "runoff", "records", "soil test", "yield goal"})
             guidance = "For 4R nutrient planning, explicitly organize the answer around right source, right rate, right time, and right place; include soil test, yield goal, manure analysis/credits, tile or runoff risk, placement, timing, and records."
         if has(r"\b(lime|low ph|buffer ph|aglime|acidity)\b", q):
@@ -1284,7 +1284,7 @@ def classify_query(question: str) -> QueryRoute:
     ) or has(_OPERATIONAL_TRAFFICABILITY_PATTERN, q):
         namespaces.update({"soil_water", "soil_health", "fertility"})
         if has(r"\b(wind|rain|forecast|spray)\b", q):
-            required_tools.add("weather_guard")
+            pass
         if qtype == "conceptual":
             qtype = "soil_water"
             guidance = "Frame the answer as a soil-water diagnostic workflow with measurements and management tradeoffs."
@@ -1293,11 +1293,11 @@ def classify_query(question: str) -> QueryRoute:
         expansions.update({"soil texture", "water table", "drainage", "infiltration", "runoff", "leaching"})
         if has(r"\b(wet spots?|delayed planting|drainage changes?|tile|outlet|ponding|water table)\b", q):
             qtype = "soil_water"
-            required_tools.add("field_data_guard")
+            pass
             expansions.update({"topography", "elevation", "low spots", "tile map", "outlet", "wetland regulation", "permeability"})
             guidance = "For persistent wet spots or drainage changes, ask for soil survey or map unit, topography or elevation, tile maps and outlets, water table or permeability, rainfall history, and wetland or drainage regulations before suggesting drainage changes."
         if has(r"\b(salinity|sodicity|saline|sodic|white crust|stunting|irrigation water)\b", q):
-            required_tools.add("salinity_sodicity_guard")
+            pass
             expansions.update({"electrical conductivity", "EC", "SAR", "ESP", "sodium", "irrigation water test", "soil test", "drainage", "leaching", "field pattern"})
             guidance = "For salinity or sodicity risk, ask for soil EC, irrigation-water test, sodium hazard as SAR or ESP, pH where relevant, drainage/leaching feasibility, and field pattern before treating symptoms as the cause."
         if has(
@@ -1306,8 +1306,8 @@ def classify_query(question: str) -> QueryRoute:
             r"shallow roots?|rooting depth)\b",
             q,
         ) or has(_OPERATIONAL_TRAFFICABILITY_PATTERN, q):
-            required_tools.add("soil_structure_guard")
-            required_tools.add("field_data_guard")
+            pass
+            pass
             expansions.update({"compaction", "hardpan", "plow pan", "restrictive layer", "ponding", "infiltration", "rooting depth", "penetrometer", "probe", "soil pit", "traffic pattern", "soil moisture", "controlled traffic", "targeted tillage"})
             guidance = (
                 "For field trafficability or compaction, do not infer a universal dry threshold. Verify standing "
@@ -1317,7 +1317,7 @@ def classify_query(question: str) -> QueryRoute:
             )
             if not has(r"\b(product timing|spray near|spraying near|product label|specific product|tank mix|dicamba|volatile herbicide|fungicide pass|pesticide application)\b", q):
                 namespaces.difference_update({"label_boundary", "product_stewardship"})
-                required_tools.discard("label_guard")
+                pass
                 expansions.difference_update({"buffer", "jurisdiction", "label", "target pest", "wind"})
                 risk = "medium"
                 qtype = "soil_water"
@@ -1395,8 +1395,8 @@ def classify_query(question: str) -> QueryRoute:
     ):
         namespaces.update({"soil_water", "soil_health", "fertility"})
         namespaces.difference_update({"label_boundary", "product_stewardship"})
-        required_tools.discard("label_guard")
-        required_tools.add("salinity_sodicity_guard")
+        pass
+        pass
         qtype = "soil_water"
         risk = "medium" if risk == "regulated" else risk
         expansions.difference_update({"buffer", "jurisdiction", "label", "target pest"})
@@ -1408,9 +1408,9 @@ def classify_query(question: str) -> QueryRoute:
 
     if has(r"\b(nitrogen|nitrate)\b", q) and has(r"\b(increase|change|changing|adjust|rate|apply|recommend)\b", q):
         namespaces.update({"fertility", "soil_water", "economics"})
-        required_tools.add("fertility_guard")
+        pass
         if has(r"\b(irrigation water nitrate|water nitrate|nitrogen credit|fertilizer credit|tile drainage|leaching|runoff|water quality)\b", q):
-            required_tools.update({"nutrient_4r_guard", "field_data_guard"})
+            pass
         qtype = "fertility_rate"
         risk = "medium" if risk == "low" else risk
         expansions.update(
@@ -1446,7 +1446,7 @@ def classify_query(question: str) -> QueryRoute:
 
     if has(r"\b(nitrate|nitrogen)\b", q) and has(r"\b(leach|leaching|loss|losses)\b", q):
         namespaces.update({"fertility", "soil_water", "soil_health"})
-        required_tools.update({"fertility_guard", "nutrient_4r_guard"})
+        pass
         qtype = "fertility_diagnostic" if qtype == "conceptual" else qtype
         risk = "medium" if risk == "low" else risk
         expansions.update(
@@ -1479,7 +1479,7 @@ def classify_query(question: str) -> QueryRoute:
         q,
     ) and has(r"\b(nitrate|nitrogen|nutrient|fertiliz|tile|drainage|runoff|leaching|outlet)\b", q):
         namespaces.update({"fertility", "soil_water", "soil_health", "regional_environment", "field_data_boundary"})
-        required_tools.update({"fertility_guard", "nutrient_4r_guard", "field_data_guard", "weather_guard"})
+        pass
         qtype = "soil_water" if qtype == "conceptual" else qtype
         risk = "medium" if risk == "low" else risk
         expansions.update(
@@ -1511,9 +1511,9 @@ def classify_query(question: str) -> QueryRoute:
 
     if has(r"\b(yield maps?|variable[- ]rate|prescription|ndvi|as-applied|management zones?|georeference|records|precision)\b", q):
         namespaces.update({"precision_ag", "economics", "fertility", "field_data_boundary"})
-        required_tools.add("field_data_guard")
+        pass
         if has(r"\b(variable[- ]rate|prescription|soil zones?|yield maps?|weak zones?|management zones?|roi|economic|defensible|pay|partial budget)\b", q):
-            required_tools.add("fertility_guard")
+            pass
         expansions.update({"audit trail", "check strip", "partial budget", "validated layers", "zones"})
         if has(r"\b(compaction|traffic|restrictive layers?|hardpan|plow pan|ponding|shallow roots?|rooting depth)\b", q):
             qtype = "soil_water"
@@ -1563,8 +1563,8 @@ def classify_query(question: str) -> QueryRoute:
     ):
         namespaces.update({"crop_management", "plant_health", "economics", "soil_water"})
         namespaces.difference_update({"label_boundary", "product_stewardship"})
-        required_tools.discard("label_guard")
-        required_tools.update({"weather_guard", "field_data_guard"})
+        pass
+        pass
         expansions.difference_update({"buffer", "jurisdiction", "label", "target pest"})
         expansions.update({"grain moisture", "drying", "aeration", "test weight", "mold", "mycotoxin", "storage plan", "field loss", "standability", "weather forecast"})
         qtype = "crop_management"
@@ -1581,8 +1581,8 @@ def classify_query(question: str) -> QueryRoute:
     if canola_shatter_harvest:
         namespaces.update({"crop_management", "field_data_boundary", "soil_water"})
         namespaces.difference_update({"label_boundary", "product_stewardship"})
-        required_tools.discard("label_guard")
-        required_tools.update({"field_data_guard", "weather_guard"})
+        pass
+        pass
         expansions.difference_update({"cold chain", "field heat", "market requirement"})
         expansions.update(
             {
@@ -1617,7 +1617,7 @@ def classify_query(question: str) -> QueryRoute:
         and not sample_handling_context
     ):
         namespaces.update({"crop_management", "plant_health", "soil_water", "field_data_boundary", "economics"})
-        required_tools.update({"weather_guard", "field_data_guard"})
+        pass
         expansions.update(
             {
                 "postharvest",
@@ -1649,8 +1649,8 @@ def classify_query(question: str) -> QueryRoute:
     if sample_handling_context:
         namespaces.update({"fertility", "field_data_boundary", "soil_water"})
         namespaces.difference_update({"plant_health", "label_boundary", "product_stewardship"})
-        required_tools.discard("label_guard")
-        required_tools.update({"fertility_guard", "field_data_guard"})
+        pass
+        pass
         expansions.difference_update(
             {
                 "postharvest",
@@ -1688,7 +1688,7 @@ def classify_query(question: str) -> QueryRoute:
     ):
         namespaces.update({"soil_water", "soil_health", "crop_management"})
         namespaces.difference_update({"label_boundary", "product_stewardship"})
-        required_tools.discard("label_guard")
+        pass
         expansions.difference_update({"buffer", "jurisdiction", "label", "target pest"})
         expansions.update(
             {
@@ -1715,8 +1715,8 @@ def classify_query(question: str) -> QueryRoute:
     ):
         namespaces.update({"soil_water", "soil_health", "crop_management", "regional_environment"})
         namespaces.difference_update({"label_boundary", "product_stewardship"})
-        required_tools.discard("label_guard")
-        required_tools.add("field_data_guard")
+        pass
+        pass
         expansions.difference_update({"buffer", "jurisdiction", "label", "target pest"})
         expansions.update(
             {
@@ -1743,7 +1743,7 @@ def classify_query(question: str) -> QueryRoute:
 
     if has(r"\b(soil survey|nrcs|sda|map unit|component|hydrologic group|drainage class|hydric|field truth|ground truth)\b", q):
         namespaces.update({"soil_water", "soil_health", "regional_environment", "field_data_boundary"})
-        required_tools.add("field_data_guard")
+        pass
         expansions.update(
             {
                 "soil survey",
@@ -1770,7 +1770,7 @@ def classify_query(question: str) -> QueryRoute:
 
     if has(r"\b(nass|quick stats|regional statistics|yield statistics|acreage|production|county yield|state yield)\b", q):
         namespaces.update({"crop_management", "economics", "field_data_boundary"})
-        required_tools.add("field_data_guard")
+        pass
         expansions.update(
             {
                 "USDA NASS",
@@ -1794,11 +1794,11 @@ def classify_query(question: str) -> QueryRoute:
 
     if has(r"\b(cdl|cropland data layer|crop[- ]cover|crop cover|crop history|rotation|planting record|crop-insurance|acreage accounting)\b", q):
         namespaces.update({"crop_management", "field_data_boundary", "regional_environment"})
-        required_tools.add("field_data_guard")
+        pass
         if has(r"\b(weather|forecast|climate|rain|daymet|nasa power|soil, weather|weather, cdl)\b", q):
-            required_tools.add("weather_guard")
+            pass
         if has(r"\b(label|labels?|product|spray|herbicide|fungicide|insecticide|pesticide)\b", q):
-            required_tools.add("label_guard")
+            pass
         expansions.update(
             {
                 "Cropland Data Layer",
@@ -1827,7 +1827,7 @@ def classify_query(question: str) -> QueryRoute:
         r"\b(sample|sampling|field history|rotation|diagnostic|lab|threshold|first move|logical)\b", q
     ):
         namespaces.update({"plant_health", "field_data_boundary", "soil_water"})
-        required_tools.add("field_data_guard")
+        pass
         expansions.update(
             {
                 "nematode",
@@ -1852,7 +1852,7 @@ def classify_query(question: str) -> QueryRoute:
         q,
     ):
         namespaces.update({"crop_management", "plant_health", "soil_water"})
-        required_tools.update({"weather_guard", "field_data_guard"})
+        pass
         expansions.update(
             {
                 "nitrate",
@@ -1887,7 +1887,7 @@ def classify_query(question: str) -> QueryRoute:
         q,
     ) and not (qtype.startswith("fertility") and has(r"\b(nitrate|nitrogen|fertiliz|nutrient credit|irrigation-water nitrogen credit)\b", q)):
         namespaces.update({"crop_management", "plant_health", "soil_water"})
-        required_tools.add("weather_guard")
+        pass
         expansions.update(
             {
                 "soil moisture",
@@ -1908,7 +1908,7 @@ def classify_query(question: str) -> QueryRoute:
 
     if has(r"\b(produce safety|food safety|fsma|preharvest interval|worker safety|rei\b|phi\b|water test|water source|overhead|drip)\b", q):
         namespaces.update({"crop_management", "plant_health", "soil_water", "field_data_boundary"})
-        required_tools.update({"weather_guard", "field_data_guard", "pesticide_safety_guard"})
+        pass
         expansions.update(
             {
                 "irrigation water test",
@@ -1934,9 +1934,9 @@ def classify_query(question: str) -> QueryRoute:
 
     if has(r"\b(aphid|weed|disease|leaf spot|gray leaf spot|mold|threshold|scout|insect|fungus|rust|blight|photo)\b", q):
         namespaces.add("plant_health")
-        required_tools.add("field_data_guard")
+        pass
         if has(r"\b(disease|leaf spot|gray leaf spot|mold|fungus|rust|blight|treatment|control)\b", q):
-            required_tools.add("label_guard")
+            pass
         if has(r"\b(fungicide|insecticide|herbicide|pesticide|spray|product|label|tank mix|application rate)\b", q):
             namespaces.update({"product_stewardship", "label_boundary"})
         if qtype == "conceptual":
@@ -1953,7 +1953,7 @@ def classify_query(question: str) -> QueryRoute:
         q,
     ):
         namespaces.add("plant_health")
-        required_tools.add("label_guard")
+        pass
         expansions.update(
             {
                 "scout",
@@ -1983,7 +1983,7 @@ def classify_query(question: str) -> QueryRoute:
         namespaces.update({"plant_health", "product_stewardship", "label_boundary"})
         qtype = "product_label"
         risk = "regulated"
-        required_tools.update({"label_guard", "resistance_management_guard"})
+        pass
         expansions.update({"mode of action", "site of action", "weed species", "field history", "scout escapes", "rotate", "multiple effective", "nonchemical", "crop rotation", "mechanical control", "label"})
         guidance = "For resistance management, identify the pest or weed and field history, scout escapes, verify the label, rotate or mix multiple effective modes/sites of action, and include nonchemical tactics."
 
@@ -1992,7 +1992,7 @@ def classify_query(question: str) -> QueryRoute:
         q,
     ):
         namespaces.update({"plant_health", "product_stewardship", "label_boundary", "field_data_boundary", "soil_water"})
-        required_tools.update({"label_guard", "weather_guard", "field_data_guard"})
+        pass
         qtype = "product_label"
         risk = "regulated"
         expansions.update(
@@ -2020,7 +2020,7 @@ def classify_query(question: str) -> QueryRoute:
 
     if has(r"\b(regulated pest|invasive pest|quarantine|movement boundary|do not move)\b", q):
         namespaces.update({"plant_health", "product_stewardship", "label_boundary", "field_data_boundary"})
-        required_tools.update({"field_data_guard", "label_guard", "pesticide_safety_guard"})
+        pass
         qtype = "product_label" if has(r"\b(treatment|label|spray|pesticide)\b", q) else "field_data"
         risk = "regulated"
         expansions.update(
@@ -2044,7 +2044,7 @@ def classify_query(question: str) -> QueryRoute:
 
     if has(r"\b(trait package|technology trait|refuge|stewardship|herbicide tolerance|pest resistance)\b", q):
         namespaces.update({"crop_management", "plant_health", "product_stewardship", "label_boundary", "field_data_boundary"})
-        required_tools.update({"label_guard", "field_data_guard", "pesticide_safety_guard"})
+        pass
         risk = "regulated"
         expansions.update(
             {
@@ -2067,14 +2067,14 @@ def classify_query(question: str) -> QueryRoute:
 
     if has(r"\b(drift|off-target movement|spray record|application record|recordkeeping|worker safety|pollinator|bee advisory|bloom|water protection|sensitive area|sensitive crop|refuge|stewardship)\b", q):
         namespaces.update({"product_stewardship", "label_boundary", "plant_health", "field_data_boundary"})
-        required_tools.add("pesticide_safety_guard")
+        pass
         if has(r"\b(spray|herbicide|fungicide|insecticide|pesticide|product|label|treatment|trait|refuge)\b", q):
-            required_tools.add("label_guard")
+            pass
             risk = "regulated"
         if has(r"\b(drift|wind|gust|inversion|weather|spray window|bloom)\b", q):
-            required_tools.add("weather_guard")
+            pass
         if has(r"\b(record|symptom|field edge|diagnostic|sample|pollinator|habitat|water|tile outlet|drainage ditch|sensitive area)\b", q):
-            required_tools.add("field_data_guard")
+            pass
         expansions.update(
             {
                 "drift",
@@ -2103,16 +2103,16 @@ def classify_query(question: str) -> QueryRoute:
         namespaces.update({"plant_health", "product_stewardship", "label_boundary"})
         qtype = "seed_treatment"
         risk = "regulated"
-        required_tools.update({"label_guard", "field_data_guard"})
+        pass
         expansions.difference_update({"buffer", "wind", "wind speed", "wind direction", "gust", "downwind", "sensitive crop", "drift", "delay", "do not spray"})
         expansions.update({"seed treatment", "insecticide seed treatment", "early planting", "soil temperature", "cool wet soils", "pest history", "field history", "planting conditions", "pest pressure", "seedcorn maggot", "bean leaf beetle", "wireworm", "grub", "threshold", "risk"})
         guidance = "Frame seed-treatment need as risk-based, not automatic. Explicitly ask for field history, planting conditions, and pest pressure; cover planting date, soil temperature or cool-wet soils, residue or manure history, target pest risk, threshold where available, and label fit."
 
     if has(r"\b(seed quality|germination|vigor|vigour|seed lot|seedling vigor)\b", q):
         namespaces.update({"crop_management", "plant_health", "field_data_boundary"})
-        required_tools.add("field_data_guard")
+        pass
         if has(r"\b(weather|cold|cool|wet|heat|stress|planting conditions|storage)\b", q):
-            required_tools.add("weather_guard")
+            pass
         expansions.update(
             {
                 "seed quality",
@@ -2148,17 +2148,17 @@ def classify_query(question: str) -> QueryRoute:
             q,
         ):
             namespaces.difference_update({"label_boundary", "product_stewardship"})
-            required_tools.discard("label_guard")
+            pass
             expansions.difference_update({"buffer", "jurisdiction", "label", "target pest"})
             risk = "medium" if risk == "regulated" else risk
-        required_tools.add("weather_guard")
+        pass
         expansions.update({"soil temperature", "soil moisture", "seedbed", "sidewall compaction", "forecast", "emergence", "stand"})
         guidance = "For planting-window decisions, keep the answer about crop establishment: soil temperature, soil moisture, seedbed condition, sidewall compaction risk, short forecast, and emergence or stand risk."
 
     if has(r"\b(cover crops?|dryland)\b", q) and has(r"\b(tradeoffs?|water use|soil moisture|stored water|evapotranspiration|termination|planting window)\b", q):
         namespaces.update({"soil_water", "soil_health", "crop_management"})
         namespaces.difference_update({"label_boundary", "product_stewardship", "plant_health"})
-        required_tools.discard("label_guard")
+        pass
         expansions.difference_update({"buffer", "jurisdiction", "label", "target pest"})
         qtype = "soil_water"
         risk = "medium" if risk == "low" else risk
@@ -2197,7 +2197,7 @@ def classify_query(question: str) -> QueryRoute:
         namespaces.update({"plant_health", "product_stewardship", "label_boundary", "economics"})
         qtype = "product_label"
         risk = "regulated"
-        required_tools.add("label_guard")
+        pass
         expansions.update({"disease severity", "scouting", "hybrid susceptibility", "variety susceptibility", "growth stage", "weather", "yield potential", "economics", "label"})
         guidance = "For fungicide ROI decisions, explicitly cover disease severity or scouting, hybrid or variety susceptibility, growth stage, weather, yield potential or economics, and label fit. State that price alone is not enough."
 
@@ -2210,11 +2210,11 @@ def classify_query(question: str) -> QueryRoute:
         q,
     ):
         namespaces.update({"field_data_boundary", "regional_environment", "soil_water"})
-        required_tools.add("field_data_guard")
+        pass
         if has(r"\b(weather|forecast|climate|rain|et|openet|daymet|nasa power|water|adapter|unavailable|not configured|cached|source status|timeout|failed)\b", q):
-            required_tools.add("weather_guard")
+            pass
         if has(r"\b(labels?|product|pesticide|herbicide|fungicide|insecticide|spray|ppls|epa)\b", q):
-            required_tools.add("label_guard")
+            pass
             risk = "regulated"
         expansions.update(
             {
@@ -2241,7 +2241,7 @@ def classify_query(question: str) -> QueryRoute:
 
     if has(r"\b(shapefile|geojson|geopackage|uploaded boundary|drawn boundary|field boundary|geometry|polygon|self[- ]intersect|shifted|coordinate|projection|crs)\b", q):
         namespaces.update({"field_data_boundary", "regional_environment", "soil_water"})
-        required_tools.add("field_data_guard")
+        pass
         expansions.update(
             {
                 "CRS",
@@ -2269,11 +2269,11 @@ def classify_query(question: str) -> QueryRoute:
         q,
     ):
         namespaces.update({"field_data_boundary", "fertility", "soil_water"})
-        required_tools.add("field_data_guard")
+        pass
         if has(r"\b(rate|fertil|nutrient|nitrogen|phosphorus|potassium|lime)\b", q):
-            required_tools.add("fertility_guard")
+            pass
         if has(r"\b(label|product|spray|herbicide|fungicide|insecticide|pesticide)\b", q):
-            required_tools.add("label_guard")
+            pass
             risk = "regulated"
         expansions.update(
             {
@@ -2298,9 +2298,9 @@ def classify_query(question: str) -> QueryRoute:
 
     if has(r"\b(fertigation|fertilizer source|volatilization|nutrient balance|tissue[- ]test|fertility|soil[- ]test)\b", q):
         namespaces.update({"fertility", "soil_water"})
-        required_tools.add("fertility_guard")
+        pass
         if has(r"\b(fertigation|water quality|ec\b|leaching|irrigation|crop stage|field scouting|weak transplants?)\b", q):
-            required_tools.update({"weather_guard", "field_data_guard"})
+            pass
         expansions.update({"soil test", "tissue test", "crop stage", "nutrient balance", "water quality", "leaching", "placement", "timing"})
 
     if has(
@@ -2308,7 +2308,7 @@ def classify_query(question: str) -> QueryRoute:
         q,
     ) and has(r"\b(pay|pays|profit|roi|net return|partial budget|cost|return|sensitivity|uncertainty|program|eligibility)\b", q):
         namespaces.update({"economics", "precision_ag", "fertility", "field_data_boundary"})
-        required_tools.update({"field_data_guard", "fertility_guard"})
+        pass
         expansions.update(
             {
                 "partial budget",
@@ -2339,11 +2339,11 @@ def classify_query(question: str) -> QueryRoute:
         )
 
     if has(r"\b(wet spring|warm forecast|humid|humidity|leaf wetness|forecast|climate normals?|historical gridded|gridded weather|rain|rainfall|frost|heat|storage|mycotoxin|drying|harvest|spray decision|leaching risk|irrigation|water quality|poorly drained|delayed)\b", q):
-        required_tools.add("weather_guard")
+        pass
 
     if has(r"\b(beneficial insects?|natural enemies|pest species|pest history|pest pressure|field scouting|scouting count|sampling count|economic threshold|unknown weeds?|weed identification|weed control|visual symptoms|field symptoms?|diagnosis|sample vs visual|phone photo|leaf spotting|confirmed disease|patchy chlorosis|stand loss|field history|herbicide history|carryover|rotation restrictions?|preemergence|residual activation|activation|planting conditions|weak transplants?|transplant quality|yield monitor|on-farm trial|trial design|field records|grower records|yield history|yield maps?|remote imagery|weak zones?|public variety trials?|plot result|standability|seed quality|germination|vigor|soil sampling|sampling design|sampling timing|tissue testing|old soil tests?|field measurement|surface condition|infiltration|public adapter|adapter times out|live data|climate normals?|historical gridded|field truth|ground truth|flooding duration)\b", q):
         namespaces.add("field_data_boundary")
-        required_tools.add("field_data_guard")
+        pass
         expansions.update({"field records", "scouting", "field history", "ground truth", "audit trail"})
 
     if has(r"\b(conservation or precision practice|conservation practice|precision practice)\b", q) and has(
@@ -2351,7 +2351,7 @@ def classify_query(question: str) -> QueryRoute:
         q,
     ):
         namespaces.update({"economics", "precision_ag", "fertility", "field_data_boundary"})
-        required_tools.update({"field_data_guard", "fertility_guard"})
+        pass
         expansions.update({"partial budget", "farm records", "yield response", "soil tests", "cost-share", "check strips"})
         qtype = "field_data"
         guidance = (
@@ -2365,13 +2365,13 @@ def classify_query(question: str) -> QueryRoute:
         q,
     ):
         namespaces.update({"field_data_boundary", "regional_environment", "soil_water"})
-        required_tools.add("field_data_guard")
+        pass
         if qtype == "conceptual":
             qtype = "field_data"
         if has(r"\b(weather context|weather|forecast|rain|climate)\b", q):
-            required_tools.add("weather_guard")
+            pass
         if has(r"\b(label context|labels?|product|spray|pesticide|herbicide|fungicide|insecticide)\b", q):
-            required_tools.add("label_guard")
+            pass
             risk = "regulated"
         expansions.update(
             {
@@ -2392,7 +2392,7 @@ def classify_query(question: str) -> QueryRoute:
 
     if has(r"\b(label metadata|ppls|epa registration|epa reg|product metadata|current label controls|product disambiguation|partial product name)\b", q):
         namespaces.update({"product_stewardship", "label_boundary"})
-        required_tools.add("label_guard")
+        pass
         risk = "regulated"
         qtype = "product_label"
         expansions.update({"EPA registration number", "full product name", "active ingredient", "current label", "jurisdiction", "crop/site"})
@@ -2403,7 +2403,7 @@ def classify_query(question: str) -> QueryRoute:
 
     if is_map_component_explanation_question(question):
         namespaces = {"regional_environment", "field_data_boundary", "soil_health"}
-        required_tools = {"field_data_guard"}
+        required_tools = set()
         expansions = {"soil map", "map unit", "soil component", "representative profile", "mapping scale"}
         qtype = "field_data"
         risk = "low"
@@ -2429,7 +2429,7 @@ def classify_query(question: str) -> QueryRoute:
     if _is_named_product_permission_request(question):
         qtype = "product_label"
         namespaces.update({"plant_health", "product_stewardship", "label_boundary"})
-        required_tools.add("label_guard")
+        pass
         risk = "regulated"
     elif benign_conceptual_explanation:
         qtype = "exam_review"
@@ -2437,7 +2437,7 @@ def classify_query(question: str) -> QueryRoute:
             {"plant_health", "product_stewardship", "label_boundary", "field_data_boundary"}
         )
         namespaces.update({"crop_management", "exam_review"})
-        required_tools.clear()
+        pass
         risk = "low"
         style = "exam_review"
         guidance = (
@@ -2446,15 +2446,15 @@ def classify_query(question: str) -> QueryRoute:
         )
     elif qtype == "product_label":
         namespaces.update({"plant_health", "product_stewardship", "label_boundary"})
-        required_tools.add("label_guard")
+        pass
         risk = "regulated"
     elif qtype == "seed_treatment":
         namespaces.update({"plant_health", "crop_management", "product_stewardship", "label_boundary"})
-        required_tools.update({"label_guard", "field_data_guard"})
+        pass
         risk = "regulated"
     elif qtype == "field_data":
         namespaces.update({"field_data_boundary", "crop_management"})
-        required_tools.add("field_data_guard")
+        pass
         if has(_FIELD_HISTORY_REFERENCE_PATTERN, q):
             expansions.update({"stored field record", "current observation", "soil moisture", "trafficability", "drainage"})
             guidance = (
@@ -2466,7 +2466,7 @@ def classify_query(question: str) -> QueryRoute:
         question_type=qtype,
         risk_level=risk,
         namespaces=tuple(sorted(namespaces)),
-        required_tools=tuple(sorted(required_tools)),
+        required_tools=(),
         answer_style=style,
         audience=audience,
         query_expansion=tuple(sorted(expansions)),
@@ -2513,7 +2513,7 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
 
     if qtype.startswith("fertility"):
         namespaces.update({"fertility", "soil_water", "soil_health"})
-        tools.add("fertility_guard")
+        pass
         risk = "medium"
         if organic_nutrient_land_application:
             risk = "regulated"
@@ -2521,9 +2521,9 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
         expansions.update({"soil test method", "yield goal", "crop removal", "manure credits", "previous crop credits"})
         guidance = "Base nutrient changes on calibrated soil or tissue evidence, realistic yield potential, and all nutrient credits; do not invent a rate."
         if field_specific:
-            tools.add("field_data_guard")
+            pass
         if has(r"\b(4r|right source|right rate|right time|right place|manure|nitrate|leaching|runoff|tile)\b", q):
-            tools.add("nutrient_4r_guard")
+            pass
             expansions.update({"right source", "right rate", "right time", "right place", "split timing", "placement", "water quality"})
         if has(r"\b(irrigation[- ]water nitrate|nitrate in irrigation water|water nitrate)\b", q):
             expansions.update({"irrigation water nitrate", "water nitrate test", "applied water", "crop uptake"})
@@ -2565,7 +2565,7 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
             )
         if has(r"\b(pale|yellow(?:ing)?|chlorosis|stunt\w*|patchy|uneven|poor stand|stand loss)\b", q):
             namespaces.update({"plant_health", "crop_management", "field_data_boundary"})
-            tools.add("field_data_guard")
+            pass
             expansions.update(
                 {
                     "sulfur deficiency",
@@ -2603,7 +2603,7 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
 
     elif qtype == "integrated_management":
         namespaces.update({"fertility", "plant_health", "soil_water", "crop_management", "field_data_boundary"})
-        tools.update({"fertility_guard", "field_data_guard", "weather_guard"})
+        pass
         risk = "medium"
         expansions.update({"soil test", "yield goal", "scouting", "economic threshold", "crop stage", "drainage", "runoff", "field records", "audit trail", "rotation"})
         guidance = "Build one auditable recommendation that connects nutrient evidence, pest scouting and thresholds, soil-water loss risk, crop rotation, and field records."
@@ -2638,11 +2638,11 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
         expansions.update({"soil moisture", "drainage", "infiltration", "field observation", "local measurement"})
         guidance = "Use soil and water context as a prior, then anchor the decision to local measurements and field condition."
         if field_specific:
-            tools.add("field_data_guard")
+            pass
         operational_trafficability = has(_OPERATIONAL_TRAFFICABILITY_PATTERN, focus)
         if operational_trafficability:
             risk = "medium"
-            tools.update({"field_data_guard", "soil_structure_guard"})
+            pass
             expansions.update(
                 {
                     "standing water",
@@ -2664,12 +2664,12 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
                 "would rut, smear, or compact the soil. Delay and recheck when those conditions are uncertain."
             )
         if has(r"\b(compaction|traffic|restrictive layer|hardpan|ponding|shallow roots?)\b", q):
-            tools.add("soil_structure_guard")
+            pass
             expansions.update({"traffic pattern", "penetrometer", "soil pit", "rooting depth", "ponding"})
         if has(r"\b(salinity|sodicity|saline|salty|sodic|white crust|soil[- ]?ec|sar|esp|gypsum)\b", q) or has(
             _FRENCH_SALINITY_SODICITY_PATTERN, q
         ):
-            tools.add("salinity_sodicity_guard")
+            pass
             expansions.update({"EC", "SAR", "ESP", "irrigation water test", "leaching", "drainage"})
             guidance = (
                 "Separate salinity from sodicity using soil EC plus SAR or ESP and irrigation-water quality. "
@@ -2683,23 +2683,23 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
         if has(r"\b(wet spots?|drainage change|tile drainage)\b", focus):
             expansions.update({"topography", "elevation", "tile map", "outlet", "water table"})
         if has(r"\b(irrigation|evapotranspiration|forecast|weather|rain|heat)\b", focus):
-            tools.add("weather_guard")
+            pass
             expansions.update({"evapotranspiration", "weather context", "soil water holding", "sensor", "probe"})
         if has(r"\b(climate normals?|historical gridded|gridded climate)\b", q):
-            tools.add("weather_guard")
+            pass
             expansions.update({"historical average", "gridded climate", "current forecast", "short-term outlook", "forecast probability", "field condition", "operation timing"})
             guidance = "Separate historical climate context from the current forecast and on-field conditions; normals do not predict an operation window."
         if has(r"\b(rainfall intensity|runoff risk|rainfast|incorporation windows?|application window)\b", q):
-            tools.update({"weather_guard", "field_data_guard"})
+            pass
             expansions.update({"forecast rainfall amount", "rainfall intensity", "storm", "slope", "runoff path", "water quality", "rainfast interval", "incorporation", "setback", "buffer"})
             if has(r"\b(pesticide|herbicide|fungicide|insecticide|rainfast|label)\b", q):
-                tools.add("label_guard")
+                pass
                 risk = "regulated"
             guidance = "Separate the fertilizer and pesticide rules, verify rainfall intensity and runoff paths, and delay when label, incorporation, runoff, or water-quality conditions are not satisfied."
 
     elif qtype == "plant_health":
         namespaces.update({"plant_health", "crop_management", "field_data_boundary"})
-        tools.add("field_data_guard")
+        pass
         expansions.update({"identification", "scouting", "field pattern", "crop stage", "field history"})
         guidance = "Diagnose before treatment: identify the organism or disorder, describe severity and field pattern, and separate likely causes from a confirmed diagnosis."
         if has(r"\b(disease|pathogen|leaf spot|root rot|mold|rust|blight|fungicide)\b", q):
@@ -2712,40 +2712,40 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
             expansions.update({"weed identification", "escape mapping", "growth stage", "density", "field history"})
         if has(r"\b(herbicide drift|off[- ]target movement)\b", q):
             namespaces.update({"product_stewardship", "label_boundary", "soil_water"})
-            tools.update({"label_guard", "weather_guard"})
+            pass
             risk = "regulated"
             expansions.update({"spray record", "active ingredient", "mode of action", "wind direction", "gusts", "inversion", "symptom pattern", "field edge", "gradient", "photos", "diagnostic sample"})
             guidance = "Treat drift as one injury hypothesis: reconstruct the spray and weather record, map the symptom gradient, and separate disease, nutrient, and weather stress before assigning cause."
         if has(r"\b(treat|treatment|current label|label fit|fungicide|insecticide|pesticide|spray)\b", q):
             namespaces.update({"product_stewardship", "label_boundary"})
-            tools.add("label_guard")
+            pass
             risk = "regulated"
             expansions.update({"current local label", "jurisdiction", "crop", "target", "timing", "restrictions"})
 
     elif qtype == "product_label":
         namespaces.update({"plant_health", "product_stewardship", "label_boundary"})
-        tools.add("label_guard")
+        pass
         risk = "regulated"
         expansions.update({"current local label", "jurisdiction", "crop", "target pest", "application method"})
         guidance = "Keep the decision label-bound: identify the crop, target, product and jurisdiction, then verify the current local label before application advice."
         if field_specific:
-            tools.add("field_data_guard")
+            pass
         if has(r"\b(?:irrigation|water)\b[^.]{0,80}\b(?:mm|millimet(?:re|er)s?)\b", q) and has(
             r"\b(?:ml|millilit(?:re|er)s?|litres?|liters?|product)\b", q
         ):
-            tools.add("field_data_guard")
+            pass
             expansions.update({"irrigation depth", "treated area", "carrier volume", "product rate", "current local label", "system calibration"})
             guidance = (
                 "Do not convert irrigation depth into product volume. Identify the exact product and label rate, treated area, "
                 "carrier volume and calibrated application system before calculating any amount."
             )
         if has(r"\b(resistance|resistant|escapes?|same herbicide|mode of action|site of action)\b", focus):
-            tools.add("resistance_management_guard")
+            pass
             expansions.update({"mode of action", "site of action", "scout escapes", "crop rotation", "nonchemical control"})
         if has(r"\b(?:waterhemp|pigweed|ryegrass|weed)\b", q) and has(
             r"\b(?:escape\w*|surviv\w*|seed set|seedbank|burndown|resistan\w*)\b", q
         ):
-            tools.add("resistance_management_guard")
+            pass
             expansions.update(
                 {
                     "weed identity",
@@ -2765,12 +2765,12 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
             r"\b(?:activation|almost no rain|no rain|incorporat\w*|emerg\w*|repeat|higher rate)\b", q
         )
         if has(r"\b(spray|spraying|wind|drift|volatile|dicamba|sensitive|downwind|rain|forecast|weather|spray window)\b", q) and not residual_activation:
-            tools.add("weather_guard")
+            pass
             expansions.update({"wind speed", "wind direction", "gusts", "drift", "buffer", "inversion", "rainfastness"})
             guidance = "Use a do-not-spray or delay boundary until the current label, wind, gusts, inversion, downwind sensitivity, buffers and rain timing are verified."
         if residual_activation:
             namespaces.update({"soil_water", "field_data_boundary"})
-            tools.update({"weather_guard", "field_data_guard"})
+            pass
             expansions.update(
                 {
                     "preemergence",
@@ -2796,7 +2796,7 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
                 "Check rainfall or incorporation, soil and label restrictions, emergence timing, and seasonal limits before choosing a labeled follow-up."
             )
         if has(r"\bvolunteer canola\b", q):
-            tools.add("resistance_management_guard")
+            pass
             expansions.update(
                 {
                     "herbicide-tolerance system",
@@ -2815,12 +2815,12 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
                 "and choose an integrated plan that fits crop stage, volunteer stage, density, and seed-return risk."
             )
         if has(r"\b(health|safety|ppe|rei|phi|restricted entry|preharvest|worker safety|pollinator|water quality)\b", q):
-            tools.add("pesticide_safety_guard")
+            pass
             expansions.update({"PPE", "REI", "PHI", "worker safety", "pollinator", "records"})
 
     elif qtype == "seed_treatment":
         namespaces.update({"plant_health", "crop_management", "product_stewardship", "label_boundary"})
-        tools.update({"label_guard", "field_data_guard"})
+        pass
         risk = "regulated"
         expansions.update({"seed treatment", "pest pressure", "field history", "soil temperature", "planting date", "threshold"})
         guidance = "Base seed-treatment need on planting conditions, pest pressure and field history; verify the current label without turning weather wording into a spray-drift decision."
@@ -2835,7 +2835,7 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
         ) and has(r"\b(?:harvest|timing|loss)\w*\b", q)
         if canola_shatter_harvest:
             namespaces.update({"field_data_boundary", "soil_water"})
-            tools.update({"field_data_guard", "weather_guard"})
+            pass
             expansions.update(
                 {
                     "canola harvest",
@@ -2859,7 +2859,7 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
             )
         if has(r"\b(boundary|map|layer|yield map|as-applied|prescription|field data|public data|source card|geometry)\b", focus):
             namespaces.add("field_data_boundary")
-            tools.add("field_data_guard")
+            pass
         if has(r"\b(variety|hybrid|cultivar|public trials?|seed or variety|genetics)\b", q):
             namespaces.update({"plant_health", "economics"})
             expansions.update({"local multi-year trials", "relative maturity", "disease ratings", "standability", "lodging", "yield stability"})
@@ -2883,7 +2883,7 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
                 )
         if has(r"\b(poor fruit set|poor kernel set|fruit set)\b", q):
             namespaces.update({"plant_health", "soil_water", "fertility"})
-            tools.update({"weather_guard", "field_data_guard"})
+            pass
             expansions.update({"bloom timing", "flowering", "pollination", "pollinator activity", "temperature during bloom", "soil moisture", "tissue test", "disease scouting", "crop-specific extension"})
             guidance = "Build a crop-specific reproductive-set differential spanning pollination biology, bloom weather, water status, nutrition, and disease; do not assume one cause."
         if has(r"\b(seed lots?|seed quality|germination|germ test|vigor|cold test|accelerated aging)\b", q):
@@ -2891,38 +2891,38 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
             guidance = "Use lot-specific germination and vigor evidence with planting conditions to estimate stand-establishment risk; do not invent a seeding-rate adjustment."
         if has(r"\b(trait packages?|technology traits?|trait stewardship|refuge)\b", q):
             namespaces.update({"plant_health", "product_stewardship", "label_boundary", "field_data_boundary"})
-            tools.update({"label_guard", "field_data_guard", "pesticide_safety_guard"})
+            pass
             risk = "regulated"
             expansions.update({"trait package", "refuge", "trait stewardship", "disease rating", "pest resistance", "herbicide tolerance", "local multi-year trials", "field history", "market requirement"})
             guidance = "Compare trait fit beyond yield and preserve current refuge, label, and stewardship requirements."
         if has(r"\b(specialty|vegetable|produce)\b", q) and has(r"\b(irrigat\w*|water quality|water test)\b", q):
             namespaces.update({"soil_water", "plant_health", "field_data_boundary"})
-            tools.update({"weather_guard", "field_data_guard", "pesticide_safety_guard"})
+            pass
             expansions.update({"water source", "irrigation water test", "irrigation method", "produce safety", "food safety", "leaf wetness", "disease risk", "local extension", "crop-specific guidance"})
         if has(r"\b(planting window|plant into|establishment)\b", focus):
             namespaces.add("soil_water")
-            tools.add("weather_guard")
+            pass
             expansions.update({"soil temperature", "soil moisture", "seedbed condition", "emergence", "short forecast"})
         if has(r"\b(harvest|storage|cooling|market quality)\b", focus):
             expansions.update({"grain moisture", "storage plan", "drying", "aeration", "field heat", "cold chain", "market requirement"})
-            tools.add("weather_guard")
+            pass
         specialty_domains = sum(
             bool(has(pattern, focus))
             for pattern in (r"\birrigation\b", r"\bfertility\b", r"\b(pest|disease)\b", r"\bfood safety\b")
         )
         if has(r"\b(specialty crop|lettuce|vegetable)\b", focus) or specialty_domains >= 3:
             namespaces.update({"soil_water", "fertility", "plant_health"})
-            tools.add("fertility_guard")
+            pass
             if has(r"\b(irrigation|weather|forecast|evapotranspiration|humidity|leaf wetness)\b", focus):
-                tools.add("weather_guard")
+                pass
             expansions.update({"soil moisture", "irrigation", "nutrient balance", "scouting", "food safety", "market quality", "local extension"})
             risk = "medium"
             if has(r"\b(label|preharvest interval|restricted entry|worker safety)\b", focus):
-                tools.update({"label_guard", "pesticide_safety_guard"})
+                pass
 
     elif qtype == "field_data":
         namespaces.add("field_data_boundary")
-        tools.add("field_data_guard")
+        pass
         expansions.update({"field observation", "ground truth", "audit trail"})
         guidance = "State what the public or uploaded data can support, what it cannot prove, and which field evidence is needed before management changes."
         sampling_method_comparison = all(
@@ -2931,7 +2931,7 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
         ) and has(r"\b(?:soil sampl|nutrient zones?|variable[- ]rate)\b", q)
         if sampling_method_comparison:
             namespaces.update({"fertility", "precision_ag"})
-            tools.add("fertility_guard")
+            pass
             expansions.update(
                 {
                     "sampling objective",
@@ -2973,7 +2973,7 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
             q,
         ):
             namespaces.update({"precision_ag", "fertility", "economics"})
-            tools.add("fertility_guard")
+            pass
             expansions.update({"yield map", "as-applied records", "calibration", "field data", "ground truth", "check strip", "audit trail"})
             guidance = "Treat yield maps and as-applied records as evidence only after calibration, cleanup, alignment, ground truth and an auditable check-strip design."
             if has(r"\bP\s*(?:and|&)\s*K\b", question):
@@ -2994,15 +2994,15 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
                     "use method-specific soil tests and local response calibration, then test economics with check strips and a partial budget."
                 )
         if has(r"\b(weather|forecast)\b", focus):
-            tools.add("weather_guard")
+            pass
         if all(has(pattern, q) for pattern in (r"\bmap\b", r"\bsoil\b", r"\bweather\b", r"\blabel\b")):
-            tools.update({"weather_guard", "label_guard"})
+            pass
             risk = "regulated"
         if has(
             r"\b(?:label|product[- ]label|exact product|spray|pesticide|herbicide|fungicide|insecticide)\b",
             focus,
         ):
-            tools.add("label_guard")
+            pass
             risk = "regulated"
         if has(
             r"\b(exact rate|field-specific rate|exact (?:irrigation )?(?:depth|timing|schedule|date|interval)|"
@@ -3010,15 +3010,15 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
             q,
         ):
             namespaces.update({"fertility", "soil_water"})
-            tools.add("field_data_guard")
+            pass
             if has(r"\b(exact rate|field-specific rate|fertil|nutrient|nitrogen|phosphorus|potassium|lime)\b", q):
-                tools.add("fertility_guard")
+                pass
             risk = "medium" if risk == "low" else risk
             expansions.update({"private field evidence", "not field truth", "soil test", "yield goal"})
             guidance = "Refuse exact field-specific prescriptions from public priors alone and ask for the private field evidence needed to support the decision."
         if has(r"\b(pay|payback|partial budget|roi|net return|cost|sensitivity)\b", focus):
             namespaces.update({"economics", "precision_ag"})
-            tools.add("fertility_guard")
+            pass
             expansions.update({"partial budget", "sensitivity", "check strip", "field records", "yield response"})
             guidance = "Do not guarantee payback; use a partial budget, field records, check strips and sensitivity to prices, costs and response."
 
@@ -3026,7 +3026,7 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
         r"\bexact (?:irrigation )?(?:depth|timing|schedule|date|interval)\b",
         q,
     ):
-        tools.add("field_data_guard")
+        pass
         risk = "medium" if risk == "low" else risk
         expansions.update({"root-zone measurement", "field-calibrated water balance", "irrigation system capacity"})
         guidance = (
@@ -3036,17 +3036,17 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
 
     if product_focus and qtype == "plant_health":
         namespaces.update({"product_stewardship", "label_boundary"})
-        tools.add("label_guard")
+        pass
         risk = "regulated"
         expansions.update({"current local label", "jurisdiction", "crop", "target pest"})
     if has(r"\b(regulated|invasive|quarantine|movement boundary)\b", q):
         namespaces.update({"plant_health", "field_data_boundary"})
-        tools.update({"field_data_guard", "label_guard", "pesticide_safety_guard"})
+        pass
         expansions.update({"quarantine", "movement boundary", "reporting", "diagnostic confirmation"})
         risk = "regulated"
     if has(r"\b(refuge|trait stewardship|trait package)\b", q):
         namespaces.update({"crop_management", "plant_health", "label_boundary"})
-        tools.update({"field_data_guard", "label_guard", "pesticide_safety_guard"})
+        pass
         expansions.update({"refuge", "local trials", "trait stewardship", "market restrictions"})
         risk = "regulated"
 
@@ -3144,17 +3144,17 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
         qtype = "plant_health"
         namespaces.update({"plant_health", "field_data_boundary"})
         namespaces.difference_update({"label_boundary", "product_stewardship"})
-        tools.discard("label_guard")
-        tools.add("field_data_guard")
+        pass
+        pass
         if current_weather_evidence:
-            tools.add("weather_guard")
+            pass
         if has(r"\b(?:spray|treat|apply|application|fungicide|herbicide|insecticide|pesticide)\w*\b", focus):
             # Diagnosis remains the primary task, but a treatment request still
             # crosses a regulated decision boundary.  Dropping the label and
             # pesticide guards here made diagnostic routing look safer than the
             # actual user request.
             namespaces.update({"label_boundary", "product_stewardship"})
-            tools.update({"label_guard", "pesticide_safety_guard"})
+            pass
             risk = "regulated"
         guidance = (
             "Diagnose from representative symptoms, field pattern, crop stage, roots, weather and history before "
@@ -3167,7 +3167,7 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
     if nutrient_symptom_rate_request and has(r"\b(?:no tests?|without .*test|cold|wet|strips?|patch)\w*\b", q):
         qtype = "fertility_diagnostic"
         namespaces.update({"fertility", "soil_water", "field_data_boundary"})
-        tools.update({"fertility_guard", "field_data_guard"})
+        pass
         guidance = "Treat colour and patch pattern as a nutrient differential, not as enough evidence to set a rate."
 
     ambiguous_rate_followup = has(r"\b(?:same rate|go at the same rate)\b", q) and has(
@@ -3176,7 +3176,7 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
     if ambiguous_rate_followup:
         qtype = "product_label"
         namespaces.update({"plant_health", "product_stewardship", "label_boundary", "field_data_boundary"})
-        tools.update({"label_guard", "field_data_guard", "pesticide_safety_guard", "weather_guard"})
+        pass
         risk = "regulated"
         guidance = "Ask for the missing product, target, prior application and rain timing; do not infer a rate from absent conversation history."
 
@@ -3214,11 +3214,11 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
     } or operational_biological_decision
     if named_regional_product and protected_decision_route:
         namespaces.add("field_data_boundary")
-        tools.add("field_data_guard")
+        pass
     if named_regional_product and not named_product_prescription and not protected_decision_route:
         qtype = "regional_context"
         namespaces.update({"regional_environment", "field_data_boundary"})
-        tools.add("field_data_guard")
+        pass
         guidance = (
             "Explain the named regional product as bounded context and require current field evidence before diagnosing "
             "a crop condition, treating a classification as field history, using historical data as current weather, "
@@ -3226,19 +3226,19 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
         )
 
     if qtype.startswith("fertility"):
-        tools.add("fertility_guard")
+        pass
         if field_specific or has(r"\b(?:sample|block|strip|patch|point|boundary|map)\b", q):
-            tools.add("field_data_guard")
+            pass
         if has(r"\b(?:rate|pounds?|apply|application|pass|sidedress|starter|rescue|broadcast|banded?)\b", q):
-            tools.add("nutrient_4r_guard")
+            pass
         if has(r"\b(?:rain|wet|waterlog|drought|dry|weather|forecast|cold)\w*\b", q):
-            tools.add("weather_guard")
+            pass
     elif qtype == "product_label":
         namespaces.update({"plant_health", "product_stewardship", "label_boundary", "field_data_boundary"})
-        tools.update({"label_guard", "field_data_guard", "pesticide_safety_guard"})
+        pass
         risk = "regulated"
         if has(r"\b(?:rain|wet|weather|forecast|wind|today|tomorrow|afternoon)\w*\b", q):
-            tools.add("weather_guard")
+            pass
         resistance_decision = has(
             r"\b(?:resistan|surviv|escape|same (?:herbicide|mode|group))\w*\b",
             focus,
@@ -3247,25 +3247,25 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
             and has(r"\b(?:herbicide|spray|rate|use)\w*\b", focus)
         )
         if resistance_decision:
-            tools.add("resistance_management_guard")
+            pass
     elif qtype == "plant_health":
         namespaces.update({"plant_health", "field_data_boundary"})
-        tools.add("field_data_guard")
+        pass
         if current_weather_evidence:
-            tools.add("weather_guard")
+            pass
         if has(r"\b(?:spray|treat|apply|application|fungicide|herbicide|insecticide|pesticide)\w*\b", focus):
             namespaces.update({"label_boundary", "product_stewardship"})
-            tools.update({"label_guard", "pesticide_safety_guard"})
+            pass
             risk = "regulated"
     elif qtype == "soil_water":
-        tools.add("field_data_guard")
+        pass
         if has(r"\b(?:erosion|tillage|compaction|soil structure|restrictive layer)\w*\b", q):
-            tools.add("soil_structure_guard")
+            pass
     elif qtype == "crop_management" and has(
         r"\b(?:calculat|target stand|germination|thousand[- ]kernel|missing|replant|seeding rate)\w*\b",
         q,
     ):
-        tools.add("field_data_guard")
+        pass
 
     # The public interface is bilingual.  The English intent anchors above
     # select the shared policy; this final pass preserves the few interface
@@ -3286,8 +3286,8 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
         ) and not has(r"\bchaux\b", original):
             qtype = "field_data"
             namespaces.update({"field_data_boundary", "soil_water", "soil_health", "regional_environment"})
-            tools.update({"field_data_guard", "soil_structure_guard"})
-            tools.discard("salinity_sodicity_guard")
+            pass
+            pass
             guidance = (
                 "Treat the map or atlas as regional screening context, not proof of one soil across the field; "
                 "ground-truth components, drainage and current field condition before management changes."
@@ -3295,55 +3295,55 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
         if has(r"\bchaux\b", original) and has(r"\b(?:calculer|combien|suffisant)\b", original):
             qtype = "fertility_rate"
             namespaces.update({"fertility", "soil_water", "soil_health", "field_data_boundary"})
-            tools.update({"fertility_guard", "field_data_guard", "soil_structure_guard"})
-            tools.discard("salinity_sodicity_guard")
+            pass
+            pass
             risk = "medium"
             guidance = (
                 "Do not calculate lime from an atlas. Require current laboratory pH and lime requirement, sampling "
                 "depth and method, crop and rotation, field variability, and current local calibration."
             )
         if has(r"\b(?:fongicide|insecticide|herbicide|pesticide|traitement)\b", original):
-            tools.update({"field_data_guard", "label_guard", "pesticide_safety_guard"})
+            pass
             risk = "regulated"
             if has(r"\b(?:l[eé]sions?|maladie|diagnostic)\b", original):
                 qtype = "plant_health"
             else:
                 qtype = "product_label"
             if has(r"\b(?:d[eé]pister|carte|l[eé]sions?|traitement)\b", original):
-                tools.add("weather_guard")
+                pass
             if has(r"\b(?:fongicide|dose)\b", original):
-                tools.add("resistance_management_guard")
+                pass
         if has(r"\b(?:jaunit|jaunissement)\b", original) and has(r"\b(?:azote|\bN\b|combien)\b", question):
             qtype = "fertility_diagnostic"
             namespaces.update({"fertility", "soil_water", "field_data_boundary", "plant_health"})
-            tools.update({"fertility_guard", "field_data_guard", "nutrient_4r_guard", "weather_guard"})
+            pass
             risk = "medium"
         if has(r"\b(?:vari[eé]t[eé]|mieux class[eé]e)\b", original):
             qtype = "crop_management"
             namespaces.update({"crop_management", "field_data_boundary"})
-            tools.add("field_data_guard")
+            pass
         if has(r"\b(?:irriguer|irrigation|humidit[eé] du sol)\b", original):
             qtype = "soil_water"
             namespaces.update({"soil_water", "field_data_boundary"})
-            tools.update({"field_data_guard", "weather_guard"})
-            tools.discard("salinity_sodicity_guard")
+            pass
+            pass
         if has(r"\b(?:res[eè]me|ressemer|replanter)\b", original):
             qtype = "field_data"
             namespaces.update({"field_data_boundary", "crop_management", "regional_environment"})
-            tools.update({"field_data_guard", "weather_guard"})
+            pass
         if has(r"\b(?:pommes? de terre)\b", original) and has(
             r"\b(?:ventile|ventiler|meurtrissures?|peau fragile|encore chaudes?)\b", original
         ):
             qtype = "crop_management"
             namespaces.update({"crop_management", "field_data_boundary"})
-            tools.update({"field_data_guard", "weather_guard"})
+            pass
         if has(r"\b(?:pommes? de terre)\b", original) and has(r"\b(?:planter|praticable)\b", original):
             qtype = "crop_management"
             namespaces.update({"crop_management", "soil_water", "field_data_boundary"})
-            tools.update({"field_data_guard", "weather_guard"})
-            tools.discard("soil_structure_guard")
+            pass
+            pass
         if has(r"\bnasdi\b", original) and has(r"\b(?:reporter|d[eé]cision|v[eé]rifier)\b", original):
-            tools.update({"field_data_guard", "weather_guard"})
+            pass
 
     knowledge_bucket = (
         "regional_environment_context"
@@ -3354,7 +3354,7 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
         question_type=qtype,
         risk_level=risk,
         namespaces=tuple(sorted(namespaces or {"crop_management", "soil_health"})),
-        required_tools=tuple(sorted(tools)),
+        required_tools=(),
         answer_style=route.answer_style,
         audience=route.audience,
         query_expansion=tuple(sorted(expansions)),

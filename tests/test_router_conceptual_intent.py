@@ -4,6 +4,11 @@ import pytest
 
 from agronomy_agent.evals import enrich_eval_metadata_with_expected_source_trace
 from agronomy_agent.router import classify_query, refine_query_route
+from agronomy_agent.capability_planner import build_planner_input, plan_capabilities
+from agronomy_agent.capability_registry import capability_registry
+from agronomy_agent.decision_contract import build_decision_contract
+from agronomy_agent.execution_core import stable_sha256
+from agronomy_agent.evidence_contracts import question_frame_from_runtime
 
 
 @pytest.mark.parametrize(
@@ -122,7 +127,27 @@ def test_conceptual_gate_preserves_field_and_regulated_decision_routes(
 
     assert route.question_type == expected_type
     assert route.risk_level == expected_risk
-    assert required_tools.issubset(route.required_tools)
+    # The router owns intent/risk/style only. Guard applicability is selected
+    # by the registered selector used by capability planner v2.
+    assert route.required_tools == ()
+    contract = build_decision_contract(question, route, field_context=None)
+    frame = question_frame_from_runtime(
+        question=question,
+        route=route,
+        query_context={},
+        decision_contract=contract.to_dict(),
+        field_context=None,
+    )
+    planner_input = build_planner_input(
+        question,
+        question_frame=frame.to_dict(),
+        decision_contract=contract.to_dict(),
+        capability_registry_sha256=stable_sha256([spec.as_record() for spec in capability_registry().specs]),
+        arm_id="production_full",
+        phase="tool_planning",
+    )
+    selected_guards = {item.capability_id for item in plan_capabilities(planner_input).invocations}
+    assert required_tools.issubset(selected_guards)
     assert route.question_type != "exam_review"
 
 

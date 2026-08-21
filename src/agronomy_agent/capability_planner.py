@@ -9,6 +9,7 @@ planner inputs.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+import re
 from typing import Any, Mapping
 
 from agronomy_agent.capability_registry import capability_registry
@@ -37,6 +38,8 @@ class PlannerInput:
     arm_id: str
     phase: str
     intent_set: tuple[str, ...]
+    primary_intent: str
+    risk_level: str
     obligation_keys: tuple[str, ...]
     required_capability_ids: tuple[str, ...]
     field_context: Mapping[str, Any] | None
@@ -142,6 +145,8 @@ def build_planner_input(
         arm_id=arm_id,
         phase=phase,
         intent_set=tuple(str(value) for value in decision_contract.get("intent_set", ())),
+        primary_intent=str(decision_contract.get("primary_intent") or ""),
+        risk_level=str(question_frame.get("risk_level") or "low"),
         obligation_keys=obligations,
         required_capability_ids=required,
         field_context=dict(field_context) if field_context is not None else None,
@@ -154,11 +159,65 @@ def plan_capabilities(planner_input: PlannerInput) -> CapabilityPlan:
 
     registry = capability_registry()
     invocations: list[CapabilityInvocation] = []
-    applicable_guards = {note.name for note in run_tools(planner_input.question)}
+    secondary_by_primary = {
+        "plant_health": {"field_data", "product_label", "integrated_management"},
+        "field_data": {"soil_water", "crop_management", "regional_context"},
+        "exam_review": {"field_data", "plant_health", "product_label"},
+    }
+    if planner_input.primary_intent == "exam_review" and planner_input.risk_level != "regulated":
+        secondary_by_primary["exam_review"] = set()
+    selector_intents = {
+        planner_input.primary_intent,
+        *(set(planner_input.intent_set) & secondary_by_primary.get(planner_input.primary_intent, set())),
+    }
+    lexically_applicable_guards = {note.name for note in run_tools(planner_input.question)}
+    applicable_guards = {
+        capability_id
+        for capability_id in lexically_applicable_guards
+        if (
+            (spec := registry.get(capability_id)) is not None
+            and (
+                bool(selector_intents & set(spec.planner.intent_ids))
+                or planner_input.risk_level in spec.planner.risk_levels
+                or (not spec.planner.intent_ids and not spec.planner.risk_levels)
+            )
+        )
+    }
+    applicable_guards.update(
+        spec.capability_id
+        for spec in registry.specs
+        if spec.kind == "guard" and spec.planner.automatic_intent_selection
+        if selector_intents & set(spec.planner.intent_ids)
+    )
+    if (
+        planner_input.primary_intent == "product_label"
+        and re.search(
+            r"\b(?:rate|dose|herbicide|fungicide|insecticide|weed|weeds|fongicide|herbicide)\b",
+            planner_input.question,
+            flags=re.IGNORECASE,
+        )
+    ):
+        applicable_guards.add("resistance_management_guard")
+    applicable_guards.update(
+        spec.capability_id
+        for spec in registry.specs
+        if spec.kind == "guard" and planner_input.risk_level in spec.planner.risk_levels
+    )
     guard_ids = tuple(
         dict.fromkeys(
             (
-                *planner_input.required_capability_ids,
+                *(
+                    capability_id
+                    for capability_id in planner_input.required_capability_ids
+                    if (
+                        (required_spec := registry.get(capability_id)) is not None
+                        and (
+                            bool(selector_intents & set(required_spec.planner.intent_ids))
+                            or planner_input.risk_level in required_spec.planner.risk_levels
+                            or capability_id in lexically_applicable_guards
+                        )
+                    )
+                ),
                 *sorted(applicable_guards),
             )
         )
@@ -210,6 +269,48 @@ def plan_capabilities(planner_input: PlannerInput) -> CapabilityPlan:
         planner_input,
         tuple(invocations),
         clarification=calculator_plan.clarification,
+    )
+
+
+def select_guard_capability_ids(
+    question: str,
+    *,
+    route: Any,
+    field_context: Mapping[str, Any] | None = None,
+    arm_id: str = "production_full",
+) -> tuple[str, ...]:
+    """Compatibility projection of planner v2 guard selection.
+
+    This keeps evaluation traces and older route-shaped interfaces honest
+    without returning capability ownership to the router.
+    """
+
+    from agronomy_agent.decision_contract import build_decision_contract
+    from agronomy_agent.evidence_contracts import question_frame_from_runtime
+
+    registry = capability_registry()
+    registry_sha256 = stable_sha256([spec.as_record() for spec in registry.specs])
+    contract = build_decision_contract(question, route, field_context=field_context)
+    frame = question_frame_from_runtime(
+        question=question,
+        route=route,
+        query_context={},
+        decision_contract=contract.to_dict(),
+        field_context=field_context,
+    )
+    planner_input = build_planner_input(
+        question,
+        question_frame=frame.to_dict(),
+        decision_contract=contract.to_dict(),
+        capability_registry_sha256=registry_sha256,
+        arm_id=arm_id,
+        phase="tool_planning",
+        field_context=field_context,
+    )
+    return tuple(
+        item.capability_id
+        for item in plan_capabilities(planner_input).invocations
+        if item.operation == "guard_note"
     )
 
 
@@ -296,4 +397,5 @@ __all__ = [
     "PlannerInput",
     "build_planner_input",
     "plan_capabilities",
+    "select_guard_capability_ids",
 ]

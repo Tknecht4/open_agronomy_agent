@@ -49,6 +49,7 @@ from agronomy_agent.agno_runtime.knowledge_graph import load_graph_manifests
 from agronomy_agent.paths import repo_path
 from agronomy_agent.model_identity import sha256_path
 from agronomy_agent.router import classify_query, refine_query_route
+from agronomy_agent.capability_planner import select_guard_capability_ids
 from agronomy_agent.runtime_profiles import DEFAULT_MODEL_CONFIG, DEFAULT_RAG_CONFIG
 from agronomy_agent.server.services.tool_service import PUBLIC_ADAPTER_SPECS
 from agronomy_agent.tools.registry import run_tools
@@ -1200,7 +1201,8 @@ def enrich_eval_metadata_with_expected_source_trace(metadata: dict[str, Any], it
     enriched = dict(metadata or {})
     question = eval_question(item)
     route = refine_query_route(question, classify_query(question))
-    refreshed_tool_notes = run_tools(question, route.required_tools)
+    selected_guard_ids = select_guard_capability_ids(question, route=route)
+    refreshed_tool_notes = run_tools(question, selected_guard_ids)
     if enriched.get("tool_trace_refresh"):
         # Older eval postprocessing merged broad route expectations into the
         # generation trace. Reconstruct the current generation route on rescore.
@@ -1219,10 +1221,10 @@ def enrich_eval_metadata_with_expected_source_trace(metadata: dict[str, Any], it
             }
             for note in refreshed_tool_notes
         ]
-    enriched["route"] = asdict(route)
+    enriched["route"] = {**asdict(route), "required_tools": selected_guard_ids}
     enriched["tool_trace_refresh"] = {
         "source": "current_router_and_local_guard_registry",
-        "required_tools": list(route.required_tools),
+        "required_tools": list(selected_guard_ids),
         "note": "Current refined-route expectations only. The tool_notes field records the generation path and must not be expanded by this refresh.",
     }
 

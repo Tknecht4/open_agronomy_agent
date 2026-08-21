@@ -10,6 +10,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping
 
+from agronomy_agent.benchmark_arms import ALL_ARM_IDS, execution_arm
+
 
 MATRIX_SCHEMA_VERSION = "open_agronomy_agent.v3_candidate_matrix.v1"
 OBSERVATION_REQUEST_SCHEMA_VERSION = "open_agronomy_agent.v3_candidate_observation_request.v1"
@@ -68,6 +70,9 @@ def build_matrix(
         ):
             for trial_id in config["trial_ids"]:
                 for arm in model[arm_key]:
+                    if arm not in ALL_ARM_IDS:
+                        raise ValueError(f"model declares unknown candidate arm: {arm}")
+                    execution_arm(str(arm))
                     for case in cases_by_lane[lane]:
                         sample_index += 1
                         case_identity = {
