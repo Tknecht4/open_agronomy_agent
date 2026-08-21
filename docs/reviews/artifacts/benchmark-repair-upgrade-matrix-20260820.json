@@ -1,0 +1,86 @@
+{
+  "schema_version": "open_agronomy_agent.benchmark_repair_matrix.v1",
+  "matrix_id": "benchmark-repair-upgrade-20260820",
+  "baseline_commit": "c2f9d28eb5b14895781b15b72ac180c6ceb2a3a3",
+  "branch": "codex/benchmark-repair-upgrade",
+  "status": "implementation_round_active_model_execution_pending",
+  "claim_boundary": "Engineering and exposed-set regression evidence only. Frozen RC3 remains unchanged and sealed-v3 remains human-gated.",
+  "findings": [
+    {
+      "finding": "objective_product_mass_unit_alias",
+      "rc3_observation": "14/16 frozen parser results while typed tool payloads were within tolerance on 16/16",
+      "current_status": "closed_in_current_production_path_16_of_16",
+      "evidence": ["docs/reviews/artifacts/benchmark-repair-upgrade-certification-20260821.json", "tests/test_evals.py", "tests/test_tool_planner_end_to_end.py"],
+      "remaining_limit": "A new model-backed production-path run is not a replacement for the frozen RC3 score."
+    },
+    {
+      "finding": "french_language_preservation",
+      "rc3_observation": "9/12 eligible cases per candidate preserved French",
+      "current_status": "repair_present_targeted_tests_pass",
+      "evidence": ["src/agronomy_agent/answerability.py", "tests/test_answerability.py"],
+      "remaining_limit": "The 12-case v3 competence-candidate French lane must still execute with the provisioned model."
+    },
+    {
+      "finding": "local_guard_route_completeness",
+      "rc3_observation": "134/154 eligible routes contained every expected local guard",
+      "current_status": "consequence_calibrated_policy_v2_and_profile_v3_implemented",
+      "evidence": ["src/agronomy_agent/answerability.py", "configs/model.yaml"],
+      "remaining_limit": "A retained 154-route production replay is still required before claiming 154/154."
+    },
+    {
+      "finding": "retrieval_expected_source_and_pattern_gaps",
+      "rc3_observation": "22/26 expected sources and 46/50 required patterns",
+      "current_status": "successor_positive_recall_at_7_19_of_19",
+      "evidence": ["data/manifests/offline_corpus_retrieval_evaluation.json"],
+      "residuals": [
+        {"case_id": "ca_official_ab_nutrient_sampling", "classification": "ranking", "expected_source_rank": 2},
+        {"case_id": "ca_official_alberta_range_context", "classification": "ranking", "expected_source_rank": 4}
+      ],
+      "remaining_limit": "Current 19-case positive-source evidence is a successor retrieval diagnostic, not answer quality."
+    },
+    {
+      "finding": "field_history_absence",
+      "rc3_observation": "13 unadmitted sources did not leak and 29 prospective decision-card IDs were absent",
+      "current_status": "retained_as_negative_controls",
+      "evidence": ["docs/public/development-benchmark-rc3-20260815/source_data/retrieval_lineage_summary.csv"],
+      "remaining_limit": "Only consented or synthetic field-history fixtures may make this lane executable."
+    },
+    {
+      "finding": "unexplained_terminal_stall",
+      "rc3_observation": "one retained observation elapsed 5062.879 seconds",
+      "current_status": "typed_child_timeout_and_partial_retention_implemented",
+      "evidence": ["scripts/run_open_agronomy_benchmark.py", "tests/test_benchmark_child_timeout.py"],
+      "remaining_limit": "The original stall cannot be causally classified from public RC3 artifacts."
+    },
+    {
+      "finding": "model_capability_by_intervention_interaction",
+      "rc3_observation": "uncalibrated post-hoc triage suggested the full system helped smaller models and reduced Luna scores",
+      "current_status": "risk_conditioned_selective_v3_profile_implemented",
+      "evidence": ["src/agronomy_agent/answer_verifier.py", "configs/model_gemma4_e2b_interface_v2.yaml"],
+      "remaining_limit": "Production Gemma 4 competence-candidate trials are required; AI triage is not promotion authority."
+    },
+    {
+      "finding": "external_and_regional_competence_evidence",
+      "rc3_observation": "192 of 241 cases per arm lacked deterministic answer-quality scoring",
+      "current_status": "public_v3_competence_candidate_inputs_verified",
+      "evidence": ["configs/open_agronomy_v3_competence_candidate.json", "scripts/prepare_v3_competence_candidate.py"],
+      "observed_input_receipts": {
+        "external_rows": 800,
+        "external_authority_sensitive_rows": 98,
+        "regional_rows": 72,
+        "regional_six_strata_cases_each": 12,
+        "regional_english": 60,
+        "regional_french": 12,
+        "exact_normalized_question_matches_against_1088_existing_eval_questions": 0
+      },
+      "remaining_limit": "The public dataset is exposed, has no per-row source metadata, and model pretraining exposure is unknown."
+    },
+    {
+      "finding": "sealed_v3_governance",
+      "rc3_observation": "no untouched independent cohort or calibrated human judge",
+      "current_status": "intentionally_blocked_unchanged",
+      "evidence": ["configs/open_agronomy_benchmark_v3_protocol.json"],
+      "remaining_limit": "The competence candidate cannot satisfy independent authorship, review, or human calibration."
+    }
+  ]
+}

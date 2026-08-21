@@ -1,0 +1,83 @@
+{
+  "schema_version": "open_agronomy_agent.benchmark_repair_upgrade_certification.v1",
+  "receipt_id": "benchmark-repair-upgrade-certification-20260821",
+  "claim_eligible": false,
+  "claim_boundary": "Current-code engineering verification only. This receipt does not alter frozen RC3 results, satisfy sealed v3, establish agronomist equivalence, or authorize deployment or autonomous action.",
+  "reference_state": {
+    "branch": "codex/benchmark-repair-upgrade",
+    "baseline_commit": "c2f9d28eb5b14895781b15b72ac180c6ceb2a3a3",
+    "required_ancestor": "a114195",
+    "required_ancestor_present": true,
+    "baseline_environment_sha256": "ea26b4bb58132473bf28bd73d55bdda5b725542107b344449e049b325fd30aa6"
+  },
+  "current_code_observations": {
+    "calculation_production_path": {
+      "run_execution_id": "run_e49d787866164b06a9be2c19e7d5e205",
+      "run_identity_sha256": "b0d3e4144822b78260c9e8461113cbebfffb5ac9a1a89f6edf5cee55095b2f58",
+      "summary_sha256": "522409faf5347238d7b45bea29d032301db340f58de585639a2ad3b3aaa120f7",
+      "outputs_sha256": "90c2e4f95ef859ec04be73a3fe43da04e0b3aa748cf67b794d78d11326bea4fa",
+      "cases": 16,
+      "deterministic_bypass_cases": 16,
+      "parse_valid_cases": 16,
+      "numeric_tolerance_passes": 16
+    },
+    "document_graph_two_by_two": [
+      {"configuration_id": "retrieval_neither", "ordered_stage_receipts": 17, "receipt_sha256": "b911e34b7676e03d57779524f743d645f74460318ab7e10e29a779f8d99fa445"},
+      {"configuration_id": "retrieval_document_only", "ordered_stage_receipts": 17, "receipt_sha256": "3686b7b00c79aba1726393ea09a4912d17fce2ff5f05286eb3677fe491b1dc8a"},
+      {"configuration_id": "retrieval_graph_only", "ordered_stage_receipts": 17, "receipt_sha256": "7d952d3fa885474ac2ff0e58db802a937243e2230b2dc5b8f89a76f305eaa6b7"},
+      {"configuration_id": "retrieval_both", "ordered_stage_receipts": 17, "receipt_sha256": "77d963f32e8cd36e52bf97808a6fde32a0da4f2d27044375d62e9247f1bdce37"}
+    ],
+    "corpus": {
+      "runtime_audit_status": "pass",
+      "runtime_audit_sha256": "4cfc084fca462a8657dd65d5ba376fefac4d5664c08b4c429b5e6d57e88cc71b",
+      "successor_quality_status": "pass",
+      "successor_quality_sha256": "20c54888ee5826cb97a98a8af93404ff0a2561697a3e9b2a8b3792b33bfe526d",
+      "rows": 221344,
+      "source_locator_complete_rows": 221344,
+      "quality_ledger_complete_rows": 221344
+    },
+    "capability_conformance": {
+      "status": "pass",
+      "receipt_sha256": "16e48809d4c1a848d1034a2ad1b40935ef6fd209c0b57061265db19d329cf009",
+      "positive_fixtures": 12,
+      "negative_fixtures": 4
+    },
+    "repository_gates": {
+      "backend_tests": 965,
+      "backend_failures": 0,
+      "frontend_tests": 205,
+      "frontend_failures": 0,
+      "frontend_typecheck": "pass",
+      "frontend_build": "pass",
+      "documentation_source_audit": "pass",
+      "documentation_strict_build": "pass",
+      "documentation_rendered_audit": "pass",
+      "pre_certification_public_package_files": 815,
+      "pre_certification_public_package_receipt_sha256": "50a57618dc12d1d97c916419175e92beaef720aaac9305b1b297328d69f60d8a",
+      "runtime_manifest_contract_sha256": "baac0b9e9914084733068b1f0c8373e8bfca21b4859351f81316dfe08f04ba23"
+    }
+  },
+  "v3_competence_candidate": {
+    "input_status": "frozen_inputs_verified",
+    "external_rows": 800,
+    "external_cases_sha256": "843aa1d2ee54dbf95ee7f128f608ed9a6ae58f2112a05669975ea26bbb317180",
+    "regional_rows": 72,
+    "regional_cases_sha256": "efcfec794b5cd4a60894ae35c974eecdf7d994b2ec1e98f7499998c83025023f",
+    "expected_external_observations": 7200,
+    "expected_regional_observations": 2592,
+    "observed_observations": 0,
+    "engineering_rc_status": "blocked",
+    "blockers": [
+      "The pinned Gemma 4 E2B snapshot is not present in the local Hugging Face cache.",
+      "The five reference-based semantic instrument controls have no retained results.",
+      "The exact 9792-observation execution matrix has not run.",
+      "The independent sealed-v3 authorship, review, calibration, and owner gates remain unfulfilled."
+    ]
+  },
+  "unclosed_gates": [
+    "Retained current-code replay of all 154 RC3 guard-eligible routes.",
+    "Model-backed French preservation across the frozen 12-case regional lane.",
+    "Fresh production Gemma 4 competence-candidate execution and scoring.",
+    "Explicit owner approval."
+  ]
+}

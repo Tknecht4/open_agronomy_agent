@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-08-21T04:25:12+00:00",
+  "generated_at": "2026-08-21T06:10:59+00:00",
   "status": "pass",
-  "contract_sha256": "a5809c5b688f5e4fed2ef0f4250e2884dd6eb8cd1ffd7c9c4b97b92226374097",
+  "contract_sha256": "baac0b9e9914084733068b1f0c8373e8bfca21b4859351f81316dfe08f04ba23",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -407,9 +407,9 @@
   "runtime_assets": [
     {
       "path": "src/agronomy_agent",
-      "file_count": 153,
-      "bytes": 5454178,
-      "sha256": "32e80c5d3a91e5c977ac48c7bc98fba285105704f8cd8da5d02e18a7eb47f012"
+      "file_count": 154,
+      "bytes": 5467044,
+      "sha256": "2c8a09762722180ddba6663b8285640e98b62a5009d5ae91e473439a5e364789"
     },
     {
       "path": "frontend/src",
@@ -425,15 +425,15 @@
     },
     {
       "path": "scripts",
-      "file_count": 112,
-      "bytes": 1618861,
-      "sha256": "0f3c54b44c0209a27837664373bce88f9711c23f8559b5fcac8ad84940e812f5"
+      "file_count": 114,
+      "bytes": 1632273,
+      "sha256": "0eaa52a7607aa461b3a58dc86e4aa036b2c6e87a4067e49aa8368639dca70a8a"
     },
     {
       "path": "configs",
-      "file_count": 79,
-      "bytes": 226367,
-      "sha256": "4ac138f5d3104746d89ccf95d253cb4db707d8357b636e28a41f6b3e3df46736"
+      "file_count": 80,
+      "bytes": 229673,
+      "sha256": "b9d3d9e5a6e6ec238df4ad1ceb7fe507d162c8956e2737c576987b34ff23880b"
     },
     {
       "path": "data/manifests",
@@ -456,8 +456,8 @@
     {
       "path": "docs/public",
       "file_count": 84,
-      "bytes": 8734979,
-      "sha256": "65bf981dae7b56a486d7c63f8b109017556c157751e151b972412d027fec0294"
+      "bytes": 8735996,
+      "sha256": "e87a532812b20367aec9dc2765cbdaaf8355ed69f56a03467145b8eaddf6cc27"
     }
   ],
   "geo_cache_seed": {
@@ -486,8 +486,8 @@
     {
       "path": "configs/model.yaml",
       "role": "runtime_control",
-      "bytes": 1357,
-      "sha256": "bee80fa9403b29bf1e42ec399a02bf895ca17fc6063ac7d5ee972cc496027afe"
+      "bytes": 1359,
+      "sha256": "8cd880ac68b3631a4eccc11bd9716be3e1768b1a5d49653ac13acc7ec6aeba10"
     },
     {
       "path": "LICENSE",
