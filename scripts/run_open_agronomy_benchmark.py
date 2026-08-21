@@ -16,6 +16,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -268,14 +269,69 @@ def _validate_external_execution_boundary(
         raise ValueError("semantic judging is disabled by the selected benchmark contract")
 
 
-def _run(command: list[str], *, log_path: Path, environment: dict[str, str]) -> None:
+def _run(
+    command: list[str],
+    *,
+    log_path: Path,
+    environment: dict[str, str],
+    timeout_seconds: float,
+) -> dict[str, Any]:
+    """Run one child with a typed terminal receipt and bounded cancellation.
+
+    Child outputs are never removed on timeout.  A later authorized invocation
+    may inspect and resume them through the existing partial-run contract.
+    """
+
+    if timeout_seconds <= 0:
+        raise ValueError("benchmark child timeout must be greater than zero")
     log_path.parent.mkdir(parents=True, exist_ok=True)
+    started_at = dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat()
+    started = time.monotonic()
+    timed_out = False
     with log_path.open("a", encoding="utf-8") as log:
         log.write("\n$ " + " ".join(command) + "\n")
-        result = subprocess.run(command, cwd=ROOT, env=environment, stdout=log, stderr=subprocess.STDOUT, text=True, check=False)
-        log.write(f"\nexit_code={result.returncode}\n")
-    if result.returncode:
-        raise RuntimeError(f"benchmark command failed ({result.returncode}); see {log_path}")
+        process = subprocess.Popen(
+            command,
+            cwd=ROOT,
+            env=environment,
+            stdout=log,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        try:
+            return_code = process.wait(timeout=timeout_seconds)
+        except subprocess.TimeoutExpired:
+            timed_out = True
+            process.terminate()
+            try:
+                return_code = process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                return_code = process.wait(timeout=10)
+        log.write(f"\nexit_code={return_code}\ntimed_out={str(timed_out).lower()}\n")
+    receipt = {
+        "schema_version": "open_agronomy_agent.benchmark_child_execution_receipt.v1",
+        "status": "timed_out" if timed_out else "complete" if return_code == 0 else "failed",
+        "started_at": started_at,
+        "elapsed_seconds": round(time.monotonic() - started, 3),
+        "timeout_seconds": timeout_seconds,
+        "return_code": return_code,
+        "command_sha256": hashlib.sha256(
+            json.dumps(command, separators=(",", ":")).encode("utf-8")
+        ).hexdigest(),
+        "log_path": str(log_path),
+        "partial_outputs_retained": True,
+        "cancellation": "terminate_then_kill_after_10_seconds" if timed_out else "not_required",
+    }
+    receipt_path = log_path.with_name(log_path.stem + ".execution.json")
+    receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    if timed_out:
+        raise RuntimeError(
+            f"benchmark command timed out after {timeout_seconds:g}s; partial outputs and receipt retained at {receipt_path}"
+        )
+    if return_code:
+        raise RuntimeError(f"benchmark command failed ({return_code}); see {log_path}")
+    return receipt
 
 
 def _write_invocation(
@@ -504,6 +560,12 @@ def main() -> int:
     parser.add_argument("--modes", help="Comma-separated arm override; defaults to the frozen contract.")
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--max-samples", type=int)
+    parser.add_argument(
+        "--child-timeout-seconds",
+        type=float,
+        default=7200.0,
+        help="Terminate a stalled evaluator/judge child while retaining partial outputs and a typed receipt.",
+    )
     parser.add_argument(
         "--trial-id",
         default="trial-000",
@@ -846,6 +908,7 @@ def main() -> int:
             "judge_seed": args.judge_seed,
             "process_isolation_policy": args.process_isolation_policy,
             "cache_policy": args.cache_policy,
+            "child_timeout_seconds": args.child_timeout_seconds,
             "sampling_overrides": {
                 "temperature": args.temperature,
                 "top_p": args.top_p,
@@ -976,7 +1039,12 @@ def main() -> int:
                 output_dir=arm_root,
                 resume_run_dir=resume_run_dir,
             )
-            _run(command, log_path=arm_root / "runner.log", environment=environment)
+            _run(
+                command,
+                log_path=arm_root / "runner.log",
+                environment=environment,
+                timeout_seconds=args.child_timeout_seconds,
+            )
             run_dir = _reusable_run(
                 arm_root,
                 mode=mode,
@@ -1018,7 +1086,12 @@ def main() -> int:
                     ]
                     if args.judge_seed is not None:
                         judge_command.extend(["--seed", str(args.judge_seed)])
-                _run(judge_command, log_path=judgment / "runner.log", environment=environment)
+                _run(
+                    judge_command,
+                    log_path=judgment / "runner.log",
+                    environment=environment,
+                    timeout_seconds=args.child_timeout_seconds,
+                )
         completed.append({"mode": mode, "run_dir": str(run_dir)})
         build_database(experiment, experiment / "full_system_benchmark.sqlite3")
     database = build_database(experiment, experiment / "full_system_benchmark.sqlite3")
@@ -1039,7 +1112,7 @@ def main() -> int:
             "--source", f"full_system={by_mode['agronomic_rag'] / 'outputs.jsonl'}",
             "--benchmark-lane", "canadian_decision_quality",
             "--output-dir", str(review_dir),
-        ], log_path=review_dir / "builder.log", environment=environment)
+        ], log_path=review_dir / "builder.log", environment=environment, timeout_seconds=args.child_timeout_seconds)
         review_packet = str(review_dir / "manifest.json")
     report = write_report(experiment / "full_system_benchmark.sqlite3", frozen, experiment)
     source_snapshot = _benchmark_source_snapshot()
