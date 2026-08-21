@@ -35,7 +35,7 @@ draft_model_id:
 num_draft_tokens: 4
 answer_verification:
   enabled: true
-  mode: model_agnostic_selective_v2
+  mode: risk_conditioned_selective_v3
   model_id: mlx-community/gemma-4-e2b-it-4bit
   model_revision: 238767527555cb75a05732a84dff5d6ba0dd6809
   max_tokens: 220

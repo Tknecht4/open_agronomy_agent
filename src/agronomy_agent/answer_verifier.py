@@ -1340,7 +1340,7 @@ def verify_answer(
     draft_assessment = assess(draft)
     protocol_fallback = _protocol_failure_answer(question)
     if (
-        review_mode == "model_agnostic_selective_v2"
+        review_mode in {"model_agnostic_selective_v2", "risk_conditioned_selective_v3"}
         and protocol_fallback is not None
         and draft_assessment.missing_intent_facets
     ):
@@ -1357,7 +1357,10 @@ def verify_answer(
                 final_assessment=protocol_assessment,
             )
     annual_crop_inventory_fallback = _aafc_annual_crop_inventory_fallback(question, docs)
-    if annual_crop_inventory_fallback is not None and review_mode == "model_agnostic_selective_v2":
+    if annual_crop_inventory_fallback is not None and review_mode in {
+        "model_agnostic_selective_v2",
+        "risk_conditioned_selective_v3",
+    }:
         inventory_docs = tuple(
             doc for doc in docs if doc.source_id == "ca_aafc_annual_crop_inventory_specification"
         )
@@ -1539,8 +1542,12 @@ def verify_answer(
         "conference_selective",
         "calibrated_selective",
         "model_agnostic_selective_v2",
+        "risk_conditioned_selective_v3",
     }
-    model_agnostic_selective = review_mode == "model_agnostic_selective_v2"
+    model_agnostic_selective = review_mode in {
+        "model_agnostic_selective_v2",
+        "risk_conditioned_selective_v3",
+    }
     selective_missing_decision_content = (
         selective_mode
         and "missing_decision_content" in draft_assessment.reasons

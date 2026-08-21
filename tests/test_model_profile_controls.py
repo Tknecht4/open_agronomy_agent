@@ -134,6 +134,7 @@ def test_pre_demo_profile_pins_every_selectable_local_model() -> None:
     assert config["model_revision"]
     assert config["assistant_model_revision"]
     assert config["serving_quality_gate"] == "open_agronomy_system_interface_v2"
+    assert config["answer_verification"]["mode"] == "risk_conditioned_selective_v3"
 
 
 def test_live_readiness_and_model_decision_defaults_use_release_profile(tmp_path: Any) -> None:
