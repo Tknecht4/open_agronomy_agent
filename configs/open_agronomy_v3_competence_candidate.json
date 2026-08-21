@@ -1,0 +1,61 @@
+{
+  "schema_version": "open_agronomy_agent.v3_competence_candidate.v1",
+  "benchmark_id": "open_agronomy_v3_competence_candidate",
+  "status": "public_external_reference_candidate_frozen",
+  "claim_eligible": false,
+  "sealed_v3_satisfied": false,
+  "candidate_model": {
+    "model_config": "configs/model_gemma4_e2b_interface_v2.yaml",
+    "model_id": "mlx-community/gemma-4-e2b-it-4bit",
+    "model_revision": "238767527555cb75a05732a84dff5d6ba0dd6809"
+  },
+  "external_dataset": {
+    "dataset_id": "AI71ai/agrillm-qa-eval-800",
+    "revision": "8221846561c9cf7fd4cb072b15b857f67e9ee90a",
+    "filename": "agrillm_evaluation_dataset.csv",
+    "git_oid": "fcc3cf191ddbb774bbfc7a375fd22c6e7a879dff",
+    "sha256": "170a92396fa573fcaaad05da17169c415de9f988bd8587569fc966891e2adf57",
+    "bytes": 758561,
+    "rows": 800,
+    "license": "apache-2.0",
+    "columns": ["question", "answer"],
+    "source_url": "https://huggingface.co/datasets/AI71ai/agrillm-qa-eval-800",
+    "download_url": "https://huggingface.co/datasets/AI71ai/agrillm-qa-eval-800/resolve/8221846561c9cf7fd4cb072b15b857f67e9ee90a/agrillm_evaluation_dataset.csv"
+  },
+  "external_arm_order": ["raw_model", "kernel_only", "production_full"],
+  "regional_source_suite": "data/eval/open_agronomy_successor_development.jsonl",
+  "regional_case_count": 72,
+  "regional_language_counts": {"English": 60, "French": 12},
+  "regional_strata": {
+    "canadian_decision_quality": 12,
+    "canadian_advisory_transfer": 12,
+    "objective_agronomic_calculation": 12,
+    "official_source_answer_boundary": 12,
+    "retrieval_lineage": 12,
+    "cross_jurisdiction_boundary": 12
+  },
+  "regional_priority_jurisdictions": ["Alberta", "Saskatchewan", "Manitoba", "Canada"],
+  "regional_arm_order": [
+    "raw_model",
+    "kernel_only",
+    "production_full",
+    "full_minus_field_context",
+    "retrieval_neither",
+    "retrieval_document_only",
+    "retrieval_graph_only",
+    "retrieval_document_and_graph",
+    "full_minus_typed_tools",
+    "full_minus_risk_intervention_private_only",
+    "full_minus_verifier",
+    "full_minus_fallback"
+  ],
+  "trial_ids": ["trial-001", "trial-002", "trial-003"],
+  "evaluation_policy": {
+    "single_composite_score_allowed": false,
+    "semantic_grading_role": "diagnostic_until_reference_controls_pass",
+    "unknown_model_pretraining_exposure": true,
+    "geography_policy": "explicit_text_only_never_inferred_from_crop",
+    "exclusion_policy": "retain_every_row_with_explicit_disposition",
+    "claim_boundary": "Exact public-set reference agreement and production-path engineering evidence only; not sealed-v3, agronomist equivalence, field validity, or population generalization."
+  }
+}
