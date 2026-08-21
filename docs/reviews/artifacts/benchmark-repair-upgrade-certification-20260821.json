@@ -27,6 +27,14 @@
       {"configuration_id": "retrieval_graph_only", "ordered_stage_receipts": 17, "receipt_sha256": "7d952d3fa885474ac2ff0e58db802a937243e2230b2dc5b8f89a76f305eaa6b7"},
       {"configuration_id": "retrieval_both", "ordered_stage_receipts": 17, "receipt_sha256": "77d963f32e8cd36e52bf97808a6fde32a0da4f2d27044375d62e9247f1bdce37"}
     ],
+    "guard_route_replay": {
+      "status": "pass",
+      "eligible_cases": 154,
+      "complete_cases": 154,
+      "seventeen_stage_cases": 154,
+      "receipt_sha256": "d89e1bba32ebed01f268f5e8095ea40c52f64736668fd92177f103af7a0a6022",
+      "claim_boundary": "Route and trace completeness only; not model answer quality or agronomic correctness."
+    },
     "corpus": {
       "runtime_audit_status": "pass",
       "runtime_audit_sha256": "4cfc084fca462a8657dd65d5ba376fefac4d5664c08b4c429b5e6d57e88cc71b",
@@ -54,7 +62,7 @@
       "documentation_rendered_audit": "pass",
       "pre_certification_public_package_files": 815,
       "pre_certification_public_package_receipt_sha256": "50a57618dc12d1d97c916419175e92beaef720aaac9305b1b297328d69f60d8a",
-      "runtime_manifest_contract_sha256": "baac0b9e9914084733068b1f0c8373e8bfca21b4859351f81316dfe08f04ba23"
+      "runtime_manifest_contract_sha256": "453e3e7731191ce59c0d35825fea1e063c08291cd7be6ed8f39ce4d0d1545720"
     }
   },
   "v3_competence_candidate": {
@@ -75,7 +83,6 @@
     ]
   },
   "unclosed_gates": [
-    "Retained current-code replay of all 154 RC3 guard-eligible routes.",
     "Model-backed French preservation across the frozen 12-case regional lane.",
     "Fresh production Gemma 4 competence-candidate execution and scoring.",
     "Explicit owner approval."

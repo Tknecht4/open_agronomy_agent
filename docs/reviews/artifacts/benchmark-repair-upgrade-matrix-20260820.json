@@ -23,9 +23,9 @@
     {
       "finding": "local_guard_route_completeness",
       "rc3_observation": "134/154 eligible routes contained every expected local guard",
-      "current_status": "consequence_calibrated_policy_v2_and_profile_v3_implemented",
-      "evidence": ["src/agronomy_agent/answerability.py", "configs/model.yaml"],
-      "remaining_limit": "A retained 154-route production replay is still required before claiming 154/154."
+      "current_status": "closed_in_current_production_path_154_of_154",
+      "evidence": ["scripts/audit_guard_route_replay.py", "docs/reviews/artifacts/benchmark-repair-upgrade-certification-20260821.json", "src/agronomy_agent/router.py"],
+      "remaining_limit": "This is route and trace completeness, not model answer quality or agronomic correctness."
     },
     {
       "finding": "retrieval_expected_source_and_pattern_gaps",

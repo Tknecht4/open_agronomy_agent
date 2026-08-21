@@ -186,6 +186,7 @@
     "scripts/audit_evidence_fabric_benchmark.py",
     "scripts/audit_field_offline_topology.py",
     "scripts/audit_final_benchmark_readiness.py",
+    "scripts/audit_guard_route_replay.py",
     "scripts/audit_open_agronomy_benchmark_v2.py",
     "scripts/audit_open_agronomy_benchmark_v3_readiness.py",
     "scripts/audit_v3_competence_candidate.py",

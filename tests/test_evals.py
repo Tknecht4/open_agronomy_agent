@@ -1166,6 +1166,7 @@ def test_eval_trace_refresh_uses_the_same_refined_route_as_generation() -> None:
         "field_data_guard",
         "label_guard",
         "pesticide_safety_guard",
+        "weather_guard",
     )
     assert "fertility_guard" not in metadata["route_tool_notes"]
     assert "nutrient_4r_guard" not in metadata["route_tool_notes"]

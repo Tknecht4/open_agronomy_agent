@@ -81,6 +81,11 @@ AI71 CSV, verifies its exact bytes and schema, retains all 800 row
 dispositions, derives the exposed 72-case regional lane, and writes ignored
 local input receipts. It never modifies or satisfies the sealed-v3 holdout.
 
+`audit_guard_route_replay.py` replays the 154 guard-eligible exposed Canadian
+cases through the production execution core with the mock model, retains each
+17-stage trace, and fails if any required local guard is absent. It measures
+routing and trace completeness only, not answer quality.
+
 Supported product modes are `baseline`, `agronomic_rag`, and `mock` when both
 retrieval components are enabled. `agronomic_rag` additionally supports the
 four named retrieval configurations `retrieval_neither`,

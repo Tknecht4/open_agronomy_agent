@@ -236,12 +236,20 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
         r"\b(?:nitrogen|sulphur|sulfur|phosphorus|potassium|fertili[sz]er|urea|lime|chaux|azote|engrais)\b",
         q,
     )
+    manure_rate_context = has(r"\bmanure\b", q) and has(
+        r"\b(?:rate|table|plan|apply|application|set|amount)\w*\b", q
+    )
+    nutrient_terms = nutrient_terms or manure_rate_context
     nutrient_action = has(
         r"\b(?:how much|how many|what rate|which rate|rate should|apply|add|calculate|incorporat|"
         r"guaranteed|cut the nitrogen plan|combien|dose|calculer|ajouter)\w*\b",
         q,
     )
     crop_stress = has(r"\b(?:pale|yellow|yellowing|chlorosis|jaunit|jaunissement|patch|strips?)\w*\b", q)
+    if nutrient_terms and not pesticide_terms:
+        # Acronyms for public agricultural datasets and agencies must not be
+        # interpreted as named pesticide products in a nutrient question.
+        explicit_agrochemical_context = False
 
     classification_accuracy_prior = has(
         r"\b(?:crop classifier|crop classification|classification model|mapped crop|overall accuracy|"
@@ -315,6 +323,18 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
             "reconcile tests, credits, water and loss risk, and do not state a rate from symptoms, maps or weather alone."
         )
 
+    nutrient_plan_decision = nutrient_terms and has(
+        r"\b(?:rate|table|plan|starter|blend|manure|soil[- ]test|previous application|set every)\b",
+        q,
+    )
+    if nutrient_plan_decision and not pesticide_terms:
+        qtype = "fertility_diagnostic" if crop_stress else "fertility_rate"
+        namespaces.update({"fertility", "soil_water", "field_data_boundary"})
+        tools.update({"fertility_guard", "field_data_guard", "nutrient_4r_guard"})
+        if has(r"\b(?:field|soil|manure|seed[- ]placed|previous application|from before)\b", q):
+            tools.add("weather_guard")
+        risk = "medium" if risk in {"low", "regulated"} else risk
+
     variety_decision = (
         has(r"\b(?:variety|hybrid|cultivar|vari[eé]t[eé])\b", q)
         and has(r"\b(?:trial|rank|top yield|best|which|order|seed|class[eé]e|choix)\w*\b", q)
@@ -360,6 +380,27 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
             "Diagnose and count before treatment: verify organism, field pattern, crop stage, severity or density, "
             "beneficials and current weather, then require current label fit before a product decision."
         )
+
+    field_pest_action = biological_problem and has(
+        r"\b(?:spray|treat|threshold|count|insecticide|herbicide|fungicide|what should)\w*\b",
+        q,
+    )
+    if field_pest_action:
+        qtype = "plant_health" if qtype != "product_label" else qtype
+        namespaces.update({"plant_health", "field_data_boundary"})
+        tools.update({"field_data_guard", "pesticide_safety_guard"})
+        if has(r"\b(?:spray|treat|insecticide|herbicide|fungicide)\w*\b", q):
+            tools.update({"label_guard", "weather_guard"})
+            risk = "regulated"
+
+    weed_action = has(r"\b(?:weed|weedy|lentils?)\w*\b", q) and has(
+        r"\b(?:spray|herbicide|rate|choose|product|photo)\w*\b", q
+    )
+    if weed_action:
+        tools.update(
+            {"field_data_guard", "label_guard", "pesticide_safety_guard", "resistance_management_guard"}
+        )
+        risk = "regulated"
 
     underspecified_herbicide = has(
         r"\b(?:usual broadleaf rate|usual herbicide rate|which herbicide|herbicide rate|weed .* rate|"
@@ -421,6 +462,14 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
             "rooting, wetness and structure before drainage, tillage, amendment or conservation prescriptions."
         )
 
+    mapped_soil_field_boundary = has(
+        r"\b(?:soileri|soil survey|soil map|federal soil map|mapped polygon|soil polygon)\b", q
+    ) and has(r"\b(?:field|pasture|seed|irrigat|limitations?|prove|enough)\w*\b", q)
+    if mapped_soil_field_boundary and not nutrient_terms:
+        qtype = "field_data" if has(r"\blimitations?\b", q) else "soil_water"
+        namespaces.update({"soil_water", "soil_health", "field_data_boundary", "regional_environment"})
+        tools.update({"field_data_guard", "soil_structure_guard", "salinity_sodicity_guard"})
+
     regional_field_decision = has(
         r"\b(?:map|crop[- ]health|nasdi|spei|historical average|regional (?:alert|signal|index))\b", q
     ) and has(r"\b(?:damage|hail|seed|plant|irrigat|spray|record|cancel|turn cattle|field)\w*\b", q)
@@ -446,6 +495,18 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
             tools.add("soil_structure_guard")
         if has(r"\b(?:gypsum|lime|chaux|manure)\b", q):
             tools.add("fertility_guard")
+        if has(r"\b(?:map|strip)\b", q) and has(r"\b(?:wet|irrigat)\w*\b", q):
+            tools.add("salinity_sodicity_guard")
+
+    if (qtype.startswith("fertility") or nutrient_terms) and has(r"\b(?:from before|manure)\b", q):
+        tools.add("weather_guard")
+
+    regulated_boundary_explanation = explicit_agrochemical_context and has(
+        r"\b(?:pick|choose|missing|why|not enough|before)\b", q
+    )
+    if regulated_boundary_explanation:
+        tools.update({"field_data_guard", "label_guard", "pesticide_safety_guard", "weather_guard"})
+        risk = "regulated"
 
     if qtype == "crop_management" and has(r"\b(?:nutrient plan|fertility|fertilizer|fertigation)\b", q):
         tools.add("fertility_guard")
@@ -464,6 +525,7 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
         qtype = "field_data"
         namespaces.add("field_data_boundary")
         tools.add("field_data_guard")
+        tools.add("weather_guard")
         guidance = "Recover the missing crop, field, operation and prior record before continuing the decision."
 
     # Broad lexical collection deliberately errs toward safety, but a bare use
@@ -480,7 +542,13 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
         if risk == "regulated":
             risk = "medium"
 
-    if benign_conceptual_explanation:
+    protected_boundary_explanation = (
+        mapped_soil_field_boundary
+        or nutrient_plan_decision
+        or variety_decision
+        or regulated_boundary_explanation
+    )
+    if benign_conceptual_explanation and not protected_boundary_explanation:
         qtype = "exam_review"
         namespaces.difference_update(
             {"plant_health", "product_stewardship", "label_boundary", "field_data_boundary"}
