@@ -42,6 +42,7 @@ from agronomy_agent.answerability import (
 from agronomy_agent.answer_verifier import context_evidence_text, verify_answer
 from agronomy_agent.canada_sources import apply_canadian_coverage_disclosure, build_canadian_coverage_boundary
 from agronomy_agent.capability_registry import CAPABILITY_REGISTRY_SCHEMA_VERSION, capability_catalog
+from agronomy_agent.capability_planner import build_planner_input, plan_capabilities
 from agronomy_agent.codex_app_server import (
     BENCHMARK_EGRESS_ARTIFACT_CONTRACT_SCHEMA,
     BENCHMARK_EGRESS_AUTHORIZED_PAYLOAD_CLASSES,
@@ -1527,14 +1528,15 @@ def build_context(
             span.cache_status = route_result.cache_status
         route = refine_query_route(question, route_result.value)
     contract_started = perf_counter()
+    # Planner v2 is now the production authority.  The compatibility argument
+    # remains accepted so older callers do not break, but no longer disables
+    # the typed decision contract.
     decision_contract: AgronomyDecisionContract | None = (
         build_decision_contract(
             question,
             route,
             field_context=query_signals.field_context,
         )
-        if use_decision_contract
-        else None
     )
     contract_elapsed_ms = (perf_counter() - contract_started) * 1000.0
     effective_route = (
@@ -1594,6 +1596,33 @@ def build_context(
             ),
         },
     }
+    planning_question_frame = question_frame_from_runtime(
+        question=question,
+        route=effective_route,
+        query_context=runtime_metadata["query_context"],
+        decision_contract=decision_contract.to_dict(),
+        field_context=query_signals.field_context,
+    )
+    tool_planner_input = build_planner_input(
+        question,
+        question_frame=planning_question_frame.to_dict(),
+        decision_contract=decision_contract.to_dict(),
+        capability_registry_sha256=capability_registry_sha256,
+        arm_id=(
+            "retrieval_document_and_graph"
+            if document_retrieval_enabled and graph_retrieval_enabled
+            else "retrieval_document_only"
+            if document_retrieval_enabled
+            else "retrieval_graph_only"
+            if graph_retrieval_enabled
+            else "retrieval_neither"
+        ),
+        phase="tool_planning",
+        field_context=query_signals.field_context,
+    )
+    capability_plan = plan_capabilities(tool_planner_input)
+    runtime_metadata["planner_input"] = tool_planner_input.to_dict()
+    runtime_metadata["capability_plan"] = capability_plan.to_dict()
     if query_signals.source_grounded:
         runtime_metadata.update(
             {
@@ -2358,7 +2387,13 @@ def build_context(
     )
     tool_span = profiler.span("agent.tools.run_guard_notes", input_size=len(question)) if profiler else nullcontext()
     with tool_span:
-        tool_notes = run_tools(question, effective_route.required_tools)
+        planned_guard_ids = tuple(
+            invocation.capability_id
+            for invocation in capability_plan.invocations
+            if capability_registry_snapshot
+            and invocation.operation == "guard_note"
+        )
+        tool_notes = run_tools(question, planned_guard_ids)
         tool_plan, tool_results = plan_and_execute_tools(
             question,
             field_context=query_signals.field_context,

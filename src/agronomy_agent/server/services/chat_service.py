@@ -39,6 +39,7 @@ from agronomy_agent.execution_core import (
     AgentExecutionRequest,
     AgentExecutionResult,
     build_execution_stage_receipts,
+    execution_fingerprints,
     classify_verification_origin,
     stable_sha256 as execution_stable_sha256,
 )
@@ -348,6 +349,7 @@ def _run_turn_impl(
     execution_class: str = "product_turn",
     document_retrieval_enabled: bool = True,
     graph_retrieval_enabled: bool = True,
+    arm_id: str = "production_full",
 ) -> dict[str, Any]:
     if not store.get_session(session_id):
         raise ValueError("session not found")
@@ -1000,6 +1002,44 @@ def _run_turn_impl(
             trace_store_payload["metadata"]["evidence_fabric"] = fabric_record
 
     trace_store_payload["metadata"]["execution_class"] = execution_class
+    trace_store_payload["metadata"]["execution_arm_id"] = arm_id
+    arm_record = {
+        "arm_id": arm_id,
+        "mode": mode,
+        "document_retrieval_enabled": document_retrieval_enabled,
+        "graph_retrieval_enabled": graph_retrieval_enabled,
+    }
+    harness_record = {
+        "capability_registry_sha256": (
+            ((context.runtime_metadata or {}).get("capability_registry") or {}).get(
+                "catalog_sha256"
+            )
+            if context is not None
+            else None
+        ),
+        "capability_plan_sha256": (
+            ((context.runtime_metadata or {}).get("capability_plan") or {}).get(
+                "plan_sha256"
+            )
+            if context is not None
+            else None
+        ),
+        "prompt_sha256": execution_stable_sha256(messages),
+        "prompt_version": settings.prompt_version,
+        "rag_config": rag_config,
+        "intervention_profile": model_config.get("intervention_profile"),
+        "verification_mode": verification_config.get("mode"),
+    }
+    model_record = {
+        "model_id": model_to_use if mode != "mock" else "mock",
+        "model_revision": model_config.get("model_revision"),
+        "backend": os.getenv("AGRONOMY_AGENT_MODEL_BACKEND", "mlx"),
+    }
+    trace_store_payload["metadata"]["execution_fingerprints"] = execution_fingerprints(
+        arm=arm_record,
+        harness=harness_record,
+        model=model_record,
+    )
     trace_store_payload["metadata"]["execution_stage_receipts"] = list(
         build_execution_stage_receipts(
             _production_stage_observations(
@@ -1116,6 +1156,7 @@ def execute_agent_request(request: AgentExecutionRequest) -> AgentExecutionResul
         execution_class=request.execution_class,
         document_retrieval_enabled=request.document_retrieval_enabled,
         graph_retrieval_enabled=request.graph_retrieval_enabled,
+        arm_id=request.arm_id,
     )
     return AgentExecutionResult.from_run_turn_payload(request, payload)
 
@@ -1262,6 +1303,11 @@ def _production_stage_observations(
         raise ValueError("governed execution has no retrieval/context receipt")
 
     tool_plan = metadata.get("tool_plan")
+    capability_plan = (
+        agno_runtime.get("capability_plan")
+        if isinstance(agno_runtime, dict)
+        else None
+    )
     typed_tool_results = (
         agno_runtime.get("tool_results")
         if isinstance(agno_runtime, dict)
@@ -1272,6 +1318,11 @@ def _production_stage_observations(
     if context_present and not isinstance(typed_tool_results, list):
         raise ValueError("governed execution context has no typed tool-result records")
     tool_plan_record = dict(tool_plan) if isinstance(tool_plan, dict) else {}
+    capability_plan_record = (
+        dict(capability_plan) if isinstance(capability_plan, dict) else {}
+    )
+    if context_present and not capability_plan_record:
+        raise ValueError("governed execution context has no capability-plan receipt")
     tool_result_records = (
         [dict(item) for item in typed_tool_results if isinstance(item, dict)]
         if isinstance(typed_tool_results, list)
@@ -1691,6 +1742,12 @@ def _production_stage_observations(
                 "reason": tool_planning_reason,
                 "plan_status": tool_plan_status,
                 "tool_plan_sha256": execution_stable_sha256(tool_plan_record),
+                "capability_plan_sha256": execution_stable_sha256(
+                    capability_plan_record
+                ),
+                "planning_context_id": capability_plan_record.get(
+                    "planning_context_id"
+                ),
                 "invocation_ids": tool_invocation_ids,
                 "invocation_ids_sha256": execution_stable_sha256(tool_invocation_ids),
             },

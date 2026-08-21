@@ -11,7 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Mapping
+from typing import TYPE_CHECKING, Any, Mapping, Protocol, Sequence
 
 if TYPE_CHECKING:
     from agronomy_agent.server.settings import ServerSettings
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 EXECUTION_REQUEST_SCHEMA_VERSION = "open_agronomy_agent.execution_request.v2"
 EXECUTION_RESULT_SCHEMA_VERSION = "open_agronomy_agent.execution_result.v1"
 EXECUTION_STAGE_RECEIPT_SCHEMA_VERSION = (
-    "open_agronomy_agent.execution_stage_receipt.v1"
+    "open_agronomy_agent.execution_stage_receipt.v2"
 )
 EXECUTION_STAGE_TOPOLOGY_VERSION = "open_agronomy_agent.production_stage_topology.v3"
 
@@ -29,6 +29,74 @@ SUPPORTED_EXECUTION_CLASSES = frozenset(
     {"product_turn", "observed_system_execution_nonclaim"}
 )
 SUPPORTED_MODES = frozenset({"baseline", "agronomic_rag", "mock"})
+
+
+class GenerationBackend(Protocol):
+    """Injectable generation seam shared by local and authorized remote runs."""
+
+    backend_id: str
+
+    def generate(self, messages: Sequence[Mapping[str, str]]) -> str: ...
+
+
+@dataclass(frozen=True)
+class ExecutionArmConfiguration:
+    arm_id: str = "production_full"
+    document_retrieval_enabled: bool = True
+    graph_retrieval_enabled: bool = True
+    field_context_enabled: bool = True
+    typed_tools_enabled: bool = True
+    risk_intervention_enabled: bool = True
+    verifier_enabled: bool = True
+    fallback_enabled: bool = True
+
+    def __post_init__(self) -> None:
+        if not self.arm_id.strip():
+            raise ValueError("execution arm_id is required")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "arm_id": self.arm_id,
+            "document_retrieval_enabled": self.document_retrieval_enabled,
+            "graph_retrieval_enabled": self.graph_retrieval_enabled,
+            "field_context_enabled": self.field_context_enabled,
+            "typed_tools_enabled": self.typed_tools_enabled,
+            "risk_intervention_enabled": self.risk_intervention_enabled,
+            "verifier_enabled": self.verifier_enabled,
+            "fallback_enabled": self.fallback_enabled,
+        }
+
+
+def execution_fingerprints(
+    *,
+    arm: Mapping[str, Any],
+    harness: Mapping[str, Any],
+    model: Mapping[str, Any],
+) -> dict[str, str]:
+    topology = {
+        "version": EXECUTION_STAGE_TOPOLOGY_VERSION,
+        "stage_ids": list(EXECUTION_STAGE_IDS),
+        "receipt_schema": EXECUTION_STAGE_RECEIPT_SCHEMA_VERSION,
+    }
+    topology_fingerprint = stable_sha256(topology)
+    harness_fingerprint = stable_sha256(
+        {"topology_fingerprint": topology_fingerprint, **dict(harness)}
+    )
+    arm_fingerprint = stable_sha256(dict(arm))
+    model_fingerprint = stable_sha256(dict(model))
+    return {
+        "topology_fingerprint": topology_fingerprint,
+        "harness_fingerprint": harness_fingerprint,
+        "arm_fingerprint": arm_fingerprint,
+        "model_fingerprint": model_fingerprint,
+        "system_fingerprint": stable_sha256(
+            {
+                "harness_fingerprint": harness_fingerprint,
+                "arm_fingerprint": arm_fingerprint,
+                "model_fingerprint": model_fingerprint,
+            }
+        ),
+    }
 STAGE_STATES = frozenset(
     {
         "executed",
@@ -115,6 +183,8 @@ EXECUTION_STAGE_REQUIRED_EVIDENCE_KEYS: dict[str, tuple[str, ...]] = {
         "reason",
         "plan_status",
         "tool_plan_sha256",
+        "capability_plan_sha256",
+        "planning_context_id",
         "invocation_ids_sha256",
     ),
     "tool_execution": (
@@ -468,6 +538,7 @@ class AgentExecutionRequest:
     execution_class: str = "product_turn"
     document_retrieval_enabled: bool = True
     graph_retrieval_enabled: bool = True
+    arm_id: str = "production_full"
     schema_version: str = EXECUTION_REQUEST_SCHEMA_VERSION
 
     def __post_init__(self) -> None:
@@ -491,6 +562,8 @@ class AgentExecutionRequest:
             raise TypeError("document_retrieval_enabled must be a bool")
         if not isinstance(self.graph_retrieval_enabled, bool):
             raise TypeError("graph_retrieval_enabled must be a bool")
+        if not self.arm_id.strip():
+            raise ValueError("arm_id is required")
         if self.mode != "agronomic_rag" and (
             not self.document_retrieval_enabled or not self.graph_retrieval_enabled
         ):
@@ -783,6 +856,8 @@ class AgentExecutionResult:
     stage_receipts: tuple[Mapping[str, Any], ...]
     persistence_receipt: Mapping[str, Any]
     turn: Mapping[str, Any]
+    fingerprints: Mapping[str, str]
+    arm_id: str
     schema_version: str = EXECUTION_RESULT_SCHEMA_VERSION
 
     @classmethod
@@ -810,6 +885,22 @@ class AgentExecutionResult:
             raise ValueError("persisted execution trace metadata is missing")
         if metadata.get("execution_class") != request.execution_class:
             raise ValueError("persisted execution class mismatch")
+        fingerprints = metadata.get("execution_fingerprints")
+        if not isinstance(fingerprints, Mapping) or set(fingerprints) != {
+            "topology_fingerprint",
+            "harness_fingerprint",
+            "arm_fingerprint",
+            "model_fingerprint",
+            "system_fingerprint",
+        }:
+            raise ValueError("persisted execution fingerprints are incomplete")
+        if any(
+            not isinstance(value, str) or len(value) != 64
+            for value in fingerprints.values()
+        ):
+            raise ValueError("persisted execution fingerprint is invalid")
+        if metadata.get("execution_arm_id") != request.arm_id:
+            raise ValueError("persisted execution arm identity mismatch")
         answer_stages = validate_answer_stages(
             metadata.get("answer_stages"),
             final_answer=answer,
@@ -866,6 +957,8 @@ class AgentExecutionResult:
             stage_receipts=stage_receipts,
             persistence_receipt=persistence_receipt,
             turn=dict(turn),
+            fingerprints={str(key): str(value) for key, value in fingerprints.items()},
+            arm_id=request.arm_id,
         )
 
     def to_run_turn_payload(self) -> dict[str, Any]:
@@ -875,6 +968,8 @@ class AgentExecutionResult:
             "turn_id": self.turn_id,
             "parent_turn_id": self.parent_turn_id,
             "turn": dict(self.turn),
+            "fingerprints": dict(self.fingerprints),
+            "arm_id": self.arm_id,
         }
 
     def to_record(self) -> dict[str, Any]:
@@ -894,6 +989,9 @@ class AgentExecutionResult:
 __all__ = [
     "AgentExecutionRequest",
     "AgentExecutionResult",
+    "ExecutionArmConfiguration",
+    "GenerationBackend",
+    "execution_fingerprints",
     "EXECUTION_REQUEST_SCHEMA_VERSION",
     "EXECUTION_RESULT_SCHEMA_VERSION",
     "EXECUTION_STAGE_IDS",

@@ -125,6 +125,7 @@ def test_registry_rejects_unreceipted_status_claims() -> None:
 
     assert {issue.code for issue in exc_info.value.issues} == {
         "missing_natural_language_test_evidence",
+        "missing_planner_selector",
         "missing_benchmark_evidence",
     }
 

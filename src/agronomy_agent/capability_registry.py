@@ -113,6 +113,14 @@ class PlannerMetadata:
     required_context: tuple[str, ...] = ()
     natural_language_enabled: bool = False
     natural_language_test_evidence: tuple[str, ...] = ()
+    selector_id: str | None = None
+    selector_ref: str | None = None
+    phases: tuple[str, ...] = ()
+    obligation_keys: tuple[str, ...] = ()
+    intent_ids: tuple[str, ...] = ()
+    arm_eligibility: tuple[str, ...] = ("governed",)
+    priority: int = 100
+    max_invocations: int = 1
 
     def as_record(self) -> dict[str, Any]:
         return {
@@ -120,6 +128,14 @@ class PlannerMetadata:
             "required_context": list(self.required_context),
             "natural_language_enabled": self.natural_language_enabled,
             "natural_language_test_evidence": list(self.natural_language_test_evidence),
+            "selector_id": self.selector_id,
+            "selector_ref": self.selector_ref,
+            "phases": list(self.phases),
+            "obligation_keys": list(self.obligation_keys),
+            "intent_ids": list(self.intent_ids),
+            "arm_eligibility": list(self.arm_eligibility),
+            "priority": self.priority,
+            "max_invocations": self.max_invocations,
         }
 
 
@@ -717,6 +733,24 @@ def _static_spec_issues(specs: Sequence[ToolSpec]) -> list[RegistryIssue]:
                     (spec.capability_id,),
                 )
             )
+        if spec.planner.natural_language_enabled and (
+            not spec.planner.selector_id or not spec.planner.selector_ref
+        ):
+            issues.append(
+                RegistryIssue(
+                    "missing_planner_selector",
+                    f"natural-language-enabled capability has no selector: {spec.capability_id}",
+                    (spec.capability_id,),
+                )
+            )
+        if spec.planner.max_invocations < 1:
+            issues.append(
+                RegistryIssue(
+                    "invalid_planner_invocation_limit",
+                    f"planner max_invocations must be positive: {spec.capability_id}",
+                    (spec.capability_id,),
+                )
+            )
         if spec.benchmark_exercised and not spec.benchmark_evidence:
             issues.append(
                 RegistryIssue(
@@ -1060,6 +1094,10 @@ def _guard_specs() -> list[ToolSpec]:
                         "tests/test_evals.py",
                         "tests/test_capability_registry.py",
                     ),
+                    selector_id="registered_guard_applicability_v1",
+                    selector_ref="agronomy_agent.capability_planner:plan_capabilities",
+                    phases=("tool_planning",),
+                    obligation_keys=tuple(contract.eval_tags),
                 ),
                 surfaces=SurfaceBindings(router=(capability_id,), agno=(capability_id,)),
                 verifier_adapter="guard_note_evidence",
@@ -1127,6 +1165,17 @@ def _core_spec(declaration: Mapping[str, Any]) -> ToolSpec:
                 if capability_id == "agronomic_calculator"
                 else ()
             ),
+            selector_id=(
+                "explicit_arithmetic_parser_v1"
+                if capability_id == "agronomic_calculator"
+                else None
+            ),
+            selector_ref=(
+                "agronomy_agent.capability_planner:plan_capabilities"
+                if capability_id == "agronomic_calculator"
+                else None
+            ),
+            phases=("tool_planning",) if capability_id == "agronomic_calculator" else (),
         ),
         surfaces=declaration["surfaces"],
         aliases=tuple(declaration.get("aliases") or ()),
