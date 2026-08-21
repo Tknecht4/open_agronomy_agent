@@ -1,8 +1,9 @@
-# Offline Canadian data setup
+# Offline data setup
 
 The offline package has two intentionally separate layers:
 
-1. The clone contains one cumulative, hash-bound Canadian RAG master. It needs no post-clone download.
+1. The clone contains the active hash-bound Canadian evidence and the full U.S.
+   NRCS analogue pack. Neither needs a post-clone download.
 2. The optional Prairie map layer is prepared in a user-managed state directory. It contains only the Alberta, Saskatchewan, and Manitoba Detailed Soil Survey (DSS) sources; large gridded products are not part of this setup.
 
 Neither layer turns mapped or regional context into a current field observation, soil test, diagnosis, crop-suitability finding, or management-rate authority.
@@ -14,18 +15,15 @@ install receipt, and passing profile validator.
 
 ## Verify the clone-contained knowledge store
 
-The current dated release is
-`data/derived/rag/curated_canada/releases/2026-08-14/`. It has one cumulative
-profile, `canada-offline-master`, and two policy-segregated shards. The master
-is a bounded document corpus, not a claim of even Canadian applied-guidance
-coverage or current field truth.
+The Canadian master component is an immutable, policy-segregated document
+release. It is a bounded corpus, not a claim of even Canadian applied-guidance
+coverage or current field truth. The active profile is always selected through
+`configs/rag.yaml`, not by pointing a service at a historical component path.
 
 From the repository root, verify the generated store before selecting it:
 
 ```bash
-PYTHONPATH=src .venv/bin/python scripts/validate_curated_knowledge_store.py \
-  --store-root data/derived/rag/curated_canada/releases/2026-08-14 \
-  --expect-profile canada-offline-master
+PYTHONPATH=src .venv/bin/python scripts/audit_runtime_corpus.py
 ```
 
 Select the stable product runtime for a native launch:
@@ -34,11 +32,14 @@ Select the stable product runtime for a native launch:
 export AGRONOMY_AGENT_RAG_CONFIG=configs/rag.yaml
 ```
 
-The stable runtime composes the cumulative Canadian master with the project
-seed/boundary corpora, SoilWise document and graph context, the project graph,
-and the sanitized NRCS compact v2 US-analogue corpus. Every corpus and graph is
-explicitly hash-bound. `configs/runtime_profiles.json` is the active/default
-registry; merely adding a config file cannot select it.
+The stable runtime composes Canadian evidence with project seed/boundary
+corpora, SoilWise document and graph context, the project graph, and the full
+source-exact U.S. NRCS analogue pack. The U.S. shards open only for an explicit
+U.S./NRCS MLRA or ecological-site request and remain context-only. They cannot
+establish Canadian labels, law, rates, thresholds, calibration, diagnosis, or
+field conditions. Every corpus and graph is explicitly hash-bound.
+`configs/runtime_profiles.json` is the active/default registry; merely adding
+a config file cannot select it.
 
 The generated profile-local
 `profiles/canada-offline-master/rag.yaml` is available for an explicit
@@ -88,10 +89,10 @@ Build a runtime manifest for the exact selected RAG profile, then validate the c
 ```bash
 PYTHONPATH=src .venv/bin/python scripts/build_edge_runtime_manifest.py \
   --rag-config configs/rag.yaml \
-  --output /absolute/path/to/open-agronomy-state/runtime-v2-manifest.json
+  --output /absolute/path/to/open-agronomy-state/runtime-manifest.json
 
 PYTHONPATH=src .venv/bin/python scripts/prepare_offline_runtime.py \
-  --runtime-manifest /absolute/path/to/open-agronomy-state/runtime-v2-manifest.json \
+  --runtime-manifest /absolute/path/to/open-agronomy-state/runtime-manifest.json \
   --model-config configs/model.yaml \
   --rag-config configs/rag.yaml \
   --spatial-pack-root "$AGRONOMY_AGENT_SPATIAL_PACK_ROOT" \
@@ -105,9 +106,9 @@ For a RAG-only clone, omit the three spatial arguments. The receipt then records
 
 The following remain uninstalled and cannot be used as hidden fallbacks: national 100 m soil grids, crop/DEM rasters, province/ecoregion boundary packs, SLC vector data, AESD/Census context tables, and university/extension material. The metadata-only [Canadian source-admission queue](canada-offline-source-admission.md) records inspected candidates, source identities, regional uses, and rights gates. It authorizes no download, RAG admission, redistribution, runtime lookup, or fine-tuning.
 
-To add a future document source, update/version its source record and reviewed
-companion, produce a source-aware input shard, and build a new immutable dated
-master release. Advance runtime v2 and the active registry only after corpus,
+To add a future document source, update its source record and reviewed
+companion, produce a source-aware input shard, and build a new immutable corpus
+component. Advance `configs/rag.yaml` and the active registry only after corpus,
 rights, hash, and retrieval tests pass. Do not create competing core/extended
 masters or edit a released shard, receipt, or pinned source byte in place.
 

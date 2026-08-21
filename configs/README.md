@@ -12,7 +12,7 @@
 | Governed runtime retrieval | `rag.yaml` | Active source-exact Canadian evidence plus explicit, bounded U.S. NRCS analogue access |
 | Product-selection registry | `runtime_profiles.json` | Sole active/default model and RAG admission surface; file presence is not activation |
 | RC3 development checkpoint | `final_benchmark_round_rc3.json` | Completed and frozen exposed-and-tuned, three-trial `development_rerun_nonclaim` under runtime v2; not claim-eligible and not a Benchmark v3 result |
-| Successor corpus development | `open_agronomy_successor_development.json` | Frozen exposed 256-case four-arm regression using active `rag.yaml`; adds U.S. analogue retrieval and authority-boundary cases, not a sealed or claim-eligible evaluation |
+| Successor corpus development | `open_agronomy_successor_development.json` | Exposed 256-case four-arm regression using active `rag.yaml`; covers U.S. analogue retrieval, Ontario-table handling, and authority boundaries. Any answer-affecting change requires a new run identity; it is not sealed or claim-eligible evaluation. |
 | Benchmark lifecycle registry | `benchmark_round_lifecycle_v1.json` | Append-only completion status and checkpoint receipts; keeps frozen launch-plan bytes unchanged |
 | RC1 orchestration | `final_benchmark_round_rc1.json` | Frozen historical benchmark contract, not current-code validation |
 | RC2 development rerun | `final_benchmark_round_rc2.json` | Frozen historical planning/evidence identity; not the current default |

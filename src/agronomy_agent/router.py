@@ -39,6 +39,11 @@ _CANADIAN_REGIONAL_CONTEXT_PRODUCT_PATTERN = (
     r"\b(?:map|layer)\b.{0,40}\b(?:soil )?(?:erosion|erision|eroshun)(?: risk)?\b)"
 )
 
+_ONTARIO_FIELD_CROP_PRODUCTION_PATTERN = (
+    r"\bontario\s+(?:field[- ]crop|field crop)\s+(?:production|estimate)"
+    r"(?:\s+(?:workbook|table|series))?\b"
+)
+
 _AAFC_CROP_HEALTH_EXPANSIONS = {
     "AAFC crop health indices",
     "crop stress index",
@@ -1253,11 +1258,13 @@ def classify_query(question: str) -> QueryRoute:
     named_annual_crop_inventory = has(_AAFC_ANNUAL_CROP_INVENTORY_PATTERN, q)
     named_historical_crop_yield_slc = has(_AAFC_HISTORICAL_CROP_YIELD_SLC_PATTERN, q)
     named_canadian_context_product = has(_CANADIAN_REGIONAL_CONTEXT_PRODUCT_PATTERN, q)
+    named_ontario_field_crop_table = has(_ONTARIO_FIELD_CROP_PRODUCTION_PATTERN, q)
     named_regional_product = (
         named_crop_health_product
         or named_annual_crop_inventory
         or named_historical_crop_yield_slc
         or named_canadian_context_product
+        or named_ontario_field_crop_table
     )
     if has(
         r"\b(mlra|major land resource|ecoregion|ecological site|regional (soil|climate|environment)|soil landscape|"
@@ -1277,6 +1284,15 @@ def classify_query(question: str) -> QueryRoute:
             expansions.update({"regional map context", "dataset scope", "not current field measurement", "field verification"})
             if has(r"\b(?:soileri|erosion|erision|eroshun)\b", q):
                 expansions.update({"SoilERI", "wind water tillage erosion", "Soil Landscapes of Canada", "2021 modelled risk", "field-use limitations"})
+        elif named_ontario_field_crop_table:
+            expansions.update(
+                {
+                    "Ontario field crop production estimate",
+                    "Ontario field crop production workbook",
+                    "field crop reporting series",
+                    "table units and historical scope",
+                }
+            )
         regional_context_request = (named_regional_product or has(
             r"\b(regional .*context|soil and climate context|mlra|major land resource|ecoregion|ecological site|"
             r"agroclimate|nasdi|standardized precipitation index|standardized precipitation evapotranspiration index|spi|spei)\b",
@@ -2970,11 +2986,13 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
     named_annual_crop_inventory = has(_AAFC_ANNUAL_CROP_INVENTORY_PATTERN, q)
     named_historical_crop_yield_slc = has(_AAFC_HISTORICAL_CROP_YIELD_SLC_PATTERN, q)
     named_canadian_context_product = has(_CANADIAN_REGIONAL_CONTEXT_PRODUCT_PATTERN, q)
+    named_ontario_field_crop_table = has(_ONTARIO_FIELD_CROP_PRODUCTION_PATTERN, q)
     named_regional_product = (
         named_crop_health_product
         or named_annual_crop_inventory
         or named_historical_crop_yield_slc
         or named_canadian_context_product
+        or named_ontario_field_crop_table
     )
     if has(
         r"\b(mlra|major land resource|ecoregion|ecodistrict|ecological site|soil survey|soil map|map unit|"
@@ -3008,6 +3026,15 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
             expansions.update({"regional map context", "dataset scope", "not current field measurement", "field verification"})
             if has(r"\b(?:soileri|erosion|erision|eroshun)\b", q):
                 expansions.update({"SoilERI", "wind water tillage erosion", "Soil Landscapes of Canada", "2021 modelled risk", "field-use limitations"})
+        elif named_ontario_field_crop_table:
+            expansions.update(
+                {
+                    "Ontario field crop production estimate",
+                    "Ontario field crop production workbook",
+                    "field crop reporting series",
+                    "table units and historical scope",
+                }
+            )
             guidance = (
                 f"{guidance} Treat the named Canadian regional data product as bounded context, not as current field "
                 "measurement, current weather, or a management prescription."

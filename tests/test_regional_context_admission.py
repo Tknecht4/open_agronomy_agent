@@ -241,3 +241,80 @@ def test_real_slc_context_persists_explicit_regional_signal_for_admission() -> N
     assert context.evidence_handshake.has_strong_primary is False
     assert any(doc.retrieval_policy == "context_only" for doc in context.retrieved_docs)
     assert _allows_context_only_regional_interpretation(context, question=SLC_QUESTION) is True
+
+
+def test_explicit_us_mlra_request_admits_only_governed_analogue_context() -> None:
+    question = (
+        "For a United States USDA NRCS ecological-site comparison, retrieve analogue "
+        "context for MLRA 001X."
+    )
+    context = build_context(
+        question,
+        rag_config="configs/rag.yaml",
+        field_context={
+            "country": "United States",
+            "province_state": "United States",
+            "region_text": "MLRA 001X",
+        },
+        use_context_cache=False,
+        use_search_cache=False,
+    )
+
+    assert context.runtime_metadata["query_context"]["regional_context_requested"] is True
+    assert _allows_context_only_regional_interpretation(context, question=question) is True
+    assert context.retrieved_docs
+    assert {
+        doc.source_id for doc in context.retrieved_docs
+    } >= {"nrcs_edit_ecological_site_description_json"}
+    assert all(
+        doc.retrieval_policy == "context_only"
+        for doc in context.retrieved_docs
+        if doc.source_id == "nrcs_edit_ecological_site_description_json"
+    )
+
+
+def test_named_ontario_table_reaches_bounded_context_interpretation() -> None:
+    question = (
+        "Retrieve the Ontario field crop production workbook table context for a "
+        "Canadian crop statistics question."
+    )
+    context = build_context(
+        question,
+        rag_config="configs/rag.yaml",
+        field_context={
+            "country": "Canada",
+            "province_state": "Ontario",
+            "region_text": "Ontario",
+        },
+        use_context_cache=False,
+        use_search_cache=False,
+    )
+
+    assert context.route.question_type == "regional_context"
+    assert _allows_context_only_regional_interpretation(context, question=question) is True
+    assert context.retrieved_docs[0].source_id == "on_field_crop_production_current"
+    assert context.retrieved_docs[0].source_type == "structured_table"
+
+
+def test_canadian_decisive_request_cannot_use_us_analogue_context() -> None:
+    question = (
+        "Set the exact legal fertilizer rate for a Saskatchewan canola field using a "
+        "U.S. ecological-site description."
+    )
+    context = build_context(
+        question,
+        rag_config="configs/rag.yaml",
+        field_context={
+            "country": "Canada",
+            "province_state": "Saskatchewan",
+            "region_text": "Saskatchewan",
+        },
+        use_context_cache=False,
+        use_search_cache=False,
+    )
+
+    assert _allows_context_only_regional_interpretation(context, question=question) is False
+    assert all(
+        doc.source_id != "nrcs_edit_ecological_site_description_json"
+        for doc in context.retrieved_docs
+    )

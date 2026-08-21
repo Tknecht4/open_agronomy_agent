@@ -1384,6 +1384,13 @@ def _requested_named_regional_product_source_id(question: str) -> str | None:
     if re.search(r"\b(?:GeoNB|New Brunswick) Agricultural Soil Classes\b", question, re.IGNORECASE):
         return "nb_geonb_agricultural_soil_classes"
     if re.search(
+        r"\bontario\s+(?:field[- ]crop|field crop)\s+(?:production|estimate)"
+        r"(?:\s+(?:workbook|table|series))?\b",
+        question,
+        re.IGNORECASE,
+    ):
+        return "on_field_crop_production_current"
+    if re.search(
         r"\bNewfoundland and Labrador Weather Station Climate Monitoring Data\b",
         question,
         re.IGNORECASE,
@@ -3787,9 +3794,15 @@ def _allows_context_only_regional_interpretation(
     *,
     question: str,
 ) -> bool:
-    """Admit reviewed regional context for interpretation, never as action authority."""
+    """Admit reviewed regional context for interpretation, never as action authority.
 
-    if context is None or context.route.question_type != "regional_context":
+    A U.S. NRCS ecological-site record may also be interpreted when the user
+    explicitly asks about a U.S. MLRA.  Those records are still
+    ``context_only``: this narrow exception does not admit cross-border
+    evidence for Canadian field decisions or any consequential request.
+    """
+
+    if context is None:
         return False
     if classify_high_consequence_domains(question):
         return False
@@ -3798,9 +3811,33 @@ def _allows_context_only_regional_interpretation(
         return False
     if query_context.get("regional_context_requested") is not True:
         return False
-    return any(
+    has_context_only_document = any(
         str(doc.retrieval_policy or "standard").strip().lower() == "context_only"
         for doc in context.retrieved_docs
+    )
+    if not has_context_only_document:
+        return False
+    if context.route.question_type == "regional_context":
+        return True
+
+    # A direct U.S. MLRA/ecological-site comparison is informational regional
+    # context even when the broader router also attaches a field-data guard.
+    # Require the exact governed transfer role; a generic U.S. document cannot
+    # enter through this path.
+    countries = {
+        str(value).strip().lower()
+        for value in (query_context.get("jurisdictions") or ())
+        if str(value).strip()
+    }
+    return (
+        countries == {"united states"}
+        and any(
+            str(doc.source_type or "").strip().lower() == "regional_environment_profile"
+            and str(doc.retrieval_policy or "").strip().lower() == "context_only"
+            and str(doc.transfer_scope or "").strip().lower()
+            == "us_analogue_context_only"
+            for doc in context.retrieved_docs
+        )
     )
 
 

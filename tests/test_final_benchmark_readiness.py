@@ -253,7 +253,10 @@ def test_completed_rc3_contract_stays_frozen_when_current_public_release_advance
     static = build_benchmark_static_prompt_contract()
 
     assert len(suite_case["cases"]) == plan["internal_benchmark"]["rows"]
-    assert plan["egress"]["suite_case_contract_sha256"] == suite_case["sha256"]
+    # RC3 is completed and frozen.  Current routing/prompt behavior can
+    # legitimately advance, but it must never make the historical launch
+    # contract appear rerunnable under new source bytes.
+    assert plan["egress"]["suite_case_contract_sha256"] != suite_case["sha256"]
     frozen_artifact_sha256 = "df0e6b5d77a8ade022b075541046fefc07059ac0b14e36f1593130354a0c75ba"
     assert plan["egress"]["egress_artifact_contract_sha256"] == frozen_artifact_sha256
     assert artifact["sha256"] != frozen_artifact_sha256
@@ -284,7 +287,9 @@ def test_completed_rc3_contract_stays_frozen_when_current_public_release_advance
     assert template["model_config_sha256"] == plan["egress"][
         "recipient_model_config_sha256"
     ]
-    assert template["suite_case_contract_sha256"] == suite_case["sha256"]
+    assert template["suite_case_contract_sha256"] == plan["egress"][
+        "suite_case_contract_sha256"
+    ]
     assert template["egress_artifact_contract_sha256"] == frozen_artifact_sha256
     assert template["static_prompt_contract_sha256"] == static["sha256"]
 

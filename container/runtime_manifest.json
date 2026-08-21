@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-08-14T00:00:00+00:00",
+  "generated_at": "2026-08-21T04:25:12+00:00",
   "status": "pass",
-  "contract_sha256": "d70ddbcc72053febaff981073855377bffe1ab9b6ca04fe9e5bff565a2321947",
+  "contract_sha256": "a5809c5b688f5e4fed2ef0f4250e2884dd6eb8cd1ffd7c9c4b97b92226374097",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -408,8 +408,8 @@
     {
       "path": "src/agronomy_agent",
       "file_count": 153,
-      "bytes": 5445748,
-      "sha256": "c0d84509e00c8a0b6d317b9614702d229e233bf8cf5fc543b415f72a00a3627c"
+      "bytes": 5454178,
+      "sha256": "32e80c5d3a91e5c977ac48c7bc98fba285105704f8cd8da5d02e18a7eb47f012"
     },
     {
       "path": "frontend/src",
@@ -425,15 +425,15 @@
     },
     {
       "path": "scripts",
-      "file_count": 111,
-      "bytes": 1614528,
-      "sha256": "7a23196a869f9ddef23e33798630ac121228475ae5a37235654f9e2270b63d29"
+      "file_count": 112,
+      "bytes": 1618861,
+      "sha256": "0f3c54b44c0209a27837664373bce88f9711c23f8559b5fcac8ad84940e812f5"
     },
     {
       "path": "configs",
-      "file_count": 77,
-      "bytes": 215596,
-      "sha256": "652416df7d78810368ecc718f0c911a0bce9c24bbcef2e0e1896d659f7711f86"
+      "file_count": 79,
+      "bytes": 226367,
+      "sha256": "4ac138f5d3104746d89ccf95d253cb4db707d8357b636e28a41f6b3e3df46736"
     },
     {
       "path": "data/manifests",
@@ -443,9 +443,9 @@
     },
     {
       "path": "data/eval",
-      "file_count": 34,
-      "bytes": 2452052,
-      "sha256": "c8edd3b454f68545bef0011e749772637b1aa9823e520986aab36519864bef87"
+      "file_count": 37,
+      "bytes": 3009846,
+      "sha256": "6bd92835dd8756fbd48b8833b22006d4d01fdea304280eb9a7a1854f8dcbf8ad"
     },
     {
       "path": "data/snapshots",
@@ -456,8 +456,8 @@
     {
       "path": "docs/public",
       "file_count": 84,
-      "bytes": 8751345,
-      "sha256": "b6c80d29dbe97188324d9f76d3f1fb237c2ee199c1c11d39ba0b9b7624007ff4"
+      "bytes": 8734979,
+      "sha256": "65bf981dae7b56a486d7c63f8b109017556c157751e151b972412d027fec0294"
     }
   ],
   "geo_cache_seed": {
