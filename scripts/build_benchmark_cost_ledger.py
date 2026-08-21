@@ -45,6 +45,9 @@ CREATE TABLE IF NOT EXISTS usage_entry (
     artifact_path TEXT NOT NULL,
     model_key TEXT,
     mode TEXT,
+    trial_id TEXT,
+    run_execution_id TEXT,
+    observation_id TEXT,
     eval_id TEXT,
     judge_role TEXT,
     requested_model TEXT NOT NULL,
@@ -72,6 +75,7 @@ CREATE TABLE IF NOT EXISTS usage_entry (
 );
 
 CREATE INDEX IF NOT EXISTS idx_usage_model_mode ON usage_entry(model_key, mode, usage_role);
+CREATE INDEX IF NOT EXISTS idx_usage_trial ON usage_entry(model_key, trial_id, mode, usage_role);
 CREATE INDEX IF NOT EXISTS idx_usage_judge_role ON usage_entry(judge_role, usage_role);
 """
 
@@ -111,6 +115,18 @@ def _read_jsonl(path: Path) -> Iterable[dict[str, Any]]:
             if not isinstance(payload, dict):
                 raise ValueError(f"{path}:{line_number}: expected JSON object")
             yield payload
+
+
+def _source_run_identity(path: Path, experiment_dir: Path) -> dict[str, Any]:
+    for parent in path.parents:
+        if parent == experiment_dir.parent:
+            break
+        manifest_path = parent / "run_manifest.json"
+        if manifest_path.is_file():
+            return _load_object(manifest_path)
+        if parent == experiment_dir:
+            break
+    return {}
 
 
 def _usage(receipt: dict[str, Any]) -> dict[str, int]:
@@ -162,6 +178,9 @@ def _candidate_entries(experiment_dir: Path) -> Iterable[dict[str, Any]]:
                     "artifact_path": _display_path(outputs_path),
                     "model_key": model_key,
                     "mode": mode,
+                    "trial_id": row.get("trial_id"),
+                    "run_execution_id": row.get("run_execution_id"),
+                    "observation_id": row.get("observation_id"),
                     "eval_id": str(row.get("eval_id") or "") or None,
                     "judge_role": None,
                     "receipt": receipt,
@@ -174,6 +193,9 @@ def _candidate_entries(experiment_dir: Path) -> Iterable[dict[str, Any]]:
                     "artifact_path": _display_path(outputs_path),
                     "model_key": model_key,
                     "mode": mode,
+                    "trial_id": row.get("trial_id"),
+                    "run_execution_id": row.get("run_execution_id"),
+                    "observation_id": row.get("observation_id"),
                     "eval_id": str(row.get("eval_id") or "") or None,
                     "judge_role": "answer_verifier",
                     "receipt": verification_receipt,
@@ -189,12 +211,17 @@ def _judge_entries(experiment_dir: Path) -> Iterable[dict[str, Any]]:
         attempt_class = parts[5]
         summary_path = receipt_path.parents[1] / "summary.json"
         summary = _load_object(summary_path) if summary_path.is_file() else {}
+        run_identity = _source_run_identity(receipt_path, experiment_dir)
+        replication = run_identity.get("replication_contract") or {}
         judge_role = str(summary.get("judge_role") or judge_dir.removeprefix("semantic_judge_"))
         yield {
             "usage_role": "judge",
             "artifact_path": _display_path(receipt_path),
             "model_key": model_key,
             "mode": mode,
+            "trial_id": replication.get("trial_id"),
+            "run_execution_id": run_identity.get("run_execution_id"),
+            "observation_id": None,
             "eval_id": None,
             "judge_role": f"{judge_role}::failed_attempt" if attempt_class == "failed_attempts" else judge_role,
             "receipt": _load_object(receipt_path),
@@ -212,6 +239,12 @@ def build_ledger(
     pricing = _load_object(pricing_index_path)
     database_path.parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(database_path)
+    existing_usage_columns = {
+        str(row[1]) for row in connection.execute("PRAGMA table_info(usage_entry)")
+    }
+    for column in ("trial_id", "run_execution_id", "observation_id"):
+        if existing_usage_columns and column not in existing_usage_columns:
+            connection.execute(f"ALTER TABLE usage_entry ADD COLUMN {column} TEXT")
     connection.executescript(DDL)
     rates = pricing["rates"]
     connection.execute(
@@ -251,19 +284,36 @@ def build_ledger(
             )
         usage = _usage(receipt)
         costs = _costs(usage, pricing)
-        call_id = str(receipt.get("turn_id") or _sha256_bytes(_canonical(receipt).encode("utf-8")))
+        source_call_id = str(
+            receipt.get("turn_id") or _sha256_bytes(_canonical(receipt).encode("utf-8"))
+        )
+        # A cached/replayed provider receipt can legitimately appear in more
+        # than one trial artifact.  Keep each use distinct without losing the
+        # provider's original turn_id in its dedicated column.
+        call_id = _sha256_bytes(
+            _canonical(
+                {
+                    "source_call_id": source_call_id,
+                    "artifact_path": entry["artifact_path"],
+                    "usage_role": entry["usage_role"],
+                    "observation_id": entry.get("observation_id"),
+                    "judge_role": entry.get("judge_role"),
+                }
+            ).encode("utf-8")
+        )
         connection.execute(
             """
             INSERT OR REPLACE INTO usage_entry(
                 call_id, pricing_index_id, usage_role, artifact_path, model_key, mode,
-                eval_id, judge_role, requested_model, selected_model,
+                trial_id, run_execution_id, observation_id, eval_id, judge_role,
+                requested_model, selected_model,
                 requested_reasoning_effort, thread_id, turn_id, input_tokens,
                 uncached_input_tokens, cached_input_tokens, cache_write_input_tokens,
                 output_tokens, reasoning_output_tokens, total_tokens,
                 uncached_input_cost_usd, cached_input_cost_usd,
                 cache_write_input_cost_usd, output_cost_usd, api_equivalent_cost_usd,
                 actual_billed_cost_usd, elapsed_ms, reroute_count, receipt_sha256, receipt_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 call_id,
@@ -272,6 +322,9 @@ def build_ledger(
                 entry["artifact_path"],
                 entry["model_key"],
                 entry["mode"],
+                entry.get("trial_id"),
+                entry.get("run_execution_id"),
+                entry.get("observation_id"),
                 entry["eval_id"],
                 entry["judge_role"],
                 requested_model,
@@ -319,21 +372,21 @@ def build_ledger(
     grouped: dict[str, Any] = defaultdict(dict)
     for row in connection.execute(
         """
-        SELECT model_key, mode, usage_role, judge_role, COUNT(*) AS calls,
+        SELECT model_key, trial_id, mode, usage_role, judge_role, COUNT(*) AS calls,
                SUM(input_tokens) AS input_tokens, SUM(output_tokens) AS output_tokens,
                SUM(total_tokens) AS total_tokens,
                SUM(api_equivalent_cost_usd) AS api_equivalent_cost_usd
         FROM usage_entry
-        GROUP BY model_key, mode, usage_role, judge_role
-        ORDER BY model_key, mode, usage_role, judge_role
+        GROUP BY model_key, trial_id, mode, usage_role, judge_role
+        ORDER BY model_key, trial_id, mode, usage_role, judge_role
         """
     ):
-        key = "::".join(str(value or "none") for value in row[:4])
+        key = "::".join(str(value or "none") for value in row[:5])
         grouped[key] = dict(row)
     integrity = connection.execute("PRAGMA integrity_check").fetchone()[0]
     connection.close()
     manifest = {
-        "schema_version": "open_agronomy_agent.benchmark_cost_ledger.v1",
+        "schema_version": "open_agronomy_agent.benchmark_cost_ledger.v2",
         "generated_at": dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat(),
         "experiment_dir": str(experiment_dir),
         "pricing_index": pricing,

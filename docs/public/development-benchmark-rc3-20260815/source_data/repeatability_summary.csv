@@ -1,0 +1,13 @@
+model_key,model_label,system_variant,arm_label,cases,one_unique_output,two_unique_outputs,three_unique_outputs,exact_three_trial_repeatability,interpretation
+gemma3_270m_rc3,Gemma 3 270M,raw_model,Raw,241,241,0,0,1.0,Fresh-process/order repeatability under local temperature-zero argmax; not independent seeds or correctness.
+gemma3_270m_rc3,Gemma 3 270M,kernel_only,Kernel,241,241,0,0,1.0,Fresh-process/order repeatability under local temperature-zero argmax; not independent seeds or correctness.
+gemma3_270m_rc3,Gemma 3 270M,kernel_field_context,Kernel + field,241,241,0,0,1.0,Fresh-process/order repeatability under local temperature-zero argmax; not independent seeds or correctness.
+gemma3_270m_rc3,Gemma 3 270M,full_system,Full system,241,241,0,0,1.0,Fresh-process/order repeatability under local temperature-zero argmax; not independent seeds or correctness.
+gemma4_e2b_rc3,Gemma 4 E2B,raw_model,Raw,241,241,0,0,1.0,Fresh-process/order repeatability under local temperature-zero argmax; not independent seeds or correctness.
+gemma4_e2b_rc3,Gemma 4 E2B,kernel_only,Kernel,241,241,0,0,1.0,Fresh-process/order repeatability under local temperature-zero argmax; not independent seeds or correctness.
+gemma4_e2b_rc3,Gemma 4 E2B,kernel_field_context,Kernel + field,241,241,0,0,1.0,Fresh-process/order repeatability under local temperature-zero argmax; not independent seeds or correctness.
+gemma4_e2b_rc3,Gemma 4 E2B,full_system,Full system,241,241,0,0,1.0,Fresh-process/order repeatability under local temperature-zero argmax; not independent seeds or correctness.
+luna_high_rc3,Luna High,raw_model,Raw,241,7,5,229,0.029046,Exact-text repeatability across unseeded remote repeated calls; not correctness.
+luna_high_rc3,Luna High,kernel_only,Kernel,241,7,8,226,0.029046,Exact-text repeatability across unseeded remote repeated calls; not correctness.
+luna_high_rc3,Luna High,kernel_field_context,Kernel + field,241,6,6,229,0.024896,Exact-text repeatability across unseeded remote repeated calls; not correctness.
+luna_high_rc3,Luna High,full_system,Full system,241,123,14,104,0.510373,Exact-text repeatability across unseeded remote repeated calls; not correctness.

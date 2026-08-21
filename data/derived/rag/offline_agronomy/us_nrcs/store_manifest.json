@@ -1,0 +1,1199 @@
+{
+  "schema_version": "open_agronomy_agent.offline_corpus_release.v1",
+  "release_id": "us-nrcs-full-reference",
+  "source_inventory_path": "data/manifests/historical_archive_lexar_20260819.json",
+  "raw_inventory_path": "data/manifests/nrcs_full_raw_source_inventory_20260819.json",
+  "source_full_corpus_sha256": "73f0cbbe4404b05e3e1f446dfa0cf3c0a4279821c5515a336df8d02b951d6708",
+  "raw_inventory_sha256": "d8590a32167473dcc468aba9e3d2f6f5af2d534d7a611f0bf9dc1ade93143ed4",
+  "jurisdiction_policy": "US analogue context only for Canadian questions",
+  "rights_status": "US_government_public_source",
+  "rows": 218258,
+  "sources": {
+    "nrcs_edit_ecological_site_description_json": 218258
+  },
+  "mlra_shards": {
+    "001X": [
+      "shards/nrcs-0001.jsonl"
+    ],
+    "002X": [
+      "shards/nrcs-0001.jsonl"
+    ],
+    "003X": [
+      "shards/nrcs-0001.jsonl"
+    ],
+    "004A": [
+      "shards/nrcs-0001.jsonl"
+    ],
+    "004B": [
+      "shards/nrcs-0001.jsonl"
+    ],
+    "005X": [
+      "shards/nrcs-0001.jsonl"
+    ],
+    "006X": [
+      "shards/nrcs-0001.jsonl",
+      "shards/nrcs-0002.jsonl"
+    ],
+    "007X": [
+      "shards/nrcs-0002.jsonl"
+    ],
+    "008X": [
+      "shards/nrcs-0002.jsonl"
+    ],
+    "009X": [
+      "shards/nrcs-0002.jsonl"
+    ],
+    "010X": [
+      "shards/nrcs-0002.jsonl",
+      "shards/nrcs-0003.jsonl",
+      "shards/nrcs-0004.jsonl"
+    ],
+    "011X": [
+      "shards/nrcs-0004.jsonl"
+    ],
+    "012X": [
+      "shards/nrcs-0004.jsonl"
+    ],
+    "013X": [
+      "shards/nrcs-0004.jsonl",
+      "shards/nrcs-0005.jsonl"
+    ],
+    "014X": [
+      "shards/nrcs-0005.jsonl"
+    ],
+    "015X": [
+      "shards/nrcs-0005.jsonl"
+    ],
+    "016X": [
+      "shards/nrcs-0005.jsonl"
+    ],
+    "017X": [
+      "shards/nrcs-0005.jsonl"
+    ],
+    "018X": [
+      "shards/nrcs-0005.jsonl"
+    ],
+    "019X": [
+      "shards/nrcs-0005.jsonl"
+    ],
+    "021X": [
+      "shards/nrcs-0005.jsonl"
+    ],
+    "022A": [
+      "shards/nrcs-0005.jsonl",
+      "shards/nrcs-0006.jsonl"
+    ],
+    "022B": [
+      "shards/nrcs-0006.jsonl"
+    ],
+    "023X": [
+      "shards/nrcs-0006.jsonl",
+      "shards/nrcs-0007.jsonl"
+    ],
+    "024X": [
+      "shards/nrcs-0007.jsonl"
+    ],
+    "025X": [
+      "shards/nrcs-0007.jsonl",
+      "shards/nrcs-0008.jsonl"
+    ],
+    "026X": [
+      "shards/nrcs-0008.jsonl",
+      "shards/nrcs-0009.jsonl"
+    ],
+    "027X": [
+      "shards/nrcs-0009.jsonl"
+    ],
+    "028A": [
+      "shards/nrcs-0009.jsonl",
+      "shards/nrcs-0010.jsonl",
+      "shards/nrcs-0011.jsonl"
+    ],
+    "028B": [
+      "shards/nrcs-0011.jsonl"
+    ],
+    "029X": [
+      "shards/nrcs-0011.jsonl",
+      "shards/nrcs-0012.jsonl"
+    ],
+    "030X": [
+      "shards/nrcs-0012.jsonl",
+      "shards/nrcs-0013.jsonl",
+      "shards/nrcs-0014.jsonl"
+    ],
+    "032X": [
+      "shards/nrcs-0014.jsonl"
+    ],
+    "034A": [
+      "shards/nrcs-0014.jsonl",
+      "shards/nrcs-0015.jsonl"
+    ],
+    "034B": [
+      "shards/nrcs-0015.jsonl",
+      "shards/nrcs-0016.jsonl"
+    ],
+    "035X": [
+      "shards/nrcs-0016.jsonl",
+      "shards/nrcs-0017.jsonl"
+    ],
+    "036X": [
+      "shards/nrcs-0017.jsonl"
+    ],
+    "038X": [
+      "shards/nrcs-0017.jsonl"
+    ],
+    "039X": [
+      "shards/nrcs-0017.jsonl",
+      "shards/nrcs-0018.jsonl"
+    ],
+    "040X": [
+      "shards/nrcs-0018.jsonl"
+    ],
+    "041X": [
+      "shards/nrcs-0018.jsonl"
+    ],
+    "042A": [
+      "shards/nrcs-0018.jsonl"
+    ],
+    "042B": [
+      "shards/nrcs-0018.jsonl"
+    ],
+    "042C": [
+      "shards/nrcs-0018.jsonl",
+      "shards/nrcs-0019.jsonl"
+    ],
+    "043A": [
+      "shards/nrcs-0019.jsonl"
+    ],
+    "043B": [
+      "shards/nrcs-0019.jsonl",
+      "shards/nrcs-0020.jsonl",
+      "shards/nrcs-0021.jsonl"
+    ],
+    "043C": [
+      "shards/nrcs-0021.jsonl"
+    ],
+    "044A": [
+      "shards/nrcs-0021.jsonl"
+    ],
+    "044B": [
+      "shards/nrcs-0021.jsonl",
+      "shards/nrcs-0022.jsonl"
+    ],
+    "046X": [
+      "shards/nrcs-0022.jsonl"
+    ],
+    "047X": [
+      "shards/nrcs-0022.jsonl",
+      "shards/nrcs-0023.jsonl"
+    ],
+    "048A": [
+      "shards/nrcs-0023.jsonl",
+      "shards/nrcs-0024.jsonl"
+    ],
+    "048B": [
+      "shards/nrcs-0024.jsonl"
+    ],
+    "049X": [
+      "shards/nrcs-0024.jsonl"
+    ],
+    "051X": [
+      "shards/nrcs-0024.jsonl"
+    ],
+    "052X": [
+      "shards/nrcs-0024.jsonl",
+      "shards/nrcs-0025.jsonl"
+    ],
+    "053A": [
+      "shards/nrcs-0025.jsonl"
+    ],
+    "053B": [
+      "shards/nrcs-0025.jsonl",
+      "shards/nrcs-0026.jsonl"
+    ],
+    "053C": [
+      "shards/nrcs-0026.jsonl"
+    ],
+    "054X": [
+      "shards/nrcs-0026.jsonl"
+    ],
+    "055A": [
+      "shards/nrcs-0026.jsonl"
+    ],
+    "055B": [
+      "shards/nrcs-0026.jsonl",
+      "shards/nrcs-0027.jsonl"
+    ],
+    "055C": [
+      "shards/nrcs-0027.jsonl"
+    ],
+    "055D": [
+      "shards/nrcs-0027.jsonl"
+    ],
+    "056A": [
+      "shards/nrcs-0027.jsonl"
+    ],
+    "056B": [
+      "shards/nrcs-0027.jsonl"
+    ],
+    "057X": [
+      "shards/nrcs-0027.jsonl"
+    ],
+    "058A": [
+      "shards/nrcs-0027.jsonl",
+      "shards/nrcs-0028.jsonl"
+    ],
+    "058B": [
+      "shards/nrcs-0028.jsonl"
+    ],
+    "058C": [
+      "shards/nrcs-0028.jsonl"
+    ],
+    "058D": [
+      "shards/nrcs-0028.jsonl"
+    ],
+    "060A": [
+      "shards/nrcs-0028.jsonl",
+      "shards/nrcs-0029.jsonl"
+    ],
+    "060B": [
+      "shards/nrcs-0029.jsonl"
+    ],
+    "061X": [
+      "shards/nrcs-0029.jsonl"
+    ],
+    "062X": [
+      "shards/nrcs-0029.jsonl"
+    ],
+    "063A": [
+      "shards/nrcs-0029.jsonl"
+    ],
+    "063B": [
+      "shards/nrcs-0029.jsonl"
+    ],
+    "064X": [
+      "shards/nrcs-0029.jsonl",
+      "shards/nrcs-0030.jsonl"
+    ],
+    "065X": [
+      "shards/nrcs-0030.jsonl"
+    ],
+    "066X": [
+      "shards/nrcs-0030.jsonl"
+    ],
+    "067A": [
+      "shards/nrcs-0030.jsonl"
+    ],
+    "067B": [
+      "shards/nrcs-0030.jsonl"
+    ],
+    "069X": [
+      "shards/nrcs-0030.jsonl",
+      "shards/nrcs-0031.jsonl"
+    ],
+    "070A": [
+      "shards/nrcs-0031.jsonl"
+    ],
+    "070B": [
+      "shards/nrcs-0031.jsonl"
+    ],
+    "071X": [
+      "shards/nrcs-0031.jsonl"
+    ],
+    "072X": [
+      "shards/nrcs-0031.jsonl"
+    ],
+    "073X": [
+      "shards/nrcs-0031.jsonl"
+    ],
+    "074X": [
+      "shards/nrcs-0031.jsonl"
+    ],
+    "075X": [
+      "shards/nrcs-0031.jsonl",
+      "shards/nrcs-0032.jsonl"
+    ],
+    "076X": [
+      "shards/nrcs-0032.jsonl"
+    ],
+    "077A": [
+      "shards/nrcs-0032.jsonl"
+    ],
+    "077B": [
+      "shards/nrcs-0032.jsonl"
+    ],
+    "077C": [
+      "shards/nrcs-0032.jsonl"
+    ],
+    "077D": [
+      "shards/nrcs-0032.jsonl"
+    ],
+    "077E": [
+      "shards/nrcs-0032.jsonl"
+    ],
+    "078A": [
+      "shards/nrcs-0032.jsonl"
+    ],
+    "078B": [
+      "shards/nrcs-0032.jsonl"
+    ],
+    "078C": [
+      "shards/nrcs-0032.jsonl",
+      "shards/nrcs-0033.jsonl"
+    ],
+    "079X": [
+      "shards/nrcs-0033.jsonl"
+    ],
+    "080A": [
+      "shards/nrcs-0033.jsonl"
+    ],
+    "080B": [
+      "shards/nrcs-0033.jsonl"
+    ],
+    "081A": [
+      "shards/nrcs-0033.jsonl"
+    ],
+    "081B": [
+      "shards/nrcs-0033.jsonl"
+    ],
+    "081C": [
+      "shards/nrcs-0033.jsonl"
+    ],
+    "081D": [
+      "shards/nrcs-0033.jsonl"
+    ],
+    "082A": [
+      "shards/nrcs-0033.jsonl"
+    ],
+    "082B": [
+      "shards/nrcs-0033.jsonl"
+    ],
+    "083A": [
+      "shards/nrcs-0033.jsonl",
+      "shards/nrcs-0034.jsonl"
+    ],
+    "083B": [
+      "shards/nrcs-0034.jsonl"
+    ],
+    "083C": [
+      "shards/nrcs-0034.jsonl"
+    ],
+    "083D": [
+      "shards/nrcs-0034.jsonl"
+    ],
+    "083E": [
+      "shards/nrcs-0034.jsonl"
+    ],
+    "084A": [
+      "shards/nrcs-0034.jsonl"
+    ],
+    "084B": [
+      "shards/nrcs-0034.jsonl"
+    ],
+    "084C": [
+      "shards/nrcs-0034.jsonl"
+    ],
+    "085A": [
+      "shards/nrcs-0034.jsonl"
+    ],
+    "085B": [
+      "shards/nrcs-0034.jsonl"
+    ],
+    "086A": [
+      "shards/nrcs-0034.jsonl"
+    ],
+    "086B": [
+      "shards/nrcs-0034.jsonl"
+    ],
+    "087A": [
+      "shards/nrcs-0034.jsonl"
+    ],
+    "087B": [
+      "shards/nrcs-0034.jsonl"
+    ],
+    "088X": [
+      "shards/nrcs-0034.jsonl"
+    ],
+    "089X": [
+      "shards/nrcs-0034.jsonl",
+      "shards/nrcs-0035.jsonl"
+    ],
+    "090A": [
+      "shards/nrcs-0035.jsonl"
+    ],
+    "090B": [
+      "shards/nrcs-0035.jsonl"
+    ],
+    "091X": [
+      "shards/nrcs-0035.jsonl"
+    ],
+    "092X": [
+      "shards/nrcs-0035.jsonl"
+    ],
+    "093A": [
+      "shards/nrcs-0035.jsonl"
+    ],
+    "093B": [
+      "shards/nrcs-0035.jsonl"
+    ],
+    "094A": [
+      "shards/nrcs-0035.jsonl"
+    ],
+    "094B": [
+      "shards/nrcs-0035.jsonl"
+    ],
+    "094C": [
+      "shards/nrcs-0035.jsonl"
+    ],
+    "094D": [
+      "shards/nrcs-0035.jsonl",
+      "shards/nrcs-0036.jsonl"
+    ],
+    "095X": [
+      "shards/nrcs-0036.jsonl"
+    ],
+    "096X": [
+      "shards/nrcs-0036.jsonl"
+    ],
+    "097X": [
+      "shards/nrcs-0036.jsonl"
+    ],
+    "098X": [
+      "shards/nrcs-0036.jsonl"
+    ],
+    "099X": [
+      "shards/nrcs-0036.jsonl"
+    ],
+    "101X": [
+      "shards/nrcs-0036.jsonl"
+    ],
+    "102A": [
+      "shards/nrcs-0036.jsonl"
+    ],
+    "102B": [
+      "shards/nrcs-0036.jsonl"
+    ],
+    "102C": [
+      "shards/nrcs-0036.jsonl",
+      "shards/nrcs-0037.jsonl"
+    ],
+    "102D": [
+      "shards/nrcs-0037.jsonl"
+    ],
+    "103X": [
+      "shards/nrcs-0037.jsonl"
+    ],
+    "104X": [
+      "shards/nrcs-0037.jsonl"
+    ],
+    "105X": [
+      "shards/nrcs-0037.jsonl"
+    ],
+    "106X": [
+      "shards/nrcs-0037.jsonl"
+    ],
+    "107X": [
+      "shards/nrcs-0037.jsonl",
+      "shards/nrcs-0038.jsonl"
+    ],
+    "108X": [
+      "shards/nrcs-0038.jsonl",
+      "shards/nrcs-0039.jsonl"
+    ],
+    "109X": [
+      "shards/nrcs-0039.jsonl"
+    ],
+    "110X": [
+      "shards/nrcs-0039.jsonl"
+    ],
+    "111X": [
+      "shards/nrcs-0039.jsonl",
+      "shards/nrcs-0040.jsonl"
+    ],
+    "112X": [
+      "shards/nrcs-0040.jsonl"
+    ],
+    "113X": [
+      "shards/nrcs-0040.jsonl"
+    ],
+    "114X": [
+      "shards/nrcs-0040.jsonl"
+    ],
+    "115X": [
+      "shards/nrcs-0040.jsonl",
+      "shards/nrcs-0041.jsonl"
+    ],
+    "116A": [
+      "shards/nrcs-0041.jsonl"
+    ],
+    "116B": [
+      "shards/nrcs-0041.jsonl",
+      "shards/nrcs-0042.jsonl"
+    ],
+    "116C": [
+      "shards/nrcs-0042.jsonl"
+    ],
+    "117X": [
+      "shards/nrcs-0042.jsonl"
+    ],
+    "118A": [
+      "shards/nrcs-0042.jsonl"
+    ],
+    "118B": [
+      "shards/nrcs-0042.jsonl"
+    ],
+    "119X": [
+      "shards/nrcs-0042.jsonl"
+    ],
+    "120A": [
+      "shards/nrcs-0042.jsonl"
+    ],
+    "120B": [
+      "shards/nrcs-0042.jsonl"
+    ],
+    "120C": [
+      "shards/nrcs-0042.jsonl"
+    ],
+    "121X": [
+      "shards/nrcs-0042.jsonl"
+    ],
+    "122X": [
+      "shards/nrcs-0042.jsonl"
+    ],
+    "123X": [
+      "shards/nrcs-0042.jsonl"
+    ],
+    "124X": [
+      "shards/nrcs-0042.jsonl"
+    ],
+    "125X": [
+      "shards/nrcs-0042.jsonl",
+      "shards/nrcs-0043.jsonl"
+    ],
+    "126X": [
+      "shards/nrcs-0043.jsonl"
+    ],
+    "127X": [
+      "shards/nrcs-0043.jsonl"
+    ],
+    "128X": [
+      "shards/nrcs-0043.jsonl"
+    ],
+    "129X": [
+      "shards/nrcs-0043.jsonl"
+    ],
+    "130A": [
+      "shards/nrcs-0043.jsonl"
+    ],
+    "130B": [
+      "shards/nrcs-0043.jsonl"
+    ],
+    "131A": [
+      "shards/nrcs-0043.jsonl"
+    ],
+    "131B": [
+      "shards/nrcs-0043.jsonl"
+    ],
+    "131C": [
+      "shards/nrcs-0043.jsonl"
+    ],
+    "131D": [
+      "shards/nrcs-0043.jsonl"
+    ],
+    "133A": [
+      "shards/nrcs-0043.jsonl"
+    ],
+    "133B": [
+      "shards/nrcs-0043.jsonl",
+      "shards/nrcs-0044.jsonl"
+    ],
+    "134X": [
+      "shards/nrcs-0044.jsonl"
+    ],
+    "135A": [
+      "shards/nrcs-0044.jsonl"
+    ],
+    "135B": [
+      "shards/nrcs-0044.jsonl"
+    ],
+    "136X": [
+      "shards/nrcs-0044.jsonl",
+      "shards/nrcs-0045.jsonl"
+    ],
+    "137X": [
+      "shards/nrcs-0045.jsonl"
+    ],
+    "138X": [
+      "shards/nrcs-0045.jsonl"
+    ],
+    "139X": [
+      "shards/nrcs-0045.jsonl"
+    ],
+    "140X": [
+      "shards/nrcs-0045.jsonl"
+    ],
+    "141X": [
+      "shards/nrcs-0045.jsonl"
+    ],
+    "142X": [
+      "shards/nrcs-0045.jsonl"
+    ],
+    "143X": [
+      "shards/nrcs-0045.jsonl"
+    ],
+    "144A": [
+      "shards/nrcs-0045.jsonl",
+      "shards/nrcs-0046.jsonl"
+    ],
+    "144B": [
+      "shards/nrcs-0046.jsonl"
+    ],
+    "145X": [
+      "shards/nrcs-0046.jsonl"
+    ],
+    "146X": [
+      "shards/nrcs-0046.jsonl"
+    ],
+    "147X": [
+      "shards/nrcs-0046.jsonl"
+    ],
+    "148X": [
+      "shards/nrcs-0046.jsonl"
+    ],
+    "149B": [
+      "shards/nrcs-0046.jsonl"
+    ],
+    "150A": [
+      "shards/nrcs-0046.jsonl"
+    ],
+    "150B": [
+      "shards/nrcs-0046.jsonl",
+      "shards/nrcs-0047.jsonl"
+    ],
+    "151X": [
+      "shards/nrcs-0047.jsonl"
+    ],
+    "152B": [
+      "shards/nrcs-0047.jsonl"
+    ],
+    "153A": [
+      "shards/nrcs-0047.jsonl"
+    ],
+    "153B": [
+      "shards/nrcs-0047.jsonl"
+    ],
+    "154X": [
+      "shards/nrcs-0047.jsonl"
+    ],
+    "155X": [
+      "shards/nrcs-0047.jsonl"
+    ],
+    "156A": [
+      "shards/nrcs-0047.jsonl",
+      "shards/nrcs-0048.jsonl"
+    ],
+    "156B": [
+      "shards/nrcs-0048.jsonl"
+    ],
+    "157X": [
+      "shards/nrcs-0048.jsonl"
+    ],
+    "158X": [
+      "shards/nrcs-0048.jsonl"
+    ],
+    "159A": [
+      "shards/nrcs-0048.jsonl"
+    ],
+    "160X": [
+      "shards/nrcs-0048.jsonl"
+    ],
+    "161A": [
+      "shards/nrcs-0048.jsonl"
+    ],
+    "161B": [
+      "shards/nrcs-0048.jsonl"
+    ],
+    "162X": [
+      "shards/nrcs-0048.jsonl"
+    ],
+    "163X": [
+      "shards/nrcs-0048.jsonl"
+    ],
+    "164X": [
+      "shards/nrcs-0048.jsonl"
+    ],
+    "165X": [
+      "shards/nrcs-0048.jsonl"
+    ],
+    "166X": [
+      "shards/nrcs-0048.jsonl"
+    ],
+    "167X": [
+      "shards/nrcs-0048.jsonl"
+    ],
+    "190X": [
+      "shards/nrcs-0048.jsonl"
+    ],
+    "191X": [
+      "shards/nrcs-0048.jsonl"
+    ],
+    "192X": [
+      "shards/nrcs-0048.jsonl"
+    ],
+    "197X": [
+      "shards/nrcs-0048.jsonl"
+    ],
+    "220X": [
+      "shards/nrcs-0048.jsonl",
+      "shards/nrcs-0049.jsonl"
+    ],
+    "222X": [
+      "shards/nrcs-0049.jsonl"
+    ],
+    "223X": [
+      "shards/nrcs-0049.jsonl"
+    ],
+    "224X": [
+      "shards/nrcs-0049.jsonl"
+    ],
+    "225X": [
+      "shards/nrcs-0049.jsonl"
+    ],
+    "226X": [
+      "shards/nrcs-0049.jsonl"
+    ],
+    "227X": [
+      "shards/nrcs-0049.jsonl"
+    ],
+    "228X": [
+      "shards/nrcs-0049.jsonl"
+    ],
+    "229X": [
+      "shards/nrcs-0049.jsonl"
+    ],
+    "230X": [
+      "shards/nrcs-0049.jsonl"
+    ],
+    "231X": [
+      "shards/nrcs-0049.jsonl"
+    ],
+    "232X": [
+      "shards/nrcs-0049.jsonl",
+      "shards/nrcs-0050.jsonl"
+    ],
+    "233X": [
+      "shards/nrcs-0050.jsonl"
+    ],
+    "234X": [
+      "shards/nrcs-0050.jsonl"
+    ],
+    "236X": [
+      "shards/nrcs-0050.jsonl"
+    ],
+    "237X": [
+      "shards/nrcs-0050.jsonl"
+    ],
+    "238X": [
+      "shards/nrcs-0050.jsonl"
+    ],
+    "239X": [
+      "shards/nrcs-0050.jsonl"
+    ],
+    "240X": [
+      "shards/nrcs-0050.jsonl"
+    ],
+    "241X": [
+      "shards/nrcs-0050.jsonl"
+    ],
+    "242X": [
+      "shards/nrcs-0050.jsonl"
+    ],
+    "243X": [
+      "shards/nrcs-0050.jsonl"
+    ],
+    "244X": [
+      "shards/nrcs-0050.jsonl"
+    ],
+    "245X": [
+      "shards/nrcs-0050.jsonl"
+    ],
+    "246X": [
+      "shards/nrcs-0050.jsonl",
+      "shards/nrcs-0051.jsonl"
+    ]
+  },
+  "shards": [
+    {
+      "path": "shards/nrcs-0001.jsonl",
+      "sha256": "88f2575abc2aca505e613149abeca54cd25ec9e798a1ae75358712bba76099a9",
+      "rows": 4321,
+      "bytes": 16776408,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0002.jsonl",
+      "sha256": "3c0e52b1caf6d49c45b504241a4f10fb282495f403c1fd8f33428400f772b6fc",
+      "rows": 4395,
+      "bytes": 16774534,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0003.jsonl",
+      "sha256": "208445837a3c7b0f64c1da13f6713494636b3495907d08c11a6baf04cf6b95fa",
+      "rows": 4374,
+      "bytes": 16776721,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0004.jsonl",
+      "sha256": "d39f38bf81539d554e5aefa4a26b8d0ff17f965735ce6104769658d522deaa82",
+      "rows": 4325,
+      "bytes": 16773193,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0005.jsonl",
+      "sha256": "1502a09e470dd7b373a0c0f605780112adf755a26b1e51702c0827ea727c84d8",
+      "rows": 4385,
+      "bytes": 16776250,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0006.jsonl",
+      "sha256": "fb1c7ac65b280c2c7c82619ebe3151485362e6f6babe8f5802f101d502b34093",
+      "rows": 4438,
+      "bytes": 16774620,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0007.jsonl",
+      "sha256": "5d2d1cc40a823c32b0772917ae95010c28e88f4030330c33ccaec6188a151c71",
+      "rows": 4365,
+      "bytes": 16774748,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0008.jsonl",
+      "sha256": "c90148971312ae948bfe7931aff9eb179a2e772d60c80159ae0132816218174a",
+      "rows": 4382,
+      "bytes": 16775820,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0009.jsonl",
+      "sha256": "746f94f98f0a4d37f9180724fead83f6fab9773d594728be7430ddd01d682f0e",
+      "rows": 4383,
+      "bytes": 16773401,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0010.jsonl",
+      "sha256": "d2a93d2cd7b334d0643e838ac5eb082c519e804ed370579fe323ad7b3899cdf2",
+      "rows": 4353,
+      "bytes": 16776959,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0011.jsonl",
+      "sha256": "cd0b596bd9ba9bbb47e9c9cf77ac4042601c4f5ac114a1a2132924708e9259b9",
+      "rows": 4360,
+      "bytes": 16775312,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0012.jsonl",
+      "sha256": "be165b37898049240267c1565342afc828071421ce15fcd57ef2ddd205d87a42",
+      "rows": 4417,
+      "bytes": 16776933,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0013.jsonl",
+      "sha256": "432b9466cca1b9c3da6e28da6ae7d1c8f64edcc91795834fc2129a54bca2c8ac",
+      "rows": 4398,
+      "bytes": 16775491,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0014.jsonl",
+      "sha256": "f91953ed5ca24f961ed3a96cf5de00bd96e4330bdef072673e65d671a35ee68d",
+      "rows": 4363,
+      "bytes": 16776301,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0015.jsonl",
+      "sha256": "2c4c4569df23013b34a818bc22b8ee81981c249e1098d30da56e14910679abb9",
+      "rows": 4336,
+      "bytes": 16774674,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0016.jsonl",
+      "sha256": "2b33474b545184a9a2a57cdaee6f67d17599127211c76d02d4ca70077aa748b6",
+      "rows": 4399,
+      "bytes": 16776349,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0017.jsonl",
+      "sha256": "a09b984aa503398a89628027be198153646dd743acfe39ecffb10b8397950dc0",
+      "rows": 4365,
+      "bytes": 16776835,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0018.jsonl",
+      "sha256": "b1fdd0e6d5ace1589d70a9ce8e298b1dc5b319a5d56b21e8f6d11f7c8f9f1dc7",
+      "rows": 4417,
+      "bytes": 16776459,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0019.jsonl",
+      "sha256": "9e810ad4b8f9d76c356c2ba1294e9fa0f0ef77b6b8bd6b287102644c0721a7b1",
+      "rows": 4316,
+      "bytes": 16776531,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0020.jsonl",
+      "sha256": "9c2659b8a68fbc5b14338c96867bca099d9b0f692cfc08cc5612fc611976f37a",
+      "rows": 4339,
+      "bytes": 16777101,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0021.jsonl",
+      "sha256": "d3a49f8377ef4a336282a1a34c08d37d6dafebafcce785ecd350aee17e25e6eb",
+      "rows": 4311,
+      "bytes": 16776808,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0022.jsonl",
+      "sha256": "1a733ab7e09fbd9678e65b2ef7ec826a25d233623612e7b9f86fd2dad7a481d6",
+      "rows": 4357,
+      "bytes": 16775546,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0023.jsonl",
+      "sha256": "9bfb5be531e7af03828827b828e3510e990bbd1b85ef6bebabec456ac3f4ec4c",
+      "rows": 4352,
+      "bytes": 16777161,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0024.jsonl",
+      "sha256": "186baeb533120f2f4ab852d7fb4d2a3990a912a650ab9e0c93cc6145f0bc60a2",
+      "rows": 4366,
+      "bytes": 16775557,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0025.jsonl",
+      "sha256": "a192e147d86a512a3e95fcf9d958256795f7314d2e68e347e82ad222c68edb72",
+      "rows": 4342,
+      "bytes": 16775609,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0026.jsonl",
+      "sha256": "463397eb1eedb1fa2d97459af4f5b60aa0debed3b1c07d0b5003208cb90d033f",
+      "rows": 4352,
+      "bytes": 16776247,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0027.jsonl",
+      "sha256": "0c3278a55a06d448dba1a5a66e6dce906a79c1815c3a79043d07930f56cfb671",
+      "rows": 4361,
+      "bytes": 16776401,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0028.jsonl",
+      "sha256": "3ae2ec5a9e9e689af60de064b4208b9c3849cb2584d338c1bf844b8a667c8a58",
+      "rows": 4342,
+      "bytes": 16774125,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0029.jsonl",
+      "sha256": "acd0d612e5bfc2fec99f347d5ddec2a7e90a668a84e32a282d477052c3829f43",
+      "rows": 4377,
+      "bytes": 16773926,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0030.jsonl",
+      "sha256": "6739fe7622f3a6ac12e0b9d10dcd1051a082a794b790a5845df89b3e4061a307",
+      "rows": 4350,
+      "bytes": 16775223,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0031.jsonl",
+      "sha256": "2c20940989d79196b415682ca6a8f6e9a8ed9d0cadc45791fcffb86aed1ca1b5",
+      "rows": 4390,
+      "bytes": 16774950,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0032.jsonl",
+      "sha256": "09b9011f8bcb421bf8bd0502b1ec0d6a81689556a1a27faad45c352cab0bd731",
+      "rows": 4390,
+      "bytes": 16774704,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0033.jsonl",
+      "sha256": "4194aac34c81ec28eb95a2cc15e2d9a700d57d84cdc15489167a5d5a46f7e839",
+      "rows": 4399,
+      "bytes": 16777212,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0034.jsonl",
+      "sha256": "38843c4a55a770c20f44445d372d5a587f37a0556be5cce8ba35265dab25632c",
+      "rows": 4373,
+      "bytes": 16775491,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0035.jsonl",
+      "sha256": "d83ca8c4d79b3aea272463c9315c91a51108fc778118a4cd11a51eaf34d6b8d4",
+      "rows": 4367,
+      "bytes": 16775657,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0036.jsonl",
+      "sha256": "b093e87fdd7e081ec59dfc2a5f0b33b39e40156af2dac1750720593a2442b99b",
+      "rows": 4382,
+      "bytes": 16776898,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0037.jsonl",
+      "sha256": "53dff8843c422a0b0ad8e5a0808dad8a73a06c3e2185eec18b42a0e9eb629b4c",
+      "rows": 4376,
+      "bytes": 16773283,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0038.jsonl",
+      "sha256": "b9828c7418cefc64676f43555649243cb57f4c13a497d2985c0c6c497e6185b5",
+      "rows": 4372,
+      "bytes": 16776646,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0039.jsonl",
+      "sha256": "c324f7c0015f5114de2d2d2ae9765cd78172c05f406aa221a37817367a00dce4",
+      "rows": 4386,
+      "bytes": 16776786,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0040.jsonl",
+      "sha256": "4a8d4b7d837d77f2b7886a14ee63faa4636fd2a30a3701693c6617503534f85b",
+      "rows": 4362,
+      "bytes": 16775808,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0041.jsonl",
+      "sha256": "0eb8284f6938d3ad6e7889af50777b055e9b89b5e0a818594940fabeb6e1f2cf",
+      "rows": 4360,
+      "bytes": 16775191,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0042.jsonl",
+      "sha256": "83697c67d8bb9a96bdb1fcc3b4f859353363ab02c193d0ee3772ebb66054f3e1",
+      "rows": 4344,
+      "bytes": 16776046,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0043.jsonl",
+      "sha256": "cce212d4baf2cebc95b45fb302c3798d9ff6b490b133a2fc6022bd3369ffb78d",
+      "rows": 4332,
+      "bytes": 16774781,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0044.jsonl",
+      "sha256": "5efd678a1c6c22d9f32419f2daa0842321d59aecc3ecf75502b26511e10dd516",
+      "rows": 4317,
+      "bytes": 16776318,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0045.jsonl",
+      "sha256": "84236859ebed83cd89149f0841c60d5d382e71ab0371c0916bccb205864e6dcc",
+      "rows": 4336,
+      "bytes": 16773949,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0046.jsonl",
+      "sha256": "8a6626869e05eb4a42a0f73336ff170a98b80a1f8cb587214ac1199a0262d205",
+      "rows": 4369,
+      "bytes": 16775625,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0047.jsonl",
+      "sha256": "d13af8bf4b03ede5ed4918744b9633aead34d84d1f9819eccada91bf840cc5d9",
+      "rows": 4346,
+      "bytes": 16773622,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0048.jsonl",
+      "sha256": "29e64ff51109d98d276c06986b5d0026c3d52220adcb41ff8799863f0f066a94",
+      "rows": 4316,
+      "bytes": 16773530,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0049.jsonl",
+      "sha256": "bc548fe8851b2520f0b53b96957f8fdc840b3a4d2d1e182cf58ad8191528521a",
+      "rows": 4333,
+      "bytes": 16774223,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0050.jsonl",
+      "sha256": "feefd544fcaccab6c3b762ede0f1b829f4676180361cb32a41d0ec775d4f7dd5",
+      "rows": 4310,
+      "bytes": 16773178,
+      "retrieval_policy": "context_only"
+    },
+    {
+      "path": "shards/nrcs-0051.jsonl",
+      "sha256": "715d556f867415445d0b83e6ddea6bbe3b3f3e61587aae96dd504f66d90d5984",
+      "rows": 157,
+      "bytes": 616343,
+      "retrieval_policy": "context_only"
+    }
+  ],
+  "quality_ledger": {
+    "path": "quality_ledger.json",
+    "sha256": "44cf39460e7ed6761538e4c469bb1367801d40c278d720c8691b4bef72926a3a"
+  },
+  "near_duplicate_clusters": {
+    "path": "near_duplicate_clusters.json",
+    "sha256": "ae43a1bbb18965d3ffcb0fbb2f8b9e2dac3397fb3d328be4bd4d77a8eb8e191f",
+    "clusters": 5056
+  },
+  "active_shard_naming": "nrcs-NNNN.jsonl; stable development path; shard bytes unchanged",
+  "bm25_statistics_index": {
+    "path": "bm25_statistics_index.json",
+    "sha256": "6e45c4e6ce142feaebf6f83962c5ba9cdff337a919030059d4933658bf799396"
+  },
+  "store_sha256": "03db2d31b97f2cdef876b7f87a6500b3bf10bb36af1d930067fa0fc4edec2ead"
+}

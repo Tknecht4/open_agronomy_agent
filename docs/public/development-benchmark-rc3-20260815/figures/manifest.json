@@ -1,0 +1,58 @@
+{
+  "analysis_seed": 20260815,
+  "artifacts": [
+    {
+      "bytes": 31343,
+      "path": "figures/rc3_deterministic_metrics.pdf",
+      "sha256": "f73aededebb8d9064dcd34e42157e6f2c3a1512d8600afbe1a43904d58cdea49"
+    },
+    {
+      "bytes": 102623,
+      "path": "figures/rc3_deterministic_metrics.svg",
+      "sha256": "a4949ef34d522c1314010002d564395e13ba98e04897228d9574db08a86397ad"
+    },
+    {
+      "bytes": 16026,
+      "path": "figures/rc3_evidence_coverage.pdf",
+      "sha256": "c9ec395aa54bfcd67b6b3f87145941f8c231c758e863074e02be71461935c495"
+    },
+    {
+      "bytes": 70622,
+      "path": "figures/rc3_evidence_coverage.svg",
+      "sha256": "05397199e1ac174ce87647dd35c0b1a8f34934ba3435a5859b52dfc0532fc645"
+    },
+    {
+      "bytes": 18008,
+      "path": "figures/rc3_harness_behavior.pdf",
+      "sha256": "dd1cf4a8992842d60f6e088e03f1efbff6d037036203c763a799996ef98c5a22"
+    },
+    {
+      "bytes": 80469,
+      "path": "figures/rc3_harness_behavior.svg",
+      "sha256": "09c234ae197c65b9229bec8ee46e7436cac1c5c7fec52b7f498fc651c564af7f"
+    },
+    {
+      "bytes": 20934,
+      "path": "figures/rc3_posthoc_semantic_review.pdf",
+      "sha256": "3c5f64b2a73c5ab6fec640f9204fbff1cc4fccf4f80458119ba32f138c7fb330"
+    },
+    {
+      "bytes": 77282,
+      "path": "figures/rc3_posthoc_semantic_review.svg",
+      "sha256": "8751ddb92a758499429f6b79c35a92f5a860cad6e114aac3398d3e6fd300b127"
+    },
+    {
+      "bytes": 24130,
+      "path": "figures/rc3_repeatability_latency.pdf",
+      "sha256": "cca4ffad64e2a6cf19a922818c1d534df69e02e79696f2a19ce83c0dd476f4c4"
+    },
+    {
+      "bytes": 90685,
+      "path": "figures/rc3_repeatability_latency.svg",
+      "sha256": "90ccd62da19dfa269d0cb7e955faa9e183e688bcb6575d1422572bc3bb830fb5"
+    }
+  ],
+  "bootstrap_draws": 50000,
+  "boundary": "Vector figures show deterministic diagnostics, trace activation, repeatability, observed resources, and a separately authorized post-hoc uncalibrated AI triage. None reports validated semantic answer quality or a composite rank.",
+  "schema_version": "open_agronomy_agent.rc3_checkpoint_figures.v1"
+}

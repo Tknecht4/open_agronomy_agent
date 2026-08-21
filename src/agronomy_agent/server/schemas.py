@@ -385,12 +385,34 @@ class GraphHitSnapshot(BaseModel):
     kind: str
     evidence: str
     neighbors: list[str] = Field(default_factory=list)
+    namespaces: list[str] = Field(default_factory=list)
+    graph_id: str = "legacy.unknown"
+    graph_version: str = "0"
+    graph_source: str = "unknown"
+    graph_license: str = "NOASSERTION"
+    graph_sha256: str = ""
+    authority_role: str = "vocabulary_hint"
+    relation_paths: list[str] = Field(default_factory=list)
 
 
 class ToolInvocationSnapshot(BaseModel):
-    name: str
+    name: str | None = None
     text: str | None = None
     payload: dict[str, Any] | None = None
+    schema_version: str | None = None
+    invocation_id: str | None = None
+    result_id: str | None = None
+    planner_version: str | None = None
+    tool_id: str | None = None
+    tool_version: str | None = None
+    operation: str | None = None
+    inputs: dict[str, Any] | None = None
+    status: str | None = None
+    payload_sha256: str | None = None
+    authority_role: str | None = None
+    freshness_status: str | None = None
+    provenance: str | None = None
+    limitations: list[str] = Field(default_factory=list)
 
 
 class TurnTracePayload(BaseModel):

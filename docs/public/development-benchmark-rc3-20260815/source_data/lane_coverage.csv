@@ -1,0 +1,7 @@
+benchmark_lane,lane_label,cases,objective_numeric_cases,lexical_regression_cases,unscored_cases,interpretation
+canadian_decision_quality,Canadian decision quality,90,0,0,90,trace or independent human review pending
+canadian_advisory_transfer,Advisory transfer,31,0,0,31,trace or independent human review pending
+field_history_lineage,Field-history lineage,32,0,0,32,trace or independent human review pending
+official_source_answer_boundary,Official-source boundary,39,0,33,6,lexical contract regression only; not answer quality
+retrieval_lineage,Retrieval lineage,33,0,0,33,trace or independent human review pending
+objective_agronomic_calculation,Objective calculations,16,16,0,0,objective numeric tolerance

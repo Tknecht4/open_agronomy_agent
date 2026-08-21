@@ -303,6 +303,34 @@ def test_crop_stress_fallback_preserves_named_phosphorus_decision() -> None:
     assert "rescue nitrogen or sulphur" not in answer
 
 
+def test_clubroot_fallback_uses_explicit_alberta_jurisdiction() -> None:
+    state = build_decision_route_state(
+        "Canola patch is dying and roots look swollen near the approach. "
+        "Clubroot? What do I do with the field today?",
+        "plant_health",
+    )
+
+    answer = _decision_route_failure_answer(state, jurisdiction="Alberta")
+
+    assert answer is not None
+    assert "current Alberta clubroot guidance" in answer
+    assert "Saskatchewan" not in answer
+
+
+def test_clubroot_fallback_uses_explicit_saskatchewan_jurisdiction() -> None:
+    state = build_decision_route_state(
+        "Canola patch is dying and roots look swollen near the approach. "
+        "Clubroot? What do I do with the field today?",
+        "plant_health",
+    )
+
+    answer = _decision_route_failure_answer(state, jurisdiction="SK")
+
+    assert answer is not None
+    assert "current Saskatchewan clubroot guidance" in answer
+    assert "Alberta clubroot guidance" not in answer
+
+
 def test_white_crust_salinity_question_is_not_reframed_as_mechanical_crusting() -> None:
     question = (
         "This Saskatchewan spring wheat field has patchy emergence and white crusting in low areas. "

@@ -1,0 +1,50 @@
+\begin{table*}[t]
+\centering
+\caption{Deterministic development metrics. Values are finite-suite means across case-level trial averages. The official-source metric is a lexical contract regression, not answer quality.}
+\label{tab:metrics}
+\small
+\begin{tabular}{llrrrr}
+\toprule
+Candidate configuration & Metric & Raw & Kernel & Kernel + field & Full system \\
+\midrule
+Gemma 3 270M & Numeric tolerance (\%) & 0.00 & 0.00 & 0.00 & 87.50 \\
+Gemma 3 270M & Lexical proxy (\%) & 43.33 & 36.63 & 38.94 & 48.91 \\
+Gemma 4 E2B & Numeric tolerance (\%) & 31.25 & 37.50 & 18.75 & 87.50 \\
+Gemma 4 E2B & Lexical proxy (\%) & 60.65 & 53.36 & 59.93 & 62.34 \\
+Luna High & Numeric tolerance (\%) & 97.92 & 89.58 & 93.75 & 87.50 \\
+Luna High & Lexical proxy (\%) & 72.11 & 75.92 & 77.10 & 68.69 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\begin{table}[t]
+\centering
+\caption{Full-system harness activation across three trials per configuration. Counts are execution traces, not correctness scores.}
+\label{tab:harness}
+\small
+\begin{tabular}{lrrr}
+\toprule
+Configuration & Generated & Holds & Verifier triggered \\
+\midrule
+Gemma 3 & 489 & 174 & 453 \\
+Gemma 4 & 489 & 174 & 333 \\
+Luna & 489 & 174 & 296 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Separately authorized post-hoc blinded Luna High triage of saved primary-lane answers. These are uncalibrated AI diagnostic scores, not answer-quality estimates or rankings.}
+\label{tab:posthoc-triage}
+\small
+\begin{tabular}{lrrr}
+\toprule
+Candidate configuration & Raw & Full system & Full -- raw \\
+\midrule
+Gemma 3 & 3.73 & 66.30 & +62.57 \\
+Gemma 4 & 57.50 & 68.75 & +11.25 \\
+Luna & 86.68 & 81.00 & -5.68 \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -128,7 +128,10 @@ def blind_item(row: dict[str, Any]) -> dict[str, Any]:
         or []
     )
     return {
-        "review_id": _clean(row.get("eval_id") or row.get("review_id") or row.get("source_id")),
+        # A post-hoc packet can carry an opaque, per-answer review ID.  Prefer
+        # it to the repeated eval ID so paired raw/governed answers remain
+        # blinded and unambiguous in one judge batch.
+        "review_id": _clean(row.get("review_id") or row.get("eval_id") or row.get("source_id")),
         "question": _clean(row.get("question")),
         "answer": _clean(row.get("output") or row.get("answer") or row.get("saved_answer")),
         "crop": _clean(metadata.get("crop") or row.get("crop")),
@@ -367,6 +370,10 @@ class AppServerJudgeRunner:
         server_cwd: Path = Path("/private/tmp"),
         judge_role: str = "semantic_answer_quality",
     ) -> None:
+        raise RuntimeError(
+            "App Server semantic judging is disabled until a dedicated judge-egress "
+            "authorization contract is implemented"
+        )
         self.command = command
         self.timeout_seconds = timeout_seconds
         self.collect_protocol_identity = collect_protocol_identity
@@ -962,8 +969,18 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def validate_judge_transport(args: argparse.Namespace) -> None:
+    """Fail closed until a dedicated semantic-judge egress contract exists."""
+
+    raise ValueError(
+        f"Codex semantic judging via {args.transport} is disabled because no dedicated "
+        "judge-egress authorization contract is implemented"
+    )
+
+
 def main() -> None:
     args = parse_args()
+    validate_judge_transport(args)
     if args.batch_size < 1:
         raise SystemExit("--batch-size must be at least 1")
     if args.workers < 1:

@@ -1,0 +1,105 @@
+{
+  "corpora": [
+    {
+      "evidence_tier": "curated_canadian_source",
+      "path": "data/derived/rag/curated_canada/releases/2026-08-14/shards/context_only-canada-offline-master-0001.jsonl",
+      "reason": "Rows are context-only and cannot support high-consequence action.",
+      "rights_status": "redistributable_with_verified_source_scope",
+      "runtime_eligibility": "context_only",
+      "runtime_path_reference": "data/derived/rag/curated_canada/releases/2026-08-14/shards/context_only-canada-offline-master-0001.jsonl",
+      "sha256": "373146ad55a26503292f8e8f252cf52b830774302ecf54c0b4511c3093347810",
+      "shard_policy_role": "context_only",
+      "source_ids": [
+        "ab_clubroot_canola_mustard_2015",
+        "ab_crop_producer_bmp_manual_2004",
+        "ab_fall_applied_nitrogen_2013",
+        "ab_nutrient_management_planning_guide_2008",
+        "ab_phosphorus_fertilizer_crops_2013",
+        "ab_potassium_fertilizer_crops_2013",
+        "ab_red_lentil_management_2020",
+        "ab_stripe_rust_101_2023",
+        "ab_sulphur_fertilizer_crops_2013",
+        "ab_tame_pasture_range_health_2017",
+        "ca_aafc_annual_crop_inventory_specification",
+        "ca_aafc_crop_health_indices_specification",
+        "ca_aafc_nasdi_specification",
+        "ca_aafc_sk_detailed_soil_survey_specification",
+        "ca_cansis_soil_landscapes",
+        "mb_2023_crop_rotation_context",
+        "mb_2026_canola_insect_scouting",
+        "mb_2026_crop_disease_scouting",
+        "mb_soil_fertility_guide",
+        "on_field_crop_production_current"
+      ],
+      "store_profile_id": "canada-offline-master"
+    },
+    {
+      "evidence_tier": "curated_canadian_source",
+      "path": "data/derived/rag/curated_canada/releases/2026-08-14/shards/requires_live_authority-canada-offline-master-0001.jsonl",
+      "reason": "Rows require a live authority. They are physically separated and retain requires_live_authority row policy; the existing row-level guard blocks static use.",
+      "rights_status": "redistributable_with_verified_source_scope",
+      "runtime_eligibility": "decisive",
+      "runtime_path_reference": "data/derived/rag/curated_canada/releases/2026-08-14/shards/requires_live_authority-canada-offline-master-0001.jsonl",
+      "sha256": "5379329ecefe50d5b7d32cb5ff79a993277cab1fdb1e9351898f8c0717fdc05c",
+      "shard_policy_role": "requires_live_authority",
+      "source_ids": [
+        "ab_crop_producer_bmp_manual_2004",
+        "ab_red_lentil_management_2020",
+        "ab_sulphur_fertilizer_crops_2013",
+        "mb_2026_canola_insect_scouting",
+        "mb_soil_fertility_guide"
+      ],
+      "store_profile_id": "canada-offline-master"
+    },
+    {
+      "evidence_tier": "government_regional_profile",
+      "path": "data/derived/rag/nrcs_esd_rag_corpus_compact_v2.jsonl",
+      "reason": "Portable section-balanced USDA ecological-site context. Retrieval for Canadian questions requires an explicit NRCS, MLRA, ecological-site, or US analogue request; it cannot establish Canadian field condition, calibration, legal authority, product use, rate, threshold, or prescription.",
+      "rights_status": "US_government_public_source",
+      "runtime_eligibility": "context_only",
+      "sha256": "0fffaa61e9b6d7986de1a02eff470adbdc7227d8b4ecc95b50c6075d3a837b7b"
+    },
+    {
+      "evidence_tier": "open_ontology",
+      "path": "data/derived/rag/soilwise_rag_corpus.jsonl",
+      "reason": "Open soil-health concepts and relations; not field-specific management authority.",
+      "rights_status": "CC-BY-4.0",
+      "runtime_eligibility": "context_only",
+      "sha256": "eef95a5d2dbc11183a6f8061fe91fe7387e9568112e45d8b62c2cf835bd1d737"
+    },
+    {
+      "evidence_tier": "internal_synthesis",
+      "path": "data/seed/agronomy_rag_corpus.jsonl",
+      "reason": "Project-authored conceptual scaffolding; not document-level or field-specific authority.",
+      "rights_status": "project_authored",
+      "runtime_eligibility": "context_only",
+      "sha256": "45f22cf8380007661c9ba3109ff1e6254f031b39a78bcaa09b11c1ba3c858ba5"
+    },
+    {
+      "evidence_tier": "project_safety_policy",
+      "path": "data/seed/boundary_rag_corpus.jsonl",
+      "reason": "Project-authored fail-closed safety boundaries; not a substitute for external agronomic authority.",
+      "rights_status": "project_authored",
+      "runtime_eligibility": "decisive",
+      "sha256": "d6210d1db7efe7cd7814c4a51acd85d778c2e490f274726b47c9d14334a0ddb6"
+    }
+  ],
+  "default_eligibility": "quarantined",
+  "master_knowledge_release": {
+    "path": "data/derived/rag/curated_canada/releases/2026-08-14",
+    "profile_id": "canada-offline-master",
+    "source_policy_path": "data/derived/rag/curated_canada/releases/2026-08-14/profiles/canada-offline-master/runtime_corpus_policy.json",
+    "source_policy_sha256": "c35d28d19c36761b4040fd40b1bace0f4f69d850ab2b045ef83f357960333907"
+  },
+  "policy_id": "open-agronomy-runtime-master-2026-08-14",
+  "rules": {
+    "context_only": "May explain concepts or frame questions, but cannot support a high-consequence action.",
+    "decisive": "May support an action only within source, jurisdiction, currency, retrieval-policy, and field-fit limits.",
+    "quarantined": "Must not enter runtime model context."
+  },
+  "schema_version": "open_agronomy_agent.runtime_corpus_policy.v1",
+  "training_authorization": {
+    "granted": false,
+    "statement": "Runtime retrieval admission and redistribution do not grant permission to train or fine-tune a model."
+  }
+}

@@ -18,6 +18,20 @@ def main() -> int:
     parser.add_argument("--rag-config", type=Path)
     parser.add_argument("--hf-hub-cache", type=Path)
     parser.add_argument("--state-dir", type=Path)
+    parser.add_argument(
+        "--spatial-pack-root",
+        type=Path,
+        help="verified external spatial-pack directory; omitted means RAG-only offline readiness",
+    )
+    parser.add_argument(
+        "--spatial-profile",
+        help="declared offline spatial profile required for --spatial-pack-root",
+    )
+    parser.add_argument(
+        "--spatial-profile-manifest",
+        type=Path,
+        help="profile contract; defaults to data/manifests/offline_spatial_profiles_v1.json",
+    )
     parser.add_argument("--output", type=Path)
     parser.add_argument("--require-ready", action="store_true")
     args = parser.parse_args()
@@ -29,6 +43,9 @@ def main() -> int:
         rag_config_path=args.rag_config,
         hub_cache=args.hf_hub_cache,
         state_dir=args.state_dir,
+        spatial_pack_root=args.spatial_pack_root,
+        spatial_profile_id=args.spatial_profile,
+        spatial_profile_manifest_path=args.spatial_profile_manifest,
     )
     if args.output:
         output = args.output if args.output.is_absolute() else root / args.output

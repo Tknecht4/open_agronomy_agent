@@ -1,5 +1,6 @@
 .DS_Store
 .venv/
+*.egg-info/
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -17,6 +18,8 @@ pytest-*/
 tmp/
 /tmp
 output/
+build/
+/PUBLIC_RELEASE_RECEIPT.json
 frontend/dist/
 frontend/node_modules/
 
@@ -35,10 +38,19 @@ data/derived/rag/*
 !data/derived/rag/canada_agronomy_supplement_v1.jsonl
 !data/derived/rag/canada_agronomy_supplement_v2.jsonl
 !data/derived/rag/canada_agronomy_supplement_v3.jsonl
-!data/derived/rag/nrcs_esd_rag_corpus_compact.jsonl
-!data/derived/rag/nrcs_esd_compact_summary.json
+!data/derived/rag/nrcs_esd_rag_corpus_compact_v2.jsonl
+!data/derived/rag/nrcs_esd_compact_v2_summary.json
 !data/derived/rag/soilwise_knowledge_graph.json
+!data/derived/rag/soilwise_knowledge_graph.manifest.json
 !data/derived/rag/soilwise_rag_corpus.jsonl
+!data/derived/rag/curated_canada/
+data/derived/rag/curated_canada/*
+!data/derived/rag/curated_canada/inputs/
+!data/derived/rag/curated_canada/inputs/**
+!data/derived/rag/curated_canada/releases/
+!data/derived/rag/curated_canada/releases/**
+!data/derived/rag/offline_agronomy/
+!data/derived/rag/offline_agronomy/**
 !data/derived/geo_layers/
 data/derived/geo_layers/*
 !data/derived/geo_layers/*_manifest.json

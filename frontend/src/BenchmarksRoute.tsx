@@ -802,8 +802,16 @@ const countValue = (value: number | undefined): number | 'n/a' =>
 const percentText = (value: number | undefined): string =>
   typeof value === 'number' && Number.isFinite(value) ? `${(value * 100).toFixed(1)}%` : 'n/a'
 
-const repoRelativePath = (path: string | undefined): string =>
-  path?.replace('/Volumes/ext/agronomy_agent/', '') || 'gap report pending'
+export const repoRelativePath = (path: string | undefined): string => {
+  if (!path) return 'gap report pending'
+  const normalized = path.replace(/\\/g, '/')
+  const repositoryMarker = '/open_agronomy_agent/'
+  const repositoryIndex = normalized.lastIndexOf(repositoryMarker)
+  if (repositoryIndex >= 0) return normalized.slice(repositoryIndex + repositoryMarker.length)
+  if (!normalized.startsWith('/')) return normalized
+  const segments = normalized.split('/').filter(Boolean)
+  return segments[segments.length - 1] || 'gap report pending'
+}
 
 const benchmarkArtifactHref = (artifactId: string): string => `/api/benchmarks/artifacts/${artifactId}`
 

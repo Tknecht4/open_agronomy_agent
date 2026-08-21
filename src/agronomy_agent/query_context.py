@@ -264,6 +264,11 @@ def analyze_query_context(question: str, field_context: dict[str, Any] | None = 
         or re.search(_AAFC_ANNUAL_CROP_INVENTORY_PATTERN, lower)
         or re.search(_AAFC_HISTORICAL_CROP_YIELD_SLC_PATTERN, lower)
         or re.search(_CANADIAN_REGIONAL_CONTEXT_PRODUCT_PATTERN, lower)
+        or re.search(
+            r"\bontario\s+(?:field[- ]crop|field crop)\s+(?:production|estimate)"
+            r"(?:\s+(?:workbook|table|series))?\b",
+            lower,
+        )
     )
     capsule = build_decision_capsule(text, crop=crops[0] if crops else None)
     return QueryContextSignals(

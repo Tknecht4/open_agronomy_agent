@@ -21,8 +21,8 @@ claims:
       artifacts:
         - path: "../architecture.md"
           description: "Canonical request path and trust boundary."
-        - path: "../../../PUBLIC_RELEASE_RECEIPT.json"
-          description: "Validated public-release file and checksum receipt."
+        - path: "public_repository_receipt_rc1.json"
+          description: "Frozen public-release file and checksum receipt for the evaluated RC1 boundary."
       statistics:
         metric: "release receipt integrity"
         unit_of_analysis: "repository file"

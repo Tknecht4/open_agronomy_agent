@@ -1,0 +1,138 @@
+{
+  "schema_version": "open_agronomy_agent.offline_spatial_profiles.v1",
+  "generated_at": "2026-08-13T00:00:00Z",
+  "purpose": "Declared compact offline spatial installations. A source registry record may be known or redistributable without being installed in a selected local profile.",
+  "profiles": [
+    {
+      "id": "prairie-dss-v1",
+      "title": "Prairie Detailed Soil Survey offline context",
+      "status": "approved_for_local_install",
+      "source_registry_path": "data/manifests/canada_geospatial_sources.json",
+      "pack": {
+        "directory": "spatial-pack/prairie-dss-v1",
+        "manifest": "prairie_spatial_pack_manifest.json",
+        "install_receipt": "install_receipt.json",
+        "minimum_free_bytes": 1500000000,
+        "estimated_raw_bytes": 458868648,
+        "estimated_runtime_database_bytes": 480382976
+      },
+      "sources": [
+        {
+          "source_id": "ca_aafc_ab_detailed_soil_survey",
+          "layer_id": "ab_detailed_soil",
+          "source_record_id": "9150ad66-73f7-444f-a67c-4be5cf676453",
+          "download_url": "https://sis.agr.gc.ca/cansis/nsdb/dss/v3/dss_v3_ab_20140529.zip",
+          "source_entry_sha256": "9f2c512dae502e7bd5ee2fe2c577ca2950d2ebe8da8228ae003e9ba4b45e58a6",
+          "expected_raw_bytes": 27057261,
+          "expected_raw_sha256": "44db35220db8f3b8edb8c1d6c383b822cc2fcf937bd3a48388accf3a1ba883ab",
+          "state_paths": {
+            "raw": "raw/canada_agronomy/ca_aafc_ab_detailed_soil_survey_dss_v3/source.zip",
+            "lineage": "raw/canada_agronomy/ca_aafc_ab_detailed_soil_survey_dss_v3/source.zip.lineage.json",
+            "derived": "derived/geo_layers/ab_detailed_soil.sqlite3",
+            "derived_manifest": "derived/geo_layers/ab_detailed_soil_manifest.json"
+          }
+        },
+        {
+          "source_id": "ca_aafc_sk_detailed_soil_survey",
+          "layer_id": "sk_detailed_soil",
+          "source_record_id": "3734623c-25c5-4e69-936d-26f764a2807f",
+          "download_url": "https://sis.agr.gc.ca/cansis/nsdb/dss/v3/dss_v3_sk_20170111.zip",
+          "source_entry_sha256": "139155f04179af8eb3f3e36569735eebe05b895363c89e804530c997e9272e53",
+          "expected_raw_bytes": 173315189,
+          "expected_raw_sha256": "84cb07414d27aafca93d9831dfa444381cfc3a954af47f1af3b4c2a6015da296",
+          "state_paths": {
+            "raw": "raw/canada_agronomy/ca_aafc_sk_detailed_soil_survey_dss_v3/source.zip",
+            "lineage": "raw/canada_agronomy/ca_aafc_sk_detailed_soil_survey_dss_v3/source.zip.lineage.json",
+            "derived": "derived/geo_layers/sk_detailed_soil.sqlite3",
+            "derived_manifest": "derived/geo_layers/sk_detailed_soil_manifest.json"
+          }
+        },
+        {
+          "source_id": "ca_aafc_mb_detailed_soil_survey",
+          "layer_id": "mb_detailed_soil",
+          "source_record_id": "741a06a2-718f-4da9-9adf-6e95c8c37f3d",
+          "download_url": "https://sis.agr.gc.ca/cansis/nsdb/dss/v3/dss_v3_mb_20161207.zip",
+          "source_entry_sha256": "88df47622424b6857e95193c1a3c57601c3d9739743a832da425ecb68f833c35",
+          "expected_raw_bytes": 258496198,
+          "expected_raw_sha256": "b092f46188cecd74489690b6a43f5bde11c0dc79d0182785c30294b7b803adc2",
+          "state_paths": {
+            "raw": "raw/canada_agronomy/ca_aafc_mb_detailed_soil_survey_dss_v3/source.zip",
+            "lineage": "raw/canada_agronomy/ca_aafc_mb_detailed_soil_survey_dss_v3/source.zip.lineage.json",
+            "derived": "derived/geo_layers/mb_detailed_soil.sqlite3",
+            "derived_manifest": "derived/geo_layers/mb_detailed_soil_manifest.json"
+          }
+        }
+      ],
+      "boundary": "Historical detailed soil-survey polygons and listed components are mapped regional priors. They are not current field observations, soil-test values, a diagnosis, a crop-suitability finding, or management-rate authority. Ground-truth with field observations and current soil tests.",
+      "deferred_layers": [
+        "ca_aafc_soil_erosion_risk_2021",
+        "ca_aafc_soil_landscape_grids_100m",
+        "canada-boundaries-v1",
+        "census-agriculture-context-v1",
+        "slc-context-v1"
+      ]
+    },
+    {
+      "id": "canada-context-boundaries-v1",
+      "title": "Canadian field-context boundaries",
+      "status": "candidate_local_install",
+      "source_registry_path": "data/manifests/canada_geospatial_sources.json",
+      "pack": {
+        "directory": "spatial-pack/canada-context-boundaries-v1",
+        "manifest": "canada_context_boundaries_pack_manifest.json",
+        "install_receipt": "install_receipt.json",
+        "minimum_free_bytes": 250000000,
+        "estimated_raw_bytes": 22968231,
+        "estimated_runtime_database_bytes": 30000000
+      },
+      "sources": [
+        {
+          "source_id": "ca_statcan_2021_provinces_territories",
+          "layer_id": "ca_statcan_2021_provinces_territories",
+          "source_record_id": "92-160-X2021001",
+          "download_url": "https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/files-fichiers/lpr_000a21a_e.zip",
+          "source_entry_sha256": "b97c42ca79bfbebed9f34e73a68addd084ac4ba176b3eeebced6c8f7f47404ae",
+          "expected_raw_bytes": 2777186,
+          "expected_raw_sha256": "c4dd830f8a6e9b4a1d80e71bc830ae319aaab37785cc92185e830f5e3da4714e",
+          "state_paths": {
+            "raw": "raw/canada_context_boundaries/ca_statcan_2021_provinces_territories/source.zip",
+            "lineage": "raw/canada_context_boundaries/ca_statcan_2021_provinces_territories/source.zip.lineage.json",
+            "derived": "derived/geo_layers/ca_statcan_2021_provinces_territories.sqlite3",
+            "derived_manifest": "derived/geo_layers/ca_statcan_2021_provinces_territories_manifest.json"
+          }
+        },
+        {
+          "source_id": "ca_statcan_2021_census_agricultural_regions",
+          "layer_id": "ca_statcan_2021_census_agricultural_regions",
+          "source_record_id": "92-160-X2021001",
+          "download_url": "https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/files-fichiers/lcar000a21a_e.zip",
+          "source_entry_sha256": "0b2b2503cc988e6685e7b9b01d05647c5c7d4cf8761bb7fbb11b7616f95dc2b6",
+          "expected_raw_bytes": 6623754,
+          "expected_raw_sha256": "17f773420e6b07555f9fc7d5b67f82460594c8be0424e86b75b63860e2c571f7",
+          "state_paths": {
+            "raw": "raw/canada_context_boundaries/ca_statcan_2021_census_agricultural_regions/source.zip",
+            "lineage": "raw/canada_context_boundaries/ca_statcan_2021_census_agricultural_regions/source.zip.lineage.json",
+            "derived": "derived/geo_layers/ca_statcan_2021_census_agricultural_regions.sqlite3",
+            "derived_manifest": "derived/geo_layers/ca_statcan_2021_census_agricultural_regions_manifest.json"
+          }
+        },
+        {
+          "source_id": "ca_aafc_terrestrial_ecoregions_v2_2",
+          "layer_id": "ca_aafc_terrestrial_ecoregions_v2_2",
+          "source_record_id": "ade80d26-61f5-439e-8966-73b352811fe6",
+          "download_url": "https://agriculture.canada.ca/atlas/data_donnees/nationalEcologicalFramework/data_donnees/geoJSON/er/nef_ca_ter_ecoregion_v2_2.geojson",
+          "source_entry_sha256": "199eb2dc1ae77007939b10c29376ad86af52a37d2df80eee2bfce2a4c6ba2fcf",
+          "expected_raw_bytes": 13567291,
+          "expected_raw_sha256": "f2c7ac1cabc601c364479c4616c245c993443ac61f6842f01a12078844a71e6b",
+          "state_paths": {
+            "raw": "raw/canada_context_boundaries/ca_aafc_terrestrial_ecoregions_v2_2/source.geojson",
+            "lineage": "raw/canada_context_boundaries/ca_aafc_terrestrial_ecoregions_v2_2/source.geojson.lineage.json",
+            "derived": "derived/geo_layers/ca_aafc_terrestrial_ecoregions_v2_2.sqlite3",
+            "derived_manifest": "derived/geo_layers/ca_aafc_terrestrial_ecoregions_v2_2_manifest.json"
+          }
+        }
+      ],
+      "boundary": "These official boundary and ecological-classification layers organize geographic and source-routing context only. Their IDs, names, and hierarchy fields may help retrieve appropriately scoped documents, but they are not field truth, legal location proof, crop-production evidence, a diagnosis, or management authority."
+    }
+  ]
+}

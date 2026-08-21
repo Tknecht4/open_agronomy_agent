@@ -46,7 +46,7 @@
         "attribution": "Contains information licensed under the Open Government Licence - British Columbia from the Government of British Columbia."
       },
       "runtime": {
-        "status": "bundled",
+        "status": "candidate_not_bundled",
         "raw_path": "data/raw/canada_agronomy/bc_agriculture_capability_mapping/source.zip",
         "lineage_path": "data/raw/canada_agronomy/bc_agriculture_capability_mapping/source.zip.lineage.json",
         "derived_path": "data/derived/geo_layers/bc_agriculture_capability.sqlite3",
@@ -78,7 +78,7 @@
         "attribution": "Contains information licensed under the Open Government Licence - Canada from Agriculture and Agri-Food Canada, Canadian Soil Information Service."
       },
       "runtime": {
-        "status": "bundled",
+        "status": "candidate_not_bundled",
         "raw_path": "data/raw/canada_agronomy/ca_sk_thematic_soil_maps/source.gpkg",
         "lineage_path": "data/raw/canada_agronomy/ca_sk_thematic_soil_maps/source.gpkg.lineage.json",
         "derived_path": "data/derived/geo_layers/sk_thematic_soil.sqlite3",
@@ -110,7 +110,7 @@
         "attribution": "Contains information licensed under the Open Government Licence - Canada from Agriculture and Agri-Food Canada, Canadian Soil Information Service."
       },
       "runtime": {
-        "status": "bundled",
+        "status": "external_profile_available",
         "raw_path": "data/raw/canada_agronomy/ca_aafc_sk_detailed_soil_survey_dss_v3/source.zip",
         "lineage_path": "data/raw/canada_agronomy/ca_aafc_sk_detailed_soil_survey_dss_v3/source.zip.lineage.json",
         "derived_path": "data/derived/geo_layers/sk_detailed_soil.sqlite3",
@@ -142,7 +142,7 @@
         "attribution": "Contains information licensed under the Open Government Licence - Canada from Agriculture and Agri-Food Canada."
       },
       "runtime": {
-        "status": "bundled",
+        "status": "candidate_not_bundled",
         "raw_path": "data/raw/canada_agronomy/ca_aafc_soil_erosion_risk_2021/source.zip",
         "lineage_path": "data/raw/canada_agronomy/ca_aafc_soil_erosion_risk_2021/source.zip.lineage.json",
         "derived_path": "data/derived/geo_layers/ca_soil_erosion_risk.sqlite3",
@@ -180,7 +180,7 @@
         "attribution": "Contains information licensed under the Open Government Licence - Canada from Agriculture and Agri-Food Canada, Canadian Soil Information Service."
       },
       "runtime": {
-        "status": "bundled",
+        "status": "candidate_not_bundled",
         "raw_path": "data/raw/canada_agronomy/ca_aafc_pei_detailed_soil_survey/source.gpkg",
         "lineage_path": "data/raw/canada_agronomy/ca_aafc_pei_detailed_soil_survey/source.gpkg.lineage.json",
         "derived_path": "data/derived/geo_layers/pei_detailed_soil.sqlite3",
@@ -218,7 +218,7 @@
         "attribution": "Contains information licensed under the Open Government Licence - Canada from Agriculture and Agri-Food Canada, Canadian Soil Information Service."
       },
       "runtime": {
-        "status": "bundled",
+        "status": "candidate_not_bundled",
         "raw_path": "data/raw/canada_agronomy/ca_aafc_ns_detailed_soil_survey/source.gpkg",
         "lineage_path": "data/raw/canada_agronomy/ca_aafc_ns_detailed_soil_survey/source.gpkg.lineage.json",
         "derived_path": "data/derived/geo_layers/ns_pictou_detailed_soil.sqlite3",
@@ -250,7 +250,7 @@
         "attribution": "Contains information licensed under the Open Government Licence - Canada from Agriculture and Agri-Food Canada, Canadian Soil Information Service."
       },
       "runtime": {
-        "status": "bundled",
+        "status": "external_profile_available",
         "raw_path": "data/raw/canada_agronomy/ca_aafc_ab_detailed_soil_survey_dss_v3/source.zip",
         "lineage_path": "data/raw/canada_agronomy/ca_aafc_ab_detailed_soil_survey_dss_v3/source.zip.lineage.json",
         "derived_path": "data/derived/geo_layers/ab_detailed_soil.sqlite3",
@@ -282,7 +282,7 @@
         "attribution": "Contains information licensed under the Open Government Licence - Canada from Agriculture and Agri-Food Canada, Canadian Soil Information Service."
       },
       "runtime": {
-        "status": "bundled",
+        "status": "external_profile_available",
         "raw_path": "data/raw/canada_agronomy/ca_aafc_mb_detailed_soil_survey_dss_v3/source.zip",
         "lineage_path": "data/raw/canada_agronomy/ca_aafc_mb_detailed_soil_survey_dss_v3/source.zip.lineage.json",
         "derived_path": "data/derived/geo_layers/mb_detailed_soil.sqlite3",
@@ -318,6 +318,102 @@
         "reason": "The 279 MB source archive and multi-component soil semantics require a separate bounded derivation and validation pass."
       },
       "boundary": "A polygon may contain up to three expected soils plus unmapped minor soils, boundaries are approximate, and the mapped soil is not guaranteed at a point."
+    },
+    {
+      "id": "ca_statcan_2021_provinces_territories",
+      "title": "Province and Territory Cartographic Boundary File, 2021 Census",
+      "publisher": "Statistics Canada, Census of Population",
+      "jurisdiction": ["Canada"],
+      "canonical_url": "https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21",
+      "catalogue_api_url": "https://www150.statcan.gc.ca/n1/en/catalogue/92-160-X2021001",
+      "download_url": "https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/files-fichiers/lpr_000a21a_e.zip",
+      "source_record_id": "92-160-X2021001",
+      "format": "2021_cartographic_boundary_zipped_shapefile",
+      "source_crs": "EPSG:3347 (NAD83 / Statistics Canada Lambert)",
+      "source_scale": "2021 Census cartographic province and territory boundary; a land-mass cartographic representation for geographic organization",
+      "currency": "2021 Census geography; official source file last modified 2022-01-05",
+      "license": {
+        "identifier": "Statistics Canada Open Licence",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "reviewed_on": "2026-08-14",
+        "attribution": "Contains information licensed under the Statistics Canada Open Licence from Statistics Canada."
+      },
+      "runtime": {
+        "status": "candidate_local_profile",
+        "raw_path": "external_state_only/raw/canada_context_boundaries/ca_statcan_2021_provinces_territories/source.zip",
+        "lineage_path": "external_state_only/raw/canada_context_boundaries/ca_statcan_2021_provinces_territories/source.zip.lineage.json",
+        "derived_path": "external_state_only/derived/geo_layers/ca_statcan_2021_provinces_territories.sqlite3",
+        "derived_manifest_path": "external_state_only/derived/geo_layers/ca_statcan_2021_provinces_territories_manifest.json",
+        "layer_id": "ca_statcan_2021_provinces_territories",
+        "query_backend": "local_sqlite_rtree"
+      },
+      "boundary": "A 2021 Census cartographic boundary for geographic orientation and source routing. It is not a surveyed farm boundary, proof of legal land location or jurisdiction, crop-production evidence, current field condition, or management authorization."
+    },
+    {
+      "id": "ca_statcan_2021_census_agricultural_regions",
+      "title": "Census Agricultural Regions Cartographic Boundary File, 2021 Census",
+      "publisher": "Statistics Canada, Census of Population",
+      "jurisdiction": ["Canada"],
+      "canonical_url": "https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21",
+      "catalogue_api_url": "https://www150.statcan.gc.ca/n1/en/catalogue/92-160-X2021001",
+      "download_url": "https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/files-fichiers/lcar000a21a_e.zip",
+      "source_record_id": "92-160-X2021001",
+      "format": "2021_cartographic_boundary_zipped_shapefile",
+      "source_crs": "EPSG:3347 (NAD83 / Statistics Canada Lambert)",
+      "source_scale": "2021 Census Agricultural Region cartographic boundary; a statistical dissemination geography for organizing regional evidence",
+      "currency": "2021 Census geography; official source file last modified 2022-01-05",
+      "license": {
+        "identifier": "Statistics Canada Open Licence",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "reviewed_on": "2026-08-14",
+        "attribution": "Contains information licensed under the Statistics Canada Open Licence from Statistics Canada."
+      },
+      "runtime": {
+        "status": "candidate_local_profile",
+        "raw_path": "external_state_only/raw/canada_context_boundaries/ca_statcan_2021_census_agricultural_regions/source.zip",
+        "lineage_path": "external_state_only/raw/canada_context_boundaries/ca_statcan_2021_census_agricultural_regions/source.zip.lineage.json",
+        "derived_path": "external_state_only/derived/geo_layers/ca_statcan_2021_census_agricultural_regions.sqlite3",
+        "derived_manifest_path": "external_state_only/derived/geo_layers/ca_statcan_2021_census_agricultural_regions_manifest.json",
+        "layer_id": "ca_statcan_2021_census_agricultural_regions",
+        "query_backend": "local_sqlite_rtree"
+      },
+      "boundary": "A 2021 Census statistical dissemination geography for organizing region-tagged evidence. It is not an agronomic management zone, a field boundary, a proof of crop production or farm practice, or authority for a field-specific recommendation."
+    },
+    {
+      "id": "ca_aafc_terrestrial_ecoregions_v2_2",
+      "title": "Terrestrial Ecoregions of Canada, National Ecological Framework v2.2",
+      "publisher": "Agriculture and Agri-Food Canada, Canadian Soil Information Service",
+      "jurisdiction": ["Canada"],
+      "canonical_url": "https://open.canada.ca/data/en/dataset/ade80d26-61f5-439e-8966-73b352811fe6",
+      "catalogue_api_url": "https://open.canada.ca/data/api/action/package_show?id=ade80d26-61f5-439e-8966-73b352811fe6",
+      "download_url": "https://agriculture.canada.ca/atlas/data_donnees/nationalEcologicalFramework/data_donnees/geoJSON/er/nef_ca_ter_ecoregion_v2_2.geojson",
+      "source_record_id": "ade80d26-61f5-439e-8966-73b352811fe6",
+      "format": "GeoJSON",
+      "source_crs": "EPSG:4326 (GeoJSON WGS84)",
+      "source_scale": "National Ecological Framework ecoregion context; a regional ecological classification rather than field-scale measurement",
+      "currency": "National Ecological Framework v2.2 GeoJSON; official raw resource last modified 2023-01-18, catalogue reviewed 2026-08-14",
+      "license": {
+        "identifier": "Open Government Licence - Canada",
+        "permits_modification": true,
+        "permits_commercial": true,
+        "permits_redistribution": true,
+        "reviewed_on": "2026-08-14",
+        "attribution": "Contains information licensed under the Open Government Licence - Canada from Agriculture and Agri-Food Canada, Canadian Soil Information Service."
+      },
+      "runtime": {
+        "status": "candidate_local_profile",
+        "raw_path": "external_state_only/raw/canada_context_boundaries/ca_aafc_terrestrial_ecoregions_v2_2/source.geojson",
+        "lineage_path": "external_state_only/raw/canada_context_boundaries/ca_aafc_terrestrial_ecoregions_v2_2/source.geojson.lineage.json",
+        "derived_path": "external_state_only/derived/geo_layers/ca_aafc_terrestrial_ecoregions_v2_2.sqlite3",
+        "derived_manifest_path": "external_state_only/derived/geo_layers/ca_aafc_terrestrial_ecoregions_v2_2_manifest.json",
+        "layer_id": "ca_aafc_terrestrial_ecoregions_v2_2",
+        "query_backend": "local_sqlite_rtree"
+      },
+      "boundary": "A National Ecological Framework ecoregion is broad ecological context for organizing evidence by regional climate, physiography, vegetation, soil, water, and fauna. It is not a current field observation, a soil test, a crop-suitability decision, a diagnosis, or management-rate authority."
     }
   ]
 }

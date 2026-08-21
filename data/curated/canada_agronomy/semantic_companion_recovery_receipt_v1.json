@@ -1,0 +1,67 @@
+{
+  "schema_version": "open_agronomy_agent.semantic_companion_recovery_receipt.v1",
+  "recovered_on": "2026-08-14",
+  "status": "recovered_from_hash_bound_derived_rows_not_original_bytes",
+  "method": "Reconstructed the reviewed companion schema, source binding, review metadata, titles, source pages, tags, and text from emitted semantic rows in committed source-aware JSONL. The prior companion SHA-256 remains recorded as provenance, but the exact prior byte stream was not recovered. Each recovered file therefore has a new immutable review-dated path and SHA-256. The master-store rebind accepts a row only after exact title, text, page, source-ID, and parent-raw-hash agreement.",
+  "limits": [
+    "The recovered companion files are not claimed to reproduce the byte ordering of the missing originals.",
+    "Tag values were preserved from emitted row metadata; ordering was restored for readability and is not claimed to match the missing files.",
+    "No new agronomic statement was added during recovery."
+  ],
+  "training_authorization": {
+    "granted": false,
+    "statement": "Recovery of retrieval provenance does not authorize training or fine-tuning."
+  },
+  "recoveries": [
+    {
+      "source_id": "ca_aafc_annual_crop_inventory_specification",
+      "derived_rows_path": "data/derived/rag/canada_agronomy_distributable_v13.jsonl",
+      "derived_rows_sha256": "461cdf59627b684123e02fb712d72cffd21ff04fdef7b76bd0b9a17d86b4c2de",
+      "missing_companion_path": "data/curated/canada_agronomy/ca_aafc_annual_crop_inventory_specification.semantic.json",
+      "missing_companion_sha256_recorded_in_rows": "0dc3fbbe69b3c32f8fe0fdda30da33b1725b2a92836b6e4d746cb1e007918e9d",
+      "recovered_companion_path": "data/curated/canada_agronomy/ca_aafc_annual_crop_inventory_specification.2026-07-20.semantic.json",
+      "recovered_companion_sha256": "ba22f8846fa79ba57111d5cf049baebfe8cf22c40d7392ce54622f1a5aaad92c",
+      "semantic_rows": 3
+    },
+    {
+      "source_id": "ca_aafc_crop_health_indices_specification",
+      "derived_rows_path": "data/derived/rag/canada_agronomy_distributable_v13.jsonl",
+      "derived_rows_sha256": "461cdf59627b684123e02fb712d72cffd21ff04fdef7b76bd0b9a17d86b4c2de",
+      "missing_companion_path": "data/curated/canada_agronomy/ca_aafc_crop_health_indices_specification.semantic.json",
+      "missing_companion_sha256_recorded_in_rows": "398214dc8a3c83f5da10f93d8e7926f89a86c4685a217d0b360a39c5cc8137fe",
+      "recovered_companion_path": "data/curated/canada_agronomy/ca_aafc_crop_health_indices_specification.2026-07-19.semantic.json",
+      "recovered_companion_sha256": "51c2cffddc159fd85d2cd259463813e4afa14a0c80f6fb2c96983baca54a7b40",
+      "semantic_rows": 4
+    },
+    {
+      "source_id": "ca_aafc_sk_detailed_soil_survey_specification",
+      "derived_rows_path": "data/derived/rag/canada_agronomy_distributable_v13.jsonl",
+      "derived_rows_sha256": "461cdf59627b684123e02fb712d72cffd21ff04fdef7b76bd0b9a17d86b4c2de",
+      "missing_companion_path": "data/curated/canada_agronomy/ca_aafc_sk_detailed_soil_survey_specification.semantic.json",
+      "missing_companion_sha256_recorded_in_rows": "55b0b4fbab1e30797bda1bb1c6c06dc27c1db7e9cff2b6fc6114a06b87999924",
+      "recovered_companion_path": "data/curated/canada_agronomy/ca_aafc_sk_detailed_soil_survey_specification.2026-07-20.semantic.json",
+      "recovered_companion_sha256": "2ecc6043f41a8130c79dae4e991c3d4a851f3bfe5f1533fd0117692d6ea1c9f4",
+      "semantic_rows": 3
+    },
+    {
+      "source_id": "mb_2026_canola_insect_scouting",
+      "derived_rows_path": "data/derived/rag/canada_agronomy_supplement_v3.jsonl",
+      "derived_rows_sha256": "f175130e4dbd635ecd7142ce47e996a05a9d1671aaea4041e67187f0cea22e21",
+      "missing_companion_path": "data/curated/canada_agronomy/mb_2026_canola_insect_scouting.semantic.json",
+      "missing_companion_sha256_recorded_in_rows": "e2c097487aefe9c408c339fd40859c8c43a0f9ef766d43917bf0c705a7f69d01",
+      "recovered_companion_path": "data/curated/canada_agronomy/mb_2026_canola_insect_scouting.2026-07-24.semantic.json",
+      "recovered_companion_sha256": "bf84a51dd849777fa8b8d09d2ff2334089a396f9e36e6c32fba20f41179692f6",
+      "semantic_rows": 3
+    },
+    {
+      "source_id": "mb_2026_crop_disease_scouting",
+      "derived_rows_path": "data/derived/rag/canada_agronomy_supplement_v3.jsonl",
+      "derived_rows_sha256": "f175130e4dbd635ecd7142ce47e996a05a9d1671aaea4041e67187f0cea22e21",
+      "missing_companion_path": "data/curated/canada_agronomy/mb_2026_crop_disease_scouting.semantic.json",
+      "missing_companion_sha256_recorded_in_rows": "3ee0e7b6bd92392f069077915230735f4ac9325be1c763f4ec3445cb76535a46",
+      "recovered_companion_path": "data/curated/canada_agronomy/mb_2026_crop_disease_scouting.2026-07-24.semantic.json",
+      "recovered_companion_sha256": "5d2f99d98355968b0ec4601dc78c072900bd5ddf77692592407dd208b2b863e4",
+      "semantic_rows": 3
+    }
+  ]
+}

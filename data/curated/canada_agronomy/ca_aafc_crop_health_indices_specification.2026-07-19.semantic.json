@@ -1,0 +1,80 @@
+{
+  "schema_version": "open_agronomy_agent.reviewed_semantic_companion.v1",
+  "source_id": "ca_aafc_crop_health_indices_specification",
+  "source_raw_sha256": "06d23451384e55bdc70a853e881365191b69e988e40419ebabc34de57e67df1a",
+  "reviewed_on": "2026-07-19",
+  "review_method": "Manual transcription and cross-check against source PDF pages 5, 6, 9, and 10; no outside agronomic claims added.",
+  "records": [
+    {
+      "title": "Crop Stress Index: verified formula, stored scale, stress bands, and boundary",
+      "source_pages": [
+        5,
+        9,
+        10
+      ],
+      "tags": [
+        "AAFC crop health indices",
+        "Crop Stress Index",
+        "AET PET",
+        "integer raster",
+        "0 to 100 stress bands",
+        "extreme stress",
+        "modelled regional context",
+        "field decisions require current crop"
+      ],
+      "text": "The AAFC specification defines Crop Stress Index as CSI = 1 - (AET/PET), where AET is actual evapotranspiration and PET is potential evapotranspiration. The conceptual index ranges from 0 to 1, with values closer to 1 indicating higher modelled crop-water stress. For storage, values are multiplied by 100 to make an integer raster: 0-25 no stress, 26-50 light stress, 51-75 severe stress, and 76-100 extreme stress. The index is produced with the Versatile Soil Moisture Budget model from station temperature and precipitation plus crop-specific coefficients. It is modelled regional context, not measured root-zone water status or an irrigation prescription; field decisions require current crop, soil-water, rainfall, and field observations."
+    },
+    {
+      "title": "Crop development stage: verified cool-season and warm-season model families",
+      "source_pages": [
+        6
+      ],
+      "tags": [
+        "AAFC crop development stage",
+        "Robertson biometeorological time scale",
+        "Brown and Bootsma Crop Heat Unit",
+        "wheat barley corn soybean",
+        "5 km modelled regional raster",
+        "not observation every plant",
+        "representative field areas"
+      ],
+      "text": "For AAFC crop development stage, the specification uses a Robertson biometeorological time-scale model for cool-season crops such as wheat and barley. It uses a Crop Heat Unit algorithm attributed to Brown and Bootsma for warm-season crops such as corn and soybean. These are different crop-family model definitions, so a stage value must be interpreted with the correct crop family rather than treated as one universal scale. The output is a 5 km modelled regional raster, not observation of every plant. Confirm actual stage across representative field areas before using stage-sensitive operational timing."
+    },
+    {
+      "title": "Crop development stage: verified 0 to 5 small-grain and corn-soybean value table",
+      "source_pages": [
+        9,
+        10
+      ],
+      "tags": [
+        "AAFC crop development stage values",
+        "small grain stage table",
+        "corn soybean stage table",
+        "0 before planting 1 emergence 2 jointing 3 heading 4 soft dough 5 ripening",
+        "full cover senescence maturity",
+        "5 km raster",
+        "5 km regional raster",
+        "representative field zones"
+      ],
+      "text": "The AAFC crop development stage table assigns small grains: 0 before planting, 1 emergence, 2 jointing, 3 heading, 4 soft dough, and 5 ripening. Corn and soybean share 0 before planting and 1 emergence, but their middle values differ: 2 full cover, 3 senescence, and 4 maturity or ripening. Small-grain labels must not be applied to corn or soybean without checking the crop family. The values are modelled in a 5 km regional raster, so one grid value does not prove uniform stage across a field. Confirm stage in representative field zones before any stage-sensitive decision."
+    },
+    {
+      "title": "Crop Health Indices: verified VSMB inputs, station interpolation, resolution, and field boundary",
+      "source_pages": [
+        5,
+        6,
+        10
+      ],
+      "tags": [
+        "AAFC crop health indices lineage",
+        "Versatile Soil Moisture Budget",
+        "station precipitation temperature",
+        "crop-specific coefficients",
+        "interpolated station data",
+        "5 km resolution",
+        "regional not field measurement"
+      ],
+      "text": "The AAFC Crop Health Indices are derived with the Versatile Soil Moisture Budget model using crop-specific coefficients and station-based precipitation and temperature measurements to simulate crop growth. Values are generated at Canadian weather-station point locations and interpolated into 5 km by 5 km raster datasets over the Canadian agricultural extent. The interpolation, crop and model assumptions, station spacing, and grid resolution make these products regional representations. They are not remotely sensed field truth, in-field soil-water measurements, direct observations of crop stage, or management prescriptions. Use them to frame regional conditions, then collect current crop, root-zone, soil, weather, and field observations for the actual decision."
+    }
+  ]
+}

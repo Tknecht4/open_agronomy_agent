@@ -1,0 +1,103 @@
+paper:
+  title: "What RC3 Measured: A Reproducible Harness Checkpoint for an Evidence-Governed Agronomy Agent"
+  status: "complete nonclaim development checkpoint"
+  benchmark_source_commit: "3e30fb5de38105fa5bba3845411eb2174c21d3c4"
+  benchmark_source_snapshot_sha256: "25fb45e1d1ea7476a8d0b58ef563dc6afb7bc391e85f97a72324491cb6c273c3"
+  analysis_date: "2026-08-15"
+
+claim_boundary:
+  supported:
+    - "The exact 3 candidate by 3 trial by 4 arm by 241 case matrix completed with receipt-bound retention."
+    - "The frozen numeric scorer, source-lineage probes, structural activation, repeatability, and resource observations have the reported values."
+    - "RC3 exposed specific parser, localization, guard-routing, reporting, and latency defects."
+    - "A separately authorized post-hoc blinded Luna High process produced the reported aggregate triage diagnostics for saved primary-lane answers."
+  unsupported:
+    - "Any candidate is agronomically superior."
+    - "Retrieval or verification improved answer quality."
+    - "Agronomist equivalence, grower utility, safety, field efficacy, legal compliance, or population generalization."
+    - "Benchmark v3 performance or release eligibility."
+
+claims:
+  - id: C1
+    claim: "RC3 contains 8,676 unique canonical observations in 36 arm executions and nine verified retention bundles, with zero generation-time automated semantic judgments."
+    evidence:
+      - "source_data/checkpoint_validation_receipt.json"
+      - "source_data/trial_inventory.csv"
+    unit: "trial, arm execution, and observation identity"
+    limitation: "Completion and retention prove execution integrity, not answer correctness."
+
+  - id: C2
+    claim: "Only 49 of 241 cases per arm have a defined deterministic score; 192 are trace-only or await independent review."
+    evidence:
+      - "source_data/lane_coverage.csv"
+      - "figures/rc3_evidence_coverage.svg"
+    unit: "frozen benchmark case"
+    limitation: "The lexical score is a regression proxy and cannot fill the absent semantic-review lanes."
+
+  - id: C3
+    claim: "The frozen full-system calculation parser reports 14/16, while a post-run audit finds all 16 typed tool payloads within numeric tolerance."
+    evidence:
+      - "source_data/checkpoint_validation_receipt.json"
+      - "source_data/deterministic_metric_summary.csv"
+      - "figures/rc3_deterministic_metrics.svg"
+    unit: "objective calculation case"
+    limitation: "The 16/16 audit is parser sensitivity, not a replacement for the frozen 14/16 result."
+
+  - id: C4
+    claim: "Expected sources surfaced on 22/26 positive retrieval cases and 46/50 required patterns were present."
+    evidence:
+      - "source_data/retrieval_lineage_summary.csv"
+      - "figures/rc3_harness_behavior.svg"
+    unit: "retrieval probe case and required regex pattern"
+    limitation: "Retrieval precedes generation and is invariant across candidates; presence is not relevance, use, or correctness."
+
+  - id: C5
+    claim: "Full-system output origin and verification behavior are strongly harness-dependent."
+    evidence:
+      - "source_data/harness_activation_summary.csv"
+      - "figures/rc3_harness_behavior.svg"
+    unit: "full-system observation"
+    limitation: "Fallback, rewrite, hold, and tool counts do not establish whether final answers are better."
+
+  - id: C6
+    claim: "Local argmax outputs repeat exactly across trials, while repeated remote outputs vary; latency contains a retained 5,062.879-second stall."
+    evidence:
+      - "source_data/repeatability_summary.csv"
+      - "source_data/resource_summary.csv"
+      - "figures/rc3_repeatability_latency.svg"
+    unit: "case-level output hash and response wall time"
+    limitation: "Repeatability is not correctness; latency is descriptive and not a cross-backend speed comparison."
+
+  - id: C7
+    claim: "Full-system input lineage, field-context binding, route trace, context-admission trace, and evidence lineage are present on every canonical observation."
+    evidence:
+      - "source_data/interface_trace_summary.csv"
+      - "source_data/checkpoint_validation_receipt.json"
+    unit: "full-system observation, separated by candidate configuration"
+    limitation: "Trace presence and linkage do not establish evidence correctness, answer quality, or field validity."
+
+  - id: C8
+    claim: "The accompanying release candidate contains versioned, future-only repairs for the scorer, public metric projection, deterministic response language, and admission reporting defects exposed by RC3."
+    evidence:
+      - "source_data/checkpoint_validation_receipt.json"
+    unit: "repository-relative implementation and regression-test file identity"
+    limitation: "These repairs were not part of the measured RC3 system and do not alter its frozen observations or scores."
+
+  - id: C9
+    claim: "A separately authorized post-hoc blinded Luna High process reviewed 1,620 saved primary-lane answers and produced the reported aggregate weighted-rubric summaries and raw/full contrasts."
+    evidence:
+      - "source_data/posthoc_semantic_review_summary.csv"
+      - "source_data/posthoc_semantic_review_paired_effects.csv"
+      - "source_data/posthoc_semantic_review_quality_controls.json"
+      - "figures/rc3_posthoc_semantic_review.svg"
+      - "source_data/checkpoint_validation_receipt.json"
+    unit: "saved answer in the 90 raw/full decision-quality pairs per candidate trial"
+    limitation: "The triage has no human labels, calibration, independent adjudication, or promotion authority; Luna judges Luna candidate outputs. It is not semantic-quality validation, an agronomic ranking, or evidence that any component improved answers."
+
+methods:
+  primary_estimand: "finite-suite case mean after averaging the three observed trials within each case"
+  uncertainty: "95% case-resampling sensitivity intervals; 50,000 draws; shared indexes across candidate and arm cells within each metric family; base seed 20260815 with metric offsets 0/1; paired arm-contrast offsets 1000/1001"
+  missingness: "preserved as missing; never converted to zero"
+  multiplicity: "no p-values, significance tests, equivalence claims, or composite score"
+  public_data_boundary: "answer text, questions, prompts, context, databases, logs, model weights, and machine-local paths excluded"
+  posthoc_ai_triage: "separately authorized after generation; blinded answer-only Luna High review; weighted 0--4 rubric mapped to 0--100; uncalibrated diagnostic only; not combined with deterministic endpoints"

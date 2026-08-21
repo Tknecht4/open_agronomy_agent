@@ -40,7 +40,11 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--db-path", default="outputs/cockpit/phase3.sqlite3")
     parser.add_argument("--artifact-root", default="outputs/cockpit/artifacts")
     parser.add_argument("--static-dir", default=None)
-    parser.add_argument("--model-config", default=None, help="model profile YAML; defaults to configs/model.yaml")
+    parser.add_argument(
+        "--model-config",
+        default=None,
+        help="model profile YAML; defaults to configs/model.yaml",
+    )
     parser.add_argument("--frontend", action="store_true", help="launch npm dev server for the frontend")
     parser.add_argument("--frontend-dir", default="frontend")
     parser.add_argument("--frontend-port", type=int, default=5173)
@@ -157,6 +161,30 @@ def _validate_bind_security(*, host: str, allow_local_dev_auth: bool) -> None:
         )
 
 
+def _stop_frontend_process(
+    process: subprocess.Popen[bytes] | subprocess.Popen[str] | None,
+    *,
+    timeout_seconds: float = 5.0,
+) -> str:
+    """Stop the Vite child after normal, interrupted, or failed API shutdown."""
+
+    if process is None or process.poll() is not None:
+        return "not_running"
+    try:
+        process.send_signal(signal.SIGINT)
+        process.wait(timeout=timeout_seconds)
+        return "stopped_sigint"
+    except subprocess.TimeoutExpired:
+        process.terminate()
+    try:
+        process.wait(timeout=timeout_seconds)
+        return "stopped_terminate"
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=timeout_seconds)
+        return "stopped_kill"
+
+
 def main() -> int:
     parser = _build_parser()
     args = parser.parse_args()
@@ -266,9 +294,9 @@ def main() -> int:
             )
         return int(server.run())
     except KeyboardInterrupt:
-        if frontend_proc:
-            frontend_proc.send_signal(signal.SIGINT)
         return 0
+    finally:
+        _stop_frontend_process(frontend_proc)
 
 
 if __name__ == "__main__":

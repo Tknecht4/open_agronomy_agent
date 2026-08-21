@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
 from agronomy_agent.skill_registry import skill_metadata
@@ -195,22 +196,44 @@ def nutrient_4r_guard(query: str) -> ToolNote | None:
     )
 
 
+GuardExecutor = Callable[[str], ToolNote | None]
+
+_GUARD_EXECUTOR_INVENTORY: Mapping[str, GuardExecutor] = {
+    "label_guard": label_guard,
+    "fertility_guard": fertility_guard,
+    "weather_guard": weather_guard,
+    "field_data_guard": field_data_guard,
+    "salinity_sodicity_guard": salinity_sodicity_guard,
+    "soil_structure_guard": soil_structure_guard,
+    "pesticide_safety_guard": pesticide_safety_guard,
+    "resistance_management_guard": resistance_management_guard,
+    "nutrient_4r_guard": nutrient_4r_guard,
+}
+
+
+def registered_guard_ids() -> tuple[str, ...]:
+    """Return guard IDs from the executable inventory in stable order."""
+
+    return tuple(_GUARD_EXECUTOR_INVENTORY)
+
+
 def run_tools(query: str, enabled_tools: tuple[str, ...] | None = None) -> list[ToolNote]:
-    tool_fns = {
-        "label_guard": label_guard,
-        "fertility_guard": fertility_guard,
-        "weather_guard": weather_guard,
-        "field_data_guard": field_data_guard,
-        "salinity_sodicity_guard": salinity_sodicity_guard,
-        "soil_structure_guard": soil_structure_guard,
-        "pesticide_safety_guard": pesticide_safety_guard,
-        "resistance_management_guard": resistance_management_guard,
-        "nutrient_4r_guard": nutrient_4r_guard,
-    }
-    selected_names = tuple(tool_fns) if enabled_tools is None else tuple(dict.fromkeys(name for name in enabled_tools if name in tool_fns))
+    if enabled_tools is None:
+        selected_names = registered_guard_ids()
+    else:
+        selected_names = tuple(dict.fromkeys(str(name) for name in enabled_tools))
+        unknown = tuple(
+            name for name in selected_names if name not in _GUARD_EXECUTOR_INVENTORY
+        )
+        if unknown:
+            raise ValueError(
+                "unknown enabled guard(s): "
+                f"{', '.join(unknown)}; registered guards: "
+                f"{', '.join(registered_guard_ids())}"
+            )
     notes: list[ToolNote] = []
     for name in selected_names:
-        note = tool_fns[name](query)
+        note = _GUARD_EXECUTOR_INVENTORY[name](query)
         if note is None and enabled_tools is not None:
             note = _tool_note(name, EXPLICIT_TOOL_FALLBACK_TEXT[name])
         if note is not None:

@@ -205,7 +205,7 @@ export function App() {
   const [replayMode, setReplayMode] = useState<'baseline' | 'agronomic_rag' | 'mock'>('mock')
   const [replayPipeline, setReplayPipeline] = useState<'full' | 'route_only' | 'retrieve_only' | 'answer_only'>('full')
   const [replayModel, setReplayModel] = useState('')
-  const [replayRagConfig, setReplayRagConfig] = useState('configs/rag_final_mvp.yaml')
+  const [replayRagConfig, setReplayRagConfig] = useState('configs/rag.yaml')
   const [replayTopK, setReplayTopK] = useState(5)
   const [replayMaxTokens, setReplayMaxTokens] = useState(280)
   const [sources, setSources] = useState<DataSourceRecord[]>([])
@@ -216,9 +216,11 @@ export function App() {
   const [exportIncludeArtifacts, setExportIncludeArtifacts] = useState(true)
   const [exportIncludeSources, setExportIncludeSources] = useState(true)
   const [chatModelId, setChatModelId] = useState('mock')
-  const [chatRagConfig, setChatRagConfig] = useState('configs/rag_final_mvp.yaml')
+  const [chatRagConfig, setChatRagConfig] = useState('configs/rag.yaml')
   const [availableModels, setAvailableModels] = useState<string[]>(['mock'])
-  const [availableRagConfigs, setAvailableRagConfigs] = useState<string[]>(['configs/rag_final_mvp.yaml'])
+  const [availableRagConfigs, setAvailableRagConfigs] = useState<string[]>([
+    'configs/rag.yaml',
+  ])
   const [reflectionObservation, setReflectionObservation] = useState('')
   const [reflectionEvidence, setReflectionEvidence] = useState('')
   const [reflectionHypothesis, setReflectionHypothesis] = useState('')
@@ -269,7 +271,10 @@ export function App() {
       default_rag_config: string
     }>('/api/configs')
     const models = configs.models.length > 0 ? configs.models : ['mock']
-    const ragConfigs = configs.rag_configs.length > 0 ? configs.rag_configs : ['configs/rag_final_mvp.yaml']
+    const ragConfigs =
+      configs.rag_configs.length > 0
+        ? configs.rag_configs
+        : ['configs/rag.yaml']
     setAvailableModels(models)
     setAvailableRagConfigs(ragConfigs)
     setChatModelId((current) => (models.includes(current) ? current : models[0]))

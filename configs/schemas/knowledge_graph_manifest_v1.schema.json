@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-agronomy.local/schemas/knowledge_graph_manifest_v1.schema.json",
+  "title": "Open Agronomy Knowledge Graph Manifest v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "graph_id",
+    "version",
+    "data_path",
+    "namespaces",
+    "source",
+    "license",
+    "sha256",
+    "authority_role",
+    "priority",
+    "collision_policy",
+    "relation_vocabulary"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "open_agronomy_agent.knowledge_graph_manifest.v1"
+    },
+    "graph_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "data_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "namespaces": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_:-]*$"
+      }
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "license": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "authority_role": {
+      "enum": [
+        "vocabulary_hint",
+        "regional_context",
+        "decision_evidence"
+      ]
+    },
+    "priority": {
+      "type": "integer"
+    },
+    "collision_policy": {
+      "enum": [
+        "error",
+        "prefer_higher_priority"
+      ]
+    },
+    "relation_vocabulary": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_:-]*$"
+      }
+    }
+  },
+  "additionalProperties": false
+}

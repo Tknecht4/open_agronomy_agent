@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-agronomy-agent.local/schemas/benchmark_judge_calibration_v1.schema.json",
+  "title": "Open Agronomy Agent semantic-judge calibration receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "calibration_id",
+    "status",
+    "created_at",
+    "judge",
+    "human_review",
+    "artifacts",
+    "probe_counts",
+    "acceptance_thresholds",
+    "observed",
+    "human_adjudication_authoritative",
+    "candidate_self_judgment_is_sole_release_evidence",
+    "claim_eligible"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "open_agronomy_agent.benchmark_judge_calibration.v1"
+    },
+    "calibration_id": {
+      "type": "string",
+      "pattern": "^oaa_judge_calibration_[a-z0-9][a-z0-9._-]{2,100}$"
+    },
+    "status": {
+      "enum": ["template_not_calibrated", "calibrated_pass", "calibrated_blocked"]
+    },
+    "created_at": {"type": "string", "format": "date-time"},
+    "judge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["backend", "model_id", "revision", "role", "sampling"],
+      "properties": {
+        "backend": {"type": "string", "minLength": 2},
+        "model_id": {"type": "string", "minLength": 2},
+        "revision": {"type": ["string", "null"]},
+        "role": {"type": "string", "minLength": 2},
+        "sampling": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["temperature", "seed_policy"],
+          "properties": {
+            "temperature": {"type": "number", "minimum": 0},
+            "seed_policy": {"type": "string", "minLength": 2}
+          }
+        }
+      }
+    },
+    "human_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reviewer_count", "case_count", "blinded", "disagreements_preserved"],
+      "properties": {
+        "reviewer_count": {"type": "integer", "minimum": 2},
+        "case_count": {"type": "integer", "minimum": 1},
+        "blinded": {"const": true},
+        "disagreements_preserved": {"const": true}
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "development_set_sha256",
+        "human_labels_sha256",
+        "prompt_sha256",
+        "rubric_sha256",
+        "parser_sha256"
+      ],
+      "properties": {
+        "development_set_sha256": {"$ref": "#/$defs/sha256"},
+        "human_labels_sha256": {"$ref": "#/$defs/sha256"},
+        "prompt_sha256": {"$ref": "#/$defs/sha256"},
+        "rubric_sha256": {"$ref": "#/$defs/sha256"},
+        "parser_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "probe_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "order_reversal_pairs",
+        "concise_correct_vs_verbose_vague",
+        "useful_caution_vs_blanket_refusal",
+        "supported_vs_cosmetic_citation",
+        "actionable_unsafe_vs_bounded"
+      ],
+      "properties": {
+        "order_reversal_pairs": {"type": "integer", "minimum": 1},
+        "concise_correct_vs_verbose_vague": {"type": "integer", "minimum": 1},
+        "useful_caution_vs_blanket_refusal": {"type": "integer", "minimum": 1},
+        "supported_vs_cosmetic_citation": {"type": "integer", "minimum": 1},
+        "actionable_unsafe_vs_bounded": {"type": "integer", "minimum": 1}
+      }
+    },
+    "acceptance_thresholds": {"$ref": "#/$defs/metric_set"},
+    "observed": {"$ref": "#/$defs/metric_set"},
+    "human_adjudication_authoritative": {"const": true},
+    "candidate_self_judgment_is_sole_release_evidence": {"const": false},
+    "claim_eligible": {"const": false}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "metric_set": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["macro_f1", "false_positive_rate", "false_negative_rate", "order_flip_rate"],
+      "properties": {
+        "macro_f1": {"type": "number", "minimum": 0, "maximum": 1},
+        "false_positive_rate": {"type": "number", "minimum": 0, "maximum": 1},
+        "false_negative_rate": {"type": "number", "minimum": 0, "maximum": 1},
+        "order_flip_rate": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    }
+  }
+}

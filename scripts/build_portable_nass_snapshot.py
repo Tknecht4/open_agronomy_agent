@@ -20,6 +20,7 @@ from agronomy_agent.paths import repo_path
 
 
 DATASET_INDEX_URL = "https://www.nass.usda.gov/datasets/"
+ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_COMMODITIES = (
     "BARLEY",
     "CANOLA",
@@ -110,6 +111,16 @@ def _iter_bulk_rows(response: Any) -> Iterable[dict[str, str]]:
         yield from csv.DictReader(itertools.chain([first_line], text), delimiter=delimiter)
 
 
+def _portable_path_hint(path: Path) -> str:
+    """Describe output location without recording a workstation-specific path."""
+
+    resolved = path.resolve()
+    try:
+        return resolved.relative_to(ROOT.resolve()).as_posix()
+    except ValueError:
+        return path.name
+
+
 def build_snapshot(
     *,
     source_url: str,
@@ -161,7 +172,7 @@ def build_snapshot(
         "source_url": source_url,
         "source_index": DATASET_INDEX_URL,
         "source_headers": source_headers,
-        "output": str(output),
+        "output": _portable_path_hint(output),
         "sha256": hasher.hexdigest(),
         "row_count": row_count,
         "min_year": min_year,

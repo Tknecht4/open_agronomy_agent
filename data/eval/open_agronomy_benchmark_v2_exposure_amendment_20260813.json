@@ -1,0 +1,57 @@
+{
+  "schema_version": "open_agronomy_agent.benchmark_v2_exposure_amendment.v1",
+  "amendment_id": "oab2-exposure-20260813-01",
+  "benchmark_id": "open_agronomy_benchmark_v2",
+  "recorded_at": "2026-08-13T00:00:00Z",
+  "status": "exposed_and_used_for_deterministic_behavior_tuning",
+  "append_only": true,
+  "claim_eligible": false,
+  "exposure": {
+    "first_known_exposure_date": "2026-08-13",
+    "scope": "all_30_exact_questions_and_case_expectations",
+    "activities": [
+      "The exact suite was parsed and validated against its JSON Schema.",
+      "Every calculation and missing-input question was executed through the deterministic planner.",
+      "Every question was probed against answerability state contracts.",
+      "Observed failures included a benign nitrogen-versus-urea explanation misclassified as a calculation and five of six high-consequence cases not requiring authority.",
+      "Planner and answerability matcher rules were changed after inspecting those exact failures.",
+      "An exact all-30 regression test was added to preserve the tuned behavior."
+    ],
+    "exposure_classes": [
+      "developer_read_case_text",
+      "deterministic_planner_probe",
+      "answerability_probe",
+      "behavior_tuning_using_exact_failures",
+      "exact_case_regression_test"
+    ]
+  },
+  "affected_components": [
+    {
+      "path": "src/agronomy_agent/tool_planner.py",
+      "post_tuning_sha256_at_receipt": "bee93a3c35f2f139367381e55b10c71a3b594c84ca9f8e663210295309d9865c",
+      "change_reason": "prevent benign explanatory prompts from being converted into calculator clarification"
+    },
+    {
+      "path": "src/agronomy_agent/answerability.py",
+      "post_tuning_sha256_at_receipt": "baf4c13360fee3419a7c13cbcefea62dd4b4fa39be20fc75dab51678e75e95d7",
+      "change_reason": "recognize explicit certified, exact, and irreversible high-consequence action requests as requiring authority"
+    }
+  ],
+  "artifact_lineage_before_amendment": {
+    "suite_path": "data/eval/open_agronomy_benchmark_v2_cases.jsonl",
+    "suite_sha256": "9785caf6ca8040b4bbe7906914aaa7c8c0375e48da90c30ec8a927a116daab32",
+    "contract_path": "configs/open_agronomy_benchmark_v2.json",
+    "contract_sha256": "3e0dcce6ed62d012139c5b3ececc3c1bb345c2bd32174e0747fbf3555a3c6e0c",
+    "preregistration_path": "configs/open_agronomy_benchmark_v2_preregistration.json",
+    "preregistration_sha256": "64876a64958153201bc2cd2a2163168980290cbfb47ef1b035a892db68c1bfda"
+  },
+  "methodological_consequence": {
+    "v2_role_after_exposure": "internal_development_regression_and_harness_contract_qa_only",
+    "v2_may_measure_post_tuning_generalization": false,
+    "v2_may_support_external_capability_claim": false,
+    "v2_dry_runner_output_is_system_performance": false,
+    "required_successor": "A freshly authored, untouched v3 is required for future evaluation; independent case authorship and review are preferred.",
+    "independent_review_cannot_restore_holdout_status": true
+  },
+  "interpretation_boundary": "This receipt records methodological contamination rather than correcting or deleting it. Exact v2 conformance now shows regression behavior on exposed cases, not general agronomic-agent ability."
+}

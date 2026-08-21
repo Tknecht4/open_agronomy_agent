@@ -52,6 +52,7 @@ import {
   TraceToolGroup,
 } from './sourceCards'
 import { buildReviewerExportMarkdown, reviewerExportFilename } from './reviewerExport'
+import { CapabilityReadinessStatus } from './CapabilityReadinessStatus'
 import {
   RetrievedDoc,
   SessionRecord,
@@ -2021,7 +2022,7 @@ export function OpenAgronomyApp() {
   const [offlineStorageRepair, setOfflineStorageRepair] =
     useState<Phase6OfflineStorageRepairDetail | null>(null)
   const [privateKnowledge, setPrivateKnowledge] = useState<PrivateKnowledgeInspection[]>([])
-  const [ragConfig, setRagConfig] = useState('configs/rag_final_mvp.yaml')
+  const [ragConfig, setRagConfig] = useState('configs/rag.yaml')
   const [adapterReadiness, setAdapterReadiness] = useState<PublicAdapterReadiness>(fallbackAdapterReadiness)
   const [turns, setTurns] = useState<Turn[]>([])
   const [evidenceTurnId, setEvidenceTurnId] = useState('')
@@ -2174,7 +2175,10 @@ export function OpenAgronomyApp() {
         setSessionId(matchingSession?.session_id || '')
         setTurns(matchingSession?.turns || [])
         const nextModels = configs.models.length > 0 ? configs.models : ['mock']
-        const nextRagConfigs = configs.rag_configs.length > 0 ? configs.rag_configs : ['configs/rag_final_mvp.yaml']
+        const nextRagConfigs =
+          configs.rag_configs.length > 0
+            ? configs.rag_configs
+            : ['configs/rag.yaml']
         const nextProfiles = configs.model_profiles || []
         setModelProfiles(nextProfiles)
         setNetworkMode(
@@ -4684,6 +4688,7 @@ function SourcesPage({
         <div className="benchmark-status">
           <span>{sourceStatus}</span>
           <span>{packageStatus}</span>
+          <CapabilityReadinessStatus />
         </div>
       </section>
       <PublicAdapterReadinessPanel readiness={adapterReadiness} compact />

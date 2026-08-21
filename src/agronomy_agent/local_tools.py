@@ -867,7 +867,7 @@ def route_question(question: str) -> dict[str, Any]:
     }
 
 
-def retrieve_context(question: str, top_k: int = 5, rag_config: str = "configs/rag_governed_runtime_v1.yaml") -> dict[str, Any]:
+def retrieve_context(question: str, top_k: int = 5, rag_config: str = "configs/rag.yaml") -> dict[str, Any]:
     resources = load_agent_resources(rag_config)
     context = build_context(question, resources=resources)
     return {
@@ -901,6 +901,14 @@ def retrieve_context(question: str, top_k: int = 5, rag_config: str = "configs/r
                 "kind": hit.kind,
                 "evidence": hit.evidence,
                 "neighbors": hit.neighbors[:8],
+                "namespaces": hit.namespaces,
+                "graph_id": hit.graph_id,
+                "graph_version": hit.graph_version,
+                "graph_source": hit.graph_source,
+                "graph_license": hit.graph_license,
+                "graph_sha256": hit.graph_sha256,
+                "authority_role": hit.authority_role,
+                "relation_paths": hit.relation_paths[:8],
             }
             for idx, hit in enumerate(context.graph_hits[:top_k], start=1)
         ],

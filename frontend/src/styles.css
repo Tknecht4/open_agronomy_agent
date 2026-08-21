@@ -355,13 +355,21 @@ body {
 .chat-message {
   box-sizing: border-box;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 6px;
   width: min(94%, 680px);
+  min-width: 0;
+  max-width: 100%;
   padding: 11px 12px;
   border: 1px solid #d4ddd0;
   border-radius: 8px;
   background: #fbfcf9;
   overflow-wrap: anywhere;
+}
+
+.chat-message > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .chat-message > span {
@@ -506,18 +514,18 @@ body {
 
 @media (max-width: 1180px) and (min-width: 821px) {
   .map-workspace {
-    grid-template-columns: minmax(260px, 320px) minmax(430px, 1fr);
+    grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr);
     height: auto;
   }
 
   .map-stage {
-    min-height: 720px;
+    min-height: 620px;
   }
 
   .chat-panel {
     display: flex;
-    grid-column: 1 / -1;
-    min-height: 640px;
+    grid-column: auto;
+    min-height: 620px;
   }
 
   .conversation-thread {
@@ -2567,6 +2575,22 @@ pre,
   display: grid;
   gap: 8px;
   margin-top: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Generated answers can contain long identifiers, URLs, and compact code.
+   Keep every Markdown child inside the narrow chat card instead of letting a
+   grid item's intrinsic width stretch the panel. */
+.formatted-answer > *,
+.formatted-answer p,
+.formatted-answer li,
+.formatted-answer blockquote,
+.formatted-answer a,
+.formatted-answer code {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .formatted-answer p {
@@ -2612,6 +2636,8 @@ pre,
 }
 
 .formatted-answer pre {
+  box-sizing: border-box;
+  max-width: 100%;
   margin: 0;
   padding: 10px;
   overflow-x: auto;
@@ -3998,18 +4024,18 @@ pre,
 
 @media (max-width: 1180px) and (min-width: 821px) {
   .map-workspace {
-    grid-template-columns: minmax(260px, 320px) minmax(430px, 1fr);
+    grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr);
     height: auto;
   }
 
   .map-stage {
-    min-height: 720px;
+    min-height: 620px;
   }
 
   .chat-panel {
     display: flex;
-    grid-column: 1 / -1;
-    min-height: 640px;
+    grid-column: auto;
+    min-height: 620px;
   }
 
   .conversation-thread {
@@ -4036,9 +4062,77 @@ pre,
   }
 
   .chat-panel {
+    box-sizing: border-box;
     display: flex;
     order: 2;
-    min-height: 70svh;
+    height: calc(100svh - 72px);
+    min-height: 0;
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .chat-heading {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .chat-heading > div {
+    grid-column: auto;
+    gap: 2px;
+  }
+
+  /* The heading already says this is the agent chat. On a stacked workspace,
+     reserve that vertical space for the conversation while retaining the
+     answer state and reset action on wider layouts. */
+  .chat-heading .panel-kicker,
+  .chat-heading .agent-state {
+    display: none;
+  }
+
+  .chat-heading h2 {
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.15;
+  }
+
+  .network-answer-state,
+  .answer-receipt {
+    margin: 0;
+  }
+
+  .network-answer-state {
+    padding: 6px 8px;
+  }
+
+  .network-answer-state.runtime_online {
+    display: none;
+  }
+
+  /* The Evidence page and each answer's context disclosure remain available.
+     On the vertically stacked workspace, prioritise the scrollable answer over
+     a duplicate full-width evidence shortcut. */
+  .answer-receipt {
+    display: none;
+  }
+
+  .answer-receipt {
+    align-items: center;
+    flex-direction: row;
+    gap: 6px;
+    padding: 6px 7px;
+  }
+
+  .answer-receipt-summary strong {
+    font-size: 12px;
+  }
+
+  .answer-receipt > button {
+    width: auto;
+  }
+
+  .answer-receipt-summary > div:first-child > span {
+    display: none;
   }
 
   .field-panel {
@@ -4046,8 +4140,18 @@ pre,
   }
 
   .conversation-thread {
-    min-height: 42svh;
-    max-height: 62svh;
+    min-height: 0;
+    max-height: none;
+  }
+
+  .chat-composer {
+    gap: 6px;
+    padding: 6px 0 0;
+  }
+
+  .chat-panel .chat-composer textarea {
+    min-height: 72px;
+    max-height: 140px;
   }
 
   .map-toolbar .map-actions {

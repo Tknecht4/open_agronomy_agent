@@ -1,0 +1,140 @@
+{
+  "schema_version": "open_agronomy_agent.benchmark_v2_interface.v1",
+  "benchmark_id": "open_agronomy_benchmark_v2",
+  "status": "exposed_development_regression_interface",
+  "claim_eligible": false,
+  "arm_order": [
+    "raw_model",
+    "kernel_only",
+    "kernel_field_context",
+    "retrieval_only",
+    "tools_only",
+    "retrieval_tools_no_intervention",
+    "retrieval_tools_risk_intervention",
+    "full_no_fallback",
+    "production_full"
+  ],
+  "component_fields": [
+    "kernel_prompt",
+    "field_context",
+    "retrieval",
+    "typed_tools",
+    "risk_intervention",
+    "verifier",
+    "fallback"
+  ],
+  "arms": {
+    "raw_model": {
+      "kernel_prompt": false,
+      "field_context": false,
+      "retrieval": false,
+      "typed_tools": false,
+      "risk_intervention": false,
+      "verifier": false,
+      "fallback": false,
+      "role": "model capability reference; not a product behavior claim"
+    },
+    "kernel_only": {
+      "kernel_prompt": true,
+      "field_context": false,
+      "retrieval": false,
+      "typed_tools": false,
+      "risk_intervention": false,
+      "verifier": false,
+      "fallback": false,
+      "role": "kernel prompt contribution"
+    },
+    "kernel_field_context": {
+      "kernel_prompt": true,
+      "field_context": true,
+      "retrieval": false,
+      "typed_tools": false,
+      "risk_intervention": false,
+      "verifier": false,
+      "fallback": false,
+      "role": "structured field-context contribution"
+    },
+    "retrieval_only": {
+      "kernel_prompt": true,
+      "field_context": true,
+      "retrieval": true,
+      "typed_tools": false,
+      "risk_intervention": false,
+      "verifier": false,
+      "fallback": false,
+      "role": "governed retrieval contribution without intervention or verifier"
+    },
+    "tools_only": {
+      "kernel_prompt": true,
+      "field_context": true,
+      "retrieval": false,
+      "typed_tools": true,
+      "risk_intervention": false,
+      "verifier": false,
+      "fallback": false,
+      "role": "typed deterministic tool contribution; meaningful primarily on calculation strata"
+    },
+    "retrieval_tools_no_intervention": {
+      "kernel_prompt": true,
+      "field_context": true,
+      "retrieval": true,
+      "typed_tools": true,
+      "risk_intervention": false,
+      "verifier": false,
+      "fallback": false,
+      "role": "retrieval-plus-tools integration reference before caution policy"
+    },
+    "retrieval_tools_risk_intervention": {
+      "kernel_prompt": true,
+      "field_context": true,
+      "retrieval": true,
+      "typed_tools": true,
+      "risk_intervention": true,
+      "verifier": false,
+      "fallback": false,
+      "role": "risk-conditioned answerability and pre-generation intervention contribution"
+    },
+    "full_no_fallback": {
+      "kernel_prompt": true,
+      "field_context": true,
+      "retrieval": true,
+      "typed_tools": true,
+      "risk_intervention": true,
+      "verifier": true,
+      "fallback": false,
+      "role": "full governed path with model output visible when verifier does not accept it"
+    },
+    "production_full": {
+      "kernel_prompt": true,
+      "field_context": true,
+      "retrieval": true,
+      "typed_tools": true,
+      "risk_intervention": true,
+      "verifier": true,
+      "fallback": true,
+      "role": "production behavior including fallback; report answer origin explicitly"
+    }
+  },
+  "named_causal_contrasts": [
+    {"contrast_id": "kernel_prompt", "control": "raw_model", "treatment": "kernel_only", "changed_component": "kernel_prompt"},
+    {"contrast_id": "field_context", "control": "kernel_only", "treatment": "kernel_field_context", "changed_component": "field_context"},
+    {"contrast_id": "retrieval", "control": "kernel_field_context", "treatment": "retrieval_only", "changed_component": "retrieval"},
+    {"contrast_id": "typed_tools", "control": "kernel_field_context", "treatment": "tools_only", "changed_component": "typed_tools"},
+    {"contrast_id": "retrieval_tools_integration", "control": "retrieval_only", "treatment": "retrieval_tools_no_intervention", "changed_component": "typed_tools"},
+    {"contrast_id": "risk_intervention", "control": "retrieval_tools_no_intervention", "treatment": "retrieval_tools_risk_intervention", "changed_component": "risk_intervention"},
+    {"contrast_id": "verifier", "control": "retrieval_tools_risk_intervention", "treatment": "full_no_fallback", "changed_component": "verifier"},
+    {"contrast_id": "fallback", "control": "full_no_fallback", "treatment": "production_full", "changed_component": "fallback"}
+  ],
+  "execution_contract": {
+    "same_exact_model_revision_across_arms": true,
+    "same_decoding_parameters_across_model_generating_arms": true,
+    "same_case_order_or_recorded_seed": true,
+    "fresh_process_for_each_arm": true,
+    "record_component_versions": true,
+    "record_unavailable_arm_as_missing_never_zero": true,
+    "tools_only_noncalculation_outputs": "not_applicable_not_failure",
+    "fallback_outputs_must_not_be_attributed_to_the_model": true,
+    "v2_outputs_are_regression_qa_not_holdout_evaluation": true,
+    "fresh_untouched_v3_required_for_evaluative_outcomes": true
+  }
+}

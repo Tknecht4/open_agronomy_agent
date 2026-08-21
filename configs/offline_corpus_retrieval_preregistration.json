@@ -1,0 +1,56 @@
+{
+  "schema_version": "open_agronomy_agent.retrieval_successor_preregistration.v1",
+  "status": "frozen_before_retriever_tuning",
+  "study_id": "offline-agronomy-corpus-successor-v1",
+  "suite_manifest_path": "data/manifests/offline_corpus_retrieval_suite.json",
+  "baseline": {
+    "retriever": "local_bm25",
+    "config_path": "configs/rag.yaml",
+    "comparison_rule": "No hybrid, dense, or reranking profile may become selectable without this source-grounded comparison."
+  },
+  "partitions": [
+    "canadian_official_source",
+    "us_analogue_context",
+    "community_boundary_negative",
+    "table_and_layout",
+    "negative_retrieval",
+    "spatial_context_boundary"
+  ],
+  "primary_metrics": [
+    "recall_at_1",
+    "recall_at_3",
+    "recall_at_7",
+    "ndcg_at_7",
+    "source_locator_validity_rate",
+    "jurisdiction_authority_compliance_rate"
+  ],
+  "diagnostic_metrics": [
+    "duplicate_leakage_rate",
+    "table_fidelity_rate",
+    "rebuild_identity_match"
+  ],
+  "inference": {
+    "unit": "frozen evaluation case",
+    "interval": "95% fixed-suite paired case-resampling sensitivity interval",
+    "resamples": 50000,
+    "seed": 20260819,
+    "prohibited_claims": [
+      "population_generalization",
+      "agronomist_equivalence",
+      "field_outcome_effectiveness",
+      "composite_quality_ranking"
+    ]
+  },
+  "promotion_gate": {
+    "minimum_source_locator_validity_rate": 1.0,
+    "minimum_jurisdiction_authority_compliance_rate": 1.0,
+    "duplicate_leakage_rate": 0.0,
+    "hybrid_requirement": "Positive paired improvement over BM25 on both macro Recall@7 and macro nDCG@7, with no regression in either Canadian-official or U.S.-analogue partition.",
+    "community_requirement": "Source-specific redistribution, privacy, attribution, and non-decisive authority admission."
+  },
+  "human_calibration": {
+    "required_for_pr": false,
+    "required_for_semantic_quality_promotion": true,
+    "statement": "Automated controls can release engineering artifacts but cannot establish agronomist-equivalent quality."
+  }
+}

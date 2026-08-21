@@ -117,6 +117,69 @@ REGION_LAYERS: dict[str, RegionLayer] = {
         code_fields=("ECOZONE_ID", "EZ_CODE", "ECONUM", "OBJECTID"),
         name_fields=("ECOZONE_NAME_EN", "ECOZONE_NAME", "EZ_NAME", "ENAME", "NAME"),
     ),
+    "ca_statcan_2021_provinces_territories": RegionLayer(
+        id="ca_statcan_2021_provinces_territories",
+        label="Statistics Canada Provinces and Territories (2021 Census)",
+        system="Statistics Canada 2021 Census geography",
+        service_url="",
+        source_url="https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21",
+        color="#667f94",
+        code_fields=("code",),
+        name_fields=("province_name",),
+        query_backend="local_sqlite",
+        local_database=_local_database_path(
+            environment_variable="AGRONOMY_AGENT_CA_STATCAN_2021_PR_DB_PATH",
+            filename="ca_statcan_2021_provinces_territories.sqlite3",
+        ),
+        local_match_reason="Installed Statistics Canada 2021 cartographic-boundary intersection",
+        boundary=(
+            "A 2021 Census cartographic boundary for geographic orientation and source routing. It is not a "
+            "surveyed farm boundary, proof of legal land location or jurisdiction, crop-production evidence, "
+            "current field condition, or management authorization."
+        ),
+    ),
+    "ca_statcan_2021_census_agricultural_regions": RegionLayer(
+        id="ca_statcan_2021_census_agricultural_regions",
+        label="Statistics Canada Census Agricultural Regions (2021 Census)",
+        system="Statistics Canada 2021 Census agricultural geography",
+        service_url="",
+        source_url="https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21",
+        color="#849668",
+        code_fields=("code",),
+        name_fields=("census_agricultural_region",),
+        query_backend="local_sqlite",
+        local_database=_local_database_path(
+            environment_variable="AGRONOMY_AGENT_CA_STATCAN_2021_CAR_DB_PATH",
+            filename="ca_statcan_2021_census_agricultural_regions.sqlite3",
+        ),
+        local_match_reason="Installed Statistics Canada 2021 Census Agricultural Region intersection",
+        boundary=(
+            "A 2021 Census statistical dissemination geography for organizing region-tagged evidence. It is not "
+            "an agronomic management zone, a field boundary, proof of crop production or farm practice, or "
+            "authority for a field-specific recommendation."
+        ),
+    ),
+    "ca_aafc_terrestrial_ecoregions_v2_2": RegionLayer(
+        id="ca_aafc_terrestrial_ecoregions_v2_2",
+        label="AAFC Terrestrial Ecoregions of Canada (v2.2)",
+        system="AAFC National Ecological Framework",
+        service_url="",
+        source_url="https://open.canada.ca/data/en/dataset/ade80d26-61f5-439e-8966-73b352811fe6",
+        color="#80b26d",
+        code_fields=("code",),
+        name_fields=("ecoregion",),
+        query_backend="local_sqlite",
+        local_database=_local_database_path(
+            environment_variable="AGRONOMY_AGENT_CA_AAFC_ECOREGION_DB_PATH",
+            filename="ca_aafc_terrestrial_ecoregions_v2_2.sqlite3",
+        ),
+        local_match_reason="Installed AAFC National Ecological Framework ecoregion intersection",
+        boundary=(
+            "A National Ecological Framework ecoregion is broad ecological context for organizing evidence by "
+            "regional climate, physiography, vegetation, soil, water, and fauna. It is not a current field "
+            "observation, a soil test, a crop-suitability decision, a diagnosis, or management-rate authority."
+        ),
+    ),
     "bc_agriculture_capability": RegionLayer(
         id="bc_agriculture_capability",
         label="BC Agriculture Capability Mapping",
@@ -855,6 +918,16 @@ def _intersection_record(*, feature: dict[str, Any], layer: RegionLayer, input_g
         "boundary": layer.boundary,
     }
     for key in (
+        "province_uid",
+        "province_name",
+        "province_abbreviation",
+        "census_agricultural_region_code",
+        "census_agricultural_region",
+        "ecoregion_id",
+        "ecoregion",
+        "ecozone_id",
+        "ecoprovince_id",
+        "dissemination_geography_id",
         "capability_label",
         "improved_capability_label",
         "primary_class",

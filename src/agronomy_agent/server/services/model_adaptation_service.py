@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from agronomy_agent.paths import repo_path
+from agronomy_agent.runtime_profiles import DEFAULT_MODEL_CONFIG
 from agronomy_agent.server.services.model_decision_service import (
     _active_runtime_configuration,
     conference_model_decision,
@@ -99,7 +100,7 @@ def model_adaptation_readiness(
     active = _active_runtime_configuration(
         path=(
             active_model_config_path
-            or repo_path("configs/model_gemma4_e2b.yaml")
+            or repo_path(DEFAULT_MODEL_CONFIG)
         ).resolve(),
         conference_model={
             "model_id": conference_model["model_id"],
@@ -133,7 +134,7 @@ def model_adaptation_readiness(
         "sha256": _sha256(path),
     }
     active_path = (
-        active_model_config_path or repo_path("configs/model_gemma4_e2b.yaml")
+        active_model_config_path or repo_path(DEFAULT_MODEL_CONFIG)
     ).resolve()
     if active_path.is_file():
         result["evidence"]["active_model_config"] = {

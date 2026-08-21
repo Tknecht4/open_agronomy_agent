@@ -17,7 +17,7 @@ DEFAULT_GATE_QUESTIONS = (
     "How should I reason about sulfur deficiency in corn?",
     "What field data are required before a variable-rate nitrogen prescription?",
 )
-DEFAULT_RUNTIME_BUDGET_PATH = "plans/agronomy_agent_phase5_optimization_hardening_packet/phase5_runtime_budget_targets.csv"
+DEFAULT_RUNTIME_BUDGET_PATH = "configs/runtime_latency_budgets.csv"
 STAGE_BUDGET_ALIASES = {
     "router_classify": ("agent.route.classify",),
     "lexical_retrieval": ("agent.rag.lexical_search",),

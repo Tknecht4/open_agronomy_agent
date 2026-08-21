@@ -1,0 +1,180 @@
+{
+  "aggregate_sha256": "6581ec77417fac88df6f834b20604281151cec9cf1d8ba24bdffa279729702a1",
+  "analysis_date": "2026-08-15",
+  "artifact_count": 34,
+  "artifacts": [
+    {
+      "bytes": 8098,
+      "path": "README.md",
+      "sha256": "d5ea41c8b9dab9009eaa1abeb1a3f990e6ac2b2dcf318abdb8b60d539e8345be"
+    },
+    {
+      "bytes": 2113,
+      "path": "figures/manifest.json",
+      "sha256": "d75c9ce8ae338aa801f916419c7e5a7d1f76182ed93514083d5da6dc7997d6cb"
+    },
+    {
+      "bytes": 31343,
+      "path": "figures/rc3_deterministic_metrics.pdf",
+      "sha256": "f73aededebb8d9064dcd34e42157e6f2c3a1512d8600afbe1a43904d58cdea49"
+    },
+    {
+      "bytes": 102623,
+      "path": "figures/rc3_deterministic_metrics.svg",
+      "sha256": "a4949ef34d522c1314010002d564395e13ba98e04897228d9574db08a86397ad"
+    },
+    {
+      "bytes": 16026,
+      "path": "figures/rc3_evidence_coverage.pdf",
+      "sha256": "c9ec395aa54bfcd67b6b3f87145941f8c231c758e863074e02be71461935c495"
+    },
+    {
+      "bytes": 70622,
+      "path": "figures/rc3_evidence_coverage.svg",
+      "sha256": "05397199e1ac174ce87647dd35c0b1a8f34934ba3435a5859b52dfc0532fc645"
+    },
+    {
+      "bytes": 18008,
+      "path": "figures/rc3_harness_behavior.pdf",
+      "sha256": "dd1cf4a8992842d60f6e088e03f1efbff6d037036203c763a799996ef98c5a22"
+    },
+    {
+      "bytes": 80469,
+      "path": "figures/rc3_harness_behavior.svg",
+      "sha256": "09c234ae197c65b9229bec8ee46e7436cac1c5c7fec52b7f498fc651c564af7f"
+    },
+    {
+      "bytes": 20934,
+      "path": "figures/rc3_posthoc_semantic_review.pdf",
+      "sha256": "3c5f64b2a73c5ab6fec640f9204fbff1cc4fccf4f80458119ba32f138c7fb330"
+    },
+    {
+      "bytes": 77282,
+      "path": "figures/rc3_posthoc_semantic_review.svg",
+      "sha256": "8751ddb92a758499429f6b79c35a92f5a860cad6e114aac3398d3e6fd300b127"
+    },
+    {
+      "bytes": 24130,
+      "path": "figures/rc3_repeatability_latency.pdf",
+      "sha256": "cca4ffad64e2a6cf19a922818c1d534df69e02e79696f2a19ce83c0dd476f4c4"
+    },
+    {
+      "bytes": 90685,
+      "path": "figures/rc3_repeatability_latency.svg",
+      "sha256": "90ccd62da19dfa269d0cb7e955faa9e183e688bcb6575d1422572bc3bb830fb5"
+    },
+    {
+      "bytes": 511,
+      "path": "generated_results.tex",
+      "sha256": "68e908ef8041cac0a92701316dea5b867fdd75a2f13e64d76cd5a4f8c2a17f0a"
+    },
+    {
+      "bytes": 1722,
+      "path": "generated_tables.tex",
+      "sha256": "22ed2fb84ac253bdc22af9fce54926f5b2a96097c50a9c13e89f812161751f97"
+    },
+    {
+      "bytes": 23798,
+      "path": "main.tex",
+      "sha256": "6ffc9530f1b8b0b84782f18fa1016df0af3b005533da2535d92e9e9196b5b847"
+    },
+    {
+      "bytes": 194944,
+      "path": "paper.pdf",
+      "sha256": "869ac11549219906964e08c0ad9a5db2ef85cd53553e790c8c9c06596dd21979"
+    },
+    {
+      "bytes": 6511,
+      "path": "paper_evidence_manifest.yaml",
+      "sha256": "947e70c6d6d28e6797512f8c728ae26c5c496d5f41c094f7c228d831151a7784"
+    },
+    {
+      "bytes": 2593,
+      "path": "references.bib",
+      "sha256": "3da178aa35c0b9adc7bc6825268cf17f648c244cefc2501967909eeda17d6b9f"
+    },
+    {
+      "bytes": 117018,
+      "path": "scripts/analyze_rc3_checkpoint.py",
+      "sha256": "1271a968aa9ee9aad58292bf0cc86aacc70c5bd090ea82bec2c9dafdbb346a02"
+    },
+    {
+      "bytes": 9917,
+      "path": "source_data/analysis_manifest.json",
+      "sha256": "ed0e307a704c1211b69e0fd807eaf1e36a1968ae80872d382f72c4d4c6739dae"
+    },
+    {
+      "bytes": 7484,
+      "path": "source_data/checkpoint_validation_receipt.json",
+      "sha256": "99e343fdcb3923d1cb3ebd40f5625ab1ad1a1d4f48d2046c25d13e82e2019d62"
+    },
+    {
+      "bytes": 6412,
+      "path": "source_data/deterministic_metric_summary.csv",
+      "sha256": "a004172b03069dc1eb18217f8c81650ad544a3e308827c02096c8af32a49c9ae"
+    },
+    {
+      "bytes": 1106,
+      "path": "source_data/harness_activation_summary.csv",
+      "sha256": "38faeb638a30ea2a37c7faf3a4a6a4d3678527af57b0fde7fb148bf4630e81d2"
+    },
+    {
+      "bytes": 612,
+      "path": "source_data/interface_trace_summary.csv",
+      "sha256": "121cf4c3bd3f7fb387777d4b98d1e41431a4a54fe9ea3f4001124a54b7b61001"
+    },
+    {
+      "bytes": 709,
+      "path": "source_data/lane_coverage.csv",
+      "sha256": "7d10ff9b1e531853c80698863420fd5553b1547ee3c5b8258c6589acc4b7bba9"
+    },
+    {
+      "bytes": 5883,
+      "path": "source_data/paired_arm_effects.csv",
+      "sha256": "5625c774c6a8e8cd77aa63e7d9a6c2be6786e403fbd2ecf3ef91ad4c4e04f44c"
+    },
+    {
+      "bytes": 489,
+      "path": "source_data/posthoc_semantic_review_paired_effects.csv",
+      "sha256": "4cbcc9b270c75ab05dbbd762a6031326fb30a624866610529bbeb6ffca08b81b"
+    },
+    {
+      "bytes": 1903,
+      "path": "source_data/posthoc_semantic_review_quality_controls.json",
+      "sha256": "5c39d63d1bd8bb9282a9e8b256c52a29047706bd8916c99b12f84b9f4f7791e2"
+    },
+    {
+      "bytes": 1351,
+      "path": "source_data/posthoc_semantic_review_summary.csv",
+      "sha256": "d3059bad9588924df4a5a7d4476eb7279c3199e2ceca1d738633bb88d8ff25f7"
+    },
+    {
+      "bytes": 6134632,
+      "path": "source_data/public_safe_response_measurements.csv",
+      "sha256": "40fa9a4cff46046f09f59acb3fc3951b587e79a2058d1a947a8dfc8df8932d26"
+    },
+    {
+      "bytes": 2168,
+      "path": "source_data/repeatability_summary.csv",
+      "sha256": "16e7bf3cb80cc7992e1f67fb87916938b99cd02bd3d21f84b72ba5073fa5b2b1"
+    },
+    {
+      "bytes": 3583,
+      "path": "source_data/resource_summary.csv",
+      "sha256": "316e04f6625bf8a5b48d08e48d48e3df69e513fafae84ffe99748a8442c56d8d"
+    },
+    {
+      "bytes": 805,
+      "path": "source_data/retrieval_lineage_summary.csv",
+      "sha256": "d898be381f782950e2a3f70fb212ffa3aa0f6562faa606f5ed22b8da4aebc7a7"
+    },
+    {
+      "bytes": 4816,
+      "path": "source_data/trial_inventory.csv",
+      "sha256": "ffc30d4ed7ae81c45e2fdc01f7d0bb04726219d9d3557877848d3eb51e1378ad"
+    }
+  ],
+  "boundary": "The manifest excludes itself to avoid self-reference. Raw answers, prompts, databases, logs, and model weights are not public package artifacts.",
+  "package": "development-benchmark-rc3-20260815",
+  "schema_version": "open_agronomy_agent.rc3_checkpoint_artifacts.v2"
+}

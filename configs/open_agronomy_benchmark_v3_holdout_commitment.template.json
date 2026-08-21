@@ -1,0 +1,35 @@
+{
+  "schema_version": "open_agronomy_agent.benchmark_v3_holdout_commitment.v1",
+  "benchmark_id": "open_agronomy_benchmark_v3",
+  "cohort_id": "oab3_holdout_replace_me",
+  "status": "template_not_sealed",
+  "created_at": "2026-08-13T00:00:00Z",
+  "custodian_key_id": "replace-with-pseudonymous-custodian-key-id",
+  "authored_outside_repository": true,
+  "plaintext_present_in_repository": false,
+  "exposure_count": 0,
+  "suite_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "rubric_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "source_package_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "case_schema_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "access_log_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "authorship_receipt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "review_receipt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "author_ids": ["replace_author"],
+  "reviewer_ids": ["replace_reviewer"],
+  "case_count": 72,
+  "family_count": 12,
+  "strata_counts": {
+    "benign_explanation": 12,
+    "complete_calculation_or_support": 12,
+    "one_decisive_input_missing": 12,
+    "irrelevant_input_missing": 12,
+    "current_authority": 12,
+    "fault_or_conflict": 12
+  },
+  "language_counts": {
+    "en_ca": 60,
+    "fr_ca": 12
+  },
+  "amendment_sha256s": []
+}

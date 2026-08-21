@@ -1,0 +1,45 @@
+{
+  "schema_version": "open_agronomy_agent.curated_knowledge_store_profiles.v1",
+  "purpose": "Explicit source selection for the compact, redistributable Canadian offline knowledge store. A source must appear here and separately retain local-RAG, redistribution, and no-training eligibility in the Canadian source registry before it can enter a release shard.",
+  "profiles": [
+    {
+      "id": "canada-offline-core",
+      "description": "The current compact Canadian field-guidance core: provenance-complete Alberta and Manitoba sources. Its geographic depth is intentionally uneven and all row-level historical, currency, and live-authority restrictions remain active.",
+      "source_ids": [
+        "ab_clubroot_canola_mustard_2015",
+        "ab_crop_producer_bmp_manual_2004",
+        "ab_fall_applied_nitrogen_2013",
+        "ab_nutrient_management_planning_guide_2008",
+        "ab_phosphorus_fertilizer_crops_2013",
+        "ab_potassium_fertilizer_crops_2013",
+        "ab_red_lentil_management_2020",
+        "ab_stripe_rust_101_2023",
+        "ab_sulphur_fertilizer_crops_2013",
+        "mb_soil_fertility_guide"
+      ]
+    },
+    {
+      "id": "canada-offline-extended",
+      "description": "The core plus reviewed federal data-product context, Saskatchewan detailed-soil specification context, and Ontario regional statistics. It is an explicit extension, not evidence that Canada-wide or Saskatchewan applied crop guidance is complete.",
+      "base_profile": "canada-offline-core",
+      "source_ids": [
+        "ab_clubroot_canola_mustard_2015",
+        "ab_crop_producer_bmp_manual_2004",
+        "ab_fall_applied_nitrogen_2013",
+        "ab_nutrient_management_planning_guide_2008",
+        "ab_phosphorus_fertilizer_crops_2013",
+        "ab_potassium_fertilizer_crops_2013",
+        "ab_red_lentil_management_2020",
+        "ab_stripe_rust_101_2023",
+        "ab_sulphur_fertilizer_crops_2013",
+        "ca_aafc_annual_crop_inventory_specification",
+        "ca_aafc_crop_health_indices_specification",
+        "ca_aafc_nasdi_specification",
+        "ca_aafc_sk_detailed_soil_survey_specification",
+        "ca_cansis_soil_landscapes",
+        "mb_soil_fertility_guide",
+        "on_field_crop_production_current"
+      ]
+    }
+  ]
+}

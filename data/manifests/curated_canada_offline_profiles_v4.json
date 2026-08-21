@@ -1,0 +1,48 @@
+{
+  "schema_version": "open_agronomy_agent.curated_knowledge_store_profiles.v1",
+  "purpose": "Explicit source selection for a prospective curated-canada-v4. It preserves curated-canada-v3 and adds one hash-pinned, Alberta-wide, historical tame-pasture assessment semantic companion to the extended profile only. The companion supplies qualitative observation and monitoring context, not a score, classification, species identification, legal determination, grazing or renewal direction, field prediction, or management prescription.",
+  "profiles": [
+    {
+      "id": "canada-offline-core",
+      "description": "The v1 compact Canadian field-guidance core, unchanged to preserve its release boundary. Its geographic depth is intentionally uneven and all row-level historical, currency, and live-authority restrictions remain active.",
+      "source_ids": [
+        "ab_clubroot_canola_mustard_2015",
+        "ab_crop_producer_bmp_manual_2004",
+        "ab_fall_applied_nitrogen_2013",
+        "ab_nutrient_management_planning_guide_2008",
+        "ab_phosphorus_fertilizer_crops_2013",
+        "ab_potassium_fertilizer_crops_2013",
+        "ab_red_lentil_management_2020",
+        "ab_stripe_rust_101_2023",
+        "ab_sulphur_fertilizer_crops_2013",
+        "mb_soil_fertility_guide"
+      ]
+    },
+    {
+      "id": "canada-offline-extended",
+      "description": "The curated-canada-v3 extended profile plus four reviewed, context-only Alberta historical tame-pasture monitoring records. They apply only to Alberta tame pasture and do not classify a site, assign a score, identify a regulated weed, prescribe grazing or renovation, or establish an individual field outcome.",
+      "base_profile": "canada-offline-core",
+      "source_ids": [
+        "ab_clubroot_canola_mustard_2015",
+        "ab_crop_producer_bmp_manual_2004",
+        "ab_fall_applied_nitrogen_2013",
+        "ab_nutrient_management_planning_guide_2008",
+        "ab_phosphorus_fertilizer_crops_2013",
+        "ab_potassium_fertilizer_crops_2013",
+        "ab_red_lentil_management_2020",
+        "ab_stripe_rust_101_2023",
+        "ab_sulphur_fertilizer_crops_2013",
+        "ab_tame_pasture_range_health_2017",
+        "ca_aafc_annual_crop_inventory_specification",
+        "ca_aafc_crop_health_indices_specification",
+        "ca_aafc_nasdi_specification",
+        "ca_aafc_sk_detailed_soil_survey_specification",
+        "ca_cansis_soil_landscapes",
+        "mb_2023_crop_rotation_context",
+        "mb_2026_crop_disease_scouting",
+        "mb_soil_fertility_guide",
+        "on_field_crop_production_current"
+      ]
+    }
+  ]
+}

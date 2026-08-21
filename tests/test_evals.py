@@ -24,6 +24,7 @@ from agronomy_agent.evals import (
     eval_question,
     forbidden_contains,
     load_partial_outputs,
+    is_local_model_endpoint,
     run_eval,
     parse_multiple_choice_answer,
     score_item,
@@ -35,6 +36,68 @@ from agronomy_agent.evals import (
     validate_resume_identity,
     validate_resume_prefix,
 )
+
+
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        "http://localhost:8080/v1",
+        "http://127.42.0.1:8080/v1",
+        "http://[::1]:8080/v1",
+        "unix:///tmp/model.sock",
+    ],
+)
+def test_local_model_endpoint_accepts_only_loopback_or_unix(endpoint: str) -> None:
+    assert is_local_model_endpoint(endpoint) is True
+
+
+@pytest.mark.parametrize(
+    "endpoint",
+    ["https://models.example/v1", "http://10.0.0.7:8080/v1", "not-a-url"],
+)
+def test_local_model_endpoint_rejects_external_or_ambiguous_hosts(endpoint: str) -> None:
+    assert is_local_model_endpoint(endpoint) is False
+
+
+def test_internal_eval_rejects_non_loopback_model_endpoint_before_generation(
+    tmp_path: Path,
+) -> None:
+    suite = tmp_path / "suite.jsonl"
+    suite.write_text(
+        json.dumps(
+            {
+                "eval_id": "internal-1",
+                "task_family": "internal",
+                "question": "What should be checked?",
+                "evaluation_partition": "internal",
+                "required_patterns": [],
+                "forbidden_patterns": [],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    model_config = tmp_path / "model.yaml"
+    model_config.write_text("model_id: fixture/model\nmax_tokens: 32\n", encoding="utf-8")
+    args = build_parser().parse_args(
+        [
+            "--mode",
+            "baseline",
+            "--suite",
+            str(suite),
+            "--model-config",
+            str(model_config),
+            "--output-dir",
+            str(tmp_path / "outputs"),
+            "--model-base-url",
+            "https://models.example/v1",
+            "--private-knowledge-policy",
+            "disabled",
+            "--mock",
+        ]
+    )
+    with pytest.raises(ValueError, match="non-loopback --model-base-url"):
+        run_eval(args)
 
 
 def test_eval_field_context_normalizes_legacy_canadian_aliases() -> None:
@@ -62,6 +125,109 @@ def test_numeric_agronomic_calculation_requires_value_and_unit_contract() -> Non
     assert score["score"] == 100.0
     assert score["parsed_value"] == 120.0
     assert score["metric_role"] == "objective_agronomic_calculation_accuracy"
+
+
+@pytest.mark.parametrize(
+    (
+        "eval_id",
+        "reference",
+        "tolerance",
+        "product_alias",
+        "calculation_contract",
+        "output",
+    ),
+    [
+        (
+            "ca_calc_urea_03",
+            217.4,
+            1.0,
+            "kg urea/ha",
+            "target_N_kg_ha / 0.46",
+            "Using 100 kg N/ha and 46% N, the calculator returns 217.391 kg product/ha.",
+        ),
+        (
+            "ca_calc_map_04",
+            86.5,
+            0.8,
+            "kg MAP/ha",
+            "target_P2O5_kg_ha / 0.52",
+            "Using 45 kg P2O5/ha and 52% P2O5, the calculator returns 86.538 kg product/ha.",
+        ),
+    ],
+)
+def test_post_rc3_numeric_scorer_accepts_generic_fertilizer_product_rate_unit(
+    eval_id: str,
+    reference: float,
+    tolerance: float,
+    product_alias: str,
+    calculation_contract: str,
+    output: str,
+) -> None:
+    """Future scoring fixes the RC3 parser defect without rescoring frozen artifacts."""
+
+    item = {
+        "eval_id": eval_id,
+        "task_family": "fertilizer_calculation",
+        "reference_numeric": reference,
+        "reference_unit": "kg/ha",
+        "unit_aliases": [product_alias, "kg ha-1", "kg ha⁻¹"],
+        "absolute_tolerance": tolerance,
+        "calculation_contract": calculation_contract,
+    }
+
+    score = score_item_numeric(output, item)
+
+    assert score["score"] == 100.0
+    assert score["parse_valid"] is True
+    assert score["parsed_value"] == pytest.approx(reference, abs=tolerance)
+
+
+@pytest.mark.parametrize(
+    "item",
+    [
+        {
+            "eval_id": "seeding-control",
+            "task_family": "seeding_calculation",
+            "reference_numeric": 122.8,
+            "reference_unit": "kg/ha",
+            "unit_aliases": ["kg ha-1", "kg ha⁻¹"],
+            "absolute_tolerance": 1.3,
+            "calculation_contract": (
+                "target_plants_per_m2 * TKW_g / "
+                "(germination_fraction * survival_fraction * 100)"
+            ),
+        },
+        {
+            "eval_id": "nutrient-mass-control",
+            "task_family": "fertilizer_calculation",
+            "reference_numeric": 51.0,
+            "reference_unit": "kg N/ha",
+            "unit_aliases": ["kg N ha-1", "kg N ha⁻¹"],
+            "absolute_tolerance": 0.3,
+            "calculation_contract": "product_rate_kg_ha * 0.34",
+        },
+        {
+            "eval_id": "unqualified-fertilizer-rate-control",
+            "task_family": "fertilizer_calculation",
+            "reference_numeric": 51.0,
+            "reference_unit": "kg/ha",
+            "unit_aliases": ["kg ha-1", "kg ha⁻¹"],
+            "absolute_tolerance": 0.3,
+            "calculation_contract": "target_N_kg_ha / 0.34",
+        },
+    ],
+)
+def test_post_rc3_generic_product_rate_alias_does_not_broaden_other_unit_contracts(
+    item: dict,
+) -> None:
+    score = score_item_numeric(
+        "Inputs 150 and 34 produce a final value of 51.0 kg product/ha.",
+        item,
+    )
+
+    assert score["score"] == 0.0
+    assert score["parse_valid"] is False
+    assert score["parsed_value"] is None
 
 
 def test_eval_run_writes_hash_bound_identity_manifest(tmp_path: Path) -> None:
@@ -111,10 +277,10 @@ def test_eval_run_writes_hash_bound_identity_manifest(tmp_path: Path) -> None:
     assert summary["outputs_sha256"] == manifest["outputs_sha256"]
 
 
-def test_eval_cli_defaults_to_submission_rag_configuration() -> None:
+def test_eval_cli_defaults_to_active_master_rag_configuration() -> None:
     args = build_parser().parse_args(["--mode", "agronomic_rag"])
 
-    assert DEFAULT_RAG_CONFIG == "configs/rag_final_mvp.yaml"
+    assert DEFAULT_RAG_CONFIG == "configs/rag.yaml"
     assert args.rag_config == DEFAULT_RAG_CONFIG
 
 
@@ -199,6 +365,61 @@ def test_rag_artifact_identity_excludes_quarantined_missing_corpora(tmp_path: Pa
         str(graph),
         str(policy),
     ]
+
+
+def test_rag_artifact_identity_binds_every_on_demand_release_byte(tmp_path: Path) -> None:
+    release = tmp_path / "us-release"
+    shard = release / "shards" / "nrcs-0001.jsonl"
+    index = release / "bm25_statistics_index.json"
+    manifest = release / "store_manifest.json"
+    shard.parent.mkdir(parents=True)
+    shard.write_text('{"doc_id":"us-1"}\n', encoding="utf-8")
+    index.write_text('{"document_count":1}\n', encoding="utf-8")
+    manifest.write_text(
+        json.dumps(
+            {
+                "bm25_statistics_index": {"path": "bm25_statistics_index.json"},
+                "shards": [{"path": "shards/nrcs-0001.jsonl"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    class Resources:
+        rag_config = {
+            "retrieval": {
+                "on_demand_corpus_releases": [{"manifest_path": str(manifest)}],
+            }
+        }
+
+    records = build_rag_artifact_identity(Resources())
+
+    assert [record["kind"] for record in records] == [
+        "on_demand_manifest",
+        "on_demand_bm25_statistics",
+        "on_demand_shard",
+    ]
+    assert [Path(record["path"]).resolve() for record in records] == [
+        manifest.resolve(),
+        index.resolve(),
+        shard.resolve(),
+    ]
+
+
+def test_rag_artifact_identity_uses_portable_paths_for_repo_on_demand_release() -> None:
+    class Resources:
+        rag_config = {
+            "retrieval": {
+                "on_demand_corpus_releases": [
+                    {"manifest_path": "data/derived/rag/offline_agronomy/us_nrcs/store_manifest.json"}
+                ],
+            }
+        }
+
+    records = build_rag_artifact_identity(Resources())
+
+    assert all(not Path(str(record["path"])).is_absolute() for record in records)
+    assert records[0]["path"] == "data/derived/rag/offline_agronomy/us_nrcs/store_manifest.json"
 
 
 def test_rag_artifact_identity_rejects_missing_admitted_corpus(tmp_path: Path) -> None:
@@ -291,11 +512,28 @@ def test_eval_can_use_chatgpt_authenticated_codex_app_server(monkeypatch) -> Non
             "--codex-app-server",
             "--reasoning-effort",
             "high",
+            "--egress-authorization",
+            "/tmp/fixture-egress.json",
+            "--benchmark-id",
+            "fixture-benchmark",
+            "--private-knowledge-policy",
+            "disabled",
         ]
     )
     model_cfg = {"answer_verification": {"enabled": False}}
+    artifact_contract = {"schema_version": "fixture", "sha256": "b" * 64}
+    suite_case_contract = {"schema_version": "fixture", "sha256": "c" * 64}
+    static_prompt_contract = {"schema_version": "fixture", "sha256": "e" * 64}
 
-    generator, verifier, model_id, backend, request_model_id = build_eval_generators(args, model_cfg)
+    generator, verifier, model_id, backend, request_model_id = build_eval_generators(
+        args,
+        model_cfg,
+        benchmark_suite_sha256="a" * 64,
+        egress_artifact_contract=artifact_contract,
+        suite_case_contract=suite_case_contract,
+        static_prompt_contract=static_prompt_contract,
+        model_config_sha256="d" * 64,
+    )
 
     assert isinstance(generator, FakeAppServerGenerator)
     assert verifier is None
@@ -304,11 +542,66 @@ def test_eval_can_use_chatgpt_authenticated_codex_app_server(monkeypatch) -> Non
             "model_id": "gpt-5.6-luna",
             "reasoning_effort": "high",
             "timeout_seconds": 360.0,
+            "egress_authorization": "/tmp/fixture-egress.json",
+            "benchmark_id": "fixture-benchmark",
+            "benchmark_suite_sha256": "a" * 64,
+            "benchmark_arm": "baseline",
+            "egress_artifact_contract": artifact_contract,
+            "suite_case_contract": suite_case_contract,
+            "static_prompt_contract": static_prompt_contract,
+            "model_config_sha256": "d" * 64,
+            "egress_phase": "candidate_generation",
         }
     ]
     assert model_id == "gpt-5.6-luna"
     assert backend == "codex_app_server_chatgpt_auth"
     assert request_model_id == "gpt-5.6-luna"
+
+
+def test_codex_app_server_verifier_uses_the_verification_egress_phase(monkeypatch) -> None:
+    created: list[dict[str, object]] = []
+
+    class FakeAppServerGenerator:
+        def __init__(self, **kwargs: object) -> None:
+            created.append(dict(kwargs))
+
+    monkeypatch.setattr("agronomy_agent.evals.CodexAppServerGenerator", FakeAppServerGenerator)
+    args = build_parser().parse_args(
+        [
+            "--mode",
+            "agronomic_rag",
+            "--model",
+            "gpt-5.6-luna",
+            "--codex-app-server",
+            "--egress-authorization",
+            "/tmp/fixture-egress.json",
+            "--benchmark-id",
+            "fixture-benchmark",
+            "--private-knowledge-policy",
+            "disabled",
+        ]
+    )
+    contract = {"schema_version": "fixture", "sha256": "b" * 64}
+    suite_case_contract = {"schema_version": "fixture", "sha256": "c" * 64}
+    static_prompt_contract = {"schema_version": "fixture", "sha256": "e" * 64}
+
+    generator, verifier, *_ = build_eval_generators(
+        args,
+        {"answer_verification": {"enabled": True}},
+        benchmark_suite_sha256="a" * 64,
+        egress_artifact_contract=contract,
+        suite_case_contract=suite_case_contract,
+        static_prompt_contract=static_prompt_contract,
+        model_config_sha256="d" * 64,
+    )
+
+    assert isinstance(generator, FakeAppServerGenerator)
+    assert isinstance(verifier, FakeAppServerGenerator)
+    assert [item["egress_phase"] for item in created] == [
+        "candidate_generation",
+        "verification",
+    ]
+    assert all(item["benchmark_arm"] == "agronomic_rag" for item in created)
 
 
 def test_raw_model_arm_has_no_kernel_and_preserves_unformatted_output() -> None:
@@ -876,6 +1169,37 @@ def test_eval_trace_refresh_uses_the_same_refined_route_as_generation() -> None:
     )
     assert "fertility_guard" not in metadata["route_tool_notes"]
     assert "nutrient_4r_guard" not in metadata["route_tool_notes"]
+
+
+def test_eval_metadata_retains_expected_source_contract_and_candidate_trace() -> None:
+    item = {
+        "eval_id": "us_analogue_trace",
+        "task_family": "retrieval_lineage",
+        "question": "Retrieve U.S. analogue context for MLRA 001X.",
+        "required_patterns": [],
+        "forbidden_patterns": [],
+        "expected_source_ids": ["nrcs_edit_ecological_site_description_json"],
+        "forbidden_source_ids": ["community_forum"],
+        "source_use_boundary": "U.S. context only; not Canadian decision authority.",
+    }
+    metadata = {
+        "benchmark_generation_input": {
+            "retrieved_documents": [
+                {"source_id": "nrcs_edit_ecological_site_description_json"},
+                {"source_id": "nrcs_edit_ecological_site_description_json"},
+            ]
+        },
+        "evidence_selection_trace": {"admitted_doc_ids": ["nrcs:001x:chunk-1"]},
+    }
+
+    enriched = enrich_eval_metadata_with_expected_source_trace(metadata, item)
+
+    trace = enriched["expected_source_trace"]
+    assert trace["expected_source_ids"] == ["nrcs_edit_ecological_site_description_json"]
+    assert trace["candidate_retrieved_source_ids"] == ["nrcs_edit_ecological_site_description_json"]
+    assert trace["candidate_expected_source_hit"] is True
+    assert trace["candidate_forbidden_source_hit"] is False
+    assert trace["admitted_document_ids"] == ["nrcs:001x:chunk-1"]
 
 
 def test_answer_profile_environment_switches_benchmark_contract(monkeypatch: pytest.MonkeyPatch) -> None:

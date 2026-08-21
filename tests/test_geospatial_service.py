@@ -47,6 +47,46 @@ def _write_local_layer(path: Path) -> None:
         connection.close()
 
 
+def _write_context_layer(path: Path) -> None:
+    geometry = {
+        "type": "Polygon",
+        "coordinates": [[[-104.8, 50.4], [-104.7, 50.4], [-104.7, 50.5], [-104.8, 50.5], [-104.8, 50.4]]],
+    }
+    properties = {
+        "province_uid": "47",
+        "province_name": "Saskatchewan",
+        "province_abbreviation": "Sask.",
+        "dissemination_geography_id": "2021A000247",
+        "unreviewed_source_field": "must not enter the model-facing intersection record",
+    }
+    connection = sqlite3.connect(path)
+    try:
+        connection.executescript(
+            """
+            CREATE TABLE metadata (key TEXT PRIMARY KEY, value_json TEXT NOT NULL);
+            CREATE TABLE features (
+              fid INTEGER PRIMARY KEY,
+              code TEXT NOT NULL,
+              name TEXT NOT NULL,
+              properties_json TEXT NOT NULL,
+              geometry_json TEXT NOT NULL
+            );
+            CREATE VIRTUAL TABLE feature_bounds USING rtree(fid, min_lon, max_lon, min_lat, max_lat);
+            """
+        )
+        connection.execute(
+            "INSERT INTO features VALUES (?, ?, ?, ?, ?)",
+            (1, "PR_47", "Saskatchewan", json.dumps(properties), json.dumps(geometry)),
+        )
+        connection.execute(
+            "INSERT INTO feature_bounds VALUES (?, ?, ?, ?, ?)",
+            (1, -104.8, -104.7, 50.4, 50.5),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+
 def test_spatial_pack_root_and_per_layer_override_precedence(tmp_path: Path, monkeypatch) -> None:
     pack = tmp_path / "pack"
     pack.mkdir()
@@ -99,6 +139,81 @@ def test_local_soil_layer_intersects_offline_and_preserves_components(
     assert result["feature_count"] == 1
     assert result["intersections"][0]["source_scale"] == "1:100,000"
     assert result["intersections"][0]["dominant_components"][0]["soil_name"] == "REGINA"
+    assert result["network_policy"]["external_requests_attempted"] == 0
+
+
+def test_context_boundary_intersection_exposes_only_allowlisted_hierarchy_fields(
+    tmp_path: Path, monkeypatch
+) -> None:
+    database = tmp_path / "context.sqlite3"
+    _write_context_layer(database)
+    layer = geo.RegionLayer(
+        id="synthetic_context_boundary",
+        label="Synthetic context boundary",
+        system="test",
+        service_url="",
+        source_url="https://example.invalid/source",
+        color="#667f94",
+        code_fields=("code",),
+        name_fields=("province_name",),
+        query_backend="local_sqlite",
+        local_database=str(database),
+        local_match_reason="Synthetic local context intersection",
+        boundary="Context only.",
+    )
+    monkeypatch.setitem(geo.REGION_LAYERS, layer.id, layer)
+
+    result = geo.intersect_region_layers(
+        geometry={
+            "type": "Polygon",
+            "coordinates": [[[-104.76, 50.44], [-104.74, 50.44], [-104.74, 50.46], [-104.76, 50.46], [-104.76, 50.44]]],
+        },
+        layer_ids=[layer.id],
+        network_mode="offline",
+    )
+
+    assert result["errors"] == []
+    intersection = result["intersections"][0]
+    assert intersection["province_name"] == "Saskatchewan"
+    assert intersection["province_uid"] == "47"
+    assert intersection["dissemination_geography_id"] == "2021A000247"
+    assert "unreviewed_source_field" not in intersection
+    assert result["network_policy"]["external_requests_attempted"] == 0
+
+
+def test_uninstalled_context_layer_is_not_selected_or_silently_fetched_offline(
+    tmp_path: Path, monkeypatch
+) -> None:
+    layer = geo.RegionLayer(
+        id="uninstalled_context_boundary",
+        label="Uninstalled context boundary",
+        system="test",
+        service_url="https://example.invalid/remote",
+        source_url="https://example.invalid/source",
+        color="#667f94",
+        code_fields=("code",),
+        name_fields=("province_name",),
+        query_backend="local_sqlite",
+        local_database=str(tmp_path / "not-installed.sqlite3"),
+        boundary="Context only.",
+    )
+    monkeypatch.setitem(geo.REGION_LAYERS, layer.id, layer)
+
+    assert layer.id not in {candidate.id for candidate in geo._selected_layers(None)}
+    catalog = {row["id"]: row for row in geo.layer_catalog(network_mode="offline")["layers"]}
+    assert catalog[layer.id]["installation_status"] == "not_installed"
+
+    result = geo.intersect_region_layers(
+        geometry={
+            "type": "Polygon",
+            "coordinates": [[[-104.76, 50.44], [-104.74, 50.44], [-104.74, 50.46], [-104.76, 50.46], [-104.76, 50.44]]],
+        },
+        layer_ids=[layer.id],
+        network_mode="offline",
+    )
+
+    assert result["feature_count"] == 0
+    assert result["errors"] and result["errors"][0]["layer_id"] == layer.id
     assert result["network_policy"]["external_requests_attempted"] == 0
 
 

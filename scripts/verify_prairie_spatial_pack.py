@@ -16,6 +16,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from build_prairie_spatial_pack import (
+    DEFAULT_PROFILE_ID,
+    DEFAULT_PROFILE_MANIFEST,
+    validate_pack,
+)
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SAMPLES = (
@@ -51,7 +57,30 @@ def _polygon(bbox: tuple[float, float, float, float]) -> dict[str, Any]:
     }
 
 
-def run_probe(pack_root: Path) -> dict[str, Any]:
+def run_probe(
+    pack_root: Path,
+    *,
+    profile_id: str = DEFAULT_PROFILE_ID,
+    profile_manifest_path: Path = DEFAULT_PROFILE_MANIFEST,
+) -> dict[str, Any]:
+    pack_validation = validate_pack(
+        pack_root,
+        profile_id=profile_id,
+        profile_manifest_path=profile_manifest_path,
+    )
+    if pack_validation["status"] != "pass":
+        return {
+            "schema_version": "open_agronomy_agent.prairie_spatial_runtime_probe.v2",
+            "status": "fail",
+            "profile_id": profile_id,
+            "pack_root": str(pack_root),
+            "network_mode": "offline",
+            "sample_count": 0,
+            "samples": [],
+            "errors": ["pack_validation_failed", *pack_validation["errors"]],
+            "pack_validation": pack_validation,
+            "boundary": "The runtime probe did not query an invalid or mismatched spatial pack.",
+        }
     os.environ["AGRONOMY_AGENT_SPATIAL_PACK_ROOT"] = str(pack_root)
     source_root = ROOT / "src"
     if str(source_root) not in sys.path:
@@ -119,13 +148,15 @@ def run_probe(pack_root: Path) -> dict[str, Any]:
             }
         )
     return {
-        "schema_version": "open_agronomy_agent.prairie_spatial_runtime_probe.v1",
+        "schema_version": "open_agronomy_agent.prairie_spatial_runtime_probe.v2",
         "status": "pass" if not errors else "fail",
+        "profile_id": profile_id,
         "pack_root": str(pack_root),
         "network_mode": "offline",
         "sample_count": len(samples),
         "samples": samples,
         "errors": errors,
+        "pack_validation": pack_validation,
         "boundary": (
             "This is an application-path and geographic-alignment probe, not validation "
             "of map-unit truth at these fields or agronomic management advice."
@@ -136,9 +167,15 @@ def run_probe(pack_root: Path) -> dict[str, Any]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pack-root", type=Path, required=True)
+    parser.add_argument("--profile", default=DEFAULT_PROFILE_ID)
+    parser.add_argument("--profile-manifest", type=Path, default=DEFAULT_PROFILE_MANIFEST)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    report = run_probe(args.pack_root.resolve())
+    report = run_probe(
+        args.pack_root.resolve(),
+        profile_id=args.profile,
+        profile_manifest_path=args.profile_manifest.resolve(),
+    )
     rendered = json.dumps(report, indent=2, sort_keys=True) + "\n"
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)

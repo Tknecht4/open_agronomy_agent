@@ -1,25 +1,41 @@
 retrieval:
-  top_k: 5
+  top_k: 7
   min_score: 0.03
+  corpus_policy_manifest: data/manifests/runtime_corpus_policy.json
   corpus_paths:
-    - data/seed/agronomy_rag_corpus.jsonl
-    - data/seed/boundary_rag_corpus.jsonl
-    - data/seed/cca_objective_rag_corpus.jsonl
-    - data/derived/rag/soilwise_rag_corpus.jsonl
-    - data/derived/rag/document_expansion_rag_corpus.jsonl
-    - data/derived/rag/canada_agronomy_distributable.jsonl
-    - data/derived/rag/nrcs_esd_rag_corpus_compact.jsonl
-    - data/derived/rag/forum_newagtalk_forum_threads_rag_corpus.jsonl
-    - data/derived/rag/forum_agricultivation_communities_agrictalk_forum_threads_rag_corpus.jsonl
-    - data/derived/rag/forum_agriville_forum_threads_rag_corpus.jsonl
-    - data/derived/rag/forum_farmchat_forum_threads_rag_corpus.jsonl
-    - data/derived/rag/forum_agricultureinformation_forum_threads_rag_corpus.jsonl
-    - data/derived/rag/forum_forum4farming_forum_threads_rag_corpus.jsonl
-    - data/derived/rag/forum_farmnest_india_forum_threads_rag_corpus.jsonl
-    - data/derived/rag/forum_soilforwater_forum_threads_rag_corpus.jsonl
+  - data/derived/rag/offline_agronomy/active/shards/canadian_context-0001.jsonl
+  - data/derived/rag/offline_agronomy/active/shards/canadian_live-0001.jsonl
+  - data/derived/rag/offline_agronomy/active/shards/project_context-0001.jsonl
+  - data/derived/rag/offline_agronomy/active/shards/project_decisive-0001.jsonl
+  - data/derived/rag/offline_agronomy/active/shards/soilwise_context-0001.jsonl
   graph_paths:
-    - data/seed/agronomy_knowledge_graph.json
-    - data/derived/rag/soilwise_knowledge_graph.json
+  - data/seed/agronomy_knowledge_graph.json
+  - data/derived/rag/soilwise_knowledge_graph.json
+  require_graph_manifests: true
+  on_demand_corpus_releases:
+  - release_id: us-nrcs-full-reference
+    manifest_path: data/derived/rag/offline_agronomy/us_nrcs/store_manifest.json
+    activation: explicit_us_nrcs_or_mlra
+    jurisdiction: United States
+    retrieval_policy: context_only
+    authority_boundary: U.S. material is analogue/context only for Canadian questions.
+  jurisdiction_ranking:
+    schema_version: open_agronomy_agent.jurisdiction_ranking.v1
+    canadian_query_priority:
+    - curated_canadian_source
+    - project_safety_policy
+    - internal_synthesis
+    - open_ontology
+    - US_government_analogue_reference
+    - community_experience
+    us_analogue_boundary: U.S. evidence is labelled analogue context and cannot support
+      Canadian decisive claims.
+    community_boundary: Community material is non-decisive and requires source-specific
+      rights and privacy admission before it can be loaded.
+private_knowledge:
+  enabled: true
+  required: false
+  manifest_path: data/derived/private_knowledge/manifest.json
 tools:
   label_guard: true
   fertility_guard: true
@@ -29,7 +45,7 @@ agent_runtime:
   mode: agno
   agno_enabled: true
 agno:
-  version_pin: ">=2.6,<2.7"
+  version_pin: '>=2.6,<2.7'
   knowledge:
     default_base: agronomy_public
     contents_table: agno_knowledge_contents
@@ -38,10 +54,15 @@ agno:
     embedder_profile: local_default
     reranker: coverage
   retrieval:
-    top_k: 5
-    final_context_k: 5
+    top_k: 7
+    final_context_k: 6
     enable_agentic_search: true
     max_agentic_subqueries: 2
     agentic_candidate_multiplier: 2
-    min_agentic_candidates: 8
+    min_agentic_candidates: 16
     use_custom_retriever: true
+release_profile:
+  profile_id: offline-agronomy
+  active_store: data/derived/rag/offline_agronomy/active/store_manifest.json
+  us_reference_store: data/derived/rag/offline_agronomy/us_nrcs/store_manifest.json
+  community_status: no_archive_community_source_has_a_public_runtime_rights_admission

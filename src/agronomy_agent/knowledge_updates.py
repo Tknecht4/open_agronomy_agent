@@ -16,7 +16,13 @@ from typing import Any, Iterable
 import yaml
 
 from agronomy_agent.artifact_signature import sign_manifest, verify_manifest_signature
-from agronomy_agent.corpus_governance import ALLOWED_ELIGIBILITY, audit_runtime_corpora
+from agronomy_agent.agno_runtime.knowledge_graph import graph_artifact_paths
+from agronomy_agent.corpus_governance import (
+    ALLOWED_ELIGIBILITY,
+    audit_runtime_corpora,
+    load_corpus_policy,
+    partition_runtime_corpus_paths,
+)
 from agronomy_agent.knowledge_update_trust import (
     VerifiedKnowledgeUpdateTrustPolicy,
     private_key_id,
@@ -57,6 +63,68 @@ def sha256_path(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _resolve_rag_artifact_root(
+    *,
+    repository_root: Path,
+    rag_config: Path,
+    retrieval: dict[str, Any],
+) -> Path:
+    """Resolve a profile's artifact root without allowing it to escape its tree.
+
+    Legacy RAG configurations address artifacts from the repository root.  A
+    generated curated-store profile instead declares ``retrieval.artifact_root``
+    relative to its own YAML file.  Keep both semantics here so the builder,
+    package validator, and runtime audit agree about which bytes are bound.
+    """
+
+    repository_root = repository_root.resolve()
+    configured = str(retrieval.get("artifact_root") or "").strip()
+    if not configured:
+        artifact_root = repository_root
+    elif Path(configured).is_absolute():
+        artifact_root = Path(configured).resolve()
+    else:
+        artifact_root = (rag_config.parent / configured).resolve()
+    if artifact_root != repository_root and repository_root not in artifact_root.parents:
+        raise ValueError(
+            "RAG artifact_root escapes the repository or knowledge-update package"
+        )
+    return artifact_root
+
+
+def _resolve_artifact_path(
+    *,
+    artifact_root: Path,
+    value: str | Path,
+    label: str,
+) -> Path:
+    """Resolve one configured artifact and keep it within its artifact root."""
+
+    configured = Path(value)
+    path = (
+        configured.resolve()
+        if configured.is_absolute()
+        else (artifact_root / configured).resolve()
+    )
+    if path != artifact_root and artifact_root not in path.parents:
+        raise ValueError(f"{label} escapes RAG artifact_root: {value!r}")
+    return path
+
+
+def _artifact_relative_path(
+    *,
+    artifact_root: Path,
+    path: Path,
+    label: str,
+) -> str:
+    """Render a packaged artifact reference relative to its artifact root."""
+
+    try:
+        return path.resolve().relative_to(artifact_root.resolve()).as_posix()
+    except ValueError as exc:
+        raise ValueError(f"{label} escapes RAG artifact_root: {path}") from exc
+
+
 def build_knowledge_update(
     *,
     repo_root: Path,
@@ -90,15 +158,53 @@ def build_knowledge_update(
     retrieval = source_config.get("retrieval")
     if not isinstance(retrieval, dict):
         raise ValueError("RAG configuration must contain a retrieval mapping")
-    configured = [
-        *(retrieval.get("corpus_paths") or []),
-        *(retrieval.get("graph_paths") or []),
+    artifact_root = _resolve_rag_artifact_root(
+        repository_root=repo_root,
+        rag_config=rag_config,
+        retrieval=retrieval,
+    )
+    configured_corpora = [*(retrieval.get("corpus_paths") or [])]
+    configured_graphs = [
+        _resolve_artifact_path(
+            artifact_root=artifact_root,
+            value=value,
+            label="RAG graph path",
+        )
+        for value in (retrieval.get("graph_paths") or [])
     ]
     policy = retrieval.get("corpus_policy_manifest")
-    if policy:
-        configured.append(policy)
+    policy_path = (
+        _resolve_artifact_path(
+            artifact_root=artifact_root,
+            value=str(policy),
+            label="RAG corpus policy",
+        )
+        if policy
+        else None
+    )
+    policy_payload = load_corpus_policy(artifact_root, policy_path) if policy_path else {}
+    packageable_corpora, excluded_corpora = partition_runtime_corpus_paths(
+        configured_corpora,
+        policy_payload,
+    )
+    packageable_corpus_paths = [
+        _resolve_artifact_path(
+            artifact_root=artifact_root,
+            value=value,
+            label="RAG corpus path",
+        )
+        for value in packageable_corpora
+    ]
 
-    source_paths = [rag_config, *(_repo_file(repo_root, value) for value in configured)]
+    source_paths = [
+        rag_config,
+        *packageable_corpus_paths,
+        *([policy_path] if policy_path is not None else []),
+        *graph_artifact_paths(
+            configured_graphs,
+            require_manifests=bool(retrieval.get("require_graph_manifests", False)),
+        ),
+    ]
     source_paths.extend(path.resolve() for path in extra_paths)
     relative_paths: dict[str, Path] = {}
     for source in source_paths:
@@ -142,7 +248,35 @@ def build_knowledge_update(
         packaged_config_path = package_root / config_relative
         packaged_config = yaml.safe_load(packaged_config_path.read_text(encoding="utf-8")) or {}
         packaged_retrieval = packaged_config.setdefault("retrieval", {})
-        packaged_retrieval["artifact_root"] = os.path.relpath(package_root, packaged_config_path.parent)
+        packaged_artifact_root = package_root / artifact_root.relative_to(repo_root)
+        packaged_retrieval["corpus_paths"] = [
+            _artifact_relative_path(
+                artifact_root=artifact_root,
+                path=path,
+                label="RAG corpus path",
+            )
+            for path in packageable_corpus_paths
+        ]
+        if policy_path is not None:
+            packaged_retrieval["corpus_policy_manifest"] = _artifact_relative_path(
+                artifact_root=artifact_root,
+                path=policy_path,
+                label="RAG corpus policy",
+            )
+        if retrieval.get("graph_paths") is not None:
+            packaged_retrieval["graph_paths"] = [
+                _artifact_relative_path(
+                    artifact_root=artifact_root,
+                    path=path,
+                    label="RAG graph path",
+                )
+                for path in configured_graphs
+            ]
+        packaged_retrieval["excluded_configured_corpora"] = excluded_corpora
+        packaged_retrieval["artifact_root"] = os.path.relpath(
+            packaged_artifact_root,
+            packaged_config_path.parent,
+        )
         packaged_config_path.write_text(
             yaml.safe_dump(packaged_config, sort_keys=False, allow_unicode=True),
             encoding="utf-8",
@@ -162,6 +296,7 @@ def build_knowledge_update(
             "rag_config": config_relative.as_posix(),
             "source_rag_config_sha256": sha256_path(rag_config),
             "notes": notes,
+            "excluded_configured_corpora": excluded_corpora,
             "files": entries,
             "security_boundary": (
                 "The detached Ed25519 signature authenticates this manifest; manifest hashes and byte counts "
@@ -340,9 +475,11 @@ def validate_knowledge_update(
     rag_config = _inside(package_root, Path(*rag_relative.parts))
     config = yaml.safe_load(rag_config.read_text(encoding="utf-8")) or {}
     retrieval = config.get("retrieval") if isinstance(config.get("retrieval"), dict) else {}
-    artifact_root = (rag_config.parent / str(retrieval.get("artifact_root") or "")).resolve()
-    if artifact_root != package_root:
-        raise ValueError("packaged RAG artifact_root must resolve to the package root")
+    _resolve_rag_artifact_root(
+        repository_root=package_root,
+        rag_config=rag_config,
+        retrieval=retrieval,
+    )
     audit = audit_runtime_corpora(root=package_root, rag_config_path=rag_config)
     if audit["status"] != "pass":
         raise ValueError(f"knowledge update corpus audit failed: {audit['errors']}")
@@ -1381,13 +1518,6 @@ def _extract_archive_safely(archive_path: Path, destination: Path) -> Path:
     if not package_root.is_dir():
         raise ValueError("knowledge update archive has no package directory")
     return package_root
-
-
-def _repo_file(repo_root: Path, value: str | Path) -> Path:
-    path = Path(value)
-    if path.is_absolute():
-        return path.resolve()
-    return (repo_root / path).resolve()
 
 
 def _package_files(root: Path) -> list[Path]:

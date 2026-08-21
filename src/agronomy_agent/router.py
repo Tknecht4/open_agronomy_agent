@@ -39,6 +39,11 @@ _CANADIAN_REGIONAL_CONTEXT_PRODUCT_PATTERN = (
     r"\b(?:map|layer)\b.{0,40}\b(?:soil )?(?:erosion|erision|eroshun)(?: risk)?\b)"
 )
 
+_ONTARIO_FIELD_CROP_PRODUCTION_PATTERN = (
+    r"\bontario\s+(?:field[- ]crop|field crop)\s+(?:production|estimate)"
+    r"(?:\s+(?:workbook|table|series))?\b"
+)
+
 _AAFC_CROP_HEALTH_EXPANSIONS = {
     "AAFC crop health indices",
     "crop stress index",
@@ -167,6 +172,35 @@ def has(pattern: str, text: str) -> bool:
     return re.search(pattern, text, re.I) is not None
 
 
+def _is_named_product_permission_request(question: str) -> bool:
+    """Detect a proper-named product permission or rate request without a brand list."""
+
+    permission_request = re.search(
+        r"\b(?:Can|May|Should)\s+(?:I|we)\s+(?:use|apply|spray)\s+"
+        r"(?:the\s+)?[A-Z][A-Za-z0-9_.-]*(?:\s+[A-Z][A-Za-z0-9_.-]*){0,2}\b|"
+        r"\b(?:Is|Are)\s+[A-Z][A-Za-z0-9_.-]*(?:\s+[A-Z][A-Za-z0-9_.-]*){0,2}\s+"
+        r"(?:allowed|permitted|registered|legal)\b",
+        question,
+    )
+    if permission_request is not None:
+        return True
+    named_rate_request = re.search(
+        r"\b(?:What\s+is|What's)\s+(?:the\s+)?"
+        r"(?:[A-Z][A-Za-z0-9_.-]+\s+(?:rate|dose|dosage)|"
+        r"(?:rate|dose|dosage)\s+(?:for|of)\s+[A-Z][A-Za-z0-9_.-]+)\b|"
+        r"\bWhat\s+(?:rate|dose|dosage)\s+(?:of|for)\s+[A-Z][A-Za-z0-9_.-]+\b|"
+        r"\bHow\s+much\s+[A-Z][A-Za-z0-9_.-]+\b",
+        question,
+    )
+    if named_rate_request is None:
+        return False
+    return not has(
+        r"\b(?:nitrogen|phosphorus|potassium|sulphur|sulfur|fertili[sz]er|urea|"
+        r"lime|manure|compost|seed(?:ing)?|irrigation|water)\b",
+        question,
+    )
+
+
 def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     """Reconcile high-signal user intents after the broad lexical route.
 
@@ -177,6 +211,7 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     """
 
     q = _routing_text(question)
+    benign_conceptual_explanation = _is_benign_conceptual_explanation(question)
     qtype = route.question_type
     namespaces = set(route.namespaces)
     tools = set(route.required_tools)
@@ -189,7 +224,7 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
         r"\b(?:herbicide|fungicide|insecticide|pesticide|spray|tank mix|active ingredient|"
         r"registration number|pcp number|pmra|epa(?:-registered)?|product[- ]label)\b",
         q,
-    )
+    ) or _is_named_product_permission_request(question)
     regulated_land_application = has(
         r"\b(?:manure|digestate|biosolids?|organic nutrient|land[- ]application)\b",
         q,
@@ -445,12 +480,25 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
         if risk == "regulated":
             risk = "medium"
 
+    if benign_conceptual_explanation:
+        qtype = "exam_review"
+        namespaces.difference_update(
+            {"plant_health", "product_stewardship", "label_boundary", "field_data_boundary"}
+        )
+        namespaces.update({"crop_management", "exam_review"})
+        tools.clear()
+        risk = "low"
+        guidance = (
+            "Explain the agronomy practice or mechanism directly. Distinguish the general concept from a "
+            "field diagnosis or prescription without requesting case-specific evidence the user did not need."
+        )
+
     return QueryRoute(
         question_type=qtype,
         risk_level=risk,
         namespaces=tuple(sorted(namespaces)),
         required_tools=tuple(sorted(tools)),
-        answer_style=route.answer_style,
+        answer_style="exam_review" if benign_conceptual_explanation else route.answer_style,
         audience=route.audience,
         query_expansion=tuple(sorted(expansions)),
         guidance=guidance,
@@ -480,6 +528,61 @@ def request_focus(text: str) -> str:
     return text
 
 
+def _is_benign_conceptual_explanation(text: str) -> bool:
+    """Recognize non-operational agronomy concept and mechanism questions.
+
+    Agronomic vocabulary such as ``disease`` or ``pest`` must not by itself
+    turn an explanatory question into a field diagnosis.  This gate is
+    intentionally conservative: field-specific evidence, a requested action,
+    regulated products, rates, thresholds, or labels keep their existing
+    diagnostic or product routes.
+    """
+
+    q = _routing_text(text).strip()
+    focus = request_focus(q).strip()
+    explanatory_form = has(
+        r"^(?:please\s+)?(?:"
+        r"what\s+(?:is|are)\b|"
+        r"why\s+(?:does|do|can|is|are)\b|"
+        r"how\s+(?:does|do|can|is|are)\b|"
+        r"explain\b|describe\b)",
+        focus,
+    )
+    if not explanatory_form:
+        return False
+
+    field_specific = has(
+        r"\b(?:my|our)\b|"
+        r"\bthis\s+(?:field|farm|crop|plant|stand|season|sample|test|map)\b|"
+        r"\b(?:today|tomorrow|tonight|currently|right now|this week|this season)\b",
+        q,
+    )
+    operational_request = has(
+        r"\b(?:what\s+should|what\s+do|how\s+should|when\s+should)\b|"
+        r"\b(?:can|may|do|should)\s+(?:i|we)\b|"
+        r"\b(?:diagnos|identify|confirm|treat|spray|apply|prescrib|recommend|"
+        r"choose|select)\w*\b",
+        focus,
+    )
+    regulated_or_numeric_request = has(
+        r"\b(?:herbicide|fungicide|insecticide|pesticide|tank mix|product[- ]?label|"
+        r"label|rates?|dose|dosage|threshold|how much|"
+        r"pre[- ]?harvest interval|restricted[- ]?entry interval|phi|rei|ppe)\b",
+        focus,
+    ) or _is_named_product_permission_request(text)
+    diagnostic_observation = has(
+        r"\b(?:symptoms?|lesions?|leaf spots?|root rot|yellow(?:ing)?|pale|wilting|"
+        r"patch(?:y|es)?|stunt(?:ed|ing)?|stand loss|injury|infestation)\b",
+        focus,
+    )
+    return not (
+        field_specific
+        or operational_request
+        or regulated_or_numeric_request
+        or diagnostic_observation
+    )
+
+
 def _resolve_primary_question_type(text: str, current: str) -> str:
     """Stabilize primary intent after the broad namespace and guard pass.
 
@@ -491,6 +594,13 @@ def _resolve_primary_question_type(text: str, current: str) -> str:
     focus = request_focus(text.lower())
     if has(r"\busing only (?:the )?(?:supplied|provided|following)\b|\bextension excerpt\b", text):
         return "conceptual"
+    if _is_named_product_permission_request(text) or has(
+        r"\b(?:phi|rei|pre[- ]?harvest interval|restricted[- ]?entry interval)\b",
+        focus,
+    ):
+        return "product_label"
+    if _is_benign_conceptual_explanation(text):
+        return "exam_review"
 
     if has(_FRENCH_SOIL_WATER_PATTERN, text) and (
         has(_FRENCH_MAP_PATTERN, text)
@@ -1148,11 +1258,13 @@ def classify_query(question: str) -> QueryRoute:
     named_annual_crop_inventory = has(_AAFC_ANNUAL_CROP_INVENTORY_PATTERN, q)
     named_historical_crop_yield_slc = has(_AAFC_HISTORICAL_CROP_YIELD_SLC_PATTERN, q)
     named_canadian_context_product = has(_CANADIAN_REGIONAL_CONTEXT_PRODUCT_PATTERN, q)
+    named_ontario_field_crop_table = has(_ONTARIO_FIELD_CROP_PRODUCTION_PATTERN, q)
     named_regional_product = (
         named_crop_health_product
         or named_annual_crop_inventory
         or named_historical_crop_yield_slc
         or named_canadian_context_product
+        or named_ontario_field_crop_table
     )
     if has(
         r"\b(mlra|major land resource|ecoregion|ecological site|regional (soil|climate|environment)|soil landscape|"
@@ -1172,6 +1284,15 @@ def classify_query(question: str) -> QueryRoute:
             expansions.update({"regional map context", "dataset scope", "not current field measurement", "field verification"})
             if has(r"\b(?:soileri|erosion|erision|eroshun)\b", q):
                 expansions.update({"SoilERI", "wind water tillage erosion", "Soil Landscapes of Canada", "2021 modelled risk", "field-use limitations"})
+        elif named_ontario_field_crop_table:
+            expansions.update(
+                {
+                    "Ontario field crop production estimate",
+                    "Ontario field crop production workbook",
+                    "field crop reporting series",
+                    "table units and historical scope",
+                }
+            )
         regional_context_request = (named_regional_product or has(
             r"\b(regional .*context|soil and climate context|mlra|major land resource|ecoregion|ecological site|"
             r"agroclimate|nasdi|standardized precipitation index|standardized precipitation evapotranspiration index|spi|spei)\b",
@@ -2236,7 +2357,26 @@ def classify_query(question: str) -> QueryRoute:
         namespaces.update({"crop_management", "soil_health", "exam_review"})
 
     qtype = _resolve_primary_question_type(q, qtype)
-    if qtype == "product_label":
+    benign_conceptual_explanation = _is_benign_conceptual_explanation(question)
+    if _is_named_product_permission_request(question):
+        qtype = "product_label"
+        namespaces.update({"plant_health", "product_stewardship", "label_boundary"})
+        required_tools.add("label_guard")
+        risk = "regulated"
+    elif benign_conceptual_explanation:
+        qtype = "exam_review"
+        namespaces.difference_update(
+            {"plant_health", "product_stewardship", "label_boundary", "field_data_boundary"}
+        )
+        namespaces.update({"crop_management", "exam_review"})
+        required_tools.clear()
+        risk = "low"
+        style = "exam_review"
+        guidance = (
+            "Explain the agronomy practice or mechanism directly. Distinguish the general concept from a "
+            "field diagnosis or prescription without requesting case-specific evidence the user did not need."
+        )
+    elif qtype == "product_label":
         namespaces.update({"plant_health", "product_stewardship", "label_boundary"})
         required_tools.add("label_guard")
         risk = "regulated"
@@ -2278,6 +2418,7 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
 
     q = _routing_text(question)
     focus = request_focus(q)
+    benign_conceptual_explanation = _is_benign_conceptual_explanation(question)
     qtype = route.question_type
     namespaces: set[str] = set()
     tools: set[str] = set()
@@ -2400,9 +2541,29 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
         guidance = "Build one auditable recommendation that connects nutrient evidence, pest scouting and thresholds, soil-water loss risk, crop rotation, and field records."
 
     elif qtype == "exam_review":
-        namespaces.update({"fertility", "crop_management", "exam_review"})
-        expansions.update({"macronutrient", "micronutrient", "mobile nutrient", "immobile nutrient", "deficiency symptoms", "soil test", "tissue test"})
-        guidance = "Answer the agronomy concept directly, then connect it to field diagnosis without inventing a prescription."
+        namespaces.update({"crop_management", "exam_review"})
+        if benign_conceptual_explanation:
+            expansions.update(
+                {
+                    "agronomic mechanism",
+                    "benefits",
+                    "limitations",
+                    "conditions where the practice helps",
+                }
+            )
+            if has(r"\b(?:disease|pathogen|pest)\b", q):
+                expansions.update({"host range", "life cycle", "rotation diversity", "integrated management"})
+            if has(r"\b(?:nutrient|nitrogen|phosphorus|potassium|sulphur|sulfur|fixation)\b", q):
+                namespaces.update({"fertility", "soil_health"})
+                expansions.update({"nutrient cycling", "soil process", "crop rotation"})
+            guidance = (
+                "Explain the agronomy practice or mechanism directly, including its main benefit and limitation. "
+                "Keep the general explanation distinct from a field diagnosis or prescription."
+            )
+        else:
+            namespaces.add("fertility")
+            expansions.update({"macronutrient", "micronutrient", "mobile nutrient", "immobile nutrient", "deficiency symptoms", "soil test", "tissue test"})
+            guidance = "Answer the agronomy concept directly, then connect it to field diagnosis without inventing a prescription."
 
     elif qtype == "soil_water":
         namespaces.update({"soil_water", "soil_health"})
@@ -2825,11 +2986,13 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
     named_annual_crop_inventory = has(_AAFC_ANNUAL_CROP_INVENTORY_PATTERN, q)
     named_historical_crop_yield_slc = has(_AAFC_HISTORICAL_CROP_YIELD_SLC_PATTERN, q)
     named_canadian_context_product = has(_CANADIAN_REGIONAL_CONTEXT_PRODUCT_PATTERN, q)
+    named_ontario_field_crop_table = has(_ONTARIO_FIELD_CROP_PRODUCTION_PATTERN, q)
     named_regional_product = (
         named_crop_health_product
         or named_annual_crop_inventory
         or named_historical_crop_yield_slc
         or named_canadian_context_product
+        or named_ontario_field_crop_table
     )
     if has(
         r"\b(mlra|major land resource|ecoregion|ecodistrict|ecological site|soil survey|soil map|map unit|"
@@ -2863,6 +3026,15 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
             expansions.update({"regional map context", "dataset scope", "not current field measurement", "field verification"})
             if has(r"\b(?:soileri|erosion|erision|eroshun)\b", q):
                 expansions.update({"SoilERI", "wind water tillage erosion", "Soil Landscapes of Canada", "2021 modelled risk", "field-use limitations"})
+        elif named_ontario_field_crop_table:
+            expansions.update(
+                {
+                    "Ontario field crop production estimate",
+                    "Ontario field crop production workbook",
+                    "field crop reporting series",
+                    "table units and historical scope",
+                }
+            )
             guidance = (
                 f"{guidance} Treat the named Canadian regional data product as bounded context, not as current field "
                 "measurement, current weather, or a management prescription."

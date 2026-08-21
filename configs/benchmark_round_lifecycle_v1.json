@@ -1,0 +1,22 @@
+{
+  "records": [
+    {
+      "artifact_manifest_path": "docs/public/development-benchmark-rc3-20260815/source_data/artifact_manifest.json",
+      "artifact_manifest_sha256": "75a56d86162ec782042cebbe00cde453b327c00e80418d3b8cf04944bebec33c",
+      "benchmark_source_commit": "3e30fb5de38105fa5bba3845411eb2174c21d3c4",
+      "canonical_arm_executions": 36,
+      "canonical_observations": 8676,
+      "canonical_trials": 9,
+      "checkpoint_receipt_path": "docs/public/development-benchmark-rc3-20260815/source_data/checkpoint_validation_receipt.json",
+      "checkpoint_receipt_sha256": "99e343fdcb3923d1cb3ebd40f5625ab1ad1a1d4f48d2046c25d13e82e2019d62",
+      "completed_at": "2026-08-15",
+      "new_observations_allowed": false,
+      "plan_path": "configs/final_benchmark_round_rc3.json",
+      "plan_sha256": "f1fabf6ab5dca84acc41b8925663d11759ab9b86e8c5fa5ffeffe15e65e21ece",
+      "round_id": "open_agronomy_development_rc3_20260814",
+      "status": "completed_frozen_nonclaim",
+      "successor_round_required": true
+    }
+  ],
+  "schema_version": "open_agronomy_agent.benchmark_round_lifecycle.v1"
+}

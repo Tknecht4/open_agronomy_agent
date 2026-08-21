@@ -90,7 +90,8 @@
         "exclude_page_ranges": [],
         "exclude_line_patterns": [],
         "emit_source_chunks": false,
-        "semantic_companion_path": "data/curated/canada_agronomy/mb_2026_crop_disease_scouting.semantic.json",
+        "semantic_companion_path": "data/curated/canada_agronomy/mb_2026_crop_disease_scouting.2026-07-24.semantic.json",
+        "semantic_companion_sha256": "5d2f99d98355968b0ec4601dc78c072900bd5ddf77692592407dd208b2b863e4",
         "notes": "Source extraction is limited to the reviewed introductory disease-management pages. Runtime emission is companion-only so product-specific and unreviewed raw text cannot enter model context."
       },
       "use_policy": {
@@ -166,7 +167,8 @@
         "exclude_page_ranges": [],
         "exclude_line_patterns": [],
         "emit_source_chunks": false,
-        "semantic_companion_path": "data/curated/canada_agronomy/mb_2026_canola_insect_scouting.semantic.json",
+        "semantic_companion_path": "data/curated/canada_agronomy/mb_2026_canola_insect_scouting.2026-07-24.semantic.json",
+        "semantic_companion_sha256": "bf84a51dd849777fa8b8d09d2ff2334089a396f9e36e6c32fba20f41179692f6",
         "notes": "Source extraction is limited to general field-scouting concepts and the canola scouting pages. Runtime emission is companion-only; adjacent product and rate tables are not emitted."
       },
       "use_policy": {

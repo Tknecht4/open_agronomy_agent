@@ -9,6 +9,8 @@ from typing import Any
 import yaml
 
 from agronomy_agent.paths import REPO_ROOT, repo_path
+from agronomy_agent.runtime_profiles import DEFAULT_MODEL_CONFIG as RELEASE_MODEL_CONFIG
+from agronomy_agent.runtime_profiles import DEFAULT_RAG_CONFIG as RELEASE_RAG_CONFIG
 
 
 OPEN_AGRONOMY_BENCHMARK_MANIFEST = repo_path("data/eval/open_agronomy_canadian_performance_v1_manifest.json")
@@ -222,8 +224,8 @@ AIAGRIBENCH_SUBMISSION_DRY_RUN_PROMPT_BOUNDARY_PREFLIGHT = repo_path(
 )
 AIAGRIBENCH_SUBMISSION_DRY_RUN_QUESTIONS = repo_path("data/eval/aiagribench_submission_dry_run_questions.json")
 AIAGRIBENCH_SUBMISSION_DRY_RUN_PACKET_BUILDER = repo_path("scripts/build_aiagribench_submission_dry_run_packet.py")
-DEFAULT_MODEL_CONFIG = repo_path("configs/model.yaml")
-DEFAULT_RAG_CONFIG = repo_path("configs/rag_final_mvp.yaml")
+DEFAULT_MODEL_CONFIG = repo_path(RELEASE_MODEL_CONFIG)
+DEFAULT_RAG_CONFIG = repo_path(RELEASE_RAG_CONFIG)
 DEFAULT_PUBLIC_DOMAIN_FULL_ROOTS = (
     repo_path("outputs/evals/public_domain_coverage_full_live_1056_current_rescore_contract_repairs_final"),
     repo_path("outputs/evals/public_domain_coverage_full_live_1056_current_rescore_contract_repairs"),
@@ -1042,8 +1044,8 @@ def aiagribench_submission_freeze_manifest(
         "--questions <official_aiagribench_questions.csv> "
         "--output-dir outputs/aiagribench_submission "
         "--mode agronomic_rag "
-        "--model-config configs/model.yaml "
-        "--rag-config configs/rag_final_mvp.yaml "
+        f"--model-config {RELEASE_MODEL_CONFIG} "
+        f"--rag-config {RELEASE_RAG_CONFIG} "
         "--answer-profile benchmark "
         f"--max-tokens {int(model_config.get('max_tokens') or 480)}"
     )

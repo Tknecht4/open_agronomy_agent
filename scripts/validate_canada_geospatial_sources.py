@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate Canadian geospatial licensing, lineage, and bundled layer integrity."""
+"""Validate the geospatial source catalog or one installed spatial profile."""
 
 from __future__ import annotations
 
@@ -7,8 +7,18 @@ import argparse
 import hashlib
 import json
 import sqlite3
+from collections import Counter
 from pathlib import Path
 from typing import Any
+
+from offline_spatial_profiles import (
+    load_profile,
+    profile_entry_sha256,
+    resolve_state_path,
+    source_ids as profile_source_ids,
+    source_row,
+    validate_profile_registry_contract,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -16,6 +26,7 @@ SCHEMA_VERSION = "open_agronomy_agent.canada_geospatial_sources.v1"
 ALLOWED_OPEN_LICENCES = {
     "Open Government Licence - British Columbia",
     "Open Government Licence - Canada",
+    "Statistics Canada Open Licence",
 }
 REQUIRED_SOURCE_FIELDS = {
     "id",
@@ -33,6 +44,11 @@ REQUIRED_SOURCE_FIELDS = {
     "license",
     "runtime",
     "boundary",
+}
+KNOWN_RUNTIME_STATUSES = {
+    "candidate_not_bundled",
+    "candidate_local_profile",
+    "external_profile_available",
 }
 
 
@@ -56,10 +72,35 @@ def _resolve(root: Path, value: Any) -> Path:
     return path if path.is_absolute() else root / path
 
 
-def validate(manifest_path: Path, *, root: Path = ROOT) -> dict[str, Any]:
+def validate(
+    manifest_path: Path,
+    *,
+    root: Path = ROOT,
+    profile_manifest_path: Path | None = None,
+    profile_id: str | None = None,
+) -> dict[str, Any]:
+    """Validate catalog metadata or one explicit local profile.
+
+    The catalog records source and installability state; it does not assert
+    that large map assets are present in a clone. A selected profile validates
+    exact external bytes independently from unrelated catalog rows.
+    """
+
+    if (profile_manifest_path is None) != (profile_id is None):
+        raise ValueError("profile_manifest_path and profile_id must be provided together")
     errors: list[str] = []
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest_sha256 = _sha256(manifest_path)
+    profile: dict[str, Any] | None = None
+    profile_sources: dict[str, dict[str, Any]] = {}
+    if profile_manifest_path is not None and profile_id is not None:
+        profile = load_profile(profile_manifest_path, profile_id)
+        profile_sources = {
+            str(row["source_id"]): row
+            for row in profile.get("sources") or []
+            if isinstance(row, dict)
+        }
+        errors.extend(validate_profile_registry_contract(profile, manifest))
     if manifest.get("schema_version") != SCHEMA_VERSION:
         errors.append(f"schema_version must be {SCHEMA_VERSION}")
     soil_gate = manifest.get("national_soil_context_gate")
@@ -84,11 +125,14 @@ def validate(manifest_path: Path, *, root: Path = ROOT) -> dict[str, Any]:
 
     bundled: list[dict[str, Any]] = []
     candidates: list[str] = []
+    status_counts: Counter[str] = Counter()
     for index, source in enumerate(sources):
         if not isinstance(source, dict):
             errors.append(f"sources[{index}] must be an object")
             continue
         source_id = str(source.get("id") or f"sources[{index}]")
+        if profile is not None and source_id not in profile_sources:
+            continue
         missing = sorted(REQUIRED_SOURCE_FIELDS - set(source))
         if missing:
             errors.append(f"{source_id} missing fields: {missing}")
@@ -102,14 +146,26 @@ def validate(manifest_path: Path, *, root: Path = ROOT) -> dict[str, Any]:
             if license_record.get(permission) is not True:
                 errors.append(f"{source_id} missing licence permission: {permission}")
         runtime = source.get("runtime") if isinstance(source.get("runtime"), dict) else {}
-        if runtime.get("status") != "bundled":
+        runtime_status = str(runtime.get("status") or "")
+        status_counts[runtime_status] += 1
+        if runtime_status not in KNOWN_RUNTIME_STATUSES:
+            errors.append(f"{source_id} has unsupported runtime status: {runtime_status!r}")
+            continue
+        if profile is None:
             candidates.append(source_id)
             continue
 
-        raw_path = _resolve(root, runtime.get("raw_path"))
-        lineage_path = _resolve(root, runtime.get("lineage_path"))
-        derived_path = _resolve(root, runtime.get("derived_path"))
-        derived_manifest_path = _resolve(root, runtime.get("derived_manifest_path"))
+        profile_source = profile_sources.get(source_id)
+        if profile_source is None:
+            raw_path = _resolve(root, runtime.get("raw_path"))
+            lineage_path = _resolve(root, runtime.get("lineage_path"))
+            derived_path = _resolve(root, runtime.get("derived_path"))
+            derived_manifest_path = _resolve(root, runtime.get("derived_manifest_path"))
+        else:
+            raw_path = resolve_state_path(root, profile_source, "raw")
+            lineage_path = resolve_state_path(root, profile_source, "lineage")
+            derived_path = resolve_state_path(root, profile_source, "derived")
+            derived_manifest_path = resolve_state_path(root, profile_source, "derived_manifest")
         for label, path in (
             ("raw", raw_path),
             ("lineage", lineage_path),
@@ -135,6 +191,14 @@ def validate(manifest_path: Path, *, root: Path = ROOT) -> dict[str, Any]:
             errors.append(f"{source_id} raw byte count does not match lineage")
         if lineage.get("raw_sha256") != raw_sha256:
             errors.append(f"{source_id} raw SHA256 does not match lineage")
+        if profile_source is not None:
+            expected_raw_path = str(raw_path.relative_to(root))
+            if lineage.get("raw_path") != expected_raw_path:
+                errors.append(f"{source_id} lineage raw path does not match the profile state path")
+            if int(profile_source.get("expected_raw_bytes") or -1) != raw_path.stat().st_size:
+                errors.append(f"{source_id} raw byte count does not match the profile contract")
+            if profile_source.get("expected_raw_sha256") != raw_sha256:
+                errors.append(f"{source_id} raw SHA256 does not match the profile contract")
         lineage_entry_sha256 = lineage.get("source_entry_sha256")
         if lineage_entry_sha256 is not None:
             if lineage_entry_sha256 != source_entry_sha256:
@@ -229,7 +293,19 @@ def validate(manifest_path: Path, *, root: Path = ROOT) -> dict[str, Any]:
         "manifest_path": rendered_manifest_path,
         "manifest_sha256": manifest_sha256,
         "source_count": len(sources),
+        "profile": (
+            {
+                "id": profile.get("id"),
+                "profile_manifest_path": str(profile_manifest_path),
+                "profile_manifest_sha256": _sha256(profile_manifest_path),
+                "profile_entry_sha256": profile_entry_sha256(profile),
+                "required_source_ids": list(profile_source_ids(profile)),
+            }
+            if profile is not None and profile_manifest_path is not None
+            else None
+        ),
         "bundled_source_count": len(bundled),
+        "catalog_status_counts": dict(sorted(status_counts.items())),
         "candidate_source_ids": candidates,
         "bundled_layers": bundled,
         "national_soil_context_gate": {
@@ -251,6 +327,16 @@ def main() -> int:
         default=ROOT / "data/manifests/canada_geospatial_sources.json",
     )
     parser.add_argument(
+        "--profile",
+        help="validate exact external assets for this offline spatial profile",
+    )
+    parser.add_argument(
+        "--profile-manifest",
+        type=Path,
+        default=ROOT / "data/manifests/offline_spatial_profiles_v1.json",
+        help="offline spatial profile contract used with --profile",
+    )
+    parser.add_argument(
         "--asset-root",
         type=Path,
         default=ROOT,
@@ -258,7 +344,12 @@ def main() -> int:
     )
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    report = validate(args.manifest.resolve(), root=args.asset_root.resolve())
+    report = validate(
+        args.manifest.resolve(),
+        root=args.asset_root.resolve(),
+        profile_manifest_path=args.profile_manifest.resolve() if args.profile else None,
+        profile_id=args.profile,
+    )
     rendered = json.dumps(report, indent=2) + "\n"
     if args.output:
         output = args.output if args.output.is_absolute() else ROOT / args.output

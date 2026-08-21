@@ -1,0 +1,190 @@
+{
+  "analysis_date": "2026-08-15",
+  "automated_semantic_judge_requested": false,
+  "benchmark_id": "open_agronomy_canadian_performance_v1_runtime_v2",
+  "benchmark_source_snapshot_sha256": "25fb45e1d1ea7476a8d0b58ef563dc6afb7bc391e85f97a72324491cb6c273c3",
+  "benchmark_suite_sha256": "5c3ce59195ac603d2dd8ec5f36f3672b3ee0c20227cdb4fd301dfe3848a83c63",
+  "boundary": "RC3 measures exposed-suite deterministic diagnostics and harness behavior. It does not establish answer quality, agronomic correctness, model superiority, grower utility, field outcomes, or Benchmark v3 performance.",
+  "canonical_arm_executions": 36,
+  "canonical_observations": 8676,
+  "canonical_trials": 9,
+  "cases_per_arm": 241,
+  "claim_eligible": false,
+  "deterministically_scored_cases_per_arm": 49,
+  "final_partial_identical_arms": 36,
+  "implementation_commit": "3e30fb5de38105fa5bba3845411eb2174c21d3c4",
+  "independent_human_reviews_completed": 0,
+  "known_interface_findings": {
+    "french_language_preservation": {
+      "eligible": 12,
+      "preserved": 9
+    },
+    "full_system_trace_completeness": {
+      "candidate_configurations": 3,
+      "context_admission_trace": "complete",
+      "evidence_lineage": "complete",
+      "field_context_binding": "complete",
+      "input_lineage": "complete",
+      "interpretation": "Presence and linkage contract only; not evidence correctness or answer quality.",
+      "observations_per_candidate": 723,
+      "route_trace": "complete"
+    },
+    "latency_outlier": {
+      "classification": "unexplained_host_or_runtime_stall_retained_in_results",
+      "elapsed_seconds": 5062.879,
+      "eval_id": "oacp1::canadian_decision_quality::ca_v2_manitoba_soils_06"
+    },
+    "local_guard_route_completeness": {
+      "complete": 134,
+      "eligible": 154
+    }
+  },
+  "luna_usage": {
+    "actual_billed_cost_usd": null,
+    "answer_verifier_calls": 183,
+    "api_equivalent_cost_usd": 3.04627364,
+    "billing_scope": "api_equivalent_estimate_only",
+    "calls": 2841,
+    "input_tokens": 9546631,
+    "interpretation": "API-equivalent estimate only. Actual ChatGPT-authenticated billing and local energy use were not observed.",
+    "output_tokens": 1372813,
+    "pricing_index_id": "openai::gpt-5.6-luna::standard::2026-08-08",
+    "pricing_index_sha256": "66a78dd56288cc0b7e9b88519def2be7ef89be93a9e2a562aa6ade29f9967aeb",
+    "reasoning_output_tokens": 930092,
+    "total_tokens": 10919444
+  },
+  "matched_trial_keys": 2169,
+  "objective_parser_audit": {
+    "canonical_full_system_cases": 16,
+    "canonical_parser_accuracy_percent": 87.5,
+    "canonical_parser_passes": 14,
+    "false_negative_case_ids": [
+      "ca_calc_map_04",
+      "ca_calc_urea_03"
+    ],
+    "false_negative_cases": [
+      {
+        "absolute_tolerance": 0.8,
+        "eval_id": "ca_calc_map_04",
+        "frozen_parser_accuracy": 0.0,
+        "reference_numeric": 86.5,
+        "typed_tool_unit": "kg product/ha",
+        "typed_tool_value": 86.538
+      },
+      {
+        "absolute_tolerance": 1.0,
+        "eval_id": "ca_calc_urea_03",
+        "frozen_parser_accuracy": 0.0,
+        "reference_numeric": 217.4,
+        "typed_tool_unit": "kg product/ha",
+        "typed_tool_value": 217.391
+      }
+    ],
+    "interpretation": "The 87.5% frozen score is preserved. The 100% value is a post-run parser-sensitivity audit of typed tool payloads, not a replacement score.",
+    "post_run_tool_payload_accuracy_percent": 100.0,
+    "post_run_tool_payload_cases": 16,
+    "post_run_tool_payload_within_tolerance": 16
+  },
+  "posthoc_semantic_review": {
+    "boundary": "This is a separately authorized, post-hoc, blinded AI triage of saved answers. It did not alter the frozen RC3 run, has no human calibration or adjudication, and cannot support answer-quality, safety, agronomic-correctness, ranking, or promotion claims.",
+    "human_calibration_status": "missing",
+    "judge": {
+      "model_id": "gpt-5.6-luna",
+      "reasoning_effort": "high",
+      "self_judges_luna_candidate_outputs": true
+    },
+    "promotion_eligible": false,
+    "rows": 1620,
+    "status": "complete_uncalibrated_blinded_ai_triage_nonclaim"
+  },
+  "retention_bundle_ids": [
+    "5ced49ebff820c83a329e985b7fc8589769f4a57d8b57468cc1e553a56ce6585",
+    "61e7ffbcb6f8a9d16392ae136d9797673e4e739eebe974d3e6e0c2b0e2b6928c",
+    "40fbe1eaa8a6a67b0cdab353b0512a6e606fcb63e78199002f610fa502dd953d",
+    "ca89abb053084c9149dbb46b0ad196e0ea6f04dd0e1864986a288b28020e7bd4",
+    "e073853c45751fbf38981a4fe597e9ddb530bead5e70f9a33641bc28116803fa",
+    "5263acb55a506400b420d67010cd5e3c598b8443346e36703449bbc9ca44ad18",
+    "d1ccc1af9bc42787158fa83b2c94814f1536db0da3ae33eb7c178c82e0247fe9",
+    "c0ef89e7718c33725ba73a6cdc0130179592fb43ddf572a5c3206df2afe982fd",
+    "3c5fd6bdfed84420450440082db47da2419b83009295a33f7668374216a9e116"
+  ],
+  "review_packet_rows": 1620,
+  "review_packets": 9,
+  "review_rows_completed": 0,
+  "schema_version": "open_agronomy_agent.rc3_checkpoint_validation.v2",
+  "semantic_judgments": 0,
+  "status": "complete_nonclaim_development_checkpoint",
+  "successor_repairs": [
+    {
+      "artifacts": [
+        {
+          "bytes": 105129,
+          "path": "src/agronomy_agent/evals.py",
+          "sha256": "9bedddde55e041422e4a57188e0fb2b3bcf2a105dfe0034dc3d4cfe4f02f94fe"
+        },
+        {
+          "bytes": 50191,
+          "path": "tests/test_evals.py",
+          "sha256": "6c0bb2bc1de5984704e589fb7e62e733a4a61f2d8cd73d6ca01e0477bdcaafed"
+        }
+      ],
+      "repair": "objective_product_mass_unit_alias",
+      "status": "future_only_not_part_of_rc3"
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 4559,
+          "path": "configs/schemas/benchmark_retention_bundle_v1.schema.json",
+          "sha256": "be267061aa69f868c5afc8204e531b98a1ff5eb7ce8cd785047f5a662539c837"
+        },
+        {
+          "bytes": 48573,
+          "path": "scripts/build_benchmark_retention_bundle.py",
+          "sha256": "78f2a6873aac825e4d9f41d652d71d61eea0bd2d42a24babbbf3c5f62a1b6016"
+        },
+        {
+          "bytes": 27165,
+          "path": "tests/test_benchmark_retention_bundle.py",
+          "sha256": "2c0dc5c4dc109a11710363bab7ce5dd0c3ec583a047d326a8e9ed0eee85c90f3"
+        }
+      ],
+      "repair": "versioned_public_metric_projection",
+      "status": "future_only_not_part_of_rc3"
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 46598,
+          "path": "src/agronomy_agent/answerability.py",
+          "sha256": "07341ef67affa6bcf9aa83b522a60a1956a606bc1e603462ea1b56acd36a9589"
+        },
+        {
+          "bytes": 36053,
+          "path": "tests/test_answerability.py",
+          "sha256": "c611708e5002abd32524601b27a69619ed53862ae987089a79bcf11bbbae7dd6"
+        }
+      ],
+      "repair": "deterministic_hold_language_preservation",
+      "status": "future_only_not_part_of_rc3"
+    },
+    {
+      "artifacts": [
+        {
+          "bytes": 21115,
+          "path": "src/agronomy_agent/benchmark_report.py",
+          "sha256": "956c9101a324a13c4c72546eb30b4f31d08bd0d2ce96f1b0266ed611c8ea2f6c"
+        },
+        {
+          "bytes": 5479,
+          "path": "tests/test_benchmark_report.py",
+          "sha256": "85b6e0031c49a9af5a58c323564f4fc2d5e83af37d1c9146f2a2d4b0be001a1a"
+        }
+      ],
+      "repair": "context_admission_reporting_categories",
+      "status": "future_only_not_part_of_rc3"
+    }
+  ],
+  "suite_exposure_status": "exposed_and_used_for_system_tuning",
+  "unique_observation_ids": 8676
+}

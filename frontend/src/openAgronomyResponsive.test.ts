@@ -2,6 +2,14 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 const css = (): string => readFileSync('src/styles.css', 'utf-8').replace(/\s+/g, ' ')
+const finalMobileCss = (): string => {
+  const source = css()
+  return source.slice(source.lastIndexOf('@media (max-width: 820px)'))
+}
+const compactDesktopCss = (): string => {
+  const source = css()
+  return source.slice(source.lastIndexOf('@media (max-width: 1180px) and (min-width: 821px)'))
+}
 const benchmarksCss = (): string => readFileSync('src/BenchmarksRoute.css', 'utf-8').replace(/\s+/g, ' ')
 const appSource = (): string => readFileSync('src/OpenAgronomyApp.tsx', 'utf-8')
 const benchmarksRouteSource = (): string => readFileSync('src/BenchmarksRoute.tsx', 'utf-8')
@@ -27,8 +35,16 @@ describe('Open Agronomy mobile layout CSS', () => {
     expect(source).toMatch(/\.demo-nav \{[^}]*grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/)
     expect(source).toMatch(/\.map-workspace \{[^}]*padding: 8px 8px 76px/)
     expect(source).toMatch(/\.map-stage \{[^}]*order: 1/)
-    expect(source).toMatch(/\.chat-panel \{[^}]*order: 2/)
-    expect(source).toMatch(/\.analyze-workspace \{[^}]*grid-template-columns: minmax\(520px, 1fr\) minmax\(340px, 420px\)/)
+    const finalMobile = finalMobileCss()
+    expect(finalMobile).toMatch(/\.chat-panel \{[^}]*order: 2;[^}]*height: calc\(100svh - 72px\);[^}]*min-height: 0/)
+    expect(finalMobile).toMatch(/\.conversation-thread \{[^}]*min-height: 0;[^}]*max-height: none/)
+    expect(finalMobile).toMatch(/\.chat-heading \.panel-kicker,[^}]*\.chat-heading \.agent-state \{[^}]*display: none/)
+    expect(finalMobile).toMatch(/\.answer-receipt \{[^}]*margin: 0/)
+    expect(finalMobile).toMatch(/\.answer-receipt \{[^}]*display: none/)
+    expect(finalMobile).toMatch(/\.answer-receipt-summary > div:first-child > span \{[^}]*display: none/)
+    // Desktop keeps the map usable while explicitly reserving a generous chat column.
+    // This protects the current map/chat balance instead of the superseded layout.
+    expect(source).toMatch(/\.analyze-workspace \{[^}]*grid-template-columns: minmax\(480px, 1\.12fr\) minmax\(500px, 0\.88fr\)/)
     expect(source).toMatch(/\.fields-workspace \{[^}]*display: block/)
   })
 
@@ -36,7 +52,10 @@ describe('Open Agronomy mobile layout CSS', () => {
     const source = css()
 
     expect(source).toMatch(/\.conversation-thread \{[^}]*overflow-x: hidden;[^}]*overflow-y: auto/)
-    expect(source).toMatch(/\.chat-message \{[^}]*box-sizing: border-box;[^}]*overflow-wrap: anywhere/)
+    expect(source).toMatch(/\.chat-message \{[^}]*box-sizing: border-box;[^}]*grid-template-columns: minmax\(0, 1fr\);[^}]*min-width: 0;[^}]*max-width: 100%;[^}]*overflow-wrap: anywhere/)
+    expect(source).toMatch(/\.chat-message > \* \{[^}]*min-width: 0;[^}]*max-width: 100%/)
+    expect(source).toMatch(/\.formatted-answer > \*,[^}]*overflow-wrap: anywhere/)
+    expect(source).toMatch(/\.formatted-answer pre \{[^}]*box-sizing: border-box;[^}]*max-width: 100%/)
     expect(source).toMatch(/\.map-toolbar \.map-actions \{[^}]*grid-template-columns: minmax\(0, 1fr\) auto/)
     expect(source).toMatch(/\.map-toolbar \.map-mode-control \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/)
     expect(source).toMatch(/\.map-primary-action \{[^}]*min-height: 44px/)
@@ -44,6 +63,19 @@ describe('Open Agronomy mobile layout CSS', () => {
     expect(source).toMatch(/\.map-toolbar \.map-mode-control button span \{[^}]*font-size: 12px;[^}]*white-space: nowrap/)
     expect(source).toMatch(/\.chat-panel \.tool-source-list \{[^}]*display: flex;[^}]*overflow-x: auto;[^}]*scroll-snap-type: x proximity/)
     expect(source).toMatch(/\.chat-panel \.tool-source-card \{[^}]*flex: 0 0 min\(88vw, 360px\);[^}]*scroll-snap-align: start/)
+  })
+
+  it('keeps a half-width desktop map-first without turning the map into a sidebar', () => {
+    const compactDesktop = compactDesktopCss()
+    const finalMobile = finalMobileCss()
+
+    expect(compactDesktop).toMatch(/\.map-workspace \{[^}]*grid-template-columns: minmax\(0, 1\.15fr\) minmax\(340px, 0\.85fr\)/)
+    expect(compactDesktop).toMatch(/\.chat-panel \{[^}]*grid-column: auto/)
+    expect(compactDesktop).toMatch(/\.map-stage \{[^}]*min-height: 620px/)
+    expect(compactDesktop).toMatch(/\.chat-panel \{[^}]*min-height: 620px/)
+    expect(finalMobile).toMatch(/\.chat-panel \{[^}]*box-sizing: border-box;[^}]*gap: 6px;[^}]*padding: 8px/)
+    expect(finalMobile).toMatch(/\.network-answer-state\.runtime_online \{[^}]*display: none/)
+    expect(finalMobile).toMatch(/\.chat-panel \.chat-composer textarea \{[^}]*min-height: 72px/)
   })
 
   it('keeps the benchmark page wired to the human review operations packet', () => {

@@ -1,0 +1,885 @@
+{
+  "schema_version": "open_agronomy_agent.canada_offline_source_admission_candidates.v1",
+  "generated_at": "2026-08-13T00:00:00Z",
+  "status": "candidate_research_queue_unadmitted",
+  "scope": "A compact, metadata-only research queue for Canadian offline spatial context, agricultural statistics, and university extension sources. It is not a download list, runtime corpus policy, spatial-pack manifest, rights grant, or model-training authorization.",
+  "universal_boundary": {
+    "metadata_discovery": true,
+    "runtime_admission": false,
+    "download_or_fetch": false,
+    "raw_bytes_present": false,
+    "local_rag": false,
+    "distributable_bundle": false,
+    "model_training": false
+  },
+  "admission_gates": [
+    {
+      "id": "exact_resource_and_byte_freeze",
+      "title": "Freeze one exact resource",
+      "purpose": "Select the exact logical resource, record retrieval time, bytes, SHA-256, version and attribution, and preserve the raw resource outside Git before any derivation."
+    },
+    {
+      "id": "rights_scope",
+      "title": "Confirm item-level reuse scope",
+      "purpose": "Record the source-specific licence or written permission, attribution, commercial and redistribution scope, and third-party exclusions for the exact frozen bytes."
+    },
+    {
+      "id": "training_rights",
+      "title": "Make a separate training decision",
+      "purpose": "Obtain and record a human-approved, source-specific training-use decision. General public availability or reuse language does not activate training."
+    },
+    {
+      "id": "derivation_or_extraction_validation",
+      "title": "Validate the compact derivative or extraction",
+      "purpose": "Run a deterministic build with input/output hashes, schema checks, representative query tests, and a documented compactness budget."
+    },
+    {
+      "id": "runtime_policy_admission",
+      "title": "Make a separate runtime admission",
+      "purpose": "Add a reviewed runtime-policy decision only after all prior gates; candidate metadata cannot enter retrieval or field advice by itself."
+    },
+    {
+      "id": "spatial_semantic_contract",
+      "title": "Verify spatial semantics",
+      "purpose": "Verify coordinate reference system, feature identifiers, boundary type, scale or temporal coverage, point-in-polygon behavior, and field-context limitations."
+    },
+    {
+      "id": "statistical_variable_contract",
+      "title": "Select and validate published variables",
+      "purpose": "Allowlist exact variables, units, geography, reference year, suppression codes, allocation method and aggregation limits before packaging statistics."
+    },
+    {
+      "id": "agronomic_currency_review",
+      "title": "Review currency and agronomic scope",
+      "purpose": "Check edition, regional calibration, intended crop or practice scope, label or regulatory currency, and the distinction between context and recommendation."
+    },
+    {
+      "id": "third_party_material_review",
+      "title": "Exclude unlicensed third-party material",
+      "purpose": "Identify co-authored, cited, embedded, photographed, table, logo, product-label, and publisher-controlled material before any copying or derivative creation."
+    }
+  ],
+  "candidate_sources": [
+    {
+      "id": "ca_statcan_2021_province_territory_digital_boundaries",
+      "category": "administrative_boundary",
+      "title": "2021 Census Boundary Files: provinces and territories (digital boundary selection)",
+      "publisher": "Statistics Canada",
+      "authority_type": "federal_government",
+      "jurisdictions": ["Canada", "provinces and territories"],
+      "languages": ["en-CA", "fr-CA"],
+      "canonical_url": "https://open.canada.ca/data/en/dataset/ef70dc3b-1069-4037-9bce-61f47e628a1d",
+      "source_identity": {
+        "identifier_type": "open_canada_dataset_id",
+        "identifier": "ef70dc3b-1069-4037-9bce-61f47e628a1d",
+        "identifier_status": "official_catalogue_record_observed",
+        "evidence_url": "https://open.canada.ca/data/en/dataset/ef70dc3b-1069-4037-9bce-61f47e628a1d"
+      },
+      "candidate_resources": [
+        {
+          "role": "catalogue_record",
+          "url": "https://open.canada.ca/data/en/dataset/ef70dc3b-1069-4037-9bce-61f47e628a1d",
+          "format": "catalogue_html",
+          "status": "unfetched_candidate"
+        },
+        {
+          "role": "boundary_selection_page",
+          "url": "https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21",
+          "format": "html",
+          "status": "unfetched_candidate"
+        }
+      ],
+      "source_characteristics": {
+        "content_type": "2021 vector census boundary files",
+        "spatial_linkage": "Province or territory identifier and census geographic identifiers; select only the digital province or territory boundary resource after exact-resource resolution.",
+        "decision_role": "Location label and jurisdiction routing context only."
+      },
+      "rights": {
+        "status": "publisher_open_licence_observed_pending_resource_scope",
+        "licence_identifier": "Statistics Canada Open Licence",
+        "evidence_url": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
+        "catalogue_licence_observed": false,
+        "commercial_reuse_status": "publisher_licence_observed_not_approved_for_project_use",
+        "redistribution_status": "publisher_licence_observed_not_approved_for_project_use",
+        "third_party_rights_review_required": true,
+        "notes": "The Statistics Canada licence is the observed publisher licence; the exact digital resource, attribution wording and any third-party exclusions still require a byte-level review."
+      },
+      "training_rights": {
+        "status": "not_assessed_no_training_authorization",
+        "source_specific_authorization": false,
+        "notes": "No training-use decision has been made for the exact resource or any derivative."
+      },
+      "proposed_use": {
+        "metadata_discovery": true,
+        "download": false,
+        "raw_snapshot": false,
+        "derived_local_store": false,
+        "runtime_lookup": false,
+        "local_rag": false,
+        "distributable_bundle": false,
+        "training": false
+      },
+      "admission_state": "candidate_not_admitted",
+      "required_gate_ids": [
+        "exact_resource_and_byte_freeze",
+        "rights_scope",
+        "training_rights",
+        "derivation_or_extraction_validation",
+        "runtime_policy_admission",
+        "spatial_semantic_contract"
+      ],
+      "limitations": [
+        "An administrative boundary is not a farm, parcel, field, management zone, or legal boundary.",
+        "The catalogue offers cartographic and digital forms; the exact selection and its intended use must be recorded before derivation.",
+        "A point-in-polygon result labels geographic context and cannot establish agronomic suitability or a recommendation."
+      ]
+    },
+    {
+      "id": "ca_statcan_2021_census_agricultural_regions_digital_boundaries",
+      "category": "administrative_boundary",
+      "title": "2021 Census Boundary Files: census agricultural regions (digital boundary selection)",
+      "publisher": "Statistics Canada",
+      "authority_type": "federal_government",
+      "jurisdictions": ["Canada", "census agricultural regions"],
+      "languages": ["en-CA", "fr-CA"],
+      "canonical_url": "https://open.canada.ca/data/en/dataset/ef70dc3b-1069-4037-9bce-61f47e628a1d",
+      "source_identity": {
+        "identifier_type": "open_canada_dataset_id",
+        "identifier": "ef70dc3b-1069-4037-9bce-61f47e628a1d",
+        "identifier_status": "official_catalogue_record_observed",
+        "evidence_url": "https://open.canada.ca/data/en/dataset/ef70dc3b-1069-4037-9bce-61f47e628a1d"
+      },
+      "candidate_resources": [
+        {
+          "role": "catalogue_record",
+          "url": "https://open.canada.ca/data/en/dataset/ef70dc3b-1069-4037-9bce-61f47e628a1d",
+          "format": "catalogue_html",
+          "status": "unfetched_candidate"
+        },
+        {
+          "role": "boundary_selection_page",
+          "url": "https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?year=21",
+          "format": "html",
+          "status": "unfetched_candidate"
+        }
+      ],
+      "source_characteristics": {
+        "content_type": "2021 vector census agricultural-region boundary files",
+        "spatial_linkage": "Census agricultural-region identifiers; select the exact digital CAR resource and join contract after exact-resource resolution.",
+        "decision_role": "Regional agricultural-statistics routing and context only."
+      },
+      "rights": {
+        "status": "publisher_open_licence_observed_pending_resource_scope",
+        "licence_identifier": "Statistics Canada Open Licence",
+        "evidence_url": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
+        "catalogue_licence_observed": false,
+        "commercial_reuse_status": "publisher_licence_observed_not_approved_for_project_use",
+        "redistribution_status": "publisher_licence_observed_not_approved_for_project_use",
+        "third_party_rights_review_required": true,
+        "notes": "The candidate shares the official boundary catalogue record with province and territory boundaries but needs its own selected-resource hash and geographic-join validation."
+      },
+      "training_rights": {
+        "status": "not_assessed_no_training_authorization",
+        "source_specific_authorization": false,
+        "notes": "No training-use decision has been made for the exact resource or any derivative."
+      },
+      "proposed_use": {
+        "metadata_discovery": true,
+        "download": false,
+        "raw_snapshot": false,
+        "derived_local_store": false,
+        "runtime_lookup": false,
+        "local_rag": false,
+        "distributable_bundle": false,
+        "training": false
+      },
+      "admission_state": "candidate_not_admitted",
+      "required_gate_ids": [
+        "exact_resource_and_byte_freeze",
+        "rights_scope",
+        "training_rights",
+        "derivation_or_extraction_validation",
+        "runtime_policy_admission",
+        "spatial_semantic_contract",
+        "statistical_variable_contract"
+      ],
+      "limitations": [
+        "A census agricultural region is an aggregation geography, not a local management zone.",
+        "It must not be used to infer field practices, soil properties, yield, or input rates.",
+        "Any statistics joined through this geography require an explicit variable, year, unit, and suppression contract."
+      ]
+    },
+    {
+      "id": "ca_aafc_terrestrial_ecoregions_v2_2",
+      "category": "ecological_boundary",
+      "title": "Terrestrial Ecoregions of Canada, version 2.2",
+      "publisher": "Agriculture and Agri-Food Canada",
+      "authority_type": "federal_government",
+      "jurisdictions": ["Canada"],
+      "languages": ["en-CA", "fr-CA"],
+      "canonical_url": "https://open.canada.ca/data/en/dataset/ade80d26-61f5-439e-8966-73b352811fe6",
+      "source_identity": {
+        "identifier_type": "open_canada_dataset_id",
+        "identifier": "ade80d26-61f5-439e-8966-73b352811fe6",
+        "identifier_status": "official_catalogue_record_observed",
+        "evidence_url": "https://open.canada.ca/data/en/dataset/ade80d26-61f5-439e-8966-73b352811fe6"
+      },
+      "candidate_resources": [
+        {
+          "role": "catalogue_record",
+          "url": "https://open.canada.ca/data/en/dataset/ade80d26-61f5-439e-8966-73b352811fe6",
+          "format": "catalogue_html",
+          "status": "unfetched_candidate"
+        },
+        {
+          "role": "candidate_vector_resource",
+          "url": "https://agriculture.canada.ca/atlas/data_donnees/nationalEcologicalFramework/data_donnees/geoJSON/er/nef_ca_ter_ecoregion_v2_2.geojson",
+          "format": "geojson",
+          "status": "unfetched_candidate"
+        },
+        {
+          "role": "product_specification",
+          "url": "https://agriculture.canada.ca/atlas/data_donnees/nationalEcologicalFramework/supportdocument_documentdesupport/en/ISO_19131_National_Ecological_Framework_for_Canada_Data_Product_Specification.pdf",
+          "format": "pdf",
+          "status": "unfetched_candidate"
+        }
+      ],
+      "source_characteristics": {
+        "content_type": "national vector ecological-region representation",
+        "spatial_linkage": "Ecoregion polygon identifier after source-schema verification.",
+        "decision_role": "Broad ecological context and document-location routing only."
+      },
+      "rights": {
+        "status": "catalogue_open_licence_observed_pending_admission",
+        "licence_identifier": "Open Government Licence - Canada",
+        "evidence_url": "https://open.canada.ca/data/en/dataset/ade80d26-61f5-439e-8966-73b352811fe6",
+        "catalogue_licence_observed": true,
+        "commercial_reuse_status": "catalogue_licence_observed_not_approved_for_project_use",
+        "redistribution_status": "catalogue_licence_observed_not_approved_for_project_use",
+        "third_party_rights_review_required": true,
+        "notes": "The official catalogue record displays the Open Government Licence - Canada. Exact-resource bytes, attribution and derivative scope still require the source-admission gates."
+      },
+      "training_rights": {
+        "status": "not_assessed_no_training_authorization",
+        "source_specific_authorization": false,
+        "notes": "No training-use decision has been made for the source geometry, attributes, product specification, or a derivative."
+      },
+      "proposed_use": {
+        "metadata_discovery": true,
+        "download": false,
+        "raw_snapshot": false,
+        "derived_local_store": false,
+        "runtime_lookup": false,
+        "local_rag": false,
+        "distributable_bundle": false,
+        "training": false
+      },
+      "admission_state": "candidate_not_admitted",
+      "required_gate_ids": [
+        "exact_resource_and_byte_freeze",
+        "rights_scope",
+        "training_rights",
+        "derivation_or_extraction_validation",
+        "runtime_policy_admission",
+        "spatial_semantic_contract"
+      ],
+      "limitations": [
+        "An ecoregion describes broad regional ecological factors and cannot identify within-field conditions.",
+        "It is not a substitute for field observations, a soil test, weather records, pest surveillance, or a recommendation.",
+        "The reported source temporal coverage and maintenance status must travel with every derivative."
+      ]
+    },
+    {
+      "id": "ca_aafc_soil_landscapes_v3_2",
+      "category": "soil_vector_context",
+      "title": "Soil Landscapes of Canada, version 3.2",
+      "publisher": "Agriculture and Agri-Food Canada",
+      "authority_type": "federal_government",
+      "jurisdictions": ["Canada"],
+      "languages": ["en-CA", "fr-CA"],
+      "canonical_url": "https://open.canada.ca/data/en/dataset/5ad5e20c-f2bb-497d-a2a2-440eec6e10cd",
+      "source_identity": {
+        "identifier_type": "open_canada_dataset_id",
+        "identifier": "5ad5e20c-f2bb-497d-a2a2-440eec6e10cd",
+        "identifier_status": "official_catalogue_record_observed",
+        "evidence_url": "https://open.canada.ca/data/en/dataset/5ad5e20c-f2bb-497d-a2a2-440eec6e10cd"
+      },
+      "candidate_resources": [
+        {
+          "role": "catalogue_record",
+          "url": "https://open.canada.ca/data/en/dataset/5ad5e20c-f2bb-497d-a2a2-440eec6e10cd",
+          "format": "catalogue_html",
+          "status": "unfetched_candidate"
+        },
+        {
+          "role": "candidate_vector_resource",
+          "url": "https://agriculture.canada.ca/atlas/data_donnees/soilLandscapesOfCanada3_2/data_donnees/gpkg/soil_landscapes_of_canada_v3r2.gpkg",
+          "format": "geopackage",
+          "status": "unfetched_candidate"
+        },
+        {
+          "role": "product_specification",
+          "url": "https://agriculture.canada.ca/atlas/data_donnees/soilLandscapesOfCanada3_2/supportdocument_documentdesupport/en/ISO_19131_Soil_Landscapes_of_Canada_Data_Product_Specification.pdf",
+          "format": "pdf",
+          "status": "unfetched_candidate"
+        }
+      ],
+      "source_characteristics": {
+        "content_type": "national soil-landscape polygons linked to component and soil attribute tables",
+        "spatial_linkage": "Soil-landscape polygon and verified relational identifiers; retain only a review-approved compact attribute projection if later admitted.",
+        "decision_role": "Regional mapped-soil prior and source-document routing only."
+      },
+      "rights": {
+        "status": "catalogue_open_licence_observed_pending_admission",
+        "licence_identifier": "Open Government Licence - Canada",
+        "evidence_url": "https://open.canada.ca/data/en/dataset/5ad5e20c-f2bb-497d-a2a2-440eec6e10cd",
+        "catalogue_licence_observed": true,
+        "commercial_reuse_status": "catalogue_licence_observed_not_approved_for_project_use",
+        "redistribution_status": "catalogue_licence_observed_not_approved_for_project_use",
+        "third_party_rights_review_required": true,
+        "notes": "The official catalogue record displays the Open Government Licence - Canada. No SLC bytes, table extracts, derived SQLite stores or other payloads are present in this registry."
+      },
+      "training_rights": {
+        "status": "not_assessed_no_training_authorization",
+        "source_specific_authorization": false,
+        "notes": "No training-use decision has been made for the source data, its table joins, or a compact projection."
+      },
+      "proposed_use": {
+        "metadata_discovery": true,
+        "download": false,
+        "raw_snapshot": false,
+        "derived_local_store": false,
+        "runtime_lookup": false,
+        "local_rag": false,
+        "distributable_bundle": false,
+        "training": false
+      },
+      "admission_state": "candidate_not_admitted",
+      "required_gate_ids": [
+        "exact_resource_and_byte_freeze",
+        "rights_scope",
+        "training_rights",
+        "derivation_or_extraction_validation",
+        "runtime_policy_admission",
+        "spatial_semantic_contract"
+      ],
+      "limitations": [
+        "SLC is a mapped regional landscape product; it is not a current field soil sample or a prescription.",
+        "Component locations within a polygon are not established by a point-in-polygon result.",
+        "A compact derivative must preserve source version, polygon and component lineage, and the regional-prior boundary."
+      ]
+    },
+    {
+      "id": "ca_statcan_2021_aesd",
+      "category": "agricultural_statistics_context",
+      "title": "Census of Agriculture: Agri-Environmental Spatial Data (AESD), 2021",
+      "publisher": "Statistics Canada",
+      "authority_type": "federal_government",
+      "jurisdictions": ["Canada"],
+      "languages": ["en-CA", "fr-CA"],
+      "canonical_url": "https://open.canada.ca/data/en/dataset/83096e57-6584-4a8c-9854-59a49e57fb28",
+      "source_identity": {
+        "identifier_type": "open_canada_dataset_id",
+        "identifier": "83096e57-6584-4a8c-9854-59a49e57fb28",
+        "identifier_status": "official_catalogue_record_observed",
+        "evidence_url": "https://open.canada.ca/data/en/dataset/83096e57-6584-4a8c-9854-59a49e57fb28"
+      },
+      "candidate_resources": [
+        {
+          "role": "catalogue_record",
+          "url": "https://open.canada.ca/data/en/dataset/83096e57-6584-4a8c-9854-59a49e57fb28",
+          "format": "catalogue_html",
+          "status": "unfetched_candidate"
+        },
+        {
+          "role": "candidate_database_resource",
+          "url": "https://ftp.maps.canada.ca/pub/statcan_statcan/Agriculture_Agriculture/AESD-DSAE/2021_AESD_DSAE.gdb.zip",
+          "format": "file_geodatabase_zip",
+          "status": "unfetched_candidate"
+        },
+        {
+          "role": "user_guide",
+          "url": "https://ftp.maps.canada.ca/pub/statcan_statcan/Agriculture_Agriculture/AESD-DSAE/AESD2021_UserGuide_FINAL_EN.pdf",
+          "format": "pdf",
+          "status": "unfetched_candidate"
+        }
+      ],
+      "source_characteristics": {
+        "content_type": "2021 Census of Agriculture values spatially allocated to source geography",
+        "spatial_linkage": "Published AESD geography and a future allowlisted-variable contract; source documentation describes Soil Landscapes of Canada and sub-sub-drainage context.",
+        "decision_role": "Aggregate historical agricultural context only."
+      },
+      "rights": {
+        "status": "publisher_open_licence_observed_pending_resource_scope",
+        "licence_identifier": "Statistics Canada Open Licence",
+        "evidence_url": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
+        "catalogue_licence_observed": false,
+        "commercial_reuse_status": "publisher_licence_observed_not_approved_for_project_use",
+        "redistribution_status": "publisher_licence_observed_not_approved_for_project_use",
+        "third_party_rights_review_required": true,
+        "notes": "The exact database resource and user guide have not been frozen or examined for variable-level, attribution, allocation-method, or third-party constraints."
+      },
+      "training_rights": {
+        "status": "not_assessed_no_training_authorization",
+        "source_specific_authorization": false,
+        "notes": "No training-use decision has been made for published AESD values, source metadata, or derived context tables."
+      },
+      "proposed_use": {
+        "metadata_discovery": true,
+        "download": false,
+        "raw_snapshot": false,
+        "derived_local_store": false,
+        "runtime_lookup": false,
+        "local_rag": false,
+        "distributable_bundle": false,
+        "training": false
+      },
+      "admission_state": "candidate_not_admitted",
+      "required_gate_ids": [
+        "exact_resource_and_byte_freeze",
+        "rights_scope",
+        "training_rights",
+        "derivation_or_extraction_validation",
+        "runtime_policy_admission",
+        "spatial_semantic_contract",
+        "statistical_variable_contract"
+      ],
+      "limitations": [
+        "Spatial allocation and aggregate Census values are not farm observations, grower records, crop histories, or current field conditions.",
+        "No variable, unit, reference date, allocation method, suppression treatment or selected geography is approved yet.",
+        "Any later use must be context-only unless a separate, stronger authority is established."
+      ]
+    },
+    {
+      "id": "ca_statcan_2021_census_agriculture_linked_boundaries",
+      "category": "agricultural_statistics_context",
+      "title": "Census of Agriculture: Data Linked to Geographic Boundaries, 2021",
+      "publisher": "Statistics Canada",
+      "authority_type": "federal_government",
+      "jurisdictions": ["Canada", "provinces and territories", "census agricultural regions"],
+      "languages": ["en-CA", "fr-CA"],
+      "canonical_url": "https://open.canada.ca/data/en/dataset/b944bd53-49e5-4a80-83e5-1048d3abf38d",
+      "source_identity": {
+        "identifier_type": "open_canada_dataset_id",
+        "identifier": "b944bd53-49e5-4a80-83e5-1048d3abf38d",
+        "identifier_status": "official_catalogue_record_observed",
+        "evidence_url": "https://open.canada.ca/data/en/dataset/b944bd53-49e5-4a80-83e5-1048d3abf38d"
+      },
+      "candidate_resources": [
+        {
+          "role": "catalogue_record",
+          "url": "https://open.canada.ca/data/en/dataset/b944bd53-49e5-4a80-83e5-1048d3abf38d",
+          "format": "catalogue_html",
+          "status": "unfetched_candidate"
+        },
+        {
+          "role": "candidate_resource_directory",
+          "url": "https://ftp.maps.canada.ca/pub/statcan_statcan/Agriculture_Agriculture/census_of_agriculture-recensement_agriculture/2021/",
+          "format": "file_geodatabase_directory",
+          "status": "unfetched_candidate"
+        }
+      ],
+      "source_characteristics": {
+        "content_type": "2021 published Census of Agriculture statistics linked to standard geographic polygons",
+        "spatial_linkage": "Published province or territory, census agricultural region, census division and census consolidated subdivision geographies after exact table selection.",
+        "decision_role": "Aggregate historical agricultural context and regional coverage description only."
+      },
+      "rights": {
+        "status": "publisher_open_licence_observed_pending_resource_scope",
+        "licence_identifier": "Statistics Canada Open Licence",
+        "evidence_url": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
+        "catalogue_licence_observed": false,
+        "commercial_reuse_status": "publisher_licence_observed_not_approved_for_project_use",
+        "redistribution_status": "publisher_licence_observed_not_approved_for_project_use",
+        "third_party_rights_review_required": true,
+        "notes": "The catalogue record identifies five domains and explains that confidential values are assigned -1. Exact tables and source bytes have not been selected or assessed."
+      },
+      "training_rights": {
+        "status": "not_assessed_no_training_authorization",
+        "source_specific_authorization": false,
+        "notes": "No training-use decision has been made for any Census of Agriculture table, geography, or derivative."
+      },
+      "proposed_use": {
+        "metadata_discovery": true,
+        "download": false,
+        "raw_snapshot": false,
+        "derived_local_store": false,
+        "runtime_lookup": false,
+        "local_rag": false,
+        "distributable_bundle": false,
+        "training": false
+      },
+      "admission_state": "candidate_not_admitted",
+      "required_gate_ids": [
+        "exact_resource_and_byte_freeze",
+        "rights_scope",
+        "training_rights",
+        "derivation_or_extraction_validation",
+        "runtime_policy_admission",
+        "spatial_semantic_contract",
+        "statistical_variable_contract"
+      ],
+      "limitations": [
+        "The record includes aggregate geography, not individual farms or fields.",
+        "The documented -1 confidential-value convention must be preserved and must never be treated as a measured value or zero.",
+        "Census reference year and geographic aggregation prevent present-tense field or management claims."
+      ]
+    },
+    {
+      "id": "ca_statcan_2021_agricultural_ecumene",
+      "category": "administrative_boundary",
+      "title": "2021 Agricultural Ecumene Boundary File",
+      "publisher": "Statistics Canada",
+      "authority_type": "federal_government",
+      "jurisdictions": ["Canada"],
+      "languages": ["en-CA", "fr-CA"],
+      "canonical_url": "https://open.canada.ca/data/en/dataset/462c0b06-6dd8-4e9d-9016-2f02230255bd",
+      "source_identity": {
+        "identifier_type": "open_canada_dataset_id",
+        "identifier": "462c0b06-6dd8-4e9d-9016-2f02230255bd",
+        "identifier_status": "official_catalogue_record_observed",
+        "evidence_url": "https://open.canada.ca/data/en/dataset/462c0b06-6dd8-4e9d-9016-2f02230255bd"
+      },
+      "candidate_resources": [
+        {
+          "role": "catalogue_record",
+          "url": "https://open.canada.ca/data/en/dataset/462c0b06-6dd8-4e9d-9016-2f02230255bd",
+          "format": "catalogue_html",
+          "status": "unfetched_candidate"
+        }
+      ],
+      "source_characteristics": {
+        "content_type": "2021 agricultural-ecumene boundary representation",
+        "spatial_linkage": "A future documented agricultural-ecumene feature identifier and published definition.",
+        "decision_role": "Broad display or routing mask candidate only."
+      },
+      "rights": {
+        "status": "publisher_open_licence_observed_pending_resource_scope",
+        "licence_identifier": "Statistics Canada Open Licence",
+        "evidence_url": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
+        "catalogue_licence_observed": false,
+        "commercial_reuse_status": "publisher_licence_observed_not_approved_for_project_use",
+        "redistribution_status": "publisher_licence_observed_not_approved_for_project_use",
+        "third_party_rights_review_required": true,
+        "notes": "Only the official catalogue identity is retained. A logical resource, its definition, bytes and resource-specific attribution have not been frozen."
+      },
+      "training_rights": {
+        "status": "not_assessed_no_training_authorization",
+        "source_specific_authorization": false,
+        "notes": "No training-use decision has been made for the boundary or any derivative."
+      },
+      "proposed_use": {
+        "metadata_discovery": true,
+        "download": false,
+        "raw_snapshot": false,
+        "derived_local_store": false,
+        "runtime_lookup": false,
+        "local_rag": false,
+        "distributable_bundle": false,
+        "training": false
+      },
+      "admission_state": "candidate_not_admitted",
+      "required_gate_ids": [
+        "exact_resource_and_byte_freeze",
+        "rights_scope",
+        "training_rights",
+        "derivation_or_extraction_validation",
+        "runtime_policy_admission",
+        "spatial_semantic_contract"
+      ],
+      "limitations": [
+        "An agricultural ecumene is not proof that a particular parcel is farmed, crop-producing, eligible, or currently accessible.",
+        "It must not be used as a farm or field boundary.",
+        "Any visual use needs the source definition and reference year displayed or retained in provenance."
+      ]
+    },
+    {
+      "id": "mb_um_make_ag_food_resources",
+      "category": "university_extension",
+      "title": "MAKE Ag & Food Resources",
+      "publisher": "University of Manitoba, Faculty of Agricultural and Food Sciences",
+      "authority_type": "university_extension",
+      "jurisdictions": ["Manitoba", "Prairies"],
+      "languages": ["en-CA"],
+      "canonical_url": "https://umanitoba.ca/agricultural-food-sciences/make/make-ag-food-resources",
+      "source_identity": {
+        "identifier_type": "publisher_canonical_page",
+        "identifier": "mb_um_make_ag_food_resources",
+        "identifier_status": "publisher_canonical_page_only",
+        "evidence_url": "https://umanitoba.ca/agricultural-food-sciences/make/make-ag-food-resources"
+      },
+      "candidate_resources": [
+        {
+          "role": "publisher_resource_hub",
+          "url": "https://umanitoba.ca/agricultural-food-sciences/make/make-ag-food-resources",
+          "format": "html",
+          "status": "unfetched_candidate"
+        }
+      ],
+      "source_characteristics": {
+        "content_type": "university knowledge-exchange hub with crop resources, media and linked guidelines",
+        "spatial_linkage": "Manitoba and Prairie context claimed by individual resource metadata only; no geography is inferred from the hub page.",
+        "decision_role": "Discovery of candidate documents and research contacts only."
+      },
+      "rights": {
+        "status": "permission_required",
+        "licence_identifier": "No source-specific reusable-content licence identified on the canonical hub page",
+        "evidence_url": "https://umanitoba.ca/agricultural-food-sciences/make/make-ag-food-resources",
+        "catalogue_licence_observed": false,
+        "commercial_reuse_status": "not_established",
+        "redistribution_status": "not_established",
+        "third_party_rights_review_required": true,
+        "notes": "The hub describes resources developed with Manitoba Pulse and Soybean Growers, Manitoba Agriculture and the University of Manitoba. Rights must be checked for each linked item and collaborator."
+      },
+      "training_rights": {
+        "status": "not_assessed_no_training_authorization",
+        "source_specific_authorization": false,
+        "notes": "Public access to a hub or linked media is not treated as permission to use any item for model training."
+      },
+      "proposed_use": {
+        "metadata_discovery": true,
+        "download": false,
+        "raw_snapshot": false,
+        "derived_local_store": false,
+        "runtime_lookup": false,
+        "local_rag": false,
+        "distributable_bundle": false,
+        "training": false
+      },
+      "admission_state": "candidate_not_admitted",
+      "required_gate_ids": [
+        "exact_resource_and_byte_freeze",
+        "rights_scope",
+        "training_rights",
+        "derivation_or_extraction_validation",
+        "runtime_policy_admission",
+        "agronomic_currency_review",
+        "third_party_material_review"
+      ],
+      "limitations": [
+        "The hub is an index, not one uniformly licensed or uniformly current source.",
+        "Collaborative guidelines require an item-level rights and attribution review.",
+        "A research or extension item cannot supply a current rate, threshold, product choice or regulatory answer without its own currency and authority check."
+      ]
+    },
+    {
+      "id": "sk_usask_soils_and_crops_resources",
+      "category": "university_extension",
+      "title": "Soils and Crops: Resources",
+      "publisher": "University of Saskatchewan, College of Agriculture and Bioresources",
+      "authority_type": "university_extension",
+      "jurisdictions": ["Saskatchewan", "Prairies"],
+      "languages": ["en-CA"],
+      "canonical_url": "https://agbio.usask.ca/soilsncrops/resources/index.php",
+      "source_identity": {
+        "identifier_type": "publisher_canonical_page",
+        "identifier": "sk_usask_soils_and_crops_resources",
+        "identifier_status": "publisher_canonical_page_only",
+        "evidence_url": "https://agbio.usask.ca/soilsncrops/resources/index.php"
+      },
+      "candidate_resources": [
+        {
+          "role": "publisher_resource_hub",
+          "url": "https://agbio.usask.ca/soilsncrops/resources/index.php",
+          "format": "html",
+          "status": "unfetched_candidate"
+        },
+        {
+          "role": "publisher_context_page",
+          "url": "https://agbio.usask.ca/soilsncrops/About-the-Conference/About-the-Conference.php",
+          "format": "html",
+          "status": "unfetched_candidate"
+        }
+      ],
+      "source_characteristics": {
+        "content_type": "university workshop proceedings and research-resource hub",
+        "spatial_linkage": "Saskatchewan or Prairie applicability must be established from each authored item, study setting and date.",
+        "decision_role": "Research discovery and document-level candidate intake only."
+      },
+      "rights": {
+        "status": "permission_required",
+        "licence_identifier": "No source-specific reusable-content licence identified on the canonical resource page",
+        "evidence_url": "https://agbio.usask.ca/soilsncrops/resources/index.php",
+        "catalogue_licence_observed": false,
+        "commercial_reuse_status": "not_established",
+        "redistribution_status": "not_established",
+        "third_party_rights_review_required": true,
+        "notes": "The hub includes proceedings and authored materials. Copyright, author permission, edition, and applicability must be determined item by item."
+      },
+      "training_rights": {
+        "status": "not_assessed_no_training_authorization",
+        "source_specific_authorization": false,
+        "notes": "A publicly downloadable proceeding is not treated as a training-data authorization."
+      },
+      "proposed_use": {
+        "metadata_discovery": true,
+        "download": false,
+        "raw_snapshot": false,
+        "derived_local_store": false,
+        "runtime_lookup": false,
+        "local_rag": false,
+        "distributable_bundle": false,
+        "training": false
+      },
+      "admission_state": "candidate_not_admitted",
+      "required_gate_ids": [
+        "exact_resource_and_byte_freeze",
+        "rights_scope",
+        "training_rights",
+        "derivation_or_extraction_validation",
+        "runtime_policy_admission",
+        "agronomic_currency_review",
+        "third_party_material_review"
+      ],
+      "limitations": [
+        "Conference proceedings and research updates may be historical, preliminary, or narrower than general extension guidance.",
+        "Authorship, study location, units, methods and version must be retained before the item can support a contextual statement.",
+        "No source in this hub is an automatic recommendation or pesticide-label authority."
+      ]
+    },
+    {
+      "id": "on_field_crop_news",
+      "category": "university_extension",
+      "title": "Field Crop News",
+      "publisher": "Ontario Ministry of Agriculture, Food and Rural Affairs; University of Guelph; Ontario field crop collaborators",
+      "authority_type": "university_provincial_extension_collaboration",
+      "jurisdictions": ["Ontario"],
+      "languages": ["en-CA"],
+      "canonical_url": "https://fieldcropnews.com/about/",
+      "source_identity": {
+        "identifier_type": "publisher_canonical_page",
+        "identifier": "on_field_crop_news",
+        "identifier_status": "publisher_canonical_page_only",
+        "evidence_url": "https://fieldcropnews.com/about/"
+      },
+      "candidate_resources": [
+        {
+          "role": "publisher_about_page",
+          "url": "https://fieldcropnews.com/about/",
+          "format": "html",
+          "status": "unfetched_candidate"
+        }
+      ],
+      "source_characteristics": {
+        "content_type": "Ontario field-crop extension and research article archive",
+        "spatial_linkage": "Ontario relevance and any regional qualifier must be assessed for each article, publication date and cited source.",
+        "decision_role": "Current-source discovery and individual-article candidate intake only."
+      },
+      "rights": {
+        "status": "permission_required",
+        "licence_identifier": "No source-specific reusable-content licence identified on the canonical about page",
+        "evidence_url": "https://fieldcropnews.com/about/",
+        "catalogue_licence_observed": false,
+        "commercial_reuse_status": "not_established",
+        "redistribution_status": "not_established",
+        "third_party_rights_review_required": true,
+        "notes": "The about page identifies a collaboration among provincial staff, university faculty and producers. This metadata does not establish rights to individual articles, images, tables, embedded documents or quoted sources."
+      },
+      "training_rights": {
+        "status": "not_assessed_no_training_authorization",
+        "source_specific_authorization": false,
+        "notes": "No archive-wide or article-level training permission has been obtained or inferred."
+      },
+      "proposed_use": {
+        "metadata_discovery": true,
+        "download": false,
+        "raw_snapshot": false,
+        "derived_local_store": false,
+        "runtime_lookup": false,
+        "local_rag": false,
+        "distributable_bundle": false,
+        "training": false
+      },
+      "admission_state": "candidate_not_admitted",
+      "required_gate_ids": [
+        "exact_resource_and_byte_freeze",
+        "rights_scope",
+        "training_rights",
+        "derivation_or_extraction_validation",
+        "runtime_policy_admission",
+        "agronomic_currency_review",
+        "third_party_material_review"
+      ],
+      "limitations": [
+        "The archive contains time-sensitive material and cannot be treated as a timeless field recommendation source.",
+        "Pesticide, product, pest and regulatory content require the current official authority and product label where applicable.",
+        "Regional applicability cannot be inferred from Ontario-wide publisher identity alone."
+      ]
+    },
+    {
+      "id": "atl_dal_wild_blueberry_fact_sheets",
+      "category": "university_extension",
+      "title": "Wild Blueberry Network Information Centre: Fact Sheets",
+      "publisher": "Dalhousie University, Faculty of Agriculture",
+      "authority_type": "university_extension",
+      "jurisdictions": ["Nova Scotia", "Atlantic Canada"],
+      "languages": ["en-CA"],
+      "canonical_url": "https://www.dal.ca/sites/wild-blueberry/publications/fact_sheets.html",
+      "source_identity": {
+        "identifier_type": "publisher_canonical_page",
+        "identifier": "atl_dal_wild_blueberry_fact_sheets",
+        "identifier_status": "publisher_canonical_page_only",
+        "evidence_url": "https://www.dal.ca/sites/wild-blueberry/publications/fact_sheets.html"
+      },
+      "candidate_resources": [
+        {
+          "role": "publisher_fact_sheet_hub",
+          "url": "https://www.dal.ca/sites/wild-blueberry/publications/fact_sheets.html",
+          "format": "html",
+          "status": "unfetched_candidate"
+        },
+        {
+          "role": "publisher_publications_context",
+          "url": "https://www.dal.ca/sites/wild-blueberry/publications.html",
+          "format": "html",
+          "status": "unfetched_candidate"
+        }
+      ],
+      "source_characteristics": {
+        "content_type": "university specialty-crop publication and fact-sheet hub",
+        "spatial_linkage": "Atlantic applicability, crop system and source version must be recorded for each fact sheet or linked report.",
+        "decision_role": "Specialty-crop source discovery and item-level candidate intake only."
+      },
+      "rights": {
+        "status": "permission_required",
+        "licence_identifier": "No source-specific reusable-content licence identified on the canonical fact-sheet page",
+        "evidence_url": "https://www.dal.ca/sites/wild-blueberry/publications/fact_sheets.html",
+        "catalogue_licence_observed": false,
+        "commercial_reuse_status": "not_established",
+        "redistribution_status": "not_established",
+        "third_party_rights_review_required": true,
+        "notes": "The publication site aggregates full-text resources and citations, which can include historical documents and material owned by other organizations."
+      },
+      "training_rights": {
+        "status": "not_assessed_no_training_authorization",
+        "source_specific_authorization": false,
+        "notes": "No training-use permission has been requested or inferred for the hub, individual fact sheets, linked reports or cited sources."
+      },
+      "proposed_use": {
+        "metadata_discovery": true,
+        "download": false,
+        "raw_snapshot": false,
+        "derived_local_store": false,
+        "runtime_lookup": false,
+        "local_rag": false,
+        "distributable_bundle": false,
+        "training": false
+      },
+      "admission_state": "candidate_not_admitted",
+      "required_gate_ids": [
+        "exact_resource_and_byte_freeze",
+        "rights_scope",
+        "training_rights",
+        "derivation_or_extraction_validation",
+        "runtime_policy_admission",
+        "agronomic_currency_review",
+        "third_party_material_review"
+      ],
+      "limitations": [
+        "This is a specialty-crop hub and must not be generalized to unrelated crops or regions.",
+        "Historical fact sheets, pest material and linked external documents need individual date, rights and current-label review.",
+        "A source's presence on a university publication page does not establish recommendation, distribution or training rights."
+      ]
+    }
+  ]
+}

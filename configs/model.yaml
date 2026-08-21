@@ -1,19 +1,25 @@
-model_id: mlx-community/Qwen3.5-2B-OptiQ-4bit
-serving_model_id: mlx-community/Qwen3.5-2B-OptiQ-4bit
-serving_label: Qwen3.5 2B OptiQ
-serving_role: default
-serving_quality_gate: answer_default
+# Pre-demo local-runtime profile. Both selectable models are revision pinned and
+# must be explicitly provisioned before the answer engine starts.
+model_id: mlx-community/gemma-4-e2b-it-4bit
+serving_model_id: mlx-community/gemma-4-e2b-it-4bit
+serving_label: Gemma 4 E2B · offline reference
+serving_role: active_release
+serving_quality_gate: open_agronomy_system_interface_v2
 assistant_model_id: mlx-community/Qwen3.5-0.8B-OptiQ-4bit
+assistant_model_revision: ef60586933bd2cc02b763f77eb8839a5114bbec1
 assistant_label: Qwen3.5 0.8B OptiQ Fast
 assistant_role: fast
 assistant_quality_gate: fast_repaired
-vlm_model_id: mlx-community/Qwen3.5-2B-MLX-4bit
-max_tokens: 480
-serving_max_tokens: 240
+vlm_model_id: mlx-community/gemma-4-e2b-it-4bit
+model_revision: 238767527555cb75a05732a84dff5d6ba0dd6809
+license: apache-2.0
+max_tokens: 640
+serving_max_tokens: 640
 assistant_max_tokens: 35
 temperature: 0.0
 top_p: 0.9
 top_k: 0
+intervention_profile: balanced
 seed: 42
 use_stream_generate: true
 prompt_cache_enabled: false
@@ -29,7 +35,8 @@ draft_model_id:
 num_draft_tokens: 4
 answer_verification:
   enabled: true
-  mode: conference_selective
-  model_id:
-  max_tokens: 180
+  mode: model_agnostic_selective_v2
+  model_id: mlx-community/gemma-4-e2b-it-4bit
+  model_revision: 238767527555cb75a05732a84dff5d6ba0dd6809
+  max_tokens: 220
   max_evidence_chars: 9000

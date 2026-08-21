@@ -11,8 +11,8 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_INPUT = ROOT / "data" / "derived" / "rag" / "nrcs_esd_rag_corpus.jsonl"
-DEFAULT_OUTPUT = ROOT / "data" / "derived" / "rag" / "nrcs_esd_rag_corpus_compact.jsonl"
-DEFAULT_SUMMARY = ROOT / "data" / "derived" / "rag" / "nrcs_esd_compact_summary.json"
+DEFAULT_OUTPUT = ROOT / "data" / "derived" / "rag" / "nrcs_esd_rag_corpus_compact_v2.jsonl"
+DEFAULT_SUMMARY = ROOT / "data" / "derived" / "rag" / "nrcs_esd_compact_v2_summary.json"
 
 PRIORITY_TERMS = (
     "ecological site",
@@ -69,6 +69,37 @@ def matched_facets(row: dict[str, Any]) -> tuple[str, ...]:
     )
 
 
+def portable_extraction(row: dict[str, Any]) -> dict[str, Any] | None:
+    """Remove ingest-host paths while retaining a reproducible raw-file locator."""
+
+    original = row.get("extraction")
+    if not isinstance(original, dict):
+        return None
+    extraction = dict(original)
+    legacy_raw_path = extraction.pop("raw_path", None)
+    locator = extraction.get("raw_locator")
+    if legacy_raw_path is not None or locator is not None:
+        mlra = str(row.get("mlra") or "").strip()
+        site_id = str(row.get("ecological_site_id") or "").strip()
+        if not mlra or not site_id:
+            raise ValueError("NRCS row with raw provenance is missing MLRA or ecological-site ID")
+        extraction["raw_locator"] = {
+            "base": "nrcs_esd_ingest_raw_dir",
+            "path": f"{mlra}/{site_id}.json",
+        }
+    return extraction
+
+
+def portable_path_hint(path: Path) -> str:
+    """Describe a generated artifact without serializing a workstation path."""
+
+    resolved = path.resolve()
+    try:
+        return resolved.relative_to(ROOT.resolve()).as_posix()
+    except ValueError:
+        return path.name
+
+
 def select_site_rows(
     candidates: list[dict[str, Any]],
     *,
@@ -113,6 +144,9 @@ def select_site_rows(
         start=1,
     ):
         item = dict(row)
+        extraction = portable_extraction(item)
+        if extraction is not None:
+            item["extraction"] = extraction
         item.update(
             {
                 "jurisdiction": ["United States"],
@@ -194,7 +228,7 @@ def main() -> int:
         "site_facet_counts": dict(sorted(facet_counts.items())),
         "transfer_scope": "cross_border_analogue",
         "deletion_gate": "full corpus must be retained until this projection passes source coverage and retrieval validation",
-        "output": str(args.output),
+        "output": portable_path_hint(args.output),
     }
     args.summary.parent.mkdir(parents=True, exist_ok=True)
     args.summary.write_text(json.dumps(summary, indent=2), encoding="utf-8")

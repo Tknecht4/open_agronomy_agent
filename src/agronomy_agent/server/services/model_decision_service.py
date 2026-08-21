@@ -8,9 +8,10 @@ from typing import Any
 import yaml
 
 from agronomy_agent.paths import repo_path
+from agronomy_agent.runtime_profiles import DEFAULT_MODEL_CONFIG
 
 
-CONFERENCE_MODEL_CONFIG_PATH = "configs/model_gemma4_e2b.yaml"
+CONFERENCE_MODEL_CONFIG_PATH = DEFAULT_MODEL_CONFIG
 LORA_PREREGISTRATION_PATH = (
     "outputs/not_bounded_research_20260724/"
     "agxqa_grounded_lora_iteration2_preregistration_20260724.json"

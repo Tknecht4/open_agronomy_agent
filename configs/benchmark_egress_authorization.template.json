@@ -1,0 +1,65 @@
+{
+  "schema_version": "open_agronomy_agent.benchmark_egress_authorization.v4",
+  "authorization_decision": "template_not_authorized",
+  "benchmark_id": "open_agronomy_canadian_performance_v1_runtime_v2",
+  "benchmark_suite_sha256": "5c3ce59195ac603d2dd8ec5f36f3672b3ee0c20227cdb4fd301dfe3848a83c63",
+  "suite_case_contract_sha256": "a326d87eb559ac6c6569eacf02b2412c102000979b2c2dc6d074f6188bb267d7",
+  "egress_artifact_contract_sha256": "df0e6b5d77a8ade022b075541046fefc07059ac0b14e36f1593130354a0c75ba",
+  "static_prompt_contract_sha256": "a6b2788d4751ae809f363cc7fa0f8a5d775212a2977208ddd52cce5550e7c47e",
+  "authorization_source": "replace-with-human-authority-receipt-id",
+  "authorized_by_key_id": "replace-with-pseudonymous-authorizer-key-id",
+  "authorized_at": "2026-08-13T00:00:00Z",
+  "expires_at": "2026-08-14T00:00:00Z",
+  "recipient_backend": "codex_app_server_chatgpt_auth",
+  "model_id": "gpt-5.6-luna",
+  "reasoning_effort": "high",
+  "model_config_sha256": "abeae5a6cdb37a11980c9ccb02e62c3257a6739b666a8cc6b8b8e195ec54a0b3",
+  "authorized_payload_classes": [
+    "project_owned_frozen_benchmark_questions",
+    "benchmark_system_and_answer_contract_prompts",
+    "synthetic_eval_field_context",
+    "selected_public_release_runtime_document_source_excerpts",
+    "public_release_runtime_graph_evidence",
+    "candidate_drafts_for_verification",
+    "verifier_evidence"
+  ],
+  "excluded_payload_classes": [
+    "farmer_records",
+    "private_field_history",
+    "credentials",
+    "whole_local_knowledge_corpus_files"
+  ],
+  "payload_classes_by_phase_and_arm": {
+    "candidate_generation": {
+      "raw_model": [
+        "project_owned_frozen_benchmark_questions"
+      ],
+      "baseline": [
+        "project_owned_frozen_benchmark_questions",
+        "benchmark_system_and_answer_contract_prompts"
+      ],
+      "kernel_field_context": [
+        "project_owned_frozen_benchmark_questions",
+        "benchmark_system_and_answer_contract_prompts",
+        "synthetic_eval_field_context"
+      ],
+      "agronomic_rag": [
+        "project_owned_frozen_benchmark_questions",
+        "benchmark_system_and_answer_contract_prompts",
+        "synthetic_eval_field_context",
+        "selected_public_release_runtime_document_source_excerpts",
+        "public_release_runtime_graph_evidence"
+      ]
+    },
+    "verification": {
+      "agronomic_rag": [
+        "project_owned_frozen_benchmark_questions",
+        "benchmark_system_and_answer_contract_prompts",
+        "selected_public_release_runtime_document_source_excerpts",
+        "candidate_drafts_for_verification",
+        "verifier_evidence"
+      ]
+    }
+  },
+  "boundary": "This checked-in file is a non-authorizing template. A current human-controlled, runtime-v2-suite-bound schema-v4 authorization must bind the exact suite-case, runtime-artifact, and static-prompt contract hashes before any App Server candidate call. RC3 has no judge or tool-result payload class, disables automated judging, and forbids private knowledge in every arm."
+}

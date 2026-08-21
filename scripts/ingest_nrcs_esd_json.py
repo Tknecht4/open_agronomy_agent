@@ -207,7 +207,13 @@ def fetch_description(
         raw = fetch(url, timeout=timeout, attempts=attempts)
         data = json.loads(raw.decode("utf-8"))
         write_json(raw_path, data)
-    return data, {"raw_path": str(raw_path), "url": url}
+    return data, {
+        "raw_locator": {
+            "base": "nrcs_esd_ingest_raw_dir",
+            "path": raw_path.relative_to(raw_dir).as_posix(),
+        },
+        "url": url,
+    }
 
 
 def rows_for_ecoclass(
@@ -251,7 +257,7 @@ def rows_for_ecoclass(
                     "chunk_index": index,
                     "extraction": {
                         "method": "official_edit_json",
-                        "raw_path": meta["raw_path"],
+                        "raw_locator": meta["raw_locator"],
                         "structured_words": len(text.split()),
                     },
                 }

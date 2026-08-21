@@ -5,6 +5,7 @@ from agronomy_agent.agent import (
     build_context,
 )
 from agronomy_agent.agno_runtime.local_index import RetrievedDoc
+from agronomy_agent.runtime_profiles import DEFAULT_RAG_CONFIG
 
 
 def _doc(doc_id: str, *, source_id: str = "other") -> RetrievedDoc:
@@ -57,7 +58,7 @@ def test_crop_stage_alias_reserves_the_crop_health_specification() -> None:
 def test_crop_stage_alias_retrieves_the_named_specification_from_the_real_corpus() -> None:
     context = build_context(
         "The regional crop-stage raster says 3. What does that number mean for small grains versus soybean, and what field check is still needed?",
-        rag_config="configs/rag_final_mvp.yaml",
+        rag_config=DEFAULT_RAG_CONFIG,
         field_context={"crop_current": "wheat", "province_state": "Manitoba"},
         use_context_cache=False,
         use_search_cache=False,
@@ -82,7 +83,7 @@ def test_crop_stage_alias_retrieves_the_named_specification_from_the_real_corpus
 def test_crop_health_grid_alias_retrieves_lineage_semantics() -> None:
     context = build_context(
         "Are the five-kilometre AAFC crop health grids remotely sensed field measurements, or station-driven VSMB regional estimates?",
-        rag_config="configs/rag_final_mvp.yaml",
+        rag_config=DEFAULT_RAG_CONFIG,
         use_context_cache=False,
         use_search_cache=False,
     )
@@ -130,13 +131,13 @@ def test_named_saskatchewan_soil_specification_survives_final_context_cutoff() -
 
 def test_explicit_nrcs_analogue_keeps_its_boundary_in_packed_context() -> None:
     context = build_context(
-        "For a Saskatchewan field, can an NRCS ecological site be used as a cross-border analogue for soil water and ecological dynamics?",
-        rag_config="configs/rag_governed_runtime_v1.yaml",
+        "For a Saskatchewan field, can NRCS MLRA 001X ecological-site material be used as a cross-border analogue for soil water and ecological dynamics?",
+        rag_config=DEFAULT_RAG_CONFIG,
         use_context_cache=False,
         use_search_cache=False,
     )
 
-    assert any(doc.transfer_scope == "cross_border_analogue" for doc in context.retrieved_docs)
+    assert any(doc.transfer_scope == "US_analogue_context_only" for doc in context.retrieved_docs)
     assert context.packed_context is not None
     assert "US CROSS-BORDER ANALOGUE" in context.packed_context.text
     assert "never treat as Canadian field truth" in context.packed_context.text

@@ -5,9 +5,16 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 import uuid
 from pathlib import Path
 from typing import Any
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.capture_release_environment import dependency_input_receipts
 
 
 PYTHON_REQUIREMENT_RE = re.compile(r"^([A-Za-z0-9_.-]+)(.*)$")
@@ -127,8 +134,10 @@ def build_sbom(root: Path) -> dict[str, Any]:
                     {
                         "requirements_container_sha256": _sha256(requirements),
                         "frontend_package_lock_sha256": _sha256(package_lock),
+                        "dependency_inputs": dependency_input_receipts(root),
                         "python_direct_dependency_count": len(_python_packages(requirements)),
                         "frontend_locked_package_count": len(_frontend_packages(package_lock)),
+                        "python_lock_boundary": "declared_ranges_only_not_transitively_locked",
                     },
                     sort_keys=True,
                 ),

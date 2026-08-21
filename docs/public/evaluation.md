@@ -1,6 +1,19 @@
 # Evaluation contract
 
-The canonical internal benchmark is `open_agronomy_canadian_performance_v1`: 241 project-owned Canadian field questions. It is a development instrument, not a certification exam and not evidence of agronomist equivalence.
+Open Agronomy Agent separates product checks from evaluation claims. A passing
+test, retrieval trace, or benchmark receipt does not establish agronomist
+equivalence, field-outcome validity, or a grower recommendation.
+
+The canonical internal benchmark is `open_agronomy_canadian_performance_v1`:
+241 project-authored Canadian field questions. It is a development instrument,
+not a certification exam or a representative sample of agronomy work.
+
+`open_agronomy_successor_development` is the separate 256-case regression
+suite for the active source-exact corpus. It retains the 241 exposed
+project-authored cases and adds U.S. NRCS MLRA retrieval probes, an Ontario
+structured-table control, and community/jurisdiction boundary controls. It is
+exposed and non-claim-eligible: it detects source-trace, authority-boundary,
+and orchestration regressions rather than unbiased model performance.
 
 ## Frozen arms
 
@@ -8,112 +21,96 @@ The canonical internal benchmark is `open_agronomy_canadian_performance_v1`: 241
 |---|---|
 | `raw_model` | User question only; no kernel, retrieval, verifier, or post-processing |
 | `baseline` | Shared kernel and answer contract; no retrieval or verifier |
-| `kernel_field_context` | Kernel plus the same structured crop, region, jurisdiction and management context used by the full arm |
-| `agronomic_rag` | Kernel plus governed retrieval/evidence intervention and configured validation |
+| `kernel_field_context` | Kernel plus the structured crop, region, jurisdiction, and management context used by the full arm |
+| `agronomic_rag` | Kernel plus governed retrieval, evidence intervention, and configured validation |
 
-The primary causal comparison is raw model versus the governed system. Intermediate arms identify whether changes arise from instructions, field context, or knowledge/evidence handling.
+The primary matched contrast is raw model versus the governed system.
+Intermediate arms localize changes to added instruction, field context, or
+knowledge/evidence bundles; they do not isolate individual component effects.
 
-## What is measured
+## What the harness measures
 
-- Canadian decision-quality cases preserve reference points, material errors, missing-evidence boundaries and field context for review.
-- Sixteen arithmetic cases have structured reference values, units and numeric tolerances.
-- Route, retrieval, evidence, tool and output-contract traces are checked as interface capabilities.
-- All questions, exact messages, context packets, responses, scores and identities are stored in a local SQLite result database.
+- Canadian decision-quality cases retain reference points, material-error
+  boundaries, and field context for independent review.
+- Sixteen arithmetic cases have structured reference values, units, and numeric
+  tolerances.
+- Source identity, retrieval, evidence, tool, language, and route traces are
+  interface capabilities, not answer-quality scores.
+- The runner records exact messages, context packets, outputs, scores, and
+  identities in a private local SQLite database. That database is not a public
+  source artifact.
 
-Automated semantic judges are advisory triage. They can help find regressions but cannot substitute for blinded, calibrated agronomist review. Lexical proxy scores are reported only for lanes where their contract is defined; there is no valid single composite “agronomy intelligence” score.
+Lexical-contract diagnostics are reported only where their contract is defined;
+they are not agronomic accuracy. Automated semantic judges are advisory triage
+only and cannot substitute for blinded, calibrated agronomist review. There is
+no valid single composite score.
 
-## External diagnostic
+## Retrieval and corpus checks
 
-`open_agronomy_external_agroqa_v1` contains 256 held-out AgroQA items. It is external transfer evidence from a different geography and task distribution. It must not be mixed into the internal suite, used for iterative prompt tuning, or presented as Canadian validation.
+The source-grounded retrieval suite is run separately from model generation.
+It checks expected-source Recall@1/3/7, nDCG@7, source-locator validity,
+jurisdiction/authority compliance, duplicate leakage, table fidelity, latency,
+and reproducibility. Exact BM25 is the fixed baseline; hybrid, dense, or
+reranking changes require a separately frozen held-out comparison and zero
+authority, jurisdiction, privacy, or source-locator violations.
 
-Historical CROP multiple-choice imports are quarantined because audit found material answer-key problems. CCA-aligned questions are project-authored coverage probes and make no professional-exam claim.
+The active U.S. NRCS pack is evaluated as explicit U.S. analogue context. It
+may explain a U.S. MLRA/ecological-site comparison but cannot establish a
+Canadian label, law, rate, threshold, calibration, diagnosis, or field
+condition. A public Canadian table can be interpreted with its source and
+coordinates; it is not field truth or a prescription.
 
-## Construct boundary
-
-The checked-in construct audit separates the 241 rows into 90 primary semantic
-field-decision cases, 31 secondary advisory cases, and 120 regression or
-interface cases. The latter must not be averaged into an agronomic answer-
-quality claim. The primary lane spans nine task categories with ten cases each
-and balanced province-level coverage, but it currently contains no proven
-real-user questions, independent agronomist adjudication, multi-turn primary
-cases, or executable field geometries. These are explicit residual validity
-gaps, not zero-valued capabilities.
-
-Regenerate the audit with:
-
-```bash
-PYTHONPATH=src .venv/bin/python scripts/audit_canadian_field_benchmark.py
-```
-
-The expected output status is `development_construct_only`. A change that
-silently upgrades this status or collapses the three reporting tiers is a
-release blocker.
-
-## Reproducibility gates
-
-The runner locks the suite hash, interface contract, arm-contract version, executable source snapshot, model profile, and RAG artifact identities. A partial run resumes only when those substantive identities match. Release validation requires all canonical comparison arms to share one implementation hash. Dirty-checkout experiments may be retained for development, but a public result must identify the exact committed source.
-
-## Final-round readiness
-
-`configs/final_benchmark_round_rc1.json` is the orchestration contract for the
-current development round. It freezes the internal and external suite hashes,
-four arms, Gemma 3 270M and Gemma 4 local profiles, Luna High remote profile,
-semantic-judge role, output location, claim boundary, and promotion policy.
-
-Run the model-free gate from a clean checkout before any final generation:
+Run the current corpus checks from the repository root:
 
 ```bash
-PYTHONPATH=src .venv/bin/python scripts/audit_final_benchmark_readiness.py \
-  --hub-cache /absolute/path/to/huggingface/hub \
-  --egress-authorization /absolute/path/to/egress_authorization.json
+PYTHONPATH=src .venv/bin/python scripts/audit_runtime_corpus.py
+PYTHONPATH=src .venv/bin/python scripts/audit_offline_corpus_successor_quality.py --fail-on-gap
+PYTHONPATH=src .venv/bin/python scripts/evaluate_offline_corpus_retrieval.py \
+  --config configs/rag.yaml
 ```
 
-The authorization receipt must be suite-bound and may cover only project-owned
-benchmark questions, benchmark field context, candidate answers, and the
-reference/rubric needed for judging. Farmer records, private field history,
-credentials, and local corpus files remain excluded. Luna judging is advisory
-semantic triage only; deterministic calculation and interface checks retain
-their own scorers.
+## Reproducible runs
 
-The canonical output directory must also be absent or empty at this gate. This
-prevents an old response database or identity lock from being mistaken for the
-new final round; resume is allowed only after the round has started and the
-runner confirms substantive identity equality.
+The runner binds suite hash, interface contract, arm contract, executable source
+snapshot, model profile, and RAG artifact identities. A partial run resumes only
+when those substantive identities match. Canonical comparison arms must share
+one implementation hash; a changed answer-affecting configuration requires a
+new benchmark identity.
 
-The gate must report `ready` and emit exact commands for all three candidates.
-Run the internal matrix first, build the blinded raw-model versus full-system
-review packet, freeze a finalist, and only then run the 256-item external
-diagnostic once. Do not use that external result to repair and rerun the same
-benchmark version.
+Each model-by-trial invocation also records trial ID, sample index, generation,
+verification, case-order and judge seeds, cache/process policy, ordered-case
+digest, observation IDs, and matched-arm keys. A completed trial is never
+silently rerun. The current retention workflow requires a verified,
+content-addressed private bundle before an invocation is marked complete. It
+excludes only the `.eval_run.lock` coordination file and rejects symlinks and
+other non-regular inputs.
 
-## Final RC1 result — 2026-08-12
+## Historical checkpoints and development suites
 
-The completed internal database contains 2,892 responses and 2,892 advisory
-judgments: three candidates by four arms by 241 cases. On the 90-case primary
-Canadian decision-quality lane, the frozen raw-versus-governed comparison was:
+Benchmark outputs are evidence packages, not product documentation. The public
+packages preserve their contracts, measurements, limits, and regeneration
+instructions without converting an exposed development result into a product
+claim:
 
-| Candidate | Raw model | Governed system | Paired change (95% interval) |
-|---|---:|---:|---:|
-| Gemma 3 270M 4-bit | 2.50 | 73.13 | +70.63 (+65.46 to +75.71) |
-| Gemma 4 E2B 4-bit | 54.71 | 77.93 | +23.22 (+17.60 to +28.59) |
-| Luna High | 89.82 | 83.38 | -6.45 (-11.52 to -1.18) |
+- [RC3 development checkpoint](development-benchmark-rc3-20260815/README.md):
+  completed 241-case Canadian development matrix; frozen and non-claim-eligible.
+- [RC1 evidence package](final-benchmark-20260812/README.md): historical
+  development evidence; its advisory judge measurements do not evaluate the
+  current runtime.
 
-These are automated development scores, not agronomist ratings. The negative
-Luna result and intermediate-arm analysis show that system intervention must
-be calibrated to generator capability rather than assumed to help every model.
-The benchmark path also failed to call the typed calculator, leaving all three
-governed candidates at 0/16 objective calculation cases. That failure is
-preserved as an orchestration defect for the next development round.
+The former Benchmark v2 fixture is likewise an exposed internal regression
+suite. Its deterministic executor and metric contracts support implementation
+testing, but its cases are not untouched evaluation data.
 
-The one-time held-out AgroQA diagnostic used the frozen Gemma 4 full-system
-finalist. Normalized reference-token F1 changed from 0.0508 raw to 0.0595 with
-the governed system. Because the source questions are Ugandan and the answers
-were not revalidated for Canadian practice, this is geographic transfer
-evidence only and the exposed implementation must not be tuned and rerun on the
-same set version.
+## Claim boundary
 
-The [technical paper and public evidence package](final-benchmark-20260812/README.md)
-contain the full interpretation, task-family summaries, paired intervals,
-orchestration diagnostics, frozen finalist receipt, and plotting inputs. Exact
-answers and SQLite databases remain local, with checksums and counts retained
-for separately transferred artifact verification.
+The internal suites contain no proven real-user cohort, independent agronomist
+adjudication, representative product/service sample, or field-outcome
+validation. Live adapters, multi-turn diagnosis, and executable field geometry
+must be evaluated separately. Do not make population-level, professional-exam,
+field-performance, or agronomist-equivalence claims from these fixtures.
+
+Future claim-bearing work requires an independently authored and reviewed,
+untouched cohort; a sealed cohort commitment; predeclared reporting; and,
+where semantic judging is used, a human-calibrated judge record that passes its
+order-, length-, and candidate-sensitivity checks.

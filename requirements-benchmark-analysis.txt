@@ -1,0 +1,5 @@
+# Reproducible RC3 checkpoint analysis and vector-figure generation.
+# These pins reproduce the checked-in 2026-08-15 analysis environment; they
+# are not a complete transitive Python lock for the application runtime.
+numpy==2.0.2
+matplotlib==3.9.4

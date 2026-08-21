@@ -225,6 +225,28 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _portable_path(path: Path, *, asset_root: Path | None) -> str:
+    """Render a receipt path without assuming assets live inside this checkout."""
+
+    resolved = path.resolve()
+    bases = [asset_root.resolve()] if asset_root is not None else [ROOT.resolve()]
+    for base in bases:
+        try:
+            return str(resolved.relative_to(base))
+        except ValueError:
+            continue
+    return str(resolved)
+
+
+def _write_json_atomically(path: Path, payload: dict[str, Any]) -> None:
+    """Avoid presenting a partially written derivation receipt as valid."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(path.name + ".tmp")
+    temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    os.replace(temporary, path)
+
+
 def _clean(value: Any) -> str | None:
     if value is None or pd.isna(value):
         return None
@@ -646,9 +668,13 @@ def build_layer(
     manifest_path: Path,
     tolerance_metres: float,
     coordinate_precision: float,
+    asset_root: Path | None = None,
 ) -> dict[str, Any]:
     gpd, shapely, mapping = _require_geo_stack()
     source = source.resolve()
+    lineage_path = lineage_path.resolve()
+    output = output.resolve()
+    manifest_path = manifest_path.resolve()
     lineage = json.loads(lineage_path.read_text(encoding="utf-8"))
     source_sha256 = _sha256(source)
     if lineage.get("source_id") != profile.source_id or lineage.get("raw_sha256") != source_sha256:
@@ -903,7 +929,7 @@ def build_layer(
         "schema_version": SCHEMA_VERSION,
         "generated_at": generated_at,
         "source_id": profile.source_id,
-        "source_path": str(source.relative_to(ROOT)),
+        "source_path": _portable_path(source, asset_root=asset_root),
         "source_sha256": source_sha256,
         "source_bytes": source.stat().st_size,
         "support_files": support_files,
@@ -911,7 +937,7 @@ def build_layer(
         "relational_table_repairs": table_repairs,
         "source_crs": profile.source_crs,
         "output_crs": OUTPUT_CRS,
-        "output_path": str(output.relative_to(ROOT)),
+        "output_path": _portable_path(output, asset_root=asset_root),
         "output_sha256": _sha256(output),
         "output_bytes": output.stat().st_size,
         "feature_count": len(frame),
@@ -936,7 +962,7 @@ def build_layer(
         "max_simplification_area_change_fraction": MAX_SIMPLIFICATION_AREA_CHANGE_FRACTION,
         "simplification_tolerance_metres": tolerance_metres,
         "coordinate_precision_degrees": coordinate_precision,
-        "lineage_path": str(lineage_path.relative_to(ROOT)),
+        "lineage_path": _portable_path(lineage_path, asset_root=asset_root),
         "lineage_sha256": _sha256(lineage_path),
         "source_registry_path": lineage.get("source_registry_path"),
         "source_registry_sha256": lineage.get("source_registry_sha256"),
@@ -947,8 +973,7 @@ def build_layer(
             "evidence, crop-specific suitability, drainage diagnosis, or management-rate authority."
         ),
     }
-    manifest_path.parent.mkdir(parents=True, exist_ok=True)
-    manifest_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _write_json_atomically(manifest_path, report)
     return report
 
 
@@ -959,6 +984,11 @@ def main() -> int:
     parser.add_argument("--lineage", type=Path)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--manifest", type=Path)
+    parser.add_argument(
+        "--asset-root",
+        type=Path,
+        help="root used to render source/output paths in the derivation receipt; supports external state directories",
+    )
     parser.add_argument("--tolerance-metres", type=float, default=DEFAULT_TOLERANCE_METRES)
     parser.add_argument("--coordinate-precision", type=float, default=DEFAULT_COORDINATE_PRECISION)
     args = parser.parse_args()
@@ -974,6 +1004,7 @@ def main() -> int:
         manifest_path=(args.manifest or ROOT / profile.output_manifest),
         tolerance_metres=args.tolerance_metres,
         coordinate_precision=args.coordinate_precision,
+        asset_root=args.asset_root,
     )
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0

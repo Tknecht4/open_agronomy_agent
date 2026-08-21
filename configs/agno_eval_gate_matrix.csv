@@ -1,0 +1,4 @@
+gate_id,gate_name,scope,pass_condition,block_condition,owner
+source_exact_corpus,Offline corpus lineage,product,All loaded rows carry complete source locators,Any active row lacks source-exact lineage,maintainer
+retrieval_authority,Jurisdiction and authority controls,product,No authority or jurisdiction violation in frozen retrieval suite,Any authority or jurisdiction violation,maintainer
+rebuild_identity,Deterministic corpus rebuild,release,Manifest and shard identities reproduce,Any rebuilt identity drift,maintainer

@@ -27,9 +27,11 @@ from starlette.datastructures import UploadFile as StarletteUploadFile
 from starlette.staticfiles import StaticFiles
 
 from agronomy_agent.agent import load_model_config, local_model_snapshot_status, phase5_cache_stats
+from agronomy_agent.corpus_governance import audit_runtime_corpora
 from agronomy_agent.field_events import FieldEventSyncError
 from agronomy_agent.knowledge_updates import read_activation, validate_activation_freshness
 from agronomy_agent.paths import repo_path
+from agronomy_agent.runtime_profiles import load_runtime_profile_registry
 from agronomy_agent.phase5_optimization import candidate_promotion_gate
 from agronomy_agent.phase5_reports import model_registry_comparison, stage_latency_report
 from agronomy_agent.phase5_sft import (
@@ -141,7 +143,11 @@ from agronomy_agent.server.services.privacy_boundary import (
 from agronomy_agent.server.services.replay_service import replay_turn
 from agronomy_agent.server.services.retrieval_service import retrieve_only
 from agronomy_agent.server.services.router_service import route_query
-from agronomy_agent.server.services.tool_service import public_adapter_readiness, run_local_tool
+from agronomy_agent.server.services.tool_service import (
+    capability_registry_view,
+    public_adapter_readiness,
+    run_local_tool,
+)
 from agronomy_agent.server.observability import build_telemetry, log_request, request_id
 from agronomy_agent.server.queue import JobQueueUnavailable, build_job_queue
 from agronomy_agent.server.rate_limit import FixedWindowRateLimiter, RateLimiterUnavailable, RedisFixedWindowRateLimiter
@@ -244,22 +250,35 @@ def _read_json(file_path: Path) -> dict[str, Any]:
 
 
 def _corpus_audit(settings: ServerSettings, store: Any) -> str:
-    cfg = _read_json(repo_path("configs/rag.yaml"))
-    retrieval = cfg.get("retrieval", {})
-    corpus_paths = retrieval.get("corpus_paths") or [
-        retrieval.get("corpus_path", "data/seed/agronomy_rag_corpus.jsonl"),
-    ]
-    corpus_paths = [str(path) for path in corpus_paths]
-    digest = hashlib.sha256()
-    corpus_count = 0
-    for path in corpus_paths:
-        p = repo_path(path)
-        if p.exists() and p.is_file():
-            digest.update(p.read_bytes())
-            with p.open("r", encoding="utf-8") as handle:
-                corpus_count += sum(1 for line in handle if line.strip())
-    audit_id = make_corpus_audit_id(corpus_paths)
-    store.create_corpus_audit(audit_id, ",".join(corpus_paths), digest.hexdigest(), corpus_count)
+    config_path = repo_path(settings.default_rag_config).resolve()
+    report = audit_runtime_corpora(root=repo_path("."), rag_config_path=config_path)
+    if report.get("status") != "pass":
+        errors = report.get("errors") or ["unknown runtime corpus audit failure"]
+        raise RuntimeError("active RAG corpus audit failed: " + "; ".join(str(value) for value in errors))
+    identity = {
+        "rag_config": settings.default_rag_config,
+        "rag_config_sha256": hashlib.sha256(config_path.read_bytes()).hexdigest(),
+        "policy_manifest": report.get("policy_manifest"),
+        "corpora": [
+            {
+                "path": row.get("path"),
+                "sha256": row.get("sha256"),
+                "rows": row.get("rows"),
+                "runtime_eligibility": row.get("runtime_eligibility"),
+            }
+            for row in report.get("corpora") or []
+        ],
+    }
+    serialized = json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    corpus_hash = hashlib.sha256(serialized).hexdigest()
+    corpus_count = sum(int(row.get("rows") or 0) for row in report.get("corpora") or [])
+    audit_id = make_corpus_audit_id([settings.default_rag_config, corpus_hash])
+    store.create_corpus_audit(
+        audit_id,
+        settings.default_rag_config,
+        corpus_hash,
+        corpus_count,
+    )
     return audit_id
 
 
@@ -2158,8 +2177,40 @@ QUOTA_USAGE_KEYS = {
 }
 
 
+def _demo_model_policy(active_model_id: str) -> str:
+    return (
+        f"The active release profile uses {active_model_id}. Change the public demo "
+        "default only after a candidate passes the current release gate and preserves "
+        "the local/open deployment contract."
+    )
+
+
 def create_app(settings: ServerSettings | None = None) -> FastAPI:
     settings = settings or build_settings()
+    runtime_profiles = load_runtime_profile_registry()
+    signed_update_selected = settings.knowledge_update_root is not None
+    if (
+        not signed_update_selected
+        and settings.default_rag_config not in runtime_profiles.selectable_rag_configs
+    ):
+        raise ValueError(
+            "default RAG configuration is not an active registered runtime profile: "
+            f"{settings.default_rag_config}"
+        )
+    selectable_runtime_rag_configs = tuple(
+        dict.fromkeys(
+            [
+                *([settings.default_rag_config] if signed_update_selected else []),
+                *runtime_profiles.selectable_rag_configs,
+            ]
+        )
+    )
+    capability_preflight = capability_registry_view()
+    if (capability_preflight.get("preflight") or {}).get("status") != "passed":
+        raise RuntimeError(
+            "capability registry preflight failed: "
+            + json.dumps((capability_preflight.get("preflight") or {}).get("issues") or [])
+        )
     store = build_trace_store(settings)
     settings = ServerSettings(
         db_path=settings.db_path,
@@ -2270,7 +2321,15 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                     ) from exc
         selected = str(requested or settings.default_rag_config)
         if settings.allow_rag_config_override:
-            return selected
+            if selected in selectable_runtime_rag_configs:
+                return selected
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "RAG configuration is not in the active runtime-profile registry. "
+                    "Register and hash-bind the profile before selecting it."
+                ),
+            )
         if repo_path(selected).resolve() != repo_path(settings.default_rag_config).resolve():
             raise HTTPException(
                 status_code=409,
@@ -3698,9 +3757,8 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
 
     @app.get("/api/configs")
     async def configs() -> dict[str, Any]:
-        config_dir = repo_path("configs")
         rag_configs = (
-            sorted([f"configs/{p.name}" for p in config_dir.glob("*.yaml") if p.name.startswith("rag")])
+            list(selectable_runtime_rag_configs)
             if settings.allow_rag_config_override
             else [settings.default_rag_config]
         )
@@ -3937,6 +3995,13 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
     @app.get("/api/tools/public-adapter-readiness")
     async def public_adapter_readiness_status() -> dict[str, Any]:
         return public_adapter_readiness()
+
+    @app.get("/api/tools/capabilities")
+    async def capability_registry_status(surface: str | None = None) -> dict[str, Any]:
+        try:
+            return capability_registry_view(surface)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.get("/health")
     async def phase4_health() -> dict[str, Any]:
@@ -4413,10 +4478,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         return {
             **report,
             "workspace_id": workspace_id,
-            "demo_model_policy": (
-                "Keep mlx-community/Qwen3.5-2B-OptiQ-4bit as public demo default until a candidate beats "
-                "the Phase 5 release gate and preserves the local/open story."
-            ),
+            "demo_model_policy": _demo_model_policy(settings.default_model_id),
         }
 
     @app.post("/auth/local-pair", response_model=None)

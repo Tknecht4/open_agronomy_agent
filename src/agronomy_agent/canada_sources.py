@@ -600,6 +600,11 @@ def validate_canada_source_manifest(payload: dict[str, Any]) -> list[str]:
             errors.append(f"{prefix}.url must be an https URL")
         if source.get("download_url") is not None and not _safe_https_url(source.get("download_url")):
             errors.append(f"{prefix}.download_url must be an https URL when present")
+        expected_raw_sha256 = source.get("expected_raw_sha256")
+        if expected_raw_sha256 is not None and not re.fullmatch(
+            r"[0-9a-fA-F]{64}", _text(expected_raw_sha256)
+        ):
+            errors.append(f"{prefix}.expected_raw_sha256 must be a 64-character hexadecimal SHA-256")
         runtime_source_type = source.get("runtime_source_type")
         if runtime_source_type is not None and runtime_source_type not in RUNTIME_SOURCE_TYPES:
             errors.append(f"{prefix}.runtime_source_type is invalid")
@@ -746,6 +751,25 @@ def validate_canada_source_manifest(payload: dict[str, Any]) -> list[str]:
                 semantic_companion_path = ingest_policy.get("semantic_companion_path")
                 if semantic_companion_path is not None and not _text(semantic_companion_path):
                     errors.append(f"{prefix}.ingest_policy.semantic_companion_path must be a non-empty string")
+                elif semantic_companion_path is not None and not _safe_relative_path(
+                    semantic_companion_path
+                ):
+                    errors.append(
+                        f"{prefix}.ingest_policy.semantic_companion_path must be a safe repository-relative path"
+                    )
+                semantic_companion_sha256 = ingest_policy.get(
+                    "semantic_companion_sha256"
+                )
+                if semantic_companion_path is not None and not re.fullmatch(
+                    r"[0-9a-f]{64}", _text(semantic_companion_sha256)
+                ):
+                    errors.append(
+                        f"{prefix}.ingest_policy.semantic_companion_sha256 must be a lowercase SHA-256 when semantic_companion_path is set"
+                    )
+                elif semantic_companion_path is None and semantic_companion_sha256 is not None:
+                    errors.append(
+                        f"{prefix}.ingest_policy.semantic_companion_sha256 requires semantic_companion_path"
+                    )
                 emit_source_chunks = ingest_policy.get("emit_source_chunks", True)
                 if not isinstance(emit_source_chunks, bool):
                     errors.append(f"{prefix}.ingest_policy.emit_source_chunks must be boolean")

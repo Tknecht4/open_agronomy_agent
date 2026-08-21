@@ -4,6 +4,7 @@ import argparse
 import json
 import sys
 
+from agronomy_agent.capability_registry import cli_capability_listing
 from agronomy_agent.local_tools import (
     DEFAULT_DAYMET_VARIABLES,
     DEFAULT_OPENET_MODEL,
@@ -51,7 +52,7 @@ def main(argv: list[str] | None = None) -> int:
     retrieve = sub.add_parser("retrieve", help="Return routed RAG/KG context for a question.")
     retrieve.add_argument("question")
     retrieve.add_argument("--top-k", type=int, default=5)
-    retrieve.add_argument("--rag-config", default="configs/rag_governed_runtime_v1.yaml")
+    retrieve.add_argument("--rag-config", default="configs/rag.yaml")
 
     soil = sub.add_parser("soil-context", help="Return regional soil/environment context from local corpora.")
     soil.add_argument("question")
@@ -170,82 +171,32 @@ def main(argv: list[str] | None = None) -> int:
         help="PMRA registry response language.",
     )
 
+    registered = sub.add_parser(
+        "run",
+        help="Run any HTTP-bound registered capability from a JSON payload.",
+    )
+    registered.add_argument("capability")
+    registered.add_argument("--payload-json", default="{}", help="JSON object passed to the registered capability")
+    registered.add_argument("--network-mode", choices=["online", "offline"], default="online")
+
     args = parser.parse_args(argv)
     try:
         if args.cmd == "list":
             payload = {
-                "tools": [
-                    {
-                        "name": "route",
-                        "purpose": "Inspect question type, risk level, required tools, and query expansion.",
-                    },
-                    {
-                        "name": "retrieve",
-                        "purpose": "Return routed local RAG/KG context plus deterministic guard notes.",
-                    },
-                    {
-                        "name": "soil-context",
-                        "purpose": "Search local NRCS/Canadian environmental corpora for regional soil-water context.",
-                    },
-                    {
-                        "name": "spray-window",
-                        "purpose": "Screen weather-sensitive label/product timing inputs without making a legal recommendation.",
-                    },
-                    {
-                        "name": "fertility-frame",
-                        "purpose": "Name missing fertility inputs and local-calibration boundaries before rate advice.",
-                    },
-                    {
-                        "name": "weather-power",
-                        "purpose": "Fetch/cache NASA POWER gridded daily agroclimate summaries for lat/lon/date windows.",
-                    },
-                    {
-                        "name": "daymet-single-pixel",
-                        "purpose": "Fetch/cache ORNL Daymet single-pixel daily gridded weather/climate summaries for a lat/lon date window.",
-                    },
-                    {
-                        "name": "openet-point-timeseries",
-                        "purpose": "Fetch/cache OpenET point evapotranspiration summaries when an API key is configured.",
-                    },
-                    {
-                        "name": "nrcs-soil-survey",
-                        "purpose": "Fetch/cache NRCS Soil Data Access map-unit context for a point as a soil-survey prior.",
-                    },
-                    {
-                        "name": "nrcs-soil-survey-geometry",
-                        "purpose": "Fetch/cache NRCS Soil Data Access map-unit and dominant-component context for a drawn/uploaded geometry.",
-                    },
-                    {
-                        "name": "cropland-data-layer",
-                        "purpose": "Fetch/cache USDA NASS CDL point crop-cover context as a public crop-history prior.",
-                    },
-                    {
-                        "name": "cropland-data-layer-geometry",
-                        "purpose": "Fetch/cache sampled USDA NASS CDL crop-cover context for a drawn/uploaded geometry and optional year list.",
-                    },
-                    {
-                        "name": "nass-quickstats-crop-stats",
-                        "purpose": "Fetch/cache USDA NASS regional crop yield, acreage, and production statistics when an API key is configured.",
-                    },
-                    {
-                        "name": "epa-ppls-product-search",
-                        "purpose": "Fetch/cache EPA PPLS product, registration, ingredient, PC code, or CAS metadata.",
-                    },
-                    {
-                        "name": "canada-source-lane",
-                        "purpose": "Return Canadian source context; PMRA can fetch exact registration metadata while other planned lanes remain explicit boundary cards.",
-                    },
-                    {
-                        "name": "diagnostic-frame",
-                        "purpose": "Return compact 4R, pesticide-safety, resistance, compaction, or salinity/sodicity decision frames.",
-                    },
-                    {
-                        "name": "calculate",
-                        "purpose": "Run validated unit conversions, seeding, fertilizer, sprayer, GDD, population, weighted-average, or partial-budget arithmetic from explicit inputs.",
-                    },
-                ],
+                "tools": cli_capability_listing(),
                 "contract": "Every command prints one JSON object to stdout; nonzero exit prints one JSON error object.",
             }
+        elif args.cmd == "run":
+            from agronomy_agent.server.services.tool_service import run_local_tool
+
+            registered_payload = json.loads(args.payload_json)
+            if not isinstance(registered_payload, dict):
+                raise ValueError("--payload-json must decode to an object")
+            payload = run_local_tool(
+                args.capability,
+                registered_payload,
+                network_mode=args.network_mode,
+            )
         elif args.cmd == "route":
             payload = route_question(args.question)
         elif args.cmd == "retrieve":

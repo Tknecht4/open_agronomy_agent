@@ -1,0 +1,42 @@
+{
+  "schema_version": "open_agronomy_agent.historical_evaluation_asset_catalog.v1",
+  "archive_root_label": "Lexar/agronomy_agent",
+  "archive_git_revision": "78cdbeffd33ac3e9d7e775243fa72f992ad3e5af",
+  "assets": [
+    {
+      "asset_id": "agribench_proxy_eval_legacy",
+      "archive_path": "data/eval/agribench_proxy_eval.jsonl",
+      "sha256": "52670469483730019c2fb701b9b626acf9a848cd2fb92423dc4c118d23b8cb7d",
+      "rows": 416,
+      "classification": "candidate",
+      "role": "historical_local_proxy_regression",
+      "reproducibility": "builder_and_source_suites_present_in_archive_only",
+      "limitations": [
+        "It is explicitly not official AI AgriBench.",
+        "It contains 283 unique questions and 133 duplicate-question variants.",
+        "Gold answers are local rubric summaries rather than expert-edited benchmark references.",
+        "It lacks the source-exact locator and authority contract required for successor retrieval evaluation."
+      ],
+      "permitted_successor_use": "failure-mode review and candidate case harvesting only after source, rights, split, and duplicate review",
+      "prohibited_use": "official leaderboard comparison, RC3 pooling, semantic-quality ground truth, or retriever-promotion endpoint"
+    },
+    {
+      "asset_id": "agribench_proxy_manifest_legacy",
+      "archive_path": "data/eval/agribench_proxy_manifest.json",
+      "sha256": "5a58ddae61020d7f0c1f9958f5f76694ff7163d394d45da0093a3622fce590e8",
+      "classification": "candidate",
+      "role": "historical_proxy_manifest",
+      "relationship": "describes agribench_proxy_eval_legacy"
+    },
+    {
+      "asset_id": "agribench_proxy_builder_legacy",
+      "archive_path": "scripts/build_agribench_proxy_suite.py",
+      "sha256": "1cf3e3843a4c5f1d8a49564c98bbfacc4e92190f78e8ea26c0228b4db56e272e",
+      "classification": "candidate",
+      "role": "historical_proxy_builder",
+      "relationship": "records the proxy's deduplication and synthetic-rubric construction"
+    }
+  ],
+  "disposition": "Retained as a hash-bound historical candidate catalog; none of these assets is copied into the successor runtime or retrieval-promotion suite.",
+  "catalog_sha256": "eb20650323cb03b3839c542a2b7e3776f63392444881686cfb972b9b7c9af12a"
+}

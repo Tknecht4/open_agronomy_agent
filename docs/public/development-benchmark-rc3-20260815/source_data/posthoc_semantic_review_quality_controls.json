@@ -1,0 +1,48 @@
+{
+  "answer_length_semantic_pearson": -0.5311,
+  "batch_receipts": 203,
+  "boundary": "This is a separately authorized, post-hoc, blinded AI triage of saved answers. It did not alter the frozen RC3 run, has no human calibration or adjudication, and cannot support answer-quality, safety, agronomic-correctness, ranking, or promotion claims.",
+  "candidate_trial_packets": 9,
+  "duplicate_answer_diagnostic": {
+    "groups": 268,
+    "interpretation": "Repeated answer-text variation is an operational diagnostic, not an inter-rater reliability estimate.",
+    "max_score_range": 77.5,
+    "median_score_range": 10.625,
+    "rows": 1221,
+    "same_disposition_groups": 195,
+    "same_score_groups": 42
+  },
+  "human_calibration_status": "missing",
+  "input_identities": {
+    "authorization_request_sha256": "8897f139990c6376523571494f8c9285891bc7e5619a371ebd290c0a449f6e3f",
+    "judgments_sha256": "5952ace66553fb12fe86905c2790b77c694bf8f92c289e0f37cb99717d3b7b14",
+    "selection_manifest_sha256": "554c0f4d73a5939230d3839fe9efadc95a8a8110e1370e61b0e5647f2da6ae77"
+  },
+  "judge": {
+    "model_id": "gpt-5.6-luna",
+    "reasoning_effort": "high",
+    "self_judges_luna_candidate_outputs": true
+  },
+  "judge_self_reported_high_confidence_rate": 0.9926,
+  "needs_source_validation": 1247,
+  "paired_raw_full_cases_per_candidate_trial": 90,
+  "promotion_eligible": false,
+  "question_validity": {
+    "questionable": 8,
+    "valid": 1612
+  },
+  "rows": 1620,
+  "schema_version": "open_agronomy_agent.rc3_posthoc_semantic_review_quality_controls.v1",
+  "score_definition": {
+    "dimension_scale": "0_to_4",
+    "scale": "0_to_100",
+    "weights": {
+      "agronomic_accuracy": 0.35,
+      "calibration_safety": 0.15,
+      "completeness_actionability": 0.2,
+      "crop_region_source_fit": 0.1,
+      "decision_relevance": 0.2
+    }
+  },
+  "status": "complete_uncalibrated_blinded_ai_triage_nonclaim"
+}

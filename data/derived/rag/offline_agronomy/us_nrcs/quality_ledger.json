@@ -1,0 +1,27 @@
+{
+  "schema_version": "open_agronomy_agent.corpus_quality_ledger.v1",
+  "release_id": "us-nrcs-full-reference-2026-08-19",
+  "rows": 218258,
+  "source_locator_complete_rate": 1.0,
+  "source_offset_precision_counts": {
+    "json_document_chunk": 218258
+  },
+  "duplicate_policy": "normalized_text_sha256; retain first occurrence in frozen source order",
+  "near_duplicate_policy": "Exact normalized duplicates are removed globally. High-precision normalized-boundary clusters are retained as source-distinct splits pending an evidence-specific merge decision.",
+  "per_row_ledger": {
+    "storage": "embedded runtime row quality object plus source_locator",
+    "required_fields": [
+      "extraction_fidelity",
+      "language",
+      "authority_tier",
+      "jurisdiction",
+      "temporal_scope",
+      "risk_class",
+      "retrieval_eligibility",
+      "duplicate_disposition",
+      "near_duplicate_disposition"
+    ]
+  },
+  "answer_evidence_policy": "No boilerplate-only NRCS records were admitted; exact source text remains source-bound.",
+  "rows_sha256": "633169102220c016db8bde4b823596139bfa4a3a4790e91e48e08cea53242aa2"
+}

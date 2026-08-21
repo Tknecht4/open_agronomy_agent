@@ -9,8 +9,10 @@ separate from unpromoted candidates.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import hashlib
 import json
+import os
 import re
 from collections import Counter
 from pathlib import Path
@@ -50,21 +52,29 @@ CANADIAN_PROVINCES = {
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", default="configs/rag_governed_runtime_v1.yaml")
+    parser.add_argument("--config", default="configs/rag.yaml")
     parser.add_argument("--policy", default="data/manifests/runtime_corpus_policy.json")
     parser.add_argument(
         "--candidate",
-        default="data/derived/rag/canada_agronomy_distributable_v12_candidate.jsonl",
+        help="Optional unpromoted corpus to inventory without activating it.",
     )
+    parser.add_argument("--audit-date", default=_default_audit_date())
     parser.add_argument(
         "--json-output",
-        default="outputs/knowledge_store_review_20260723/runtime_knowledge_sufficiency.json",
+        default="outputs/runtime_knowledge_sufficiency_latest.json",
     )
     parser.add_argument(
         "--markdown-output",
-        default="docs/runtime_knowledge_sufficiency_audit_20260723.md",
+        default="outputs/runtime_knowledge_sufficiency_latest.md",
     )
     return parser.parse_args()
+
+
+def _default_audit_date() -> str:
+    source_date_epoch = os.getenv("SOURCE_DATE_EPOCH")
+    if source_date_epoch:
+        return dt.datetime.fromtimestamp(int(source_date_epoch), tz=dt.UTC).date().isoformat()
+    return dt.datetime.now(dt.UTC).date().isoformat()
 
 
 def sha256(path: Path) -> str:
@@ -233,9 +243,26 @@ def build_report(root: Path, args: argparse.Namespace) -> dict[str, Any]:
             continue
         corpus_reports.append(corpus_summary(path, policy))
 
-    eligibility_rows: Counter[str] = Counter()
+    corpus_policy_rows: Counter[str] = Counter()
+    effective_eligibility_rows: Counter[str] = Counter()
     for corpus in corpus_reports:
-        eligibility_rows[str(corpus.get("runtime_eligibility") or "quarantined")] += int(corpus.get("rows") or 0)
+        corpus_eligibility = str(corpus.get("runtime_eligibility") or "quarantined")
+        row_count = int(corpus.get("rows") or 0)
+        corpus_policy_rows[corpus_eligibility] += row_count
+        retrieval_policies = {
+            str(key).strip().lower(): int(value)
+            for key, value in (corpus.get("retrieval_policies") or {}).items()
+        }
+        declared_rows = sum(retrieval_policies.values())
+        effective_eligibility_rows[corpus_eligibility] += max(0, row_count - declared_rows)
+        for retrieval_policy, count in retrieval_policies.items():
+            effective_eligibility = {
+                "context_only": "context_only",
+                "requires_live_authority": "requires_live_authority",
+                "quarantined": "quarantined",
+                "standard": corpus_eligibility,
+            }.get(retrieval_policy, corpus_eligibility)
+            effective_eligibility_rows[effective_eligibility] += count
 
     decisive = [item for item in corpus_reports if item.get("runtime_eligibility") == "decisive"]
     applied_context_records: list[dict[str, Any]] = []
@@ -357,14 +384,20 @@ def build_report(root: Path, args: argparse.Namespace) -> dict[str, Any]:
     graph_reports = [
         graph_summary(root / item) for item in config["retrieval"].get("graph_paths", [])
     ]
-    candidate_path = root / args.candidate
-    candidate = candidate_summary(candidate_path, applied_source_ids) if candidate_path.exists() else None
-    candidate_policy = policies.get(args.candidate)
+    candidate_path = root / args.candidate if args.candidate else None
+    candidate = (
+        candidate_summary(candidate_path, applied_source_ids)
+        if candidate_path is not None and candidate_path.is_file()
+        else None
+    )
+    candidate_policy = policies.get(args.candidate) if args.candidate else None
     candidate_activation_declared = (
-        args.candidate not in configured_paths
+        args.candidate is None
+        or args.candidate not in configured_paths
         or (
             candidate_policy is not None
-            and candidate_path.exists()
+            and candidate_path is not None
+            and candidate_path.is_file()
             and str(candidate_policy.get("sha256") or "") == sha256(candidate_path)
         )
     )
@@ -411,12 +444,13 @@ def build_report(root: Path, args: argparse.Namespace) -> dict[str, Any]:
 
     return {
         "schema_version": "open_agronomy_agent.runtime_knowledge_sufficiency.v1",
-        "audit_date": "2026-07-23",
+        "audit_date": args.audit_date,
         "config": args.config,
         "policy": args.policy,
         "policy_id": policy_manifest.get("policy_id"),
         "configured_corpora": len(configured_paths),
-        "runtime_rows_by_eligibility": dict(eligibility_rows),
+        "runtime_rows_by_eligibility": dict(effective_eligibility_rows),
+        "corpus_policy_rows_by_eligibility": dict(corpus_policy_rows),
         "corpora": corpus_reports,
         "graphs": graph_reports,
         "decisive_canadian_applied": {
@@ -468,7 +502,8 @@ def render_markdown(report: dict[str, Any]) -> str:
         "## Governed runtime inventory",
         "",
         f"- Configured corpora: {report['configured_corpora']}",
-        f"- Rows by eligibility: `{json.dumps(report['runtime_rows_by_eligibility'], sort_keys=True)}`",
+        f"- Rows by effective eligibility: `{json.dumps(report['runtime_rows_by_eligibility'], sort_keys=True)}`",
+        f"- Rows by corpus-level policy: `{json.dumps(report['corpus_policy_rows_by_eligibility'], sort_keys=True)}`",
         f"- Decisive Canadian applied corpus: {applied['rows']} chunks from {applied['unique_sources']} sources",
         f"- Complete source lineage: {applied['lineage_complete_rate']:.1%}",
         f"- Explicit modification/commercial/redistribution rights: {applied['explicit_open_rights_rate']:.1%}",

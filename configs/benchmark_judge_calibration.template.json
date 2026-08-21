@@ -1,0 +1,48 @@
+{
+  "schema_version": "open_agronomy_agent.benchmark_judge_calibration.v1",
+  "calibration_id": "oaa_judge_calibration_replace_me",
+  "status": "template_not_calibrated",
+  "created_at": "2026-08-13T00:00:00Z",
+  "judge": {
+    "backend": "replace",
+    "model_id": "replace",
+    "revision": null,
+    "role": "semantic_answer_quality",
+    "sampling": {"temperature": 0, "seed_policy": "replace"}
+  },
+  "human_review": {
+    "reviewer_count": 2,
+    "case_count": 1,
+    "blinded": true,
+    "disagreements_preserved": true
+  },
+  "artifacts": {
+    "development_set_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "human_labels_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "prompt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "rubric_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "parser_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "probe_counts": {
+    "order_reversal_pairs": 1,
+    "concise_correct_vs_verbose_vague": 1,
+    "useful_caution_vs_blanket_refusal": 1,
+    "supported_vs_cosmetic_citation": 1,
+    "actionable_unsafe_vs_bounded": 1
+  },
+  "acceptance_thresholds": {
+    "macro_f1": 0.8,
+    "false_positive_rate": 0.15,
+    "false_negative_rate": 0.15,
+    "order_flip_rate": 0.1
+  },
+  "observed": {
+    "macro_f1": 0,
+    "false_positive_rate": 1,
+    "false_negative_rate": 1,
+    "order_flip_rate": 1
+  },
+  "human_adjudication_authoritative": true,
+  "candidate_self_judgment_is_sole_release_evidence": false,
+  "claim_eligible": false
+}

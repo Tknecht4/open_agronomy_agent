@@ -6,6 +6,14 @@ import os
 from typing import Any
 
 from agronomy_agent import local_tools
+from agronomy_agent.capability_registry import (
+    ROUTE_REQUIRED_CAPABILITY_IDS,
+    capability_catalog,
+    capability_registry,
+    execute_registered_capability,
+    http_dispatch_name,
+    normalize_surface_name,
+)
 from agronomy_agent.paths import repo_path
 
 
@@ -29,13 +37,16 @@ _PUBLIC_TOOL_CACHE_SUBDIRS = {
     "aafc-nasdi-agroclimate": "aafc_nasdi_agroclimate",
 }
 
-_NETWORK_DEPENDENT_TOOLS = frozenset(_PUBLIC_TOOL_CACHE_SUBDIRS)
+_CAPABILITY_REGISTRY = capability_registry()
+_NETWORK_DEPENDENT_TOOLS = frozenset(
+    spec.surface_names("http")[0]
+    for spec in _CAPABILITY_REGISTRY.for_surface("http")
+    if spec.network.mode == "required"
+)
 _OFFLINE_CACHE_CAPABLE_TOOLS = frozenset(
-    {
-        "aafc-nasdi-agroclimate",
-        "canada-et-or-water-use-source-needed",
-        "statcan-field-crop-statistics",
-    }
+    spec.surface_names("http")[0]
+    for spec in _CAPABILITY_REGISTRY.for_surface("http")
+    if spec.offline.mode in {"cached", "snapshot"}
 )
 
 
@@ -433,7 +444,10 @@ PUBLIC_ADAPTER_SPECS: tuple[dict[str, Any], ...] = (
 
 
 def tool_name_alias(name: str) -> str:
-    return name.strip().lower().replace("_", "-")
+    try:
+        return http_dispatch_name(name)
+    except KeyError:
+        return normalize_surface_name(name)
 
 
 def _runtime_tool_payload(tool: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -476,11 +490,41 @@ def public_adapter_readiness() -> dict[str, Any]:
         },
         "smoke_checks": smoke_checks,
         "adapters": adapters,
+        "capability_registry": {
+            "schema_version": capability_catalog("readiness")["schema_version"],
+            "capability_count": capability_catalog("readiness")["capability_count"],
+            "parity_status": "passed"
+            if not _CAPABILITY_REGISTRY.audit(
+                surface_registrations={"readiness": [str(spec["id"]) for spec in PUBLIC_ADAPTER_SPECS]}
+            )
+            else "failed",
+        },
         "boundary": (
             "Readiness reports configuration and local cache state only. It does not prove that a provider is currently reachable "
             "or that a returned public source is field truth. Offline smoke artifacts prove adapter contracts, not live provider coverage."
         ),
     }
+
+
+def capability_registry_view(surface: str | None = None) -> dict[str, Any]:
+    """Return the JSON-safe canonical capability catalog for HTTP and operator views."""
+
+    allowed_surfaces = {None, "router", "cli", "http", "agno", "readiness", "docs"}
+    if surface not in allowed_surfaces:
+        raise ValueError(f"unknown capability surface: {surface}")
+    catalog = capability_catalog(surface)  # type: ignore[arg-type]
+    if surface is None:
+        issues = _CAPABILITY_REGISTRY.audit(
+            required_tools=ROUTE_REQUIRED_CAPABILITY_IDS,
+            surface_registrations={
+                "readiness": [str(spec["id"]) for spec in PUBLIC_ADAPTER_SPECS],
+            },
+        )
+        catalog["preflight"] = {
+            "status": "passed" if not issues else "failed",
+            "issues": [issue.as_record() for issue in issues],
+        }
+    return catalog
 
 
 def _public_adapter_readiness_item(spec: dict[str, Any], *, smoke_checks: list[dict[str, Any]]) -> dict[str, Any]:
@@ -661,61 +705,7 @@ def run_local_tool(
     if network_mode not in {"online", "offline"}:
         raise ValueError("network_mode must be 'online' or 'offline'")
     payload = _runtime_tool_payload(tool, payload)
-    allowed_tools = {
-        "route",
-        "retrieve",
-        "soil-context",
-        "soil_context",
-        "spray-window",
-        "spray_window",
-        "fertility-frame",
-        "fertility_frame",
-        "diagnostic-frame",
-        "diagnostic_frame",
-        "agronomic-calculator",
-        "agronomic_calculator",
-        "weather-power",
-        "weather_power",
-        "daymet-single-pixel",
-        "daymet_single_pixel",
-        "openet-point-timeseries",
-        "openet_point_timeseries",
-        "nrcs-soil-survey",
-        "nrcs_soil_survey",
-        "nrcs-soil-survey-geometry",
-        "nrcs_soil_survey_geometry",
-        "cropland-data-layer",
-        "cropland_data_layer",
-        "cropland-data-layer-geometry",
-        "cropland_data_layer_geometry",
-        "nass-quickstats-crop-stats",
-        "nass_quickstats_crop_stats",
-        "epa-ppls-product-search",
-        "epa_ppls_product_search",
-        "cansis-soil-landscapes-canada",
-        "cansis_soil_landscapes_canada",
-        "aafc-annual-crop-inventory",
-        "aafc_annual_crop_inventory",
-        "aafc-nasdi-agroclimate",
-        "aafc_nasdi_agroclimate",
-        "statcan-field-crop-statistics",
-        "statcan_field_crop_statistics",
-        "health-canada-pmra-label-search",
-        "health_canada_pmra_label_search",
-        "canada-et-or-water-use-source-needed",
-        "canada_et_or_water_use_source_needed",
-        "disease-risk-context-adapter",
-        "public-variety-trial-ingest",
-        "specialty-crop-extension-corpus",
-        "conservation-practice-context-adapter",
-        "canada-conservation-practice-context-source",
-        "field-record-audit-card",
-        "partial-budget-calculator",
-        "public-program-context-source",
-        "forage-livestock-extension-corpus",
-        "postharvest-storage-quality-corpus",
-    }
-    allowed_tools.update(source_lane_id.replace("_", "-") for source_lane_id in local_tools.DEEP_PUBLIC_SOURCE_LANE_DEFINITIONS)
+    allowed_tools = set(_CAPABILITY_REGISTRY.surface_names("http"))
     if tool not in allowed_tools:
         raise ValueError(f"unknown tool: {name}")
     if network_mode == "offline" and tool in _NETWORK_DEPENDENT_TOOLS:
@@ -1105,12 +1095,18 @@ def run_local_tool(
             practice=_optional_str(payload.get("practice") or payload.get("proposed_change")),
         )
 
-    # retrieve
-    return local_tools.retrieve_context(
-        payload.get("question", ""),
-        top_k=int(payload.get("top_k", 5)),
-        rag_config=payload.get("rag_config", "configs/rag_final_mvp.yaml"),
-    )
+    if tool == "retrieve":
+        return local_tools.retrieve_context(
+            payload.get("question", ""),
+            top_k=int(payload.get("top_k", 5)),
+            rag_config=payload.get("rag_config", "configs/rag.yaml"),
+        )
+
+    # Extension path: a new HTTP-bound capability can be added with one ToolSpec
+    # and a mapping-returning executor. Existing adapters retain their explicit
+    # argument normalization above for backwards compatibility.
+    spec = _CAPABILITY_REGISTRY.resolve_surface("http", tool)
+    return execute_registered_capability(spec.capability_id, payload)
 
 
 def _required_float(payload: dict[str, Any], key: str) -> float:

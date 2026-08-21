@@ -33,6 +33,10 @@ agronomy-tool = "agronomy_agent.tool_cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = [".", "src"]
+# The suite uses per-test temporary state and passed under four xdist workers.
+# Keeping this bounded avoids the slower process oversubscription seen with -n auto.
+addopts = "-n 4"
 
 [tool.setuptools.packages.find]
 where = ["src"]

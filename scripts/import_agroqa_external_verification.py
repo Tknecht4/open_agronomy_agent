@@ -31,6 +31,7 @@ LICENSE_URL = (
     f"{UPSTREAM_COMMIT}/LICENSE"
 )
 UPSTREAM_SHA256 = "05f2775ce7ebfbe85cf24c86910f5761eefb1c1c12504233399231fca26d0e3f"
+LICENSE_SHA256 = "a51ca1eea5706a5542e67289af5bbf9db7cdf54fda7511f425feadb9906dca8b"
 SAMPLE_SEED = "open-agronomy-agroqa-external-v1"
 ROWS_PER_CROP = 64
 CROPS = ("beans", "cassava", "general", "maize")
@@ -192,11 +193,20 @@ def build_subset(raw: bytes) -> tuple[list[dict[str, object]], dict[str, object]
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, help="Use a previously downloaded pinned CSV.")
+    parser.add_argument(
+        "--license-input",
+        type=Path,
+        help="Pinned upstream license bytes required with --input when rebuilding.",
+    )
     parser.add_argument("--acquire", action="store_true", help="Download the pinned CSV and MIT license.")
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
     if bool(args.input) == bool(args.acquire):
         raise ValueError("choose exactly one of --input or --acquire")
+    if args.acquire and args.license_input:
+        raise ValueError("--license-input cannot be combined with --acquire")
+    if args.input and not args.check and not args.license_input:
+        raise ValueError("--license-input is required with --input when rebuilding")
     raw = args.input.read_bytes() if args.input else fetch(UPSTREAM_URL)
     actual_sha = sha256_bytes(raw)
     if actual_sha != UPSTREAM_SHA256:
@@ -214,7 +224,10 @@ def main() -> int:
         return 0
     RAW_PATH.parent.mkdir(parents=True, exist_ok=True)
     RAW_PATH.write_bytes(raw)
-    license_bytes = fetch(LICENSE_URL) if args.acquire else Path("/private/tmp/agroqa_LICENSE").read_bytes()
+    license_bytes = fetch(LICENSE_URL) if args.acquire else args.license_input.read_bytes()
+    actual_license_sha = sha256_bytes(license_bytes)
+    if actual_license_sha != LICENSE_SHA256:
+        raise ValueError(f"upstream license SHA-256 mismatch: {actual_license_sha}")
     LICENSE_PATH.write_bytes(license_bytes)
     OUTPUT_PATH.write_text(rendered, encoding="utf-8")
     AUDIT_PATH.write_text(json.dumps(audit, indent=2, sort_keys=True) + "\n", encoding="utf-8")

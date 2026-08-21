@@ -31,7 +31,6 @@ ALLOWED_CONTROL_FILE_CHANGES = {
     "container/README.md",
     "container/build-overlay-image.sh",
     "container/release.sh",
-    "scripts/repair_edge_oci_archive.py",
 }
 
 

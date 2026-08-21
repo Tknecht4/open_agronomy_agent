@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-08-12T07:11:45+00:00",
+  "generated_at": "2026-08-21T04:25:12+00:00",
   "status": "pass",
-  "contract_sha256": "a12f1e91902dcd66f461f7d3019672ee0bde71864eb40313af27c19eaf4772a4",
+  "contract_sha256": "a5809c5b688f5e4fed2ef0f4250e2884dd6eb8cd1ffd7c9c4b97b92226374097",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -16,195 +16,48 @@
     "docker_compose": "docker-compose.edge.yml"
   },
   "model": {
-    "config_path": "configs/model_gemma4_e2b_interface_v2.yaml",
+    "config_path": "configs/model.yaml",
     "configured_model_id": "mlx-community/gemma-4-e2b-it-4bit",
     "included": false,
     "reason": "MLX and Metal run natively on the macOS host; the Linux image calls the host over loopback-only HTTP."
   },
-  "rag_config": "configs/rag_governed_runtime_v1.yaml",
+  "rag_config": "configs/rag.yaml",
   "corpus_policy_manifest": "data/manifests/runtime_corpus_policy.json",
-  "configured_corpus_count": 23,
-  "included_corpus_count": 10,
-  "excluded_corpus_count": 13,
-  "excluded_corpora": [
-    {
-      "path": "data/seed/cca_objective_rag_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "Competency objectives are useful for coverage design but are not approved as copied runtime text.",
-      "rights_status": "copyrighted_citation_only",
-      "expected_sha256": "4f46706317afd16765c84b82f1a1aefd374bbd6d8b89c752853060cce935b02f",
-      "included": false
-    },
-    {
-      "path": "data/derived/rag/document_expansion_rag_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "The source is public but the current rows do not carry the required licence snapshot and lineage.",
-      "rights_status": "redistribution_review_required",
-      "expected_sha256": "26baf409f1e377d0d91e5ab9252c3d63fba47246c204623d4333db1e77a16a9b",
-      "included": false
-    },
-    {
-      "path": "data/derived/rag/forum_newagtalk_forum_threads_rag_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified.",
-      "rights_status": "permission_not_established",
-      "expected_sha256": "d5fad73f2db3318b632580f15c2a5f7c79f894a0d89df6abc7aa34a7b6b43629",
-      "included": false
-    },
-    {
-      "path": "data/derived/rag/forum_agricultivation_communities_agrictalk_forum_threads_rag_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified.",
-      "rights_status": "permission_not_established",
-      "expected_sha256": "84714c7361e0523d0e7ccb7f0575a9746ae59a22cc5a80780099e07495211024",
-      "included": false
-    },
-    {
-      "path": "data/derived/rag/forum_agriville_forum_threads_rag_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified.",
-      "rights_status": "permission_not_established",
-      "expected_sha256": "53d39aced68807a300b76b44ac7ac8482eee9a6e0156e8ae28d1fd7806bfe0f2",
-      "included": false
-    },
-    {
-      "path": "data/derived/rag/forum_farmchat_forum_threads_rag_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified.",
-      "rights_status": "permission_not_established",
-      "expected_sha256": "ddaceb8bb9c483a0266b1747fbcc4bb2e4441289f2cfa90c3a36c4e20e507ff7",
-      "included": false
-    },
-    {
-      "path": "data/derived/rag/forum_agricultureinformation_forum_threads_rag_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified.",
-      "rights_status": "permission_not_established",
-      "expected_sha256": "d5befa1509494cade443a481187e9c866c691d64370504613587ee68e508ac6e",
-      "included": false
-    },
-    {
-      "path": "data/derived/rag/forum_forum4farming_forum_threads_rag_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified.",
-      "rights_status": "permission_not_established",
-      "expected_sha256": "d6e81583045ccfdbda9d23931936bf005ea173c7d78d25f57086177068c81980",
-      "included": false
-    },
-    {
-      "path": "data/derived/rag/forum_farmnest_india_forum_threads_rag_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified.",
-      "rights_status": "permission_not_established",
-      "expected_sha256": "b5b2e4768084dfccecba51d6ba5709717bb579ffd81ce2c06ef19ab6c38de73f",
-      "included": false
-    },
-    {
-      "path": "data/derived/rag/forum_soilforwater_forum_threads_rag_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "Public readability is not a redistribution licence; authorship, accuracy, and current applicability are unverified.",
-      "rights_status": "permission_not_established",
-      "expected_sha256": "ed356c1b055cfcf533f7b164f4dc487fbbd292b87fd31d8841eac8aa1e4d3960",
-      "included": false
-    },
-    {
-      "path": "data/seed/final_mvp_gap_repair_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "Answer-gap synthesis risks eval-shaped behavior and includes rows explicitly awaiting reviewed-source replacement.",
-      "rights_status": "mixed_and_unverified",
-      "expected_sha256": "092f7131e657c87bdffb67a780d19ed6194c01b56a0748b678031049584e6746",
-      "included": false
-    },
-    {
-      "path": "data/seed/aiagribench_public_gap_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "Public benchmark-gap summaries are excluded from runtime to prevent benchmark-shaped retrieval and unverifiable source paraphrases.",
-      "rights_status": "source_rights_not_row_audited",
-      "expected_sha256": "2b0baf1ce96f23b8811f751506bf026a2a4015ba38161c71e49fd407b1191e81",
-      "included": false
-    },
-    {
-      "path": "data/seed/aiagribench_transfer_v2_source_corpus.jsonl",
-      "runtime_eligibility": "quarantined",
-      "reason": "corpus_quarantined_at_load",
-      "policy_reason": "Transfer-suite source summaries remain evaluation research and are excluded from the production answer path.",
-      "rights_status": "source_rights_not_row_audited",
-      "expected_sha256": "474749f9ffa3696b8edbdaf05541f1c199e6e24a651552bfcafd34c10656e612",
-      "included": false
-    }
-  ],
+  "configured_corpus_count": 5,
+  "included_corpus_count": 5,
+  "on_demand_release_count": 1,
+  "excluded_corpus_count": 0,
+  "excluded_corpora": [],
   "runtime_knowledge": [
     {
-      "path": "data/seed/agronomy_rag_corpus.jsonl",
+      "path": "data/derived/rag/offline_agronomy/active/shards/canadian_context-0001.jsonl",
       "role": "runtime_knowledge",
-      "bytes": 19616,
-      "sha256": "45f22cf8380007661c9ba3109ff1e6254f031b39a78bcaa09b11c1ba3c858ba5"
+      "bytes": 3167773,
+      "sha256": "3a6d96394853ed8341c5c8df9ec6d208e12819736cc934ec2c9de7729a893245"
     },
     {
-      "path": "data/seed/boundary_rag_corpus.jsonl",
+      "path": "data/derived/rag/offline_agronomy/active/shards/canadian_live-0001.jsonl",
       "role": "runtime_knowledge",
-      "bytes": 2929,
-      "sha256": "d6210d1db7efe7cd7814c4a51acd85d778c2e490f274726b47c9d14334a0ddb6"
+      "bytes": 1473469,
+      "sha256": "c105e0284b30b954ee46449c6fb28413dbc9dcb0b2282167313cb4a7404258cf"
     },
     {
-      "path": "data/derived/rag/soilwise_rag_corpus.jsonl",
+      "path": "data/derived/rag/offline_agronomy/active/shards/project_context-0001.jsonl",
       "role": "runtime_knowledge",
-      "bytes": 572121,
-      "sha256": "eef95a5d2dbc11183a6f8061fe91fe7387e9568112e45d8b62c2cf835bd1d737"
+      "bytes": 64253,
+      "sha256": "6a3eb04006b4dafdc9234cda826dd3de54397bb655b67394cac4300c6a4159e2"
     },
     {
-      "path": "data/derived/rag/canada_agronomy_distributable_v13.jsonl",
+      "path": "data/derived/rag/offline_agronomy/active/shards/project_decisive-0001.jsonl",
       "role": "runtime_knowledge",
-      "bytes": 4437330,
-      "sha256": "461cdf59627b684123e02fb712d72cffd21ff04fdef7b76bd0b9a17d86b4c2de"
+      "bytes": 10389,
+      "sha256": "6e31c3cbd1523963ec1007fe0c9b79499dd9f89f18e4977b9abffd9f1745f713"
     },
     {
-      "path": "data/derived/rag/canada_agronomy_ontario_context_v1.jsonl",
+      "path": "data/derived/rag/offline_agronomy/active/shards/soilwise_context-0001.jsonl",
       "role": "runtime_knowledge",
-      "bytes": 1348287,
-      "sha256": "72df2be18c87ef62dcc286201ad5274f1d0a9d8f74518a463487d696a83cb152"
-    },
-    {
-      "path": "data/derived/rag/canada_agronomy_supplement_v1.jsonl",
-      "role": "runtime_knowledge",
-      "bytes": 128051,
-      "sha256": "c8293511e27d034528ce41c4754bbaccac0bc98b1afe0fb08cf346a9f5211810"
-    },
-    {
-      "path": "data/derived/rag/canada_agronomy_supplement_v2.jsonl",
-      "role": "runtime_knowledge",
-      "bytes": 166353,
-      "sha256": "d0ed46ffb8fc153f4fb8c60dab2b74706c89bdf144eeb01142c8677eece41988"
-    },
-    {
-      "path": "data/derived/rag/canada_agronomy_supplement_v3.jsonl",
-      "role": "runtime_knowledge",
-      "bytes": 37455,
-      "sha256": "f175130e4dbd635ecd7142ce47e996a05a9d1671aaea4041e67187f0cea22e21"
-    },
-    {
-      "path": "data/derived/rag/canada_agronomy_regional_context_v1.jsonl",
-      "role": "runtime_knowledge",
-      "bytes": 206821,
-      "sha256": "863a97ac599c15c7699300284d9d3af8e9bbe0d875016facdf1362458abd48f1"
-    },
-    {
-      "path": "data/derived/rag/nrcs_esd_rag_corpus_compact.jsonl",
-      "role": "runtime_knowledge",
-      "bytes": 92050082,
-      "sha256": "d86786e7e3dffd6a41be8e7c76e0d1a3c60d8b026741f19e2e742fee7aecd16d"
+      "bytes": 2725686,
+      "sha256": "7d1a9a56c868e8aae544b210925a5e40c0bd98c3e453181cc5aa2685b3584645"
     },
     {
       "path": "data/seed/agronomy_knowledge_graph.json",
@@ -217,22 +70,352 @@
       "role": "runtime_knowledge",
       "bytes": 953273,
       "sha256": "9e73db954212216241b4b77d63088d4671fa017539e5309ee71e444b086a618b"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/store_manifest.json",
+      "role": "runtime_knowledge",
+      "bytes": 27527,
+      "sha256": "17f6d5e61519f81aaba6bbcfaa2cb63610d69833128a03643d82aa66dbae6110"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/quality_ledger.json",
+      "role": "runtime_knowledge",
+      "bytes": 1132,
+      "sha256": "44cf39460e7ed6761538e4c469bb1367801d40c278d720c8691b4bef72926a3a"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/near_duplicate_clusters.json",
+      "role": "runtime_knowledge",
+      "bytes": 2945710,
+      "sha256": "ae43a1bbb18965d3ffcb0fbb2f8b9e2dac3397fb3d328be4bd4d77a8eb8e191f"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/bm25_statistics_index.json",
+      "role": "runtime_knowledge",
+      "bytes": 21659315,
+      "sha256": "6e45c4e6ce142feaebf6f83962c5ba9cdff337a919030059d4933658bf799396"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0001.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16776408,
+      "sha256": "88f2575abc2aca505e613149abeca54cd25ec9e798a1ae75358712bba76099a9"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0002.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16774534,
+      "sha256": "3c0e52b1caf6d49c45b504241a4f10fb282495f403c1fd8f33428400f772b6fc"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0003.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16776721,
+      "sha256": "208445837a3c7b0f64c1da13f6713494636b3495907d08c11a6baf04cf6b95fa"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0004.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16773193,
+      "sha256": "d39f38bf81539d554e5aefa4a26b8d0ff17f965735ce6104769658d522deaa82"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0005.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16776250,
+      "sha256": "1502a09e470dd7b373a0c0f605780112adf755a26b1e51702c0827ea727c84d8"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0006.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16774620,
+      "sha256": "fb1c7ac65b280c2c7c82619ebe3151485362e6f6babe8f5802f101d502b34093"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0007.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16774748,
+      "sha256": "5d2d1cc40a823c32b0772917ae95010c28e88f4030330c33ccaec6188a151c71"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0008.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16775820,
+      "sha256": "c90148971312ae948bfe7931aff9eb179a2e772d60c80159ae0132816218174a"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0009.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16773401,
+      "sha256": "746f94f98f0a4d37f9180724fead83f6fab9773d594728be7430ddd01d682f0e"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0010.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16776959,
+      "sha256": "d2a93d2cd7b334d0643e838ac5eb082c519e804ed370579fe323ad7b3899cdf2"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0011.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16775312,
+      "sha256": "cd0b596bd9ba9bbb47e9c9cf77ac4042601c4f5ac114a1a2132924708e9259b9"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0012.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16776933,
+      "sha256": "be165b37898049240267c1565342afc828071421ce15fcd57ef2ddd205d87a42"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0013.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16775491,
+      "sha256": "432b9466cca1b9c3da6e28da6ae7d1c8f64edcc91795834fc2129a54bca2c8ac"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0014.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16776301,
+      "sha256": "f91953ed5ca24f961ed3a96cf5de00bd96e4330bdef072673e65d671a35ee68d"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0015.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16774674,
+      "sha256": "2c4c4569df23013b34a818bc22b8ee81981c249e1098d30da56e14910679abb9"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0016.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16776349,
+      "sha256": "2b33474b545184a9a2a57cdaee6f67d17599127211c76d02d4ca70077aa748b6"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0017.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16776835,
+      "sha256": "a09b984aa503398a89628027be198153646dd743acfe39ecffb10b8397950dc0"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0018.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16776459,
+      "sha256": "b1fdd0e6d5ace1589d70a9ce8e298b1dc5b319a5d56b21e8f6d11f7c8f9f1dc7"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0019.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16776531,
+      "sha256": "9e810ad4b8f9d76c356c2ba1294e9fa0f0ef77b6b8bd6b287102644c0721a7b1"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0020.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16777101,
+      "sha256": "9c2659b8a68fbc5b14338c96867bca099d9b0f692cfc08cc5612fc611976f37a"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0021.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16776808,
+      "sha256": "d3a49f8377ef4a336282a1a34c08d37d6dafebafcce785ecd350aee17e25e6eb"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0022.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16775546,
+      "sha256": "1a733ab7e09fbd9678e65b2ef7ec826a25d233623612e7b9f86fd2dad7a481d6"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0023.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16777161,
+      "sha256": "9bfb5be531e7af03828827b828e3510e990bbd1b85ef6bebabec456ac3f4ec4c"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0024.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16775557,
+      "sha256": "186baeb533120f2f4ab852d7fb4d2a3990a912a650ab9e0c93cc6145f0bc60a2"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0025.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16775609,
+      "sha256": "a192e147d86a512a3e95fcf9d958256795f7314d2e68e347e82ad222c68edb72"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0026.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16776247,
+      "sha256": "463397eb1eedb1fa2d97459af4f5b60aa0debed3b1c07d0b5003208cb90d033f"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0027.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16776401,
+      "sha256": "0c3278a55a06d448dba1a5a66e6dce906a79c1815c3a79043d07930f56cfb671"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0028.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16774125,
+      "sha256": "3ae2ec5a9e9e689af60de064b4208b9c3849cb2584d338c1bf844b8a667c8a58"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0029.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16773926,
+      "sha256": "acd0d612e5bfc2fec99f347d5ddec2a7e90a668a84e32a282d477052c3829f43"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0030.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16775223,
+      "sha256": "6739fe7622f3a6ac12e0b9d10dcd1051a082a794b790a5845df89b3e4061a307"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0031.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16774950,
+      "sha256": "2c20940989d79196b415682ca6a8f6e9a8ed9d0cadc45791fcffb86aed1ca1b5"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0032.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16774704,
+      "sha256": "09b9011f8bcb421bf8bd0502b1ec0d6a81689556a1a27faad45c352cab0bd731"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0033.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16777212,
+      "sha256": "4194aac34c81ec28eb95a2cc15e2d9a700d57d84cdc15489167a5d5a46f7e839"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0034.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16775491,
+      "sha256": "38843c4a55a770c20f44445d372d5a587f37a0556be5cce8ba35265dab25632c"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0035.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16775657,
+      "sha256": "d83ca8c4d79b3aea272463c9315c91a51108fc778118a4cd11a51eaf34d6b8d4"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0036.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16776898,
+      "sha256": "b093e87fdd7e081ec59dfc2a5f0b33b39e40156af2dac1750720593a2442b99b"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0037.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16773283,
+      "sha256": "53dff8843c422a0b0ad8e5a0808dad8a73a06c3e2185eec18b42a0e9eb629b4c"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0038.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16776646,
+      "sha256": "b9828c7418cefc64676f43555649243cb57f4c13a497d2985c0c6c497e6185b5"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0039.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16776786,
+      "sha256": "c324f7c0015f5114de2d2d2ae9765cd78172c05f406aa221a37817367a00dce4"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0040.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16775808,
+      "sha256": "4a8d4b7d837d77f2b7886a14ee63faa4636fd2a30a3701693c6617503534f85b"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0041.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16775191,
+      "sha256": "0eb8284f6938d3ad6e7889af50777b055e9b89b5e0a818594940fabeb6e1f2cf"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0042.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16776046,
+      "sha256": "83697c67d8bb9a96bdb1fcc3b4f859353363ab02c193d0ee3772ebb66054f3e1"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0043.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16774781,
+      "sha256": "cce212d4baf2cebc95b45fb302c3798d9ff6b490b133a2fc6022bd3369ffb78d"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0044.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16776318,
+      "sha256": "5efd678a1c6c22d9f32419f2daa0842321d59aecc3ecf75502b26511e10dd516"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0045.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16773949,
+      "sha256": "84236859ebed83cd89149f0841c60d5d382e71ab0371c0916bccb205864e6dcc"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0046.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16775625,
+      "sha256": "8a6626869e05eb4a42a0f73336ff170a98b80a1f8cb587214ac1199a0262d205"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0047.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16773622,
+      "sha256": "d13af8bf4b03ede5ed4918744b9633aead34d84d1f9819eccada91bf840cc5d9"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0048.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16773530,
+      "sha256": "29e64ff51109d98d276c06986b5d0026c3d52220adcb41ff8799863f0f066a94"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0049.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16774223,
+      "sha256": "bc548fe8851b2520f0b53b96957f8fdc840b3a4d2d1e182cf58ad8191528521a"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0050.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 16773178,
+      "sha256": "feefd544fcaccab6c3b762ede0f1b829f4676180361cb32a41d0ec775d4f7dd5"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/us_nrcs/shards/nrcs-0051.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 616343,
+      "sha256": "715d556f867415445d0b83e6ddea6bbe3b3f3e61587aae96dd504f66d90d5984"
     }
   ],
-  "runtime_knowledge_bytes": 99925375,
+  "runtime_knowledge_bytes": 872423068,
   "runtime_policies": [],
   "runtime_assets": [
     {
       "path": "src/agronomy_agent",
-      "file_count": 154,
-      "bytes": 5162639,
-      "sha256": "27a8b01c52554bde3890ab888ce8c20eda7d616d7b12a68edb1d4a4a51975886"
+      "file_count": 153,
+      "bytes": 5454178,
+      "sha256": "32e80c5d3a91e5c977ac48c7bc98fba285105704f8cd8da5d02e18a7eb47f012"
     },
     {
       "path": "frontend/src",
-      "file_count": 70,
-      "bytes": 1083097,
-      "sha256": "3ba439bb2b33c05067eac915e92c4b17eb688628d90e82639cec635491692274"
+      "file_count": 73,
+      "bytes": 1142442,
+      "sha256": "b2b9fd035c875d9f38ecf82fe37cc058e880a7e1ba74a892ef97214e0996b3be"
     },
     {
       "path": "frontend/public",
@@ -242,66 +425,69 @@
     },
     {
       "path": "scripts",
-      "file_count": 81,
-      "bytes": 1021550,
-      "sha256": "41d269c828d8db774cb4ddc4f596e25e9c12bb6e4725799eba4ddba176937d5c"
+      "file_count": 112,
+      "bytes": 1618861,
+      "sha256": "0f3c54b44c0209a27837664373bce88f9711c23f8559b5fcac8ad84940e812f5"
     },
     {
       "path": "configs",
-      "file_count": 58,
-      "bytes": 108856,
-      "sha256": "00f702658a32633e2555f58be03c15e9b83759ca623ee1ce35807fddadeb1de0"
+      "file_count": 79,
+      "bytes": 226367,
+      "sha256": "4ac138f5d3104746d89ccf95d253cb4db707d8357b636e28a41f6b3e3df46736"
     },
     {
       "path": "data/manifests",
-      "file_count": 11,
-      "bytes": 190194,
-      "sha256": "c06aa0ff70f97ea78fec3bc94fcaa8da02e8f521527830544bd746692f2b802b"
+      "file_count": 27,
+      "bytes": 19425019,
+      "sha256": "6b0b8582677f8fe02d7ef90329a3bb9c77501150262a2bf4d462399b6a9936c4"
     },
     {
       "path": "data/eval",
-      "file_count": 28,
-      "bytes": 2366457,
-      "sha256": "1a7e6d006543aeb60a41ee1513fd44b33af05c690dc3ca345b2ce550e26dfd78"
+      "file_count": 37,
+      "bytes": 3009846,
+      "sha256": "6bd92835dd8756fbd48b8833b22006d4d01fdea304280eb9a7a1854f8dcbf8ad"
     },
     {
       "path": "data/snapshots",
       "file_count": 4,
-      "bytes": 34829467,
-      "sha256": "5e6455c12f13ede4e12cd4755dad1c5c726cf2bdf98dd85baf3e863bff84d027"
+      "bytes": 34829439,
+      "sha256": "6bb57f95a1d4d62ed3c096ee66fc64480134ba430c88d3585e1c0aced848df45"
     },
     {
       "path": "docs/public",
-      "file_count": 31,
-      "bytes": 1478912,
-      "sha256": "a873acb2c1403e349fcce462c94afc38e8afcab002b7d43bff9835caf61b1e96"
+      "file_count": 84,
+      "bytes": 8734979,
+      "sha256": "65bf981dae7b56a486d7c63f8b109017556c157751e151b972412d027fec0294"
     }
   ],
   "geo_cache_seed": {
     "path": "data/derived/geo_cache",
-    "file_count": 0,
-    "bytes": 0,
-    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    "file_count": 606,
+    "bytes": 10868679,
+    "sha256": "627442546f439f392c067e354921e83b9a9ab00faeb1177b225c7e483239b8b3"
   },
   "bundled_geo_layers": {
     "path": "data/derived/geo_layers",
     "file_count": 8,
     "bytes": 32805,
-    "sha256": "de958f674e8a5818d0c9c841033b9cb8be6e05e4d8f77634f98cbbadf96e84c7"
+    "sha256": "de958f674e8a5818d0c9c841033b9cb8be6e05e4d8f77634f98cbbadf96e84c7",
+    "content_class": "lineage_manifests_only",
+    "runtime_layer_assets_included": false,
+    "install_authority": "data/manifests/offline_spatial_profiles_v1.json"
   },
   "benchmark_evidence": [],
   "control_files": [
     {
-      "path": "configs/rag_governed_runtime_v1.yaml",
+      "path": "configs/rag.yaml",
       "role": "runtime_control",
-      "bytes": 2397,
-      "sha256": "ea04348fc109b028fcc98acabec3ce38ce5bfabf507a6321f87870ef086f0abc"
+      "bytes": 2575,
+      "sha256": "8f45880dbadf368848d52251aaafb24e25b17d9baa7923aa7707f6880fc04b91"
     },
     {
-      "path": "configs/model_gemma4_e2b_interface_v2.yaml",
+      "path": "configs/model.yaml",
       "role": "runtime_control",
-      "bytes": 1359,
-      "sha256": "3a078b5351c3655bff793c44c6edbb488f655f6ca623a2d8f03a8954d818d20e"
+      "bytes": 1357,
+      "sha256": "bee80fa9403b29bf1e42ec399a02bf895ca17fc6063ac7d5ee972cc496027afe"
     },
     {
       "path": "LICENSE",
@@ -319,7 +505,7 @@
       "path": "Containerfile",
       "role": "runtime_control",
       "bytes": 3921,
-      "sha256": "a621bd01e04562133ce58fb767e2d69cb08aacb78e100e8395f20fafb994f60f"
+      "sha256": "0fe7ebf225817f3516530fda57b7b6f542bdc833e936c8e83e42c4b6066501a2"
     },
     {
       "path": "Containerfile.overlay",
@@ -330,8 +516,8 @@
     {
       "path": ".dockerignore",
       "role": "runtime_control",
-      "bytes": 3780,
-      "sha256": "ac004a12f51ea75c2501514b420f97486788f9769425cb474b8597abe7405b0c"
+      "bytes": 2516,
+      "sha256": "2c9438c21234b3214bb8f01b62e8500f598d14108d251095fffeffe482ceb384"
     },
     {
       "path": "requirements-container.txt",
@@ -342,8 +528,8 @@
     {
       "path": "pyproject.toml",
       "role": "runtime_control",
-      "bytes": 808,
-      "sha256": "4a4365c4580a24220f72afd537501d8b8465bbea58d6c1c04a90ec3a75fca99f"
+      "bytes": 1015,
+      "sha256": "b64b04a88df2e5af83e829bba8c309a53bc1749e4cb36a561ee5473e957c120d"
     },
     {
       "path": "docker-compose.edge.yml",
@@ -378,14 +564,14 @@
     {
       "path": "frontend/vite.config.ts",
       "role": "runtime_control",
-      "bytes": 1161,
-      "sha256": "42cc63899ff37019fa4afc1ff36726ec7732ed3630872dba99a9f11474ad573a"
+      "bytes": 1435,
+      "sha256": "9437b51d9bd845c0e5bbcdd504f7c9ad463d72bd07166638b9e7e99bda0d02fe"
     },
     {
       "path": "container/.env.example",
       "role": "runtime_control",
-      "bytes": 1893,
-      "sha256": "1cd9cce5c4f2710b8e3493277efc448a291e75ccc9030b0e96addd1f76a482a7"
+      "bytes": 1906,
+      "sha256": "e471bbb3587708214a441d0e6d09fa6f4db929f110edf1e139856fce4d1c7e52"
     },
     {
       "path": "container/runtime-defaults.env",
@@ -396,8 +582,8 @@
     {
       "path": "container/README.md",
       "role": "runtime_control",
-      "bytes": 8638,
-      "sha256": "8a73f827e84a388b078c28973ee8e70a62ffd385f4b2dc07da8bb51b6ba9fc73"
+      "bytes": 4718,
+      "sha256": "1e5d9fa221747f97f034a70680b801f47f83105d3517f12fc9c37281d0432ba0"
     },
     {
       "path": "container/runtime-common.sh",
@@ -427,7 +613,7 @@
       "path": "container/model-host.sh",
       "role": "runtime_control",
       "bytes": 8132,
-      "sha256": "9b75e28eb91ed4743e097c06c6fa276e9223b6b55b4c8fe17a654400a95b1092"
+      "sha256": "b3a453217ae86a17914a1865c63372e8af548ba8d5e83366aa40e64cae771415"
     },
     {
       "path": "container/apple.sh",
@@ -474,14 +660,14 @@
     {
       "path": "data/manifests/canada_agronomy_sources.json",
       "role": "runtime_control",
-      "bytes": 93983,
-      "sha256": "d00074a6aab76678a5f21bc4839b1594d60f0f6ebd908349f8a2488f37827829"
+      "bytes": 108568,
+      "sha256": "f539619f941d10e1650123d274291beffaf29b4016ae5d2d552671d66cdd8ee2"
     },
     {
       "path": "data/manifests/canada_geospatial_sources.json",
       "role": "runtime_control",
-      "bytes": 22240,
-      "sha256": "3ec2c4efbb7eb55996588b71931e5dd156b68f08107231ccd21c6c35d7b89f6e"
+      "bytes": 29540,
+      "sha256": "fd0850224615baba61b86841d41466bac16cbaa03907307d51230a2b996ea17f"
     },
     {
       "path": "data/manifests/source_licensing_matrix.json",
@@ -492,8 +678,8 @@
     {
       "path": "data/manifests/runtime_corpus_policy.json",
       "role": "runtime_control",
-      "bytes": 12118,
-      "sha256": "80a8d9413129fe2b04606771e899abb06dcb4d9b731f5f75b9d66008566b155f"
+      "bytes": 44170,
+      "sha256": "a322ee54efaf01496c48e346df472f273c348a33f31431022a56b05892d8dcfb"
     }
   ]
 }

@@ -118,8 +118,8 @@ const bootConfig = {
   modes: ['baseline', 'agronomic_rag', 'mock'],
   models: ['mock'],
   model_profiles: [{ id: 'mock', role: 'test', max_tokens: 120 }],
-  rag_configs: ['configs/rag_final_mvp.yaml'],
-  default_rag_config: 'configs/rag_final_mvp.yaml',
+  rag_configs: ['configs/rag_governed_runtime_v2.yaml'],
+  default_rag_config: 'configs/rag_governed_runtime_v2.yaml',
   network: { mode: 'online', external_calls_allowed: true, telemetry_enabled: false },
 }
 
@@ -1243,6 +1243,10 @@ describe('Open Agronomy map upload workflow', () => {
     render(<OpenAgronomyApp />)
 
     await screen.findByText(/Regional context refreshed: AAFC Alberta Detailed Soil Survey AB_SOIL_ABD192014361 matched at 100% confidence/i)
+    // Let the initial field-bound weather request settle before changing the geometry.
+    // Otherwise it can complete during the draft/cancel interaction and leave React's
+    // asynchronous state update outside the test's observed work.
+    await screen.findByTestId('map-nasa-power-summary')
     const map = await screen.findByTestId('mock-leaflet-map')
     expect(map).toHaveAttribute('data-first-lon', '-113.608')
 
@@ -1255,9 +1259,11 @@ describe('Open Agronomy map upload workflow', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
 
-    expect(screen.queryByRole('button', { name: 'Save edits' })).not.toBeInTheDocument()
-    expect(screen.getByTestId('mock-leaflet-map')).toHaveAttribute('data-first-lon', '-113.608')
-    expect(screen.getByText(/Field edits cancelled\. The prior geometry and map context were restored\./i)).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Save edits' })).not.toBeInTheDocument()
+      expect(screen.getByTestId('mock-leaflet-map')).toHaveAttribute('data-first-lon', '-113.608')
+      expect(screen.getByText(/Field edits cancelled\. The prior geometry and map context were restored\./i)).toBeInTheDocument()
+    })
   })
 
   it('lets reviewers select a different uploaded feature and refreshes regional context from that geometry', async () => {
@@ -1752,7 +1758,7 @@ describe('Open Agronomy map upload workflow', () => {
       system_state: {
         mode: 'agronomic_rag',
         model_id: 'mlx-community/gemma-4-e2b-it-4bit',
-        rag_config: 'configs/rag_governed_runtime_v1.yaml',
+        rag_config: 'configs/rag_governed_runtime_v2.yaml',
         prompt_version: 'conference',
         model_identity: {
           schema_version: 'open_agronomy_agent.model_identity_contract.v1',

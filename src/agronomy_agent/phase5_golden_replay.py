@@ -99,7 +99,7 @@ def _tool_names(tools: Any) -> list[str]:
     names = []
     for tool in tools or []:
         if isinstance(tool, dict):
-            value = tool.get("name") or tool.get("tool_name")
+            value = tool.get("name") or tool.get("tool_name") or tool.get("tool_id")
         else:
             value = str(tool)
         if value:
@@ -117,4 +117,3 @@ def _string_list(value: Any) -> list[str]:
 
 def _row_id(row: dict[str, Any]) -> str:
     return str(row.get("eval_id") or row.get("id") or row.get("trace_id") or "unknown")
-
