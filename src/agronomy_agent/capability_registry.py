@@ -1315,7 +1315,15 @@ def _public_adapter_specs() -> list[ToolSpec]:
                     # tests currently prove the executor/surface contracts, not
                     # end-to-end conversational selection and final-answer use
                     # for every adapter. Do not promote that broader claim yet.
-                    natural_language_enabled=False,
+                    natural_language_enabled=source_card,
+                    natural_language_test_evidence=("tests/test_public_tool_adapters.py",) if source_card else (),
+                    selector_id="registered_public_source_card_selector_v1" if source_card else None,
+                    selector_ref=(
+                        "agronomy_agent.server.services.chat_service:_public_source_card_tasks"
+                        if source_card
+                        else None
+                    ),
+                    phases=("public_adapter_selection",) if source_card else (),
                 ),
                 surfaces=SurfaceBindings(
                     cli=cli_names,

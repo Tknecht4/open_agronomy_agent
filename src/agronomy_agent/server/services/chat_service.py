@@ -26,6 +26,8 @@ from agronomy_agent.agent import (
     system_prompt,
 )
 from agronomy_agent.query_context import is_source_grounded_question
+from agronomy_agent.capability_planner import select_public_capability_plan
+from agronomy_agent.router import classify_query, refine_query_route
 from agronomy_agent.answer_verifier import context_evidence_text, verify_answer
 from agronomy_agent.answer_safety import enforce_answer_safety_postconditions
 from agronomy_agent.evidence_contracts import (
@@ -1961,6 +1963,16 @@ def _run_public_adapter_preflight(
 ) -> list[dict[str, Any]]:
     if not isinstance(field_context, dict) or not field_context.get("enable_public_adapters"):
         return []
+    public_plan = select_public_capability_plan(
+        message,
+        route=refine_query_route(message, classify_query(message)),
+        field_context=field_context,
+    )
+    planned_source_cards = {
+        item.capability_id: item
+        for item in public_plan.invocations
+        if item.operation == "public_source_card"
+    }
     normalized_geometry = _public_adapter_geometry(field_context.get("geometry"))
     if normalized_geometry is not None:
         field_context = {**field_context, "geometry": normalized_geometry}
@@ -2034,7 +2046,11 @@ def _run_public_adapter_preflight(
                 records.append(_call_health_canada_pmra(ppls_search))
             else:
                 records.append(_call_epa_ppls(ppls_search, timeout=timeout))
-    source_card_tasks = _public_source_card_tasks(message, field_context)
+    source_card_tasks = [
+        task
+        for task in _public_source_card_tasks(message, field_context)
+        if str(getattr(task, "capability_id", "")) in planned_source_cards
+    ]
     if source_card_tasks:
         adapter_span = (
             profiler.span("agent.tools.public_source_cards", metadata={"count": len(source_card_tasks)})
@@ -2042,7 +2058,14 @@ def _run_public_adapter_preflight(
             else nullcontext()
         )
         with adapter_span:
-            records.extend(_run_public_adapter_tasks(source_card_tasks))
+            source_records = _run_public_adapter_tasks(source_card_tasks)
+            for record in source_records:
+                invocation = planned_source_cards.get(str(record.get("name") or ""))
+                if invocation is not None:
+                    record["invocation_id"] = invocation.invocation_id
+                    record["planning_context_id"] = invocation.planning_context_id
+                    record["planner_version"] = invocation.planner_version
+            records.extend(source_records)
     return records
 
 
@@ -2108,7 +2131,11 @@ def _public_source_card_tasks(message: str, field_context: dict[str, Any]) -> li
     tasks: list[Callable[[], dict[str, Any]]] = []
 
     def add(name: str, callback: Callable[[], dict[str, Any]]) -> None:
-        tasks.append(lambda name=name, callback=callback: _call_public_source_card(name, callback))
+        def task(name: str = name, callback: Callable[[], dict[str, Any]] = callback) -> dict[str, Any]:
+            return _call_public_source_card(name, callback)
+
+        setattr(task, "capability_id", name)
+        tasks.append(task)
 
     if province == "SK":
         add(

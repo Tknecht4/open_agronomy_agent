@@ -100,6 +100,11 @@ def test_capability_claims_require_specific_execution_evidence() -> None:
     assert natural_language_ids == {
         *ROUTE_REQUIRED_CAPABILITY_IDS,
         "agronomic_calculator",
+        *{
+            spec.capability_id
+            for spec in registry.specs
+            if spec.kind == "source_card"
+        },
     }
     assert all(
         spec.planner.natural_language_test_evidence

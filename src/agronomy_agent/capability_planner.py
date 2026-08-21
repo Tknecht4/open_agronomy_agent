@@ -155,7 +155,39 @@ def build_planner_input(
 
 def plan_capabilities(planner_input: PlannerInput) -> CapabilityPlan:
     if planner_input.phase == "public_adapter_selection":
-        return _finish_plan(planner_input, (), clarification=None)
+        if not isinstance(planner_input.field_context, Mapping):
+            return _finish_plan(planner_input, (), clarification=None)
+        from agronomy_agent.server.services.chat_service import _public_source_card_tasks
+
+        registry = capability_registry()
+        selected_ids = tuple(
+            dict.fromkeys(
+                str(getattr(task, "capability_id", ""))
+                for task in _public_source_card_tasks(
+                    planner_input.question,
+                    dict(planner_input.field_context),
+                )
+                if str(getattr(task, "capability_id", ""))
+            )
+        )
+        invocations = tuple(
+            _invocation(
+                planner_input,
+                capability_id=spec.capability_id,
+                capability_version=spec.version,
+                operation="public_source_card",
+                inputs={"question_sha256": planner_input.question_sha256},
+                status="planned",
+                missing_inputs=(),
+                authority_role=spec.authority_role,
+                risk_class=spec.risk_class,
+                selector_id=str(spec.planner.selector_id or ""),
+            )
+            for capability_id in selected_ids
+            for spec in (registry.require(capability_id),)
+            if spec.kind == "source_card" and "public_adapter_selection" in spec.planner.phases
+        )
+        return _finish_plan(planner_input, invocations, clarification=None)
     if planner_input.arm_id == "full_minus_typed_tools":
         return _finish_plan(planner_input, (), clarification=None)
 
@@ -316,6 +348,37 @@ def select_guard_capability_ids(
     )
 
 
+def select_public_capability_plan(
+    question: str,
+    *,
+    route: Any,
+    field_context: Mapping[str, Any] | None,
+    arm_id: str = "production_full",
+) -> CapabilityPlan:
+    from agronomy_agent.decision_contract import build_decision_contract
+    from agronomy_agent.evidence_contracts import question_frame_from_runtime
+
+    registry = capability_registry()
+    contract = build_decision_contract(question, route, field_context=field_context)
+    frame = question_frame_from_runtime(
+        question=question,
+        route=route,
+        query_context={},
+        decision_contract=contract.to_dict(),
+        field_context=field_context,
+    )
+    planner_input = build_planner_input(
+        question,
+        question_frame=frame.to_dict(),
+        decision_contract=contract.to_dict(),
+        capability_registry_sha256=stable_sha256([spec.as_record() for spec in registry.specs]),
+        arm_id=arm_id,
+        phase="public_adapter_selection",
+        field_context=field_context,
+    )
+    return plan_capabilities(planner_input)
+
+
 def _invocation(
     planner_input: PlannerInput,
     *,
@@ -400,4 +463,5 @@ __all__ = [
     "build_planner_input",
     "plan_capabilities",
     "select_guard_capability_ids",
+    "select_public_capability_plan",
 ]
