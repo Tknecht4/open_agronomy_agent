@@ -1,0 +1,114 @@
+{
+  "schema_version": "open_agronomy_agent.two_gemma_colab_assessment.v1",
+  "assessment_date": "2026-09-26",
+  "evaluated_commit": "d43ade76967644f6d4d3fc09176c45537b9b12af",
+  "branch": "codex/benchmark-repair-upgrade",
+  "benchmark": {
+    "benchmark_id": "open_agronomy_canadian_performance_v1_runtime_v2",
+    "suite_path": "data/eval/open_agronomy_canadian_performance_v1.jsonl",
+    "suite_sha256": "5c3ce59195ac603d2dd8ec5f36f3672b3ee0c20227cdb4fd301dfe3848a83c63",
+    "suite_rows": 241,
+    "arms": ["raw_model", "kernel_only", "kernel_field_context", "full_system"],
+    "trials": ["trial-001", "trial-002", "trial-003"],
+    "expected_response_count": 5784,
+    "observed_response_count": 5784,
+    "status": "complete_exposed_development_regression_nonclaim"
+  },
+  "runtime": {
+    "provider": "Google Colab CLI",
+    "accelerator": "NVIDIA A100-SXM4-40GB",
+    "driver": "580.82.07",
+    "cuda_toolkit": "12.8",
+    "python": "3.13.15",
+    "mlx": "0.32.2",
+    "mlx_lm": "0.31.3",
+    "source_capsule_sha256": "6278c28a988e1004640c78793889b829fdc8019ec27108e747ca446f9f18eba7",
+    "eval_source_supplement_sha256": "d25e275e59d11c954db6c9f195a2c842b34a68f971756a8a94ff3c50c0c858be",
+    "compute_unit_balance_before_a100_assessment": 197.93,
+    "compute_unit_balance_after_a100_assessment": 170.78,
+    "measured_compute_unit_delta": 27.15
+  },
+  "models": {
+    "gemma3_270m_current": {
+      "model_id": "mlx-community/gemma-3-270m-it-4bit",
+      "revision": "ff1143e3a10547c9f2129e94ca37059b096b23f4",
+      "model_config_sha256": "9e330974dad5a651fc6eccdac46320f8d2ca81425ca6f98a2f17b28bc5b111d0",
+      "weight_sha256": "bf8b442cff5dd7c9ac6b5695310d5b66a4d0a4c3780f5c774fb90cd0c352bd9d",
+      "full_system_objective_calculation_accuracy": 100.0,
+      "full_system_official_source_lexical_proxy_mean": 49.9027272727,
+      "raw_model_official_source_lexical_proxy_mean": 43.6006060606,
+      "full_system_exact_three_trial_repeatability": 1.0,
+      "full_system_fallback_or_degraded_per_trial": [148, 148, 148],
+      "production_profile_recommendation": "not_selected_high_fallback_dependence"
+    },
+    "gemma4_e2b_current": {
+      "model_id": "mlx-community/gemma-4-e2b-it-4bit",
+      "revision": "238767527555cb75a05732a84dff5d6ba0dd6809",
+      "model_config_sha256": "c6e1e37e86542d0af8e77831a6c97db6413f13eeff82b3170bd207954b2d45de",
+      "weight_sha256": "038e39a37a7667373d2c3991375446b10c96ae1d717a68674870343db376b76e",
+      "full_system_objective_calculation_accuracy": 100.0,
+      "full_system_official_source_lexical_proxy_mean": 58.0737373737,
+      "raw_model_official_source_lexical_proxy_mean": 61.23,
+      "full_system_exact_three_trial_repeatability": 0.88796680498,
+      "full_system_variant_cases": 27,
+      "full_system_fallback_or_degraded_per_trial": [98, 100, 100],
+      "production_profile_recommendation": "retain_as_candidate_not_competence_approved"
+    }
+  },
+  "system_interface": {
+    "calculation_cases": "16/16 in every full-system trial",
+    "french_cases": "12/12 in every full-system trial",
+    "guard_routes": "154/154 in every full-system trial",
+    "generation_input_lineage_rate": 1.0,
+    "field_context_binding_rate": 1.0,
+    "route_trace_rate": 1.0,
+    "context_admission_trace_rate": 1.0,
+    "evidence_lineage_rate": 1.0,
+    "retention_bundles_verified": 6,
+    "canonical_responses_per_bundle": 964
+  },
+  "trial_archives": [
+    {"model_key": "gemma3_270m_current", "trial_id": "trial-001", "elapsed_seconds": 2849.729, "sha256": "286ee43192e7077d339ba064032b0530986ec039380df725188e517e5a7eba7e", "retention_bundle_id": "16a64728977f7af03d8a4a0d2c179369e1934d60b7efe5f5e2d59ad9308134f1"},
+    {"model_key": "gemma3_270m_current", "trial_id": "trial-002", "elapsed_seconds": 2784.452, "sha256": "a7217d2b0327d2543e27421f2629ce95860eff823d8c7774bb8f08ed7a7a3e5a", "retention_bundle_id": "1b851075c7d50da5234fc8d9506a15190093d9f364b8eed5f1e74f5eb749c2ad"},
+    {"model_key": "gemma3_270m_current", "trial_id": "trial-003", "elapsed_seconds": 2800.008, "sha256": "56488f7248caa1476eb4f7eaf055c693dd2119ebc740f7449488bab41af4c5c1", "retention_bundle_id": "454880e3257d047ed79b923d544dcd585e584d7dee042b143ca41c95fa662e8c"},
+    {"model_key": "gemma4_e2b_current", "trial_id": "trial-001", "elapsed_seconds": 3910.575, "sha256": "647c3ac403dcba7e8cac3f39e9b5a743f892fd8123d88af688d603a0e6cf83c9", "retention_bundle_id": "335fad9247463592779700f065fcb2a2308584e6f93f4fa2a5f8fefca917eba9"},
+    {"model_key": "gemma4_e2b_current", "trial_id": "trial-002", "elapsed_seconds": 3730.211, "sha256": "97b2bad3465798a00314f3a1f981642b01d410c2c7db31ce3e89dfaca9aa674f", "retention_bundle_id": "aa4c514019a471f0561018fca6dbea295a20572df9f03b7595224cab7e2002f5"},
+    {"model_key": "gemma4_e2b_current", "trial_id": "trial-003", "elapsed_seconds": 3719.288, "sha256": "70ec6554e0ad45858076bdd378143720c995dd807a5c62b160502adcd7ab0385", "retention_bundle_id": "5c697e6f7c61fd468749b612b8750a5247d78a34d23a28133119bd0035bcd201"}
+  ],
+  "quality_gates": {
+    "backend_tests": "992 passed",
+    "frontend_tests": "205 passed",
+    "frontend_typecheck": "pass",
+    "frontend_build": "pass",
+    "strict_docs_build": "pass",
+    "rendered_docs_audit": "pass",
+    "clean_checkout_audit": "pass",
+    "guard_route_replay": "154/154 pass",
+    "retrieval_recall_at_1": 0.8095238095,
+    "retrieval_recall_at_3": 0.8571428571,
+    "retrieval_recall_at_7": 0.9047619048,
+    "retrieval_ndcg_at_7": 0.860076491,
+    "source_locator_validity_rate": 1.0,
+    "jurisdiction_authority_compliance_rate": 1.0,
+    "successor_corpus_rows_with_complete_locator_and_quality_ledger": 221344
+  },
+  "observed_anomalies": [
+    "Gemma 4 full-system answers were byte-identical across all three trials for 214/241 cases; 27 low/medium-risk cases varied while every non-full arm was 241/241 repeatable.",
+    "Gemma 4 full-system official-source lexical proxy was lower than its raw-model proxy; this diagnostic proxy is not semantic answer quality.",
+    "Verifier fallback-or-degraded dependence remained high for both models and was substantially higher for Gemma 3 270M.",
+    "The controller began one unintended duplicate Gemma 4 trial after the 270M matrix; it was cancelled before acceptance, excluded from the six intended trial archives, and is not part of reported metrics."
+  ],
+  "assessment": {
+    "qa_qc_branch_merge": "go_with_explicit_nonclaim_release_notes",
+    "production_competence_claim": "blocked",
+    "gemma4_production_candidate": "retain_candidate_status_only",
+    "gemma3_270m_production_candidate": "not_recommended",
+    "required_follow_up": [
+      "Investigate the 27 Gemma 4 full-system repeatability failures, concentrated in source-bound and verifier-preserve/rewrite paths.",
+      "Reduce or explain verifier fallback-or-degraded dependence before a production-quality claim.",
+      "Complete calibrated semantic controls and independent agronomist review before comparing answer quality or claiming competence.",
+      "Keep sealed-v3, deployment, autonomous-action, field-outcome, and population-generalization gates unfulfilled."
+    ]
+  },
+  "claim_boundary": "This is current-code exposed development-regression and system-interface evidence. It is not sealed-v3, independent agronomist adjudication, field validation, deployment approval, or a competence claim."
+}
