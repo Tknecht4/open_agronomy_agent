@@ -1,0 +1,113 @@
+name: Mac desktop candidate
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/macos-app.yml"
+      - "macos_app/**"
+      - "scripts/build_macos_app.py"
+      - "scripts/smoke_macos_app.py"
+      - "scripts/smoke_macos_first_run.py"
+      - "scripts/smoke_macos_launcher.py"
+      - "scripts/smoke_macos_offline.py"
+      - "scripts/run_cockpit.py"
+      - "src/agronomy_agent/**"
+      - "frontend/**"
+      - "configs/**"
+      - "data/**"
+      - "requirements-macos-app-*.txt"
+      - "requirements-container.txt"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-app-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-smoke:
+    runs-on: macos-26
+    timeout-minutes: 90
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - name: Check out the candidate
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Set up Python 3.12
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+      - name: Set up Node 20
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Record builder capacity
+        run: |
+          uname -sm
+          sw_vers -productVersion
+          df -h .
+      - name: Install pinned candidate dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -c requirements-macos-app-constraints.txt -r requirements-macos-app-runtime.txt
+          python -m pip install --editable .
+          python -m pip install -r requirements-macos-app-build.txt
+          python -m pip install -c requirements-macos-app-constraints.txt pytest pytest-xdist
+      - name: Install frontend build dependencies
+        run: npm ci
+        working-directory: frontend
+      - name: Verify desktop source contracts
+        run: |
+          PYTHONPATH=src python -m pytest -q -n 0 \
+            tests/test_macos_app_package.py tests/test_runtime_paths.py \
+            tests/test_desktop_local_auth.py tests/test_local_runtime_boundaries.py \
+            tests/test_run_cockpit_cleanup.py tests/test_field_lan_launch.py
+          cd frontend
+          npm run typecheck
+          npm test
+      - name: Build ad hoc Mac candidate
+        run: |
+          mkdir -p outputs/macos
+          python scripts/build_macos_app.py --preflight \
+            --output "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app"
+          python scripts/build_macos_app.py \
+            --output "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app"
+      - name: Smoke native first-run model installation
+        run: |
+          python -m scripts.smoke_macos_first_run \
+            --app "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app" \
+            --state-root "$HOME/Library/Application Support/OpenAgronomyAgent/desktop" \
+            --report "$GITHUB_WORKSPACE/outputs/macos/first-run-smoke.json"
+      - name: Smoke installed backend and pinned local model
+        run: |
+          python scripts/smoke_macos_app.py \
+            --app "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app" \
+            --state-root "$HOME/Library/Application Support/OpenAgronomyAgent/desktop" \
+            --preprovisioned \
+            --report "$GITHUB_WORKSPACE/outputs/macos/smoke.json"
+      - name: Smoke native launcher, browser pairing, Quit, and reopen
+        run: |
+          python scripts/smoke_macos_launcher.py \
+            --app "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app" \
+            --state-root "$HOME/Library/Application Support/OpenAgronomyAgent/desktop" \
+            --backend-report "$GITHUB_WORKSPACE/outputs/macos/smoke.json" \
+            --report "$GITHUB_WORKSPACE/outputs/macos/launcher-smoke.json"
+      - name: Smoke local answer with public egress denied
+        run: |
+          python -m scripts.smoke_macos_offline \
+            --app "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app" \
+            --state-root "$HOME/Library/Application Support/OpenAgronomyAgent/desktop" \
+            --report "$GITHUB_WORKSPACE/outputs/macos/offline-smoke.json"
+      - name: Verify signature and archive candidate in runner
+        run: |
+          codesign --verify --deep --strict "outputs/macos/Open Agronomy.app"
+          ditto -c -k --sequesterRsrc --keepParent \
+            "outputs/macos/Open Agronomy.app" \
+            "outputs/macos/open-agronomy-macos-app.zip"
+          shasum -a 256 "outputs/macos/open-agronomy-macos-app.zip"

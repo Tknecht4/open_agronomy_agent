@@ -1,9 +1,24 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+def _runtime_root(override: str | None) -> Path:
+    if override is None:
+        return Path(__file__).resolve().parents[2]
+    path = Path(override)
+    if not path.is_absolute():
+        raise ValueError("AGRONOMY_AGENT_RUNTIME_ROOT must be an absolute path")
+    root = path.resolve(strict=True)
+    if not root.is_dir() or not (root / "configs/runtime_profiles.json").is_file():
+        raise ValueError(
+            "AGRONOMY_AGENT_RUNTIME_ROOT must contain the runtime profile registry"
+        )
+    return root
+
+
+REPO_ROOT = _runtime_root(os.environ.get("AGRONOMY_AGENT_RUNTIME_ROOT"))
 
 
 def repo_path(value: str | Path) -> Path:
