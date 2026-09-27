@@ -1,0 +1,2 @@
+# Builder only; the installed Mac app does not need PyInstaller.
+pyinstaller==6.22.3

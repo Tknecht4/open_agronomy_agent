@@ -1,0 +1,9 @@
+# Candidate Apple Silicon app environment. Exact direct model packages match the
+# native product-path smoke on 2026-09-27; transitive resolution is still a
+# release receipt, not a portable hash lock.
+-r requirements-container.txt
+mlx==0.32.2
+mlx-lm==0.31.3
+mlx-vlm==0.7.3
+huggingface_hub==1.33.0
+transformers==5.17.0

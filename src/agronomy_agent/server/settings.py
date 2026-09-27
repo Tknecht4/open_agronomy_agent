@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import hashlib
+import ipaddress
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from agronomy_agent.paths import repo_path
 from agronomy_agent.agent import load_model_config
@@ -55,6 +57,7 @@ class ServerSettings:
     jwt_jwks_url: str | None = None
     allow_local_dev_auth: bool = True
     local_pairing_token_sha256: str | None = None
+    desktop_local_origin: str | None = None
     oidc_authorization_endpoint: str | None = None
     oidc_token_endpoint: str | None = None
     oidc_client_id: str | None = None
@@ -113,6 +116,42 @@ def _coerce_path(value: str) -> Path:
     return repo_path(value)
 
 
+def validate_desktop_local_auth(
+    *,
+    origin: str,
+    allow_local_dev_auth: bool,
+    pairing_token_sha256: str | None,
+    session_secret: str | None,
+) -> None:
+    parsed = urlsplit(origin)
+    try:
+        host = parsed.hostname
+        port = parsed.port
+        address = ipaddress.ip_address(host or "")
+    except ValueError as exc:
+        raise ValueError("desktop-local origin must use a numeric loopback HTTP host and explicit port") from exc
+    if (
+        parsed.scheme != "http"
+        or address not in (ipaddress.ip_address("127.0.0.1"), ipaddress.ip_address("::1"))
+        or port is None
+        or port < 1
+        or origin != f"http://{parsed.netloc}"
+        or parsed.username is not None
+        or parsed.password is not None
+    ):
+        raise ValueError("desktop-local origin must use a numeric loopback HTTP host and explicit port")
+    if allow_local_dev_auth:
+        raise ValueError("desktop-local mode requires local development authentication disabled")
+    if not pairing_token_sha256 or len(pairing_token_sha256) != 64:
+        raise ValueError("desktop-local mode requires a one-time pairing token hash")
+    try:
+        bytes.fromhex(pairing_token_sha256)
+    except ValueError as exc:
+        raise ValueError("desktop-local mode requires a valid pairing token hash") from exc
+    if not session_secret or len(session_secret) < 32:
+        raise ValueError("desktop-local mode requires a session secret of at least 32 characters")
+
+
 def build_settings(
     *,
     db_path: str | Path | None = None,
@@ -129,6 +168,7 @@ def build_settings(
     jwt_jwks_url: str | None = None,
     allow_local_dev_auth: bool | None = None,
     local_pairing_token_sha256: str | None = None,
+    desktop_local_origin: str | None = None,
     oidc_authorization_endpoint: str | None = None,
     oidc_token_endpoint: str | None = None,
     oidc_client_id: str | None = None,
@@ -237,6 +277,13 @@ def build_settings(
             raise ValueError(
                 "local pairing requires AGRONOMY_AGENT_OIDC_SESSION_SECRET with at least 32 characters"
             )
+    if desktop_local_origin is not None:
+        validate_desktop_local_auth(
+            origin=desktop_local_origin,
+            allow_local_dev_auth=local_dev_auth_enabled,
+            pairing_token_sha256=pairing_token_sha256,
+            session_secret=resolved_session_secret,
+        )
     telemetry_enabled = (
         otel_enabled
         if otel_enabled is not None
@@ -418,6 +465,7 @@ def build_settings(
         jwt_jwks_url=jwt_jwks_url or os.getenv("AGRONOMY_AGENT_JWT_JWKS_URL"),
         allow_local_dev_auth=local_dev_auth_enabled,
         local_pairing_token_sha256=pairing_token_sha256 or None,
+        desktop_local_origin=desktop_local_origin,
         oidc_authorization_endpoint=oidc_authorization_endpoint or os.getenv("AGRONOMY_AGENT_OIDC_AUTHORIZATION_ENDPOINT"),
         oidc_token_endpoint=oidc_token_endpoint or os.getenv("AGRONOMY_AGENT_OIDC_TOKEN_ENDPOINT"),
         oidc_client_id=oidc_client_id or os.getenv("AGRONOMY_AGENT_OIDC_CLIENT_ID"),
