@@ -20,7 +20,6 @@ final class OpenAgronomyDesktop: NSObject, NSApplicationDelegate, NSWindowDelega
     private var port = 0
     private var pairingToken = ""
     private var pairingURLUsed = false
-    private var workspaceOpenedAt: Date?
     private var isQuitting = false
 
     static func main() {
@@ -37,13 +36,41 @@ final class OpenAgronomyDesktop: NSObject, NSApplicationDelegate, NSWindowDelega
 
     private var backendExecutable: URL {
         Bundle.main.bundleURL.appendingPathComponent(
-            "Contents/Helpers/OpenAgronomyBackend/OpenAgronomyBackend"
+            "Contents/Helpers/OpenAgronomyBackend.app/Contents/MacOS/OpenAgronomyBackend"
         )
     }
 
     private var stateRoot: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("OpenAgronomyAgent/desktop", isDirectory: true)
+    }
+
+    private func writeStatus(_ phase: String, browserOpened: Bool? = nil) {
+        var row: [String: Any] = [
+            "schema_version": "open_agronomy_agent.macos_launcher_status.v1",
+            "phase": phase,
+            "launcher_pid": Int(ProcessInfo.processInfo.processIdentifier),
+            "backend_pid": backend?.isRunning == true ? Int(backend!.processIdentifier) : 0,
+            "port": port,
+            "updated_at": ISO8601DateFormatter().string(from: Date()),
+        ]
+        if !pairingToken.isEmpty {
+            row["launch_id"] = SHA256.hash(data: Data(pairingToken.utf8))
+                .map { String(format: "%02x", $0) }.joined()
+        }
+        if let browserOpened = browserOpened {
+            row["browser_opened"] = browserOpened
+        }
+        let path = stateRoot.appendingPathComponent("launcher-status.json")
+        do {
+            let data = try JSONSerialization.data(withJSONObject: row, options: [.sortedKeys])
+            try data.write(to: path, options: [.atomic])
+            try FileManager.default.setAttributes(
+                [.posixPermissions: 0o600], ofItemAtPath: path.path
+            )
+        } catch {
+            // The status receipt is diagnostic; the visible window remains authoritative.
+        }
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -69,6 +96,7 @@ final class OpenAgronomyDesktop: NSObject, NSApplicationDelegate, NSWindowDelega
             showFailure("Could not prepare private application state: \(error.localizedDescription)")
             return
         }
+        writeStatus("checking")
         checkModel()
     }
 
@@ -76,7 +104,9 @@ final class OpenAgronomyDesktop: NSObject, NSApplicationDelegate, NSWindowDelega
         isQuitting = true
         stopOwnedProcess(operation)
         stopOwnedProcess(backend)
+        backend = nil
         backendLog?.closeFile()
+        writeStatus("stopped")
         if lockDescriptor >= 0 {
             flock(lockDescriptor, LOCK_UN)
             close(lockDescriptor)
@@ -153,6 +183,7 @@ final class OpenAgronomyDesktop: NSObject, NSApplicationDelegate, NSWindowDelega
         detailLabel.stringValue = message
         setupButton.isEnabled = false
         openButton.isEnabled = false
+        writeStatus("error")
     }
 
     private func setBusy(_ status: String, detail: String = "") {
@@ -170,6 +201,7 @@ final class OpenAgronomyDesktop: NSObject, NSApplicationDelegate, NSWindowDelega
 
     private func checkModel() {
         setBusy("Checking the pinned local model…")
+        writeStatus("checking")
         runOneShot("status") { [weak self] code, output in
             guard let self = self, !self.isQuitting else { return }
             guard code == 0, let result = self.lastJSON(output),
@@ -184,6 +216,7 @@ final class OpenAgronomyDesktop: NSObject, NSApplicationDelegate, NSWindowDelega
                 self.statusLabel.stringValue = "One-time model setup required"
                 self.detailLabel.stringValue = "The pinned local model will download after you choose Install local model."
                 self.setupButton.isEnabled = true
+                self.writeStatus("setup_required")
             }
         }
     }
@@ -225,6 +258,7 @@ final class OpenAgronomyDesktop: NSObject, NSApplicationDelegate, NSWindowDelega
 
     @objc private func installModelClicked(_ sender: Any?) {
         setBusy("Installing the pinned local model…", detail: "This may take several minutes. Keep the app open.")
+        writeStatus("installing_model")
         runOneShot("install-model") { [weak self] code, output in
             guard let self = self, !self.isQuitting else { return }
             if code == 0, self.lastJSON(output)?["phase"] as? String == "ready" {
@@ -313,11 +347,14 @@ final class OpenAgronomyDesktop: NSObject, NSApplicationDelegate, NSWindowDelega
                     guard let self = self, !self.isQuitting,
                           self.backend === terminated else { return }
                     self.backend = nil
-                    self.showFailure("The local service stopped. Check the private backend log, then reopen the app.")
+                    self.showFailure("The local service stopped. Check the private backend log, then retry opening it.")
+                    self.openButton.title = "Retry opening"
+                    self.openButton.isEnabled = true
                 }
             }
             try process.run()
             backend = process
+            writeStatus("starting")
             pollHealth(attemptsRemaining: 180)
         } catch {
             showFailure("Could not start the local service: \(error.localizedDescription)")
@@ -327,7 +364,12 @@ final class OpenAgronomyDesktop: NSObject, NSApplicationDelegate, NSWindowDelega
     private func pollHealth(attemptsRemaining: Int) {
         guard !isQuitting else { return }
         guard attemptsRemaining > 0, backend?.isRunning == true else {
-            showFailure("The local service did not become ready. Check the private backend log in Application Support.")
+            let failedBackend = backend
+            backend = nil
+            stopOwnedProcess(failedBackend)
+            showFailure("The local service did not become ready. Check its private log, then retry opening it.")
+            openButton.title = "Retry opening"
+            openButton.isEnabled = true
             return
         }
         let url = URL(string: "http://127.0.0.1:\(port)/api/health")!
@@ -347,9 +389,17 @@ final class OpenAgronomyDesktop: NSObject, NSApplicationDelegate, NSWindowDelega
                    pairing?["launch_id"] as? String == expected {
                     self.spinner.stopAnimation(nil)
                     self.statusLabel.stringValue = "Ready on this Mac"
-                    self.detailLabel.stringValue = "Your fields and answers stay in local application state."
+                    self.detailLabel.stringValue = "Your fields and answers stay local. Reopen and reconnect starts a fresh private session."
+                    self.openButton.title = "Reopen and reconnect"
                     self.openButton.isEnabled = true
-                    self.openWorkspace()
+                    let opened = self.openWorkspace()
+                    if opened {
+                        self.writeStatus("ready", browserOpened: true)
+                    } else {
+                        self.showFailure("Could not open the browser workspace. Retry opening it.")
+                        self.openButton.title = "Retry opening"
+                        self.openButton.isEnabled = true
+                    }
                 } else {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         self.pollHealth(attemptsRemaining: attemptsRemaining - 1)
@@ -359,26 +409,20 @@ final class OpenAgronomyDesktop: NSObject, NSApplicationDelegate, NSWindowDelega
         }.resume()
     }
 
-    private func openWorkspace() {
+    @discardableResult private func openWorkspace() -> Bool {
         let suffix = pairingURLUsed ? "" : "/#pair=\(pairingToken)"
         let url = URL(string: "http://127.0.0.1:\(port)\(suffix.isEmpty ? "/" : suffix)")!
-        pairingURLUsed = true
-        workspaceOpenedAt = Date()
-        NSWorkspace.shared.open(url)
+        let opened = NSWorkspace.shared.open(url)
+        pairingURLUsed = opened
+        return opened
     }
 
     @objc private func openWorkspaceClicked(_ sender: Any?) {
-        guard backend?.isRunning == true else {
-            startBackend()
-            return
-        }
-        if let opened = workspaceOpenedAt, Date().timeIntervalSince(opened) > 7 * 60 * 60 {
+        if backend?.isRunning == true {
             stopOwnedProcess(backend)
             backend = nil
-            startBackend()
-            return
         }
-        openWorkspace()
+        startBackend()
     }
 
     @objc private func quitClicked(_ sender: Any?) {

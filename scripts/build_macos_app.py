@@ -246,8 +246,9 @@ def build(root: Path, output: Path, *, python: Path, version: str) -> dict[str, 
         (contents / "Info.plist").write_bytes(_info_plist(version))
         subprocess.run(
             [
-                str(python), "-m", "PyInstaller", "--onedir", "--noconfirm",
+                str(python), "-m", "PyInstaller", "--onedir", "--windowed", "--noconfirm",
                 "--name", "OpenAgronomyBackend",
+                "--osx-bundle-identifier", "io.openagronomy.desktop.backend",
                 "--distpath", str(stage / "backend-dist"),
                 "--workpath", str(stage / "pyinstaller-work"),
                 "--specpath", str(stage / "pyinstaller-spec"),
@@ -260,7 +261,7 @@ def build(root: Path, output: Path, *, python: Path, version: str) -> dict[str, 
             cwd=root,
             check=True,
         )
-        shutil.move(str(stage / "backend-dist/OpenAgronomyBackend"), helpers)
+        shutil.move(str(stage / "backend-dist/OpenAgronomyBackend.app"), helpers)
         subprocess.run(
             [
                 "swiftc", "-parse-as-library", str(root / "macos_app/Launcher.swift"),
@@ -269,9 +270,13 @@ def build(root: Path, output: Path, *, python: Path, version: str) -> dict[str, 
             check=True,
         )
         macho_count = _audit_macho_links(app)
-        subprocess.run(["codesign", "--force", "--deep", "--sign", "-", str(app)], check=True)
+        subprocess.run(
+            ["codesign", "--verify", "--deep", "--strict", str(helpers / "OpenAgronomyBackend.app")],
+            check=True,
+        )
+        subprocess.run(["codesign", "--force", "--sign", "-", str(app)], check=True)
         subprocess.run(["codesign", "--verify", "--deep", "--strict", str(app)], check=True)
-        if not (helpers / "OpenAgronomyBackend/OpenAgronomyBackend").is_file():
+        if not (helpers / "OpenAgronomyBackend.app/Contents/MacOS/OpenAgronomyBackend").is_file():
             raise ValueError("PyInstaller did not produce the backend executable")
         app.rename(output)
     except Exception:

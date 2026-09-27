@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-09-27T07:24:51+00:00",
+  "generated_at": "2026-09-27T07:44:15+00:00",
   "status": "pass",
-  "contract_sha256": "22b4c316bcece3ca8f8686e87c29b55ed6fab9d0c1c97eef62b9d8263ec35575",
+  "contract_sha256": "ccd088843707b1f99b3fa0b4d317dff4f5c4fc2ba52200210a3598c88cd12f44",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -425,15 +425,15 @@
     },
     {
       "path": "scripts",
-      "file_count": 124,
-      "bytes": 1682404,
-      "sha256": "2c41c8e5e505b2a29e11451a3b0a35e0b7d6f229eaae4ff2fde46c446b8da1f6"
+      "file_count": 125,
+      "bytes": 1690758,
+      "sha256": "c64d8d44b11ae5ba96ae2752cc024773023921229f1aeb2e116d06b9ea6b62e1"
     },
     {
       "path": "configs",
-      "file_count": 84,
-      "bytes": 249377,
-      "sha256": "2d45e9d1972f3172d24cd213fc303d8058ad9d2426a6317d0390ec8b115ccda8"
+      "file_count": 85,
+      "bytes": 252128,
+      "sha256": "c8fcfd06a0f5e53ef30b13f59c2afb8261196b74fdeb96e0f0720cf43936d903"
     },
     {
       "path": "data/manifests",

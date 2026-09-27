@@ -67,6 +67,8 @@ def test_model_receipt_matches_pinned_bytes_and_detects_drift(
     weight.write_bytes(b"original weights")
     monkeypatch.setattr(backend, "_model_contract", lambda _: ("public/model", "a" * 40, "f" * 64))
     monkeypatch.setattr(backend, "_snapshot", lambda *_: snapshot)
+    expected_files = backend._snapshot_files(snapshot, cache)
+    monkeypatch.setattr(backend, "_expected_model_files", lambda *_: expected_files)
 
     installed = backend.install_model(runtime, state, cache)
     assert installed["phase"] == "ready"
@@ -75,8 +77,24 @@ def test_model_receipt_matches_pinned_bytes_and_detects_drift(
     assert backend.verify_model_receipt(runtime, state, cache) == receipt
 
     weight.write_bytes(b"altered weights")
-    with pytest.raises(ValueError, match="snapshot bytes differ"):
+    with pytest.raises(ValueError, match="pinned asset manifest"):
         backend.verify_model_receipt(runtime, state, cache)
+    monkeypatch.setattr(backend.shutil, "disk_usage", lambda _: SimpleNamespace(free=1024))
+    with pytest.raises(ValueError, match="at least 6 GiB free"):
+        backend.install_model(runtime, state, cache)
+    assert json.loads((state / "receipts/model-install.json").read_text()) == receipt
+    attempts = (state / "receipts/model-install-attempts.jsonl").read_text().splitlines()
+    assert json.loads(attempts[-1])["reason"] == "cached snapshot did not match pinned asset identities"
+
+
+def test_expected_model_manifest_is_bound_to_reviewed_bytes() -> None:
+    root = Path(__file__).resolve().parents[1]
+    model_id, revision, _ = backend._model_contract(root)
+    files = backend._expected_model_files(root, model_id, revision)
+    assert len(files) == 10
+    assert next(row for row in files if row["path"] == "model.safetensors")["sha256"] == (
+        "038e39a37a7667373d2c3991375446b10c96ae1d717a68674870343db376b76e"
+    )
 
 
 def test_model_setup_stops_before_download_with_insufficient_space(
@@ -85,6 +103,7 @@ def test_model_setup_stops_before_download_with_insufficient_space(
     cache = tmp_path / "models/hub"
     cache.mkdir(parents=True)
     monkeypatch.setattr(backend, "_model_contract", lambda _: ("public/model", "a" * 40, "f" * 64))
+    monkeypatch.setattr(backend, "_expected_model_files", lambda *_: [{"path": "model.safetensors", "bytes": 7, "sha256": "a" * 64}])
     monkeypatch.setattr(backend, "_snapshot", lambda *_: (_ for _ in ()).throw(RuntimeError("missing")))
     monkeypatch.setattr(backend.shutil, "disk_usage", lambda _: SimpleNamespace(free=1024))
 

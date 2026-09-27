@@ -79,8 +79,15 @@ jobs:
         run: |
           python scripts/smoke_macos_app.py \
             --app "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app" \
-            --state-root "$RUNNER_TEMP/open-agronomy-macos-smoke" \
+            --state-root "$HOME/Library/Application Support/OpenAgronomyAgent/desktop" \
             --report "$GITHUB_WORKSPACE/outputs/macos/smoke.json"
+      - name: Smoke native launcher, browser pairing, Quit, and reopen
+        run: |
+          python scripts/smoke_macos_launcher.py \
+            --app "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app" \
+            --state-root "$HOME/Library/Application Support/OpenAgronomyAgent/desktop" \
+            --backend-report "$GITHUB_WORKSPACE/outputs/macos/smoke.json" \
+            --report "$GITHUB_WORKSPACE/outputs/macos/launcher-smoke.json"
       - name: Verify signature and archive candidate in runner
         run: |
           codesign --verify --deep --strict "outputs/macos/Open Agronomy.app"

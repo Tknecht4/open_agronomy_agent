@@ -50,7 +50,9 @@ hoc signature as Developer ID signing or notarization.
 Opening the app checks its bundled runtime manifest and the pinned model
 receipt. If the model is absent, the user chooses **Install local model**;
 setup checks disk, downloads the pinned revision, hashes all snapshot files,
-and writes a receipt. The app then starts the backend and opens the browser
+compares them with `configs/model_assets_gemma4_e2b_mlx.json`, and writes a
+receipt only after exact agreement. A corrupt cached snapshot is recorded and
+force-refetched; it cannot become the new expected version. The app then starts the backend and opens the browser
 workspace using a one-time fragment token. API/model readiness, browser
 rendering, and a real answer are separate checks.
 
@@ -64,12 +66,15 @@ operator contract.
 
 Run the focused desktop/auth tests, the repository's full backend/frontend/docs
 gates, a PyInstaller build on a clean macOS 26 arm64 host, and an installed-app
-smoke with no Homebrew/Python/Node/Docker dependencies. Exercise model setup,
-one real source-bound answer, offline behavior, restart persistence, port
-conflicts, Quit cleanup, and bundled file/model identity. Developer ID signing,
+smoke with no Homebrew/Python/Node/Docker dependencies. The CI path also launches
+the actual Swift app, checks default-browser pairing, and exercises Quit and
+reopen with a persisted session. Exercise model setup, one real source-bound
+answer, offline behavior, port conflicts, and bundled file/model identity.
+Developer ID signing,
 notarization, quarantine launch, and an update/rollback path are separate
 distribution gates.
 
-The cookie session currently expires after eight hours. The launcher restarts
-its owned backend and issues new pairing credentials when **Open workspace** is
-used after seven hours; background browser tabs do not renew themselves.
+The cookie session currently expires after eight hours. **Reopen and reconnect**
+restarts the owned backend and issues fresh pairing credentials, so an expired
+or deleted browser cookie can be recovered without quitting the app. This
+interrupts any in-flight answer; background browser tabs do not renew themselves.

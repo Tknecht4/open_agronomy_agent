@@ -104,7 +104,7 @@ def smoke(
     app: Path, state: Path, *, report: Path, model_cache: Path | None = None
 ) -> dict[str, Any]:
     app = app.resolve(strict=True)
-    backend = app / "Contents/Helpers/OpenAgronomyBackend/OpenAgronomyBackend"
+    backend = app / "Contents/Helpers/OpenAgronomyBackend.app/Contents/MacOS/OpenAgronomyBackend"
     runtime = app / "Contents/Resources/runtime"
     if not backend.is_file() or not (runtime / "frontend/dist/index.html").is_file():
         raise ValueError("app is missing its backend executable or production UI")
@@ -228,6 +228,7 @@ def smoke(
                 "pre_pair_status": anonymous,
                 "pair_status": paired,
                 "replay_status": replay,
+                "session_id": session_id,
                 "turn_status": turn_status,
                 "answer_sha256": hashlib.sha256(turn["answer"].encode()).hexdigest(),
                 "generation_tokens": generated,

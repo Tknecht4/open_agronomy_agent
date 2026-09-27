@@ -7,6 +7,7 @@ are explicit setup operations; serving resolves an already verified snapshot.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import hashlib
 import json
 import os
@@ -19,6 +20,8 @@ from typing import Any
 
 MODEL_RECEIPT_SCHEMA = "open_agronomy_agent.desktop_model_install.v1"
 RUNTIME_MANIFEST_SCHEMA = "open_agronomy_agent.macos_app_runtime.v1"
+MODEL_ASSET_MANIFEST = "configs/model_assets_gemma4_e2b_mlx.json"
+MODEL_ASSET_MANIFEST_SHA256 = "20eb23b66581b7d61ea66cb9d79f84a9f18de95844b96089a64ff814b06ee238"
 MIN_DOWNLOAD_FREE_BYTES = 6 * 1024**3
 
 
@@ -124,6 +127,46 @@ def _model_contract(runtime_root: Path) -> tuple[str, str, str]:
     return model_id, revision, _sha256(config_path)
 
 
+def _expected_model_files(runtime_root: Path, model_id: str, revision: str) -> list[dict[str, Any]]:
+    path = runtime_root / MODEL_ASSET_MANIFEST
+    if _sha256(path) != MODEL_ASSET_MANIFEST_SHA256:
+        raise ValueError("pinned model asset manifest bytes do not match the reviewed version")
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    if (
+        manifest.get("schema_version") != "open_agronomy_agent.pinned_model_assets.v1"
+        or manifest.get("repo_id") != model_id
+        or manifest.get("revision") != revision
+    ):
+        raise ValueError("pinned model asset manifest conflicts with the active model config")
+    files = manifest.get("files")
+    if not isinstance(files, list) or not files:
+        raise ValueError("pinned model asset manifest has no files")
+    expected: list[dict[str, Any]] = []
+    names: set[str] = set()
+    for row in files:
+        if not isinstance(row, dict):
+            raise ValueError("pinned model asset manifest contains an invalid file entry")
+        name = row.get("path")
+        size = row.get("bytes")
+        digest = row.get("sha256")
+        if (
+            not isinstance(name, str)
+            or not name
+            or Path(name).is_absolute()
+            or ".." in Path(name).parts
+            or name in names
+            or not isinstance(size, int)
+            or size <= 0
+            or not isinstance(digest, str)
+            or len(digest) != 64
+            or any(char not in "0123456789abcdef" for char in digest)
+        ):
+            raise ValueError("pinned model asset manifest contains an invalid file entry")
+        names.add(name)
+        expected.append({"path": name, "bytes": size, "sha256": digest})
+    return sorted(expected, key=lambda row: row["path"])
+
+
 def _snapshot(model_id: str, revision: str) -> Path:
     from agronomy_agent.agent import resolve_local_model_snapshot
 
@@ -157,6 +200,25 @@ def _receipt_path(state_root: Path) -> Path:
     return state_root / "receipts/model-install.json"
 
 
+def _record_model_mismatch(
+    state_root: Path, *, expected: list[dict[str, Any]], observed: list[dict[str, Any]] | None,
+    reason: str,
+) -> None:
+    path = state_root / "receipts/model-install-attempts.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    row = {
+        "schema_version": "open_agronomy_agent.desktop_model_install_attempt.v1",
+        "observed_at_utc": dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat(),
+        "status": "rejected",
+        "reason": reason,
+        "expected": expected,
+        "observed": observed,
+    }
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(row, sort_keys=True) + "\n")
+    path.chmod(0o600)
+
+
 def _write_receipt(state_root: Path, receipt: dict[str, Any]) -> None:
     path = _receipt_path(state_root)
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -174,25 +236,43 @@ def verify_model_receipt(runtime_root: Path, state_root: Path, model_cache: Path
         raise ValueError("model has not been installed through desktop setup")
     receipt = json.loads(path.read_text(encoding="utf-8"))
     model_id, revision, config_sha256 = _model_contract(runtime_root)
+    expected_files = _expected_model_files(runtime_root, model_id, revision)
     expected = {
         "schema_version": MODEL_RECEIPT_SCHEMA,
         "model_id": model_id,
         "revision": revision,
         "model_config_sha256": config_sha256,
+        "model_asset_manifest_sha256": MODEL_ASSET_MANIFEST_SHA256,
+        "files": expected_files,
     }
     if any(receipt.get(key) != value for key, value in expected.items()):
         raise ValueError("model install receipt does not match the active model contract")
     actual_files = _snapshot_files(_snapshot(model_id, revision), model_cache)
-    if receipt.get("files") != actual_files:
-        raise ValueError("model snapshot bytes differ from the install receipt")
+    if actual_files != expected_files:
+        raise ValueError("model snapshot bytes differ from the pinned asset manifest")
     return receipt
 
 
 def install_model(runtime_root: Path, state_root: Path, model_cache: Path) -> dict[str, Any]:
     model_id, revision, config_sha256 = _model_contract(runtime_root)
+    expected_files = _expected_model_files(runtime_root, model_id, revision)
+    force_download = False
     try:
         snapshot = _snapshot(model_id, revision)
+        observed_files = _snapshot_files(snapshot, model_cache)
+        if observed_files != expected_files:
+            _record_model_mismatch(
+                state_root, expected=expected_files, observed=observed_files,
+                reason="cached snapshot did not match pinned asset identities",
+            )
+            force_download = True
     except RuntimeError:
+        _record_model_mismatch(
+            state_root, expected=expected_files, observed=None,
+            reason="local pinned snapshot is absent or incomplete",
+        )
+        snapshot = None
+    if snapshot is None or force_download:
         free = shutil.disk_usage(model_cache).free
         if free < MIN_DOWNLOAD_FREE_BYTES:
             raise ValueError(
@@ -201,21 +281,32 @@ def install_model(runtime_root: Path, state_root: Path, model_cache: Path) -> di
             ) from None
         from huggingface_hub import snapshot_download
 
-        print(json.dumps({"phase": "downloading", "model_id": model_id, "revision": revision}), flush=True)
+        print(json.dumps({"phase": "downloading", "model_id": model_id, "revision": revision,
+                          "repairing_cache": force_download}), flush=True)
         try:
-            snapshot_download(repo_id=model_id, revision=revision, cache_dir=str(model_cache))
+            snapshot_download(
+                repo_id=model_id, revision=revision, cache_dir=str(model_cache),
+                force_download=force_download,
+            )
         except Exception as exc:
             raise RuntimeError(
                 "pinned model download failed; check the connection and retry setup"
             ) from exc
         snapshot = _snapshot(model_id, revision)
     files = _snapshot_files(snapshot, model_cache)
+    if files != expected_files:
+        _record_model_mismatch(
+            state_root, expected=expected_files, observed=files,
+            reason="downloaded snapshot did not match pinned asset identities",
+        )
+        raise ValueError("model snapshot differs from the pinned public file identities")
     receipt = {
         "schema_version": MODEL_RECEIPT_SCHEMA,
         "model_id": model_id,
         "revision": revision,
         "model_config_sha256": config_sha256,
-        "files": files,
+        "model_asset_manifest_sha256": MODEL_ASSET_MANIFEST_SHA256,
+        "files": expected_files,
     }
     _write_receipt(state_root, receipt)
     return {"phase": "ready", "model_id": model_id, "revision": revision, "file_count": len(files)}
