@@ -406,6 +406,7 @@
     "data/eval/production_foundations_development_v1.jsonl",
     "data/eval/production_foundations_confirmation_v1.jsonl",
     "data/eval/production_foundations_transfer_v1.jsonl",
+    "data/eval/production_foundations_topic_confirmation_v1.jsonl",
     "configs/benchmark_capability_conformance_v2.json",
     "docs/reviews/production-foundations-benchmark-20260927.md",
     "docs/reviews/production-foundations-efficacy-audit-20260927.md",
