@@ -72,7 +72,7 @@ vi.mock('./LeafletFieldMap', async () => {
 vi.mock('./FieldSyncPanel', async () => {
   const React = await import('react')
   return {
-    default: () => React.createElement('div', { 'data-testid': 'mock-field-sync-panel' }, 'record transfer'),
+    FieldSyncPanel: () => React.createElement('div', { 'data-testid': 'mock-field-sync-panel' }, 'record transfer'),
     SoilTestEntryPanel: () => null,
   }
 })
@@ -1750,14 +1750,21 @@ describe('Open Agronomy map upload workflow', () => {
       updatedAt: '2026-07-20T12:00:00Z',
       storageMode: 'account_workspace',
     }
+    const otherField = { ...storedField, id: 'field-context-2', field_context_id: 'field-context-2', name: 'South quarter' }
     const records: Array<Record<string, unknown>> = []
+    let rejectFirstRecord: ((error: Error) => void) | undefined
+    let releaseCorrection: (() => void) | undefined
+    let recordAttempts = 0
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       if (url === '/api/sessions?include_archived=true&include_turns=false') return jsonResponse([])
       if (url === '/api/configs') return jsonResponse(bootConfig)
       if (url === '/api/tools/public-adapter-readiness') return jsonResponse(adapterReadiness)
-      if (url === '/api/demo/fields') return jsonResponse({ ...emptyDemoFields, fields: [storedField] })
+      if (url === '/api/demo/fields') return jsonResponse({ ...emptyDemoFields, fields: [storedField, otherField] })
       if (url === '/api/demo/fields/field-context-1/events' && init?.method === 'POST') {
+        recordAttempts += 1
+        if (recordAttempts === 1) return new Promise<Response>((_resolve, reject) => { rejectFirstRecord = reject })
+        if (recordAttempts === 3) await new Promise<void>((resolve) => { releaseCorrection = resolve })
         const body = JSON.parse(String(init.body || '{}'))
         records.push({
           id: 'event-1',
@@ -1793,6 +1800,16 @@ describe('Open Agronomy map upload workflow', () => {
           boundary: 'Field records are append-only.',
         })
       }
+      if (url === '/api/demo/fields/field-context-2/history') return jsonResponse({
+        schema_version: 'open_agronomy_agent.demo_field_history.v4',
+        field: otherField,
+        event_count: 0,
+        events: [],
+        event_chain: { valid: true, event_count: 0, head_sha256: null, failure_count: 0 },
+        turn_count: 0,
+        turns: [],
+        boundary: 'Field records are append-only.',
+      })
       if (url === '/api/geo/priors') return jsonResponse(skPriors)
       if (url === '/api/tools/aafc-nasdi-agroclimate') return jsonResponse(nasdiConditions)
       return jsonResponse({})
@@ -1800,20 +1817,34 @@ describe('Open Agronomy map upload workflow', () => {
     vi.stubGlobal('fetch', fetchMock)
     render(<OpenAgronomyApp />)
 
-    expect(screen.queryByTestId('mock-field-sync-panel')).not.toBeInTheDocument()
     openPrimaryPage('Fields')
     fireEvent.click(await screen.findByText('North quarter'))
     openFieldTab('Records & soil tests')
     await screen.findByText('0 field records · 0 answers.')
-    expect(await screen.findByTestId('mock-field-sync-panel')).toBeInTheDocument()
     expect(screen.getByText(/Saved answers stay linked to the exact field snapshot/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Add record' }))
+    expect((screen.getByLabelText('When it happened') as HTMLInputElement).value).not.toBe('')
     fireEvent.change(screen.getByLabelText('What happened'), {
       target: { value: 'Standing water observed in the northwest corner.' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Add record' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save record' }))
+    fireEvent.submit(screen.getByRole('form', { name: 'Add field record' }))
+    expect(recordAttempts).toBe(1)
+    expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled()
+    const draftDate = (screen.getByLabelText('When it happened') as HTMLInputElement).value
+    fireEvent(screen.getByRole('dialog', { name: 'Add field record' }), new Event('cancel', { bubbles: true, cancelable: true }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await act(async () => { rejectFirstRecord?.(new Error('offline')) })
+    fireEvent.click(screen.getByRole('button', { name: 'Resume unsaved record' }))
+    expect(screen.getByLabelText('When it happened')).toHaveValue(draftDate)
+    expect(screen.getByLabelText('Record type')).toHaveValue('observation')
+    expect(within(screen.getByRole('dialog', { name: 'Add field record' })).getByRole('alert')).toHaveTextContent('Save not confirmed: offline')
+    expect(screen.getByLabelText('What happened')).toHaveValue('Standing water observed in the northwest corner.')
+    fireEvent.click(screen.getByRole('button', { name: 'Save record' }))
 
     expect(await screen.findByText('Standing water observed in the northwest corner.')).toBeInTheDocument()
-    expect(screen.getByText('Immutable record · aaaaaaaaaaaa')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Record details'))
+    expect(screen.getByText(/Immutable record · aaaaaaaaaa/)).toBeInTheDocument()
     const request = fetchMock.mock.calls.find(
       ([url, init]) => String(url) === '/api/demo/fields/field-context-1/events' && init?.method === 'POST',
     )
@@ -1822,6 +1853,25 @@ describe('Open Agronomy map upload workflow', () => {
       payload: { summary: 'Standing water observed in the northwest corner.' },
       provenance: { capture_method: 'user_entered', surface: 'fields_timeline' },
     })
+    fireEvent.click(screen.getByRole('button', { name: 'Correct' }))
+    expect(screen.getByLabelText('Record to correct')).toHaveValue('event-1')
+    fireEvent.change(screen.getByLabelText('What happened'), { target: { value: 'Corrected location: southwest corner.' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save correction' }))
+    await waitFor(() => expect(fetchMock.mock.calls.filter(([url, init]) => String(url) === '/api/demo/fields/field-context-1/events' && init?.method === 'POST')).toHaveLength(3))
+    const correctionRequest = fetchMock.mock.calls.filter(([url, init]) => String(url) === '/api/demo/fields/field-context-1/events' && init?.method === 'POST')[2]
+    expect(JSON.parse(String(correctionRequest?.[1]?.body))).toMatchObject({
+      event_type: 'correction',
+      corrects_event_id: 'event-1',
+      payload: { summary: 'Corrected location: southwest corner.', correction_kind: 'user_entered' },
+    })
+    fireEvent(screen.getByRole('dialog', { name: 'Correct field record' }), new Event('cancel', { bubbles: true, cancelable: true }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add record' })).toBeDisabled()
+    fireEvent.click(screen.getByText('South quarter'))
+    await act(async () => { releaseCorrection?.() })
+    openFieldTab('Records & soil tests')
+    expect(screen.queryByText('Corrected location: southwest corner.')).not.toBeInTheDocument()
+    expect(await screen.findByText('0 field records · 0 answers.')).toBeInTheDocument()
   })
 
   it('refreshes verified field-linked answer history after a streamed turn completes', async () => {

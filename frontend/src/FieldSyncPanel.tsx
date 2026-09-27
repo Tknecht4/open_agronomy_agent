@@ -1,5 +1,6 @@
-import { useState, type ChangeEvent, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { apiGet, apiPost } from './api'
+import { WorkspaceDialog } from './WorkspaceDialog'
 
 type SyncExport = {
   schema_version: 'open_agronomy_agent.field_event_sync.v1'
@@ -217,14 +218,29 @@ export function SoilTestEntryPanel({
   const [sourceQuality, setSourceQuality] = useState('user_transcribed_lab_report')
   const [labName, setLabName] = useState('')
   const [occurredAt, setOccurredAt] = useState('')
+  const [originalReportRetained, setOriginalReportRetained] = useState(false)
   const [saveStatus, setSaveStatus] = useState('')
+  const [open, setOpen] = useState(false)
+  const [pending, setPending] = useState(false)
+  const pendingRef = useRef(false)
+  const mountedRef = useRef(false)
+  const fieldIdRef = useRef(fieldContextId)
+  fieldIdRef.current = fieldContextId
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (pendingRef.current || !fieldContextId) return
+    const targetFieldId = fieldContextId
+    pendingRef.current = true
+    setPending(true)
     const selectedMetric = soilMetrics.find(([id]) => id === metric)
-    setSaveStatus('Saving soil test.')
+    setSaveStatus('Saving soil test. Closing this window leaves the request running; check the timeline before trying again.')
     try {
-      await apiPost(`/api/demo/fields/${encodeURIComponent(fieldContextId)}/events`, {
+      await apiPost(`/api/demo/fields/${encodeURIComponent(targetFieldId)}/events`, {
         event_type: 'sample',
         ...(occurredAt ? { occurred_at: new Date(occurredAt).toISOString() } : {}),
         payload: {
@@ -251,22 +267,33 @@ export function SoilTestEntryPanel({
         provenance: {
           capture_method: sourceQuality,
           surface: 'fields_soil_test_form',
-          original_report_retained: sourceQuality !== 'field_kit',
+          sampling_time_status: occurredAt ? 'user_supplied' : 'unknown',
+          ...(occurredAt ? { sampled_at: new Date(occurredAt).toISOString() } : {}),
+          original_report_retained: originalReportRetained,
         },
       })
+      if (!mountedRef.current || fieldIdRef.current !== targetFieldId) return
       setValue('')
-      setSaveStatus('Saved. Keep the original report.')
+      setSaveStatus('Saved. Keep the original report if available.')
       await onSaved()
     } catch (error) {
-      setSaveStatus(`Save failed: ${String((error as Error).message || error)}`)
+      if (mountedRef.current && fieldIdRef.current === targetFieldId) {
+        setSaveStatus(`Save not confirmed: ${String((error as Error).message || error)}. The server may have saved it; check the timeline before trying again.`)
+      }
+    } finally {
+      pendingRef.current = false
+      if (mountedRef.current && fieldIdRef.current === targetFieldId) setPending(false)
     }
   }
 
   return (
-    <details className="field-sync-panel">
-      <summary>Add structured soil-test result</summary>
-      <p>Copy sample ID, value, unit, method and depth exactly. No conversions.</p>
-      <form className="field-event-form" aria-label="Add structured soil-test result" onSubmit={(event) => void submit(event)}>
+    <div className="soil-entry-action">
+      <button type="button" className="secondary-button" onClick={() => setOpen(true)}>{pending ? 'View pending soil test' : 'Add soil test'}</button>
+      {!open && saveStatus ? <small className="soil-entry-outcome" role="status">{saveStatus}</small> : null}
+      {open ? <WorkspaceDialog title="Add soil test" onClose={() => setOpen(false)}>
+      <p className="soil-entry-hint">Copy the report's value, unit, method and depth exactly.</p>
+      <form className="field-event-form record-entry-form" aria-label="Add structured soil-test result" onSubmit={(event) => void submit(event)}>
+        <fieldset className="soil-entry-fields" disabled={pending}>
         <label>
           Sample ID
           <input value={sampleId} onChange={(event) => setSampleId(event.target.value)} required maxLength={128} />
@@ -315,7 +342,9 @@ export function SoilTestEntryPanel({
         </label>
         <label>
           Entry source
-          <select value={sourceQuality} onChange={(event) => setSourceQuality(event.target.value)}>
+          <select value={sourceQuality} onChange={(event) => {
+            setSourceQuality(event.target.value)
+          }}>
             <option value="user_transcribed_lab_report">Typed from lab report</option>
             <option value="imported_lab_report">Imported lab report</option>
             <option value="lab_report">Lab data feed</option>
@@ -330,24 +359,15 @@ export function SoilTestEntryPanel({
           Sampled at
           <input type="datetime-local" value={occurredAt} onChange={(event) => setOccurredAt(event.target.value)} />
         </label>
-        <button type="submit" className="map-primary-action">Save soil test</button>
+        <label className="field-event-summary soil-report-check">
+          <input type="checkbox" checked={originalReportRetained} onChange={(event) => setOriginalReportRetained(event.target.checked)} />
+          Original report retained
+        </label>
+        </fieldset>
+        <button type="submit" className="map-primary-action" disabled={pending}>{pending ? 'Saving…' : 'Save soil test'}</button>
       </form>
-      <small aria-live="polite">{saveStatus}</small>
-    </details>
-  )
-}
-
-export default function FieldRecordsPanel({
-  fieldContextId,
-  onImported,
-}: {
-  fieldContextId: string
-  onImported: () => void | Promise<void>
-}) {
-  return (
-    <>
-      <SoilTestEntryPanel fieldContextId={fieldContextId} onSaved={onImported} />
-      <FieldSyncPanel fieldContextId={fieldContextId} onImported={onImported} />
-    </>
+      <small className="record-entry-status" aria-live="polite">{saveStatus}</small>
+      </WorkspaceDialog> : null}
+    </div>
   )
 }

@@ -48,7 +48,9 @@ record or the source checks attached to an earlier answer.
 
 **Field insights** opens a compact analysis of the current saved boundary or
 example. Area, boundary length, and a location inside the shape are computed
-without a model. The hectare/acre switch changes display units only. If recorded
+without a model. Boundary measurements appear independently of slower map-source
+lookups. The hectare/acre switch changes display units only. **Boundary details**
+contains the location and calculation method. If recorded
 acreage differs materially from the computed boundary area, both are labelled;
 neither overwrites the other. Pins have a location but no inferred area.
 
@@ -57,7 +59,8 @@ area. It does not reinterpret the older vertex-sampling match scores as area.
 A layer's overall coverage uses the union of its source shapes; individual named
 zones may overlap, so their percentages need not add to 100%. Empty matches are
 collapsed; unavailable, partial, offline, and uninstalled states remain explicit.
-Open **Source & method** for provenance, map scale limits, and the calculation.
+Open a coverage row for the zone breakdown, area, source, and method.
+Partial-source warnings remain visible even while that detail is closed.
 Generalized or historical mapping remains context rather than a field survey,
 soil test, crop observation, or recommendation.
 
@@ -84,6 +87,21 @@ Esri imagery credits follow the [provider's current service metadata](https://se
 3. Review the location and any imported provenance note, then save. A polygon-derived acreage is an estimate. A pin does not establish acreage.
 
 **Fields** has **Overview**, **Records & soil tests**, and **Map context**. Overview holds supplied details; Records & soil tests retains observations, measurements, corrections, and linked answer history; Map context shows regional matches with source and uncertainty. Field-event sync and recovery are available with the records. A browser draft is not a synchronized record until the API confirms it.
+
+**Add record** opens a focused entry form; **Correct** beside an existing record
+preselects it for an append-only correction. The original remains in the timeline.
+**Add soil test** retains the exact report value, unit, method, depth and sample ID.
+Enter the sampling date only when known, and explicitly mark whether you retained
+the original report. Entry time and sampling time are different facts: sample rows label their recording
+time, and sampling dates remain explicit or unknown in field context. Failed save
+confirmations keep the form values, but the server may already have saved the record;
+check the timeline before retrying. **Resume unsaved record** reopens a failed
+record form that was closed. A pending save can be dismissed without cancelling
+the request or enabling another submission.
+
+The timeline shows concise summaries. Open **Record details** for capture and
+measurement metadata, or expand an answer for its full text and provenance.
+**Show more** reveals older loaded records without replacing the current view.
 
 Deletion is explicit. The field library can remove the selected field record while historical answer records remain retained by the server; review the confirmation carefully. No map class, graph edge, or regional statistic replaces a representative soil sample or field observation.
 
