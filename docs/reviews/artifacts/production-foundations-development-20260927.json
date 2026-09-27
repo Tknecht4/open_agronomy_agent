@@ -1,0 +1,958 @@
+{
+  "schema_version": "open_agronomy_agent.production_foundations_development_evidence.v2",
+  "status": "exposed_development_nonclaim_candidate_not_promoted",
+  "base_commit": "7c502d8065a46c14c6abb462833509e5b598f2f8",
+  "case_file": "data/eval/production_foundations_development_v1.jsonl",
+  "case_file_sha256": "066df89087bd9e1b6a0816e78afe57a590893e4e031f017b2416d891497bdb58",
+  "model_id": "mlx-community/gemma-4-e2b-it-4bit",
+  "model_revision": "238767527555cb75a05732a84dff5d6ba0dd6809",
+  "model_identity": {
+    "backend": "mlx_local",
+    "configured_model_id": "mlx-community/gemma-4-e2b-it-4bit",
+    "configured_model_revision": "238767527555cb75a05732a84dff5d6ba0dd6809",
+    "endpoint_port": null,
+    "identity_required": false,
+    "model_config_path": "configs/model.yaml",
+    "model_config_sha256": "8cd880ac68b3631a4eccc11bd9716be3e1768b1a5d49653ac13acc7ec6aeba10",
+    "parametric_adaptation": {
+      "adapter_path": null,
+      "mode": "base_only"
+    },
+    "paths_minimized": true,
+    "receipt_path": null,
+    "receipt_sha256": null,
+    "request_model_id": null,
+    "response_model_id": "mlx-community/gemma-4-e2b-it-4bit",
+    "schema_version": "open_agronomy_agent.model_identity_contract.v1",
+    "status": "verified_direct_loader",
+    "verification_errors": []
+  },
+  "model_config_sha256": "8cd880ac68b3631a4eccc11bd9716be3e1768b1a5d49653ac13acc7ec6aeba10",
+  "max_tokens": 320,
+  "runner_sha256": "9c1692882a190cb29882975d85d85e268b94ebc6911248f4bdcc61bc692270bc",
+  "baseline_rag_config_path": "configs/rag.yaml",
+  "baseline_rag_config_sha256": "8f45880dbadf368848d52251aaafb24e25b17d9baa7923aa7707f6880fc04b91",
+  "baseline_policy_sha256": "a322ee54efaf01496c48e346df472f273c348a33f31431022a56b05892d8dcfb",
+  "candidate_rag_config_path": "configs/rag_production_foundations_candidate.yaml",
+  "candidate_rag_config_sha256": "ae7228c494ede35cd9109c38e5a987910fe76a99737780e7e70cbd47ef0d02d0",
+  "candidate_policy_sha256": "91a16620a8fb8d082ede0634ba60fe9fd2209a5326792f19e5853fc2cba9134a",
+  "candidate_store_sha256": "edfdd45de6afce6cb814371b37b4cce21bd8ff3e5b12d2b55ebe923cff1a708d",
+  "candidate_seed_sha256": "8f9ada96fb5f6a7be94c1c6901f173c522a1b9857d8d196a5de9e0fd9d955d10",
+  "baseline_run_report_sha256": "4969c643abd995efbcd35f4131e350e7cec044b2d1f037de8ad395c578784236",
+  "candidate_run_report_sha256": "b743d19640bd24e5a83ff80fa7a18741ed77ffe3b82d0ec0f0a3e6c18c67ae3c",
+  "case_count": 13,
+  "manual_review_method": "Nonblinded agent review of saved final answers against exact numeric or boundary requests; strict full pass requires all requested qualifiers. Not independent agronomist adjudication.",
+  "full_pass_count": {
+    "baseline": 5,
+    "candidate": 5
+  },
+  "safe_boundary_pass_count": {
+    "baseline": 3,
+    "candidate": 3
+  },
+  "fallback_count": {
+    "baseline": 6,
+    "candidate": 6
+  },
+  "candidate_expected_card_selected_count": 9,
+  "model_elapsed_ms_total": {
+    "baseline": 140467.3,
+    "candidate": 119739.0
+  },
+  "latency_interpretation": "Serial local wall time includes cache/process state; a prior path-equivalent pair reversed the timing order, so no throughput benefit is claimed.",
+  "prior_path_equivalent_pair_elapsed_ms_total": {
+    "baseline": 138475.8,
+    "candidate": 168262.5
+  },
+  "seed_application": "Model-call traces requested and applied no seed (not_configured); generation used temperature-zero argmax. Bypass turns have no seed-application record. The model config seed 42 was not applied.",
+  "existing_retrieval": {
+    "cases": 21,
+    "baseline_recall_at_1": 0.8095238095238095,
+    "candidate_recall_at_1": 0.7619047619047619,
+    "baseline_recall_at_3": 0.8571428571428571,
+    "candidate_recall_at_3": 0.9047619047619048,
+    "baseline_recall_at_7": 0.9047619047619048,
+    "candidate_recall_at_7": 0.9047619047619048,
+    "baseline_ndcg_at_7": 0.8600764910307073,
+    "candidate_ndcg_at_7": 0.8458028336734722,
+    "baseline_authority_compliance": 1.0,
+    "candidate_authority_compliance": 1.0,
+    "regressed_case": "ca_official_mb_rotation_context rank 1 to 2"
+  },
+  "new_card_raw_retrieval": {
+    "positive_cases": 11,
+    "candidate_recall_at_1": 1.0,
+    "candidate_recall_at_3": 1.0,
+    "candidate_recall_at_7": 1.0,
+    "interpretation": "Cards did not exist in baseline; this tests reachability on source-conditioned, exposed questions only."
+  },
+  "negative_attempts": [
+    "Initial cards indexed but selected zero cards in 13 product turns because source type and knowledge bucket did not match live route filters.",
+    "An early candidate displaced a Manitoba soil-fertility source; narrowing wording briefly restored rank 1, but the final method-only candidate still ranks the named source second.",
+    "An early 160-token paired run clipped a GDD answer; final comparisons use 320 tokens.",
+    "Independent review found exact synthetic benchmark inputs and expected answers in five runtime cards. That contaminated result was invalidated, the worked examples were removed, and the method-only candidate was rebuilt.",
+    "The contaminated candidate called user-supplied total cost operating cost. The repaired candidate withheld the break-even-price answer; no cost-boundary error was promoted.",
+    "A post-hoc sentence about not renaming total cost was added after the exposed error; it remains development-only and no independent gain is claimed."
+  ],
+  "limitations": [
+    "Small exposed, source-conditioned question set and nonblinded scoring.",
+    "No calibrated semantic or independent agronomist review.",
+    "External source snapshots are hash-identified but not redistributed.",
+    "Candidate is not in runtime_profiles.json and is not active product retrieval.",
+    "The actual model seed was not configured despite a seed value in model.yaml."
+  ],
+  "cases": [
+    {
+      "case_id": "mb_seed_rate",
+      "kind": "calculation",
+      "baseline_assessment": "incomplete",
+      "candidate_assessment": "incomplete",
+      "assessment_note": "Both withheld the requested seed-rate arithmetic; candidate final context selected no formula card.",
+      "baseline_answer": "Keep each seed lot separate and start with its current germination percentage or germ test plus any vigor test, cold test, or accelerated-aging result relevant to the crop. Confirm seed identity, seed size, treatment and storage history, then compare lot quality with planting date, soil temperature, soil moisture and seedbed condition. Use locally calibrated emergence assumptions to assess seeding rate, expected stand establishment and replant risk; do not invent a rate from the label value alone. Where lots differ materially, place the stronger lot in the higher-stress planting window or field and verify emergence with stand counts.",
+      "candidate_answer": "Keep each seed lot separate and start with its current germination percentage or germ test plus any vigor test, cold test, or accelerated-aging result relevant to the crop. Confirm seed identity, seed size, treatment and storage history, then compare lot quality with planting date, soil temperature, soil moisture and seedbed condition. Use locally calibrated emergence assumptions to assess seeding rate, expected stand establishment and replant risk; do not invent a rate from the label value alone. Where lots differ materially, place the stronger lot in the higher-stress planting window or field and verify emergence with stand counts.",
+      "baseline_answer_sha256": "03e6f0fdb4d45f640c379a4637f94f30a26bd8a796765bab114f0fb5cc1eae82",
+      "candidate_answer_sha256": "03e6f0fdb4d45f640c379a4637f94f30a26bd8a796765bab114f0fb5cc1eae82",
+      "candidate_expected_card_selected": false,
+      "baseline_fallback_kind": "verification_conservative",
+      "candidate_fallback_kind": "verification_conservative",
+      "baseline_elapsed_ms": 22377.1,
+      "candidate_elapsed_ms": 15489.5,
+      "baseline_seed_application": {
+        "application_count": 0,
+        "application_point": "serialized_generation_lock_before_sampler",
+        "applied_seed": null,
+        "backend": "mlx_local",
+        "implementation": "mlx.core.random.seed",
+        "requested_seed": null,
+        "sampler": {
+          "factory": "mlx_lm.sample_utils.make_sampler",
+          "sampling_mode": "argmax",
+          "temperature": 0.0,
+          "top_k": 0,
+          "top_p": 0.9
+        },
+        "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+        "status": "not_configured"
+      },
+      "candidate_seed_application": {
+        "application_count": 0,
+        "application_point": "serialized_generation_lock_before_sampler",
+        "applied_seed": null,
+        "backend": "mlx_local",
+        "implementation": "mlx.core.random.seed",
+        "requested_seed": null,
+        "sampler": {
+          "factory": "mlx_lm.sample_utils.make_sampler",
+          "sampling_mode": "argmax",
+          "temperature": 0.0,
+          "top_k": 0,
+          "top_p": 0.9
+        },
+        "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+        "status": "not_configured"
+      },
+      "baseline_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "0e28915c804c5c1bec407b2af5076382cab0b7cdbd86c57ebe2d3f8f9ea7ca1a",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "46b7ea1f9051097c2fa408203d8335dbe24a72f0f606a1ed8eee7512a7b2eee5",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "candidate_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "d4b4a4b4918b925858830f484db7460ae6229d2074e44e8b5919bf3c9b5ec5ec",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "7f00bcd26cd65844299506a04682278b99aab4197258e2117b79aea04c3b72b2",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "baseline_prompt_tokens": 1712,
+      "candidate_prompt_tokens": 1980,
+      "baseline_generation_tokens": 320,
+      "candidate_generation_tokens": 320
+    },
+    {
+      "case_id": "mb_seed_missing",
+      "kind": "missing_input",
+      "baseline_assessment": "partial",
+      "candidate_assessment": "partial",
+      "assessment_note": "Both named lot quality and emergence evidence but did not directly state that a purchase quantity cannot be calculated.",
+      "baseline_answer": "Keep each seed lot separate and start with its current germination percentage or germ test plus any vigor test, cold test, or accelerated-aging result relevant to the crop. Confirm seed identity, seed size, treatment and storage history, then compare lot quality with planting date, soil temperature, soil moisture and seedbed condition. Use locally calibrated emergence assumptions to assess seeding rate, expected stand establishment and replant risk; do not invent a rate from the label value alone. Where lots differ materially, place the stronger lot in the higher-stress planting window or field and verify emergence with stand counts.",
+      "candidate_answer": "Keep each seed lot separate and start with its current germination percentage or germ test plus any vigor test, cold test, or accelerated-aging result relevant to the crop. Confirm seed identity, seed size, treatment and storage history, then compare lot quality with planting date, soil temperature, soil moisture and seedbed condition. Use locally calibrated emergence assumptions to assess seeding rate, expected stand establishment and replant risk; do not invent a rate from the label value alone. Where lots differ materially, place the stronger lot in the higher-stress planting window or field and verify emergence with stand counts.",
+      "baseline_answer_sha256": "03e6f0fdb4d45f640c379a4637f94f30a26bd8a796765bab114f0fb5cc1eae82",
+      "candidate_answer_sha256": "03e6f0fdb4d45f640c379a4637f94f30a26bd8a796765bab114f0fb5cc1eae82",
+      "candidate_expected_card_selected": false,
+      "baseline_fallback_kind": "verification_conservative",
+      "candidate_fallback_kind": "verification_conservative",
+      "baseline_elapsed_ms": 6397.9,
+      "candidate_elapsed_ms": 4013.7,
+      "baseline_seed_application": {
+        "application_count": 0,
+        "application_point": "serialized_generation_lock_before_sampler",
+        "applied_seed": null,
+        "backend": "mlx_local",
+        "implementation": "mlx.core.random.seed",
+        "requested_seed": null,
+        "sampler": {
+          "factory": "mlx_lm.sample_utils.make_sampler",
+          "sampling_mode": "argmax",
+          "temperature": 0.0,
+          "top_k": 0,
+          "top_p": 0.9
+        },
+        "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+        "status": "not_configured"
+      },
+      "candidate_seed_application": {
+        "application_count": 0,
+        "application_point": "serialized_generation_lock_before_sampler",
+        "applied_seed": null,
+        "backend": "mlx_local",
+        "implementation": "mlx.core.random.seed",
+        "requested_seed": null,
+        "sampler": {
+          "factory": "mlx_lm.sample_utils.make_sampler",
+          "sampling_mode": "argmax",
+          "temperature": 0.0,
+          "top_k": 0,
+          "top_p": 0.9
+        },
+        "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+        "status": "not_configured"
+      },
+      "baseline_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "e221eb4549f05f8b8776caed625628eb681c3a62a69ea02a1ab442a346bfffd5",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "05fa6938c9f40ebe5c4cb35b36dd5ad1017a010d2743dafd0ffff10a768e1a1f",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "candidate_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "115d3cae5ebc6c259193a6dde5ed106bdbfa0974e09480fb3ab05a55094e7dad",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "cbc2229261d66aeee9831237437afdeefacf5afb05c439feb043432725b91d18",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "baseline_prompt_tokens": 1588,
+      "candidate_prompt_tokens": 1588,
+      "baseline_generation_tokens": 38,
+      "candidate_generation_tokens": 38
+    },
+    {
+      "case_id": "aafc_gdd",
+      "kind": "calculation",
+      "baseline_assessment": "incorrect",
+      "candidate_assessment": "incomplete",
+      "assessment_note": "Baseline used a wrong formula and gave 5 C days; candidate verifier withheld instead of giving 10 C days.",
+      "baseline_answer": "The simple growing degree-day (GDD) calculation is determined by the formula:\n\n$$\\text{GDD} = \\frac{T_{\\text{max}} - T_{\\text{min}}}{2}$$\n\nUsing your provided maximum temperature of $20^\\circ\\text{C}$ and minimum temperature of $10^\\circ\\text{C}$, the calculation is:\n\n$$\\text{GDD} = \\frac{20^\\circ\\text{C} - 10^\\circ\\text{C}}{2} = \\frac{10^\\circ\\text{C}}{2} = 5^\\circ\\text{C}$$\n\nThis calculated value of $5^\\circ\\text{C}$ represents a measure of thermal accumulation over a single day based on the specified temperature range. However, this value alone is not a crop-yield prediction; it is a measure of thermal unit used in physiological modeling, not a direct prediction of crop yield.",
+      "candidate_answer": "I do not have enough reliable topic-specific information to answer this conceptual question accurately. I will not substitute an unrelated agronomy concept. Rephrase the concept or provide a relevant reviewed source; a benign conceptual question does not require field samples.",
+      "baseline_answer_sha256": "f511241da0ce793c9d2f9820f2ed415a47591cb5eea85386b6a242e5842e2337",
+      "candidate_answer_sha256": "9bcf7cd3d35f00677b36cbc1f3a74f52899e2205a84562baf0fa9fda1da31d07",
+      "candidate_expected_card_selected": true,
+      "baseline_fallback_kind": null,
+      "candidate_fallback_kind": "verification_conservative",
+      "baseline_elapsed_ms": 9230.3,
+      "candidate_elapsed_ms": 16670.6,
+      "baseline_seed_application": {
+        "application_count": 0,
+        "application_point": "serialized_generation_lock_before_sampler",
+        "applied_seed": null,
+        "backend": "mlx_local",
+        "implementation": "mlx.core.random.seed",
+        "requested_seed": null,
+        "sampler": {
+          "factory": "mlx_lm.sample_utils.make_sampler",
+          "sampling_mode": "argmax",
+          "temperature": 0.0,
+          "top_k": 0,
+          "top_p": 0.9
+        },
+        "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+        "status": "not_configured"
+      },
+      "candidate_seed_application": {
+        "application_count": 0,
+        "application_point": "serialized_generation_lock_before_sampler",
+        "applied_seed": null,
+        "backend": "mlx_local",
+        "implementation": "mlx.core.random.seed",
+        "requested_seed": null,
+        "sampler": {
+          "factory": "mlx_lm.sample_utils.make_sampler",
+          "sampling_mode": "argmax",
+          "temperature": 0.0,
+          "top_k": 0,
+          "top_p": 0.9
+        },
+        "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+        "status": "not_configured"
+      },
+      "baseline_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "4c0a0916abde34c14c4e5e1a2630757e5e4cde07d61e63ef0e7634379f59cc0f",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "c6a86a8b678c47fd670d93cf666cc39b81f3a449ceb938fd7be67c82ccd2e8c7",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "candidate_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "fcc851883a47ab1e0e40634d4a4d2abba19f28fa79e71450c1f2748609e91dc0",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "106b130d7ac98fd9516439d478592b696f8f47b6dc97b7197a44923a4d9882b1",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "baseline_prompt_tokens": 1798,
+      "candidate_prompt_tokens": 2034,
+      "baseline_generation_tokens": 201,
+      "candidate_generation_tokens": 297
+    },
+    {
+      "case_id": "mb_break_even_price",
+      "kind": "calculation",
+      "baseline_assessment": "incomplete",
+      "candidate_assessment": "incomplete",
+      "assessment_note": "Both withheld the $12/bu arithmetic after removal of evaluation-derived worked examples.",
+      "baseline_answer": "Decision boundary: do not act on this financial decision from this answer. Missing evidence: user-specific input and application costs; crop price or value assumption; locally defensible response range. Use the answer only to plan the next verification step.\n\nI do not have enough reliable topic-specific information to answer this conceptual question accurately. I will not substitute an unrelated agronomy concept. Rephrase the concept or provide a relevant reviewed source; a benign conceptual question does not require field samples.",
+      "candidate_answer": "Decision boundary: do not act on this financial decision from this answer. Missing evidence: user-specific input and application costs; crop price or value assumption; locally defensible response range. Use the answer only to plan the next verification step.\n\nI do not have enough reliable topic-specific information to answer this conceptual question accurately. I will not substitute an unrelated agronomy concept. Rephrase the concept or provide a relevant reviewed source; a benign conceptual question does not require field samples.",
+      "baseline_answer_sha256": "1468fd48bff83c949cde9fbdc0609f703c91fb6ab1f248f2fe04c57f5ca5d0fe",
+      "candidate_answer_sha256": "1468fd48bff83c949cde9fbdc0609f703c91fb6ab1f248f2fe04c57f5ca5d0fe",
+      "candidate_expected_card_selected": true,
+      "baseline_fallback_kind": "verification_conservative",
+      "candidate_fallback_kind": "verification_conservative",
+      "baseline_elapsed_ms": 18395.1,
+      "candidate_elapsed_ms": 11024.4,
+      "baseline_seed_application": {
+        "application_count": 0,
+        "application_point": "serialized_generation_lock_before_sampler",
+        "applied_seed": null,
+        "backend": "mlx_local",
+        "implementation": "mlx.core.random.seed",
+        "requested_seed": null,
+        "sampler": {
+          "factory": "mlx_lm.sample_utils.make_sampler",
+          "sampling_mode": "argmax",
+          "temperature": 0.0,
+          "top_k": 0,
+          "top_p": 0.9
+        },
+        "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+        "status": "not_configured"
+      },
+      "candidate_seed_application": {
+        "application_count": 0,
+        "application_point": "serialized_generation_lock_before_sampler",
+        "applied_seed": null,
+        "backend": "mlx_local",
+        "implementation": "mlx.core.random.seed",
+        "requested_seed": null,
+        "sampler": {
+          "factory": "mlx_lm.sample_utils.make_sampler",
+          "sampling_mode": "argmax",
+          "temperature": 0.0,
+          "top_k": 0,
+          "top_p": 0.9
+        },
+        "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+        "status": "not_configured"
+      },
+      "baseline_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "67c9b3cb38b2a3dba17dbbb6f0413f69267c0864bf462e0c2882f69c428a2c5e",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "5619966248b1deb99ff616173a2810a4f808e6b3c3b58bfc9535b3b18c9f7919",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "candidate_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "0f279ef9cb3d0834c500b37d84e2ecab94140b3d2fb6d1c2e8530740f8734132",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "f720420849df45a5df77a98c6bc330a4b8daf3c07613135a7035620c147f819f",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "baseline_prompt_tokens": 1694,
+      "candidate_prompt_tokens": 2170,
+      "baseline_generation_tokens": 217,
+      "candidate_generation_tokens": 158
+    },
+    {
+      "case_id": "mb_break_even_yield",
+      "kind": "calculation",
+      "baseline_assessment": "partial",
+      "candidate_assessment": "partial",
+      "assessment_note": "Both gave 60 bu/ac; candidate labelled the price assumed, but neither explicitly separated it from a current market quote as requested.",
+      "baseline_answer": "The break-even yield is determined by dividing the total cost by the price per bushel.\n\n* **Total Cost:** $\\$600$ per acre\n* **Price per Bushel:** $\\$10$ per bushel\n\n**Calculation:**\n$$\\text{Break-Even Yield (Bushels)} = \\frac{\\text{Total Cost}}{\\text{Price per Bushel}} = \\frac{\\$600}{\\$10/\\text{bushel}} = 60 \\text{ bushels}$$\n\nThis calculation shows that to break even, the yield must be 60 bushels per acre.",
+      "candidate_answer": "The yield breaks even calculation is determined by dividing the total cost per acre by the assumed selling price per bushel.\n\n* **Total Cost per Acre:** \\$600\n* **Assumed Selling Price per Bushel:** \\$10\n\n**Calculation:**\n$$\\text{Break-Even Yield (Bushels/Acre)} = \\frac{\\text{Total Cost per Acre}}{\\text{Selling Price per Bushel}}$$\n$$\\text{Break-Even Yield (Bushels/Acre)} = \\frac{\\$600}{\\$10/\\text{bushel}} = 60 \\text{ bushels/acre}$$\n\nThis calculation shows that to break even under these assumptions, the expected yield must be 60 bushels per acre.",
+      "baseline_answer_sha256": "a3d6cea27513faee318d6696bc5f073fa4266716e748bd16cb8cbb04c1c000b1",
+      "candidate_answer_sha256": "ee0a5d9ea57848155bb7a76f90ca0099518079dd187326ca30bfb6f5d8b07c76",
+      "candidate_expected_card_selected": true,
+      "baseline_fallback_kind": null,
+      "candidate_fallback_kind": null,
+      "baseline_elapsed_ms": 6115.3,
+      "candidate_elapsed_ms": 6417.2,
+      "baseline_seed_application": {
+        "application_count": 0,
+        "application_point": "serialized_generation_lock_before_sampler",
+        "applied_seed": null,
+        "backend": "mlx_local",
+        "implementation": "mlx.core.random.seed",
+        "requested_seed": null,
+        "sampler": {
+          "factory": "mlx_lm.sample_utils.make_sampler",
+          "sampling_mode": "argmax",
+          "temperature": 0.0,
+          "top_k": 0,
+          "top_p": 0.9
+        },
+        "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+        "status": "not_configured"
+      },
+      "candidate_seed_application": {
+        "application_count": 0,
+        "application_point": "serialized_generation_lock_before_sampler",
+        "applied_seed": null,
+        "backend": "mlx_local",
+        "implementation": "mlx.core.random.seed",
+        "requested_seed": null,
+        "sampler": {
+          "factory": "mlx_lm.sample_utils.make_sampler",
+          "sampling_mode": "argmax",
+          "temperature": 0.0,
+          "top_k": 0,
+          "top_p": 0.9
+        },
+        "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+        "status": "not_configured"
+      },
+      "baseline_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "f60a1d25fb8cf13c67c304a3db1eaa5f0812add845e05a7224814278f3f55816",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "efd613d7786d4b699424d710e5eb626dbe29b717beb7383e1e81b2f6594f084f",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "candidate_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "4556e6b9ccd7876142be95d4e10dba4751dd36c76a641fb22019157d17b2c183",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "22d0830aefd7c14c85c1e4b094216cea3671123aab4779633ac3aace0b1ffad9",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "baseline_prompt_tokens": 1659,
+      "candidate_prompt_tokens": 2222,
+      "baseline_generation_tokens": 127,
+      "candidate_generation_tokens": 158
+    },
+    {
+      "case_id": "isu_partial_budget",
+      "kind": "calculation",
+      "baseline_assessment": "incorrect",
+      "candidate_assessment": "incorrect",
+      "assessment_note": "Both gave -$50/ac; four-change arithmetic is +$20/ac. The Iowa source was not selected in this query with no stated U.S. jurisdiction.",
+      "baseline_answer": "The partial-budget net change is a net loss of $\\$50$ per acre.",
+      "candidate_answer": "The partial-budget net change is a net loss of $\\$50$ per acre.",
+      "baseline_answer_sha256": "1e9128d3a9d1f6311fc7584a1c0e72c8eb06c6a3404094aba8604b8a62feda73",
+      "candidate_answer_sha256": "1e9128d3a9d1f6311fc7584a1c0e72c8eb06c6a3404094aba8604b8a62feda73",
+      "candidate_expected_card_selected": false,
+      "baseline_fallback_kind": null,
+      "candidate_fallback_kind": null,
+      "baseline_elapsed_ms": 8624.3,
+      "candidate_elapsed_ms": 6270.8,
+      "baseline_seed_application": {
+        "application_count": 0,
+        "application_point": "serialized_generation_lock_before_sampler",
+        "applied_seed": null,
+        "backend": "mlx_local",
+        "implementation": "mlx.core.random.seed",
+        "requested_seed": null,
+        "sampler": {
+          "factory": "mlx_lm.sample_utils.make_sampler",
+          "sampling_mode": "argmax",
+          "temperature": 0.0,
+          "top_k": 0,
+          "top_p": 0.9
+        },
+        "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+        "status": "not_configured"
+      },
+      "candidate_seed_application": {
+        "application_count": 0,
+        "application_point": "serialized_generation_lock_before_sampler",
+        "applied_seed": null,
+        "backend": "mlx_local",
+        "implementation": "mlx.core.random.seed",
+        "requested_seed": null,
+        "sampler": {
+          "factory": "mlx_lm.sample_utils.make_sampler",
+          "sampling_mode": "argmax",
+          "temperature": 0.0,
+          "top_k": 0,
+          "top_p": 0.9
+        },
+        "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+        "status": "not_configured"
+      },
+      "baseline_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "29044cd1b4897303aaeefb4790669a78ee5c90fd35326c92a2c0edf89dba9fac",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "cd7b23e3706e5d56d88ef6b5a0c88f489002381e75389f0794dc7617990fb524",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "candidate_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "c7c7d711a141cad2734d50228add4de509ba5d64d44e513dd0d8709d92a0aec3",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "21fe2ecc80742508f59b6478df90a4c6a4f20441b5f19647ae9b29ca344b8781",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "baseline_prompt_tokens": 2185,
+      "candidate_prompt_tokens": 1924,
+      "baseline_generation_tokens": 67,
+      "candidate_generation_tokens": 102
+    },
+    {
+      "case_id": "isu_partial_budget_missing",
+      "kind": "missing_input",
+      "baseline_assessment": "pass",
+      "candidate_assessment": "pass",
+      "assessment_note": "Both identified material omitted purchase, depreciation, labour and yield inputs.",
+      "baseline_answer": "The decision to purchase a new seeder based solely on lower fuel cost requires evaluating several partial-budget inputs beyond just the fuel savings.\n\nThe inputs still needed to make a comprehensive decision include:\n\n* **Purchase Price:** The upfront cost of the new seeder. * **Depreciation:** The expected lifespan and depreciation schedule of the equipment. * **Labor Change:** Any impact on the time or skill required for operation and maintenance of the new equipment. * **Yield Effect:** Any potential impact on planting depth, seed placement, or overall planting efficiency that could affect final yield.\n\nWithout information on these factors, a decision based only on fuel cost is incomplete. You need to assess the total cost of ownership, including capital expenditure, operational changes, and any potential impact on productivity, to determine if the lower fuel cost justifies the investment.",
+      "candidate_answer": "Should I buy a new seeder based only on lower fuel cost, without the purchase price, depreciation, labour change or any yield effect? Explain the partial-budget inputs still needed.\n\nThis decision requires a partial budget analysis to determine the true economic viability of purchasing a new seeder, as considering only fuel cost ignores significant other factors. To make a sound decision, you must account for the full scope of the change beyond just the fuel savings.\n\nThe partial budget inputs still needed include:\n\n* **Cash Items:** You need to account for the purchase price of the new seeder and any associated upfront costs. * **Non-Cash Items:** You must factor in changes to labour, machinery ownership, and depreciation related to the new equipment. * **Revenue/Yield Factors:** Since you are excluding yield effects, you must still consider how the new seeder might impact your expected yield or revenue, which is a critical component of any farm business decision.\n\nThe decision is conditional on these factors, and you should compare the net change per acre or per farm resulting from these various cash and non-cash items against the potential savings.",
+      "baseline_answer_sha256": "bae8889cbcd3a293946ab4197211390dd65e738a5ae928f521a0247303821cf2",
+      "candidate_answer_sha256": "bac2b4c5b3d76f9194d390e609921ea9ee2003a677e5fc8c2a1a761553e04883",
+      "candidate_expected_card_selected": true,
+      "baseline_fallback_kind": null,
+      "candidate_fallback_kind": null,
+      "baseline_elapsed_ms": 7754.0,
+      "candidate_elapsed_ms": 8381.8,
+      "baseline_seed_application": {
+        "application_count": 0,
+        "application_point": "serialized_generation_lock_before_sampler",
+        "applied_seed": null,
+        "backend": "mlx_local",
+        "implementation": "mlx.core.random.seed",
+        "requested_seed": null,
+        "sampler": {
+          "factory": "mlx_lm.sample_utils.make_sampler",
+          "sampling_mode": "argmax",
+          "temperature": 0.0,
+          "top_k": 0,
+          "top_p": 0.9
+        },
+        "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+        "status": "not_configured"
+      },
+      "candidate_seed_application": {
+        "application_count": 0,
+        "application_point": "serialized_generation_lock_before_sampler",
+        "applied_seed": null,
+        "backend": "mlx_local",
+        "implementation": "mlx.core.random.seed",
+        "requested_seed": null,
+        "sampler": {
+          "factory": "mlx_lm.sample_utils.make_sampler",
+          "sampling_mode": "argmax",
+          "temperature": 0.0,
+          "top_k": 0,
+          "top_p": 0.9
+        },
+        "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+        "status": "not_configured"
+      },
+      "baseline_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "40d2c2499acc34c228980f6564f910a92f62127cc4a90dede5d62ee25ff73c9f",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "28f5c1bcfad94024259d88f2e879fefec375523309cce006dde8247347e27560",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "candidate_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "33a1b70345951c39ea30b06d462133cf1f5600e765f4461b7c33406e1aa7bad3",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "b566b47b73fa40264b0b1fb688414ea9f9527a091199c8a431d596a993c8551b",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "baseline_prompt_tokens": 1741,
+      "candidate_prompt_tokens": 2308,
+      "baseline_generation_tokens": 176,
+      "candidate_generation_tokens": 234
+    },
+    {
+      "case_id": "us_ers_current_ratio",
+      "kind": "calculation",
+      "baseline_assessment": "incomplete",
+      "candidate_assessment": "incomplete",
+      "assessment_note": "Both withheld the ratio 2.0 despite candidate source selection.",
+      "baseline_answer": "I do not have enough reliable topic-specific information to answer this conceptual question accurately. I will not substitute an unrelated agronomy concept. Rephrase the concept or provide a relevant reviewed source; a benign conceptual question does not require field samples.",
+      "candidate_answer": "I do not have enough reliable topic-specific information to answer this conceptual question accurately. I will not substitute an unrelated agronomy concept. Rephrase the concept or provide a relevant reviewed source; a benign conceptual question does not require field samples.",
+      "baseline_answer_sha256": "9bcf7cd3d35f00677b36cbc1f3a74f52899e2205a84562baf0fa9fda1da31d07",
+      "candidate_answer_sha256": "9bcf7cd3d35f00677b36cbc1f3a74f52899e2205a84562baf0fa9fda1da31d07",
+      "candidate_expected_card_selected": true,
+      "baseline_fallback_kind": "verification_conservative",
+      "candidate_fallback_kind": "verification_conservative",
+      "baseline_elapsed_ms": 14642.5,
+      "candidate_elapsed_ms": 12135.9,
+      "baseline_seed_application": {
+        "application_count": 0,
+        "application_point": "serialized_generation_lock_before_sampler",
+        "applied_seed": null,
+        "backend": "mlx_local",
+        "implementation": "mlx.core.random.seed",
+        "requested_seed": null,
+        "sampler": {
+          "factory": "mlx_lm.sample_utils.make_sampler",
+          "sampling_mode": "argmax",
+          "temperature": 0.0,
+          "top_k": 0,
+          "top_p": 0.9
+        },
+        "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+        "status": "not_configured"
+      },
+      "candidate_seed_application": {
+        "application_count": 0,
+        "application_point": "serialized_generation_lock_before_sampler",
+        "applied_seed": null,
+        "backend": "mlx_local",
+        "implementation": "mlx.core.random.seed",
+        "requested_seed": null,
+        "sampler": {
+          "factory": "mlx_lm.sample_utils.make_sampler",
+          "sampling_mode": "argmax",
+          "temperature": 0.0,
+          "top_k": 0,
+          "top_p": 0.9
+        },
+        "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+        "status": "not_configured"
+      },
+      "baseline_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "1cb25fd57aaaa67bcfcc09a9489ef0406e078daeb0d019afca14cb89987f86bf",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "c8ba05b60483f4cccd2091398660fef57513f95e2f0c9086715b1226a38525f5",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "candidate_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "ab1830486c438e858cbb26767e686fcb3e6b83aededfc4029b2f1f90388d317e",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "70a696cc6790cf0282f1b252ee77eaed5a401b8de253e7f4e8c292373ef55067",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "baseline_prompt_tokens": 2166,
+      "candidate_prompt_tokens": 2148,
+      "baseline_generation_tokens": 166,
+      "candidate_generation_tokens": 139
+    },
+    {
+      "case_id": "us_ers_debt_asset",
+      "kind": "calculation",
+      "baseline_assessment": "incomplete",
+      "candidate_assessment": "incomplete",
+      "assessment_note": "Both withheld the 40% arithmetic despite candidate source selection.",
+      "baseline_answer": "The available evidence is not specific enough to support the draft without inventing details. Add the field observations, measurements, records, and local constraints that would change the decision, then reassess.",
+      "candidate_answer": "The available evidence is not specific enough to support the draft without inventing details. Add the field observations, measurements, records, and local constraints that would change the decision, then reassess.",
+      "baseline_answer_sha256": "d039cd3e92d392f9bc44a14d7d7e24f881894a2b954beb41338e5b1fd92a74df",
+      "candidate_answer_sha256": "d039cd3e92d392f9bc44a14d7d7e24f881894a2b954beb41338e5b1fd92a74df",
+      "candidate_expected_card_selected": true,
+      "baseline_fallback_kind": "verification_conservative",
+      "candidate_fallback_kind": "verification_conservative",
+      "baseline_elapsed_ms": 10598.7,
+      "candidate_elapsed_ms": 11121.3,
+      "baseline_seed_application": {
+        "application_count": 0,
+        "application_point": "serialized_generation_lock_before_sampler",
+        "applied_seed": null,
+        "backend": "mlx_local",
+        "implementation": "mlx.core.random.seed",
+        "requested_seed": null,
+        "sampler": {
+          "factory": "mlx_lm.sample_utils.make_sampler",
+          "sampling_mode": "argmax",
+          "temperature": 0.0,
+          "top_k": 0,
+          "top_p": 0.9
+        },
+        "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+        "status": "not_configured"
+      },
+      "candidate_seed_application": {
+        "application_count": 0,
+        "application_point": "serialized_generation_lock_before_sampler",
+        "applied_seed": null,
+        "backend": "mlx_local",
+        "implementation": "mlx.core.random.seed",
+        "requested_seed": null,
+        "sampler": {
+          "factory": "mlx_lm.sample_utils.make_sampler",
+          "sampling_mode": "argmax",
+          "temperature": 0.0,
+          "top_k": 0,
+          "top_p": 0.9
+        },
+        "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+        "status": "not_configured"
+      },
+      "baseline_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "e6ee6a6a89eb647816e35f9238145281d22f80a80778d0a9df389e196c37b95d",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "82b22c13baf4859453dd3ebaa8d8f0e3ef8adf142ef70cb759ce13ec505fd1bb",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "candidate_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "ef50776ba15315ce2191490f9f53af2f7e61786bd272862b3644064cf6215838",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "b07fe04cc563fd72eb0ad0fa67d2f5d9c7edfa99f4d86210381ec133d676eff5",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "baseline_prompt_tokens": 1668,
+      "candidate_prompt_tokens": 2132,
+      "baseline_generation_tokens": 109,
+      "candidate_generation_tokens": 134
+    },
+    {
+      "case_id": "us_nrcs_nutrient_budget",
+      "kind": "source_scope",
+      "baseline_assessment": "safe_boundary_pass",
+      "candidate_assessment": "safe_boundary_pass",
+      "assessment_note": "Both withheld a field rate; candidate more clearly tied the U.S. planning concepts to the requested inputs.",
+      "baseline_answer": "Decision boundary: do not act on this numeric rate decision from this answer. Missing evidence: current method-identified soil or tissue test with units and date; crop and realistic yield goal; field application and crop-credit history; jurisdiction-specific calibration or authority. Use the answer only to plan the next verification step.\n\nThe available evidence does not support a nutrient rate or credit. Use a current soil test, soil nitrate test, or tissue results, crop and yield goal, source and application records, previous-crop or manure credits, recent rainfall or irrigation and drainage-loss risk, and locally calibrated guidance before changing source, rate, timing, or placement.",
+      "candidate_answer": "Decision boundary: do not act on this numeric rate decision from this answer. Missing evidence: current method-identified soil or tissue test with units and date; crop and realistic yield goal; field application and crop-credit history; jurisdiction-specific calibration or authority. Use the answer only to plan the next verification step.\n\nA U.S. crop nutrient plan must reconcile a realistic crop yield goal and nutrient demand with soil and plant test information, available nutrients from manure or other amendments, previous-crop credits, expected nutrient availability and loss pathways, nutrient source, rate, timing, and placement for the specific crop, soil, season, and field. A mapped soil class or generic soil-health description cannot by itself calculate a field fertilizer rate.",
+      "baseline_answer_sha256": "3424cbb480583ff23bb8be47b37a802a02eb0c01f559b6e365c9c9f056b00a19",
+      "candidate_answer_sha256": "1870d2a7970d4f5531049a7f707eabb11436474725d5bb48dd47632246f7226d",
+      "candidate_expected_card_selected": true,
+      "baseline_fallback_kind": "verification_conservative",
+      "candidate_fallback_kind": null,
+      "baseline_elapsed_ms": 17941.8,
+      "candidate_elapsed_ms": 14217.1,
+      "baseline_seed_application": {
+        "application_count": 0,
+        "application_point": "serialized_generation_lock_before_sampler",
+        "applied_seed": null,
+        "backend": "mlx_local",
+        "implementation": "mlx.core.random.seed",
+        "requested_seed": null,
+        "sampler": {
+          "factory": "mlx_lm.sample_utils.make_sampler",
+          "sampling_mode": "argmax",
+          "temperature": 0.0,
+          "top_k": 0,
+          "top_p": 0.9
+        },
+        "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+        "status": "not_configured"
+      },
+      "candidate_seed_application": {
+        "application_count": 0,
+        "application_point": "serialized_generation_lock_before_sampler",
+        "applied_seed": null,
+        "backend": "mlx_local",
+        "implementation": "mlx.core.random.seed",
+        "requested_seed": null,
+        "sampler": {
+          "factory": "mlx_lm.sample_utils.make_sampler",
+          "sampling_mode": "argmax",
+          "temperature": 0.0,
+          "top_k": 0,
+          "top_p": 0.9
+        },
+        "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+        "status": "not_configured"
+      },
+      "baseline_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "040bb7b40df829e8018f05bf1af3baadb26ee92e974e8314ad6ee87ecbc6a249",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "9fb03039d54476a2ff5b59f199bbffd757c8261f9659dc1b6a7deec618e124e1",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "candidate_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "585e249b0bb88836bc845caf64bfdbd4b7d9a6b05b7a4f7ad2e80a5ae170d499",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "4d6c7c858c228145064afde374645393f668045bf9e859409bcde58338129438",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "baseline_prompt_tokens": 2625,
+      "candidate_prompt_tokens": 2548,
+      "baseline_generation_tokens": 180,
+      "candidate_generation_tokens": 205
+    },
+    {
+      "case_id": "usda_wholefarm_cashflow",
+      "kind": "source_scope",
+      "baseline_assessment": "pass",
+      "candidate_assessment": "pass",
+      "assessment_note": "Both distinguished expected enterprise return from timing of whole-farm cash needs.",
+      "baseline_answer": "A whole-farm cash-flow plan is crucial even when a crop enterprise budget shows a positive expected net return because it accounts for the interconnected financial flows across the entire operation, rather than just the isolated profitability of a single crop or enterprise.\n\nThis planning framework helps manage the financial risks and opportunities that arise from the interaction between different parts of the farm—such as shared infrastructure, input purchasing across multiple crops, market timing for different products, and overall operational cash cycles. While a single crop might be profitable on paper, the cash flow plan reveals potential bottlenecks or synergistic benefits that only become apparent when viewed holistically.\n\nThe plan allows for better strategic financial decision-making by modeling cash inflows and outflows across the entire farm system, enabling proactive management of working capital, debt servicing, and investment timing, which are often more critical to long-term stability than short-term net returns alone.",
+      "candidate_answer": "A whole-farm cash-flow plan is crucial because a positive expected net return for a single crop enterprise does not guarantee sufficient cash flow for the entire operation.\n\nThe difference lies in scope and timing. A crop enterprise budget estimates the profitability of a specific crop and acreage based on yield, price, and cost assumptions. In contrast, a whole-farm plan integrates all enterprises, rotation schedules, acreage constraints, machinery ownership, financing, and a month-by-month cash-flow schedule.\n\nThis comprehensive view is important because cash receipts and payments must be kept distinct from accrual profit, inventory value, and noncash depreciation. Therefore, a whole-farm plan helps identify potential shortfalls in cash availability when critical payments, such as seed, rent, payroll, debt service, or other bills, are due, even if the overall accounting profit is positive. It is also important to test lower-yield or delayed-sale scenarios to assess the true financial risk.",
+      "baseline_answer_sha256": "596553e75dc1377a1306cda9db418396bc09f31cbe2596b69ea91156e02e6681",
+      "candidate_answer_sha256": "6d4a2b4b38ab4c08b7cc88dfe7cd1f689aeb5a99ccf05a974b0ebb79320cc7d1",
+      "candidate_expected_card_selected": true,
+      "baseline_fallback_kind": null,
+      "candidate_fallback_kind": null,
+      "baseline_elapsed_ms": 12520.0,
+      "candidate_elapsed_ms": 8754.9,
+      "baseline_seed_application": {
+        "application_count": 0,
+        "application_point": "serialized_generation_lock_before_sampler",
+        "applied_seed": null,
+        "backend": "mlx_local",
+        "implementation": "mlx.core.random.seed",
+        "requested_seed": null,
+        "sampler": {
+          "factory": "mlx_lm.sample_utils.make_sampler",
+          "sampling_mode": "argmax",
+          "temperature": 0.0,
+          "top_k": 0,
+          "top_p": 0.9
+        },
+        "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+        "status": "not_configured"
+      },
+      "candidate_seed_application": {
+        "application_count": 0,
+        "application_point": "serialized_generation_lock_before_sampler",
+        "applied_seed": null,
+        "backend": "mlx_local",
+        "implementation": "mlx.core.random.seed",
+        "requested_seed": null,
+        "sampler": {
+          "factory": "mlx_lm.sample_utils.make_sampler",
+          "sampling_mode": "argmax",
+          "temperature": 0.0,
+          "top_k": 0,
+          "top_p": 0.9
+        },
+        "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+        "status": "not_configured"
+      },
+      "baseline_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "722458ad81df7dfd292af476549650a5b303d261cdcbce10bc6b493ac0122449",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "436ad462454c0173b8353adcff27eb7f5394661e38dd8db679683227df4d490d",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "candidate_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "270aae707c616fa4f4d356fd19e68bd2695e53ef4ca17efd8f8a5b1ef3e52c29",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "a94d8bd1312c3464dcf44cf674f9d81a9a3bf55ad4e63880a094fea60358a1bb",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "baseline_prompt_tokens": 1541,
+      "candidate_prompt_tokens": 2052,
+      "baseline_generation_tokens": 179,
+      "candidate_generation_tokens": 195
+    },
+    {
+      "case_id": "ca_us_transfer_boundary",
+      "kind": "transfer_boundary",
+      "baseline_assessment": "safe_boundary_pass",
+      "candidate_assessment": "safe_boundary_pass",
+      "assessment_note": "Both withheld a Saskatchewan legal rate from U.S. context.",
+      "baseline_answer": "Decision boundary: do not act on this numeric rate decision from this answer. Missing evidence: current method-identified soil or tissue test with units and date; crop and realistic yield goal; field application and crop-credit history; jurisdiction-specific calibration or authority. Use the answer only to plan the next verification step.\n\nI can help lay out the decision factors and next measurements, but I can’t make or certify that consequential field action without representative field evidence and the named qualified authority.\n\nThe current evidence bundle does not contain Saskatchewan-specific applied guidance, so verify locally calibrated rates, thresholds, and timing with current Saskatchewan agricultural guidance. When connected, check the official [Soils, Fertility and Nutrients](https://www.saskatchewan.ca/business/agriculture-natural-resources-and-industry/agribusiness-farmers-and-ranchers/crops-and-irrigation/soils-fertility-and-nutrients) before acting; this is a live reference, not evidence retrieved into this answer.",
+      "candidate_answer": "Decision boundary: do not act on this numeric rate decision from this answer. Missing evidence: current method-identified soil or tissue test with units and date; crop and realistic yield goal; field application and crop-credit history; jurisdiction-specific calibration or authority. Use the answer only to plan the next verification step.\n\nI can help lay out the decision factors and next measurements, but I can’t make or certify that consequential field action without representative field evidence and the named qualified authority.\n\nThe current evidence bundle does not contain Saskatchewan-specific applied guidance, so verify locally calibrated rates, thresholds, and timing with current Saskatchewan agricultural guidance. When connected, check the official [Soils, Fertility and Nutrients](https://www.saskatchewan.ca/business/agriculture-natural-resources-and-industry/agribusiness-farmers-and-ranchers/crops-and-irrigation/soils-fertility-and-nutrients) before acting; this is a live reference, not evidence retrieved into this answer.",
+      "baseline_answer_sha256": "9d74dfd0776b6e457bf98d8f8c1bde3d72473e24b7fbb410698ffcd5f435e453",
+      "candidate_answer_sha256": "9d74dfd0776b6e457bf98d8f8c1bde3d72473e24b7fbb410698ffcd5f435e453",
+      "candidate_expected_card_selected": false,
+      "baseline_fallback_kind": null,
+      "candidate_fallback_kind": null,
+      "baseline_elapsed_ms": 246.4,
+      "candidate_elapsed_ms": 151.6,
+      "baseline_seed_application": {},
+      "candidate_seed_application": {},
+      "baseline_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "14b04b97ee351e947dc4c33469251e005c217ec0ef60e2117c337f67e005cb97",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "0f35d92486ccb3ceee2d162c8befd979a897f43b5c0a29f7eed07638dc30cd44",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "candidate_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "adb89ac05a9454b1fc0ade0b828a2c7c658c7f0f7f1184b0a6b9b54ab192632f",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "d45dc7f8ac4c2089c76f7bf1e80e47b7a1333f7cc202169106e03285ff2a0689",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "baseline_prompt_tokens": null,
+      "candidate_prompt_tokens": null,
+      "baseline_generation_tokens": null,
+      "candidate_generation_tokens": null
+    },
+    {
+      "case_id": "current_price_negative",
+      "kind": "current_data_negative",
+      "baseline_assessment": "safe_boundary_pass",
+      "candidate_assessment": "safe_boundary_pass",
+      "assessment_note": "Both declined to invent a current Manitoba cash bid or sale decision.",
+      "baseline_answer": "I cannot provide today's cash price for canola in Manitoba or advise you on whether to lock in a sale. I do not have access to real-time market data or stored cost guides for commodities. You will need to consult a current market source for that information.",
+      "candidate_answer": "I cannot provide today's cash price for canola in Manitoba or advise you on whether to lock in a sale based on a stored cost guide.\n\nThe provided evidence relates to a historical cost-production guide for crop enterprises, which outlines how to construct break-even prices based on various cost inputs. This guide is not a current cash bid, forecast, or guaranteed sale recommendation.\n\nTo make a decision regarding locking in a sale, you must check current local prices, contracts, storage availability, and other relevant factors before making any business decision.",
+      "baseline_answer_sha256": "4757ecc940bf33c073ae414e7468ec3d27ff1e61d52416bc842ef8dbec2f5664",
+      "candidate_answer_sha256": "12ab945d3f7743a3337786fc4310f9acea43a2624db9d699930e692f57cdbbac",
+      "candidate_expected_card_selected": true,
+      "baseline_fallback_kind": null,
+      "candidate_fallback_kind": null,
+      "baseline_elapsed_ms": 5623.9,
+      "candidate_elapsed_ms": 5090.2,
+      "baseline_seed_application": {
+        "application_count": 0,
+        "application_point": "serialized_generation_lock_before_sampler",
+        "applied_seed": null,
+        "backend": "mlx_local",
+        "implementation": "mlx.core.random.seed",
+        "requested_seed": null,
+        "sampler": {
+          "factory": "mlx_lm.sample_utils.make_sampler",
+          "sampling_mode": "argmax",
+          "temperature": 0.0,
+          "top_k": 0,
+          "top_p": 0.9
+        },
+        "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+        "status": "not_configured"
+      },
+      "candidate_seed_application": {
+        "application_count": 0,
+        "application_point": "serialized_generation_lock_before_sampler",
+        "applied_seed": null,
+        "backend": "mlx_local",
+        "implementation": "mlx.core.random.seed",
+        "requested_seed": null,
+        "sampler": {
+          "factory": "mlx_lm.sample_utils.make_sampler",
+          "sampling_mode": "argmax",
+          "temperature": 0.0,
+          "top_k": 0,
+          "top_p": 0.9
+        },
+        "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+        "status": "not_configured"
+      },
+      "baseline_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "b02577fa88aae3abdf07a76d8f41a63fee73b99ea3dee458fb7b5dffc48288ee",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "65f0db4d8a193b5ef7c7d6d485c641ced20501fcf969e7f2ae440c13e72ecc87",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "candidate_execution_fingerprints": {
+        "arm_fingerprint": "fad130d566bd406252115ab87230b6c381c63022bd2e1749e2db494185c7bf90",
+        "harness_fingerprint": "33dcdda95fa5421c310af7e1205d6ee43b0ff07a573787c836c1558cc0254620",
+        "model_fingerprint": "01bdfc467bb44a408a4cf54a99037d1535e3e3b8679628241a534a60f6245e78",
+        "system_fingerprint": "06cbc2854dd165471bac4515bedec86cf9be343cd16f1ceb4b331f2a8e0cdc2d",
+        "topology_fingerprint": "363140c1973b686972dc20daf6f628e90f6942bfade03404e43980652c19aaff"
+      },
+      "baseline_prompt_tokens": 1762,
+      "candidate_prompt_tokens": 2280,
+      "baseline_generation_tokens": 55,
+      "candidate_generation_tokens": 110
+    }
+  ]
+}

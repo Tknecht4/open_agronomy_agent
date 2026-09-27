@@ -300,6 +300,18 @@ def _tokenize_cached(text: str) -> tuple[str, ...]:
     return tuple(tokens)
 
 
+@lru_cache(maxsize=2048)
+def _source_name_trigrams(source_id: str) -> frozenset[tuple[str, str, str]]:
+    """Find distinctive three-word names in a source identifier."""
+
+    words = tokenize(source_id.replace("_", " ").replace("-", " "))
+    return frozenset(
+        tuple(words[index : index + 3])
+        for index in range(max(0, len(words) - 2))
+        if all(len(word) >= 3 for word in words[index : index + 3])
+    )
+
+
 def load_jsonl(path: Path) -> list[dict]:
     rows: list[dict] = []
     with path.open("r", encoding="utf-8") as handle:
@@ -513,6 +525,11 @@ class LexicalRetriever:
             return []
         self._ensure_runtime_caches()
         query_token_set = set(query_tokens)
+        named_source_tokens = tokenize(query)
+        query_trigrams = {
+            tuple(named_source_tokens[index : index + 3])
+            for index in range(max(0, len(named_source_tokens) - 2))
+        }
         eligible_indices = self._eligible_indices_for_filters(
             allowed_role_set=allowed_role_set,
             knowledge_domain_set=knowledge_domain_set,
@@ -648,6 +665,16 @@ class LexicalRetriever:
                     score *= 1.35
                 elif language_prefixes:
                     score *= 0.78
+            doc = self.docs[idx]
+            if (
+                str(doc.get("authority_tier") or "").casefold().startswith("canadian_official")
+                and query_trigrams
+                and _source_name_trigrams(str(doc.get("source_id") or "")) & query_trigrams
+            ):
+                # An explicitly named official guide should outrank a project
+                # synthesis with incidental lexical overlap. This changes
+                # ranking only; later corpus policy still decides authority.
+                score *= 1.25
             normalized = score * score_normalizer
             if normalized >= min_score:
                 scored.append((normalized, idx))

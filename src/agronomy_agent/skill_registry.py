@@ -7,6 +7,7 @@ from typing import Any
 
 import yaml
 
+from agronomy_agent.calculator_contracts import CALCULATOR_VERSION
 from agronomy_agent.paths import repo_path
 
 
@@ -141,7 +142,7 @@ SKILL_CONTRACTS: dict[str, SkillContract] = {
         favor_recall=True,
     ),
     "agronomic_calculator": SkillContract(
-        skill_id="agronomic_calculator_v1",
+        skill_id=CALCULATOR_VERSION,
         tool_name="agronomic_calculator",
         name="Structured Agronomic Calculator",
         risk_class="medium",

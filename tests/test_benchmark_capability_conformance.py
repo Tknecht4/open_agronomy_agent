@@ -6,7 +6,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/run_benchmark_capability_conformance.py"
-CONTRACT = ROOT / "configs/benchmark_capability_conformance_v1.json"
+CONTRACT = ROOT / "configs/benchmark_capability_conformance_v2.json"
 
 
 def _module():
@@ -25,9 +25,17 @@ def test_all_calculator_operations_execute_through_canonical_registry() -> None:
     assert report["failures"] == []
     calculator = report["capabilities"][0]
     assert calculator["capability_id"] == "agronomic_calculator"
-    assert calculator["declared_operation_count"] == 12
-    assert calculator["implemented_operation_count"] == 12
+    assert calculator["declared_operation_count"] == 17
+    assert calculator["implemented_operation_count"] == 17
     assert calculator["conformance_exercised"] is True
     assert calculator["performance_benchmark_exercised"] is False
     assert all(row["passed"] for row in calculator["positive_fixtures"])
     assert all(row["passed"] for row in calculator["negative_fixtures"])
+
+
+def test_frozen_v1_conformance_cannot_impersonate_current_calculator() -> None:
+    report = _module().run_conformance(ROOT / "configs/benchmark_capability_conformance_v1.json")
+
+    assert report["status"] == "blocked"
+    assert "agronomic_calculator:version_mismatch" in report["failures"]
+    assert "agronomic_calculator:operation_coverage_mismatch" in report["failures"]

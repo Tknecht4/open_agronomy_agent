@@ -1,0 +1,23 @@
+{
+  "schema_version": "open_agronomy_agent.offline_corpus_release.v1",
+  "store_id": "production-foundations-v1",
+  "profile": "source-linked-context-only",
+  "shards": [
+    {
+      "path": "shards/foundations-0001.jsonl",
+      "rows": 9,
+      "bytes": 25168,
+      "sha256": "2efcb7ccb2820e260e2f1633077544305c8698b6f4959b4d958d81a0e74d8d59",
+      "retrieval_policies": [
+        "context_only"
+      ]
+    }
+  ],
+  "row_count": 9,
+  "quality_ledger_path": "quality_ledger.json",
+  "quality_ledger_sha256": "0f47e111d52cdc7a04d7e49e0a90bbfbc2807d5169fef883664eb5fd9a9e1508",
+  "source_receipt_path": "source_receipt.json",
+  "source_receipt_sha256": "a078842b85b96144fd0b8002734cc51b59bde3f35e6a5c0c5de5784bc0fbbce8",
+  "authority_boundary": "Project-authored context only. No current price, field rate, legal authority, or local calibration.",
+  "store_sha256": "edfdd45de6afce6cb814371b37b4cce21bd8ff3e5b12d2b55ebe923cff1a708d"
+}

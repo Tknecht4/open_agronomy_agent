@@ -98,6 +98,50 @@ completed `frontend/dist` JS/CSS files. Run it after `npm run build` with
 `node scripts/profile_frontend_build.mjs` from the repository root, or pass a
 different build directory as its positional argument. See the [workspace customization guide](../docs/public/developer/customizing-the-harness.md)
 and the [bounded backend findings](../docs/reviews/artifacts/ui-backend-findings-20260927.md).
+## Production foundations candidate
+
+`build_production_foundations_supplement.py` builds the nine-card, source-linked
+context release from `data/seed/production_foundations_v1.jsonl` and its
+external-source registry. The external snapshots are inspected and hash
+recorded but not copied into the public package. The builder refuses a
+nonempty output directory; save a prior candidate before rebuilding.
+`build_production_foundations_profile.py` composes an ignored candidate profile
+by default. The checked-in `configs/rag_production_foundations_candidate.yaml`
+and companion policy are nonselectable development artifacts. Writing the
+builder outputs to `configs/rag.yaml` and the active policy would be a separate
+admission step requiring a qualified answer-quality result, updated
+`runtime_profiles.json` hashes, and full validation; this comparison did not
+authorize that step.
+
+The exposed development probes are:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/evaluate_production_foundations_retrieval.py \
+  --config configs/rag_production_foundations_candidate.yaml \
+  --output outputs/production-foundations-retrieval.json
+PYTHONPATH=src .venv/bin/python scripts/run_production_foundations_development.py \
+  --rag-config configs/rag_production_foundations_candidate.yaml \
+  --max-tokens 320 \
+  --output-dir outputs/production-foundations-model
+```
+
+The second command requires the pinned local Gemma snapshot and Metal access.
+Both are development diagnostics; compare against an independently captured
+baseline and inspect saved answers rather than treating a numeric substring
+proxy as a correctness score. Output destinations must be new and empty. The
+separate `data/eval/production_foundations_confirmation_v1.jsonl` probes the
+versioned typed-calculation follow-up through this same runner. The current
+deterministic registry/executor gate is:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/run_benchmark_capability_conformance.py \
+  --contract configs/benchmark_capability_conformance_v2.json
+```
+
+The v1 contract is retained as historical evidence and intentionally fails
+current-version conformance. The [follow-up record](../docs/reviews/production-foundations-benchmark-20260927.md)
+distinguishes calculator gain from corpus gain and records interrupted model
+runs as incomplete.
 
 ## Observed-system rehearsal
 

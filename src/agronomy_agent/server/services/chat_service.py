@@ -11,6 +11,7 @@ from time import perf_counter
 from typing import Any, Callable
 
 from agronomy_agent import local_tools
+from agronomy_agent.calculator_contracts import TOOL_PLANNER_VERSION
 from agronomy_agent.agent import (
     MockGenerator,
     MLXGenerator,
@@ -299,45 +300,34 @@ def _build_mlx_generator(
         )
     if backend not in {"mlx", "native", "local"}:
         raise ValueError(f"unsupported AGRONOMY_AGENT_MODEL_BACKEND: {backend}")
-    try:
-        prompt_cache_max_bytes = int(float(model_config.get("prompt_cache_max_bytes_mb", 256)) * 1024 * 1024)
-        generator = MLXGenerator(
-            model_id,
-            model_revision=selected_revision,
-            temperature=float(model_config.get("temperature", 0.0)),
-            top_p=float(model_config.get("top_p", 0.9)),
-            top_k=int(model_config.get("top_k", 0)),
-            draft_model_id=model_config.get("draft_model_id") or None,
-            num_draft_tokens=int(model_config.get("num_draft_tokens", 4)),
-            use_stream_generate=bool(model_config.get("use_stream_generate", True)),
-            prompt_cache_enabled=bool(model_config.get("prompt_cache_enabled", False)),
-            prompt_cache_entries=int(model_config.get("prompt_cache_entries", 8)),
-            prompt_cache_max_bytes=prompt_cache_max_bytes,
-            prompt_cache_min_prefix_tokens=int(model_config.get("prompt_cache_min_prefix_tokens", 64)),
-            prefill_step_size=int(model_config.get("prefill_step_size", 2048)),
-            kv_bits=int(model_config["kv_bits"]) if model_config.get("kv_bits") is not None else None,
-            kv_group_size=int(model_config.get("kv_group_size", 64)),
-            quantized_kv_start=int(model_config.get("quantized_kv_start", 0)),
-            max_kv_size=int(model_config["max_kv_size"]) if model_config.get("max_kv_size") is not None else None,
-        )
-        generator.model_identity = model_identity_contract(
-            model_id=model_id,
-            model_revision=selected_revision,
-            backend="mlx_local",
-            model_config_path=effective_config_path,
-        )
-        return generator
-    except TypeError as exc:
-        if "unexpected keyword argument" not in str(exc):
-            raise
-        generator = MLXGenerator(model_id, model_revision=selected_revision)
-        generator.model_identity = model_identity_contract(
-            model_id=model_id,
-            model_revision=selected_revision,
-            backend="mlx_local",
-            model_config_path=effective_config_path,
-        )
-        return generator
+    prompt_cache_max_bytes = int(float(model_config.get("prompt_cache_max_bytes_mb", 256)) * 1024 * 1024)
+    generator = MLXGenerator(
+        model_id,
+        model_revision=selected_revision,
+        temperature=float(model_config.get("temperature", 0.0)),
+        top_p=float(model_config.get("top_p", 0.9)),
+        top_k=int(model_config.get("top_k", 0)),
+        seed=int(model_config["seed"]) if model_config.get("seed") is not None else None,
+        draft_model_id=model_config.get("draft_model_id") or None,
+        num_draft_tokens=int(model_config.get("num_draft_tokens", 4)),
+        use_stream_generate=bool(model_config.get("use_stream_generate", True)),
+        prompt_cache_enabled=bool(model_config.get("prompt_cache_enabled", False)),
+        prompt_cache_entries=int(model_config.get("prompt_cache_entries", 8)),
+        prompt_cache_max_bytes=prompt_cache_max_bytes,
+        prompt_cache_min_prefix_tokens=int(model_config.get("prompt_cache_min_prefix_tokens", 64)),
+        prefill_step_size=int(model_config.get("prefill_step_size", 2048)),
+        kv_bits=int(model_config["kv_bits"]) if model_config.get("kv_bits") is not None else None,
+        kv_group_size=int(model_config.get("kv_group_size", 64)),
+        quantized_kv_start=int(model_config.get("quantized_kv_start", 0)),
+        max_kv_size=int(model_config["max_kv_size"]) if model_config.get("max_kv_size") is not None else None,
+    )
+    generator.model_identity = model_identity_contract(
+        model_id=model_id,
+        model_revision=selected_revision,
+        backend="mlx_local",
+        model_config_path=effective_config_path,
+    )
+    return generator
 
 
 def _run_turn_impl(
@@ -654,7 +644,7 @@ def _run_turn_impl(
             generation_metadata = {
                 "generation_bypass": {
                     "reason": deterministic_generation_path or "deterministic_tool_result",
-                    "renderer": "tool_planner.v1",
+                    "renderer": TOOL_PLANNER_VERSION,
                 },
                 "generation_path": deterministic_generation_path,
                 "tool_execution": {
