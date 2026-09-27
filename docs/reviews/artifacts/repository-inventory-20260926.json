@@ -30,11 +30,17 @@
   ],
   "phase_1_cleanup": {
     "python_modules_after": 123,
-    "python_lines_after": 106441,
+    "python_lines_after": 106444,
     "modules_removed": 29,
     "python_lines_removed": 10522,
-    "collected_tests_after": 992,
+    "python_test_files_after": 88,
+    "explicit_test_functions_after": 719,
+    "collected_tests_after": 994,
     "removed_test_files": 0,
+    "added_test_files": 1,
+    "added_test_contracts": [
+      "pending_restore_journal_blocks_startup_and_names_the_supported_recovery_api"
+    ],
     "removed_categories": [
       "unused_agno_comparison_and_ingestion_experiments",
       "unused_lfm_shadow_router",

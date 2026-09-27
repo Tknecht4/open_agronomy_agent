@@ -14,7 +14,7 @@
 | Ingestion/build | `ingest_*`, `build_*corpus*`, geospatial builders | Require source, rights, hashes, deterministic outputs |
 | Evaluation | `run_open_agronomy_benchmark.py`, `run_open_agronomy_benchmark_v2.py`, `run_observed_system_rehearsal.py`, `run_benchmark_capability_conformance.py`, v2/v3 audits, model matrix, judges, analyzers | Preserve identities and separation; v2 dry execution, capability conformance, and observed-system rehearsal are harness QA, not performance evidence |
 | Packaging/release | `audit_release_candidate_checkout.py`, `capture_release_environment.py`, `build_public_repository.py`, edge manifest/container/SBOM scripts | Curated scope only; no private/generated state; the Python environment receipt observes range resolution and is not a portable lock |
-| Recovery | Security recovery/readiness tools | Narrow incident contracts; never promotion by recovery alone |
+| Recovery | Transaction-safe backup primitives in `server/storage/backup.py` | Programmatic maintenance boundary; no supported standalone recovery CLI is currently published |
 
 ## Inputs and outputs
 

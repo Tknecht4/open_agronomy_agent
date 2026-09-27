@@ -26,6 +26,11 @@ geospatial-prep = [
     "pyproj>=3.6,<4",
     "shapely>=2.0,<3",
 ]
+training = [
+    "datasets>=4.0,<5",
+    "huggingface_hub>=1.12.0,<2",
+    "transformers>=5.0,<6",
+]
 
 [project.scripts]
 agronomy-agent = "agronomy_agent.cli:main"

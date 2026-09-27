@@ -284,8 +284,11 @@ def assert_no_pending_restore(target_db_path: Path) -> None:
     pending_path = restore_journal_pending_path(target_db_path)
     if _path_exists(journal_path) or _path_exists(pending_path):
         raise RuntimeError(
-            f"pending restore journal blocks database use: {journal_path}; run "
-            f"`python scripts/phase4_backup.py recover --target-db-path {target_db_path}` first"
+            f"pending restore journal blocks database use: {journal_path}; "
+            "recover it with "
+            "agronomy_agent.server.storage.backup.recover_interrupted_restore "
+            "in an operator-controlled maintenance process, or restore from a "
+            "verified backup before restarting the application"
         )
 
 

@@ -361,6 +361,7 @@
     "tests/test_v3_competence_candidate.py",
     "tests/test_v3_candidate_runner.py",
     "tests/test_benchmark_child_timeout.py",
+    "tests/test_backup_restore_guard.py",
     "tests/test_public_tool_adapters.py",
     "tests/test_public_adapter_planner.py",
     "tests/test_public_docs.py",

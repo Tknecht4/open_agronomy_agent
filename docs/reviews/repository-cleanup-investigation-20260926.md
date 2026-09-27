@@ -143,3 +143,37 @@ whose sole CLI referenced five absent drill scripts/tests, plus unreachable
 demo, deployment-readiness, and persisted-path migration modules. Active backup
 transaction checks, storage backends, and hosted worker/preflight code were
 retained for an explicit operator-surface review.
+
+Independent review found that the retained backup guard still named a deleted
+`phase4_backup.py` command. The message now points to the supported
+`recover_interrupted_restore` API/verified-backup boundary, with focused tests.
+The same review found that a clean CI environment needed explicit training and
+geospatial optional dependencies; the package extras and CI install contract
+now declare them instead of relying on the maintainer workstation's transitive
+environment.
+
+The final post-cleanup inventory contains 123 package modules and 106,444
+Python lines. The test inventory is 88 files, 719 explicit test functions, and
+994 collected cases: no test was removed, and two focused restore-guard cases
+were added to protect the supported recovery boundary. The generated edge
+runtime manifest was refreshed after the source and documentation changes and
+its container-package validator passed with contract digest
+`82fd57270db03331b43464062ec479805d3dc5cddaacd175b16e47ac2a8cab6e`.
+
+## Final verification
+
+- A clean Python 3.12 environment installed the declared phase-4, benchmark,
+  geospatial, and training dependency sets without relying on the maintainer
+  environment.
+- The first parallel clean-environment run exhausted the host temporary volume
+  while copying the approximately 1 GiB public package: it reached 970 passes,
+  then reported two failures and 22 setup errors whose common cause was
+  `ENOSPC`. After removing only generated temporary outputs, the serial rerun
+  passed all 994 tests in 93.12 seconds with one upstream Starlette/httpx
+  deprecation warning.
+- Python compilation, the edge-container package validator, all 205 frontend
+  tests, frontend type checking and production build, public documentation
+  source/render audits, strict MkDocs rendering, and the frozen RC3 published-
+  artifact check passed.
+- The curated public package built 812 files and rejected no manifest or
+  machine-local-path boundary.

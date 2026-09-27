@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-08-21T06:23:35+00:00",
+  "generated_at": "2026-09-27T01:27:49+00:00",
   "status": "pass",
-  "contract_sha256": "453e3e7731191ce59c0d35825fea1e063c08291cd7be6ed8f39ce4d0d1545720",
+  "contract_sha256": "82fd57270db03331b43464062ec479805d3dc5cddaacd175b16e47ac2a8cab6e",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -407,9 +407,9 @@
   "runtime_assets": [
     {
       "path": "src/agronomy_agent",
-      "file_count": 154,
-      "bytes": 5470428,
-      "sha256": "594dead29c50bf2dd070f55c7cad1ed78a6ce5b77f2c6f81a1aeea4b775aa1f2"
+      "file_count": 130,
+      "bytes": 5101335,
+      "sha256": "7f53be26a921436f6b08154f4470483408ff749f22e3d30419834b94020d3857"
     },
     {
       "path": "frontend/src",
@@ -426,14 +426,14 @@
     {
       "path": "scripts",
       "file_count": 115,
-      "bytes": 1637925,
-      "sha256": "63bd0c7ab05203ec36c34005be3a9facd778780d9e43e47bb792934cda8544c4"
+      "bytes": 1600068,
+      "sha256": "7354567a1ac3a6e8335d8a32d824206b047e6bd688c382d6f855cc6d30abf059"
     },
     {
       "path": "configs",
-      "file_count": 80,
-      "bytes": 229716,
-      "sha256": "abd4f19f5041da2605b01384607e22ce842317c6bfcc2598441b98516e8c6402"
+      "file_count": 82,
+      "bytes": 234262,
+      "sha256": "ae1367bd91debb6a2bc07b4e6f65b68fec6ac906180fefec85457fefc87cc17f"
     },
     {
       "path": "data/manifests",
@@ -455,9 +455,9 @@
     },
     {
       "path": "docs/public",
-      "file_count": 84,
-      "bytes": 8735996,
-      "sha256": "e87a532812b20367aec9dc2765cbdaaf8355ed69f56a03467145b8eaddf6cc27"
+      "file_count": 86,
+      "bytes": 8743453,
+      "sha256": "697a2b8addc6155f93e1b6d0c0960e20e3336a0a85c275af845085de2a730362"
     }
   ],
   "geo_cache_seed": {
@@ -528,8 +528,8 @@
     {
       "path": "pyproject.toml",
       "role": "runtime_control",
-      "bytes": 1015,
-      "sha256": "b64b04a88df2e5af83e829bba8c309a53bc1749e4cb36a561ee5473e957c120d"
+      "bytes": 1116,
+      "sha256": "68b075044b04489ed7baadbbab3869ee5b5e22fd7c7ea5218be87757f160961c"
     },
     {
       "path": "docker-compose.edge.yml",
