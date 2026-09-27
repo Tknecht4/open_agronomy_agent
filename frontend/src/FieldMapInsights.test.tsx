@@ -14,22 +14,44 @@ const result: FieldMapAnalysis = {
   elapsed_ms: 12, warnings: ['Mapped context is not a measurement.'],
 }
 const response = (data: FieldMapAnalysis) => ({ ok: true, json: async () => data })
-afterEach(() => vi.unstubAllGlobals())
+const geometryResult = { ...result, layers: [] }
+const isGeometryOnly = (options: RequestInit) => JSON.parse(String(options.body)).layers.length === 0
+const deferred = () => {
+  let resolve!: (value: unknown) => void
+  const promise = new Promise(release => { resolve = release })
+  return { promise, resolve }
+}
+afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers() })
 
-describe('on-demand field map insights', () => {
-  it('shows geometry, bounded source coverage and units without another request', async () => {
+describe('compact on-demand field map insights', () => {
+  it('shows a compact summary and discloses zone areas and source details without refetching', async () => {
     const fetcher = vi.fn().mockResolvedValue(response(result))
     vi.stubGlobal('fetch', fetcher)
     render(<FieldMapInsights {...props} />)
     expect(await screen.findByText('10 ha')).toBeInTheDocument()
     expect(screen.getByText('1.3 km')).toBeInTheDocument()
-    expect(screen.getByText('Test mapped zone')).toBeInTheDocument()
+    expect(screen.getByText('Canada ecozones', { selector: '.insight-layer-label strong' }).closest('details')).not.toHaveAttribute('open')
+    expect(screen.getByRole('link', { name: 'Open source' })).not.toBeVisible()
+    fireEvent.click(screen.getByText('Canada ecozones', { selector: '.insight-layer-label strong' }))
+    expect(screen.getByRole('table', { name: 'Mapped zones in Canada ecozones' })).toHaveTextContent('Test mapped zone5 ha50%')
+    expect(screen.getByRole('link', { name: 'Open source' })).toHaveAttribute('href', 'https://example.test/official')
     fireEvent.click(screen.getByRole('button', { name: 'ac' }))
     expect(screen.getByText('24.7 ac')).toBeInTheDocument()
-    expect(fetcher).toHaveBeenCalledOnce()
-    const request = JSON.parse(fetcher.mock.calls[0][1].body)
-    expect(request).toEqual({ geometry, layers: ['canada_ecozones'] })
-    expect(screen.getByRole('link', { name: 'Open source' })).toHaveAttribute('href', 'https://example.test/official')
+    expect(screen.getByRole('table')).toHaveTextContent('12.4 ac')
+    expect(fetcher).toHaveBeenCalledTimes(2)
+    expect(fetcher.mock.calls.map(call => JSON.parse(call[1].body).layers)).toEqual([[], ['canada_ecozones']])
+  })
+
+  it('shows measurements while sources remain pending, then retains them if sources fail', async () => {
+    const source = deferred()
+    vi.stubGlobal('fetch', vi.fn((_url, options) => isGeometryOnly(options) ? Promise.resolve(response(geometryResult)) : source.promise))
+    render(<FieldMapInsights {...props} />)
+    expect(await screen.findByText('10 ha')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Reading 1 map source')
+    await act(async () => { source.resolve({ ok: false, status: 503 }); await source.promise })
+    expect(screen.getByRole('alert')).toHaveTextContent('Boundary measurements remain available above')
+    expect(screen.getByText('10 ha')).toBeInTheDocument()
+    expect(screen.queryByText('Canada ecozones')).not.toBeInTheDocument()
   })
 
   it('keeps zero mapped coverage distinct from unavailable data', async () => {
@@ -38,10 +60,20 @@ describe('on-demand field map insights', () => {
       { ...result.layers[0], layer_id: 'ab_detailed_soil', label: 'Alberta soils', status: 'not_installed', reason: 'local_layer_not_installed', zones: [], covered_area_ha: null, coverage_fraction: null },
     ] })))
     render(<FieldMapInsights {...props} />)
-    expect(await screen.findByText('0%')).toBeInTheDocument()
-    expect(screen.getByText('Not installed')).toBeInTheDocument()
-    expect(screen.getByText('This map pack is not installed.')).toBeInTheDocument()
+    expect(await screen.findByText('Not installed')).toBeInTheDocument()
+    expect(screen.getByText(/This map pack is not installed/)).toBeInTheDocument()
+    fireEvent.click(screen.getByText('1 layer had no mapped match'))
     expect(screen.getAllByText('0%')).toHaveLength(1)
+  })
+
+  it('keeps partial-source warnings visible while details are collapsed', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ ...result, status: 'partial', layers: [
+      { ...result.layers[0], status: 'partial', reason: 'source_transfer_limit_reached', covered_area_ha: null, coverage_fraction: null },
+    ] })))
+    render(<FieldMapInsights {...props} />)
+    expect(await screen.findByText(/Total coverage is unknown/)).toBeVisible()
+    expect(screen.getByText('Canada ecozones', { selector: '.insight-layer-label strong' }).closest('details')).not.toHaveAttribute('open')
+    expect(screen.queryByText('50%', { selector: '.insight-layer-value strong' })).not.toBeInTheDocument()
   })
 
   it('does not invent area from a point location', async () => {
@@ -50,42 +82,83 @@ describe('on-demand field map insights', () => {
       layers: [{ ...result.layers[0], covered_area_ha: null, coverage_fraction: null, zones: [{ ...result.layers[0].zones[0], area_ha: null, fraction_of_field: null }] }],
     })))
     render(<FieldMapInsights {...props} geometry={{ type: 'Point', coordinates: [-113.6, 53.3] }} />)
-    expect(await screen.findByText('Pin only')).toBeInTheDocument()
+    expect(await screen.findByText(/Pin only/)).toBeInTheDocument()
     expect(screen.getByText('At this location')).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Area units' })).not.toBeInTheDocument()
     expect(screen.queryByText('50%')).not.toBeInTheDocument()
+    expect(screen.queryByText('Boundary length')).not.toBeInTheDocument()
   })
 
-  it('rejects stale results after a field changes and aborts on unmount', async () => {
-    let release!: (value: unknown) => void
-    const pending = new Promise(resolve => { release = resolve })
-    const fetcher = vi.fn().mockReturnValueOnce(pending).mockResolvedValueOnce(response({ ...result, geometry: { ...result.geometry, area_ha: 20 } }))
+  it('rejects late geometry and source results after changing field and aborts on unmount', async () => {
+    const pending = [deferred(), deferred()]
+    const fetcher = vi.fn().mockReturnValueOnce(pending[0].promise).mockReturnValueOnce(pending[1].promise)
+      .mockResolvedValue(response({ ...result, geometry: { ...result.geometry, area_ha: 20 } }))
     vi.stubGlobal('fetch', fetcher)
     const { rerender, unmount } = render(<FieldMapInsights {...props} />)
     rerender(<FieldMapInsights {...props} fieldKey="field-two" fieldName="South field" />)
     expect(await screen.findByText('20 ha')).toBeInTheDocument()
-    await act(async () => { release(response(result)); await pending })
+    await act(async () => { pending.forEach(item => item.resolve(response(result))); await Promise.all(pending.map(item => item.promise)) })
     expect(screen.queryByText('10 ha')).not.toBeInTheDocument()
     expect(fetcher.mock.calls[0][1].signal.aborted).toBe(true)
-    unmount()
     expect(fetcher.mock.calls[1][1].signal.aborted).toBe(true)
+    unmount()
+    expect(fetcher.mock.calls.every(call => call[1].signal.aborted)).toBe(true)
   })
 
-  it('provides retry after a failed response without displaying raw server paths', async () => {
-    const fetcher = vi.fn().mockResolvedValueOnce({ ok: false, status: 500, text: async () => '/private/server/path' }).mockResolvedValueOnce(response(result))
+  it('does not repeat geometry requests when only selected layers change', async () => {
+    const source = deferred()
+    const fetcher = vi.fn((_url, options) => isGeometryOnly(options) ? Promise.resolve(response(geometryResult)) : source.promise)
+    vi.stubGlobal('fetch', fetcher)
+    const { rerender } = render(<FieldMapInsights {...props} />)
+    expect(await screen.findByText('10 ha')).toBeInTheDocument()
+    rerender(<FieldMapInsights {...props} layerIds={['other-layer']} />)
+    expect(fetcher).toHaveBeenCalledTimes(3)
+    expect(fetcher.mock.calls.filter(call => isGeometryOnly(call[1]))).toHaveLength(1)
+    expect(fetcher.mock.calls[1][1].signal.aborted).toBe(true)
+    expect(screen.getByText('10 ha')).toBeInTheDocument()
+  })
+
+  it('uses just one geometry-only request with no selected layers', async () => {
+    const fetcher = vi.fn().mockResolvedValue(response(geometryResult))
+    vi.stubGlobal('fetch', fetcher)
+    render(<FieldMapInsights {...props} layerIds={[]} allowNetwork={false} />)
+    expect(await screen.findByText('10 ha')).toBeInTheDocument()
+    expect(fetcher).toHaveBeenCalledOnce()
+    expect(isGeometryOnly(fetcher.mock.calls[0][1])).toBe(true)
+  })
+
+  it('retries a failed source response without displaying raw server paths', async () => {
+    let sourceCalls = 0
+    const fetcher = vi.fn((_url, options) => Promise.resolve(isGeometryOnly(options) ? response(geometryResult) : ++sourceCalls === 1 ? { ok: false, status: 500, text: async () => '/private/server/path' } : response(result)))
     vi.stubGlobal('fetch', fetcher)
     render(<FieldMapInsights {...props} />)
     expect(await screen.findByRole('alert')).toHaveTextContent('Field insights are unavailable')
     expect(screen.queryByText('/private/server/path')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
-    await waitFor(() => expect(screen.getByText('10 ha')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('Canada ecozones', { selector: '.insight-layer-label strong' })).toBeInTheDocument())
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
-  it('keeps recorded acreage distinct from a boundary-derived estimate', async () => {
+
+  it('keeps recorded acreage distinct from the boundary estimate', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(result)))
     render(<FieldMapInsights {...props} recordedAcres={40} />)
     expect(await screen.findByText('10 ha')).toBeInTheDocument()
-    expect(screen.getByText('40 ac')).toBeInTheDocument()
-    expect(screen.getByText('24.7 ac')).toBeInTheDocument()
-    expect(screen.getByText(/Your field record says/)).toHaveTextContent('This boundary is about')
+    expect(screen.getByText('40 ac recorded')).toBeInTheDocument()
+    expect(screen.getByText('24.7 ac from boundary')).toBeInTheDocument()
   })
 
+  it('times out sources without losing geometry, and ignores a late response', async () => {
+    vi.useFakeTimers()
+    const source = deferred()
+    vi.stubGlobal('fetch', vi.fn((_url, options) => isGeometryOnly(options) ? Promise.resolve(response(geometryResult)) : source.promise))
+    render(<FieldMapInsights {...props} />)
+    await act(async () => { await Promise.resolve() })
+    expect(screen.getByText('10 ha')).toBeInTheDocument()
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_000) })
+    expect(screen.getByRole('alert')).toHaveTextContent('taking too long')
+    await act(async () => { source.resolve(response(result)); await source.promise })
+    expect(screen.queryByText('Canada ecozones')).not.toBeInTheDocument()
+    expect(screen.getByText('10 ha')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeEnabled()
+  })
 })

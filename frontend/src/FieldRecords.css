@@ -1,0 +1,52 @@
+.workspace-shell .field-records-content .field-history-panel { min-width: 0; padding: 16px; }
+.workspace-shell .field-record-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.workspace-shell .field-record-toolbar button,
+.workspace-shell .field-record-more,
+.workspace-shell .field-event-list button,
+.workspace-shell .field-history-actions button,
+.workspace-shell .field-sync-panel summary { min-height: 40px; }
+.workspace-shell .field-record-toolbar button { padding: 8px 12px; }
+.workspace-shell .field-history-list article { min-width: 0; padding: 10px 0; border: 0; border-bottom: 1px solid #dce6db; border-radius: 0; background: transparent; }
+.workspace-shell .field-history-list article strong,
+.workspace-shell .field-history-list article p,
+.workspace-shell .field-history-list article small { overflow-wrap: anywhere; }
+.workspace-shell .field-record-detail { min-width: 0; }
+.workspace-shell .field-record-detail > summary { min-height: 40px; display: flex; align-items: center; cursor: pointer; color: #435e51; font-size: 12px; }
+.workspace-shell .field-record-detail[open] > summary { margin-bottom: 6px; }
+.workspace-shell .field-record-detail small { display: block; margin: 3px 0; }
+.workspace-shell .field-measurement-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 10px; margin: 6px 0 10px; font-size: 12px; }
+.workspace-shell .field-measurement-details > div { min-width: 0; }
+.workspace-shell .field-measurement-details dt { color: #657268; }
+.workspace-shell .field-measurement-details dd { margin: 0; overflow-wrap: anywhere; font-weight: 600; }
+.workspace-shell .field-record-more { width: fit-content; padding: 8px 12px; }
+.workspace-dialog:has(.record-entry-form) { overflow-x: hidden; overflow-y: auto; }
+.workspace-dialog .record-entry-form { min-width: 0; max-width: 100%; margin: 0; border: 0; background: transparent; }
+.workspace-dialog .record-entry-form label,
+.workspace-dialog .soil-entry-fields > label { min-width: 0; max-width: 100%; }
+.workspace-dialog .record-entry-form input,
+.workspace-dialog .record-entry-form select,
+.workspace-dialog .record-entry-form textarea { box-sizing: border-box; min-width: 0; max-width: 100%; margin: 0; }
+.workspace-dialog .soil-entry-fields { display: grid; grid-template-columns: minmax(0, .7fr) minmax(0, 1fr); gap: 10px; grid-column: 1 / -1; min-width: 0; margin: 0; padding: 0; border: 0; }
+.workspace-dialog .soil-entry-fields .field-event-summary { grid-column: 1 / -1; }
+.workspace-dialog .record-entry-form textarea { min-height: 96px; }
+.workspace-dialog .record-entry-form button { min-height: 42px; }
+.workspace-dialog .record-entry-status { padding: 0 14px 14px; }
+.workspace-shell .soil-entry-action { margin: 0; width: fit-content; }
+.workspace-shell .soil-entry-action > button { min-height: 40px; font-size: 12px; }
+.workspace-dialog .soil-entry-hint { margin: 14px 16px 0; font-size: 12px; }
+.workspace-dialog .soil-report-check { display: flex; flex-direction: row; align-items: center; }
+.workspace-dialog .soil-report-check input { width: 20px; min-height: 20px; height: 20px; }
+.workspace-dialog .record-entry-form pre,
+.workspace-shell .field-record-detail pre { max-width: 100%; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11px; }
+@media (max-width: 640px) {
+  .workspace-shell .field-records-content .field-history-panel { padding: 12px; }
+  .workspace-dialog .record-entry-form { grid-template-columns: minmax(0, 1fr); }
+  .workspace-dialog .record-entry-form > label { grid-column: 1; }
+  .workspace-dialog .soil-entry-fields { grid-template-columns: minmax(0, 1fr); }
+  .workspace-dialog .soil-entry-fields .field-event-summary { grid-column: 1; }
+  .workspace-shell .field-measurement-details { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Modal forms override the surrounding timeline layout, including its spacing. */
+.workspace-shell .workspace-dialog form.record-entry-form { margin: 0; padding: 16px; }
+.workspace-dialog .record-entry-status { display: block; padding: 0 16px 16px; }

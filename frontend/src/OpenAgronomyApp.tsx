@@ -30,6 +30,7 @@ import { selectedConversation, rememberConversation } from './conversationSelect
 import { powerCoverage } from './weatherPresentation'
 import { useWorkspaceMenus } from './useWorkspaceMenus'
 import { WorkspaceDialog } from './WorkspaceDialog'
+import './FieldRecords.css'
 import { apiDelete, apiGet, apiPatch, apiPost, apiUpload, csrfHeaders } from './api'
 import { clearPhase6ChatDraft, loadPhase6ChatDraft, savePhase6ChatDraft } from './offlineDrafts'
 import { clearPhase6Scratchpad, loadPhase6Scratchpad, savePhase6Scratchpad } from './offlineScratchpad'
@@ -161,7 +162,8 @@ const FieldMapInsights = lazy(() => import('./FieldMapInsights').then(module => 
 const FieldSetupDialog = lazy(() => import('./FieldSetupDialog').then(module => ({ default: module.FieldSetupDialog })))
 const BenchmarksRoute = lazy(() => import('./BenchmarksRoute').then((module) => ({ default: module.BenchmarksRoute })))
 const LeafletFieldMap = lazy(() => import('./LeafletFieldMap').then((module) => ({ default: module.LeafletFieldMap })))
-const FieldSyncPanel = lazy(() => import('./FieldSyncPanel'))
+const FieldSyncPanel = lazy(() => import('./FieldSyncPanel').then(module => ({ default: module.FieldSyncPanel })))
+const SoilTestEntryPanel = lazy(() => import('./FieldSyncPanel').then(module => ({ default: module.SoilTestEntryPanel })))
 const PrivateKnowledgePanel = lazy(() => import('./PrivateKnowledgePanel'))
 const OfflineTerrainContextPanel = lazy(() => import('./OfflineTerrainContextPanel'))
 const CanadianKnowledgeCoveragePanel = lazy(() => import('./CanadianKnowledgeCoveragePanel'))
@@ -1021,6 +1023,11 @@ type FieldEventChain = {
   failure_count: number
 }
 
+function fieldChainStatus(chain: FieldEventChain | null | undefined): 'checked' | 'failed' | 'unknown' {
+  if (!chain) return 'unknown'
+  return chain.valid && chain.failure_count === 0 ? 'checked' : 'failed'
+}
+
 type FieldHistorySummary = Pick<
   StoredField,
   | 'id'
@@ -1050,6 +1057,41 @@ type DemoFieldEventResponse = {
   schema_version: string
   event: FieldEvent
   chain: FieldEventChain
+}
+
+function localDateTimeValue(date = new Date()): string {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+  return local.toISOString().slice(0, 16)
+}
+
+function fieldEventLabel(event: FieldEvent): string {
+  const summary = event.payload.summary
+  if (typeof summary === 'string' && summary.trim()) return summary
+  const measurement = event.payload.measurement
+  if (measurement && typeof measurement === 'object') {
+    const sample = measurement as Record<string, unknown>
+    return [sample.label || sample.metric || 'Soil test', sample.value, sample.unit].filter(value => value !== undefined && value !== null && value !== '').join(' ')
+  }
+  return 'Structured field record'
+}
+
+function FieldEventMeasurementDetails({ measurement }: { measurement: unknown }) {
+  if (!measurement || typeof measurement !== 'object') return null
+  const sample = measurement as Record<string, unknown>
+  const depth = sample.sample_depth && typeof sample.sample_depth === 'object'
+    ? sample.sample_depth as Record<string, unknown>
+    : null
+  const items = [
+    ['Sample', sample.sample_id],
+    ['Measurement', sample.label || sample.metric],
+    ['Value', `${String(sample.value ?? 'unknown')} ${String(sample.unit ?? '')}`.trim()],
+    ['Method', sample.method],
+    ['Depth', depth ? `${String(depth.top ?? '?')}–${String(depth.bottom ?? '?')} ${String(depth.unit ?? '')}` : null],
+    ['Scope', sample.spatial_scope],
+    ['Source quality', sample.source_quality],
+    ['Lab', sample.lab_name],
+  ].filter(([, value]) => value !== undefined && value !== null && value !== '')
+  return <dl className="field-measurement-details">{items.map(([label, value]) => <div key={String(label)}><dt>{String(label)}</dt><dd>{String(value)}</dd></div>)}</dl>
 }
 
 const emptyGeometry: FieldGeometry = { kind: 'none' }
@@ -2026,6 +2068,12 @@ export function OpenAgronomyApp() {
   const [fieldEventSummary, setFieldEventSummary] = useState('')
   const [fieldEventOccurredAt, setFieldEventOccurredAt] = useState('')
   const [fieldCorrectionTarget, setFieldCorrectionTarget] = useState('')
+  const [recordDialogFieldId, setRecordDialogFieldId] = useState('')
+  const [recordSavePending, setRecordSavePending] = useState(false)
+  const [recordSaveError, setRecordSaveError] = useState('')
+  const recordSaveBusyRef = useRef(false)
+  const [visibleRecordCount, setVisibleRecordCount] = useState(12)
+  const [visibleAnswerCount, setVisibleAnswerCount] = useState(12)
   const [geoPriors, setGeoPriors] = useState<GeoPriors | null>(null)
   const [agroclimate, setAgroclimate] = useState<AgroclimateState>({ status: 'idle' })
   const [agroclimateRefresh, setAgroclimateRefresh] = useState(0)
@@ -2794,13 +2842,17 @@ export function OpenAgronomyApp() {
 
   const appendFieldEvent = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!activeFieldContextId || fieldStorageMode !== 'account_workspace' || !fieldEventSummary.trim()) {
+    const targetFieldId = recordDialogFieldId
+    if (recordSaveBusyRef.current || !targetFieldId || targetFieldId !== activeFieldRef.current
+      || fieldStorageMode !== 'account_workspace' || !fieldEventSummary.trim()) {
       return
     }
     if (fieldEventType === 'correction' && !fieldCorrectionTarget) {
       setFieldHistoryStatus('Choose the record this correction refers to.')
       return
     }
+    recordSaveBusyRef.current = true
+    setRecordSavePending(true)
     setFieldHistoryStatus('Saving an append-only field record.')
     try {
       const payload: Record<string, unknown> = {
@@ -2821,17 +2873,38 @@ export function OpenAgronomyApp() {
         payload.corrects_event_id = fieldCorrectionTarget
       }
       await apiPost<DemoFieldEventResponse>(
-        `/api/demo/fields/${encodeURIComponent(activeFieldContextId)}/events`,
+        `/api/demo/fields/${encodeURIComponent(targetFieldId)}/events`,
         payload,
       )
-      setFieldEventSummary('')
-      setFieldEventOccurredAt('')
-      setFieldCorrectionTarget('')
-      setFieldEventType('observation')
-      await refreshFieldHistory(activeFieldContextId)
+      if (activeFieldRef.current === targetFieldId) {
+        setRecordSaveError('')
+        setRecordDialogFieldId('')
+        setFieldEventSummary('')
+        setFieldEventOccurredAt('')
+        setFieldCorrectionTarget('')
+        setFieldEventType('observation')
+        await refreshFieldHistory(targetFieldId)
+      }
     } catch (err) {
-      setFieldHistoryStatus(`Could not save field record: ${String((err as Error).message || err)}`)
+      if (activeFieldRef.current === targetFieldId) {
+        const message = `Could not save field record: ${String((err as Error).message || err)}`
+        setRecordSaveError(message)
+        setFieldHistoryStatus(message)
+      }
+    } finally {
+      recordSaveBusyRef.current = false
+      setRecordSavePending(false)
     }
+  }
+
+  const openRecordDialog = (correctsEventId = '') => {
+    if (!activeFieldContextId || fieldStorageMode !== 'account_workspace') return
+    setFieldEventType(correctsEventId ? 'correction' : 'observation')
+    setFieldCorrectionTarget(correctsEventId)
+    setFieldEventSummary('')
+    setFieldEventOccurredAt(localDateTimeValue())
+    setRecordSaveError('')
+    setRecordDialogFieldId(activeFieldContextId)
   }
 
   const persistCurrentField = async (saveAsNew = false) => {
@@ -2951,6 +3024,10 @@ export function OpenAgronomyApp() {
     setFieldEventOccurredAt('')
     setFieldCorrectionTarget('')
     setFieldEventType('observation')
+    setRecordDialogFieldId('')
+    setRecordSaveError('')
+    setVisibleRecordCount(12)
+    setVisibleAnswerCount(12)
     setFieldTab('details')
     regionalLookupRequestRef.current += 1
     const storedFieldId = stored.field_context_id || stored.id
@@ -3753,6 +3830,231 @@ export function OpenAgronomyApp() {
             </Suspense>
             </section>
             <section hidden={fieldTab !== 'records'} className="field-records-content">
+            <section className="field-history-panel" aria-label="Field timeline">
+              <div className="field-history-heading">
+                <div>
+                  <strong>Field timeline</strong>
+                  <span>Records and linked answers</span>
+                </div>
+                {activeFieldContextId ? (
+                  <button
+                    type="button"
+                    className="icon-button"
+                    aria-label="Refresh field timeline"
+                    onClick={() => void refreshFieldHistory(activeFieldContextId)}
+                  >
+                    <RefreshCw size={15} />
+                  </button>
+                ) : null}
+              </div>
+              <p className="field-history-status">{fieldHistoryStatus}</p>
+              <div className="field-record-toolbar">
+                <button type="button" className="map-primary-action" disabled={!activeFieldContextId || fieldStorageMode !== 'account_workspace' || recordSavePending} onClick={() => openRecordDialog()}><Plus size={16} /> Add record</button>
+                {activeFieldContextId && fieldStorageMode === 'account_workspace' ? (
+                  <Suspense fallback={null}>
+                    <SoilTestEntryPanel
+                      key={activeFieldContextId}
+                      fieldContextId={activeFieldContextId}
+                      onSaved={() => activeFieldRef.current === activeFieldContextId ? refreshFieldHistory(activeFieldContextId) : undefined}
+                    />
+                  </Suspense>
+                ) : null}
+              </div>
+              {recordDialogFieldId === activeFieldContextId && recordDialogFieldId ? <WorkspaceDialog title={fieldEventType === 'correction' ? 'Correct field record' : 'Add field record'} busy={recordSavePending} onClose={() => setRecordDialogFieldId('')}>
+              <form className="field-event-form record-entry-form" aria-label="Add field record" onSubmit={(event) => void appendFieldEvent(event)}>
+                <label>
+                  Record type
+                  <select
+                    value={fieldEventType}
+                    onChange={(event) => {
+                      const nextType = event.target.value as FieldEvent['event_type']
+                      setFieldEventType(nextType)
+                      if (nextType !== 'correction') setFieldCorrectionTarget('')
+                    }}
+                    disabled={recordSavePending}
+                  >
+                    <option value="observation">Observation</option>
+                    <option value="sample">Sample</option>
+                    <option value="operation">Operation</option>
+                    <option value="decision">Decision</option>
+                    <option value="outcome">Outcome</option>
+                    <option value="note">Note</option>
+                    <option value="correction">Correction</option>
+                  </select>
+                </label>
+                <label>
+                  When it happened
+                  <input
+                    type="datetime-local"
+                    value={fieldEventOccurredAt}
+                    onChange={(event) => setFieldEventOccurredAt(event.target.value)}
+                    disabled={recordSavePending}
+                  />
+                </label>
+                {fieldEventType === 'correction' ? (
+                  <label className="field-event-correction-target">
+                    Record to correct
+                    <select
+                      value={fieldCorrectionTarget}
+                      onChange={(event) => setFieldCorrectionTarget(event.target.value)}
+                      disabled={recordSavePending}
+                      required
+                    >
+                      <option value="">Choose a prior record</option>
+                      {(fieldHistory?.events || []).slice().reverse().map((fieldEvent) => (
+                        <option key={fieldEvent.id} value={fieldEvent.id}>
+                          {fieldEvent.event_type}: {String(fieldEvent.payload.summary || fieldEvent.id).slice(0, 80)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+                <label className="field-event-summary">
+                  What happened
+                  <textarea
+                    value={fieldEventSummary}
+                    onChange={(event) => setFieldEventSummary(event.target.value)}
+                    placeholder={
+                      fieldEventType === 'correction'
+                        ? 'Explain the error and correction.'
+                        : 'Describe the record.'
+                    }
+                    maxLength={2000}
+                    required
+                    disabled={recordSavePending}
+                  />
+                </label>
+                <button
+                  type="submit"
+                  className="map-primary-action"
+                  disabled={
+                    !activeFieldContextId
+                    || fieldStorageMode !== 'account_workspace'
+                    || !fieldEventSummary.trim()
+                    || (fieldEventType === 'correction' && !fieldCorrectionTarget)
+                    || recordSavePending
+                  }
+                >
+                  <Save size={15} /> {recordSavePending ? 'Saving…' : fieldEventType === 'correction' ? 'Save correction' : 'Save record'}
+                </button>
+              </form>
+              {recordSaveError ? <p className="record-entry-status" role="alert">{recordSaveError}</p> : null}
+              </WorkspaceDialog> : null}
+              {fieldHistory?.events?.length ? (
+                <div className="field-history-list field-event-list" aria-label="Field records">
+                  {fieldHistory.events.slice().reverse().slice(0, visibleRecordCount).map((fieldEvent) => (
+                    <article key={fieldEvent.id}>
+                      <div>
+                        <span className={`lineage-state ${fieldChainStatus(fieldHistory.event_chain) === 'checked' ? 'verified' : 'legacy'}`}>{fieldEvent.event_type}</span>
+                        <time>{new Date(fieldEvent.occurred_at || fieldEvent.recorded_at).toLocaleString()}</time>
+                      </div>
+                      <p>{fieldEventLabel(fieldEvent)}</p>
+                      {fieldEvent.corrects_event_id ? <small>Corrects record {fieldEvent.corrects_event_id.slice(0, 8)}</small> : null}
+                      <div className="field-history-actions">
+                        <button type="button" disabled={recordSavePending || fieldStorageMode !== 'account_workspace'} onClick={() => openRecordDialog(fieldEvent.id)}>Correct</button>
+                        <details className="field-record-detail"><summary>Record details</summary>
+                          <FieldEventMeasurementDetails measurement={fieldEvent.payload.measurement} />
+                          <small>Chain: {fieldChainStatus(fieldHistory.event_chain)}</small>
+                          <small>Immutable record · {fieldEvent.integrity_sha256} · recorded {new Date(fieldEvent.recorded_at).toLocaleString()}</small>
+                          <small>Capture: {String(fieldEvent.provenance.capture_method || 'unknown')}</small>
+                          {typeof fieldEvent.provenance.original_report_retained === 'boolean' ? <small>Original report retained: {fieldEvent.provenance.original_report_retained ? 'yes' : 'not declared'}</small> : null}
+                          {fieldEvent.previous_event_sha256 ? <small>Previous record: {fieldEvent.previous_event_sha256}</small> : null}
+                        </details>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : null}
+              {(fieldHistory?.events?.length || 0) > visibleRecordCount ? <button type="button" className="field-record-more" onClick={() => setVisibleRecordCount(count => count + 12)}>Show more records ({(fieldHistory?.events?.length || 0) - visibleRecordCount} remaining)</button> : null}
+              {fieldHistory?.turns?.length ? <strong className="field-answer-history-title">Answer history</strong> : null}
+              {fieldHistory?.turns?.length ? (
+                <div className="field-history-list">
+                  {fieldHistory.turns.slice().reverse().slice(0, visibleAnswerCount).map((turn) => {
+                    const answerAccepted = turn.feedback?.accepted
+                    const answerStatus = turn.feedback?.answer_status || turn.answer_status || 'draft'
+                    const reviewLabel = answerAccepted === true
+                      ? 'Marked useful'
+                      : answerAccepted === false || answerStatus === 'rejected'
+                        ? 'Do not rely'
+                        : answerStatus === 'approved'
+                          ? 'Approved answer'
+                          : answerStatus === 'reviewed'
+                            ? 'Reviewed answer'
+                            : 'Unreviewed answer'
+                    const reviewClass = answerAccepted === true || answerStatus === 'approved'
+                      ? 'accepted'
+                      : answerAccepted === false || answerStatus === 'rejected'
+                        ? 'rejected'
+                        : 'unreviewed'
+                    const [coverageLabel, coverageVerified] = knowledgeCoverageView(turn.knowledge_coverage)
+                    return (
+                      <article key={turn.turn_id}>
+                        <div>
+                          <span className={`lineage-state ${turn.binding_status === 'verified_snapshot' ? 'verified' : 'legacy'}`}>
+                            {turn.binding_status === 'verified_snapshot' ? 'Field snapshot verified' : 'Legacy binding'}
+                          </span>
+                          <span className={`answer-review-state ${reviewClass}`}>{reviewLabel}</span>
+                          <span className={`lineage-state ${coverageVerified ? 'verified' : 'legacy'}`}>
+                            {coverageLabel}
+                          </span>
+                          <time>{turn.created_at ? new Date(turn.created_at).toLocaleString() : 'Time unavailable'}</time>
+                        </div>
+                        <strong>{turn.question}</strong>
+                        <details className="field-record-detail"><summary>Read saved answer and provenance</summary>
+                          <p>{turn.answer}</p>
+                          <small>
+                            {turn.retrieved_document_count} documents · {turn.tool_invocation_count} tools
+                            {turn.field_lineage?.field_snapshot_sha256
+                              ? ` · snapshot ${turn.field_lineage.field_snapshot_sha256}`
+                              : ''}
+                            {turn.answer_integrity_receipt?.receipt_sha256
+                              ? ` · answer receipt ${turn.answer_integrity_receipt.receipt_sha256}`
+                              : ' · legacy answer receipt'}
+                          </small>
+                        </details>
+                        <div className="field-history-actions">
+                          <button type="button" onClick={() => void openFieldAnswerEvidence(turn)}>
+                            Review evidence
+                          </button>
+                          <button
+                            type="button"
+                            disabled={fieldAnswerReviewPending === turn.turn_id}
+                            onClick={() => void reviewFieldAnswer(turn, true)}
+                          >
+                            Mark useful
+                          </button>
+                          <button
+                            type="button"
+                            className="answer-reject-action"
+                            disabled={fieldAnswerReviewPending === turn.turn_id}
+                            onClick={() => void reviewFieldAnswer(turn, false)}
+                          >
+                            Do not rely
+                          </button>
+                        </div>
+                      </article>
+                    )
+                  })}
+                </div>
+              ) : null}
+              {(fieldHistory?.turns?.length || 0) > visibleAnswerCount ? <button type="button" className="field-record-more" onClick={() => setVisibleAnswerCount(count => count + 12)}>Show more answers ({(fieldHistory?.turns?.length || 0) - visibleAnswerCount} remaining)</button> : null}
+              {fieldHistory?.boundary ? (
+                <small className="field-history-boundary">
+                  Field records are append-only: corrections keep the original. Saved answers stay linked to the exact
+                  field snapshot and evidence available at the time. Open Review evidence for technical hashes and
+                  source lineage.
+                </small>
+              ) : null}
+              {activeFieldContextId && fieldStorageMode === 'account_workspace' ? (
+                <Suspense fallback={null}>
+                  <FieldSyncPanel
+                    key={activeFieldContextId}
+                    fieldContextId={activeFieldContextId}
+                    onImported={() => activeFieldRef.current === activeFieldContextId ? refreshFieldHistory(activeFieldContextId) : undefined}
+                  />
+                </Suspense>
+              ) : null}
+            </section>
             <details className="workspace-disclosure local-field-notes">
               <summary><Pencil size={16} /> Offline field notes</summary>
               <p>Stored only on this device. These notes are not synced, sent to the model, or included in reports until you copy them into a field record or question.</p>
@@ -3795,201 +4097,6 @@ export function OpenAgronomyApp() {
                 </button>
               </div>
             </details>
-            <section className="field-history-panel" aria-label="Field timeline">
-              <div className="field-history-heading">
-                <div>
-                  <strong>Field timeline</strong>
-                  <span>Records and linked answers</span>
-                </div>
-                {activeFieldContextId ? (
-                  <button
-                    type="button"
-                    className="icon-button"
-                    aria-label="Refresh field timeline"
-                    onClick={() => void refreshFieldHistory(activeFieldContextId)}
-                  >
-                    <RefreshCw size={15} />
-                  </button>
-                ) : null}
-              </div>
-              <p className="field-history-status">{fieldHistoryStatus}</p>
-              <form className="field-event-form" aria-label="Add field record" onSubmit={(event) => void appendFieldEvent(event)}>
-                <label>
-                  Record type
-                  <select
-                    value={fieldEventType}
-                    onChange={(event) => {
-                      const nextType = event.target.value as FieldEvent['event_type']
-                      setFieldEventType(nextType)
-                      if (nextType !== 'correction') setFieldCorrectionTarget('')
-                    }}
-                    disabled={!activeFieldContextId || fieldStorageMode !== 'account_workspace'}
-                  >
-                    <option value="observation">Observation</option>
-                    <option value="sample">Sample</option>
-                    <option value="operation">Operation</option>
-                    <option value="decision">Decision</option>
-                    <option value="outcome">Outcome</option>
-                    <option value="note">Note</option>
-                    <option value="correction">Correction</option>
-                  </select>
-                </label>
-                <label>
-                  When it happened
-                  <input
-                    type="datetime-local"
-                    value={fieldEventOccurredAt}
-                    onChange={(event) => setFieldEventOccurredAt(event.target.value)}
-                    disabled={!activeFieldContextId || fieldStorageMode !== 'account_workspace'}
-                  />
-                </label>
-                {fieldEventType === 'correction' ? (
-                  <label className="field-event-correction-target">
-                    Record to correct
-                    <select
-                      value={fieldCorrectionTarget}
-                      onChange={(event) => setFieldCorrectionTarget(event.target.value)}
-                      required
-                    >
-                      <option value="">Choose a prior record</option>
-                      {(fieldHistory?.events || []).slice().reverse().map((fieldEvent) => (
-                        <option key={fieldEvent.id} value={fieldEvent.id}>
-                          {fieldEvent.event_type}: {String(fieldEvent.payload.summary || fieldEvent.id).slice(0, 80)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                ) : null}
-                <label className="field-event-summary">
-                  What happened
-                  <textarea
-                    value={fieldEventSummary}
-                    onChange={(event) => setFieldEventSummary(event.target.value)}
-                    placeholder={
-                      fieldEventType === 'correction'
-                        ? 'Explain the error and correction.'
-                        : 'Describe the record.'
-                    }
-                    maxLength={2000}
-                    required
-                    disabled={!activeFieldContextId || fieldStorageMode !== 'account_workspace'}
-                  />
-                </label>
-                <button
-                  type="submit"
-                  className="map-primary-action"
-                  disabled={
-                    !activeFieldContextId
-                    || fieldStorageMode !== 'account_workspace'
-                    || !fieldEventSummary.trim()
-                    || (fieldEventType === 'correction' && !fieldCorrectionTarget)
-                  }
-                >
-                  <Save size={15} /> Add record
-                </button>
-              </form>
-              {fieldHistory?.events?.length ? (
-                <div className="field-history-list field-event-list" aria-label="Field records">
-                  {fieldHistory.events.slice().reverse().slice(0, 12).map((fieldEvent) => (
-                    <article key={fieldEvent.id}>
-                      <div>
-                        <span className="lineage-state verified">{fieldEvent.event_type}</span>
-                        <time>{new Date(fieldEvent.occurred_at || fieldEvent.recorded_at).toLocaleString()}</time>
-                      </div>
-                      <p>{String(fieldEvent.payload.summary || 'Structured field record')}</p>
-                      <small>
-                        Immutable record · {fieldEvent.integrity_sha256.slice(0, 12)}
-                        {fieldEvent.corrects_event_id ? ` · corrects ${fieldEvent.corrects_event_id.slice(0, 8)}` : ''}
-                      </small>
-                    </article>
-                  ))}
-                </div>
-              ) : null}
-              {fieldHistory?.turns?.length ? <strong className="field-answer-history-title">Answer history</strong> : null}
-              {fieldHistory?.turns?.length ? (
-                <div className="field-history-list">
-                  {fieldHistory.turns.slice().reverse().slice(0, 12).map((turn) => {
-                    const answerAccepted = turn.feedback?.accepted
-                    const answerStatus = turn.feedback?.answer_status || turn.answer_status || 'draft'
-                    const reviewLabel = answerAccepted === true
-                      ? 'Marked useful'
-                      : answerAccepted === false || answerStatus === 'rejected'
-                        ? 'Do not rely'
-                        : answerStatus === 'approved'
-                          ? 'Approved answer'
-                          : answerStatus === 'reviewed'
-                            ? 'Reviewed answer'
-                            : 'Unreviewed answer'
-                    const reviewClass = answerAccepted === true || answerStatus === 'approved'
-                      ? 'accepted'
-                      : answerAccepted === false || answerStatus === 'rejected'
-                        ? 'rejected'
-                        : 'unreviewed'
-                    const [coverageLabel, coverageVerified] = knowledgeCoverageView(turn.knowledge_coverage)
-                    return (
-                      <article key={turn.turn_id}>
-                        <div>
-                          <span className={`lineage-state ${turn.binding_status === 'verified_snapshot' ? 'verified' : 'legacy'}`}>
-                            {turn.binding_status === 'verified_snapshot' ? 'Field snapshot verified' : 'Legacy binding'}
-                          </span>
-                          <span className={`answer-review-state ${reviewClass}`}>{reviewLabel}</span>
-                          <span className={`lineage-state ${coverageVerified ? 'verified' : 'legacy'}`}>
-                            {coverageLabel}
-                          </span>
-                          <time>{turn.created_at ? new Date(turn.created_at).toLocaleString() : 'Time unavailable'}</time>
-                        </div>
-                        <strong>{turn.question}</strong>
-                        <p>{turn.answer}</p>
-                        <small>
-                          {turn.retrieved_document_count} documents · {turn.tool_invocation_count} tools
-                          {turn.field_lineage?.field_snapshot_sha256
-                            ? ` · snapshot ${turn.field_lineage.field_snapshot_sha256.slice(0, 12)}`
-                            : ''}
-                          {turn.answer_integrity_receipt?.receipt_sha256
-                            ? ` · answer receipt ${turn.answer_integrity_receipt.receipt_sha256.slice(0, 12)}`
-                            : ' · legacy answer receipt'}
-                        </small>
-                        <div className="field-history-actions">
-                          <button type="button" onClick={() => void openFieldAnswerEvidence(turn)}>
-                            Review evidence
-                          </button>
-                          <button
-                            type="button"
-                            disabled={fieldAnswerReviewPending === turn.turn_id}
-                            onClick={() => void reviewFieldAnswer(turn, true)}
-                          >
-                            Mark useful
-                          </button>
-                          <button
-                            type="button"
-                            className="answer-reject-action"
-                            disabled={fieldAnswerReviewPending === turn.turn_id}
-                            onClick={() => void reviewFieldAnswer(turn, false)}
-                          >
-                            Do not rely
-                          </button>
-                        </div>
-                      </article>
-                    )
-                  })}
-                </div>
-              ) : null}
-              {activeFieldContextId && fieldStorageMode === 'account_workspace' ? (
-                <Suspense fallback={null}>
-                  <FieldSyncPanel
-                    fieldContextId={activeFieldContextId}
-                    onImported={() => refreshFieldHistory(activeFieldContextId)}
-                  />
-                </Suspense>
-              ) : null}
-              {fieldHistory?.boundary ? (
-                <small className="field-history-boundary">
-                  Field records are append-only: corrections keep the original. Saved answers stay linked to the exact
-                  field snapshot and evidence available at the time. Open Review evidence for technical hashes and
-                  source lineage.
-                </small>
-              ) : null}
-            </section>
             </section>
             </div>
           </aside>
@@ -4356,7 +4463,7 @@ export function OpenAgronomyApp() {
         </Suspense>
       ) : null}
       </div>
-      {mapInsightsOpen ? <WorkspaceDialog title="Field insights" onClose={() => setMapInsightsOpen(false)} wide><Suspense fallback={<div role="status" className="dialog-body">Opening field insights…</div>}><FieldMapInsights geometry={fieldGeometryToGeoJson(fieldGeometry)} fieldKey={activeFieldContextId || scenarioId || 'general'} fieldName={fieldName} recordedAcres={field.acres.trim() ? Number(field.acres) : null} layerIds={mapAnalysisLayers} allowNetwork={networkMode === 'online'} /></Suspense></WorkspaceDialog> : null}
+      {mapInsightsOpen ? <WorkspaceDialog title="Field insights" onClose={() => setMapInsightsOpen(false)}><Suspense fallback={<div role="status" className="dialog-body">Opening field insights…</div>}><FieldMapInsights geometry={fieldGeometryToGeoJson(fieldGeometry)} fieldKey={activeFieldContextId || scenarioId || 'general'} fieldName={fieldName} recordedAcres={field.acres.trim() ? Number(field.acres) : null} layerIds={mapAnalysisLayers} allowNetwork={networkMode === 'online'} /></Suspense></WorkspaceDialog> : null}
       {newFieldOpen ? <Suspense fallback={<div role="status">Opening field setup…</div>}><FieldSetupDialog onClose={() => setNewFieldOpen(false)} onSave={createFieldFromDraft} allowNetwork={networkMode === 'online'} previousRegion={storedFields[0]} /></Suspense> : null}
       {deleteTarget ? <WorkspaceDialog title="Delete field?" onClose={() => setDeleteTarget(null)}><div className="dialog-body"><p>Remove <strong>{deleteTarget.name}</strong> from your field library? Its historical answer records are retained by the server.</p><div className="dialog-actions"><button type="button" onClick={() => setDeleteTarget(null)}>Keep field</button><button type="button" className="danger" onClick={() => { void deleteStoredField(deleteTarget.id); setDeleteTarget(null) }}>Delete field</button></div></div></WorkspaceDialog> : null}
       {evidenceOpen ? <WorkspaceDialog title="Sources & checks" onClose={() => setEvidenceOpen(false)} wide><EvidencePage latestTurn={evidenceTurn} docs={evidenceDocs} liveToolCards={evidenceLiveToolCards} mapEvidenceCards={evidenceMapCards} retrievedDocCount={evidenceRetrievedDocCount} sourceCheckSummary={evidenceSourceSummary} traceToolGroups={evidenceTraceGroups} adapterReadiness={adapterReadiness} onCopyReport={() => void copyReviewerReport()} onDownloadReport={downloadReviewerReport} /></WorkspaceDialog> : null}

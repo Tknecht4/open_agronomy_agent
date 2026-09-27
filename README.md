@@ -11,7 +11,7 @@ The screenshot shows synthetic example data. [Explore the workspace](docs/public
 | Workspace | What it provides |
 |---|---|
 | Ask and inspect | General questions work without inventing a field. Answers expose sources, tool results, missing evidence, and the answer trace. |
-| Build a field record | Name a field, optionally add crop and region, then pin, draw, or import its location. Review before saving; add observations and soil tests over time. |
+| Build a field record | Name a field, optionally add crop and region, then pin, draw, or import its location. Review before saving; keep dated observations and typed soil tests, with corrections that preserve the original record. |
 | Explore the map | Choose satellite, street, or simple styles; control up to four mapped layers; open field insights for boundary measurements and source-bound coverage. |
 | Use context carefully | Regional map layers, graph relationships, and dated public adapters can inform a question. They remain labelled priors, never field measurements or current label authority. |
 | Bring data in | Inspect a private reference for the current browser session, import field boundaries and records, or use governed source-ingestion builders. These are distinct admission paths. |

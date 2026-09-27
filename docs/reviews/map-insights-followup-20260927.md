@@ -128,3 +128,72 @@ runtime inventory is rebuilt from the combined source. The map analysis service,
 its provider boundaries and user-facing feature scope are unchanged by this
 integration. The final review and CI bind the merged candidate rather than the
 older base snapshot.
+
+
+## Compact workspace repair pass
+
+User feedback: the accepted insights UI still consumes too much space; continue
+repairing the experience and exposing the existing backend usefully. Reference is
+current main `0a942a3`; branch `codex/compact-field-workspace`, same isolated UI
+checkout. Existing deployment, corpus and field-ingestion work remain separately
+owned.
+
+Scope: replace tall insight cards with a compact measurement strip and mapped-zone
+rows; return boundary measurements independently of slower source lookups using the
+existing geometry-only endpoint. Make the records page history-first, with focused
+record/soil-test entry and contextual append-only correction actions. Preserve
+source/method/partial states, record provenance, error recovery, and field isolation.
+No new provider destination, calculation authority, model profile or data activation.
+
+Owner handles insights, browser QA, integration and release; one bounded frontend
+worker owns the records section and its tests. Fresh independent acceptance follows
+a frozen candidate. Whole-phase estimate: 60–100 minutes including workers, repair,
+frontend/backend/docs/package checks and CI; token/dollar usage unavailable. At the
+first complete UI checkpoint, stop optional expansion and focus on observed defects.
+
+Acceptance: smaller measured dialog footprint at 391px and desktop without shrinking
+readable type or touch targets; geometry remains useful during slow/failed source
+requests; stale requests cannot replace current field state; adding/correcting typed
+records retains payload semantics and provenance; failed saves retain input and
+pending saves cannot duplicate or land on a newly selected field. Browser evidence,
+focused regressions, full integrated gates and source-bound review decide acceptance.
+
+
+The compact implementation checkpoint is complete: large metric/location cards
+become a two-value readout; location and method move into Boundary details, and
+coverage rows expand into actual per-zone areas and provenance. Geometry-only and
+source requests run independently, so delayed, failed or timed-out map sources do
+not erase boundary metrics. Units do not refetch; selecting another layer reuses
+the current geometry result. Refresh is a labelled icon beside the unit control.
+
+Field history leads the records view. Focused record/soil-test dialogs retain input
+on failure, guard pending submissions, and scope completion to the selected field.
+Corrections preselect the original record and append a new event. Soil sampling
+time remains explicit rather than borrowing entry time; original-report retention
+is a user assertion, not an automatic assumption. Typed measurement metadata and
+answer provenance remain available behind compact disclosures.
+
+The unchanged backend's synthetic offline profile completed all cells: cold app
+creation 5,925 ms, warm seeded history median 13.711 ms, and warm mock-core median
+9.689 ms (five samples each). This includes no new local-model or answer-quality
+claim. Five concurrent local HTTP geometry/source pairs completed with potentially
+warm provider caches; these are diagnostics, not uncached provider latency or a
+speedup. Final source-bound receipts and UI dimensions are retained with the phase.
+Optional expansion stops here; remaining work is integrated validation, browser
+repair if observed, public packaging and independent acceptance.
+
+
+Browser QA measured the final collapsed insights dialog at 478 px high in a
+391×783 CSS viewport, and 560×492 px in a 1200×800 viewport. Both fit without
+internal or horizontal scrolling; expanded source details scroll vertically.
+Native Safari also exercised the compact view against the online synthetic
+Alberta example. The records flow saved an observation, a linked correction and
+a typed 12.5 ppm / 0–15 cm synthetic soil result, then reloaded the history.
+
+QA caught stacked entry buttons, secondary controls above history, and a six-pixel
+soil-form overflow from a legacy input margin. Actions now share a toolbar;
+secondary controls follow history in DOM order. The repaired soil dialog and form
+both measure clientWidth=scrollWidth=356 px; only the dialog scrolls. The local
+full backend run passed 1,147 tests; the final layout-only frontend delta receives
+its own full rerun and final CI binding. Physical touch-device validation remains
+outside this desktop browser pass. Public/private source authority is unchanged.
