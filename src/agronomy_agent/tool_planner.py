@@ -15,12 +15,13 @@ import re
 from typing import Any, Mapping
 
 from agronomy_agent.agronomic_calculations import agronomic_calculator, calculation_tool_schema
+from agronomy_agent.calculator_contracts import CALCULATOR_VERSION, TOOL_PLANNER_VERSION, format_calculator_clarification, tool_version_for
+from agronomy_agent.foundation_math_parser import _unsafe_action_request, parse_foundation_calculation
 
 
-PLANNER_VERSION = "open_agronomy_agent.tool_planner.v1"
+PLANNER_VERSION = TOOL_PLANNER_VERSION
 TOOL_PLAN_SCHEMA_VERSION = "open_agronomy_agent.tool_plan.v1"
 CALCULATOR_ID = "agronomic_calculator"
-CALCULATOR_VERSION = "agronomic_calculator_v1"
 _NUMBER = r"([0-9][0-9,]*(?:\.[0-9]+)?)"
 
 
@@ -100,10 +101,11 @@ def plan_tools(question: str, *, field_context: Mapping[str, Any] | None = None)
     if parsed is None:
         return ToolPlan(TOOL_PLAN_SCHEMA_VERSION, PLANNER_VERSION, "not_applicable", ())
     operation, inputs, missing = parsed
+    tool_version = tool_version_for(operation)
     seed = {
         "planner_version": PLANNER_VERSION,
         "tool_id": CALCULATOR_ID,
-        "tool_version": CALCULATOR_VERSION,
+        "tool_version": tool_version,
         "operation": operation,
         "inputs": inputs,
         "question_sha256": hashlib.sha256(question.encode("utf-8")).hexdigest(),
@@ -113,7 +115,7 @@ def plan_tools(question: str, *, field_context: Mapping[str, Any] | None = None)
         invocation_id=_identifier("invocation", seed),
         planner_version=PLANNER_VERSION,
         tool_id=CALCULATOR_ID,
-        tool_version=CALCULATOR_VERSION,
+        tool_version=tool_version,
         operation=operation,
         inputs=inputs,
         question_sha256=seed["question_sha256"],
@@ -128,7 +130,7 @@ def plan_tools(question: str, *, field_context: Mapping[str, Any] | None = None)
             PLANNER_VERSION,
             "clarification_required",
             (invocation,),
-            "To calculate this, provide " + ", ".join(missing) + ".",
+            format_calculator_clarification(missing),
         )
     return ToolPlan(TOOL_PLAN_SCHEMA_VERSION, PLANNER_VERSION, "ready", (invocation,))
 
@@ -184,8 +186,15 @@ def calculator_contract() -> dict[str, Any]:
 def _parse_calculation(question: str) -> tuple[str, dict[str, Any], tuple[str, ...]] | None:
     text = " ".join(question.replace("−", "-").split())
     lower = text.casefold()
-    if not _explicit_arithmetic_request(lower):
+    if _unsafe_action_request(lower):
         return None
+    foundation = parse_foundation_calculation(text)
+    if foundation is not None and not foundation[2]:
+        return foundation
+    if foundation is not None and any(item.startswith("invalid ") for item in foundation[2]):
+        return foundation
+    if not _explicit_arithmetic_request(lower):
+        return foundation
 
     parsers = (
         _parse_unit_conversion,
@@ -200,10 +209,25 @@ def _parse_calculation(question: str) -> tuple[str, dict[str, Any], tuple[str, .
         _parse_nutrient_delivery,
         _parse_fertilizer_product_mass,
     )
+    legacy_clarification = None
     for parser in parsers:
         parsed = parser(text, lower)
         if parsed is not None:
-            return parsed
+            if not parsed[2]:
+                return parsed
+            legacy_clarification = legacy_clarification or parsed
+
+    if (
+        foundation is not None
+        and legacy_clarification is not None
+        and foundation[0] == legacy_clarification[0]
+        and foundation[1] == legacy_clarification[1]
+    ):
+        return legacy_clarification
+    if foundation is not None:
+        return foundation
+    if legacy_clarification is not None:
+        return legacy_clarification
 
     if any(token in lower for token in ("fertilizer", "urea", "map", "potash", "nitrogen", "p₂o₅", "k₂o")):
         return "fertilizer_product_mass", {}, (

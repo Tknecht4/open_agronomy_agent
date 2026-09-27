@@ -15,7 +15,7 @@ from typing import Any, Mapping
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from agronomy_agent.agronomic_calculations import CalculationOperation  # noqa: E402
+from agronomy_agent.agronomic_calculations import calculation_tool_schema  # noqa: E402
 from agronomy_agent.capability_registry import (  # noqa: E402
     capability_catalog,
     capability_registry,
@@ -23,7 +23,7 @@ from agronomy_agent.capability_registry import (  # noqa: E402
 )
 
 
-DEFAULT_CONTRACT = ROOT / "configs/benchmark_capability_conformance_v1.json"
+DEFAULT_CONTRACT = ROOT / "configs/benchmark_capability_conformance_v2.json"
 
 
 def _canonical_sha256(value: object) -> str:
@@ -37,7 +37,10 @@ def _file_sha256(path: Path) -> str:
 
 def run_conformance(contract_path: Path) -> dict[str, Any]:
     contract = json.loads(contract_path.read_text(encoding="utf-8"))
-    if contract.get("schema_version") != "open_agronomy_agent.benchmark_capability_conformance.v1":
+    if contract.get("schema_version") not in {
+        "open_agronomy_agent.benchmark_capability_conformance.v1",
+        "open_agronomy_agent.benchmark_capability_conformance.v2",
+    }:
         raise ValueError("unsupported capability conformance schema")
     if contract.get("claim_eligible") is not False:
         raise ValueError("capability conformance must remain non-claim")
@@ -121,7 +124,7 @@ def run_conformance(contract_path: Path) -> dict[str, Any]:
             )
 
         if capability_id == "agronomic_calculator":
-            implemented_operations = {operation.value for operation in CalculationOperation}
+            implemented_operations = set(calculation_tool_schema()["operations"])
             if declared_operations != implemented_operations:
                 failures.append(f"{capability_id}:operation_coverage_mismatch")
         else:

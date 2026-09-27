@@ -1,7 +1,7 @@
 {
   "schema_version": "open_agronomy_agent.public_repository_manifest.v1",
   "release_id": "offline_corpus_successor_release_candidate",
-  "description": "Source-exact active offline knowledge, the accepted full U.S. NRCS analogue pack, governed runtime contracts, frozen RC3 evidence, retrieval protocols, tests, and public documentation.",
+  "description": "Source-exact active offline knowledge, a non-active production and farm-business foundations candidate, the accepted full U.S. NRCS analogue pack, governed runtime contracts, frozen RC3 evidence, retrieval protocols, tests, and public documentation.",
   "paths": [
     ".github/workflows/ci.yml",
     ".github/workflows/docs.yml",
@@ -96,6 +96,7 @@
     "configs/rag_governed_runtime_v1.yaml",
     "configs/rag_governed_runtime_v2.yaml",
     "configs/rag.yaml",
+    "configs/rag_production_foundations_candidate.yaml",
     "configs/runtime_profiles.json",
     "configs/schemas/benchmark_judge_calibration_v1.schema.json",
     "configs/schemas/benchmark_retention_bundle_v1.schema.json",
@@ -140,6 +141,7 @@
     "data/manifests/offline_corpus_retrieval_evaluation.json",
     "data/manifests/rag_sources.json",
     "data/manifests/runtime_corpus_policy.json",
+    "data/manifests/runtime_corpus_policy_production_foundations_candidate.json",
     "docs/public/historical-artifacts.md",
     "docs/reviews/offline-corpus-retrieval-methods-20260819.md",
     "data/manifests/runtime_corpus_policy_v2.json",
@@ -398,7 +400,22 @@
     "docs/reviews/map-insights-followup-20260927.md",
     "docs/reviews/artifacts/map-insights-performance-20260927.json",
     "docs/reviews/artifacts/ui-workspace-performance-20260927.json",
-    "docs/reviews/artifacts/ui-post-merge-profile-20260927.json"
+    "docs/reviews/artifacts/ui-post-merge-profile-20260927.json",
+    "data/seed/production_foundations_v1.jsonl",
+    "data/manifests/production_foundations_sources_v1.json",
+    "data/eval/production_foundations_development_v1.jsonl",
+    "data/eval/production_foundations_confirmation_v1.jsonl",
+    "configs/benchmark_capability_conformance_v2.json",
+    "docs/reviews/production-foundations-benchmark-20260927.md",
+    "docs/reviews/agronomic-expertise-knowledge-plan-20260927.md",
+    "docs/reviews/artifacts/production-foundations-development-20260927.json",
+    "docs/reviews/artifacts/production-foundations-typed-followup-20260927.json",
+    "scripts/build_production_foundations_supplement.py",
+    "scripts/build_production_foundations_profile.py",
+    "scripts/evaluate_production_foundations_retrieval.py",
+    "scripts/run_production_foundations_development.py",
+    "tests/test_production_foundations_runtime.py",
+    "tests/test_cross_border_fertility_boundary.py"
   ],
   "trees": [
     "src",

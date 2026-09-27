@@ -51,6 +51,26 @@ archive is bundled or prefetched by this application.
   GIS User Community. Provider imagery is not project-owned or a current field
   observation. See the [service metadata](https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer).
 
+## Production and farm-business foundation cards
+
+The nine foundation cards under `data/seed/production_foundations_v1.jsonl`
+are project-authored summaries. Their seven public source pages or PDFs were
+inspected and hashed; the external bytes are not redistributed. Source URLs,
+snapshot hashes, locators, jurisdiction, and rights dispositions are in
+`data/manifests/production_foundations_sources_v1.json`.
+They remain a non-active development candidate rather than a default runtime
+corpus.
+
+Manitoba source concepts are attributed to Manitoba Agriculture under the
+[OpenMB licence](https://www.gov.mb.ca/legal/copyright.html). The AAFC thermal-
+time service is linked, with no AAFC page text reproduced; its site terms
+restrict commercial redistribution without separate permission. Iowa State
+Extension's partial-budget page is linked but its source-text redistribution
+rights were not established, so only a project-authored method summary is
+included. USDA ERS, NRCS, and ARS pages are attributed to their agencies;
+embedded third-party material is not reused. These source links do not grant
+training permission or imply the publishers endorse this project.
+
 ## Runtime dependencies and model
 
 Direct runtime dependencies use permissive licences recorded in their package

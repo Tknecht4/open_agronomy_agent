@@ -41,9 +41,32 @@ def enforce_answer_safety_postconditions(
     answer_text = _normalize_unsupported_regional_product_prescription(answer_text, question=question)
     answer_text = _normalize_field_trafficability_gaps(answer_text, question=question)
     answer_text = _normalize_salinity_terminology(answer_text, question=question, route=route)
+    answer_text = _ensure_cross_border_fertility_authority_boundary(answer_text, question=question)
     if _route_question_type(route) == "product_label":
         answer_text = _ensure_current_product_label_boundary(answer_text)
     return answer_text
+
+
+def _ensure_cross_border_fertility_authority_boundary(answer_text: str, *, question: str | None) -> str:
+    """Answer the cross-border authority question directly without supplying a rate."""
+
+    query = str(question or "")
+    if not (
+        (
+            re.search(r"\b(?:USDA|United States|American|U\.S\.?A?\.?)\b", query, re.IGNORECASE)
+            or re.search(r"\bUS\b", query)
+        )
+        and re.search(r"\b(?:Canada|Canadian|Alberta|Saskatchewan|Manitoba|Ontario|Quebec|British Columbia|province)\b", query, re.IGNORECASE)
+        and re.search(r"\b(?:guide|guidance|recommendation|manual|source|USDA)\b", query, re.IGNORECASE)
+        and re.search(r"\b(?:nutrient|nitrogen|phosphorus|potassium|fertiliz\w*|fertilis\w*)\b", query, re.IGNORECASE)
+        and re.search(r"\b(?:legal|legally|set|apply|authorize|recommend|determine|establish)\b", query, re.IGNORECASE)
+    ):
+        return answer_text
+    return (
+        "No. U.S. nutrient guidance can explain a method or provide analogue context, but it cannot establish "
+        "a Canadian legal or locally calibrated field fertilizer rate. Check current applicable provincial authority "
+        "and representative field evidence before any rate decision."
+    )
 
 
 def _normalize_salinity_terminology(

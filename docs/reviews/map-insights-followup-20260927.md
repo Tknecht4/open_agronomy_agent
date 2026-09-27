@@ -117,3 +117,14 @@ Python gate runs on GitHub's clean runner; no local full-suite pass is claimed f
 that interrupted run. Public packaging uses independent APFS copy-on-write clones
 to avoid another full physical duplicate, followed by the unchanged builder's
 content hashes, scope checks and runtime-inventory regeneration.
+
+
+## Integration with current main
+
+Main advanced to `393b071` (the accepted foundations/typed-calculation PR) while
+this pass was being validated. The map branch integrates that main before final
+acceptance. Both sets of third-party notices are retained, and the generated
+runtime inventory is rebuilt from the combined source. The map analysis service,
+its provider boundaries and user-facing feature scope are unchanged by this
+integration. The final review and CI bind the merged candidate rather than the
+older base snapshot.

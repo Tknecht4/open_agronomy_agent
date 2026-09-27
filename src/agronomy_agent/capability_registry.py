@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from functools import lru_cache, partial
 from typing import Any, Callable, Iterable, Literal, Mapping, Protocol, Sequence, runtime_checkable
 
+from agronomy_agent.calculator_contracts import CALCULATOR_VERSION, EXPLICIT_ARITHMETIC_SELECTOR_ID
+
 
 CapabilityKind = Literal[
     "guard",
@@ -1034,7 +1036,7 @@ _CORE_DECLARATIONS: tuple[dict[str, Any], ...] = (
     },
     {
         "capability_id": "agronomic_calculator",
-        "version": "agronomic_calculator_v1",
+        "version": CALCULATOR_VERSION,
         "name": "Structured agronomic calculator",
         "description": "Run deterministic agronomic arithmetic from explicitly supplied structured inputs.",
         "kind": "calculator",
@@ -1133,14 +1135,14 @@ def _core_spec(declaration: Mapping[str, Any]) -> ToolSpec:
     capability_id = str(declaration["capability_id"])
     if capability_id == "agronomic_calculator":
         input_schema = DataSchema(
-            "agronomic_calculator_v1.input",
+            f"{CALCULATOR_VERSION}.input",
             (
                 SchemaField("operation", "string", True),
                 SchemaField("inputs", "object", True),
             ),
         )
         output_schema = DataSchema(
-            "agronomic_calculator_v1.output",
+            f"{CALCULATOR_VERSION}.output",
             (
                 SchemaField("value", "number"),
                 SchemaField("unit", "string"),
@@ -1184,7 +1186,7 @@ def _core_spec(declaration: Mapping[str, Any]) -> ToolSpec:
                 else ()
             ),
             selector_id=(
-                "explicit_arithmetic_parser_v1"
+                EXPLICIT_ARITHMETIC_SELECTOR_ID
                 if capability_id == "agronomic_calculator"
                 else None
             ),

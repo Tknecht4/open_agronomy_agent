@@ -41,6 +41,7 @@ from agronomy_agent.local_tools import (
     specialty_crop_extension_corpus,
 )
 from agronomy_agent.skill_registry import skill_metadata
+from agronomy_agent.calculator_contracts import CALCULATOR_VERSION
 from agronomy_agent.tools.registry import run_tools
 
 
@@ -80,7 +81,7 @@ def load_agno_tool_adapters() -> dict[str, AgnoToolAdapter]:
         "spray_window": AgnoToolAdapter("spray_window", "spray_window_screen_v1", ("product_stewardship", "weather_guard"), "regulated", spray_window),
         "agronomic_calculator": AgnoToolAdapter(
             "agronomic_calculator",
-            "agronomic_calculator_v1",
+            CALCULATOR_VERSION,
             ("calculation", "offline", "deterministic"),
             "supplied_inputs_arithmetic_only",
             agronomic_calculator_tool,

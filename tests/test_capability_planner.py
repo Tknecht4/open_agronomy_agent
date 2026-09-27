@@ -21,7 +21,7 @@ def test_production_context_retains_registry_planner_identity() -> None:
     )
     legacy = metadata["tool_plan"]["invocations"][0]
     assert calculator["invocation_id"] == legacy["invocation_id"]
-    assert calculator["selector_id"] == "explicit_arithmetic_parser_v1"
+    assert calculator["selector_id"] == "explicit_arithmetic_parser_v2"
 
 
 def test_planner_selects_registered_guards_without_model_or_answer_inputs() -> None:

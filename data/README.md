@@ -44,6 +44,16 @@ only for an explicit MLRA-scoped U.S. analogue request and cannot establish
 Canadian decisive authority. Community and spatial archive candidates remain
 outside runtime until source-specific review.
 
+The separately built `offline_agronomy/production_foundations/v1/` candidate adds
+nine project-authored, source-linked cards on crop-establishment arithmetic,
+thermal time, nutrient planning, enterprise budgets, and farm finance. Its
+seed file and external-source snapshot hashes are retained separately. The
+card text is context-only and must not be mistaken for a publisher's verbatim
+document, a current price, or a locally calibrated recommendation. Its one
+shard is admitted only by the nonselectable candidate RAG profile and policy;
+the active product profile does not load it. The source snapshots are not part
+of the public package.
+
 To add documents, update the source receipt and extraction adapter, rebuild the
 stable active store, then advance `configs/rag.yaml` and
 `configs/runtime_profiles.json` only after validation, policy generation,
