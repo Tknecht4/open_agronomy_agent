@@ -50,13 +50,17 @@ dependence and Gemma 4 full-system repeatability remain open work.
 
 ## Local-private infrastructure and training boundaries
 
-The product runtime uses in-memory request limiting, SQLite-local ingest job
-records, and a permission-restricted filesystem artifact root. The earlier
+The product runtime uses in-memory request limiting, database-recorded ingest
+work (SQLite by default), and a permission-restricted filesystem artifact root. The earlier
 Redis queue/rate-limit and S3-compatible storage alternatives, their preflight
 commands, and the standalone queue worker were removed after the project chose
 the local-private deployment model. Retired `AGRONOMY_AGENT_*` backend
 environment variables fail closed so an old deployment cannot silently write
 somewhere different than its operator expects.
+
+The schema-checked Postgres and identity-provider compatibility interfaces are
+separate boundaries. This removal neither qualifies them for deployment nor
+misreports their database identity as SQLite.
 
 `src/agronomy_agent/training/` is offline maintainer tooling, not part of the
 answer path. No current Canadian source is admitted for model training;

@@ -102,7 +102,8 @@ def test_health_reports_fixed_local_private_backends(tmp_path: Path) -> None:
     assert payload["object_store"] == {"backend": "local"}
     assert payload["rate_limit"] == {"backend": "memory", "fail_open": False}
     assert payload["job_queue"] == {
-        "backend": "sqlite-local",
+        "backend": "database-recorded",
+        "database_backend": "sqlite",
         "fail_open": False,
-        "scope": "local_private",
+        "scope": "application_private",
     }

@@ -4,8 +4,9 @@
 
 `server/` composes the FastAPI application, application services, settings,
 authentication/network boundaries, observability, and persistence. The React
-cockpit is the supported interface. Runtime artifacts, request limiting, and
-ingest job records are local-only: filesystem, memory, and SQLite respectively.
+cockpit is the supported interface. Runtime artifacts and request limiting are
+local-only: filesystem and memory respectively. Ingest work is recorded in the
+configured application database, which defaults to SQLite.
 
 ## Entry points
 

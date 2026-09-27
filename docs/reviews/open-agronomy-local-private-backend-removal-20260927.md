@@ -9,7 +9,8 @@ Open Agronomy Agent no longer offers Redis-backed queues or rate limiting, or
 S3-compatible artifact storage. Those paths were early scale-out scaffolding
 and do not belong in the local-private product. Application artifacts remain
 under the operator-selected local filesystem root, request limiting remains
-in process memory, and ingest job state remains in the local database.
+in process memory, and ingest job state remains in the configured application
+database (SQLite by default).
 
 ## Evidence before removal
 
@@ -78,7 +79,7 @@ required or authorized for this removal.
 
 ## Local verification results
 
-- Package inventory: 118 Python modules and 104,632 Python lines.
+- Package inventory: 118 Python modules and 104,627 Python lines.
 - Test inventory: 89 files, 726 explicit test functions, and 1,016 collected
   cases.
 - Complete backend suite: 1,016 passed in 134.73 seconds with Starlette
@@ -87,8 +88,25 @@ required or authorized for this removal.
 - Frontend: 205 tests, type checking, and production build passed.
 - Public documentation source/render audits and strict MkDocs build passed.
 - Edge package validation passed with current contract
-  `b7b920eafafd733d218e9f398ff437197f21210c09f9718b0da1b4d9e343f08b`.
+  `e33f48adb45408627958e76c46405b0a241ca0a3d263b58e7ade335b4a2e0fc8`.
 - The first public-package attempt exhausted temporary disk while copying the
   checked-in NRCS pack. After removing only task-generated temporary trees, the
   809-file package passed. Its external receipt is retained separately so this
   included review does not create a self-referential package hash.
+
+## Acceptance repairs
+
+Independent review rejected the first committed candidate because its
+`job_queue` status hard-coded `sqlite-local` even though the separately retained
+database compatibility layer can select Postgres, and because a one-byte source
+formatting repair occurred after runtime-manifest generation. Runtime responses
+now describe ingest as `database-recorded`, include the actual database backend,
+and limit the local-only claim to artifact storage and rate limiting. The
+runtime manifest was then regenerated and validated before rebuilding the
+public package.
+
+The public-package builder deliberately regenerates
+`container/runtime_manifest.json` inside the curated destination so that its
+runtime-asset digest binds the 809-file public tree rather than the larger
+source checkout. Its receipted manifest hash therefore differs from the source
+manifest by design; it must match the generated file inside that package.

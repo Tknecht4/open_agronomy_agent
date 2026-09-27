@@ -2269,6 +2269,12 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
     app.state.local_pairing_consumed = False
     local_pairing_lock = asyncio.Lock()
     object_store = LocalObjectStore(settings.artifact_root)
+    job_execution = {
+        "backend": "database-recorded",
+        "database_backend": settings.database_backend,
+        "fail_open": False,
+        "scope": "application_private",
+    }
     attachment_scanner = build_attachment_scanner(settings)
     ephemeral_private_scanner = LocalAttachmentScanner()
     image_observation_adapter = _build_image_observation_adapter(settings)
@@ -3400,7 +3406,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                     "storage": metrics["storage"]["backend"],
                     "database_backend": settings.database_backend,
                     "rate_limit_backend": rate_limiter.backend,
-                    "job_queue_backend": "sqlite-local",
+                    "job_queue_backend": job_execution["backend"],
                 },
             },
             {
@@ -3686,11 +3692,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             "object_store": {"backend": object_store.backend},
             "vlm_observation": {"backend": settings.vlm_observation_backend},
             "rate_limit": {"backend": rate_limiter.backend, "fail_open": False},
-            "job_queue": {
-                "backend": "sqlite-local",
-                "fail_open": False,
-                "scope": "local_private",
-            },
+            "job_queue": job_execution,
         }
 
     @app.get("/api/configs")
@@ -3963,11 +3965,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             "object_store": {"backend": object_store.backend},
             "vlm_observation": {"backend": settings.vlm_observation_backend},
             "rate_limit": {"backend": rate_limiter.backend, "fail_open": False},
-            "job_queue": {
-                "backend": "sqlite-local",
-                "fail_open": False,
-                "scope": "local_private",
-            },
+            "job_queue": job_execution,
             "corpus_audit_id": settings.corpus_audit_id,
             "telemetry": telemetry.status(),
         }
@@ -3997,11 +3995,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             "object_store": {"backend": object_store.backend},
             "vlm_observation": {"backend": settings.vlm_observation_backend},
             "rate_limit": {"backend": rate_limiter.backend, "fail_open": False},
-            "job_queue": {
-                "backend": "sqlite-local",
-                "fail_open": False,
-                "scope": "local_private",
-            },
+            "job_queue": job_execution,
             "quota_blocked": quota_report["blocked"],
             "corpus_status": corpus_health["status"],
             "corpus_audit_id": settings.corpus_audit_id,
@@ -5807,7 +5801,8 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         require_workspace_role(user, data_source["workspace_id"], ORG_ADMIN_ROLES)
         job = store.create_phase4_ingest_job(data_source=data_source, created_by_user_id=user["id"])
         enqueue = {
-            "backend": "sqlite-local",
+            "backend": job_execution["backend"],
+            "database_backend": settings.database_backend,
             "enqueued": True,
             "job_id": job["id"],
         }
