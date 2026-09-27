@@ -60,7 +60,9 @@ Private state is under `~/Library/Application Support/OpenAgronomyAgent/desktop/
 the SQLite database, artifacts, model cache, receipts, and logs. The installed
 app bundle is read-only. Existing checkout and container state are not silently
 migrated. The first release is loopback-only; field-LAN remains a separate
-operator contract.
+operator contract. The app keeps one saved loopback port across launches so
+browser-local drafts stay on the same origin; a port collision fails with a
+retry message instead of silently changing that origin.
 
 ## Qualification before merging or distributing
 

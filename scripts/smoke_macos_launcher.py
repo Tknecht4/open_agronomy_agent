@@ -145,6 +145,7 @@ def smoke(app: Path, state: Path, backend_report: Path, report: Path) -> dict[st
                 {
                     "attempt": attempt + 1,
                     "launch_id": active["launch_id"],
+                    "port": port,
                     "browser_pairing_consumed": True,
                     "workspace_status": 200,
                     "session_preserved": True,
@@ -156,6 +157,8 @@ def smoke(app: Path, state: Path, backend_report: Path, report: Path) -> dict[st
                 backend_pid=int(active["backend_pid"]), port=port,
             )
             active = None
+        if observations[0]["port"] != observations[1]["port"]:
+            raise ValueError("native reopen changed the browser origin and stranded local drafts")
         result = {
             "schema_version": "open_agronomy_agent.macos_launcher_smoke.v1",
             "status": "pass",

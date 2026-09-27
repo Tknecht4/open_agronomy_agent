@@ -14,6 +14,7 @@ import os
 import shutil
 import sys
 import tempfile
+import traceback
 from pathlib import Path
 from typing import Any
 
@@ -200,6 +201,54 @@ def _receipt_path(state_root: Path) -> Path:
     return state_root / "receipts/model-install.json"
 
 
+def _safe_failure(exc: Exception) -> dict[str, Any]:
+    if isinstance(exc, ModuleNotFoundError):
+        code = "missing_module"
+    elif isinstance(exc, ImportError):
+        code = "import_error"
+    elif isinstance(exc, OSError):
+        code = "os_error"
+    elif isinstance(exc, ValueError):
+        code = "invalid_runtime_contract"
+    else:
+        code = "runtime_error"
+    row: dict[str, Any] = {
+        "schema_version": "open_agronomy_agent.desktop_startup_diagnostic.v1",
+        "phase": "error",
+        "error_code": code,
+        "exception_type": type(exc).__name__,
+    }
+    if isinstance(exc, ModuleNotFoundError) and isinstance(exc.name, str):
+        name = exc.name
+        if len(name) <= 80 and all(char.isalnum() or char in "._" for char in name):
+            row["missing_module"] = name
+    if isinstance(exc, OSError) and isinstance(exc.errno, int):
+        row["errno"] = exc.errno
+    return row
+
+
+def _write_startup_diagnostic(state_root: Path, row: dict[str, Any], *, exc: Exception | None = None) -> None:
+    directory = state_root / "receipts"
+    directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+    path = directory / "backend-startup.json"
+    with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=directory, delete=False) as handle:
+        temporary = Path(handle.name)
+        json.dump(row, handle, sort_keys=True)
+        handle.write("\n")
+    temporary.chmod(0o600)
+    os.replace(temporary, path)
+    if exc is not None:
+        logs = state_root / "logs"
+        logs.mkdir(parents=True, exist_ok=True, mode=0o700)
+        with tempfile.NamedTemporaryFile(
+            "w", encoding="utf-8", dir=logs,
+            prefix="backend-startup-error-", suffix=".log", delete=False,
+        ) as handle:
+            private_log = Path(handle.name)
+            traceback.print_exception(type(exc), exc, exc.__traceback__, file=handle)
+        private_log.chmod(0o600)
+
+
 def _record_model_mismatch(
     state_root: Path, *, expected: list[dict[str, Any]], observed: list[dict[str, Any]] | None,
     reason: str,
@@ -319,6 +368,10 @@ def serve(runtime_root: Path, state_root: Path, model_cache: Path, *, port: int)
     secret = os.environ.get("AGRONOMY_AGENT_DESKTOP_SESSION_SECRET", "")
     if len(token) < 32 or len(secret) < 32:
         raise ValueError("desktop pairing token and session secret are required")
+    _write_startup_diagnostic(
+        state_root,
+        {"schema_version": "open_agronomy_agent.desktop_startup_diagnostic.v1", "phase": "launching"},
+    )
     verify_model_receipt(runtime_root, state_root, model_cache)
     from scripts.run_cockpit import main as run_cockpit
 
@@ -350,6 +403,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--require-bundle-manifest", action="store_true")
     parser.add_argument("--port", type=int, default=18080)
     args = parser.parse_args(argv)
+    state_root: Path | None = None
     try:
         runtime_root, state_root, model_cache = _configure_runtime(args)
         if args.command == "status":
@@ -364,8 +418,11 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(install_model(runtime_root, state_root, model_cache)))
             return 0
         return serve(runtime_root, state_root, model_cache, port=args.port)
-    except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
-        print(json.dumps({"phase": "error", "detail": str(exc)}), file=sys.stderr)
+    except Exception as exc:
+        failure = _safe_failure(exc)
+        if state_root is not None and args.command == "serve":
+            _write_startup_diagnostic(state_root, failure, exc=exc)
+        print(json.dumps(failure), file=sys.stderr)
         return 1
 
 

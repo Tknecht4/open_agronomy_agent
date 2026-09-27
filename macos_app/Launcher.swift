@@ -15,6 +15,7 @@ final class OpenAgronomyDesktop: NSObject, NSApplicationDelegate, NSWindowDelega
     private let spinner = NSProgressIndicator()
     private var operation: Process?
     private var backend: Process?
+    private var backendGeneration = 0
     private var backendLog: FileHandle?
     private var lockDescriptor: Int32 = -1
     private var port = 0
@@ -282,13 +283,14 @@ final class OpenAgronomyDesktop: NSObject, NSApplicationDelegate, NSWindowDelega
             .replacingOccurrences(of: "=", with: "")
     }
 
-    private func availablePort() -> Int? {
+    private func availablePort(_ requestedPort: Int = 0) -> Int? {
         let descriptor = Darwin.socket(AF_INET, SOCK_STREAM, 0)
         guard descriptor >= 0 else { return nil }
         defer { Darwin.close(descriptor) }
         var address = sockaddr_in()
         address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
         address.sin_family = sa_family_t(AF_INET)
+        address.sin_port = in_port_t(UInt16(requestedPort).bigEndian)
         _ = "127.0.0.1".withCString { inet_pton(AF_INET, $0, &address.sin_addr) }
         let bound = withUnsafePointer(to: &address) { pointer in
             pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) {
@@ -306,10 +308,49 @@ final class OpenAgronomyDesktop: NSObject, NSApplicationDelegate, NSWindowDelega
         return Int(UInt16(bigEndian: address.sin_port))
     }
 
+    private func stablePort() throws -> Int {
+        let path = stateRoot.appendingPathComponent("desktop-port.json")
+        if FileManager.default.fileExists(atPath: path.path) {
+            let data = try Data(contentsOf: path)
+            let row = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            guard row?["schema_version"] as? String == "open_agronomy_agent.desktop_port.v1",
+                  let saved = row?["port"] as? Int, 1024 <= saved, saved <= 65535 else {
+                throw NSError(domain: "OpenAgronomyDesktop", code: 1,
+                              userInfo: [NSLocalizedDescriptionKey: "The saved local port is invalid."])
+            }
+            guard availablePort(saved) == saved else {
+                throw NSError(domain: "OpenAgronomyDesktop", code: 2,
+                              userInfo: [NSLocalizedDescriptionKey: "The saved local port is in use. Close its owner and retry."])
+            }
+            return saved
+        }
+        guard let chosen = availablePort(), 1024 <= chosen, chosen <= 65535 else {
+            throw NSError(domain: "OpenAgronomyDesktop", code: 3,
+                          userInfo: [NSLocalizedDescriptionKey: "Could not reserve a local port."])
+        }
+        let data = try JSONSerialization.data(
+            withJSONObject: ["schema_version": "open_agronomy_agent.desktop_port.v1", "port": chosen],
+            options: [.sortedKeys]
+        )
+        try data.write(to: path, options: [.atomic])
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: path.path)
+        return chosen
+    }
+
     private func startBackend() {
-        guard let selectedPort = availablePort(),
-              let token = randomSecret(), let secret = randomSecret() else {
-            showFailure("Could not reserve a local port or create a private session.")
+        backendGeneration += 1
+        let generation = backendGeneration
+        let selectedPort: Int
+        do {
+            selectedPort = try stablePort()
+        } catch {
+            showFailure(error.localizedDescription)
+            openButton.title = "Retry opening"
+            openButton.isEnabled = true
+            return
+        }
+        guard let token = randomSecret(), let secret = randomSecret() else {
+            showFailure("Could not create a private local session.")
             return
         }
         port = selectedPort
@@ -355,14 +396,14 @@ final class OpenAgronomyDesktop: NSObject, NSApplicationDelegate, NSWindowDelega
             try process.run()
             backend = process
             writeStatus("starting")
-            pollHealth(attemptsRemaining: 180)
+            pollHealth(attemptsRemaining: 180, generation: generation)
         } catch {
             showFailure("Could not start the local service: \(error.localizedDescription)")
         }
     }
 
-    private func pollHealth(attemptsRemaining: Int) {
-        guard !isQuitting else { return }
+    private func pollHealth(attemptsRemaining: Int, generation: Int) {
+        guard !isQuitting, generation == backendGeneration else { return }
         guard attemptsRemaining > 0, backend?.isRunning == true else {
             let failedBackend = backend
             backend = nil
@@ -377,7 +418,7 @@ final class OpenAgronomyDesktop: NSObject, NSApplicationDelegate, NSWindowDelega
         request.timeoutInterval = 2
         URLSession.shared.dataTask(with: request) { data, response, _ in
             DispatchQueue.main.async {
-                guard !self.isQuitting else { return }
+                guard !self.isQuitting, generation == self.backendGeneration else { return }
                 let status = (response as? HTTPURLResponse)?.statusCode
                 let payload = data.flatMap {
                     try? JSONSerialization.jsonObject(with: $0) as? [String: Any]
@@ -402,7 +443,7 @@ final class OpenAgronomyDesktop: NSObject, NSApplicationDelegate, NSWindowDelega
                     }
                 } else {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        self.pollHealth(attemptsRemaining: attemptsRemaining - 1)
+                        self.pollHealth(attemptsRemaining: attemptsRemaining - 1, generation: generation)
                     }
                 }
             }

@@ -49,6 +49,32 @@ def _free_port() -> int:
         return int(sock.getsockname()[1])
 
 
+def _startup_summary(state: Path) -> dict[str, Any]:
+    path = state / "receipts/backend-startup.json"
+    try:
+        row = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"phase": "unavailable"}
+    if not isinstance(row, dict) or row.get("schema_version") != "open_agronomy_agent.desktop_startup_diagnostic.v1":
+        return {"phase": "invalid"}
+    summary: dict[str, Any] = {}
+    if row.get("phase") in {"launching", "error"}:
+        summary["phase"] = row["phase"]
+    if row.get("error_code") in {
+        "missing_module", "import_error", "os_error", "invalid_runtime_contract", "runtime_error"
+    }:
+        summary["error_code"] = row["error_code"]
+    for key in ("exception_type", "missing_module"):
+        value = row.get(key)
+        if isinstance(value, str) and len(value) <= 80 and all(
+            char in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._" for char in value
+        ):
+            summary[key] = value
+    if isinstance(row.get("errno"), int) and 0 <= row["errno"] <= 255:
+        summary["errno"] = row["errno"]
+    return summary or {"phase": "invalid"}
+
+
 def _request(
     opener: urllib.request.OpenerDirector,
     origin: str,
@@ -157,7 +183,10 @@ def smoke(
         try:
             for _ in range(180):
                 if process.poll() is not None:
-                    raise RuntimeError(f"backend exited before readiness: {log_path}")
+                    raise RuntimeError(
+                        "backend exited before readiness: "
+                        + json.dumps({"exit_code": process.returncode, "startup": _startup_summary(state)})
+                    )
                 try:
                     health_status, body = _request(opener, origin, "/api/health", timeout=2)
                     health = json.loads(body)
@@ -169,7 +198,10 @@ def smoke(
                     break
                 time.sleep(0.5)
             else:
-                raise RuntimeError("backend readiness timed out")
+                raise RuntimeError(
+                    "backend readiness timed out: "
+                    + json.dumps({"startup": _startup_summary(state)})
+                )
 
             anonymous, _ = _request(opener, origin, "/auth/me")
             if anonymous != 401:

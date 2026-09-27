@@ -12,6 +12,7 @@ import pytest
 
 from macos_app import backend
 from scripts.build_macos_app import _asset_manifest, _audit_macho_links, _tracked_asset_files
+from scripts.smoke_macos_app import _startup_summary
 
 
 def test_runtime_asset_selection_uses_tracked_files_only(tmp_path: Path) -> None:
@@ -128,6 +129,23 @@ def test_macho_audit_rejects_developer_linked_runtime(
         _audit_macho_links(tmp_path)
 
 
+def test_startup_diagnostic_exposes_only_allowlisted_failure_identity(tmp_path: Path) -> None:
+    error = ModuleNotFoundError("secret private path", name="missing.dynamic_module")
+    safe = backend._safe_failure(error)
+    assert safe["error_code"] == "missing_module"
+    assert safe["missing_module"] == "missing.dynamic_module"
+    assert "secret private path" not in json.dumps(safe)
+    receipt = tmp_path / "receipts/backend-startup.json"
+    receipt.parent.mkdir()
+    receipt.write_text(json.dumps({**safe, "private_trace": "never leave runner state"}))
+    assert _startup_summary(tmp_path) == {
+        "phase": "error",
+        "error_code": "missing_module",
+        "exception_type": "ModuleNotFoundError",
+        "missing_module": "missing.dynamic_module",
+    }
+
+
 def test_backend_status_never_downloads_without_receipt(tmp_path: Path) -> None:
     registry = tmp_path / "runtime/configs/runtime_profiles.json"
     registry.parent.mkdir(parents=True)
@@ -162,4 +180,7 @@ def test_backend_status_never_downloads_without_receipt(tmp_path: Path) -> None:
         command, env=environment, capture_output=True, text=True, check=False
     )
     assert insecure.returncode == 1
-    assert "accessible only" in json.loads(insecure.stderr)["detail"]
+    diagnostic = json.loads(insecure.stderr)
+    assert diagnostic["error_code"] == "invalid_runtime_contract"
+    assert diagnostic["exception_type"] == "ValueError"
+    assert "detail" not in diagnostic
