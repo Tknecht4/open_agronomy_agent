@@ -224,9 +224,22 @@ least 12 GiB free and retains a non-zero builder exit as failure.
 GitHub Actions run `36282861014` showed that strict documentation build,
 render audit, and Pages artifact upload all passed. Deployment alone failed
 with a 404 because repository Pages was disabled. The workflow now includes a
-commit-pinned `actions/configure-pages` step and a source audit requiring it;
-the repository setting must select **GitHub Actions** before the next protected
-`main` deployment can succeed.
+commit-pinned `actions/configure-pages` step and a source audit requiring it.
+The repository setting now selects **GitHub Actions**, and run `36288518596`
+successfully built, audited, uploaded, and deployed the protected `main`
+artifact. The public homepage was fetched after deployment and contained the
+project title, repository map, and current two-Gemma assessment.
+
+The first general Linux CI run (`36288518565`) then found two workstation-
+masked test defects: a frontend assertion observed restored-field state before
+the component's separate effect settled, and the candidate-matrix shape test
+read ignored generated files under `outputs/`. The frontend assertion now
+waits for the same eventual state without weakening it; the matrix test builds
+deterministic 800-row external and 72-row regional fixtures while retaining
+the frozen config and exact 17,640-observation assertions. The official
+`actions/setup-node` v6 commit pin also removes the runner's Node 20 action-
+runtime warning. Follow-up run `36288799792` passed both Python and frontend
+jobs on GitHub-hosted Linux.
 
 The root README now distinguishes clone-contained governed knowledge from the
 optional external Prairie DSS pack and includes the dry-run, download/build/
