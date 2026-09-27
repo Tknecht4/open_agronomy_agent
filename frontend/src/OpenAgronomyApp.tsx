@@ -1075,7 +1075,7 @@ function fieldEventLabel(event: FieldEvent): string {
   return 'Structured field record'
 }
 
-function FieldEventMeasurementDetails({ measurement }: { measurement: unknown }) {
+function FieldEventMeasurementDetails({ measurement, event }: { measurement: unknown; event: FieldEvent }) {
   if (!measurement || typeof measurement !== 'object') return null
   const sample = measurement as Record<string, unknown>
   const depth = sample.sample_depth && typeof sample.sample_depth === 'object'
@@ -1083,6 +1083,8 @@ function FieldEventMeasurementDetails({ measurement }: { measurement: unknown })
     : null
   const items = [
     ['Sample', sample.sample_id],
+    ['Sampled at', event.provenance.sampling_time_status === 'user_supplied' && typeof event.provenance.sampled_at === 'string' && /(?:Z|[+-]\d{2}:\d{2})$/i.test(event.provenance.sampled_at) && /(?:Z|[+-]\d{2}:\d{2})$/i.test(event.occurred_at) && Number.isFinite(Date.parse(event.provenance.sampled_at)) && Date.parse(event.provenance.sampled_at) === Date.parse(event.occurred_at)
+      ? new Date(event.provenance.sampled_at).toLocaleString() : event.provenance.sampling_time_status === 'unknown' ? 'Not supplied' : 'Not specified in this record'],
     ['Measurement', sample.label || sample.metric],
     ['Value', `${String(sample.value ?? 'unknown')} ${String(sample.unit ?? '')}`.trim()],
     ['Method', sample.method],
@@ -2853,7 +2855,8 @@ export function OpenAgronomyApp() {
     }
     recordSaveBusyRef.current = true
     setRecordSavePending(true)
-    setFieldHistoryStatus('Saving an append-only field record.')
+    setRecordSaveError('')
+    setFieldHistoryStatus('Record save pending. Closing the form leaves the request running; refresh the timeline to check.')
     try {
       const payload: Record<string, unknown> = {
         event_type: fieldEventType,
@@ -2887,7 +2890,7 @@ export function OpenAgronomyApp() {
       }
     } catch (err) {
       if (activeFieldRef.current === targetFieldId) {
-        const message = `Could not save field record: ${String((err as Error).message || err)}`
+        const message = `Save not confirmed: ${String((err as Error).message || err)}. The server may have saved it; check the timeline before trying again.`
         setRecordSaveError(message)
         setFieldHistoryStatus(message)
       }
@@ -3860,7 +3863,7 @@ export function OpenAgronomyApp() {
                   </Suspense>
                 ) : null}
               </div>
-              {recordDialogFieldId === activeFieldContextId && recordDialogFieldId ? <WorkspaceDialog title={fieldEventType === 'correction' ? 'Correct field record' : 'Add field record'} busy={recordSavePending} onClose={() => setRecordDialogFieldId('')}>
+              {recordDialogFieldId === activeFieldContextId && recordDialogFieldId ? <WorkspaceDialog title={fieldEventType === 'correction' ? 'Correct field record' : 'Add field record'} onClose={() => setRecordDialogFieldId('')}>
               <form className="field-event-form record-entry-form" aria-label="Add field record" onSubmit={(event) => void appendFieldEvent(event)}>
                 <label>
                   Record type
@@ -3938,6 +3941,7 @@ export function OpenAgronomyApp() {
                   <Save size={15} /> {recordSavePending ? 'Saving…' : fieldEventType === 'correction' ? 'Save correction' : 'Save record'}
                 </button>
               </form>
+              {recordSavePending ? <p className="record-entry-status" role="status">Saving continues if you close this window. Refresh the timeline before trying again.</p> : null}
               {recordSaveError ? <p className="record-entry-status" role="alert">{recordSaveError}</p> : null}
               </WorkspaceDialog> : null}
               {fieldHistory?.events?.length ? (
@@ -3946,14 +3950,14 @@ export function OpenAgronomyApp() {
                     <article key={fieldEvent.id}>
                       <div>
                         <span className={`lineage-state ${fieldChainStatus(fieldHistory.event_chain) === 'checked' ? 'verified' : 'legacy'}`}>{fieldEvent.event_type}</span>
-                        <time>{new Date(fieldEvent.occurred_at || fieldEvent.recorded_at).toLocaleString()}</time>
+                        <time>{fieldEvent.payload.measurement ? 'Recorded ' : ''}{new Date(fieldEvent.payload.measurement ? fieldEvent.recorded_at : fieldEvent.occurred_at || fieldEvent.recorded_at).toLocaleString()}</time>
                       </div>
                       <p>{fieldEventLabel(fieldEvent)}</p>
                       {fieldEvent.corrects_event_id ? <small>Corrects record {fieldEvent.corrects_event_id.slice(0, 8)}</small> : null}
                       <div className="field-history-actions">
                         <button type="button" disabled={recordSavePending || fieldStorageMode !== 'account_workspace'} onClick={() => openRecordDialog(fieldEvent.id)}>Correct</button>
                         <details className="field-record-detail"><summary>Record details</summary>
-                          <FieldEventMeasurementDetails measurement={fieldEvent.payload.measurement} />
+                          <FieldEventMeasurementDetails measurement={fieldEvent.payload.measurement} event={fieldEvent} />
                           <small>Chain: {fieldChainStatus(fieldHistory.event_chain)}</small>
                           <small>Immutable record · {fieldEvent.integrity_sha256} · recorded {new Date(fieldEvent.recorded_at).toLocaleString()}</small>
                           <small>Capture: {String(fieldEvent.provenance.capture_method || 'unknown')}</small>

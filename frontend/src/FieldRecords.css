@@ -50,3 +50,5 @@
 /* Modal forms override the surrounding timeline layout, including its spacing. */
 .workspace-shell .workspace-dialog form.record-entry-form { margin: 0; padding: 16px; }
 .workspace-dialog .record-entry-status { display: block; padding: 0 16px 16px; }
+
+.soil-entry-outcome { display: block; max-width: 36em; margin-top: 6px; font-size: 12px; line-height: 1.5; color: #566b4d; }

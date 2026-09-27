@@ -1,10 +1,19 @@
 from __future__ import annotations
 
+from pathlib import Path
+
+import pytest
+
 from agronomy_agent.server.services.chat_service import (
+    _append_field_context_prompt,
+    _field_history_evidence_text,
+    _field_lineage_record,
     _safe_field_context_intersections,
     _should_call_aafc_crop_inventory,
     _should_call_statcan_crop_statistics,
+    _with_stored_field_history,
 )
+from agronomy_agent.server.storage.db import TraceStore
 from agronomy_agent.server.services.answer_renderer import (
     _append_to_labeled_line,
     render_map_component_explanation_answer,
@@ -15,6 +24,163 @@ from agronomy_agent.answer_verifier import _decision_route_failure_answer
 from agronomy_agent.answer_safety import enforce_answer_safety_postconditions
 from agronomy_agent.decision_route import build_decision_route_state
 from agronomy_agent.router import classify_query
+
+
+def _stored_field_history(
+    tmp_path: Path,
+    *,
+    event_type: str = "sample",
+    occurred_at: str | None = None,
+    sampling_time_status: str | None = None,
+    sampled_at: str | None = None,
+) -> tuple[dict, dict, dict, dict]:
+    store = TraceStore(tmp_path / "field-history.sqlite3")
+    field = store.create_phase4_field_context(
+        workspace={"id": "workspace-1", "organization_id": "organization-1"},
+        created_by_user_id="user-1",
+        payload={"display_name": "Synthetic field", "region_text": "Saskatchewan"},
+    )
+    measurement = {
+        "schema_version": "open_agronomy_agent.field_measurement.v1",
+        "kind": "soil_test",
+        "sample_id": "S1",
+        "metric": "nitrate_n",
+        "value": 12.5,
+        "unit": "ppm",
+        "method": "synthetic method",
+        "sample_depth": {"top": 0, "bottom": 15, "unit": "cm"},
+        "spatial_scope": "composite",
+        "source_quality": "user_transcribed_lab_report",
+    }
+    payload = {
+        "event_type": event_type,
+        "payload": (
+            {"summary": "Water ponding was observed"}
+            if event_type == "observation"
+            else {"summary": "Synthetic soil result", "measurement": measurement}
+        ),
+        "provenance": {
+            **({"sampling_time_status": sampling_time_status} if sampling_time_status is not None else {}),
+            **({"sampled_at": sampled_at} if sampled_at is not None else {}),
+        },
+    }
+    if occurred_at is not None:
+        payload["occurred_at"] = occurred_at
+    stored = store.append_phase4_field_event(
+        field_context=field, recorded_by_user_id="user-1", payload=payload
+    )
+    context = {"field_context_id": field["id"]}
+    authorized = {"field_context_id": field["id"], "field_access_authorized": True}
+    enriched = _with_stored_field_history(
+        store, session_context=authorized, field_context=context
+    )
+    assert store.verify_phase4_field_event_chain(str(field["id"]))["valid"] is True
+    assert store.get_phase4_field_event(stored["id"])["integrity_sha256"] == stored["integrity_sha256"]
+    return stored, enriched, authorized, store
+
+
+@pytest.mark.parametrize(
+    ("sampling_time_status", "occurred_at"),
+    [
+        ("unknown", None),
+        ("unknown", "2025-04-12T10:00:00+00:00"),
+        (None, None),
+        (None, "2025-04-12T10:00:00+00:00"),
+    ],
+)
+def test_soil_sampling_date_without_user_date_is_not_entry_time(
+    tmp_path: Path, sampling_time_status: str | None, occurred_at: str | None
+) -> None:
+    stored, context, authorized, _ = _stored_field_history(
+        tmp_path, occurred_at=occurred_at, sampling_time_status=sampling_time_status
+    )
+    record = context["field_history"]["events"][0]
+    expected_status = sampling_time_status or "unspecified"
+    if occurred_at is None:
+        assert stored["occurred_at"] == stored["recorded_at"]
+    else:
+        assert stored["occurred_at"] == occurred_at
+    assert record["sampling_time_status"] == expected_status
+    assert "occurred_at" not in record
+    assert record["event_time"] == stored["occurred_at"]
+    assert record["recorded_at"] == stored["recorded_at"]
+    expected_label = "Sampling date unknown" if sampling_time_status else "Sampling date unspecified"
+    prompt = _append_field_context_prompt("", context)
+    evidence = _field_history_evidence_text(context)
+    assert f"{expected_label} (recorded {stored['recorded_at']})" in prompt
+    assert f"{expected_label} (recorded {stored['recorded_at']})" in evidence
+    assert f"- {stored['recorded_at']} sample" not in evidence
+    lineage = _field_lineage_record(authorized, context)["field_history"]["events"][0]
+    assert lineage["sampling_time_status"] == expected_status
+    assert lineage["event_time"] == stored["occurred_at"]
+    assert lineage["recorded_at"] == stored["recorded_at"]
+    assert "occurred_at" not in lineage
+
+
+def test_user_supplied_soil_sampling_date_stays_distinct_from_entry_time(tmp_path: Path) -> None:
+    sample_time = "2025-04-12T10:00:00+00:00"
+    stored, context, authorized, _ = _stored_field_history(
+        tmp_path, occurred_at=sample_time, sampling_time_status="user_supplied",
+        sampled_at="2025-04-12T10:00:00Z",
+    )
+    record = context["field_history"]["events"][0]
+    assert record["sampling_time_status"] == "user_supplied"
+    assert record["occurred_at"] == sample_time
+    assert record["event_time"] == sample_time
+    assert record["recorded_at"] == stored["recorded_at"]
+    for text in (_append_field_context_prompt("", context), _field_history_evidence_text(context)):
+        assert f"Sampled {sample_time} (recorded {stored['recorded_at']})" in text
+    lineage = _field_lineage_record(authorized, context)["field_history"]["events"][0]
+    assert lineage["occurred_at"] == sample_time
+    assert lineage["sampling_time_status"] == "user_supplied"
+
+
+@pytest.mark.parametrize(
+    ("occurred_at", "sampled_at"),
+    [
+        (None, None),
+        ("2025-04-12T10:00:00+00:00", None),
+        ("2025-04-12T10:00:00+00:00", "not-a-date"),
+        ("2025-04-12T10:00:00+00:00", "2025-04-13T10:00:00+00:00"),
+        ("not-a-date", "2025-04-12T10:00:00+00:00"),
+    ],
+)
+def test_claimed_soil_sampling_date_without_matching_valid_provenance_is_unknown(
+    tmp_path: Path, occurred_at: str | None, sampled_at: str | None
+) -> None:
+    stored, context, _, _ = _stored_field_history(
+        tmp_path, occurred_at=occurred_at, sampling_time_status="user_supplied",
+        sampled_at=sampled_at,
+    )
+    record = context["field_history"]["events"][0]
+    assert record["sampling_time_status"] == "unknown"
+    assert "occurred_at" not in record
+    assert "Sampling date unknown" in _append_field_context_prompt("", context)
+    assert record["event_time"] == stored["occurred_at"]
+
+
+def test_non_soil_observation_keeps_event_date_and_unauthorized_history_is_excluded(
+    tmp_path: Path,
+) -> None:
+    observed_at = "2025-06-02T09:30:00+00:00"
+    stored, context, _, store = _stored_field_history(
+        tmp_path, event_type="observation", occurred_at=observed_at,
+        sampling_time_status="unknown",
+    )
+    record = context["field_history"]["events"][0]
+    assert record["occurred_at"] == observed_at
+    assert "sampling_time_status" not in record
+    assert "event_time" not in record
+    assert f"{observed_at} observation" in _field_history_evidence_text(context)
+    excluded = _with_stored_field_history(
+        store,
+        session_context={"field_context_id": stored["field_context_id"]},
+        field_context={"field_context_id": stored["field_context_id"]},
+    )
+    assert excluded["field_history"]["authorization_status"] == "not_authorized"
+    assert excluded["field_history"]["events"] == []
+    assert _field_history_evidence_text(excluded) == ""
+    assert observed_at not in _append_field_context_prompt("", excluded)
 
 
 def test_pei_mapped_soil_context_keeps_bounded_lineage_fields() -> None:

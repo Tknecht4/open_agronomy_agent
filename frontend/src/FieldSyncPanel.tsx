@@ -238,7 +238,7 @@ export function SoilTestEntryPanel({
     pendingRef.current = true
     setPending(true)
     const selectedMetric = soilMetrics.find(([id]) => id === metric)
-    setSaveStatus('Saving soil test.')
+    setSaveStatus('Saving soil test. Closing this window leaves the request running; check the timeline before trying again.')
     try {
       await apiPost(`/api/demo/fields/${encodeURIComponent(targetFieldId)}/events`, {
         event_type: 'sample',
@@ -267,6 +267,8 @@ export function SoilTestEntryPanel({
         provenance: {
           capture_method: sourceQuality,
           surface: 'fields_soil_test_form',
+          sampling_time_status: occurredAt ? 'user_supplied' : 'unknown',
+          ...(occurredAt ? { sampled_at: new Date(occurredAt).toISOString() } : {}),
           original_report_retained: originalReportRetained,
         },
       })
@@ -276,7 +278,7 @@ export function SoilTestEntryPanel({
       await onSaved()
     } catch (error) {
       if (mountedRef.current && fieldIdRef.current === targetFieldId) {
-        setSaveStatus(`Save failed: ${String((error as Error).message || error)}`)
+        setSaveStatus(`Save not confirmed: ${String((error as Error).message || error)}. The server may have saved it; check the timeline before trying again.`)
       }
     } finally {
       pendingRef.current = false
@@ -286,8 +288,9 @@ export function SoilTestEntryPanel({
 
   return (
     <div className="soil-entry-action">
-      <button type="button" className="secondary-button" onClick={() => setOpen(true)}>Add soil test</button>
-      {open ? <WorkspaceDialog title="Add soil test" busy={pending} onClose={() => setOpen(false)}>
+      <button type="button" className="secondary-button" onClick={() => setOpen(true)}>{pending ? 'View pending soil test' : 'Add soil test'}</button>
+      {!open && saveStatus ? <small className="soil-entry-outcome" role="status">{saveStatus}</small> : null}
+      {open ? <WorkspaceDialog title="Add soil test" onClose={() => setOpen(false)}>
       <p className="soil-entry-hint">Copy the report's value, unit, method and depth exactly.</p>
       <form className="field-event-form record-entry-form" aria-label="Add structured soil-test result" onSubmit={(event) => void submit(event)}>
         <fieldset className="soil-entry-fields" disabled={pending}>

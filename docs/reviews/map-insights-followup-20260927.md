@@ -197,3 +197,15 @@ both measure clientWidth=scrollWidth=356 px; only the dialog scrolls. The local
 full backend run passed 1,147 tests; the final layout-only frontend delta receives
 its own full rerun and final CI binding. Physical touch-device validation remains
 outside this desktop browser pass. Public/private source authority is unchanged.
+
+
+Independent review reproduced a stalled-write modal that could not close, and an
+unknown sampling date being replaced by the backend's generic event timestamp in
+model-facing field history. Both are repair findings, not accepted exclusions.
+Modal dismissal now leaves an explicitly pending, deduplicated request running;
+lost confirmation is labelled unknown and requires checking the timeline before
+manual retry. The sampling repair adds explicit unknown/user-supplied provenance
+and carries the distinction into UI history and bounded product context without
+rewriting existing event hashes. This narrow backend correction expands the
+original frontend-only scope; focused date-boundary checks and exact-source full
+CI must pass before renewed acceptance. Original failing probes remain retained.

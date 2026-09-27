@@ -52,11 +52,26 @@ describe('SoilTestEntryPanel', () => {
       provenance: {
         capture_method: 'user_transcribed_lab_report',
         surface: 'fields_soil_test_form',
+        sampling_time_status: 'unknown',
         original_report_retained: true,
       },
     })
     expect(await screen.findByText('Saved. Keep the original report if available.')).toBeInTheDocument()
     expect(onSaved).toHaveBeenCalledOnce()
+  })
+
+  it('retains an explicitly supplied sampling date separately from entry time', async () => {
+    render(<SoilTestEntryPanel fieldContextId="field-1" onSaved={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add soil test' }))
+    for (const [label, value] of [['Sample ID', 'dated-sample'], ['Value', '7'], ['Unit on report', 'pH'], ['Lab method', 'water'], ['Depth bottom', '15'], ['Sampled at', '2025-05-12T09:30']]) {
+      fireEvent.change(screen.getByLabelText(label), { target: { value } })
+    }
+    fireEvent.submit(screen.getByRole('form', { name: 'Add structured soil-test result' }))
+    await waitFor(() => expect(apiPostMock).toHaveBeenCalledOnce())
+    expect(apiPostMock.mock.calls[0][1]).toMatchObject({
+      occurred_at: new Date('2025-05-12T09:30').toISOString(),
+      provenance: { sampling_time_status: 'user_supplied', sampled_at: new Date('2025-05-12T09:30').toISOString() },
+    })
   })
 
   it('blocks duplicate saves and keeps the typed sample after an API failure', async () => {
@@ -75,11 +90,19 @@ describe('SoilTestEntryPanel', () => {
     fireEvent.submit(form)
     expect(apiPostMock).toHaveBeenCalledOnce()
     expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled()
+    fireEvent(screen.getByRole('dialog'), new Event('cancel', { bubbles: true, cancelable: true }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('leaves the request running')
+    fireEvent.click(screen.getByRole('button', { name: 'View pending soil test' }))
+    expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled()
+    expect(screen.getByLabelText('Sample ID')).toHaveValue('S-1')
+    fireEvent.submit(screen.getByRole('form', { name: 'Add structured soil-test result' }))
+    expect(apiPostMock).toHaveBeenCalledOnce()
     await act(async () => { rejectSave?.(new Error('offline')) })
-    expect(screen.getByText('Save failed: offline')).toBeInTheDocument()
+    expect(screen.getByText(/Save not confirmed: offline/)).toBeInTheDocument()
     expect(screen.getByLabelText('Sample ID')).toHaveValue('S-1')
     expect(screen.getByLabelText('Value')).toHaveValue(7)
-    fireEvent.submit(form)
+    fireEvent.submit(screen.getByRole('form', { name: 'Add structured soil-test result' }))
     await waitFor(() => expect(apiPostMock).toHaveBeenCalledTimes(2))
     expect(onSaved).toHaveBeenCalledOnce()
   })

@@ -3858,7 +3858,7 @@ def _append_field_context_prompt(context_block: str, field_context: Any) -> str:
                     continue
                 event_id = (_clean_field_text(record.get("event_id")) or "unknown")[:12]
                 event_type = _clean_field_text(record.get("event_type")) or "record"
-                occurred_at = _clean_field_text(record.get("occurred_at")) or "date unknown"
+                occurred_at = _field_history_display_time(record)
                 measurement = safe_soil_measurement(record.get("measurement"))
                 summary_text = (
                     soil_measurement_display(measurement)
@@ -3936,7 +3936,7 @@ def _field_history_evidence_text(field_context: Any) -> str:
         if not summary:
             continue
         event_type = _clean_field_text(record.get("event_type")) or "record"
-        occurred_at = _clean_field_text(record.get("occurred_at")) or "date unknown"
+        occurred_at = _field_history_display_time(record)
         status = ""
         if record.get("superseded_by_event_id"):
             status = " [superseded by a later correction; do not use as current evidence]"
@@ -3944,6 +3944,20 @@ def _field_history_evidence_text(field_context: Any) -> str:
             status = " [correction; current user-entered record]"
         lines.append(f"- {occurred_at} {event_type}{status}: {summary}")
     return "\n".join(lines)
+
+
+def _field_history_display_time(record: dict[str, Any]) -> str:
+    """Distinguish a soil sampling date from the event's entry/audit time."""
+    if safe_soil_measurement(record.get("measurement")):
+        status = record.get("sampling_time_status")
+        recorded_at = _clean_field_text(record.get("recorded_at"))
+        recorded_note = f" (recorded {recorded_at})" if recorded_at else ""
+        if status == "user_supplied" and record.get("occurred_at"):
+            return f"Sampled {_clean_field_text(record['occurred_at'])}{recorded_note}"
+        if status == "unknown":
+            return f"Sampling date unknown{recorded_note}"
+        return f"Sampling date unspecified{recorded_note}"
+    return _clean_field_text(record.get("occurred_at")) or "date unknown"
 
 
 def _safe_field_context_summary(field_context: Any) -> dict[str, Any]:
@@ -4077,18 +4091,41 @@ def _with_stored_field_history(
             event_id = _clean_field_text(event.get("id"))
             payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
             measurement = safe_soil_measurement(payload.get("measurement"))
-            included.append(
-                {
-                    "event_id": event_id,
-                    "event_type": _clean_field_text(event.get("event_type")) or "record",
-                    "occurred_at": _clean_field_text(event.get("occurred_at") or event.get("recorded_at")),
-                    "summary": _field_event_prompt_summary(payload),
-                    "measurement": measurement,
-                    "corrects_event_id": _clean_field_text(event.get("corrects_event_id")) or None,
-                    "superseded_by_event_id": corrected_by.get(event_id),
-                    "integrity_sha256": _clean_field_text(event.get("integrity_sha256")) or None,
-                }
-            )
+            record = {
+                "event_id": event_id,
+                "event_type": _clean_field_text(event.get("event_type")) or "record",
+                "summary": _field_event_prompt_summary(payload),
+                "measurement": measurement,
+                "corrects_event_id": _clean_field_text(event.get("corrects_event_id")) or None,
+                "superseded_by_event_id": corrected_by.get(event_id),
+                "integrity_sha256": _clean_field_text(event.get("integrity_sha256")) or None,
+            }
+            event_time = _clean_field_text(event.get("occurred_at") or event.get("recorded_at"))
+            if measurement:
+                provenance = event.get("provenance") if isinstance(event.get("provenance"), dict) else {}
+                status = provenance.get("sampling_time_status")
+                if status == "user_supplied":
+                    supplied_time = _parsed_field_event_datetime(
+                        _clean_field_text(provenance.get("sampled_at"))
+                    )
+                    stored_time = _parsed_field_event_datetime(event_time)
+                    status = (
+                        "user_supplied"
+                        if supplied_time is not None
+                        and stored_time is not None
+                        and supplied_time == stored_time
+                        else "unknown"
+                    )
+                elif status != "unknown":
+                    status = "unspecified"
+                record["sampling_time_status"] = status
+                record["event_time"] = event_time
+                record["recorded_at"] = _clean_field_text(event.get("recorded_at"))
+                if status == "user_supplied":
+                    record["occurred_at"] = event_time
+            else:
+                record["occurred_at"] = event_time
+            included.append(record)
 
     enriched = dict(field_context)
     enriched["field_history"] = {
@@ -4100,6 +4137,16 @@ def _with_stored_field_history(
         "events": included,
     }
     return enriched
+
+
+def _parsed_field_event_datetime(value: str | None) -> dt.datetime | None:
+    if not value:
+        return None
+    try:
+        parsed = dt.datetime.fromisoformat(value[:-1] + "+00:00" if value.endswith("Z") else value)
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo is not None and parsed.utcoffset() is not None else None
 
 
 def _field_event_prompt_summary(payload: dict[str, Any]) -> str:
@@ -4132,6 +4179,9 @@ def _safe_field_history_summary(value: Any) -> dict[str, Any]:
                 "event_id",
                 "event_type",
                 "occurred_at",
+                "event_time",
+                "recorded_at",
+                "sampling_time_status",
                 "corrects_event_id",
                 "superseded_by_event_id",
                 "integrity_sha256",

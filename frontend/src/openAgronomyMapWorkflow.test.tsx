@@ -1832,7 +1832,7 @@ describe('Open Agronomy map upload workflow', () => {
     expect(recordAttempts).toBe(1)
     expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled()
     await act(async () => { rejectFirstRecord?.(new Error('offline')) })
-    expect(within(screen.getByRole('dialog', { name: 'Add field record' })).getByRole('alert')).toHaveTextContent('Could not save field record: offline')
+    expect(within(screen.getByRole('dialog', { name: 'Add field record' })).getByRole('alert')).toHaveTextContent('Save not confirmed: offline')
     expect(screen.getByLabelText('What happened')).toHaveValue('Standing water observed in the northwest corner.')
     fireEvent.click(screen.getByRole('button', { name: 'Save record' }))
 
@@ -1858,6 +1858,9 @@ describe('Open Agronomy map upload workflow', () => {
       corrects_event_id: 'event-1',
       payload: { summary: 'Corrected location: southwest corner.', correction_kind: 'user_entered' },
     })
+    fireEvent(screen.getByRole('dialog', { name: 'Correct field record' }), new Event('cancel', { bubbles: true, cancelable: true }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add record' })).toBeDisabled()
     fireEvent.click(screen.getByText('South quarter'))
     await act(async () => { releaseCorrection?.() })
     openFieldTab('Records & soil tests')
