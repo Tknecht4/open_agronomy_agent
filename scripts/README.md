@@ -79,7 +79,11 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
 provisioned revision-pinned snapshot. It forces Hugging Face offline mode,
 executes two synthetic questions through the typed core, and retains timing,
 stage, selected token, and local memory measurements without answer text in its
-receipt. A Metal-capable host is required; no cloud provider is contacted.
+receipt. A parent process enforces the worker deadline, kills the worker process
+group on expiry, and preserves the last receipt with interrupted cells. Both
+workspace profilers disable inherited private-knowledge overlays and record that
+policy, so synthetic diagnostics cannot read machine-local private references.
+A Metal-capable host is required for model profiling; no cloud provider is contacted.
 
 ```bash
 HF_HUB_CACHE=/absolute/local/hf-cache/hub HF_HUB_OFFLINE=1 \

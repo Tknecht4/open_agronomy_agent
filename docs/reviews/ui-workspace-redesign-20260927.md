@@ -281,3 +281,31 @@ was restarted with `AGRONOMY_AGENT_GEO_CACHE_DIR` pointing there. The distributa
 runtime inventory was regenerated with its original empty cache seed; the public
 package was rebuilt afterward. No provider observations were discarded or promoted
 into bundled runtime evidence. The first package receipt remains retained locally.
+
+## Fresh pre-merge review and repairs
+
+A new independent full-diff review of `0db8df9` against main `7c502d8` required
+three further repairs before the authorized merge:
+
+- Pressing Enter bypassed the disabled Ask button while the saved field library
+  was loading. Both the keyboard path and canonical submit handler now wait for
+  field hydration. The regression exercises Enter and direct form submission,
+  then verifies that a later request uses the restored field identity.
+- The model profiler's one-shot deadline could be caught inside a failed cell,
+  allowing a later model call. The worker now retains deadline-expiry state and
+  refuses subsequent work or success. A supervising process enforces the worker
+  deadline even if native work blocks signal handling, kills only the worker's
+  process group, and retains the last receipt with interrupted cells.
+- Both synthetic profilers could inherit an enabled private-knowledge overlay.
+  They now disable that overlay and remove its inherited manifest before runtime
+  initialization, recording the isolation policy in their receipts. Regression
+  fixtures prove that an otherwise loadable synthetic private source is excluded.
+
+The targeted workflow suite passes 46 tests. Five new profiler-guard tests pass,
+including a stalled subprocess and a swallowed timeout; no model, provider, or
+real private overlay is used by these failure probes. Full integration and GitHub
+CI must pass on the repaired candidate before the fresh reviewer approves merge.
+Earlier failed probes and both review decisions remain under the local
+`outputs/ui-redesign/merge-review/` evidence directory. Existing completed timing
+receipts retain their original source binding and are not reinterpreted as new
+performance measurements.

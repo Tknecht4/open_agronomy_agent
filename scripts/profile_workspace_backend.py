@@ -13,6 +13,7 @@ import hashlib
 import io
 import json
 import math
+import os
 import platform
 import pstats
 import statistics
@@ -166,6 +167,9 @@ def main() -> int:
     parser.add_argument("--sessions", type=int, default=20)
     parser.add_argument("--turns-per-session", type=int, default=8)
     args = parser.parse_args()
+    # Profiling must not inherit a machine-local private retrieval overlay.
+    os.environ["AGRONOMY_AGENT_PRIVATE_KNOWLEDGE"] = "disabled"
+    os.environ.pop("AGRONOMY_AGENT_PRIVATE_KNOWLEDGE_MANIFEST", None)
     if min(args.warm_repeats, args.sessions, args.turns_per_session) < 1:
         parser.error("warm repeats, sessions, and turns per session must be positive")
     output_dir = args.output_dir.resolve()
@@ -177,6 +181,7 @@ def main() -> int:
         "status": "running",
         "claim_eligible": False,
         "network_mode": "offline",
+        "private_knowledge_mode": "disabled",
         "model": "mock_only",
         "input": {
             "question_sha256": hashlib.sha256(QUESTION.encode()).hexdigest(),

@@ -2619,6 +2619,43 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.queryByText('General answer')).not.toBeInTheDocument()
   })
 
+  it('blocks Enter and direct form submission until the saved field identity is restored', async () => {
+    const field = {
+      id: 'field-chat-bootstrap', field_context_id: 'field-chat-bootstrap', name: 'Restored chat field',
+      crop: 'barley', region: 'Leduc County', jurisdiction: 'Alberta', acres: '', concern: '', notes: '',
+      geometry: { kind: 'point', point: { lat: 53.3, lon: -113.6 } }, regionalContext: '', geoPriors: null,
+      sourceBoundary: 'Regional context is not field truth.', createdAt: '2026-07-20T12:00:00Z',
+      storageMode: 'account_workspace',
+    }
+    window.localStorage.setItem('open-agronomy-agent.active-field.v1', field.id)
+    const fetchMock = installFetchMock()
+    const baseImplementation = fetchMock.getMockImplementation()!
+    let releaseFields!: (value: Response) => void
+    const pendingFields = new Promise<Response>(resolve => { releaseFields = resolve })
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) =>
+      String(input) === '/api/demo/fields' && (!init?.method || init.method === 'GET')
+        ? pendingFields : baseImplementation(input, init))
+    render(<OpenAgronomyApp />)
+    await screen.findByText('Local runtime · connected mode')
+    const composer = screen.getByLabelText('Ask about this field') as HTMLTextAreaElement
+    fireEvent.change(composer, { target: { value: 'Question while the saved field is loading' } })
+    expect(screen.getByRole('button', { name: 'Ask' })).toBeDisabled()
+    fireEvent.keyDown(composer, { key: 'Enter', code: 'Enter' })
+    fireEvent.submit(composer.form!)
+    await act(async () => { await Promise.resolve() })
+    const sessionCreates = () => fetchMock.mock.calls.filter(([url, init]) => String(url) === '/api/sessions' && init?.method === 'POST')
+    expect(sessionCreates()).toHaveLength(0)
+
+    await act(async () => { releaseFields(jsonResponse({ ...emptyDemoFields, fields: [field] })); await pendingFields })
+    await screen.findByRole('heading', { name: field.name })
+    fireEvent.change(composer, { target: { value: 'Question for the restored field' } })
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Ask' })).toBeEnabled())
+    fireEvent.keyDown(composer, { key: 'Enter', code: 'Enter' })
+    await waitFor(() => expect(sessionCreates()).toHaveLength(1))
+    const body = JSON.parse(String(sessionCreates()[0][1]?.body))
+    expect(body.context).toMatchObject({ field_context_id: field.id, field_conversation_key: `field:${field.id}` })
+  })
+
   it('keeps field creation closed until the initial field library response settles', async () => {
     const fetchMock = installFetchMock()
     const baseImplementation = fetchMock.getMockImplementation()!

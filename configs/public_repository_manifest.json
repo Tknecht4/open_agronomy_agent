@@ -351,6 +351,7 @@
     "tests/test_manitoba_insect_semantic_companion.py",
     "tests/test_manitoba_rotation_semantic_companion.py",
     "tests/test_model_profile_controls.py",
+    "tests/test_workspace_profiling_guards.py",
     "tests/test_nrcs_compact.py",
     "tests/test_on_demand_corpus.py",
     "tests/test_portable_nass_snapshot.py",

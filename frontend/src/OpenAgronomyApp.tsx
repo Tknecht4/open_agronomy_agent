@@ -2443,7 +2443,7 @@ export function OpenAgronomyApp() {
 
   const sendQuestion = async (event: FormEvent) => {
     event.preventDefault()
-    if (isAnalyzing || loadingConversation || !message.trim()) {
+    if (isAnalyzing || loadingConversation || !fieldsHydrated || !message.trim()) {
       return
     }
     if (!answerCapability.canGenerateAnswer) {
@@ -4279,7 +4279,7 @@ export function OpenAgronomyApp() {
                 aria-label="Ask about this field"
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
-                onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (!isAnalyzing && !loadingConversation && message.trim() && answerCapability.canGenerateAnswer && selectedModelReady) event.currentTarget.form?.requestSubmit() } }}
+                onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (!isAnalyzing && !loadingConversation && fieldsHydrated && message.trim() && answerCapability.canGenerateAnswer && selectedModelReady) event.currentTarget.form?.requestSubmit() } }}
                 disabled={isAnalyzing}
                 placeholder="Ask a field question, compare observations, or request an evidence check…"
                 rows={2}

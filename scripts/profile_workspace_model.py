@@ -15,6 +15,7 @@ from pathlib import Path
 import platform
 import resource
 import signal
+import subprocess
 import sys
 import time
 import traceback
@@ -85,13 +86,50 @@ def generation_counts(metadata: Any) -> dict[str, Any]:
     }
 
 
+def supervise_profile(command: list[str], path: Path, deadline_seconds: float) -> int:
+    """Bound the worker even if native work blocks Python signal handling."""
+    process = subprocess.Popen(command, start_new_session=True)
+    try:
+        return process.wait(timeout=deadline_seconds)
+    except subprocess.TimeoutExpired:
+        # The worker owns this process group; preserve other local model servers.
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        process.wait(timeout=5)
+        try:
+            receipt = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            receipt = {
+                "schema_version": "open_agronomy_agent.workspace_model_profile.v1",
+                "claim_eligible": False, "network_mode": "offline",
+                "private_knowledge_mode": "disabled", "cells": [],
+            }
+        failure = {"type": "TimeoutError", "message": f"profile worker exceeded {deadline_seconds} seconds"}
+        receipt["status"] = "failed"
+        receipt["failure"] = failure
+        for cell in receipt.get("cells", []):
+            if cell.get("status") == "running":
+                cell["status"] = "interrupted"
+                cell["failure"] = failure
+        path.parent.mkdir(parents=True, exist_ok=True)
+        write_receipt(receipt, path)
+        print(json.dumps({"status": "failed", "receipt": str(path)}))
+        return 1
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--execute-local-pinned", action="store_true", help="Required explicit opt-in for Metal model generation")
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--max-tokens", type=int, default=120)
     parser.add_argument("--deadline-seconds", type=int, default=900)
+    parser.add_argument("--profile-worker", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
+    # Profiling must not inherit a machine-local private retrieval overlay.
+    os.environ["AGRONOMY_AGENT_PRIVATE_KNOWLEDGE"] = "disabled"
+    os.environ.pop("AGRONOMY_AGENT_PRIVATE_KNOWLEDGE_MANIFEST", None)
     if not args.execute_local_pinned:
         parser.error("--execute-local-pinned is required")
     if args.max_tokens < 1 or args.max_tokens > 160:
@@ -103,6 +141,11 @@ def main() -> int:
         parser.error("output directory must be new or empty")
     output_dir.mkdir(parents=True, exist_ok=True)
     path = output_dir / "receipt.json"
+    if not args.profile_worker:
+        command = [sys.executable, str(Path(__file__).resolve()), "--execute-local-pinned",
+                   "--output-dir", str(output_dir), "--max-tokens", str(args.max_tokens),
+                   "--deadline-seconds", str(args.deadline_seconds), "--profile-worker"]
+        return supervise_profile(command, path, args.deadline_seconds)
     model_config = yaml.safe_load((ROOT / "configs/model.yaml").read_text(encoding="utf-8"))
     model_id = str(model_config["serving_model_id"])
     revision = str(model_config["model_revision"])
@@ -111,6 +154,7 @@ def main() -> int:
         "status": "running",
         "claim_eligible": False,
         "network_mode": "offline",
+        "private_knowledge_mode": "disabled",
         "model_id": model_id,
         "model_revision": revision,
         "max_tokens": args.max_tokens,
@@ -130,7 +174,15 @@ def main() -> int:
     }
     write_receipt(receipt, path)
 
+    deadline_expired = False
+
+    def check_deadline() -> None:
+        if deadline_expired:
+            raise TimeoutError(f"local profiling exceeded {args.deadline_seconds} seconds")
+
     def expired(_signal: int, _frame: Any) -> None:
+        nonlocal deadline_expired
+        deadline_expired = True
         raise TimeoutError(f"local profiling exceeded {args.deadline_seconds} seconds")
 
     signal.signal(signal.SIGALRM, expired)
@@ -159,6 +211,7 @@ def main() -> int:
 
         receipt["metal_device"] = str(mx.default_device())
         for index, question in enumerate(QUESTIONS):
+            check_deadline()
             cell: dict[str, Any] = {
                 "index": index,
                 "question_sha256": hashlib.sha256(question.encode()).hexdigest(),
@@ -186,6 +239,7 @@ def main() -> int:
                 mx.metal.reset_peak_memory()
                 started = time.perf_counter()
                 result = execute_agent_request(request)
+                check_deadline()
                 cell["elapsed_ms"] = round((time.perf_counter() - started) * 1000, 3)
                 cell["status"] = "completed"
                 cell["answer_sha256"] = hashlib.sha256(result.answer.encode()).hexdigest()
@@ -198,6 +252,8 @@ def main() -> int:
                 cell["status"] = "failed"
                 cell["failure"] = {"type": type(exc).__name__, "message": str(exc)[:500], "traceback": traceback.format_exc(limit=6)}
                 cell["memory"] = memory_sample()
+                if deadline_expired:
+                    raise
             finally:
                 cell["stages"] = [
                     {"stage": span.stage, "duration_ms": span.duration_ms, "status": span.status,
