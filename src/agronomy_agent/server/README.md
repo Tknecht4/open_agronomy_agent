@@ -2,7 +2,10 @@
 
 ## Purpose and status
 
-`server/` composes the FastAPI application, application services, settings, authentication/network boundaries, queues, observability, and persistence. The React cockpit is the supported interface. Local SQLite operation is exercised; hosted Postgres and external infrastructure paths must be treated according to their explicit readiness checks, not assumed from the presence of code.
+`server/` composes the FastAPI application, application services, settings,
+authentication/network boundaries, observability, and persistence. The React
+cockpit is the supported interface. Runtime artifacts, request limiting, and
+ingest job records are local-only: filesystem, memory, and SQLite respectively.
 
 ## Entry points
 
@@ -13,7 +16,6 @@
 - `services/tool_service.py`, `retrieval_service.py`, and `geospatial_service.py` expose capability domains.
 - `services/answer_renderer.py` produces the user-facing answer/source structure.
 - `storage/db.py` owns broad local SQLite persistence; `storage/runtime.py` exposes the schema-verified Postgres boundary.
-- `worker.py` is the queue worker entry point.
 
 ## Service boundaries
 
@@ -33,7 +35,8 @@ Major endpoint domains include health/configuration, sessions and chat, field co
 - Offline mode blocks public network adapters before a call.
 - Workspace/user authority is checked before private state is read or mutated.
 - Raw private records, credentials, and local absolute paths do not enter public exports.
-- Route handlers do not silently fall back from a configured hosted store to SQLite.
+- Retired Redis/S3 environment variables fail closed; no remote queue, rate-
+  limit, or artifact-store selection remains.
 - Trace and evidence identities survive rendering and persistence.
 
 ## Add or change an endpoint
@@ -48,7 +51,11 @@ Adding an endpoint is not how a tool becomes available to chat. Register the cap
 
 ## Configuration
 
-Environment variables are normalized in `settings.py`. Prefer adding a typed `ServerSettings` field with validation over reading environment variables throughout services. Secrets remain environment- or provider-owned and must never enter repository configuration.
+Environment variables are normalized in `settings.py`. Prefer adding a typed
+`ServerSettings` field with validation over reading environment variables
+throughout services. Redis/S3 backend variables are deliberately retired and
+rejected. Secrets remain environment- or provider-owned and must never enter
+repository configuration.
 
 ## Validation
 
@@ -64,4 +71,7 @@ These focused tests do not replace the full suite or a live UI/API exercise.
 
 ## Failure modes
 
-Expected states include invalid request, unauthenticated/unauthorized, blocked offline, model setup required, storage unavailable, queue unavailable, provider unavailable, and validation failure. Fail closed when authority or egress is ambiguous; return a useful status rather than fabricating a successful capability result.
+Expected states include invalid request, unauthenticated/unauthorized, blocked
+offline, model setup required, local storage unavailable, provider unavailable,
+and validation failure. Fail closed when authority or egress is ambiguous;
+return a useful status rather than fabricating a successful capability result.

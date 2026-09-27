@@ -98,6 +98,9 @@ profile to invalidate its in-memory session secret.
 
 - Profiles isolate accounts, fields, chats, feedback, and artifacts under the
   selected host-state directory and mount it at `/state`.
+- The application stores artifacts on that mounted filesystem, rate-limits in
+  memory, and retains ingest jobs in the local database. Redis and S3 backend
+  selection are not part of the image contract.
 - The native MLX model host is shared across profiles but retains only its
   process identity and logs.
 - Verify the optional Prairie spatial pack separately, then extract it into

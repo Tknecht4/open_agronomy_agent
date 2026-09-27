@@ -48,15 +48,15 @@ dependence and Gemma 4 full-system repeatability remain open work.
 | `docs/public/` | Supported public documentation site |
 | `docs/reviews/` | Dated review records and public-safe evidence |
 
-## Optional infrastructure and training boundaries
+## Local-private infrastructure and training boundaries
 
-The reference edge/container profile uses the local queue and local object
-store. `server/worker.py`, `server/redis_preflight.py`, and
-`server/storage/object_store_preflight.py` are retained because the application
-has explicit Redis queue and S3-compatible storage settings and can emit work
-for those backends. Their local and simulated failure boundaries are tested,
-but this repository does not currently publish a supported hosted deployment
-profile or a live Redis/S3 integration receipt.
+The product runtime uses in-memory request limiting, SQLite-local ingest job
+records, and a permission-restricted filesystem artifact root. The earlier
+Redis queue/rate-limit and S3-compatible storage alternatives, their preflight
+commands, and the standalone queue worker were removed after the project chose
+the local-private deployment model. Retired `AGRONOMY_AGENT_*` backend
+environment variables fail closed so an old deployment cannot silently write
+somewhere different than its operator expects.
 
 `src/agronomy_agent/training/` is offline maintainer tooling, not part of the
 answer path. No current Canadian source is admitted for model training;

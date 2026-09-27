@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 
 
@@ -165,127 +164,6 @@ def image_embedding_search(
     }
 
 
-def run_image_observation_job(
-    *,
-    store: Any,
-    observation_adapter: Any,
-    job_id: str,
-    worker_name: str = "local_worker",
-) -> dict[str, Any]:
-    job = store.get_phase4_image_job(job_id)
-    if not job:
-        raise ValueError(f"image job not found: {job_id}")
-    store.update_phase4_image_job(
-        job_id=job_id,
-        status="running",
-        result={**job.get("result", {}), "worker": worker_name},
-        started_at=_now_iso(),
-    )
-    try:
-        workspace = store.get_phase4_workspace(job["workspace_id"])
-        if not workspace:
-            raise ValueError("workspace not found")
-        attachments = []
-        for attachment_id in job.get("attachment_ids", []):
-            attachment = store.get_phase4_attachment(str(attachment_id))
-            if not attachment or attachment["workspace_id"] != workspace["id"]:
-                raise ValueError(f"attachment not found: {attachment_id}")
-            attachments.append(attachment)
-        image_search = image_embedding_search(
-            query_attachments=attachments,
-            candidate_embeddings=store.list_phase4_image_embeddings(workspace["id"]),
-            crop=job.get("crop"),
-            region=job.get("region"),
-        )
-        payload = image_quality_payload(
-            attachments=attachments,
-            question=job["question"],
-            crop=job.get("crop"),
-            region=job.get("region"),
-            observation_adapter=observation_adapter,
-            similar_examples=image_search["examples"],
-            image_retrieval_eval=image_search["eval_summary"],
-        )
-        if job.get("thread_id"):
-            thread = store.get_phase4_thread(job["thread_id"])
-            if not thread or thread["workspace_id"] != workspace["id"]:
-                raise ValueError("thread not found")
-            store.append_phase4_trace_event(thread=thread, event_type="image_observation", actor="worker", payload=payload)
-    except Exception as exc:
-        return store.update_phase4_image_job(
-            job_id=job_id,
-            status="failed",
-            result={"worker": worker_name, "unhandled_error": exc.__class__.__name__},
-            error_message=str(exc),
-            finished_at=_now_iso(),
-        ) or {}
-    return store.update_phase4_image_job(
-        job_id=job_id,
-        status="completed",
-        result={"worker": worker_name, "image_observation": payload},
-        error_message=None,
-        finished_at=_now_iso(),
-    ) or {}
-
-
-def run_queued_image_jobs(
-    *,
-    store: Any,
-    observation_adapter: Any,
-    limit: int = 1,
-    worker_name: str = "local_worker",
-) -> dict[str, Any]:
-    if limit <= 0:
-        raise ValueError("limit must be > 0")
-    jobs = store.list_phase4_queued_image_jobs(limit=limit)
-    return run_image_job_ids(
-        store=store,
-        observation_adapter=observation_adapter,
-        job_ids=[job["id"] for job in jobs],
-        requested_limit=limit,
-        worker_name=worker_name,
-        queue_name="image",
-    )
-
-
-def run_image_job_ids(
-    *,
-    store: Any,
-    observation_adapter: Any,
-    job_ids: list[str],
-    requested_limit: int,
-    worker_name: str = "local_worker",
-    queue_name: str = "image",
-) -> dict[str, Any]:
-    results: list[dict[str, Any]] = []
-    for job_id in job_ids:
-        try:
-            result = run_image_observation_job(
-                store=store,
-                observation_adapter=observation_adapter,
-                job_id=job_id,
-                worker_name=worker_name,
-            )
-        except Exception as exc:
-            result = store.update_phase4_image_job(
-                job_id=job_id,
-                status="failed",
-                result={"worker": worker_name, "unhandled_error": exc.__class__.__name__},
-                error_message=str(exc),
-                finished_at=_now_iso(),
-            ) or {"id": job_id, "status": "failed"}
-        results.append(result)
-    return {
-        "queue": queue_name,
-        "worker": worker_name,
-        "requested_limit": requested_limit,
-        "processed": len(results),
-        "completed": sum(1 for item in results if item.get("status") == "completed"),
-        "failed": sum(1 for item in results if item.get("status") == "failed"),
-        "job_ids": [item.get("id") for item in results],
-    }
-
-
 def _vector_similarity(left: list[Any], right: list[Any]) -> float:
     left_numbers = [float(value) for value in left if isinstance(value, (int, float))]
     right_numbers = [float(value) for value in right if isinstance(value, (int, float))]
@@ -294,7 +172,3 @@ def _vector_similarity(left: list[Any], right: list[Any]) -> float:
     distance = sum((a - b) ** 2 for a, b in zip(left_numbers, right_numbers)) ** 0.5
     scale = (sum(a**2 for a in left_numbers) ** 0.5) + (sum(b**2 for b in right_numbers) ** 0.5) + 1.0
     return round(max(0.0, 1.0 - distance / scale), 4)
-
-
-def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()

@@ -41,7 +41,7 @@ path observed; it is not a second agent implementation.
 | Deterministic tools | `agronomic_calculations.py`, `local_tools.py`, `tools/` | Supported calculations bypass model drafting |
 | Public adapters | `local_tools.py`, `server/services/chat_service.py` | Network/cache/jurisdiction dependent; unavailable is a typed state |
 | Persistence | `server/storage/db.py`, `server/storage/runtime.py` | SQLite product path and schema-checked Postgres boundary |
-| Optional hosted backends | `server/worker.py`, `server/redis_preflight.py`, `server/storage/object_store_preflight.py` | Retained because the application can emit Redis jobs and S3 artifacts; characterized developer surface, not a supported deployment profile |
+| Local runtime services | `server/rate_limit.py`, `server/storage/object_store.py` | In-memory rate limits and filesystem artifacts only; Redis/S3 selection was removed |
 | Training helpers | `training/` | Offline maintainer tooling only; no current Canadian source is training-authorized |
 | UI | `frontend/src/` | React cockpit, map, field state, source cards, benchmark viewer |
 | Operator workflows | `scripts/` | Thin CLIs around package contracts; generated outputs belong under ignored paths |
@@ -125,9 +125,9 @@ is not a useful cleanup target by itself.
   directory because frozen hashes constrain moves.
 - Large runtime data dominates clone size and should eventually be distributed
   as a verified release asset or dataset package.
-- Redis/S3 scale-out code has local/fake-boundary characterization but no
-  published deployment profile or live-service integration receipt. The edge
-  reference profile continues to use the local queue and object store.
+- Redis/S3 scale-out code and its standalone queue worker were removed after
+  the local-private product decision. Retired namespaced environment variables
+  fail closed instead of silently implying remote persistence.
 
 See `AGENTS.md` for safe repository work and
 `docs/reviews/repository-cleanup-investigation-20260926.md` for the current

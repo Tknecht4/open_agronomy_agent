@@ -245,3 +245,16 @@ The root README now distinguishes clone-contained governed knowledge from the
 optional external Prairie DSS pack and includes the dry-run, download/build/
 verify, disk, environment, and `not_installed` boundaries needed for first-time
 setup.
+
+## Successor local-private decision
+
+On 2026-09-27 the earlier decision to retain unvalidated Redis/S3 scale-out
+scaffolding was superseded. The project confirmed its local-private deployment
+direction and removed Redis queue/rate-limit support, S3-compatible storage,
+their preflights and settings, remote endpoint branches, and the standalone
+queue worker. See
+`docs/reviews/open-agronomy-local-private-backend-removal-20260927.md` for the
+consumer evidence, retained local contracts, compatibility boundary, and
+verification record. Historical statements above remain as a record of what
+was inspected and why it was initially retained; they are not current runtime
+documentation.
