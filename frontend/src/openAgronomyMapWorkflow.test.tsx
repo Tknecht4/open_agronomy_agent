@@ -1440,7 +1440,9 @@ describe('Open Agronomy map upload workflow', () => {
     )
     expect(screen.getByText(/0 field records · 0 answers/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Refresh field timeline' })).toBeEnabled()
-    expect(screen.queryByText('Save or load the field in this workspace first.')).not.toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.queryByText('Save or load the field in this workspace first.')).not.toBeInTheDocument(),
+    )
     expect(window.localStorage.getItem('open-agronomy-agent.active-field.v1')).toBe('field-restored')
   })
 
