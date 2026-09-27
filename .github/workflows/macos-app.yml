@@ -55,6 +55,7 @@ jobs:
           python -m pip install -c requirements-macos-app-constraints.txt -r requirements-macos-app-runtime.txt
           python -m pip install --editable .
           python -m pip install -r requirements-macos-app-build.txt
+          python -m pip install -c requirements-macos-app-constraints.txt pytest pytest-xdist
       - name: Install frontend build dependencies
         run: npm ci
         working-directory: frontend
