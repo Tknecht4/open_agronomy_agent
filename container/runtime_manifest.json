@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-09-27T07:04:38+00:00",
+  "generated_at": "2026-09-27T08:01:19+00:00",
   "status": "pass",
-  "contract_sha256": "19095283c210f3a21fe27248313498279682212afce0688bba4e59734755a62f",
+  "contract_sha256": "5909fde09a0bb22ac540fce31aae0029f7c6ad03f734c29dea3bbf1c41e0e5d7",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -408,8 +408,8 @@
     {
       "path": "src/agronomy_agent",
       "file_count": 129,
-      "bytes": 5092597,
-      "sha256": "53765456c8e621b2824a5e0fd66c11ce408a4f643dd2e1ee46325a324ea24912"
+      "bytes": 5098028,
+      "sha256": "18fee9ebadb15eeef34e267c4a774bf255ccc16878191702e73d870914cabb38"
     },
     {
       "path": "frontend/src",
@@ -426,14 +426,14 @@
     {
       "path": "scripts",
       "file_count": 122,
-      "bytes": 1656687,
-      "sha256": "c6b40408b4e1012766043163527562411d78c15736650f95e9a694db2584586e"
+      "bytes": 1657328,
+      "sha256": "2e45e93f0adf34cf3ca604adb26d9ef179206213998cf9e208b112f787fa2910"
     },
     {
       "path": "configs",
       "file_count": 84,
-      "bytes": 248954,
-      "sha256": "76ea21b08d6de2672ea6a75691999c83e2026e505b27240e8934d1d01bbe029f"
+      "bytes": 249274,
+      "sha256": "6996e61103479eb306d30e42118eee5b3d31be0f6b3145c15e779085e9595bb0"
     },
     {
       "path": "data/manifests",
@@ -443,9 +443,9 @@
     },
     {
       "path": "data/eval",
-      "file_count": 39,
-      "bytes": 3021287,
-      "sha256": "431ca9a9964af57e2690a3882f83f36a3b2f885db2b3dd07807e0bb72e5c22da"
+      "file_count": 41,
+      "bytes": 3047132,
+      "sha256": "34b2e6fef7ab402c7ec0d2a91a060c529178a119d63ea366a64b5b8da34ecb96"
     },
     {
       "path": "data/snapshots",
@@ -456,8 +456,8 @@
     {
       "path": "docs/public",
       "file_count": 90,
-      "bytes": 8808674,
-      "sha256": "b8a85fa589f20cca88d918316344545b0867d7d468d11f8fb99297cf15e4aedd"
+      "bytes": 8809323,
+      "sha256": "d9e8a97030cc435aa371324c48e64d2812515c1fcf23f905f60922d910276852"
     }
   ],
   "geo_cache_seed": {

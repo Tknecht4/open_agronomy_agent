@@ -143,6 +143,15 @@ current-version conformance. The [follow-up record](../docs/reviews/production-f
 distinguishes calculator gain from corpus gain and records interrupted model
 runs as incomplete.
 
+The [source-distinct efficacy audit](../docs/reviews/production-foundations-efficacy-audit-20260927.md)
+uses the same runner with `--cases data/eval/production_foundations_transfer_v1.jsonl`
+or `--cases data/eval/production_foundations_topic_confirmation_v1.jsonl`.
+Run matched active and candidate profiles in separate empty output directories
+at `--max-tokens 320`, then inspect every answer and the selected document
+IDs. In an isolated worktree, point `HF_HOME` and `HF_HUB_CACHE` at an already
+provisioned model cache explicitly; no answer run downloads weights. These
+exposed cases and nonblinded reports are development diagnostics.
+
 ## Observed-system rehearsal
 
 `run_observed_system_rehearsal.py` executes one question through the same typed

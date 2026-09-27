@@ -82,3 +82,17 @@ def test_candidate_card_reaches_execution_route_but_cannot_authorize_a_rate() ->
     )
     assert allowed == []
     assert blocked and blocked[0]["reason"] == "not_decisive_for_high_consequence"
+
+
+def test_canadian_budget_card_does_not_gain_us_decisive_scope() -> None:
+    resources = load_agent_resources("configs/rag_production_foundations_candidate.yaml")
+    doc = next(
+        doc for doc in resources.retriever.search("Manitoba crop budget break-even price", top_k=20)
+        if doc.doc_id == "foundation_mb_break_even"
+    )
+    from agronomy_agent.query_context import analyze_query_context, filter_docs_for_query
+
+    query = "For an Oklahoma wheat budget, what is the break-even grain price concept?"
+    fit = filter_docs_for_query([doc], analyze_query_context(query), primary_intent="conceptual")
+    assert not fit.docs
+    assert fit.dropped[0]["reason"] == "jurisdiction_mismatch"
