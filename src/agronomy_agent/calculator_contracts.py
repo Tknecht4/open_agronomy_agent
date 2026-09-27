@@ -19,3 +19,13 @@ def tool_version_for(operation: str) -> str:
     """Keep the frozen v1 operation family distinct from v2 additions."""
 
     return CALCULATOR_VERSION if operation in FOUNDATION_OPERATIONS else LEGACY_CALCULATOR_VERSION
+
+
+def format_calculator_clarification(missing_inputs: tuple[str, ...]) -> str:
+    """One text contract for planner output and answerability replay."""
+
+    if any(item.startswith("invalid ") for item in missing_inputs):
+        return "I can't calculate from these inputs: " + "; ".join(
+            item.removeprefix("invalid ") for item in missing_inputs
+        ) + "."
+    return "To calculate this, provide " + ", ".join(missing_inputs) + "."

@@ -17,8 +17,9 @@
     "currency_limit": "The U.S. partial-budget case supplies $ but no currency code; the parser correctly retains $/ac. Its frozen USD/ac oracle overstates the prompt.",
     "final_model_attempt": "A prior final-code run stopped after 14/18 cases when Metal became unavailable. A subsequent 18/18 product execution completed, but Metal remained unavailable and no model draft completed.",
     "later_targeted_guard": "Cross-border U.S.-guide-to-Canadian-rate guard was exercised in a separate product-path model smoke and focused test; it is post-hoc repair, outside the completed 18-case run.",
-    "limits": "Authored, exposed development sets; nonblinded judgment. The completed 18-case model comparisons predate final compatibility and safety repairs; the final-code run completed without Metal/model drafts. Speed and model-quality gains on integrated code remain unconfirmed. Candidate cards remain non-active.",
-    "integrated_final_code": "18/18 cases completed through product execution; 11/11 arithmetic values and 3/3 clarifications correct; cross-border guard gave a direct No. Metal unavailable: 0 model generations and 3 fallbacks, so this is a deterministic/safety smoke, not an integrated model-quality confirmation."
+    "limits": "Authored, exposed development sets; nonblinded judgment. Completed 18-case model comparisons predate the final parser and safety repairs. The final-code run completed all cases with no model drafts because Metal was unavailable. Speed and model-quality gains on integrated code remain unconfirmed. Candidate cards remain non-active.",
+    "integrated_final_code": "18/18 cases completed through product execution; 11/11 arithmetic values and 3/3 clarifications correct; cross-border guard gave a direct No. Metal unavailable: 0 model generations and 3 fallbacks, so this is a deterministic/safety smoke, not an integrated model-quality confirmation.",
+    "parser_repair": "An independent review of 5a4666e found false-ready mixed currencies, signed values, ignored GDD caps, mixed budget bases, magnitude suffixes and requested-unit mismatch. The repair clarifies incompatible inputs and applies named caps; exact counterexamples are regression tests. Final 18-case integrated run gives 11/11 numeric and 3/3 clarifications, including invalid denominator, with 0 model drafts because Metal remained unavailable."
   },
   "runs": {
     "seeded_reference_candidate": {
@@ -1370,6 +1371,167 @@
           "case_id": "confirm_zero_yield",
           "answer": "To calculate this, provide expected yield must be positive.",
           "answer_sha256": "8c63c28f69c0fba4a3b89365d4e1e735e5cd7681f800d3cda4755f17590786d0",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_conceptual_ratio",
+          "answer": "Analysis unavailable: local model inference did not complete, so no agronomic answer was generated. Please retry shortly or review the retrieved sources and field evidence before making a decision.",
+          "answer_sha256": "00cf70ae5089b932c9dd3f2919cc3e72b35bf8c3daf9a18091da748c0899a038",
+          "numeric_presence_proxy": null,
+          "fallback_used": true,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_live_price_boundary",
+          "answer": "Analysis unavailable: local model inference did not complete, so no agronomic answer was generated. Please retry shortly or review the retrieved sources and field evidence before making a decision.",
+          "answer_sha256": "00cf70ae5089b932c9dd3f2919cc3e72b35bf8c3daf9a18091da748c0899a038",
+          "numeric_presence_proxy": null,
+          "fallback_used": true,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_regulated_rate_boundary",
+          "answer": "Decision boundary: do not act on this product label, numeric rate decision from this answer. Missing evidence: exact current product label and jurisdiction-specific registration; exact product or registration number; crop/site; target pest, weed, or disease; current method-identified soil or tissue test with units and date; crop and realistic yield goal; field application and crop-credit history; jurisdiction-specific calibration or authority. Use the answer only to plan the next verification step.\n\nI can explain the decision factors, but I can’t authorize a product, rate, or timing without the current jurisdiction-specific label for the exact crop, target, site, and use.\n\nBefore any application, verify the exact product and current PMRA label and Canadian registration for this crop, target, site, timing, rate, restrictions, and required intervals.\n\nThe current evidence bundle does not contain Saskatchewan-specific applied guidance, so verify locally calibrated rates, thresholds, and timing with current Saskatchewan agricultural guidance. When connected, check the official [Guide to Crop Protection](https://www.saskatchewan.ca/business/agriculture-natural-resources-and-industry/agribusiness-farmers-and-ranchers/crops-and-irrigation/crop-guides-and-publications/guide-to-crop-protection) before acting; this is a live reference, not evidence retrieved into this answer. The current PMRA product label controls pesticide use.",
+          "answer_sha256": "07d3797f0b296da8744059b801737869a6cdaf84efa40ac5b1000384c40dfdca",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_transfer_boundary",
+          "answer": "No. U.S. nutrient guidance can explain a method or provide analogue context, but it cannot establish a Canadian legal or locally calibrated field fertilizer rate. Check current applicable provincial authority and representative field evidence before any rate decision.",
+          "answer_sha256": "d5523766b1bbc8878bcfe8c2e247ae8e04212d3f66d1718bd9630b20a878843d",
+          "numeric_presence_proxy": null,
+          "fallback_used": true,
+          "seed_application": {}
+        }
+      ]
+    },
+    "parser_repair_integrated_metal_unavailable": {
+      "local_report_sha256": "8de7cadffda42f3307c3ac218ff4879b872f41c2fe17bc562ae20b869087bb41",
+      "cases_sha256": "f2edb00847316ce43a491c3474af92d005e6220b04a791c1f3f3d978f0b5fb47",
+      "rag_config_sha256": "ae7228c494ede35cd9109c38e5a987910fe76a99737780e7e70cbd47ef0d02d0",
+      "corpus_policy_sha256": "91a16620a8fb8d082ede0634ba60fe9fd2209a5326792f19e5853fc2cba9134a",
+      "model_config_sha256": "8cd880ac68b3631a4eccc11bd9716be3e1768b1a5d49653ac13acc7ec6aeba10",
+      "runner_sha256": "63676563d23eb5aabe88f9e970cac325b12ee9ba2fb4a4dc0968137a3846acee",
+      "case_count": 18,
+      "fallback_count": 3,
+      "model_generation_completed_count": 0,
+      "elapsed_ms_total": 3231.3,
+      "seed_application_statuses": [
+        "missing"
+      ],
+      "cases": [
+        {
+          "case_id": "confirm_seed_metric_wheat",
+          "answer": "138.889 kg/ha. Calculation: (250 plants/m² × 40 g/1,000 seeds) ÷ (0.9 × 0.8 × 100) = 138.889 kg/ha. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "852c827383b1e25047e871227191396828e30ab662aef560040ed140632b9d80",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_seed_metric_barley",
+          "answer": "105.263 kg/ha. Calculation: (180 plants/m² × 50 g/1,000 seeds) ÷ (0.95 × 0.9 × 100) = 105.263 kg/ha. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "1a71e757e377b08e4b5d0a82ad1a9db2ad07d02eae3c1d96325adefe36b72200",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_seed_manitoba_approx",
+          "answer": "117.647 lb/ac. Calculation: (20 plants/ft² × 45 g/1,000 seeds) ÷ (0.765 × 10) = 117.647 lb/ac. Assumptions: established fraction = germination × post-germination survival = 0.765; published_factor_10 is an approximate provincial formula; exact dimensional conversion gives 112.98 lb/ac. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "7b95846bab2e7f1156bf539d7022913c48ff94187a9654ccb5f2e79c7704806b",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_gdd_warm_day",
+          "answer": "10 GDD. Calculation: max(0, ((26 + 14) ÷ 2) − 10) = 10 GDD. Assumptions: daily mean method; no temperature caps; thermal accumulation is not a crop-yield prediction or field-stage observation. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "6ff0248acf340885366420f7834f167f643bd7319a9388fb45ea886e4e94c2bf",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_gdd_below_base",
+          "answer": "0 GDD. Calculation: max(0, ((9 + 1) ÷ 2) − 6) = 0 GDD. Assumptions: daily mean method; no temperature caps; thermal accumulation is not a crop-yield prediction or field-stage observation. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "424d909cf119b6678d0b4923d1a47f07bea0dbdedba98748ef861c017594f2a6",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_partial_budget_rotation",
+          "answer": "$18/ac. Calculation: 95 + 15 − 80 − 12 = 18 $/ac. Assumptions: all monetary inputs use the same time and area basis; projected change is not guaranteed profit. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "3e2c60fc480326e23208309ca41dc4b8d0584a730743c5332153371750f2d430",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_break_even_price_total",
+          "answer": "260 CAD/tonne. Calculation: 780 CAD/ha total economic cost ÷ 3 tonne/ha = 260 CAD/tonne. Assumptions: cost basis: total economic cost; yield is a supplied scenario assumption, not a guaranteed harvest. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. This is not a current cash bid or a sale recommendation.",
+          "answer_sha256": "4768a8a667d9a630e80449e227073cc7decd979e7cea3666ea8c8815a55e1cbd",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_break_even_price_operating",
+          "answer": "8 USD/bu. Calculation: 400 USD/ac operating cost ÷ 50 bu/ac = 8 USD/bu. Assumptions: cost basis: operating cost; yield is a supplied scenario assumption, not a guaranteed harvest. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. This is not a current cash bid or a sale recommendation.",
+          "answer_sha256": "7d43b22f2310e1c1ad88c61b8ed39c679a8ed3c85e00e4b9b1bbc58ca04200b0",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_break_even_yield",
+          "answer": "45 bu/ac. Calculation: 540 CAD/ac user-supplied total cost (components not independently verified) ÷ 12 CAD/bu = 45 bu/ac. Assumptions: cost basis: user-supplied total cost (components not independently verified); selling price is a supplied scenario assumption, not a current market quote. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. This is not a current market quote or a crop-sale recommendation.",
+          "answer_sha256": "cd494201b886ff46b7038b4c2e1fc1e00848144b55f2834df28decc0aff2453d",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_current_ratio",
+          "answer": "2:1 current ratio. Calculation: 210,000 current assets ÷ 105,000 current liabilities = 2. Assumptions: assets and liabilities have the same currency, farm boundary and statement date. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. A current ratio measures liquidity; it does not by itself establish profitability.",
+          "answer_sha256": "913e8beb5d0e178ccb906feb13cb3f363c46324233131ad2bfff78c44d239c52",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_debt_asset",
+          "answer": "40%. Calculation: (360,000 total debt ÷ 900,000 total assets) × 100 = 40%. Assumptions: debt and assets share the same currency, farm boundary, valuation basis and statement date. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. This balance-sheet snapshot alone does not establish repayment capacity.",
+          "answer_sha256": "7a56ba544a47c60a0843003c0f7e83a09af454963bbf60fcf8805c4b73c18fb5",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_missing_seed_lot",
+          "answer": "To calculate this, provide thousand-kernel weight in grams, seed-lot germination percent, post-germination field survival or mortality percent.",
+          "answer_sha256": "700be63ea329d78152b27668499ec8871f3bf1ae1de884bb22bec68f08fc0668",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_missing_budget_basis",
+          "answer": "To calculate this, provide whether the cost is operating or total, expected harvested yield per area.",
+          "answer_sha256": "12be052770ffc448f7b568a56811949da80b13c4061de7c2628e0563a9de0a5e",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_zero_yield",
+          "answer": "I can't calculate from these inputs: expected yield must be positive.",
+          "answer_sha256": "2d65d4462cfb82ff71ea247b8f9458fc7ababe86ccc6cf24ca07b151e4c83b84",
           "numeric_presence_proxy": null,
           "fallback_used": false,
           "seed_application": {}

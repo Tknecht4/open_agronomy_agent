@@ -16,7 +16,7 @@ import json
 import re
 from typing import Any, Mapping, Sequence
 
-from agronomy_agent.calculator_contracts import TOOL_PLANNER_VERSION, tool_version_for
+from agronomy_agent.calculator_contracts import TOOL_PLANNER_VERSION, format_calculator_clarification, tool_version_for
 
 
 ANSWERABILITY_POLICY_VERSION = "open_agronomy_agent.answerability.v1"
@@ -710,7 +710,7 @@ def validated_deterministic_tool_clarification(
     missing_inputs = tuple(str(value).strip() for value in invocation.get("missing_inputs") or ())
     if not missing_inputs or any(not value for value in missing_inputs):
         return None
-    expected = "To calculate this, provide " + ", ".join(missing_inputs) + "."
+    expected = format_calculator_clarification(tuple(missing_inputs))
     if str((tool_plan or {}).get("clarification") or "") != expected:
         return None
     return missing_inputs

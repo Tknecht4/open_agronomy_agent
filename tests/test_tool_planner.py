@@ -117,3 +117,39 @@ def test_planner_avoids_ambiguous_or_action_seeking_math(question: str, expected
     assert plan.status == expected_status
     if expected_status != "ready":
         assert not any(invocation.status == "planned" for invocation in plan.invocations)
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Calculate current ratio from current assets CAD 300,000 and current liabilities USD 120,000.",
+        "Calculate debt-to-asset ratio from total debt USD 250,000 and total assets CAD 1,000,000.",
+        "Calculate current ratio from current assets USD 1.2 million and current liabilities USD 600,000.",
+        "Calculate debt-to-asset ratio from total debt CAD 250 thousand and total assets CAD 1 million.",
+        "Calculate debt-to-asset ratio from total debt CAD 250k and total assets CAD 1m.",
+        "Calculate break-even price from total cost CAD 500/ac and expected yield -50 bu/ac.",
+        "Calculate wheat seed mass from -260 plants/m² target, TKW 40 g, germination 90%, and field survival 85% in kg/ha.",
+        "Calculate a partial-budget net change: added revenue USD 100/ac, saved costs USD 25 total for the whole farm, added costs USD 80/ac and lost revenue USD 15/ac.",
+        "Calculate partial-budget net change per acre: added revenue USD 100/ac, saved costs USD 25, added costs USD 80/ac and lost revenue USD 15/ac.",
+        "Calculate seed mass from 28 plants/ft² target, TKW 39 g, germination 99% and field survival 85% in kg/ha.",
+        "Calculate seed mass from 260 plants/m² target, TKW 39 g, germination 99% and field survival 85% in lb/ac.",
+        "Calculate one day's GDD from Tmax 35 C, Tmin 9 C and base 10 C with cap 30 C.",
+    ],
+)
+def test_foundation_parser_clarifies_incompatible_supplied_inputs(question: str) -> None:
+    plan, results = plan_and_execute_tools(question)
+
+    assert plan.status == "clarification_required"
+    assert plan.clarification
+    assert not results
+
+
+def test_gdd_parser_applies_explicit_upper_cap_before_averaging() -> None:
+    plan, results = plan_and_execute_tools(
+        "Calculate one day's GDD from Tmax 35 C, Tmin 9 C and base 10 C with maximum cap 30 C."
+    )
+
+    assert plan.status == "ready"
+    assert len(results) == 1
+    assert results[0].payload["value"] == 9.5
+    assert results[0].payload["inputs"]["upper_cap_c"] == 30.0

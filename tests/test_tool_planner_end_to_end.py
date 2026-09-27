@@ -84,6 +84,19 @@ def test_missing_calculator_input_returns_only_the_minimal_clarification() -> No
     assert metadata["evidence_fabric"]["validated_answer"]["answer_status"] == "review_required"
 
 
+def test_mixed_currency_ratio_clarifies_without_model_generation() -> None:
+    answer, metadata = generate_answer(
+        "Calculate current ratio from current assets CAD 300,000 and current liabilities USD 120,000.",
+        "agronomic_rag",
+        _NeverGenerate(),
+        verification_enabled=True,
+    )
+
+    assert metadata["generation_path"] == "deterministic_tool_clarification"
+    assert "assets and liabilities must use the same currency" in answer
+    assert metadata["answer_verification"]["status"] == "needs_input"
+
+
 def test_product_label_number_conversion_preserves_the_claim_boundary() -> None:
     answer, metadata = generate_answer(
         "Convert 2 kg/ha of this herbicide label rate to lb/ac.",

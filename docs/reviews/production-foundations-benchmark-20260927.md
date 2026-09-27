@@ -92,6 +92,7 @@ generation occurred, not because a requested seed was ignored.
 | Typed v2, candidate RAG | 18 | 11/11 correct | 1 | 3 | 23.86 s |
 | Typed v2, original active RAG | 18 | 11/11 correct | 1 | 3 | 24.45 s |
 | Integrated code, candidate RAG, Metal unavailable | 18 | 11/11 correct | 3 | 0 | 3.21 s; not comparable |
+| Parser-repaired code, candidate RAG, Metal unavailable | 18 | 11/11 correct | 3 | 0 | 3.23 s; not comparable |
 
 The three missing/invalid-input cases produced specific clarifications in both
 typed arms. Conceptual, current-price, and regulated-rate controls stayed
@@ -142,3 +143,27 @@ math plus explicit units, cost basis, assumptions and scope. The candidate
 cards still need independent, source-distinct agronomic review before active
 corpus admission. Current field outcomes, nutrient rates, prices, labels and
 jurisdictional authority remain unavailable from a formula or retrieved card.
+
+### Independent parser counterexamples and repair
+
+The first acceptance review of commit `5a4666e` returned **REPAIR**. It found
+that mixed CAD/USD ratio inputs could be divided, `1.2 million` could be read
+as `1.2`, negative targets/yields could lose their sign, an explicit GDD cap
+could be ignored, a whole-farm budget amount could be combined with per-acre
+amounts, and seeding could answer in a different unit from the one requested.
+These were real false-ready calculations absent from the exposed 18-case set.
+They invalidate any broad claim from that set that the parser safely handles
+all supplied-input variants.
+
+The follow-up parser preserves signs, clarifies unsupported magnitude suffixes,
+rejects explicit mixed currencies and incompatible budget bases, binds supported
+GDD caps before averaging, and clarifies a requested seeding output unit that
+needs a separate conversion. For the reviewed cap example, `Tmax 35 C`,
+`Tmin 9 C`, base `10 C`, and upper cap `30 C` yield **9.5 GDD** by the stated
+daily-mean method: `(30 + 9)/2 − 10`. The review's initial `10.5` expectation
+was corrected after recalculation. The exact counterexamples became focused
+regressions, and two were exercised through the observed product core with a
+mock backend. The repaired code's 18-case product run again gave 11/11 numeric
+results, 3/3 specific clarifications (including the zero denominator), and a
+direct cross-border refusal; Metal remained unavailable and no model draft
+completed. The integrated model-quality limit above remains in force.

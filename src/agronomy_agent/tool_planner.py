@@ -15,7 +15,7 @@ import re
 from typing import Any, Mapping
 
 from agronomy_agent.agronomic_calculations import agronomic_calculator, calculation_tool_schema
-from agronomy_agent.calculator_contracts import CALCULATOR_VERSION, TOOL_PLANNER_VERSION, tool_version_for
+from agronomy_agent.calculator_contracts import CALCULATOR_VERSION, TOOL_PLANNER_VERSION, format_calculator_clarification, tool_version_for
 from agronomy_agent.foundation_math_parser import _unsafe_action_request, parse_foundation_calculation
 
 
@@ -130,7 +130,7 @@ def plan_tools(question: str, *, field_context: Mapping[str, Any] | None = None)
             PLANNER_VERSION,
             "clarification_required",
             (invocation,),
-            "To calculate this, provide " + ", ".join(missing) + ".",
+            format_calculator_clarification(missing),
         )
     return ToolPlan(TOOL_PLAN_SCHEMA_VERSION, PLANNER_VERSION, "ready", (invocation,))
 
@@ -190,6 +190,8 @@ def _parse_calculation(question: str) -> tuple[str, dict[str, Any], tuple[str, .
         return None
     foundation = parse_foundation_calculation(text)
     if foundation is not None and not foundation[2]:
+        return foundation
+    if foundation is not None and any(item.startswith("invalid ") for item in foundation[2]):
         return foundation
     if not _explicit_arithmetic_request(lower):
         return foundation
