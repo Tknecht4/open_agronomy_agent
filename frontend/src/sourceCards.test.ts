@@ -39,6 +39,25 @@ describe('source card normalization', () => {
     expect(card.sourceLabel).toBe('USDA NRCS Soil Data Access')
   })
 
+  it('keeps partial NASA observations visible with their actual metric coverage', () => {
+    const tool: ToolInvocation = { name: 'nasa_power_daily', payload: {
+      kind: 'public_adapter', status: 'partial_available', summary: {
+        requested_day_count: 3, observed_day_count: 3,
+        observation_start: '2026-09-23', observation_end: '2026-09-25',
+        parameter_summary: { T2M: { days: 3, mean: 12.5 }, PRECTOTCORR: { days: 1, sum: 0 }, WS2M: { days: 3, mean: 2.4 } },
+      },
+    } }
+    const card = buildPublicToolCard(tool)
+    expect(card.statusTone).toBe('attention')
+    expect(card.statusLabel).toBe('partial coverage')
+    expect(card.facts).toContain('Observed UTC 2026-09-23–2026-09-25')
+    expect(card.facts).toContain('0 mm precip (1 observed day)')
+    expect(card.facts).toContain('12.5 C mean temp (3 observed days)')
+    expect(card.limitation).toContain('only published observations')
+    expect(card.limitation).not.toContain('missing')
+    expect(buildSourceCheckSummary([tool], [])).toMatchObject({ attentionCount: 1, unavailableCount: 0 })
+  })
+
   it('summarizes CDL geometry as sampled crop-cover context instead of acreage proof', () => {
     const card = buildPublicToolCard({
       name: 'cropland_data_layer_geometry',

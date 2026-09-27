@@ -145,6 +145,26 @@ def _adapter_facts(name: str, summary: dict[str, Any]) -> list[str]:
     if name == "nasa_power_daily":
         parameters = summary.get("parameter_summary") if isinstance(summary.get("parameter_summary"), dict) else {}
         facts = []
+        observation_start = _text(summary.get("observation_start"))
+        observation_end = _text(summary.get("observation_end"))
+        observed_days = summary.get("observed_day_count")
+        requested_days = summary.get("requested_day_count")
+        if (
+            observation_start and observation_end
+            and isinstance(observed_days, int) and observed_days > 0
+            and isinstance(requested_days, int) and requested_days >= observed_days
+        ):
+            span = (
+                observation_start
+                if observation_start == observation_end
+                else f"{observation_start} to {observation_end}"
+            )
+            facts.append(f"observed UTC {span}; {observed_days} of {requested_days} requested days had usable values")
+        days_by_parameter = (
+            summary.get("available_days_by_parameter")
+            if isinstance(summary.get("available_days_by_parameter"), dict)
+            else {}
+        )
         for key, label, statistic, units in (
             ("PRECTOTCORR", "recent precipitation", "sum", "mm"),
             ("T2M", "mean temperature", "mean", "°C"),
@@ -153,7 +173,13 @@ def _adapter_facts(name: str, summary: dict[str, Any]) -> list[str]:
             value = parameters.get(key) if isinstance(parameters.get(key), dict) else {}
             number = value.get(statistic)
             if isinstance(number, (int, float)) and not isinstance(number, bool):
-                facts.append(f"{label} {round(float(number), 2):g} {units}")
+                metric_days = days_by_parameter.get(key)
+                day_suffix = (
+                    f" across {metric_days} observed day{'s' if metric_days != 1 else ''}"
+                    if isinstance(metric_days, int) and metric_days > 0
+                    else ""
+                )
+                facts.append(f"{label} {round(float(number), 2):g} {units}{day_suffix}")
         return facts
     return []
 

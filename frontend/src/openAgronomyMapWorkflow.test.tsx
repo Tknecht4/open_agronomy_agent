@@ -983,6 +983,36 @@ describe('Open Agronomy map upload workflow', () => {
     expect(priorsCall).toBeTruthy()
   })
 
+  it('labels an online partial weather window with observed dates rather than requested dates', async () => {
+    const base = installFetchMock()
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit) => String(input) === '/api/tools/weather-power'
+      ? Promise.resolve(jsonResponse({ ...nasaPowerConditions, cache_hit: false, status: 'partial_available', requested_day_count: 3, observed_day_count: 1,
+          observation_start: '2026-09-25', observation_end: '2026-09-25', parameter_summary: {
+            T2M: { days: 1, mean: 12.5 }, PRECTOTCORR: { days: 1, sum: 0 }, WS2M: { days: 1, mean: 2.4 },
+          } })) : base(input, init)))
+    render(<OpenAgronomyApp />)
+    await selectExample('central-alberta-barley', true)
+    expect(await screen.findByTestId('map-nasa-power-summary')).toHaveTextContent('1/3 days')
+    fireEvent.click(screen.getByLabelText('NASA POWER field weather'))
+    expect(screen.getByText('1 of 3 requested days available')).toBeVisible()
+    expect(screen.getByText('Observed UTC 2026-09-25')).toBeVisible()
+    expect(screen.getByText('0.0 mm')).toBeVisible()
+    expect(screen.getByText(/Totals include only published observations/)).toBeVisible()
+  })
+
+  it('does not present an empty successful weather response as available observations', async () => {
+    const base = installFetchMock()
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit) => String(input) === '/api/tools/weather-power'
+      ? Promise.resolve(jsonResponse({ ...nasaPowerConditions, status: 'no_data', requested_day_count: 3, observed_day_count: 0, parameter_summary: {} })) : base(input, init)))
+    render(<OpenAgronomyApp />)
+    await selectExample('central-alberta-barley', true)
+    await screen.findByText('unavailable', { selector: '.map-weather-pill small' })
+    expect(screen.queryByTestId('map-nasa-power-summary')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText('NASA POWER field weather'))
+    expect(screen.getByText('No usable observations in this window')).toBeVisible()
+    expect(screen.getByText(/No usable weather observations have been published/)).toBeVisible()
+  })
+
   it('shows recent NASA POWER field weather beside Set field and refreshes it on demand', async () => {
     const fetchMock = installFetchMock()
     render(<OpenAgronomyApp />)

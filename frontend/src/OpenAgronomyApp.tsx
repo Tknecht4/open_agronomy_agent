@@ -27,6 +27,8 @@ import {
 import { WorkspacePerformancePanel } from './workspacePerformance'
 import type { NewFieldDraft } from './FieldSetupDialog'
 import { selectedConversation, rememberConversation } from './conversationSelection'
+import { powerCoverage } from './weatherPresentation'
+import { useWorkspaceMenus } from './useWorkspaceMenus'
 import { WorkspaceDialog } from './WorkspaceDialog'
 import { apiDelete, apiGet, apiPatch, apiPost, apiUpload, csrfHeaders } from './api'
 import { clearPhase6ChatDraft, loadPhase6ChatDraft, savePhase6ChatDraft } from './offlineDrafts'
@@ -113,6 +115,11 @@ type NasaPowerMetric = {
 
 type NasaPowerResponse = {
   tool: 'nasa_power_daily'
+  status?: string
+  requested_day_count?: number
+  observed_day_count?: number
+  observation_start?: string | null
+  observation_end?: string | null
   source: string
   cache_hit?: boolean
   latitude: number
@@ -124,7 +131,7 @@ type NasaPowerResponse = {
 }
 
 type NasaPowerState = {
-  status: 'idle' | 'loading' | 'available' | 'error'
+  status: 'idle' | 'loading' | 'available' | 'partial_available' | 'unavailable' | 'error'
   payload?: NasaPowerResponse
   message?: string
 }
@@ -2022,6 +2029,7 @@ export function OpenAgronomyApp() {
   const [agroclimate, setAgroclimate] = useState<AgroclimateState>({ status: 'idle' })
   const [agroclimateRefresh, setAgroclimateRefresh] = useState(0)
   const [nasaPower, setNasaPower] = useState<NasaPowerState>({ status: 'idle' })
+  const nasaCoverage = powerCoverage(nasaPower.payload)
   const [nasaPowerRefresh, setNasaPowerRefresh] = useState(0)
   const [message, setMessage] = useState('')
   const [mode] = useState<DemoMode>('agronomic_rag')
@@ -2056,6 +2064,7 @@ export function OpenAgronomyApp() {
     return () => media.removeEventListener?.('change', update)
   }, [])
   const [workspaceView, setWorkspaceView] = useState<'chat' | 'split' | 'map'>('split')
+  useWorkspaceMenus(`${page}:${workspaceView}:${activeFieldContextId}`)
   const [fieldTab, setFieldTab] = useState<'details' | 'records' | 'context'>('details')
   const [visibleTurnCount, setVisibleTurnCount] = useState(20)
   const [savingField, setSavingField] = useState(false)
@@ -3179,7 +3188,7 @@ export function OpenAgronomyApp() {
           parameters: ['T2M', 'PRECTOTCORR', 'WS2M'],
         })
         if (requestId !== nasaPowerRequestRef.current) return
-        setNasaPower({ status: 'available', payload })
+        setNasaPower({ status: powerCoverage(payload).status, payload, message: powerCoverage(payload).hasData ? undefined : 'No usable weather observations have been published for this window yet.' })
       } catch (err) {
         if (requestId !== nasaPowerRequestRef.current) return
         setNasaPower({
@@ -3342,22 +3351,23 @@ export function OpenAgronomyApp() {
   }, [fieldLibraryQuery, fieldLibrarySort, storedFields])
 
   return (
-    <main className="demo-app workspace-shell">
+    <main className="demo-app workspace-shell" data-page={page}>
       <WorkspacePerformancePanel />
       <DemoHeader page={page} setPage={navigateToPage} answerCapability={answerCapability} />
       <div className="workspace-content">
       <header className="workspace-topbar">
         <div><span className="eyebrow">{page === 'analyze' ? 'YOUR WORKSPACE' : page === 'fields' ? 'FIELD LIBRARY' : page === 'sources' ? 'KNOWLEDGE & DATA' : 'OPEN AGRONOMY'}</span>
-          <h1>{page === 'analyze' ? (fieldName || 'A clearer view of your field.') : page === 'fields' ? 'My fields' : page === 'sources' ? 'Bring your evidence.' : page === 'evidence' ? 'Behind the answer' : readableLabel(page)}</h1>
+          <h1>{page === 'analyze' ? (fieldName || 'A clearer view of your field.') : page === 'fields' ? 'My fields' : page === 'sources' ? 'Bring your evidence.' : page === 'evidence' ? 'Behind the answer' : page === 'benchmarks' ? 'Research & benchmarks' : page === 'privacy' ? 'Privacy & data' : 'About Open Agronomy'}</h1>
         </div>
-        <button className="primary-button" type="button" onClick={() => setNewFieldOpen(true)} disabled={!fieldsHydrated || isAnalyzing || savingField}><Plus size={17} /> Add field</button>
+        {page === 'analyze' || page === 'fields' ? <button className="primary-button" type="button" onClick={() => setNewFieldOpen(true)} disabled={!fieldsHydrated || isAnalyzing || savingField}><Plus size={17} /> Add field</button> : null}
       </header>
       {page === 'analyze' ? <div className="workspace-context-toolbar">
-        <label className="active-field-select"><MapPin size={16} /><span className="sr-only">Active field</span><select aria-label="Active field" value={activeFieldContextId} disabled={!fieldsHydrated || isAnalyzing || savingField} onChange={event => {
+        <label className="active-field-select"><MapPin size={16} /><span className="sr-only">Active field</span><select aria-label="Active field" value={activeFieldContextId || (scenarioId ? `sample:${scenarioId}` : '')} disabled={!fieldsHydrated || isAnalyzing || savingField} onChange={event => {
+          if (event.target.value.startsWith('sample:')) { applyScenario(event.target.value.slice(7)); return }
           const selected = storedFields.find(item => (item.field_context_id || item.id) === event.target.value)
           if (selected) loadStoredField(selected)
           else startNewField()
-        }}><option value="">{scenarioId ? `${fieldName} · example` : 'General question · no field selected'}</option>{storedFields.map(item => <option key={item.id} value={item.field_context_id || item.id}>{item.name}</option>)}</select></label>
+        }}><option value="">General question · no field selected</option>{storedFields.map(item => <option key={item.id} value={item.field_context_id || item.id}>{item.name}</option>)}<optgroup label="Demonstration fields">{sampleProfiles.map(sample => <option key={sample.id} value={`sample:${sample.id}`}>{sample.name} · example</option>)}</optgroup></select></label>
         {scenarioId ? <span className="example-badge">Demonstration data</span> : null}
         <div className="workspace-view-switch" role="group" aria-label="Workspace view">{(['chat', 'split', 'map'] as const).map(view => <button key={view} type="button" className={`view-${view}`} aria-pressed={(workspaceView === 'split' && !wideWorkspace ? 'chat' : workspaceView) === view} onClick={() => setWorkspaceView(view)}>{view === 'chat' ? 'Conversation' : view === 'map' ? 'Map' : 'Together'}</button>)}</div>
       </div> : null}
@@ -3472,7 +3482,7 @@ export function OpenAgronomyApp() {
                 <h2>{activeFieldContextId ? 'Edit field' : 'New field setup'}</h2>
               </div>
               <span className={`context-state ${geometryReady ? 'ready' : 'pending'}`}>
-                {activeFieldContextId ? 'Saved field' : fieldGeometry.kind === 'none' ? 'Add a boundary' : geometryReady ? 'Ready to save' : 'Fix geometry'}
+                {activeFieldContextId ? 'Saved field' : scenarioId ? 'Example · not saved' : fieldGeometry.kind === 'none' ? 'Add a boundary' : geometryReady ? 'Ready to save' : 'Fix geometry'}
               </span>
             </div>
             <p className="field-workflow-hint">{activeFieldContextId ? "Keep the details that matter. Add measurements in Records & soil tests." : "Add a field to start a private record, or explore an example below."}</p>
@@ -4007,15 +4017,15 @@ export function OpenAgronomyApp() {
                   </div>
                 ) : null}
                 {committedWeatherPoint && networkMode === 'online' ? (
-                  <details className="map-weather-pill">
+                  <details className="map-weather-pill" data-workspace-menu>
                     <summary aria-label="NASA POWER field weather" title="Recent NASA POWER gridded weather">
                       <CloudSun size={16} />
                       <span>NASA POWER</span>
                       {nasaPower.status === 'loading' ? (
                         <small>loading</small>
-                      ) : nasaPower.status === 'available' ? (
+                      ) : nasaCoverage.hasData ? (
                         <small data-testid="map-nasa-power-summary">
-                          {powerMetricValue(nasaPower.payload?.parameter_summary?.PRECTOTCORR, 'sum')} mm · {powerMetricValue(nasaPower.payload?.parameter_summary?.WS2M, 'mean')} m/s
+                          {nasaPower.status === 'partial_available' ? `${nasaCoverage.observed}/${nasaCoverage.requested} days · ` : ''}{powerMetricValue(nasaPower.payload?.parameter_summary?.PRECTOTCORR, 'sum')} mm · {powerMetricValue(nasaPower.payload?.parameter_summary?.WS2M, 'mean')} m/s
                         </small>
                       ) : (
                         <small>unavailable</small>
@@ -4025,7 +4035,7 @@ export function OpenAgronomyApp() {
                       <div className="map-weather-heading">
                         <div>
                           <strong>Recent gridded weather</strong>
-                          <span>3-day point summary</span>
+                          <span>{nasaCoverage.label}</span>
                         </div>
                         <button
                           type="button"
@@ -4038,14 +4048,16 @@ export function OpenAgronomyApp() {
                           <RefreshCw size={15} className={nasaPower.status === 'loading' ? 'spin' : ''} />
                         </button>
                       </div>
-                      {nasaPower.status === 'available' ? (
+                      {nasaCoverage.hasData ? (
                         <>
                           <div className="map-weather-metrics">
-                            <div><span>Mean air temp.</span><strong>{powerMetricValue(nasaPower.payload?.parameter_summary?.T2M, 'mean')} °C</strong></div>
-                            <div><span>Precipitation</span><strong>{powerMetricValue(nasaPower.payload?.parameter_summary?.PRECTOTCORR, 'sum')} mm</strong></div>
-                            <div><span>Mean wind</span><strong>{powerMetricValue(nasaPower.payload?.parameter_summary?.WS2M, 'mean')} m/s</strong></div>
+                            <div><span>Mean air temp.</span><strong>{powerMetricValue(nasaPower.payload?.parameter_summary?.T2M, 'mean')} °C</strong>{nasaPower.payload?.parameter_summary?.T2M?.days !== undefined ? <small>{nasaPower.payload.parameter_summary.T2M.days} observed {nasaPower.payload.parameter_summary.T2M.days === 1 ? 'day' : 'days'}</small> : null}</div>
+                            <div><span>Precipitation</span><strong>{powerMetricValue(nasaPower.payload?.parameter_summary?.PRECTOTCORR, 'sum')} mm</strong>{nasaPower.payload?.parameter_summary?.PRECTOTCORR?.days !== undefined ? <small>{nasaPower.payload.parameter_summary.PRECTOTCORR.days} observed {nasaPower.payload.parameter_summary.PRECTOTCORR.days === 1 ? 'day' : 'days'}</small> : null}</div>
+                            <div><span>Mean wind</span><strong>{powerMetricValue(nasaPower.payload?.parameter_summary?.WS2M, 'mean')} m/s</strong>{nasaPower.payload?.parameter_summary?.WS2M?.days !== undefined ? <small>{nasaPower.payload.parameter_summary.WS2M.days} observed {nasaPower.payload.parameter_summary.WS2M.days === 1 ? 'day' : 'days'}</small> : null}</div>
                           </div>
-                          <p>UTC {nasaPower.payload?.start}–{nasaPower.payload?.end}{nasaPower.payload?.cache_hit ? ' · local cache' : ''}</p>
+                          <p>{nasaCoverage.observationLabel}{nasaPower.payload?.cache_hit ? ' · local cache' : ''}</p>
+                          <p className="weather-request-window">Requested UTC {nasaPower.payload?.start}–{nasaPower.payload?.end}</p>
+                          {nasaPower.status === 'partial_available' ? <p className="weather-coverage-note">This is a partial window. Totals include only published observations.</p> : null}
                           <p>{nasaPower.payload?.boundary || 'NASA POWER is gridded weather context, not an on-field sensor.'}</p>
                           {nasaPower.payload?.source ? (
                             <a href={nasaPower.payload.source} target="_blank" rel="noreferrer">Official NASA POWER response</a>
@@ -4059,6 +4071,7 @@ export function OpenAgronomyApp() {
                 ) : null}
                 <details
                   className="map-advanced-tools map-field-tools"
+                  data-workspace-menu
                   open={fieldToolsOpen}
                   onToggle={(event) => setFieldToolsOpen((event.target as HTMLDetailsElement).open)}
                 >
@@ -4274,7 +4287,7 @@ export function OpenAgronomyApp() {
               <div className="composer-actions">
                 <button type="button" className="composer-reference" onClick={() => navigateToPage('sources')}><Upload size={16} /> Add reference{privateKnowledge.length ? ` (${privateKnowledge.length})` : ''}</button>
                 {sessionId ? <button type="button" className="icon-button" aria-label="Refresh conversation" disabled={isAnalyzing} onClick={() => void refreshConversation()}><RefreshCw size={15} /></button> : null}
-                <details className="model-settings-disclosure">
+                <details className="model-settings-disclosure" data-workspace-menu>
                   <summary title="Model settings" aria-label="Model settings"><Settings2 size={17} /></summary>
                   {modelProfiles.length > 0 ? (
                     <label className="model-profile-select">
@@ -4395,6 +4408,7 @@ function DemoHeader({
         ))}
         <details
           ref={morePagesRef}
+          data-workspace-menu
           className={`demo-nav-more ${secondaryItems.some(([id]) => page === id) ? 'active' : ''}`}
         >
           <summary aria-label="More pages">More</summary>
@@ -4782,7 +4796,7 @@ function SourcesPage({
         if (active) {
           setAdapterReadiness(readiness)
           setSourceStatus(
-            `${readiness.summary.ready_count || 0}/${readiness.summary.adapter_count || 0} source adapters ready`,
+            `${readiness.summary.ready_count || 0}/${readiness.summary.adapter_count || 0} source adapters configured`,
           )
         }
       })

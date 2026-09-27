@@ -57,7 +57,7 @@ function PrivacyPage() {
           <article>
             <span>Online mode</span>
             <strong>Minimum query, traced</strong>
-            <p>Explicit public adapters receive only the query and generalized location they need; each attempted call is attached to the answer trace.</p>
+            <p>Online source checks may send coordinates, map bounds, or a field boundary when the adapter needs them. Answer-time checks retain source and status receipts; map browsing also requests imagery and regional layers.</p>
           </article>
           <article>
             <span>Export and review</span>
@@ -85,7 +85,7 @@ function AboutPage() {
     <div className="about-page">
       <section>
         <div className="panel-kicker">Open Agronomy Agent</div>
-        <h2>A map-first assistant for agronomy questions</h2>
+        <h2>An evidence-grounded field workspace</h2>
         <p>
           The product goal is simple: help users ask better agronomy questions by starting from field context,
           retrieving relevant evidence, showing uncertainty, and making missing data obvious.

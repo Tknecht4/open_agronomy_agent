@@ -12,6 +12,25 @@ Open **Workspace** and type a general question. A field is optional: the app mus
 
 Select a field when its known details matter to the question. Field observations and soil tests are user records; map intersections and provider data are separate contextual inputs. If a field is incomplete, leave unknowns blank and ask a bounded question. A model answer should not turn an unknown into a zero, a pass, or a prescription.
 
+## Map and connected sources
+
+Use **Conversation**, **Together**, or **Map** to give the current task more room.
+Smaller windows switch between conversation and map; the map can scroll with the
+page so its field details remain accessible. Set-field, weather, and model menus
+close when you click elsewhere, press Escape, or change views.
+
+Connected mode loads public imagery and regional context. Source checks may send
+a point, map bounds, or a field boundary to the selected provider. Map browsing is
+separate from the source receipts retained with an answer. The Privacy view explains
+these boundaries.
+
+The weather summary reports actual published observation dates and coverage for
+each metric. Recent NASA POWER windows can be partial because observations lag the
+requested dates. A partial total is not a full-window total; missing values are not
+zero rainfall. **Sources & checks** preserves these limits with the saved answer.
+A missing public-knowledge readiness report remains unavailable, even when other
+online providers work.
+
 ## Add and manage a field
 
 1. In **Fields**, select **Add field**. Enter a field name; crop, region, and province are optional. Reusing the region from a previous field is an explicit action, not an automatic assumption.

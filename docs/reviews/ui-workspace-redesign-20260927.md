@@ -178,3 +178,106 @@ retaining available receipts. The package retry passed before the integration
 commit. No model cache, personal data, or historical benchmark was removed.
 
 Final integrated validation: **1,019 Python tests passed**, **241 frontend tests passed**, frontend typecheck/build passed, strict MkDocs passed, and the public documentation checker passed. The container runtime inventory was regenerated from the integrated source. The final public-package receipt and independent review bind the delivered merge candidate; human PR acceptance remains separate.
+
+## Round 2: Safari and online functionality
+
+User follow-up explicitly requested another UI test/fix round in the already-open
+Safari browser, including online extended functionality. Reference state is clean
+commit `35b32a3`; the previous implementation review does not validate this new round.
+
+Plan: reproduce every primary/secondary view and menu/dialog in Safari; fix observed
+alignment, clipping and responsive issues; run the online map/weather/knowledge
+paths with synthetic example locations; verify successful, unavailable and key-gated
+services distinctly; then rerun affected regressions, update screenshots/evidence,
+and obtain an independent review of the final delta. Existing fields and drafts
+are preserved. No publishing is authorized by this follow-up.
+
+Planning envelope: owner Safari/layout work, one bounded backend online specialist,
+then one independent reviewer; approximately 60–90 minutes before integration checks.
+Provider calls are bounded public read requests using synthetic data; no paid remote
+model or compute work. Reassess scope after observed failures rather than adding
+optional features. Disk copies stay bounded; retain failed evidence without keeping
+multiple gigabyte package copies. Token/dollar usage is unavailable.
+
+First observed defect: Safari's Set field popover extends beyond the map card and
+is clipped. Secondary-page content alignment and action placement need inspection.
+
+
+### Observed defects and repairs
+
+- Contained Set field, weather, and model menus within their panels. Added outside
+  click, Escape, and view-change dismissal without closing unrelated disclosures.
+- Aligned field labels, search/sort controls, library actions, native Safari
+  selects, secondary-page headings, metric cards, and privacy cards. Reduced
+  empty-chat spacing and based conversation height on the actual header space.
+- Reproduced map-footer clipping in a short Safari window. Map mode now preserves
+  the canvas and footer's intrinsic space and permits page scroll. The field-details
+  action remains reachable at the narrow layout and increased page zoom.
+- Added explicit example options to the active-field selector. Examples remain
+  visibly unsaved until the user saves a field.
+- Replaced a raw missing-report filesystem diagnostic in Public knowledge with a
+  concise unavailable state; the API diagnostic remains retained. Adapter status
+  says configured rather than implying proven live reachability.
+- NASA POWER's current three-day request returned only one published day. The
+  backend previously treated HTTP success as complete weather and could cache the
+  incomplete window. It now validates usable observations, distinguishes complete,
+  partial, and no-data responses, retains actual UTC dates/per-metric counts, and
+  caches only complete windows. Map, source cards, and compiled agent context share
+  the coverage boundary. Zero measured rainfall remains a valid observation.
+
+### Browser and online evidence
+
+Testing used the user's native Safari tab, not a replacement browser. The original
+window capture was 3420 by 2018 pixels (Retina); the restored window is 3420 by 2020.
+A resized 1148 by 1510 capture exercised the narrow/short layout, with a further
+three native page-zoom increments used to check narrower effective content width.
+Zoom was reset and the window restored after testing. The short-window screenshot
+proves the map footer and Open field details remain visible after scrolling.
+
+Safari exercised saved-field creation from explicit synthetic coordinates, reload,
+observation entry, a labeled synthetic structured soil test, field-linked answer
+history, conversation/map views, source dialog, all three Data tabs, Benchmarks,
+Privacy, and About. The isolated QA field is named `Safari QA - synthetic field`;
+its observation and soil sample explicitly identify themselves as test data.
+
+A local pinned Gemma 4 E2B answer completed in connected mode from the synthetic
+Alberta point. The answer explicitly reported 2026-09-25 UTC, one of three requested
+days, and the observed precipitation/wind. Its source dialog showed NASA partial
+coverage with actual dates and per-metric counts. This verifies a workflow, not
+agronomic quality or provider completeness. It did not call a paid remote model.
+
+Live public checks confirmed Esri imagery, Canadian ecozone intersections, NASA
+POWER, and AAFC NASDI. Isolated API probes covered layer catalog, priors,
+intersections, synthetic GeoJSON import, and nonpersistent private-reference
+inspection. Exact observed statuses and timings are in
+`artifacts/ui-online-services-20260927.json`. Public-knowledge/readiness reports
+are absent in this checkout and remain unavailable; eleven optional local layers
+are not installed. Credential declarations and registry readiness are not live
+provider proofs. Key-gated services were not provisioned or paid for by this task.
+
+### Round-two verification
+
+The full Python suite passed **1,022 tests** in 357.14 seconds; the full frontend
+suite passed **251 tests** in 24.27 seconds. The full Python invocation used a
+separate temporary root and pytest's failed-only temporary retention to bound disk
+use without weakening test contracts. Targeted reviewer checks passed 25 backend
+and 67 frontend cases. The reviewer found and required repair of partial-weather
+source cards, a mismatched cache fixture, and short-window map clipping; each was
+reproduced or independently tested and repaired. Earlier failed logs remain local.
+
+Native Safari captures, UI observations, complete logs, final source manifest, and
+review receipt are retained under `outputs/ui-redesign/safari-online/`. These full
+browser captures include browser chrome and are local review artifacts, not new
+public README images. Existing sanitized screenshots stay in the public docs.
+Physical touch devices, assistive-technology studies, every provider geography,
+and slow-network distributions remain outside the exercised coverage. No runtime
+model/RAG profile, governed corpus, frozen benchmark, or durable memory was changed.
+
+
+The final inventory review caught a packaging mismatch: online QA had populated
+an ignored map cache which the inventory builder then counted as a bundled seed.
+The cache was preserved under the local round-two evidence directory, and the demo
+was restarted with `AGRONOMY_AGENT_GEO_CACHE_DIR` pointing there. The distributable
+runtime inventory was regenerated with its original empty cache seed; the public
+package was rebuilt afterward. No provider observations were discarded or promoted
+into bundled runtime evidence. The first package receipt remains retained locally.

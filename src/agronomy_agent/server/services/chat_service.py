@@ -2682,15 +2682,28 @@ def _call_nasa_power(latitude: float, longitude: float, *, timeout: int) -> dict
             parameters=("T2M", "PRECTOTCORR", "WS2M"),
             timeout=timeout,
         )
+        status = str(payload.get("status") or "unavailable")
+        if status not in {"available", "partial_available"}:
+            return _public_tool_record(
+                "nasa_power_daily",
+                "NASA POWER returned no usable dated weather for the requested window; do not infer current weather.",
+                payload,
+                status=status,
+            )
         summary = payload.get("parameter_summary") or {}
         rain = (summary.get("PRECTOTCORR") or {}).get("sum")
         wind = (summary.get("WS2M") or {}).get("mean")
         text_parts = ["NASA POWER weather context"]
+        observed_end = payload.get("observation_end")
+        observed_days = payload.get("observed_day_count")
+        requested_days = payload.get("requested_day_count")
+        if observed_end and isinstance(observed_days, int) and isinstance(requested_days, int):
+            text_parts[0] += f" through {observed_end} ({observed_days} of {requested_days} requested UTC days)"
         if rain is not None:
-            text_parts.append(f"{rain} mm recent precipitation")
+            text_parts.append(f"{rain} mm observed precipitation")
         if wind is not None:
             text_parts.append(f"{wind} m/s mean wind")
-        return _public_tool_record("nasa_power_daily", ": ".join([text_parts[0], ", ".join(text_parts[1:])]) if len(text_parts) > 1 else text_parts[0], payload, status="available")
+        return _public_tool_record("nasa_power_daily", ": ".join([text_parts[0], ", ".join(text_parts[1:])]) if len(text_parts) > 1 else text_parts[0], payload, status=status)
     except Exception as exc:  # noqa: BLE001
         return _public_tool_error(
             "nasa_power_daily",
@@ -3135,7 +3148,15 @@ def _adapter_summary(payload: dict[str, Any]) -> dict[str, Any]:
             "component_summary": payload.get("component_summary") or {},
         }
     if payload.get("tool") == "nasa_power_daily":
-        return {"parameter_summary": payload.get("parameter_summary") or {}}
+        return {
+            "status": payload.get("status"),
+            "parameter_summary": payload.get("parameter_summary") or {},
+            "requested_day_count": payload.get("requested_day_count"),
+            "observed_day_count": payload.get("observed_day_count"),
+            "available_days_by_parameter": payload.get("available_days_by_parameter") or {},
+            "observation_start": payload.get("observation_start"),
+            "observation_end": payload.get("observation_end"),
+        }
     if payload.get("tool") == "cansis_soil_landscapes_canada":
         return {
             "status": payload.get("status"),
