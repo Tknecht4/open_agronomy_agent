@@ -28,6 +28,12 @@ payloads intentionally absent from the public package. `benchmark_models/`,
 versions are evaluation or historical artifacts. Do not switch production
 behavior because a newer-looking filename exists.
 
+`rag_production_foundations_candidate.yaml` and its companion candidate policy
+bind the nine source-linked method cards for development comparison. They are
+not listed in `runtime_profiles.json` and are not selectable product defaults.
+The exposed comparison found no reliable improvement in the requested numeric
+calculations after evaluation-derived worked examples were removed.
+
 ## RC3 egress and completed execution boundary
 
 The completed RC3 run was governed by `final_benchmark_round_rc3.json`, which requires

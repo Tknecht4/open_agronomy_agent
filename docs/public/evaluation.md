@@ -69,6 +69,13 @@ PYTHONPATH=src .venv/bin/python scripts/evaluate_offline_corpus_retrieval.py \
   --config configs/rag.yaml
 ```
 
+The September 2026 non-active production and farm-business candidate has a separate
+[13-question exposed development comparison](https://github.com/Tknecht4/open_agronomy_agent/blob/main/docs/reviews/production-foundations-benchmark-20260927.md).
+It reports source reachability, paired local-model answers, explicit failures,
+and authority controls. Its method-only rerun did not qualify the candidate
+for active retrieval. Its known-source questions and nonblinded review are
+not a fresh competence or field-outcome evaluation.
+
 ## Reproducible runs
 
 The runner binds suite hash, interface contract, arm contract, executable source
