@@ -4,11 +4,12 @@ import hashlib
 from pathlib import Path
 from typing import Any, Iterable
 
+from agronomy_agent.paths import REPO_ROOT
+
 
 IMPLEMENTATION_BINDING_SCHEMA = (
     "open_agronomy_agent.security_evidence_implementation_binding.v1"
 )
-REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def build_implementation_binding(
