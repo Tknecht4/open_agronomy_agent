@@ -2,7 +2,7 @@
 
 ## Purpose and status
 
-This package adapts local retrieval, knowledge graphs, models, capabilities, and traces to the active Agno runtime. `resolve_agent_runtime` currently accepts only `agno`. The adapters do not make every registered capability part of the live chat path; execution and evidence integration must be verified end to end.
+This package adapts local retrieval, knowledge graphs, and capabilities to the active Agno runtime. `resolve_agent_runtime` currently accepts only `agno`. The adapters do not make every registered capability part of the live chat path; execution and evidence integration must be verified end to end.
 
 ## Entry points
 
@@ -10,11 +10,13 @@ This package adapts local retrieval, knowledge graphs, models, capabilities, and
 - `local_index.py` supplies the local lexical index and `RetrievedDoc` records.
 - `knowledge_factory.py` builds the local Agno knowledge facade.
 - `knowledge_graph.py` loads/searches configured graph JSON.
-- `model_adapter.py` adapts model generation.
 - `tool_adapters.py` exposes capability executors to Agno-facing code.
-- `trace_adapter.py` creates the Agno trace projection.
-- `profile.py` supports benchmark/runtime profiles.
-- `source_ingest.py` and `source_manifest.py` govern source ingestion.
+- `source_ingest.py` is the explicit network-backed source ingestion CLI implementation.
+
+Model generation and production traces are owned by `agent.py`,
+`execution_core.py`, and the server execution path. Historical Agno comparison,
+model, trace, and promotion adapters were removed because they had no live
+consumer or tests.
 
 ## Inputs and outputs
 
@@ -27,7 +29,6 @@ Inputs are versioned RAG/model configuration plus admitted corpus, graph, and so
 - Graph output is vocabulary/relationship context, not field truth or action authority.
 - Model adapters receive bounded evidence and do not own corpus or safety policy.
 - Tool adapters expose an executor; they do not by themselves prove planner, verifier, renderer, and persistence parity.
-- Rollback checks preserve identity and fail when a requested transition is unsupported.
 
 ## Add a graph
 

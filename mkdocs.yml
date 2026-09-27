@@ -73,6 +73,7 @@ nav:
       - RC1 public evidence package: final-benchmark-20260812/README.md
   - Developer guide:
       - Code and contracts: developer/index.md
+      - Repository map: developer/repository-map.md
       - Extending the system: developer/extending.md
       - Testing and claims: developer/testing.md
       - Release-candidate gates: developer/release-readiness.md

@@ -1,0 +1,47 @@
+{
+  "schema_version": "open_agronomy_agent.repository_inventory.v1",
+  "source_commit": "7a341115f48f568153d95f467933a3602b305281",
+  "python_modules": 152,
+  "python_lines": 116963,
+  "python_test_files": 87,
+  "explicit_test_functions": 717,
+  "collected_python_tests": 992,
+  "scripts": 116,
+  "configs": 83,
+  "documentation_files": 104,
+  "tracked_size_mib": {
+    "data": 987.9,
+    "docs": 8.6,
+    "src": 5.3,
+    "scripts": 1.6,
+    "frontend": 1.3,
+    "tests": 0.9,
+    "configs": 0.2
+  },
+  "largest_python_modules_by_lines": [
+    {"path": "src/agronomy_agent/server/app.py", "lines": 7375},
+    {"path": "src/agronomy_agent/server/storage/db.py", "lines": 6131},
+    {"path": "src/agronomy_agent/answer_verifier.py", "lines": 5317},
+    {"path": "src/agronomy_agent/agent.py", "lines": 5030},
+    {"path": "src/agronomy_agent/server/services/chat_service.py", "lines": 4907},
+    {"path": "src/agronomy_agent/server/storage/runtime.py", "lines": 4590},
+    {"path": "src/agronomy_agent/local_tools.py", "lines": 4190},
+    {"path": "src/agronomy_agent/server/services/export_service.py", "lines": 3756}
+  ],
+  "phase_1_cleanup": {
+    "python_modules_after": 131,
+    "python_lines_after": 109338,
+    "modules_removed": 21,
+    "python_lines_removed": 7625,
+    "collected_tests_after": 992,
+    "removed_test_files": 0,
+    "removed_categories": [
+      "unused_agno_comparison_and_ingestion_experiments",
+      "unused_lfm_shadow_router",
+      "quarantined_decision_card_matcher",
+      "unused_phase5_experiment_and_release_reports",
+      "unattached_applied_guidance_promotion_workflow"
+    ]
+  },
+  "interpretation": "Inventory counts identify review boundaries. They do not prove that a file, test, or artifact is unused or safe to remove."
+}

@@ -73,6 +73,8 @@ No output means both development listeners have stopped.
 
 ## Documentation
 
+- [Repository architecture map](ARCHITECTURE.md)
+- [Coding-agent guidance](AGENTS.md)
 - [Documentation home](docs/public/index.md) and the future [GitHub Pages site](https://tknecht4.github.io/open_agronomy_agent/)
 - [System architecture](docs/public/architecture.md)
 - [Knowledge and evidence governance](docs/public/knowledge-and-data.md)
@@ -84,6 +86,7 @@ No output means both development listeners have stopped.
 - [Upgrade implementation record](docs/reviews/open-agronomy-upgrade-implementation-20260813.md)
 - [Historical benchmark RC2 readiness record](docs/reviews/open-agronomy-benchmark-rc2-readiness-record-20260814.md)
 - [Developer guide](docs/public/developer/index.md)
+- [Public repository map](docs/public/developer/repository-map.md)
 - [Release-candidate checkout gates](docs/public/developer/release-readiness.md)
 - [Native operations](docs/public/operations/native-setup.md), [offline operation](docs/public/offline-operation.md), and [containers](container/README.md)
 

@@ -24,7 +24,7 @@ The supported cockpit composes the system through `server/app.py`. A normal answ
 | Area | Entry points | Responsibility |
 |---|---|---|
 | Kernel | `agent.py`, `context_packer.py` | Resource loading, context construction, prompts, generation, intervention |
-| Routing | `router.py`, `decision_route.py`, `route_decision_v2.py` | Question type, risk, namespaces, tools, decision contracts |
+| Routing | `router.py`, `decision_route.py`, `decision_contract.py`, `capability_planner.py` | Question type, risk, namespaces, evidence obligations, and capability plans |
 | Evidence | `evidence_contracts.py`, `evidence_handshake.py`, `evidence_authority.py` | Typed provenance, applicability, coverage, and validated-answer records |
 | Validation | `answer_verifier.py`, `answer_safety.py`, `high_consequence.py` | Evidence and action-boundary checks |
 | Execution receipts | `execution_core.py`, `benchmark_rehearsal.py` | Typed production-path requests/results, fail-closed stage receipts, and claim-ineligible rehearsals |
@@ -78,10 +78,9 @@ rehearsal both call `execute_agent_request`. The shared result validates an
 ordered, content-addressed receipt for routing, field context, public adapters,
 document and graph observations, typed tools, prompt construction, risk
 intervention, generation, verification, safety policy, high-consequence policy,
-and final rendering. The rehearsal currently supports only the complete
-production configuration. Document and graph observations are separate, but
-their execution switches remain coupled inside `build_context`; attempted
-component ablations fail instead of being reported as implemented.
+and final rendering. The observed-system adapter supports the complete
+production configuration and the explicit document/graph retrieval 2×2; other
+component ablations must fail instead of being reported as implemented.
 
 This seam covers the persisted server answer pipeline. HTTP authorization and
 configuration selection, hosted-message copying and metrics, image-research
