@@ -79,7 +79,7 @@ jobs:
             --output "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app"
       - name: Smoke native first-run model installation
         run: |
-          python scripts/smoke_macos_first_run.py \
+          python -m scripts.smoke_macos_first_run \
             --app "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app" \
             --state-root "$HOME/Library/Application Support/OpenAgronomyAgent/desktop" \
             --report "$GITHUB_WORKSPACE/outputs/macos/first-run-smoke.json"
