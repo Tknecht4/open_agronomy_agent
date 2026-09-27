@@ -1,6 +1,7 @@
 """Integrity, privacy and exact lookup contracts for the imagery sidecar."""
 
 import json
+import sqlite3
 import stat
 
 import pytest
@@ -89,3 +90,106 @@ def test_incomplete_cache_and_schema_drift(tmp_path):
         db.execute("UPDATE schema_identity SET version=3")
     with pytest.raises(RuntimeError):
         ImageryStore(tmp_path)
+
+
+def test_read_only_missing_and_empty_index_never_create_or_chmod(tmp_path):
+    missing = tmp_path / "missing"
+    store = ImageryStore(missing, read_only=True)
+    assert store.get("request") is None
+    assert store.get_by_chip_hash("a" * 64) is None
+    assert store.preview_bytes("a" * 64) is None
+    assert store.intersects((-1, -1, 1, 1)) == []
+    with pytest.raises(RuntimeError):
+        store.put({}, (-1, -1, 1, 1))
+    assert not missing.exists()
+
+    empty = tmp_path / "empty"
+    empty.mkdir(mode=0o755)
+    empty.chmod(0o755)
+    index = empty / "imagery-v1.sqlite3"
+    index.write_bytes(b"")
+    index.chmod(0o644)
+    before = (index.stat().st_size, index.stat().st_mtime_ns)
+    assert ImageryStore(empty, read_only=True).get("request") is None
+    assert (index.stat().st_size, index.stat().st_mtime_ns) == before
+    assert stat.S_IMODE(empty.stat().st_mode) == 0o755
+    assert stat.S_IMODE(index.stat().st_mode) == 0o644
+    assert not (empty / "imagery-v1.sqlite3-wal").exists()
+    assert not (empty / "imagery-v1.sqlite3-shm").exists()
+
+
+def test_read_only_legacy_index_is_unchanged_and_not_attested(tmp_path):
+    root = tmp_path / "legacy"
+    root.mkdir()
+    index = root / "imagery-v1.sqlite3"
+    with sqlite3.connect(index) as db:
+        db.execute("CREATE TABLE schema_identity(version INTEGER NOT NULL)")
+        db.execute("INSERT INTO schema_identity VALUES (1)")
+    before = index.read_bytes()
+    mtime = index.stat().st_mtime_ns
+    store = ImageryStore(root, read_only=True)
+    assert store.get("request") is None
+    assert store.get_by_chip_hash("a" * 64) is None
+    assert index.read_bytes() == before and index.stat().st_mtime_ns == mtime
+    assert not (root / "imagery-v1.sqlite3-wal").exists()
+    assert not (root / "imagery-v1.sqlite3-shm").exists()
+
+
+def test_read_only_trusted_v2_reads_without_permission_changes(tmp_path):
+    store, receipt, names = _stored(tmp_path)
+    tmp_path.chmod(0o755)
+    store.database.chmod(0o644)
+    for name in names.values():
+        (tmp_path / name).chmod(0o644)
+    paths = [store.database, *(tmp_path / name for name in names.values())]
+    before = [(path.stat().st_mtime_ns, stat.S_IMODE(path.stat().st_mode)) for path in paths]
+    reader = ImageryStore(tmp_path, read_only=True)
+    assert reader.get("request")["chip_hash"] == receipt["chip_hash"]
+    assert reader.get_by_chip_hash(receipt["chip_hash"])["request_hash"] == "request"
+    assert reader.preview_bytes(receipt["chip_hash"]) == b"png bytes"
+    assert reader.intersects((-104.5, 40.5, -104.4, 40.6)) == [receipt["chip_hash"]]
+    assert before == [(path.stat().st_mtime_ns, stat.S_IMODE(path.stat().st_mode)) for path in paths]
+    assert not (tmp_path / "imagery-v1.sqlite3-wal").exists()
+    assert not (tmp_path / "imagery-v1.sqlite3-shm").exists()
+
+
+def test_read_only_never_attests_unhashed_v2_row(tmp_path):
+    store, receipt, names = _stored(tmp_path)
+    with store._connect() as db:
+        db.execute("""UPDATE chips SET npz_sha256=NULL,png_sha256=NULL,
+                      receipt_sha256=NULL,receipt_file_sha256=NULL""")
+    before = store.database.read_bytes()
+    mtime = store.database.stat().st_mtime_ns
+    reader = ImageryStore(tmp_path, read_only=True)
+    assert reader.get("request") is None
+    assert reader.get_by_chip_hash(receipt["chip_hash"]) is None
+    assert reader.preview_bytes(receipt["chip_hash"]) is None
+    assert store.database.read_bytes() == before
+    assert store.database.stat().st_mtime_ns == mtime
+
+
+def test_read_only_rejects_corrupt_and_wal_headers_without_sidecars(tmp_path):
+    corrupt = tmp_path / "corrupt"
+    corrupt.mkdir()
+    bad = corrupt / "imagery-v1.sqlite3"
+    bad.write_bytes(b"bad SQLite content")
+    with pytest.raises(ValueError, match="header"):
+        ImageryStore(corrupt, read_only=True)
+    assert bad.read_bytes() == b"bad SQLite content"
+
+    wal_root = tmp_path / "wal"
+    wal_root.mkdir()
+    wal_index = wal_root / "imagery-v1.sqlite3"
+    db = sqlite3.connect(wal_index)
+    try:
+        db.execute("PRAGMA journal_mode=WAL")
+        db.execute("CREATE TABLE schema_identity(version INTEGER NOT NULL)")
+        db.execute("INSERT INTO schema_identity VALUES (2)")
+        db.commit()
+    finally:
+        db.close()
+    sidecars = [wal_root / "imagery-v1.sqlite3-wal", wal_root / "imagery-v1.sqlite3-shm"]
+    before = [(path.exists(), path.stat().st_size if path.exists() else None) for path in sidecars]
+    with pytest.raises(RuntimeError, match="WAL-mode"):
+        ImageryStore(wal_root, read_only=True)
+    assert before == [(path.exists(), path.stat().st_size if path.exists() else None) for path in sidecars]

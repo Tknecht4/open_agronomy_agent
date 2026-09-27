@@ -97,6 +97,41 @@ describe('FieldImageryAnalyticsPanel', () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 
+  it.each([
+    ['storage_limit', /imagery storage limit or free-disk reserve has been reached/, /Existing cached analyses remain available/],
+    ['storage_unavailable', /local imagery cache could not be verified or opened/, /No new imagery was fetched/],
+  ])('shows the typed %s failure without inventing observations', async (status, message, consequence) => {
+    apiPost.mockResolvedValue({ status })
+    render(<FieldImageryAnalyticsPanel fieldContextId="field-1" geometryKey="polygon-1" imageryReady />)
+    open()
+    setDates()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Analyze scene' })).toBeEnabled())
+    fireEvent.click(screen.getByRole('button', { name: 'Analyze scene' }))
+    const result = await screen.findByRole('region', { name: 'Imagery analysis result' })
+    expect(within(result).getByRole('status')).toHaveTextContent(message)
+    expect(within(result).getByRole('status')).toHaveTextContent(consequence)
+    expect(within(result).queryByText('0.530')).not.toBeInTheDocument()
+    expect(within(result).queryByRole('img')).not.toBeInTheDocument()
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('labels an exact offline cache read and still loads its authenticated preview', async () => {
+    apiGet.mockResolvedValue({ status: 'ready', network_mode: 'offline' })
+    apiPost.mockResolvedValue({ ...receipt, cache_hit: true, cog_transfer_bytes: 819200 })
+    render(<FieldImageryAnalyticsPanel fieldContextId="field-1" geometryKey="polygon-1" imageryReady />)
+    open()
+    setDates()
+    expect(await screen.findByText(/An exact cached analysis may still be available/)).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Analyze scene' })).toBeEnabled())
+    fireEvent.click(screen.getByRole('button', { name: 'Analyze scene' }))
+    const result = await screen.findByRole('region', { name: 'Imagery analysis result' })
+    expect(within(result).getByText('Observed indices for the saved field polygon.')).toBeInTheDocument()
+    expect(within(result).getByText(/· cached$/)).toBeInTheDocument()
+    expect(within(result).getByText(/COG transfer 819,200 bytes/)).toBeInTheDocument()
+    expect(await within(result).findByRole('img')).toHaveAttribute('src', 'blob:field-preview')
+    expect(fetch).toHaveBeenCalledWith(previewPath, expect.objectContaining({ credentials: 'same-origin' }))
+  })
+
   it('drops an analysis response after geometry changes', async () => {
     let resolveAnalysis!: (value: unknown) => void
     apiPost.mockReturnValue(new Promise(resolve => { resolveAnalysis = resolve }))

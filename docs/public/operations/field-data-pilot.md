@@ -178,11 +178,74 @@ Incomplete scans and hashing limits remain explicit. APFS shared extents mean
 summed allocation is not uniquely occupied space; whole-file and internal NPZ
 duplicate estimates overlap and must not be added together.
 
-The measured plan in the repository's
-`docs/reviews/artifacts/field-imagery-20260927/storage-audit.md`
-separates reusable scene pixels from field masks/results, proposes
-workspace-scoped raw-upload deduplication and configurable cache quotas, and
-requires a verified migration before retiring old artifacts. Those migrations
-and automatic eviction are not implemented. Public repository builds already
-use independent APFS copy-on-write copies where available, with ordinary-copy
-fallback and unchanged output hash verification.
+New uploads retain their original bytes in compressed, SHA-256-addressed blobs
+within the private SQLite database. Repeated uploads in the same workspace
+share one blob; imports, reviewed mappings and row locators remain separate.
+Different workspaces do not share blob identities. Reads verify both stored and
+original hashes and enforce the 8 MiB decoded-source limit. Existing inline
+imports remain readable without an automatic startup conversion.
+
+For an existing SQLite workspace, stop its writers and create and verify a
+backup using `server/storage/backup.py::create_backup` before migration. Inspect
+the default dry run first:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/migrate_field_source_blobs.py \
+  --database /absolute/private/state.sqlite3
+PYTHONPATH=src .venv/bin/python scripts/migrate_field_source_blobs.py \
+  --database /absolute/private/state.sqlite3 --apply
+```
+
+The migration verifies source bytes and preserves import/mapping identities in
+one transaction. Dry run preserves logical data, schema and payloads, but SQLite
+may create WAL/SHM coordination sidecars. `--restore-inline --apply` restores
+verified inline bytes while retaining blob history. Neither direction deletes
+source history or runs `VACUUM`; fewer logical payload bytes do not promise an
+immediately smaller database file. This CLI supports SQLite only.
+
+Imagery writers default to a **2 GiB logical cache limit** and **1 GiB free-disk
+reserve**. Set `AGRONOMY_AGENT_IMAGERY_CACHE_MAX_BYTES` and
+`AGRONOMY_AGENT_IMAGERY_MIN_FREE_BYTES` before starting the source-checkout
+server to change these bounds. One cross-process lock covers all field caches
+under the configured root. Admission reserves up to 16 MiB before remote reads
+or processing and checks again before saving. Capacity refusal returns
+`storage_limit`; corrupt or unsupported cache state returns
+`storage_unavailable`. Verified cache reads remain available without new-write
+admission. Read-only lookups never migrate or attest legacy entries, and refuse
+WAL indexes rather than mutating SQLite sidecars. These are cooperating-writer
+checks, not an operating-system disk quota: unrelated processes can still
+consume free space. No evidence is automatically evicted.
+
+The historical plan in
+`docs/reviews/artifacts/field-imagery-20260927/storage-audit.md` remains a record
+of the initial measurements. Sharing raster pixels across field masks and
+retiring old NPZ references still require a separate verified migration. Public
+repository builds use independent APFS copy-on-write copies where available,
+with ordinary-copy fallback and unchanged output hash verification.
+
+## Preparing additional research tables
+
+`scripts/prepare_field_sources.py` accepts the separately acquired, hash-pinned
+Canadian bean/onion and Arkansas soybean source files. It writes a new output
+directory containing source manifests, every row's disposition, study-group
+CSVs and explicit import mappings. It performs no network requests or formula
+evaluation. Formula cells and contradictory dates stay excluded and recorded;
+missing geometry stays unknown. Group labels are source research units, not
+claims of independent farms. For example:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/prepare_field_sources.py \
+  --raw-root /absolute/private/acquired-sources \
+  --output-dir /absolute/private/prepared-new
+```
+
+Review the generated source, mapping and unit notes before preview/commit.
+Onion laboratory measurements, Picketa model outputs and derived soybean yield
+remain separate evidence roles. Preparation does not grant redistribution or
+training rights; consult the source-specific catalog and original license.
+The prepared source-only development lane is separate from benchmark answers.
+
+The default Mac desktop launcher isolates inherited server environment
+variables. Its bundled application does not provision this optional EO worker
+or enable an imagery cache. The configured native server above is the exercised
+optional-imagery path.

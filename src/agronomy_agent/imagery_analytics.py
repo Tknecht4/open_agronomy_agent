@@ -12,6 +12,7 @@ import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import io
 import json
+import sqlite3
 import math
 import os
 from pathlib import Path
@@ -457,6 +458,52 @@ def analyze_scene(
     cache_root: str | Path, network_mode: str = "offline",
     start_date: str | None = None, end_date: str | None = None,
     buffer_m: int = 0, context_pixels: int | None = None,
+    budget_root: str | Path | None = None,
+    max_cache_bytes: int = 2 * 1024**3, min_free_bytes: int = 1024**3,
+) -> dict[str, Any]:
+    """Reuse verified chips or admit one bounded writer before public egress."""
+    from agronomy_agent.imagery_budget import reserve_cache, StorageRefusal, validate_policy
+    validate_policy(max_cache_bytes, min_free_bytes)
+    if network_mode not in ("offline", "online"):
+        raise ValueError("network_mode must be offline or online")
+    _, _, _, request_hash = _request_identity(
+        geometry, provider_id, scene_id, start_date, end_date, buffer_m, context_pixels)
+    supplied = Path(cache_root).expanduser()
+    if supplied.is_symlink():
+        raise ValueError("imagery cache root cannot be a symlink")
+    root = supplied.resolve()
+    repository = Path(__file__).resolve().parents[2]
+    if root.is_relative_to(repository):
+        raise ValueError("imagery cache must be outside the repository")
+    budget = Path(budget_root).expanduser() if budget_root is not None else supplied
+    if budget.is_symlink() or budget.resolve().is_relative_to(repository) or not root.is_relative_to(budget.resolve()):
+        raise ValueError("imagery budget root must contain the cache outside the repository")
+    try:
+        if (root / "imagery-v1.sqlite3").exists():
+            cached = ImageryStore(root, read_only=True).get(request_hash, scene_id=scene_id)
+            if cached:
+                return {**cached, "cache_hit": True}
+        if network_mode == "offline":
+            return {"status": "blocked_offline", "provider_id": provider_id,
+                    "scene_id": scene_id, "request_hash": request_hash,
+                    "reason": "no matching local chip"}
+        with reserve_cache(budget, max_cache_bytes=max_cache_bytes, min_free_bytes=min_free_bytes) as admission:
+            return _analyze_scene_admitted(
+                geometry, provider_id, scene_id, cache_root=root, network_mode=network_mode,
+                start_date=start_date, end_date=end_date, buffer_m=buffer_m,
+                context_pixels=context_pixels, admission=admission)
+    except StorageRefusal as exc:
+        return {"status": exc.status, "reason": exc.reason, "request_hash": request_hash}
+    except (OSError, RuntimeError, ValueError, sqlite3.Error) as exc:
+        return {"status": "storage_unavailable", "reason": "imagery_cache_unavailable",
+                "error_type": type(exc).__name__, "request_hash": request_hash}
+
+
+def _analyze_scene_admitted(
+    geometry: dict[str, Any], provider_id: str, scene_id: str | None = None, *,
+    cache_root: str | Path, network_mode: str = "offline",
+    start_date: str | None = None, end_date: str | None = None,
+    buffer_m: int = 0, context_pixels: int | None = None, admission: Any,
 ) -> dict[str, Any]:
     """Return a source-bound single-scene receipt; offline reuses exact cached work.
 
@@ -542,12 +589,16 @@ def analyze_scene(
         temp_names = {ext: root / f".{chip_hash}.{os.getpid()}.{threading.get_ident()}{ext}"
                       for ext in (".npz", ".png", ".json")}
         try:
-            with temp_names[".npz"].open("wb") as handle:
-                np.savez_compressed(handle, bands=bands, valid_mask=valid, field_mask=weights > 0,
+            packed = io.BytesIO()
+            np.savez_compressed(packed, bands=bands, valid_mask=valid, field_mask=weights > 0,
                                     field_weights=weights, fmask=fmask, ndvi=ndvi,
                                     metadata_json=_canonical(metadata).decode())
-            temp_names[".png"].write_bytes(_png(ndvi, valid, weights, Image))
-            temp_names[".json"].write_bytes(_canonical(receipt))
+            payloads = {".npz": packed.getvalue(), ".png": _png(ndvi, valid, weights, Image),
+                        ".json": _canonical(receipt)}
+            # Reserve enough for temporary files and index/journal overhead.
+            admission.ensure(sum(len(value) for value in payloads.values()) + 1024**2)
+            for ext, payload in payloads.items():
+                temp_names[ext].write_bytes(payload)
             for ext, name in ((".npz", names["npz"]), (".png", names["png"]), (".json", names["receipt"])):
                 os.replace(temp_names[ext], root / name)
         finally:
@@ -559,6 +610,9 @@ def analyze_scene(
         return {"status": "no_scene", "provider_id": provider_id, "scene_id": scene_id,
                 "request_hash": request_hash}
     except (OSError, RuntimeError, ValueError, httpx.HTTPError) as exc:
+        from agronomy_agent.imagery_budget import StorageRefusal
+        if isinstance(exc, StorageRefusal):
+            raise
         # Never render GDAL/httpx exception strings: they can contain a SAS URL.
         return {"status": "unavailable", "provider_id": provider_id, "scene_id": scene_id,
                 "request_hash": request_hash, "error_type": type(exc).__name__,

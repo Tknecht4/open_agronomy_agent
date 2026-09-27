@@ -115,6 +115,9 @@ def test_worker_environment_has_no_account_credentials(tmp_path, monkeypatch):
     monkeypatch.setenv("GOOGLE_APPLICATION_CREDENTIALS", "/private/credentials")
     monkeypatch.setenv("HF_TOKEN", "private")
     def run(command, **kwargs):
+        assert command[1:3] == ["-m", "agronomy_agent.imagery_worker"]
+        assert command[command.index("--max-cache-bytes") + 1] == str(settings.imagery_cache_max_bytes)
+        assert command[command.index("--min-free-bytes") + 1] == str(settings.imagery_min_free_bytes)
         assert "--online" not in command
         assert "GOOGLE_APPLICATION_CREDENTIALS" not in kwargs["env"]
         assert "HF_TOKEN" not in kwargs["env"]
@@ -123,3 +126,15 @@ def test_worker_environment_has_no_account_credentials(tmp_path, monkeypatch):
         return type("Completed", (), {"returncode": 2})()
     monkeypatch.setattr(service.subprocess, "run", run)
     assert service._run_worker(settings, tmp_path / "c", {}, PAYLOAD)["status"] == "blocked_offline"
+
+
+def test_storage_policy_survives_app_settings_and_returns_typed_refusal(runtime, monkeypatch):
+    client, field_id, settings = runtime
+    monkeypatch.setattr(service, "_run_worker", lambda *a: {"status": "storage_limit", "reason": "free_disk_reserve_reached"})
+    base = f"/api/demo/fields/{field_id}/imagery"
+    availability = client.get(base + "/analytics", headers=OWNER).json()
+    assert availability["storage_policy"]["max_cache_bytes"] == settings.imagery_cache_max_bytes
+    assert availability["storage_policy"]["eviction"] == "none"
+    result = client.post(base + "/analyze", headers=OWNER, json=PAYLOAD)
+    assert result.json()["status"] == "storage_limit"
+    assert "preview_url" not in result.json()

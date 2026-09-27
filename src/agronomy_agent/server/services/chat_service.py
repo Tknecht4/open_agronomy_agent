@@ -1000,7 +1000,10 @@ def _run_turn_impl(
 
     postprocess_span = profiler.span("agent.answer.postprocess", input_size=len(answer)) if profiler else nullcontext()
     with postprocess_span:
-        structured_answer = render_structured_answer(answer.strip(), trace=trace_store_payload, question=message)
+        structured_answer = render_structured_answer(
+            answer.strip(), trace=trace_store_payload, question=message,
+            trusted_field_context=field_context if isinstance(field_context, dict) else None,
+        )
         answer = structured_answer.answer
         trace_store_payload["structured_answer"] = structured_answer.as_record()
     trace_store_payload["metadata"]["answer_stages"] = {

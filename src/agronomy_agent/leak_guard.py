@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from html import unescape
 
 
-LEAK_GUARD_VERSION = "phase5.leak_guard.v3"
+LEAK_GUARD_VERSION = "phase5.leak_guard.v4"
 
 _LABEL_SEPARATOR = r"[\s_-]+"
 
@@ -75,13 +75,14 @@ class LeakFinding:
         }
 
 
-def detect_prompt_leaks(answer_text: str) -> list[LeakFinding]:
+def detect_prompt_leaks(answer_text: str, *, literal_identifiers: tuple[str, ...] = ()) -> list[LeakFinding]:
     findings: list[LeakFinding] = []
     scan_text = _normalize_for_leak_scan(answer_text)
     for leak_class, severity, pattern in _LEAK_PATTERNS:
         match = next(
             (candidate for candidate in pattern.finditer(scan_text)
-             if not (leak_class == "eval_regex_fragment" and _is_json_array(candidate.group(0)))),
+             if not (leak_class == "eval_regex_fragment" and _is_json_array(candidate.group(0)))
+             and not (leak_class == "raw_source_id" and candidate.group(0) in literal_identifiers)),
             None,
         )
         if not match:

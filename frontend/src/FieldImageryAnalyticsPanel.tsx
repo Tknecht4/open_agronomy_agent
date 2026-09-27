@@ -5,7 +5,7 @@ import './FieldImageryAnalyticsPanel.css'
 type AnalyticsAvailability = { status: 'ready' | 'not_configured'; network_mode: string }
 type IndexStats = { mean?: number | null; min?: number | null; max?: number | null; area_m2?: number | null }
 type AnalyticsReceipt = {
-  status: 'available' | 'empty_valid_area' | 'empty_field_mask' | 'blocked_offline' | 'no_scene' | 'unavailable' | 'not_configured' | 'busy'
+  status: 'available' | 'empty_valid_area' | 'empty_field_mask' | 'blocked_offline' | 'no_scene' | 'unavailable' | 'not_configured' | 'busy' | 'storage_limit' | 'storage_unavailable'
   provider_id?: string
   scene_id?: string | null
   source?: {
@@ -55,6 +55,8 @@ function statusText(receipt: AnalyticsReceipt): string {
   if (receipt.status === 'no_scene') return 'No matching HLS scene was found in this date window.'
   if (receipt.status === 'not_configured') return 'Optional imagery processing is not configured in this runtime.'
   if (receipt.status === 'busy') return 'Imagery processing is busy. Try again shortly.'
+  if (receipt.status === 'storage_limit') return 'The imagery storage limit or free-disk reserve has been reached. Existing cached analyses remain available. Review local storage settings before requesting more imagery.'
+  if (receipt.status === 'storage_unavailable') return 'The local imagery cache could not be verified or opened. No new imagery was fetched.'
   return receipt.message || receipt.reason || 'This scene could not be processed. No index value is available.'
 }
 

@@ -555,7 +555,20 @@
     "docs/reviews/artifacts/field-data-expansion-20260927/source-catalog.csv",
     "docs/reviews/artifacts/field-data-expansion-20260927/source-catalog.json",
     "docs/reviews/artifacts/field-data-expansion-20260927/us-candidates.json",
-    "docs/reviews/artifacts/field-data-expansion-20260927/us-notes.md"
+    "docs/reviews/artifacts/field-data-expansion-20260927/us-notes.md",
+    "docs/reviews/field-data-merge-readiness-20260927.md",
+    "scripts/migrate_field_source_blobs.py",
+    "scripts/prepare_field_sources.py",
+    "scripts/rehearse_field_source_imports.py",
+    "tests/test_field_source_blobs.py",
+    "tests/test_field_source_preparation.py",
+    "tests/test_imagery_budget.py",
+    "docs/reviews/artifacts/field-data-merge-20260927/preparation-receipt.json",
+    "docs/reviews/artifacts/field-data-merge-20260927/preparation.md",
+    "docs/reviews/artifacts/field-data-merge-20260927/review.md",
+    "docs/reviews/artifacts/field-data-merge-20260927/product-rehearsal.json",
+    "docs/reviews/artifacts/field-data-merge-20260927/product-rehearsal.md",
+    "docs/reviews/artifacts/field-data-merge-20260927/verification.json"
   ],
   "trees": [
     "src",

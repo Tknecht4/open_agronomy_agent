@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from agronomy_agent.field_data import parse_table, safe_number
+from agronomy_agent.server.storage.field_source_blobs import BLOB, put_source_blob, read_source
 
 MAX_QUERY_ROWS = 100
 MAX_SNAPSHOT_ROWS = 8
@@ -85,11 +86,12 @@ def preview_import(
         with store._cursor() as cursor:
             cursor.execute("BEGIN IMMEDIATE")
             bound = _assert_field(cursor, field_id, field)
+            put_source_blob(cursor, bound["workspace_id"], source_sha256, content)
             cursor.execute(
                 """INSERT INTO field_data_imports
-                (id, field_id, workspace_id, actor_id, filename, source_bytes, source_sha256,
-                 profile_json, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'preview', ?)""",
-                (import_id, field_id, bound["workspace_id"], actor_id, parsed["filename"], content,
+                (id, field_id, workspace_id, actor_id, filename, source_bytes, source_storage, source_sha256,
+                 profile_json, status, created_at) VALUES (?, ?, ?, ?, ?, X'', ?, ?, ?, 'preview', ?)""",
+                (import_id, field_id, bound["workspace_id"], actor_id, parsed["filename"], BLOB,
                  source_sha256, _json(profile), _now()),
             )
     return {
@@ -193,13 +195,14 @@ def commit_import(store: Any, field: dict[str, Any], import_id: str, mapping: di
     with store._field_event_lock:
         with store._cursor() as cursor:
             cursor.execute("BEGIN IMMEDIATE")
-            _assert_field(cursor, field_id, field)
+            bound = _assert_field(cursor, field_id, field)
             imported = cursor.execute("SELECT * FROM field_data_imports WHERE id = ? AND field_id = ?", (import_id, field_id)).fetchone()
             if imported is None:
                 raise ValueError("unknown import for field")
-            if hashlib.sha256(bytes(imported["source_bytes"])).hexdigest() != imported["source_sha256"]:
-                raise ValueError("stored source checksum mismatch")
-            parsed = parse_table(imported["filename"], bytes(imported["source_bytes"]), json.loads(imported["profile_json"])["encoding"] if imported["filename"].lower().endswith(("csv", "tsv", "tab")) else None)
+            if imported["workspace_id"] != bound["workspace_id"]:
+                raise ValueError("field workspace mismatch")
+            source = read_source(cursor, imported)
+            parsed = parse_table(imported["filename"], source, json.loads(imported["profile_json"])["encoding"] if imported["filename"].lower().endswith(("csv", "tsv", "tab")) else None)
             normalized, rows = _validate_mapping(mapping, parsed)
             mapping_hash = _hash(normalized)
             if imported["status"] == "committed":
@@ -270,12 +273,13 @@ def query_import(store: Any, field_id: str, import_id: str, query: dict[str, Any
         raise ValueError("query column must be text")
     with store._field_event_lock:
         with store._cursor() as cursor:
-            _assert_field(cursor, field_id)
+            bound = _assert_field(cursor, field_id)
             imported = cursor.execute("SELECT * FROM field_data_imports WHERE id = ? AND field_id = ? AND status = 'committed'", (import_id, field_id)).fetchone()
             if imported is None:
                 raise ValueError("committed import not found for field")
-            if hashlib.sha256(bytes(imported["source_bytes"])).hexdigest() != imported["source_sha256"]:
-                raise ValueError("stored source checksum mismatch")
+            if imported["workspace_id"] != bound["workspace_id"]:
+                raise ValueError("field workspace mismatch")
+            read_source(cursor, imported)
             mapping = json.loads(imported["mapping_json"])
             if _hash(mapping) != imported["mapping_sha256"]:
                 raise ValueError("stored mapping checksum mismatch")

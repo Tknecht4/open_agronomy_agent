@@ -141,3 +141,34 @@ def test_stored_table_reaches_production_receipts_and_client_cannot_supply_it(ru
     with pytest.raises(ValueError, match="workspace binding"):
         _with_stored_field_data(store, session_context={**context, "field_access_workspace_id": "different"}, field_context=context["field_context"])
     store._conn.close()
+
+
+def test_source_named_column_answer_survives_http_and_persistence(runtime):
+    client, field_id, settings = runtime
+    from dataclasses import replace
+    client = TestClient(create_app(replace(settings, allow_model_id_override=True)))
+    content = CONTENT.replace(b"yield_kg_ha", b"source_yd")
+    uploaded = client.post(f"/api/demo/fields/{field_id}/data/preview", headers=OWNER,
+        json={"filename": "study.csv", "base64_content": base64.b64encode(content).decode()})
+    assert uploaded.status_code == 201
+    reviewed = mapping()
+    reviewed["columns"][1].update(column="source_yd", label="Seed yield")
+    import_id = uploaded.json()["import_id"]
+    assert client.post(f"/api/demo/fields/{field_id}/data/{import_id}/commit", headers=OWNER,
+                       json={"mapping": reviewed}).status_code == 200
+    session = client.post("/api/sessions", headers=OWNER, json={"title": "Source column", "consent": {}}).json()
+    response = client.post(f"/api/sessions/{session['session_id']}/turns", headers=OWNER, json={
+        "message": "What is the mean source_yd in my uploaded data?", "mode": "agronomic_rag",
+        "model_id": "mock", "session_context": {"field_context_id": field_id}, "max_tokens": 80})
+    assert response.status_code == 200, response.text
+    turn = response.json()["turn"]
+    executed = next(item for item in turn["trace"]["tool_invocations"]
+                    if item["tool_id"] == "field_table_query" and item["status"] == "success")
+    assert turn["answer"] == executed["payload"]["answer"]
+    assert "Mean source_yd: 3000" in turn["answer"]
+    assert turn["trace"]["structured_answer"]["answer"] == turn["answer"]
+    import sqlite3
+    with sqlite3.connect(settings.db_path) as connection:
+        saved = connection.execute("SELECT answer FROM turns WHERE id = ?", (response.json()["turn_id"],)).fetchone()[0]
+    assert saved == turn["answer"]
+    client.close()

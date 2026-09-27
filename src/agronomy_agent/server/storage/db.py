@@ -26,6 +26,7 @@ from agronomy_agent.field_measurements import validate_field_event_payload
 from agronomy_agent.server.services.field_context_quality import evaluate_field_context_quality
 from agronomy_agent.server.services.privacy_boundary import minimized_export_trace_payload
 from agronomy_agent.server.storage.backup import assert_no_pending_restore
+from agronomy_agent.server.storage.field_source_blobs import ensure_source_schema
 
 
 def _now() -> str:
@@ -99,6 +100,7 @@ class TraceStore:
                     actor_id TEXT NOT NULL,
                     filename TEXT NOT NULL,
                     source_bytes BLOB NOT NULL,
+                    source_storage TEXT NOT NULL DEFAULT 'inline-v1',
                     source_sha256 TEXT NOT NULL,
                     profile_json TEXT NOT NULL,
                     status TEXT NOT NULL CHECK(status IN ('preview', 'committed')),
@@ -111,6 +113,7 @@ class TraceStore:
                 )
                 """
             )
+            ensure_source_schema(cursor)
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_field_data_imports_field ON field_data_imports(field_id, status)")
             cursor.execute(
                 """

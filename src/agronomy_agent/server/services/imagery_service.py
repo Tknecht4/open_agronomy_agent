@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sqlite3
 import tempfile
 import threading
 from typing import Any
@@ -36,7 +37,10 @@ def geometry_hash(geometry: dict[str, Any]) -> str:
 
 def readiness(settings: Any) -> dict[str, Any]:
     configured = bool(settings.imagery_cache_root and settings.imagery_worker_python)
-    return {"status": "ready" if configured else "not_configured", "network_mode": settings.network_mode}
+    return {"status": "ready" if configured else "not_configured", "network_mode": settings.network_mode,
+            "storage_policy": {"max_cache_bytes": settings.imagery_cache_max_bytes,
+                               "min_free_bytes": settings.imagery_min_free_bytes,
+                               "eviction": "none"}}
 
 
 def field_cache(settings: Any, field: dict[str, Any]) -> Path | None:
@@ -49,8 +53,6 @@ def field_cache(settings: Any, field: dict[str, Any]) -> Path | None:
     child = root / hashlib.sha256(identity.encode()).hexdigest()
     if child.is_symlink():
         raise ValueError("imagery field cache is invalid")
-    root.mkdir(mode=0o700, parents=True, exist_ok=True)
-    root.chmod(0o700)
     return child
 
 
@@ -71,9 +73,12 @@ def _run_worker(settings: Any, cache: Path, geometry: dict[str, Any], payload: d
         geometry_path = Path(temporary) / "geometry.json"
         geometry_path.write_text(json.dumps(geometry), encoding="utf-8")
         geometry_path.chmod(0o600)
-        command = [str(settings.imagery_worker_python), str(REPO_ROOT / "scripts/analyze_field_imagery.py"),
+        command = [str(settings.imagery_worker_python), "-m", "agronomy_agent.imagery_worker",
                    "--geometry", str(geometry_path), "--cache-root", str(cache),
-                   "--provider", payload["provider_id"], "--buffer-m", str(payload.get("buffer_m", 0))]
+                   "--provider", payload["provider_id"], "--buffer-m", str(payload.get("buffer_m", 0)),
+                   "--budget-root", str(settings.imagery_cache_root),
+                   "--max-cache-bytes", str(settings.imagery_cache_max_bytes),
+                   "--min-free-bytes", str(settings.imagery_min_free_bytes)]
         for name in ("scene_id", "start_date", "end_date"):
             if payload.get(name):
                 command.extend(["--" + name.replace("_", "-"), payload[name]])
@@ -99,7 +104,10 @@ def analyze(settings: Any, field: dict[str, Any], geometry: dict[str, Any], payl
     cache = field_cache(settings, field)
     if cache is None or settings.imagery_worker_python is None:
         return {"status": "not_configured"}
-    cached = ImageryStore(cache).get(expected_request, scene_id=payload.get("scene_id"))
+    try:
+        cached = ImageryStore(cache, read_only=True).get(expected_request, scene_id=payload.get("scene_id")) if (cache / "imagery-v1.sqlite3").exists() else None
+    except (OSError, RuntimeError, sqlite3.Error, ValueError):
+        return {"status": "storage_unavailable", "reason": "imagery_cache_unavailable"}
     if cached:
         return public_receipt({**cached, "cache_hit": True}, field["id"])
     if settings.network_mode == "offline":
@@ -110,12 +118,12 @@ def analyze(settings: Any, field: dict[str, Any], geometry: dict[str, Any], payl
         result = _run_worker(settings, cache, geometry, payload)
         if result.get("status") in {"available", "empty_valid_area"}:
             # Read back independently rather than trust worker stdout or paths.
-            stored = ImageryStore(cache).get_by_chip_hash(result.get("chip_hash", ""))
+            stored = ImageryStore(cache, read_only=True).get_by_chip_hash(result.get("chip_hash", ""))
             if not stored or stored.get("geometry_hash") != expected_geometry or stored.get("request_hash") != expected_request:
                 raise ValueError("imagery worker result binding failed")
             result = stored
         return public_receipt(result, field["id"])
-    except (OSError, ValueError, subprocess.TimeoutExpired):
+    except (OSError, ValueError, RuntimeError, sqlite3.Error, subprocess.TimeoutExpired):
         return {"status": "unavailable", "reason": "imagery worker failed or exceeded its time limit"}
     finally:
         _WORKER_SLOT.release()
@@ -126,8 +134,11 @@ def preview(settings: Any, field: dict[str, Any], geometry: dict[str, Any], chip
     cache = field_cache(settings, field)
     if cache is None or not cache.exists():
         return None
-    store = ImageryStore(cache)
-    result = store.get_by_chip_hash(chip_hash)
+    try:
+        store = ImageryStore(cache, read_only=True)
+        result = store.get_by_chip_hash(chip_hash)
+    except (OSError, RuntimeError, sqlite3.Error, ValueError):
+        return None
     if (result is None or result.get("geometry_hash") != geometry_hash(geometry)
             or result.get("preview_version") != PREVIEW_VERSION):
         return None

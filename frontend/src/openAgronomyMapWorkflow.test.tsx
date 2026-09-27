@@ -1685,7 +1685,7 @@ describe('Open Agronomy map upload workflow', () => {
     expect(fetchMock.mock.calls.filter(([url]) => String(url) === '/api/geo/priors')).toHaveLength(priorCallsBeforeSave)
     expect(screen.getByText('Saved · no location')).toBeInTheDocument()
     openPrimaryPage('Map')
-    expect(screen.getByText('No location or boundary recorded')).toBeInTheDocument()
+    expect(screen.getByText('No location selected')).toBeInTheDocument()
   })
 
   it('enables imagery for a saved polygon without acreage and blocks it after unsaved coordinate changes', async () => {

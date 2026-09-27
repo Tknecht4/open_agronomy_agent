@@ -53,10 +53,13 @@ def render_structured_answer(
     *,
     trace: dict[str, Any] | None = None,
     question: str | None = None,
+    trusted_field_context: dict[str, Any] | None = None,
 ) -> StructuredAnswer:
-    leak_findings = detect_prompt_leaks(answer_text)
     trace = trace or {}
-    sanitized = _sanitize_markdown(_strip_leaking_lines(answer_text) if leak_findings else answer_text.strip())
+    literal_identifiers = _validated_field_column_identifiers(
+        answer_text, trace, question, trusted_field_context)
+    leak_findings = detect_prompt_leaks(answer_text, literal_identifiers=literal_identifiers)
+    sanitized = _sanitize_markdown(_strip_leaking_lines(answer_text, literal_identifiers=literal_identifiers) if leak_findings else answer_text.strip())
     metadata = trace.get("metadata") or {}
     retrieval_policy = str(metadata.get("retrieval_policy") or "")
     answer_profile = str(metadata.get("answer_policy_profile") or "")
@@ -895,10 +898,46 @@ def _append_to_labeled_line(answer_text: str, label: str, sentence: str) -> str:
     return f"{stripped}\n\n**{label}**\n\n{sentence.strip()}"
 
 
-def _strip_leaking_lines(answer_text: str) -> str:
+def _validated_field_column_identifiers(
+    answer_text: str, trace: dict[str, Any], question: str | None,
+    trusted_field_context: dict[str, Any] | None,
+) -> tuple[str, ...]:
+    """Allow literal column names only after exact replay against stored context.
+
+    A trace's own field snapshot or a deterministic status label is insufficient.
+    The caller supplies the authorized, server-loaded snapshot separately. Other
+    leak classes and identifiers elsewhere on the same line remain detectable.
+    """
+    from agronomy_agent.answerability import validated_deterministic_tool_execution
+
+    metadata = trace.get("metadata") or {}
+    if not question or not trusted_field_context or metadata.get("generation_path") != "deterministic_tool_result":
+        return ()
+    results = [item for item in trace.get("tool_invocations", [])
+               if isinstance(item, dict) and item.get("tool_id") == "field_table_query"
+               and item.get("status") == "success"]
+    if len(results) != 1:
+        return ()
+    result = results[0]
+    payload = result.get("payload") or {}
+    if (answer_text != payload.get("answer")
+            or result.get("result_id") not in metadata.get("tool_result_ids", [])
+            or not validated_deterministic_tool_execution(
+                question, metadata.get("tool_plan"), results,
+                field_context=trusted_field_context)):
+        return ()
+    receipt = payload.get("query_receipt") or {}
+    for imported in trusted_field_context.get("field_data", {}).get("imports", []):
+        if all(imported.get(key) == receipt.get(key) for key in ("import_id", "source_sha256", "mapping_sha256")):
+            return tuple(column["column"] for column in imported.get("columns", [])
+                         if isinstance(column.get("column"), str))
+    return ()
+
+
+def _strip_leaking_lines(answer_text: str, *, literal_identifiers: tuple[str, ...] = ()) -> str:
     kept: list[str] = []
     for line in answer_text.splitlines():
-        if detect_prompt_leaks(line):
+        if detect_prompt_leaks(line, literal_identifiers=literal_identifiers):
             continue
         kept.append(line)
     cleaned = "\n".join(kept).strip()

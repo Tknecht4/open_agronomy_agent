@@ -30,18 +30,23 @@ def _sha(data: bytes) -> str:
 
 
 class ImageryStore:
-    def __init__(self, root: str | Path):
+    def __init__(self, root: str | Path, *, read_only: bool = False):
+        self.read_only = read_only
+        self._readable = False
         supplied = Path(root).expanduser()
         if supplied.is_symlink():
             raise ValueError("imagery cache root cannot be a symlink")
         self.root = supplied.resolve()
+        self.database = self.root / "imagery-v1.sqlite3"  # Retain existing index identity.
+        if self.database.is_symlink():
+            raise ValueError("imagery index cannot be a symlink")
+        if read_only:
+            self._readable = self._read_only_preflight()
+            return
         self.root.mkdir(mode=0o700, parents=True, exist_ok=True)
         if not self.root.is_dir():
             raise ValueError("imagery cache root must be a directory")
         self.root.chmod(0o700)
-        self.database = self.root / "imagery-v1.sqlite3"  # Retain existing index identity.
-        if self.database.is_symlink():
-            raise ValueError("imagery index cannot be a symlink")
         if not self.database.exists():
             try:
                 fd = os.open(self.database, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
@@ -91,8 +96,63 @@ class ImageryStore:
             elif versions != [SCHEMA_VERSION]:
                 raise RuntimeError("unsupported imagery index version")
 
+    def _read_only_preflight(self) -> bool:
+        """Reject absent, legacy, and WAL indexes without creating sidecars."""
+        if not self.root.is_dir() or not self.database.exists():
+            return False
+        if not self.database.is_file():
+            raise ValueError("imagery index is not a regular file")
+        for suffix in ("-wal", "-shm"):
+            sidecar = self.root / (self.database.name + suffix)
+            if sidecar.exists() or sidecar.is_symlink():
+                raise RuntimeError("WAL-mode imagery index unavailable for read-only lookup")
+        try:
+            fd = os.open(self.database, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+            try:
+                info = os.fstat(fd)
+                header = os.read(fd, 100)
+            finally:
+                os.close(fd)
+            if not stat.S_ISREG(info.st_mode):
+                raise ValueError("imagery index is not a regular file")
+            if info.st_size == 0:
+                return False
+            if info.st_size < 100 or header[:16] != b"SQLite format 3\x00":
+                raise ValueError("invalid imagery index header")
+            if header[18:20] != b"\x01\x01":
+                raise RuntimeError("WAL-mode or unsupported imagery index unavailable for read-only lookup")
+            # mode=ro still obeys rollback-journal locks. WAL is rejected above
+            # and in the header; immutable=1 would ignore active WAL commits.
+            self._readable = True
+            with self._connect() as db:
+                versions = [row[0] for row in db.execute("SELECT version FROM schema_identity")]
+                if versions == [1]:
+                    return False
+                if versions != [SCHEMA_VERSION]:
+                    raise RuntimeError("unsupported imagery index version")
+                columns = {row[1] for row in db.execute("PRAGMA table_info(chips)")}
+                if not {
+                    "npz_sha256", "png_sha256", "receipt_sha256", "receipt_file_sha256"
+                }.issubset(columns):
+                    raise RuntimeError("incomplete hashed imagery index schema")
+                if db.execute("PRAGMA journal_mode").fetchone()[0].lower() != "delete":
+                    raise RuntimeError("unsupported imagery index journal mode")
+            return True
+        except sqlite3.Error as exc:
+            raise RuntimeError("imagery index unreadable") from exc
+        except OSError as exc:
+            raise RuntimeError("imagery index cannot be opened read-only") from exc
+        finally:
+            self._readable = False
+
     def _connect(self) -> sqlite3.Connection:
-        db = sqlite3.connect(self.database, timeout=15)
+        if self.read_only:
+            if not self._readable:
+                raise RuntimeError("read-only imagery index unavailable")
+            db = sqlite3.connect(self.database.as_uri() + "?mode=ro", uri=True, timeout=15)
+            db.execute("PRAGMA query_only=ON")
+        else:
+            db = sqlite3.connect(self.database, timeout=15)
         db.row_factory = sqlite3.Row
         return db
 
@@ -110,7 +170,8 @@ class ImageryStore:
             info = os.fstat(fd)
             if not stat.S_ISREG(info.st_mode) or info.st_size > _LIMITS[kind]:
                 raise ValueError("invalid imagery cache file")
-            os.fchmod(fd, 0o600)
+            if not self.read_only:
+                os.fchmod(fd, 0o600)
             with os.fdopen(fd, "rb", closefd=False) as handle:
                 data = handle.read(_LIMITS[kind] + 1)
             if len(data) > _LIMITS[kind]:
@@ -135,6 +196,8 @@ class ImageryStore:
         return {kind: self._file_bytes(name, kind) for kind, name in names.items()}
 
     def put(self, receipt: dict[str, Any], bounds: tuple[float, float, float, float]) -> None:
+        if self.read_only:
+            raise RuntimeError("read-only imagery store cannot write")
         names = self._names(receipt)
         payloads = self._payloads(names)
         stored = json.loads(payloads["receipt"])
@@ -251,6 +314,9 @@ class ImageryStore:
 
     def _verified_row(self, row: sqlite3.Row) -> dict[str, Any] | None:
         try:
+            if self.read_only and any(row[name] is None for name in
+                    ("npz_sha256", "png_sha256", "receipt_sha256", "receipt_file_sha256")):
+                return None
             names = {"npz": row["npz_name"], "png": row["png_name"],
                      "receipt": row["receipt_name"]}
             if names != {"npz": row["chip_hash"] + ".npz",
@@ -281,6 +347,8 @@ class ImageryStore:
             return None
 
     def get(self, request_hash: str, *, scene_id: str | None = None) -> dict[str, Any] | None:
+        if self.read_only and not self._readable:
+            return None
         with self._connect() as db:
             if scene_id is None:
                 rows = db.execute("SELECT * FROM chips WHERE request_hash=? ORDER BY acquired_at DESC,scene_id",
@@ -297,6 +365,8 @@ class ImageryStore:
     def get_by_chip_hash(self, chip_hash: str) -> dict[str, Any] | None:
         """Resolve only intact chips for an authenticated preview route."""
         if not isinstance(chip_hash, str) or not _HASH.fullmatch(chip_hash):
+            return None
+        if self.read_only and not self._readable:
             return None
         with self._connect() as db:
             row = db.execute("SELECT * FROM chips WHERE chip_hash=?", (chip_hash,)).fetchone()
@@ -322,6 +392,8 @@ class ImageryStore:
         return self.read_verified_artifact(chip_hash, "png")
 
     def intersects(self, bounds: tuple[float, float, float, float]) -> list[str]:
+        if self.read_only and not self._readable:
+            return []
         minx, miny, maxx, maxy = bounds
         with self._connect() as db:
             hashes = [row[0] for row in db.execute("""

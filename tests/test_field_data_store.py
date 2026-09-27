@@ -223,9 +223,9 @@ def test_stored_source_and_rows_are_verified_on_read(tmp_path: Path) -> None:
     import_id = preview_import(store, field, "owner", "values.csv", SOURCE)["import_id"]
     store._conn.execute("UPDATE field_data_imports SET source_bytes = ? WHERE id = ?", (b"corrupted", import_id))
     store._conn.commit()
-    with pytest.raises(ValueError, match="source checksum"):
+    with pytest.raises(ValueError, match="unexpected inline bytes"):
         commit_import(store, field, import_id, _mapping())
-    store._conn.execute("UPDATE field_data_imports SET source_bytes = ? WHERE id = ?", (SOURCE, import_id))
+    store._conn.execute("UPDATE field_data_imports SET source_bytes = X'' WHERE id = ?", (import_id,))
     store._conn.commit()
     commit_import(store, field, import_id, _mapping())
     store._conn.execute(
