@@ -1,0 +1,19 @@
+{
+  "status": "discovery_not_runtime_or_training_admission",
+  "checked_date": "2026-09-27",
+  "catalog_entry_count": 51,
+  "unique_source_url_count": 50,
+  "license_status_counts": {
+    "conditional": 14,
+    "confirmed_open": 28,
+    "unknown": 9
+  },
+  "imagery_reference_count": 37,
+  "query_count": 113,
+  "independent_field_count": null,
+  "independent_field_count_reason": "Source overlaps and physical identity not fully resolved; entry and pixel counts are not independent farms.",
+  "raw_data_and_dictionary_files": 10,
+  "raw_file_bytes_excluding_api_snapshots": 7534085,
+  "runtime_changed": false,
+  "model_inference_measured": false
+}

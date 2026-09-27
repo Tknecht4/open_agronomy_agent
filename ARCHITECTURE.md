@@ -44,6 +44,8 @@ path observed; it is not a second agent implementation.
 | Local runtime services | `server/rate_limit.py`, `server/storage/object_store.py` | In-memory rate limits and filesystem artifacts only; Redis/S3 selection was removed |
 | Training helpers | `training/` | Offline maintainer tooling only; no current Canadian source is training-authorized |
 | UI | `frontend/src/` | React cockpit, map, field state, source cards, benchmark viewer |
+| Reviewed field tables | `field_data.py`, `server/storage/field_data_store.py`, `field_data_capability.py` | Bounded intake, immutable mappings, private field queries and registered result lineage |
+| Anonymous imagery | `field_imagery.py`, `server/field_data_routes.py` | Polygon-bound scene discovery and public-access probe; no raster or yield analysis |
 | Operator workflows | `scripts/` | Thin CLIs around package contracts; generated outputs belong under ignored paths |
 
 ## Harnesses and what they prove

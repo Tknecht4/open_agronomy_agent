@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from dataclasses import dataclass
 from html import unescape
@@ -78,7 +79,11 @@ def detect_prompt_leaks(answer_text: str) -> list[LeakFinding]:
     findings: list[LeakFinding] = []
     scan_text = _normalize_for_leak_scan(answer_text)
     for leak_class, severity, pattern in _LEAK_PATTERNS:
-        match = pattern.search(scan_text)
+        match = next(
+            (candidate for candidate in pattern.finditer(scan_text)
+             if not (leak_class == "eval_regex_fragment" and _is_json_array(candidate.group(0)))),
+            None,
+        )
         if not match:
             continue
         findings.append(
@@ -89,6 +94,23 @@ def detect_prompt_leaks(answer_text: str) -> list[LeakFinding]:
             )
         )
     return findings
+
+
+def _is_json_array(fragment: str) -> bool:
+    """Ordinary data arrays are not regex character classes.
+
+    Keep explicit evaluation keys, regex flags, boundaries, quantifiers and
+    non-JSON character classes detectable. Continue scanning after a benign
+    array so it cannot hide a subsequent real leak on the same line.
+    """
+    if not fragment.startswith("[") or not fragment.endswith("]"):
+        return False
+    if re.search(r"required_patterns|forbidden_patterns|ask_for_patterns|forbidden_contains|\\b|\(\?i\)", fragment, re.IGNORECASE):
+        return False
+    try:
+        return isinstance(json.loads(fragment), list)
+    except (TypeError, ValueError):
+        return False
 
 
 def _normalize_for_leak_scan(answer_text: str) -> str:

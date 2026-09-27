@@ -26,6 +26,7 @@ This table is generated from `src/agronomy_agent/capability_registry.py`. “Imp
 | `fertility_guard` | guard | router, agno | none | native | yes | yes | yes | no |
 | `field_data_guard` | guard | router, agno | none | native | yes | yes | yes | no |
 | `field_record_audit_card` | source_card | http, agno, readiness | none | native | yes | yes | yes | no |
+| `field_table_query` | local_data | agno | none | native | yes | yes | yes | no |
 | `forage_feed_safety_extension` | source_card | http, agno, readiness | none | native | yes | yes | yes | no |
 | `forage_livestock_extension_corpus` | source_card | http, agno, readiness | none | native | yes | yes | yes | no |
 | `guard_notes` | guard | agno | none | native | yes | yes | no | no |

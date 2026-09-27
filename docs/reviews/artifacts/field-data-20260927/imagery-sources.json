@@ -1,0 +1,376 @@
+{
+  "checked_date": "2026-09-27",
+  "status": "research_only_no_activation",
+  "queries": [
+    "site.registry.opendata.aws hls Harmonized Landsat Sentinel",
+    "site.huggingface.co allenai OlmoEarth pretrained model",
+    "site.github.com allenai olmoearth_pretrain MPS CUDA",
+    "site.huggingface.co ibm-nasa-geospatial Prithvi EO 2.0 300M",
+    "site.earthdata.nasa.gov HLS STAC direct S3 access us-west-2 Earthdata login",
+    "site.registry.opendata.aws sentinel 2 l2a earth search requester pays landsat",
+    "site.github.com nasaharvest presto model parameters license cpu",
+    "site.developers.google.com earth-engine satellite embedding alphaearth annual 64 10m license",
+    "site.pytorch.org MPS backend torch.backends.mps.is_available",
+    "site.github.com/allenai/olmoearth_pretrain_minimal \"cpu\" \"load\"",
+    "site.github.com/nasaharvest/presto \"556\"",
+    "site.huggingface.co/torchgeo/presto license",
+    "site.github.com/allenai/olmoearth_pretrain_minimal \"map_location\"",
+    "site.github.com/allenai/olmoearth_pretrain \"mps\"",
+    "site.github.com/nasaharvest/presto \"556k\"",
+    "site.github.com/allenai/olmoearth_pretrain_minimal \"scaled_dot_product_attention\""
+  ],
+  "sources": [
+    {
+      "id": "hls-l30",
+      "title": "HLS L30 AWS registry",
+      "url": "https://registry.opendata.aws/nasa-hlsl30/",
+      "claim": "30m harmonized COGs; 2013 onward; controlled lp-prod-protected HLSL30.020 us-west-2; known QA issues",
+      "license": "CC BY 4.0 in registry",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "hls-s30",
+      "title": "HLS S30 AWS registry",
+      "url": "https://registry.opendata.aws/nasa-hlss30/",
+      "claim": "30m harmonized COGs; 2015 onward; controlled HLSS30.020; known QA issues",
+      "license": "CC BY 4.0 in registry",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "hls-guide",
+      "title": "HLS User Guide v2 April 2026",
+      "url": "https://lpdaac.usgs.gov/documents/1698/HLS_User_Guide_V2.pdf",
+      "claim": "Global coverage, native sensor bands/resolution, harmonization, QA and subsetting; processing latency differs slightly from access page",
+      "license": "Product rights separately documented in registry",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "hls-access",
+      "title": "NASA HLS Data Access and Tools",
+      "url": "https://hls.gsfc.nasa.gov/data-access-and-tools/",
+      "claim": "Earthdata Login, CMR-STAC, HTTPS/S3, AppEEARS, Azure mirror; ~2-3 day latency",
+      "license": "Access documentation, not separate data license",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "hls-credentials",
+      "title": "LP DAAC in-region S3 credentials",
+      "url": "https://data.lpdaac.earthdatacloud.nasa.gov/s3credentialsREADME",
+      "claim": "Earthdata-authenticated temporary same-region read-only S3 credentials",
+      "license": "Access documentation",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "hls-region",
+      "title": "NASA support HLS S3 region clarification",
+      "url": "https://forum.earthdata.nasa.gov/viewtopic.php?t=3995",
+      "claim": "NASA support states direct S3 requests must originate in us-west-2",
+      "license": "Support documentation",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "s2-cogs",
+      "title": "Sentinel-2 COG AWS registry",
+      "url": "https://registry.opendata.aws/sentinel-2-l2a-cogs/",
+      "claim": "Anonymous Earth Search COG bucket and global COG record since December 2018",
+      "license": "Copernicus terms linked; retain attribution/terms snapshot",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "s2-original",
+      "title": "Sentinel-2 original AWS registry",
+      "url": "https://registry.opendata.aws/sentinel-2/",
+      "claim": "L2A anonymous versus L1C/zipped requester-pays distinctions",
+      "license": "Copernicus terms linked",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "landsat-aws",
+      "title": "USGS Landsat Commercial Cloud Data Access",
+      "url": "https://www.usgs.gov/landsat-missions/landsat-commercial-cloud-data-access",
+      "claim": "usgs-landsat AWS bucket is requester pays",
+      "license": "Cloud charges separate from Landsat rights; exact distribution terms not re-audited",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "earth-search",
+      "title": "Element84 Earth Search documentation",
+      "url": "https://github.com/Element84/earth-search/blob/main/README.md",
+      "claim": "Free STAC search; requester-pays asset URLs differ from public HTTPS",
+      "license": "Service/source-specific terms",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "olmo-collection",
+      "title": "Ai2 OlmoEarth collection",
+      "url": "https://huggingface.co/collections/allenai/olmoearth",
+      "claim": "v1, v1_1, v1_2 exact IDs; no v3 in inspected collection",
+      "license": "Model-specific",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "olmo-nano",
+      "title": "OlmoEarth v1_2 Nano card",
+      "url": "https://huggingface.co/allenai/OlmoEarth-v1_2-Nano",
+      "claim": "1.7M encoder parameters and supported satellite modalities",
+      "license": "OlmoEarth Artifact License",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "olmo-tiny",
+      "title": "OlmoEarth v1_2 Tiny card",
+      "url": "https://huggingface.co/allenai/OlmoEarth-v1_2-Tiny",
+      "claim": "Card rounds Tiny to 12M, package table 12.5M",
+      "license": "OlmoEarth Artifact License",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "olmo-small",
+      "title": "OlmoEarth v1_2 Small card",
+      "url": "https://huggingface.co/allenai/OlmoEarth-v1_2-Small",
+      "claim": "36M rounded encoder parameters",
+      "license": "OlmoEarth Artifact License",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "olmo-base",
+      "title": "OlmoEarth v1_2 Base card",
+      "url": "https://huggingface.co/allenai/OlmoEarth-v1_2-Base",
+      "claim": "114M; prose retains inconsistent v1_1 name",
+      "license": "OlmoEarth Artifact License",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "olmo-license",
+      "title": "OlmoEarth Artifact License",
+      "url": "https://huggingface.co/allenai/OlmoEarth-v1_2-Nano/blob/main/LICENSE.txt",
+      "claim": "Custom use restrictions and downstream derivative restrictions",
+      "license": "Custom license inspected; not legal advice",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "olmo-nano-files",
+      "title": "OlmoEarth Nano file listing",
+      "url": "https://huggingface.co/allenai/OlmoEarth-v1_2-Nano/tree/main",
+      "claim": "17 MB weights.pth metadata; weights not downloaded",
+      "license": "OlmoEarth Artifact License",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "olmo-tiny-files",
+      "title": "OlmoEarth Tiny file listing",
+      "url": "https://huggingface.co/allenai/OlmoEarth-v1_2-Tiny/tree/main",
+      "claim": "107 MB weights.pth metadata; weights not downloaded",
+      "license": "OlmoEarth Artifact License",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "olmo-minimal",
+      "title": "Ai2 minimal inference package",
+      "url": "https://github.com/allenai/olmoearth_pretrain_minimal",
+      "claim": "CPU tensor example; parameter table; band order; masks; encoder modalities and decode-only maps",
+      "license": "Artifact license linked; pin repo LICENSE before installation",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "olmo-minimal-deps",
+      "title": "Minimal package dependencies",
+      "url": "https://github.com/allenai/olmoearth_pretrain_minimal/blob/main/pyproject.toml",
+      "claim": "Python>=3.11 torch>=2.7; indexed page versions differed; not lockfile",
+      "license": "Repository license applies",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "olmo-train",
+      "title": "OlmoEarth training documentation",
+      "url": "https://github.com/allenai/olmoearth_pretrain/blob/main/docs/Pretraining.md",
+      "claim": "CUDA 12.8/PyTorch training environment and distributed GPU examples",
+      "license": "Repository license applies",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "olmo-deps",
+      "title": "OlmoEarth dependency source",
+      "url": "https://github.com/allenai/olmoearth_pretrain/blob/main/pyproject.toml",
+      "claim": "FlashAttention optional; no basis to claim CUDA-only inference from training instructions",
+      "license": "Repository license applies",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "olmo-materialize",
+      "title": "Official OlmoEarth embedding materialization tutorial",
+      "url": "https://github.com/allenai/rslearn/blob/master/docs/examples/OlmoEarthEmbeddings.md",
+      "claim": "Native modality acquisition/normalization; Sentinel-1 VV/VH and 12-band S2 workflow",
+      "license": "Code license distinct from imagery",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "prithvi-card",
+      "title": "Prithvi EO 2.0 300M family card",
+      "url": "https://huggingface.co/ibm-nasa-geospatial/Prithvi-EO-2.0-300M",
+      "claim": "5M tiny,100M,300M,600M families; six-band HLS pretraining",
+      "license": "Apache-2.0 model card; HLS rights separate",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "prithvi-tiny-files",
+      "title": "Prithvi tiny-TL files",
+      "url": "https://huggingface.co/ibm-nasa-geospatial/Prithvi-EO-2.0-tiny-TL/tree/main",
+      "claim": "129 MB complete checkpoint despite 5M advertised model; no download",
+      "license": "Apache-2.0",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "prithvi-300-files",
+      "title": "Prithvi 300M files",
+      "url": "https://huggingface.co/ibm-nasa-geospatial/Prithvi-EO-2.0-300M/tree/main",
+      "claim": "1.33 GB checkpoint metadata; no download",
+      "license": "Apache-2.0",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "prithvi-source",
+      "title": "Prithvi tiny-TL inference source",
+      "url": "https://huggingface.co/ibm-nasa-geospatial/Prithvi-EO-2.0-tiny-TL/blob/main/inference.py",
+      "claim": "Explicit CUDA-else-CPU; batch1; original four time frames; no MPS selection",
+      "license": "Apache-2.0",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "presto-code",
+      "title": "NASA Harvest Presto author code",
+      "url": "https://github.com/nasaharvest/presto",
+      "claim": "Per-pixel time-series encoder; masks/month/coordinates; downstream regression construction",
+      "license": "MIT code",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "presto-card",
+      "title": "TorchGeo Presto card",
+      "url": "https://huggingface.co/torchgeo/presto",
+      "claim": "Traceable rehost of author pretrained checkpoint",
+      "license": "MIT model card",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "presto-files",
+      "title": "TorchGeo Presto files",
+      "url": "https://huggingface.co/torchgeo/presto/tree/main",
+      "claim": "3.32 MB checkpoint; count not rederived; files not downloaded",
+      "license": "MIT model card",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "dofa",
+      "title": "DOFA author repository",
+      "url": "https://github.com/zhu-xlab/DOFA",
+      "claim": "Variable-channel wavelength-conditioned backbone; CUDA calls in examples",
+      "license": "MIT repo; exact selected weight terms unresolved",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "satmae",
+      "title": "SatMAE author repository",
+      "url": "https://github.com/sustainlab-group/SatMAE",
+      "claim": "Temporal and spectral MAE; multi-GPU training examples do not establish minimum inference hardware",
+      "license": "License separately inspected",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "satmae-license",
+      "title": "SatMAE license",
+      "url": "https://github.com/sustainlab-group/SatMAE/blob/main/LICENSE",
+      "claim": "Noncommercial restriction",
+      "license": "CC BY-NC 4.0",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "clay",
+      "title": "Clay model card",
+      "url": "https://huggingface.co/made-with-clay/Clay",
+      "claim": "Semantic embeddings and downstream tasks; code/model/dataset rights distinguished",
+      "license": "Apache-2.0 code/weights; ODC-BY maintained embeddings; CC BY docs",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "alphaearth-catalog",
+      "title": "AlphaEarth Satellite Embedding V1 catalog",
+      "url": "https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_SATELLITE_EMBEDDING_V1_ANNUAL",
+      "claim": "64D 10m annual vectors; CDL supervision; year metadata lags GCS README",
+      "license": "CC BY 4.0 dataset with required attribution",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "alphaearth-gcs",
+      "title": "AlphaEarth GCS data guide",
+      "url": "https://developers.google.com/earth-engine/guides/aef_on_gcs_readme",
+      "claim": "COG annual embeddings 2017-2025; provider pays July2026; verify actual item availability",
+      "license": "CC BY 4.0 dataset with required attribution",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    },
+    {
+      "id": "pytorch-mps",
+      "title": "PyTorch MPS backend documentation",
+      "url": "https://docs.pytorch.org/docs/main/notes/mps.html",
+      "claim": "General MPS device support/checks; not EO model-specific qualification",
+      "license": "Documentation only",
+      "evidence_status": "primary_page_inspected_not_locally_executed",
+      "checked_date": "2026-09-27"
+    }
+  ],
+  "limitations": [
+    "No model weights downloaded, dependencies installed, or inference run",
+    "No HLS asset authentication or range-read executed",
+    "Primary-page source/code inspection is not proof of MPS compatibility",
+    "Failed direct shell fetch: raw.githubusercontent.com DNS unavailable in sandbox; web used instead",
+    "Failed guessed dotted OlmoEarth version URLs resolved by official collection to underscore repository names",
+    "No relevant OlmoEarth MPS source found by exact search; unrelated OLMo LLM hits rejected"
+  ],
+  "local_observation": {
+    "provenance": "Owner agent read-only sysctl and project package metadata; communicated 2026-09-27",
+    "chip": "Apple M4",
+    "unified_memory_bytes": 17179869184,
+    "absent_packages": [
+      "torch",
+      "rasterio",
+      "xarray"
+    ],
+    "mlx_version": "0.32.2"
+  }
+}

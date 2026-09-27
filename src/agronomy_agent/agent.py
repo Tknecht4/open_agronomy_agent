@@ -41,7 +41,7 @@ from agronomy_agent.answerability import (
 )
 from agronomy_agent.answer_verifier import context_evidence_text, verify_answer
 from agronomy_agent.canada_sources import apply_canadian_coverage_disclosure, build_canadian_coverage_boundary
-from agronomy_agent.capability_registry import CAPABILITY_REGISTRY_SCHEMA_VERSION, capability_catalog
+from agronomy_agent.capability_registry import CAPABILITY_REGISTRY_SCHEMA_VERSION, capability_catalog, capability_registry
 from agronomy_agent.capability_planner import build_planner_input, plan_capabilities
 from agronomy_agent.codex_app_server import (
     BENCHMARK_EGRESS_ARTIFACT_CONTRACT_SCHEMA,
@@ -2415,20 +2415,13 @@ def build_context(
                 (),
             )
             tool_results = ()
-        if tool_results:
-            calculator_metadata = skill_metadata("agronomic_calculator")
-            tool_notes.extend(
-                ToolNote(
-                    name="agronomic_calculator",
-                    text=result.answer,
-                    skill_id=str(calculator_metadata["skill_id"]),
-                    provenance=tuple(str(item) for item in calculator_metadata["provenance"]),
-                    boundary=str(calculator_metadata["boundary"]),
-                    risk_class=str(calculator_metadata["risk_class"]),
-                    eval_tags=tuple(str(item) for item in calculator_metadata["eval_tags"]),
-                )
-                for result in tool_results
-            )
+        for result in tool_results:
+            result_spec = capability_registry().require(result.tool_id)
+            tool_notes.append(ToolNote(
+                name=result.tool_id, text=result.answer, skill_id=result_spec.version,
+                provenance=(result.provenance,), boundary=result_spec.boundary,
+                risk_class=result_spec.risk_class, eval_tags=result_spec.planner.triggers,
+            ))
         runtime_metadata["tool_plan"] = tool_plan.to_dict()
         runtime_metadata["tool_invocations"] = [
             invocation.to_dict() for invocation in tool_plan.invocations
@@ -3452,7 +3445,7 @@ def decide_evidence_intervention(
         "required_authority": decision.required_authority,
     }
     if decision.state == AnswerabilityState.ANSWER_DIRECTLY:
-        has_typed_result = validated_deterministic_tool_execution(question, plan, results)
+        has_typed_result = validated_deterministic_tool_execution(question, plan, results, field_context=runtime.get("answerability_field_context"))
         has_primary = bool(
             context is not None
             and context.evidence_handshake is not None
@@ -3907,7 +3900,7 @@ def deterministic_tool_response(
         for item in (runtime.get("tool_results") or ())
         if isinstance(item, Mapping)
     )
-    if validated_deterministic_tool_execution(question, plan, results):
+    if validated_deterministic_tool_execution(question, plan, results, field_context=runtime.get("answerability_field_context")):
         payload = results[0].get("payload") if isinstance(results[0], Mapping) else None
         answer = str((payload or {}).get("answer") or "").strip() if isinstance(payload, Mapping) else ""
         if answer:
@@ -3919,18 +3912,18 @@ def deterministic_tool_response(
                 and has_recognized_regulated_product(question)
                 and re.search(r"\bfor\s+(?:the\s+)?[a-z0-9][a-z0-9 .®™'/-]*[?.!]*\s*$", question, re.I)
             )
-            if named_product_conversion or re.search(
+            if results[0].get("tool_id") == "agronomic_calculator" and (named_product_conversion or re.search(
                 r"\b(?:product|herbicide|fungicide|insecticide|pesticide)\b.{0,40}\b(?:label|rate)\b",
                 question,
                 re.IGNORECASE,
-            ):
+            )):
                 answer += (
                     " This only converts the user-supplied number; it does not establish that a label is "
                     "current or applicable, does not establish label authority or product applicability, "
                     "and does not authorize use."
                 )
             return answer, "deterministic_tool_result"
-    if validated_deterministic_tool_clarification(question, plan, results) is not None:
+    if validated_deterministic_tool_clarification(question, plan, results, field_context=runtime.get("answerability_field_context")) is not None:
         clarification = str(plan.get("clarification") or "").strip()
         if clarification:
             return clarification, "deterministic_tool_clarification"
@@ -4430,6 +4423,7 @@ def build_benchmark_candidate_application_messages(
         question,
         context_tool_plan,
         context_tool_results,
+        field_context=field_context,
     )
     objective_context_rejected = bool(
         objective_multiple_choice
@@ -4525,6 +4519,7 @@ def generate_answer(
         question,
         context_tool_plan,
         context_tool_results,
+        field_context=field_context,
     )
     objective_context_rejected = bool(
         objective_multiple_choice

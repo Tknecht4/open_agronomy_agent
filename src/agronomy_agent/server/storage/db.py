@@ -92,6 +92,50 @@ class TraceStore:
         with self._cursor() as cursor:
             cursor.execute(
                 """
+                CREATE TABLE IF NOT EXISTS field_data_imports (
+                    id TEXT PRIMARY KEY,
+                    field_id TEXT NOT NULL,
+                    workspace_id TEXT NOT NULL,
+                    actor_id TEXT NOT NULL,
+                    filename TEXT NOT NULL,
+                    source_bytes BLOB NOT NULL,
+                    source_sha256 TEXT NOT NULL,
+                    profile_json TEXT NOT NULL,
+                    status TEXT NOT NULL CHECK(status IN ('preview', 'committed')),
+                    mapping_json TEXT,
+                    mapping_sha256 TEXT,
+                    manifest_json TEXT,
+                    created_at TEXT NOT NULL,
+                    committed_at TEXT,
+                    FOREIGN KEY(field_id) REFERENCES phase4_field_contexts(id)
+                )
+                """
+            )
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_field_data_imports_field ON field_data_imports(field_id, status)")
+            cursor.execute(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_field_data_committed_identity
+                ON field_data_imports(field_id, source_sha256, mapping_sha256)
+                WHERE status = 'committed'
+                """
+            )
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS field_data_rows (
+                    import_id TEXT NOT NULL,
+                    field_id TEXT NOT NULL,
+                    row_number INTEGER NOT NULL,
+                    locator_json TEXT NOT NULL,
+                    values_json TEXT NOT NULL,
+                    row_sha256 TEXT NOT NULL,
+                    PRIMARY KEY(import_id, row_number),
+                    FOREIGN KEY(import_id) REFERENCES field_data_imports(id)
+                )
+                """
+            )
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_field_data_rows_field ON field_data_rows(field_id, import_id)")
+            cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS sessions (
                     id TEXT PRIMARY KEY,
                     title TEXT NOT NULL,

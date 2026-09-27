@@ -34,6 +34,30 @@ beforeEach(() => { uploadMock.mockReset() })
 afterEach(() => { vi.clearAllMocks() })
 
 describe('new field setup', () => {
+  it('saves an explicitly data-only field with unknown location', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined)
+    openWizard(onSave)
+    moveToLocation()
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'No location yet · data only' }))
+    expect(screen.queryByTestId('mock-map')).not.toBeInTheDocument()
+    expect(screen.getByText(/map context and imagery require a valid location/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    expect(screen.getByText('Unknown · data only')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Save field' }))
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ name: 'North field', geometry: { kind: 'none' }, acres: '' })))
+  })
+
+  it('clears an earlier point when choosing data-only and requires a new point when switching back', async () => {
+    openWizard()
+    moveToLocation()
+    fireEvent.click(await screen.findByRole('button', { name: 'Set map point' }))
+    fireEvent.click(screen.getByRole('button', { name: 'No location yet · data only' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Place a pin' }))
+    expect(screen.getByTestId('mock-map')).toHaveAttribute('data-kind', 'none')
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled()
+  })
+
   it('requires a name, retains free-form crop and jurisdiction, and accepts zero coordinates', async () => {
     const onSave = vi.fn().mockResolvedValue(undefined)
     openWizard(onSave)

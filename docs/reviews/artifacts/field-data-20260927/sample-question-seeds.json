@@ -1,0 +1,186 @@
+{
+  "schema_version": "research_question_seeds.v1",
+  "status": "exposed_development_seeds_not_reviewed_benchmark",
+  "checked_date": "2026-09-27",
+  "runtime_admission": false,
+  "training_admission": false,
+  "interpretation_review": "pending independent agronomic review; numerical rows verified directly from downloaded CSVs",
+  "locator_convention": "1-based CSV logical record including header; not physical line numbers where quoted newlines occur",
+  "cases": [
+    {
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Data_from_Late-season_corn_stalk_nitrate_measurements_across_the_US_Midwest_from_2006_to_2018/24668283",
+      "source_path": "data/raw/field_data_research/20260927/us/corn_stalk_nitrate.csv",
+      "source_sha256": "5186e2ee41a6dfe975edcef44e6b10633e05dfde3dd2da4b3bb276e994a62513",
+      "license": "CC BY 4.0",
+      "attribution": "Laurent et al., Late-season corn stalk nitrate measurements across the US Midwest from 2006 to 2018, USDA Ag Data Commons, DOI 10.15482/USDA.ADC/1527976",
+      "csv_record_numbers_with_header_1": [
+        2,
+        3,
+        4
+      ],
+      "id": "nitrate-01",
+      "difficulty": "easy",
+      "question": "For field GSS2010OHMM015 in 2010, what previous crop, principal fertilizer form and seasonal N rate were reported?",
+      "expected": {
+        "previous_crop": "Soybean",
+        "form": "UAN",
+        "total_N_rate_kgha": 131.04,
+        "total_N_rate_lbac": 117
+      }
+    },
+    {
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Data_from_Late-season_corn_stalk_nitrate_measurements_across_the_US_Midwest_from_2006_to_2018/24668283",
+      "source_path": "data/raw/field_data_research/20260927/us/corn_stalk_nitrate.csv",
+      "source_sha256": "5186e2ee41a6dfe975edcef44e6b10633e05dfde3dd2da4b3bb276e994a62513",
+      "license": "CC BY 4.0",
+      "attribution": "Laurent et al., Late-season corn stalk nitrate measurements across the US Midwest from 2006 to 2018, USDA Ag Data Commons, DOI 10.15482/USDA.ADC/1527976",
+      "csv_record_numbers_with_header_1": [
+        2,
+        3,
+        4
+      ],
+      "id": "nitrate-02",
+      "difficulty": "medium",
+      "question": "There are three uploaded rows for GSS2010OHMM015. Should I add their N rates to obtain the field total?",
+      "expected": {
+        "answer": "No. The three rows are repeat stalk samples; each repeats the same seasonal field-level rate.",
+        "correct_reported_rate_kgha": 131.04,
+        "incorrect_triple_count_kgha": 393.12
+      },
+      "reason": "Requires entity grain and measurement vs management separation; not merely arithmetic."
+    },
+    {
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Data_from_Late-season_corn_stalk_nitrate_measurements_across_the_US_Midwest_from_2006_to_2018/24668283",
+      "source_path": "data/raw/field_data_research/20260927/us/corn_stalk_nitrate.csv",
+      "source_sha256": "5186e2ee41a6dfe975edcef44e6b10633e05dfde3dd2da4b3bb276e994a62513",
+      "license": "CC BY 4.0",
+      "attribution": "Laurent et al., Late-season corn stalk nitrate measurements across the US Midwest from 2006 to 2018, USDA Ag Data Commons, DOI 10.15482/USDA.ADC/1527976",
+      "csv_record_numbers_with_header_1": [
+        2,
+        3,
+        4
+      ],
+      "id": "nitrate-03",
+      "difficulty": "medium",
+      "question": "What is the arithmetic mean of the three recorded stalk nitrate values for GSS2010OHMM015, and is that the reported GM_ppm?",
+      "expected": {
+        "recorded_values": [
+          2129,
+          290,
+          101
+        ],
+        "arithmetic_mean": 840,
+        "reported_GM_ppm": 397,
+        "answer": "The arithmetic mean is 840; the reported geometric-mean field is 397. These are different statistics."
+      },
+      "reason": "Dictionary labels the nitrate metric Stalk_nitrate_N while CSV uses Stalk_nitrate_CSNT. The mapping needs an explicit documented alias; retain original column names."
+    },
+    {
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Data_from_Late-season_corn_stalk_nitrate_measurements_across_the_US_Midwest_from_2006_to_2018/24668283",
+      "source_path": "data/raw/field_data_research/20260927/us/corn_stalk_nitrate.csv",
+      "source_sha256": "5186e2ee41a6dfe975edcef44e6b10633e05dfde3dd2da4b3bb276e994a62513",
+      "license": "CC BY 4.0",
+      "attribution": "Laurent et al., Late-season corn stalk nitrate measurements across the US Midwest from 2006 to 2018, USDA Ag Data Commons, DOI 10.15482/USDA.ADC/1527976",
+      "csv_record_numbers_with_header_1": [
+        2,
+        3,
+        4
+      ],
+      "id": "nitrate-04",
+      "difficulty": "hard",
+      "question": "Can you retrieve satellite chips for GSS2010OHMM015 using the coordinates in my upload?",
+      "expected": {
+        "answerability": "insufficient_geometry",
+        "reason": "This field has blank county centroid coordinates. More generally the survey masks exact field locations for privacy; a county centroid is not a field boundary."
+      }
+    },
+    {
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Data_from_Late-season_corn_stalk_nitrate_measurements_across_the_US_Midwest_from_2006_to_2018/24668283",
+      "source_path": "data/raw/field_data_research/20260927/us/corn_stalk_nitrate.csv",
+      "source_sha256": "5186e2ee41a6dfe975edcef44e6b10633e05dfde3dd2da4b3bb276e994a62513",
+      "license": "CC BY 4.0",
+      "attribution": "Laurent et al., Late-season corn stalk nitrate measurements across the US Midwest from 2006 to 2018, USDA Ag Data Commons, DOI 10.15482/USDA.ADC/1527976",
+      "csv_record_numbers_with_header_1": [
+        2,
+        3,
+        4
+      ],
+      "id": "nitrate-05",
+      "difficulty": "expert",
+      "question": "Do these three stalk samples prove that the applied N increased this field\u2019s yield?",
+      "expected": {
+        "answerability": "not_identifiable",
+        "reason": "The upload has no measured yield or untreated randomized comparison for this field. Stalk N status alone cannot establish causal yield response."
+      }
+    },
+    {
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Data_from_Topographic_position_index_predicts_within-field_yield_variation_in_a_dryland_cereal_production_system/28914434",
+      "source_path": "data/raw/field_data_research/20260927/us/akron_modeling_data.csv",
+      "source_sha256": "a1599b9c523f4ed44efd9b7f0c3ba6baf9f263f7c274415c77b4eb81d623f38b",
+      "license": "CC0",
+      "attribution": "USDA Ag Data Commons, Topographic position index predicts within-field yield variation in a dryland cereal production system, record 28914434",
+      "id": "akron-01",
+      "difficulty": "easy",
+      "question": "What crop, year, management unit and yield appear in the first uploaded data row?",
+      "csv_record_numbers_with_header_1": [
+        2
+      ],
+      "expected": {
+        "crop": "Wheat",
+        "year": 2022,
+        "field": "S2",
+        "yield_kg_ha": 363.834926060268
+      }
+    },
+    {
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Data_from_Topographic_position_index_predicts_within-field_yield_variation_in_a_dryland_cereal_production_system/28914434",
+      "source_path": "data/raw/field_data_research/20260927/us/akron_modeling_data.csv",
+      "source_sha256": "a1599b9c523f4ed44efd9b7f0c3ba6baf9f263f7c274415c77b4eb81d623f38b",
+      "license": "CC0",
+      "attribution": "USDA Ag Data Commons, Topographic position index predicts within-field yield variation in a dryland cereal production system, record 28914434",
+      "id": "akron-02",
+      "difficulty": "medium",
+      "question": "For S2 in 2022, calculate the unweighted mean of the yield values at the sampled locations. Is that an area-weighted field yield?",
+      "csv_record_numbers_with_header_1": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "expected": {
+        "n": 13,
+        "unweighted_mean_kg_ha": 567.7894685731263,
+        "tolerance_kg_ha": 0.001,
+        "area_weighted_field_yield_known": false,
+        "boundary": "Sample-location mean only; not an area-weighted yield across the field."
+      }
+    },
+    {
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Data_from_Topographic_position_index_predicts_within-field_yield_variation_in_a_dryland_cereal_production_system/28914434",
+      "source_path": "data/raw/field_data_research/20260927/us/akron_modeling_data.csv",
+      "source_sha256": "a1599b9c523f4ed44efd9b7f0c3ba6baf9f263f7c274415c77b4eb81d623f38b",
+      "license": "CC0",
+      "attribution": "USDA Ag Data Commons, Topographic position index predicts within-field yield variation in a dryland cereal production system, record 28914434",
+      "id": "akron-03",
+      "difficulty": "hard",
+      "question": "Before comparing yields among crops, what moisture bases does the supplied data dictionary declare?",
+      "additional_source_path": "data/raw/field_data_research/20260927/us/akron_data_dictionary.csv",
+      "additional_source_sha256": "8d28eab66237bf0decb2da46570acefbd350b8b8a7a6732b34f2b55fffae1604",
+      "expected": {
+        "wheat_percent": 12.5,
+        "millet_percent": 12,
+        "corn_percent": 15.5,
+        "boundary": "Do not mix wet/dry conventions or infer a common moisture basis without a specified conversion."
+      }
+    }
+  ]
+}

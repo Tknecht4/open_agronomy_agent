@@ -123,6 +123,12 @@ The explicit pinned-model profiler requires a locally provisioned snapshot and `
 
 Artifacts use the configured local filesystem, request limits are in memory, and records use the application database (SQLite by default). Redis queues/rate limits and S3-compatible storage are unsupported; retired namespaced settings fail closed. Retained Postgres and identity-provider interfaces are separate and are not newly deployment-qualified.
 
+The [field-data pilot](docs/public/operations/field-data-pilot.md) adds reviewed
+CSV/TSV/XLSX imports, source-bound table questions and anonymous Sentinel-2/HLS
+scene discovery. Named fields can retain an unknown location. Its exposed
+24-bundle development benchmark tests ingestion and deterministic query
+contracts; imagery prediction and training are not qualified by that pilot.
+
 ## Evidence and contribution boundaries
 
 The checked-in active corpus is hash-admitted and includes Canadian evidence, project policy, SoilWise context, and a 218,258-row U.S. NRCS analogue pack available only for explicit U.S./MLRA comparison. U.S. material cannot establish Canadian decisive authority. Evaluation cases never enter runtime retrieval or training. Runtime databases, traces, model caches, private overlays, credentials, and raw benchmark answers stay outside the public package. Historical RC1–RC3 and the [current two-Gemma assessment](docs/public/two-gemma-colab-assessment-20260926.md) retain their original identities; passing tests or a small profile does not establish agronomic competence.

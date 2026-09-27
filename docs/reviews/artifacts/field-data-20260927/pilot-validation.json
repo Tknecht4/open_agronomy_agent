@@ -1,0 +1,47 @@
+{
+  "schema_version": "field_data_pilot_validation.v1",
+  "status": "passed_pilot_contracts_not_agronomic_validation",
+  "python_tests": 1093,
+  "frontend_tests": 210,
+  "frontend_typecheck": "passed",
+  "frontend_build": "passed",
+  "strict_mkdocs": "passed",
+  "public_docs_audit": "passed",
+  "runtime_corpus_audit": "passed",
+  "benchmark_summary_sha256": "05b610024578c92e38bbe003be44c783e83b9dd6e0424678c3621c83373ae02d",
+  "benchmark": {
+    "case_count": 96,
+    "query_contract_passes": 96,
+    "exact_product_binding_passes": 72,
+    "semantic_cases_unscored": 24,
+    "failed_cases": 0,
+    "bundles": 24,
+    "source_families": 2,
+    "independent_farms": null,
+    "generator": "offline_mock",
+    "code_environment_stable": true
+  },
+  "browser": {
+    "upload_preview_commit_reload_query": "passed",
+    "fixture": "akron-01.csv",
+    "selected_rows": 13,
+    "mean_yield_kg_ha": 567.7894685731263,
+    "geometry": "unknown",
+    "screenshot_path": "outputs/field-data-pilot-validation/ui-query.png"
+  },
+  "cleanup": {
+    "files_preserved": 455,
+    "all_hashes_verified": true,
+    "independent_inodes": true,
+    "benchmark_records_deleted": 0,
+    "observed_free_byte_increase": 1294225408
+  },
+  "receipts": {
+    "python": "outputs/field-data-pilot-validation/pytest-reviewed.log",
+    "benchmark": "outputs/field-data-pilot-validation/benchmark-reviewed/summary.json",
+    "negative_trace": "outputs/field-data-pilot-validation/negative-sanitizer-regression/cases.jsonl",
+    "cleanup": "outputs/maintenance/20260927-field-data-cleanup/",
+    "package": "outputs/field-data-pilot-validation/public-package-receipt.json"
+  },
+  "memory_delta": "none"
+}

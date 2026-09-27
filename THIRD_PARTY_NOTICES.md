@@ -70,6 +70,42 @@ rights were not established, so only a project-authored method summary is
 included. USDA ERS, NRCS, and ARS pages are attributed to their agencies;
 embedded third-party material is not reused. These source links do not grant
 training permission or imply the publishers endorse this project.
+## Field-data research and development question seeds
+
+The September 2026 field-data research catalog is discovery metadata, not a
+runtime or training admission. Per-record rights, access limits, and source
+links are recorded under `docs/reviews/artifacts/field-data-20260927/`.
+Downloaded raw samples are excluded from the public package.
+
+The source-derived examples in `sample-question-seeds.json` and the small
+exposed development fixtures under `data/eval/field_data_pilot_v1/` retain
+the following source terms. The latter manifest records the exact source CSV
+hashes, projected columns and original row locators; project-authored gold
+answers remain separate from the imported data.
+
+- **Laurent et al., Late-season corn stalk nitrate measurements across the
+  US Midwest from 2006 to 2018**, USDA Ag Data Commons,
+  [DOI 10.15482/USDA.ADC/1527976](https://doi.org/10.15482/USDA.ADC/1527976),
+  [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The project
+  selected rows, drafted questions and calculated summaries; these are
+  exposed development examples, not the publisher's benchmark or endorsement.
+- **Topographic position index predicts within-field yield variation in a
+  dryland cereal production system**, USDA Ag Data Commons,
+  [record 28914434](https://agdatacommons.nal.usda.gov/articles/dataset/Data_from_Topographic_position_index_predicts_within-field_yield_variation_in_a_dryland_cereal_production_system/28914434),
+  CC0. The examples preserve source hashes, record locators, moisture-basis
+  limits and the distinction between sample-location and whole-field yield.
+
+UBC Farm records are cataloged under CC BY-NC-SA 4.0 and remain a separate
+local research lane; the public package does not include their raw tables.
+The UBC-specific source-derived examples in the Canadian research notes are
+attributed to [UBC Farm / Centre for Sustainable Food Systems](https://borealisdata.ca/dataverse/UBC_CSFS)
+and retain [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+terms. They are outside the project's Apache-2.0 grant and should be excluded
+from an unrestricted commercial content bundle unless separately cleared.
+Their record links and restrictions remain in the Canadian research notes.
+Conditional and unknown-license entries are not grants to redistribute,
+train on, or commercially use the underlying data. The Apache-2.0 project
+license does not replace any source-specific terms.
 
 ## Runtime dependencies and model
 

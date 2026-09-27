@@ -404,6 +404,9 @@ def _run_turn_impl(
     field_context = (session_context or {}).get("field_context") if isinstance(session_context, dict) else None
     if not field_context_enabled:
         field_context = None
+    field_context = _with_stored_field_data(
+        store, session_context=session_context, field_context=field_context,
+    )
     field_context = _with_stored_field_history(
         store,
         session_context=session_context,
@@ -3965,6 +3968,18 @@ def _safe_field_context_summary(field_context: Any) -> dict[str, Any]:
         return {}
     allowed = {"crop", "region", "jurisdiction", "concern", "geometry_summary", "regional_context"}
     summary = {key: field_context.get(key) for key in sorted(allowed) if field_context.get(key)}
+    imported = field_context.get("field_data")
+    if isinstance(imported, dict):
+        summary["field_data"] = {
+            "snapshot_sha256": imported.get("snapshot_sha256"),
+            "import_count": imported.get("import_count"),
+            "imports_truncated": imported.get("imports_truncated", False),
+            "imports": [
+                {key: item.get(key) for key in ("import_id", "filename", "source_sha256", "mapping_sha256", "row_count")}
+                for item in imported.get("imports", []) if isinstance(item, dict)
+            ],
+            "boundary": "Reviewed private uploads; source meaning and rights remain user-asserted.",
+        }
     selected_feature = field_context.get("selected_upload_feature")
     if isinstance(selected_feature, dict):
         summary["selected_upload_feature"] = {
@@ -4035,6 +4050,32 @@ def _field_lineage_record(session_context: Any, field_context: Any) -> dict[str,
     if answer_history_summary:
         lineage["field_answer_history"] = answer_history_summary
     return lineage
+
+
+def _with_stored_field_data(
+    store: TraceStore, *, session_context: Any, field_context: Any,
+) -> Any:
+    """Replace client table claims with the authorized, committed store snapshot."""
+    if not isinstance(field_context, dict):
+        return field_context
+    trusted = dict(field_context)
+    trusted.pop("field_data", None)
+    outer = session_context if isinstance(session_context, dict) else {}
+    field_id = outer.get("field_context_id") or trusted.get("field_context_id")
+    if not field_id or outer.get("field_access_authorized") is not True:
+        return trusted
+    field = store.get_phase4_field_context(str(field_id))
+    if not field:
+        return trusted
+    workspace_id = outer.get("field_access_workspace_id")
+    if workspace_id and str(workspace_id) != str(field.get("workspace_id")):
+        raise ValueError("field data workspace binding mismatch")
+    from agronomy_agent.server.storage.field_data_store import field_data_snapshot
+
+    snapshot = field_data_snapshot(store, str(field_id))
+    if snapshot.get("import_count"):
+        trusted["field_data"] = snapshot
+    return trusted
 
 
 def _with_stored_field_history(

@@ -1632,6 +1632,62 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.getByRole('heading', { name: 'West quarter' })).toBeInTheDocument()
   })
 
+  it('creates a data-only field through the wizard without requesting regional map context', async () => {
+    const fetchMock = installFetchMock()
+    render(<OpenAgronomyApp />)
+
+    openPrimaryPage('Fields')
+    const newField = screen.getByRole('button', { name: 'New field' })
+    await waitFor(() => expect(newField).toBeEnabled())
+    fireEvent.click(newField)
+    const setup = await screen.findByRole('dialog', { name: 'Add a field' })
+    fireEvent.change(within(setup).getByLabelText('Field name'), { target: { value: 'Table-only field' } })
+    fireEvent.click(within(setup).getByRole('button', { name: 'Continue' }))
+    fireEvent.click(within(setup).getByRole('button', { name: 'No location yet · data only' }))
+    fireEvent.click(within(setup).getByRole('button', { name: 'Continue' }))
+    expect(within(setup).getByText('Unknown · data only')).toBeInTheDocument()
+    const priorCalls = fetchMock.mock.calls.filter(([url]) => String(url) === '/api/geo/priors').length
+    fireEvent.click(within(setup).getByRole('button', { name: 'Save field' }))
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url, init]) => String(url) === '/api/demo/fields' && init?.method === 'POST')).toBe(true))
+    const saveCall = fetchMock.mock.calls.find(([url, init]) => String(url) === '/api/demo/fields' && init?.method === 'POST')
+    expect(JSON.parse(String(saveCall?.[1]?.body || '{}'))).toMatchObject({
+      name: 'Table-only field', geometry: { kind: 'none' }, regionalContext: '', geoPriors: null,
+    })
+    expect(fetchMock.mock.calls.filter(([url]) => String(url) === '/api/geo/priors')).toHaveLength(priorCalls)
+    openPrimaryPage('Fields')
+    expect(screen.getByText('Saved · no location')).toBeInTheDocument()
+  })
+
+  it('stores a named data-only field without inventing geometry or regional context', async () => {
+    const fetchMock = installFetchMock()
+    render(<OpenAgronomyApp />)
+
+    openPrimaryPage('Fields')
+    await screen.findByText('Saved to My agronomy workspace.')
+    fireEvent.click(screen.getByRole('button', { name: 'New field' }))
+    fireEvent.click(within(await screen.findByRole('dialog', { name: 'Add a field' })).getByRole('button', { name: 'Close Add a field' }))
+    expect(screen.getByRole('button', { name: 'Save field' })).toBeDisabled()
+    expect(screen.getByText('Boundary optional')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Field name'), { target: { value: 'Anonymous nitrate field' } })
+    expect(screen.getByRole('button', { name: 'Save field' })).toBeEnabled()
+    const priorCallsBeforeSave = fetchMock.mock.calls.filter(([url]) => String(url) === '/api/geo/priors').length
+    fireEvent.click(screen.getByRole('button', { name: 'Save field' }))
+
+    await waitFor(() => expect(fetchMock.mock.calls.map(([url, init]) => `${init?.method || 'GET'} ${String(url)}`)).toContain('POST /api/demo/fields'))
+    const saveCall = fetchMock.mock.calls.find(
+      ([url, init]) => String(url) === '/api/demo/fields' && init?.method === 'POST',
+    )
+    const body = JSON.parse(String(saveCall?.[1]?.body || '{}'))
+    expect(body).toMatchObject({
+      name: 'Anonymous nitrate field', geometry: { kind: 'none' }, geoPriors: null, regionalContext: '',
+    })
+    expect(body.sourceBoundary).toContain('No location or boundary supplied')
+    expect(fetchMock.mock.calls.filter(([url]) => String(url) === '/api/geo/priors')).toHaveLength(priorCallsBeforeSave)
+    expect(screen.getByText('Saved · no location')).toBeInTheDocument()
+    openPrimaryPage('Map')
+    expect(screen.getByText('No location or boundary recorded')).toBeInTheDocument()
+  })
+
   it('keeps the active field selected when deleting another field and clears context when deleting the active field', async () => {
     const northField = {
       id: 'field-north', field_context_id: 'field-north', name: 'North field', crop: 'canola',

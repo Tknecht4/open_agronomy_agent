@@ -1,0 +1,4 @@
+Field_ID,Sample_number,Year,Previous_crop,N_fertilizer_form,Total_N_rate_kgha,Stalk_nitrate_CSNT,County_centroid_latitude,County_centroid_longitude
+AGRI05,1,2006,Soybean,NH3,151.335,37,41.0331271493696,-95.61923712281
+AGRI05,2,2006,Soybean,NH3,151.335,2100,41.0331271493696,-95.61923712281
+AGRI05,3,2006,Soybean,NH3,151.335,897,41.0331271493696,-95.61923712281

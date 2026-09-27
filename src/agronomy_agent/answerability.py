@@ -550,6 +550,9 @@ def summarize_field_context_for_answerability(
         return tuple(str(value) for value in values if str(value or "").strip())
 
     return {
+        # This bounded snapshot is supplied by the authorized server store, never
+        # inferred from textual field facts. It is retained for exact tool replay.
+        **({"field_data": context["field_data"]} if isinstance(context.get("field_data"), Mapping) else {}),
         "representative_measurement_complete": _representative_sample_complete(context),
         "crop_scope": _as_tuple(crop_values),
         "jurisdiction_scope": _as_tuple(jurisdiction_values),
@@ -623,6 +626,7 @@ def validated_deterministic_tool_execution(
     question: str,
     tool_plan: Mapping[str, Any] | None,
     tool_results: Sequence[Mapping[str, Any]],
+    *, field_context: Mapping[str, Any] | None = None,
 ) -> bool:
     # The runtime records are untrusted trace input at this boundary.  Accept
     # only the exact current planner output and exact deterministic execution,
@@ -630,7 +634,7 @@ def validated_deterministic_tool_execution(
     from agronomy_agent.tool_planner import plan_and_execute_tools
 
     try:
-        expected_plan, expected_results = plan_and_execute_tools(question)
+        expected_plan, expected_results = plan_and_execute_tools(question, field_context=field_context)
     except (ArithmeticError, TypeError, ValueError):
         return False
     if (
@@ -640,6 +644,10 @@ def validated_deterministic_tool_execution(
         != _canonical_json([result.to_dict() for result in expected_results])
     ):
         return False
+    if expected_plan.invocations[0].tool_id == "field_table_query":
+        # Exact re-selection and execution above require the independently supplied
+        # trusted snapshot. A plausible result/receipt in the trace alone cannot pass.
+        return len(expected_results) == 1 and expected_results[0].status == "success"
     invocation = _validated_calculator_invocation(
         question,
         tool_plan,
@@ -688,17 +696,20 @@ def validated_deterministic_tool_clarification(
     question: str,
     tool_plan: Mapping[str, Any] | None,
     tool_results: Sequence[Mapping[str, Any]],
+    *, field_context: Mapping[str, Any] | None = None,
 ) -> tuple[str, ...] | None:
     if tool_results:
         return None
     from agronomy_agent.tool_planner import plan_tools
 
-    expected_plan = plan_tools(question)
+    expected_plan = plan_tools(question, field_context=field_context)
     if (
         expected_plan.status != "clarification_required"
         or _canonical_json(dict(tool_plan or {})) != _canonical_json(expected_plan.to_dict())
     ):
         return None
+    if expected_plan.invocations[0].tool_id == "field_table_query":
+        return expected_plan.invocations[0].missing_inputs
     invocation = _validated_calculator_invocation(
         question,
         tool_plan,
@@ -982,24 +993,25 @@ def assess_answerability(
             ),
         )
 
-    if validated_deterministic_tool_execution(question, tool_plan, tool_results):
+    is_field_table = any(item.get("tool_id") == "field_table_query" for item in (tool_plan or {}).get("invocations", ()) if isinstance(item, Mapping))
+    if validated_deterministic_tool_execution(question, tool_plan, tool_results, field_context=field_context):
         return AnswerabilityDecision(
             ANSWERABILITY_POLICY_VERSION,
             AnswerabilityState.ANSWER_DIRECTLY,
             "validated_deterministic_tool_result_available",
-            "calculation.supplied_inputs.v1",
+            "field.reviewed_table.v1" if is_field_table else "calculation.supplied_inputs.v1",
             "low_arithmetic",
         )
-    validated_missing = validated_deterministic_tool_clarification(question, tool_plan, tool_results)
+    validated_missing = validated_deterministic_tool_clarification(question, tool_plan, tool_results, field_context=field_context)
     if validated_missing is not None:
         return AnswerabilityDecision(
             ANSWERABILITY_POLICY_VERSION,
             AnswerabilityState.ASK_ONE_DISCRIMINATING_QUESTION,
-            "calculator_requires_explicit_supplied_input",
-            "calculation.supplied_inputs.v1",
+            "field_table_query_requires_review_or_disambiguation" if is_field_table else "calculator_requires_explicit_supplied_input",
+            "field.reviewed_table.v1" if is_field_table else "calculation.supplied_inputs.v1",
             "low_arithmetic",
             missing_inputs=validated_missing,
-            failed_claim="numeric result cannot be computed without the missing supplied quantity",
+            failed_claim=("field table request exceeds reviewed evidence or supported query scope" if is_field_table else "numeric result cannot be computed without the missing supplied quantity"),
             response_text=str((tool_plan or {}).get("clarification") or "").strip() or None,
         )
 

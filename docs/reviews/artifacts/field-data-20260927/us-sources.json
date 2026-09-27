@@ -1,0 +1,764 @@
+{
+  "checked_date": "2026-09-27 UTC",
+  "queries": [
+    "site:data.nal.usda.gov field experiment crop yield soil management dataset license download",
+    "site:ltar.ars.usda.gov dataset field management yield soil download data",
+    "site:lter.kbs.msu.edu data long term ecological research agronomic yield soil treatment download",
+    "site:datadryad.org agricultural field experiment yield management geospatial data CC0",
+    "site:data.nal.usda.gov/dataset \"yield\" \"field\" \"License\" \"Download\"",
+    "site:agdatacommons.nal.usda.gov \"yield monitor\" field dataset",
+    "USDA GRACEnet database data download agricultural field management soil nitrous oxide",
+    "USDA LTAR Cropland Common Experiment data portal yield management download",
+    "site:agdatacommons.nal.usda.gov/articles/dataset \"Morrow Plots\"",
+    "site:agdatacommons.nal.usda.gov/articles/dataset \"Magruder\" yield",
+    "site:agdatacommons.nal.usda.gov/articles/dataset \"Sanborn Field\"",
+    "site:agdatacommons.nal.usda.gov/articles/dataset \"on-farm\" \"yield\"",
+    "site:agdatacommons.nal.usda.gov/articles/dataset \"Genomes to Fields\" yield weather soil",
+    "site:agdatacommons.nal.usda.gov/articles/dataset \"Bushland, Texas\" sorghum \"Licence\"",
+    "site:agdatacommons.nal.usda.gov/articles/dataset \"Colorado Sunflower Water Use\"",
+    "site:agdatacommons.nal.usda.gov/articles/dataset \"Morrow\" \"plots\"",
+    "site:agdatacommons.nal.usda.gov/articles/dataset \"Magruder Plots\"",
+    "site:agdatacommons.nal.usda.gov/articles/dataset \"Sanborn Field\" yield",
+    "site:agdatacommons.nal.usda.gov/articles/dataset \"Morrow Plots\" yield",
+    "site:agdatacommons.nal.usda.gov/articles/dataset \"Winter Wheat Datasets\" Bushland",
+    "site:agdatacommons.nal.usda.gov/articles/dataset \"Topographic position index predicts within-field yield variation\"",
+    "site:agdatacommons.nal.usda.gov/articles/dataset \"Two Years of Cotton\"",
+    "site:agdatacommons.nal.usda.gov/articles/dataset \"Long-Term\" \"yield\" \"soil\" \"Licence\"",
+    "site:datadryad.org/dataset \"yield monitor\" \"field\" agriculture",
+    "site:lter.kbs.msu.edu/datasets/ \"Main Cropping System Experiment\" agronomic yields",
+    "site:lter.kbs.msu.edu/datasets/ \"MCSE Scale-up Experiment\" \"Geo-referenced\"",
+    "site:lter.kbs.msu.edu/datasets/ \"Biodiversity Gradient Experiment\" agronomic yields",
+    "site:lter.kbs.msu.edu/datasets/ \"GLBRC Scale-up Experiment\" \"Agronomic Yields\"",
+    "Morrow plots long term data download yield soil University Illinois dataset",
+    "Magruder plots long term data download Oklahoma state yield soil",
+    "Sanborn field long term experiment data download yield soil Missouri",
+    "\"Morrow Plots Treatment and Yield Data\" license CC0 CC BY Illinois Data Bank",
+    "site:databank.illinois.edu/datasets/IDB-7865141 license",
+    "site:datadryad.org dryad data CC0 license public domain datasets terms",
+    "site:datadryad.org/dataset/doi:10.5061/dryad.66t1g1k2g license",
+    "site:lter.kbs.msu.edu \"Data Use Policy\" \"written permission\"",
+    "site:agdatacommons.nal.usda.gov/articles/dataset \"Two Years of Cotton (Gossypium hirsutum L.) Data\"",
+    "site:agdatacommons.nal.usda.gov/articles/dataset \"Organic Amendment Study\" \"Licence\"",
+    "site:agdatacommons.nal.usda.gov/articles/dataset \"Nitrogen Source Study\" \"Licence\""
+  ],
+  "count": 23,
+  "counting_rule": "Record inventory only, not independent field cohorts. Source families and site overlap must be deduplicated before benchmark splitting; no portal and contained record should count as two datasets.",
+  "records": [
+    {
+      "id": "us-corn-stalk-nitrate",
+      "title": "Late-season corn stalk nitrate measurements across the US Midwest, 2006–2018",
+      "country": "United States",
+      "unit": "field; three stalk samples per field",
+      "evidence_role": "observed_field",
+      "coverage": "10,675 corn fields, 32,025 measurements; IA, IL, IN, MI, MN, OH; 2006–2018",
+      "modalities": [
+        "stalk nitrate",
+        "N rate and source",
+        "tillage",
+        "prior crop",
+        "weather companion"
+      ],
+      "formats": [
+        "CSV"
+      ],
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Data_from_Late-season_corn_stalk_nitrate_measurements_across_the_US_Midwest_from_2006_to_2018/24668283",
+      "download_url": "https://ndownloader.figshare.com/files/44532422",
+      "license_status": "confirmed_open",
+      "license_name": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "license_evidence": "Record Licence section and Figshare API license field",
+      "access_status": "principal CSV and dictionary downloaded and inspected; 217.9 MB weather companion not downloaded",
+      "priority": "high",
+      "limitations": "No yield observations; management variables are inconsistently populated/simplified; county is sometimes absent; county centroid is not a field coordinate; high manure-derived N rates may be misestimated.",
+      "source_family": "Ag Data Commons / Laurent 2022"
+    },
+    {
+      "id": "us-akron-spatial-yield",
+      "title": "Topographic position index and within-field yield in a dryland cereal system",
+      "country": "United States",
+      "unit": "30 m soil sampling point with 5 m gridded yield extraction",
+      "evidence_role": "observed_field",
+      "coverage": "18 management units, Akron Colorado; wheat/corn/proso millet; 2019–2022",
+      "modalities": [
+        "yield",
+        "soil texture and chemistry",
+        "topography",
+        "weather",
+        "UTM coordinates",
+        "rotation"
+      ],
+      "formats": [
+        "CSV",
+        "GeoTIFF"
+      ],
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Data_from_Topographic_position_index_predicts_within-field_yield_variation_in_a_dryland_cereal_production_system/28914434",
+      "download_url": "https://ndownloader.figshare.com/files/54132527",
+      "license_status": "confirmed_open",
+      "license_name": "CC0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "license_evidence": "Record Licence section and Figshare API license field",
+      "access_status": "modeling CSV and dictionary downloaded and inspected",
+      "priority": "high",
+      "limitations": "Repeated coordinates/years and 30 m sampling cause spatial dependence; yield extracted from gridded yield monitor and is not independent plot harvest; weather and crop vary.",
+      "source_family": "Ag Data Commons / Poss 2025"
+    },
+    {
+      "id": "us-transforming-drainage",
+      "title": "Transforming Drainage research data",
+      "country": "United States",
+      "unit": "paired plot or field site-year",
+      "evidence_role": "observed_field",
+      "coverage": "39 experiments, 8 US states; 1996–2018",
+      "modalities": [
+        "yield",
+        "management operations",
+        "soil properties",
+        "weather",
+        "drainage",
+        "water quality"
+      ],
+      "formats": [
+        "CSV"
+      ],
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Transforming_Drainage_Research_Data_USDA-NIFA_Award_No_2015-68007-23193_/24665985",
+      "download_url": null,
+      "license_status": "confirmed_open",
+      "license_name": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "license_evidence": "Record Licence section and Figshare API license field",
+      "access_status": "CSV file list and metadata verified; no raw sample downloaded",
+      "priority": "high",
+      "limitations": "Site protocols and available variables differ; missing/imputed drainage values; some soil moisture probes lack soil-specific calibration.",
+      "source_family": "Ag Data Commons / Transforming Drainage"
+    },
+    {
+      "id": "us-morrow-plots",
+      "title": "Morrow Plots Treatment and Yield Data",
+      "country": "United States",
+      "unit": "experimental plot-year",
+      "evidence_role": "observed_field",
+      "coverage": "Illinois; planting, treatment, and yield since 1888",
+      "modalities": [
+        "yield",
+        "fertilizer",
+        "rotation",
+        "planting",
+        "cultivar"
+      ],
+      "formats": [
+        "tabular archive",
+        "codebook"
+      ],
+      "source_url": "https://databank.illinois.edu/datasets/IDB-3676612",
+      "download_url": null,
+      "license_status": "confirmed_open",
+      "license_name": "CC BY",
+      "license_url": "https://databank.illinois.edu/datasets/IDB-3676612",
+      "license_evidence": "Illinois Data Bank version 2 landing says License: CC BY",
+      "access_status": "source indexed; direct page fetch returned 403 in research browser",
+      "priority": "high",
+      "limitations": "One long-term site with historical changes in methods and treatments; validate exact current download and version before use.",
+      "source_family": "Illinois Data Bank / Morrow v2"
+    },
+    {
+      "id": "us-bushland-sorghum-growth",
+      "title": "Bushland Texas sorghum growth and yield",
+      "country": "United States",
+      "unit": "replicate plot/lysimeter field-year",
+      "evidence_role": "observed_field",
+      "coverage": "Four 4.44 ha quadrants; 13 sorghum years, 1988–2015",
+      "modalities": [
+        "yield",
+        "biomass",
+        "growth stage",
+        "irrigation",
+        "soil water"
+      ],
+      "formats": [
+        "XLSX"
+      ],
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Growth_and_Yield_Data_for_the_Bushland_Texas_Sorghum_Datasets/24856872",
+      "download_url": null,
+      "license_status": "confirmed_open",
+      "license_name": "CC0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "license_evidence": "Record Licence section",
+      "access_status": "public landing; file access not exercised",
+      "priority": "high",
+      "limitations": "Single research station; hand and machine harvest yields differ; within-site companion records overlap and must join by year/quadrant.",
+      "source_family": "USDA Bushland lysimeter experiments"
+    },
+    {
+      "id": "us-bushland-soybean-growth",
+      "title": "Bushland Texas soybean growth and yield",
+      "country": "United States",
+      "unit": "replicate plot/lysimeter field-year",
+      "evidence_role": "observed_field",
+      "coverage": "Bushland Texas; 1995, 2003, 2004, 2010, 2019",
+      "modalities": [
+        "yield",
+        "crop growth",
+        "irrigation",
+        "soil water"
+      ],
+      "formats": [
+        "XLSX"
+      ],
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Growth_and_Yield_Data_for_the_Bushland_Texas_Soybean_Datasets/24856533",
+      "download_url": null,
+      "license_status": "confirmed_open",
+      "license_name": "CC0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "license_evidence": "Record Licence section",
+      "access_status": "public landing; file access not exercised",
+      "priority": "medium",
+      "limitations": "Same Bushland site and geometry as other crop records; avoid counting as independent geography.",
+      "source_family": "USDA Bushland lysimeter experiments"
+    },
+    {
+      "id": "us-bushland-wheat-growth",
+      "title": "Bushland Texas winter wheat growth and yield",
+      "country": "United States",
+      "unit": "replicate plot/lysimeter field-year",
+      "evidence_role": "observed_field",
+      "coverage": "Bushland Texas; 1989–1993",
+      "modalities": [
+        "yield",
+        "biomass",
+        "growth stage",
+        "irrigation",
+        "soil water"
+      ],
+      "formats": [
+        "XLSX"
+      ],
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Growth_and_Yield_Data_for_the_Bushland_Texas_Winter_Wheat_Datasets/24856107",
+      "download_url": null,
+      "license_status": "confirmed_open",
+      "license_name": "CC0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "license_evidence": "Record Licence section",
+      "access_status": "public landing; file access not exercised",
+      "priority": "medium",
+      "limitations": "Same Bushland site family; historic methods and manual versus machine harvest distinctions.",
+      "source_family": "USDA Bushland lysimeter experiments"
+    },
+    {
+      "id": "us-colorado-sunflower",
+      "title": "Colorado sunflower water use and productivity",
+      "country": "United States",
+      "unit": "replicated irrigation plot-season",
+      "evidence_role": "observed_field",
+      "coverage": "Northeast Colorado; 2008–2016",
+      "modalities": [
+        "yield",
+        "irrigation",
+        "soil water",
+        "crop ET",
+        "weather",
+        "plant response"
+      ],
+      "formats": [
+        "XLSX"
+      ],
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/USDA-ARS_Colorado_Sunflower_Water_Use_and_Productivity_Dataset/28586066",
+      "download_url": null,
+      "license_status": "confirmed_open",
+      "license_name": "U.S. Public Domain",
+      "license_url": "https://agdatacommons.nal.usda.gov/articles/dataset/USDA-ARS_Colorado_Sunflower_Water_Use_and_Productivity_Dataset/28586066",
+      "license_evidence": "Record Licence section states U.S. Public Domain",
+      "access_status": "public landing; file access not exercised",
+      "priority": "high",
+      "limitations": "One site and oil sunflower crop; dataset includes estimated ET in addition to observations, requiring variable-level observation/model labels.",
+      "source_family": "USDA ARS Colorado LIRF"
+    },
+    {
+      "id": "us-sd-rotation-economics",
+      "title": "Diversified versus conventional crop rotations in South Dakota",
+      "country": "United States",
+      "unit": "rotation treatment-year",
+      "evidence_role": "observed_field",
+      "coverage": "Brookings South Dakota; 2017–2020 economic cycle from 2000 experiment",
+      "modalities": [
+        "yield",
+        "N rate",
+        "management cost",
+        "revenue"
+      ],
+      "formats": [
+        "downloadable archive"
+      ],
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Data_from_Yield_and_profit_comparison_of_diversified_versus_conventional_crop_rotation_systems_in_South_Dakota/27207915",
+      "download_url": null,
+      "license_status": "confirmed_open",
+      "license_name": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "license_evidence": "Record Licence section",
+      "access_status": "public landing; file access not exercised",
+      "priority": "medium",
+      "limitations": "Single site and one four-year cycle; price/revenue values are analyses, not direct field observations.",
+      "source_family": "USDA ARS Brookings Alternative Rotation"
+    },
+    {
+      "id": "us-gracenet-bowling-green",
+      "title": "GRACEnet Bowling Green greenhouse-gas study",
+      "country": "United States",
+      "unit": "experimental treatment plot",
+      "evidence_role": "observed_field",
+      "coverage": "Bowling Green Kentucky; corn fertilizer treatments",
+      "modalities": [
+        "N source",
+        "soil chemistry and physics",
+        "GHG flux",
+        "weather",
+        "yield"
+      ],
+      "formats": [
+        "CSV archive"
+      ],
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Greenhouse_Gas_Study_for_Greenhouse_gas_Reduction_through_Agricultural_Carbon_Enhancement_network_in_Bowling_Green_Kentucky/24665352",
+      "download_url": null,
+      "license_status": "confirmed_open",
+      "license_name": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "license_evidence": "Record Licence section",
+      "access_status": "public landing; file access not exercised",
+      "priority": "medium",
+      "limitations": "GHG-oriented study; check crop-yield rows and unit joins before benchmark selection.",
+      "source_family": "GRACEnet/AgCROS; Kentucky site"
+    },
+    {
+      "id": "us-gracenet-fort-collins-nsource",
+      "title": "GRACEnet Fort Collins nitrogen-source study",
+      "country": "United States",
+      "unit": "experimental treatment plot",
+      "evidence_role": "observed_field",
+      "coverage": "Fort Collins Colorado; irrigated corn/barley/beans, 2007–2008",
+      "modalities": [
+        "N source and rate",
+        "tillage",
+        "GHG flux",
+        "soil",
+        "weather",
+        "yield"
+      ],
+      "formats": [
+        "CSV ZIP"
+      ],
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Nitrogen_Source_Study_for_Greenhouse_gas_Reduction_through_Agricultural_Carbon_Enhancement_network_in_Fort_Collins_Colorado/24665397",
+      "download_url": null,
+      "license_status": "confirmed_open",
+      "license_name": "U.S. Public Domain",
+      "license_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Nitrogen_Source_Study_for_Greenhouse_gas_Reduction_through_Agricultural_Carbon_Enhancement_network_in_Fort_Collins_Colorado/24665397",
+      "license_evidence": "Record Licence section states U.S. Public Domain",
+      "access_status": "public landing; file access not exercised",
+      "priority": "medium",
+      "limitations": "Small single-site trial; overlapping geography with other Fort Collins GRACEnet records; citation requested.",
+      "source_family": "GRACEnet/AgCROS; Fort Collins site"
+    },
+    {
+      "id": "us-gracenet-fort-collins-manure",
+      "title": "GRACEnet/NUOnet Fort Collins organic amendment study",
+      "country": "United States",
+      "unit": "experimental treatment plot",
+      "evidence_role": "observed_field",
+      "coverage": "Fort Collins Colorado; irrigated continuous corn, 2012–2015",
+      "modalities": [
+        "manure/fertilizer treatment",
+        "GHG flux",
+        "soil",
+        "weather",
+        "growth",
+        "yield"
+      ],
+      "formats": [
+        "CSV ZIP"
+      ],
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Organic_Amendment_Study_for_Greenhouse_gas_Reduction_through_Agricultural_Carbon_Enhancement_network_and_Nutrient_Use_and_Outcome_Network_in_Fort_Collins_Colorado/24665259",
+      "download_url": null,
+      "license_status": "confirmed_open",
+      "license_name": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "license_evidence": "Record Licence section",
+      "access_status": "public landing; file access not exercised",
+      "priority": "medium",
+      "limitations": "Same station family as other Fort Collins studies; do not split site into independent test/train sites; citation requested.",
+      "source_family": "GRACEnet/AgCROS; Fort Collins site"
+    },
+    {
+      "id": "us-switchgrass-onfarm",
+      "title": "Switchgrass biomass composition and theoretical ethanol yield",
+      "country": "United States",
+      "unit": "on-farm field sample",
+      "evidence_role": "observed_field",
+      "coverage": "North Dakota, South Dakota, Nebraska; 2000–2005",
+      "modalities": [
+        "biomass",
+        "forage composition",
+        "NIRS-predicted composition",
+        "theoretical ethanol yield"
+      ],
+      "formats": [
+        "downloadable table"
+      ],
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Data_from_Temporal_and_spatial_variation_in_switchgrass_biomass_composition_and_theoretical_ethanol_yield/28334345",
+      "download_url": null,
+      "license_status": "confirmed_open",
+      "license_name": "CC0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "license_evidence": "Record Licence section",
+      "access_status": "public landing; file access not exercised",
+      "priority": "low",
+      "limitations": "Theoretical ethanol yield and NIRS predictions are modeled; separate from observed biomass/chemistry.",
+      "source_family": "USDA ARS switchgrass on-farm trial"
+    },
+    {
+      "id": "us-kbs-mcse",
+      "title": "KBS Main Cropping System Experiment annual crop yields",
+      "country": "United States",
+      "unit": "treatment replicate-year",
+      "evidence_role": "observed_field",
+      "coverage": "Michigan; corn-soybean-wheat rotations since 1989",
+      "modalities": [
+        "yield",
+        "rotation",
+        "management log",
+        "plot polygons"
+      ],
+      "formats": [
+        "web table",
+        "EML/PASTA"
+      ],
+      "source_url": "https://lter.kbs.msu.edu/datasets/23",
+      "download_url": null,
+      "license_status": "conditional",
+      "license_name": "KBS standard data use policy",
+      "license_url": "https://lter.kbs.msu.edu/datatables/51",
+      "license_evidence": "Datatable states core data may not be published without written permission of lead investigator/project director",
+      "access_status": "viewable tables and download UI; no permission requested and no sample downloaded",
+      "priority": "high",
+      "limitations": "Publication permission required; east-half yield before 2017 versus whole plot after; some whole-plot values include prairie strips.",
+      "source_family": "KBS LTER MCSE"
+    },
+    {
+      "id": "us-kbs-resource-gradient",
+      "title": "KBS Resource Gradient Experiment",
+      "country": "United States",
+      "unit": "N-rate x irrigation plot-year",
+      "evidence_role": "observed_field",
+      "coverage": "Michigan; 1999–2025",
+      "modalities": [
+        "yield",
+        "nine N rates",
+        "irrigation",
+        "soil properties"
+      ],
+      "formats": [
+        "web table",
+        "EML/PASTA"
+      ],
+      "source_url": "https://lter.kbs.msu.edu/datasets/36",
+      "download_url": null,
+      "license_status": "conditional",
+      "license_name": "KBS standard data use policy",
+      "license_url": "https://lter.kbs.msu.edu/datatables/51",
+      "license_evidence": "KBS core database publication condition applies; check dataset-specific terms",
+      "access_status": "catalog and table descriptions viewed; no sample downloaded",
+      "priority": "high",
+      "limitations": "Site moved in 2005; crop rotations and N-rate schedule changed over time; publication condition.",
+      "source_family": "KBS LTER Resource Gradient"
+    },
+    {
+      "id": "us-kbs-biodiversity-gradient",
+      "title": "KBS Biodiversity Gradient agronomic yields",
+      "country": "United States",
+      "unit": "treatment plot-year",
+      "evidence_role": "observed_field",
+      "coverage": "Michigan; 21 treatments, 2000–2020",
+      "modalities": [
+        "yield",
+        "crop",
+        "diversity treatment",
+        "management logs"
+      ],
+      "formats": [
+        "web table",
+        "EML/PASTA"
+      ],
+      "source_url": "https://lter.kbs.msu.edu/datatables/75",
+      "download_url": null,
+      "license_status": "conditional",
+      "license_name": "KBS standard data use policy",
+      "license_url": "https://lter.kbs.msu.edu/datatables/75",
+      "license_evidence": "Datatable explicitly says written permission required to publish KBS core data",
+      "access_status": "viewable table and download UI; no sample downloaded",
+      "priority": "medium",
+      "limitations": "Experiment retired; 2020 sorghum residual test differs from earlier crops; publication condition.",
+      "source_family": "KBS LTER Biodiversity Gradient"
+    },
+    {
+      "id": "us-dryad-midwest-nrate",
+      "title": "Performance and refinement of nitrogen fertilization tools",
+      "country": "United States",
+      "unit": "plot/site-year",
+      "evidence_role": "observed_field",
+      "coverage": "49 Midwest corn site-years, 8 states, 2014–2016",
+      "modalities": [
+        "yield",
+        "16 N rates",
+        "soil N and ECa",
+        "weather",
+        "irrigation",
+        "plot geometry"
+      ],
+      "formats": [
+        "XLSX",
+        "SHP ZIP"
+      ],
+      "source_url": "https://datadryad.org/dataset/doi:10.5061/dryad.66t1g1k2g",
+      "download_url": null,
+      "license_status": "confirmed_open",
+      "license_name": "CC0",
+      "license_url": "https://api.datacite.org/dois/10.5061/dryad.66t1g1k2g",
+      "license_evidence": "Dataset-specific DataCite DOI metadata rightsList reports Creative Commons Zero v1.0 Universal (cc0-1.0), observed 2026-09-27. Metadata SHA-256 e76d705714c5cb8731bace86b613951be52eb55ef5327bbde9488509bc993a82.",
+      "access_status": "individual files listed and downloadable; no sample downloaded",
+      "priority": "high",
+      "limitations": "Known site anomalies: hail, ponding, erroneous blanket N application, lodging; economic optimum N is derived label and must be separated from raw observations.",
+      "source_family": "Dryad / 49-site-year Midwest N study"
+    },
+    {
+      "id": "us-dryad-maize-multistate",
+      "title": "Crop performance, aerial, and satellite data from multistate maize yield trials",
+      "country": "United States",
+      "unit": "genotype plot/site-year",
+      "evidence_role": "observed_field",
+      "coverage": "Nebraska and Iowa maize trials at five locations in 2022",
+      "modalities": [
+        "plot yield",
+        "aerial imagery",
+        "satellite imagery",
+        "genotype"
+      ],
+      "formats": [
+        "tabular data",
+        "imagery archive"
+      ],
+      "source_url": "https://datadryad.org/dataset/doi:10.5061/dryad.905qftttm",
+      "download_url": null,
+      "license_status": "confirmed_open",
+      "license_name": "CC0",
+      "license_url": "https://api.datacite.org/dois/10.5061/dryad.905qftttm",
+      "license_evidence": "Dataset-specific DataCite DOI metadata rightsList reports [{'rights': 'Creative Commons Zero v1.0 Universal', 'rightsUri': 'https://creativecommons.org/publicdomain/zero/1.0/legalcode', 'schemeUri': 'https://spdx.org/licenses/', 'rightsIdentifier': 'cc0-1.0', 'rightsIdentifierScheme': 'SPDX'}]; SHA-256 1414f64660d9b68367d42ad3392c74077b78c325ae346227b9617224f87d98f1",
+      "access_status": "landing and download UI verified; bulk imagery not downloaded",
+      "priority": "medium",
+      "limitations": "Breeding plots are small; imagery-derived features are not field observations; genotype-site split is essential.",
+      "source_family": "Dryad / 2022 multistate maize trial"
+    },
+    {
+      "id": "us-g2f-2016",
+      "title": "Genomes to Fields 2016",
+      "country": "United States",
+      "unit": "maize genotype plot-environment",
+      "evidence_role": "observed_field",
+      "coverage": "US maize field cooperators, 2016",
+      "modalities": [
+        "yield/performance traits",
+        "genotype",
+        "soil",
+        "weather"
+      ],
+      "formats": [
+        "CSV",
+        "CyVerse directory"
+      ],
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Genomes_To_Fields_2016/24852822",
+      "download_url": "http://datacommons.cyverse.org/browse/iplant/home/shared/commons_repo/curated/GenomesToFields_G2F_2016_Data_Mar_2018",
+      "license_status": "confirmed_open",
+      "license_name": "U.S. Public Domain",
+      "license_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Genomes_To_Fields_2016/24852822",
+      "license_evidence": "Ag Data Commons record Licence section states U.S. Public Domain",
+      "access_status": "ADC metadata verified; linked CyVerse download route not exercised",
+      "priority": "medium",
+      "limitations": "ADC is metadata mirror, CyVerse holds bytes; verify source directory access and file-level rights; field management may be sparse.",
+      "source_family": "Genomes to Fields 2016"
+    },
+    {
+      "id": "us-magruder-plots",
+      "title": "Magruder Plots wheat yield summary",
+      "country": "United States",
+      "unit": "fertility plot-year",
+      "evidence_role": "observed_field",
+      "coverage": "Stillwater Oklahoma; 1892 onward, with 1947 soil relocation",
+      "modalities": [
+        "wheat yield",
+        "fertilizer treatment",
+        "soil properties"
+      ],
+      "formats": [
+        "XLSX"
+      ],
+      "source_url": "https://www.nue.okstate.edu/Long_Term_Experiments/Magruder_Plots_Yield_Summary.htm",
+      "download_url": "https://www.nue.okstate.edu/Long_Term_Experiments/Magruder_Plots_Yield_Summary_files/EMAG_18.xlsx",
+      "license_status": "unknown",
+      "license_name": null,
+      "license_url": null,
+      "license_evidence": "GLTEN explicitly says no licence or data policy supplied: https://www.glten.org/experiments/32",
+      "access_status": "public XLSX link surfaced but not downloaded",
+      "priority": "medium",
+      "limitations": "No verified data rights; 1947 site relocation breaks simple time-series interpretation.",
+      "source_family": "Oklahoma State Magruder"
+    },
+    {
+      "id": "us-ofpe-example",
+      "title": "Montana State OFPEDATA on-farm precision examples",
+      "country": "United States",
+      "unit": "commercial farm field-year; dense yield-monitor points",
+      "evidence_role": "observed_field",
+      "coverage": "Two Montana wheat fields, 2016/2018; one Manitoba field, 2017/2019",
+      "modalities": [
+        "yield monitor",
+        "grain protein",
+        "as-applied N and seeding",
+        "field boundaries"
+      ],
+      "formats": [
+        "SHP",
+        "CSV",
+        "R package data"
+      ],
+      "source_url": "https://github.com/paulhegedus/OFPEDATA",
+      "download_url": null,
+      "license_status": "unknown",
+      "license_name": null,
+      "license_url": null,
+      "license_evidence": "Repository MIT LICENSE.md explicitly addresses software and documentation; README says data originate on real farms. Data-specific permission not established.",
+      "access_status": "GitHub public; no raw farmer sample downloaded",
+      "priority": "high",
+      "limitations": "Real farm data and geometry; no confirmed rights to reuse underlying farmer measurements or publish geometry. One of three fields is Canadian, so split jurisdiction.",
+      "source_family": "MSU OFPE example package"
+    },
+    {
+      "id": "us-drives",
+      "title": "Diverse Rotations Improve Valuable Ecosystem Services database",
+      "country": "United States",
+      "unit": "experimental plot/site-year",
+      "evidence_role": "observed_field",
+      "coverage": "21 North American long-term sites; 17 sites participating in first release as of May 2025",
+      "modalities": [
+        "yield",
+        "weather",
+        "management",
+        "experimental metadata"
+      ],
+      "formats": [
+        "CSV metadata",
+        "controlled database"
+      ],
+      "source_url": "https://catalog.data.gov/dataset/diverse-rotations-improve-valuable-ecosystem-services-drives-database",
+      "download_url": null,
+      "license_status": "conditional",
+      "license_name": "request-and-acknowledgement conditions",
+      "license_url": null,
+      "license_evidence": "Catalog states data request form required and publications/products must acknowledge DRIVES; Canadian sites need separate request",
+      "access_status": "open metadata/inventory only; substantive database requires request and emailed login",
+      "priority": "medium",
+      "limitations": "Cannot treat open metadata tables as the field observations; site-specific permissions and overlap with Morrow/KBS require deduplication.",
+      "source_family": "DRIVES long-term network"
+    },
+    {
+      "id": "us-gracenet-network",
+      "title": "GRACEnet/REAP/AgCROS multi-site field archive",
+      "country": "United States",
+      "unit": "site experiment-unit measurement",
+      "evidence_role": "field_data_archive",
+      "coverage": "20+ US field sites; public archive snapshot through 2022",
+      "modalities": [
+        "management",
+        "yield",
+        "soil C",
+        "GHG flux",
+        "weather"
+      ],
+      "formats": [
+        "ZIP",
+        "CSV",
+        "XML"
+      ],
+      "source_url": "https://catalog.data.gov/dataset/gracenet-greenhouse-gas-reduction-through-agricultural-carbon-enhancement-network",
+      "download_url": null,
+      "license_status": "unknown",
+      "license_name": null,
+      "license_url": null,
+      "license_evidence": "Catalog public access and downloadable archive are not a source-specific license for all contributed measurements",
+      "access_status": "catalog lists natres.zip public archive; not downloaded",
+      "priority": "medium",
+      "limitations": "Network archive may contain the site studies above; do not count archive and site records independently; exact redistribution/training rights unresolved.",
+      "source_family": "GRACEnet/REAP/AgCROS"
+    }
+  ],
+  "sample_receipts": [
+    {
+      "record_id": "us-akron-spatial-yield",
+      "files": [
+        {
+          "path": "data/raw/field_data_research/20260927/us/akron_modeling_data.csv",
+          "source_url": "https://ndownloader.figshare.com/files/54132527",
+          "bytes": 199505,
+          "sha256": "a1599b9c523f4ed44efd9b7f0c3ba6baf9f263f7c274415c77b4eb81d623f38b",
+          "data_rows": 721,
+          "columns": 21,
+          "example": {
+            "easting_UTM13N": "657888.345",
+            "northing_UTM13N": "4446112.296",
+            "yield_kg_ha": "363.834926060268",
+            "crop": "Wheat",
+            "year": "2022",
+            "field": "S2",
+            "sand_percent": "34.66666816357714"
+          }
+        },
+        {
+          "path": "data/raw/field_data_research/20260927/us/akron_data_dictionary.csv",
+          "source_url": "https://ndownloader.figshare.com/files/54132539",
+          "bytes": 1782,
+          "sha256": "8d28eab66237bf0decb2da46570acefbd350b8b8a7a6732b34f2b55fffae1604",
+          "data_rows": 21,
+          "columns": 5
+        }
+      ]
+    },
+    {
+      "record_id": "us-corn-stalk-nitrate",
+      "files": [
+        {
+          "path": "data/raw/field_data_research/20260927/us/corn_stalk_nitrate.csv",
+          "source_url": "https://ndownloader.figshare.com/files/44532422",
+          "bytes": 5875215,
+          "sha256": "5186e2ee41a6dfe975edcef44e6b10633e05dfde3dd2da4b3bb276e994a62513",
+          "data_rows": 32025,
+          "columns": 23,
+          "unique_field_ids": 10675,
+          "example": {
+            "Field_ID": "GSS2010OHMM015",
+            "Sample_number": "1",
+            "Year": "2010",
+            "State": "OH",
+            "Previous_crop": "Soybean",
+            "N_fertilizer_form": "UAN",
+            "Total_N_rate_kgha": "131.04",
+            "Stalk_nitrate_CSNT": "2129",
+            "GM_4_category": "Marginal"
+          }
+        },
+        {
+          "path": "data/raw/field_data_research/20260927/us/corn_stalk_dictionary.csv",
+          "source_url": "https://ndownloader.figshare.com/files/44532425",
+          "bytes": 2635,
+          "sha256": "15c9363d65e16d9c50e1e7885fd9a8fbe564f24e507142549f2ade2bd96889f2",
+          "data_rows": 22,
+          "columns": 3
+        }
+      ]
+    }
+  ]
+}
