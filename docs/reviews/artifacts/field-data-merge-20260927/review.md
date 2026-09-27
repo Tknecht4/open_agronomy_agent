@@ -161,3 +161,19 @@ Final source-bound delta snapshot:
 The accepted production closure sources from the earlier hash table are unchanged except for the explicitly bound renderer/guard/chat additions above. The verification receipt binds the current controls. Refresh the final public copy and runtime inventory after this review is frozen; do not treat a package containing the earlier review as the final reviewed package. The integrator must check source-exact generated artifacts and green remote CI/Mac candidate checks before merging the tested head.
 
 Changed: this review only. Verified: repaired admission, byte/source/workspace contracts, complete rendered-answer binding, negative boundaries, and source-bound local verification evidence. Residual Risk: four documented conservative audit false positives; final generated-artifact/remote checks remain prerequisites; scientific/source-rights/geometry holds and historical raster-reference limits remain binding. Memory Delta: none.
+
+## CI dependency-only delta — accepted, remote rerun required
+
+**ACCEPT** the addition of `scikit-learn==1.9.1` and its synthetic-assessment comment to `requirements-phase4-ci.txt`. The Ubuntu Python workflow installs that file before running the complete backend suite. Retained run `36327015486` on candidate `4cda266` reports **six failures, 1,310 passes and three skips**; every failure is `ModuleNotFoundError: No module named 'sklearn'` from `test_imagery_assessment.py`. This is a missing CI dependency, not evidence that the scientific or numerical assertions passed.
+
+The pin matches the existing optional imagery-model requirements and macOS constraints, and the installed local version. Root `requirements.txt` instead declares the broader compatible `scikit-learn>=1.5.0`. Installed package metadata requires Python >=3.11 and NumPy >=1.24.1, consistent with CI Python 3.12 and its NumPy 2.0.2 pin; the exercised local environment also uses NumPy 2.0.2. The affected local synthetic assessment rerun completed **17 passed, 26 warnings in 2.69s**. No runtime implementation, fixture assertion, test skip, provider request, or model-weight activation changed. All 20 prior verification control hashes still match.
+
+| Delta/evidence | SHA-256 |
+|---|---|
+| `requirements-phase4-ci.txt` | `71fd6a358ba6cfdb203574e899a58343bbb78df3b4c1f916fda798d1ff39f717` |
+| `outputs/field-data-merge-validation/ci-python-failure.log` | `a049f44ee9e1aaf1d3ef0202617281f5f05c4d900beac1546ae63188b7b98fc5` |
+| `outputs/field-data-merge-validation/ci-dependency-local.log` | `bdeadbb1281524c99bcdbaf93c947e0b6c5a16ddc0471c019f03e0ae4cf9dccf` |
+
+Preserve the failed remote run. The local rerun and dependency metadata do not establish a successful clean Ubuntu installation or green replacement CI. Refresh generated artifacts/public packaging for this delta, then require all remote checks on the new candidate, including the Mac candidate workflow, before merge.
+
+Changed: this review appendix only. Verified: targeted CI dependency delta, raw six-failure diagnosis, compatible declared dependency bounds, and 17 passing local assessment tests. Residual Risk: clean remote rerun and final-head release checks remain pending; earlier documented scientific and audit limits are unchanged. Memory Delta: none.
