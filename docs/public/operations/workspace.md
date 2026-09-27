@@ -31,6 +31,52 @@ zero rainfall. **Sources & checks** preserves these limits with the saved answer
 A missing public-knowledge readiness report remains unavailable, even when other
 online providers work.
 
+## Map explorer and field insights
+
+Open **Map & layers** on the map to choose **Satellite**, **Streets**, or **Simple**.
+The choice preserves the current view and boundary. Satellite uses Esri imagery;
+Streets uses OpenStreetMap. Simple removes external basemap tiles so the boundary
+and selected context remain easy to read. In offline mode only Simple and installed
+context layers are available. Style and layer preferences stay in this browser.
+
+Choose up to four context layers. The color keys identify the visible overlays;
+**Layer shading** adjusts their prominence. An information button opens a layer's
+source and limitations. Uninstalled layers stay in a collapsed list. Tooltips name
+the mapped zone; a click opens its source. Missing source responses are distinct
+from a valid result with no match. These display controls do not change the field
+record or the source checks attached to an earlier answer.
+
+**Field insights** opens a compact analysis of the current saved boundary or
+example. Area, boundary length, and a location inside the shape are computed
+without a model. The hectare/acre switch changes display units only. If recorded
+acreage differs materially from the computed boundary area, both are labelled;
+neither overwrites the other. Pins have a location but no inferred area.
+
+For selected context layers, coverage uses clipped source polygons and geodesic
+area. It does not reinterpret the older vertex-sampling match scores as area.
+A layer's overall coverage uses the union of its source shapes; individual named
+zones may overlap, so their percentages need not add to 100%. Empty matches are
+collapsed; unavailable, partial, offline, and uninstalled states remain explicit.
+Open **Source & method** for provenance, map scale limits, and the calculation.
+Generalized or historical mapping remains context rather than a field survey,
+soil test, crop observation, or recommendation.
+
+New native and container installations include `pyproj` and `shapely`. Existing
+environments should refresh their supported requirements to enable analysis;
+without those libraries the API reports unavailable. Optional soil-map packs are
+still separate. The interactive endpoint limits each request to four explicit
+layers, 1,024 input positions and a 128 KiB geometry. Very large, invalid, or
+antimeridian-crossing boundaries are rejected rather than silently simplified.
+The editor still accepts a single exterior field ring; the analysis API also
+supports validated holes and multipart polygons with local map packs. The legacy
+online query path cannot establish complete coverage for those shapes, so remote
+results remain explicitly partial with unknown total coverage.
+
+Basemap tiles load only for the visible map; the app does not prefetch or package
+them for offline use. Keep provider attribution visible. OpenStreetMap service use
+follows its [tile usage policy](https://operations.osmfoundation.org/policies/tiles/);
+Esri imagery credits follow the [provider's current service metadata](https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer).
+
 ## Add and manage a field
 
 1. In **Fields**, select **Add field**. Enter a field name; crop, region, and province are optional. Reusing the region from a previous field is an explicit action, not an automatic assumption.

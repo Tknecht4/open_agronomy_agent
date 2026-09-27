@@ -983,6 +983,35 @@ describe('Open Agronomy map upload workflow', () => {
     expect(priorsCall).toBeTruthy()
   })
 
+  it('runs field insights only on demand and keeps unsaved drawing edits out of analysis', async () => {
+    const fetchMock = installFetchMock()
+    const base = fetchMock.getMockImplementation()!
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => String(input) === '/api/geo/field-analysis'
+      ? jsonResponse({ schema_version: 'open_agronomy_agent.field_map_analysis.v1', status: 'complete',
+          geometry: { type: 'Polygon', status: 'complete', area_ha: 95, area_ac: 234.7, perimeter_m: 3910,
+            location: { latitude: 53.3, longitude: -113.6 }, method: 'WGS84 ellipsoid' }, layers: [], warnings: [], elapsed_ms: 1 })
+      : base(input, init))
+    render(<OpenAgronomyApp />)
+    await screen.findByText('Local runtime · connected mode')
+    await waitFor(() => expect(screen.getByLabelText('Active field')).toBeEnabled())
+    fireEvent.change(screen.getByLabelText('Active field'), { target: { value: 'sample:central-alberta-barley' } })
+    openPrimaryPage('Map')
+    expect(fetchMock.mock.calls.filter(([url]) => String(url) === '/api/geo/field-analysis')).toHaveLength(0)
+    fireEvent.click(screen.getByRole('button', { name: 'Field insights' }))
+    expect(await screen.findByText('95 ha')).toBeVisible()
+    const analysisCall = fetchMock.mock.calls.find(([url]) => String(url) === '/api/geo/field-analysis')!
+    const body = JSON.parse(String(analysisCall[1]?.body))
+    expect(body.geometry.type).toBe('Polygon')
+    expect(body.geometry.coordinates[0][0]).toEqual([-113.608, 53.296])
+    expect(body).not.toHaveProperty('acres')
+    fireEvent.click(screen.getByRole('button', { name: 'Close Field insights' }))
+    expect((analysisCall[1]?.signal as AbortSignal).aborted).toBe(true)
+    fireEvent.click(screen.getByLabelText('Set field'))
+    fireEvent.click(screen.getByRole('button', { name: 'Draw boundary' }))
+    expect(screen.getByRole('button', { name: 'Field insights' })).toBeDisabled()
+    expect(fetchMock.mock.calls.filter(([url]) => String(url) === '/api/geo/field-analysis')).toHaveLength(1)
+  })
+
   it('labels an online partial weather window with observed dates rather than requested dates', async () => {
     const base = installFetchMock()
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit) => String(input) === '/api/tools/weather-power'
@@ -1258,7 +1287,8 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.getByText(/not as soil-test, scouting, yield, legal-boundary, or product-rate evidence/i)).toBeInTheDocument()
     openPrimaryPage('Map')
     expect(screen.getByTestId('mock-leaflet-map')).toHaveAttribute('data-geometry-kind', 'polygon')
-    expect(screen.getByText(/4 vertices · approx 50 ac · editable boundary/i)).toBeInTheDocument()
+    expect(screen.getByText(/50 ac · boundary estimate/i)).toBeVisible()
+    expect(screen.getByTestId('mock-leaflet-map')).toHaveAttribute('data-point-count', '4')
 
     const boundaryPriorsCall = fetchMock.mock.calls.find(([url, init]) => {
       if (String(url) !== '/api/geo/priors' || init?.method !== 'POST') return false
@@ -1282,7 +1312,7 @@ describe('Open Agronomy map upload workflow', () => {
       within(mapContextBar as HTMLElement).getAllByText(/NRCS MLRA MLRA_103/i),
     ).toHaveLength(2)
     expect(screen.queryByText('Central Iowa and Minnesota Till Prairies')).not.toBeInTheDocument()
-    expect(screen.getByText(/point 42\.02000, -93\.72000 · prior-only match/i)).toBeInTheDocument()
+    expect(screen.getByText(/Point location · NRCS MLRA MLRA_103/i)).toBeVisible()
     expect(screen.getByTestId('mock-leaflet-map')).toHaveAttribute('data-geometry-kind', 'point')
     openPrimaryPage('Fields')
     openFieldTab('Map context')

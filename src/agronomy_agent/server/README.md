@@ -11,6 +11,7 @@ configured application database, which defaults to SQLite.
 ## Entry points
 
 - `app.py:create_app` constructs the application and routes.
+- `map_analysis_routes.py` registers the bounded synchronous `POST /api/geo/field-analysis` read endpoint; `services/field_map_analysis.py` validates geometry and computes geodesic measurements and clipped mapped coverage. It does not add a chat capability or persist field changes.
 - `settings.py:build_settings` resolves environment and local defaults.
 - `services/chat_service.py` coordinates the primary conversational path.
 - `services/field_context_compiler.py` builds bounded field context.

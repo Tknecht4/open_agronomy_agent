@@ -116,6 +116,7 @@ from agronomy_agent.server.services.benchmark_service import (
 from agronomy_agent.server.services.datasource_service import inspect_source, read_checksum, run_local_data_source_ingest
 from agronomy_agent.server.services.eval_service import eval_run_gates, eval_run_metrics
 from agronomy_agent.server.services.export_service import build_export_bundle, create_phase4_thread_export
+from agronomy_agent.server.map_analysis_routes import register_map_analysis_routes
 from agronomy_agent.server.services.geospatial_service import (
     REGION_LAYERS,
     attach_region_intersections_to_upload,
@@ -6125,6 +6126,8 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             for session in visible:
                 session["turns_included"] = False
         return visible
+
+    register_map_analysis_routes(app, settings)
 
     @app.get("/api/geo/layers")
     async def public_geo_layer_catalog() -> dict[str, Any]:
