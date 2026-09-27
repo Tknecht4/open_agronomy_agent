@@ -61,35 +61,52 @@ const formatNumber = (value: number): string => {
   return value.toFixed(2).replace(/\.?0+$/, '')
 }
 
-export const formatToolName = (name: string): string =>
-  name
+export const formatToolName = (name: string | undefined): string =>
+  (asString(name) || 'Unknown tool')
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (letter) => letter.toUpperCase())
 
+const toolName = (tool: ToolInvocation): string => asString(tool.name) || asString(tool.tool_id) || 'unknown_tool'
+
+const typedToolDetail = (tool: ToolInvocation): string | undefined => {
+  if (!tool.schema_version) return undefined
+  const stage = tool.schema_version === 'open_agronomy_agent.tool_invocation.v1' ? 'Invocation' : 'Result'
+  const status = asString(tool.status) || 'unknown'
+  const parts = [
+    `${stage}: ${status.replace(/_/g, ' ')}`,
+    asString(tool.operation) ? `Operation: ${formatToolName(tool.operation)}` : undefined,
+    asString(tool.authority_role) ? `Authority: ${formatToolName(tool.authority_role)}` : undefined,
+  ]
+  const limitation = asStringArray(tool.limitations)[0] || asString(asRecord(tool.payload).boundary)
+  if (limitation) parts.push(limitation)
+  return parts.filter(Boolean).join(' · ')
+}
+
 export const buildPublicToolCard = (tool: ToolInvocation): PublicToolCard => {
+  const name = toolName(tool)
   const payload = asRecord(tool.payload)
   const summary = asRecord(payload.summary)
   const freshness = asRecord(payload.freshness)
   const freshnessStatus = asString(freshness.status)
   const status = freshnessStatus === 'stale' || freshnessStatus === 'future_invalid'
     ? 'stale'
-    : asString(payload.status) || 'unknown'
+    : (tool.schema_version ? asString(tool.status) : undefined) || asString(payload.status) || 'unknown'
   const source = asString(payload.source)
   const sourceUrl = source && /^https?:\/\//i.test(source) ? source : undefined
   const freshnessDeclaration = asString(freshness.declaration)
-  const limitation = toolLimitation(tool.name, payload, status)
+  const limitation = toolLimitation(name, payload, status)
   return {
-    name: tool.name,
-    title: toolTitle(tool.name, summary),
-    provider: toolProvider(tool.name, summary),
+    name,
+    title: toolTitle(name, summary),
+    provider: toolProvider(name, summary),
     status,
     statusLabel: statusLabel(status),
     statusTone: statusTone(status),
-    facts: toolFacts(tool.name, summary, status),
+    facts: toolFacts(name, summary, status),
     limitation: freshnessDeclaration ? `${freshnessDeclaration} ${limitation}` : limitation,
     sourceLabel: sourceUrl ? undefined : source,
     sourceUrl,
-    links: toolLinks(tool.name, summary),
+    links: toolLinks(name, summary),
   }
 }
 
@@ -191,18 +208,17 @@ export const buildTraceToolGroups = (
 ): TraceToolGroup[] => {
   const toolInvocations = turn?.trace?.tool_invocations || []
   const publicTools = toolInvocations.filter((tool) => asRecord(tool.payload).kind === 'public_adapter')
-  const publicNames = new Set(publicTools.map((tool) => tool.name))
   const guardToolNames = Array.from(
     new Set([
       ...toolInvocations
-        .filter((tool) => !publicNames.has(tool.name) && isGuardToolName(tool.name))
-        .map((tool) => tool.name),
+        .filter((tool) => asRecord(tool.payload).kind !== 'public_adapter' && isGuardToolName(toolName(tool)))
+        .map(toolName),
       ...toolNoteNames(turn).filter(isGuardToolName),
     ]),
   )
   const guardNameSet = new Set(guardToolNames)
   const otherTools = toolInvocations.filter(
-    (tool) => !publicNames.has(tool.name) && !guardNameSet.has(tool.name),
+    (tool) => asRecord(tool.payload).kind !== 'public_adapter' && !guardNameSet.has(toolName(tool)),
   )
   return [
     mapTraceGroup(mapCards),
@@ -253,7 +269,7 @@ const guardTraceGroup = (guardNames: string[], tools: ToolInvocation[]): TraceTo
   summary: guardNames.length ? `${guardNames.length} applied` : 'none triggered',
   statusTone: guardNames.length ? 'ok' : 'attention',
   items: guardNames.slice(0, 6).map((name) => {
-    const tool = tools.find((candidate) => candidate.name === name)
+    const tool = tools.find((candidate) => toolName(candidate) === name)
     const payload = asRecord(tool?.payload)
     return {
       name,
@@ -274,10 +290,10 @@ const otherToolTraceGroup = (tools: ToolInvocation[]): TraceToolGroup => ({
   count: tools.length,
   summary: tools.length ? `${tools.length} other trace item${tools.length === 1 ? '' : 's'}` : 'none',
   statusTone: tools.length ? 'attention' : 'ok',
-  items: tools.slice(0, 5).map((tool) => ({
-    name: tool.name,
-    label: formatToolName(tool.name),
-    detail: asString(tool.text) || asString(asRecord(tool.payload).status) || 'Auxiliary trace item.',
+  items: tools.slice(0, 5).map((tool, index) => ({
+    name: tool.schema_version ? `${toolName(tool)}:${tool.schema_version}:${index}` : toolName(tool),
+    label: formatToolName(toolName(tool)),
+    detail: typedToolDetail(tool) || asString(tool.text) || asString(asRecord(tool.payload).status) || 'Auxiliary trace item.',
     statusTone: 'attention',
   })),
 })

@@ -10,8 +10,12 @@ export type FieldGeometry =
   | { kind: 'point'; point: FieldPoint }
   | { kind: 'polygon'; points: FieldPoint[]; acres: number }
 
+export const validFieldPoint = (point: FieldPoint): boolean =>
+  Number.isFinite(point.lat) && Number.isFinite(point.lon) &&
+  point.lat >= -90 && point.lat <= 90 && point.lon >= -180 && point.lon <= 180
+
 export const estimatePolygonAcres = (points: FieldPoint[]): number => {
-  if (points.length < 3) {
+  if (points.length < 3 || points.some((point) => !validFieldPoint(point))) {
     return 0
   }
   const meanLat = points.reduce((sum, point) => sum + point.lat, 0) / points.length
@@ -89,7 +93,10 @@ export const fieldGeometryIssue = (geometry: FieldGeometry): string | null => {
     return 'Add a point or draw a boundary first.'
   }
   if (geometry.kind === 'point') {
-    return null
+    return validFieldPoint(geometry.point) ? null : 'Field point coordinates are invalid.'
+  }
+  if (geometry.points.some((point) => !validFieldPoint(point))) {
+    return 'Boundary coordinates are invalid.'
   }
   if (geometry.points.length < 3) {
     return 'Add at least three boundary vertices.'
@@ -97,7 +104,7 @@ export const fieldGeometryIssue = (geometry: FieldGeometry): string | null => {
   if (polygonSelfIntersects(geometry.points)) {
     return 'Boundary edges cross. Edit the vertices before intersecting or saving.'
   }
-  if (geometry.acres <= 0) {
+  if (!Number.isFinite(geometry.acres) || geometry.acres <= 0 || estimatePolygonAcres(geometry.points) <= 0) {
     return 'Boundary vertices must enclose an area.'
   }
   return null

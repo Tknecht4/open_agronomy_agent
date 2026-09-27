@@ -41,11 +41,31 @@ export type GraphHit = {
   evidence: string
 }
 
-export type ToolInvocation = {
-  name: string
-  text?: string
-  payload?: Record<string, unknown>
-}
+export type ToolInvocation =
+  | {
+      // Legacy adapter/guard trace record.
+      name: string
+      text?: string
+      payload?: Record<string, unknown>
+      schema_version?: undefined
+      tool_id?: undefined
+      authority_role?: string
+    }
+  | {
+      schema_version: 'open_agronomy_agent.tool_invocation.v1' | 'open_agronomy_agent.tool_result.v1'
+      tool_id: string
+      status: string
+      invocation_id?: string
+      tool_version?: string
+      operation?: string
+      authority_role?: string
+      limitations?: string[]
+      missing_inputs?: string[]
+      inputs?: Record<string, unknown>
+      payload?: Record<string, unknown>
+      name?: undefined
+      text?: string
+    }
 
 export type StructuredEvidenceCard = {
   doc_id?: string | null
@@ -173,6 +193,7 @@ export type Consent = {
 export type SessionStatus = 'active' | 'paused' | 'archived'
 
 export type SessionRecord = {
+  turns_included?: boolean
   session_id: string
   title: string
   tags: string[]

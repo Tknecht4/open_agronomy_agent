@@ -297,38 +297,29 @@ export const installFrontendRum = () => {
   })
 
   let cls = 0
+  let clsWindow = 0
+  let clsWindowStart = 0
+  let clsWindowLast = 0
   observe('layout-shift', (entries) => {
     entries.forEach((entry) => {
       const shift = entry as PerformanceEntry & { hadRecentInput?: boolean; value?: number }
       if (!shift.hadRecentInput) {
-        cls += Number(shift.value || 0)
+        if (shift.startTime - clsWindowLast > 1000 || shift.startTime - clsWindowStart > 5000) {
+          clsWindow = 0
+          clsWindowStart = shift.startTime
+        }
+        clsWindow += Number(shift.value || 0)
+        clsWindowLast = shift.startTime
+        cls = Math.max(cls, clsWindow)
       }
     })
   })
-
-  let inp = 0
-  observe(
-    'event',
-    (entries) => {
-      entries.forEach((entry) => {
-        const eventEntry = entry as PerformanceEntry & { duration?: number; interactionId?: number }
-        if (eventEntry.interactionId && Number(eventEntry.duration || 0) > inp) {
-          inp = Number(eventEntry.duration || 0)
-        }
-      })
-    },
-    { durationThreshold: 40 },
-  )
 
   observe('longtask', (entries) => {
     entries.forEach((entry) => {
       sendRumMetric({ metric_name: 'long_task', value: entry.duration, unit: 'ms', metadata: { name: entry.name } })
     })
   })
-
-  window.setTimeout(() => {
-    sendRumMetric({ metric_name: 'TTI', value: performance.now(), unit: 'ms' })
-  }, 0)
 
   let flushed = false
   const flush = () => {
@@ -339,16 +330,16 @@ export const installFrontendRum = () => {
     if (latestLcp > 0) {
       sendRumMetric({ metric_name: 'LCP', value: latestLcp, unit: 'ms' })
     }
-    sendRumMetric({ metric_name: 'CLS', value: cls, unit: 'score' })
-    if (inp > 0) {
-      sendRumMetric({ metric_name: 'INP', value: inp, unit: 'ms' })
+    if (supported.has('layout-shift')) {
+      sendRumMetric({ metric_name: 'CLS', value: cls, unit: 'score' })
     }
   }
-  window.addEventListener('visibilitychange', flush, { once: true })
+  const flushOnHidden = () => { if (document.visibilityState === 'hidden') flush() }
+  window.addEventListener('visibilitychange', flushOnHidden)
   window.addEventListener('pagehide', flush, { once: true })
   return () => {
     observers.forEach((observer) => observer.disconnect())
-    window.removeEventListener('visibilitychange', flush)
+    window.removeEventListener('visibilitychange', flushOnHidden)
     window.removeEventListener('pagehide', flush)
   }
 }

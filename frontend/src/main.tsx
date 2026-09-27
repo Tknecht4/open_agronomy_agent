@@ -1,10 +1,12 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { WorkspaceErrorBoundary } from './WorkspaceErrorBoundary'
 import { OpenAgronomyApp } from './OpenAgronomyApp'
 import { consumeLocalPairingFragment } from './localPairing'
 import { registerPhase6Pwa } from './pwa'
 import { installFrontendRum, sendFrontendEvent } from './rum'
 import './styles.css'
+import './workspace.css'
 
 const rootElement = document.getElementById('root')!
 const root = createRoot(rootElement)
@@ -15,7 +17,7 @@ const renderApp = () => {
   sendFrontendEvent('app_shell_loaded', { pwa_registration_attempted: true })
   root.render(
     <StrictMode>
-      <OpenAgronomyApp />
+      <WorkspaceErrorBoundary><OpenAgronomyApp /></WorkspaceErrorBoundary>
     </StrictMode>,
   )
 }

@@ -1,8 +1,22 @@
 # Open Agronomy Agent
 
-Open Agronomy Agent is a local-first research system for evidence-grounded Canadian field questions. It joins field context, governed knowledge, graph relationships, deterministic capabilities, a downloadable model, validation, and an auditable trace.
+Open Agronomy Agent is a local-first field workspace and a customizable research-agent foundation. Ask a general question without inventing field facts, then add a field when its own records, location, and history matter. The system joins governed knowledge, graph relationships, deterministic capabilities, a downloadable model, validation, and an auditable trace.
 
 It is not an agronomist replacement or a regulatory, diagnostic, or field-outcome authority. Its central design rule is to preserve the difference between **observation**, **model output**, and **interpretation**.
+
+![Workspace with a selected synthetic field, conversation, and map](assets/workspace.jpg)
+
+*Synthetic example data; no personal field record is shown.* [Use the workspace](operations/workspace.md) · [Run it locally](operations/native-setup.md) · [Customize the agent](developer/customizing-the-harness.md)
+
+## One workspace, three entry points
+
+| View | Primary task | Boundary |
+|---|---|---|
+| **Workspace** | Ask and inspect a question with an optional selected field; expand the map when needed | An unknown field value stays unknown. Sources & checks shows observed evidence and trace, not proof of correctness. |
+| **Fields** | Add a field by name and pin/draw/import, then use Overview, Records & soil tests, and Map context | Mapped layers and calculated acreage are context/estimates, not measurements. |
+| **Data** | Inspect a private session reference and see governed knowledge and adapter readiness | Private inspection does not admit a source to the shared corpus or training. |
+
+The [workspace guide](operations/workspace.md) covers field setup, offline drafts, imports, exports, and evidence review. The [customization guide](developer/customizing-the-harness.md) maps model, source, graph, capability, UI, and evaluation extension seams.
 
 <div class="system-flow" aria-label="High-level request flow">
   <span>Field question<br><small>context + history</small></span><b aria-hidden="true">→</b>
@@ -37,6 +51,8 @@ It is not an agronomist replacement or a regulatory, diagnostic, or field-outcom
 - [Current two-Gemma assessment](two-gemma-colab-assessment-20260926.md): current-code A100 results, merge decision, residual fallback dependence, and reproducibility limits.
 - [RC3 development checkpoint](development-benchmark-rc3-20260815/README.md): paper, scientific figures, public-safe measurements, and reproducibility receipts.
 - [Developer guide](developer/index.md): code map and how to add a graph, tool, source, or service.
+- [Customizing the harness](developer/customizing-the-harness.md): supported fork seams, data ingestion paths, profiling, and public packaging.
+- [Workspace guide](operations/workspace.md): questions, field records, private references, and offline recovery.
 - [Native setup](operations/native-setup.md), [offline operation](offline-operation.md), and [containers](operations/containers.md).
 - [Governance](governance.md): privacy, egress, licensing, contribution, and publication boundaries.
 

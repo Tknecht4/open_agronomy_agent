@@ -76,12 +76,9 @@ export default function PrivateKnowledgePanel({
     <section className="source-private-knowledge">
       <div>
         <div className="panel-kicker">Private local references</div>
-        <h2>Use your own document without adding it to the public corpus</h2>
-        <p>
-          PDF, text, Markdown, or JSON stays in browser memory as unverified context. It cannot authorize a pesticide,
-          set a rate, confirm a diagnosis, enter training, or override current official authority.
-        </p>
-        <p>Document text is excluded from saved prompts and retrieval traces; answers may paraphrase it in field history.</p>
+        <h2>Add your own reference.</h2>
+        <p>Use a PDF, text, Markdown, or JSON file as context for questions in this browser session. References stay in this browser session; reloading clears them.</p>
+        <details><summary>How private references are used</summary><p>The local server parses the upload, then selected excerpts accompany your questions. They remain unverified context and cannot authorize a pesticide, set a rate, confirm a diagnosis, enter training, or override current authority.</p><p>Document text is excluded from saved prompts and retrieval traces; answers may paraphrase it in field history.</p></details>
       </div>
       <div className="source-private-actions">
         <label>

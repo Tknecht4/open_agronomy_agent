@@ -1,106 +1,85 @@
 # Open Agronomy Agent
 
-Open Agronomy Agent is a local-first research system for evidence-grounded Canadian field questions. It combines a downloadable language model, governed retrieval and graph context, structured field history, deterministic capabilities, validation, and an auditable answer trace.
+**A local-first field workspace and a customizable research-agent foundation.** Ask general agronomy questions, attach a field when it matters, inspect the sources and checks behind an answer, and keep observations distinct from mapped context and model output. The repository includes the React workspace, FastAPI service, pinned local model profile, governed document and graph retrieval, deterministic tools, tests, and evidence-preserving research workflows.
 
-It is **not** an agronomist replacement, diagnostic authority, pesticide-label authority, or proof that a recommendation will work in a field. It is a development system that makes source identity, missing evidence, assumptions, and intervention visible.
+![Open Agronomy Agent workspace with synthetic example data](docs/public/assets/workspace.jpg)
 
-> Project-authored contents are licensed under [Apache-2.0](LICENSE). Third-party data, evaluation material, dependencies, and model weights retain their own terms; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+The screenshot shows synthetic example data. [Explore the workspace](docs/public/operations/workspace.md) · [Customize the agent](docs/public/developer/customizing-the-harness.md) · [Read the architecture](docs/public/architecture.md)
 
-## Quick start
+## What you can do
 
-The exercised local target is an Apple Silicon Mac with 16 GB unified memory. Use Python 3.11 or 3.12 and Node 20 or newer.
+| Workspace | What it provides |
+|---|---|
+| Ask and inspect | General questions work without inventing a field. Answers expose sources, tool results, missing evidence, and the answer trace. |
+| Build a field record | Name a field, optionally add crop and region, then pin, draw, or import its location. Review before saving; add observations and soil tests over time. |
+| Use context carefully | Regional map layers, graph relationships, and dated public adapters can inform a question. They remain labelled priors, never field measurements or current label authority. |
+| Bring data in | Inspect a private reference for the current browser session, import field boundaries and records, or use governed source-ingestion builders. These are distinct admission paths. |
+| Extend the system | Change the pinned model profile, register a typed capability, add an admitted source or graph, and verify behavior through the production execution seam. |
+
+This is a development and research system. It is not an agronomist replacement, diagnosis, pesticide-label authority, or evidence that a recommendation will work in a field. Confirm consequential decisions with current local authority, representative observations, and qualified professional judgment.
+
+## Run locally
+
+The exercised native target is an Apple Silicon Mac with 16 GB unified memory, Python 3.11 or 3.12, and Node 20 or newer. Install from the repository root:
 
 ```bash
 git clone https://github.com/Tknecht4/open_agronomy_agent.git
 cd open_agronomy_agent
-
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 python -m pip install -e .
-
-cd frontend
-npm ci
-cd ..
+cd frontend && npm ci && cd ..
 ```
 
-Model weights are not committed and are never downloaded while answering a question. Provision the exact pinned serving model:
+Model weights are not committed or fetched while answering. Provision the active Gemma 4 E2B profile explicitly:
 
 ```bash
-python scripts/download_model.py \
-  --model-config configs/model.yaml
+python scripts/download_model.py --model-config configs/model.yaml
 ```
 
-The profile currently pins `mlx-community/gemma-4-e2b-it-4bit` at revision `238767527555cb75a05732a84dff5d6ba0dd6809`. That snapshot occupied approximately 3.34 GiB in the exercised local cache; reserve additional disk and unified memory for dependencies, indexes, context, and generation.
-
-Launch the API and React cockpit:
+The serving snapshot is `mlx-community/gemma-4-e2b-it-4bit` at revision `238767527555cb75a05732a84dff5d6ba0dd6809`. It occupied about 3.34 GiB in the exercised cache; leave additional room for dependencies, indexes, runtime state, and generation. Start the API and workspace:
 
 ```bash
 PYTHONPATH=src python scripts/run_cockpit.py \
-  --host 127.0.0.1 \
-  --port 8000 \
-  --frontend \
-  --frontend-port 5173 \
+  --host 127.0.0.1 --port 8000 \
+  --frontend --frontend-port 5173 \
   --model-config configs/model.yaml \
-  --rag-config configs/rag.yaml \
   --warm-model
 ```
 
-Open `http://127.0.0.1:5173`. In another terminal, verify the API itself rather than inferring readiness from the page:
+Open `http://127.0.0.1:5173` and check API readiness independently:
 
 ```bash
 curl --fail --silent http://127.0.0.1:8000/api/health | python -m json.tool
 ```
 
-The response must include `"status": "ok"`. Press **Ctrl+C** in the launch terminal to stop the API and frontend. Confirm both listeners are gone:
+Expect `"status": "ok"`; this verifies API configuration, not a completed model turn or an external provider. Stop the launch command with **Ctrl+C**. [Native setup and troubleshooting](docs/public/operations/native-setup.md) includes listener and recovery checks.
+
+## Start in the workspace
+
+Ask a general question directly, or choose **Add field** for a private field record. The three-step flow asks for a name, a pin/drawn boundary/imported GeoJSON, JSON, ZIP, or GPKG boundary, and a final review. Crop and region are optional. A calculated polygon area is an estimate, not a measurement. **Fields** contains Overview, Records & soil tests, and Map context; the question view keeps the map available on demand. **Sources & checks** opens the evidence behind a saved answer. The **Data** area distinguishes private session references from governed source and adapter status.
+
+Offline drafts remain local until the API acknowledges a save or sync. Optional Prairie soil layers require a separate verified pack; unavailable layers and providers are reported rather than simulated. [Workspace guide](docs/public/operations/workspace.md) explains the full flow, ingestion boundaries, exports, and recovery.
+
+## Build on this repository
+
+The supported product path is `src/agronomy_agent/server/app.py` → `server/services/chat_service.py::execute_agent_request` → the typed production core. Active profiles live in `configs/model.yaml`, `configs/rag.yaml`, and `configs/runtime_profiles.json`. Capability selection belongs to the registry-driven planners; source and graph presence on disk never grants runtime authority. See [customizing the harness](docs/public/developer/customizing-the-harness.md) for exact extension seams, ingestion routes, checks, and claim limits.
+
+Development profiling is reproducible without a provider call by default:
 
 ```bash
-lsof -nP -iTCP:8000 -iTCP:5173 -sTCP:LISTEN
+PYTHONPATH=src .venv/bin/python scripts/profile_workspace_backend.py \
+  --output-dir /tmp/open-agronomy-backend-profile
 ```
 
-No output means both development listeners have stopped.
+The explicit pinned-model profiler requires a locally provisioned snapshot and `--execute-local-pinned`; both write non-claim receipts to a new output directory. The [measured backend findings](docs/reviews/artifacts/ui-backend-findings-20260927.md) report cold-start and two local Gemma turns, including the timing and memory limits. They are diagnostics, not latency budgets or answer-quality evidence.
 
-## Need to know
+## Evidence and contribution boundaries
 
-- **Local-first is not automatically offline.** The model, admitted corpus, graph, calculator, history, and traces can run locally. Weather, current labels, regulations, and other live adapters require an authorized connection and must report when unavailable.
-- **Regional data is not field truth.** Soil maps, statistics, and historical guidance are priors. They do not replace representative samples, current observations, verified geometry, or local calibration.
-- **Private state stays local by default.** Runtime databases, traces, model caches, raw benchmark answers, private overlays, and generated spatial databases are excluded from Git and the documentation site.
-- **Consequential decisions need authority.** Confirm current labels and regulations and involve a qualified local professional when a decision carries material agronomic, legal, environmental, safety, or financial consequences.
-- **Knowledge is cumulative but explicitly admitted.** The active offline profile contains source-exact Canadian evidence, project policy, SoilWise context, and a 218,258-row USDA NRCS pack. U.S. material is available only for an explicit U.S. MLRA or ecological-site comparison as labelled context; it never establishes Canadian decisive authority. A named Canadian public table can be explained with its source coordinates, but it is not field truth or a prescription. Adding a file does not make it model-visible; source rights, policy, registry admission, and corpus validation remain required.
-- **Benchmark claims are bounded.** RC1–RC3 retain frozen historical development identities. The current-code two-Gemma assessment adds 5,784 retained responses from three four-arm trials each for Gemma 3 270M and Gemma 4 E2B. It confirms deterministic calculations and trace contracts, while exposing high verifier fallback dependence and 27 non-repeatable Gemma 4 full-system cases. It has no calibrated semantic or independent agronomist review and is not a competence claim.
-- **Optional assets remain explicit.** Public adapters need provider/network availability; the Prairie spatial pack is a separately built local asset; unavailable capabilities must not be simulated.
+The checked-in active corpus is hash-admitted and includes Canadian evidence, project policy, SoilWise context, and a 218,258-row U.S. NRCS analogue pack available only for explicit U.S./MLRA comparison. U.S. material cannot establish Canadian decisive authority. Evaluation cases never enter runtime retrieval or training. Runtime databases, traces, model caches, private overlays, credentials, and raw benchmark answers stay outside the public package. Historical RC1–RC3 and the [current two-Gemma assessment](docs/public/two-gemma-colab-assessment-20260926.md) retain their original identities; passing tests or a small profile does not establish agronomic competence.
 
-## Documentation
+Project-authored content is [Apache-2.0](LICENSE). Third-party data, evaluation material, dependencies, and model weights keep their own terms; consult [third-party notices](THIRD_PARTY_NOTICES.md). The [documentation site](docs/public/index.md), [governance guide](docs/public/governance.md), and [evaluation contract](docs/public/evaluation.md) explain evidence, privacy, and claim limits.
 
-- [Documentation home](docs/public/index.md) and the future [GitHub Pages site](https://tknecht4.github.io/open_agronomy_agent/)
-- [System architecture](docs/public/architecture.md)
-- [Knowledge and evidence governance](docs/public/knowledge-and-data.md)
-- [Tools and adapters](docs/public/tools-and-adapters.md)
-- [Evaluation contract](docs/public/evaluation.md)
-- [Current two-Gemma Colab assessment](docs/public/two-gemma-colab-assessment-20260926.md)
-- [RC3 development benchmark checkpoint and paper](docs/public/development-benchmark-rc3-20260815/README.md)
-- [Academic benchmark and system review](docs/reviews/open-agronomy-benchmark-system-review-20260813.md)
-- [Upgrade implementation record](docs/reviews/open-agronomy-upgrade-implementation-20260813.md)
-- [Historical benchmark RC2 readiness record](docs/reviews/open-agronomy-benchmark-rc2-readiness-record-20260814.md)
-- [Developer guide](docs/public/developer/index.md)
-- [Release-candidate checkout gates](docs/public/developer/release-readiness.md)
-- [Native operations](docs/public/operations/native-setup.md), [offline operation](docs/public/offline-operation.md), and [containers](container/README.md)
-
-Subsystem extension contracts live beside the code: [Python package](src/agronomy_agent/README.md), [server](src/agronomy_agent/server/README.md), [Agno runtime](src/agronomy_agent/agno_runtime/README.md), [tools](src/agronomy_agent/tools/README.md), [frontend](frontend/README.md), [configuration](configs/README.md), [data](data/README.md), [manifests](data/manifests/README.md), [scripts](scripts/README.md), and [tests](tests/README.md).
-
-## Verify changes
-
-```bash
-PYTHONPATH=src .venv/bin/python -m pytest -q
-PYTHONPATH=src .venv/bin/python scripts/check_public_docs.py
-
-cd frontend
-npm run typecheck
-npm test
-npm run build
-```
-
-A focused check proves only its named contract. Do not describe a partial test run as full-system, field, agronomist, or release validation.
-
-Before a benchmark release candidate, use the [clean-checkout and environment-receipt procedure](docs/public/developer/release-readiness.md). Most Python dependencies are range-declared; the RC3 analysis file pins its direct plotting dependencies, and the generated receipt records the exact exercised environment. Neither is a complete portable lock.
+Before a repository-wide claim, run the Python suite, public-doc checker, strict MkDocs build, and frontend typecheck/tests/build listed in [release readiness](docs/public/developer/release-readiness.md). Run corpus, retrieval, release, or model gates when their controlling inputs change.

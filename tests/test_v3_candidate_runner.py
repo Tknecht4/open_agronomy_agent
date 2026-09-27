@@ -12,17 +12,22 @@ from agronomy_agent.v3_candidate_runner import AppendOnlyObservationLedger, buil
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def _rows(path: Path) -> list[dict]:
-    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
-
-
 def test_frozen_candidate_matrix_has_declared_model_arm_shape() -> None:
     config = json.loads((ROOT / "configs/open_agronomy_v3_competence_candidate.json").read_text())
-    inputs = ROOT / "outputs/v3_competence_candidate/inputs"
+    # This checks matrix orchestration, not benchmark content. Use unique,
+    # synthetic case identities so a clean checkout needs no ignored inputs.
+    external_cases = [
+        {"eval_id": f"fixture-external-{index:03d}", "question": "Synthetic matrix question."}
+        for index in range(config["external_dataset"]["rows"])
+    ]
+    regional_cases = [
+        {"eval_id": f"fixture-regional-{index:03d}", "question": "Synthetic matrix question."}
+        for index in range(config["regional_case_count"])
+    ]
     matrix = build_matrix(
         config=config,
-        external_cases=_rows(inputs / "external_cases.jsonl"),
-        regional_cases=_rows(inputs / "regional_cases.jsonl"),
+        external_cases=external_cases,
+        regional_cases=regional_cases,
     )
     assert len(matrix) == 17_640
     counts = Counter((row.model_key, row.lane) for row in matrix)

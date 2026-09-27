@@ -24,4 +24,12 @@ describe('field geometry validity', () => {
   it('keeps incomplete drafts out of intersect and save workflows', () => {
     expect(fieldGeometryIssue({ kind: 'polygon', points: rectangle.slice(0, 2), acres: 0 })).toMatch(/at least three/i)
   })
+
+  it('keeps a location marker distinct from a boundary and rejects invalid coordinates', () => {
+    expect(fieldGeometryIssue({ kind: 'point', point: rectangle[0] })).toBeNull()
+    expect(fieldGeometryIssue({ kind: 'point', point: { lat: 91, lon: -99 } })).toMatch(/coordinates are invalid/i)
+    const invalid = [{ lat: Number.NaN, lon: -99.965 }, ...rectangle.slice(1)]
+    expect(estimatePolygonAcres(invalid)).toBe(0)
+    expect(fieldGeometryIssue({ kind: 'polygon', points: invalid, acres: Number.NaN })).toMatch(/coordinates are invalid/i)
+  })
 })
