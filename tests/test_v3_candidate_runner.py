@@ -12,17 +12,19 @@ from agronomy_agent.v3_candidate_runner import AppendOnlyObservationLedger, buil
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def _rows(path: Path) -> list[dict]:
-    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+def _cases(prefix: str, count: int) -> list[dict[str, str]]:
+    return [
+        {"eval_id": f"{prefix}-{index:04d}", "question": f"{prefix} fixture {index}"}
+        for index in range(count)
+    ]
 
 
 def test_frozen_candidate_matrix_has_declared_model_arm_shape() -> None:
     config = json.loads((ROOT / "configs/open_agronomy_v3_competence_candidate.json").read_text())
-    inputs = ROOT / "outputs/v3_competence_candidate/inputs"
     matrix = build_matrix(
         config=config,
-        external_cases=_rows(inputs / "external_cases.jsonl"),
-        regional_cases=_rows(inputs / "regional_cases.jsonl"),
+        external_cases=_cases("external", 800),
+        regional_cases=_cases("regional", 72),
     )
     assert len(matrix) == 17_640
     counts = Counter((row.model_key, row.lane) for row in matrix)
