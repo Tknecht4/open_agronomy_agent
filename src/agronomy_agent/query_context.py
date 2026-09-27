@@ -842,10 +842,7 @@ def _topic_families(text: str) -> tuple[str, ...]:
         ("weed", r"\b(weeds?|waterhemp|pigweed|ryegrass|volunteer canola|burndown|glyphosate|herbicide|preemergence|residual activation|control failure|resistance management|mode of action|site of action)\b"),
         ("product", r"\b(sprays?|spraying|drift|pesticide|herbicide|glyphosate|fungicide|insecticide|label|tank mix|application window|application record)\b"),
         ("precision", r"\b(variable-rate|variable rate|prescription|yield map|precision|check strip|trial design)\b"),
-        ("economics", r"\b(econom\w*|roi|net returns?|return on investment|partial budget|"
-         r"profit\w*|payback|costs?|revenues?|financial|finance|liquidity|"
-         r"cash[- ]flow|income statement|current ratio|debt|assets?|liabilit\w*|"
-         r"break[- ]?even|(?:farm|crop|enterprise) budget)\b"),
+        ("economics", r"\b(econom\w*|roi|net return|return on investment|partial budget|profit|payback|cost)\b"),
         ("regional", r"\b(mlra|ecoregion|ecological site|soil survey|soil map|map-unit|map unit|regional context)\b"),
         ("field_data", r"\b(source availability|adapter|geometry|shapefile|geojson|field-specific public|source card|provenance)\b"),
         ("produce_safety", r"\b(produce[- ]safety|food[- ]safety|crop[- ]contact water|agricultural water|water intake)\b"),
@@ -853,12 +850,7 @@ def _topic_families(text: str) -> tuple[str, ...]:
         ("planting_establishment", r"\b(seed[- ]zone|seedbed|planting depth|trafficability|sidewall smearing|stand establishment)\b"),
         ("crop_management", r"\b(variety|hybrid|cultivar|planting|replant|harvest|postharvest|field heat|cold chain|cooling|storage|forage|fourrages?|pâturages?|grazing|livestock|stand establishment|seed quality|germination|vigor|standability|crop stage|specialty[- ]crop|vegetable|leafy greens?|market quality|transplants?|root[- ]bound|root ball|hardening)\b"),
     )
-    found = [name for name, pattern in patterns if re.search(pattern, text, re.IGNORECASE)]
-    if "economics" not in found and re.search(
-        r"\benterprise\b[^.!?]{0,50}\bbudgets?\b", text, re.IGNORECASE
-    ):
-        found.append("economics")
-    return tuple(found)
+    return tuple(name for name, pattern in patterns if re.search(pattern, text, re.IGNORECASE))
 
 
 def _primary_topic_families(primary_intent: str | None, signals: QueryContextSignals) -> set[str]:
@@ -876,10 +868,9 @@ def _primary_topic_families(primary_intent: str | None, signals: QueryContextSig
     if intent == "crop_management":
         specific_lanes = set(signals.topics) & {"produce_safety", "transplant_establishment", "planting_establishment"}
         if specific_lanes:
-            return {"crop_management", *specific_lanes} | ({"economics"} if "economics" in signals.topics else set())
+            return {"crop_management", *specific_lanes}
         multi_domain = set(signals.topics) & {"fertility", "soil_water", "disease", "insect", "weed", "product", "produce_safety", "transplant_establishment", "planting_establishment"}
-        primary = ({"crop_management"} | multi_domain) if len(multi_domain) >= 3 else {"crop_management"}
-        return primary | ({"economics"} if "economics" in signals.topics else set())
+        return ({"crop_management"} | multi_domain) if len(multi_domain) >= 3 else {"crop_management"}
     if intent == "field_data":
         return {"field_data", "regional"} | (set(signals.topics) & {"precision", "economics", "fertility", "soil_water"})
     return set()

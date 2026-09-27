@@ -84,41 +84,6 @@ def test_candidate_card_reaches_execution_route_but_cannot_authorize_a_rate() ->
     assert blocked and blocked[0]["reason"] == "not_decisive_for_high_consequence"
 
 
-def test_business_method_cards_survive_product_context_preparation() -> None:
-    candidate_config = "configs/rag_production_foundations_candidate.yaml"
-    cases = (
-        (
-            "A US hay farm compares hiring a baling contractor with doing the job using its own equipment. "
-            "Which costs and returns should change in the comparison?",
-            "foundation_us_partial_budget",
-        ),
-        (
-            "A Minnesota grain farm sold old inventory and postponed bills. Does a better cash tax record "
-            "prove this year's farm was more profitable?",
-            "foundation_us_wholefarm",
-        ),
-        (
-            "A Maryland vegetable farm has annual profit but customer payments arrive after seasonal bills. "
-            "How would a whole-farm cash-flow plan expose that gap?",
-            "foundation_us_wholefarm",
-        ),
-        (
-            "An Oklahoma mixed farm finds an attractive enterprise budget, but the proposed enterprise "
-            "needs the same tractor and workers during the current enterprise's busiest period. "
-            "What must a whole-farm plan check?",
-            "foundation_us_wholefarm",
-        ),
-    )
-    for question, expected_doc_id in cases:
-        context = build_context(
-            question,
-            rag_config=candidate_config,
-            use_context_cache=False,
-            use_search_cache=False,
-        )
-        assert expected_doc_id in {doc.doc_id for doc in context.retrieved_docs}
-
-
 def test_canadian_budget_card_does_not_gain_us_decisive_scope() -> None:
     resources = load_agent_resources("configs/rag_production_foundations_candidate.yaml")
     doc = next(

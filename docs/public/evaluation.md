@@ -78,6 +78,15 @@ the answer and negative-control receipts are retained in the review artifact.
 These known-source questions and nonblinded judgments are not a fresh
 competence or field-outcome evaluation.
 
+A later [source-distinct transfer audit](https://github.com/Tknecht4/open_agronomy_agent/blob/main/docs/reviews/production-foundations-efficacy-audit-20260927.md)
+used a pinned local model, blinded grading, ten qualitative transfer questions
+and four boundary controls. The candidate gained no complete answers and added
+two materially misleading responses. An experimental business-topic selector
+helped the exposed development set but reduced relevant-card delivery on a
+separately frozen confirmation set, so it was reverted. The cards remain
+non-active; partial claim coverage and raw retrieval reachability do not
+qualify them for activation.
+
 ## Reproducible runs
 
 The runner binds suite hash, interface contract, arm contract, executable source

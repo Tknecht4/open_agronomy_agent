@@ -41,3 +41,44 @@ The result can support only a narrow statement about this exposed transfer cohor
 Before examining or changing selection code, a separate author prepared [eight confirmation cases](../../data/eval/production_foundations_topic_confirmation_v1.jsonl), SHA-256 `8dcc4964aa7a3af8cd3dcb08a1d2def6d348686a18422c2d8d478c8afee6cf9d`: six qualitative method cases, two negative controls. Their source URLs are distinct from the seven card sources and the first 14-case cohort. One Penn State page with unreliable direct access was replaced before freezing by directly opened [Minnesota market-channel guidance](https://extension.umn.edu/agriculture/farm-operations-and-systems/agricultural-business-management/marketing-farm-products/marketing-mix-analysis-for-farm-operators). The author did not inspect cards, first-cohort outputs or code.
 
 Run the unchanged code once with active then candidate RAG on these eight cases; retain both reports without reading their answers. Implement a bounded selection/safety repair derived only from the first 14-case development diagnosis. Then repeat the eight cases with candidate then active RAG, matching model revision, seed, token limit and runner. Grade all four arms from shuffled, masked answers against the already frozen claims. The old-code baseline and new-code comparison have different implementation identities, so report them as separate paired contrasts. A useful context-preparation repair requires a relevant card in at least 4/6 final positive-case contexts, no new unsafe answer in either control, and no decline in the older 21-case retrieval/authority suite. Complete-answer changes remain separately adjudicated; case exposure and the small denominator prohibit a general competence claim.
+
+## Observed paired results
+
+The [public evidence artifact](artifacts/production-foundations-efficacy-20260927.json) retains every final answer and its SHA-256, product-selected document IDs, actual model/seed and fallback receipts, raw report hashes, masked-grade records and source-selection diagnosis. The first cohort's active and candidate reports are SHA-256 `41e6f750daee60fbdf55c627e5d87d540ec733d4b62cf3ad08fb8bfaa4dd789f` and `02100fadae335329cffa9a4670f7f1ee8bc67f3d2dfbca8ce76b9d681507e7f2`. Both ran all 14 cases with 12 completed model drafts, applied seed when drafting, and four fallbacks. Seven paired final answers changed.
+
+| First transfer cohort, blind grade | Active | Candidate |
+|---|---:|---:|
+| Complete | 1/14 | 1/14 |
+| Partial | 12/14 | 10/14 |
+| Materially misleading | 1/14 | 3/14 |
+| Expected card in final context, ten positive cases | Not in profile | 3/10 |
+
+There was **no paired complete-answer gain**. The candidate introduced two additional materially misleading answers: it treated moisture as the established cause of differing alfalfa maturity and misstated proportionality in a break-even explanation. Both arms also told a U.S. herbicide user to check Canada's PMRA label. These judgments include the independent blind grader's rationale and uncertainty; none involved a supplied numerical herbicide rate. A safe fallback on a positive case still counted as incomplete.
+
+The candidate's direct raw question search ranked the expected card within seven documents in **9/10** positive cases, but final product context retained it in **3/10**. Four method cards were excluded for mismatched jurisdiction, which correctly prevents a Manitoba guide from establishing an Oklahoma or Saskatchewan field recommendation. Three U.S. business cards were dropped by topic or lexical-fit filters. Irrelevant nutrient-planning cards sometimes occupied business-question context. This identifies context preparation and missing jurisdiction-appropriate source coverage as distinct bottlenecks; raw recall alone overstated treatment delivery.
+
+The previously unresolved integrated-model check is also closed operationally. With the worktree pointed at the already provisioned cache, the pinned model completed the exposed 18-case active/candidate rerun on merged code: three drafts and one fallback in each arm; **17/18 final answers byte-identical**. All eleven arithmetic answers were the same deterministic tool results. The candidate's remaining answer was a more farm-specific current-ratio definition. These exposed cases do not establish card efficacy.
+
+## Rejected selector experiment and separate safety repair
+
+The first cohort exposed a tempting lexical repair: broaden `economics` topic terms so U.S. partial-budget and whole-farm cards survive final filtering. On the exposed first cohort, this raised expected-card delivery from **3/10 to 6/10**. The independently frozen eight-case confirmation contradicted the apparent improvement. The old code selected the expected card in **5/6** positive candidate cases; the experimental code selected **3/6**, below the preregistered 4/6 floor. The new topic tag made the whole-farm card itself exclusive while ordinary questions about a cash projection or direct-market poultry lacked matching finance keywords. A valid card was then filtered out. The selector experiment was **reverted**; it is not a supported optimization.
+
+| Eight-case confirmation, blind grade | Before active | Before candidate | Selector experiment active | Selector experiment candidate |
+|---|---:|---:|---:|---:|
+| Complete | 0/8 | 0/8 | 0/8 | 0/8 |
+| Partial | 8/8 | 8/8 | 8/8 | 8/8 |
+| Materially misleading | 0/8 | 0/8 | 0/8 | 0/8 |
+| Expected claims fully present | 8/31 | 14/31 | 9/31 | 12/31 |
+| Expected card in final context, six positive cases | Not in profile | 5/6 | Not in profile | 3/6 |
+
+Individual claim coverage is diagnostic, not a substitute for a complete answer. Both candidate arms supplied more fragments than their paired active arms, but neither completed a case; the selector experiment reduced the candidate's claim coverage and card delivery. The before-code reports are SHA-256 `d506f6b449b84cac0b88da971eefeeff0fdd849232f018db1d35bd3322a1e9b5` and `dfec37eb1cc9abd6a398bab4c509e342a6c5d9936ad9d15b493cb0155e2ce603`; after-code reports are `4bf12b01c39de41695e996bb94a6845cfbd8fd33ef24f68aa7c6e4ae0419ccc3` and `a42b3c9efe34758fbff235e500520424ead1cfc6b1de9856694deb3609f37402`. Each run completed seven model drafts and one fallback. The post-change comparison was reversed in arm order as planned.
+
+The U.S. product-label error was a separate, high-consequence defect: a postcondition hardcoded PMRA/Canadian registration even when the user explicitly named a U.S. field. The bounded repair recognizes explicit U.S. jurisdiction and withholds a pesticide/rate decision pending exact product, [current EPA-registered labeling](https://www.epa.gov/pesticide-labels/introduction-pesticide-labels), crop/site, target and applicable state requirements. It leaves the Canadian label boundary intact. A product-path replay of the previously failed U.S. control returned that U.S. boundary with zero model drafts and no fallback. This is a post-hoc safety fix, not a card win or a new unbiased evaluation.
+
+## Decision and next research gate
+
+**Do not activate the nine-card candidate.** On the first independent transfer cohort it added no complete answers and two material errors; on confirmation it completed no case; context delivery was unreliable; and the exposed lexical selector repair failed independent confirmation. The cards may supply useful partial claims when applicable, but that does not meet the preregistered answer-quality or safety gate. The public corpus and policy remain non-active development assets.
+
+The next candidate should make `farm_business` and crop-production methods explicit in the capability/context contract, distinguish method transfer from local authority, and add U.S. and Canadian source coverage where the current jurisdiction filter correctly refuses transfer. In particular, the present cards have no U.S. GDD or break-even counterpart and no Saskatchewan-specific seeding-method card. Design that representation and source/rights package before another retrieval change; compare it against a separately authored, still-unseen cohort and require no unsafe regression. Do not tune another keyword list on these exposed answers.
+
+Limits: two small authored development cohorts, one pinned local model, one blind grader per cohort, no independent field outcomes or calibrated agronomist panel, and some external source pages with incomplete direct-fetch receipts. Card presence and individual claim coverage do not prove the model used the card correctly. All null, fallback and failed selector observations are retained; no activation or general competence claim follows.
