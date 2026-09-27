@@ -95,6 +95,30 @@ from agronomy_agent.agronomic_calculations import (
             55,
             "CAD",
         ),
+        (
+            "break_even_price",
+            {"cost_per_area": 840, "yield_per_area": 4, "currency": "CAD", "area_unit": "ha", "yield_unit": "tonne", "cost_basis": "total"},
+            210,
+            "CAD/tonne",
+        ),
+        (
+            "break_even_yield",
+            {"cost_per_area": 480, "price_per_unit": 8, "currency": "USD", "area_unit": "ac", "yield_unit": "bu", "cost_basis": "operating"},
+            60,
+            "bu/ac",
+        ),
+        (
+            "current_ratio",
+            {"current_assets": 250000, "current_liabilities": 100000},
+            2.5,
+            "ratio",
+        ),
+        (
+            "debt_to_asset_percent",
+            {"total_debt": 275000, "total_assets": 1100000},
+            25,
+            "%",
+        ),
     ],
 )
 def test_structured_calculator_operations(
@@ -135,6 +159,34 @@ def test_inverse_conversion_matches_dimensional_factor() -> None:
     assert float(result.value) == pytest.approx(89.2179, rel=1e-5)
 
 
+def test_imperial_seed_methods_preserve_the_published_approximation() -> None:
+    inputs = {
+        "target_plants_per_ft2": 28,
+        "tkw_g": 39,
+        "germination_pct": 99,
+        "field_survival_pct": 85,
+    }
+    published = calculate_agronomic("seed_rate_mass_imperial", {**inputs, "method": "published_factor_10"})
+    dimensional = calculate_agronomic("seed_rate_mass_imperial", {**inputs, "method": "dimensional"})
+
+    assert float(published.value) == pytest.approx(129.76827, rel=1e-5)
+    assert float(dimensional.value) == pytest.approx(124.535, rel=1e-3)
+    assert published.value > dimensional.value
+    assert "approximate" in published.answer()
+    assert "dimensional conversion" in published.answer()
+
+
+def test_budget_cost_basis_and_price_currency_are_not_relabelled() -> None:
+    result = calculate_agronomic(
+        "break_even_price",
+        {"cost_per_area": 840, "yield_per_area": 4, "currency": "CAD", "area_unit": "ha", "yield_unit": "tonne", "cost_basis": "total"},
+    )
+
+    assert "total cost" in result.answer()
+    assert "operating cost" not in result.answer()
+    assert "not a current cash bid" in result.answer()
+
+
 def test_weighted_average_rejects_unaccounted_area() -> None:
     with pytest.raises(ValueError, match="zone areas total 80 ha but total_area_ha is 100 ha"):
         calculate_agronomic(
@@ -165,6 +217,16 @@ def test_weighted_average_rejects_unaccounted_area() -> None:
             "tank_coverage",
             {"tank_volume_l": 1000, "application_volume_l_per_ha": 100, "unusable_volume_l": 1000},
             "smaller than",
+        ),
+        (
+            "break_even_price",
+            {"cost_per_area": 840, "yield_per_area": 0, "currency": "CAD", "area_unit": "ha", "yield_unit": "tonne", "cost_basis": "total"},
+            "expected yield must be greater than zero",
+        ),
+        (
+            "debt_to_asset_percent",
+            {"total_debt": 1, "total_assets": 0},
+            "total_assets must be greater than zero",
         ),
     ],
 )

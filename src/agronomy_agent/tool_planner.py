@@ -15,12 +15,13 @@ import re
 from typing import Any, Mapping
 
 from agronomy_agent.agronomic_calculations import agronomic_calculator, calculation_tool_schema
+from agronomy_agent.calculator_contracts import CALCULATOR_VERSION, TOOL_PLANNER_VERSION
+from agronomy_agent.foundation_math_parser import _unsafe_action_request, parse_foundation_calculation
 
 
-PLANNER_VERSION = "open_agronomy_agent.tool_planner.v1"
+PLANNER_VERSION = TOOL_PLANNER_VERSION
 TOOL_PLAN_SCHEMA_VERSION = "open_agronomy_agent.tool_plan.v1"
 CALCULATOR_ID = "agronomic_calculator"
-CALCULATOR_VERSION = "agronomic_calculator_v1"
 _NUMBER = r"([0-9][0-9,]*(?:\.[0-9]+)?)"
 
 
@@ -184,6 +185,11 @@ def calculator_contract() -> dict[str, Any]:
 def _parse_calculation(question: str) -> tuple[str, dict[str, Any], tuple[str, ...]] | None:
     text = " ".join(question.replace("−", "-").split())
     lower = text.casefold()
+    if _unsafe_action_request(lower):
+        return None
+    foundation = parse_foundation_calculation(text)
+    if foundation is not None:
+        return foundation
     if not _explicit_arithmetic_request(lower):
         return None
 

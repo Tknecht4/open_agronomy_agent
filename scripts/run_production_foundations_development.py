@@ -117,14 +117,18 @@ def main() -> int:
         expected = case.get("expected_doc_id")
         row = {
             "case_id": case["case_id"],
-            "kind": case["kind"],
+            "kind": case.get("kind") or case.get("case_class") or "unspecified",
             "question": case["question"],
             "answer": answer,
             "answer_sha256": hashlib.sha256(answer.encode()).hexdigest(),
             "expected_doc_id": expected,
             "expected_doc_retrieved": expected in documents if expected else None,
             "retrieved_doc_ids": documents,
-            "numeric_presence_proxy": _numeric_proxy(answer, float(case["expected_number"]), float(case["number_tolerance"])) if "expected_number" in case else None,
+            "numeric_presence_proxy": _numeric_proxy(
+                answer,
+                float(case.get("expected_number", case.get("expected_value"))),
+                float(case.get("number_tolerance", case.get("absolute_tolerance", 0.01))),
+            ) if "expected_number" in case or "expected_value" in case else None,
             "required_term_presence_proxy": {term: term.casefold() in answer.casefold() for term in case.get("required_terms") or []},
             "draft_generation": _stage(result, "draft_generation"),
             "fallback_origin": _stage(result, "fallback_origin"),
