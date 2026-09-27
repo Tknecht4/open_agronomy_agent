@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-09-27T05:20:19+00:00",
+  "generated_at": "2026-09-27T06:07:45+00:00",
   "status": "pass",
-  "contract_sha256": "3c749298014f377e34b68b50412f0fcdbf6458738949560310619c427fd74dd3",
+  "contract_sha256": "60f2a5c0b07ce02dcf7516977fce1aef3e8b33359f9fa0a88e27a3eb791e0f74",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -407,9 +407,9 @@
   "runtime_assets": [
     {
       "path": "src/agronomy_agent",
-      "file_count": 125,
-      "bytes": 5029681,
-      "sha256": "2188a531b2dc463c38f64147db467465b014c9cb9c7221f3557e701d07a32a18"
+      "file_count": 127,
+      "bytes": 5060316,
+      "sha256": "e7863fb92907b57a69528c2256627d1e17562c12c3289f34369e0a31bd19d642"
     },
     {
       "path": "frontend/src",
@@ -425,27 +425,27 @@
     },
     {
       "path": "scripts",
-      "file_count": 118,
-      "bytes": 1629580,
-      "sha256": "12cb6122eb1aaea676e6b6daac5cd0c4f3b5f1f7e2b42589136741e846dd2630"
+      "file_count": 122,
+      "bytes": 1656687,
+      "sha256": "c6b40408b4e1012766043163527562411d78c15736650f95e9a694db2584586e"
     },
     {
       "path": "configs",
-      "file_count": 82,
-      "bytes": 234941,
-      "sha256": "05582567adb6247d45bf2f539bfaf872740922548c295c2d400f2f4d6b045c96"
+      "file_count": 84,
+      "bytes": 248791,
+      "sha256": "33736121e0aaaca37e141ba226a3b202bfcff1394c77758a947ec2aef1c2c451"
     },
     {
       "path": "data/manifests",
-      "file_count": 27,
-      "bytes": 19425019,
-      "sha256": "6b0b8582677f8fe02d7ef90329a3bb9c77501150262a2bf4d462399b6a9936c4"
+      "file_count": 29,
+      "bytes": 19477653,
+      "sha256": "f43455c47b5464e6196f6ec38015f8cc400dd7b88c800bc7c7d062aa78ea0eba"
     },
     {
       "path": "data/eval",
-      "file_count": 37,
-      "bytes": 3009846,
-      "sha256": "6bd92835dd8756fbd48b8833b22006d4d01fdea304280eb9a7a1854f8dcbf8ad"
+      "file_count": 39,
+      "bytes": 3021287,
+      "sha256": "431ca9a9964af57e2690a3882f83f36a3b2f885db2b3dd07807e0bb72e5c22da"
     },
     {
       "path": "data/snapshots",
@@ -456,8 +456,8 @@
     {
       "path": "docs/public",
       "file_count": 90,
-      "bytes": 8804286,
-      "sha256": "1c8b5e3e01948b64ce08f712476d284f0b4c2408f2d017aaa33cbb5806a936cf"
+      "bytes": 8805582,
+      "sha256": "2bbb93bf0a292efd3f4e5bb8ca6537d9384127a9971fde172038ca43e79b1ea4"
     }
   ],
   "geo_cache_seed": {
@@ -498,8 +498,8 @@
     {
       "path": "THIRD_PARTY_NOTICES.md",
       "role": "runtime_control",
-      "bytes": 3342,
-      "sha256": "45aa6f00130eacc4f51c89d16560c5beeca5592901f7dff79303c4069f38bb0e"
+      "bytes": 4509,
+      "sha256": "b0c43be25d586323fdb823f81a078ab1c0787fbcbc78163e72e63e81958e9bfb"
     },
     {
       "path": "Containerfile",

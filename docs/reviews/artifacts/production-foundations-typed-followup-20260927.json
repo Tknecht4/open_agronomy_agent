@@ -1,0 +1,1412 @@
+{
+  "schema_version": "open_agronomy_agent.production_foundations_typed_followup.v1",
+  "status": "development_evidence_only",
+  "claim_eligible": false,
+  "model_id": "mlx-community/gemma-4-e2b-it-4bit",
+  "model_revision": "238767527555cb75a05732a84dff5d6ba0dd6809",
+  "max_tokens": 320,
+  "assessment": {
+    "confirmation_numeric_manual": "11/11 supplied-input arithmetic cases correct in both typed arms",
+    "confirmation_missing_invalid_manual": "3/3 targeted clarifications in both typed arms",
+    "confirmation_boundary_manual": "conceptual, live-price and regulated-rate controls remained bounded; cross-border transfer was a generic safe fallback before the targeted direct-no guard",
+    "confirmation_seeded_reference": "12/18 conservative fallbacks and 17 model generations; the final follow-up code was not present in this arm",
+    "typed_candidate": "1/18 fallbacks and 3 model generations on the pre-guard code",
+    "typed_active": "1/18 fallbacks and 3 model generations on the pre-guard code",
+    "pilot_comparison": "13/13 paired typed answers inspected; numeric results matched; candidate had zero fallbacks versus one with active retrieval; this exposed source-conditioned pilot is not independent efficacy",
+    "known_disagreement": "The Manitoba guide factor-10 approximation for the original imperial seeding scenario is about 116.959 lb/ac, while exact dimensional conversion is about 112.32 lb/ac. Both are labeled, never equated.",
+    "currency_limit": "The U.S. partial-budget case supplies $ but no currency code; the parser correctly retains $/ac. Its frozen USD/ac oracle overstates the prompt.",
+    "final_model_attempt": "A prior final-code run stopped after 14/18 cases when Metal became unavailable. A subsequent 18/18 product execution completed, but Metal remained unavailable and no model draft completed.",
+    "later_targeted_guard": "Cross-border U.S.-guide-to-Canadian-rate guard was exercised in a separate product-path model smoke and focused test; it is post-hoc repair, outside the completed 18-case run.",
+    "limits": "Authored, exposed development sets; nonblinded judgment. The completed 18-case model comparisons predate final compatibility and safety repairs; the final-code run completed without Metal/model drafts. Speed and model-quality gains on integrated code remain unconfirmed. Candidate cards remain non-active.",
+    "integrated_final_code": "18/18 cases completed through product execution; 11/11 arithmetic values and 3/3 clarifications correct; cross-border guard gave a direct No. Metal unavailable: 0 model generations and 3 fallbacks, so this is a deterministic/safety smoke, not an integrated model-quality confirmation."
+  },
+  "runs": {
+    "seeded_reference_candidate": {
+      "local_report_sha256": "7ed8a718c4943357595614e7926840b32ec7ff5b4060e3f5e117776e61513fc5",
+      "cases_sha256": "f2edb00847316ce43a491c3474af92d005e6220b04a791c1f3f3d978f0b5fb47",
+      "rag_config_sha256": "ae7228c494ede35cd9109c38e5a987910fe76a99737780e7e70cbd47ef0d02d0",
+      "corpus_policy_sha256": "91a16620a8fb8d082ede0634ba60fe9fd2209a5326792f19e5853fc2cba9134a",
+      "model_config_sha256": "8cd880ac68b3631a4eccc11bd9716be3e1768b1a5d49653ac13acc7ec6aeba10",
+      "runner_sha256": "63676563d23eb5aabe88f9e970cac325b12ee9ba2fb4a4dc0968137a3846acee",
+      "case_count": 18,
+      "fallback_count": 12,
+      "model_generation_completed_count": 17,
+      "elapsed_ms_total": 135952.4,
+      "seed_application_statuses": [
+        "applied",
+        "missing"
+      ],
+      "cases": [
+        {
+          "case_id": "confirm_seed_metric_wheat",
+          "answer": "Decision boundary: do not act on this numeric rate decision from this answer. Missing evidence: current method-identified soil or tissue test with units and date; crop and realistic yield goal; field application and crop-credit history; jurisdiction-specific calibration or authority. Use the answer only to plan the next verification step.\n\nKeep each seed lot separate and start with its current germination percentage or germ test plus any vigor test, cold test, or accelerated-aging result relevant to the crop. Confirm seed identity, seed size, treatment and storage history, then compare lot quality with planting date, soil temperature, soil moisture and seedbed condition. Use locally calibrated emergence assumptions to assess seeding rate, expected stand establishment and replant risk; do not invent a rate from the label value alone. Where lots differ materially, place the stronger lot in the higher-stress planting window or field and verify emergence with stand counts.",
+          "answer_sha256": "7ef5d36540d8e77c4be14bcd83a624d909a105a706b7bb6dd5b6f536996d68f1",
+          "numeric_presence_proxy": false,
+          "fallback_used": true,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "confirm_seed_metric_barley",
+          "answer": "Decision boundary: do not act on this numeric rate decision from this answer. Missing evidence: current method-identified soil or tissue test with units and date; crop and realistic yield goal; field application and crop-credit history; jurisdiction-specific calibration or authority. Use the answer only to plan the next verification step.\n\nKeep each seed lot separate and start with its current germination percentage or germ test plus any vigor test, cold test, or accelerated-aging result relevant to the crop. Confirm seed identity, seed size, treatment and storage history, then compare lot quality with planting date, soil temperature, soil moisture and seedbed condition. Use locally calibrated emergence assumptions to assess seeding rate, expected stand establishment and replant risk; do not invent a rate from the label value alone. Where lots differ materially, place the stronger lot in the higher-stress planting window or field and verify emergence with stand counts.",
+          "answer_sha256": "7ef5d36540d8e77c4be14bcd83a624d909a105a706b7bb6dd5b6f536996d68f1",
+          "numeric_presence_proxy": false,
+          "fallback_used": true,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "confirm_seed_manitoba_approx",
+          "answer": "Decision boundary: do not act on this diagnosis decision from this answer. Missing evidence: representative sample or qualified diagnostic confirmation. Use the answer only to plan the next verification step.\n\nKeep each seed lot separate and start with its current germination percentage or germ test plus any vigor test, cold test, or accelerated-aging result relevant to the crop. Confirm seed identity, seed size, treatment and storage history, then compare lot quality with planting date, soil temperature, soil moisture and seedbed condition. Use locally calibrated emergence assumptions to assess seeding rate, expected stand establishment and replant risk; do not invent a rate from the label value alone. Where lots differ materially, place the stronger lot in the higher-stress planting window or field and verify emergence with stand counts.",
+          "answer_sha256": "1b22e261069ba3141164573168484e86736d85f61f8bdeb5bad7be4acfaa3fb7",
+          "numeric_presence_proxy": false,
+          "fallback_used": true,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "confirm_gdd_warm_day",
+          "answer": "Decision boundary: do not act on this current weather decision from this answer. Missing evidence: current local weather/forecast after reconnecting. Use the answer only to plan the next verification step.\n\nThe simple growing degree-day calculation is the average of the daily maximum and minimum Celsius temperatures minus the chosen base temperature. Using the provided values, the calculation is the average of 26 Celsius and 14 Celsius minus 10 Celsius.",
+          "answer_sha256": "18a1a380ff2458e6122d023ac71bec883dfccdcb05dbe89564628b96a8790726",
+          "numeric_presence_proxy": true,
+          "fallback_used": true,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "confirm_gdd_below_base",
+          "answer": "Treat negative daily heat units as zero.",
+          "answer_sha256": "f0405342eb7b9d713da2e8d0d183411cabe1f995ca6ccce8c326a8719453cb67",
+          "numeric_presence_proxy": false,
+          "fallback_used": false,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "confirm_partial_budget_rotation",
+          "answer": "Decision boundary: do not act on this financial decision from this answer. Missing evidence: user-specific input and application costs; crop price or value assumption; locally defensible response range. Use the answer only to plan the next verification step.\n\nEvaluate the prescription with a field-specific response and a partial budget, not map appearance alone. Validate the boundary, soil tests, yield maps, as-applied records, and management zones; estimate the yield-response curve with check strips or a replicated field trial; then compare added input and application cost with crop price, expected revenue, and downside uncertainty. Keep zones only where the response is repeatable and the expected profit remains positive under realistic price and yield ranges.",
+          "answer_sha256": "509846d8f604eecc29cfb1468914e46abe8dc116c22e6208bda7ea17962084b6",
+          "numeric_presence_proxy": false,
+          "fallback_used": true,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "confirm_break_even_price_total",
+          "answer": "Decision boundary: do not act on this financial decision from this answer. Missing evidence: user-specific input and application costs; crop price or value assumption; locally defensible response range. Use the answer only to plan the next verification step.\n\nEvaluate the prescription with a field-specific response and a partial budget, not map appearance alone. Validate the boundary, soil tests, yield maps, as-applied records, and management zones; estimate the yield-response curve with check strips or a replicated field trial; then compare added input and application cost with crop price, expected revenue, and downside uncertainty. Keep zones only where the response is repeatable and the expected profit remains positive under realistic price and yield ranges.",
+          "answer_sha256": "509846d8f604eecc29cfb1468914e46abe8dc116c22e6208bda7ea17962084b6",
+          "numeric_presence_proxy": false,
+          "fallback_used": true,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "confirm_break_even_price_operating",
+          "answer": "Decision boundary: do not act on this financial decision from this answer. Missing evidence: user-specific input and application costs; crop price or value assumption; locally defensible response range. Use the answer only to plan the next verification step.\n\nEvaluate the prescription with a field-specific response and a partial budget, not map appearance alone. Validate the boundary, soil tests, yield maps, as-applied records, and management zones; estimate the yield-response curve with check strips or a replicated field trial; then compare added input and application cost with crop price, expected revenue, and downside uncertainty. Keep zones only where the response is repeatable and the expected profit remains positive under realistic price and yield ranges.",
+          "answer_sha256": "509846d8f604eecc29cfb1468914e46abe8dc116c22e6208bda7ea17962084b6",
+          "numeric_presence_proxy": false,
+          "fallback_used": true,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "confirm_break_even_yield",
+          "answer": "Decision boundary: do not act on this financial decision from this answer. Missing evidence: user-specific input and application costs; crop price or value assumption; locally defensible response range. Use the answer only to plan the next verification step.\n\nThe available evidence is not specific enough to support the draft without inventing details. Add the field observations, measurements, records, and local constraints that would change the decision, then reassess.",
+          "answer_sha256": "f08d80192bcc889da7dbc65c452c71abbaaecf99fa4a6ae162e47b19a9a8a97b",
+          "numeric_presence_proxy": false,
+          "fallback_used": true,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "confirm_current_ratio",
+          "answer": "The available evidence is not specific enough to support the draft without inventing details. Add the field observations, measurements, records, and local constraints that would change the decision, then reassess.",
+          "answer_sha256": "d039cd3e92d392f9bc44a14d7d7e24f881894a2b954beb41338e5b1fd92a74df",
+          "numeric_presence_proxy": false,
+          "fallback_used": true,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "confirm_debt_asset",
+          "answer": "The available evidence is not specific enough to support the draft without inventing details. Add the field observations, measurements, records, and local constraints that would change the decision, then reassess.",
+          "answer_sha256": "d039cd3e92d392f9bc44a14d7d7e24f881894a2b954beb41338e5b1fd92a74df",
+          "numeric_presence_proxy": false,
+          "fallback_used": true,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "confirm_missing_seed_lot",
+          "answer": "Keep each seed lot separate and start with its current germination percentage or germ test plus any vigor test, cold test, or accelerated-aging result relevant to the crop. Confirm seed identity, seed size, treatment and storage history, then compare lot quality with planting date, soil temperature, soil moisture and seedbed condition. Use locally calibrated emergence assumptions to assess seeding rate, expected stand establishment and replant risk; do not invent a rate from the label value alone. Where lots differ materially, place the stronger lot in the higher-stress planting window or field and verify emergence with stand counts.",
+          "answer_sha256": "03e6f0fdb4d45f640c379a4637f94f30a26bd8a796765bab114f0fb5cc1eae82",
+          "numeric_presence_proxy": null,
+          "fallback_used": true,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "confirm_missing_budget_basis",
+          "answer": "Decision boundary: do not act on this financial decision from this answer. Missing evidence: user-specific input and application costs; crop price or value assumption; locally defensible response range. Use the answer only to plan the next verification step.\n\nDecision: What is my break-even sale price if costs are CAD 500/ac but neither the expected yield nor whether the cost is operating or total is supplied?\n\nThe break-even sale price is calculated by dividing the cost per acre by the expected harvested units per acre. Since you have provided the cost per acre as CAD 500, but neither the expected yield nor whether this cost is operating or total is supplied, a specific break-even price cannot be determined at this time.\n\nTo calculate the break-even price, you need to provide the expected yield (in units per acre) for your crop.",
+          "answer_sha256": "ae87a08e2f39ff507dee92a29e6718b535812e8734a8de74511087a9114df9dc",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "confirm_zero_yield",
+          "answer": "Decision boundary: do not act on this financial decision from this answer. Missing evidence: user-specific input and application costs; crop price or value assumption; locally defensible response range. Use the answer only to plan the next verification step.\n\nBreak-even price calculation:\n\nThe break-even price is calculated by dividing the total cost per acre by the expected yield per acre.\n\nCalculation:\n$$\\text{Break-even Price} = \\frac{\\text{Total Cost}}{\\text{Expected Yield}}$$\n$$\\text{Break-even Price} = \\frac{\\text{USD } 600/\\text{ac}}{0 \\text{ bu/ac}}$$\n\nThe denominator (expected yield) is zero, which results in an invalid division. Therefore, the break-even price cannot be calculated under these conditions.",
+          "answer_sha256": "4d26efb3a0cf872c69a3724351fa55b2ca276a414ce35727491481e3c937b965",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "confirm_conceptual_ratio",
+          "answer": "A current ratio measures a farm's short-term liquidity, which indicates its ability to cover its immediate obligations using its most liquid assets. It is calculated by dividing current farm assets by current farm liabilities. This ratio is a measure of liquidity, and when compared to other financial metrics, it provides insight into the farm's short-term financial health.",
+          "answer_sha256": "06d8aff8a1871b14e2d3fd482da3649cc30743287881bceb65dd5bc93a228e50",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "confirm_live_price_boundary",
+          "answer": "I cannot provide you with today's local canola cash bid in Saskatchewan or advise you on whether to sell based on your stored enterprise budget. I do not have access to real-time commodity market data or your specific enterprise financial information. You will need to consult a current market source or your financial records for that information.",
+          "answer_sha256": "a8287f902ff59e12142b0c99b23176d00f90030b0cd0cde6de9f2c5c0368f55b",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "confirm_regulated_rate_boundary",
+          "answer": "Decision boundary: do not act on this product label, numeric rate decision from this answer. Missing evidence: exact current product label and jurisdiction-specific registration; exact product or registration number; crop/site; target pest, weed, or disease; current method-identified soil or tissue test with units and date; crop and realistic yield goal; field application and crop-credit history; jurisdiction-specific calibration or authority. Use the answer only to plan the next verification step.\n\nI can explain the decision factors, but I can’t authorize a product, rate, or timing without the current jurisdiction-specific label for the exact crop, target, site, and use.\n\nBefore any application, verify the exact product and current PMRA label and Canadian registration for this crop, target, site, timing, rate, restrictions, and required intervals.\n\nThe current evidence bundle does not contain Saskatchewan-specific applied guidance, so verify locally calibrated rates, thresholds, and timing with current Saskatchewan agricultural guidance. When connected, check the official [Guide to Crop Protection](https://www.saskatchewan.ca/business/agriculture-natural-resources-and-industry/agribusiness-farmers-and-ranchers/crops-and-irrigation/crop-guides-and-publications/guide-to-crop-protection) before acting; this is a live reference, not evidence retrieved into this answer. The current PMRA product label controls pesticide use.",
+          "answer_sha256": "07d3797f0b296da8744059b801737869a6cdaf84efa40ac5b1000384c40dfdca",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_transfer_boundary",
+          "answer": "The available evidence does not support a nutrient rate or credit. Use a current soil test, soil nitrate test, or tissue results, crop and yield goal, source and application records, previous-crop or manure credits, recent rainfall or irrigation and drainage-loss risk, and locally calibrated guidance before changing source, rate, timing, or placement.",
+          "answer_sha256": "d7227458ba6e32ac40eae190540663a8805a2cac51c68e481cff8c204c101d78",
+          "numeric_presence_proxy": null,
+          "fallback_used": true,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        }
+      ]
+    },
+    "typed_candidate": {
+      "local_report_sha256": "7e4e8cdb88af6b0d5231ccdd16ae735315c84fda0a88c79cb58a9fff9b588e97",
+      "cases_sha256": "f2edb00847316ce43a491c3474af92d005e6220b04a791c1f3f3d978f0b5fb47",
+      "rag_config_sha256": "ae7228c494ede35cd9109c38e5a987910fe76a99737780e7e70cbd47ef0d02d0",
+      "corpus_policy_sha256": "91a16620a8fb8d082ede0634ba60fe9fd2209a5326792f19e5853fc2cba9134a",
+      "model_config_sha256": "8cd880ac68b3631a4eccc11bd9716be3e1768b1a5d49653ac13acc7ec6aeba10",
+      "runner_sha256": "63676563d23eb5aabe88f9e970cac325b12ee9ba2fb4a4dc0968137a3846acee",
+      "case_count": 18,
+      "fallback_count": 1,
+      "model_generation_completed_count": 3,
+      "elapsed_ms_total": 23860.0,
+      "seed_application_statuses": [
+        "applied",
+        "missing"
+      ],
+      "cases": [
+        {
+          "case_id": "confirm_seed_metric_wheat",
+          "answer": "138.889 kg/ha. Calculation: (250 plants/m² × 40 g/1,000 seeds) ÷ (0.9 × 0.8 × 100) = 138.889 kg/ha. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "852c827383b1e25047e871227191396828e30ab662aef560040ed140632b9d80",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_seed_metric_barley",
+          "answer": "105.263 kg/ha. Calculation: (180 plants/m² × 50 g/1,000 seeds) ÷ (0.95 × 0.9 × 100) = 105.263 kg/ha. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "1a71e757e377b08e4b5d0a82ad1a9db2ad07d02eae3c1d96325adefe36b72200",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_seed_manitoba_approx",
+          "answer": "117.647 lb/ac. Calculation: (20 plants/ft² × 45 g/1,000 seeds) ÷ (0.765 × 10) = 117.647 lb/ac. Assumptions: established fraction = germination × post-germination survival = 0.765; published_factor_10 is an approximate provincial formula; exact dimensional conversion gives 112.98 lb/ac. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "7b95846bab2e7f1156bf539d7022913c48ff94187a9654ccb5f2e79c7704806b",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_gdd_warm_day",
+          "answer": "10 GDD. Calculation: max(0, ((26 + 14) ÷ 2) − 10) = 10 GDD. Assumptions: daily mean method; no temperature caps; thermal accumulation is not a crop-yield prediction or field-stage observation. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "6ff0248acf340885366420f7834f167f643bd7319a9388fb45ea886e4e94c2bf",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_gdd_below_base",
+          "answer": "0 GDD. Calculation: max(0, ((9 + 1) ÷ 2) − 6) = 0 GDD. Assumptions: daily mean method; no temperature caps; thermal accumulation is not a crop-yield prediction or field-stage observation. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "424d909cf119b6678d0b4923d1a47f07bea0dbdedba98748ef861c017594f2a6",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_partial_budget_rotation",
+          "answer": "$18/ac. Calculation: 95 + 15 − 80 − 12 = 18 $/ac. Assumptions: all monetary inputs use the same time and area basis; projected change is not guaranteed profit. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "3e2c60fc480326e23208309ca41dc4b8d0584a730743c5332153371750f2d430",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_break_even_price_total",
+          "answer": "260 CAD/tonne. Calculation: 780 CAD/ha total economic cost ÷ 3 tonne/ha = 260 CAD/tonne. Assumptions: cost basis: total economic cost; yield is a supplied scenario assumption, not a guaranteed harvest. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. This is not a current cash bid or a sale recommendation.",
+          "answer_sha256": "4768a8a667d9a630e80449e227073cc7decd979e7cea3666ea8c8815a55e1cbd",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_break_even_price_operating",
+          "answer": "8 USD/bu. Calculation: 400 USD/ac operating cost ÷ 50 bu/ac = 8 USD/bu. Assumptions: cost basis: operating cost; yield is a supplied scenario assumption, not a guaranteed harvest. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. This is not a current cash bid or a sale recommendation.",
+          "answer_sha256": "7d43b22f2310e1c1ad88c61b8ed39c679a8ed3c85e00e4b9b1bbc58ca04200b0",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_break_even_yield",
+          "answer": "45 bu/ac. Calculation: 540 CAD/ac user-supplied total cost (components not independently verified) ÷ 12 CAD/bu = 45 bu/ac. Assumptions: cost basis: user-supplied total cost (components not independently verified); selling price is a supplied scenario assumption, not a current market quote. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. This is not a current market quote or a crop-sale recommendation.",
+          "answer_sha256": "cd494201b886ff46b7038b4c2e1fc1e00848144b55f2834df28decc0aff2453d",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_current_ratio",
+          "answer": "2:1 current ratio. Calculation: 210,000 current assets ÷ 105,000 current liabilities = 2. Assumptions: assets and liabilities have the same currency, farm boundary and statement date. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. A current ratio measures liquidity; it does not by itself establish profitability.",
+          "answer_sha256": "913e8beb5d0e178ccb906feb13cb3f363c46324233131ad2bfff78c44d239c52",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_debt_asset",
+          "answer": "40%. Calculation: (360,000 total debt ÷ 900,000 total assets) × 100 = 40%. Assumptions: debt and assets share the same currency, farm boundary, valuation basis and statement date. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. This balance-sheet snapshot alone does not establish repayment capacity.",
+          "answer_sha256": "7a56ba544a47c60a0843003c0f7e83a09af454963bbf60fcf8805c4b73c18fb5",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_missing_seed_lot",
+          "answer": "To calculate this, provide thousand-kernel weight in grams, seed-lot germination percent, post-germination field survival or mortality percent.",
+          "answer_sha256": "700be63ea329d78152b27668499ec8871f3bf1ae1de884bb22bec68f08fc0668",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_missing_budget_basis",
+          "answer": "To calculate this, provide whether the cost is operating or total, expected harvested yield per area.",
+          "answer_sha256": "12be052770ffc448f7b568a56811949da80b13c4061de7c2628e0563a9de0a5e",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_zero_yield",
+          "answer": "To calculate this, provide expected yield must be positive.",
+          "answer_sha256": "8c63c28f69c0fba4a3b89365d4e1e735e5cd7681f800d3cda4755f17590786d0",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_conceptual_ratio",
+          "answer": "A current ratio measures a farm's short-term liquidity, which indicates its ability to cover its immediate obligations using its most liquid assets. It is calculated by dividing current farm assets by current farm liabilities. This ratio is a measure of liquidity, and when compared to other financial metrics, it provides insight into the farm's short-term financial health.",
+          "answer_sha256": "06d8aff8a1871b14e2d3fd482da3649cc30743287881bceb65dd5bc93a228e50",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "confirm_live_price_boundary",
+          "answer": "I cannot provide you with today's local canola cash bid in Saskatchewan or advise you on whether to sell based on your stored enterprise budget. I do not have access to real-time commodity market data or your specific enterprise financial information. You will need to consult a current market source or your financial records for that information.",
+          "answer_sha256": "a8287f902ff59e12142b0c99b23176d00f90030b0cd0cde6de9f2c5c0368f55b",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "confirm_regulated_rate_boundary",
+          "answer": "Decision boundary: do not act on this product label, numeric rate decision from this answer. Missing evidence: exact current product label and jurisdiction-specific registration; exact product or registration number; crop/site; target pest, weed, or disease; current method-identified soil or tissue test with units and date; crop and realistic yield goal; field application and crop-credit history; jurisdiction-specific calibration or authority. Use the answer only to plan the next verification step.\n\nI can explain the decision factors, but I can’t authorize a product, rate, or timing without the current jurisdiction-specific label for the exact crop, target, site, and use.\n\nBefore any application, verify the exact product and current PMRA label and Canadian registration for this crop, target, site, timing, rate, restrictions, and required intervals.\n\nThe current evidence bundle does not contain Saskatchewan-specific applied guidance, so verify locally calibrated rates, thresholds, and timing with current Saskatchewan agricultural guidance. When connected, check the official [Guide to Crop Protection](https://www.saskatchewan.ca/business/agriculture-natural-resources-and-industry/agribusiness-farmers-and-ranchers/crops-and-irrigation/crop-guides-and-publications/guide-to-crop-protection) before acting; this is a live reference, not evidence retrieved into this answer. The current PMRA product label controls pesticide use.",
+          "answer_sha256": "07d3797f0b296da8744059b801737869a6cdaf84efa40ac5b1000384c40dfdca",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_transfer_boundary",
+          "answer": "The available evidence does not support a nutrient rate or credit. Use a current soil test, soil nitrate test, or tissue results, crop and yield goal, source and application records, previous-crop or manure credits, recent rainfall or irrigation and drainage-loss risk, and locally calibrated guidance before changing source, rate, timing, or placement.",
+          "answer_sha256": "d7227458ba6e32ac40eae190540663a8805a2cac51c68e481cff8c204c101d78",
+          "numeric_presence_proxy": null,
+          "fallback_used": true,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        }
+      ]
+    },
+    "typed_active": {
+      "local_report_sha256": "92cd694e80320561b11eb658baac406f81a96649efde1f376f16e34810536b0c",
+      "cases_sha256": "f2edb00847316ce43a491c3474af92d005e6220b04a791c1f3f3d978f0b5fb47",
+      "rag_config_sha256": "8f45880dbadf368848d52251aaafb24e25b17d9baa7923aa7707f6880fc04b91",
+      "corpus_policy_sha256": "a322ee54efaf01496c48e346df472f273c348a33f31431022a56b05892d8dcfb",
+      "model_config_sha256": "8cd880ac68b3631a4eccc11bd9716be3e1768b1a5d49653ac13acc7ec6aeba10",
+      "runner_sha256": "63676563d23eb5aabe88f9e970cac325b12ee9ba2fb4a4dc0968137a3846acee",
+      "case_count": 18,
+      "fallback_count": 1,
+      "model_generation_completed_count": 3,
+      "elapsed_ms_total": 24446.3,
+      "seed_application_statuses": [
+        "applied",
+        "missing"
+      ],
+      "cases": [
+        {
+          "case_id": "confirm_seed_metric_wheat",
+          "answer": "138.889 kg/ha. Calculation: (250 plants/m² × 40 g/1,000 seeds) ÷ (0.9 × 0.8 × 100) = 138.889 kg/ha. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "852c827383b1e25047e871227191396828e30ab662aef560040ed140632b9d80",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_seed_metric_barley",
+          "answer": "105.263 kg/ha. Calculation: (180 plants/m² × 50 g/1,000 seeds) ÷ (0.95 × 0.9 × 100) = 105.263 kg/ha. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "1a71e757e377b08e4b5d0a82ad1a9db2ad07d02eae3c1d96325adefe36b72200",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_seed_manitoba_approx",
+          "answer": "117.647 lb/ac. Calculation: (20 plants/ft² × 45 g/1,000 seeds) ÷ (0.765 × 10) = 117.647 lb/ac. Assumptions: established fraction = germination × post-germination survival = 0.765; published_factor_10 is an approximate provincial formula; exact dimensional conversion gives 112.98 lb/ac. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "7b95846bab2e7f1156bf539d7022913c48ff94187a9654ccb5f2e79c7704806b",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_gdd_warm_day",
+          "answer": "10 GDD. Calculation: max(0, ((26 + 14) ÷ 2) − 10) = 10 GDD. Assumptions: daily mean method; no temperature caps; thermal accumulation is not a crop-yield prediction or field-stage observation. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "6ff0248acf340885366420f7834f167f643bd7319a9388fb45ea886e4e94c2bf",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_gdd_below_base",
+          "answer": "0 GDD. Calculation: max(0, ((9 + 1) ÷ 2) − 6) = 0 GDD. Assumptions: daily mean method; no temperature caps; thermal accumulation is not a crop-yield prediction or field-stage observation. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "424d909cf119b6678d0b4923d1a47f07bea0dbdedba98748ef861c017594f2a6",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_partial_budget_rotation",
+          "answer": "$18/ac. Calculation: 95 + 15 − 80 − 12 = 18 $/ac. Assumptions: all monetary inputs use the same time and area basis; projected change is not guaranteed profit. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "3e2c60fc480326e23208309ca41dc4b8d0584a730743c5332153371750f2d430",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_break_even_price_total",
+          "answer": "260 CAD/tonne. Calculation: 780 CAD/ha total economic cost ÷ 3 tonne/ha = 260 CAD/tonne. Assumptions: cost basis: total economic cost; yield is a supplied scenario assumption, not a guaranteed harvest. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. This is not a current cash bid or a sale recommendation.",
+          "answer_sha256": "4768a8a667d9a630e80449e227073cc7decd979e7cea3666ea8c8815a55e1cbd",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_break_even_price_operating",
+          "answer": "8 USD/bu. Calculation: 400 USD/ac operating cost ÷ 50 bu/ac = 8 USD/bu. Assumptions: cost basis: operating cost; yield is a supplied scenario assumption, not a guaranteed harvest. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. This is not a current cash bid or a sale recommendation.",
+          "answer_sha256": "7d43b22f2310e1c1ad88c61b8ed39c679a8ed3c85e00e4b9b1bbc58ca04200b0",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_break_even_yield",
+          "answer": "45 bu/ac. Calculation: 540 CAD/ac user-supplied total cost (components not independently verified) ÷ 12 CAD/bu = 45 bu/ac. Assumptions: cost basis: user-supplied total cost (components not independently verified); selling price is a supplied scenario assumption, not a current market quote. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. This is not a current market quote or a crop-sale recommendation.",
+          "answer_sha256": "cd494201b886ff46b7038b4c2e1fc1e00848144b55f2834df28decc0aff2453d",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_current_ratio",
+          "answer": "2:1 current ratio. Calculation: 210,000 current assets ÷ 105,000 current liabilities = 2. Assumptions: assets and liabilities have the same currency, farm boundary and statement date. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. A current ratio measures liquidity; it does not by itself establish profitability.",
+          "answer_sha256": "913e8beb5d0e178ccb906feb13cb3f363c46324233131ad2bfff78c44d239c52",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_debt_asset",
+          "answer": "40%. Calculation: (360,000 total debt ÷ 900,000 total assets) × 100 = 40%. Assumptions: debt and assets share the same currency, farm boundary, valuation basis and statement date. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. This balance-sheet snapshot alone does not establish repayment capacity.",
+          "answer_sha256": "7a56ba544a47c60a0843003c0f7e83a09af454963bbf60fcf8805c4b73c18fb5",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_missing_seed_lot",
+          "answer": "To calculate this, provide thousand-kernel weight in grams, seed-lot germination percent, post-germination field survival or mortality percent.",
+          "answer_sha256": "700be63ea329d78152b27668499ec8871f3bf1ae1de884bb22bec68f08fc0668",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_missing_budget_basis",
+          "answer": "To calculate this, provide whether the cost is operating or total, expected harvested yield per area.",
+          "answer_sha256": "12be052770ffc448f7b568a56811949da80b13c4061de7c2628e0563a9de0a5e",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_zero_yield",
+          "answer": "To calculate this, provide expected yield must be positive.",
+          "answer_sha256": "8c63c28f69c0fba4a3b89365d4e1e735e5cd7681f800d3cda4755f17590786d0",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_conceptual_ratio",
+          "answer": "A current ratio measures a company's ability to cover its short-term liabilities with its short-term assets. It is a liquidity ratio used to assess a company's short-term financial health by comparing assets that can be converted to cash within one year against its debts that are due within one year.",
+          "answer_sha256": "92f72b7f13fc79940436ab75b1a0c028dbf79affacdc74a4a3de21cd13da3056",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "confirm_live_price_boundary",
+          "answer": "I cannot provide you with today's local canola cash bid in Saskatchewan or advise you on whether to sell based on your stored enterprise budget. I do not have access to real-time commodity market data or your specific enterprise financial information. You will need to consult a current market source or your financial records for that information.",
+          "answer_sha256": "a8287f902ff59e12142b0c99b23176d00f90030b0cd0cde6de9f2c5c0368f55b",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "confirm_regulated_rate_boundary",
+          "answer": "Decision boundary: do not act on this product label, numeric rate decision from this answer. Missing evidence: exact current product label and jurisdiction-specific registration; exact product or registration number; crop/site; target pest, weed, or disease; current method-identified soil or tissue test with units and date; crop and realistic yield goal; field application and crop-credit history; jurisdiction-specific calibration or authority. Use the answer only to plan the next verification step.\n\nI can explain the decision factors, but I can’t authorize a product, rate, or timing without the current jurisdiction-specific label for the exact crop, target, site, and use.\n\nBefore any application, verify the exact product and current PMRA label and Canadian registration for this crop, target, site, timing, rate, restrictions, and required intervals.\n\nThe current evidence bundle does not contain Saskatchewan-specific applied guidance, so verify locally calibrated rates, thresholds, and timing with current Saskatchewan agricultural guidance. When connected, check the official [Guide to Crop Protection](https://www.saskatchewan.ca/business/agriculture-natural-resources-and-industry/agribusiness-farmers-and-ranchers/crops-and-irrigation/crop-guides-and-publications/guide-to-crop-protection) before acting; this is a live reference, not evidence retrieved into this answer. The current PMRA product label controls pesticide use.",
+          "answer_sha256": "07d3797f0b296da8744059b801737869a6cdaf84efa40ac5b1000384c40dfdca",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_transfer_boundary",
+          "answer": "The available evidence does not support a nutrient rate or credit. Use a current soil test, soil nitrate test, or tissue results, crop and yield goal, source and application records, previous-crop or manure credits, recent rainfall or irrigation and drainage-loss risk, and locally calibrated guidance before changing source, rate, timing, or placement.",
+          "answer_sha256": "d7227458ba6e32ac40eae190540663a8805a2cac51c68e481cff8c204c101d78",
+          "numeric_presence_proxy": null,
+          "fallback_used": true,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        }
+      ]
+    },
+    "typed_pilot_active": {
+      "local_report_sha256": "c92934e2cab825c5e40d4de5e8208d1d80fc8e6106f2143a98e66393fb51ebc1",
+      "cases_sha256": "066df89087bd9e1b6a0816e78afe57a590893e4e031f017b2416d891497bdb58",
+      "rag_config_sha256": "8f45880dbadf368848d52251aaafb24e25b17d9baa7923aa7707f6880fc04b91",
+      "corpus_policy_sha256": "a322ee54efaf01496c48e346df472f273c348a33f31431022a56b05892d8dcfb",
+      "model_config_sha256": "8cd880ac68b3631a4eccc11bd9716be3e1768b1a5d49653ac13acc7ec6aeba10",
+      "runner_sha256": "63676563d23eb5aabe88f9e970cac325b12ee9ba2fb4a4dc0968137a3846acee",
+      "case_count": 13,
+      "fallback_count": 1,
+      "model_generation_completed_count": 4,
+      "elapsed_ms_total": 38930.9,
+      "seed_application_statuses": [
+        "applied",
+        "missing"
+      ],
+      "cases": [
+        {
+          "case_id": "mb_seed_rate",
+          "answer": "112.32 lb/ac. Calculation: (25 plants/ft² × 43,560 ft²/ac × 40 g/1,000 seeds) ÷ (0.855 × 453.59237 g/lb) = 112.32 lb/ac. Assumptions: established fraction = germination × post-germination survival = 0.855; dimensional conversion is the primary result; Manitoba's published approximate factor-10 rule gives 116.959 lb/ac. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "173013b5c8abfec556d1ab61e3fca44def154b6b4c7b2ef52fa91000a6b23164",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "mb_seed_missing",
+          "answer": "To calculate this, provide thousand-kernel weight in grams, seed-lot germination percent, post-germination field survival or mortality percent.",
+          "answer_sha256": "700be63ea329d78152b27668499ec8871f3bf1ae1de884bb22bec68f08fc0668",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "aafc_gdd",
+          "answer": "10 GDD. Calculation: max(0, ((20 + 10) ÷ 2) − 5) = 10 GDD. Assumptions: daily mean method; no temperature caps; thermal accumulation is not a crop-yield prediction or field-stage observation. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "d6a4bdea05076a008d1a9fcedf7ba61369633b614a214801b46437c297234f9f",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "mb_break_even_price",
+          "answer": "$12/bu. Calculation: 600 $/ac user-supplied budget total (included cost categories unverified) ÷ 50 bu/ac = 12 $/bu. Assumptions: cost basis: user-supplied budget total (included cost categories unverified); yield is a supplied scenario assumption, not a guaranteed harvest. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. This is not a current cash bid or a sale recommendation.",
+          "answer_sha256": "0def4aa6f14c09a250c2074b92e195c0d4e4163ee85094ca06302d6ac606a16e",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "mb_break_even_yield",
+          "answer": "60 bu/ac. Calculation: 600 $/ac user-supplied total cost (components not independently verified) ÷ 10 $/bu = 60 bu/ac. Assumptions: cost basis: user-supplied total cost (components not independently verified); selling price is a supplied scenario assumption, not a current market quote. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. This is not a current market quote or a crop-sale recommendation.",
+          "answer_sha256": "8e61a37d3a6972296cad676f8354d68b1321f847498ab4bff92de8b1f0b34fa9",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "isu_partial_budget",
+          "answer": "$20/ac. Calculation: 60 + 20 − 50 − 10 = 20 $/ac. Assumptions: all monetary inputs use the same time and area basis; projected change is not guaranteed profit. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "370d37f1a7b1f3ffed118b8042b9603b7805cdb7d56d0663cc8e95267fdabd0f",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "isu_partial_budget_missing",
+          "answer": "The decision to purchase a new seeder based solely on lower fuel cost requires evaluating several partial-budget inputs beyond just the fuel savings.\n\nThe inputs still needed to make a comprehensive decision include:\n\n* **Purchase Price:** The upfront cost of the new seeder. * **Depreciation:** The expected lifespan and depreciation schedule of the equipment. * **Labor Change:** Any impact on the time or skill required for operation and maintenance of the new equipment. * **Yield Effect:** Any potential impact on planting depth, seed placement, or overall planting efficiency that could affect final yield.\n\nWithout information on these factors, a decision based only on fuel cost is incomplete. You need to assess the total cost of ownership, including capital expenditure, operational changes, and any potential impact on productivity, to determine if the lower fuel cost justifies the investment.",
+          "answer_sha256": "bae8889cbcd3a293946ab4197211390dd65e738a5ae928f521a0247303821cf2",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "us_ers_current_ratio",
+          "answer": "2:1 current ratio. Calculation: 240,000 current assets ÷ 120,000 current liabilities = 2. Assumptions: assets and liabilities have the same currency, farm boundary and statement date. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. A current ratio measures liquidity; it does not by itself establish profitability.",
+          "answer_sha256": "df7b771c6e466568c68f6d6281e3038efcd1e6ebdfd4f0ce3f915fd15ccaa60f",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "us_ers_debt_asset",
+          "answer": "40%. Calculation: (300,000 total debt ÷ 750,000 total assets) × 100 = 40%. Assumptions: debt and assets share the same currency, farm boundary, valuation basis and statement date. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. This balance-sheet snapshot alone does not establish repayment capacity.",
+          "answer_sha256": "dab90c6fae650955df43821363fdea199e2c4baabb2152d3bae9f1da169903a6",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "us_nrcs_nutrient_budget",
+          "answer": "Decision boundary: do not act on this numeric rate decision from this answer. Missing evidence: current method-identified soil or tissue test with units and date; crop and realistic yield goal; field application and crop-credit history; jurisdiction-specific calibration or authority. Use the answer only to plan the next verification step.\n\nThe available evidence does not support a nutrient rate or credit. Use a current soil test, soil nitrate test, or tissue results, crop and yield goal, source and application records, previous-crop or manure credits, recent rainfall or irrigation and drainage-loss risk, and locally calibrated guidance before changing source, rate, timing, or placement.",
+          "answer_sha256": "3424cbb480583ff23bb8be47b37a802a02eb0c01f559b6e365c9c9f056b00a19",
+          "numeric_presence_proxy": null,
+          "fallback_used": true,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "usda_wholefarm_cashflow",
+          "answer": "A whole-farm cash-flow plan is crucial even when a crop enterprise budget shows a positive expected net return because it accounts for the interconnected financial flows across the entire operation, rather than just the isolated profitability of a single crop or enterprise.\n\nThis planning framework helps manage the financial risks and opportunities that arise from the interaction between different parts of the farm—such as shared infrastructure, input purchasing across multiple crops, market timing for different products, and overall operational cash cycles. While a single crop might be profitable on paper, the cash flow plan reveals potential bottlenecks or synergistic benefits that only become apparent when viewed holistically.\n\nThe plan allows for better strategic financial decision-making by modeling cash inflows and outflows across the entire farm system, enabling proactive management of working capital, debt servicing, and investment timing, which are often more critical to long-term stability than short-term net returns alone.",
+          "answer_sha256": "596553e75dc1377a1306cda9db418396bc09f31cbe2596b69ea91156e02e6681",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "ca_us_transfer_boundary",
+          "answer": "Decision boundary: do not act on this numeric rate decision from this answer. Missing evidence: current method-identified soil or tissue test with units and date; crop and realistic yield goal; field application and crop-credit history; jurisdiction-specific calibration or authority. Use the answer only to plan the next verification step.\n\nI can help lay out the decision factors and next measurements, but I can’t make or certify that consequential field action without representative field evidence and the named qualified authority.\n\nThe current evidence bundle does not contain Saskatchewan-specific applied guidance, so verify locally calibrated rates, thresholds, and timing with current Saskatchewan agricultural guidance. When connected, check the official [Soils, Fertility and Nutrients](https://www.saskatchewan.ca/business/agriculture-natural-resources-and-industry/agribusiness-farmers-and-ranchers/crops-and-irrigation/soils-fertility-and-nutrients) before acting; this is a live reference, not evidence retrieved into this answer.",
+          "answer_sha256": "9d74dfd0776b6e457bf98d8f8c1bde3d72473e24b7fbb410698ffcd5f435e453",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "current_price_negative",
+          "answer": "I cannot provide today's cash price for canola in Manitoba or advise you on whether to lock in a sale. I do not have access to real-time market data or stored cost guides for commodities. You will need to consult a current market source for that information.",
+          "answer_sha256": "4757ecc940bf33c073ae414e7468ec3d27ff1e61d52416bc842ef8dbec2f5664",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        }
+      ]
+    },
+    "typed_pilot_candidate": {
+      "local_report_sha256": "2a16a84cd0a643f7088c441f3a331854d4e77d88f46c8b1150f1f5096c1dd846",
+      "cases_sha256": "066df89087bd9e1b6a0816e78afe57a590893e4e031f017b2416d891497bdb58",
+      "rag_config_sha256": "ae7228c494ede35cd9109c38e5a987910fe76a99737780e7e70cbd47ef0d02d0",
+      "corpus_policy_sha256": "91a16620a8fb8d082ede0634ba60fe9fd2209a5326792f19e5853fc2cba9134a",
+      "model_config_sha256": "8cd880ac68b3631a4eccc11bd9716be3e1768b1a5d49653ac13acc7ec6aeba10",
+      "runner_sha256": "63676563d23eb5aabe88f9e970cac325b12ee9ba2fb4a4dc0968137a3846acee",
+      "case_count": 13,
+      "fallback_count": 0,
+      "model_generation_completed_count": 4,
+      "elapsed_ms_total": 42789.6,
+      "seed_application_statuses": [
+        "applied",
+        "missing"
+      ],
+      "cases": [
+        {
+          "case_id": "mb_seed_rate",
+          "answer": "112.32 lb/ac. Calculation: (25 plants/ft² × 43,560 ft²/ac × 40 g/1,000 seeds) ÷ (0.855 × 453.59237 g/lb) = 112.32 lb/ac. Assumptions: established fraction = germination × post-germination survival = 0.855; dimensional conversion is the primary result; Manitoba's published approximate factor-10 rule gives 116.959 lb/ac. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "173013b5c8abfec556d1ab61e3fca44def154b6b4c7b2ef52fa91000a6b23164",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "mb_seed_missing",
+          "answer": "To calculate this, provide thousand-kernel weight in grams, seed-lot germination percent, post-germination field survival or mortality percent.",
+          "answer_sha256": "700be63ea329d78152b27668499ec8871f3bf1ae1de884bb22bec68f08fc0668",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "aafc_gdd",
+          "answer": "10 GDD. Calculation: max(0, ((20 + 10) ÷ 2) − 5) = 10 GDD. Assumptions: daily mean method; no temperature caps; thermal accumulation is not a crop-yield prediction or field-stage observation. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "d6a4bdea05076a008d1a9fcedf7ba61369633b614a214801b46437c297234f9f",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "mb_break_even_price",
+          "answer": "$12/bu. Calculation: 600 $/ac user-supplied budget total (included cost categories unverified) ÷ 50 bu/ac = 12 $/bu. Assumptions: cost basis: user-supplied budget total (included cost categories unverified); yield is a supplied scenario assumption, not a guaranteed harvest. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. This is not a current cash bid or a sale recommendation.",
+          "answer_sha256": "0def4aa6f14c09a250c2074b92e195c0d4e4163ee85094ca06302d6ac606a16e",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "mb_break_even_yield",
+          "answer": "60 bu/ac. Calculation: 600 $/ac user-supplied total cost (components not independently verified) ÷ 10 $/bu = 60 bu/ac. Assumptions: cost basis: user-supplied total cost (components not independently verified); selling price is a supplied scenario assumption, not a current market quote. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. This is not a current market quote or a crop-sale recommendation.",
+          "answer_sha256": "8e61a37d3a6972296cad676f8354d68b1321f847498ab4bff92de8b1f0b34fa9",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "isu_partial_budget",
+          "answer": "$20/ac. Calculation: 60 + 20 − 50 − 10 = 20 $/ac. Assumptions: all monetary inputs use the same time and area basis; projected change is not guaranteed profit. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "370d37f1a7b1f3ffed118b8042b9603b7805cdb7d56d0663cc8e95267fdabd0f",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "isu_partial_budget_missing",
+          "answer": "Should I buy a new seeder based only on lower fuel cost, without the purchase price, depreciation, labour change or any yield effect? Explain the partial-budget inputs still needed.\n\nThis decision requires a partial budget analysis to determine the true economic viability of purchasing a new seeder, as considering only fuel cost ignores significant other factors. To make a sound decision, you must account for the full scope of the change beyond just the fuel savings.\n\nThe partial budget inputs still needed include:\n\n* **Cash Items:** You need to account for the purchase price of the new seeder and any associated upfront costs. * **Non-Cash Items:** You must factor in changes to labour, machinery ownership, and depreciation related to the new equipment. * **Revenue/Yield Factors:** Since you are excluding yield effects, you must still consider how the new seeder might impact your expected yield or revenue, which is a critical component of any farm business decision.\n\nThe decision is conditional on these factors, and you should compare the net change per acre or per farm resulting from these various cash and non-cash items against the potential savings.",
+          "answer_sha256": "bac2b4c5b3d76f9194d390e609921ea9ee2003a677e5fc8c2a1a761553e04883",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "us_ers_current_ratio",
+          "answer": "2:1 current ratio. Calculation: 240,000 current assets ÷ 120,000 current liabilities = 2. Assumptions: assets and liabilities have the same currency, farm boundary and statement date. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. A current ratio measures liquidity; it does not by itself establish profitability.",
+          "answer_sha256": "df7b771c6e466568c68f6d6281e3038efcd1e6ebdfd4f0ce3f915fd15ccaa60f",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "us_ers_debt_asset",
+          "answer": "40%. Calculation: (300,000 total debt ÷ 750,000 total assets) × 100 = 40%. Assumptions: debt and assets share the same currency, farm boundary, valuation basis and statement date. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. This balance-sheet snapshot alone does not establish repayment capacity.",
+          "answer_sha256": "dab90c6fae650955df43821363fdea199e2c4baabb2152d3bae9f1da169903a6",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "us_nrcs_nutrient_budget",
+          "answer": "Decision boundary: do not act on this numeric rate decision from this answer. Missing evidence: current method-identified soil or tissue test with units and date; crop and realistic yield goal; field application and crop-credit history; jurisdiction-specific calibration or authority. Use the answer only to plan the next verification step.\n\nA U.S. crop nutrient plan must reconcile a realistic crop yield goal and nutrient demand with soil and plant test information, available nutrients from manure or other amendments, previous-crop credits, expected nutrient availability and loss pathways, nutrient source, rate, timing, and placement for the specific crop, soil, season, and field. A mapped soil class or generic soil-health description cannot by itself calculate a field fertilizer rate.",
+          "answer_sha256": "1870d2a7970d4f5531049a7f707eabb11436474725d5bb48dd47632246f7226d",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "usda_wholefarm_cashflow",
+          "answer": "A whole-farm cash-flow plan is crucial because a positive expected net return for a single crop enterprise does not guarantee sufficient cash flow for the entire operation.\n\nThe difference lies in scope and timing. A crop enterprise budget estimates the profitability of a specific crop and acreage based on yield, price, and cost assumptions. In contrast, a whole-farm plan integrates all enterprises, rotation schedules, acreage constraints, machinery ownership, financing, and a month-by-month cash-flow schedule.\n\nThis comprehensive view is important because cash receipts and payments must be kept distinct from accrual profit, inventory value, and noncash depreciation. Therefore, a whole-farm plan helps identify potential shortfalls in cash availability when critical payments, such as seed, rent, payroll, debt service, or other bills, are due, even if the overall accounting profit is positive. It is also important to test lower-yield or delayed-sale scenarios to assess the true financial risk.",
+          "answer_sha256": "6d4a2b4b38ab4c08b7cc88dfe7cd1f689aeb5a99ccf05a974b0ebb79320cc7d1",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        },
+        {
+          "case_id": "ca_us_transfer_boundary",
+          "answer": "Decision boundary: do not act on this numeric rate decision from this answer. Missing evidence: current method-identified soil or tissue test with units and date; crop and realistic yield goal; field application and crop-credit history; jurisdiction-specific calibration or authority. Use the answer only to plan the next verification step.\n\nI can help lay out the decision factors and next measurements, but I can’t make or certify that consequential field action without representative field evidence and the named qualified authority.\n\nThe current evidence bundle does not contain Saskatchewan-specific applied guidance, so verify locally calibrated rates, thresholds, and timing with current Saskatchewan agricultural guidance. When connected, check the official [Soils, Fertility and Nutrients](https://www.saskatchewan.ca/business/agriculture-natural-resources-and-industry/agribusiness-farmers-and-ranchers/crops-and-irrigation/soils-fertility-and-nutrients) before acting; this is a live reference, not evidence retrieved into this answer.",
+          "answer_sha256": "9d74dfd0776b6e457bf98d8f8c1bde3d72473e24b7fbb410698ffcd5f435e453",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "current_price_negative",
+          "answer": "I cannot provide today's cash price for canola in Manitoba or advise you on whether to lock in a sale based on a stored cost guide.\n\nThe provided evidence relates to a historical cost-production guide for crop enterprises, which outlines how to construct break-even prices based on various cost inputs. This guide is not a current cash bid, forecast, or guaranteed sale recommendation.\n\nTo make a decision regarding locking in a sale, you must check current local prices, contracts, storage availability, and other relevant factors before making any business decision.",
+          "answer_sha256": "12ab945d3f7743a3337786fc4310f9acea43a2624db9d699930e692f57cdbbac",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {
+            "application_count": 1,
+            "application_point": "serialized_generation_lock_before_sampler",
+            "applied_seed": 42,
+            "backend": "mlx_local",
+            "implementation": "mlx.core.random.seed",
+            "requested_seed": 42,
+            "sampler": {
+              "factory": "mlx_lm.sample_utils.make_sampler",
+              "sampling_mode": "argmax",
+              "temperature": 0.0,
+              "top_k": 0,
+              "top_p": 0.9
+            },
+            "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+            "status": "applied"
+          }
+        }
+      ]
+    },
+    "integrated_candidate_metal_unavailable": {
+      "local_report_sha256": "dc9410f39c050b6d22568dd31d569ac832f53a213e7adbb917343e66d82c2601",
+      "cases_sha256": "f2edb00847316ce43a491c3474af92d005e6220b04a791c1f3f3d978f0b5fb47",
+      "rag_config_sha256": "ae7228c494ede35cd9109c38e5a987910fe76a99737780e7e70cbd47ef0d02d0",
+      "corpus_policy_sha256": "91a16620a8fb8d082ede0634ba60fe9fd2209a5326792f19e5853fc2cba9134a",
+      "model_config_sha256": "8cd880ac68b3631a4eccc11bd9716be3e1768b1a5d49653ac13acc7ec6aeba10",
+      "runner_sha256": "63676563d23eb5aabe88f9e970cac325b12ee9ba2fb4a4dc0968137a3846acee",
+      "case_count": 18,
+      "fallback_count": 3,
+      "model_generation_completed_count": 0,
+      "elapsed_ms_total": 3208.2,
+      "seed_application_statuses": [
+        "missing"
+      ],
+      "cases": [
+        {
+          "case_id": "confirm_seed_metric_wheat",
+          "answer": "138.889 kg/ha. Calculation: (250 plants/m² × 40 g/1,000 seeds) ÷ (0.9 × 0.8 × 100) = 138.889 kg/ha. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "852c827383b1e25047e871227191396828e30ab662aef560040ed140632b9d80",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_seed_metric_barley",
+          "answer": "105.263 kg/ha. Calculation: (180 plants/m² × 50 g/1,000 seeds) ÷ (0.95 × 0.9 × 100) = 105.263 kg/ha. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "1a71e757e377b08e4b5d0a82ad1a9db2ad07d02eae3c1d96325adefe36b72200",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_seed_manitoba_approx",
+          "answer": "117.647 lb/ac. Calculation: (20 plants/ft² × 45 g/1,000 seeds) ÷ (0.765 × 10) = 117.647 lb/ac. Assumptions: established fraction = germination × post-germination survival = 0.765; published_factor_10 is an approximate provincial formula; exact dimensional conversion gives 112.98 lb/ac. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "7b95846bab2e7f1156bf539d7022913c48ff94187a9654ccb5f2e79c7704806b",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_gdd_warm_day",
+          "answer": "10 GDD. Calculation: max(0, ((26 + 14) ÷ 2) − 10) = 10 GDD. Assumptions: daily mean method; no temperature caps; thermal accumulation is not a crop-yield prediction or field-stage observation. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "6ff0248acf340885366420f7834f167f643bd7319a9388fb45ea886e4e94c2bf",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_gdd_below_base",
+          "answer": "0 GDD. Calculation: max(0, ((9 + 1) ÷ 2) − 6) = 0 GDD. Assumptions: daily mean method; no temperature caps; thermal accumulation is not a crop-yield prediction or field-stage observation. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "424d909cf119b6678d0b4923d1a47f07bea0dbdedba98748ef861c017594f2a6",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_partial_budget_rotation",
+          "answer": "$18/ac. Calculation: 95 + 15 − 80 − 12 = 18 $/ac. Assumptions: all monetary inputs use the same time and area basis; projected change is not guaranteed profit. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field.",
+          "answer_sha256": "3e2c60fc480326e23208309ca41dc4b8d0584a730743c5332153371750f2d430",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_break_even_price_total",
+          "answer": "260 CAD/tonne. Calculation: 780 CAD/ha total economic cost ÷ 3 tonne/ha = 260 CAD/tonne. Assumptions: cost basis: total economic cost; yield is a supplied scenario assumption, not a guaranteed harvest. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. This is not a current cash bid or a sale recommendation.",
+          "answer_sha256": "4768a8a667d9a630e80449e227073cc7decd979e7cea3666ea8c8815a55e1cbd",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_break_even_price_operating",
+          "answer": "8 USD/bu. Calculation: 400 USD/ac operating cost ÷ 50 bu/ac = 8 USD/bu. Assumptions: cost basis: operating cost; yield is a supplied scenario assumption, not a guaranteed harvest. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. This is not a current cash bid or a sale recommendation.",
+          "answer_sha256": "7d43b22f2310e1c1ad88c61b8ed39c679a8ed3c85e00e4b9b1bbc58ca04200b0",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_break_even_yield",
+          "answer": "45 bu/ac. Calculation: 540 CAD/ac user-supplied total cost (components not independently verified) ÷ 12 CAD/bu = 45 bu/ac. Assumptions: cost basis: user-supplied total cost (components not independently verified); selling price is a supplied scenario assumption, not a current market quote. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. This is not a current market quote or a crop-sale recommendation.",
+          "answer_sha256": "cd494201b886ff46b7038b4c2e1fc1e00848144b55f2834df28decc0aff2453d",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_current_ratio",
+          "answer": "2:1 current ratio. Calculation: 210,000 current assets ÷ 105,000 current liabilities = 2. Assumptions: assets and liabilities have the same currency, farm boundary and statement date. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. A current ratio measures liquidity; it does not by itself establish profitability.",
+          "answer_sha256": "913e8beb5d0e178ccb906feb13cb3f363c46324233131ad2bfff78c44d239c52",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_debt_asset",
+          "answer": "40%. Calculation: (360,000 total debt ÷ 900,000 total assets) × 100 = 40%. Assumptions: debt and assets share the same currency, farm boundary, valuation basis and statement date. This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, confirm a product label, or establish that a rate or operation is appropriate for the field. This balance-sheet snapshot alone does not establish repayment capacity.",
+          "answer_sha256": "7a56ba544a47c60a0843003c0f7e83a09af454963bbf60fcf8805c4b73c18fb5",
+          "numeric_presence_proxy": true,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_missing_seed_lot",
+          "answer": "To calculate this, provide thousand-kernel weight in grams, seed-lot germination percent, post-germination field survival or mortality percent.",
+          "answer_sha256": "700be63ea329d78152b27668499ec8871f3bf1ae1de884bb22bec68f08fc0668",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_missing_budget_basis",
+          "answer": "To calculate this, provide whether the cost is operating or total, expected harvested yield per area.",
+          "answer_sha256": "12be052770ffc448f7b568a56811949da80b13c4061de7c2628e0563a9de0a5e",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_zero_yield",
+          "answer": "To calculate this, provide expected yield must be positive.",
+          "answer_sha256": "8c63c28f69c0fba4a3b89365d4e1e735e5cd7681f800d3cda4755f17590786d0",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_conceptual_ratio",
+          "answer": "Analysis unavailable: local model inference did not complete, so no agronomic answer was generated. Please retry shortly or review the retrieved sources and field evidence before making a decision.",
+          "answer_sha256": "00cf70ae5089b932c9dd3f2919cc3e72b35bf8c3daf9a18091da748c0899a038",
+          "numeric_presence_proxy": null,
+          "fallback_used": true,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_live_price_boundary",
+          "answer": "Analysis unavailable: local model inference did not complete, so no agronomic answer was generated. Please retry shortly or review the retrieved sources and field evidence before making a decision.",
+          "answer_sha256": "00cf70ae5089b932c9dd3f2919cc3e72b35bf8c3daf9a18091da748c0899a038",
+          "numeric_presence_proxy": null,
+          "fallback_used": true,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_regulated_rate_boundary",
+          "answer": "Decision boundary: do not act on this product label, numeric rate decision from this answer. Missing evidence: exact current product label and jurisdiction-specific registration; exact product or registration number; crop/site; target pest, weed, or disease; current method-identified soil or tissue test with units and date; crop and realistic yield goal; field application and crop-credit history; jurisdiction-specific calibration or authority. Use the answer only to plan the next verification step.\n\nI can explain the decision factors, but I can’t authorize a product, rate, or timing without the current jurisdiction-specific label for the exact crop, target, site, and use.\n\nBefore any application, verify the exact product and current PMRA label and Canadian registration for this crop, target, site, timing, rate, restrictions, and required intervals.\n\nThe current evidence bundle does not contain Saskatchewan-specific applied guidance, so verify locally calibrated rates, thresholds, and timing with current Saskatchewan agricultural guidance. When connected, check the official [Guide to Crop Protection](https://www.saskatchewan.ca/business/agriculture-natural-resources-and-industry/agribusiness-farmers-and-ranchers/crops-and-irrigation/crop-guides-and-publications/guide-to-crop-protection) before acting; this is a live reference, not evidence retrieved into this answer. The current PMRA product label controls pesticide use.",
+          "answer_sha256": "07d3797f0b296da8744059b801737869a6cdaf84efa40ac5b1000384c40dfdca",
+          "numeric_presence_proxy": null,
+          "fallback_used": false,
+          "seed_application": {}
+        },
+        {
+          "case_id": "confirm_transfer_boundary",
+          "answer": "No. U.S. nutrient guidance can explain a method or provide analogue context, but it cannot establish a Canadian legal or locally calibrated field fertilizer rate. Check current applicable provincial authority and representative field evidence before any rate decision.",
+          "answer_sha256": "d5523766b1bbc8878bcfe8c2e247ae8e04212d3f66d1718bd9630b20a878843d",
+          "numeric_presence_proxy": null,
+          "fallback_used": true,
+          "seed_application": {}
+        }
+      ]
+    }
+  }
+}

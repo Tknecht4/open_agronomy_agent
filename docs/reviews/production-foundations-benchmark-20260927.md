@@ -76,3 +76,69 @@ Status: implementation plan frozen before calculator, parser, and retrieval chan
 **Acceptance map.** On the frozen 13-case development set and the separate 18-case confirmation set, every fully specified benign arithmetic case should produce a typed, parseable numeric answer with the correct unit, denominator/cost basis, and source-method assumption. Missing or invalid inputs should yield one specific clarification; current prices, product labels, cross-border rates and unsupported field targets should remain withheld. The older 21-case retrieval suite should retain at least its baseline Recall@1/3/7 (17/18/19 hits), nDCG@7 and 21/21 authority compliance. Candidate corpus hashes, locators, rights and evaluation partitioning remain binding. These are necessary development gates; a broad expert or field-outcome claim still requires a new independently authored and reviewed cohort.
 
 **Resource and stop rule.** Whole-phase estimate: 2–4 hours for parser/calculator and context changes, 1–2 hours for local model comparisons and repair, 1 hour for package/CI and independent review, with serialized GPU runs and a public package of roughly 1 GiB. Retain failed runs and exact implementation, model, seed and config receipts. If a specific unsafe interpretation repeats after a focused repair, or any authority or retrieval gate regresses, keep the candidate non-active and leave PR #6 unmerged; passing unit tests or lexical recall alone is insufficient.
+
+## Typed follow-up observations and reconciliation
+
+The [public follow-up artifact](artifacts/production-foundations-typed-followup-20260927.json)
+retains per-case final answers, hashes, fallbacks, applied-seed states, config
+hashes, and raw report hashes for the completed paired development runs. The
+seed fix passed the configured `42` into the pinned Gemma generator. Model
+drafts report `applied`; deterministic paths report `missing` because no model
+generation occurred, not because a requested seed was ignored.
+
+| Completed run | Confirmation cases | Numeric manual check | Fallbacks | Model generations | Serial elapsed |
+|---|---:|---:|---:|---:|---:|
+| Seeded reference, candidate RAG, before typed binding | 18 | Incomplete; many withheld | 12 | 17 | 135.95 s |
+| Typed v2, candidate RAG | 18 | 11/11 correct | 1 | 3 | 23.86 s |
+| Typed v2, original active RAG | 18 | 11/11 correct | 1 | 3 | 24.45 s |
+| Integrated code, candidate RAG, Metal unavailable | 18 | 11/11 correct | 3 | 0 | 3.21 s; not comparable |
+
+The three missing/invalid-input cases produced specific clarifications in both
+typed arms. Conceptual, current-price, and regulated-rate controls stayed
+bounded. The cross-border fertility transfer control was safe but fell back to
+a generic answer. A later, scoped product-path guard gave the direct refusal
+that the question calls for and was checked with a real model smoke; it is a
+post-hoc repair and is not counted in the completed model comparison. An
+attempt to rerun all 18 cases stopped after 14 when the local Metal device
+became unavailable. A subsequent integrated-code run completed 18/18 through
+the product path, including the direct cross-border refusal, but Metal stayed
+unavailable: zero model drafts completed and three fallbacks were used. That
+run verifies deterministic arithmetic and bounded fallback behavior, not
+integrated model quality or a new speedup.
+
+On the original 13-case exposed pilot, typed results were numerically the same
+with active and candidate retrieval on the pre-compatibility-repair code. Candidate context gave more specific
+nutrient-plan and cash-flow source explanations and had zero fallbacks versus
+one with active retrieval. Because the supplied-input arithmetic succeeds
+with unchanged active RAG, the large gain is attributable primarily to the
+typed planner and calculator, not to activating the nine cards. The candidate
+remains non-active. The elapsed difference is an exploratory local observation;
+changed code and model work between runs prevent a controlled speed claim.
+
+The imperial seeding answer now states both calculations: dimensional
+conversion gives approximately `112.32 lb/ac` in the original pilot, while
+the Manitoba guide's published factor-10 approximation gives approximately
+`116.959 lb/ac`. The original `117` expectation follows the approximation.
+The confirmation U.S. partial-budget prompt gives `$` without a currency code;
+the result keeps `$/ac`. Its frozen `USD/ac` oracle is more specific than the
+question. Neither discrepancy was silently scored as an exact-method or
+currency-code agreement.
+
+Named-source retrieval was restricted to an explicitly named Canadian official
+guide. On the older 21-case suite, the active profile reached Recall@1/3/7
+`18/18/19`; the candidate reached `18/19/19`, with authority compliance `21/21`
+in both. The previously displaced Manitoba soil-fertility guide returned to
+rank one. This is a relevance repair for an exposed case, not proof that the
+new cards improve unseen retrieval. The current v2 capability conformance
+contract covers 17 operations and seven negative fixtures. The hash-frozen
+Benchmark v2 runner remains byte-for-byte unchanged. Its original 12-operation
+enum and v1 invocation identity are preserved; the five new operations use a
+separate v2 extension enum and invocation identity. The current registry and
+calculator schema expose both families. Frozen v1 fixture bytes and old
+Benchmark v2 semantics are not repurposed for this follow-up.
+
+**Interpretation.** The strongest supported improvement is reliable supplied-input
+math plus explicit units, cost basis, assumptions and scope. The candidate
+cards still need independent, source-distinct agronomic review before active
+corpus admission. Current field outcomes, nutrient rates, prices, labels and
+jurisdictional authority remain unavailable from a formula or retrieved card.

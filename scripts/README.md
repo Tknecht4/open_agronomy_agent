@@ -128,7 +128,20 @@ PYTHONPATH=src .venv/bin/python scripts/run_production_foundations_development.p
 The second command requires the pinned local Gemma snapshot and Metal access.
 Both are development diagnostics; compare against an independently captured
 baseline and inspect saved answers rather than treating a numeric substring
-proxy as a correctness score. Output destinations must be new and empty.
+proxy as a correctness score. Output destinations must be new and empty. The
+separate `data/eval/production_foundations_confirmation_v1.jsonl` probes the
+versioned typed-calculation follow-up through this same runner. The current
+deterministic registry/executor gate is:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/run_benchmark_capability_conformance.py \
+  --contract configs/benchmark_capability_conformance_v2.json
+```
+
+The v1 contract is retained as historical evidence and intentionally fails
+current-version conformance. The [follow-up record](../docs/reviews/production-foundations-benchmark-20260927.md)
+distinguishes calculator gain from corpus gain and records interrupted model
+runs as incomplete.
 
 ## Observed-system rehearsal
 

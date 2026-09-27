@@ -401,14 +401,18 @@
     "data/seed/production_foundations_v1.jsonl",
     "data/manifests/production_foundations_sources_v1.json",
     "data/eval/production_foundations_development_v1.jsonl",
+    "data/eval/production_foundations_confirmation_v1.jsonl",
+    "configs/benchmark_capability_conformance_v2.json",
     "docs/reviews/production-foundations-benchmark-20260927.md",
     "docs/reviews/agronomic-expertise-knowledge-plan-20260927.md",
     "docs/reviews/artifacts/production-foundations-development-20260927.json",
+    "docs/reviews/artifacts/production-foundations-typed-followup-20260927.json",
     "scripts/build_production_foundations_supplement.py",
     "scripts/build_production_foundations_profile.py",
     "scripts/evaluate_production_foundations_retrieval.py",
     "scripts/run_production_foundations_development.py",
-    "tests/test_production_foundations_runtime.py"
+    "tests/test_production_foundations_runtime.py",
+    "tests/test_cross_border_fertility_boundary.py"
   ],
   "trees": [
     "src",

@@ -13,12 +13,13 @@ import re
 from typing import Any, Mapping
 
 from agronomy_agent.capability_registry import capability_registry
+from agronomy_agent.calculator_contracts import EXPLICIT_ARITHMETIC_SELECTOR_ID
 from agronomy_agent.execution_core import stable_sha256
 from agronomy_agent.tool_planner import plan_tools
 from agronomy_agent.tools.registry import run_tools
 
 
-PLANNER_VERSION = "open_agronomy_agent.capability_planner.v2"
+PLANNER_VERSION = "open_agronomy_agent.capability_planner.v3"
 PLANNER_INPUT_SCHEMA_VERSION = "open_agronomy_agent.planner_input.v2"
 PLANNER_BINDING_SCHEMA_VERSION = "open_agronomy_agent.planner_binding.v1"
 CAPABILITY_PLAN_SCHEMA_VERSION = "open_agronomy_agent.capability_plan.v2"
@@ -295,7 +296,7 @@ def plan_capabilities(planner_input: PlannerInput) -> CapabilityPlan:
                 missing_inputs=item.missing_inputs,
                 authority_role=item.authority_role,
                 risk_class=item.risk_class,
-                selector_id="explicit_arithmetic_parser_v1",
+                selector_id=EXPLICIT_ARITHMETIC_SELECTOR_ID,
                 invocation_id=item.invocation_id,
             )
         )

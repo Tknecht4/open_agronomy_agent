@@ -19,7 +19,7 @@
 | Benchmark v2 regression | `open_agronomy_benchmark_v2.json` | Exact cases were exposed and used for tuning; contract QA only, never claim-eligible; fresh untouched v3 required for evaluation |
 | Benchmark v3 protocol | `open_agronomy_benchmark_v3_protocol.json` | Public 17-stage protocol only; no sealed holdout is present or implied |
 | V3 competence candidate | `open_agronomy_v3_competence_candidate.json` | Public/exposed exact-set engineering instrument; never satisfies the sealed-v3 gate |
-| Capability conformance | `benchmark_capability_conformance_v1.json` | Deterministic registry/executor fixture contract, not model or field performance |
+| Capability conformance | `benchmark_capability_conformance_v2.json` | Current 17-operation deterministic registry/executor contract; v1 remains a frozen historical contract, not model or field performance |
 
 `rag_governed_runtime_v1.yaml` and `rag_final_mvp.yaml` remain public solely as
 frozen RC1/RC2 identity inputs. They are nonselectable and may reference legacy
@@ -31,8 +31,10 @@ behavior because a newer-looking filename exists.
 `rag_production_foundations_candidate.yaml` and its companion candidate policy
 bind the nine source-linked method cards for development comparison. They are
 not listed in `runtime_profiles.json` and are not selectable product defaults.
-The exposed comparison found no reliable improvement in the requested numeric
-calculations after evaluation-derived worked examples were removed.
+The exposed corpus-only comparison found no reliable improvement in the requested
+numeric calculations after evaluation-derived worked examples were removed.
+The separate typed-calculation follow-up improved those calculations with either
+active or candidate retrieval; it does not activate the candidate cards.
 
 ## RC3 egress and completed execution boundary
 

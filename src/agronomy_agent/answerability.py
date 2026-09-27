@@ -16,6 +16,8 @@ import json
 import re
 from typing import Any, Mapping, Sequence
 
+from agronomy_agent.calculator_contracts import TOOL_PLANNER_VERSION, tool_version_for
+
 
 ANSWERABILITY_POLICY_VERSION = "open_agronomy_agent.answerability.v1"
 AUTHORITY_RECEIPT_SCHEMA_VERSION = "open_agronomy_agent.authority_receipt.v1"
@@ -24,9 +26,7 @@ LABEL_AUTHORITY_RECORD_SCHEMA_VERSION = "open_agronomy_agent.label_authority_rec
 TOOL_PLAN_SCHEMA_VERSION = "open_agronomy_agent.tool_plan.v1"
 TOOL_INVOCATION_SCHEMA_VERSION = "open_agronomy_agent.tool_invocation.v1"
 TOOL_RESULT_SCHEMA_VERSION = "open_agronomy_agent.tool_result.v1"
-TOOL_PLANNER_VERSION = "open_agronomy_agent.tool_planner.v1"
 CALCULATOR_ID = "agronomic_calculator"
-CALCULATOR_VERSION = "agronomic_calculator_v1"
 
 
 class AnswerabilityState(StrEnum):
@@ -589,11 +589,12 @@ def _validated_calculator_invocation(
     if not isinstance(inputs, Mapping) or not isinstance(missing_inputs, Sequence) or isinstance(missing_inputs, (str, bytes)):
         return None
     operation = str(invocation.get("operation") or "").strip()
+    tool_version = tool_version_for(operation)
     question_sha256 = _sha256_text(question)
     seed = {
         "planner_version": TOOL_PLANNER_VERSION,
         "tool_id": CALCULATOR_ID,
-        "tool_version": CALCULATOR_VERSION,
+        "tool_version": tool_version,
         "operation": operation,
         "inputs": dict(inputs),
         "question_sha256": question_sha256,
@@ -602,7 +603,7 @@ def _validated_calculator_invocation(
         invocation.get("schema_version") != TOOL_INVOCATION_SCHEMA_VERSION
         or invocation.get("planner_version") != TOOL_PLANNER_VERSION
         or invocation.get("tool_id") != CALCULATOR_ID
-        or invocation.get("tool_version") != CALCULATOR_VERSION
+        or invocation.get("tool_version") != tool_version
         or invocation.get("question_sha256") != question_sha256
         or invocation.get("invocation_id") != _identifier("invocation", seed)
         or invocation.get("status") != expected_invocation_status
@@ -668,7 +669,7 @@ def validated_deterministic_tool_execution(
         and result.get("result_id") == expected_result_id
         and result.get("invocation_id") == invocation.get("invocation_id")
         and result.get("tool_id") == CALCULATOR_ID
-        and result.get("tool_version") == CALCULATOR_VERSION
+        and result.get("tool_version") == tool_version_for(str(invocation.get("operation") or ""))
         and result.get("operation") == invocation.get("operation")
         and result.get("status") == payload.get("status") == "calculated"
         and result.get("payload_sha256") == payload_sha256

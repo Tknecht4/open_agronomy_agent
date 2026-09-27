@@ -11,6 +11,7 @@ from time import perf_counter
 from typing import Any, Callable
 
 from agronomy_agent import local_tools
+from agronomy_agent.calculator_contracts import TOOL_PLANNER_VERSION
 from agronomy_agent.agent import (
     MockGenerator,
     MLXGenerator,
@@ -643,7 +644,7 @@ def _run_turn_impl(
             generation_metadata = {
                 "generation_bypass": {
                     "reason": deterministic_generation_path or "deterministic_tool_result",
-                    "renderer": "tool_planner.v1",
+                    "renderer": TOOL_PLANNER_VERSION,
                 },
                 "generation_path": deterministic_generation_path,
                 "tool_execution": {

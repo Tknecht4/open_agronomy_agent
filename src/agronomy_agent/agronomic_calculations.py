@@ -9,9 +9,10 @@ from agronomy_agent.calculator_contracts import CALCULATOR_SCHEMA_VERSION, CALCU
 
 
 class CalculationOperation(StrEnum):
+    """Operations named by the hash-frozen Benchmark v2 harness."""
+
     UNIT_CONVERSION = "unit_conversion"
     SEED_RATE_MASS = "seed_rate_mass"
-    SEED_RATE_MASS_IMPERIAL = "seed_rate_mass_imperial"
     FERTILIZER_PRODUCT_MASS = "fertilizer_product_mass"
     NUTRIENT_DELIVERY = "nutrient_delivery"
     SPRAYER_APPLICATION_VOLUME = "sprayer_application_volume"
@@ -22,10 +23,19 @@ class CalculationOperation(StrEnum):
     FIELD_PRODUCT_TOTAL = "field_product_total"
     AREA_WEIGHTED_AVERAGE = "area_weighted_average"
     PARTIAL_BUDGET = "partial_budget"
+
+
+class FoundationCalculationOperation(StrEnum):
+    """Current v2 extension; excluded from the historical harness inventory."""
+
+    SEED_RATE_MASS_IMPERIAL = "seed_rate_mass_imperial"
     BREAK_EVEN_PRICE = "break_even_price"
     BREAK_EVEN_YIELD = "break_even_yield"
     CURRENT_RATIO = "current_ratio"
     DEBT_TO_ASSET_PERCENT = "debt_to_asset_percent"
+
+
+ALL_CALCULATION_OPERATIONS = tuple(CalculationOperation) + tuple(FoundationCalculationOperation)
 
 
 _ARITHMETIC_BOUNDARY = (
@@ -36,7 +46,7 @@ _ARITHMETIC_BOUNDARY = (
 
 @dataclass(frozen=True)
 class AgronomicCalculation:
-    operation: CalculationOperation
+    operation: CalculationOperation | FoundationCalculationOperation
     value: Decimal
     unit: str
     formula: str
@@ -51,7 +61,14 @@ class AgronomicCalculation:
         return self.operation.value
 
     def answer(self) -> str:
-        result = f"{_format_decimal(self.value)} {self.unit}".strip()
+        if self.operation == FoundationCalculationOperation.CURRENT_RATIO:
+            result = f"{_format_decimal(self.value)}:1 current ratio"
+        elif self.unit == "%":
+            result = f"{_format_decimal(self.value)}%"
+        elif self.unit.startswith("$/"):
+            result = f"${_format_decimal(self.value)}/{self.unit[2:]}"
+        else:
+            result = f"{_format_decimal(self.value)} {self.unit}".strip()
         text = f"{result}. Calculation: {self.formula}."
         if self.assumptions:
             text += " Assumptions: " + "; ".join(self.assumptions) + "."
@@ -88,7 +105,7 @@ def calculation_tool_schema() -> dict[str, Any]:
             "properties": {
                 "operation": {
                     "type": "string",
-                    "enum": [operation.value for operation in CalculationOperation],
+                    "enum": [operation.value for operation in ALL_CALCULATION_OPERATIONS],
                 },
                 "inputs": {"type": "object"},
             },
@@ -138,9 +155,11 @@ def calculation_tool_schema() -> dict[str, Any]:
             },
             "break_even_price": {
                 "required": ["cost_per_area", "yield_per_area", "currency", "area_unit", "yield_unit", "cost_basis"],
+                "cost_bases": ["total", "total_economic", "operating", "budget_total_supplied"],
             },
             "break_even_yield": {
                 "required": ["cost_per_area", "price_per_unit", "currency", "area_unit", "yield_unit", "cost_basis"],
+                "cost_bases": ["total", "total_economic", "operating", "budget_total_supplied"],
             },
             "current_ratio": {"required": ["current_assets", "current_liabilities"]},
             "debt_to_asset_percent": {"required": ["total_debt", "total_assets"]},
@@ -149,7 +168,7 @@ def calculation_tool_schema() -> dict[str, Any]:
     }
 
 
-def calculate_agronomic(operation: str | CalculationOperation, inputs: Mapping[str, Any]) -> AgronomicCalculation:
+def calculate_agronomic(operation: str | CalculationOperation | FoundationCalculationOperation, inputs: Mapping[str, Any]) -> AgronomicCalculation:
     """Execute one validated calculation from structured inputs.
 
     Natural-language interpretation is intentionally outside this function. A
@@ -158,9 +177,9 @@ def calculate_agronomic(operation: str | CalculationOperation, inputs: Mapping[s
     """
 
     try:
-        selected = operation if isinstance(operation, CalculationOperation) else CalculationOperation(str(operation))
-    except ValueError as exc:
-        supported = ", ".join(item.value for item in CalculationOperation)
+        selected = next(item for item in ALL_CALCULATION_OPERATIONS if item.value == str(operation))
+    except StopIteration as exc:
+        supported = ", ".join(item.value for item in ALL_CALCULATION_OPERATIONS)
         raise ValueError(f"unknown calculation operation {operation!r}; supported: {supported}") from exc
     if not isinstance(inputs, Mapping):
         raise ValueError("calculation inputs must be an object")
@@ -168,7 +187,7 @@ def calculate_agronomic(operation: str | CalculationOperation, inputs: Mapping[s
     handlers = {
         CalculationOperation.UNIT_CONVERSION: _unit_conversion,
         CalculationOperation.SEED_RATE_MASS: _seed_rate_mass,
-        CalculationOperation.SEED_RATE_MASS_IMPERIAL: _seed_rate_mass_imperial,
+        FoundationCalculationOperation.SEED_RATE_MASS_IMPERIAL: _seed_rate_mass_imperial,
         CalculationOperation.FERTILIZER_PRODUCT_MASS: _fertilizer_product_mass,
         CalculationOperation.NUTRIENT_DELIVERY: _nutrient_delivery,
         CalculationOperation.SPRAYER_APPLICATION_VOLUME: _sprayer_application_volume,
@@ -179,10 +198,10 @@ def calculate_agronomic(operation: str | CalculationOperation, inputs: Mapping[s
         CalculationOperation.FIELD_PRODUCT_TOTAL: _field_product_total,
         CalculationOperation.AREA_WEIGHTED_AVERAGE: _area_weighted_average,
         CalculationOperation.PARTIAL_BUDGET: _partial_budget,
-        CalculationOperation.BREAK_EVEN_PRICE: _break_even_price,
-        CalculationOperation.BREAK_EVEN_YIELD: _break_even_yield,
-        CalculationOperation.CURRENT_RATIO: _current_ratio,
-        CalculationOperation.DEBT_TO_ASSET_PERCENT: _debt_to_asset_percent,
+        FoundationCalculationOperation.BREAK_EVEN_PRICE: _break_even_price,
+        FoundationCalculationOperation.BREAK_EVEN_YIELD: _break_even_yield,
+        FoundationCalculationOperation.CURRENT_RATIO: _current_ratio,
+        FoundationCalculationOperation.DEBT_TO_ASSET_PERCENT: _debt_to_asset_percent,
     }
     return handlers[selected](inputs)
 
@@ -304,7 +323,7 @@ def _seed_rate_mass_imperial(inputs: Mapping[str, Any]) -> AgronomicCalculation:
         )
         alternative = f"Manitoba's published approximate factor-10 rule gives {_format_decimal(published)} lb/ac"
     return _result(
-        CalculationOperation.SEED_RATE_MASS_IMPERIAL,
+        FoundationCalculationOperation.SEED_RATE_MASS_IMPERIAL,
         value,
         "lb/ac",
         formula,
@@ -584,16 +603,17 @@ def _break_even_price(inputs: Mapping[str, Any]) -> AgronomicCalculation:
     area_unit = _area_unit(inputs["area_unit"])
     yield_unit = _yield_unit(inputs["yield_unit"])
     basis = _cost_basis(inputs["cost_basis"])
+    basis_label = _cost_basis_label(basis)
     answer = cost / harvested
     unit = f"{currency}/{yield_unit}"
     return _result(
-        CalculationOperation.BREAK_EVEN_PRICE,
+        FoundationCalculationOperation.BREAK_EVEN_PRICE,
         answer,
         unit,
-        f"{_format_decimal(cost)} {currency}/{area_unit} {basis} cost ÷ "
+        f"{_format_decimal(cost)} {currency}/{area_unit} {basis_label} ÷ "
         f"{_format_decimal(harvested)} {yield_unit}/{area_unit} = {_format_decimal(answer)} {unit}",
         dict(inputs),
-        assumptions=(f"cost basis: {basis}", "yield is a supplied scenario assumption, not a guaranteed harvest"),
+        assumptions=(f"cost basis: {basis_label}", "yield is a supplied scenario assumption, not a guaranteed harvest"),
         boundary=_ARITHMETIC_BOUNDARY + " This is not a current cash bid or a sale recommendation.",
     )
 
@@ -607,16 +627,17 @@ def _break_even_yield(inputs: Mapping[str, Any]) -> AgronomicCalculation:
     area_unit = _area_unit(inputs["area_unit"])
     yield_unit = _yield_unit(inputs["yield_unit"])
     basis = _cost_basis(inputs["cost_basis"])
+    basis_label = _cost_basis_label(basis)
     answer = cost / price
     unit = f"{yield_unit}/{area_unit}"
     return _result(
-        CalculationOperation.BREAK_EVEN_YIELD,
+        FoundationCalculationOperation.BREAK_EVEN_YIELD,
         answer,
         unit,
-        f"{_format_decimal(cost)} {currency}/{area_unit} {basis} cost ÷ "
+        f"{_format_decimal(cost)} {currency}/{area_unit} {basis_label} ÷ "
         f"{_format_decimal(price)} {currency}/{yield_unit} = {_format_decimal(answer)} {unit}",
         dict(inputs),
-        assumptions=(f"cost basis: {basis}", "selling price is a supplied scenario assumption, not a current market quote"),
+        assumptions=(f"cost basis: {basis_label}", "selling price is a supplied scenario assumption, not a current market quote"),
         boundary=_ARITHMETIC_BOUNDARY + " This is not a current market quote or a crop-sale recommendation.",
     )
 
@@ -627,7 +648,7 @@ def _current_ratio(inputs: Mapping[str, Any]) -> AgronomicCalculation:
     liabilities = _positive(inputs, "current_liabilities")
     answer = assets / liabilities
     return _result(
-        CalculationOperation.CURRENT_RATIO,
+        FoundationCalculationOperation.CURRENT_RATIO,
         answer,
         "ratio",
         f"{_format_decimal(assets)} current assets ÷ {_format_decimal(liabilities)} current liabilities = {_format_decimal(answer)}",
@@ -643,7 +664,7 @@ def _debt_to_asset_percent(inputs: Mapping[str, Any]) -> AgronomicCalculation:
     assets = _positive(inputs, "total_assets")
     answer = debt / assets * Decimal("100")
     return _result(
-        CalculationOperation.DEBT_TO_ASSET_PERCENT,
+        FoundationCalculationOperation.DEBT_TO_ASSET_PERCENT,
         answer,
         "%",
         f"({_format_decimal(debt)} total debt ÷ {_format_decimal(assets)} total assets) × 100 = {_format_decimal(answer)}%",
@@ -654,7 +675,7 @@ def _debt_to_asset_percent(inputs: Mapping[str, Any]) -> AgronomicCalculation:
 
 
 def _result(
-    operation: CalculationOperation,
+    operation: CalculationOperation | FoundationCalculationOperation,
     value: Decimal,
     unit: str,
     formula: str,
@@ -778,9 +799,18 @@ def _yield_unit(value: Any) -> str:
 
 def _cost_basis(value: Any) -> str:
     basis = str(value or "").strip().lower()
-    if basis not in {"total", "operating", "budget_total_supplied"}:
-        raise ValueError("cost_basis must be total, operating, or budget_total_supplied")
+    if basis not in {"total", "total_economic", "operating", "budget_total_supplied"}:
+        raise ValueError("cost_basis must be total, total_economic, operating, or budget_total_supplied")
     return basis
+
+
+def _cost_basis_label(basis: str) -> str:
+    return {
+        "total": "user-supplied total cost (components not independently verified)",
+        "total_economic": "total economic cost",
+        "operating": "operating cost",
+        "budget_total_supplied": "user-supplied budget total (included cost categories unverified)",
+    }[basis]
 
 
 def _clamp(value: Decimal, lower: Decimal | None, upper: Decimal | None) -> Decimal:

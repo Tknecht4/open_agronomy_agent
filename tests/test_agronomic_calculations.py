@@ -5,7 +5,7 @@ from decimal import Decimal
 import pytest
 
 from agronomy_agent.agronomic_calculations import (
-    CalculationOperation,
+    ALL_CALCULATION_OPERATIONS,
     agronomic_calculator,
     calculate_agronomic,
     calculation_tool_schema,
@@ -182,7 +182,7 @@ def test_budget_cost_basis_and_price_currency_are_not_relabelled() -> None:
         {"cost_per_area": 840, "yield_per_area": 4, "currency": "CAD", "area_unit": "ha", "yield_unit": "tonne", "cost_basis": "total"},
     )
 
-    assert "total cost" in result.answer()
+    assert "user-supplied total cost" in result.answer()
     assert "operating cost" not in result.answer()
     assert "not a current cash bid" in result.answer()
 
@@ -251,6 +251,6 @@ def test_tool_schema_lists_every_operation() -> None:
     schema = calculation_tool_schema()
 
     assert schema["input"]["properties"]["operation"]["enum"] == [
-        operation.value for operation in CalculationOperation
+        operation.value for operation in ALL_CALCULATION_OPERATIONS
     ]
-    assert set(schema["operations"]) == {operation.value for operation in CalculationOperation}
+    assert set(schema["operations"]) == {operation.value for operation in ALL_CALCULATION_OPERATIONS}

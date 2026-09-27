@@ -70,11 +70,13 @@ PYTHONPATH=src .venv/bin/python scripts/evaluate_offline_corpus_retrieval.py \
 ```
 
 The September 2026 non-active production and farm-business candidate has a separate
-[13-question exposed development comparison](https://github.com/Tknecht4/open_agronomy_agent/blob/main/docs/reviews/production-foundations-benchmark-20260927.md).
-It reports source reachability, paired local-model answers, explicit failures,
-and authority controls. Its method-only rerun did not qualify the candidate
-for active retrieval. Its known-source questions and nonblinded review are
-not a fresh competence or field-outcome evaluation.
+[13-question exposed development comparison](https://github.com/Tknecht4/open_agronomy_agent/blob/main/docs/reviews/production-foundations-benchmark-20260927.md)
+and an 18-question typed-calculation follow-up. The corpus-only comparison did
+not qualify the candidate for active retrieval. The later improvement is largely
+from typed calculation and appears with the original active RAG profile too;
+the answer and negative-control receipts are retained in the review artifact.
+These known-source questions and nonblinded judgments are not a fresh
+competence or field-outcome evaluation.
 
 ## Reproducible runs
 

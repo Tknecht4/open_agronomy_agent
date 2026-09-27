@@ -85,7 +85,7 @@ def parse_foundation_calculation(question: str) -> tuple[str, dict[str, Any], tu
 
 
 def _seed_rate(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, ...]] | None:
-    if not re.search(r"\b(?:seed(?:ing)? (?:rate|mass|purchase)|plants\s*(?:/|per\s+)(?:m²|m2|ft²|ft2|square))\b", lower):
+    if not re.search(r"\b(?:seed(?:ing)? (?:rate|mass|purchase)|seed[- ]lot|thousand[- ]kernel|tkw)\b", lower):
         return None
     target_matches = list(re.finditer(
         rf"{NUMBER}\s*(?:[A-Za-z-]+\s+)?(?:established\s+)?plants\s*(?:/|per\s+)(m²|m2|square metre|square meter|ft²|ft2|square foot|square feet)",
@@ -214,7 +214,7 @@ def _cost_candidates(text: str) -> set[tuple[float, str, str]]:
     for index, pattern in enumerate(specific_patterns):
         for match in re.finditer(pattern, text, re.IGNORECASE):
             basis = (match.groupdict().get("basis") or ("budget_total_supplied" if index == 1 else "")).lower()
-            candidates.add((_number(match.group("value")), _area(match.group("area")), "total" if basis == "total economic" else basis))
+            candidates.add((_number(match.group("value")), _area(match.group("area")), "total_economic" if basis == "total economic" else basis))
     if candidates:
         return candidates
     generic = rf"\bcosts?\s*(?:of|is|are|:)?\s*(?:CAD|USD|\$)\s*(?P<value>[0-9][0-9,]*(?:\.[0-9]+)?)\s*(?:/|per\s+)(?P<area>{AREA})\b"
@@ -256,11 +256,13 @@ def _break_even(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, 
     costs = _cost_candidates(text)
     requested_basis = (
         "operating" if re.search(r"\boperating[- ]cost break[- ]?even\b", lower)
-        else "total" if re.search(r"\btotal(?: economic)?[- ]cost break[- ]?even\b", lower)
+        else "total_economic" if re.search(r"\btotal economic[- ]cost break[- ]?even\b", lower)
+        else "total" if re.search(r"\btotal[- ]cost break[- ]?even\b", lower)
         else None
     )
     if requested_basis:
-        costs = {candidate for candidate in costs if candidate[2] == requested_basis}
+        compatible = {"total", "total_economic", "budget_total_supplied"} if requested_basis == "total" else {requested_basis}
+        costs = {candidate for candidate in costs if candidate[2] in compatible}
     cost = next(iter(costs)) if len(costs) == 1 else None
     harvested = _yield(text) if price_question else None
     selling_price = _price(text) if yield_question else None
