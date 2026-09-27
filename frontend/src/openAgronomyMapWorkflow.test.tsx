@@ -1831,7 +1831,13 @@ describe('Open Agronomy map upload workflow', () => {
     fireEvent.submit(screen.getByRole('form', { name: 'Add field record' }))
     expect(recordAttempts).toBe(1)
     expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled()
+    const draftDate = (screen.getByLabelText('When it happened') as HTMLInputElement).value
+    fireEvent(screen.getByRole('dialog', { name: 'Add field record' }), new Event('cancel', { bubbles: true, cancelable: true }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     await act(async () => { rejectFirstRecord?.(new Error('offline')) })
+    fireEvent.click(screen.getByRole('button', { name: 'Resume unsaved record' }))
+    expect(screen.getByLabelText('When it happened')).toHaveValue(draftDate)
+    expect(screen.getByLabelText('Record type')).toHaveValue('observation')
     expect(within(screen.getByRole('dialog', { name: 'Add field record' })).getByRole('alert')).toHaveTextContent('Save not confirmed: offline')
     expect(screen.getByLabelText('What happened')).toHaveValue('Standing water observed in the northwest corner.')
     fireEvent.click(screen.getByRole('button', { name: 'Save record' }))

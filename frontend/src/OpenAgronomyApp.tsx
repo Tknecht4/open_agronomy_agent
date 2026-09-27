@@ -2902,6 +2902,12 @@ export function OpenAgronomyApp() {
 
   const openRecordDialog = (correctsEventId = '') => {
     if (!activeFieldContextId || fieldStorageMode !== 'account_workspace') return
+    // A dismissed write can fail after the dialog closes. Resume that captured
+    // draft before starting another record; loading a different field clears it.
+    if (recordSaveError && fieldEventSummary.trim()) {
+      setRecordDialogFieldId(activeFieldContextId)
+      return
+    }
     setFieldEventType(correctsEventId ? 'correction' : 'observation')
     setFieldCorrectionTarget(correctsEventId)
     setFieldEventSummary('')
@@ -3852,7 +3858,7 @@ export function OpenAgronomyApp() {
               </div>
               <p className="field-history-status">{fieldHistoryStatus}</p>
               <div className="field-record-toolbar">
-                <button type="button" className="map-primary-action" disabled={!activeFieldContextId || fieldStorageMode !== 'account_workspace' || recordSavePending} onClick={() => openRecordDialog()}><Plus size={16} /> Add record</button>
+                <button type="button" className="map-primary-action" disabled={!activeFieldContextId || fieldStorageMode !== 'account_workspace' || recordSavePending} onClick={() => openRecordDialog()}><Plus size={16} /> {recordSaveError && fieldEventSummary.trim() ? 'Resume unsaved record' : 'Add record'}</button>
                 {activeFieldContextId && fieldStorageMode === 'account_workspace' ? (
                   <Suspense fallback={null}>
                     <SoilTestEntryPanel

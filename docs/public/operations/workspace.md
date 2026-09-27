@@ -95,7 +95,8 @@ Enter the sampling date only when known, and explicitly mark whether you retaine
 the original report. Entry time and sampling time are different facts: sample rows label their recording
 time, and sampling dates remain explicit or unknown in field context. Failed save
 confirmations keep the form values, but the server may already have saved the record;
-check the timeline before retrying. A pending save can be dismissed without cancelling
+check the timeline before retrying. **Resume unsaved record** reopens a failed
+record form that was closed. A pending save can be dismissed without cancelling
 the request or enabling another submission.
 
 The timeline shows concise summaries. Open **Record details** for capture and

@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-09-27T14:35:25+00:00",
+  "generated_at": "2026-09-27T14:48:22+00:00",
   "status": "pass",
-  "contract_sha256": "228cf99a825bdf3cb5f73ddf92cd64855056408e60f7b52d5a3f52a211538df2",
+  "contract_sha256": "39e6929974b9b301825f5fea57243a0195cb78c1e0109a06b20b82fdbccbe2c4",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -414,8 +414,8 @@
     {
       "path": "frontend/src",
       "file_count": 92,
-      "bytes": 1385864,
-      "sha256": "c5e5e3274ecd51807fe77b8e75702bfd377cdfa7dc62399247b5b7b490c3f145"
+      "bytes": 1386750,
+      "sha256": "bea745157e88634a3c6c78cb2c2001b3b6267e394259c9da2e6cdee7aeae0d8a"
     },
     {
       "path": "frontend/public",
@@ -456,8 +456,8 @@
     {
       "path": "docs/public",
       "file_count": 90,
-      "bytes": 8810496,
-      "sha256": "56bb25fb5a2d107045469b37d347c2fdb5cf050e7253170823ddf8a972eb4190"
+      "bytes": 8810568,
+      "sha256": "73b8bc779d584c3a9e101cf2abb2856dd0e63b1ae32e8afba8d2702fe79b2a8e"
     }
   ],
   "geo_cache_seed": {

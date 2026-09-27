@@ -209,3 +209,10 @@ and carries the distinction into UI history and bounded product context without
 rewriting existing event hashes. This narrow backend correction expands the
 original frontend-only scope; focused date-boundary checks and exact-source full
 CI must pass before renewed acceptance. Original failing probes remain retained.
+
+
+A second retained review probe found that a record failing after dismissal could
+lose its draft on reopening. Resume unsaved record now restores the same form
+without resetting its summary, event type, date, correction target or uncertain
+save warning. The independent reproducer passes after that narrow repair. Final
+acceptance still requires binding the settled commit and terminal CI results.
