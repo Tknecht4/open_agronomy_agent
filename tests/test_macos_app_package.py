@@ -153,6 +153,21 @@ def test_startup_diagnostic_exposes_only_allowlisted_failure_identity(tmp_path: 
     }
 
 
+def test_desktop_serve_can_select_explicit_offline_mode(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("AGRONOMY_AGENT_DESKTOP_PAIRING_TOKEN", "test-pairing-token-0123456789abcdef")
+    monkeypatch.setenv("AGRONOMY_AGENT_DESKTOP_SESSION_SECRET", "test-session-secret-0123456789abcdef")
+    monkeypatch.setenv("AGRONOMY_AGENT_NETWORK_MODE", "online")
+    monkeypatch.setattr(backend, "verify_model_receipt", lambda *_: None)
+    monkeypatch.setitem(sys.modules, "scripts.run_cockpit", SimpleNamespace(main=lambda: 0))
+    monkeypatch.setattr(sys, "argv", ["pytest"])
+
+    assert backend.serve(tmp_path, tmp_path, tmp_path, port=18080, network_mode="offline") == 0
+    assert os.environ["AGRONOMY_AGENT_NETWORK_MODE"] == "offline"
+    assert "--desktop-local" in sys.argv
+
+
 def test_backend_status_never_downloads_without_receipt(tmp_path: Path) -> None:
     registry = tmp_path / "runtime/configs/runtime_profiles.json"
     registry.parent.mkdir(parents=True)

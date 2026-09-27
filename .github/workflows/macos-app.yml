@@ -9,6 +9,7 @@ on:
       - "scripts/smoke_macos_app.py"
       - "scripts/smoke_macos_first_run.py"
       - "scripts/smoke_macos_launcher.py"
+      - "scripts/smoke_macos_offline.py"
       - "scripts/run_cockpit.py"
       - "src/agronomy_agent/**"
       - "frontend/**"
@@ -97,6 +98,12 @@ jobs:
             --state-root "$HOME/Library/Application Support/OpenAgronomyAgent/desktop" \
             --backend-report "$GITHUB_WORKSPACE/outputs/macos/smoke.json" \
             --report "$GITHUB_WORKSPACE/outputs/macos/launcher-smoke.json"
+      - name: Smoke local answer with public egress denied
+        run: |
+          python -m scripts.smoke_macos_offline \
+            --app "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app" \
+            --state-root "$HOME/Library/Application Support/OpenAgronomyAgent/desktop" \
+            --report "$GITHUB_WORKSPACE/outputs/macos/offline-smoke.json"
       - name: Verify signature and archive candidate in runner
         run: |
           codesign --verify --deep --strict "outputs/macos/Open Agronomy.app"

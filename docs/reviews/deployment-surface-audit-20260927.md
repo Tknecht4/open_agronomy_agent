@@ -1,6 +1,6 @@
 # Deployment surface audit and Mac-first release plan
 
-**Source:** initially `main` at `fd590b57babca0666e24286315ec460877a59dac`; integrated current `main` at `b5ee34d1610fe6b47a79060d632e52ae317e46c1` before final review
+**Source:** initially `main` at `fd590b57babca0666e24286315ec460877a59dac`; integrated `main` at `d0effbeb1fdb3ae8189ad1da6606cd328f600b32` before final review
 
 **Review branch:** `codex/deployment-surface`
 
@@ -46,7 +46,7 @@ The recent Apple image build recorded in `docs/reviews/repository-cleanup-invest
 
 The next reviewable artifact is an **unsigned local Mac app prototype** that opens the production UI and completes a real model-backed question without Python, Node, Git, Docker, or a terminal installed on the test Mac. That proves packaging and lifecycle, not agronomic quality or public-release readiness.
 
-This branch records a source audit and decision, not a working installer. The native model path has been exercised on an Apple Silicon Mac with 16 GiB unified memory, but that is not a measured minimum for users. More free disk is needed before packaging and clean-install trials.
+This branch now contains an ad hoc signed app prototype. Its clean-runner build, setup, model answer, and lifecycle evidence are recorded below. Developer ID signing, notarization, quarantine launch, and a measured minimum memory requirement remain distribution gates. The exercised local host has 16 GiB unified memory.
 
 ## Implementation checkpoint: 2026-09-27
 
@@ -81,3 +81,7 @@ Main advanced again to `d0effbeb1fdb3ae8189ad1da6606cd328f600b32` with foundatio
 Clean Mac CI run `36305839636` then **passed** its build, bundled-model, and native-launch jobs. The frozen backend installed and verified ten pinned model files, returned a real 185-token answer with six retrieved documents, rejected unauthenticated access and pairing replay, and left no listener. The actual Swift app opened twice; the default browser consumed the one-time token on both launches, the port stayed `49271`, the saved session remained in SQLite, and Quit stopped the backend and app each time. The ad hoc app was archived and hashed only inside the runner. General CI run `36305839641` passed including full Python and public-package gates; docs run `36305839660` built successfully. These results establish an unsigned prototype path, not a public notarized release.
 
 The prior Mac run provisioned the model through the frozen backend CLI before opening the native app. The next gate opens the app in empty state, observes setup required without an automatic download, invokes the native **Install local model** button, and then reuses that verified model for the packaged answer and restart checks. Local source tests passed 52/52, Swift compiled, the edge package validator passed, and the public scope validator selected 890 files. The current generated runtime contract is `43260f8092ec16f15e25a11a036fdd5bfa7919e926d8eecd58c53b50bc7586e4`. Native first-run installation and offline/no-network operation remain unverified.
+
+Clean Mac CI run `36306935832` **passed** the native first-run, bundled answer, native reopen, signature verification, and runner-local archive gates. The native setup button was clicked after empty-state setup required; the model receipt and browser pairing completed in 131.707 seconds. The packaged backend then generated 185 tokens with six retrieved documents and stopped its listener. The native app reopened with the persisted session and stopped its owned processes. The ad hoc archive SHA-256 was `9c05e0a6542381904cc389f0c1d026f709e08ba91fa2b37745a40e482b716635`; the archive stayed on the runner and is not a public download. General CI run `36306935911` passed its full Python, public-package, frontend typecheck/test/build gates; docs run `36306935821` passed. This makes the prototype lifecycle evidence complete through first setup, but no-network local answering remains a separate gate.
+
+The follow-up candidate adds an explicit offline backend mode and a packaged-answer smoke under a macOS OS sandbox that denies public egress while allowing localhost. A local sandbox probe observed denied public access and local MLX compute remained available. The source contract tests passed 53/53, edge package validation passed with runtime contract `34395adfa9fff428ead373af36f378d59bb0a727f7a367b5f7d642f707f4f819`, and the curated public scope selected 891 files. The complete bundled offline answer and final independent delta review are pending; source checks alone do not establish either result.

@@ -71,8 +71,10 @@ gates, a PyInstaller build on a clean macOS 26 arm64 host, and an installed-app
 smoke with no Homebrew/Python/Node/Docker dependencies. The CI path first opens
 the actual Swift app in empty state and invokes its **Install local model**
 button, then checks default-browser pairing, a real model turn, and Quit and
-reopen with a persisted session. Exercise one real source-bound
-answer, offline behavior, port conflicts, and bundled file/model identity.
+reopen with a persisted session. A separate packaged-backend smoke denies
+public TCP/UDP egress at the OS level while keeping loopback available and
+requires an offline, source-bound local answer. Exercise port conflicts and
+bundled file/model identity as well.
 Developer ID signing,
 notarization, quarantine launch, and an update/rollback path are separate
 distribution gates.

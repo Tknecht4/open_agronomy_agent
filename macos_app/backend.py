@@ -373,13 +373,19 @@ def install_model(runtime_root: Path, state_root: Path, model_cache: Path) -> di
     return {"phase": "ready", "model_id": model_id, "revision": revision, "file_count": len(files)}
 
 
-def serve(runtime_root: Path, state_root: Path, model_cache: Path, *, port: int) -> int:
+def serve(
+    runtime_root: Path, state_root: Path, model_cache: Path, *, port: int,
+    network_mode: str = "online",
+) -> int:
     if not 1024 <= port <= 65535:
         raise ValueError("desktop port must be between 1024 and 65535")
     token = os.environ.get("AGRONOMY_AGENT_DESKTOP_PAIRING_TOKEN", "")
     secret = os.environ.get("AGRONOMY_AGENT_DESKTOP_SESSION_SECRET", "")
     if len(token) < 32 or len(secret) < 32:
         raise ValueError("desktop pairing token and session secret are required")
+    if network_mode not in {"online", "offline"}:
+        raise ValueError("desktop network mode must be online or offline")
+    os.environ["AGRONOMY_AGENT_NETWORK_MODE"] = network_mode
     _write_startup_diagnostic(
         state_root,
         {"schema_version": "open_agronomy_agent.desktop_startup_diagnostic.v1",
@@ -425,6 +431,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--model-cache", type=Path)
     parser.add_argument("--require-bundle-manifest", action="store_true")
     parser.add_argument("--port", type=int, default=18080)
+    parser.add_argument("--network-mode", choices=("online", "offline"), default="online")
     args = parser.parse_args(argv)
     state_root: Path | None = None
     try:
@@ -440,7 +447,10 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "install-model":
             print(json.dumps(install_model(runtime_root, state_root, model_cache)))
             return 0
-        return serve(runtime_root, state_root, model_cache, port=args.port)
+        return serve(
+            runtime_root, state_root, model_cache, port=args.port,
+            network_mode=args.network_mode,
+        )
     except Exception as exc:
         failure = _safe_failure(exc)
         if state_root is not None and args.command == "serve":

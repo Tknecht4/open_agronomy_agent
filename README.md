@@ -19,6 +19,10 @@ The screenshot shows synthetic example data. [Explore the workspace](docs/public
 
 This is a development and research system. It is not an agronomist replacement, diagnosis, pesticide-label authority, or evidence that a recommendation will work in a field. Confirm consequential decisions with current local authority, representative observations, and qualified professional judgment.
 
+## Mac desktop candidate
+
+The first end-user target is an Apple Silicon Mac. The [Mac app candidate](macos_app/README.md) bundles the workspace, API, and local MLX runtime behind a native launcher. Opening it offers a one-time pinned-model setup and then opens the workspace in the default browser; routine use needs no terminal, Python, Node, Git, or container engine. The candidate is built and ad hoc signed in Mac CI, but is not yet a notarized, downloadable release. The commands below remain the source-checkout workflow for developers.
+
 ## Run locally
 
 The exercised native target is an Apple Silicon Mac with 16 GB unified memory, Python 3.11 or 3.12, and Node 20 or newer. Install from the repository root:
