@@ -137,12 +137,19 @@ def test_startup_diagnostic_exposes_only_allowlisted_failure_identity(tmp_path: 
     assert "secret private path" not in json.dumps(safe)
     receipt = tmp_path / "receipts/backend-startup.json"
     receipt.parent.mkdir()
-    receipt.write_text(json.dumps({**safe, "private_trace": "never leave runner state"}))
+    receipt.write_text(json.dumps({
+        **safe,
+        "stage": "product_import",
+        "origin_module": "agronomy_agent.server.app",
+        "private_trace": "never leave runner state",
+    }))
     assert _startup_summary(tmp_path) == {
         "phase": "error",
         "error_code": "missing_module",
+        "stage": "product_import",
         "exception_type": "ModuleNotFoundError",
         "missing_module": "missing.dynamic_module",
+        "origin_module": "agronomy_agent.server.app",
     }
 
 
@@ -184,3 +191,38 @@ def test_backend_status_never_downloads_without_receipt(tmp_path: Path) -> None:
     assert diagnostic["error_code"] == "invalid_runtime_contract"
     assert diagnostic["exception_type"] == "ValueError"
     assert "detail" not in diagnostic
+
+
+def test_desktop_startup_failure_keeps_traceback_private(tmp_path: Path) -> None:
+    registry = tmp_path / "runtime/configs/runtime_profiles.json"
+    registry.parent.mkdir(parents=True)
+    registry.write_text("{}", encoding="utf-8")
+    index = tmp_path / "runtime/frontend/dist/index.html"
+    index.parent.mkdir(parents=True)
+    index.write_text("ready", encoding="utf-8")
+    source_root = Path(__file__).resolve().parents[1]
+    state = tmp_path / "state"
+    completed = subprocess.run(
+        [
+            sys.executable, str(source_root / "macos_app/backend.py"), "serve",
+            "--runtime-root", str(tmp_path / "runtime"),
+            "--state-root", str(state), "--port", "18080",
+        ],
+        env={
+            **os.environ,
+            "PYTHONPATH": os.pathsep.join((str(source_root), str(source_root / "src"))),
+            "AGRONOMY_AGENT_DESKTOP_PAIRING_TOKEN": "test-pairing-token-0123456789abcdef",
+            "AGRONOMY_AGENT_DESKTOP_SESSION_SECRET": "test-session-secret-0123456789abcdef",
+        },
+        capture_output=True, text=True, check=False,
+    )
+    assert completed.returncode == 1
+    public = json.loads(completed.stderr)
+    assert public["error_code"] == "invalid_runtime_contract"
+    assert "detail" not in public
+    assert _startup_summary(state)["error_code"] == "invalid_runtime_contract"
+    assert _startup_summary(state)["stage"] == "model_receipt"
+    private_logs = list((state / "logs").glob("backend-startup-error-*.log"))
+    assert len(private_logs) == 1
+    assert private_logs[0].stat().st_mode & 0o077 == 0
+    assert "model has not been installed" in private_logs[0].read_text()

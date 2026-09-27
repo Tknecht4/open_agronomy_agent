@@ -64,7 +64,9 @@ def _startup_summary(state: Path) -> dict[str, Any]:
         "missing_module", "import_error", "os_error", "invalid_runtime_contract", "runtime_error"
     }:
         summary["error_code"] = row["error_code"]
-    for key in ("exception_type", "missing_module"):
+    if row.get("stage") in {"model_receipt", "product_import", "product_start"}:
+        summary["stage"] = row["stage"]
+    for key in ("exception_type", "missing_module", "origin_module"):
         value = row.get(key)
         if isinstance(value, str) and len(value) <= 80 and all(
             char in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._" for char in value

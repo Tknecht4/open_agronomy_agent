@@ -287,6 +287,16 @@ final class OpenAgronomyDesktop: NSObject, NSApplicationDelegate, NSWindowDelega
         let descriptor = Darwin.socket(AF_INET, SOCK_STREAM, 0)
         guard descriptor >= 0 else { return nil }
         defer { Darwin.close(descriptor) }
+        // Match the backend listener: TIME_WAIT is reusable, but a live listener
+        // still blocks this bind because SO_REUSEPORT is deliberately absent.
+        var reuseAddress: Int32 = 1
+        let reuseSet = withUnsafePointer(to: &reuseAddress) {
+            Darwin.setsockopt(
+                descriptor, SOL_SOCKET, SO_REUSEADDR, $0,
+                socklen_t(MemoryLayout<Int32>.size)
+            )
+        }
+        guard reuseSet == 0 else { return nil }
         var address = sockaddr_in()
         address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
         address.sin_family = sa_family_t(AF_INET)

@@ -224,6 +224,18 @@ def _safe_failure(exc: Exception) -> dict[str, Any]:
             row["missing_module"] = name
     if isinstance(exc, OSError) and isinstance(exc.errno, int):
         row["errno"] = exc.errno
+    frame = exc.__traceback__
+    while frame is not None and frame.tb_next is not None:
+        frame = frame.tb_next
+    if frame is not None:
+        module = frame.tb_frame.f_globals.get("__name__")
+        if (
+            isinstance(module, str)
+            and module.startswith(("agronomy_agent.", "scripts.", "macos_app."))
+            and len(module) <= 80
+            and all(char in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._" for char in module)
+        ):
+            row["origin_module"] = module
     return row
 
 
@@ -370,11 +382,22 @@ def serve(runtime_root: Path, state_root: Path, model_cache: Path, *, port: int)
         raise ValueError("desktop pairing token and session secret are required")
     _write_startup_diagnostic(
         state_root,
-        {"schema_version": "open_agronomy_agent.desktop_startup_diagnostic.v1", "phase": "launching"},
+        {"schema_version": "open_agronomy_agent.desktop_startup_diagnostic.v1",
+         "phase": "launching", "stage": "model_receipt"},
     )
     verify_model_receipt(runtime_root, state_root, model_cache)
+    _write_startup_diagnostic(
+        state_root,
+        {"schema_version": "open_agronomy_agent.desktop_startup_diagnostic.v1",
+         "phase": "launching", "stage": "product_import"},
+    )
     from scripts.run_cockpit import main as run_cockpit
 
+    _write_startup_diagnostic(
+        state_root,
+        {"schema_version": "open_agronomy_agent.desktop_startup_diagnostic.v1",
+         "phase": "launching", "stage": "product_start"},
+    )
     sys.argv = [
         "run_cockpit.py",
         "--desktop-local",
@@ -421,6 +444,14 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as exc:
         failure = _safe_failure(exc)
         if state_root is not None and args.command == "serve":
+            try:
+                previous = json.loads(
+                    (state_root / "receipts/backend-startup.json").read_text(encoding="utf-8")
+                )
+                if previous.get("stage") in {"model_receipt", "product_import", "product_start"}:
+                    failure["stage"] = previous["stage"]
+            except (OSError, ValueError, json.JSONDecodeError):
+                pass
             _write_startup_diagnostic(state_root, failure, exc=exc)
         print(json.dumps(failure), file=sys.stderr)
         return 1
