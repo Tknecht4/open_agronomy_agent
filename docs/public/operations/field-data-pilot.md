@@ -1,4 +1,4 @@
-# Field uploads and public imagery pilot
+# Field uploads and public imagery
 
 Reviewed tables now connect to persisted fields, deterministic queries,
 conversational answers and evidence traces. Supported files are CSV, TSV,
@@ -52,14 +52,46 @@ A point or county centroid is insufficient for a field imagery footprint.
 | Provider | Personal account | Current capability |
 |---|---|---|
 | Sentinel-2 C1 L2A, Earth Search/AWS | No | Discovery and anonymous COG access |
-| HLS S30/L30 v2, Planetary Computer mirror | No | Discovery and COG access using a public short-lived SAS token |
+| HLS S30/L30 v2, Planetary Computer mirror | No | Discovery, COG access and optional single-scene QA/NDVI/NDMI using a public short-lived SAS token |
 | HLS, Google Earth Engine | Required | Optional declaration; credentials and execution are not configured |
 
 Source rights and hosting access are separate. The catalog preserves license
 links and hosting `proprietary` labels where present. Tokens are not saved in
-traces. This pilot shows acquisition dates and **scene-wide** cloud percentage.
-It does not decode chips, calculate clear field fraction/NDVI, diagnose stress
-or predict yield. A byte-range probe proves access only.
+traces. Scene search shows acquisition dates and **scene-wide** cloud
+percentage. The optional HLS worker reads bounded native 30 m imagery over a
+saved field polygon, applies the HLS quality mask, and reports field clear-area
+coverage plus observed NDVI and NDMI with source and processing hashes. Its
+authenticated preview shows field-only NDVI. A visual/context buffer does not
+expand the polygon used for field statistics. These spectral observations are
+not diagnoses, treatment effects, yield estimates or predictions. Empty valid
+area remains an explicit result.
+
+### Optional isolated HLS worker
+
+Install the raster worker in a separate Python 3.12 environment outside the
+checkout; the normal serving environment does not need raster/model packages:
+
+```bash
+python3.12 -m venv /absolute/path/to/imagery-venv
+/absolute/path/to/imagery-venv/bin/python -m pip install -r requirements-imagery.txt
+export AGRONOMY_AGENT_IMAGERY_CACHE_ROOT=/absolute/path/to/private-imagery-cache
+export AGRONOMY_AGENT_IMAGERY_PYTHON=/absolute/path/to/imagery-venv/bin/python
+```
+
+Create the cache directory on private local storage outside the repository.
+Both settings are required for the workspace analysis panel. The worker gets
+only the saved field polygon and bounded request, runs with a narrow environment
+that excludes normal application credentials, and keeps public HLS access tokens
+in memory. It cannot analyze an unsaved polygon or a point. With
+`AGRONOMY_AGENT_NETWORK_MODE=offline`, only an exact verified cached analysis
+can be reused; online requests send polygon and dates to the public catalog.
+The cache is private field-scoped state, not a public source or model profile.
+
+In **Fields**, save a polygon, then open **Imagery analysis** to choose HLS S30
+or L30 and a date interval. The panel reports missing setup, offline cache
+misses, no scene, and unavailable data explicitly. The receipt shows valid
+area, excluded QA area, source item and band identities, dates and hashes;
+inspect these before comparing fields or seasons.
 
 List providers without network access:
 
@@ -74,6 +106,17 @@ For a local GeoJSON Polygon/Feature, find two HLS scenes and probe up to
 PYTHONPATH=src .venv/bin/python scripts/inspect_field_imagery.py \
   --geometry field.geojson --provider hls-s30-planetary-computer \
   --start-date 2025-06-01 --end-date 2025-06-15 --limit 2 --online --probe B04
+```
+
+For a separate command-line analysis of one HLS scene, use the isolated worker
+Python and an outside-checkout cache. `--online` is an explicit network choice;
+without it, the command only reuses an exact cached result:
+
+```bash
+PYTHONPATH=src /absolute/path/to/imagery-venv/bin/python scripts/analyze_field_imagery.py \
+  --geometry field.geojson --provider hls-s30-planetary-computer \
+  --start-date 2025-06-01 --end-date 2025-06-15 \
+  --cache-root /absolute/path/to/private-imagery-cache --online
 ```
 
 ## Development benchmark
@@ -100,3 +143,46 @@ Never upload gold answers or admit evaluation files into shared retrieval or
 training. Explicitly select a source-only fixture CSV for an isolated
 development field; answers remain outside that workspace. Future training
 requires separately admitted fields and rights.
+
+## Research-only imagery assessment
+
+`requirements-imagery-models.txt` describes the separately exercised EO/model
+environment. It adds frozen Prithvi encoder and fixed-readout dependencies to
+the HLS worker stack; installing it does not activate a serving model or field
+prediction. `scripts/assess_field_imagery.py` freezes or applies a source-bound
+label/split protocol to an explicitly supplied research CSV and writes a new
+receipt. `scripts/probe_imagery_model.py` checks a pinned local model snapshot
+on CPU and MPS under supervised batch-one limits: 120 seconds per stage, 8 GiB
+process RSS and 64 MiB observed system-swap growth. An MPS failure remains a
+failure even if CPU succeeds. Device timing, finite features and dependency
+identities are diagnostics, not accuracy. The current research receipts are
+under `docs/reviews/artifacts/field-imagery-20260927/`; their grouped results
+apply only to the recorded source, splits, dates and task. No research labels,
+scores or encoder features enter the normal field-answer path.
+
+## Inspect local storage
+
+The read-only audit reports logical bytes, summed filesystem allocation,
+verified duplicate payloads and a bounded four-date storage estimate. Supply
+distinct, non-overlapping roots and a new output file outside those roots:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/audit_imagery_storage.py \
+  --root imagery=/absolute/local/imagery-cache \
+  --root acquisition=/absolute/local/research-acquisition \
+  --verify-duplicates --output /absolute/local/storage-audit-new.json
+```
+
+It does not follow symlinks, delete data, change a cache, or evict evidence.
+Incomplete scans and hashing limits remain explicit. APFS shared extents mean
+summed allocation is not uniquely occupied space; whole-file and internal NPZ
+duplicate estimates overlap and must not be added together.
+
+The measured plan in the repository's
+`docs/reviews/artifacts/field-imagery-20260927/storage-audit.md`
+separates reusable scene pixels from field masks/results, proposes
+workspace-scoped raw-upload deduplication and configurable cache quotas, and
+requires a verified migration before retiring old artifacts. Those migrations
+and automatic eviction are not implemented. Public repository builds already
+use independent APFS copy-on-write copies where available, with ordinary-copy
+fallback and unchanged output hash verification.

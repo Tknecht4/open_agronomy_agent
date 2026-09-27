@@ -1,0 +1,62 @@
+{
+  "status": "observed_live_public_API_and_authenticated_PNG",
+  "network": "anonymous Planetary Computer HLS; user-approved public Akron research support only",
+  "support": "union of eligible sampled points buffered15m, not surveyed field boundary",
+  "http_status": 200,
+  "preview_http_status": 200,
+  "preview_sha256": "9f003fe09e2d6802b8893243c09cec37f7432d4a861dba608f36988834cff6a9",
+  "scene_id": "hls2-s30:HLS.S30.T13TFE.2021163T173909.v2.0",
+  "acquired_at": "2021-06-12T17:52:53.187280Z",
+  "grid_shape": [
+    25,
+    26
+  ],
+  "source_native_grid": true,
+  "geometry_hash": "7dce7d174162d12d98f9d8150ef520b1c3dfd47b8d3bfe5ee86fb1f6b9e6050d",
+  "chip_hash": "8105ca1f8e5a54c36fcf3a29a7982be31ef8ad978c21de3e08bb76e14e17288f",
+  "process_version": "hls-chip-v2-native-asset-grid-fmask-v1",
+  "preview_version": "ndvi-preview-v2-finite-alpha",
+  "qa": {
+    "excluded_area_m2_by_reason": {
+      "adjacent_cloud_shadow": 0.0,
+      "cirrus": 0.0,
+      "cloud": 0.0,
+      "high_aerosol": 0.0,
+      "shadow": 0.0,
+      "snow_ice": 0.0
+    },
+    "field_area_m2": 425572.3663330078,
+    "nodata_area_m2": 0.0,
+    "overlap_note": "QA reason areas may overlap; do not sum them",
+    "valid_area_fraction": 1.0,
+    "valid_area_m2": 425572.3663330078
+  },
+  "zonal_stats": {
+    "NDMI": {
+      "area_m2": 425572.3937988281,
+      "max": 0.4958622455596924,
+      "mean": -0.068419449031353,
+      "min": -0.24793271720409393
+    },
+    "NDVI": {
+      "area_m2": 425572.3937988281,
+      "max": 0.842522919178009,
+      "mean": 0.3369145691394806,
+      "min": 0.16745281219482422
+    }
+  },
+  "cog_transfer_bytes": 786432,
+  "cog_range_requests": 14,
+  "api_elapsed_seconds": 22.523625457979506,
+  "processing_elapsed_seconds": 21.573431416996755,
+  "account_required": false,
+  "credentials_transferred": false,
+  "evidence_role": "observation",
+  "limitation": "single-scene technical execution; indices do not establish yield or stress",
+  "source_hashes": {
+    "src/agronomy_agent/imagery_analytics.py": "9ef2252ce8b8deb475533948bdea78391149027e2872b087f31b709b6f0c12c7",
+    "src/agronomy_agent/imagery_store.py": "791413c697f771f0a791534521e7320ba07fd373771332b5114b1146c49fa595",
+    "src/agronomy_agent/server/services/imagery_service.py": "e37527010fdbe9938f3ba149cf87b556727cc03e35a1b53e2c1fdc7faff12c9a",
+    "src/agronomy_agent/server/field_data_routes.py": "7b34da36bc89e4529079aafa51f8fea6f9eedf5953e77b714d429d7d6d45fd9a"
+  }
+}

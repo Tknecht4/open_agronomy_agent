@@ -1,0 +1,346 @@
+{
+  "aggregate": {
+    "allocated_bytes_sum_st_blocks": 1169068032,
+    "allocated_note": "st_blocks sum is not unique physical bytes; APFS clone/shared extents are unknown",
+    "auxiliary_hashed_json_files": 35,
+    "directories": 2043,
+    "distinct_geometry_hashes_in_receipts": 2,
+    "distinct_scene_ids_in_receipts": 33,
+    "files": 24554,
+    "invalid_chip_receipts": 0,
+    "invalid_npz": 0,
+    "logical_bytes": 1110849540,
+    "npz_member_totals": {
+      "bands": {
+        "compressed_bytes": 72102854,
+        "count": 142,
+        "uncompressed_bytes": 167470976
+      },
+      "field_mask": {
+        "compressed_bytes": 27152,
+        "count": 142,
+        "uncompressed_bytes": 6995376
+      },
+      "field_weights": {
+        "compressed_bytes": 83322,
+        "count": 142,
+        "uncompressed_bytes": 27926976
+      },
+      "fmask": {
+        "compressed_bytes": 139447,
+        "count": 51,
+        "uncompressed_bytes": 2417712
+      },
+      "metadata_json": {
+        "compressed_bytes": 219489,
+        "count": 142,
+        "uncompressed_bytes": 3023312
+      },
+      "ndvi": {
+        "compressed_bytes": 5573714,
+        "count": 51,
+        "uncompressed_bytes": 9651264
+      },
+      "valid_mask": {
+        "compressed_bytes": 122274,
+        "count": 142,
+        "uncompressed_bytes": 6995376
+      }
+    },
+    "receipts_with_unknown_cog_transfer": 2,
+    "recorded_cog_transfer_bytes_sum": 84399125
+  },
+  "duplicates": {
+    "bytes_hashed": 301268588,
+    "candidate_compressed_member_savings_bytes": 64541492,
+    "candidate_files": 16371,
+    "exact_duplicate_file_groups": 132,
+    "exact_duplicate_member_groups": 102,
+    "file_by_kind": {
+      "chip_npz": {
+        "groups": 12,
+        "redundant_logical_bytes": 8969453
+      },
+      "other": {
+        "groups": 109,
+        "redundant_logical_bytes": 5628789
+      },
+      "other_json": {
+        "groups": 4,
+        "redundant_logical_bytes": 65069
+      },
+      "png": {
+        "groups": 5,
+        "redundant_logical_bytes": 241672
+      },
+      "python_bytecode": {
+        "groups": 2,
+        "redundant_logical_bytes": 468
+      }
+    },
+    "hashed_files": 16371,
+    "member_by_name": {
+      "bands": {
+        "candidate_compressed_savings_bytes": 61634006,
+        "groups": 16,
+        "redundant_uncompressed_bytes": 140909184
+      },
+      "field_mask": {
+        "candidate_compressed_savings_bytes": 24421,
+        "groups": 16,
+        "redundant_uncompressed_bytes": 6239776
+      },
+      "field_weights": {
+        "candidate_compressed_savings_bytes": 75150,
+        "groups": 16,
+        "redundant_uncompressed_bytes": 24910720
+      },
+      "fmask": {
+        "candidate_compressed_savings_bytes": 44417,
+        "groups": 13,
+        "redundant_uncompressed_bytes": 955776
+      },
+      "metadata_json": {
+        "candidate_compressed_savings_bytes": 15642,
+        "groups": 12,
+        "redundant_uncompressed_bytes": 244820
+      },
+      "ndvi": {
+        "candidate_compressed_savings_bytes": 2651522,
+        "groups": 13,
+        "redundant_uncompressed_bytes": 5221632
+      },
+      "valid_mask": {
+        "candidate_compressed_savings_bytes": 96334,
+        "groups": 16,
+        "redundant_uncompressed_bytes": 5885568
+      }
+    },
+    "redundant_logical_file_bytes": 14905451,
+    "redundant_uncompressed_member_bytes": 184367476,
+    "requested": true,
+    "status": "complete"
+  },
+  "incomplete_reasons": [],
+  "limits": {
+    "max_directories": 20000,
+    "max_files": 100000,
+    "max_hash_bytes": 2147483648,
+    "max_logical_bytes": 4294967296
+  },
+  "projection": {
+    "assumed_dates_per_field_season": 4,
+    "measured_224_context_samples": 36,
+    "median_compressed_chip_bytes": 708033,
+    "same_context_reuse_scenarios": {
+      "100": {
+        "one_context_per_field_season_bytes": 283213200,
+        "twelve_units_per_shared_context_bytes": 25489188
+      },
+      "1000": {
+        "one_context_per_field_season_bytes": 2832132000,
+        "twelve_units_per_shared_context_bytes": 237899088
+      }
+    }
+  },
+  "roots": {
+    "assessment": {
+      "allocated_bytes_sum_st_blocks": 64917504,
+      "by_kind": {
+        "chip_npz": {
+          "allocated_bytes_sum_st_blocks": 63430656,
+          "files": 106,
+          "logical_bytes": 63283493
+        },
+        "chip_receipt": {
+          "allocated_bytes_sum_st_blocks": 0,
+          "files": 0,
+          "logical_bytes": 0
+        },
+        "other": {
+          "allocated_bytes_sum_st_blocks": 8192,
+          "files": 1,
+          "logical_bytes": 5747
+        },
+        "other_json": {
+          "allocated_bytes_sum_st_blocks": 1478656,
+          "files": 67,
+          "logical_bytes": 1349324
+        }
+      },
+      "directories": 12,
+      "files": 174,
+      "logical_bytes": 64638564,
+      "other_entries_skipped": 0,
+      "symlinks_skipped": 0,
+      "unreadable_entries": 0
+    },
+    "eo-env": {
+      "allocated_bytes_sum_st_blocks": 955826176,
+      "by_kind": {
+        "chip_npz": {
+          "allocated_bytes_sum_st_blocks": 3629056,
+          "files": 20,
+          "logical_bytes": 3588836
+        },
+        "model_weights_or_binary": {
+          "allocated_bytes_sum_st_blocks": 8192,
+          "files": 2,
+          "logical_bytes": 169
+        },
+        "other": {
+          "allocated_bytes_sum_st_blocks": 884899840,
+          "files": 21637,
+          "logical_bytes": 833054638
+        },
+        "other_json": {
+          "allocated_bytes_sum_st_blocks": 1773568,
+          "files": 29,
+          "logical_bytes": 1710258
+        },
+        "png": {
+          "allocated_bytes_sum_st_blocks": 352256,
+          "files": 12,
+          "logical_bytes": 325501
+        },
+        "python_bytecode": {
+          "allocated_bytes_sum_st_blocks": 65163264,
+          "files": 2538,
+          "logical_bytes": 59508649
+        }
+      },
+      "directories": 2022,
+      "files": 24238,
+      "logical_bytes": 898188051,
+      "other_entries_skipped": 0,
+      "symlinks_skipped": 3,
+      "unreadable_entries": 0
+    },
+    "hls-final": {
+      "allocated_bytes_sum_st_blocks": 10194944,
+      "by_kind": {
+        "chip_npz": {
+          "allocated_bytes_sum_st_blocks": 9170944,
+          "files": 23,
+          "logical_bytes": 9106646
+        },
+        "chip_receipt": {
+          "allocated_bytes_sum_st_blocks": 151552,
+          "files": 23,
+          "logical_bytes": 124340
+        },
+        "imagery_index": {
+          "allocated_bytes_sum_st_blocks": 167936,
+          "files": 1,
+          "logical_bytes": 167936
+        },
+        "png": {
+          "allocated_bytes_sum_st_blocks": 704512,
+          "files": 23,
+          "logical_bytes": 648667
+        }
+      },
+      "directories": 1,
+      "files": 70,
+      "logical_bytes": 10047589,
+      "other_entries_skipped": 0,
+      "symlinks_skipped": 0,
+      "unreadable_entries": 0
+    },
+    "hls-previous": {
+      "allocated_bytes_sum_st_blocks": 5824512,
+      "by_kind": {
+        "chip_npz": {
+          "allocated_bytes_sum_st_blocks": 5189632,
+          "files": 9,
+          "logical_bytes": 5173306
+        },
+        "chip_receipt": {
+          "allocated_bytes_sum_st_blocks": 110592,
+          "files": 9,
+          "logical_bytes": 79933
+        },
+        "imagery_index": {
+          "allocated_bytes_sum_st_blocks": 118784,
+          "files": 1,
+          "logical_bytes": 118784
+        },
+        "png": {
+          "allocated_bytes_sum_st_blocks": 405504,
+          "files": 9,
+          "logical_bytes": 383986
+        }
+      },
+      "directories": 1,
+      "files": 28,
+      "logical_bytes": 5756009,
+      "other_entries_skipped": 0,
+      "symlinks_skipped": 0,
+      "unreadable_entries": 0
+    },
+    "model": {
+      "allocated_bytes_sum_st_blocks": 129409024,
+      "by_kind": {
+        "model_weights_or_binary": {
+          "allocated_bytes_sum_st_blocks": 129261568,
+          "files": 1,
+          "logical_bytes": 129258736
+        },
+        "other": {
+          "allocated_bytes_sum_st_blocks": 98304,
+          "files": 18,
+          "logical_bytes": 55429
+        },
+        "other_json": {
+          "allocated_bytes_sum_st_blocks": 8192,
+          "files": 2,
+          "logical_bytes": 3710
+        },
+        "python_bytecode": {
+          "allocated_bytes_sum_st_blocks": 40960,
+          "files": 1,
+          "logical_bytes": 37048
+        }
+      },
+      "directories": 6,
+      "files": 22,
+      "logical_bytes": 129354923,
+      "other_entries_skipped": 0,
+      "symlinks_skipped": 0,
+      "unreadable_entries": 0
+    },
+    "public-smoke": {
+      "allocated_bytes_sum_st_blocks": 2895872,
+      "by_kind": {
+        "chip_npz": {
+          "allocated_bytes_sum_st_blocks": 2523136,
+          "files": 7,
+          "logical_bytes": 2512962
+        },
+        "chip_receipt": {
+          "allocated_bytes_sum_st_blocks": 28672,
+          "files": 7,
+          "logical_bytes": 24736
+        },
+        "imagery_index": {
+          "allocated_bytes_sum_st_blocks": 61440,
+          "files": 1,
+          "logical_bytes": 61440
+        },
+        "png": {
+          "allocated_bytes_sum_st_blocks": 282624,
+          "files": 7,
+          "logical_bytes": 265266
+        }
+      },
+      "directories": 1,
+      "files": 22,
+      "logical_bytes": 2864404,
+      "other_entries_skipped": 0,
+      "symlinks_skipped": 0,
+      "unreadable_entries": 0
+    }
+  },
+  "schema_version": 1,
+  "status": "complete"
+}

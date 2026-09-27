@@ -12,7 +12,9 @@ import json
 from typing import Any, Callable
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field
+from typing import Literal
 
 
 MAX_UPLOAD_BYTES = 8 * 1024 * 1024
@@ -36,6 +38,15 @@ class FieldImagerySearchRequest(BaseModel):
     start_date: str = Field(min_length=10, max_length=10)
     end_date: str = Field(min_length=10, max_length=10)
     limit: int = Field(default=5, ge=1, le=10)
+
+
+class FieldImageryAnalyzeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    provider_id: Literal["hls-s30-planetary-computer", "hls-l30-planetary-computer"]
+    start_date: str = Field(min_length=10, max_length=10)
+    end_date: str = Field(min_length=10, max_length=10)
+    scene_id: str | None = Field(default=None, max_length=180)
+    buffer_m: int = Field(default=0, ge=0, le=3000, strict=True)
 
 
 def _stored_polygon(field: dict[str, Any]) -> dict[str, Any]:
@@ -72,6 +83,41 @@ def register_field_data_routes(
         query_import,
     )
     from agronomy_agent.field_imagery import provider_catalog, search_field_imagery
+    from agronomy_agent.server.services import imagery_service
+
+    @app.get("/api/demo/fields/{field_id}/imagery/analytics")
+    def field_imagery_readiness(field_id: str, request: Request) -> dict[str, Any]:
+        authorize(request, field_id, False)
+        return imagery_service.readiness(settings)
+
+    @app.post("/api/demo/fields/{field_id}/imagery/analyze")
+    def analyze_field_scene(field_id: str, payload: FieldImageryAnalyzeRequest, request: Request) -> dict[str, Any]:
+        field, _ = authorize(request, field_id, True)
+        try:
+            geometry = _stored_polygon(field)
+            before = imagery_service.geometry_hash(geometry)
+            result = imagery_service.analyze(settings, field, geometry, payload.model_dump())
+            current, _ = authorize(request, field_id, True)
+            if imagery_service.geometry_hash(_stored_polygon(current)) != before:
+                raise HTTPException(status_code=409, detail="Field boundary changed during analysis. Run it again for the saved boundary.")
+            return result
+        except (ValueError, KeyError, TypeError) as exc:
+            raise HTTPException(status_code=422, detail="Invalid field geometry, imagery request or local cache configuration.") from exc
+
+    @app.get("/api/demo/fields/{field_id}/imagery/analyses/{chip_hash}/preview.png")
+    def field_imagery_preview(field_id: str, chip_hash: str, request: Request) -> Response:
+        field, _ = authorize(request, field_id, False)
+        try:
+            geometry = _stored_polygon(field)
+            image = imagery_service.preview(settings, field, geometry, chip_hash)
+            current, _ = authorize(request, field_id, False)
+            if imagery_service.geometry_hash(_stored_polygon(current)) != imagery_service.geometry_hash(geometry):
+                image = None
+        except (ValueError, KeyError, TypeError, OSError):
+            image = None
+        if image is None:
+            raise HTTPException(status_code=404, detail="Verified imagery preview not found for the saved field boundary.")
+        return Response(content=image, media_type="image/png", headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"})
 
     @app.post("/api/demo/fields/{field_id}/data/preview", status_code=201)
     def preview_field_table(field_id: str, payload: FieldTablePreviewRequest, request: Request) -> dict[str, Any]:

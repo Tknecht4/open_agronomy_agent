@@ -2273,6 +2273,8 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         knowledge_update_allow_unsigned=settings.knowledge_update_allow_unsigned,
         allow_rag_config_override=settings.allow_rag_config_override,
         allow_model_id_override=settings.allow_model_id_override,
+        imagery_cache_root=settings.imagery_cache_root,
+        imagery_worker_python=settings.imagery_worker_python,
         corpus_audit_id=_corpus_audit(settings, store),
     )
     app = FastAPI(title="Agronomy Agent Cockpit")

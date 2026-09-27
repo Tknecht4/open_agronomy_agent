@@ -1688,6 +1688,40 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.getByText('No location or boundary recorded')).toBeInTheDocument()
   })
 
+  it('enables imagery for a saved polygon without acreage and blocks it after unsaved coordinate changes', async () => {
+    const savedField = {
+      id: 'field-public', field_context_id: 'field-public', name: 'Public support area', crop: '',
+      region: 'Colorado', jurisdiction: 'United States', acres: '', concern: '', notes: '',
+      geometry: { kind: 'polygon', points: southRing.slice(0, -1).map(([lon, lat]) => ({ lat, lon })) },
+      regionalContext: '', geoPriors: null, sourceBoundary: 'Research support, not a surveyed field boundary.',
+      createdAt: '2026-09-27T00:00:00Z', storageMode: 'account_workspace',
+    }
+    const fetchMock = installFetchMock({ ...emptyDemoFields, fields: [savedField] })
+    const baseFetch = fetchMock.getMockImplementation()!
+    fetchMock.mockImplementation((input: RequestInfo | URL, init?: RequestInit) =>
+      String(input) === '/api/demo/fields/field-public/imagery/analytics'
+        ? Promise.resolve(jsonResponse({ status: 'ready', network_mode: 'online' }))
+        : baseFetch(input, init))
+    render(<OpenAgronomyApp />)
+
+    openPrimaryPage('Fields')
+    fireEvent.click(await screen.findByRole('button', { name: /^Public support area/ }))
+    openFieldTab('Records & soil tests')
+    fireEvent.click(await screen.findByText('Observed satellite indices'))
+    fireEvent.change(screen.getByLabelText('Acquired from'), { target: { value: '2025-06-01' } })
+    fireEvent.change(screen.getByLabelText('Acquired through'), { target: { value: '2025-06-30' } })
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Analyze scene' })).toBeEnabled())
+
+    openFieldTab('Overview')
+    fireEvent.change(screen.getByLabelText('Boundary upload'), {
+      target: { files: [new File([JSON.stringify({ type: 'FeatureCollection', features: [] })], 'changed.geojson')] },
+    })
+    await screen.findByTestId('upload-feature-geojson:0')
+    openFieldTab('Records & soil tests')
+    expect(screen.getByRole('button', { name: 'Analyze scene' })).toBeDisabled()
+    expect(screen.getByText(/Save a valid field polygon before analyzing imagery/)).toBeInTheDocument()
+  })
+
   it('keeps the active field selected when deleting another field and clears context when deleting the active field', async () => {
     const northField = {
       id: 'field-north', field_context_id: 'field-north', name: 'North field', crop: 'canola',

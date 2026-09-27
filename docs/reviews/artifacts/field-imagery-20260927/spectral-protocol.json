@@ -1,0 +1,30 @@
+{
+  "base_protocol_id": "9714d8896c97092f81ac283d6ac2025d9460e3eed5733f85aa08776e4ce8455e",
+  "freeze_status": "before any EO accuracy score or spectral feature inspection; prior soil and location controls already observed",
+  "pairing": "Exact source/date/ROI/QA identities required; same success-intersection training and test masks for spectral and encoder; all29 dispositions retained.",
+  "recipe": {
+    "date_weighting": "separate chronological slots; no temporal interpolation or duplicate dates",
+    "dates": "four distinct chronological dates from the same frozen context manifests as Prithvi",
+    "dimension": 32,
+    "indices": {
+      "ndmi": "(NarrowNIR-SWIR1)/(NarrowNIR+SWIR1)",
+      "ndvi": "(NarrowNIR-Red)/(NarrowNIR+Red)"
+    },
+    "per_date_order": [
+      "mean_blue",
+      "mean_green",
+      "mean_red",
+      "mean_narrow_nir",
+      "mean_swir1",
+      "mean_swir2",
+      "mean_pixel_ndvi",
+      "mean_pixel_ndmi"
+    ],
+    "ratio_denominator": "absolute denominator > 1e-6; no eligible pixels means failure, no imputation",
+    "selection": "fixed before EO feature/score inspection; prior source-only soil/control scores already observed",
+    "support": "positive-area intersection with frozen sample-hull plus15m research AOI; binary valid pixel weighting, matching Prithvi support",
+    "version": "hls-valid-support-spectral-32-v1"
+  },
+  "recipe_sha256": "9e51786b72071f3ee3537fdbb85edfa5582a5b56ba48e85854c09976de6ed945",
+  "source_selection": "One common latest-four station sampling-hull QA-positive acquisition context per year. Auxiliary per-unit alternate-date manifests excluded. Any missing valid ROI date is a failure."
+}

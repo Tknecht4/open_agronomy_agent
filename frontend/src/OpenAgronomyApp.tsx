@@ -165,6 +165,7 @@ const LeafletFieldMap = lazy(() => import('./LeafletFieldMap').then((module) => 
 const FieldSyncPanel = lazy(() => import('./FieldSyncPanel').then(module => ({ default: module.FieldSyncPanel })))
 const SoilTestEntryPanel = lazy(() => import('./FieldSyncPanel').then(module => ({ default: module.SoilTestEntryPanel })))
 const FieldDataPanel = lazy(() => import('./FieldDataPanel'))
+const FieldImageryAnalyticsPanel = lazy(() => import('./FieldImageryAnalyticsPanel'))
 const PrivateKnowledgePanel = lazy(() => import('./PrivateKnowledgePanel'))
 const OfflineTerrainContextPanel = lazy(() => import('./OfflineTerrainContextPanel'))
 const CanadianKnowledgeCoveragePanel = lazy(() => import('./CanadianKnowledgeCoveragePanel'))
@@ -1515,6 +1516,22 @@ const geometrySummary = (geometry: FieldGeometry): string => {
   return 'No location or boundary recorded'
 }
 
+const samePolygonCoordinates = (saved: FieldGeometry | undefined, current: FieldGeometry): boolean => {
+  if (saved?.kind !== 'polygon' || current.kind !== 'polygon' ||
+      !Array.isArray(saved.points) || !Array.isArray(current.points)) return false
+  const coordinates = (geometry: Extract<FieldGeometry, { kind: 'polygon' }>) => {
+    const points = geometry.points.map((point) => [point.lon, point.lat] as const)
+    if (points.length > 3 && points[0][0] === points[points.length - 1][0] &&
+        points[0][1] === points[points.length - 1][1]) points.pop()
+    return points
+  }
+  const savedPoints = coordinates(saved)
+  const currentPoints = coordinates(current)
+  return savedPoints.length >= 3 && savedPoints.length === currentPoints.length &&
+    savedPoints.every(([lon, lat], index) => Number.isFinite(lon) && Number.isFinite(lat) &&
+      lon === currentPoints[index][0] && lat === currentPoints[index][1])
+}
+
 const fieldGeometryToGeoJson = (geometry: FieldGeometry) => {
   if (geometry.kind === 'point') {
     return { type: 'Point', coordinates: [geometry.point.lon, geometry.point.lat] }
@@ -2144,6 +2161,9 @@ export function OpenAgronomyApp() {
   const committedWeatherPoint = fieldWeatherPoint(fieldGeometry)
   const geometryIssue = fieldGeometryIssue(fieldGeometry)
   const geometryReady = isUsableFieldGeometry(fieldGeometry)
+  const savedImageryField = storedFields.find((stored) => (stored.field_context_id || stored.id) === activeFieldContextId)
+  const imageryReady = fieldGeometry.kind === 'polygon' && geometryReady && !isEditingGeometry
+    && samePolygonCoordinates(savedImageryField?.geometry, fieldGeometry)
   const fieldCanSave = !isEditingGeometry && (geometryReady || (fieldGeometry.kind === 'none' && Boolean(fieldName.trim())))
   const activeArea = fieldGeometry.kind === 'polygon' ? String(Math.round(fieldGeometry.acres)) : field.acres
   const selectedModelProfile = modelProfiles.find((profile) => profile.id === modelId)
@@ -3066,7 +3086,10 @@ export function OpenAgronomyApp() {
       notes: stored.notes,
     })
     setFieldName(stored.name)
-    setFieldGeometry(stored.geometry)
+    setFieldGeometry(stored.geometry.kind === 'polygon' && Array.isArray(stored.geometry.points) &&
+      !(Number.isFinite(stored.geometry.acres) && stored.geometry.acres > 0)
+      ? { ...stored.geometry, acres: estimatePolygonAcres(stored.geometry.points) }
+      : stored.geometry)
     setGeometryDraft(null)
     setGeometryEditSnapshot(null)
     setFieldToolsOpen(false)
@@ -4075,11 +4098,17 @@ export function OpenAgronomyApp() {
                   <FieldDataPanel
                     key={activeFieldContextId}
                     fieldContextId={activeFieldContextId}
-                    imageryReady={fieldGeometry.kind === 'polygon' && geometryReady && !isEditingGeometry}
+                    imageryReady={imageryReady}
                     onAskQuestion={(question) => {
                       setMessage(question)
                       navigateToPage('analyze')
                     }}
+                  />
+                  <FieldImageryAnalyticsPanel
+                    key={`analytics-${activeFieldContextId}`}
+                    fieldContextId={activeFieldContextId}
+                    geometryKey={JSON.stringify({ geometry: fieldGeometry, updatedAt: activeFieldRecordUpdatedAt })}
+                    imageryReady={imageryReady}
                   />
                 </Suspense>
               ) : null}

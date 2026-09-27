@@ -12,10 +12,28 @@ from scripts.build_portable_agent_bundle import (
     select_runtime_geospatial,
     select_runtime_knowledge,
 )
-from scripts.build_public_repository import _contains_literal, build
+from scripts.build_public_repository import _contains_literal, _copy_independent, build
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_package_copy_has_independent_writes_on_clone_and_fallback(tmp_path, monkeypatch):
+    from scripts import build_public_repository as builder
+    source = tmp_path / "source"
+    source.write_bytes(b"immutable source bytes")
+    clone = tmp_path / "clone"
+    _copy_independent(source, clone)
+    assert clone.read_bytes() == source.read_bytes()
+    assert clone.stat().st_ino != source.stat().st_ino
+    clone.write_bytes(b"changed destination")
+    assert source.read_bytes() == b"immutable source bytes"
+    monkeypatch.setattr(builder, "_try_clone", lambda *_: False)
+    fallback = tmp_path / "fallback"
+    _copy_independent(source, fallback)
+    assert fallback.read_bytes() == source.read_bytes()
+    source.write_bytes(b"changed source")
+    assert fallback.read_bytes() == b"immutable source bytes"
 
 
 def test_literal_scan_finds_tokens_across_binary_read_blocks(tmp_path: Path) -> None:
