@@ -9,6 +9,7 @@
 - `src/main.tsx` mounts the application.
 - `src/OpenAgronomyApp.tsx` owns the primary cockpit workflow.
 - `src/FieldSetupDialog.tsx` owns the name/location/review field wizard; `src/WorkspaceDialog.tsx` supplies accessible modal behavior.
+- `src/MapPresentationControls.tsx` and `src/mapPresentation.ts` own map style/layer display preferences. `src/FieldMapInsights.tsx` renders lazy, on-demand analysis with stale-request cancellation.
 - `src/api.ts` is the API client boundary.
 - `src/LeafletFieldMap.tsx` and `src/fieldGeometry.ts` render and validate pin, boundary, and imported-geometry interaction.
 - `src/types.ts` defines shared client-side response shapes.

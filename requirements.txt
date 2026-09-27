@@ -20,3 +20,7 @@ python-multipart>=0.0.20
 agno>=2.6,<2.7
 pgvector>=0.4
 cryptography>=45,<47
+
+# Geometry and mapped-zone analysis in the field workspace.
+pyproj>=3.6,<4
+shapely>=2.0,<3

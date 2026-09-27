@@ -47,6 +47,14 @@ A compliant addition should require one implementation, one contract, and testsâ
 
 The calculator takes an operation and a typed input object, uses decimal arithmetic, validates units/ranges, and returns formula, value, unit, assumptions, and boundary. It verifies arithmetic only. A natural-language request is complete only when the planner invokes it, the same result identity reaches evidence/validation/trace, and the final answer contains the parseable result.
 
+The v2 calculator adds explicit crop-establishment, growing-degree-day, partial-budget,
+break-even, and farm-ratio forms. It uses only numbers supplied in the question.
+Missing or invalid inputs yield a specific clarification. Currency, area,
+yield, and cost basis remain attached to the result. The Manitoba published
+factor-10 imperial seeding approximation and exact dimensional conversion are
+shown as distinct methods; they can differ. A computed scenario is not a
+current quote, observed field outcome, or regulated rate.
+
 ```bash
 PYTHONPATH=src python -m agronomy_agent.tool_cli calculate unit_conversion \
   --inputs-json '{"value":100,"from_unit":"kg/ha","to_unit":"lb/ac"}'

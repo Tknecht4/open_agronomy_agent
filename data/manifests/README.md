@@ -11,6 +11,8 @@
 - Historical Canadian-master records remain evidence of prior releases, not the active runtime contract.
 - `source_licensing_matrix.json` and source-specific manifests preserve rights and redistribution state.
 - `rag_sources.json` and Canadian supplement/source manifests preserve retrieval lineage.
+- `production_foundations_sources_v1.json` identifies seven inspected US/Canadian external source snapshots, rights, locators, and hashes for the nine project-authored context cards; it does not redistribute or train on external text.
+- `runtime_corpus_policy_production_foundations_candidate.json` admits those cards only for the nonselectable candidate RAG profile; the active policy remains unchanged.
 - `canada_geospatial_sources.json` preserves source/derivation boundaries for map layers.
 - `eval_benchmark_sources.json` records evaluation-source identity and separation.
 - `source_retention_receipt.json` is retained historical compact-NRCS evidence; it is not the active offline-corpus gate or standing deletion authority. The active source-exact gate is `offline_corpus_quality_audit.json` plus each active-store source receipt.

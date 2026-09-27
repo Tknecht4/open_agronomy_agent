@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+from agronomy_agent.agent import load_agent_resources
 from agronomy_agent.agno_runtime.knowledge_graph import KnowledgeGraph
 from agronomy_agent.agno_runtime.knowledge_factory import build_knowledge
 from agronomy_agent.agno_runtime.local_index import LexicalRetriever, infer_namespaces, infer_source_type, tokenize
@@ -8,6 +9,19 @@ from agronomy_agent.router import classify_query
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_named_official_guide_outweighs_incidental_candidate_overlap() -> None:
+    retriever = load_agent_resources("configs/rag_production_foundations_candidate.yaml").retriever
+
+    named = retriever.search(
+        "Retrieve the Manitoba soil fertility guide context about field conditions before interpreting a current issue.",
+        top_k=3,
+    )
+    business = retriever.search("Explain break-even crop price from a Manitoba enterprise budget.", top_k=3)
+
+    assert named[0].source_id == "mb_soil_fertility_guide"
+    assert business[0].doc_id == "foundation_mb_break_even"
 
 
 def test_specialized_guidance_source_types_are_canonicalized_for_retrieval() -> None:

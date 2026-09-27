@@ -1,0 +1,18 @@
+{
+  "schema_version": "open_agronomy_agent.production_foundations_source_receipt.v1",
+  "seed_path": "data/seed/production_foundations_v1.jsonl",
+  "seed_sha256": "8f9ada96fb5f6a7be94c1c6901f173c522a1b9857d8d196a5de9e0fd9d955d10",
+  "external_source_registry_path": "data/manifests/production_foundations_sources_v1.json",
+  "external_source_registry_sha256": "6fccbebe50e76581c91b987db1a47374bb8b0a9d6afcfd44eaf2352fe44ed5e5",
+  "external_snapshots_in_public_package": false,
+  "source_ids": [
+    "aafc_growing_degree_days_service",
+    "isu_partial_budget",
+    "mb_special_crop_costs",
+    "mb_spring_cereal_seeding_rates",
+    "usda_ars_wholefarm",
+    "usda_ers_financial_ratios",
+    "usda_nrcs_nutrient_management"
+  ],
+  "rights_boundary": "Only project-authored summaries are distributed; source-specific terms remain with the publishers."
+}

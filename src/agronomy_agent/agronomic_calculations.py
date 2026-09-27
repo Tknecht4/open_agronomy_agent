@@ -5,8 +5,12 @@ from decimal import Decimal, InvalidOperation, localcontext
 from enum import StrEnum
 from typing import Any, Mapping, Sequence
 
+from agronomy_agent.calculator_contracts import CALCULATOR_SCHEMA_VERSION, CALCULATOR_VERSION
+
 
 class CalculationOperation(StrEnum):
+    """Operations named by the hash-frozen Benchmark v2 harness."""
+
     UNIT_CONVERSION = "unit_conversion"
     SEED_RATE_MASS = "seed_rate_mass"
     FERTILIZER_PRODUCT_MASS = "fertilizer_product_mass"
@@ -21,6 +25,19 @@ class CalculationOperation(StrEnum):
     PARTIAL_BUDGET = "partial_budget"
 
 
+class FoundationCalculationOperation(StrEnum):
+    """Current v2 extension; excluded from the historical harness inventory."""
+
+    SEED_RATE_MASS_IMPERIAL = "seed_rate_mass_imperial"
+    BREAK_EVEN_PRICE = "break_even_price"
+    BREAK_EVEN_YIELD = "break_even_yield"
+    CURRENT_RATIO = "current_ratio"
+    DEBT_TO_ASSET_PERCENT = "debt_to_asset_percent"
+
+
+ALL_CALCULATION_OPERATIONS = tuple(CalculationOperation) + tuple(FoundationCalculationOperation)
+
+
 _ARITHMETIC_BOUNDARY = (
     "This tool verifies arithmetic from supplied inputs only. It does not choose an agronomic target, "
     "confirm a product label, or establish that a rate or operation is appropriate for the field."
@@ -29,7 +46,7 @@ _ARITHMETIC_BOUNDARY = (
 
 @dataclass(frozen=True)
 class AgronomicCalculation:
-    operation: CalculationOperation
+    operation: CalculationOperation | FoundationCalculationOperation
     value: Decimal
     unit: str
     formula: str
@@ -44,7 +61,14 @@ class AgronomicCalculation:
         return self.operation.value
 
     def answer(self) -> str:
-        result = f"{_format_decimal(self.value)} {self.unit}".strip()
+        if self.operation == FoundationCalculationOperation.CURRENT_RATIO:
+            result = f"{_format_decimal(self.value)}:1 current ratio"
+        elif self.unit == "%":
+            result = f"{_format_decimal(self.value)}%"
+        elif self.unit.startswith("$/"):
+            result = f"${_format_decimal(self.value)}/{self.unit[2:]}"
+        else:
+            result = f"{_format_decimal(self.value)} {self.unit}".strip()
         text = f"{result}. Calculation: {self.formula}."
         if self.assumptions:
             text += " Assumptions: " + "; ".join(self.assumptions) + "."
@@ -72,15 +96,16 @@ def calculation_tool_schema() -> dict[str, Any]:
     """Return the stable structured contract exposed to local agent runtimes."""
 
     return {
-        "schema_version": "open_agronomy_agent.agronomic_calculator.schema.v1",
+        "schema_version": CALCULATOR_SCHEMA_VERSION,
         "tool": "agronomic_calculator",
+        "tool_version": CALCULATOR_VERSION,
         "input": {
             "type": "object",
             "required": ["operation", "inputs"],
             "properties": {
                 "operation": {
                     "type": "string",
-                    "enum": [operation.value for operation in CalculationOperation],
+                    "enum": [operation.value for operation in ALL_CALCULATION_OPERATIONS],
                 },
                 "inputs": {"type": "object"},
             },
@@ -93,6 +118,10 @@ def calculation_tool_schema() -> dict[str, Any]:
             },
             "seed_rate_mass": {
                 "required": ["target_plants_per_m2", "tkw_g", "germination_pct", "field_survival_pct"],
+            },
+            "seed_rate_mass_imperial": {
+                "required": ["target_plants_per_ft2", "tkw_g", "germination_pct", "field_survival_pct", "method"],
+                "methods": ["dimensional", "published_factor_10", "compare"],
             },
             "fertilizer_product_mass": {
                 "required": ["nutrient_target_kg_per_ha", "nutrient_percent"],
@@ -122,14 +151,24 @@ def calculation_tool_schema() -> dict[str, Any]:
             },
             "partial_budget": {
                 "required": ["added_returns", "reduced_costs", "added_costs", "reduced_returns"],
-                "optional": ["currency"],
+                "optional": ["currency", "area_unit"],
             },
+            "break_even_price": {
+                "required": ["cost_per_area", "yield_per_area", "currency", "area_unit", "yield_unit", "cost_basis"],
+                "cost_bases": ["total", "total_economic", "operating", "budget_total_supplied"],
+            },
+            "break_even_yield": {
+                "required": ["cost_per_area", "price_per_unit", "currency", "area_unit", "yield_unit", "cost_basis"],
+                "cost_bases": ["total", "total_economic", "operating", "budget_total_supplied"],
+            },
+            "current_ratio": {"required": ["current_assets", "current_liabilities"]},
+            "debt_to_asset_percent": {"required": ["total_debt", "total_assets"]},
         },
         "boundary": _ARITHMETIC_BOUNDARY,
     }
 
 
-def calculate_agronomic(operation: str | CalculationOperation, inputs: Mapping[str, Any]) -> AgronomicCalculation:
+def calculate_agronomic(operation: str | CalculationOperation | FoundationCalculationOperation, inputs: Mapping[str, Any]) -> AgronomicCalculation:
     """Execute one validated calculation from structured inputs.
 
     Natural-language interpretation is intentionally outside this function. A
@@ -138,9 +177,9 @@ def calculate_agronomic(operation: str | CalculationOperation, inputs: Mapping[s
     """
 
     try:
-        selected = operation if isinstance(operation, CalculationOperation) else CalculationOperation(str(operation))
-    except ValueError as exc:
-        supported = ", ".join(item.value for item in CalculationOperation)
+        selected = next(item for item in ALL_CALCULATION_OPERATIONS if item.value == str(operation))
+    except StopIteration as exc:
+        supported = ", ".join(item.value for item in ALL_CALCULATION_OPERATIONS)
         raise ValueError(f"unknown calculation operation {operation!r}; supported: {supported}") from exc
     if not isinstance(inputs, Mapping):
         raise ValueError("calculation inputs must be an object")
@@ -148,6 +187,7 @@ def calculate_agronomic(operation: str | CalculationOperation, inputs: Mapping[s
     handlers = {
         CalculationOperation.UNIT_CONVERSION: _unit_conversion,
         CalculationOperation.SEED_RATE_MASS: _seed_rate_mass,
+        FoundationCalculationOperation.SEED_RATE_MASS_IMPERIAL: _seed_rate_mass_imperial,
         CalculationOperation.FERTILIZER_PRODUCT_MASS: _fertilizer_product_mass,
         CalculationOperation.NUTRIENT_DELIVERY: _nutrient_delivery,
         CalculationOperation.SPRAYER_APPLICATION_VOLUME: _sprayer_application_volume,
@@ -158,6 +198,10 @@ def calculate_agronomic(operation: str | CalculationOperation, inputs: Mapping[s
         CalculationOperation.FIELD_PRODUCT_TOTAL: _field_product_total,
         CalculationOperation.AREA_WEIGHTED_AVERAGE: _area_weighted_average,
         CalculationOperation.PARTIAL_BUDGET: _partial_budget,
+        FoundationCalculationOperation.BREAK_EVEN_PRICE: _break_even_price,
+        FoundationCalculationOperation.BREAK_EVEN_YIELD: _break_even_yield,
+        FoundationCalculationOperation.CURRENT_RATIO: _current_ratio,
+        FoundationCalculationOperation.DEBT_TO_ASSET_PERCENT: _debt_to_asset_percent,
     }
     return handlers[selected](inputs)
 
@@ -240,6 +284,61 @@ def _seed_rate_mass(inputs: Mapping[str, Any]) -> AgronomicCalculation:
             "germination_pct": germination * Decimal("100"),
             "field_survival_pct": survival * Decimal("100"),
         },
+    )
+
+
+def _seed_rate_mass_imperial(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    _require_only(
+        inputs,
+        required={"target_plants_per_ft2", "tkw_g", "germination_pct", "field_survival_pct", "method"},
+    )
+    target = _positive(inputs, "target_plants_per_ft2")
+    tkw = _positive(inputs, "tkw_g")
+    germination = _percent(inputs, "germination_pct") / Decimal("100")
+    survival = _percent(inputs, "field_survival_pct") / Decimal("100")
+    method = str(inputs["method"]).strip().lower()
+    if method not in {"dimensional", "published_factor_10", "compare"}:
+        raise ValueError("method must be dimensional, published_factor_10, or compare")
+    established_fraction = germination * survival
+    # 43,560 ft²/ac and 453.59237 g/lb are dimensional conversions. The
+    # Manitoba guide's denominator of 10 is a distinct approximate rule.
+    dimensional = target * tkw * Decimal("43560") / (
+        established_fraction * Decimal("1000") * Decimal("453.59237")
+    )
+    published = target * tkw / (established_fraction * Decimal("10"))
+    if method == "published_factor_10":
+        value = published
+        formula = (
+            f"({_format_decimal(target)} plants/ft² × {_format_decimal(tkw)} g/1,000 seeds) ÷ "
+            f"({_format_decimal(established_fraction)} × 10) = {_format_decimal(published)} lb/ac"
+        )
+        alternative = f"exact dimensional conversion gives {_format_decimal(dimensional)} lb/ac"
+    else:
+        value = dimensional
+        formula = (
+            f"({_format_decimal(target)} plants/ft² × 43,560 ft²/ac × "
+            f"{_format_decimal(tkw)} g/1,000 seeds) ÷ "
+            f"({_format_decimal(established_fraction)} × 453.59237 g/lb) = "
+            f"{_format_decimal(dimensional)} lb/ac"
+        )
+        alternative = f"Manitoba's published approximate factor-10 rule gives {_format_decimal(published)} lb/ac"
+    return _result(
+        FoundationCalculationOperation.SEED_RATE_MASS_IMPERIAL,
+        value,
+        "lb/ac",
+        formula,
+        {
+            "target_plants_per_ft2": target,
+            "tkw_g": tkw,
+            "germination_pct": germination * Decimal("100"),
+            "field_survival_pct": survival * Decimal("100"),
+            "method": method,
+        },
+        assumptions=(
+            f"established fraction = germination × post-germination survival = {_format_decimal(established_fraction)}",
+            "published_factor_10 is an approximate provincial formula" if method == "published_factor_10" else "dimensional conversion is the primary result",
+            alternative,
+        ),
     )
 
 
@@ -350,6 +449,7 @@ def _daily_gdd(inputs: Mapping[str, Any]) -> AgronomicCalculation:
     assumptions = (
         "daily mean method",
         "temperatures were capped before averaging" if lower_cap is not None or upper_cap is not None else "no temperature caps",
+        "thermal accumulation is not a crop-yield prediction or field-stage observation",
     )
     return _result(
         CalculationOperation.DAILY_GDD,
@@ -464,21 +564,23 @@ def _partial_budget(inputs: Mapping[str, Any]) -> AgronomicCalculation:
     _require_only(
         inputs,
         required={"added_returns", "reduced_costs", "added_costs", "reduced_returns"},
-        optional={"currency"},
+        optional={"currency", "area_unit"},
     )
-    added_returns = _decimal(inputs, "added_returns")
-    reduced_costs = _decimal(inputs, "reduced_costs")
-    added_costs = _decimal(inputs, "added_costs")
-    reduced_returns = _decimal(inputs, "reduced_returns")
-    currency = str(inputs.get("currency") or "CAD").strip().upper() or "CAD"
+    added_returns = _nonnegative(inputs, "added_returns")
+    reduced_costs = _nonnegative(inputs, "reduced_costs")
+    added_costs = _nonnegative(inputs, "added_costs")
+    reduced_returns = _nonnegative(inputs, "reduced_returns")
+    currency = _currency(inputs.get("currency") or "CAD")
+    area_unit = _area_unit(inputs["area_unit"]) if inputs.get("area_unit") else None
+    unit = f"{currency}/{area_unit}" if area_unit else currency
     answer = added_returns + reduced_costs - added_costs - reduced_returns
     return _result(
         CalculationOperation.PARTIAL_BUDGET,
         answer,
-        currency,
+        unit,
         (
             f"{_format_decimal(added_returns)} + {_format_decimal(reduced_costs)} − "
-            f"{_format_decimal(added_costs)} − {_format_decimal(reduced_returns)} = {_format_decimal(answer)} {currency}"
+            f"{_format_decimal(added_costs)} − {_format_decimal(reduced_returns)} = {_format_decimal(answer)} {unit}"
         ),
         {
             "added_returns": added_returns,
@@ -486,19 +588,101 @@ def _partial_budget(inputs: Mapping[str, Any]) -> AgronomicCalculation:
             "added_costs": added_costs,
             "reduced_returns": reduced_returns,
             "currency": currency,
+            **({"area_unit": area_unit} if area_unit else {}),
         },
-        assumptions=("all monetary inputs use the same time and area basis",),
+        assumptions=("all monetary inputs use the same time and area basis", "projected change is not guaranteed profit"),
+    )
+
+
+def _break_even_price(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    required = {"cost_per_area", "yield_per_area", "currency", "area_unit", "yield_unit", "cost_basis"}
+    _require_only(inputs, required=required)
+    cost = _nonnegative(inputs, "cost_per_area")
+    harvested = _positive(inputs, "yield_per_area", label="expected yield")
+    currency = _currency(inputs["currency"])
+    area_unit = _area_unit(inputs["area_unit"])
+    yield_unit = _yield_unit(inputs["yield_unit"])
+    basis = _cost_basis(inputs["cost_basis"])
+    basis_label = _cost_basis_label(basis)
+    answer = cost / harvested
+    unit = f"{currency}/{yield_unit}"
+    return _result(
+        FoundationCalculationOperation.BREAK_EVEN_PRICE,
+        answer,
+        unit,
+        f"{_format_decimal(cost)} {currency}/{area_unit} {basis_label} ÷ "
+        f"{_format_decimal(harvested)} {yield_unit}/{area_unit} = {_format_decimal(answer)} {unit}",
+        dict(inputs),
+        assumptions=(f"cost basis: {basis_label}", "yield is a supplied scenario assumption, not a guaranteed harvest"),
+        boundary=_ARITHMETIC_BOUNDARY + " This is not a current cash bid or a sale recommendation.",
+    )
+
+
+def _break_even_yield(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    required = {"cost_per_area", "price_per_unit", "currency", "area_unit", "yield_unit", "cost_basis"}
+    _require_only(inputs, required=required)
+    cost = _nonnegative(inputs, "cost_per_area")
+    price = _positive(inputs, "price_per_unit", label="assumed selling price")
+    currency = _currency(inputs["currency"])
+    area_unit = _area_unit(inputs["area_unit"])
+    yield_unit = _yield_unit(inputs["yield_unit"])
+    basis = _cost_basis(inputs["cost_basis"])
+    basis_label = _cost_basis_label(basis)
+    answer = cost / price
+    unit = f"{yield_unit}/{area_unit}"
+    return _result(
+        FoundationCalculationOperation.BREAK_EVEN_YIELD,
+        answer,
+        unit,
+        f"{_format_decimal(cost)} {currency}/{area_unit} {basis_label} ÷ "
+        f"{_format_decimal(price)} {currency}/{yield_unit} = {_format_decimal(answer)} {unit}",
+        dict(inputs),
+        assumptions=(f"cost basis: {basis_label}", "selling price is a supplied scenario assumption, not a current market quote"),
+        boundary=_ARITHMETIC_BOUNDARY + " This is not a current market quote or a crop-sale recommendation.",
+    )
+
+
+def _current_ratio(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    _require_only(inputs, required={"current_assets", "current_liabilities"})
+    assets = _nonnegative(inputs, "current_assets")
+    liabilities = _positive(inputs, "current_liabilities")
+    answer = assets / liabilities
+    return _result(
+        FoundationCalculationOperation.CURRENT_RATIO,
+        answer,
+        "ratio",
+        f"{_format_decimal(assets)} current assets ÷ {_format_decimal(liabilities)} current liabilities = {_format_decimal(answer)}",
+        {"current_assets": assets, "current_liabilities": liabilities},
+        assumptions=("assets and liabilities have the same currency, farm boundary and statement date",),
+        boundary=_ARITHMETIC_BOUNDARY + " A current ratio measures liquidity; it does not by itself establish profitability.",
+    )
+
+
+def _debt_to_asset_percent(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    _require_only(inputs, required={"total_debt", "total_assets"})
+    debt = _nonnegative(inputs, "total_debt")
+    assets = _positive(inputs, "total_assets")
+    answer = debt / assets * Decimal("100")
+    return _result(
+        FoundationCalculationOperation.DEBT_TO_ASSET_PERCENT,
+        answer,
+        "%",
+        f"({_format_decimal(debt)} total debt ÷ {_format_decimal(assets)} total assets) × 100 = {_format_decimal(answer)}%",
+        {"total_debt": debt, "total_assets": assets},
+        assumptions=("debt and assets share the same currency, farm boundary, valuation basis and statement date",),
+        boundary=_ARITHMETIC_BOUNDARY + " This balance-sheet snapshot alone does not establish repayment capacity.",
     )
 
 
 def _result(
-    operation: CalculationOperation,
+    operation: CalculationOperation | FoundationCalculationOperation,
     value: Decimal,
     unit: str,
     formula: str,
     inputs: dict[str, Any],
     *,
     assumptions: tuple[str, ...] = (),
+    boundary: str = _ARITHMETIC_BOUNDARY,
 ) -> AgronomicCalculation:
     if not value.is_finite():
         raise ValueError("calculation produced a non-finite result")
@@ -509,6 +693,7 @@ def _result(
         formula=formula,
         inputs=inputs,
         assumptions=assumptions,
+        boundary=boundary,
     )
 
 
@@ -589,6 +774,43 @@ def _unit(value: Any) -> str:
     if unit is None:
         raise ValueError(f"unsupported unit {value!r}")
     return unit
+
+
+def _currency(value: Any) -> str:
+    currency = str(value or "").strip().upper()
+    if currency not in {"CAD", "USD", "$"}:
+        raise ValueError("currency must be CAD, USD, or unspecified $")
+    return currency
+
+
+def _area_unit(value: Any) -> str:
+    unit = str(value or "").strip().lower()
+    if unit not in {"ac", "ha"}:
+        raise ValueError("area_unit must be ac or ha")
+    return unit
+
+
+def _yield_unit(value: Any) -> str:
+    unit = str(value or "").strip().lower()
+    if unit not in {"bu", "tonne", "lb", "kg"}:
+        raise ValueError("yield_unit must be bu, tonne, lb, or kg")
+    return unit
+
+
+def _cost_basis(value: Any) -> str:
+    basis = str(value or "").strip().lower()
+    if basis not in {"total", "total_economic", "operating", "budget_total_supplied"}:
+        raise ValueError("cost_basis must be total, total_economic, operating, or budget_total_supplied")
+    return basis
+
+
+def _cost_basis_label(basis: str) -> str:
+    return {
+        "total": "user-supplied total cost (components not independently verified)",
+        "total_economic": "total economic cost",
+        "operating": "operating cost",
+        "budget_total_supplied": "user-supplied budget total (included cost categories unverified)",
+    }[basis]
 
 
 def _clamp(value: Decimal, lower: Decimal | None, upper: Decimal | None) -> Decimal:

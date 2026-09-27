@@ -220,6 +220,7 @@ def test_generator_receives_revision_for_selected_profile(monkeypatch: Any) -> N
         "model_revision": "serving-revision",
         "assistant_model_id": "assistant/model",
         "assistant_model_revision": "assistant-revision",
+        "seed": 42,
     }
 
     _build_mlx_generator("serving/model", config)
@@ -227,6 +228,17 @@ def test_generator_receives_revision_for_selected_profile(monkeypatch: Any) -> N
 
     assert calls[0]["model_revision"] == "serving-revision"
     assert calls[1]["model_revision"] == "assistant-revision"
+    assert [call["seed"] for call in calls] == [42, 42]
+
+
+def test_invalid_local_generation_seed_fails_closed(monkeypatch: Any) -> None:
+    class UnexpectedGenerator:
+        def __init__(self, model_id: str, **kwargs: Any) -> None:
+            raise AssertionError("invalid seed should fail before generator construction")
+
+    monkeypatch.setattr("agronomy_agent.server.services.chat_service.MLXGenerator", UnexpectedGenerator)
+    with pytest.raises(ValueError, match="invalid literal"):
+        _build_mlx_generator("serving/model", {"model_id": "serving/model", "seed": "not-an-integer"})
 
 
 def test_local_snapshot_resolution_fails_closed_without_downloading(monkeypatch: Any) -> None:

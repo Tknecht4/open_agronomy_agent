@@ -539,9 +539,11 @@ def intersect_region_layers(
     features: list[dict[str, Any]] = []
     intersections: list[dict[str, Any]] = []
     errors: list[dict[str, str]] = []
+    source_collection_status: list[dict[str, Any]] = []
     for layer in layers:
         try:
             collection = _query_layer(layer, geometry=_arcgis_geometry(parsed_geometry), geometry_type=_arcgis_geometry_type(parsed_geometry))
+            source_collection_status.append(_source_collection_status(collection, layer_id=layer.id))
             normalized = _normalize_feature_collection(collection, layer)
             features.extend(normalized)
             for feature in normalized:
@@ -559,6 +561,7 @@ def intersect_region_layers(
         "feature_collection": {"type": "FeatureCollection", "features": features},
         "feature_count": len(features),
         "errors": errors,
+        "source_collection_status": source_collection_status,
         "source_mode": _source_mode(layers),
         "network_policy": _network_policy_payload(
             network_mode=network_mode,
@@ -568,6 +571,44 @@ def intersect_region_layers(
     if offline_cache_key and not errors:
         _offline_intersection_cache_put(offline_cache_key, result)
     return result
+
+
+def _source_collection_status(collection: Any, *, layer_id: str) -> dict[str, Any]:
+    """Retain raw completeness signals lost during feature normalization.
+
+    This does not change the existing provider request or normalized results.
+    The bounded analysis consumer can distinguish true empty coverage from a
+    malformed or transfer-limited source response.
+    """
+    valid = (
+        isinstance(collection, dict)
+        and collection.get("type") == "FeatureCollection"
+        and isinstance(collection.get("features"), list)
+    )
+    if not valid:
+        return {
+            "layer_id": layer_id,
+            "valid": False,
+            "raw_feature_count": None,
+            "invalid_feature_count": None,
+            "exceeded_transfer_limit": None,
+        }
+    raw_features = collection["features"]
+    invalid_count = sum(
+        not isinstance(feature, dict)
+        or feature.get("type") != "Feature"
+        or not isinstance(feature.get("geometry"), dict)
+        or not isinstance(feature.get("properties"), dict)
+        for feature in raw_features
+    )
+    transfer = collection.get("exceededTransferLimit")
+    return {
+        "layer_id": layer_id,
+        "valid": isinstance(transfer, bool) or transfer is None,
+        "raw_feature_count": len(raw_features),
+        "invalid_feature_count": invalid_count,
+        "exceeded_transfer_limit": transfer if isinstance(transfer, bool) else None,
+    }
 
 
 def _offline_intersection_cache_key(

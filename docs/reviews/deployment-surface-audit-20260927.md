@@ -1,6 +1,6 @@
 # Deployment surface audit and Mac-first release plan
 
-**Source:** `main` at `fd590b57babca0666e24286315ec460877a59dac` (verified as live `origin/main` on 2026-09-27)
+**Source:** initially `main` at `fd590b57babca0666e24286315ec460877a59dac`; integrated current `main` at `b5ee34d1610fe6b47a79060d632e52ae317e46c1` before final review
 
 **Review branch:** `codex/deployment-surface`
 
@@ -63,3 +63,5 @@ The source candidate now has a Swift launcher, a frozen-backend entrypoint, expl
 Focused desktop/auth tests passed 48/48. Frontend type checking, 252 frontend tests, the production build, public-doc audit, and strict MkDocs build passed. The first full serial Python run had 1,046 passes and one public-package scope failure caused by a literal developer-path check in the new binary audit. That source check was replaced by a stricter non-system absolute-library check; the exact 850-file public selection and scope validator now pass. A settled full suite and actual public-package materialization still need to run on the committed candidate.
 
 The current disk had about 1.075 GiB free while the selected public package source alone totals 1.048 GiB. A local copy or full app build would leave unsafe headroom. The Mac CI workflow builds and smokes an ad hoc app on a clean arm64 runner without publishing the packaged payload. Its result, a real installed-binary model answer, package integrity, and independent review are required before merge. Developer ID signing, notarization, fresh-user install, and update/rollback remain later distribution gates; this candidate must not be advertised as a public release.
+
+The newer main with map-insights and production-foundations candidate work merged without textual conflicts. The generated edge runtime manifest now has contract `22b4c316bcece3ca8f8686e87c29b55ed6fab9d0c1c97eef62b9d8263ec35575`. On the integrated source, 78 focused backend tests, 263 frontend tests/typechecking/build, the edge package validator, public-doc audit, and strict MkDocs build passed. A desktop-mode real turn generated 120 tokens with the pinned `mlx_local` revision and six retrieved documents; the owned listener stopped. The public manifest selects 882 files with no scope violations. The full settled Python/public-package and frozen-app CI gates remain outstanding for draft PR #10.

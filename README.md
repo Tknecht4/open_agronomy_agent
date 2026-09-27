@@ -12,6 +12,7 @@ The screenshot shows synthetic example data. [Explore the workspace](docs/public
 |---|---|
 | Ask and inspect | General questions work without inventing a field. Answers expose sources, tool results, missing evidence, and the answer trace. |
 | Build a field record | Name a field, optionally add crop and region, then pin, draw, or import its location. Review before saving; add observations and soil tests over time. |
+| Explore the map | Choose satellite, street, or simple styles; control up to four mapped layers; open field insights for boundary measurements and source-bound coverage. |
 | Use context carefully | Regional map layers, graph relationships, and dated public adapters can inform a question. They remain labelled priors, never field measurements or current label authority. |
 | Bring data in | Inspect a private reference for the current browser session, import field boundaries and records, or use governed source-ingestion builders. These are distinct admission paths. |
 | Extend the system | Change the pinned model profile, register a typed capability, add an admitted source or graph, and verify behavior through the production execution seam. |
@@ -121,6 +122,8 @@ Artifacts use the configured local filesystem, request limits are in memory, and
 ## Evidence and contribution boundaries
 
 The checked-in active corpus is hash-admitted and includes Canadian evidence, project policy, SoilWise context, and a 218,258-row U.S. NRCS analogue pack available only for explicit U.S./MLRA comparison. U.S. material cannot establish Canadian decisive authority. Evaluation cases never enter runtime retrieval or training. Runtime databases, traces, model caches, private overlays, credentials, and raw benchmark answers stay outside the public package. Historical RC1–RC3 and the [current two-Gemma assessment](docs/public/two-gemma-colab-assessment-20260926.md) retain their original identities; passing tests or a small profile does not establish agronomic competence.
+
+Nine source-linked production and farm-business method cards are a separately benchmarked, **non-active candidate** under `configs/rag_production_foundations_candidate.yaml`. The exposed corpus-only comparison did not qualify them as a product default; a later typed-calculation intervention is evaluated separately in [the benchmark record](docs/reviews/production-foundations-benchmark-20260927.md).
 
 Project-authored content is [Apache-2.0](LICENSE). Third-party data, evaluation material, dependencies, and model weights keep their own terms; consult [third-party notices](THIRD_PARTY_NOTICES.md). The [documentation site](docs/public/index.md), [governance guide](docs/public/governance.md), and [evaluation contract](docs/public/evaluation.md) explain evidence, privacy, and claim limits.
 

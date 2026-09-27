@@ -157,6 +157,7 @@ const AGROCLIMATE_METRICS = [
   { key: 'percent_of_average_precipitation', label: '13 wk precipitation' },
 ] as const
 
+const FieldMapInsights = lazy(() => import('./FieldMapInsights').then(module => ({ default: module.FieldMapInsights })))
 const FieldSetupDialog = lazy(() => import('./FieldSetupDialog').then(module => ({ default: module.FieldSetupDialog })))
 const BenchmarksRoute = lazy(() => import('./BenchmarksRoute').then((module) => ({ default: module.BenchmarksRoute })))
 const LeafletFieldMap = lazy(() => import('./LeafletFieldMap').then((module) => ({ default: module.LeafletFieldMap })))
@@ -2054,6 +2055,8 @@ export function OpenAgronomyApp() {
   const [pendingQuestion, setPendingQuestion] = useState('')
   const [error, setError] = useState('')
   const [newFieldOpen, setNewFieldOpen] = useState(false)
+  const [mapInsightsOpen, setMapInsightsOpen] = useState(false)
+  const [mapAnalysisLayers, setMapAnalysisLayers] = useState<string[]>([])
   const [evidenceOpen, setEvidenceOpen] = useState(false)
   const [wideWorkspace, setWideWorkspace] = useState(() => typeof window.matchMedia === 'function' && window.matchMedia('(min-width: 1051px)').matches)
   useEffect(() => {
@@ -4140,6 +4143,7 @@ export function OpenAgronomyApp() {
               }
             >
               <LeafletFieldMap
+                onLayerSelectionChange={setMapAnalysisLayers}
                 fieldKey={activeFieldContextId || scenarioId || 'general'}
                 allowNetwork={networkMode === 'online'}
                 onFinishBoundary={() => setMapMode('edit')}
@@ -4156,21 +4160,20 @@ export function OpenAgronomyApp() {
             </Suspense>}
             <div className="map-context-bar" aria-label="Current field context">
               <div>
-                <span aria-live="polite">{boundaryStatus}</span>
+                <span aria-live="polite" className={isEditingGeometry || isMapContextChecking || /failed|error|unavailable|invalid|cross|unsupported/i.test(boundaryStatus) ? undefined : 'sr-only'}>{boundaryStatus}</span>
                 <strong>
-                  {geometrySummary(mapGeometry, 'No location selected')}
+                  {mapGeometry.kind === 'point' ? 'Point location' : mapGeometry.kind === 'polygon' ? `${estimatePolygonAcres(mapGeometry.points).toLocaleString(undefined, { maximumFractionDigits: 1 })} ac · boundary estimate` : 'No location selected'}
                   {isEditingGeometry
                     ? ' · draft changes'
                     : primaryGeoCandidate
                     ? ` · ${primaryGeoCandidate.system} ${primaryGeoCandidate.code}`
-                    : geometryReady
-                      ? ' · layers not checked'
-                      : ''}
+                    : ''}
                 </strong>
               </div>
-              <button type="button" onClick={() => navigateToPage('fields')}>
-                Open field details
-              </button>
+              <div className="map-context-actions">
+                <button type="button" className="map-insights-button" disabled={!geometryReady || isEditingGeometry} title={isEditingGeometry ? 'Save or cancel boundary edits first' : 'Measure the boundary and explore mapped coverage'} onClick={() => setMapInsightsOpen(true)}><Layers3 size={15} /> Field insights <ArrowUpRight size={13} /></button>
+                <button type="button" onClick={() => navigateToPage('fields')}>Open field details</button>
+              </div>
             </div>
           </section> : null}
 
@@ -4353,6 +4356,7 @@ export function OpenAgronomyApp() {
         </Suspense>
       ) : null}
       </div>
+      {mapInsightsOpen ? <WorkspaceDialog title="Field insights" onClose={() => setMapInsightsOpen(false)} wide><Suspense fallback={<div role="status" className="dialog-body">Opening field insights…</div>}><FieldMapInsights geometry={fieldGeometryToGeoJson(fieldGeometry)} fieldKey={activeFieldContextId || scenarioId || 'general'} fieldName={fieldName} recordedAcres={field.acres.trim() ? Number(field.acres) : null} layerIds={mapAnalysisLayers} allowNetwork={networkMode === 'online'} /></Suspense></WorkspaceDialog> : null}
       {newFieldOpen ? <Suspense fallback={<div role="status">Opening field setup…</div>}><FieldSetupDialog onClose={() => setNewFieldOpen(false)} onSave={createFieldFromDraft} allowNetwork={networkMode === 'online'} previousRegion={storedFields[0]} /></Suspense> : null}
       {deleteTarget ? <WorkspaceDialog title="Delete field?" onClose={() => setDeleteTarget(null)}><div className="dialog-body"><p>Remove <strong>{deleteTarget.name}</strong> from your field library? Its historical answer records are retained by the server.</p><div className="dialog-actions"><button type="button" onClick={() => setDeleteTarget(null)}>Keep field</button><button type="button" className="danger" onClick={() => { void deleteStoredField(deleteTarget.id); setDeleteTarget(null) }}>Delete field</button></div></div></WorkspaceDialog> : null}
       {evidenceOpen ? <WorkspaceDialog title="Sources & checks" onClose={() => setEvidenceOpen(false)} wide><EvidencePage latestTurn={evidenceTurn} docs={evidenceDocs} liveToolCards={evidenceLiveToolCards} mapEvidenceCards={evidenceMapCards} retrievedDocCount={evidenceRetrievedDocCount} sourceCheckSummary={evidenceSourceSummary} traceToolGroups={evidenceTraceGroups} adapterReadiness={adapterReadiness} onCopyReport={() => void copyReviewerReport()} onDownloadReport={downloadReviewerReport} /></WorkspaceDialog> : null}

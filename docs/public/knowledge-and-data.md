@@ -16,6 +16,15 @@ quality ledger are required evidence. A row that cannot be rebuilt with a
 source-exact locator is excluded from this active profile rather than admitted
 under a historical exception.
 
+A separate nine-card `production_foundations/v1` release is a non-active candidate. Its
+text is project-authored synthesis linked to seven inspected U.S. and Canadian
+source snapshots by URL and hash. The external source bytes are not shipped,
+and these cards are **context only**: their formulas support explanation of
+user-supplied scenarios, not a current price, field rate, or legal decision.
+The source registry records rights and currency limits for each publisher.
+The candidate has a hash-bound RAG config and policy for reproducible local
+tests, but `runtime_profiles.json` does not select it for product answers.
+
 The former `curated_canada/v1` through `v4` development payloads are not
 active runtime inputs. Frozen receipt material and Git history preserve their
 milestones. `configs/rag_governed_runtime_v1.yaml` and
