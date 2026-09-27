@@ -61,35 +61,52 @@ const formatNumber = (value: number): string => {
   return value.toFixed(2).replace(/\.?0+$/, '')
 }
 
-export const formatToolName = (name: string): string =>
-  name
+export const formatToolName = (name: string | undefined): string =>
+  (asString(name) || 'Unknown tool')
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (letter) => letter.toUpperCase())
 
+const toolName = (tool: ToolInvocation): string => asString(tool.name) || asString(tool.tool_id) || 'unknown_tool'
+
+const typedToolDetail = (tool: ToolInvocation): string | undefined => {
+  if (!tool.schema_version) return undefined
+  const stage = tool.schema_version === 'open_agronomy_agent.tool_invocation.v1' ? 'Invocation' : 'Result'
+  const status = asString(tool.status) || 'unknown'
+  const parts = [
+    `${stage}: ${status.replace(/_/g, ' ')}`,
+    asString(tool.operation) ? `Operation: ${formatToolName(tool.operation)}` : undefined,
+    asString(tool.authority_role) ? `Authority: ${formatToolName(tool.authority_role)}` : undefined,
+  ]
+  const limitation = asStringArray(tool.limitations)[0] || asString(asRecord(tool.payload).boundary)
+  if (limitation) parts.push(limitation)
+  return parts.filter(Boolean).join(' · ')
+}
+
 export const buildPublicToolCard = (tool: ToolInvocation): PublicToolCard => {
+  const name = toolName(tool)
   const payload = asRecord(tool.payload)
   const summary = asRecord(payload.summary)
   const freshness = asRecord(payload.freshness)
   const freshnessStatus = asString(freshness.status)
   const status = freshnessStatus === 'stale' || freshnessStatus === 'future_invalid'
     ? 'stale'
-    : asString(payload.status) || 'unknown'
+    : (tool.schema_version ? asString(tool.status) : undefined) || asString(payload.status) || 'unknown'
   const source = asString(payload.source)
   const sourceUrl = source && /^https?:\/\//i.test(source) ? source : undefined
   const freshnessDeclaration = asString(freshness.declaration)
-  const limitation = toolLimitation(tool.name, payload, status)
+  const limitation = toolLimitation(name, payload, status)
   return {
-    name: tool.name,
-    title: toolTitle(tool.name, summary),
-    provider: toolProvider(tool.name, summary),
+    name,
+    title: toolTitle(name, summary),
+    provider: toolProvider(name, summary),
     status,
     statusLabel: statusLabel(status),
     statusTone: statusTone(status),
-    facts: toolFacts(tool.name, summary, status),
+    facts: toolFacts(name, summary, status),
     limitation: freshnessDeclaration ? `${freshnessDeclaration} ${limitation}` : limitation,
     sourceLabel: sourceUrl ? undefined : source,
     sourceUrl,
-    links: toolLinks(tool.name, summary),
+    links: toolLinks(name, summary),
   }
 }
 
@@ -191,18 +208,17 @@ export const buildTraceToolGroups = (
 ): TraceToolGroup[] => {
   const toolInvocations = turn?.trace?.tool_invocations || []
   const publicTools = toolInvocations.filter((tool) => asRecord(tool.payload).kind === 'public_adapter')
-  const publicNames = new Set(publicTools.map((tool) => tool.name))
   const guardToolNames = Array.from(
     new Set([
       ...toolInvocations
-        .filter((tool) => !publicNames.has(tool.name) && isGuardToolName(tool.name))
-        .map((tool) => tool.name),
+        .filter((tool) => asRecord(tool.payload).kind !== 'public_adapter' && isGuardToolName(toolName(tool)))
+        .map(toolName),
       ...toolNoteNames(turn).filter(isGuardToolName),
     ]),
   )
   const guardNameSet = new Set(guardToolNames)
   const otherTools = toolInvocations.filter(
-    (tool) => !publicNames.has(tool.name) && !guardNameSet.has(tool.name),
+    (tool) => asRecord(tool.payload).kind !== 'public_adapter' && !guardNameSet.has(toolName(tool)),
   )
   return [
     mapTraceGroup(mapCards),
@@ -253,7 +269,7 @@ const guardTraceGroup = (guardNames: string[], tools: ToolInvocation[]): TraceTo
   summary: guardNames.length ? `${guardNames.length} applied` : 'none triggered',
   statusTone: guardNames.length ? 'ok' : 'attention',
   items: guardNames.slice(0, 6).map((name) => {
-    const tool = tools.find((candidate) => candidate.name === name)
+    const tool = tools.find((candidate) => toolName(candidate) === name)
     const payload = asRecord(tool?.payload)
     return {
       name,
@@ -274,10 +290,10 @@ const otherToolTraceGroup = (tools: ToolInvocation[]): TraceToolGroup => ({
   count: tools.length,
   summary: tools.length ? `${tools.length} other trace item${tools.length === 1 ? '' : 's'}` : 'none',
   statusTone: tools.length ? 'attention' : 'ok',
-  items: tools.slice(0, 5).map((tool) => ({
-    name: tool.name,
-    label: formatToolName(tool.name),
-    detail: asString(tool.text) || asString(asRecord(tool.payload).status) || 'Auxiliary trace item.',
+  items: tools.slice(0, 5).map((tool, index) => ({
+    name: tool.schema_version ? `${toolName(tool)}:${tool.schema_version}:${index}` : toolName(tool),
+    label: formatToolName(toolName(tool)),
+    detail: typedToolDetail(tool) || asString(tool.text) || asString(asRecord(tool.payload).status) || 'Auxiliary trace item.',
     statusTone: 'attention',
   })),
 })
@@ -302,12 +318,13 @@ const guardLabel = (name: string): string => {
 
 const statusTone = (status: string): PublicToolCard['statusTone'] => {
   if (status === 'available' || status === 'source_lane_available') return 'ok'
-  if (status === 'stale' || status === 'not_configured' || status === 'no_records' || status === 'canada_source_lane_planned' || status === 'canada_source_lane_needed') return 'attention'
+  if (status === 'partial_available' || status === 'stale' || status === 'not_configured' || status === 'no_records' || status === 'canada_source_lane_planned' || status === 'canada_source_lane_needed') return 'attention'
   return 'unavailable'
 }
 
 const statusLabel = (status: string): string => {
   if (status === 'available') return 'available'
+  if (status === 'partial_available') return 'partial coverage'
   if (status === 'source_lane_available') return 'source card'
   if (status === 'not_configured') return 'needs key'
   if (status === 'no_records') return 'no records'
@@ -415,6 +432,7 @@ const toolProvider = (name: string, summary: JsonRecord = {}): string => {
 const toolFacts = (name: string, summary: JsonRecord, status: string): string[] => {
   if (isCanadaSourceLane(name)) return canadaSourceLaneFacts(summary)
   if (isPublicSourceCard(name)) return publicSourceCardFacts(summary)
+  if (name === 'nasa_power_daily' && status === 'partial_available') return nasaPowerFacts(summary)
   if (status !== 'available') return unavailableFacts(name, summary, status)
   if (name === 'nrcs_soil_survey_geometry') return nrcsGeometryFacts(summary)
   if (name === 'nrcs_soil_survey_point') return nrcsPointFacts(summary)
@@ -567,9 +585,19 @@ const nasaPowerFacts = (summary: JsonRecord): string[] => {
   const temp = asNumber(asRecord(parameters.T2M).mean)
   const wind = asNumber(asRecord(parameters.WS2M).mean)
   const facts = []
-  if (precip !== undefined) facts.push(`${formatNumber(precip)} mm precip`)
-  if (temp !== undefined) facts.push(`${formatNumber(temp)} C mean temp`)
-  if (wind !== undefined) facts.push(`${formatNumber(wind)} m/s mean wind`)
+  const first = asString(summary.observation_start)
+  const last = asString(summary.observation_end)
+  if (first && last) facts.push(`Observed UTC ${first}${first === last ? '' : `–${last}`}`)
+  const observed = asNumber(summary.observed_day_count)
+  const requested = asNumber(summary.requested_day_count)
+  if (observed !== undefined && requested !== undefined) facts.push(`${observed} of ${requested} requested days had usable observations`)
+  const days = (key: string) => {
+    const count = asNumber(asRecord(parameters[key]).days)
+    return count === undefined ? '' : ` (${count} observed ${count === 1 ? 'day' : 'days'})`
+  }
+  if (precip !== undefined) facts.push(`${formatNumber(precip)} mm precip${days('PRECTOTCORR')}`)
+  if (temp !== undefined) facts.push(`${formatNumber(temp)} C mean temp${days('T2M')}`)
+  if (wind !== undefined) facts.push(`${formatNumber(wind)} m/s mean wind${days('WS2M')}`)
   return facts
 }
 
@@ -692,6 +720,7 @@ const unavailableFacts = (name: string, summary: JsonRecord, status: string): st
 const toolLimitation = (name: string, payload: JsonRecord, status: string): string => {
   if (isCanadaSourceLane(name)) return asString(payload.boundary) || 'Canadian source lane is identified for review; live intersected facts are not returned yet.'
   if (isPublicSourceCard(name)) return asString(payload.boundary) || 'Source card is a decision framework, not live field proof.'
+  if (name === 'nasa_power_daily' && status === 'partial_available') return 'Partial weather window: values include only published observations. NASA POWER is gridded context, not an on-field sensor.'
   if (status !== 'available') {
     const boundary = asString(payload.boundary)
     return boundary

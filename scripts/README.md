@@ -13,6 +13,7 @@
 | Tools/data | `smoke_*`, `build_prairie_spatial_pack.py`, `verify_prairie_spatial_pack.py` | Fixture/provider and package contracts, not field truth |
 | Ingestion/build | `ingest_*`, `build_*corpus*`, geospatial builders | Require source, rights, hashes, deterministic outputs |
 | Evaluation | `run_open_agronomy_benchmark.py`, `run_open_agronomy_benchmark_v2.py`, `run_observed_system_rehearsal.py`, `run_benchmark_capability_conformance.py`, v2/v3 audits, model matrix, judges, analyzers | Preserve identities and separation; v2 dry execution, capability conformance, and observed-system rehearsal are harness QA, not performance evidence |
+| Workspace profiling | `profile_workspace_backend.py`, `profile_workspace_model.py`, `profile_frontend_build.mjs` | Synthetic local timing and build receipts; never agronomic quality, provider availability, or a release latency budget |
 | Packaging/release | `audit_release_candidate_checkout.py`, `capture_release_environment.py`, `build_public_repository.py`, edge manifest/container/SBOM scripts | Curated scope only; no private/generated state; the Python environment receipt observes range resolution and is not a portable lock |
 | Recovery | Transaction-safe backup primitives in `server/storage/backup.py` | Programmatic maintenance boundary; no supported standalone recovery CLI is currently published |
 
@@ -59,6 +60,44 @@ for the selected active RAG profile. Because its contract hashes governed
 runtime trees, regenerate it only after the final code/config/data/docs inputs
 are stable; do not edit `container/runtime_manifest.json` by hand. An unchanged
 contract retains its prior generated timestamp.
+
+## Workspace profiling
+
+`profile_workspace_backend.py` creates an isolated synthetic SQLite database in a
+new output directory. It measures cold/warm API calls and a mock production-core
+turn, captures cProfile summaries and stage spans, hashes controlling inputs,
+and retains failed cells. It makes no model or public-provider calls. `--help`
+lists adjustable synthetic session/turn counts and warm repeats.
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
+  scripts/profile_workspace_backend.py \
+  --output-dir /tmp/open-agronomy-backend-profile-new
+```
+
+`profile_workspace_model.py` requires `--execute-local-pinned` and a separately
+provisioned revision-pinned snapshot. It forces Hugging Face offline mode,
+executes two synthetic questions through the typed core, and retains timing,
+stage, selected token, and local memory measurements without answer text in its
+receipt. A parent process enforces the worker deadline, kills the worker process
+group on expiry, and preserves the last receipt with interrupted cells. Both
+workspace profilers disable inherited private-knowledge overlays and record that
+policy, so synthetic diagnostics cannot read machine-local private references.
+A Metal-capable host is required for model profiling; no cloud provider is contacted.
+
+```bash
+HF_HUB_CACHE=/absolute/local/hf-cache/hub HF_HUB_OFFLINE=1 \
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python \
+  scripts/profile_workspace_model.py --execute-local-pinned \
+  --output-dir /tmp/open-agronomy-model-profile-new \
+  --max-tokens 120 --deadline-seconds 900
+```
+
+`profile_frontend_build.mjs` reports raw and gzip bytes plus SHA-256 for the
+completed `frontend/dist` JS/CSS files. Run it after `npm run build` with
+`node scripts/profile_frontend_build.mjs` from the repository root, or pass a
+different build directory as its positional argument. See the [workspace customization guide](../docs/public/developer/customizing-the-harness.md)
+and the [bounded backend findings](../docs/reviews/artifacts/ui-backend-findings-20260927.md).
 
 ## Observed-system rehearsal
 

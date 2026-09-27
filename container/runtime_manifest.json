@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-09-27T03:21:16+00:00",
+  "generated_at": "2026-09-27T05:20:19+00:00",
   "status": "pass",
-  "contract_sha256": "e33f48adb45408627958e76c46405b0a241ca0a3d263b58e7ade335b4a2e0fc8",
+  "contract_sha256": "3c749298014f377e34b68b50412f0fcdbf6458738949560310619c427fd74dd3",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -408,14 +408,14 @@
     {
       "path": "src/agronomy_agent",
       "file_count": 125,
-      "bytes": 5023789,
-      "sha256": "d99d39b064cce93e87efffac544ba54f54fd5a44b3144b8ec8316be1cfe667b3"
+      "bytes": 5029681,
+      "sha256": "2188a531b2dc463c38f64147db467465b014c9cb9c7221f3557e701d07a32a18"
     },
     {
       "path": "frontend/src",
-      "file_count": 73,
-      "bytes": 1142475,
-      "sha256": "1c7018522cd9cacbb6f87be73fdaf1cb529ce586c87fd214daa02abd5b064d49"
+      "file_count": 87,
+      "bytes": 1305350,
+      "sha256": "6f19f9311c838cb8a93db36026aa559908c7666e5214cd5f95d534d6e65bc36d"
     },
     {
       "path": "frontend/public",
@@ -425,15 +425,15 @@
     },
     {
       "path": "scripts",
-      "file_count": 115,
-      "bytes": 1600348,
-      "sha256": "a583cd7347690cb374b1624c5a21d536a36ed006f592f3846c7db1b1b4c06abb"
+      "file_count": 118,
+      "bytes": 1629580,
+      "sha256": "12cb6122eb1aaea676e6b6daac5cd0c4f3b5f1f7e2b42589136741e846dd2630"
     },
     {
       "path": "configs",
       "file_count": 82,
-      "bytes": 234384,
-      "sha256": "a1a4c0ad8423ce3435650d598924f1be4a8cdf0c88fac00a99cd60969500d39b"
+      "bytes": 234941,
+      "sha256": "05582567adb6247d45bf2f539bfaf872740922548c295c2d400f2f4d6b045c96"
     },
     {
       "path": "data/manifests",
@@ -455,16 +455,16 @@
     },
     {
       "path": "docs/public",
-      "file_count": 86,
-      "bytes": 8744475,
-      "sha256": "391d5daed1a2a136d6b26b16f242f3d67422762b0daf78a277d383d6987e4083"
+      "file_count": 90,
+      "bytes": 8804286,
+      "sha256": "1c8b5e3e01948b64ce08f712476d284f0b4c2408f2d017aaa33cbb5806a936cf"
     }
   ],
   "geo_cache_seed": {
     "path": "data/derived/geo_cache",
-    "file_count": 606,
-    "bytes": 10868679,
-    "sha256": "627442546f439f392c067e354921e83b9a9ab00faeb1177b225c7e483239b8b3"
+    "file_count": 0,
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   },
   "bundled_geo_layers": {
     "path": "data/derived/geo_layers",

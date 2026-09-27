@@ -1187,7 +1187,7 @@ class TraceStore:
             )
         return self.get_session(session_id)
 
-    def list_sessions(self, include_archived: bool = False) -> list[dict[str, Any]]:
+    def list_sessions(self, include_archived: bool = False, *, include_turns: bool = True) -> list[dict[str, Any]]:
         with self._cursor() as cursor:
             if include_archived:
                 rows = cursor.execute(
@@ -1198,8 +1198,9 @@ class TraceStore:
                     "SELECT * FROM sessions WHERE archived = 0 ORDER BY updated_at DESC",
                 ).fetchall()
             sessions = [self._normalize_session_row(dict(row)) for row in rows]
-            for session in sessions:
-                session["turns"] = self._get_turns_for_session(session["session_id"])
+            if include_turns:
+                for session in sessions:
+                    session["turns"] = self._get_turns_for_session(session["session_id"])
             return sessions
 
     def get_session(self, session_id: str) -> dict[str, Any] | None:

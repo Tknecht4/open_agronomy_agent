@@ -200,7 +200,7 @@ export default function CanadianKnowledgeCoveragePanel() {
         </span>
       </div>
       {!coverage.available ? (
-        <p className="knowledge-coverage-error">{coverage.message || 'Coverage evidence unavailable.'}</p>
+        <p className="knowledge-coverage-error">Coverage report unavailable. Province-specific advisory readiness cannot be confirmed.</p>
       ) : (
         <>
           <div className="knowledge-coverage-summary">

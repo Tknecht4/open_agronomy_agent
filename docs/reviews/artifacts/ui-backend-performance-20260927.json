@@ -1,0 +1,106 @@
+{
+  "schema_version": "open_agronomy_agent.ui_backend_performance_summary.v1",
+  "status": "development_diagnostic",
+  "claim_eligible": false,
+  "baseline_commit": "7a341115f48f568153d95f467933a3602b305281",
+  "network_mode": "offline",
+  "synthetic_input": {
+    "sessions": 20,
+    "turns_per_session": 8,
+    "selected_field_turns": 8
+  },
+  "source_identity": {
+    "baseline_app_sha256": "3c3d902c2f26112efa4f7ba9b68895dbee0cfe8408d911afcc8f6808fd861e3c",
+    "optimized_app_sha256": "288acb4b57d1608e88128073edc7c4de5bde1c6ee4000edb8248e3b16ad9af0b",
+    "model_config_sha256": "8cd880ac68b3631a4eccc11bd9716be3e1768b1a5d49653ac13acc7ec6aeba10",
+    "rag_config_sha256": "8f45880dbadf368848d52251aaafb24e25b17d9baa7923aa7707f6880fc04b91",
+    "model_profiler_run_sha256": "c897fe8e669c4942cdc98349317cf0a6b9330b8bd9634843370a386fcf35a9bd",
+    "model_profiler_current_sha256": "6327eaa884f5d3b28f893bec5edc571b6c5ab4e67777bdb634e9f78de518b911"
+  },
+  "mock_runs": [
+    {
+      "name": "baseline",
+      "status": "completed",
+      "app_create_cold_ms": 9915.681,
+      "corpus_audit_cprofile_cumulative_ms": 9544,
+      "field_history_warm_median_ms": 48.782,
+      "field_history_warm_samples": 4,
+      "full_turn_loads_per_history_request": 160,
+      "core_mock_cold_ms": 88.209
+    },
+    {
+      "name": "first_after_contended",
+      "status": "completed",
+      "app_create_cold_ms": 19622.55,
+      "field_history_warm_median_ms": 75.226,
+      "sessions_list_seeded_warm_median_ms": 63.349,
+      "core_mock_cold_ms": 240.498,
+      "interpretation": "all measured cells slowed; host contention prevented a latency gain claim"
+    },
+    {
+      "name": "second_after",
+      "status": "completed",
+      "app_create_cold_ms": 15604.167,
+      "field_history_warm_median_ms": 34.602,
+      "field_history_warm_samples": 7,
+      "full_turn_loads_per_history_request": 8,
+      "core_mock_cold_ms": 196.782,
+      "core_mock_warm_median_ms": 21.14,
+      "core_mock_warm_samples": 7
+    }
+  ],
+  "startup_corpus_audit": {
+    "status": "pass",
+    "audited_corpus_count": 56,
+    "hash_calls": 56,
+    "unique_hashed_paths": 56,
+    "duplicate_hashed_paths": 0
+  },
+  "local_model_run": {
+    "status": "completed",
+    "model_id": "mlx-community/gemma-4-e2b-it-4bit",
+    "model_revision": "238767527555cb75a05732a84dff5d6ba0dd6809",
+    "snapshot_preflight": "available_local_only",
+    "app_create_cold_ms": 6573.576,
+    "max_tokens_per_turn": 120,
+    "turns": [
+      {
+        "status": "completed",
+        "elapsed_ms": 37520.337,
+        "stage_receipts": 17,
+        "draft_prompt_tokens": 2022,
+        "draft_generation_tokens": 120,
+        "verifier_prompt_tokens": 1662,
+        "verifier_generation_tokens": 79,
+        "draft_decode_ms": 29113.842,
+        "verification_decode_ms": 7071.073,
+        "metal_peak_mib": 3180.48,
+        "metal_active_after_mib": 2483.47,
+        "process_peak_rss_mib": 973.92
+      },
+      {
+        "status": "completed",
+        "elapsed_ms": 18266.612,
+        "stage_receipts": 17,
+        "draft_prompt_tokens": 2287,
+        "draft_generation_tokens": 120,
+        "verifier_prompt_tokens": 1706,
+        "verifier_generation_tokens": 96,
+        "draft_decode_ms": 10191.928,
+        "verification_decode_ms": 7723.601,
+        "metal_peak_mib": 3174.49,
+        "metal_active_after_mib": 2483.47,
+        "process_peak_rss_mib": 973.92
+      }
+    ],
+    "token_counts_source": "persisted generation_stats and answer_verification.generation_stats in synthetic trace",
+    "time_to_first_token_ms": null,
+    "model_load_ms": null,
+    "unobserved_stage_reason": "lazy load is included in decode; generator does not expose tokenization or prefill timing"
+  },
+  "residual_risks": [
+    "backend timing comparison was affected by concurrent host activity",
+    "synthetic and two model turns do not establish throughput or answer quality",
+    "cold corpus audit cost remains required and unoptimized"
+  ]
+}

@@ -2896,16 +2896,22 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
     def _demo_field_record(record: dict[str, Any]) -> dict[str, Any]:
         open_metadata = _demo_field_metadata(record)
         field = open_metadata.get("field") if isinstance(open_metadata.get("field"), dict) else {}
+
+        def field_text(key: str, *legacy_values: Any) -> str:
+            if key in field:
+                return str(field[key] or "")
+            return next((str(value) for value in legacy_values if value), "")
+
         return {
             "id": record["id"],
             "field_context_id": record["id"],
             "name": record.get("display_name") or field.get("name") or "Stored field",
-            "crop": record.get("crop_current") or field.get("crop") or "",
-            "region": field.get("region") or record.get("region_text") or "",
-            "jurisdiction": field.get("jurisdiction") or record.get("province_state") or record.get("country") or "",
-            "acres": str(field.get("acres") or open_metadata.get("acres") or ""),
-            "concern": field.get("concern") or "",
-            "notes": field.get("notes") or record.get("management_notes") or "",
+            "crop": field_text("crop", record.get("crop_current")),
+            "region": field_text("region", record.get("region_text")),
+            "jurisdiction": field_text("jurisdiction", record.get("province_state"), record.get("country")),
+            "acres": field_text("acres", open_metadata.get("acres")),
+            "concern": field_text("concern"),
+            "notes": field_text("notes", record.get("management_notes")),
             "geometry": open_metadata.get("geometry") or {"kind": "none"},
             "regionalContext": open_metadata.get("regional_context_label") or record.get("region_text") or "",
             "geoPriors": open_metadata.get("geo_priors"),
@@ -6099,13 +6105,26 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         }
 
     @app.get("/api/sessions")
-    async def list_sessions(request: Request, include_archived: bool = False) -> list[dict[str, Any]]:
+    async def list_sessions(
+        request: Request,
+        include_archived: bool = False,
+        include_turns: bool = True,
+    ) -> list[dict[str, Any]]:
         user = _demo_field_user(request)
-        return [
+        sessions = (
+            store.list_sessions(include_archived=include_archived)
+            if include_turns
+            else store.list_sessions(include_archived=include_archived, include_turns=False)
+        )
+        visible = [
             _session_response(session)
-            for session in store.list_sessions(include_archived=include_archived)
+            for session in sessions
             if _session_visible_to_user(session, request=request, user=user)
         ]
+        if not include_turns:
+            for session in visible:
+                session["turns_included"] = False
+        return visible
 
     @app.get("/api/geo/layers")
     async def public_geo_layer_catalog() -> dict[str, Any]:
@@ -6385,17 +6404,17 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 trace = turn.get("trace") if isinstance(turn.get("trace"), dict) else {}
                 metadata = trace.get("metadata") if isinstance(trace.get("metadata"), dict) else {}
                 lineage = metadata.get("field_lineage") if isinstance(metadata.get("field_lineage"), dict) else {}
+                lineage_field_id = lineage.get("field_context_id")
+                if lineage_field_id != field_context_id and not (
+                    not lineage_field_id and session_field_id == field_context_id
+                ):
+                    continue
                 stored_turn = store.get_turn(str(turn.get("turn_id") or ""))
                 feedback = (
                     stored_turn.get("feedback")
                     if isinstance(stored_turn, dict) and isinstance(stored_turn.get("feedback"), dict)
                     else {}
                 )
-                lineage_field_id = lineage.get("field_context_id")
-                if lineage_field_id != field_context_id and not (
-                    not lineage_field_id and session_field_id == field_context_id
-                ):
-                    continue
                 history.append(
                     {
                         "session_id": session["session_id"],

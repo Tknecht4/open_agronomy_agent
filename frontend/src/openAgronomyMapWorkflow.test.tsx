@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { StrictMode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { OpenAgronomyApp } from './OpenAgronomyApp'
 import { PHASE6_SCRATCHPAD_STORAGE_KEY } from './offlineScratchpad'
@@ -740,7 +741,7 @@ const installFetchMock = (
 ) => {
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input)
-    if (url === '/api/sessions?include_archived=true') return jsonResponse(initialSessions)
+    if (url === '/api/sessions?include_archived=true&include_turns=false') return jsonResponse(initialSessions)
     if (url === '/api/configs') return jsonResponse(bootConfig)
     if (url === '/api/tools/public-adapter-readiness') return jsonResponse(adapterReadiness)
     if (url === '/api/demo/fields' && (!init?.method || init.method === 'GET')) return jsonResponse(demoFields)
@@ -846,7 +847,7 @@ const installFetchMock = (
 const installDegradedFetchMock = () => {
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input)
-    if (url === '/api/sessions?include_archived=true') return jsonResponse([])
+    if (url === '/api/sessions?include_archived=true&include_turns=false') return jsonResponse([])
     if (url === '/api/configs') return jsonResponse(bootConfig)
     if (url === '/api/tools/public-adapter-readiness') throw new Error('adapter readiness unavailable')
     if (url === '/api/demo/fields' && (!init?.method || init.method === 'GET')) throw new Error('field storage unavailable')
@@ -860,7 +861,7 @@ const installDegradedFetchMock = () => {
 const installConversationFetchMock = () => {
   const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input)
-    if (url === '/api/sessions?include_archived=true') {
+    if (url === '/api/sessions?include_archived=true&include_turns=false') {
       return jsonResponse([
         {
           session_id: 'session-conversation',
@@ -920,6 +921,19 @@ afterEach(() => {
 const openPrimaryPage = (name: 'Map' | 'Fields') => {
   const navigation = screen.getByRole('navigation', { name: 'Primary' })
   fireEvent.click(within(navigation).getByRole('button', { name: name === 'Map' ? 'Workspace' : name }))
+  if (name === 'Map') fireEvent.click(screen.getByRole('button', { name: 'Map' }))
+}
+
+const selectExample = async (id = 'central-alberta-barley', returnToMap = false) => {
+  await screen.findByText('Local runtime · connected mode')
+  openPrimaryPage('Fields')
+  fireEvent.change(screen.getByRole('combobox', { name: /example/i }), { target: { value: id } })
+  if (returnToMap) openPrimaryPage('Map')
+}
+
+const openFieldTab = (name: 'Overview' | 'Records & soil tests' | 'Map context') => {
+  const group = screen.getByRole('group', { name: 'Field information' })
+  fireEvent.click(within(group).getByRole('button', { name }))
 }
 
 describe('Open Agronomy map upload workflow', () => {
@@ -929,29 +943,35 @@ describe('Open Agronomy map upload workflow', () => {
 
     const navigation = screen.getByRole('navigation', { name: 'Primary' })
     const primaryButtons = Array.from(navigation.querySelectorAll(':scope > button'))
-    expect(primaryButtons.map((button) => button.textContent)).toEqual(['Workspace', 'Fields', 'Evidence'])
+    expect(primaryButtons.map((button) => button.textContent)).toEqual(['Workspace', 'Fields', 'Data'])
     expect(within(navigation).getByRole('button', { name: 'Workspace' })).toHaveAttribute('aria-current', 'page')
 
     const more = screen.getByText('More', { selector: 'summary' })
     fireEvent.click(more)
-    expect(within(navigation).getByRole('button', { name: 'Sources' })).toBeVisible()
+    expect(within(navigation).getByRole('button', { name: 'Evidence' })).toBeVisible()
     expect(within(navigation).getByRole('button', { name: 'Benchmarks' })).toBeVisible()
     expect(within(navigation).getByRole('button', { name: 'Privacy' })).toBeVisible()
     expect(within(navigation).getByRole('button', { name: 'About' })).toBeVisible()
 
-    fireEvent.click(within(navigation).getByRole('button', { name: 'Sources' }))
-    expect(await screen.findByRole('heading', { name: /Sources/i })).toBeInTheDocument()
+    fireEvent.click(within(navigation).getByRole('button', { name: 'Evidence' }))
+    expect(await screen.findByRole('heading', { name: 'Behind the answer' })).toBeInTheDocument()
     expect(more.closest('details')).not.toHaveAttribute('open')
   })
 
-  it('hydrates the default Alberta sample as live geometry and intersects it before the first question', async () => {
+  it('keeps the general question blank until the Alberta example is explicitly selected', async () => {
     const fetchMock = installFetchMock()
     render(<OpenAgronomyApp />)
 
+    expect(await screen.findByRole('button', { name: /Explore an example field/i })).toBeInTheDocument()
+    openPrimaryPage('Map')
+    expect(screen.getByRole('combobox', { name: 'Active field' })).toHaveValue('')
+    expect(fetchMock.mock.calls.some(([url]) => String(url) === '/api/geo/priors')).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: /Explore an example field/i }))
     expect(await screen.findByText(/Regional context refreshed: AAFC Alberta Detailed Soil Survey AB_SOIL_ABD192014361 matched at 100% confidence/i)).toBeInTheDocument()
-    expect(screen.getByTestId('mock-leaflet-map')).toHaveAttribute('data-geometry-kind', 'polygon')
+    expect(await screen.findByTestId('mock-leaflet-map')).toHaveAttribute('data-geometry-kind', 'polygon')
     expect(screen.getByTestId('mock-leaflet-map')).toHaveAttribute('data-first-lon', '-113.608')
     openPrimaryPage('Fields')
+    openFieldTab('Map context')
     expect(screen.getAllByText(/Alberta detailed soil map unit MMNV9\/U1l/i).length).toBeGreaterThan(0)
     expect(await screen.findByTestId('agroclimate-spi')).toHaveTextContent('13 wk SPI0.43')
 
@@ -963,9 +983,41 @@ describe('Open Agronomy map upload workflow', () => {
     expect(priorsCall).toBeTruthy()
   })
 
+  it('labels an online partial weather window with observed dates rather than requested dates', async () => {
+    const base = installFetchMock()
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit) => String(input) === '/api/tools/weather-power'
+      ? Promise.resolve(jsonResponse({ ...nasaPowerConditions, cache_hit: false, status: 'partial_available', requested_day_count: 3, observed_day_count: 1,
+          observation_start: '2026-09-25', observation_end: '2026-09-25', parameter_summary: {
+            T2M: { days: 1, mean: 12.5 }, PRECTOTCORR: { days: 1, sum: 0 }, WS2M: { days: 1, mean: 2.4 },
+          } })) : base(input, init)))
+    render(<OpenAgronomyApp />)
+    await selectExample('central-alberta-barley', true)
+    expect(await screen.findByTestId('map-nasa-power-summary')).toHaveTextContent('1/3 days')
+    fireEvent.click(screen.getByLabelText('NASA POWER field weather'))
+    expect(screen.getByText('1 of 3 requested days available')).toBeVisible()
+    expect(screen.getByText('Observed UTC 2026-09-25')).toBeVisible()
+    expect(screen.getByText('0.0 mm')).toBeVisible()
+    expect(screen.getByText(/Totals include only published observations/)).toBeVisible()
+  })
+
+  it('does not present an empty successful weather response as available observations', async () => {
+    const base = installFetchMock()
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit) => String(input) === '/api/tools/weather-power'
+      ? Promise.resolve(jsonResponse({ ...nasaPowerConditions, status: 'no_data', requested_day_count: 3, observed_day_count: 0, parameter_summary: {} })) : base(input, init)))
+    render(<OpenAgronomyApp />)
+    await selectExample('central-alberta-barley', true)
+    await screen.findByText('unavailable', { selector: '.map-weather-pill small' })
+    expect(screen.queryByTestId('map-nasa-power-summary')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText('NASA POWER field weather'))
+    expect(screen.getByText('No usable observations in this window')).toBeVisible()
+    expect(screen.getByText(/No usable weather observations have been published/)).toBeVisible()
+  })
+
   it('shows recent NASA POWER field weather beside Set field and refreshes it on demand', async () => {
     const fetchMock = installFetchMock()
     render(<OpenAgronomyApp />)
+
+    await selectExample('central-alberta-barley', true)
 
     expect(await screen.findByTestId('map-nasa-power-summary')).toHaveTextContent('3.2 mm · 2.9 m/s')
     const weatherSummary = screen.getByLabelText('NASA POWER field weather')
@@ -996,7 +1048,8 @@ describe('Open Agronomy map upload workflow', () => {
     installFetchMock()
     render(<OpenAgronomyApp />)
 
-    openPrimaryPage('Fields')
+    await selectExample()
+    openFieldTab('Map context')
     const regionalSummary = await screen.findByText('Regional context', { selector: 'summary' })
     const regionalDisclosure = regionalSummary.closest('details')
     const conditionsSummary = screen.getByText('Current regional conditions', { selector: 'summary' })
@@ -1017,9 +1070,8 @@ describe('Open Agronomy map upload workflow', () => {
     const fetchMock = installFetchMock()
     render(<OpenAgronomyApp />)
 
-    openPrimaryPage('Fields')
-    const picker = screen.getByRole('combobox', { name: /example/i })
-    fireEvent.change(picker, { target: { value: 'regina-thematic-soil' } })
+    await selectExample('regina-thematic-soil')
+    openFieldTab('Map context')
 
     expect(
       (await screen.findAllByText(/Saskatchewan thematic soil: capability class 2; well drainage; 0 - 2% slope/i)).length,
@@ -1067,7 +1119,8 @@ describe('Open Agronomy map upload workflow', () => {
     })
     render(<OpenAgronomyApp />)
 
-    openPrimaryPage('Fields')
+    await selectExample()
+    openFieldTab('Map context')
     expect(
       await screen.findByText('Current AAFC regional conditions are unavailable for this geometry.'),
     ).toBeInTheDocument()
@@ -1079,9 +1132,8 @@ describe('Open Agronomy map upload workflow', () => {
     const fetchMock = installFetchMock()
     render(<OpenAgronomyApp />)
 
-    openPrimaryPage('Fields')
-    const picker = screen.getByRole('combobox', { name: /example/i })
-    fireEvent.change(picker, { target: { value: 'canola-acidity' } })
+    await selectExample('canola-acidity')
+    openFieldTab('Map context')
 
     expect((await screen.findAllByText(/2021 soil erosion risk: Very Low/i)).length).toBeGreaterThan(0)
     expect(screen.getByText(/1981-2021 change class decrease/i)).toBeInTheDocument()
@@ -1105,6 +1157,7 @@ describe('Open Agronomy map upload workflow', () => {
     fireEvent.change(await screen.findByLabelText('Boundary upload'), {
       target: { files: [new File([JSON.stringify({ type: 'Polygon', coordinates: [peiRing] })], 'pei-field.geojson')] },
     })
+    openFieldTab('Map context')
 
     expect(
       (await screen.findAllByText(/PEI detailed soil map unit PEPED103Ch:6-Ti:3\/CD/i)).length,
@@ -1127,6 +1180,7 @@ describe('Open Agronomy map upload workflow', () => {
         files: [new File([JSON.stringify({ type: 'Polygon', coordinates: [peiRing] })], 'pictou-field.geojson')],
       },
     })
+    openFieldTab('Map context')
 
     expect(
       (await screen.findAllByText(/Pictou County detailed soil map unit NSNSD005Qu4\/C/i)).length,
@@ -1149,7 +1203,7 @@ describe('Open Agronomy map upload workflow', () => {
     let lookupCount = 0
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
-      if (url === '/api/sessions?include_archived=true') return jsonResponse([])
+      if (url === '/api/sessions?include_archived=true&include_turns=false') return jsonResponse([])
       if (url === '/api/configs') return jsonResponse(bootConfig)
       if (url === '/api/tools/public-adapter-readiness') return jsonResponse(adapterReadiness)
       if (url === '/api/demo/fields') return jsonResponse(emptyDemoFields)
@@ -1164,12 +1218,13 @@ describe('Open Agronomy map upload workflow', () => {
     vi.stubGlobal('fetch', fetchMock)
     render(<OpenAgronomyApp />)
 
-    openPrimaryPage('Fields')
+    await selectExample()
     fireEvent.change(await screen.findByLabelText('Boundary upload'), {
       target: {
         files: [new File([JSON.stringify({ type: 'Polygon', coordinates: [peiRing] })], 'pictou-field.geojson')],
       },
     })
+    openFieldTab('Map context')
     expect(
       (await screen.findAllByText(/Pictou County detailed soil map unit NSNSD005Qu4\/C/i)).length,
     ).toBeGreaterThan(0)
@@ -1187,6 +1242,7 @@ describe('Open Agronomy map upload workflow', () => {
     const fetchMock = installFetchMock()
     render(<OpenAgronomyApp />)
 
+    openPrimaryPage('Map')
     fireEvent.click(screen.getByLabelText('Set field'))
     fireEvent.click(screen.getByRole('button', { name: 'Draw boundary' }))
     fireEvent.click(await screen.findByRole('button', { name: /mock draw boundary/i }))
@@ -1195,6 +1251,7 @@ describe('Open Agronomy map upload workflow', () => {
 
     expect(await screen.findByText(/Regional context refreshed: EPA Level III Ecoregion 47 matched at 92% confidence/i)).toBeInTheDocument()
     openPrimaryPage('Fields')
+    openFieldTab('Map context')
     expect(screen.getByText('Southern Iowa Drift Plain')).toBeInTheDocument()
     expect(screen.getByText(/EPA Level III Ecoregion 47/i)).toBeInTheDocument()
     expect(screen.getByText(/Use this as regional guidance for retrieval and source checks/i)).toBeInTheDocument()
@@ -1228,6 +1285,7 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.getByText(/point 42\.02000, -93\.72000 · prior-only match/i)).toBeInTheDocument()
     expect(screen.getByTestId('mock-leaflet-map')).toHaveAttribute('data-geometry-kind', 'point')
     openPrimaryPage('Fields')
+    openFieldTab('Map context')
     expect(screen.getByText('Central Iowa and Minnesota Till Prairies')).toBeInTheDocument()
 
     const pointPriorsCall = fetchMock.mock.calls.find(([url, init]) => {
@@ -1242,6 +1300,7 @@ describe('Open Agronomy map upload workflow', () => {
     installFetchMock()
     render(<OpenAgronomyApp />)
 
+    await selectExample('central-alberta-barley', true)
     await screen.findByText(/Regional context refreshed: AAFC Alberta Detailed Soil Survey AB_SOIL_ABD192014361 matched at 100% confidence/i)
     // Let the initial field-bound weather request settle before changing the geometry.
     // Otherwise it can complete during the draft/cancel interaction and leave React's
@@ -1291,6 +1350,7 @@ describe('Open Agronomy map upload workflow', () => {
     expect(await screen.findByText(/Regional context refreshed: EPA Level III Ecoregion 47 matched/i)).toBeInTheDocument()
     expect(screen.getByTestId('mock-leaflet-map')).toHaveAttribute('data-first-lon', '-93.68')
     openPrimaryPage('Fields')
+    openFieldTab('Map context')
     expect(screen.getByText(/Use this as regional guidance for retrieval and source checks/i)).toBeInTheDocument()
     expect(screen.getByText('Southern Iowa Drift Plain')).toBeInTheDocument()
     expect(screen.getByText('EPA Level III Ecoregion 47')).toBeInTheDocument()
@@ -1316,7 +1376,7 @@ describe('Open Agronomy map upload workflow', () => {
     const fetchMock = installFetchMock()
     render(<OpenAgronomyApp />)
 
-    openPrimaryPage('Fields')
+    await selectExample()
     await screen.findAllByText(/Saved to My agronomy workspace/i)
     const fileInput = await screen.findByLabelText('Boundary upload')
     fireEvent.change(fileInput, {
@@ -1372,6 +1432,7 @@ describe('Open Agronomy map upload workflow', () => {
     openPrimaryPage('Fields')
     await screen.findAllByText(/Saved to My agronomy workspace/i)
     fireEvent.click(screen.getAllByRole('button', { name: /Quebec field/i })[0])
+    openFieldTab('Map context')
     fireEvent.click(await screen.findByText('Offline terrain context'))
     fireEvent.click(await screen.findByRole('button', { name: 'Check saved field' }))
 
@@ -1433,6 +1494,7 @@ describe('Open Agronomy map upload workflow', () => {
     openPrimaryPage('Fields')
 
     expect(await screen.findByText('Restored Fraser Valley field')).toBeInTheDocument()
+    openFieldTab('Records & soil tests')
     await waitFor(() =>
       expect(fetchMock.mock.calls.some(
         ([url]) => String(url) === '/api/demo/fields/field-restored/history',
@@ -1508,9 +1570,9 @@ describe('Open Agronomy map upload workflow', () => {
 
     openPrimaryPage('Fields')
     fireEvent.click(screen.getByRole('button', { name: 'New field' }))
-    expect(screen.getByLabelText('Field name')).toHaveValue('')
-    expect(screen.getByText('New field setup')).toBeInTheDocument()
-    expect(screen.getByText(/1\. Add details/i)).toBeInTheDocument()
+    const setup = await screen.findByRole('dialog', { name: 'Add a field' })
+    expect(within(setup).getByLabelText('Field name')).toHaveValue('')
+    expect(within(setup).getByText('Step 1 of 3')).toBeInTheDocument()
     expect(screen.queryByText('South answer')).not.toBeInTheDocument()
   })
 
@@ -1519,21 +1581,25 @@ describe('Open Agronomy map upload workflow', () => {
     render(<OpenAgronomyApp />)
 
     openPrimaryPage('Fields')
-    fireEvent.click(screen.getByRole('button', { name: 'New field' }))
-    fireEvent.change(screen.getByLabelText('Field name'), { target: { value: 'West quarter' } })
-    fireEvent.change(screen.getByLabelText('Crop'), { target: { value: 'oats' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Draw boundary on map' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'Mock draw boundary' }))
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Save edits' })).toBeEnabled())
-    fireEvent.click(screen.getByRole('button', { name: 'Save edits' }))
-
-    openPrimaryPage('Fields')
-    fireEvent.click(screen.getByRole('button', { name: 'Save field' }))
+    const newField = screen.getByRole('button', { name: 'New field' })
+    await waitFor(() => expect(newField).toBeEnabled())
+    fireEvent.click(newField)
+    const setup = await screen.findByRole('dialog', { name: 'Add a field' })
+    fireEvent.change(within(setup).getByLabelText('Field name'), { target: { value: 'West quarter' } })
+    fireEvent.change(within(setup).getByLabelText(/Crop/), { target: { value: 'oats' } })
+    fireEvent.click(within(setup).getByRole('button', { name: 'Continue' }))
+    expect(within(setup).getByText('Step 2 of 3')).toBeInTheDocument()
+    fireEvent.click(within(setup).getByRole('button', { name: 'Draw boundary' }))
+    fireEvent.click(await within(setup).findByRole('button', { name: 'Mock draw boundary' }))
+    fireEvent.click(within(setup).getByRole('button', { name: 'Continue' }))
+    expect(within(setup).getByText('Step 3 of 3')).toBeInTheDocument()
+    expect(within(setup).getByText(/calculated from boundary/i)).toBeInTheDocument()
+    fireEvent.click(within(setup).getByRole('button', { name: 'Save field' }))
     await waitFor(() => expect(fetchMock.mock.calls.some(
       ([url, init]) => String(url) === '/api/demo/fields' && init?.method === 'POST'
         && JSON.parse(String(init.body || '{}')).name === 'West quarter',
     )).toBe(true))
-    expect(screen.getByText('West quarter')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'West quarter' })).toBeInTheDocument()
   })
 
   it('keeps the active field selected when deleting another field and clears context when deleting the active field', async () => {
@@ -1552,10 +1618,14 @@ describe('Open Agronomy map upload workflow', () => {
     fireEvent.click(await screen.findByRole('button', { name: /^North field/ }))
     expect(screen.getByLabelText('Field name')).toHaveValue('North field')
     fireEvent.click(screen.getByRole('button', { name: 'Delete South field' }))
+    expect(screen.getByRole('dialog', { name: 'Delete field?' })).toHaveTextContent('South field')
+    expect(fetchMock.mock.calls.some(([url, init]) => String(url).includes('field-south') && init?.method === 'DELETE')).toBe(false)
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Delete field?' })).getByRole('button', { name: 'Delete field' }))
     await waitFor(() => expect(screen.queryByText('South field')).not.toBeInTheDocument())
     expect(screen.getByLabelText('Field name')).toHaveValue('North field')
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete North field' }))
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Delete field?' })).getByRole('button', { name: 'Delete field' }))
     await waitFor(() => expect(screen.getByLabelText('Field name')).toHaveValue(''))
     expect(screen.getByText('New field setup')).toBeInTheDocument()
     expect(fetchMock.mock.calls.filter(([url, init]) => String(url).startsWith('/api/demo/fields/') && init?.method === 'DELETE')).toHaveLength(2)
@@ -1574,6 +1644,7 @@ describe('Open Agronomy map upload workflow', () => {
     }])
     render(<OpenAgronomyApp />)
 
+    await selectExample('central-alberta-barley', true)
     expect(await screen.findByText('Old BC field answer')).toBeInTheDocument()
     openPrimaryPage('Fields')
     fireEvent.change(await screen.findByLabelText('Boundary upload'), {
@@ -1615,7 +1686,7 @@ describe('Open Agronomy map upload workflow', () => {
     installFetchMock({ ...emptyDemoFields, fields })
     const { container } = render(<OpenAgronomyApp />)
 
-    openPrimaryPage('Fields')
+    await selectExample()
     await waitFor(() => expect(container.querySelectorAll('.field-library-list article')).toHaveLength(13))
     expect(screen.queryByText('stale-device-1')).not.toBeInTheDocument()
     const fileInput = await screen.findByLabelText('Boundary upload')
@@ -1652,7 +1723,7 @@ describe('Open Agronomy map upload workflow', () => {
     const records: Array<Record<string, unknown>> = []
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
-      if (url === '/api/sessions?include_archived=true') return jsonResponse([])
+      if (url === '/api/sessions?include_archived=true&include_turns=false') return jsonResponse([])
       if (url === '/api/configs') return jsonResponse(bootConfig)
       if (url === '/api/tools/public-adapter-readiness') return jsonResponse(adapterReadiness)
       if (url === '/api/demo/fields') return jsonResponse({ ...emptyDemoFields, fields: [storedField] })
@@ -1702,6 +1773,7 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.queryByTestId('mock-field-sync-panel')).not.toBeInTheDocument()
     openPrimaryPage('Fields')
     fireEvent.click(await screen.findByText('North quarter'))
+    openFieldTab('Records & soil tests')
     await screen.findByText('0 field records · 0 answers.')
     expect(await screen.findByTestId('mock-field-sync-panel')).toBeInTheDocument()
     expect(screen.getByText(/Saved answers stay linked to the exact field snapshot/i)).toBeInTheDocument()
@@ -1817,7 +1889,7 @@ describe('Open Agronomy map upload workflow', () => {
     let answerAccepted: boolean | null = null
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
-      if (url === '/api/sessions?include_archived=true') {
+      if (url === '/api/sessions?include_archived=true&include_turns=false') {
         return jsonResponse([{
           session_id: 'session-field-1',
           title: 'North quarter',
@@ -1899,6 +1971,7 @@ describe('Open Agronomy map upload workflow', () => {
 
     openPrimaryPage('Fields')
     fireEvent.click(await screen.findByText('North quarter'))
+    openFieldTab('Records & soil tests')
     await screen.findByText('0 field records · 0 answers.')
     openPrimaryPage('Map')
     fireEvent.change(screen.getByLabelText('Ask about this field'), {
@@ -1908,6 +1981,7 @@ describe('Open Agronomy map upload workflow', () => {
 
     await screen.findByText(completedTurn.answer)
     openPrimaryPage('Fields')
+    openFieldTab('Records & soil tests')
     expect(await screen.findByText('0 field records · 1 answer.')).toBeInTheDocument()
     expect(screen.getByText('Field snapshot verified')).toBeInTheDocument()
     expect(screen.getByText('Local guidance missing')).toBeInTheDocument()
@@ -1925,7 +1999,9 @@ describe('Open Agronomy map upload workflow', () => {
       answer_status: 'reviewed',
     })
     fireEvent.click(screen.getByRole('button', { name: 'Review evidence' }))
-    expect(await screen.findByRole('region', { name: 'Answer lineage' })).toBeInTheDocument()
+    const lineage = await screen.findByText('Technical receipt & export', { selector: 'summary' })
+    fireEvent.click(lineage)
+    expect(lineage.closest('details')).toHaveAttribute('open')
     expect(screen.getByText('b'.repeat(64))).toBeInTheDocument()
     expect(screen.getByText(completedTurn.user_message)).toBeInTheDocument()
     expect(screen.getByText('Evidence at answer time')).toBeInTheDocument()
@@ -1965,11 +2041,10 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.getAllByText(/Device-only fallback; backend field storage is unavailable/i).length).toBeGreaterThanOrEqual(1)
   })
 
-  it('loads a private reference only into browser memory from the Sources tab', async () => {
+  it('loads a private reference only into browser memory from the Data tab', async () => {
     const fetchMock = installFetchMock()
     render(<OpenAgronomyApp />)
-    fireEvent.click(screen.getByText('More', { selector: 'summary' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'Sources' }))
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Primary' })).getByRole('button', { name: 'Data' }))
     const input = await screen.findByLabelText('Choose private reference')
     fireEvent.change(input, {
       target: {
@@ -1990,6 +2065,7 @@ describe('Open Agronomy map upload workflow', () => {
     installConversationFetchMock()
     render(<OpenAgronomyApp />)
 
+    await selectExample('central-alberta-barley', true)
     expect(await screen.findByRole('button', { name: 'Select point' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Draw boundary' })).toBeEnabled()
     expect(screen.queryByRole('button', { name: 'Check map context' })).not.toBeInTheDocument()
@@ -2005,7 +2081,7 @@ describe('Open Agronomy map upload workflow', () => {
     const answerText = screen.getByText(/Check crop stage, application history, drainage/i)
     expect(answerText.closest('article')).toHaveClass('assistant-message')
 
-    expect(screen.getByText('Evidence and trace available')).toBeInTheDocument()
+    expect(within(answerText.closest('article') as HTMLElement).getByRole('button', { name: /Sources & checks/i })).toBeEnabled()
     expect(screen.queryByText(/^Context hash /)).not.toBeInTheDocument()
     expect(screen.queryByText('6 docs')).not.toBeInTheDocument()
     expect(screen.queryByText('Evidence checks')).not.toBeInTheDocument()
@@ -2015,7 +2091,8 @@ describe('Open Agronomy map upload workflow', () => {
       'placeholder',
       'Ask a field question, compare observations, or request an evidence check…',
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Review evidence' }))
+    fireEvent.click(within(answerText.closest('article') as HTMLElement).getByRole('button', { name: /Sources & checks/i }))
+    expect(screen.getByRole('dialog', { name: 'Sources & checks' })).toBeInTheDocument()
     expect(screen.getByText('Crop stress')).toHaveAttribute('title', 'fertility_diagnostic')
     expect(screen.getByText('Moderate')).toHaveAttribute('title', 'medium')
     expect(screen.getAllByText('6 used').length).toBeGreaterThanOrEqual(1)
@@ -2040,6 +2117,7 @@ describe('Open Agronomy map upload workflow', () => {
     installConversationFetchMock()
     render(<OpenAgronomyApp />)
 
+    await selectExample('central-alberta-barley', true)
     expect(await screen.findByText('Should I add nitrogen after this wet spring?')).toBeInTheDocument()
     const input = screen.getByLabelText('Ask about this field') as HTMLTextAreaElement
     fireEvent.change(input, { target: { value: 'Keep this only in the old draft.' } })
@@ -2047,7 +2125,7 @@ describe('Open Agronomy map upload workflow', () => {
 
     await waitFor(() => {
       expect(screen.queryByText('Should I add nitrogen after this wet spring?')).not.toBeInTheDocument()
-      expect(screen.getByText('Start with a field question')).toBeInTheDocument()
+      expect(screen.getByText('What are you seeing in the field?')).toBeInTheDocument()
       expect(input).toHaveValue('')
     })
     expect(screen.getByTestId('reset-chat')).toBeEnabled()
@@ -2067,6 +2145,7 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.getByText(/This device cannot generate an answer/i)).toBeInTheDocument()
 
     openPrimaryPage('Fields')
+    openFieldTab('Records & soil tests')
     const notes = screen.getByLabelText('Offline field notes')
     fireEvent.change(notes, { target: { value: 'Wet patch expanded after 18 mm rain; photograph roots.' } })
     expect(screen.getByTestId('local-field-notes-status')).toHaveTextContent('Local only')
@@ -2078,6 +2157,7 @@ describe('Open Agronomy map upload workflow', () => {
 
     expect(await screen.findByLabelText('Ask about this field')).toHaveValue('What should I inspect in the wet patch tomorrow?')
     openPrimaryPage('Fields')
+    openFieldTab('Records & soil tests')
     expect(screen.getByLabelText('Offline field notes')).toHaveValue('Wet patch expanded after 18 mm rain; photograph roots.')
   })
 
@@ -2089,6 +2169,7 @@ describe('Open Agronomy map upload workflow', () => {
 
     expect(await screen.findByText('Local runtime · connected mode')).toBeInTheDocument()
     openPrimaryPage('Fields')
+    openFieldTab('Records & soil tests')
     const notice = await screen.findByTestId('offline-storage-recovery-notice')
     expect(notice).toHaveTextContent('Unreadable local data was preserved')
     expect(notice).toHaveTextContent('Download recovery file')
@@ -2100,7 +2181,7 @@ describe('Open Agronomy map upload workflow', () => {
   it('keeps conversation history isolated to the selected field', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
-      if (url === '/api/sessions?include_archived=true') {
+      if (url === '/api/sessions?include_archived=true&include_turns=false') {
         return jsonResponse([
           {
             session_id: 'session-bc',
@@ -2138,6 +2219,7 @@ describe('Open Agronomy map upload workflow', () => {
     vi.stubGlobal('fetch', fetchMock)
     render(<OpenAgronomyApp />)
 
+    await selectExample('central-alberta-barley', true)
     expect(await screen.findByText('BC field history only')).toBeInTheDocument()
     expect(screen.queryByText('Saskatchewan field history only')).not.toBeInTheDocument()
 
@@ -2157,7 +2239,7 @@ describe('Open Agronomy map upload workflow', () => {
     })
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
-      if (url === '/api/sessions?include_archived=true') return sessionsResponse
+      if (url === '/api/sessions?include_archived=true&include_turns=false') return sessionsResponse
       if (url === '/api/configs') return jsonResponse(bootConfig)
       if (url === '/api/tools/public-adapter-readiness') return jsonResponse(adapterReadiness)
       if (url === '/api/demo/fields') return jsonResponse(emptyDemoFields)
@@ -2166,25 +2248,14 @@ describe('Open Agronomy map upload workflow', () => {
       return jsonResponse({})
     })
     vi.stubGlobal('fetch', fetchMock)
-    const frames: FrameRequestCallback[] = []
+    const frames: Array<FrameRequestCallback | null> = []
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
       frames.push(callback)
       return frames.length
     })
-    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined)
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation((id) => { frames[id - 1] = null })
 
     const { container } = render(<OpenAgronomyApp />)
-    const conversation = container.querySelector('.conversation-thread') as HTMLDivElement
-    let scrollTop = 320
-    Object.defineProperty(conversation, 'scrollTop', {
-      configurable: true,
-      get: () => scrollTop,
-      set: (value: number) => {
-        scrollTop = value
-      },
-    })
-    conversation.getBoundingClientRect = () => ({ top: 100 } as DOMRect)
-
     releaseSessions(jsonResponse([
       {
         session_id: 'session-long-answer',
@@ -2200,12 +2271,454 @@ describe('Open Agronomy map upload workflow', () => {
       },
     ]))
 
+    await selectExample('central-alberta-barley', true)
+
     const answer = await screen.findByText(/Start with the field observation/i)
+    const conversation = container.querySelector('.conversation-thread') as HTMLDivElement
+    let scrollTop = 320
+    Object.defineProperty(conversation, 'scrollTop', {
+      configurable: true,
+      get: () => scrollTop,
+      set: (value: number) => { scrollTop = value },
+    })
+    conversation.getBoundingClientRect = () => ({ top: 100 } as DOMRect)
     const assistantMessage = answer.closest('article') as HTMLElement
     assistantMessage.getBoundingClientRect = () => ({ top: 248 } as DOMRect)
     await waitFor(() => expect(frames.length).toBeGreaterThan(0))
-    frames.splice(0).forEach((callback) => callback(0))
+    // Drain the queued layout pass after the chat remounts with the selected field history.
+    frames.splice(0).forEach((callback) => callback?.(0))
 
     expect(scrollTop).toBe(460)
+  })
+
+  it('reveals the complete older conversation on request', async () => {
+    const turns = Array.from({ length: 26 }, (_, index) => ({
+      turn_id: `turn-${index + 1}`,
+      user_message: `Question ${index + 1}`,
+      answer: `Answer ${index + 1}`,
+      trace: { retrieved_docs: [], graph_hits: [], tool_invocations: [] },
+    }))
+    installFetchMock(emptyDemoFields, uploadPayload, [{
+      session_id: 'session-long',
+      context: { field_conversation_key: 'general' },
+      turns,
+    }])
+    render(<OpenAgronomyApp />)
+
+    expect(await screen.findByText('Answer 26')).toBeInTheDocument()
+    expect(screen.queryByText('Answer 1')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Show earlier messages' }))
+    expect(screen.getByText('Question 1')).toBeInTheDocument()
+    expect(screen.getByText('Answer 1')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Show earlier messages' })).not.toBeInTheDocument()
+  })
+
+  it('keeps unsent question drafts with their own saved field', async () => {
+    const baseField = {
+      crop: 'canola', region: 'Leduc County', jurisdiction: 'Alberta', acres: '', concern: '', notes: '',
+      geometry: { kind: 'point', point: { lat: 53.3, lon: -113.6 } },
+      regionalContext: '', geoPriors: null, sourceBoundary: 'Regional context is not field truth.',
+      createdAt: '2026-07-20T12:00:00Z', storageMode: 'account_workspace',
+    }
+    installFetchMock({ ...emptyDemoFields, fields: [
+      { ...baseField, id: 'field-north', field_context_id: 'field-north', name: 'North field' },
+      { ...baseField, id: 'field-south', field_context_id: 'field-south', name: 'South field' },
+    ] })
+    render(<OpenAgronomyApp />)
+
+    openPrimaryPage('Fields')
+    fireEvent.click(await screen.findByRole('button', { name: /^North field/ }))
+    openPrimaryPage('Map')
+    const question = screen.getByLabelText('Ask about this field')
+    fireEvent.change(question, { target: { value: 'North-only scouting note' } })
+    openPrimaryPage('Fields')
+    fireEvent.click(screen.getByRole('button', { name: /^South field/ }))
+    openPrimaryPage('Map')
+    await waitFor(() => expect(screen.getByLabelText('Ask about this field')).toHaveValue(''))
+    fireEvent.change(screen.getByLabelText('Ask about this field'), { target: { value: 'South-only soil note' } })
+    openPrimaryPage('Fields')
+    fireEvent.click(screen.getByRole('button', { name: /^North field/ }))
+    openPrimaryPage('Map')
+    await waitFor(() => expect(screen.getByLabelText('Ask about this field')).toHaveValue('North-only scouting note'))
+    expect(screen.getByLabelText('Ask about this field')).not.toHaveValue('South-only soil note')
+  })
+
+  it('preserves an interrupted question without sending the same turn twice', async () => {
+    const baseFetch = installFetchMock()
+    const baseImplementation = baseFetch.getMockImplementation()!
+    baseFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url === '/api/sessions' && init?.method === 'POST') {
+        return jsonResponse({ session_id: 'session-interrupted', context: { field_conversation_key: 'general' }, turns: [] })
+      }
+      if (url === '/api/sessions/session-interrupted/turns/stream' && init?.method === 'POST') {
+        return { ok: true, status: 200, body: null, text: async () => 'event: generation.token\ndata: {"token":"Partial"}\n\n' } as Response
+      }
+      return baseImplementation(input, init)
+    })
+    render(<OpenAgronomyApp />)
+    await screen.findByText('Local runtime · connected mode')
+    const question = screen.getByLabelText('Ask about this field')
+    fireEvent.change(question, { target: { value: 'What changed in the wet patch?' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Ask' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('The connection ended before the answer receipt arrived')
+    expect(question).toHaveValue('What changed in the wet patch?')
+    expect(baseFetch.mock.calls.filter(([url, init]) =>
+      String(url) === '/api/sessions/session-interrupted/turns/stream' && init?.method === 'POST',
+    )).toHaveLength(1)
+    expect(screen.queryByText('Partial')).not.toBeInTheDocument()
+  })
+
+  it('ignores a delayed conversation refresh after switching fields or starting a new chat', async () => {
+    const baseField = {
+      crop: 'canola', region: 'Leduc County', jurisdiction: 'Alberta', acres: '', concern: '', notes: '',
+      geometry: { kind: 'point', point: { lat: 53.3, lon: -113.6 } }, regionalContext: '',
+      geoPriors: null, sourceBoundary: 'Regional context is not field truth.',
+      createdAt: '2026-07-20T12:00:00Z', storageMode: 'account_workspace',
+    }
+    const session = (id: string, fieldId: string, answer: string) => ({
+      session_id: id, turns_included: true,
+      context: { field_context_id: fieldId, field_conversation_key: `field:${fieldId}` },
+      turns: [{ turn_id: `${id}-turn`, user_message: `${fieldId} question`, answer,
+        trace: { retrieved_docs: [], graph_hits: [], tool_invocations: [] } }],
+    })
+    const alpha = session('session-alpha', 'field-alpha', 'Alpha field answer')
+    const beta = session('session-beta', 'field-beta', 'Beta field answer')
+    const baseFetch = installFetchMock({ ...emptyDemoFields, fields: [
+      { ...baseField, id: 'field-alpha', field_context_id: 'field-alpha', name: 'Alpha field' },
+      { ...baseField, id: 'field-beta', field_context_id: 'field-beta', name: 'Beta field' },
+    ] }, uploadPayload, [alpha, beta])
+    const baseImplementation = baseFetch.getMockImplementation()!
+    let releaseAlpha!: (value: Response) => void
+    let releaseBeta!: (value: Response) => void
+    const pendingAlpha = new Promise<Response>(resolve => { releaseAlpha = resolve })
+    const pendingBeta = new Promise<Response>(resolve => { releaseBeta = resolve })
+    baseFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === '/api/sessions/session-alpha') return pendingAlpha
+      if (String(input) === '/api/sessions/session-beta') return pendingBeta
+      return baseImplementation(input, init)
+    })
+    render(<OpenAgronomyApp />)
+    openPrimaryPage('Fields')
+    fireEvent.click(await screen.findByRole('button', { name: /^Alpha field/ }))
+    openPrimaryPage('Map')
+    expect(await screen.findByText('Alpha field answer')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh conversation' }))
+    await waitFor(() => expect(baseFetch.mock.calls.some(([url]) => String(url) === '/api/sessions/session-alpha')).toBe(true))
+
+    openPrimaryPage('Fields')
+    fireEvent.click(screen.getByRole('button', { name: /^Beta field/ }))
+    openPrimaryPage('Map')
+    expect(await screen.findByText('Beta field answer')).toBeInTheDocument()
+    await act(async () => {
+      releaseAlpha(jsonResponse({ ...alpha, turns: [{ ...alpha.turns[0], answer: 'Late Alpha overwrite' }] }))
+      await pendingAlpha
+    })
+    expect(screen.queryByText('Late Alpha overwrite')).not.toBeInTheDocument()
+    expect(screen.getByText('Beta field answer')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh conversation' }))
+    await waitFor(() => expect(baseFetch.mock.calls.some(([url]) => String(url) === '/api/sessions/session-beta')).toBe(true))
+    fireEvent.click(screen.getByTestId('reset-chat'))
+    await act(async () => {
+      releaseBeta(jsonResponse({ ...beta, turns: [{ ...beta.turns[0], answer: 'Late Beta overwrite' }] }))
+      await pendingBeta
+    })
+    expect(screen.queryByText('Late Beta overwrite')).not.toBeInTheDocument()
+    expect(screen.queryByText('Beta field answer')).not.toBeInTheDocument()
+    expect(screen.getByText('What are you seeing in the field?')).toBeInTheDocument()
+  })
+
+  it('skips turn hydration without a selected session and hydrates a selected summary before asking', async () => {
+    const staleSummary = {
+      session_id: 'session-sample-only', turns_included: false,
+      context: { field_conversation_key: 'sample:central-alberta-barley' }, turns: [],
+    }
+    const noSelectionFetch = installFetchMock(emptyDemoFields, uploadPayload, [staleSummary])
+    const firstRender = render(<OpenAgronomyApp />)
+    await screen.findByText('Local runtime · connected mode')
+    expect(screen.getByText('Good questions start here.')).toBeInTheDocument()
+    expect(noSelectionFetch.mock.calls.some(([url]) => String(url) === '/api/sessions/session-sample-only')).toBe(false)
+    firstRender.unmount()
+
+    const selectedSummary = { session_id: 'session-general-summary', turns_included: false,
+      context: { field_conversation_key: 'general' }, turns: [] }
+    const selectedFetch = installFetchMock(emptyDemoFields, uploadPayload, [selectedSummary])
+    const selectedImplementation = selectedFetch.getMockImplementation()!
+    let releaseSelected!: (value: Response) => void
+    const pendingSelected = new Promise<Response>(resolve => { releaseSelected = resolve })
+    selectedFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) =>
+      String(input) === '/api/sessions/session-general-summary'
+        ? pendingSelected
+        : selectedImplementation(input, init))
+    render(<OpenAgronomyApp />)
+    await waitFor(() => expect(selectedFetch.mock.calls.some(([url]) => String(url) === '/api/sessions/session-general-summary')).toBe(true))
+    fireEvent.change(screen.getByLabelText('Ask about this field'), { target: { value: 'Is the summary ready?' } })
+    expect(screen.getByRole('button', { name: 'Ask' })).toBeDisabled()
+    releaseSelected(jsonResponse({ ...selectedSummary, turns: [{ turn_id: 'turn-hydrated',
+      user_message: 'Prior general question', answer: 'Hydrated prior answer',
+      trace: { retrieved_docs: [], graph_hits: [], tool_invocations: [] } }] }))
+    expect(await screen.findByText('Hydrated prior answer')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Ask' })).toBeEnabled()
+  })
+
+  it('restores the selected general new chat and its unsent draft after reload', async () => {
+    const oldSession = { session_id: 'session-old-general', turns_included: true,
+      context: { field_conversation_key: 'general' },
+      turns: [{ turn_id: 'old-turn', user_message: 'Old general question', answer: 'Old general answer',
+        trace: { retrieved_docs: [], graph_hits: [], tool_invocations: [] } }] }
+    const fetchMock = installFetchMock(emptyDemoFields, uploadPayload, [oldSession])
+    const baseImplementation = fetchMock.getMockImplementation()!
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === '/api/sessions' && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body || '{}'))
+        return jsonResponse({ session_id: 'session-new-general', context: body.context, turns: [] })
+      }
+      if (String(input) === '/api/sessions/session-new-general/turns/stream' && init?.method === 'POST') {
+        return { ok: true, status: 200, body: null,
+          text: async () => `event: answer.completed\ndata: ${JSON.stringify({ turn_id: 'new-turn', turn: {
+            turn_id: 'new-turn', user_message: 'Draft for new general chat', answer: 'New general answer',
+            trace: { retrieved_docs: [], graph_hits: [], tool_invocations: [] },
+          } })}\n\n`,
+        } as Response
+      }
+      return baseImplementation(input, init)
+    })
+    const firstRender = render(<OpenAgronomyApp />)
+    expect(await screen.findByText('Old general answer')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('reset-chat'))
+    fireEvent.change(screen.getByLabelText('Ask about this field'), { target: { value: 'Draft for new general chat' } })
+    firstRender.unmount()
+
+    render(<OpenAgronomyApp />)
+    expect(await screen.findByLabelText('Ask about this field')).toHaveValue('Draft for new general chat')
+    expect(screen.queryByText('Old general answer')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Ask' }))
+    expect(await screen.findByText('New general answer')).toBeInTheDocument()
+    const create = fetchMock.mock.calls.find(([url, init]) => String(url) === '/api/sessions' && init?.method === 'POST')
+    const createdKey = JSON.parse(String(create?.[1]?.body || '{}')).context.field_conversation_key
+    expect(createdKey).toMatch(/^general:chat:/)
+  })
+
+  it('edits a device field without dropping fields beyond the former list cap', async () => {
+    const fields = Array.from({ length: 14 }, (_, index) => ({
+      id: `device-${index}`, field_context_id: `device-${index}`, name: `Device field ${index}`,
+      crop: 'wheat', region: 'Saskatchewan', jurisdiction: 'Saskatchewan', acres: '', concern: '', notes: '',
+      geometry: { kind: 'point', point: { lat: 50.4, lon: -104.6 } }, regionalContext: '', geoPriors: null,
+      sourceBoundary: 'Regional context is not field truth.', createdAt: '2026-07-20T12:00:00Z', storageMode: 'device',
+    }))
+    window.localStorage.setItem('open-agronomy-agent.fields.v1', JSON.stringify(fields))
+    installDegradedFetchMock()
+    const { container } = render(<OpenAgronomyApp />)
+    openPrimaryPage('Fields')
+    await waitFor(() => expect(container.querySelectorAll('.field-library-list article')).toHaveLength(14))
+    fireEvent.click(screen.getByRole('button', { name: /^Device field 0/ }))
+    fireEvent.change(screen.getByLabelText('Crop'), { target: { value: 'barley' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save field' }))
+    await waitFor(() => {
+      const saved = JSON.parse(window.localStorage.getItem('open-agronomy-agent.fields.v1') || '[]')
+      expect(saved).toHaveLength(14)
+      expect(saved.find((item: { id: string }) => item.id === 'device-0').crop).toBe('barley')
+      expect(saved.some((item: { id: string }) => item.id === 'device-13')).toBe(true)
+    })
+  })
+
+  it('restores an unsent draft when the selected saved field reloads', async () => {
+    const field = {
+      id: 'field-restored-draft', field_context_id: 'field-restored-draft', name: 'Draft field',
+      crop: 'canola', region: 'Leduc County', jurisdiction: 'Alberta', acres: '', concern: '', notes: '',
+      geometry: { kind: 'point', point: { lat: 53.3, lon: -113.6 } }, regionalContext: '', geoPriors: null,
+      sourceBoundary: 'Regional context is not field truth.', createdAt: '2026-07-20T12:00:00Z',
+      storageMode: 'account_workspace',
+    }
+    installFetchMock({ ...emptyDemoFields, fields: [field] })
+    const firstRender = render(<OpenAgronomyApp />)
+    openPrimaryPage('Fields')
+    fireEvent.click(await screen.findByRole('button', { name: /^Draft field/ }))
+    openPrimaryPage('Map')
+    fireEvent.change(screen.getByLabelText('Ask about this field'), {
+      target: { value: 'Inspect the north edge before making a rate decision.' },
+    })
+    firstRender.unmount()
+
+    render(<OpenAgronomyApp />)
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Active field' })).toHaveValue('field-restored-draft'))
+    await waitFor(() => expect(screen.getByLabelText('Ask about this field')).toHaveValue(
+      'Inspect the north edge before making a rate decision.',
+    ))
+    expect(screen.getByRole('heading', { name: 'Draft field' })).toBeInTheDocument()
+  })
+
+  it('ignores the first StrictMode bootstrap when its session response arrives after the second', async () => {
+    const current = { session_id: 'session-current', turns_included: true,
+      context: { field_conversation_key: 'general' },
+      turns: [{ turn_id: 'turn-current', user_message: 'Current question', answer: 'Current answer',
+        trace: { retrieved_docs: [], graph_hits: [], tool_invocations: [] } }] }
+    const stale = { session_id: 'session-stale', turns_included: true,
+      context: { field_conversation_key: 'general' },
+      turns: [{ turn_id: 'turn-stale', user_message: 'Stale question', answer: 'Stale answer',
+        trace: { retrieved_docs: [], graph_hits: [], tool_invocations: [] } }] }
+    const baseFetch = installFetchMock()
+    const baseImplementation = baseFetch.getMockImplementation()!
+    let releaseFirst!: (value: Response) => void
+    const firstSessions = new Promise<Response>(resolve => { releaseFirst = resolve })
+    let listingCount = 0
+    baseFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === '/api/sessions?include_archived=true&include_turns=false') {
+        listingCount += 1
+        return listingCount === 1 ? firstSessions : jsonResponse([current])
+      }
+      return baseImplementation(input, init)
+    })
+    render(<StrictMode><OpenAgronomyApp /></StrictMode>)
+    expect(await screen.findByText('Current answer')).toBeInTheDocument()
+    await act(async () => {
+      releaseFirst(jsonResponse([stale]))
+      await firstSessions
+    })
+    expect(screen.getByText('Current answer')).toBeInTheDocument()
+    expect(screen.queryByText('Stale answer')).not.toBeInTheDocument()
+    expect(listingCount).toBe(2)
+  })
+
+  it('binds delayed bootstrap sessions to the field selected while the list was loading', async () => {
+    const field = {
+      id: 'field-during-bootstrap', field_context_id: 'field-during-bootstrap', name: 'Bootstrap field',
+      crop: 'barley', region: 'Leduc County', jurisdiction: 'Alberta', acres: '', concern: '', notes: '',
+      geometry: { kind: 'point', point: { lat: 53.3, lon: -113.6 } }, regionalContext: '', geoPriors: null,
+      sourceBoundary: 'Regional context is not field truth.', createdAt: '2026-07-20T12:00:00Z',
+      storageMode: 'account_workspace',
+    }
+    const baseFetch = installFetchMock({ ...emptyDemoFields, fields: [field] })
+    const baseImplementation = baseFetch.getMockImplementation()!
+    let releaseSessions!: (value: Response) => void
+    const pendingSessions = new Promise<Response>(resolve => { releaseSessions = resolve })
+    baseFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) =>
+      String(input) === '/api/sessions?include_archived=true&include_turns=false'
+        ? pendingSessions
+        : baseImplementation(input, init))
+    render(<OpenAgronomyApp />)
+    openPrimaryPage('Fields')
+    fireEvent.click(await screen.findByRole('button', { name: /^Bootstrap field/ }))
+    openPrimaryPage('Map')
+    await act(async () => {
+      releaseSessions(jsonResponse([
+        { session_id: 'session-general', turns_included: true,
+          context: { field_conversation_key: 'general' },
+          turns: [{ turn_id: 'turn-general', user_message: 'General question', answer: 'General answer',
+            trace: { retrieved_docs: [], graph_hits: [], tool_invocations: [] } }] },
+        { session_id: 'session-field', turns_included: true,
+          context: { field_context_id: field.id, field_conversation_key: `field:${field.id}` },
+          turns: [{ turn_id: 'turn-field', user_message: 'Field question', answer: 'Selected field answer',
+            trace: { retrieved_docs: [], graph_hits: [], tool_invocations: [] } }] },
+      ]))
+      await pendingSessions
+    })
+    expect(await screen.findByText('Selected field answer')).toBeInTheDocument()
+    expect(screen.queryByText('General answer')).not.toBeInTheDocument()
+  })
+
+  it('blocks Enter and direct form submission until the saved field identity is restored', async () => {
+    const field = {
+      id: 'field-chat-bootstrap', field_context_id: 'field-chat-bootstrap', name: 'Restored chat field',
+      crop: 'barley', region: 'Leduc County', jurisdiction: 'Alberta', acres: '', concern: '', notes: '',
+      geometry: { kind: 'point', point: { lat: 53.3, lon: -113.6 } }, regionalContext: '', geoPriors: null,
+      sourceBoundary: 'Regional context is not field truth.', createdAt: '2026-07-20T12:00:00Z',
+      storageMode: 'account_workspace',
+    }
+    window.localStorage.setItem('open-agronomy-agent.active-field.v1', field.id)
+    const fetchMock = installFetchMock()
+    const baseImplementation = fetchMock.getMockImplementation()!
+    let releaseFields!: (value: Response) => void
+    const pendingFields = new Promise<Response>(resolve => { releaseFields = resolve })
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) =>
+      String(input) === '/api/demo/fields' && (!init?.method || init.method === 'GET')
+        ? pendingFields : baseImplementation(input, init))
+    render(<OpenAgronomyApp />)
+    await screen.findByText('Local runtime · connected mode')
+    const composer = screen.getByLabelText('Ask about this field') as HTMLTextAreaElement
+    fireEvent.change(composer, { target: { value: 'Question while the saved field is loading' } })
+    expect(screen.getByRole('button', { name: 'Ask' })).toBeDisabled()
+    fireEvent.keyDown(composer, { key: 'Enter', code: 'Enter' })
+    fireEvent.submit(composer.form!)
+    await act(async () => { await Promise.resolve() })
+    const sessionCreates = () => fetchMock.mock.calls.filter(([url, init]) => String(url) === '/api/sessions' && init?.method === 'POST')
+    expect(sessionCreates()).toHaveLength(0)
+
+    await act(async () => { releaseFields(jsonResponse({ ...emptyDemoFields, fields: [field] })); await pendingFields })
+    await screen.findByRole('heading', { name: field.name })
+    fireEvent.change(composer, { target: { value: 'Question for the restored field' } })
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Ask' })).toBeEnabled())
+    fireEvent.keyDown(composer, { key: 'Enter', code: 'Enter' })
+    await waitFor(() => expect(sessionCreates()).toHaveLength(1))
+    const body = JSON.parse(String(sessionCreates()[0][1]?.body))
+    expect(body.context).toMatchObject({ field_context_id: field.id, field_conversation_key: `field:${field.id}` })
+  })
+
+  it('keeps field creation closed until the initial field library response settles', async () => {
+    const fetchMock = installFetchMock()
+    const baseImplementation = fetchMock.getMockImplementation()!
+    let releaseFields!: (value: Response) => void
+    const pendingFields = new Promise<Response>(resolve => { releaseFields = resolve })
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) =>
+      String(input) === '/api/demo/fields' && (!init?.method || init.method === 'GET')
+        ? pendingFields
+        : baseImplementation(input, init))
+    render(<OpenAgronomyApp />)
+
+    const addField = screen.getByRole('button', { name: 'Add field' })
+    expect(addField).toBeDisabled()
+    fireEvent.click(addField)
+    expect(screen.queryByRole('dialog', { name: 'Add a field' })).not.toBeInTheDocument()
+    openPrimaryPage('Fields')
+    const newField = screen.getByRole('button', { name: 'New field' })
+    expect(newField).toBeDisabled()
+    fireEvent.click(newField)
+    expect(screen.queryByRole('dialog', { name: 'Add a field' })).not.toBeInTheDocument()
+    expect(fetchMock.mock.calls.some(([url, init]) => String(url) === '/api/demo/fields' && init?.method === 'POST')).toBe(false)
+
+    await act(async () => {
+      releaseFields(jsonResponse(emptyDemoFields))
+      await pendingFields
+    })
+    expect(addField).toBeEnabled()
+    expect(newField).toBeEnabled()
+  })
+
+  it('keeps a newly created field when the first StrictMode field bootstrap resolves late', async () => {
+    const fetchMock = installFetchMock()
+    const baseImplementation = fetchMock.getMockImplementation()!
+    let releaseFirst!: (value: Response) => void
+    const firstFields = new Promise<Response>(resolve => { releaseFirst = resolve })
+    let fieldGetCount = 0
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === '/api/demo/fields' && (!init?.method || init.method === 'GET')) {
+        fieldGetCount += 1
+        return fieldGetCount === 1 ? firstFields : jsonResponse(emptyDemoFields)
+      }
+      return baseImplementation(input, init)
+    })
+    render(<StrictMode><OpenAgronomyApp /></StrictMode>)
+    const addField = await screen.findByRole('button', { name: 'Add field' })
+    await waitFor(() => expect(addField).toBeEnabled())
+    fireEvent.click(addField)
+    const setup = await screen.findByRole('dialog', { name: 'Add a field' })
+    fireEvent.change(within(setup).getByLabelText('Field name'), { target: { value: 'StrictMode field' } })
+    fireEvent.click(within(setup).getByRole('button', { name: 'Continue' }))
+    fireEvent.click(await within(setup).findByRole('button', { name: 'Mock drop point' }))
+    fireEvent.click(within(setup).getByRole('button', { name: 'Continue' }))
+    fireEvent.click(within(setup).getByRole('button', { name: 'Save field' }))
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'StrictMode field' })).toBeInTheDocument())
+    expect(fetchMock.mock.calls.filter(([url, init]) => String(url) === '/api/demo/fields' && init?.method === 'POST')).toHaveLength(1)
+
+    await act(async () => {
+      releaseFirst(jsonResponse(emptyDemoFields))
+      await firstFields
+    })
+    openPrimaryPage('Fields')
+    expect(screen.getByRole('button', { name: /^StrictMode field/ })).toBeInTheDocument()
+    expect(screen.getByLabelText('Field name')).toHaveValue('StrictMode field')
+    expect(fieldGetCount).toBe(2)
   })
 })

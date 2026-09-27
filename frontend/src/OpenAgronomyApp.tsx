@@ -17,8 +17,20 @@ import {
   CloudSun,
   Upload,
   X,
+  Sprout,
+  Plus,
+  ArrowUpRight,
+  BookOpen,
+  Maximize2,
+  PanelLeftClose,
 } from 'lucide-react'
-import { apiDelete, apiGet, apiPatch, apiPost, apiUpload } from './api'
+import { WorkspacePerformancePanel } from './workspacePerformance'
+import type { NewFieldDraft } from './FieldSetupDialog'
+import { selectedConversation, rememberConversation } from './conversationSelection'
+import { powerCoverage } from './weatherPresentation'
+import { useWorkspaceMenus } from './useWorkspaceMenus'
+import { WorkspaceDialog } from './WorkspaceDialog'
+import { apiDelete, apiGet, apiPatch, apiPost, apiUpload, csrfHeaders } from './api'
 import { clearPhase6ChatDraft, loadPhase6ChatDraft, savePhase6ChatDraft } from './offlineDrafts'
 import { clearPhase6Scratchpad, loadPhase6Scratchpad, savePhase6Scratchpad } from './offlineScratchpad'
 import {
@@ -103,6 +115,11 @@ type NasaPowerMetric = {
 
 type NasaPowerResponse = {
   tool: 'nasa_power_daily'
+  status?: string
+  requested_day_count?: number
+  observed_day_count?: number
+  observation_start?: string | null
+  observation_end?: string | null
   source: string
   cache_hit?: boolean
   latitude: number
@@ -114,7 +131,7 @@ type NasaPowerResponse = {
 }
 
 type NasaPowerState = {
-  status: 'idle' | 'loading' | 'available' | 'error'
+  status: 'idle' | 'loading' | 'available' | 'partial_available' | 'unavailable' | 'error'
   payload?: NasaPowerResponse
   message?: string
 }
@@ -140,6 +157,7 @@ const AGROCLIMATE_METRICS = [
   { key: 'percent_of_average_precipitation', label: '13 wk precipitation' },
 ] as const
 
+const FieldSetupDialog = lazy(() => import('./FieldSetupDialog').then(module => ({ default: module.FieldSetupDialog })))
 const BenchmarksRoute = lazy(() => import('./BenchmarksRoute').then((module) => ({ default: module.BenchmarksRoute })))
 const LeafletFieldMap = lazy(() => import('./LeafletFieldMap').then((module) => ({ default: module.LeafletFieldMap })))
 const FieldSyncPanel = lazy(() => import('./FieldSyncPanel'))
@@ -1250,25 +1268,23 @@ const fieldPointFromCoords = (coords: unknown): FieldPoint | null => {
   if (!Array.isArray(coords) || coords.length < 2) {
     return null
   }
-  const lon = Number(coords[0])
-  const lat = Number(coords[1])
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+  const lon = coords[0]
+  const lat = coords[1]
+  if (typeof lon !== 'number' || typeof lat !== 'number' || !Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
     return null
   }
   return { lat, lon }
 }
 
 const fieldGeometryFromPolygonCoordinates = (coordinates: unknown): FieldGeometry | null => {
-  if (!Array.isArray(coordinates)) {
-    return null
-  }
+  if (!Array.isArray(coordinates) || coordinates.length !== 1) return null
   const ring = coordinates[0]
   if (!Array.isArray(ring)) {
     return null
   }
-  const points = ring
-    .map(fieldPointFromCoords)
-    .filter((point): point is FieldPoint => Boolean(point))
+  const parsedPoints = ring.map(fieldPointFromCoords)
+  if (parsedPoints.some(point => point === null)) return null
+  const points = parsedPoints as FieldPoint[]
   const openRing =
     points.length > 1 && points[0].lat === points[points.length - 1].lat && points[0].lon === points[points.length - 1].lon
       ? points.slice(0, -1)
@@ -1296,10 +1312,7 @@ const fieldGeometryFromGeoJsonLike = (parsed: {
     return fieldGeometryFromPolygonCoordinates(geometry.coordinates)
   }
   if (geometry?.type === 'MultiPolygon' && Array.isArray(geometry.coordinates)) {
-    return geometry.coordinates
-      .map(fieldGeometryFromPolygonCoordinates)
-      .filter((candidate): candidate is FieldGeometry & { kind: 'polygon' } => candidate?.kind === 'polygon')
-      .sort((left, right) => right.acres - left.acres)[0] || null
+    return geometry.coordinates.length === 1 ? fieldGeometryFromPolygonCoordinates(geometry.coordinates[0]) : null
   }
   return null
 }
@@ -1578,6 +1591,7 @@ const readSseStream = async (
   while (true) {
     const chunk = await reader.read()
     if (chunk.done) {
+      buffer += decoder.decode()
       break
     }
     buffer += decoder.decode(chunk.value, { stream: true })
@@ -1651,14 +1665,14 @@ export function AnswerContextDisclosure({
         <p>
           These map and public-source values informed this turn as regional or gridded context. They are not field measurements.
         </p>
-        <a href="#evidence" onClick={onReviewEvidence}>View sources and freshness</a>
+        <a href="#evidence" onClick={event => { event.preventDefault(); onReviewEvidence() }}>View sources and freshness</a>
       </div>
     </details>
   )
 }
 
 const primaryRegionalCandidate = (priors: GeoPriors | null): GeoPriorCandidate | null => {
-  const candidates = priors?.candidate_regions || []
+  const candidates = (priors?.candidate_regions || []).filter(candidate => candidate.code && candidate.code.toUpperCase() !== 'UNKNOWN' && candidate.system.toLowerCase() !== 'unknown')
   return candidates.find((candidate) =>
     /(?:soil|capability|erosion)/i.test(`${candidate.system} ${candidate.name} ${candidate.code}`),
   ) || candidates[0] || null
@@ -1696,7 +1710,7 @@ function StreamProgressPanel({ steps, draft }: { steps: StreamProgressStep[]; dr
       <div className="stream-progress-bar" aria-label="Agent progress">
         <div style={{ width: `${latest.progress}%` }} />
       </div>
-      <p>{latest.detail}</p>
+      <details className="progress-details"><summary>Execution details</summary><p>{latest.detail}</p>
       <ol>
         {visibleSteps.map((step) => (
           <li key={`${step.stageId || step.label}-${step.elapsedMs}`} className={`stream-step status-${step.status || 'ok'}`}>
@@ -1704,8 +1718,8 @@ function StreamProgressPanel({ steps, draft }: { steps: StreamProgressStep[]; dr
             {step.category ? <small>{step.category}</small> : null}
           </li>
         ))}
-      </ol>
-      {!draft ? <small>Waiting for the first answer chunk from the local model.</small> : null}
+      </ol></details>
+      {!draft ? <small>The answer appears after the agent finishes its checks.</small> : null}
     </div>
   )
 }
@@ -1972,21 +1986,27 @@ export function OpenAgronomyApp() {
   const [page, setPage] = useState<Page>(() => currentHashPage())
   const [sessions, setSessions] = useState<SessionRecord[]>([])
   const [sessionId, setSessionId] = useState('')
+  const activeSessionRef = useRef(sessionId)
+  activeSessionRef.current = sessionId
+  const conversationRequestRef = useRef(0)
+  const [loadingConversation, setLoadingConversation] = useState(false)
   const [activeFieldContextId, setActiveFieldContextId] = useState('')
   const [activeFieldConversationKey, setActiveFieldConversationKey] = useState(
-    sampleConversationKey(sampleProfiles[0].id),
+    () => selectedConversation(loadActiveStoredFieldId() ? storedFieldConversationKey(loadActiveStoredFieldId()) : 'general'),
   )
+  const activeConversationKeyRef = useRef(activeFieldConversationKey)
+  activeConversationKeyRef.current = activeFieldConversationKey
   const [activeFieldRecordUpdatedAt, setActiveFieldRecordUpdatedAt] = useState('')
-  const [field, setField] = useState<FieldProfile>(sampleProfiles[0])
-  const [fieldName, setFieldName] = useState(sampleProfiles[0].name)
-  const [scenarioId, setScenarioId] = useState(sampleProfiles[0].id)
-  const [boundaryStatus, setBoundaryStatus] = useState('Sample boundary loaded.')
+  const [field, setField] = useState<FieldProfile>({ ...emptyFieldProfile })
+  const [fieldName, setFieldName] = useState('')
+  const [scenarioId, setScenarioId] = useState('')
+  const [boundaryStatus, setBoundaryStatus] = useState('Add a location when your question needs one.')
   const [isMapContextChecking, setIsMapContextChecking] = useState(false)
   const [geometryDraft, setGeometryDraft] = useState<FieldGeometry | null>(null)
   const [geometryEditSnapshot, setGeometryEditSnapshot] = useState<GeometryEditSnapshot | null>(null)
   const [fieldToolsOpen, setFieldToolsOpen] = useState(false)
   const [mapMode, setMapMode] = useState<MapMode>('inspect')
-  const [fieldGeometry, setFieldGeometry] = useState<FieldGeometry>(() => geometryForScenario(sampleProfiles[0]))
+  const [fieldGeometry, setFieldGeometry] = useState<FieldGeometry>(emptyGeometry)
   const [uploadContext, setUploadContext] = useState<BoundaryUploadResponse | null>(null)
   const [selectedUploadFeatureId, setSelectedUploadFeatureId] = useState('')
   const [storedFields, setStoredFields] = useState<StoredField[]>([])
@@ -2009,8 +2029,9 @@ export function OpenAgronomyApp() {
   const [agroclimate, setAgroclimate] = useState<AgroclimateState>({ status: 'idle' })
   const [agroclimateRefresh, setAgroclimateRefresh] = useState(0)
   const [nasaPower, setNasaPower] = useState<NasaPowerState>({ status: 'idle' })
+  const nasaCoverage = powerCoverage(nasaPower.payload)
   const [nasaPowerRefresh, setNasaPowerRefresh] = useState(0)
-  const [message, setMessage] = useState(defaultQuestion(sampleProfiles[0]))
+  const [message, setMessage] = useState('')
   const [mode] = useState<DemoMode>('agronomic_rag')
   const [modelId, setModelId] = useState('mock')
   const [modelProfiles, setModelProfiles] = useState<ModelProfile[]>([])
@@ -2032,10 +2053,31 @@ export function OpenAgronomyApp() {
   const [streamProgress, setStreamProgress] = useState<StreamProgressStep[]>([])
   const [pendingQuestion, setPendingQuestion] = useState('')
   const [error, setError] = useState('')
+  const [newFieldOpen, setNewFieldOpen] = useState(false)
+  const [evidenceOpen, setEvidenceOpen] = useState(false)
+  const [wideWorkspace, setWideWorkspace] = useState(() => typeof window.matchMedia === 'function' && window.matchMedia('(min-width: 1051px)').matches)
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return
+    const media = window.matchMedia('(min-width: 1051px)')
+    const update = () => setWideWorkspace(media.matches)
+    media.addEventListener?.('change', update)
+    return () => media.removeEventListener?.('change', update)
+  }, [])
+  const [workspaceView, setWorkspaceView] = useState<'chat' | 'split' | 'map'>('split')
+  useWorkspaceMenus(`${page}:${workspaceView}:${activeFieldContextId}`)
+  const [fieldTab, setFieldTab] = useState<'details' | 'records' | 'context'>('details')
+  const [visibleTurnCount, setVisibleTurnCount] = useState(20)
+  const [savingField, setSavingField] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<StoredField | null>(null)
+  const historyRequestRef = useRef(0)
+  const activeFieldRef = useRef(activeFieldContextId)
+  activeFieldRef.current = activeFieldContextId
+  const followConversationRef = useRef(true)
+
 
   const latestTurn = turns[turns.length - 1] || null
   const evidenceTurn = turns.find((turn) => turn.turn_id === evidenceTurnId) || latestTurn
-  const activeScenario = sampleProfiles.find((sample) => sample.id === scenarioId) || sampleProfiles[0]
+  const activeScenario: SampleProfile = sampleProfiles.find((sample) => sample.id === scenarioId) || { ...emptyFieldProfile, id: '', name: '', mlra: '', geometry: 'Location not set' }
   const evidenceDocs = topDocs(evidenceTurn)
   const evidenceRetrievedDocCount = evidenceTurn?.trace?.retrieved_docs?.length || 0
   const evidenceLiveToolCards = publicToolCards(evidenceTurn)
@@ -2048,7 +2090,7 @@ export function OpenAgronomyApp() {
   const committedWeatherPoint = fieldWeatherPoint(fieldGeometry)
   const geometryIssue = fieldGeometryIssue(fieldGeometry)
   const geometryReady = isUsableFieldGeometry(fieldGeometry)
-  const activeArea = fieldGeometry.kind === 'polygon' ? Math.round(fieldGeometry.acres).toLocaleString() : field.acres
+  const activeArea = fieldGeometry.kind === 'polygon' ? String(Math.round(fieldGeometry.acres)) : field.acres
   const selectedModelProfile = modelProfiles.find((profile) => profile.id === modelId)
   const selectedModelReady = selectedModelProfile?.local_ready !== false
   const selectedUploadFeature =
@@ -2130,9 +2172,7 @@ export function OpenAgronomyApp() {
 
   useEffect(() => {
     const saved = loadPhase6ChatDraft(activeFieldConversationKey)
-    if (saved?.message) {
-      setMessage(saved.message)
-    }
+    setMessage(saved?.message || '')
     setDraftHydratedFor(activeFieldConversationKey)
   }, [activeFieldConversationKey])
 
@@ -2157,20 +2197,19 @@ export function OpenAgronomyApp() {
   }, [activeFieldConversationKey, scratchpadHydratedFor, scratchpadNotes])
 
   useEffect(() => {
+    let active = true
     ;(async () => {
       try {
         const [loadedSessions, configs] = await Promise.all([
-          apiGet<SessionRecord[]>('/api/sessions?include_archived=true'),
+          apiGet<SessionRecord[]>('/api/sessions?include_archived=true&include_turns=false'),
           apiGet<ConfigResponse>('/api/configs'),
         ])
+        if (!active) return
         setSessions(loadedSessions)
-        const persistedFieldId = loadActiveStoredFieldId()
         const matchingSession = sessionForField(
           loadedSessions,
-          persistedFieldId
-            ? storedFieldConversationKey(persistedFieldId)
-            : sampleConversationKey(sampleProfiles[0].id),
-          persistedFieldId,
+          activeConversationKeyRef.current,
+          activeFieldRef.current,
         )
         setSessionId(matchingSession?.session_id || '')
         setTurns(matchingSession?.turns || [])
@@ -2193,26 +2232,34 @@ export function OpenAgronomyApp() {
         setModelId(readyProfile?.id || (nextModels.includes('mock') ? 'mock' : nextModels[0]))
         setRagConfig(configs.default_rag_config || nextRagConfigs[0])
       } catch (err) {
+        if (!active) return
         setRuntimeAccess('unavailable')
         setError(String((err as Error).message || err))
       }
     })()
+    return () => { active = false }
   }, [])
 
   useEffect(() => {
+    if (page !== 'evidence' && !evidenceOpen) return
+    let active = true
     ;(async () => {
       try {
-        setAdapterReadiness(await apiGet<PublicAdapterReadiness>('/api/tools/public-adapter-readiness'))
+        const readiness = await apiGet<PublicAdapterReadiness>('/api/tools/public-adapter-readiness')
+        if (active) setAdapterReadiness(readiness)
       } catch {
-        setAdapterReadiness(fallbackAdapterReadiness)
+        if (active) setAdapterReadiness(fallbackAdapterReadiness)
       }
     })()
-  }, [])
+    return () => { active = false }
+  }, [page, evidenceOpen])
 
   useEffect(() => {
+    let active = true
     ;(async () => {
       try {
         const payload = await apiGet<DemoFieldsResponse>('/api/demo/fields')
+        if (!active) return
         setStoredFields(payload.fields || [])
         setFieldStorageMode('account_workspace')
         setFieldStorageStatus(
@@ -2221,13 +2268,15 @@ export function OpenAgronomyApp() {
             : 'Saved to the local account workspace.',
         )
       } catch {
+        if (!active) return
         setStoredFields(loadStoredFields())
         setFieldStorageMode('device')
         setFieldStorageStatus('Device-only fallback; backend field storage is unavailable.')
       } finally {
-        setFieldsHydrated(true)
+        if (active) setFieldsHydrated(true)
       }
     })()
+    return () => { active = false }
   }, [])
 
   useEffect(() => {
@@ -2247,7 +2296,8 @@ export function OpenAgronomyApp() {
     }
     observedTurnCountRef.current = turns.length
     const frame = window.requestAnimationFrame(() => {
-      if (isAnalyzing) {
+      if (conversationThreadRef.current !== conversation) return
+      if (isAnalyzing && followConversationRef.current) {
         conversation.scrollTop = conversation.scrollHeight
         return
       }
@@ -2261,12 +2311,14 @@ export function OpenAgronomyApp() {
       completedTurnPendingRef.current = false
     })
     return () => window.cancelAnimationFrame(frame)
-  }, [turns.length, isAnalyzing, streamDraft, streamProgress.length])
+  }, [page, workspaceView, turns.length, isAnalyzing, streamDraft, streamProgress.length])
 
   const applyScenario = (id: string) => {
+    if (isAnalyzing || savingField) return
+    setFieldTab('details')
     regionalLookupRequestRef.current += 1
     const scenario = sampleProfiles.find((sample) => sample.id === id) || sampleProfiles[0]
-    const fieldConversationKey = sampleConversationKey(scenario.id)
+    const fieldConversationKey = selectedConversation(sampleConversationKey(scenario.id))
     const matchingSession = sessionForField(sessions, fieldConversationKey)
     setScenarioId(scenario.id)
     setActiveFieldContextId('')
@@ -2293,22 +2345,26 @@ export function OpenAgronomyApp() {
   }
 
   const startNewField = () => {
+    if (isAnalyzing || savingField) return
+    setScenarioId('')
     regionalLookupRequestRef.current += 1
     setIsMapContextChecking(false)
     persistActiveStoredFieldId('')
     setActiveFieldContextId('')
-    setActiveFieldConversationKey(freshConversationKey('new-field'))
+    const generalKey = selectedConversation('general')
+    const generalSession = sessionForField(sessions, generalKey)
+    setActiveFieldConversationKey(generalKey)
     setActiveFieldRecordUpdatedAt('')
-    setSessionId('')
-    setTurns([])
+    setSessionId(generalSession?.session_id || '')
+    setTurns(generalSession?.turns || [])
     setEvidenceTurnId('')
     setMessage('')
     setScratchpadNotes('')
     setFieldName('')
     setField({ ...emptyFieldProfile })
     setFieldGeometry(emptyGeometry)
-    setGeometryDraft(emptyGeometry)
-    setGeometryEditSnapshot({ geoPriors: null, uploadContext: null, selectedUploadFeatureId: '' })
+    setGeometryDraft(null)
+    setGeometryEditSnapshot(null)
     setUploadContext(null)
     setSelectedUploadFeatureId('')
     setGeoPriors(null)
@@ -2316,9 +2372,9 @@ export function OpenAgronomyApp() {
     setFieldHistoryStatus('Save this new field to begin a durable field timeline.')
     setAgroclimate({ status: 'idle' })
     setNasaPower({ status: 'idle' })
-    setFieldToolsOpen(true)
-    setMapMode('boundary')
-    setBoundaryStatus('Start with field details, then draw or upload a boundary. Save the geometry to retrieve regional context.')
+    setFieldToolsOpen(false)
+    setMapMode('inspect')
+    setBoundaryStatus('No field selected. Add a location when your question needs one.')
   }
 
   const ensureSession = async (): Promise<string> => {
@@ -2367,10 +2423,12 @@ export function OpenAgronomyApp() {
     if (isAnalyzing) return
     const baseConversationKey = activeFieldContextId
       ? storedFieldConversationKey(activeFieldContextId)
-      : sampleConversationKey(scenarioId)
+      : scenarioId ? sampleConversationKey(scenarioId) : 'general'
     clearPhase6ChatDraft(activeFieldConversationKey)
     clearPhase6Scratchpad(activeFieldConversationKey)
-    setActiveFieldConversationKey(freshConversationKey(baseConversationKey))
+    const nextConversationKey = freshConversationKey(baseConversationKey)
+    rememberConversation(baseConversationKey, nextConversationKey)
+    setActiveFieldConversationKey(nextConversationKey)
     setSessionId('')
     setTurns([])
     setEvidenceTurnId('')
@@ -2385,7 +2443,7 @@ export function OpenAgronomyApp() {
 
   const sendQuestion = async (event: FormEvent) => {
     event.preventDefault()
-    if (!message.trim()) {
+    if (isAnalyzing || loadingConversation || !fieldsHydrated || !message.trim()) {
       return
     }
     if (!answerCapability.canGenerateAnswer) {
@@ -2394,6 +2452,7 @@ export function OpenAgronomyApp() {
       setError('The local agronomy runtime is unavailable. Your question draft remains on this device; reconnect to the prepared runtime before asking.')
       return
     }
+    followConversationRef.current = true
     setError('')
     setStatus('Analyzing field context')
     setIsAnalyzing(true)
@@ -2462,7 +2521,7 @@ export function OpenAgronomyApp() {
       }
       const response = await fetch(`/api/sessions/${id}/turns/stream`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify(payload),
       })
       if (!response.ok) {
@@ -2508,17 +2567,7 @@ export function OpenAgronomyApp() {
         )
         setStreamDraft('')
       } else {
-        const fallback = await apiPost<TurnCreateResponse>(`/api/sessions/${id}/turns`, payload)
-        setTurns((current) => [...current, fallback.turn])
-        setEvidenceTurnId(fallback.turn.turn_id)
-        setSessions((current) =>
-          current.map((session) =>
-            session.session_id === id
-              ? { ...session, turns: [...(session.turns || []), fallback.turn] }
-              : session,
-          ),
-        )
-        setStreamDraft('')
+        throw new Error('The connection ended before the answer receipt arrived. Your question is preserved. Refresh this conversation before trying again; the answer may already be saved.')
       }
       if (activeFieldContextId && fieldStorageMode === 'account_workspace') {
         await refreshFieldHistory(activeFieldContextId)
@@ -2544,13 +2593,14 @@ export function OpenAgronomyApp() {
     if (!file) {
       return
     }
-    regionalLookupRequestRef.current += 1
+    const uploadRequestId = ++regionalLookupRequestRef.current
     setError('')
     setStatus('Parsing boundary upload')
     const formData = new FormData()
     formData.append('file', file)
     try {
       const parsed = await apiUpload<BoundaryUploadResponse>('/api/geo/boundary-upload?intersect=true', formData)
+      if (uploadRequestId !== regionalLookupRequestRef.current) return
       const geometry = fieldGeometryFromGeoJsonLike(parsed.geometry)
       if (!geometry) {
         throw new Error('Uploaded boundary did not contain a map-ready point or polygon.')
@@ -2583,12 +2633,15 @@ export function OpenAgronomyApp() {
       }
     } catch (err) {
       setStatus('Needs attention')
+      if (uploadRequestId !== regionalLookupRequestRef.current) return
       setBoundaryStatus(`Could not parse ${file.name}.`)
       setError(String((err as Error).message || err))
     }
   }
 
   const beginGeometryEdit = (nextMode: 'point' | 'boundary' | 'edit') => {
+    if (isAnalyzing) return
+    setWorkspaceView('map')
     if (!geometryEditSnapshot) {
       setGeometryEditSnapshot({
         geoPriors,
@@ -2679,17 +2732,20 @@ export function OpenAgronomyApp() {
       setFieldHistoryStatus('Device-only field: timeline is not saved.')
       return
     }
+    const requestId = ++historyRequestRef.current
     setFieldHistoryStatus('Loading field timeline.')
     try {
       const history = await apiGet<DemoFieldHistoryResponse>(
         `/api/demo/fields/${encodeURIComponent(fieldContextId)}/history`,
       )
+      if (requestId !== historyRequestRef.current || activeFieldRef.current !== fieldContextId) return
       setFieldHistory(history)
       setFieldHistoryStatus(
         `${history.event_count || 0} field record${history.event_count === 1 ? '' : 's'} · `
         + `${history.turn_count || 0} answer${history.turn_count === 1 ? '' : 's'}.`,
       )
     } catch (err) {
+      if (requestId !== historyRequestRef.current || activeFieldRef.current !== fieldContextId) return
       setFieldHistory(null)
       setFieldHistoryStatus(`Field history unavailable: ${String((err as Error).message || err)}`)
     }
@@ -2775,7 +2831,7 @@ export function OpenAgronomyApp() {
     }
   }
 
-  const storeCurrentField = async (saveAsNew = false) => {
+  const persistCurrentField = async (saveAsNew = false) => {
     if (!geometryReady) {
       setBoundaryStatus(geometryIssue || 'Draw a boundary or add a point before storing the field.')
       return
@@ -2844,8 +2900,8 @@ export function OpenAgronomyApp() {
       }
     } catch (err) {
       setError(String((err as Error).message || err))
-      setFieldStorageMode('device')
-      setFieldStorageStatus('Device-only fallback; workspace save failed.')
+      setFieldStorageStatus('Save failed. Your changes are still here; retry when the workspace is available.')
+      return
     }
     const localStored = updatingCurrentField
       ? {
@@ -2856,7 +2912,7 @@ export function OpenAgronomyApp() {
           storageMode: 'device' as const,
         }
       : { ...stored, storageMode: 'device' as const }
-    setStoredFields((current) => [localStored, ...current.filter((item) => item.id !== localStored.id)].slice(0, 12))
+    setStoredFields((current) => [localStored, ...current.filter((item) => item.id !== localStored.id)])
     setActiveFieldContextId(localStored.id)
     persistActiveStoredFieldId(localStored.id)
     setFieldName(localStored.name)
@@ -2874,10 +2930,29 @@ export function OpenAgronomyApp() {
     setBoundaryStatus(updatingCurrentField ? `Saved changes to ${localStored.name} on this device.` : `Stored ${localStored.name} on this device.`)
   }
 
+  const fieldSaveBusyRef = useRef(false)
+  const storeCurrentField = async (saveAsNew = false) => {
+    if (!fieldsHydrated || fieldSaveBusyRef.current || isAnalyzing) return
+    fieldSaveBusyRef.current = true
+    setSavingField(true)
+    try { await persistCurrentField(saveAsNew) }
+    finally { fieldSaveBusyRef.current = false; setSavingField(false) }
+  }
+
   const loadStoredField = (stored: StoredField) => {
+    if (isAnalyzing || savingField) return
+    activeFieldRef.current = stored.field_context_id || stored.id
+    historyRequestRef.current += 1
+    setScenarioId('')
+    setFieldEventSummary('')
+    setFieldEventOccurredAt('')
+    setFieldCorrectionTarget('')
+    setFieldEventType('observation')
+    setFieldTab('details')
     regionalLookupRequestRef.current += 1
     const storedFieldId = stored.field_context_id || stored.id
-    const fieldConversationKey = storedFieldConversationKey(storedFieldId)
+    const fieldConversationKey = selectedConversation(storedFieldConversationKey(storedFieldId))
+    if (fieldConversationKey !== activeFieldConversationKey) setMessage('')
     const matchingSession = sessionForField(sessions, fieldConversationKey, storedFieldId)
     setActiveFieldContextId(storedFieldId)
     persistActiveStoredFieldId(storedFieldId)
@@ -2904,7 +2979,7 @@ export function OpenAgronomyApp() {
     setSelectedUploadFeatureId('')
     setGeoPriors(stored.geoPriors || null)
     setBoundaryStatus(`Loaded ${stored.name}.`)
-    setMapMode(stored.geometry.kind === 'polygon' ? 'edit' : 'inspect')
+    setMapMode('inspect')
   }
 
   useEffect(() => {
@@ -2921,6 +2996,7 @@ export function OpenAgronomyApp() {
     )
     if (!stored) {
       persistActiveStoredFieldId('')
+      setActiveFieldConversationKey(selectedConversation('general'))
       return
     }
     loadStoredField(stored)
@@ -3047,7 +3123,8 @@ export function OpenAgronomyApp() {
   }
 
   useEffect(() => {
-    const scenario = sampleProfiles.find((sample) => sample.id === scenarioId) || sampleProfiles[0]
+    const scenario = sampleProfiles.find((sample) => sample.id === scenarioId)
+    if (!scenario || activeFieldContextId) return
     const geometry = geometryForScenario(scenario)
     if (geometry.kind !== 'none') {
       void lookupRegionalContext(geometry, scenario)
@@ -3057,7 +3134,7 @@ export function OpenAgronomyApp() {
   useEffect(() => {
     const requestId = agroclimateRequestRef.current + 1
     agroclimateRequestRef.current = requestId
-    if (!geoPriors || !geometryReady || !isCanadianJurisdiction(field.jurisdiction)) {
+    if (networkMode !== 'online' || !geoPriors || !geometryReady || !isCanadianJurisdiction(field.jurisdiction)) {
       setAgroclimate({ status: 'idle' })
       return
     }
@@ -3089,12 +3166,12 @@ export function OpenAgronomyApp() {
         })
       }
     })()
-  }, [agroclimateRefresh, field.crop, field.jurisdiction, fieldGeometry, geoPriors, geometryReady])
+  }, [networkMode, agroclimateRefresh, field.crop, field.jurisdiction, fieldGeometry, geoPriors, geometryReady])
 
   useEffect(() => {
     const requestId = nasaPowerRequestRef.current + 1
     nasaPowerRequestRef.current = requestId
-    if (!committedWeatherPoint) {
+    if (networkMode !== 'online' || !committedWeatherPoint) {
       setNasaPower({ status: 'idle' })
       return
     }
@@ -3111,7 +3188,7 @@ export function OpenAgronomyApp() {
           parameters: ['T2M', 'PRECTOTCORR', 'WS2M'],
         })
         if (requestId !== nasaPowerRequestRef.current) return
-        setNasaPower({ status: 'available', payload })
+        setNasaPower({ status: powerCoverage(payload).status, payload, message: powerCoverage(payload).hasData ? undefined : 'No usable weather observations have been published for this window yet.' })
       } catch (err) {
         if (requestId !== nasaPowerRequestRef.current) return
         setNasaPower({
@@ -3120,7 +3197,7 @@ export function OpenAgronomyApp() {
         })
       }
     })()
-  }, [committedWeatherPoint?.lat, committedWeatherPoint?.lon, nasaPowerRefresh])
+  }, [networkMode, committedWeatherPoint?.lat, committedWeatherPoint?.lon, nasaPowerRefresh])
 
   const selectUploadedFeature = async (featureId: string) => {
     const feature = uploadFeatureById(uploadContext, featureId)
@@ -3147,6 +3224,55 @@ export function OpenAgronomyApp() {
     setGeoPriors(null)
     await lookupRegionalContext(geometry)
   }
+
+  const createFieldFromDraft = async (draft: NewFieldDraft) => {
+    if (!fieldsHydrated) throw new Error('Field storage is still connecting. Please wait before saving.')
+    const sourceBoundary = 'User-entered location. Calculated area and regional maps are context, not a survey or field measurement.'
+    const payload = { name: draft.name, field: { crop: draft.crop, region: draft.region, jurisdiction: draft.jurisdiction,
+      concern: draft.concern, acres: draft.acres, notes: draft.notes }, geometry: draft.geometry, regionalContext: '', geoPriors: null, sourceBoundary }
+    let saved: StoredField
+    if (fieldStorageMode === 'account_workspace') {
+      saved = (await apiPost<DemoFieldSavedResponse>('/api/demo/fields', payload)).field
+    } else {
+      saved = { ...draft, id: globalThis.crypto?.randomUUID?.() || `local-${Date.now()}`, createdAt: new Date().toISOString(),
+        storageMode: 'device', regionalContext: '', geoPriors: null, sourceBoundary }
+    }
+    setStoredFields(current => [saved, ...current])
+    loadStoredField(saved)
+    setNewFieldOpen(false)
+    navigateToPage('analyze')
+    setWorkspaceView('split')
+    // Geometry priors remain separate from the supplied facts, and may be unavailable.
+    void lookupRegionalContext(draft.geometry, { ...draft })
+  }
+
+  const retrieveConversation = async (id: string) => {
+    const requestId = ++conversationRequestRef.current
+    setLoadingConversation(true)
+    try {
+      const session = await apiGet<SessionRecord>(`/api/sessions/${encodeURIComponent(id)}`)
+      if (requestId !== conversationRequestRef.current || activeSessionRef.current !== id) return
+      const hydrated = { ...session, turns_included: true }
+      setTurns(hydrated.turns || [])
+      setSessions(current => current.map(item => item.session_id === id ? hydrated : item))
+      setError('')
+    } catch (cause) {
+      if (requestId === conversationRequestRef.current && activeSessionRef.current === id) setError((cause as Error).message)
+    } finally {
+      if (requestId === conversationRequestRef.current && activeSessionRef.current === id) setLoadingConversation(false)
+    }
+  }
+
+  const refreshConversation = async () => {
+    if (sessionId && !isAnalyzing) await retrieveConversation(sessionId)
+  }
+
+  useEffect(() => {
+    conversationRequestRef.current += 1
+    setLoadingConversation(false)
+    if (sessionId && sessions.find(item => item.session_id === sessionId)?.turns_included === false) void retrieveConversation(sessionId)
+    return () => { conversationRequestRef.current += 1 }
+  }, [sessionId])
 
   const reviewerExportMarkdown = (generatedAt: string): string | null => {
     if (!evidenceTurn) {
@@ -3225,16 +3351,30 @@ export function OpenAgronomyApp() {
   }, [fieldLibraryQuery, fieldLibrarySort, storedFields])
 
   return (
-    <main className="demo-app">
+    <main className="demo-app workspace-shell" data-page={page}>
+      <WorkspacePerformancePanel />
       <DemoHeader page={page} setPage={navigateToPage} answerCapability={answerCapability} />
+      <div className="workspace-content">
+      <header className="workspace-topbar">
+        <div><span className="eyebrow">{page === 'analyze' ? 'YOUR WORKSPACE' : page === 'fields' ? 'FIELD LIBRARY' : page === 'sources' ? 'KNOWLEDGE & DATA' : 'OPEN AGRONOMY'}</span>
+          <h1>{page === 'analyze' ? (fieldName || 'A clearer view of your field.') : page === 'fields' ? 'My fields' : page === 'sources' ? 'Bring your evidence.' : page === 'evidence' ? 'Behind the answer' : page === 'benchmarks' ? 'Research & benchmarks' : page === 'privacy' ? 'Privacy & data' : 'About Open Agronomy'}</h1>
+        </div>
+        {page === 'analyze' || page === 'fields' ? <button className="primary-button" type="button" onClick={() => setNewFieldOpen(true)} disabled={!fieldsHydrated || isAnalyzing || savingField}><Plus size={17} /> Add field</button> : null}
+      </header>
+      {page === 'analyze' ? <div className="workspace-context-toolbar">
+        <label className="active-field-select"><MapPin size={16} /><span className="sr-only">Active field</span><select aria-label="Active field" value={activeFieldContextId || (scenarioId ? `sample:${scenarioId}` : '')} disabled={!fieldsHydrated || isAnalyzing || savingField} onChange={event => {
+          if (event.target.value.startsWith('sample:')) { applyScenario(event.target.value.slice(7)); return }
+          const selected = storedFields.find(item => (item.field_context_id || item.id) === event.target.value)
+          if (selected) loadStoredField(selected)
+          else startNewField()
+        }}><option value="">General question · no field selected</option>{storedFields.map(item => <option key={item.id} value={item.field_context_id || item.id}>{item.name}</option>)}<optgroup label="Demonstration fields">{sampleProfiles.map(sample => <option key={sample.id} value={`sample:${sample.id}`}>{sample.name} · example</option>)}</optgroup></select></label>
+        {scenarioId ? <span className="example-badge">Demonstration data</span> : null}
+        <div className="workspace-view-switch" role="group" aria-label="Workspace view">{(['chat', 'split', 'map'] as const).map(view => <button key={view} type="button" className={`view-${view}`} aria-pressed={(workspaceView === 'split' && !wideWorkspace ? 'chat' : workspaceView) === view} onClick={() => setWorkspaceView(view)}>{view === 'chat' ? 'Conversation' : view === 'map' ? 'Map' : 'Together'}</button>)}</div>
+      </div> : null}
       {error ? <div className="demo-alert" role="alert">{error}</div> : null}
 
       {page === 'analyze' || page === 'fields' ? (
-        <div className={`map-workspace ${page === 'fields' ? 'fields-workspace' : 'analyze-workspace'}`}>
-          {page === 'analyze' ? <nav className="mobile-workspace-tabs" aria-label="Mobile map workflow">
-            <a href="#map-panel">Map</a>
-            <a href="#chat-panel">Ask</a>
-          </nav> : null}
+        <div className={`map-workspace ${page === 'fields' ? 'fields-workspace' : `analyze-workspace view-${workspaceView}`}`}>
           {page === 'fields' ? (
           <aside id="field-context-panel" className="field-panel" aria-label="Field context">
             <section className="field-library" aria-labelledby="field-library-heading">
@@ -3266,7 +3406,7 @@ export function OpenAgronomyApp() {
                   <option value="region">Region</option>
                 </select>
               </div>
-              <button type="button" className="map-primary-action new-field-action" onClick={startNewField}>
+              <button type="button" className="map-primary-action new-field-action" onClick={() => setNewFieldOpen(true)} disabled={!fieldsHydrated || isAnalyzing}>
                 <MapPin size={16} /> New field
               </button>
               {visibleStoredFields.length === 0 ? (
@@ -3294,7 +3434,7 @@ export function OpenAgronomyApp() {
                             <button type="button" onClick={() => setRenamingFieldId('')}>Cancel</button>
                           </div>
                         ) : (
-                          <button type="button" className="field-library-load" onClick={() => loadStoredField(stored)}>
+                          <button type="button" className="field-library-load" disabled={!fieldsHydrated || isAnalyzing || savingField} onClick={() => loadStoredField(stored)}>
                             <strong>{stored.name}</strong>
                             <span>{[stored.crop, stored.region || stored.jurisdiction].filter(Boolean).join(' · ') || stored.regionalContext}</span>
                             <small>{active ? 'Active field' : `Updated ${new Date(stored.updatedAt || stored.createdAt).toLocaleDateString()}`}</small>
@@ -3320,7 +3460,7 @@ export function OpenAgronomyApp() {
                             className="icon-button danger"
                             title={`Delete ${stored.name}`}
                             aria-label={`Delete ${stored.name}`}
-                            onClick={() => void deleteStoredField(stored.id)}
+                            disabled={!fieldsHydrated || isAnalyzing || savingField} onClick={() => setDeleteTarget(stored)}
                           >
                             <Eraser size={15} />
                           </button>
@@ -3331,18 +3471,23 @@ export function OpenAgronomyApp() {
                 </div>
               )}
             </section>
+            <div className="field-detail-workspace">
+            <div className="field-detail-tabs" role="group" aria-label="Field information">
+              {(['details', 'records', 'context'] as const).map(tab => <button type="button" key={tab} aria-pressed={fieldTab === tab} onClick={() => setFieldTab(tab)}>{tab === 'details' ? 'Overview' : tab === 'records' ? 'Records & soil tests' : 'Map context'}</button>)}
+            </div>
+            <fieldset className="field-details-form" disabled={!fieldsHydrated || isAnalyzing || savingField} hidden={fieldTab !== 'details'}>
             <div className="workspace-panel-heading">
               <div>
                 <span className="panel-kicker">Field</span>
                 <h2>{activeFieldContextId ? 'Edit field' : 'New field setup'}</h2>
               </div>
               <span className={`context-state ${geometryReady ? 'ready' : 'pending'}`}>
-                {activeFieldContextId ? 'Saved field' : fieldGeometry.kind === 'none' ? 'Add a boundary' : geometryReady ? 'Ready to save' : 'Fix geometry'}
+                {activeFieldContextId ? 'Saved field' : scenarioId ? 'Example · not saved' : fieldGeometry.kind === 'none' ? 'Add a boundary' : geometryReady ? 'Ready to save' : 'Fix geometry'}
               </span>
             </div>
-            <p className="field-workflow-hint">1. Add details  2. Draw or upload the boundary  3. Save edits to refresh map context  4. Save the field</p>
+            <p className="field-workflow-hint">{activeFieldContextId ? "Keep the details that matter. Add measurements in Records & soil tests." : "Add a field to start a private record, or explore an example below."}</p>
             {!geometryReady ? (
-              <button type="button" className="field-copy-action field-draw-action" onClick={() => navigateToPage('analyze')}>
+              <button type="button" className="field-copy-action field-draw-action" onClick={() => { navigateToPage('analyze'); setWorkspaceView('map'); beginGeometryEdit('boundary') }}>
                 <MapPin size={15} /> Draw boundary on map
               </button>
             ) : null}
@@ -3351,6 +3496,7 @@ export function OpenAgronomyApp() {
               <label>
                 Example
                 <select value={scenarioId} onChange={(event) => applyScenario(event.target.value)}>
+                  <option value="" disabled>Choose an example</option>
                   {sampleProfiles.map((sample) => (
                     <option key={sample.id} value={sample.id}>
                       {sample.name}
@@ -3478,6 +3624,9 @@ export function OpenAgronomyApp() {
                 </button>
               ) : null}
             </div>
+            </fieldset>
+            <section hidden={fieldTab !== 'context'} className="field-context-content">
+            {!geoPriors ? <div className="quiet-empty"><Layers3 size={24} /><h3>Regional context, when available.</h3><p>Add a location, then check the map layers. These are regional priors, not field samples.</p></div> : null}
             {geoPriors ? (
               <details className="workspace-disclosure regional-context-disclosure">
                 <summary>
@@ -3599,6 +3748,8 @@ export function OpenAgronomyApp() {
                 area={field.jurisdiction}
               />
             </Suspense>
+            </section>
+            <section hidden={fieldTab !== 'records'} className="field-records-content">
             <details className="workspace-disclosure local-field-notes">
               <summary><Pencil size={16} /> Offline field notes</summary>
               <p>Stored only on this device. These notes are not synced, sent to the model, or included in reports until you copy them into a field record or question.</p>
@@ -3836,16 +3987,18 @@ export function OpenAgronomyApp() {
                 </small>
               ) : null}
             </section>
+            </section>
+            </div>
           </aside>
           ) : null}
 
           {page === 'analyze' ? (
           <>
-          <section id="map-panel" className="map-stage" aria-label="Map">
+          {(workspaceView === 'map' || (workspaceView === 'split' && wideWorkspace)) ? <section id="map-panel" className="map-stage" aria-label="Map">
             <div className="map-toolbar">
               <div>
-                <strong>{field.crop || 'Field'} analysis</strong>
-                <span>{field.region || 'Unknown region'} · {field.jurisdiction || 'Unknown jurisdiction'}</span>
+                <strong>{fieldName || 'Field map'}</strong>
+                <span>{[field.region, field.jurisdiction].filter(Boolean).join(' · ') || 'A location adds context to your questions.'}</span>
               </div>
               <div className="map-actions" aria-label="Map tools">
                 {isEditingGeometry ? (
@@ -3863,16 +4016,16 @@ export function OpenAgronomyApp() {
                     </button>
                   </div>
                 ) : null}
-                {committedWeatherPoint ? (
-                  <details className="map-weather-pill">
+                {committedWeatherPoint && networkMode === 'online' ? (
+                  <details className="map-weather-pill" data-workspace-menu>
                     <summary aria-label="NASA POWER field weather" title="Recent NASA POWER gridded weather">
                       <CloudSun size={16} />
                       <span>NASA POWER</span>
                       {nasaPower.status === 'loading' ? (
                         <small>loading</small>
-                      ) : nasaPower.status === 'available' ? (
+                      ) : nasaCoverage.hasData ? (
                         <small data-testid="map-nasa-power-summary">
-                          {powerMetricValue(nasaPower.payload?.parameter_summary?.PRECTOTCORR, 'sum')} mm · {powerMetricValue(nasaPower.payload?.parameter_summary?.WS2M, 'mean')} m/s
+                          {nasaPower.status === 'partial_available' ? `${nasaCoverage.observed}/${nasaCoverage.requested} days · ` : ''}{powerMetricValue(nasaPower.payload?.parameter_summary?.PRECTOTCORR, 'sum')} mm · {powerMetricValue(nasaPower.payload?.parameter_summary?.WS2M, 'mean')} m/s
                         </small>
                       ) : (
                         <small>unavailable</small>
@@ -3882,7 +4035,7 @@ export function OpenAgronomyApp() {
                       <div className="map-weather-heading">
                         <div>
                           <strong>Recent gridded weather</strong>
-                          <span>3-day point summary</span>
+                          <span>{nasaCoverage.label}</span>
                         </div>
                         <button
                           type="button"
@@ -3895,14 +4048,16 @@ export function OpenAgronomyApp() {
                           <RefreshCw size={15} className={nasaPower.status === 'loading' ? 'spin' : ''} />
                         </button>
                       </div>
-                      {nasaPower.status === 'available' ? (
+                      {nasaCoverage.hasData ? (
                         <>
                           <div className="map-weather-metrics">
-                            <div><span>Mean air temp.</span><strong>{powerMetricValue(nasaPower.payload?.parameter_summary?.T2M, 'mean')} °C</strong></div>
-                            <div><span>Precipitation</span><strong>{powerMetricValue(nasaPower.payload?.parameter_summary?.PRECTOTCORR, 'sum')} mm</strong></div>
-                            <div><span>Mean wind</span><strong>{powerMetricValue(nasaPower.payload?.parameter_summary?.WS2M, 'mean')} m/s</strong></div>
+                            <div><span>Mean air temp.</span><strong>{powerMetricValue(nasaPower.payload?.parameter_summary?.T2M, 'mean')} °C</strong>{nasaPower.payload?.parameter_summary?.T2M?.days !== undefined ? <small>{nasaPower.payload.parameter_summary.T2M.days} observed {nasaPower.payload.parameter_summary.T2M.days === 1 ? 'day' : 'days'}</small> : null}</div>
+                            <div><span>Precipitation</span><strong>{powerMetricValue(nasaPower.payload?.parameter_summary?.PRECTOTCORR, 'sum')} mm</strong>{nasaPower.payload?.parameter_summary?.PRECTOTCORR?.days !== undefined ? <small>{nasaPower.payload.parameter_summary.PRECTOTCORR.days} observed {nasaPower.payload.parameter_summary.PRECTOTCORR.days === 1 ? 'day' : 'days'}</small> : null}</div>
+                            <div><span>Mean wind</span><strong>{powerMetricValue(nasaPower.payload?.parameter_summary?.WS2M, 'mean')} m/s</strong>{nasaPower.payload?.parameter_summary?.WS2M?.days !== undefined ? <small>{nasaPower.payload.parameter_summary.WS2M.days} observed {nasaPower.payload.parameter_summary.WS2M.days === 1 ? 'day' : 'days'}</small> : null}</div>
                           </div>
-                          <p>UTC {nasaPower.payload?.start}–{nasaPower.payload?.end}{nasaPower.payload?.cache_hit ? ' · local cache' : ''}</p>
+                          <p>{nasaCoverage.observationLabel}{nasaPower.payload?.cache_hit ? ' · local cache' : ''}</p>
+                          <p className="weather-request-window">Requested UTC {nasaPower.payload?.start}–{nasaPower.payload?.end}</p>
+                          {nasaPower.status === 'partial_available' ? <p className="weather-coverage-note">This is a partial window. Totals include only published observations.</p> : null}
                           <p>{nasaPower.payload?.boundary || 'NASA POWER is gridded weather context, not an on-field sensor.'}</p>
                           {nasaPower.payload?.source ? (
                             <a href={nasaPower.payload.source} target="_blank" rel="noreferrer">Official NASA POWER response</a>
@@ -3916,6 +4071,7 @@ export function OpenAgronomyApp() {
                 ) : null}
                 <details
                   className="map-advanced-tools map-field-tools"
+                  data-workspace-menu
                   open={fieldToolsOpen}
                   onToggle={(event) => setFieldToolsOpen((event.target as HTMLDetailsElement).open)}
                 >
@@ -3974,7 +4130,7 @@ export function OpenAgronomyApp() {
                 </details>
               </div>
             </div>
-            <Suspense
+            {mapGeometry.kind === 'none' && !isEditingGeometry ? <div className="map-start"><MapPin size={28} /><h3>Give your question a place.</h3><p>A pin is enough to start. Add a boundary whenever you’re ready.</p><button type="button" className="primary-button" disabled={!fieldsHydrated || isAnalyzing} onClick={() => setNewFieldOpen(true)}><Plus size={16} /> Add a field</button><button type="button" className="text-button" disabled={isAnalyzing} onClick={() => beginGeometryEdit('point')}>Use a temporary point</button></div> : <Suspense
               fallback={
                 <div className="leaflet-map-shell">
                   <div className="leaflet-map map-loading" aria-label="Loading field map">
@@ -3984,6 +4140,10 @@ export function OpenAgronomyApp() {
               }
             >
               <LeafletFieldMap
+                fieldKey={activeFieldContextId || scenarioId || 'general'}
+                allowNetwork={networkMode === 'online'}
+                onFinishBoundary={() => setMapMode('edit')}
+                onCancelDrawing={cancelGeometryEdits}
                 mode={mapMode}
                 scenarioId={scenarioId}
                 fieldLabel={`${field.crop || 'Field'} ${field.region || field.jurisdiction}`}
@@ -3993,12 +4153,12 @@ export function OpenAgronomyApp() {
                 onGeometryChange={onMapGeometryChange}
                 onStatusChange={onMapStatusChange}
               />
-            </Suspense>
+            </Suspense>}
             <div className="map-context-bar" aria-label="Current field context">
               <div>
                 <span aria-live="polite">{boundaryStatus}</span>
                 <strong>
-                  {geometrySummary(mapGeometry, activeScenario.geometry)}
+                  {geometrySummary(mapGeometry, 'No location selected')}
                   {isEditingGeometry
                     ? ' · draft changes'
                     : primaryGeoCandidate
@@ -4012,13 +4172,13 @@ export function OpenAgronomyApp() {
                 Open field details
               </button>
             </div>
-          </section>
+          </section> : null}
 
           <aside id="chat-panel" className="chat-panel" aria-label="Agronomy chat">
             <div className="chat-heading">
               <div>
                 <span className="panel-kicker">Agent</span>
-                <h2>Ask about this field</h2>
+                <h2>{fieldName ? 'Ask about this field' : 'Let’s work through it.'}</h2>
               </div>
               <span className={`agent-state ${isAnalyzing ? 'working' : 'ready'}`}>
                 {isAnalyzing ? status : 'Ready'}
@@ -4031,7 +4191,7 @@ export function OpenAgronomyApp() {
                 data-testid="reset-chat"
                 title="Start a fresh chat for this field"
               >
-                <Eraser size={15} /> Reset chat
+                <Plus size={15} /> New chat
               </button>
             </div>
             <div className={`network-answer-state ${answerCapability.state}`}>
@@ -4045,7 +4205,7 @@ export function OpenAgronomyApp() {
                       : 'Checking answer engine'}
               </strong>
               {answerCapability.state === 'notes_only' ? <span>{answerCapability.detail}</span> : null}
-              {!selectedModelReady ? <span>{selectedModelProfile?.local_detail || 'Selected local model is not installed.'}</span> : null}
+              {!selectedModelReady ? <details><summary>Model setup required</summary><span>{selectedModelProfile?.local_detail || 'Selected local model is not installed.'}</span></details> : null}
               {runtimeAccess === 'unavailable' ? (
                 <button
                   type="button"
@@ -4061,15 +4221,22 @@ export function OpenAgronomyApp() {
               ) : null}
             </div>
 
-            <div ref={conversationThreadRef} className="conversation-thread" aria-live="polite">
-              {turns.length === 0 && !isAnalyzing ? (
+            {loadingConversation ? <p role="status" className="conversation-loading">Loading saved conversation…</p> : null}
+            <div ref={conversationThreadRef} className="conversation-thread" aria-label="Conversation" onScroll={event => { const el = event.currentTarget; followConversationRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100 }}>
+              {turns.length > visibleTurnCount ? <button className="text-button" type="button" onClick={() => setVisibleTurnCount(count => count + 20)}>Show earlier messages</button> : null}
+              {turns.length === 0 && !isAnalyzing && !loadingConversation ? (
                 <div className="conversation-empty">
-                  <MessageSquareText size={24} />
-                  <strong>Start with a field question</strong>
-                  <p>Field context is included.</p>
+                  <span className="conversation-mark"><Sprout size={30} /></span>
+                  <span className="eyebrow">OBSERVE. QUESTION. UNDERSTAND.</span>
+                  <strong>{fieldName ? 'What are you seeing in the field?' : 'Good questions start here.'}</strong>
+                  <p>{fieldName ? 'Your saved field context travels with the conversation.' : 'Explore a question, bring a reference, or add a field. Start with what you know.'}</p>
+                  <div className="question-starters">
+                    {['What should a useful soil sample record include?', 'Convert 100 lb/ac to kg/ha.', 'How do I compare a weak patch with a healthy area?'].map(question => <button type="button" key={question} onClick={() => setMessage(question)}>{question}<ArrowUpRight size={16} /></button>)}
+                  </div>
+                  {!fieldName ? <button type="button" className="text-button" onClick={() => applyScenario(sampleProfiles[0].id)}>Explore an example field <ArrowUpRight size={14} /></button> : null}
                 </div>
               ) : null}
-              {turns.slice(-4).map((turn) => (
+              {turns.slice(-visibleTurnCount).map((turn) => (
                 <Fragment key={turn.turn_id}>
                   <article className="chat-message user-message">
                     <span>You</span>
@@ -4085,9 +4252,10 @@ export function OpenAgronomyApp() {
                       receipt={turn.trace?.metadata?.field_context_compiler as Record<string, unknown> | undefined}
                       onReviewEvidence={() => {
                         setEvidenceTurnId(turn.turn_id)
-                        navigateToPage('evidence')
+                        setEvidenceOpen(true)
                       }}
                     />
+                    <button type="button" className="answer-source-button" onClick={() => { setEvidenceTurnId(turn.turn_id); setEvidenceOpen(true) }}><BookOpen size={14} /> Sources & checks <ArrowUpRight size={13} /></button>
                   </article>
                 </Fragment>
               ))}
@@ -4106,37 +4274,20 @@ export function OpenAgronomyApp() {
               ) : null}
             </div>
 
-            {!isAnalyzing && latestTurn ? (
-              <section className="answer-receipt" aria-label="Latest answer receipt">
-                <div className="answer-receipt-summary">
-                  <div>
-                    <strong>Evidence and trace available</strong>
-                    <span>Sources, checks, context lineage, and technical receipts</span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEvidenceTurnId(latestTurn.turn_id)
-                    navigateToPage('evidence')
-                  }}
-                >
-                  Review evidence
-                </button>
-              </section>
-            ) : null}
-
             <form className="chat-composer" onSubmit={sendQuestion}>
               <textarea
                 aria-label="Ask about this field"
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
+                onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (!isAnalyzing && !loadingConversation && fieldsHydrated && message.trim() && answerCapability.canGenerateAnswer && selectedModelReady) event.currentTarget.form?.requestSubmit() } }}
                 disabled={isAnalyzing}
                 placeholder="Ask a field question, compare observations, or request an evidence check…"
-                rows={3}
+                rows={2}
               />
               <div className="composer-actions">
-                <details className="model-settings-disclosure">
+                <button type="button" className="composer-reference" onClick={() => navigateToPage('sources')}><Upload size={16} /> Add reference{privateKnowledge.length ? ` (${privateKnowledge.length})` : ''}</button>
+                {sessionId ? <button type="button" className="icon-button" aria-label="Refresh conversation" disabled={isAnalyzing} onClick={() => void refreshConversation()}><RefreshCw size={15} /></button> : null}
+                <details className="model-settings-disclosure" data-workspace-menu>
                   <summary title="Model settings" aria-label="Model settings"><Settings2 size={17} /></summary>
                   {modelProfiles.length > 0 ? (
                     <label className="model-profile-select">
@@ -4151,7 +4302,7 @@ export function OpenAgronomyApp() {
                     </label>
                   ) : <span>Local model profile</span>}
                 </details>
-                <button type="submit" disabled={isAnalyzing || !message.trim() || !answerCapability.canGenerateAnswer || !selectedModelReady}>
+                <button type="submit" disabled={isAnalyzing || loadingConversation || !fieldsHydrated || !message.trim() || !answerCapability.canGenerateAnswer || !selectedModelReady}>
                   <Send size={17} /> {isAnalyzing ? 'Working' : 'Ask'}
                 </button>
               </div>
@@ -4201,6 +4352,10 @@ export function OpenAgronomyApp() {
           <OpenAgronomyInfoPages page={page} />
         </Suspense>
       ) : null}
+      </div>
+      {newFieldOpen ? <Suspense fallback={<div role="status">Opening field setup…</div>}><FieldSetupDialog onClose={() => setNewFieldOpen(false)} onSave={createFieldFromDraft} allowNetwork={networkMode === 'online'} previousRegion={storedFields[0]} /></Suspense> : null}
+      {deleteTarget ? <WorkspaceDialog title="Delete field?" onClose={() => setDeleteTarget(null)}><div className="dialog-body"><p>Remove <strong>{deleteTarget.name}</strong> from your field library? Its historical answer records are retained by the server.</p><div className="dialog-actions"><button type="button" onClick={() => setDeleteTarget(null)}>Keep field</button><button type="button" className="danger" onClick={() => { void deleteStoredField(deleteTarget.id); setDeleteTarget(null) }}>Delete field</button></div></div></WorkspaceDialog> : null}
+      {evidenceOpen ? <WorkspaceDialog title="Sources & checks" onClose={() => setEvidenceOpen(false)} wide><EvidencePage latestTurn={evidenceTurn} docs={evidenceDocs} liveToolCards={evidenceLiveToolCards} mapEvidenceCards={evidenceMapCards} retrievedDocCount={evidenceRetrievedDocCount} sourceCheckSummary={evidenceSourceSummary} traceToolGroups={evidenceTraceGroups} adapterReadiness={adapterReadiness} onCopyReport={() => void copyReviewerReport()} onDownloadReport={downloadReviewerReport} /></WorkspaceDialog> : null}
     </main>
   )
 }
@@ -4218,10 +4373,10 @@ function DemoHeader({
   const primaryItems: Array<[Page, string]> = [
     ['analyze', 'Workspace'],
     ['fields', 'Fields'],
-    ['evidence', 'Evidence'],
+    ['sources', 'Data'],
   ]
   const secondaryItems: Array<[Page, string]> = [
-    ['sources', 'Sources'],
+    ['evidence', 'Evidence'],
     ['benchmarks', 'Benchmarks'],
     ['privacy', 'Privacy'],
     ['about', 'About'],
@@ -4233,8 +4388,8 @@ function DemoHeader({
   return (
     <header className="demo-header">
       <div className="brand-block">
-        <span>Open Agronomy Agent</span>
-        <strong>Field-aware agronomy answers with visible evidence</strong>
+        <div className="brand-symbol"><Sprout size={24} /></div><span>Open Agronomy<span className="brand-agent">AGENT WORKSPACE</span></span>
+        <strong>Grounded in evidence.<br />Built around your field.</strong>
         <small className={`network-mode-badge ${answerCapability.state}`}>
           {answerCapability.badge}
         </small>
@@ -4253,6 +4408,7 @@ function DemoHeader({
         ))}
         <details
           ref={morePagesRef}
+          data-workspace-menu
           className={`demo-nav-more ${secondaryItems.some(([id]) => page === id) ? 'active' : ''}`}
         >
           <summary aria-label="More pages">More</summary>
@@ -4462,7 +4618,7 @@ function EvidencePage({
         <h2>What the agent used</h2>
         <p>{latestTurn ? latestTurn.user_message : 'Run a question from the map page to populate this view.'}</p>
         {latestTurn ? (
-          <section className="answer-lineage-receipt" aria-label="Answer lineage">
+          <details className="answer-lineage-receipt" aria-label="Answer lineage"><summary>Technical receipt & export</summary>
             <div>
               <strong>Saved answer trace</strong>
               <span className={`lineage-state ${fieldLineage?.field_snapshot_sha256 ? 'verified' : 'legacy'}`}>
@@ -4545,7 +4701,7 @@ function EvidencePage({
               <button type="button" onClick={onCopyReport}>Copy review report</button>
               <button type="button" onClick={onDownloadReport}>Download .md</button>
             </div>
-          </section>
+          </details>
         ) : null}
         <EvidenceMetrics
           route={route}
@@ -4627,18 +4783,20 @@ function SourcesPage({
   onPrivateKnowledgeAdded: (inspection: PrivateKnowledgeInspection) => void
   onClearPrivateKnowledge: () => void
 }) {
+  const [dataTab, setDataTab] = useState<'references' | 'coverage' | 'connections'>('references')
   const [adapterReadiness, setAdapterReadiness] = useState<PublicAdapterReadiness>(fallbackAdapterReadiness)
   const [sourceStatus, setSourceStatus] = useState('Loading adapters')
   const [packageStatus, setPackageStatus] = useState('Update status unavailable')
 
   useEffect(() => {
+    if (dataTab !== 'connections') return
     let active = true
     apiGet<PublicAdapterReadiness>('/api/tools/public-adapter-readiness')
       .then((readiness) => {
         if (active) {
           setAdapterReadiness(readiness)
           setSourceStatus(
-            `${readiness.summary.ready_count || 0}/${readiness.summary.adapter_count || 0} source adapters ready`,
+            `${readiness.summary.ready_count || 0}/${readiness.summary.adapter_count || 0} source adapters configured`,
           )
         }
       })
@@ -4668,20 +4826,23 @@ function SourcesPage({
     return () => {
       active = false
     }
-  }, [])
+  }, [dataTab])
 
   return (
     <div className="sources-page">
-      <Suspense fallback={<section className="canadian-knowledge-coverage">Loading governed Canadian knowledge...</section>}>
+      <div className="field-detail-tabs" role="group" aria-label="Data views">{(['references', 'coverage', 'connections'] as const).map(tab => <button type="button" key={tab} aria-pressed={dataTab === tab} onClick={() => setDataTab(tab)}>{tab === 'references' ? 'My references' : tab === 'coverage' ? 'Public knowledge' : 'Connections'}</button>)}</div>
+      {dataTab === 'coverage' ? <Suspense fallback={<section className="canadian-knowledge-coverage">Loading governed Canadian knowledge...</section>}>
         <CanadianKnowledgeCoveragePanel />
-      </Suspense>
-      <Suspense fallback={<section className="source-private-knowledge">Loading private references...</section>}>
+      </Suspense> : null}
+      {dataTab === 'references' ? <Suspense fallback={<section className="source-private-knowledge">Loading private references...</section>}>
         <PrivateKnowledgePanel
           privateKnowledge={privateKnowledge}
           onAdded={onPrivateKnowledgeAdded}
           onClear={onClearPrivateKnowledge}
         />
-      </Suspense>
+      </Suspense> : null}
+      {dataTab === 'references' ? <section className="data-next-step"><Database size={22} /><div><h3>Build on your own knowledge.</h3><p>For a lasting shared corpus, the ingestion tools preserve source rights, versioned data, and retrieval policy.</p><a href="https://tknecht4.github.io/open_agronomy_agent/knowledge-and-data/" target="_blank" rel="noreferrer">Explore governed data ingestion <ArrowUpRight size={13} /></a></div></section> : null}
+      {dataTab === 'connections' ? <>
       <section className="source-coverage-hero">
         <div className="panel-kicker">Source system checks</div>
         <h2>Private and public sources</h2>
@@ -4691,9 +4852,12 @@ function SourcesPage({
           <CapabilityReadinessStatus />
         </div>
       </section>
-      <PublicAdapterReadinessPanel readiness={adapterReadiness} compact />
-      <CredentialPreflightPanel readiness={adapterReadiness} />
-      <p className="source-boundary-panel">{adapterReadiness.boundary}</p>
+      <details className="workspace-disclosure source-diagnostics"><summary>Connection & adapter diagnostics</summary>
+        <PublicAdapterReadinessPanel readiness={adapterReadiness} compact />
+        <CredentialPreflightPanel readiness={adapterReadiness} />
+        <p className="source-boundary-panel">{adapterReadiness.boundary}</p>
+      </details>
+      </> : null}
     </div>
   )
 }

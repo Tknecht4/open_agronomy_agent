@@ -3,6 +3,7 @@ import {
   PHASE6_FRONTEND_EVENT_NAMES,
   PHASE6_TELEMETRY_FAILURE_EVENT,
   configureFrontendRum,
+  installFrontendRum,
   rateRumMetric,
   rumBudgetStatus,
   sendFrontendEvent,
@@ -41,6 +42,31 @@ describe('frontend RUM', () => {
       target: 1,
       area: 'local model preview',
     })
+  })
+
+  it('does not emit synthetic TTI or label a small event sample as INP', () => {
+    const callbacks = new Map<string, PerformanceObserverCallback>()
+    class FakeObserver {
+      static supportedEntryTypes = ['largest-contentful-paint', 'layout-shift', 'event']
+      constructor(private callback: PerformanceObserverCallback) {}
+      observe(options: PerformanceObserverInit) { callbacks.set(String(options.type), this.callback) }
+      disconnect() {}
+    }
+    vi.stubGlobal('PerformanceObserver', FakeObserver)
+    const fetchMock = vi.fn(async (_url: string, _init: RequestInit) => ({ ok: true }))
+    vi.stubGlobal('fetch', fetchMock)
+    const stop = installFrontendRum()
+    const entries = [
+      { startTime: 100, value: 0.06, hadRecentInput: false },
+      { startTime: 300, value: 0.04, hadRecentInput: false },
+      { startTime: 7000, value: 0.03, hadRecentInput: false },
+    ]
+    callbacks.get('layout-shift')?.({ getEntries: () => entries as unknown as PerformanceEntry[] } as PerformanceObserverEntryList, {} as PerformanceObserver)
+    window.dispatchEvent(new Event('pagehide'))
+    const payloads = fetchMock.mock.calls.map(([, init]) => JSON.parse(String((init as RequestInit).body)))
+    expect(payloads).toEqual([expect.objectContaining({ metric_name: 'CLS', value: 0.1 })])
+    expect(callbacks.has('event')).toBe(false)
+    stop()
   })
 
   it('sends redacted route and workspace context without blocking render', () => {

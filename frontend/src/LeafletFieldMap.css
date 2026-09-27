@@ -1,0 +1,66 @@
+.leaflet-fit-field {
+  position: absolute;
+  z-index: 500;
+  top: 14px;
+  left: 14px;
+  border: 1px solid #526959;
+  border-radius: 9px;
+  padding: 8px 12px;
+  color: #213129;
+  background: #fffdfa;
+  box-shadow: 0 3px 12px rgb(0 0 0 / 18%);
+  font: 700 13px/1.2 system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.leaflet-offline-label {
+  position: absolute;
+  z-index: 500;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(320px, calc(100% - 120px));
+  border-radius: 9px;
+  padding: 8px 10px;
+  color: #213129;
+  background: rgb(255 253 250 / 94%);
+  box-shadow: 0 3px 12px rgb(0 0 0 / 18%);
+  font: 700 12px/1.25 system-ui, sans-serif;
+  text-align: center;
+}
+
+.leaflet-mode-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  border-radius: 12px;
+  line-height: 1.35;
+}
+
+.leaflet-drawing-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.leaflet-mode-hint button {
+  border: 1px solid #526959;
+  border-radius: 7px;
+  padding: 6px 9px;
+  color: #213129;
+  background: #fffdfa;
+  font: 700 12px/1.2 system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.leaflet-mode-hint button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.leaflet-mode-hint button:focus-visible,
+.leaflet-fit-field:focus-visible {
+  outline: 3px solid #134f7c;
+  outline-offset: 2px;
+}

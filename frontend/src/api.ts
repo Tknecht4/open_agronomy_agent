@@ -8,7 +8,7 @@ const decode = async <T,>(response: Response): Promise<T> => {
   return response.json() as Promise<T>
 }
 
-const csrfHeaders = (): Record<string, string> => {
+export const csrfHeaders = (): Record<string, string> => {
   const match = document.cookie.match(/(?:^|;\s*)agronomy_csrf=([^;]+)/)
   return match ? { 'X-CSRF-Token': decodeURIComponent(match[1]) } : {}
 }

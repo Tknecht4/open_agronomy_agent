@@ -1,0 +1,712 @@
+{
+  "schema_version": "open_agronomy_agent.workspace_redesign_profile.v1",
+  "status": "development_diagnostic",
+  "claim_eligible": false,
+  "base_commit": "7a341115f48f568153d95f467933a3602b305281",
+  "source_hashes_at_report": {
+    "frontend/src/OpenAgronomyApp.tsx": "fb542b51119270666603b04fd7d55160d2647cc2f55feb2aee30709b7bdf2bff",
+    "frontend/src/LeafletFieldMap.tsx": "6159280fe3b220330b47c6fe70254fcebb130ab214026de6a40b78b6a64badf1",
+    "frontend/src/workspacePerformance.tsx": "970c797fe9ecd1b1bfbe72042ffe8a5572e7c136964774e835f1eebf39d778ed",
+    "src/agronomy_agent/server/app.py": "8ba35cd1c5e5de5e9e0c624c6611e6004ac96448d536bd786c83a7309ef91ea7",
+    "src/agronomy_agent/server/storage/db.py": "519b78a2878e7285d6fa83ede34d6558b139a00778f33a71bb3baf6f66ca5150",
+    "configs/model.yaml": "8cd880ac68b3631a4eccc11bd9716be3e1768b1a5d49653ac13acc7ec6aeba10",
+    "configs/rag.yaml": "8f45880dbadf368848d52251aaafb24e25b17d9baa7923aa7707f6880fc04b91"
+  },
+  "method": "Same browser tab, alternating main frontend plus identical opt-in instrumentation and redesigned production frontend, 3 pairs, same offline API and synthetic DB containing one field and two turns. Navigate Fields then Workspace. Cached assets; no throttling or device benchmark.",
+  "browser_summary": {
+    "baseline": {
+      "samples": 3,
+      "viewport_css": [
+        1440,
+        1000
+      ],
+      "fcp_median_ms": 92,
+      "lcp_median_ms": 92,
+      "api_fetch_count": [
+        12,
+        12,
+        12
+      ],
+      "api_decoded_bytes": [
+        429795,
+        429795,
+        429795
+      ],
+      "initial_script_decoded_bytes": [
+        556456,
+        556456,
+        556456
+      ],
+      "observed_interaction_max_ms": [
+        64,
+        48,
+        48
+      ],
+      "long_task_count": [
+        0,
+        0,
+        0
+      ],
+      "cls": [
+        0,
+        0,
+        0
+      ],
+      "errors": [
+        {
+          "script": 0,
+          "unhandled_rejection": 0,
+          "resource": 0
+        },
+        {
+          "script": 0,
+          "unhandled_rejection": 0,
+          "resource": 0
+        },
+        {
+          "script": 0,
+          "unhandled_rejection": 0,
+          "resource": 0
+        }
+      ]
+    },
+    "candidate": {
+      "samples": 3,
+      "viewport_css": [
+        1440,
+        1000
+      ],
+      "fcp_median_ms": 108,
+      "lcp_median_ms": 108,
+      "api_fetch_count": [
+        4,
+        4,
+        4
+      ],
+      "api_decoded_bytes": [
+        21157,
+        21157,
+        21157
+      ],
+      "initial_script_decoded_bytes": [
+        414061,
+        414061,
+        414061
+      ],
+      "observed_interaction_max_ms": [
+        64,
+        64,
+        48
+      ],
+      "long_task_count": [
+        0,
+        0,
+        0
+      ],
+      "cls": [
+        0,
+        0,
+        0
+      ],
+      "errors": [
+        {
+          "script": 0,
+          "unhandled_rejection": 0,
+          "resource": 0
+        },
+        {
+          "script": 0,
+          "unhandled_rejection": 0,
+          "resource": 0
+        },
+        {
+          "script": 0,
+          "unhandled_rejection": 0,
+          "resource": 0
+        }
+      ]
+    }
+  },
+  "browser_raw_samples": [
+    {
+      "side": "baseline",
+      "run": 1,
+      "profile": {
+        "schema": "open-agronomy.local-performance.v1",
+        "captured_at": "2026-09-27T03:12:30.762Z",
+        "environment": {
+          "mode": "production",
+          "viewport_width": 1440,
+          "viewport_height": 1000,
+          "device_pixel_ratio": 2.3499999046325684,
+          "user_agent_family": "Chrome"
+        },
+        "navigation": {
+          "duration_ms": 45.4,
+          "dom_content_loaded_ms": 35.5,
+          "response_end_ms": 8
+        },
+        "first_contentful_paint": {
+          "supported": true,
+          "value": 112
+        },
+        "largest_contentful_paint": {
+          "supported": true,
+          "value": 112
+        },
+        "cumulative_layout_shift": {
+          "supported": true,
+          "value": 0
+        },
+        "observed_interactions": {
+          "supported": true,
+          "count": 2,
+          "max_ms": 64
+        },
+        "long_tasks": {
+          "supported": true,
+          "count": 0,
+          "total_ms": 0,
+          "max_ms": null
+        },
+        "resources": {
+          "supported": true,
+          "buckets": {
+            "script": {
+              "count": 3,
+              "duration_ms": 6.9,
+              "transfer_bytes": 0,
+              "decoded_bytes": 556456
+            },
+            "link": {
+              "count": 2,
+              "duration_ms": 4.3,
+              "transfer_bytes": 0,
+              "decoded_bytes": 72827
+            },
+            "img": {
+              "count": 23,
+              "duration_ms": 158.3,
+              "transfer_bytes": 0,
+              "decoded_bytes": 0
+            },
+            "fetch": {
+              "count": 12,
+              "duration_ms": 336.5,
+              "transfer_bytes": 433395,
+              "decoded_bytes": 429795
+            }
+          }
+        },
+        "errors": {
+          "script": 0,
+          "unhandled_rejection": 0,
+          "resource": 0
+        },
+        "caveats": [
+          "Local opt-in observation only; no network telemetry is sent by this recorder.",
+          "Largest contentful paint and layout shift may change until pagehide.",
+          "Observed interaction durations are thresholded at 40 ms and are not INP.",
+          "Resource timings and transfer sizes may be unavailable or restricted by the browser."
+        ]
+      }
+    },
+    {
+      "side": "candidate",
+      "run": 1,
+      "profile": {
+        "schema": "open-agronomy.local-performance.v1",
+        "captured_at": "2026-09-27T03:12:31.612Z",
+        "environment": {
+          "mode": "production",
+          "viewport_width": 1440,
+          "viewport_height": 1000,
+          "device_pixel_ratio": 2.3499999046325684,
+          "user_agent_family": "Chrome"
+        },
+        "navigation": {
+          "duration_ms": 43.1,
+          "dom_content_loaded_ms": 33,
+          "response_end_ms": 6.5
+        },
+        "first_contentful_paint": {
+          "supported": true,
+          "value": 96
+        },
+        "largest_contentful_paint": {
+          "supported": true,
+          "value": 96
+        },
+        "cumulative_layout_shift": {
+          "supported": true,
+          "value": 0
+        },
+        "observed_interactions": {
+          "supported": true,
+          "count": 2,
+          "max_ms": 64
+        },
+        "long_tasks": {
+          "supported": true,
+          "count": 0,
+          "total_ms": 0,
+          "max_ms": null
+        },
+        "resources": {
+          "supported": true,
+          "buckets": {
+            "script": {
+              "count": 2,
+              "duration_ms": 4.8,
+              "transfer_bytes": 0,
+              "decoded_bytes": 414061
+            },
+            "link": {
+              "count": 1,
+              "duration_ms": 2.3,
+              "transfer_bytes": 0,
+              "decoded_bytes": 82764
+            },
+            "fetch": {
+              "count": 4,
+              "duration_ms": 55.2,
+              "transfer_bytes": 22357,
+              "decoded_bytes": 21157
+            }
+          }
+        },
+        "errors": {
+          "script": 0,
+          "unhandled_rejection": 0,
+          "resource": 0
+        },
+        "caveats": [
+          "Local opt-in observation only; no network telemetry is sent by this recorder.",
+          "Largest contentful paint and layout shift may change until pagehide.",
+          "Observed interaction durations are thresholded at 40 ms and are not INP.",
+          "Resource timings and transfer sizes may be unavailable or restricted by the browser."
+        ]
+      }
+    },
+    {
+      "side": "baseline",
+      "run": 2,
+      "profile": {
+        "schema": "open-agronomy.local-performance.v1",
+        "captured_at": "2026-09-27T03:12:32.496Z",
+        "environment": {
+          "mode": "production",
+          "viewport_width": 1440,
+          "viewport_height": 1000,
+          "device_pixel_ratio": 2.3499999046325684,
+          "user_agent_family": "Chrome"
+        },
+        "navigation": {
+          "duration_ms": 40.5,
+          "dom_content_loaded_ms": 29.6,
+          "response_end_ms": 4.9
+        },
+        "first_contentful_paint": {
+          "supported": true,
+          "value": 92
+        },
+        "largest_contentful_paint": {
+          "supported": true,
+          "value": 92
+        },
+        "cumulative_layout_shift": {
+          "supported": true,
+          "value": 0
+        },
+        "observed_interactions": {
+          "supported": true,
+          "count": 3,
+          "max_ms": 48
+        },
+        "long_tasks": {
+          "supported": true,
+          "count": 0,
+          "total_ms": 0,
+          "max_ms": null
+        },
+        "resources": {
+          "supported": true,
+          "buckets": {
+            "script": {
+              "count": 3,
+              "duration_ms": 4.1,
+              "transfer_bytes": 0,
+              "decoded_bytes": 556456
+            },
+            "link": {
+              "count": 2,
+              "duration_ms": 2.7,
+              "transfer_bytes": 0,
+              "decoded_bytes": 72827
+            },
+            "img": {
+              "count": 24,
+              "duration_ms": 180.8,
+              "transfer_bytes": 0,
+              "decoded_bytes": 0
+            },
+            "fetch": {
+              "count": 12,
+              "duration_ms": 381.9,
+              "transfer_bytes": 433395,
+              "decoded_bytes": 429795
+            }
+          }
+        },
+        "errors": {
+          "script": 0,
+          "unhandled_rejection": 0,
+          "resource": 0
+        },
+        "caveats": [
+          "Local opt-in observation only; no network telemetry is sent by this recorder.",
+          "Largest contentful paint and layout shift may change until pagehide.",
+          "Observed interaction durations are thresholded at 40 ms and are not INP.",
+          "Resource timings and transfer sizes may be unavailable or restricted by the browser."
+        ]
+      }
+    },
+    {
+      "side": "candidate",
+      "run": 2,
+      "profile": {
+        "schema": "open-agronomy.local-performance.v1",
+        "captured_at": "2026-09-27T03:12:33.282Z",
+        "environment": {
+          "mode": "production",
+          "viewport_width": 1440,
+          "viewport_height": 1000,
+          "device_pixel_ratio": 2.3499999046325684,
+          "user_agent_family": "Chrome"
+        },
+        "navigation": {
+          "duration_ms": 49.8,
+          "dom_content_loaded_ms": 38.9,
+          "response_end_ms": 6.2
+        },
+        "first_contentful_paint": {
+          "supported": true,
+          "value": 108
+        },
+        "largest_contentful_paint": {
+          "supported": true,
+          "value": 108
+        },
+        "cumulative_layout_shift": {
+          "supported": true,
+          "value": 0
+        },
+        "observed_interactions": {
+          "supported": true,
+          "count": 2,
+          "max_ms": 64
+        },
+        "long_tasks": {
+          "supported": true,
+          "count": 0,
+          "total_ms": 0,
+          "max_ms": null
+        },
+        "resources": {
+          "supported": true,
+          "buckets": {
+            "script": {
+              "count": 2,
+              "duration_ms": 4.1,
+              "transfer_bytes": 0,
+              "decoded_bytes": 414061
+            },
+            "link": {
+              "count": 1,
+              "duration_ms": 1.9,
+              "transfer_bytes": 0,
+              "decoded_bytes": 82764
+            },
+            "fetch": {
+              "count": 4,
+              "duration_ms": 59.7,
+              "transfer_bytes": 22357,
+              "decoded_bytes": 21157
+            }
+          }
+        },
+        "errors": {
+          "script": 0,
+          "unhandled_rejection": 0,
+          "resource": 0
+        },
+        "caveats": [
+          "Local opt-in observation only; no network telemetry is sent by this recorder.",
+          "Largest contentful paint and layout shift may change until pagehide.",
+          "Observed interaction durations are thresholded at 40 ms and are not INP.",
+          "Resource timings and transfer sizes may be unavailable or restricted by the browser."
+        ]
+      }
+    },
+    {
+      "side": "baseline",
+      "run": 3,
+      "profile": {
+        "schema": "open-agronomy.local-performance.v1",
+        "captured_at": "2026-09-27T03:12:34.161Z",
+        "environment": {
+          "mode": "production",
+          "viewport_width": 1440,
+          "viewport_height": 1000,
+          "device_pixel_ratio": 2.3499999046325684,
+          "user_agent_family": "Chrome"
+        },
+        "navigation": {
+          "duration_ms": 44.8,
+          "dom_content_loaded_ms": 34.8,
+          "response_end_ms": 6.1
+        },
+        "first_contentful_paint": {
+          "supported": true,
+          "value": 92
+        },
+        "largest_contentful_paint": {
+          "supported": true,
+          "value": 92
+        },
+        "cumulative_layout_shift": {
+          "supported": true,
+          "value": 0
+        },
+        "observed_interactions": {
+          "supported": true,
+          "count": 2,
+          "max_ms": 48
+        },
+        "long_tasks": {
+          "supported": true,
+          "count": 0,
+          "total_ms": 0,
+          "max_ms": null
+        },
+        "resources": {
+          "supported": true,
+          "buckets": {
+            "script": {
+              "count": 3,
+              "duration_ms": 4.8,
+              "transfer_bytes": 0,
+              "decoded_bytes": 556456
+            },
+            "link": {
+              "count": 2,
+              "duration_ms": 3,
+              "transfer_bytes": 0,
+              "decoded_bytes": 72827
+            },
+            "img": {
+              "count": 25,
+              "duration_ms": 176.2,
+              "transfer_bytes": 0,
+              "decoded_bytes": 0
+            },
+            "fetch": {
+              "count": 12,
+              "duration_ms": 415.3,
+              "transfer_bytes": 433395,
+              "decoded_bytes": 429795
+            }
+          }
+        },
+        "errors": {
+          "script": 0,
+          "unhandled_rejection": 0,
+          "resource": 0
+        },
+        "caveats": [
+          "Local opt-in observation only; no network telemetry is sent by this recorder.",
+          "Largest contentful paint and layout shift may change until pagehide.",
+          "Observed interaction durations are thresholded at 40 ms and are not INP.",
+          "Resource timings and transfer sizes may be unavailable or restricted by the browser."
+        ]
+      }
+    },
+    {
+      "side": "candidate",
+      "run": 3,
+      "profile": {
+        "schema": "open-agronomy.local-performance.v1",
+        "captured_at": "2026-09-27T03:12:34.976Z",
+        "environment": {
+          "mode": "production",
+          "viewport_width": 1440,
+          "viewport_height": 1000,
+          "device_pixel_ratio": 2.3499999046325684,
+          "user_agent_family": "Chrome"
+        },
+        "navigation": {
+          "duration_ms": 42.8,
+          "dom_content_loaded_ms": 32.4,
+          "response_end_ms": 5.5
+        },
+        "first_contentful_paint": {
+          "supported": true,
+          "value": 108
+        },
+        "largest_contentful_paint": {
+          "supported": true,
+          "value": 108
+        },
+        "cumulative_layout_shift": {
+          "supported": true,
+          "value": 0
+        },
+        "observed_interactions": {
+          "supported": true,
+          "count": 2,
+          "max_ms": 48
+        },
+        "long_tasks": {
+          "supported": true,
+          "count": 0,
+          "total_ms": 0,
+          "max_ms": null
+        },
+        "resources": {
+          "supported": true,
+          "buckets": {
+            "script": {
+              "count": 2,
+              "duration_ms": 2,
+              "transfer_bytes": 0,
+              "decoded_bytes": 414061
+            },
+            "link": {
+              "count": 1,
+              "duration_ms": 1,
+              "transfer_bytes": 0,
+              "decoded_bytes": 82764
+            },
+            "fetch": {
+              "count": 4,
+              "duration_ms": 53,
+              "transfer_bytes": 22357,
+              "decoded_bytes": 21157
+            }
+          }
+        },
+        "errors": {
+          "script": 0,
+          "unhandled_rejection": 0,
+          "resource": 0
+        },
+        "caveats": [
+          "Local opt-in observation only; no network telemetry is sent by this recorder.",
+          "Largest contentful paint and layout shift may change until pagehide.",
+          "Observed interaction durations are thresholded at 40 ms and are not INP.",
+          "Resource timings and transfer sizes may be unavailable or restricted by the browser."
+        ]
+      }
+    }
+  ],
+  "session_summary": {
+    "app_sha256": "8ba35cd1c5e5de5e9e0c624c6611e6004ac96448d536bd786c83a7309ef91ea7",
+    "cells": {
+      "full": {
+        "elapsed_ms": [
+          3.509,
+          3.358,
+          3.581,
+          3.338,
+          3.142
+        ],
+        "full_turn_loads": [
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        "median_ms": 3.358,
+        "response_bytes": [
+          305483,
+          305483,
+          305483,
+          305483,
+          305483
+        ]
+      },
+      "summary": {
+        "elapsed_ms": [
+          1.723,
+          1.559,
+          1.64,
+          2.455,
+          1.997
+        ],
+        "full_turn_loads": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "median_ms": 1.723,
+        "response_bytes": [
+          1211,
+          1211,
+          1211,
+          1211,
+          1211
+        ]
+      }
+    },
+    "padding_chars_per_turn": 150000,
+    "schema_version": "open_agronomy_agent.session_summary_profile.v1",
+    "sessions": 2,
+    "storage_sha256": "519b78a2878e7285d6fa83ede34d6558b139a00778f33a71bb3baf6f66ca5150",
+    "synthetic": true,
+    "turns_per_session": 1
+  },
+  "interpretation": [
+    "API decoded bytes fell from 429795 to 21157 (95.1 percent) on the measured initial navigation and Fields/Workspace path.",
+    "Initial script decoded bytes fell from 556456 to 414061 (25.6 percent); map and setup are deferred.",
+    "Median paint was 92ms baseline versus108ms candidate; no paint-speedup claim. Interaction maxima are thresholded observations, not INP or population percentiles.",
+    "Field-history detailed loads fell160to8 in the separate20session benchmark; wall-clock gain remained provisional. See ui-backend-performance-20260927.json.",
+    "Model drafting and verification remain the dominant answer cost. Two120-token capped diagnostic turns took37.52s and18.27s; a separate UI640-token-limit soil-record question completed. No model-quality claim."
+  ],
+  "browser_checks": {
+    "desktop_css_viewport": [
+      1440,
+      1000
+    ],
+    "desktop_document_scroll_width": 1440,
+    "phone_css_viewport": [
+      390,
+      843
+    ],
+    "phone_document_scroll_width": 390,
+    "phone_map_unmounted_until_requested": true,
+    "modal_focus_containment_and_escape_return": "observed",
+    "field_name_and_coordinates_create_reload": "observed against isolated API",
+    "multi_feature_geojson_selection_review": "observed West/East synthetic features; selected East retained",
+    "drawing": "observed three corners, Undo disabled Finish with two, re-add corner, Finish, Review; import provenance cleared on manual redraw",
+    "evidence": "observed calculator and real Gemma answer, Sources & checks dialog, typed-tool rendering regression repaired"
+  },
+  "limitations": [
+    "No physical-device touch, screen-reader user study, or slow-network population distribution was measured.",
+    "External imagery/providers were disabled; optional offline packs were not provisioned.",
+    "Browser viewport controls initially affected a different tab; unmatched samples retained locally but not used for timing comparison.",
+    "The screenshots are unaltered native browser captures of synthetic records; screenshot capture and CSS viewport sizing are separate browser surfaces.",
+    "Profiling preceded only final drawing-control CSS/accessible-label polish and documentation; request path and lazy-load policy are unchanged.",
+    "Total built JS/CSS increased; bundle totals are reported separately, not confused with initial page load."
+  ],
+  "artifacts": {
+    "model_and_backend_profile": "ui-backend-performance-20260927.json",
+    "build_totals_recorded_in": "execution record",
+    "screenshots": [
+      "../../public/assets/workspace.jpg",
+      "../../public/assets/field-setup.jpg"
+    ]
+  }
+}

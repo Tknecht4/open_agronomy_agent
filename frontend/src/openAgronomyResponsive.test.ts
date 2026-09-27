@@ -2,80 +2,65 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 const css = (): string => readFileSync('src/styles.css', 'utf-8').replace(/\s+/g, ' ')
-const finalMobileCss = (): string => {
-  const source = css()
-  return source.slice(source.lastIndexOf('@media (max-width: 820px)'))
-}
-const compactDesktopCss = (): string => {
-  const source = css()
-  return source.slice(source.lastIndexOf('@media (max-width: 1180px) and (min-width: 821px)'))
-}
+const workspaceCss = (): string => readFileSync('src/workspace.css', 'utf-8').replace(/\s+/g, ' ')
 const benchmarksCss = (): string => readFileSync('src/BenchmarksRoute.css', 'utf-8').replace(/\s+/g, ' ')
 const appSource = (): string => readFileSync('src/OpenAgronomyApp.tsx', 'utf-8')
+const mainSource = (): string => readFileSync('src/main.tsx', 'utf-8')
 const benchmarksRouteSource = (): string => readFileSync('src/BenchmarksRoute.tsx', 'utf-8')
 const infoPagesSource = (): string => readFileSync('src/OpenAgronomyInfoPages.tsx', 'utf-8')
 
-describe('Open Agronomy mobile layout CSS', () => {
-  it('keeps the 820px breakpoint map-first while moving field management to its own page', () => {
-    const source = css()
+describe('Open Agronomy responsive workspace', () => {
+  it('keeps conversation primary while exposing explicit view and field tabs', () => {
+    const source = workspaceCss()
+    const app = appSource()
+    const main = mainSource()
+
+    expect(main.indexOf("import './styles.css'")).toBeLessThan(main.indexOf("import './workspace.css'"))
+    expect(app).toContain("useState<'chat' | 'split' | 'map'>('split')")
+    expect(app).toContain('role="group" aria-label="Workspace view"')
+    expect(app).toContain("view === 'chat' ? 'Conversation' : view === 'map' ? 'Map' : 'Together'")
+    expect(app).toContain("aria-pressed={(workspaceView === 'split' && !wideWorkspace ? 'chat' : workspaceView) === view}")
+    expect(app).toContain('onClick={() => setWorkspaceView(view)}')
+    expect(app).toContain("page === 'fields'")
+    expect(app).toContain('role="group" aria-label="Field information"')
+    expect(app).toContain("tab === 'details' ? 'Overview' : tab === 'records' ? 'Records & soil tests' : 'Map context'")
+    expect(app).toContain("hidden={fieldTab !== 'details'}")
+    expect(app).toContain("hidden={fieldTab !== 'records'}")
+    expect(app).toContain("hidden={fieldTab !== 'context'}")
+    expect(source).toMatch(/\.workspace-shell \.analyze-workspace \{[^}]*grid-template-columns: minmax\(400px, 1\.55fr\) minmax\(280px, 1fr\)/)
+    expect(source).toMatch(/\.workspace-shell \.chat-panel \{[^}]*grid-column: 1/)
+    expect(source).toMatch(/\.workspace-shell \.map-stage \{[^}]*grid-column: 2/)
+    expect(source).toMatch(/\.workspace-shell \.view-chat \.map-stage \{[^}]*display: none/)
+    expect(source).toMatch(/\.workspace-shell \.view-map \.chat-panel \{[^}]*display: none/)
+  })
+
+  it('contains long content and keeps the map behind its mobile view control', () => {
+    const source = workspaceCss()
+    const mobile = source.slice(source.indexOf('@media (max-width: 1050px)'))
+
+    expect(source).toMatch(/\.workspace-content \{[^}]*min-width: 0/)
+    expect(source).toMatch(/\.workspace-shell \.chat-panel \{[^}]*min-width: 0/)
+    expect(source).toMatch(/\.workspace-shell \.conversation-thread \{[^}]*overflow-y: auto; overflow-x: hidden/)
+    expect(source).toMatch(/\.workspace-shell \.chat-message \{[^}]*max-width: 100%;[^}]*overflow-wrap: anywhere/)
+    expect(source).toMatch(/\.workspace-shell \.formatted-answer pre \{[^}]*overflow: auto/)
+    expect(mobile).toMatch(/\.workspace-shell \.analyze-workspace \{[^}]*grid-template-columns: minmax\(0, 1fr\)/)
+    expect(mobile).toMatch(/\.workspace-shell \.analyze-workspace:not\(\.view-map\) \.map-stage \{[^}]*display: none/)
+    expect(mobile).toMatch(/\.workspace-shell \.view-map \.map-stage \{[^}]*display: flex/)
+    expect(mobile).toMatch(/\.workspace-shell \.workspace-view-switch \.view-split \{[^}]*display: none/)
+  })
+
+  it('provides keyboard focus targets and dialogs that fit small viewports', () => {
+    const source = workspaceCss()
+    const mobile = source.slice(source.indexOf('@media (max-width: 680px)'))
     const app = appSource()
 
-    expect(source).toMatch(/@media \(max-width: 820px\)/)
-    expect(app).toContain('className="mobile-workspace-tabs"')
-    expect(app).toContain('href="#map-panel"')
-    expect(app).not.toContain('href="#field-context-panel"')
-    expect(app).toContain('href="#chat-panel"')
-    expect(app).toContain("page === 'fields'")
-    expect(app).toContain('id="field-context-panel"')
-    expect(app).toContain('id="map-panel"')
-    expect(app).toContain('id="chat-panel"')
-    expect(source).toMatch(/\.mobile-workspace-tabs \{[^}]*display: none/)
-    expect(source).toMatch(/\.mobile-workspace-tabs \{[^}]*position: sticky;[^}]*top: 0;[^}]*order: 0;[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/)
-    expect(source).toMatch(/\.mobile-workspace-tabs a \{[^}]*min-height: 42px/)
-    expect(source).toMatch(/\.demo-nav \{[^}]*grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/)
-    expect(source).toMatch(/\.map-workspace \{[^}]*padding: 8px 8px 76px/)
-    expect(source).toMatch(/\.map-stage \{[^}]*order: 1/)
-    const finalMobile = finalMobileCss()
-    expect(finalMobile).toMatch(/\.chat-panel \{[^}]*order: 2;[^}]*height: calc\(100svh - 72px\);[^}]*min-height: 0/)
-    expect(finalMobile).toMatch(/\.conversation-thread \{[^}]*min-height: 0;[^}]*max-height: none/)
-    expect(finalMobile).toMatch(/\.chat-heading \.panel-kicker,[^}]*\.chat-heading \.agent-state \{[^}]*display: none/)
-    expect(finalMobile).toMatch(/\.answer-receipt \{[^}]*margin: 0/)
-    expect(finalMobile).toMatch(/\.answer-receipt \{[^}]*display: none/)
-    expect(finalMobile).toMatch(/\.answer-receipt-summary > div:first-child > span \{[^}]*display: none/)
-    // Desktop keeps the map usable while explicitly reserving a generous chat column.
-    // This protects the current map/chat balance instead of the superseded layout.
-    expect(source).toMatch(/\.analyze-workspace \{[^}]*grid-template-columns: minmax\(480px, 1\.12fr\) minmax\(500px, 0\.88fr\)/)
-    expect(source).toMatch(/\.fields-workspace \{[^}]*display: block/)
-  })
-
-  it('uses touch-safe map controls and swipeable chat source cards on mobile', () => {
-    const source = css()
-
-    expect(source).toMatch(/\.conversation-thread \{[^}]*overflow-x: hidden;[^}]*overflow-y: auto/)
-    expect(source).toMatch(/\.chat-message \{[^}]*box-sizing: border-box;[^}]*grid-template-columns: minmax\(0, 1fr\);[^}]*min-width: 0;[^}]*max-width: 100%;[^}]*overflow-wrap: anywhere/)
-    expect(source).toMatch(/\.chat-message > \* \{[^}]*min-width: 0;[^}]*max-width: 100%/)
-    expect(source).toMatch(/\.formatted-answer > \*,[^}]*overflow-wrap: anywhere/)
-    expect(source).toMatch(/\.formatted-answer pre \{[^}]*box-sizing: border-box;[^}]*max-width: 100%/)
-    expect(source).toMatch(/\.map-toolbar \.map-actions \{[^}]*grid-template-columns: minmax\(0, 1fr\) auto/)
-    expect(source).toMatch(/\.map-toolbar \.map-mode-control \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/)
-    expect(source).toMatch(/\.map-primary-action \{[^}]*min-height: 44px/)
-    expect(source).toMatch(/@media \(max-width: 420px\) \{[^}]*\.map-toolbar \.map-mode-control button \{[^}]*min-width: 0;[^}]*gap: 3px;[^}]*padding: 0 3px/)
-    expect(source).toMatch(/\.map-toolbar \.map-mode-control button span \{[^}]*font-size: 12px;[^}]*white-space: nowrap/)
-    expect(source).toMatch(/\.chat-panel \.tool-source-list \{[^}]*display: flex;[^}]*overflow-x: auto;[^}]*scroll-snap-type: x proximity/)
-    expect(source).toMatch(/\.chat-panel \.tool-source-card \{[^}]*flex: 0 0 min\(88vw, 360px\);[^}]*scroll-snap-align: start/)
-  })
-
-  it('keeps a half-width desktop map-first without turning the map into a sidebar', () => {
-    const compactDesktop = compactDesktopCss()
-    const finalMobile = finalMobileCss()
-
-    expect(compactDesktop).toMatch(/\.map-workspace \{[^}]*grid-template-columns: minmax\(0, 1\.15fr\) minmax\(340px, 0\.85fr\)/)
-    expect(compactDesktop).toMatch(/\.chat-panel \{[^}]*grid-column: auto/)
-    expect(compactDesktop).toMatch(/\.map-stage \{[^}]*min-height: 620px/)
-    expect(compactDesktop).toMatch(/\.chat-panel \{[^}]*min-height: 620px/)
-    expect(finalMobile).toMatch(/\.chat-panel \{[^}]*box-sizing: border-box;[^}]*gap: 6px;[^}]*padding: 8px/)
-    expect(finalMobile).toMatch(/\.network-answer-state\.runtime_online \{[^}]*display: none/)
-    expect(finalMobile).toMatch(/\.chat-panel \.chat-composer textarea \{[^}]*min-height: 72px/)
+    expect(source).toMatch(/\.workspace-shell button:focus-visible,[^}]*outline: 3px solid/)
+    expect(source).toMatch(/\.workspace-view-switch button,[^}]*min-height: 34px/)
+    expect(source).toMatch(/\.workspace-dialog \{[^}]*width: min\(560px, calc\(100vw - 32px\)\); max-height: calc\(100dvh - 40px\)/)
+    expect(mobile).toMatch(/\.workspace-dialog, \.workspace-dialog\.wide \{[^}]*width: calc\(100vw - 16px\); max-height: calc\(100dvh - 16px\)/)
+    expect(mobile).toMatch(/\.workspace-dialog \.field-grid \{[^}]*grid-template-columns: 1fr/)
+    expect(app).toContain("if (event.key === 'Enter') void renameStoredField(stored)")
+    expect(app).toContain("if (event.key === 'Escape') setRenamingFieldId('')")
   })
 
   it('keeps the benchmark page wired to the human review operations packet', () => {
@@ -90,7 +75,6 @@ describe('Open Agronomy mobile layout CSS', () => {
     expect(app).toContain("const LeafletFieldMap = lazy(() => import('./LeafletFieldMap')")
     expect(app).toContain("const FieldSyncPanel = lazy(() => import('./FieldSyncPanel'))")
     expect(app).toContain('<FieldSyncPanel')
-    expect(app.indexOf('<FieldSyncPanel')).toBeLessThan(app.indexOf("{page === 'analyze' ? ("))
     expect(app).toContain('Loading field map')
     expect(app).toContain('currentHashPage')
     expect(app).toContain("window.addEventListener('hashchange', syncPageFromHash)")
@@ -103,7 +87,7 @@ describe('Open Agronomy mobile layout CSS', () => {
     expect(app).toContain("['privacy', 'Privacy']")
     expect(app).toContain("['analyze', 'Workspace']")
     expect(app).toContain('aria-label="More pages"')
-    expect(app).toContain('<h2>Ask about this field</h2>')
+    expect(app).toContain("fieldName ? 'Ask about this field' : 'Let’s work through it.'")
     expect(app).not.toContain('<h2>Advice</h2>')
     expect(infoPages).toContain('function PrivacyPage()')
     expect(infoPages).toContain('Data use boundary for the public demo')

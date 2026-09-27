@@ -461,3 +461,15 @@ it('fails closed when coverage evidence cannot load', async () => {
   expect(await screen.findByText('Advisory blocked')).toBeInTheDocument()
   expect(screen.getByText(/guidance remains absent/i)).toBeInTheDocument()
 })
+
+it('keeps missing-report diagnostics out of the user-facing coverage state', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({
+    available: false, advisory_ready: false, summary: {}, provinces: [],
+    message: "Missing artifact /private/example/runtime/report.json",
+    boundary: 'Coverage unavailable; guidance remains absent.',
+  }) })))
+  render(<CanadianKnowledgeCoveragePanel />)
+  expect(await screen.findByText('Advisory blocked')).toBeInTheDocument()
+  expect(screen.getByText(/Coverage report unavailable/)).toBeInTheDocument()
+  expect(screen.queryByText(/private\/example/)).not.toBeInTheDocument()
+})

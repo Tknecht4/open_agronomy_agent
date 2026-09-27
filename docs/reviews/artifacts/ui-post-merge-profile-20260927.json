@@ -1,0 +1,90 @@
+{
+  "schema_version": "open_agronomy_agent.ui_post_merge_profile.v1",
+  "status": "completed",
+  "claim_eligible": false,
+  "purpose": "Bounded offline source-integration confirmation, not a before/after speedup or answer-quality claim",
+  "integration_state": {
+    "checkout_head_at_run": "d93953ac193ea160963114ddde26a54206c84fd7",
+    "merge_head_at_run": "7c502d8065a46c14c6abb462833509e5b598f2f8",
+    "merge_in_progress_at_run": true
+  },
+  "source_sha256": {
+    "src/agronomy_agent/server/app.py": "45b86642d0256971c32807f9cc96e8b5350101299c67de4b878e6eab53828c43",
+    "src/agronomy_agent/server/storage/db.py": "519b78a2878e7285d6fa83ede34d6558b139a00778f33a71bb3baf6f66ca5150",
+    "src/agronomy_agent/server/services/chat_service.py": "bfd01247249d704fd28ca85ca2f40437f251a66a5742e57538d08c31b3d8b02c",
+    "src/agronomy_agent/execution_core.py": "4e309bb79867cedcf6c9cf41b93d3d429d8206ead03793f4633cf6633dfdc9b4",
+    "scripts/profile_workspace_backend.py": "10648fc00fead94040dd30efbb03119bd84a0418fb7182069115af40c153d440",
+    "scripts/profile_workspace_model.py": "6327eaa884f5d3b28f893bec5edc571b6c5ab4e67777bdb634e9f78de518b911",
+    "configs/model.yaml": "8cd880ac68b3631a4eccc11bd9716be3e1768b1a5d49653ac13acc7ec6aeba10",
+    "configs/rag.yaml": "8f45880dbadf368848d52251aaafb24e25b17d9baa7923aa7707f6880fc04b91",
+    "configs/runtime_profiles.json": "e868d50cc9634dba0205bdb1b4b3a387c75c0dacc3b994f19c07055de8e94156"
+  },
+  "mock_backend": {
+    "status": "completed",
+    "network_mode": "offline",
+    "model": "mock_only",
+    "synthetic_sessions": 20,
+    "turns_per_session": 8,
+    "warm_samples": 3,
+    "app_create_cold_ms": 8508.783,
+    "health_warm_median_ms": 6.361,
+    "configs_warm_median_ms": 6.778,
+    "fields_list_warm_median_ms": 3.108,
+    "sessions_list_seeded_full_warm_median_ms": 17.419,
+    "field_history_warm_median_ms": 16.95,
+    "field_history_full_turn_loads_per_request": 8,
+    "core_mock_cold_ms": 71.639,
+    "core_mock_warm_median_ms": 10.506,
+    "failures": []
+  },
+  "local_model": {
+    "status": "completed",
+    "network_mode": "offline",
+    "snapshot_preflight": "available_local_only",
+    "model_id": "mlx-community/gemma-4-e2b-it-4bit",
+    "model_revision": "238767527555cb75a05732a84dff5d6ba0dd6809",
+    "metal_device": "Device(gpu, 0)",
+    "max_draft_tokens": 120,
+    "app_create_cold_ms": 4204.763,
+    "turns": [
+      {
+        "status": "completed",
+        "elapsed_ms": 17746.545,
+        "stage_receipt_count": 17,
+        "draft_decode_ms": 13139.672,
+        "verification_decode_ms": 4280.293,
+        "draft_prompt_tokens": 2022,
+        "draft_generation_tokens": 120,
+        "verification_prompt_tokens": 1662,
+        "verification_generation_tokens": 79,
+        "metal_peak_mib": 3180.48,
+        "metal_active_after_mib": 2483.47,
+        "process_peak_rss_mib": 1276.52
+      },
+      {
+        "status": "completed",
+        "elapsed_ms": 15645.381,
+        "stage_receipt_count": 17,
+        "draft_decode_ms": 8555.177,
+        "verification_decode_ms": 6531.753,
+        "draft_prompt_tokens": 2287,
+        "draft_generation_tokens": 120,
+        "verification_prompt_tokens": 1706,
+        "verification_generation_tokens": 96,
+        "metal_peak_mib": 3174.49,
+        "metal_active_after_mib": 2483.47,
+        "process_peak_rss_mib": 1276.52
+      }
+    ],
+    "first_token_latency_ms": null,
+    "independent_model_load_ms": null,
+    "quality_assessment": null,
+    "failures": []
+  },
+  "limitations": [
+    "The profiler used isolated synthetic state and two local model questions; it did not exercise a user field or a public provider.",
+    "Both drafts reached the 120-token profiling cap, so answer completeness is unassessed.",
+    "Lazy model load occurs inside the decode span; tokenizer and first-token timing were not independently observed.",
+    "Small timing samples and concurrent host conditions do not establish throughput or a latency budget."
+  ]
+}

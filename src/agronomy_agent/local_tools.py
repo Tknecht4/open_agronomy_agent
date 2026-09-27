@@ -1815,6 +1815,10 @@ def nasa_power_daily(
 ) -> dict[str, Any]:
     _validate_date(start)
     _validate_date(end)
+    start_date = dt.datetime.strptime(start, "%Y%m%d").date()
+    end_date = dt.datetime.strptime(end, "%Y%m%d").date()
+    if end_date < start_date:
+        raise ValueError("end must be on or after start")
     if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
         raise ValueError("latitude/longitude out of range")
     params = ",".join(parameters)
@@ -1832,17 +1836,60 @@ def nasa_power_daily(
     )
     url = f"https://power.larc.nasa.gov/api/temporal/daily/point?{query}"
     cache_path = repo_path(cache_dir) / (_safe_name(f"{latitude}_{longitude}_{start}_{end}_{params}") + ".json")
+    requested_day_count = (end_date - start_date).days + 1
     if cache_path.exists():
         payload = json.loads(cache_path.read_text(encoding="utf-8"))
-        payload["cache_hit"] = True
-        return payload
+        cached_days = payload.get("available_days_by_parameter") if isinstance(payload, dict) else None
+        if (
+            isinstance(payload, dict)
+            and payload.get("status") == "available"
+            and payload.get("requested_day_count") == requested_day_count
+            and payload.get("observed_day_count") == requested_day_count
+            and payload.get("observation_start") == start_date.isoformat()
+            and payload.get("observation_end") == end_date.isoformat()
+            and isinstance(cached_days, dict)
+            and all(cached_days.get(parameter) == requested_day_count for parameter in parameters)
+        ):
+            payload["cache_hit"] = True
+            return payload
     request = urllib.request.Request(url, headers={"User-Agent": "agronomy-agent-local-tools/0.1"})
     with urllib.request.urlopen(request, timeout=timeout) as response:
         raw = response.read().decode("utf-8")
     data = json.loads(raw)
-    series = data.get("properties", {}).get("parameter", {})
+    if not isinstance(data, dict) or data.get("error"):
+        provider_error = data.get("error") if isinstance(data, dict) else data
+        raise RuntimeError(f"NASA POWER provider error: {str(provider_error)[:220]}")
+    properties = data.get("properties")
+    series = properties.get("parameter") if isinstance(properties, dict) else None
+    if not isinstance(series, dict):
+        series = {}
+    valid_series: dict[str, dict[str, Any]] = {}
+    observed_dates: set[dt.date] = set()
+    available_days_by_parameter: dict[str, int] = {}
+    for parameter in parameters:
+        values = series.get(parameter)
+        valid_values: dict[str, Any] = {}
+        if isinstance(values, dict):
+            for date_text, value in values.items():
+                try:
+                    observation_date = dt.datetime.strptime(str(date_text), "%Y%m%d").date()
+                except ValueError:
+                    continue
+                if start_date <= observation_date <= end_date and not _is_missing_power_value(value):
+                    valid_values[str(date_text)] = value
+                    observed_dates.add(observation_date)
+        valid_series[parameter] = valid_values
+        available_days_by_parameter[parameter] = len(valid_values)
+    status = (
+        "no_data"
+        if not observed_dates
+        else "available"
+        if all(count == requested_day_count for count in available_days_by_parameter.values())
+        else "partial_available"
+    )
     summary = {
         "tool": "nasa_power_daily",
+        "status": status,
         "source": url,
         "cache_hit": False,
         "latitude": latitude,
@@ -1850,11 +1897,17 @@ def nasa_power_daily(
         "start": start,
         "end": end,
         "parameters": list(parameters),
-        "parameter_summary": _summarize_power_series(series),
+        "parameter_summary": _summarize_power_series(valid_series),
+        "requested_day_count": requested_day_count,
+        "observed_day_count": len(observed_dates),
+        "available_days_by_parameter": available_days_by_parameter,
+        "observation_start": min(observed_dates).isoformat() if observed_dates else None,
+        "observation_end": max(observed_dates).isoformat() if observed_dates else None,
         "boundary": "NASA POWER is gridded weather/agroclimatology support, not a replacement for field sensors or local forecast advisories.",
     }
-    cache_path.parent.mkdir(parents=True, exist_ok=True)
-    cache_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    if status == "available":
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        cache_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     return summary
 
 
@@ -3541,7 +3594,7 @@ def _is_missing_power_value(value: Any) -> bool:
         numeric = float(value)
     except (TypeError, ValueError):
         return True
-    return math.isclose(numeric, -999.0) or math.isclose(numeric, -9999.0)
+    return not math.isfinite(numeric) or math.isclose(numeric, -999.0) or math.isclose(numeric, -9999.0)
 
 
 def _default_cdl_year(today: dt.date | None = None) -> int:

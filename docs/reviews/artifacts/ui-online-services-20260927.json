@@ -1,0 +1,134 @@
+{
+  "schema_version": "open_agronomy_agent.ui_online_services_probe.v1",
+  "date_utc": "2026-09-27",
+  "reference_commit": "35b32a3877cce4bf229e5de16100b14c560f07a5",
+  "mode": "bounded_public_reads_and_isolated_testclient",
+  "synthetic_input": {
+    "latitude": 53.3,
+    "longitude": -113.6,
+    "province": "Alberta",
+    "crop": "barley",
+    "viewport_bbox": [-113.61, 53.29, -113.59, 53.31],
+    "private_reference": "Benign synthetic Markdown fixture without field records"
+  },
+  "provider_observations": [
+    {
+      "name": "default_geo_regions",
+      "api_route": "/api/geo/regions",
+      "http_status": 200,
+      "elapsed_ms": 1819,
+      "selected_layers": ["nrcs_mlra", "epa_l3_us", "canada_ecozones"],
+      "feature_count": 1,
+      "feature_layer_ids": ["canada_ecozones"],
+      "errors": [],
+      "skipped_layers": [],
+      "provider_http": [
+        {"host": "services.arcgis.com", "status": 200, "elapsed_ms": 490, "bytes": 98, "layer": "nrcs_mlra"},
+        {"host": "services2.arcgis.com", "status": 200, "elapsed_ms": 1325, "bytes": 98, "layer": "epa_l3_us"}
+      ],
+      "cache_note": "Canada ecozone result came from the isolated probe cache after an earlier successful live single-layer request; its exact HTTP status was not recorded."
+    },
+    {
+      "name": "current_nasa_power",
+      "api_route": "/api/tools/weather-power",
+      "api_http_status": 200,
+      "api_elapsed_ms": 507,
+      "provider_host": "power.larc.nasa.gov",
+      "provider_http_status": 200,
+      "provider_elapsed_ms": 482,
+      "request_start_utc": "20260925",
+      "request_end_utc": "20260927",
+      "parameters": ["T2M", "PRECTOTCORR", "WS2M"],
+      "result_status": "partial_available",
+      "observation_start_utc": "2026-09-25",
+      "observation_end_utc": "2026-09-25",
+      "requested_day_count": 3,
+      "observed_day_count": 1,
+      "available_days_by_parameter": {"T2M": 1, "PRECTOTCORR": 1, "WS2M": 1},
+      "summary": {"T2M_mean_c": 12.52, "PRECTOTCORR_sum_mm": 0.17, "WS2M_mean_m_per_s": 2.44},
+      "cache_hit": false
+    },
+    {
+      "name": "aafc_nasdi_spi",
+      "api_route": "/api/tools/aafc-nasdi-agroclimate",
+      "api_http_status": 200,
+      "api_elapsed_ms": 581,
+      "provider_host": "agriculture.canada.ca",
+      "provider_calls": [
+        {"stage": "catalog", "http_status": 200, "elapsed_ms": 258, "bytes": 14372},
+        {"stage": "identify", "http_status": 200, "elapsed_ms": 317, "bytes": 688}
+      ],
+      "indicator": "spi",
+      "result_status": "available",
+      "observation_end_utc": "2026-09-20",
+      "data_age_days": 7,
+      "freshness_status": "current",
+      "observation_count": 1,
+      "sample_errors": [],
+      "cache_hit": false
+    }
+  ],
+  "isolated_api_contracts": {
+    "environment": "Temporary SQLite and artifact roots; parent listeners on ports 8000 and 5173 were untouched.",
+    "geo_layers": {"http_status": 200, "layer_count": 14, "remote_count": 3, "local_not_installed_count": 11},
+    "geo_priors": {"http_status": 200, "input": "Synthetic example near Edmonton, Alberta"},
+    "geo_intersections": {"http_status": 200, "canada_ecozone_feature_count": 1, "errors": []},
+    "boundary_upload": {"http_status": 200, "synthetic_geojson_feature_count": 1},
+    "private_reference_inspect": {"http_status": 200, "parse_status": "ready", "persisted": false, "training_eligible": false},
+    "knowledge_coverage": {
+      "http_status": 200,
+      "available": false,
+      "status": "unavailable",
+      "advisory_ready": false,
+      "reason": "Governed gap-matrix output is absent in this worktree."
+    },
+    "advisory_readiness": {
+      "http_status": 200,
+      "available": false,
+      "status": "unavailable",
+      "advisory_ready": false,
+      "reason": "Full readiness receipt and embedded blocker baseline are absent in this worktree."
+    },
+    "public_adapter_readiness": {
+      "http_status": 200,
+      "adapter_count": 40,
+      "configuration_ready_count": 39,
+      "needs_key_count": 1,
+      "key_gated_count": 2,
+      "openet_status": "needs_key",
+      "nass_quickstats_status": "ready",
+      "smoke_checks_passed": 0,
+      "smoke_checks_missing": 3,
+      "boundary": "Configuration and local-cache readiness only; live provider uptime is a separate observation."
+    }
+  },
+  "negative_observations": [
+    {
+      "environment": "sandboxed command",
+      "geo_result": "Direct service payload with one per-layer DNS error and zero features",
+      "nasa_result": "URLError for DNS resolution",
+      "nasdi_result": "status=unavailable with catalog URLError",
+      "interpretation": "Sandbox DNS restriction; escalated bounded reads succeeded, so these are not evidence of provider outage."
+    },
+    {
+      "condition": "Provider returned only one usable day in a three-day NASA request",
+      "old_behavior": "HTTP 200 summary lacked status and actual observation dates; UI could label one-day metrics as a three-day summary.",
+      "new_behavior": "partial_available with actual observation dates and per-parameter counts; partial and no-data results are not cached."
+    }
+  ],
+  "backend_changes": [
+    "NASA POWER validates actual dated values within the requested range, preserves zero precipitation, and returns available, partial_available, or no_data with observed coverage fields.",
+    "Only complete dated NASA results are reused from cache; legacy cache entries without status and date coverage are refetched.",
+    "Chat trace and model-facing field context retain actual observation dates and day counts, without inferring dates from legacy receipts."
+  ],
+  "verification": {
+    "command": "PYTHONPATH=src .venv/bin/python -m pytest -q -n 0 -p no:cacheprovider tests/test_public_tool_adapters.py tests/test_field_context_compiler.py tests/test_chat_service_field_context.py",
+    "result": "41 passed"
+  },
+  "limits": [
+    "Provider checks are a small synthetic sample, not a provider uptime or agronomic validation claim.",
+    "No OpenET, NASS QuickStats, paid service, model, field-data ingestion, or promotion call was made.",
+    "Unavailable governed coverage and readiness are unknown or blocked, not passes.",
+    "The prior sandbox DNS failures and exact missing-provider conditions are retained above."
+  ]
+}

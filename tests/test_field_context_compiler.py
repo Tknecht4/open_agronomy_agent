@@ -102,3 +102,34 @@ def test_compiler_omits_unavailable_adapter_values() -> None:
 
     assert compiled["receipt"]["status"] == "limited"
     assert compiled["receipt"]["live_context"] == []
+
+
+def test_compiler_dates_partial_nasa_power_values_without_inventing_missing_days() -> None:
+    compiled = compile_field_context(
+        {"crop": "barley"},
+        [
+            {
+                "name": "nasa_power_daily",
+                "payload": {
+                    "status": "partial_available",
+                    "summary": {
+                        "requested_day_count": 3,
+                        "observed_day_count": 1,
+                        "available_days_by_parameter": {"T2M": 1, "PRECTOTCORR": 1},
+                        "observation_start": "2026-09-25",
+                        "observation_end": "2026-09-25",
+                        "parameter_summary": {
+                            "PRECTOTCORR": {"sum": 0.0},
+                            "T2M": {"mean": 12.52},
+                        },
+                    },
+                },
+            }
+        ],
+        safe_field_summary=_safe_summary,
+    )
+
+    facts = compiled["receipt"]["live_context"][0]["facts"]
+    assert facts[0] == "observed UTC 2026-09-25; 1 of 3 requested days had usable values"
+    assert "recent precipitation 0 mm across 1 observed day" in facts
+    assert "2026-09-27" not in compiled["prompt"]

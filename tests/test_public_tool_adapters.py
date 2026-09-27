@@ -1,10 +1,104 @@
 from __future__ import annotations
 
+import io
 import json
 
 from agronomy_agent.agno_runtime.tool_adapters import load_agno_tool_adapters
 from agronomy_agent import local_tools
 from agronomy_agent.server.services import tool_service
+from agronomy_agent.server.services import chat_service
+
+
+def test_nasa_power_preserves_actual_observation_dates_and_zero_rain(monkeypatch, tmp_path) -> None:
+    provider = {
+        "properties": {
+            "parameter": {
+                "T2M": {"20260925": 12.52, "20260926": -999.0, "20260927": -999.0},
+                "PRECTOTCORR": {"20260925": 0.0, "20260926": -999.0, "20260927": -999.0},
+                "WS2M": {"20260925": 2.44, "20260926": -999.0, "20260927": -999.0},
+            }
+        }
+    }
+    calls = []
+
+    def fake_urlopen(request, timeout):  # noqa: ANN001
+        calls.append(request.full_url)
+        return io.BytesIO(json.dumps(provider).encode("utf-8"))
+
+    monkeypatch.setattr(local_tools.urllib.request, "urlopen", fake_urlopen)
+    kwargs = {
+        "latitude": 53.3,
+        "longitude": -113.6,
+        "start": "20260925",
+        "end": "20260927",
+        "parameters": ("T2M", "PRECTOTCORR", "WS2M"),
+        "cache_dir": str(tmp_path / "power"),
+    }
+    partial = local_tools.nasa_power_daily(**kwargs)
+
+    assert partial["status"] == "partial_available"
+    assert partial["requested_day_count"] == 3
+    assert partial["observed_day_count"] == 1
+    assert partial["observation_start"] == partial["observation_end"] == "2026-09-25"
+    assert partial["available_days_by_parameter"] == {"T2M": 1, "PRECTOTCORR": 1, "WS2M": 1}
+    assert partial["parameter_summary"]["PRECTOTCORR"]["sum"] == 0.0
+
+    provider["properties"]["parameter"]["T2M"]["20260926"] = 13.0
+    provider["properties"]["parameter"]["T2M"]["20260927"] = 14.0
+    provider["properties"]["parameter"]["PRECTOTCORR"]["20260926"] = 0.0
+    provider["properties"]["parameter"]["PRECTOTCORR"]["20260927"] = 1.0
+    provider["properties"]["parameter"]["WS2M"]["20260926"] = 3.0
+    provider["properties"]["parameter"]["WS2M"]["20260927"] = 4.0
+    complete = local_tools.nasa_power_daily(**kwargs)
+    assert complete["status"] == "available"
+    assert complete["observation_end"] == "2026-09-27"
+    assert local_tools.nasa_power_daily(**kwargs)["cache_hit"] is True
+    assert len(calls) == 2
+
+    cache_file = next((tmp_path / "power").glob("*.json"))
+    legacy = json.loads(cache_file.read_text(encoding="utf-8"))
+    for key in ("status", "observation_start", "observation_end", "requested_day_count", "observed_day_count"):
+        legacy.pop(key)
+    cache_file.write_text(json.dumps(legacy), encoding="utf-8")
+    provider["properties"]["parameter"]["T2M"]["20260926"] = -999.0
+    refreshed = local_tools.nasa_power_daily(**kwargs)
+    assert refreshed["status"] == "partial_available"
+    assert refreshed["cache_hit"] is False
+    assert len(calls) == 3
+
+    monkeypatch.setattr(chat_service.local_tools, "nasa_power_daily", lambda **kwargs: partial)
+    record = chat_service._call_nasa_power(53.3, -113.6, timeout=1)
+    assert record["payload"]["status"] == "partial_available"
+    assert record["payload"]["summary"]["observation_end"] == "2026-09-25"
+    assert record["payload"]["summary"]["observed_day_count"] == 1
+    assert record["payload"]["freshness"]["date_field"] == "observation_end"
+    assert "1 of 3 requested UTC days" in record["text"]
+
+
+def test_nasa_power_no_data_does_not_become_chat_weather(monkeypatch, tmp_path) -> None:
+    provider = {"properties": {"parameter": {"T2M": {"20260925": -999.0}}}}
+    monkeypatch.setattr(
+        local_tools.urllib.request,
+        "urlopen",
+        lambda request, timeout: io.BytesIO(json.dumps(provider).encode("utf-8")),
+    )
+    payload = local_tools.nasa_power_daily(
+        latitude=53.3,
+        longitude=-113.6,
+        start="20260925",
+        end="20260927",
+        parameters=("T2M",),
+        cache_dir=str(tmp_path / "power"),
+    )
+    assert payload["status"] == "no_data"
+    assert payload["observation_end"] is None
+    assert payload["parameter_summary"] == {}
+    assert list((tmp_path / "power").glob("*.json")) == []
+
+    monkeypatch.setattr(chat_service.local_tools, "nasa_power_daily", lambda **kwargs: payload)
+    record = chat_service._call_nasa_power(53.3, -113.6, timeout=1)
+    assert record["payload"]["status"] == "no_data"
+    assert "no usable dated weather" in record["text"]
 
 
 def test_tool_service_exposes_structured_agronomic_calculator() -> None:

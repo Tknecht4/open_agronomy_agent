@@ -39,6 +39,25 @@ describe('source card normalization', () => {
     expect(card.sourceLabel).toBe('USDA NRCS Soil Data Access')
   })
 
+  it('keeps partial NASA observations visible with their actual metric coverage', () => {
+    const tool: ToolInvocation = { name: 'nasa_power_daily', payload: {
+      kind: 'public_adapter', status: 'partial_available', summary: {
+        requested_day_count: 3, observed_day_count: 3,
+        observation_start: '2026-09-23', observation_end: '2026-09-25',
+        parameter_summary: { T2M: { days: 3, mean: 12.5 }, PRECTOTCORR: { days: 1, sum: 0 }, WS2M: { days: 3, mean: 2.4 } },
+      },
+    } }
+    const card = buildPublicToolCard(tool)
+    expect(card.statusTone).toBe('attention')
+    expect(card.statusLabel).toBe('partial coverage')
+    expect(card.facts).toContain('Observed UTC 2026-09-23–2026-09-25')
+    expect(card.facts).toContain('0 mm precip (1 observed day)')
+    expect(card.facts).toContain('12.5 C mean temp (3 observed days)')
+    expect(card.limitation).toContain('only published observations')
+    expect(card.limitation).not.toContain('missing')
+    expect(buildSourceCheckSummary([tool], [])).toMatchObject({ attentionCount: 1, unavailableCount: 0 })
+  })
+
   it('summarizes CDL geometry as sampled crop-cover context instead of acreage proof', () => {
     const card = buildPublicToolCard({
       name: 'cropland_data_layer_geometry',
@@ -420,5 +439,59 @@ describe('source card normalization', () => {
     expect(byId.guard_checks.items.map((item) => item.name)).toEqual(expect.arrayContaining(['label_guard', 'weather_guard']))
     expect(byId.other_tools.count).toBe(1)
     expect(byId.other_tools.items[0].label).toBe('Retrieval Debug Probe')
+  })
+
+  it('renders named records beside planned and result calculator schemas without inventing authority', () => {
+    // Minimal shape from the synthetic observed-sessions receipt; the typed
+    // records intentionally have tool_id and no legacy name or text.
+    const turn = {
+      turn_id: 'turn_calculator',
+      user_message: 'Convert supplied units.',
+      answer: 'A calculated conversion was returned.',
+      answer_status: 'ok',
+      trace: {
+        tool_invocations: [
+          {
+            name: 'external_network',
+            text: 'Offline mode blocked live public-source calls.',
+            payload: { kind: 'network_policy', status: 'blocked_offline' },
+          },
+          {
+            schema_version: 'open_agronomy_agent.tool_invocation.v1',
+            tool_id: 'agronomic_calculator',
+            tool_version: 'agronomic_calculator_v1',
+            invocation_id: 'invocation_1',
+            operation: 'unit_conversion',
+            status: 'planned',
+            authority_role: 'supplied_inputs_arithmetic_only',
+            missing_inputs: [],
+            inputs: { value: 100, from_unit: 'lb/ac', to_unit: 'kg/ha' },
+          },
+          {
+            schema_version: 'open_agronomy_agent.tool_result.v1',
+            tool_id: 'agronomic_calculator',
+            tool_version: 'agronomic_calculator_v1',
+            invocation_id: 'invocation_1',
+            operation: 'unit_conversion',
+            status: 'calculated',
+            authority_role: 'supplied_inputs_arithmetic_only',
+            limitations: ['Arithmetic from supplied inputs only; no agronomic target was selected.'],
+            payload: { kind: 'unit_conversion', status: 'calculated', operation: 'unit_conversion', value: 112.1, unit: 'kg/ha' },
+          },
+        ],
+      },
+    } satisfies Turn
+    const original = structuredClone(turn.trace.tool_invocations)
+
+    const groups = buildTraceToolGroups(turn)
+    const other = groups.find((group) => group.id === 'other_tools')!
+    expect(other.count).toBe(3)
+    expect(other.items.map((item) => item.label)).toEqual(['External Network', 'Agronomic Calculator', 'Agronomic Calculator'])
+    expect(other.items[1].detail).toContain('Invocation: planned')
+    expect(other.items[1].detail).toContain('Authority: Supplied Inputs Arithmetic Only')
+    expect(other.items[2].detail).toContain('Result: calculated')
+    expect(other.items[2].detail).toContain('Arithmetic from supplied inputs only')
+    expect(other.items[1].name).not.toBe(other.items[2].name)
+    expect(turn.trace.tool_invocations).toEqual(original)
   })
 })
