@@ -52,6 +52,7 @@ final class OpenAgronomyDesktop: NSObject, NSApplicationDelegate, NSWindowDelega
             "phase": phase,
             "launcher_pid": Int(ProcessInfo.processInfo.processIdentifier),
             "backend_pid": backend?.isRunning == true ? Int(backend!.processIdentifier) : 0,
+            "operation_pid": operation?.isRunning == true ? Int(operation!.processIdentifier) : 0,
             "port": port,
             "updated_at": ISO8601DateFormatter().string(from: Date()),
         ]
@@ -236,6 +237,7 @@ final class OpenAgronomyDesktop: NSObject, NSApplicationDelegate, NSWindowDelega
             return
         }
         operation = process
+        writeStatus(command == "install-model" ? "installing_model" : "checking")
         DispatchQueue.global(qos: .utility).async {
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
             process.waitUntilExit()

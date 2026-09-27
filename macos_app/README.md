@@ -68,9 +68,10 @@ retry message instead of silently changing that origin.
 
 Run the focused desktop/auth tests, the repository's full backend/frontend/docs
 gates, a PyInstaller build on a clean macOS 26 arm64 host, and an installed-app
-smoke with no Homebrew/Python/Node/Docker dependencies. The CI path also launches
-the actual Swift app, checks default-browser pairing, and exercises Quit and
-reopen with a persisted session. Exercise model setup, one real source-bound
+smoke with no Homebrew/Python/Node/Docker dependencies. The CI path first opens
+the actual Swift app in empty state and invokes its **Install local model**
+button, then checks default-browser pairing, a real model turn, and Quit and
+reopen with a persisted session. Exercise one real source-bound
 answer, offline behavior, port conflicts, and bundled file/model identity.
 Developer ID signing,
 notarization, quarantine launch, and an update/rollback path are separate

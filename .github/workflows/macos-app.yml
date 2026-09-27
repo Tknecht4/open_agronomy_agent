@@ -7,6 +7,8 @@ on:
       - "macos_app/**"
       - "scripts/build_macos_app.py"
       - "scripts/smoke_macos_app.py"
+      - "scripts/smoke_macos_first_run.py"
+      - "scripts/smoke_macos_launcher.py"
       - "scripts/run_cockpit.py"
       - "src/agronomy_agent/**"
       - "frontend/**"
@@ -75,11 +77,18 @@ jobs:
             --output "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app"
           python scripts/build_macos_app.py \
             --output "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app"
+      - name: Smoke native first-run model installation
+        run: |
+          python scripts/smoke_macos_first_run.py \
+            --app "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app" \
+            --state-root "$HOME/Library/Application Support/OpenAgronomyAgent/desktop" \
+            --report "$GITHUB_WORKSPACE/outputs/macos/first-run-smoke.json"
       - name: Smoke installed backend and pinned local model
         run: |
           python scripts/smoke_macos_app.py \
             --app "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app" \
             --state-root "$HOME/Library/Application Support/OpenAgronomyAgent/desktop" \
+            --preprovisioned \
             --report "$GITHUB_WORKSPACE/outputs/macos/smoke.json"
       - name: Smoke native launcher, browser pairing, Quit, and reopen
         run: |

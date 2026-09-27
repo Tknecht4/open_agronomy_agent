@@ -129,15 +129,18 @@ def _run_setup_command(
 
 
 def smoke(
-    app: Path, state: Path, *, report: Path, model_cache: Path | None = None
+    app: Path, state: Path, *, report: Path, model_cache: Path | None = None,
+    preprovisioned: bool = False,
 ) -> dict[str, Any]:
     app = app.resolve(strict=True)
     backend = app / "Contents/Helpers/OpenAgronomyBackend.app/Contents/MacOS/OpenAgronomyBackend"
     runtime = app / "Contents/Resources/runtime"
     if not backend.is_file() or not (runtime / "frontend/dist/index.html").is_file():
         raise ValueError("app is missing its backend executable or production UI")
-    if state.exists() and any(state.iterdir()):
+    if not preprovisioned and state.exists() and any(state.iterdir()):
         raise ValueError("smoke state must be absent or empty")
+    if preprovisioned and not state.is_dir():
+        raise ValueError("preprovisioned smoke state is missing")
     state.mkdir(parents=True, exist_ok=True, mode=0o700)
     if model_cache is not None and not model_cache.is_absolute():
         raise ValueError("model cache override must be absolute")
@@ -146,14 +149,20 @@ def smoke(
         backend, "status", runtime=runtime, state=state,
         model_cache=model_cache, environment=environment, timeout=180,
     )
-    if initial.get("phase") != "setup_required":
-        raise ValueError("fresh app state unexpectedly contained a model receipt")
-    installed = _run_setup_command(
-        backend, "install-model", runtime=runtime, state=state,
-        model_cache=model_cache, environment=environment, timeout=1800,
-    )
-    if installed.get("phase") != "ready":
-        raise ValueError("model installation did not reach ready")
+    if preprovisioned:
+        if initial.get("phase") != "ready":
+            raise ValueError("first-run native setup did not leave a verified model")
+        receipt = json.loads((state / "receipts/model-install.json").read_text(encoding="utf-8"))
+        installed = {**initial, "file_count": len(receipt.get("files") or [])}
+    else:
+        if initial.get("phase") != "setup_required":
+            raise ValueError("fresh app state unexpectedly contained a model receipt")
+        installed = _run_setup_command(
+            backend, "install-model", runtime=runtime, state=state,
+            model_cache=model_cache, environment=environment, timeout=1800,
+        )
+        if installed.get("phase") != "ready":
+            raise ValueError("model installation did not reach ready")
     ready = _run_setup_command(
         backend, "status", runtime=runtime, state=state,
         model_cache=model_cache, environment=environment, timeout=180,
@@ -255,6 +264,7 @@ def smoke(
                 "status": "pass",
                 "model_revision": installed["revision"],
                 "model_file_count": installed["file_count"],
+                "model_provisioned_by_native_launcher": preprovisioned,
                 "runtime_manifest_sha256": hashlib.sha256(
                     (app / "Contents/Resources/runtime-manifest.json").read_bytes()
                 ).hexdigest(),
@@ -294,9 +304,13 @@ def main() -> int:
     parser.add_argument("--state-root", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--model-cache", type=Path)
+    parser.add_argument("--preprovisioned", action="store_true")
     args = parser.parse_args()
     try:
-        result = smoke(args.app, args.state_root, report=args.report, model_cache=args.model_cache)
+        result = smoke(
+            args.app, args.state_root, report=args.report,
+            model_cache=args.model_cache, preprovisioned=args.preprovisioned,
+        )
         print(json.dumps(result, indent=2))
         return 0
     except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired) as exc:

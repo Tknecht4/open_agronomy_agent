@@ -59,8 +59,11 @@ def _quit_app() -> None:
     )
 
 
-def _wait_ready(status_path: Path, *, previous_launch_id: str | None = None) -> dict[str, Any]:
-    deadline = time.monotonic() + 180
+def _wait_ready(
+    status_path: Path, *, previous_launch_id: str | None = None,
+    timeout_seconds: int = 180,
+) -> dict[str, Any]:
+    deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline:
         row = _status(status_path)
         if row and row.get("phase") == "error":
@@ -120,8 +123,10 @@ def smoke(app: Path, state: Path, backend_report: Path, report: Path) -> dict[st
     if not _session_exists(state, session_id):
         raise ValueError("packaged-backend session is absent before launcher restart")
     status_path = state / "launcher-status.json"
-    if status_path.exists():
-        raise ValueError("launcher status path must be absent before the first launch")
+    prior = _status(status_path)
+    if status_path.exists() and (prior is None or prior.get("phase") != "stopped"):
+        raise ValueError("launcher must be stopped before the reopen smoke")
+    initial_port = prior.get("port") if prior else None
     observations: list[dict[str, Any]] = []
     active: dict[str, Any] | None = None
     try:
@@ -132,6 +137,8 @@ def smoke(app: Path, state: Path, backend_report: Path, report: Path) -> dict[st
                 previous_launch_id=observations[-1]["launch_id"] if observations else None,
             )
             port = int(active["port"])
+            if initial_port is not None and port != initial_port:
+                raise ValueError("reopen changed the first-run browser origin")
             if not _wait_browser_pairing(port):
                 raise RuntimeError("default browser did not consume the native one-time pairing token")
             with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(

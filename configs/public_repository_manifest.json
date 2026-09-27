@@ -259,6 +259,7 @@
     "scripts/build_statcan_tillage_seeding_context_snapshot.py",
     "scripts/download_model.py",
     "scripts/smoke_macos_app.py",
+    "scripts/smoke_macos_first_run.py",
     "scripts/smoke_macos_launcher.py",
     "scripts/evaluate_evidence_fabric_equivalence.py",
     "scripts/export_cockpit_traces.py",
