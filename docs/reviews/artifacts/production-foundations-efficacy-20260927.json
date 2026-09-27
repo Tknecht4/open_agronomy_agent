@@ -220,9 +220,10 @@
           }
         },
         "candidate_selection": {
-          "expected_raw_rank": 1,
           "query_fit_rejection": "jurisdiction_mismatch",
-          "expected_final_selected": false
+          "expected_final_selected": false,
+          "product_raw_query_rank": 1,
+          "direct_unfiltered_rank": 1
         }
       },
       {
@@ -392,9 +393,10 @@
           }
         },
         "candidate_selection": {
-          "expected_raw_rank": 2,
           "query_fit_rejection": "jurisdiction_mismatch",
-          "expected_final_selected": false
+          "expected_final_selected": false,
+          "product_raw_query_rank": 2,
+          "direct_unfiltered_rank": 2
         }
       },
       {
@@ -574,9 +576,10 @@
           }
         },
         "candidate_selection": {
-          "expected_raw_rank": 1,
           "query_fit_rejection": "topic_mismatch",
-          "expected_final_selected": false
+          "expected_final_selected": false,
+          "product_raw_query_rank": 1,
+          "direct_unfiltered_rank": 1
         }
       },
       {
@@ -747,9 +750,10 @@
           }
         },
         "candidate_selection": {
-          "expected_raw_rank": 4,
           "query_fit_rejection": "jurisdiction_mismatch",
-          "expected_final_selected": false
+          "expected_final_selected": false,
+          "product_raw_query_rank": 4,
+          "direct_unfiltered_rank": 4
         }
       },
       {
@@ -924,9 +928,10 @@
           }
         },
         "candidate_selection": {
-          "expected_raw_rank": 1,
           "query_fit_rejection": "jurisdiction_mismatch",
-          "expected_final_selected": false
+          "expected_final_selected": false,
+          "product_raw_query_rank": 1,
+          "direct_unfiltered_rank": 1
         }
       },
       {
@@ -1102,9 +1107,10 @@
           }
         },
         "candidate_selection": {
-          "expected_raw_rank": 2,
           "query_fit_rejection": null,
-          "expected_final_selected": true
+          "expected_final_selected": true,
+          "product_raw_query_rank": 2,
+          "direct_unfiltered_rank": 2
         }
       },
       {
@@ -1269,9 +1275,10 @@
           }
         },
         "candidate_selection": {
-          "expected_raw_rank": 4,
           "query_fit_rejection": "topic_mismatch",
-          "expected_final_selected": false
+          "expected_final_selected": false,
+          "product_raw_query_rank": 4,
+          "direct_unfiltered_rank": 7
         }
       },
       {
@@ -1443,9 +1450,10 @@
           }
         },
         "candidate_selection": {
-          "expected_raw_rank": 1,
           "query_fit_rejection": null,
-          "expected_final_selected": true
+          "expected_final_selected": true,
+          "product_raw_query_rank": 1,
+          "direct_unfiltered_rank": 1
         }
       },
       {
@@ -1622,9 +1630,10 @@
           }
         },
         "candidate_selection": {
-          "expected_raw_rank": 1,
           "query_fit_rejection": "lexical_topic_mismatch",
-          "expected_final_selected": false
+          "expected_final_selected": false,
+          "product_raw_query_rank": 1,
+          "direct_unfiltered_rank": 1
         }
       },
       {
@@ -1814,9 +1823,10 @@
           }
         },
         "candidate_selection": {
-          "expected_raw_rank": 10,
           "query_fit_rejection": null,
-          "expected_final_selected": true
+          "expected_final_selected": true,
+          "product_raw_query_rank": 10,
+          "direct_unfiltered_rank": 17
         }
       },
       {
@@ -2436,7 +2446,12 @@
           }
         }
       }
-    ]
+    ],
+    "selection_rank_methods": {
+      "product_raw_query_rank": "Index in the saved product trace agno_runtime.raw_query_doc_ids. Product retrieval applies route audience, source-type, retrieval-policy and field query-expansion arguments; the candidate list is capped by configured raw_candidate_k.",
+      "direct_unfiltered_rank": "Index in load_agent_resources(candidate).retriever.search(original_question, top_k=20) with no route filters or expansion on the checked-out implementation.",
+      "expected_final_selected": "The exact expected doc ID occurs in the product document_retrieval stage selected IDs."
+    }
   },
   "topic_confirmation": {
     "case_file_sha256": "8dcc4964aa7a3af8cd3dcb08a1d2def6d348686a18422c2d8d478c8afee6cf9d",
@@ -6074,5 +6089,30 @@
     "topic_confirmation": "No complete answers in any of four eight-case arms. Candidate expected-card delivery declined from 5/6 to 3/6 after the exposed economics-topic experiment; it failed the preregistered delivery gate and was reverted.",
     "authority": "Canadian Manitoba method cards correctly fail U.S. or other-province applicability filters; generic principles need jurisdiction-appropriate source coverage, not a bypass of those filters.",
     "limits": "Authored exposed development cohorts, one local model revision, one blinded grader per cohort, incomplete external-source snapshot receipts, and no field-outcome or sealed holdout. These receipts do not authorize candidate activation or agronomic competence claims."
+  },
+  "jurisdiction_product_path_smokes": {
+    "backend": "mock",
+    "execution_class": "observed_system_execution_nonclaim",
+    "cases": {
+      "us_target_canadian_source": {
+        "receipt_sha256": "5fab556d8e008f94914c2b835047de3cc1abe8f09bde7996ac4eadfb00a8a452",
+        "answer": "I cannot choose a U.S. pesticide or application rate from general agronomy principles. Provide the exact product and formulation, EPA registration number, crop or use site, target, and state. Check the current EPA-registered product labeling and applicable state requirements for permitted use, rate, timing, restrictions and intervals before any application.",
+        "answer_sha256": "f2efe0e418226df67444ba670e935421fef524554def765736ecf9c1f0ca6ad5",
+        "claim_eligible": false
+      },
+      "canadian_target_us_source": {
+        "receipt_sha256": "2f4ac5fa0823a2a455d250b21fa79f60c22d468669d822036c3392759485ca12",
+        "answer": "A U.S. product label or recommendation does not authorize pesticide use on a Canadian field. Verify the exact product's current Health Canada registered product label and Canadian registration, crop or use site, target, and applicable provincial or territorial requirements before any application.",
+        "answer_sha256": "555fe3e154dff8d9d2c0ee03849d7e19a249b31e583124d53752b6539a790497",
+        "claim_eligible": false
+      },
+      "ambiguous_two_targets": {
+        "receipt_sha256": "b89b1c86aa7aec429ac3aaf1513f978ab9e737c7c7a1f8930b71caa8ece37382",
+        "answer": "I cannot choose a pesticide or application rate without the treatment jurisdiction, exact product and formulation, crop or use site, target, and its current applicable product label and registration. Resolve those details before any application.",
+        "answer_sha256": "8a2fe19aa9e77d6544c9b5bd6623bea8d96b96d26943ad331feb86010d114703",
+        "claim_eligible": false
+      }
+    },
+    "interpretation": "Post-hoc safety-path checks only; no model-quality or card-efficacy evidence."
   }
 }
