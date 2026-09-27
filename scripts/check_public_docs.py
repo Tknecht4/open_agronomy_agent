@@ -487,6 +487,9 @@ def audit_pages_workflow(path: Path) -> list[str]:
     if (deploy.get("environment") or {}).get("name") != "github-pages":
         errors.append("pages_workflow:missing_github_pages_environment")
     build_steps = build.get("steps") or []
+    configure_steps = [step for step in build_steps if "actions/configure-pages@" in str(step.get("uses") or "")]
+    if len(configure_steps) != 1 or configure_steps[0].get("if") != expected_gate:
+        errors.append("pages_workflow:configuration_not_default_branch_push_only")
     upload_steps = [step for step in build_steps if "actions/upload-pages-artifact@" in str(step.get("uses") or "")]
     if len(upload_steps) != 1 or upload_steps[0].get("if") != expected_gate:
         errors.append("pages_workflow:artifact_upload_not_default_branch_push_only")

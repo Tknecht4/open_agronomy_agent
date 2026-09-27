@@ -34,6 +34,42 @@ python scripts/download_model.py \
 
 The profile currently pins `mlx-community/gemma-4-e2b-it-4bit` at revision `238767527555cb75a05732a84dff5d6ba0dd6809`. That snapshot occupied approximately 3.34 GiB in the exercised local cache; reserve additional disk and unified memory for dependencies, indexes, context, and generation.
 
+## Data and optional spatial setup
+
+The clone already contains the active hash-bound document and graph corpus,
+including the context-only U.S. NRCS analogue pack. Normal question answering
+does not require a second corpus download. Verify those checked-in bytes before
+launching:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/audit_runtime_corpus.py
+```
+
+Prairie map layers are different: the Alberta, Saskatchewan, and Manitoba
+Detailed Soil Survey archives are not committed. The cockpit works without
+them and reports map coverage as `not_installed`. To enable that optional
+offline map context, choose a dedicated state directory outside the checkout,
+inspect the one-time operation, and then run it:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/setup_offline_data.py \
+  --profile prairie-dss-v1 \
+  --data-root /absolute/path/to/open-agronomy-state \
+  --download --build --verify --dry-run
+
+PYTHONPATH=src .venv/bin/python scripts/setup_offline_data.py \
+  --profile prairie-dss-v1 \
+  --data-root /absolute/path/to/open-agronomy-state \
+  --download --build --verify
+
+export AGRONOMY_AGENT_SPATIAL_PACK_ROOT=/absolute/path/to/open-agronomy-state/spatial-pack/prairie-dss-v1
+```
+
+The profile requires at least 1.5 GB free and pins the official source bytes.
+Mapped soil context remains a regional prior, not a soil test or field truth.
+See the [complete offline data procedure](docs/public/operations/offline-data-setup.md)
+for verification, raw-archive retention, and RAG-only operation.
+
 Launch the API and React cockpit:
 
 ```bash

@@ -51,11 +51,6 @@ export default defineConfig({
     // JSDOM test files are isolated; threads avoid the process-spawn overhead
     // of the default fork pool without changing file-level test isolation.
     pool: 'threads',
-    poolOptions: {
-      threads: {
-        minThreads: 6,
-        maxThreads: 6,
-      },
-    },
+    maxWorkers: 6,
   },
 })

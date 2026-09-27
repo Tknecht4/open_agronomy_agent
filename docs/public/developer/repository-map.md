@@ -48,5 +48,20 @@ dependence and Gemma 4 full-system repeatability remain open work.
 | `docs/public/` | Supported public documentation site |
 | `docs/reviews/` | Dated review records and public-safe evidence |
 
+## Optional infrastructure and training boundaries
+
+The reference edge/container profile uses the local queue and local object
+store. `server/worker.py`, `server/redis_preflight.py`, and
+`server/storage/object_store_preflight.py` are retained because the application
+has explicit Redis queue and S3-compatible storage settings and can emit work
+for those backends. Their local and simulated failure boundaries are tested,
+but this repository does not currently publish a supported hosted deployment
+profile or a live Redis/S3 integration receipt.
+
+`src/agronomy_agent/training/` is offline maintainer tooling, not part of the
+answer path. No current Canadian source is admitted for model training;
+retrieval or redistribution permission must never be treated as training
+authorization.
+
 For a more detailed maintainer map, see
 [`ARCHITECTURE.md`](https://github.com/Tknecht4/open_agronomy_agent/blob/main/ARCHITECTURE.md).

@@ -20,6 +20,16 @@ From the repository root:
 ./container/release.sh VERSION
 ```
 
+Reserve at least 12 GiB of free space on the host data volume before a full
+Apple Container build. The current staged context is approximately 958 MB and
+the exercised linux/arm64 image expands to approximately 1.51 GB; BuildKit and
+the host image store temporarily retain additional copies while exporting. An
+observed build with 8.6 GiB free completed every layer and registered a runnable
+image, but the CLI still returned `ENOSPC` while finalizing host storage. Treat
+any non-zero build exit as a failed release operation even if `container image
+inspect` can see the candidate. Reclaim the disposable builder and unpromoted
+images before retrying with adequate headroom.
+
 The candidate under `outputs/releases/open-agronomy-agent-VERSION/` contains
 the OCI archive, checksums, release manifest, and validation evidence. Do not
 overwrite or relabel it. Model and user data are not included.

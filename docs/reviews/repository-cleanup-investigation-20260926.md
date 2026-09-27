@@ -153,12 +153,12 @@ now declare them instead of relying on the maintainer workstation's transitive
 environment.
 
 The final post-cleanup inventory contains 123 package modules and 106,444
-Python lines. The test inventory is 88 files, 719 explicit test functions, and
-994 collected cases: no test was removed, and two focused restore-guard cases
-were added to protect the supported recovery boundary. The generated edge
+Python lines. The test inventory is 89 files, 725 explicit test functions, and
+1,000 collected cases: no test was removed; two focused restore-guard cases,
+five operator-boundary cases, and one Pages workflow case were added. The generated edge
 runtime manifest was refreshed after the source and documentation changes and
 its container-package validator passed with contract digest
-`82fd57270db03331b43464062ec479805d3dc5cddaacd175b16e47ac2a8cab6e`.
+`c0737d8fb854f4440829f12473eb2a6684170ae20704d30ded862560e95bda8f`.
 
 ## Final verification
 
@@ -169,11 +169,66 @@ its container-package validator passed with contract digest
   while copying the approximately 1 GiB public package: it reached 970 passes,
   then reported two failures and 22 setup errors whose common cause was
   `ENOSPC`. After removing only generated temporary outputs, the serial rerun
-  passed all 994 tests in 93.12 seconds with one upstream Starlette/httpx
-  deprecation warning.
+  passed all 994 tests in 93.12 seconds. The subsequent merge-closure phase
+  removes the Starlette/httpx warning and raises the final collection to 1,000.
 - Python compilation, the edge-container package validator, all 205 frontend
   tests, frontend type checking and production build, public documentation
   source/render audits, strict MkDocs rendering, and the frozen RC3 published-
   artifact check passed.
 - The curated public package built 812 files and rejected no manifest or
   machine-local-path boundary.
+
+## Residual-risk closure before merge
+
+The merge-closure phase is intentionally bounded to one dependency/deprecation
+repair, one available Linux/OCI build path, one operator-surface audit, and the
+affected/full repository gates. Large-module decomposition, external corpus
+distribution, and behavior-changing harness work are successor projects: doing
+them here would expand the merge surface or invalidate the evaluated reference
+state. The owner performs the repairs and integration checks; a fresh
+independent reviewer must accept the final committed delta before merge.
+
+The optional worker, Redis preflight, and object-store preflight are retained
+because the application has explicit Redis/S3 configuration and enqueue paths,
+not because an unused-file scan found their module names. Their local/fake
+boundaries now have direct tests, while public documentation explicitly marks
+the live hosted profile and live-service integration receipt as unfulfilled.
+Training helpers remain offline maintainer tools; current corpus policy admits
+no Canadian source for training.
+
+Starlette's TestClient deprecated its legacy `httpx` compatibility path. The
+CI dependency set now installs the supported `httpx2` major line, and the
+TestClient-focused suite passes with Starlette deprecations elevated to errors.
+
+The frontend dependency audit initially reported one high and three moderate
+advisories in Vitest/Browserslist build and test dependencies. Vitest moved to
+4.1.11, its pool configuration moved to the supported v4 shape, transitive
+browser data was refreshed, all 205 tests/type checking/builds passed, and
+`npm audit --audit-level=low` reported zero vulnerabilities. CI now blocks new
+high-severity frontend advisories.
+
+The full linux/arm64 Apple Container build compiled the frontend, installed the
+runtime, copied all governed assets, and produced a 958 MB staged context. With
+8.6 GiB free, Apple Container registered image index
+`sha256:c85e449b2fd3419b64767d6f8caa88e477da29a1650d87d5b58ab6f1fe781ddf`
+but returned `ENOSPC` while finalizing host storage. The registered image then
+ran successfully and imported `agronomy_agent` with runtime contract
+`0c2d874ed2737a47a6836ac2aa4d88f2b0599a2ff26439e2907f49d1ae555990`.
+The subsequent container-guide-only edit advanced the current generated
+contract to `c0737d8fb854f4440829f12473eb2a6684170ae20704d30ded862560e95bda8f`,
+which passed package validation but was not rebuilt into another image. The
+smoke is therefore runtime-code/dependency evidence, not an exact-final-source
+or successful immutable-release export. The container guide now requires at
+least 12 GiB free and retains a non-zero builder exit as failure.
+
+GitHub Actions run `36282861014` showed that strict documentation build,
+render audit, and Pages artifact upload all passed. Deployment alone failed
+with a 404 because repository Pages was disabled. The workflow now includes a
+commit-pinned `actions/configure-pages` step and a source audit requiring it;
+the repository setting must select **GitHub Actions** before the next protected
+`main` deployment can succeed.
+
+The root README now distinguishes clone-contained governed knowledge from the
+optional external Prairie DSS pack and includes the dry-run, download/build/
+verify, disk, environment, and `not_installed` boundaries needed for first-time
+setup.

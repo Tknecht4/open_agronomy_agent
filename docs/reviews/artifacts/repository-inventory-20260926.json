@@ -33,13 +33,15 @@
     "python_lines_after": 106444,
     "modules_removed": 29,
     "python_lines_removed": 10522,
-    "python_test_files_after": 88,
-    "explicit_test_functions_after": 719,
-    "collected_tests_after": 994,
+    "python_test_files_after": 89,
+    "explicit_test_functions_after": 725,
+    "collected_tests_after": 1000,
     "removed_test_files": 0,
-    "added_test_files": 1,
+    "added_test_files": 2,
     "added_test_contracts": [
-      "pending_restore_journal_blocks_startup_and_names_the_supported_recovery_api"
+      "pending_restore_journal_blocks_startup_and_names_the_supported_recovery_api",
+      "optional_worker_redis_and_object_store_operator_boundaries",
+      "github_pages_configuration_precedes_default_branch_deployment"
     ],
     "removed_categories": [
       "unused_agno_comparison_and_ingestion_experiments",
