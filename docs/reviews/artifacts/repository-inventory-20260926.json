@@ -29,10 +29,10 @@
     {"path": "src/agronomy_agent/server/services/export_service.py", "lines": 3756}
   ],
   "phase_1_cleanup": {
-    "python_modules_after": 131,
-    "python_lines_after": 109338,
-    "modules_removed": 21,
-    "python_lines_removed": 7625,
+    "python_modules_after": 123,
+    "python_lines_after": 106441,
+    "modules_removed": 29,
+    "python_lines_removed": 10522,
     "collected_tests_after": 992,
     "removed_test_files": 0,
     "removed_categories": [
@@ -40,7 +40,10 @@
       "unused_lfm_shadow_router",
       "quarantined_decision_card_matcher",
       "unused_phase5_experiment_and_release_reports",
-      "unattached_applied_guidance_promotion_workflow"
+      "unattached_applied_guidance_promotion_workflow",
+      "incomplete_security_recovery_readiness_island",
+      "undocumented_demo_and_deployment_scaffolding",
+      "unreachable_persisted_path_migration"
     ]
   },
   "interpretation": "Inventory counts identify review boundaries. They do not prove that a file, test, or artifact is unused or safe to remove."

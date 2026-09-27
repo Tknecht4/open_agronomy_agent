@@ -273,7 +273,6 @@
     "scripts/offline_spatial_profiles.py",
     "scripts/setup_offline_data.py",
     "scripts/run_retrieval_diagnostics.py",
-    "scripts/security_recovery_readiness.py",
     "scripts/smoke_aafc_nasdi.py",
     "scripts/smoke_keyed_public_adapters.py",
     "scripts/smoke_ppls_adapter_modes.py",

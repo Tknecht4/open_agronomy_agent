@@ -45,8 +45,9 @@ and are superseded by active paths:
 Historical receipts may still name removed files because they describe an
 older immutable source snapshot. That is expected and must not be rewritten.
 
-Phase 1 removed 21 modules and 7,625 Python lines from these islands, plus two
-experiment-only requirement files and one unused gate matrix. The complete
+Phase 1 and the follow-up unsupported-surface pass removed 29 modules and
+10,522 Python lines from these islands, plus two experiment-only requirement
+files, one unused gate matrix, and one broken readiness script. The complete
 backend suite still collected and passed all 992 tests; no test was removed.
 This confirms that the deleted code was outside every current collected test
 contract, while also documenting that those proposed features never had
@@ -57,8 +58,7 @@ supported coverage.
 | Area | Why it looks stale | Why it is not safe to delete yet |
 |---|---|---|
 | Hosted worker, Redis/object-store preflights | No direct tests or public operator guide | Container/hosted deployment intent and service functions exist |
-| Encrypted backup and recovery readiness | No direct tests; readiness script references missing drill scripts/tests | Security/recovery contracts are consequential and need an explicit retirement or repair decision |
-| Persisted-path audit/migration | No caller or CLI | May be a one-time migration needed by private retained databases |
+| Backup transaction guard | Broader encrypted/readiness scaffold was removed | `server/storage/backup.py` remains active because database startup checks pending restore state |
 | Training/SFT utilities | Not used by product runtime | Intentional offline maintainer tooling; needs license/output review before retirement |
 | Large historical scripts/configs | Referenced mainly by frozen receipts/public manifest | Some are reproduction inputs; archive policy must precede moves |
 
@@ -137,3 +137,9 @@ behavioral seam can detect the same forbidden regression.
 - a general backend/frontend CI workflow was added because the repository had
   only a documentation workflow despite using the full local suite as a merge
   gate.
+
+The follow-up pass removed an incomplete security/recovery readiness island
+whose sole CLI referenced five absent drill scripts/tests, plus unreachable
+demo, deployment-readiness, and persisted-path migration modules. Active backup
+transaction checks, storage backends, and hosted worker/preflight code were
+retained for an explicit operator-surface review.

@@ -32,6 +32,7 @@ jobs:
       - name: Install tested backend dependencies
         run: |
           python -m pip install --requirement requirements-phase4-ci.txt
+          python -m pip install --requirement requirements-benchmark-analysis.txt
           python -m pip install --no-deps --editable .
       - name: Compile Python sources
         run: python -m compileall -q src scripts
