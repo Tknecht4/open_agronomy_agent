@@ -177,16 +177,20 @@ def _gdd(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, ...]] |
         rf"\bbase(?: temperature)?\s*(?:was|is|of|:)?\s*{SIGNED_NUMBER}\s*°?\s*C\b",
         rf"{SIGNED_NUMBER}\s*°?\s*C\s+base\b",
     )
-    upper_cap = _find_number(
-        text,
+    upper_patterns = (
         rf"\b(?:upper|maximum|high)\s+(?:temperature\s+)?cap\s*(?:at|of|is|:)?\s*{SIGNED_NUMBER}\s*°?\s*C\b",
         rf"\bcap\s+(?:the\s+)?(?:maximum|high|tmax)\s*(?:at|to)?\s*{SIGNED_NUMBER}\s*°?\s*C\b",
     )
-    lower_cap = _find_number(
-        text,
+    lower_patterns = (
         rf"\b(?:lower|minimum|low)\s+(?:temperature\s+)?cap\s*(?:at|of|is|:)?\s*{SIGNED_NUMBER}\s*°?\s*C\b",
         rf"\bcap\s+(?:the\s+)?(?:minimum|low|tmin)\s*(?:at|to)?\s*{SIGNED_NUMBER}\s*°?\s*C\b",
     )
+    upper_matches = [match for pattern in upper_patterns for match in re.finditer(pattern, text, re.IGNORECASE)]
+    lower_matches = [match for pattern in lower_patterns for match in re.finditer(pattern, text, re.IGNORECASE)]
+    upper_values = {_number(match.group(1)) for match in upper_matches}
+    lower_values = {_number(match.group(1)) for match in lower_matches}
+    upper_cap = next(iter(upper_values)) if len(upper_values) == 1 else None
+    lower_cap = next(iter(lower_values)) if len(lower_values) == 1 else None
     values = {"max_temp_c": high, "min_temp_c": low, "base_temp_c": base,
               "upper_cap_c": upper_cap, "lower_cap_c": lower_cap}
     inputs = {key: value for key, value in values.items() if value is not None}
@@ -195,10 +199,17 @@ def _gdd(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, ...]] |
         missing += ("invalid temperatures: maximum must be at least minimum",)
     if lower_cap is not None and upper_cap is not None and lower_cap > upper_cap:
         missing += ("invalid caps: lower cap must not exceed upper cap",)
-    mentions_cap = bool(re.search(r"\bcap(?:s|ped|ping)?\b", lower))
     says_no_cap = bool(re.search(r"\b(?:no|without)\s+(?:temperature\s+)?caps?\b", lower))
-    if mentions_cap and not says_no_cap and upper_cap is None and lower_cap is None:
-        missing += ("invalid cap: specify an upper or lower temperature cap in C",)
+    if len(upper_values) > 1 or len(lower_values) > 1:
+        missing += ("invalid caps: conflicting values were supplied",)
+    cap_mentions = list(re.finditer(r"\bcap(?:s|ped|ping)?\b", text, re.IGNORECASE))
+    parsed_cap_matches = upper_matches + lower_matches
+    unbound_cap = any(
+        not any(parsed.start() <= mention.start() < parsed.end() for parsed in parsed_cap_matches)
+        for mention in cap_mentions
+    )
+    if (unbound_cap and not says_no_cap) or (says_no_cap and parsed_cap_matches):
+        missing += ("invalid cap: specify one consistent cap method and value in C",)
     return "daily_gdd", inputs, missing
 
 

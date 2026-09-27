@@ -134,6 +134,9 @@ def test_planner_avoids_ambiguous_or_action_seeking_math(question: str, expected
         "Calculate seed mass from 28 plants/ft² target, TKW 39 g, germination 99% and field survival 85% in kg/ha.",
         "Calculate seed mass from 260 plants/m² target, TKW 39 g, germination 99% and field survival 85% in lb/ac.",
         "Calculate one day's GDD from Tmax 35 C, Tmin 9 C and base 10 C with cap 30 C.",
+        "Calculate one day's GDD from Tmax 35 C, Tmin 5 C and base 10 C with lower cap 10 C, upper cap 30 C, and upper cap 32 C.",
+        "Calculate one day's GDD from Tmax 35 C, Tmin 5 C and base 10 C with lower cap 10 C and an unspecified upper cap.",
+        "Calculate one day's GDD from Tmax 35 C, Tmin 5 C and base 10 C with lower cap 8 C, lower cap 10 C, and upper cap 30 C.",
     ],
 )
 def test_foundation_parser_clarifies_incompatible_supplied_inputs(question: str) -> None:
@@ -152,4 +155,15 @@ def test_gdd_parser_applies_explicit_upper_cap_before_averaging() -> None:
     assert plan.status == "ready"
     assert len(results) == 1
     assert results[0].payload["value"] == 9.5
+    assert results[0].payload["inputs"]["upper_cap_c"] == 30.0
+
+
+def test_gdd_parser_applies_both_consistent_caps() -> None:
+    plan, results = plan_and_execute_tools(
+        "Calculate one day's GDD from Tmax 35 C, Tmin 5 C and base 10 C with lower cap 10 C and upper cap 30 C."
+    )
+
+    assert plan.status == "ready"
+    assert results[0].payload["value"] == 10.0
+    assert results[0].payload["inputs"]["lower_cap_c"] == 10.0
     assert results[0].payload["inputs"]["upper_cap_c"] == 30.0

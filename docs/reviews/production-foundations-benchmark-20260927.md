@@ -93,6 +93,7 @@ generation occurred, not because a requested seed was ignored.
 | Typed v2, original active RAG | 18 | 11/11 correct | 1 | 3 | 24.45 s |
 | Integrated code, candidate RAG, Metal unavailable | 18 | 11/11 correct | 3 | 0 | 3.21 s; not comparable |
 | Parser-repaired code, candidate RAG, Metal unavailable | 18 | 11/11 correct | 3 | 0 | 3.23 s; not comparable |
+| Cap-conflict-repaired code, candidate RAG, Metal unavailable | 18 | 11/11 correct | 3 | 0 | 7.12 s; not comparable |
 
 The three missing/invalid-input cases produced specific clarifications in both
 typed arms. Conceptual, current-price, and regulated-rate controls stayed
@@ -167,3 +168,12 @@ mock backend. The repaired code's 18-case product run again gave 11/11 numeric
 results, 3/3 specific clarifications (including the zero denominator), and a
 direct cross-border refusal; Metal remained unavailable and no model draft
 completed. The integrated model-quality limit above remains in force.
+
+A second review of the repair found one remaining cap branch: when a valid
+lower cap accompanied two conflicting upper caps, the parser discarded the
+upper values and calculated with only the lower cap. The parser now requires
+every mentioned cap to bind to one unambiguous value, clarifies an unspecified
+or conflicting upper *or* lower cap, and rejects a stated no-cap method mixed
+with a numeric cap. A consistent two-cap example and the conflicting/unspecified
+counterexamples are regression cases. This is a post-hoc repair; the exposed
+18-case set did not exercise the new cap conflict.
