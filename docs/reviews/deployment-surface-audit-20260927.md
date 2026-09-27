@@ -1,66 +1,49 @@
-# Deployment surface audit and first desktop release plan
+# Deployment surface audit and Mac-first release plan
 
-**Source:** `main` at `fd590b57babca0666e24286315ec460877a59dac` (also verified as live `origin/main` on 2026-09-27)
+**Source:** `main` at `fd590b57babca0666e24286315ec460877a59dac` (verified as live `origin/main` on 2026-09-27)
 
 **Review branch:** `codex/deployment-surface`
 
 **Date:** 2026-09-27
 
-**Requested outcome:** An ordinary user on macOS, Windows, or Linux opens an installed app and gets local inference, without cloning the repository or running commands.
+**Current target:** A user with an Apple Silicon Mac installs the app, opens it, and gets local answers without Git, Python, Node, Docker, or a terminal. Windows and Linux are deferred.
 
 ## Decision
 
-Make an installable desktop app the **single user-facing deployment surface**. Keep the React UI, FastAPI application, evidence policy, and local data contract. Bundle the production frontend and backend in per-OS installers and have the app own the local model process. A single cross-platform inference implementation, such as a pinned `llama.cpp` build and a qualified GGUF model, is the leading candidate, **not an approved replacement** for the current MLX model. The model, quantization, prompt/template behavior, response trace, speed, and quality must be measured on each target before selecting it.
+Make a native macOS `.app` the only user-facing deployment surface for the first release. Retain the React workspace, FastAPI product path, pinned MLX model, governed corpus, and local data policy. The app owns startup, first-run model provisioning, readiness, the browser workspace, and shutdown. An app icon that starts the local service and opens the workspace in the user's browser meets the first interaction goal; an embedded webview can wait.
 
-Stop extending Apple Container and Docker Compose as parallel user launch paths. Freeze their current contracts while the replacement is built; retire them only after a tested replacement covers their active consumers, including field-LAN or an explicit decision to defer that capability. Historical receipts stay immutable. Docker may remain an internal integration/build tool, but would no longer be an advertised way for an end user to run the product.
+Do not make Docker Compose the first user runtime. It packages the API and UI but still needs a separate native MLX server on the Mac. The current Docker path also imports an Apple Container-built `linux/arm64` archive, so choosing Docker would not remove Apple from the release path. Freeze the container launch paths while the Mac app is proved. Historical receipts remain intact. The first desktop scope is one Mac on loopback; field-LAN requires a separate migration or later release.
 
 ## Observed reference state
 
-| Area | Observation on `main` | Consequence |
+| Area | Observation on `main` | Mac-first implication |
 |---|---|---|
-| Native development | `scripts/run_cockpit.py` runs FastAPI and optionally a Vite development server; `requirements.txt` includes `mlx-lm` and `mlx-vlm`. | The documented local start still requires Python, npm, model provisioning, and a terminal. Vite is a development tool, not a release runtime. |
-| Production web app | `Containerfile` builds the React app and FastAPI serves the resulting static files via `AGRONOMY_AGENT_STATIC_DIR`. | The user interface can be reused in a desktop package without a runtime Node dependency. |
-| Model | `configs/model.yaml` pins `mlx-community/gemma-4-e2b-it-4bit` and a specific revision. The native product defaults to MLX; the image uses `mlx_http` to call `container/model-host.sh` on the Mac. | The OCI image does not contain the model or a portable inference engine. A Docker-only switch cannot deliver local answers on all three OSes. |
-| Container release | `container/release.sh` requires Apple Container to build/export the reference `linux/arm64` archive. `container/docker.sh` imports and runs that archive through Compose. `scripts/validate_edge_runtime_translation.py` compares Docker with the Apple runtime. | The two engines are one image contract but two launch/release/support paths. Docker is currently downstream of Apple, not an independently qualified release builder. The current ARM image is also not a qualified native x86-64 Windows/Linux artifact. |
-| Field use | `container/apple.sh` has `start-field-lan`; `scripts/audit_field_offline_topology.py` names that launcher. | Deleting Apple files now would break a declared capability and its evidence path. |
-| PWA | `frontend/public/manifest.webmanifest` and `frontend/public/service-worker.js` install/cache the browser shell and exclude private API routes. | An installed PWA does not start FastAPI or run the local model. It cannot satisfy the requested install experience by itself. |
-| Assets | The repository architecture records about 988 MiB of tracked data. The current Mac model snapshot is documented at about 3.34 GiB. `scripts/download_model.py` defaults to a repository-local cache. | Model and corpus distribution, first-run space checks, progress, checksums, and user-data placement are central release work. |
+| Native path | `scripts/run_cockpit.py` runs FastAPI and optionally Vite. `requirements.txt` includes MLX, and `configs/model.yaml` pins the Gemma 4 E2B MLX snapshot. | Reuse the working local inference path. No model conversion is needed to solve packaging. |
+| Production UI | `Containerfile` builds React static assets; FastAPI serves them with `AGRONOMY_AGENT_STATIC_DIR` or `--static-dir`. | Bundle the built UI; do not run npm or Vite in the installed app. |
+| Container paths | `container/release.sh` builds with Apple Container; `container/docker.sh` consumes its archive through Compose; both use native host MLX. | Two engine launch and support paths are redundant for the intended single-user Mac app, but active checks still name them. |
+| Field-LAN | `container/apple.sh` provides `start-field-lan`; `scripts/audit_field_offline_topology.py` names it. | Keep the operator path until a native replacement is qualified or field-LAN is explicitly deferred. |
+| PWA | `frontend/public/manifest.webmanifest` and `service-worker.js` cache the browser shell, not the API or model. | Retain useful offline draft behavior; PWA installation alone does not install the product. |
+| Assets | The repository tracks about 988 MiB of data; the documented model snapshot occupied about 3.34 GiB. `scripts/download_model.py` defaults to a checkout-local cache. | Installation needs a disk check, user-data paths, verified assets, and visible first-run download progress. |
 
-The most recent recorded Apple image build registered a runnable image but exited nonzero with `ENOSPC`; it was **not** a successful final-source release export (`docs/reviews/repository-cleanup-investigation-20260926.md`). During this review, the host had about 2.2 GiB available, Docker's daemon was unavailable, the installed Docker CLI lacked the Compose plugin, and Apple Container status returned an operation-permitted error. The Docker translation validator exited with status 1: `docker compose config` exited 125 because `docker compose` was unavailable. No image build, cold start, or cross-OS model run was performed here.
+The recent Apple image build recorded in `docs/reviews/repository-cleanup-investigation-20260926.md` exited nonzero with `ENOSPC`; it was not a completed final-source release. During this review the host had about 2.2 GiB free, Docker's daemon was stopped, its Compose plugin was absent, and Apple Container status failed with an operation-permitted error. No new image or installer was built.
 
-## What is redundant, and what is not
+## What can be simplified
 
-The **support obligation** for two container engines is the primary redundancy: `container/apple.sh` and `container/docker.sh`, both import commands, Apple-to-Docker translation validation, engine-specific documentation, and release parity fields in `scripts/build_edge_container_release.py`. They do not duplicate the application implementation, and they cannot be removed with a script deletion alone. `scripts/build_edge_runtime_manifest.py`, `scripts/validate_edge_container_package.py`, `scripts/build_portable_agent_bundle.py`, public package selection, tests, and runbooks name these paths.
+1. **One user product:** the Mac app. Stop presenting Apple Container and Docker Compose as equally supported end-user starts.
+2. **One model path:** native MLX with the exact active model revision. A cross-platform model port is no longer on the first-release critical path.
+3. **One production UI:** a static React build served by FastAPI. The Vite launcher remains a maintainer command.
+4. **Governed assets remain bound:** the corpus is a runtime asset and frozen receipts are evidence. Use a verified distribution before removing checked-in data.
 
-The native development launcher and production static frontend serve different purposes. The PWA shell provides browser caching and offline drafts, not local generation. The governed corpus, frozen benchmark outputs, and release receipts are evidence or runtime assets, not excess copies to delete for a smaller checkout. The 988 MiB data distribution issue needs a verified, content-addressed replacement before removal.
+## First implementation milestones
 
-## Options against the requested experience
+1. **Production-style native start.** Build the frontend, launch FastAPI with `--static-dir` and the pinned MLX model, then verify the UI, `/api/health`, one real source-bound answer, and clean shutdown independently. Record exact model, corpus, and runtime identities.
+2. **Unsigned app prototype.** Bundle Python, MLX dependencies, backend, static UI, and admitted corpus behind a small macOS launcher. On open it owns one loopback-only backend, waits for readiness, shows setup or errors, and opens the workspace without a terminal. It stops only processes it owns. A status/setup window is enough; an embedded browser window is optional.
+3. **Understandable first run.** Put private fields, SQLite data, traces, logs, and caches in the user's Application Support directory. Ask before downloading the pinned model, check free space, verify exact bytes, and show progress and retry. Never download while answering. Keep optional spatial packs separate and verified.
+4. **Release candidate.** Establish the Apple Silicon, macOS, memory, and disk floor from measured clean-host runs. On a Mac without developer tools, test install, open, provision, a real answer, offline behavior, quit, reopen, update without data loss, and listener cleanup. Public distribution then needs Developer ID signing and notarization; see [Apple's distribution guidance](https://developer.apple.com/developer-id/).
+5. **Retire old launch support separately.** After the app works, lead public setup guidance with the installer. Remove Apple/Docker user launch code only after replacing active release and field-LAN consumers, refreshing generated manifests, and running owning gates. Preserve historical receipts byte-for-byte.
 
-| Option | User steps after download | Local inference on all three OSes | Assessment |
-|---|---|---|---|
-| Docker Compose as the only runtime | Install/start Docker, import or build image, install/provision a separate model host, run launcher | Not with the current MLX host and image | Useful for operators, but does not meet “open it.” Docker Desktop documents Mac container GPU support as unavailable; the current Mac model therefore stays outside the container. |
-| PWA alone | Open/install website | No | Retain as a client feature; backend and model lifecycle still need an owner. |
-| Desktop installer owning local services | Install, open, consent to first-run model download | Possible after model/runtime qualification on each OS | Recommended user surface. Packaging and cross-platform model evidence are the largest work items. |
+## Acceptance and residuals
 
-Official references: [Docker Desktop GPU support](https://docs.docker.com/desktop/features/gpu/), [Docker Desktop license terms](https://docs.docker.com/subscription-billing/desktop-license/), [`llama.cpp` supported backends](https://github.com/ggml-org/llama.cpp), [Tauri sidecar packaging](https://v2.tauri.app/develop/sidecar/), and [Apple Developer ID distribution](https://developer.apple.com/developer-id/). These establish available mechanisms, not this project's runtime or quality readiness.
+The next reviewable artifact is an **unsigned local Mac app prototype** that opens the production UI and completes a real model-backed question without Python, Node, Git, Docker, or a terminal installed on the test Mac. That proves packaging and lifecycle, not agronomic quality or public-release readiness.
 
-## Smallest proof that resolves the model uncertainty
-
-1. Freeze one local model candidate and its exact source/quantized bytes, prompt template, inference binary, settings, license, and target hardware. `llama.cpp` is a candidate because it exposes an OpenAI-compatible server and has Metal, CPU, CUDA, and Vulkan backends; it has not been qualified for this application.
-2. Run the existing product request path on the candidate through `OpenAICompatibleGenerator` on one Mac, one Windows machine, and one Linux machine. Compare full answers **and** 17-stage traces, selected evidence, verifier/fallback behavior, citation integrity, refusals, and deterministic-tool results with the MLX reference. Record latency, memory, cold start, and repeated-run variation separately. Do not transfer the current Gemma/MLX benchmark claims to new weights or a new engine.
-3. Establish the supported hardware floor from measurements. OS support alone does not establish usable local inference on low-memory or CPU-only machines. If no candidate meets the product gate on all three, the first cross-platform local release is blocked; keep the existing Mac development path rather than silently substituting a cloud model.
-
-## Implementation sequence after that gate
-
-1. **Package the existing app path.** Produce the React static build, package FastAPI and dependencies, and run both under a desktop supervisor. Tauri with bundled sidecars is one candidate shell; select it after a minimal launch/shutdown spike. Keep `execute_agent_request` as the production seam.
-2. **Own the entire lifecycle.** On click, start or reconnect to one loopback-only backend and model process, wait for separate API/model readiness, show useful setup and error states, open the workspace, and stop owned processes on quit. Use an app-held token for local HTTP access and avoid exposing model endpoints to the LAN by default.
-3. **Make first run explicit.** Check OS/architecture, memory and disk; download only user-approved, pinned model assets into an OS user-data directory; verify hashes; show progress and resumable failure. Never initiate a model download while answering a question. Keep private fields, databases, traces, and caches outside the installed program directory; preserve them across updates.
-4. **Package and verify assets.** Supply the admitted corpus and static UI with manifests; migrate the repository-local model cache carefully. Support optional spatial packs as separately verified downloads. Produce per-OS signed installers and an update/rollback path; document third-party licenses and user-data removal.
-5. **Prove a clean-user path on every OS.** On fresh supported hosts, install without Python, Node, Git, or Docker; open the app; perform first-run provisioning; get one real source-bound answer; disconnect the network and observe the correct offline state; quit/reopen; upgrade without losing private data; verify model/corpus identity and that owned listeners stop. Keep release and agronomic-quality claims separate.
-6. **Retire old launch surfaces in a separate change.** Replace active field-LAN and offline audit consumers or explicitly defer them, update the runtime manifest and public package, remove active Apple/Docker launch directions, and run the owning tests and release gates. Preserve historical evidence byte-for-byte.
-
-## Acceptance and current limits
-
-A reviewable next implementation milestone is an **unsigned local prototype** that launches a bundled production UI and backend on all three OSes using a pinned model candidate, with an exact receipt for every host. That proves packaging and process ownership only. User release requires the model qualification, clean-host setup test, security/upgrade checks, and platform signing above.
-
-This branch records a source audit and recommendation. It does not change runtime selection, claim Docker parity, certify cross-platform model quality, remove launchers, or produce an installer. The next discriminating evidence is the cross-platform model/runtime spike; the current host's free space, inactive Docker daemon, and missing Compose plugin preclude a meaningful container build and validation here.
+This branch records a source audit and decision, not a working installer. The native model path has been exercised on an Apple Silicon Mac with 16 GiB unified memory, but that is not a measured minimum for users. More free disk is needed before packaging and clean-install trials.
