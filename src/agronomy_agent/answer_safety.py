@@ -43,7 +43,7 @@ def enforce_answer_safety_postconditions(
     answer_text = _normalize_salinity_terminology(answer_text, question=question, route=route)
     answer_text = _ensure_cross_border_fertility_authority_boundary(answer_text, question=question)
     if _route_question_type(route) == "product_label":
-        answer_text = _ensure_current_product_label_boundary(answer_text)
+        answer_text = _ensure_current_product_label_boundary(answer_text, question=question)
     return answer_text
 
 
@@ -110,18 +110,139 @@ def _normalize_salinity_terminology(
     return answer_text
 
 
-def _ensure_current_product_label_boundary(answer_text: str) -> str:
-    """Keep every product-label route anchored to the exact current Canadian authority."""
+def _product_target_country(question: str | None) -> str | None:
+    """Resolve the treatment site before interpreting a foreign label source."""
 
+    query = str(question or "")
+    from agronomy_agent.query_context import analyze_query_context
+
+    signals = analyze_query_context(query)
+
+    def country_in(value: str) -> str | None:
+        canada_named = bool(re.search(r"\b(?:Canada|Canadian)\b", value, re.IGNORECASE))
+        us_named = bool(re.search(r"\b(?:US|USA)\b", value) or re.search(
+            r"\b(?:U\.S\.?A?\.?|United States|American)\b", value, re.IGNORECASE
+        ))
+        if canada_named and us_named:
+            return None
+        if canada_named:
+            return "canada"
+        if us_named:
+            return "united states"
+        return analyze_query_context(value).country
+
+    target_countries: set[str] = set()
+    for match in re.finditer(
+        r"\b(?:my|our|the|this|a|an)\s+"
+        r"(?P<place>(?:(?!(?:in|on|using|with|label|product)\b)[A-Za-zÀ-ÿ.-]+\s+){1,4}?)"
+        r"(?:farm|field|crop|site)\b",
+        query,
+        re.IGNORECASE,
+    ):
+        country = country_in(match.group("place"))
+        if country:
+            target_countries.add(country)
+    for match in re.finditer(
+        r"\b(?:my|our|the|this|a|an)\s+(?:[A-Za-z-]+\s+){0,2}"
+        r"(?:farm|field|crop|site)\s+in\s+(?:the\s+)?(?P<place>[^?.!,;]{1,50})",
+        query,
+        re.IGNORECASE,
+    ):
+        place = re.split(
+            r"\b(?:using|with|under|from|label|product|pesticide|and|or)\b",
+            match.group("place"),
+            maxsplit=1,
+            flags=re.IGNORECASE,
+        )[0]
+        country = country_in(place)
+        if country:
+            target_countries.add(country)
+    if target_countries:
+        return next(iter(target_countries)) if len(target_countries) == 1 else None
+
+    mentioned = {
+        country
+        for country in (
+            country_in(query),
+            *(country_in(jurisdiction) for jurisdiction in signals.jurisdictions),
+        )
+        if country
+    }
+    return next(iter(mentioned)) if len(mentioned) == 1 else None
+
+
+def _ensure_current_product_label_boundary(answer_text: str, *, question: str | None = None) -> str:
+    """Bind product-label boundaries to the treatment jurisdiction when known."""
+
+    query = str(question or "")
+    target_country = _product_target_country(question)
+    action_request = bool(
+        re.search(
+            r"\b(?:choose|give|recommend|apply|spray|use|using|treat|treatment|proceed|rate|dose|permission|allowed)\b",
+            query,
+            re.IGNORECASE,
+        )
+    )
+    if target_country == "united states":
+        if action_request or re.search(
+            r"\b(?:check|verify|follow|consult)\b[^.\n]{0,100}\b(?:PMRA|Canadian registration|Canadian label)\b",
+            answer_text,
+            re.IGNORECASE,
+        ):
+            return (
+                "I cannot choose a U.S. pesticide or application rate from general agronomy principles. "
+                "Provide the exact product and formulation, EPA registration number, crop or use site, target, "
+                "and state. Check the current EPA-registered product labeling and applicable state requirements "
+                "for permitted use, rate, timing, restrictions and intervals before any application."
+            )
+        if re.search(r"\bcurrent\b[^.\n]{0,80}\b(?:EPA|product label|registration)\b", answer_text, re.IGNORECASE):
+            return answer_text
+        return answer_text.rstrip() + (
+            "\n\nBefore any application, verify the exact product, current EPA-registered labeling, "
+            "and applicable state requirements for the crop, target, site, rate, timing and restrictions."
+        )
+
+    if target_country is None:
+        boundary = (
+            "I cannot choose a pesticide or application rate without the treatment jurisdiction, exact product "
+            "and formulation, crop or use site, target, and its current applicable product label and registration. "
+            "Resolve those details before any application."
+        )
+        return boundary if action_request else answer_text.rstrip() + "\n\n" + boundary
+
+    wrong_us_authority_instruction = re.search(
+        r"\b(?:check|verify|follow|consult)\b[^.\n]{0,100}"
+        r"\b(?:EPA|U\.S\.?|US|United States)\b[^.\n]{0,50}\b(?:label|labeling|registration)\b",
+        answer_text,
+        re.IGNORECASE,
+    )
+    us_source_in_question = bool(
+        re.search(r"\b(?:US|USA)\b", query)
+        or re.search(r"\b(?:U\.S\.?A?\.?|United States|American)\b", query, re.IGNORECASE)
+    )
+    if wrong_us_authority_instruction or (action_request and us_source_in_question):
+        return (
+            "A U.S. product label or recommendation does not authorize pesticide use on a Canadian field. "
+            "Verify the exact product's current Health Canada registered product label and Canadian registration, "
+            "crop or use site, target, and applicable provincial or territorial requirements before any application."
+        )
+
+    if action_request:
+        answer_text = re.sub(
+            r"\b(?:current\s+)?PMRA\s+label\b",
+            "current Health Canada registered product label",
+            answer_text,
+            flags=re.IGNORECASE,
+        )
     if re.search(
-        r"\bcurrent\b[^.\n]{0,80}\b(?:PMRA|product label|Canadian label|registration)\b|"
-        r"\b(?:PMRA|product label|Canadian label|registration)\b[^.\n]{0,80}\bcurrent\b",
+        r"\bcurrent\b[^.\n]{0,80}\b(?:product label|Canadian label|registration)\b|"
+        r"\b(?:product label|Canadian label|registration)\b[^.\n]{0,80}\bcurrent\b",
         answer_text,
         re.IGNORECASE,
     ):
         return answer_text
     return answer_text.rstrip() + (
-        "\n\nBefore any application, verify the exact product and current PMRA label and Canadian registration "
+        "\n\nBefore any application, verify the exact product and current Health Canada registered product label and Canadian registration "
         "for this crop, target, site, timing, rate, restrictions, and required intervals."
     )
 

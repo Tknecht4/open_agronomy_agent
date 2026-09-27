@@ -57,6 +57,12 @@ def test_query_context_extracts_crop_jurisdiction_and_region_from_plain_language
     assert signals.field_context["crop_current"] == "wheat"
 
 
+def test_uppercase_us_country_is_not_the_pronoun_us() -> None:
+    assert analyze_query_context("A US hay farm compares contractor costs.").country == "united states"
+    assert analyze_query_context("A U.S. wheat farm compares budgets.").country == "united states"
+    assert analyze_query_context("Help us compare the farm's cash flow.").country is None
+
+
 def test_query_context_expands_uppercase_canadian_province_abbreviations() -> None:
     cases = {
         "PEI potato field": "prince edward island",
@@ -1210,6 +1216,12 @@ def test_seed_return_language_is_weed_management_not_economics() -> None:
     assert "weed" in signals.topics
     assert "economics" not in signals.topics
     assert [doc.doc_id for doc in result.docs] == ["waterhemp"]
+
+
+def test_soil_water_budget_does_not_become_farm_finance() -> None:
+    signals = analyze_query_context("How does a soil water budget respond to dry weather?")
+    assert "soil_water" in signals.topics
+    assert "economics" not in signals.topics
 
 
 def test_optional_irrigation_tag_does_not_drop_crop_specific_dryland_guidance() -> None:

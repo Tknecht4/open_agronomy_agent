@@ -199,6 +199,12 @@ def analyze_query_context(question: str, field_context: dict[str, Any] | None = 
         crops = _ordered_unique((*normalized_explicit_crops, *(crops or fallback_crops)))
 
     jurisdictions, country = _extract_jurisdictions(text)
+    if country is None and (
+        re.search(r"\b(?:US|USA)\b", text)
+        or re.search(r"\bU\.S\.?A?\.?", text, re.IGNORECASE)
+        or re.search(r"\bUnited States\b", text, re.IGNORECASE)
+    ):
+        country = "united states"
     if country is None and re.search(r"\bcanada\b", lower):
         country = "canada"
     if country is None and re.search(
