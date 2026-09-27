@@ -68,7 +68,7 @@ No output means both development listeners have stopped.
 - **Private state stays local by default.** Runtime databases, traces, model caches, raw benchmark answers, private overlays, and generated spatial databases are excluded from Git and the documentation site.
 - **Consequential decisions need authority.** Confirm current labels and regulations and involve a qualified local professional when a decision carries material agronomic, legal, environmental, safety, or financial consequences.
 - **Knowledge is cumulative but explicitly admitted.** The active offline profile contains source-exact Canadian evidence, project policy, SoilWise context, and a 218,258-row USDA NRCS pack. U.S. material is available only for an explicit U.S. MLRA or ecological-site comparison as labelled context; it never establishes Canadian decisive authority. A named Canadian public table can be explained with its source coordinates, but it is not field truth or a prescription. Adding a file does not make it model-visible; source rights, policy, registry admission, and corpus validation remain required.
-- **Benchmark claims are bounded.** RC1 and RC2 are frozen historical development identities. The completed RC3 development checkpoint contains 8,676 observations, but only 49 of 241 cases per arm have a defined deterministic score. Its later Luna semantic review is advisory instrumentation, not agronomist ground truth or a model leaderboard; sealed successor evaluation remains blocked on an independent held-out retrieval suite and release gates.
+- **Benchmark claims are bounded.** RC1–RC3 retain frozen historical development identities. The current-code two-Gemma assessment adds 5,784 retained responses from three four-arm trials each for Gemma 3 270M and Gemma 4 E2B. It confirms deterministic calculations and trace contracts, while exposing high verifier fallback dependence and 27 non-repeatable Gemma 4 full-system cases. It has no calibrated semantic or independent agronomist review and is not a competence claim.
 - **Optional assets remain explicit.** Public adapters need provider/network availability; the Prairie spatial pack is a separately built local asset; unavailable capabilities must not be simulated.
 
 ## Documentation
@@ -78,6 +78,7 @@ No output means both development listeners have stopped.
 - [Knowledge and evidence governance](docs/public/knowledge-and-data.md)
 - [Tools and adapters](docs/public/tools-and-adapters.md)
 - [Evaluation contract](docs/public/evaluation.md)
+- [Current two-Gemma Colab assessment](docs/public/two-gemma-colab-assessment-20260926.md)
 - [RC3 development benchmark checkpoint and paper](docs/public/development-benchmark-rc3-20260815/README.md)
 - [Academic benchmark and system review](docs/reviews/open-agronomy-benchmark-system-review-20260813.md)
 - [Upgrade implementation record](docs/reviews/open-agronomy-upgrade-implementation-20260813.md)

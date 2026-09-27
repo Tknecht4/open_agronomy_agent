@@ -16,16 +16,16 @@ It is not an agronomist replacement or a regulatory, diagnostic, or field-outcom
 
 | Capability | Implemented | Automated tests | Frozen benchmark evidence | Boundary |
 |---|---|---|---|---|
-| Local text generation | Yes, with explicitly provisioned MLX profile | Model/profile and service contracts | RC1 plus three fresh-process RC3 trials for each declared candidate | Model output is advisory and implementation-specific; RC3 has no semantic-quality judgment |
+| Local text generation | Yes, with explicitly provisioned MLX profile | Model/profile and service contracts | Current-code A100 assessment: three four-arm trials each for Gemma 3 270M and Gemma 4 E2B; 5,784 retained responses | Model output is advisory; the assessment is exposed development evidence without calibrated semantic or agronomist review |
 | Governed retrieval | Yes, local policy-admitted lexical/Agno path | Retrieval and corpus policy tests | RC3 surfaced the expected source in 22/26 positive probes and 46/50 required patterns | Retrieval presence is not answer use, quality, or field truth |
 | Knowledge graphs | Multiple manifest-bound JSON graphs configured and merged | Manifest, checksum, collision, provenance, and routing tests | Graph hints present in governed arm | Relationship context, not decision authority; runtime profiles require admitted manifests |
-| Structured calculator | Typed offline executor plus bounded explicit-request planner | Deterministic, service, and natural-language end-to-end tests | RC3 full-system frozen parser scored 14/16; typed-payload audit was 16/16 | The 16/16 audit is parser sensitivity, not a replacement benchmark result; computes supplied inputs only |
+| Structured calculator | Typed offline executor plus bounded explicit-request planner | Deterministic, service, and natural-language end-to-end tests | Current-code full system scored 16/16 in every trial for both assessed models | Computes supplied inputs only; this does not validate target selection or broader advice quality |
 | Public adapters | Several provider/cache contracts exist | Offline-fixture and readiness tests | Traced but live service orchestration not executed | Optional, date/provider/jurisdiction dependent |
 | Field history and traces | Local persistence and trace APIs exist | Field-event/storage/service tests | Interface/lineage lanes exercised | Local records remain private; historical trace does not validate a later answer |
 | Prairie spatial pack | Optional verified local asset | Package/intersection gates | Not a primary RC1 geometry capability | Mapped historical prior, not a sample or point truth |
 | Risk/evidence validation | Implemented and intervention-visible | Safety/evidence regression tests | RC3 retained verifier, hold, rewrite, fallback, and guard traces | Activation counts do not establish whether answers improved; validation cannot create evidence |
 
-“Automated tests” means a named contract has coverage, not that every combination or live provider was exercised. RC1 describes commit `76644dc`; RC3 describes its separately frozen source receipt. Neither automatically proves the current checkout.
+“Automated tests” means a named contract has coverage, not that every combination or live provider was exercised. RC1 and RC3 retain their historical identities. The current-code two-Gemma assessment binds evaluated commit `d43ade7`; its checked-in report was added afterward and does not alter that evaluated system identity.
 
 ## Where to go
 
@@ -34,6 +34,7 @@ It is not an agronomist replacement or a regulatory, diagnostic, or field-outcom
 - [Knowledge and data](knowledge-and-data.md): source admission, retrieval, graphs, and geospatial priors.
 - [Tools and adapters](tools-and-adapters.md): calculator, public adapters, offline behavior, and extension rules.
 - [Evaluation](evaluation.md): the four benchmark arms, RC1 history, completed RC3 checkpoint, and claim limits.
+- [Current two-Gemma assessment](two-gemma-colab-assessment-20260926.md): current-code A100 results, merge decision, residual fallback dependence, and reproducibility limits.
 - [RC3 development checkpoint](development-benchmark-rc3-20260815/README.md): paper, scientific figures, public-safe measurements, and reproducibility receipts.
 - [Developer guide](developer/index.md): code map and how to add a graph, tool, source, or service.
 - [Native setup](operations/native-setup.md), [offline operation](offline-operation.md), and [containers](operations/containers.md).
