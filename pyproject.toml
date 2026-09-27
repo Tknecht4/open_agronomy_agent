@@ -14,6 +14,8 @@ classifiers = [
 dependencies = [
     "agno>=2.6,<2.7",
     "cryptography>=45,<47",
+    "pyproj>=3.6,<4",
+    "shapely>=2.0,<3",
 ]
 
 [project.optional-dependencies]
@@ -23,8 +25,6 @@ agno-rag = [
 geospatial-prep = [
     "geopandas>=1.0,<2",
     "pyogrio>=0.10,<1",
-    "pyproj>=3.6,<4",
-    "shapely>=2.0,<3",
 ]
 training = [
     "datasets>=4.0,<5",

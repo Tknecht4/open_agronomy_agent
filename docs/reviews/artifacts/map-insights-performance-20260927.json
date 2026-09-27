@@ -1,0 +1,322 @@
+{
+  "schema_version": "open_agronomy_agent.map_insights_performance.v1",
+  "date_utc": "2026-09-27",
+  "claim_eligible": false,
+  "reference_main": "fd590b57babca0666e24286315ec460877a59dac",
+  "source_sha256": {
+    "frontend/src/LeafletFieldMap.tsx": "0f8a0ad496fbc6ce4fd3df359a4c77b87e54279e4298ef4258486a4a8a7f3377",
+    "frontend/src/MapPresentationControls.tsx": "640ec7ac08b0c73100d699a466b54f454664b83ba3cb25bcc7ab92048930eed1",
+    "frontend/src/FieldMapInsights.tsx": "559fded663305880faf4887558e5e0ca0dafd2146f7713a645592ed8842572a3",
+    "frontend/src/mapPresentation.ts": "25422a10517e153dd809ab150f6fe41b19157dbca584de654743fd61f2f968af",
+    "frontend/src/OpenAgronomyApp.tsx": "8e9a5e09a4075744ae60bfcf4ff13b3fbd6448c918e2a6b6db5710b5a53f82e6",
+    "frontend/src/workspace.css": "24392e682ea51f89deab3c43d2bf2dac1c6b4d8d1e7f995c7fc28b00f791fbb2",
+    "frontend/src/LeafletFieldMap.css": "afb3689313afc09dfe9d7294ff09657af79e0e8c51ce5794deffc8ba82ff1652",
+    "src/agronomy_agent/server/services/field_map_analysis.py": "ef7dc8de1f689230fc9281237f6dfb3ca66bb08b07b2161bb0ada2241b7af962",
+    "src/agronomy_agent/server/map_analysis_routes.py": "a2512c8bd976a7a171e3864085972297d45c1a2768d5b6d36c6825f19a09e988"
+  },
+  "frontend_assets": [
+    {
+      "asset": "assets/FieldMapInsights-ieBK2gxk.js",
+      "kind": "js",
+      "raw_bytes": 10027,
+      "gzip_bytes": 3664,
+      "sha256": "aaf3473659b2a671503dcd564afa9688dd0ef25298bca982fdc4dad807d7009d"
+    },
+    {
+      "asset": "assets/index-9OXFaVe2.css",
+      "kind": "css",
+      "raw_bytes": 94218,
+      "gzip_bytes": 17801,
+      "sha256": "457c17b836ddb5a0c0e7a50423fcbade7631e99b2b0acee536a6afee6461be11"
+    },
+    {
+      "asset": "assets/index-BZRKNtLr.js",
+      "kind": "js",
+      "raw_bytes": 416985,
+      "gzip_bytes": 129778,
+      "sha256": "838f055160b0ded01f3b10eacac7eef8d284ce7d8bde8594a525d172e325c759"
+    },
+    {
+      "asset": "assets/LeafletFieldMap-A20ulyox.css",
+      "kind": "css",
+      "raw_bytes": 22110,
+      "gzip_bytes": 8265,
+      "sha256": "a2c7fb28572ced02ff82d190b205a6fb65c525270081ec01d17623b2e072da10"
+    },
+    {
+      "asset": "assets/LeafletFieldMap-B-EwwbYg.js",
+      "kind": "js",
+      "raw_bytes": 166642,
+      "gzip_bytes": 49425,
+      "sha256": "5fa4e95ecd848200e08e76987a81a1275fe40ce99f2c26cf5a44afac73f20be6"
+    }
+  ],
+  "backend_fixture": {
+    "geometry_only": {
+      "first_call_ms": 93.6518,
+      "warm_samples_ms": [
+        0.1272,
+        0.0843,
+        0.0722,
+        0.0724,
+        0.0677,
+        0.0663,
+        0.0647,
+        0.0641,
+        0.0631,
+        0.0651,
+        0.4242,
+        0.0735,
+        0.0676,
+        0.0675,
+        0.0648,
+        0.066,
+        0.0655,
+        0.0644,
+        0.0649,
+        0.0635,
+        0.0639,
+        0.064,
+        0.062,
+        0.0638,
+        0.0642,
+        0.0669,
+        0.0637,
+        0.0648,
+        0.0623,
+        0.0633
+      ],
+      "warm_median_ms": 0.06484999999999999,
+      "result": {
+        "schema_version": "open_agronomy_agent.field_map_analysis.v1",
+        "status": "complete",
+        "geometry": {
+          "type": "Polygon",
+          "status": "complete",
+          "area_ha": 492.362878,
+          "area_ac": 1216.655169,
+          "perimeter_m": 8875.751,
+          "location": {
+            "longitude": 0.01,
+            "latitude": 0.01
+          },
+          "method": "WGS84 ellipsoid geodesic area/perimeter; representative point for polygons"
+        },
+        "layers": [],
+        "network_policy": {
+          "mode": "offline",
+          "external_calls_allowed": false,
+          "external_requests_attempted": 0
+        },
+        "limits": {
+          "max_layers": 4,
+          "max_request_bytes": 131072,
+          "max_input_vertices": 1024,
+          "max_source_vertices": 20000,
+          "max_features_per_layer": 80,
+          "max_zones_shown": 10,
+          "remote_timeout_seconds_per_layer": 25
+        },
+        "elapsed_ms": 0.06,
+        "warnings": [
+          "Mapped context is not a field measurement, survey, or current management recommendation."
+        ]
+      }
+    },
+    "real_local_second_component": {
+      "first_call_ms": 1.001,
+      "warm_samples_ms": [
+        0.5424,
+        0.4791,
+        0.4502,
+        0.5654,
+        0.5206,
+        0.5437,
+        1.0978,
+        0.9683,
+        0.5302,
+        0.4539,
+        0.4374,
+        0.4315,
+        0.4337,
+        0.4245,
+        0.4156,
+        0.4154,
+        0.41,
+        0.4077,
+        0.4102,
+        0.4215,
+        0.4111,
+        0.453,
+        0.4093,
+        0.4087,
+        0.404,
+        0.4134,
+        0.4099,
+        0.4069,
+        0.4312,
+        0.4227
+      ],
+      "warm_median_ms": 0.42785,
+      "result": {
+        "schema_version": "open_agronomy_agent.field_map_analysis.v1",
+        "status": "complete",
+        "geometry": {
+          "type": "MultiPolygon",
+          "status": "complete",
+          "area_ha": 984.725757,
+          "area_ac": 2433.310338,
+          "perimeter_m": 17751.501,
+          "location": {
+            "longitude": 0.01,
+            "latitude": 0.01
+          },
+          "method": "WGS84 ellipsoid geodesic area/perimeter; representative point for polygons"
+        },
+        "layers": [
+          {
+            "layer_id": "profile_local_fixture",
+            "label": "Synthetic local fixture",
+            "source_url": "https://example.invalid/source",
+            "source_mode": "local_sqlite",
+            "boundary": "Official regional map context; not field truth or a legal boundary.",
+            "coverage_method": "WGS84 geodesic area of field clipped to union of returned source polygons",
+            "uncertainty": "Mapped source geometry and scale limit precision; remote geometry may be generalized.",
+            "status": "complete",
+            "reason": null,
+            "feature_count": 1,
+            "processed_feature_count": 1,
+            "source_exceeded_transfer_limit": null,
+            "incomplete_reasons": [],
+            "covered_area_ha": 1.230907,
+            "coverage_fraction": 0.00125,
+            "zones": [
+              {
+                "code": "second",
+                "name": "Second component",
+                "area_ha": 1.230907,
+                "fraction_of_field": 0.00125
+              }
+            ],
+            "omitted_zone_count": 0,
+            "elapsed_ms": 0.29
+          }
+        ],
+        "network_policy": {
+          "mode": "offline",
+          "external_calls_allowed": false,
+          "external_requests_attempted": 0
+        },
+        "limits": {
+          "max_layers": 4,
+          "max_request_bytes": 131072,
+          "max_input_vertices": 1024,
+          "max_source_vertices": 20000,
+          "max_features_per_layer": 80,
+          "max_zones_shown": 10,
+          "remote_timeout_seconds_per_layer": 25
+        },
+        "elapsed_ms": 0.42,
+        "warnings": [
+          "Mapped context is not a field measurement, survey, or current management recommendation."
+        ]
+      }
+    }
+  },
+  "online_api": {
+    "input_kind": "synthetic Alberta example rectangle",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -113.608,
+            53.296
+          ],
+          [
+            -113.592,
+            53.296
+          ],
+          [
+            -113.592,
+            53.304
+          ],
+          [
+            -113.608,
+            53.304
+          ],
+          [
+            -113.608,
+            53.296
+          ]
+        ]
+      ]
+    },
+    "cache_boundary": "Connected local API with possibly populated provider cache. These are not uncached provider latency or map-accuracy measurements.",
+    "samples_ms": [
+      117.344,
+      6.955,
+      4.617,
+      3.737
+    ],
+    "statuses": [
+      "complete",
+      "complete",
+      "complete",
+      "complete"
+    ],
+    "geometry_result": {
+      "type": "Polygon",
+      "status": "complete",
+      "area_ha": 94.975182,
+      "area_ac": 234.688786,
+      "perimeter_m": 3914.141,
+      "location": {
+        "longitude": -113.6,
+        "latitude": 53.3
+      },
+      "method": "WGS84 ellipsoid geodesic area/perimeter; representative point for polygons"
+    },
+    "layers": [
+      {
+        "layer_id": "canada_ecozones",
+        "status": "complete",
+        "coverage_fraction": 1.0,
+        "elapsed_ms": 2.94
+      },
+      {
+        "layer_id": "nrcs_mlra",
+        "status": "complete",
+        "coverage_fraction": 0.0,
+        "elapsed_ms": 0.28
+      },
+      {
+        "layer_id": "epa_l3_us",
+        "status": "complete",
+        "coverage_fraction": 0.0,
+        "elapsed_ms": 0.16
+      }
+    ]
+  },
+  "optimization": {
+    "boundary": "Leaflet GeoJSON object construction during a shading-only update",
+    "before_total_constructions": 2,
+    "after_total_constructions": 1,
+    "method": "One rendered fixture layer, then a slider change. The original focused regression failed with 2 constructions; final regression passes with 1. Existing vector styles now update in place.",
+    "latency_speedup_claim": false
+  },
+  "limits": [
+    "Synthetic geometry fixtures and a single Alberta example are not map-accuracy or agronomic validation.",
+    "Observed route timings may use existing provider cache; they do not establish uncached provider latency or availability.",
+    "No new model benchmark is needed or claimed for deterministic map controls/geometry analysis.",
+    "Physical touch devices and broad network/provider distributions remain unmeasured.",
+    "Legacy online multipart/holed query selection remains unqualified; such coverage stays partial/null. Local packs use exact raw-envelope candidates and clipping."
+  ],
+  "backend_fixture_source_sha256": {
+    "src/agronomy_agent/server/services/field_map_analysis.py": "ef7dc8de1f689230fc9281237f6dfb3ca66bb08b07b2161bb0ada2241b7af962",
+    "src/agronomy_agent/server/services/geospatial_service.py": "a791f58ca5625ff537ac3a0f330361fe30924112fa2eaefc7ff5283a4af03d51",
+    "src/agronomy_agent/server/map_analysis_routes.py": "a2512c8bd976a7a171e3864085972297d45c1a2768d5b6d36c6825f19a09e988",
+    "tests/test_field_map_analysis.py": "c5173c35035c234b65e492baeb297114312cbf2b615dcc3c02be3357a2da390e"
+  },
+  "prior_profile_evidence": "Earlier raw receipts retained under outputs/map-insights; the initial public candidate was repaired after independent probes."
+}

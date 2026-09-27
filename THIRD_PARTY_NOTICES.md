@@ -38,6 +38,19 @@ Quarantined or rights-unresolved corpus bytes are not included in the portable
 runtime archive. Their identifiers may remain in policy manifests so the
 exclusion is auditable.
 
+## Interactive basemaps
+
+Connected map styles request tiles directly from the selected provider. No tile
+archive is bundled or prefetched by this application.
+
+- **OpenStreetMap Streets** — retain visible OpenStreetMap contributor attribution
+  and follow the [copyright notice](https://www.openstreetmap.org/copyright) and
+  [tile service policy](https://operations.osmfoundation.org/policies/tiles/).
+- **Esri World Imagery** — retain the provider's service attribution. The inspected
+  service metadata on 2026-09-27 credits Esri, Vantor, Earthstar Geographics, and the
+  GIS User Community. Provider imagery is not project-owned or a current field
+  observation. See the [service metadata](https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer).
+
 ## Production and farm-business foundation cards
 
 The nine foundation cards under `data/seed/production_foundations_v1.jsonl`
