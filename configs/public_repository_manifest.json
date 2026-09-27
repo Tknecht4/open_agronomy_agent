@@ -418,7 +418,8 @@
     "scripts/evaluate_production_foundations_retrieval.py",
     "scripts/run_production_foundations_development.py",
     "tests/test_production_foundations_runtime.py",
-    "tests/test_cross_border_fertility_boundary.py"
+    "tests/test_cross_border_fertility_boundary.py",
+    "tests/test_product_label_jurisdiction.py"
   ],
   "trees": [
     "src",
