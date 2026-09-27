@@ -158,3 +158,17 @@ scene/grid/band pixels with separate field masks and results, reference-aware
 cache quotas, low-free-space admission and eviction only for unpinned
 rebuildable data. These require migrations and are not active policies.
 Frozen benchmark inputs, source uploads and historical receipts stay pinned.
+
+## Final main integration
+
+The foundations/calculator work merged as `393b071` during final packaging.
+Both reviewed commits were rebased onto it. License notices and public package
+paths were combined; the registry-driven selector and planner imports retain
+both the frozen calculator v1/new calculator v2 contracts and uploaded-field
+queries. No imagery pixels, model features, labels, splits or scores changed.
+The final full suite passed **1,212 tests**, with two optional skips; frontend
+passed 267 tests, typecheck and build. The field-data runner repeated all 96
+query contracts and 72 exact production bindings successfully, leaving its
+24 semantic cases explicitly unscored. Generated docs, strict MkDocs and the
+active corpus audit also passed. The post-rebase review and validation receipt
+record source identities and final package reconciliation separately.

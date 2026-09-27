@@ -2,8 +2,8 @@
   "status": "pass_engineering_and_exposed_exploratory_evidence",
   "checks": {
     "python_full": {
-      "local_receipt": "outputs/imagery-validation/pytest-full-clean.log",
-      "sha256": "9f485b36f3286e0afeeada650a7d104dd6038e0d5481afb55d6084f7b0a6ed62"
+      "local_receipt": "outputs/imagery-validation/pytest-rebased.log",
+      "sha256": "8f8a46f8221e9417ee229235a885ab5b53dddda52c40dad753088e63cac9d010"
     },
     "python_interrupted": {
       "local_receipt": "outputs/imagery-validation/pytest-full.log",
@@ -14,31 +14,44 @@
       "sha256": "e9dea7a65e3651b609976b8d1869d88a123f8ae15f31793ef84f89dfe64958e3"
     },
     "public_docs": {
-      "local_receipt": "outputs/imagery-validation/public-docs.log",
+      "local_receipt": "outputs/imagery-validation/public-docs-rebased-fixed.log",
       "sha256": "2e7283cbed443cb0ba2a4eab4ffcecd84d03705f9b2ffb84785d7726aa5530ff"
     },
     "mkdocs": {
-      "local_receipt": "outputs/imagery-validation/mkdocs-final-repaired.log",
-      "sha256": "0cc2a5396e02bae981886909228ed25f2a1a1d1fe9e2e978bab9357f78720d5a"
+      "local_receipt": "outputs/imagery-validation/mkdocs-rebased-final.log",
+      "sha256": "7611d8f517146fde566ffbe19658ec9f1beefa0046b203bc9a5d9e5d3181ea3c"
     },
     "corpus": {
-      "local_receipt": "outputs/imagery-validation/corpus-audit.json",
+      "local_receipt": "outputs/imagery-validation/corpus-rebased.json",
       "sha256": "64868e993b5de4b98141059142a369461e19f9a41722f96d85bd1f2bf6077c92"
     },
     "frontend_build": {
-      "local_receipt": "outputs/imagery-validation/frontend-build-final.log",
-      "sha256": "b527afde69a420c89b458ba649cad71ce95bc82d3886326b8d68ad00e36c790a"
+      "local_receipt": "outputs/imagery-validation/frontend-build-rebased.log",
+      "sha256": "2284e7e0860cfa0fa7b762b8f1afd05656f497eb340e15a7d4a84d3d638b8821"
     },
     "storage_package": {
       "local_receipt": "outputs/imagery-validation/storage-package-tests-final.log",
       "sha256": "ed434db24b370ef24924f3bc666af9beb05ee79e443c89de8f84651c8ed19b44"
+    },
+    "frontend_tests": {
+      "local_receipt": "outputs/imagery-validation/frontend-tests-rebased.log",
+      "sha256": "a61c26279cbadd00a5d7f5a294c1ba70bb62c327f3d3530523ab81061ed02a11"
+    },
+    "frontend_typecheck": {
+      "local_receipt": "outputs/imagery-validation/frontend-typecheck-rebased.log",
+      "sha256": "1ae381a6ca2eca6afa8a52e29aea9428679c0e68bac8ebeb31c79b89bbd66eac"
+    },
+    "field_benchmark": {
+      "local_receipt": "outputs/imagery-validation/field-benchmark-rebased.log",
+      "sha256": "6bc8c2e29db292e68c24d53ddbb038e890a5248b65135bb8094636efeee6dbf2"
     }
   },
   "python_full": {
-    "passed": 1150,
+    "passed": 1212,
     "skipped": 2,
     "warnings": 26,
-    "seconds": 193.03
+    "seconds": 328.31,
+    "base_commit": "393b071"
   },
   "optional_eo": {
     "passed": 39,
@@ -72,17 +85,34 @@
     "seconds": 7.81,
     "note": "post-repair delta, includes nine read-only audit contracts and five package builder contracts"
   },
-  "public_package": {
+  "limitations": [
+    "CAS, raw-upload blob migration, automatic quotas and eviction remain proposed, not implemented.",
+    "Scientific outcomes remain fixed exposed one-farm evidence; no new model scoring during rebase.",
+    "The first disk-full run, repaired generated-document checks and numerical warning evidence are retained."
+  ],
+  "pre_rebase_python_full": {
+    "passed": 1150,
+    "skipped": 2,
+    "warnings": 26,
+    "seconds": 193.03
+  },
+  "pre_rebase_public_package": {
     "status": "pass",
     "files": 962,
     "logical_bytes": 1051826975,
     "copy_policy": "independent APFS clones where supported, ordinary copy fallback",
     "final_receipt": "outputs/imagery-validation/public-package-final-receipt.json"
   },
-  "limitations": [
-    "CAS, raw-upload blob migration, automatic quotas and eviction remain proposed, not implemented.",
-    "Full Python suite preceded the isolated storage/builder delta, which passed its 14 affected tests.",
-    "A documentation-link warning was repaired before the final strict build.",
-    "The first disk-full run and numerical warning evidence are retained."
-  ]
+  "public_package": {
+    "status": "final_rebased_package_receipt_recorded_separately",
+    "final_receipt": "outputs/imagery-validation/public-package-rebased-final-receipt.json",
+    "copy_policy": "independent APFS clones where supported, ordinary copy fallback"
+  },
+  "field_benchmark": {
+    "case_contracts_passed": 96,
+    "exact_production_bindings_passed": 72,
+    "semantic_cases_unscored": 24,
+    "generator": "offline_mock",
+    "runtime_code_stable": true
+  }
 }

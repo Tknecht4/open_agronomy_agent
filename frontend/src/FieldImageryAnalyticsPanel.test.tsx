@@ -50,6 +50,7 @@ describe('FieldImageryAnalyticsPanel', () => {
     const view = render(<FieldImageryAnalyticsPanel fieldContextId="field-1" geometryKey="polygon-1" imageryReady />)
     open()
     setDates()
+    expect(await screen.findByText(/sends the saved field polygon and selected dates to Microsoft Planetary Computer/)).toHaveTextContent('No account is required.')
     await waitFor(() => expect(screen.getByRole('button', { name: 'Analyze scene' })).toBeEnabled())
     fireEvent.click(screen.getByRole('button', { name: 'Analyze scene' }))
     expect(await screen.findByText('Observed indices for the saved field polygon.')).toBeInTheDocument()

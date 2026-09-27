@@ -162,6 +162,7 @@ export function FieldImageryAnalyticsPanel({ fieldContextId, geometryKey, imager
     {!imageryReady ? <p role="status">Save a valid field polygon before analyzing imagery. A point or unknown location is insufficient.</p> : null}
     {availabilityError ? <p role="alert">{availabilityError}</p> : null}
     {availability?.status === 'not_configured' ? <p role="status">Optional imagery processing is not installed in this runtime.</p> : null}
+    {availability?.network_mode === 'online' ? <p>Online analysis sends the saved field polygon and selected dates to Microsoft Planetary Computer to locate public HLS imagery. No account is required.</p> : null}
     {availability?.network_mode === 'offline' ? <p role="status">Network access is off. An exact cached analysis may still be available.</p> : null}
     <form onSubmit={(event) => void analyze(event)}>
       <label>HLS source<select value={providerId} onChange={(event) => setProviderId(event.target.value as typeof providerId)}>{providers.map((provider) => <option key={provider.id} value={provider.id}>{provider.label}</option>)}</select></label>

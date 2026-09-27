@@ -541,7 +541,8 @@
     "scripts/audit_imagery_storage.py",
     "tests/test_imagery_storage_audit.py",
     "docs/reviews/artifacts/field-imagery-20260927/storage-audit.md",
-    "docs/reviews/artifacts/field-imagery-20260927/storage-audit.json"
+    "docs/reviews/artifacts/field-imagery-20260927/storage-audit.json",
+    "docs/reviews/artifacts/field-imagery-20260927/integration-review.md"
   ],
   "trees": [
     "src",
