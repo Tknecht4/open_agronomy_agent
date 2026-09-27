@@ -1,0 +1,355 @@
+{
+  "activation_map": {
+    "concepts": [
+      "observed agricultural field data",
+      "crop yield and management",
+      "independent field and plot groups",
+      "dataset licensing",
+      "bounded acquisition"
+    ],
+    "aliases": [
+      "research farm",
+      "site-year",
+      "Borealis",
+      "Dryad",
+      "Ag Data Commons",
+      "Carob"
+    ],
+    "counterevidence_terms": [
+      "restricted",
+      "simulated",
+      "shifted coordinates",
+      "county-level",
+      "source-specific license"
+    ],
+    "known_source_anchors": [
+      "USDA Ag Data Commons",
+      "Borealis",
+      "Dryad",
+      "DataCite",
+      "Zenodo"
+    ],
+    "privacy_tier": "public_search_terms"
+  },
+  "queries_by_researcher": {
+    "owner": [
+      "agricultural field yield management georeferenced dataset Canada United States field trial Zenodo Dryad 2024 2025",
+      "site.agdatacommons.nal.usda.gov field yield data polygons nitrogen dataset",
+      "site.datadryad.org \"field\" \"yield\" \"on-farm\" \"Data\" corn",
+      "site.zenodo.org United States agricultural field yield dataset nitrogen georeferenced observed",
+      "Carob dataset United States Canada agricultural trials yield download",
+      "site.datadryad.org field dataset United States crop yield irrigation measured biomass \"Data files\"",
+      "site.carob-data.org \"Canada\" \"records\" \"license\"",
+      "site.zenodo.org \"field\" \"yield\" \"Iowa\" dataset",
+      "site.borealisdata.ca \"yield\" \"field\" \"canola\" data",
+      "site.datadryad.org \"Canada\" \"field\" \"yield\" \"soil\"",
+      "site.agdatacommons.nal.usda.gov \"on-farm\" \"yield\" \"dataset\" \"Download\"",
+      "CYPRESS Crop Yield Prediction Prithvi canola dataset data availability github",
+      "\"Commodity canola and seed canola visitation\" Borealis"
+    ],
+    "canada": [
+      "site:datadryad.org Canada agricultural field plot yield soil management dataset",
+      "site:borealisdata.ca/dataset.xhtml crop yield field experiment Canada data",
+      "site:open.canada.ca/data/en/dataset agricultural research field plot yield data AAFC",
+      "site:zenodo.org/records Canadian field trial yield soil management dataset",
+      "10.5061/dryad.5x69p8d90",
+      "site:datadryad.org/dataset/doi Canadian crop yield dataset field",
+      "site:borealisdata.ca/dataset.xhtml \"yield\" \"crop\" \"Ontario\"",
+      "site:borealisdata.ca/dataset.xhtml \"yield\" \"Saskatchewan\"",
+      "site:open.canada.ca/data/en/dataset \"yield\" \"field\" \"experimental\" agriculture",
+      "site:open.canada.ca/data/en/dataset \"crop yield\" \"research\" \"plot\"",
+      "site:open.canada.ca/data/en/dataset \"field experiment\" \"soil\" \"yield\"",
+      "site:open.canada.ca/data/en/dataset \"Swift Current\" \"crop\" \"yield\"",
+      "borealisdata.ca \"agronomic\" \"yield\" dataset",
+      "borealisdata.ca \"field experiment\" \"wheat\"",
+      "borealisdata.ca \"crop rotation\" \"yield\"",
+      "borealisdata.ca \"precision agriculture\" yield field",
+      "\"Borealis\" \"crop yield\" dataset agriculture",
+      "\"Borealis\" \"field trial\" \"yield\" dataset",
+      "\"Borealis\" \"soil\" \"crop yield\" dataverse",
+      "\"borealisdata.ca\" \"agronomic\" field data",
+      "site:borealisdata.ca \"Muck Crops Research Station\" \"yield\"",
+      "site:borealisdata.ca \"Muck Crops Research Station\" \"trial data\"",
+      "site:borealisdata.ca \"Holland Marsh\" \"yield\"",
+      "site:borealisdata.ca \"common bean\" \"yield\" \"Guelph\""
+    ],
+    "us": [
+      "site:agdatacommons.nal.usda.gov/articles/dataset/ \"Bronson Files\" cotton yield irrigation",
+      "site:agdatacommons.nal.usda.gov/articles/dataset/ \"on-farm\" \"yield\" \"field\" nitrogen",
+      "site:agdatacommons.nal.usda.gov/articles/dataset/ \"yield monitor\" \"field boundaries\"",
+      "site:datadryad.org/dataset/doi \"on-farm\" \"yield\" corn field nitrogen",
+      "site:datadryad.org/dataset/doi \"site-years\" \"yield\" \"nitrogen\" corn dataset US",
+      "site:agdatacommons.nal.usda.gov/articles/dataset/ \"on-farm\" \"plot\" \"yield\"",
+      "site:agdatacommons.nal.usda.gov/articles/dataset/ \"field\" \"yield\" \"soil\" \"irrigation\"",
+      "site:datadryad.org/dataset/doi \"on-farm experiments\" \"yield\" \"georeferenced\"",
+      "site:agdatacommons.nal.usda.gov/articles/dataset/ \"field experiments\" \"yield\" \"soil\" \"sites\"",
+      "site:datadryad.org/dataset/doi \"site-years\" \"soybean\" \"yield\" fertilizer United States",
+      "site:datadryad.org/dataset/doi \"site-years\" \"corn\" \"yield\" \"soil\" Nebraska",
+      "site:agdatacommons.nal.usda.gov/articles/dataset/ \"on-farm\" \"site-years\" yield",
+      "https://api.figshare.com/v2/articles/25213130 files download_url",
+      "\"The Bronson Files, Dataset 8\" \"files\" \"csv\"",
+      "\"The Bronson Files, Dataset 8\" \"plot\" \"csv\"",
+      "\"25213130\" \"ndownloader/files\"",
+      "site:datadryad.org/dataset/doi \"site-years\" \"yield\" \"plot\" \"phosphorus\" soybean United States",
+      "site:datadryad.org/dataset/doi \"site-years\" \"plot-level\" \"yield\" corn cover crop",
+      "site:agdatacommons.nal.usda.gov/articles/dataset/ \"multisite\" \"yield\" \"plot\"",
+      "\"Thirteen-year Stover Harvest and Tillage Effects\" \"Corn Yield\"",
+      "site:datadryad.org/dataset/doi \"plot-level\" \"site-years\" \"yield\" soybean field",
+      "site:datadryad.org/dataset/doi \"plot-level\" \"site-years\" \"yield\" wheat United States",
+      "site:agdatacommons.nal.usda.gov/articles/dataset/ \"field experiments\" \"sites\" \"yield\" \"soil\" \"2019\"",
+      "site:zenodo.org/records/ \"field\" \"plot\" \"yield\" \"nitrogen\" \"USA\"",
+      "\"10.5061/dryad.3bk3j9kxg\" \"CC0\"",
+      "\"10.5061/dryad.xksn02vn6\" \"CC0\"",
+      "\"10.5061/dryad.p30c6\" \"CC0\"",
+      "\"10.5061/dryad.3tn78n2\" \"CC0\"",
+      "site:agdatacommons.nal.usda.gov/articles/dataset/ \"field experiments\" \"yield\" \"sites\" \"phosphorus\"",
+      "site:agdatacommons.nal.usda.gov/articles/dataset/ \"site-years\" \"yield\" \"soybean\"",
+      "site:datadryad.org/dataset/doi \"site-years\" \"plot\" \"crop yield\" soil",
+      "site:datadryad.org/dataset/doi \"multi-site\" \"plot\" \"yield\" cover crop",
+      "https://api.datacite.org/dois/10.5061%2Fdryad.3bk3j9kxg",
+      "doi 10.5061/dryad.3bk3j9kxg rightsList",
+      "doi 10.5061/dryad.p30c6 license",
+      "site:datadryad.org \"Data is made available under the Creative Commons Public Domain Dedication\"",
+      "site:agdatacommons.nal.usda.gov/articles/dataset/ \"field experiments\" \"sites\" \"cotton\" \"yield\"",
+      "site:agdatacommons.nal.usda.gov/articles/dataset/ \"field experiments\" \"sites\" \"wheat\" \"yield\"",
+      "site:datadryad.org/dataset/doi \"site-years\" \"yield\" \"cover crop\" \"United States\"",
+      "site:datadryad.org/dataset/doi \"site-years\" \"yield\" \"corn\" \"on-farm\"",
+      "site:agdatacommons.nal.usda.gov/articles/dataset/ \"39 field experiments\" soybean phosphorus",
+      "site:agdatacommons.nal.usda.gov/articles/dataset/ \"experiments were conducted at\" \"sites\" \"yield\"",
+      "site:datadryad.org/dataset/doi \"site-years\" \"yield\" \"nitrogen\" \"soybean\" \"United States\"",
+      "site:datadryad.org/dataset/doi \"site-years\" \"yield\" \"disease\" \"corn\"",
+      "site:datadryad.org/dataset/doi \"plot-level yield\" \"site-years\" maize",
+      "site:datadryad.org/dataset/doi \"plot-level yield\" \"site-years\" wheat",
+      "site:datadryad.org/dataset/doi \"plot-level yield\" \"site-years\" soybean",
+      "site:agdatacommons.nal.usda.gov/articles/dataset/ \"on-farm experiments\" \"corn yield\"",
+      "site:datadryad.org/dataset/doi \"field experiments\" \"site-years\" \"yield\" United States dataset 2025",
+      "site:agdatacommons.nal.usda.gov/articles/dataset/ \"multi-location\" \"yield\" \"field\"",
+      "site:datadryad.org/dataset/doi \"on-farm\" \"site-years\" \"soybean yield\"",
+      "site:datadryad.org/dataset/doi \"sites\" \"corn yield\" \"soil\" \"cover crop\"",
+      "LTAR Common Experiment crop yield field plot data public site:agdatacommons.nal.usda.gov/articles/dataset",
+      "LTAR farm field yield management data csv site:agdatacommons.nal.usda.gov/articles/dataset",
+      "site:agdatacommons.nal.usda.gov/articles/dataset/ \"LTAR\" \"yield\" \"plot\"",
+      "USDA on farm cover crop plot yield dataset multiple farms ag data commons"
+    ]
+  },
+  "completed_queries": [
+    "agricultural field yield management georeferenced dataset Canada United States field trial Zenodo Dryad 2024 2025",
+    "site.agdatacommons.nal.usda.gov field yield data polygons nitrogen dataset",
+    "site.datadryad.org \"field\" \"yield\" \"on-farm\" \"Data\" corn",
+    "site.zenodo.org United States agricultural field yield dataset nitrogen georeferenced observed",
+    "Carob dataset United States Canada agricultural trials yield download",
+    "site.datadryad.org field dataset United States crop yield irrigation measured biomass \"Data files\"",
+    "site.carob-data.org \"Canada\" \"records\" \"license\"",
+    "site.zenodo.org \"field\" \"yield\" \"Iowa\" dataset",
+    "site.borealisdata.ca \"yield\" \"field\" \"canola\" data",
+    "site.datadryad.org \"Canada\" \"field\" \"yield\" \"soil\"",
+    "site.agdatacommons.nal.usda.gov \"on-farm\" \"yield\" \"dataset\" \"Download\"",
+    "CYPRESS Crop Yield Prediction Prithvi canola dataset data availability github",
+    "\"Commodity canola and seed canola visitation\" Borealis",
+    "site:datadryad.org Canada agricultural field plot yield soil management dataset",
+    "site:borealisdata.ca/dataset.xhtml crop yield field experiment Canada data",
+    "site:open.canada.ca/data/en/dataset agricultural research field plot yield data AAFC",
+    "site:zenodo.org/records Canadian field trial yield soil management dataset",
+    "10.5061/dryad.5x69p8d90",
+    "site:datadryad.org/dataset/doi Canadian crop yield dataset field",
+    "site:borealisdata.ca/dataset.xhtml \"yield\" \"crop\" \"Ontario\"",
+    "site:borealisdata.ca/dataset.xhtml \"yield\" \"Saskatchewan\"",
+    "site:open.canada.ca/data/en/dataset \"yield\" \"field\" \"experimental\" agriculture",
+    "site:open.canada.ca/data/en/dataset \"crop yield\" \"research\" \"plot\"",
+    "site:open.canada.ca/data/en/dataset \"field experiment\" \"soil\" \"yield\"",
+    "site:open.canada.ca/data/en/dataset \"Swift Current\" \"crop\" \"yield\"",
+    "borealisdata.ca \"agronomic\" \"yield\" dataset",
+    "borealisdata.ca \"field experiment\" \"wheat\"",
+    "borealisdata.ca \"crop rotation\" \"yield\"",
+    "borealisdata.ca \"precision agriculture\" yield field",
+    "\"Borealis\" \"crop yield\" dataset agriculture",
+    "\"Borealis\" \"field trial\" \"yield\" dataset",
+    "\"Borealis\" \"soil\" \"crop yield\" dataverse",
+    "\"borealisdata.ca\" \"agronomic\" field data",
+    "site:borealisdata.ca \"Muck Crops Research Station\" \"yield\"",
+    "site:borealisdata.ca \"Muck Crops Research Station\" \"trial data\"",
+    "site:borealisdata.ca \"Holland Marsh\" \"yield\"",
+    "site:borealisdata.ca \"common bean\" \"yield\" \"Guelph\"",
+    "site:agdatacommons.nal.usda.gov/articles/dataset/ \"Bronson Files\" cotton yield irrigation",
+    "site:agdatacommons.nal.usda.gov/articles/dataset/ \"on-farm\" \"yield\" \"field\" nitrogen",
+    "site:agdatacommons.nal.usda.gov/articles/dataset/ \"yield monitor\" \"field boundaries\"",
+    "site:datadryad.org/dataset/doi \"on-farm\" \"yield\" corn field nitrogen",
+    "site:datadryad.org/dataset/doi \"site-years\" \"yield\" \"nitrogen\" corn dataset US",
+    "site:agdatacommons.nal.usda.gov/articles/dataset/ \"on-farm\" \"plot\" \"yield\"",
+    "site:agdatacommons.nal.usda.gov/articles/dataset/ \"field\" \"yield\" \"soil\" \"irrigation\"",
+    "site:datadryad.org/dataset/doi \"on-farm experiments\" \"yield\" \"georeferenced\"",
+    "site:agdatacommons.nal.usda.gov/articles/dataset/ \"field experiments\" \"yield\" \"soil\" \"sites\"",
+    "site:datadryad.org/dataset/doi \"site-years\" \"soybean\" \"yield\" fertilizer United States",
+    "site:datadryad.org/dataset/doi \"site-years\" \"corn\" \"yield\" \"soil\" Nebraska",
+    "site:agdatacommons.nal.usda.gov/articles/dataset/ \"on-farm\" \"site-years\" yield",
+    "https://api.figshare.com/v2/articles/25213130 files download_url",
+    "\"The Bronson Files, Dataset 8\" \"files\" \"csv\"",
+    "\"The Bronson Files, Dataset 8\" \"plot\" \"csv\"",
+    "\"25213130\" \"ndownloader/files\"",
+    "site:datadryad.org/dataset/doi \"site-years\" \"yield\" \"plot\" \"phosphorus\" soybean United States",
+    "site:datadryad.org/dataset/doi \"site-years\" \"plot-level\" \"yield\" corn cover crop",
+    "site:agdatacommons.nal.usda.gov/articles/dataset/ \"multisite\" \"yield\" \"plot\"",
+    "\"Thirteen-year Stover Harvest and Tillage Effects\" \"Corn Yield\"",
+    "site:datadryad.org/dataset/doi \"plot-level\" \"site-years\" \"yield\" soybean field",
+    "site:datadryad.org/dataset/doi \"plot-level\" \"site-years\" \"yield\" wheat United States",
+    "site:agdatacommons.nal.usda.gov/articles/dataset/ \"field experiments\" \"sites\" \"yield\" \"soil\" \"2019\"",
+    "site:zenodo.org/records/ \"field\" \"plot\" \"yield\" \"nitrogen\" \"USA\"",
+    "\"10.5061/dryad.3bk3j9kxg\" \"CC0\"",
+    "\"10.5061/dryad.xksn02vn6\" \"CC0\"",
+    "\"10.5061/dryad.p30c6\" \"CC0\"",
+    "\"10.5061/dryad.3tn78n2\" \"CC0\"",
+    "site:agdatacommons.nal.usda.gov/articles/dataset/ \"field experiments\" \"yield\" \"sites\" \"phosphorus\"",
+    "site:agdatacommons.nal.usda.gov/articles/dataset/ \"site-years\" \"yield\" \"soybean\"",
+    "site:datadryad.org/dataset/doi \"site-years\" \"plot\" \"crop yield\" soil",
+    "site:datadryad.org/dataset/doi \"multi-site\" \"plot\" \"yield\" cover crop",
+    "https://api.datacite.org/dois/10.5061%2Fdryad.3bk3j9kxg",
+    "doi 10.5061/dryad.3bk3j9kxg rightsList",
+    "doi 10.5061/dryad.p30c6 license",
+    "site:datadryad.org \"Data is made available under the Creative Commons Public Domain Dedication\"",
+    "site:agdatacommons.nal.usda.gov/articles/dataset/ \"field experiments\" \"sites\" \"cotton\" \"yield\"",
+    "site:agdatacommons.nal.usda.gov/articles/dataset/ \"field experiments\" \"sites\" \"wheat\" \"yield\"",
+    "site:datadryad.org/dataset/doi \"site-years\" \"yield\" \"cover crop\" \"United States\"",
+    "site:datadryad.org/dataset/doi \"site-years\" \"yield\" \"corn\" \"on-farm\"",
+    "site:agdatacommons.nal.usda.gov/articles/dataset/ \"39 field experiments\" soybean phosphorus",
+    "site:agdatacommons.nal.usda.gov/articles/dataset/ \"experiments were conducted at\" \"sites\" \"yield\"",
+    "site:datadryad.org/dataset/doi \"site-years\" \"yield\" \"nitrogen\" \"soybean\" \"United States\"",
+    "site:datadryad.org/dataset/doi \"site-years\" \"yield\" \"disease\" \"corn\"",
+    "site:datadryad.org/dataset/doi \"plot-level yield\" \"site-years\" maize",
+    "site:datadryad.org/dataset/doi \"plot-level yield\" \"site-years\" wheat",
+    "site:datadryad.org/dataset/doi \"plot-level yield\" \"site-years\" soybean",
+    "site:agdatacommons.nal.usda.gov/articles/dataset/ \"on-farm experiments\" \"corn yield\"",
+    "site:datadryad.org/dataset/doi \"field experiments\" \"site-years\" \"yield\" United States dataset 2025",
+    "site:agdatacommons.nal.usda.gov/articles/dataset/ \"multi-location\" \"yield\" \"field\"",
+    "site:datadryad.org/dataset/doi \"on-farm\" \"site-years\" \"soybean yield\"",
+    "site:datadryad.org/dataset/doi \"sites\" \"corn yield\" \"soil\" \"cover crop\"",
+    "LTAR Common Experiment crop yield field plot data public site:agdatacommons.nal.usda.gov/articles/dataset",
+    "LTAR farm field yield management data csv site:agdatacommons.nal.usda.gov/articles/dataset",
+    "site:agdatacommons.nal.usda.gov/articles/dataset/ \"LTAR\" \"yield\" \"plot\"",
+    "USDA on farm cover crop plot yield dataset multiple farms ag data commons"
+  ],
+  "primary_repository_search_terms": {
+    "Borealis": [
+      "yield",
+      "crop rotation",
+      "field trial",
+      "soil management",
+      "potato",
+      "on-farm",
+      "soil health"
+    ]
+  },
+  "citations": [
+    {
+      "label": "Precision agricultural data and ecosystem services: can we put the pieces together?",
+      "url": "https://datadryad.org/dataset/doi:10.5061/dryad.5x69p8d90"
+    },
+    {
+      "label": "Replication data for: On-farm data for wheat yield response to plant growth regulator",
+      "url": "https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP3/1I77DM"
+    },
+    {
+      "label": "Increasing lodging resistance in oats for enhanced quality and yield",
+      "url": "https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP2/CSROC9"
+    },
+    {
+      "label": "Common bean (Phaseolus vulgaris) antiyield (AYD_AM) genotype description table, raw phenotypic data, and single nucleotide polymorphism genotype data",
+      "url": "https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP3/FD81LR"
+    },
+    {
+      "label": "Comparative evaluation of tissue testing methods and fertilizer impacts on onion nutrition, yield, and Stemphylium leaf blight severity in the Holland Marsh, Ontario (2024\u20132025)",
+      "url": "https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP3/YJTMRB"
+    },
+    {
+      "label": "Soil health assessment and cover crops for the Holland Marsh: Soil health test results from lab",
+      "url": "https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP3/FHKKIF"
+    },
+    {
+      "label": "Soil health assessment and cover crops  for the Holland Marsh: Cover crops after carrot and onion harvest",
+      "url": "https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP3/X9S5EW"
+    },
+    {
+      "label": "Soil health assessment and cover crops for the Holland Marsh: Biofumigant cover crops",
+      "url": "https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP3/4WMIFN"
+    },
+    {
+      "label": "Differences in incidence and DSI of cavity spot among carrot cultivars in field trials",
+      "url": "https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP3/JK5M8I"
+    },
+    {
+      "label": "BC Seed Trials and CANOVI Replicated Carrot Variety Trials 2017-2019 - UBC Farm",
+      "url": "https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP2/OVACVN"
+    },
+    {
+      "label": "Replication Data for: Long-term crop rotation diversity, tillage system, and nitrogen fertilizer effects on crop productivity, soil organic carbon and nitrogen concentration in a temperate humid climate",
+      "url": "https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP3/XFJNZD"
+    },
+    {
+      "label": "Replication Data for: Nitrogen dynamics and yields of fresh bean and sweet corn with different cover crops and planting dates",
+      "url": "https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP3/4ZB7RH"
+    },
+    {
+      "label": "The Bronson Files, Dataset 8, Field 113, 2016",
+      "url": "https://agdatacommons.nal.usda.gov/articles/dataset/The_Bronson_Files_Dataset_8_Field_113_2016/25213130"
+    },
+    {
+      "label": "Historical trends in the nitrogen requirement of corn over 45 years in Ohio",
+      "url": "https://datadryad.org/dataset/doi:10.5061/dryad.3bk3j9kxg"
+    },
+    {
+      "label": "Soybean yield response to phosphorus rate and Mehlich-3 soil P in Arkansas",
+      "url": "https://agdatacommons.nal.usda.gov/articles/dataset/Soybean_Yield_Response_to_Fertilizer-Phosphorus_Rate_on_Soils_having_different_Mehlich-3_Phosphorus_Values_in_Arkansas/24667830"
+    },
+    {
+      "label": "High-yielding corn response to applied P, K, and S in Nebraska",
+      "url": "https://datadryad.org/dataset/doi:10.5061/dryad.p30c6"
+    },
+    {
+      "label": "Soybean starter fertilizer in rolled-crimped cereal rye",
+      "url": "https://datadryad.org/dataset/doi:10.5061/dryad.xksn02vn6"
+    },
+    {
+      "label": "Sclerotinia stem rot control and soybean yield North Central trials",
+      "url": "https://datadryad.org/dataset/doi:10.5061/dryad.3tn78n2"
+    },
+    {
+      "label": "Thirteen-year stover harvest and tillage effects on corn in Iowa",
+      "url": "https://agdatacommons.nal.usda.gov/articles/dataset/Thirteen-year_Stover_Harvest_and_Tillage_Effects_on_Corn_Agroecosystem_Sustainability_in_Iowa/24856419"
+    },
+    {
+      "label": "Soil health and tomato yield after hairy vetch in US high tunnels",
+      "url": "https://datadryad.org/dataset/doi:10.5061/dryad.15dv41pcb"
+    },
+    {
+      "label": "Barley and mustard cover crop effects on New Mexico chile pepper",
+      "url": "https://datadryad.org/dataset/doi:10.5061/dryad.vdncjsz8v"
+    },
+    {
+      "label": "Breaking the field phenotyping bottleneck in maize with autonomous robots",
+      "url": "https://datadryad.org/dataset/doi:10.5061/dryad.m905qfvb6"
+    },
+    {
+      "label": "Sugarcane genotype by environment clonal trials in Texas Rio Grande Valley",
+      "url": "https://agdatacommons.nal.usda.gov/articles/dataset/Data_from_Sugarcane_Genotype_by_Environment_interaction_G_E_in_Clonal_Trials_in_the_U_S_Texas_Rio_Grande_Valley/28074515"
+    },
+    {
+      "label": "Hyperspectral reflectance for multi-site cotton growth monitoring",
+      "url": "https://agdatacommons.nal.usda.gov/articles/dataset/Data_from_Hyperspectral_reflectance_and_machine_learning_for_multi-site_monitoring_of_cotton_growth/27765477"
+    },
+    {
+      "label": "USDA-ARS Colorado Maize Water Productivity Dataset 2012\u20132013",
+      "url": "https://agdatacommons.nal.usda.gov/articles/dataset/USDA-ARS_Colorado_Maize_Water_Productivity_Dataset_2012-2013/24662391"
+    },
+    {
+      "label": "Soybean yield response to management practices (4\u201340 years) and soil health parameters",
+      "url": "https://datadryad.org/dataset/doi:10.5061/dryad.hx3ffbgrk"
+    },
+    {
+      "label": "A global experimental dataset for assessing grain legume production",
+      "url": "https://datadryad.org/dataset/doi:10.5061/dryad.mf42f"
+    },
+    {
+      "label": "Spatial Dataset from an Iowa Research Farm,2023",
+      "url": "https://zenodo.org/records/15367284"
+    }
+  ]
+}

@@ -1,0 +1,240 @@
+[
+  {
+    "file": "ca-borealis-onion-tissue-yield/growerFieldOnion_2024And2025.tab",
+    "rows": 402,
+    "headers": [
+      "Year",
+      "Date",
+      "Field",
+      "Sampling round",
+      "Method",
+      "Scan point",
+      "Nitrogen (%)",
+      "Phosphorus (%)",
+      "Potassium (%)",
+      "Magnesium (%)",
+      "Calcium (%)",
+      "Zinc (ppm)",
+      "Manganese (ppm)",
+      "Copper (ppm)",
+      "Iron (ppm)",
+      "Boron (ppm)",
+      "Sulfur (%)"
+    ],
+    "group_counts": {
+      "Year": 2,
+      "Date": 12,
+      "Field": 16
+    }
+  },
+  {
+    "file": "ca-borealis-onion-tissue-yield/micronutrientTrialOnion_2024And2025.tab",
+    "rows": 266,
+    "headers": [
+      "Date",
+      "Year",
+      "Scan_time",
+      "Method",
+      "Preplant",
+      "Foliar",
+      "Rep",
+      "Nitrogen (%)",
+      "Phosphorus (%)",
+      "Potassium (%)",
+      "Magnesium (%)",
+      "Calcium (%)",
+      "Zinc (ppm)",
+      "Manganese (ppm)",
+      "Copper (ppm)",
+      "Iron (ppm)",
+      "Boron (ppm)",
+      "Sulfur (%)"
+    ],
+    "group_counts": {
+      "Date": 7,
+      "Year": 2
+    }
+  },
+  {
+    "file": "ca-borealis-onion-tissue-yield/stemphyliumLeafBlightOnionYield_2024And2025.tab",
+    "rows": 48,
+    "headers": [
+      "Year",
+      "Preplant",
+      "Foliar",
+      "Rep",
+      "Disease severity index on July 4",
+      "Disease severity index on July 15",
+      "Disease severity index on July 17",
+      "Disease severity index on July 22",
+      "Disease severity index on July 25",
+      "Disease severity index on July 29",
+      "Disease severity index on August 1",
+      "Disease severity index on August 5",
+      "Disease severity index on August 12 (Destructive)",
+      "Disease severity index on August 13 (Destructive)",
+      "Jumbo bulb weight (kg)",
+      "Jumbo bulb number",
+      "large bulb weight (kg)",
+      "large bulb number",
+      "Medium bulb weight (kg)",
+      "Medium bulb number",
+      "Small bulb weight (kg)",
+      "Small bulb number",
+      "Marketable bulb weight (kg)",
+      "Number of marketable bulbs",
+      "Total bulb weight (Kg)",
+      "Total bulbs",
+      "Marketable bulb weight (t/ha)",
+      "Total bulb weight (t/ha)",
+      "% Marketable weight ",
+      "% Jumbo",
+      "%Large",
+      "%Medium",
+      "%Small"
+    ],
+    "group_counts": {
+      "Year": 2
+    }
+  },
+  {
+    "file": "ca-borealis-holland-marsh-soil-health/soilHealthTest.tab",
+    "rows": 63,
+    "headers": [
+      "S.N.",
+      "Fields",
+      "Type",
+      "Year",
+      "Productivity (Mg/ha)",
+      "Weight/2ml",
+      "SOM",
+      "ACE",
+      "SOC",
+      "TN",
+      "C/N",
+      "AC",
+      "P_Bicarb",
+      "P_Bray",
+      "K ",
+      "Mg",
+      "Ca",
+      "Na ",
+      "pH",
+      "CEC",
+      "S",
+      "Zn ",
+      "Mn ",
+      "Fe ",
+      "Cu ",
+      "B ",
+      "Al ",
+      "Nitrate",
+      "Cl ",
+      "EC",
+      "PMN",
+      "CO2C",
+      "Pseudomonas",
+      "Nitrogenfixers",
+      "Rhizobiumrelated",
+      "GramPositive",
+      "Actinomycetes",
+      "GeneralBacteria",
+      "GeneralFungi",
+      "Trichoderma",
+      "Anaerobe",
+      "TotalGramNegatives",
+      "TotalBacteria",
+      "Totalmicrobialactivity"
+    ],
+    "group_counts": {
+      "Fields": 63,
+      "Year": 2
+    }
+  },
+  {
+    "file": "us-iowa-stover-field70-71/Field 70-71 CornYield_2008-2021_ForR_0.csv",
+    "rows": 88,
+    "headers": [
+      "PlotNo",
+      "Field",
+      "Block",
+      "Treatment",
+      "LevelStoverHarvest",
+      "Tillage",
+      "InitialCroppingSystem",
+      "EndingCropRotation",
+      "EndingCroppingSystem",
+      "Crop2017",
+      "Grain2008",
+      "Stover2008",
+      "Grain2009",
+      "Stover2009",
+      "Grain2010",
+      "Stover2010",
+      "Grain2011",
+      "Stover2011",
+      "Grain2012",
+      "Stover2012",
+      "Grain2013",
+      "Stover2013",
+      "Grain2014",
+      "Stover2014",
+      "Grain2015",
+      "Stover2015",
+      "Grain2016",
+      "Stover2016",
+      "Grain2017",
+      "Stover2017",
+      "Grain2018",
+      "Stover2018",
+      "Grain2019",
+      "Stover2019",
+      "Grain2020",
+      "Stover2020"
+    ],
+    "group_counts": {
+      "PlotNo": 88,
+      "Field": 2,
+      "Treatment": 22
+    }
+  },
+  {
+    "file": "ca-borealis-bean-ayd-field/AYD_Field_Data_4environments_YRKPP.tab",
+    "rows": 1936,
+    "group_counts": {
+      "Year": 2,
+      "Location": 4,
+      "Plot": 484,
+      "Cultivar": 121
+    }
+  },
+  {
+    "file": "us-arkansas-soybean-p-39/Slaton et al., 2021 Dataset.xlsx",
+    "rows": 1357,
+    "group_counts": {
+      "Trial Harvest Year (YYYY)": 14,
+      "Site ID": 28,
+      "Site-ID2": 39,
+      "County": 8
+    }
+  },
+  {
+    "file": "us-texas-sugarcane-ge/Texas Data series 11-14.xlsx",
+    "rows": 4824,
+    "group_counts": {
+      "Test": 8,
+      "SERIES": 4,
+      "YEAR": 6,
+      "CROP": 4
+    }
+  },
+  {
+    "file": "soy-carob/standardized-soybean.zip",
+    "rows": 350,
+    "yield_missing": 1,
+    "trial_ids": [
+      "1"
+    ],
+    "location_count": 14
+  }
+]

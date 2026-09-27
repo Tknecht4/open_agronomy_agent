@@ -1,0 +1,108 @@
+{
+  "records": [
+    {
+      "id": "us-soybean-soil-management-2023",
+      "title": "Soybean yield response to management practices (4\u201340 years) and soil health parameters",
+      "doi": "10.5061/dryad.hx3ffbgrk",
+      "source_url": "https://datadryad.org/dataset/doi:10.5061/dryad.hx3ffbgrk",
+      "country_site_time": {
+        "country": "United States",
+        "time_period": "2023",
+        "publisher_trials": 17,
+        "publisher_states": 7
+      },
+      "spatial_support": "research plot; source location points, not surveyed plot polygons",
+      "observed_targets": [
+        "soybean yield",
+        "soil health and fertility",
+        "management histories"
+      ],
+      "independent_group_count": null,
+      "license_identifier": "CC0-1.0",
+      "license_evidence_url": "https://api.datacite.org/dois/10.5061/dryad.hx3ffbgrk",
+      "access_status": "public_files_but_local_Dryad_download_failed; standardized_derivative_acquired",
+      "files": [
+        {
+          "name": "SeveroSilvaEtal_FCR_Dryad.xlsx",
+          "bytes": 97745,
+          "url": "https://datadryad.org/downloads/file_stream/4347841"
+        },
+        {
+          "name": "Carob standardized derivative ZIP",
+          "bytes": 11382,
+          "url": "https://geodata.ucdavis.edu/carob/zip/doi_10.5061_dryad.hx3ffbgrk.zip"
+        }
+      ],
+      "limitations": "Original publisher describes349plots/17trials. Acquired derivative has350rows,349nonmissingyield,14locationlabels and constanttrial_id. Resolve trial mapping and transformations before splits. Weather/soil-map covariates are not all direct observations. Carob code GPL>=3 not imported; data metadata namesCC0.",
+      "proposed_use": "Multi-location management/soil/yield ingestion; raw original still pending."
+    },
+    {
+      "id": "global-grain-legume-experiments",
+      "title": "A global experimental dataset for assessing grain legume production",
+      "doi": "10.5061/dryad.mf42f",
+      "source_url": "https://datadryad.org/dataset/doi:10.5061/dryad.mf42f",
+      "country_site_time": {
+        "country": "Multiple, includes Canada and United States per standardized-source report"
+      },
+      "spatial_support": "published experimental site/season/treatment",
+      "observed_targets": [
+        "grain yield",
+        "biomass",
+        "crop nitrogen",
+        "residual soil nitrogen",
+        "water use"
+      ],
+      "independent_group_count": null,
+      "license_identifier": "CC0-1.0",
+      "license_evidence_url": "https://api.datacite.org/dois/10.5061/dryad.mf42f",
+      "access_status": "public_files; local_Dryad_download_failed",
+      "files": [
+        {
+          "name": "Crop.csv",
+          "bytes": 5824559,
+          "url": "https://datadryad.org/downloads/file_stream/69317"
+        },
+        {
+          "name": "Site.csv",
+          "bytes": 93182,
+          "url": "https://datadryad.org/downloads/file_stream/69315"
+        },
+        {
+          "name": "Crop_Sequence_Trt.csv",
+          "bytes": 316816,
+          "url": "https://datadryad.org/downloads/file_stream/69316"
+        },
+        {
+          "name": "Article.csv",
+          "bytes": 30883,
+          "url": "https://datadryad.org/downloads/file_stream/69314"
+        }
+      ],
+      "limitations": "Publisher8581crop-site-season-treatmentcombinations from173articles; no downloaded counts orverified NorthAmerican subset. Carob harmonized counts differ; avoid cross-publication/source overlap.",
+      "proposed_use": "Relational multi-table ingestion and management/yield comparisons after country/site/source deduplication."
+    },
+    {
+      "id": "us-iowa-spatial-yield-2023-restricted",
+      "title": "Spatial Dataset from an Iowa Research Farm,2023",
+      "doi": "10.5281/zenodo.15367284",
+      "source_url": "https://zenodo.org/records/15367284",
+      "country_site_time": {
+        "country": "United States",
+        "site": "Iowa research station near Williams",
+        "time_period": "2023"
+      },
+      "spatial_support": "research field maps",
+      "observed_targets": [
+        "yield maps",
+        "planting density"
+      ],
+      "independent_group_count": 1,
+      "license_identifier": "CC-BY-4.0 metadata; conflicting restrictive access terms",
+      "license_evidence_url": "https://zenodo.org/api/records/15367284",
+      "access_status": "restricted_request_required",
+      "files": [],
+      "limitations": "Landing page requires justification, acknowledgement and confidentiality/no sharing without written permission. Public metadata and a license flag do not authorize files or redistribution. No access request sent.",
+      "proposed_use": "Request-only lead; exclude from open benchmark until written terms resolved."
+    }
+  ]
+}

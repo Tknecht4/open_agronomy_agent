@@ -1,0 +1,526 @@
+{
+  "snapshot_date": "2026-09-27",
+  "scope": "Additive US observed field and plot dataset candidates; metadata research only, no acquisition/admission",
+  "candidate_count": 13,
+  "candidates": [
+    {
+      "id": "us-bronson-maricopa-field113-2016",
+      "title": "The Bronson Files, Dataset 8, Field 113, 2016",
+      "doi": "10.15482/USDA.ADC/1524800",
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/The_Bronson_Files_Dataset_8_Field_113_2016/25213130",
+      "country": "United States",
+      "site": "Maricopa Agricultural Center, Arizona; Field 113",
+      "time": "2016 cotton season",
+      "spatial_support": "experimental cotton plot polygons and geolocated proximal passes",
+      "observed_targets": [
+        "lint and seed yield",
+        "nitrogen and irrigation operations",
+        "weekly six-band canopy reflectance",
+        "soil-profile nitrate",
+        "nitrogen uptake"
+      ],
+      "independent_group_count": 1,
+      "geometry_timing_limitations": "One research farm. Plot polygons are described but their actual coordinate format and joins require inspection. Related Field 113 2017\u201318 and Field 13/17 files belong to the Bronson/Maricopa family; calculated vegetation indices are model/processing output.",
+      "license_identifier": "U.S. Public Domain",
+      "license_url": "https://www.usa.gov/publicdomain/label/1.0/",
+      "license_evidence_url": "https://agdatacommons.nal.usda.gov/articles/dataset/The_Bronson_Files_Dataset_8_Field_113_2016/25213130",
+      "access_status": "public individual files; metadata verified; no bytes acquired by researcher",
+      "files": [
+        {
+          "name": "F113_2016_Data_Dictionary.csv",
+          "url": "https://ndownloader.figshare.com/files/44530700",
+          "size_bytes": 5192
+        },
+        {
+          "name": "F113_2016_Activities_Log.csv",
+          "url": "https://ndownloader.figshare.com/files/44530703",
+          "size_bytes": 5249
+        },
+        {
+          "name": "F113_2016_MegaTable.xlsx",
+          "url": "https://ndownloader.figshare.com/files/44530706",
+          "size_bytes": 717730
+        },
+        {
+          "name": "README_The Bronson Files, Dataset 8, Field 113, 2016.txt",
+          "url": "https://ndownloader.figshare.com/files/44530724",
+          "size_bytes": 23099
+        },
+        {
+          "name": "F113_2016_maps.pdf",
+          "url": "https://ndownloader.figshare.com/files/44530718",
+          "size_bytes": 1379539
+        }
+      ],
+      "proposed_use": "Inspect small dictionary, operations, and workbook for plot/time join; candidate for research-grade treatment and spectral alignment, with farm-level holdout only after other farms are found.",
+      "overlap_check": "No DOI/title in 51-entry catalog. Do not count separate Bronson years/fields as independent farms.",
+      "priority": "high"
+    },
+    {
+      "id": "us-ohio-corn-n-45y",
+      "title": "Historical trends in the nitrogen requirement of corn over 45 years in Ohio",
+      "doi": "10.5061/dryad.3bk3j9kxg",
+      "source_url": "https://datadryad.org/dataset/doi:10.5061/dryad.3bk3j9kxg",
+      "country": "United States",
+      "site": "31 Ohio counties; on-farm and research-station trials",
+      "time": "1976\u20132021",
+      "spatial_support": "trial/site-year with plot or treatment-mean rows; county location only",
+      "observed_targets": [
+        "corn grain yield",
+        "preplant/at-planting/sidedress N",
+        "rotation, tillage, planting date, hybrid"
+      ],
+      "independent_group_count": null,
+      "geometry_timing_limitations": "431 rainfed N-response trials, 5,778 crop rows. Some rows are treatment means, others raw plots. Same farm may recur; county geography blocks field-level satellite joins and independent-farm count is unverified.",
+      "license_identifier": "CC0-1.0",
+      "license_url": "https://spdx.org/licenses/CC0-1.0.html",
+      "license_evidence_url": "https://datadryad.org/api/v2/datasets/doi%3A10.5061%2Fdryad.3bk3j9kxg",
+      "access_status": "public file manifest verified; no bytes acquired by researcher",
+      "files": [
+        {
+          "name": "Crop_Data.csv",
+          "url": "https://datadryad.org/api/v2/files/4139094/download",
+          "size_bytes": 134861
+        },
+        {
+          "name": "Experimental_Design.csv",
+          "url": "https://datadryad.org/api/v2/files/4139093/download",
+          "size_bytes": 36120
+        },
+        {
+          "name": "README.md",
+          "url": "https://datadryad.org/api/v2/files/4139101/download",
+          "size_bytes": 6460
+        }
+      ],
+      "proposed_use": "Offline grouped nitrogen-response analysis after separating raw-plot and treatment-mean records; no field-imagery target.",
+      "overlap_check": "No DOI/title in old catalog; distinct from 49-site-year Midwest N-rate Dryad archive.",
+      "priority": "high"
+    },
+    {
+      "id": "us-arkansas-soybean-p-39",
+      "title": "Soybean yield response to phosphorus rate and Mehlich-3 soil P in Arkansas",
+      "doi": "10.15482/USDA.ADC/1524648",
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Soybean_Yield_Response_to_Fertilizer-Phosphorus_Rate_on_Soils_having_different_Mehlich-3_Phosphorus_Values_in_Arkansas/24667830",
+      "country": "United States",
+      "site": "Eastern Arkansas private production fields and experiment stations; 8 counties",
+      "time": "2004\u20132018",
+      "spatial_support": "39 site-year trials with plot treatments; source metadata gives point coordinates for many trial sites",
+      "observed_targets": [
+        "soybean grain yield",
+        "fertilizer P rate/source",
+        "Mehlich-3 soil nutrients, pH, organic matter",
+        "tissue nutrients"
+      ],
+      "independent_group_count": null,
+      "geometry_timing_limitations": "39 sites/site-years reported, but repeated station/farm groups require file-level deduplication. Plot harvested areas are given, not verified plot polygons. SoyMap R1 dates are predictions; do not relabel as observed phenology.",
+      "license_identifier": "U.S. Public Domain",
+      "license_url": "https://www.usa.gov/publicdomain/label/1.0/",
+      "license_evidence_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Soybean_Yield_Response_to_Fertilizer-Phosphorus_Rate_on_Soils_having_different_Mehlich-3_Phosphorus_Values_in_Arkansas/24667830",
+      "access_status": "public individual workbook; metadata verified; no bytes acquired by researcher",
+      "files": [
+        {
+          "name": "Slaton et al., 2021 Dataset.xlsx",
+          "url": "https://ndownloader.figshare.com/files/44545148",
+          "size_bytes": 656705
+        }
+      ],
+      "proposed_use": "High-priority soil-test/response study; validate site-point mapping and farm grouping before spatial holdout.",
+      "overlap_check": "No DOI/title in old catalog. Different crops/protocols from Midwest N-rate archive.",
+      "priority": "high"
+    },
+    {
+      "id": "us-nebraska-corn-pks-34",
+      "title": "High-yielding corn response to applied P, K, and S in Nebraska",
+      "doi": "10.5061/dryad.p30c6",
+      "source_url": "https://datadryad.org/dataset/doi:10.5061/dryad.p30c6",
+      "country": "United States",
+      "site": "Diverse irrigated corn sites across Nebraska",
+      "time": "34 trial site-years; study published 2009",
+      "spatial_support": "site-year nutrient trial table; exact geometry not verified",
+      "observed_targets": [
+        "corn grain yield",
+        "P/K/S fertilizer response",
+        "soil test nutrients, pH, organic matter",
+        "plant nutrient uptake"
+      ],
+      "independent_group_count": null,
+      "geometry_timing_limitations": "34 site-years are reported; independent physical site count and coordinates unverified. Main XLS is 51.5 MB, above the entire 20 MiB sample envelope. README is small.",
+      "license_identifier": "CC0-1.0",
+      "license_url": "https://spdx.org/licenses/CC0-1.0.html",
+      "license_evidence_url": "https://datadryad.org/api/v2/datasets/doi%3A10.5061%2Fdryad.p30c6",
+      "access_status": "public files; metadata verified; main data not acquired",
+      "files": [
+        {
+          "name": "Nebr_HiYieldCornNPKS_Feb_2021.xls",
+          "url": "https://datadryad.org/api/v2/files/569423/download",
+          "size_bytes": 51500032
+        },
+        {
+          "name": "README_for_Nebr HiYieldCornNPKS.docx",
+          "url": "https://datadryad.org/api/v2/files/569422/download",
+          "size_bytes": 14004
+        }
+      ],
+      "proposed_use": "Catalog for future bounded extraction; inspect README now, defer large workbook pending storage plan.",
+      "overlap_check": "No DOI/title in old catalog; possible geographic overlap with Midwest N-rate trials, cross-check site IDs and dates.",
+      "priority": "medium"
+    },
+    {
+      "id": "us-ny-wi-organic-soy-starter-n",
+      "title": "Soybean starter fertilizer in rolled-crimped cereal rye",
+      "doi": "10.5061/dryad.xksn02vn6",
+      "source_url": "https://datadryad.org/dataset/doi:10.5061/dryad.xksn02vn6",
+      "country": "United States",
+      "site": "Organic field sites in New York and Wisconsin",
+      "time": "five site-years, 2020\u20132022",
+      "spatial_support": "plot, block, treatment, site-year; no plot coordinates",
+      "observed_targets": [
+        "soybean yield",
+        "weed and soybean biomass",
+        "growth stage",
+        "soil P/K, pH, organic matter",
+        "fertilizer treatment"
+      ],
+      "independent_group_count": null,
+      "geometry_timing_limitations": "Five site-years span two states, but exact physical-farm grouping is not established. Soil variables are block-level; plot yield is a separate table. No imagery-ready geometry.",
+      "license_identifier": "CC0-1.0",
+      "license_url": "https://spdx.org/licenses/CC0-1.0.html",
+      "license_evidence_url": "https://datadryad.org/api/v2/datasets/doi%3A10.5061%2Fdryad.xksn02vn6",
+      "access_status": "public small CSV files; metadata verified; no bytes acquired by researcher",
+      "files": [
+        {
+          "name": "AllenEtal.StarterN.allplots.csv",
+          "url": "https://datadryad.org/api/v2/files/2595665/download",
+          "size_bytes": 3198
+        },
+        {
+          "name": "AllenEtal.StarterN.blocklevel.csv",
+          "url": "https://datadryad.org/api/v2/files/2595664/download",
+          "size_bytes": 752
+        },
+        {
+          "name": "AllenEtal.StarterN.SPAD_height_gs.csv",
+          "url": "https://datadryad.org/api/v2/files/2595666/download",
+          "size_bytes": 5136
+        }
+      ],
+      "proposed_use": "Compact multi-site plot response and phenology join; use blocked site-year assessment, not field imagery.",
+      "overlap_check": "No DOI/title in old catalog.",
+      "priority": "medium"
+    },
+    {
+      "id": "us-soy-sclerotinia-network",
+      "title": "Sclerotinia stem rot control and soybean yield North Central trials",
+      "doi": "10.5061/dryad.3tn78n2",
+      "source_url": "https://datadryad.org/dataset/doi:10.5061/dryad.3tn78n2",
+      "country": "United States",
+      "site": "Illinois, Iowa, Michigan, Minnesota, New Jersey, Wisconsin",
+      "time": "2009\u20132016; 25 site-years",
+      "spatial_support": "plot-level treatment and disease/yield table; no published geometry verified",
+      "observed_targets": [
+        "soybean yield",
+        "Sclerotinia disease severity",
+        "pesticide active ingredient and application timing"
+      ],
+      "independent_group_count": null,
+      "geometry_timing_limitations": "2,057 plot records across 25 site-years; independent farms and exact coordinates unknown. Workbook title says without non-treated, so control availability and treatment comparisons need checking. Pesticide records are historic evidence, not current label authority.",
+      "license_identifier": "CC0-1.0",
+      "license_url": "https://spdx.org/licenses/CC0-1.0.html",
+      "license_evidence_url": "https://datadryad.org/api/v2/datasets/doi%3A10.5061%2Fdryad.3tn78n2",
+      "access_status": "public workbooks; metadata verified; no bytes acquired by researcher",
+      "files": [
+        {
+          "name": "2009-16 NETWORK Meta Analysis_Dataset_without Non-treated.xlsx",
+          "url": "https://datadryad.org/api/v2/files/82637/download",
+          "size_bytes": 114617
+        },
+        {
+          "name": "Treatment Master List.xlsx",
+          "url": "https://datadryad.org/api/v2/files/82636/download",
+          "size_bytes": 120588
+        }
+      ],
+      "proposed_use": "Offline disease/yield association and treatment-record parsing only; preserve pesticide-authority exclusion.",
+      "overlap_check": "No DOI/title in old catalog; not the GRACEnet network.",
+      "priority": "medium"
+    },
+    {
+      "id": "us-iowa-stover-field70-71",
+      "title": "Thirteen-year stover harvest and tillage effects on corn in Iowa",
+      "doi": "10.15482/USDA.ADC/1528303",
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Thirteen-year_Stover_Harvest_and_Tillage_Effects_on_Corn_Agroecosystem_Sustainability_in_Iowa/24856419",
+      "country": "United States",
+      "site": "Iowa State University Ag Engineering and Agronomy Farm, Boone; Fields 70\u201371",
+      "time": "2007\u20132021",
+      "spatial_support": "longitudinal research plots with one farm coordinate",
+      "observed_targets": [
+        "corn and rotation crop yields",
+        "stover biomass",
+        "soil C/N/pH and compaction",
+        "tillage/stover/biochar/crop-sequence treatments"
+      ],
+      "independent_group_count": 1,
+      "geometry_timing_limitations": "One research farm; two fields and many years are not independent farms. No plot polygons verified. Treatments changed over time, including discontinuation of no-till/no-harvest in 2012 and biochar introduction in 2013; consult plot-status workbook.",
+      "license_identifier": "U.S. Public Domain",
+      "license_url": "https://www.usa.gov/publicdomain/label/1.0/",
+      "license_evidence_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Thirteen-year_Stover_Harvest_and_Tillage_Effects_on_Corn_Agroecosystem_Sustainability_in_Iowa/24856419",
+      "access_status": "public individual files; metadata verified; no bytes acquired by researcher",
+      "files": [
+        {
+          "name": "Field 70-71 CornYield_2008-2021_ForR_0.csv",
+          "url": "https://ndownloader.figshare.com/files/44532917",
+          "size_bytes": 18917
+        },
+        {
+          "name": "Field 70-71 Crop Yield File 2008-2020_0.xlsx",
+          "url": "https://ndownloader.figshare.com/files/44532929",
+          "size_bytes": 70489
+        },
+        {
+          "name": "Field 70-71 Plot Status 2007-2021.xlsx",
+          "url": "https://ndownloader.figshare.com/files/44532926",
+          "size_bytes": 287972
+        },
+        {
+          "name": "Field 70-71 Surface Soil Test Data 2007-2021.xlsx",
+          "url": "https://ndownloader.figshare.com/files/44532956",
+          "size_bytes": 320439
+        },
+        {
+          "name": "Field 70-71 Data Dictionary.xlsx",
+          "url": "https://ndownloader.figshare.com/files/44532959",
+          "size_bytes": 16503
+        }
+      ],
+      "proposed_use": "Longitudinal treatment/soil/yield joins and change-point QA at one station.",
+      "overlap_check": "No DOI/title in old catalog; check possible site-level overlap with other Iowa research-farm datasets.",
+      "priority": "high"
+    },
+    {
+      "id": "us-tomato-vetch-high-tunnel",
+      "title": "Soil health and tomato yield after hairy vetch in US high tunnels",
+      "doi": "10.5061/dryad.15dv41pcb",
+      "source_url": "https://datadryad.org/dataset/doi:10.5061/dryad.15dv41pcb",
+      "country": "United States",
+      "site": "Kansas, Kentucky, Minnesota organic high tunnels",
+      "time": "three years at each site; published 2026",
+      "spatial_support": "replicated high-tunnel plots at three sites",
+      "observed_targets": [
+        "tomato yield and marketability",
+        "vetch biomass",
+        "soil nitrate, C/N, microbial biomass and enzyme activity"
+      ],
+      "independent_group_count": 3,
+      "geometry_timing_limitations": "Three geographically separate sites are explicit; one Minnesota site-year failed overwintering and was excluded. High-tunnel crop geometry and microclimate are not comparable with broadacre HLS imagery.",
+      "license_identifier": "CC0-1.0",
+      "license_url": "https://spdx.org/licenses/CC0-1.0.html",
+      "license_evidence_url": "https://datadryad.org/api/v2/datasets/doi%3A10.5061%2Fdryad.15dv41pcb",
+      "access_status": "public workbooks; metadata verified; no bytes acquired by researcher",
+      "files": [
+        {
+          "name": "Productivity_data.xlsx",
+          "url": "https://datadryad.org/api/v2/files/4950498/download",
+          "size_bytes": 25976
+        },
+        {
+          "name": "Soil_data.xlsx",
+          "url": "https://datadryad.org/api/v2/files/4950499/download",
+          "size_bytes": null
+        }
+      ],
+      "proposed_use": "Small independent-site soil/cover-crop/yield benchmark for tabular agronomy only.",
+      "overlap_check": "No DOI/title in old catalog; tomato/high-tunnel domain distinct.",
+      "priority": "medium"
+    },
+    {
+      "id": "us-newmexico-chile-covercrop",
+      "title": "Barley and mustard cover crop effects on New Mexico chile pepper",
+      "doi": "10.5061/dryad.vdncjsz8v",
+      "source_url": "https://datadryad.org/dataset/doi:10.5061/dryad.vdncjsz8v",
+      "country": "United States",
+      "site": "Leyendecker and Los Lunas New Mexico research centers",
+      "time": "2022\u20132023; four site-years",
+      "spatial_support": "plot/replicate/treatment at two named sites",
+      "observed_targets": [
+        "chile fruit fresh-weight yield",
+        "cover crop biomass",
+        "weed density",
+        "hand-hoeing effort"
+      ],
+      "independent_group_count": 2,
+      "geometry_timing_limitations": "Two sites, two growing years. Yield is hand-harvested from an 8 m row transect and scaled to hectare. No plot geocoordinates shown; weed germination assay is controlled-environment follow-up, not field observation. License metadata API not queried because Dryad throttled.",
+      "license_identifier": null,
+      "license_url": null,
+      "license_evidence_url": "https://datadryad.org/api/v2/datasets/doi%3A10.5061%2Fdryad.vdncjsz8v",
+      "access_status": "public page and file links; source-specific license pending; no bytes acquired",
+      "files": [
+        {
+          "name": "Fruit_yield_data.xlsx",
+          "url": "https://datadryad.org/downloads/file_stream/4554211",
+          "size_bytes": null
+        },
+        {
+          "name": "Cover_crop_biomass_data.xlsx",
+          "url": "https://datadryad.org/downloads/file_stream/4554209",
+          "size_bytes": null
+        },
+        {
+          "name": "Weed_density_data.xlsx",
+          "url": "https://datadryad.org/downloads/file_stream/4554215",
+          "size_bytes": null
+        }
+      ],
+      "proposed_use": "Tabular observed weed and yield response after rights check; exclude controlled-environment assay from field labels.",
+      "overlap_check": "No DOI/title in old catalog.",
+      "priority": "medium"
+    },
+    {
+      "id": "us-maize-robot-phenotyping",
+      "title": "Breaking the field phenotyping bottleneck in maize with autonomous robots",
+      "doi": "10.5061/dryad.m905qfvb6",
+      "source_url": "https://datadryad.org/dataset/doi:10.5061/dryad.m905qfvb6",
+      "country": "United States and Canada (US case studies only)",
+      "site": "US and Canada study; US case-study locations include Illinois and two on-farm N-trial sites",
+      "time": "five-year overall program; deposited case studies include 2022",
+      "spatial_support": "research plot x-y range grid within field; geographic coordinates not established",
+      "observed_targets": [
+        "manual plant/ear height and stem width",
+        "plot-combine grain yield for subset",
+        "robot sensor measurements with modeled trait estimates",
+        "nitrogen rate and planting density"
+      ],
+      "independent_group_count": null,
+      "geometry_timing_limitations": "Abstract describes 142 fields and ~200,000 experimental units, but deposited workbook is selected case studies, not the full archive. Do not infer 142 independent accessible groups. Robot-derived traits are processed model outputs; separate manual validation measures.",
+      "license_identifier": "CC0-1.0",
+      "license_url": "https://spdx.org/licenses/CC0-1.0.html",
+      "license_evidence_url": "https://datadryad.org/api/v2/datasets/doi%3A10.5061%2Fdryad.m905qfvb6",
+      "access_status": "public small workbooks; metadata verified; no bytes acquired by researcher",
+      "files": [
+        {
+          "name": "Data_for_Case_studies_1_to_5.xlsx",
+          "url": "https://datadryad.org/api/v2/files/3939325/download",
+          "size_bytes": 389983
+        },
+        {
+          "name": "Data_for_Figure_S2_Trait_Validation.xlsx",
+          "url": "https://datadryad.org/api/v2/files/3939324/download",
+          "size_bytes": 22631
+        }
+      ],
+      "proposed_use": "Phenotype sensor-versus-manual validation and within-field plot joins after checking which tabs contain measured yield.",
+      "overlap_check": "No DOI/title in old catalog; potential broad maize-trial overlap with G2F cannot be excluded without site identifiers.",
+      "priority": "medium"
+    },
+    {
+      "id": "us-texas-sugarcane-ge",
+      "title": "Sugarcane genotype by environment clonal trials in Texas Rio Grande Valley",
+      "doi": "10.15482/USDA.ADC/28074515.v1",
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Data_from_Sugarcane_Genotype_by_Environment_interaction_G_E_in_Clonal_Trials_in_the_U_S_Texas_Rio_Grande_Valley/28074515",
+      "country": "United States",
+      "site": "later-stage off-station Texas sugarcane farms, 4\u20135 locations per planting series",
+      "time": "planting series 2011\u20132014; evaluations 2015\u20132020",
+      "spatial_support": "breeding plot \u00d7 genotype \u00d7 location \u00d7 ratoon crop",
+      "observed_targets": [
+        "cane yield",
+        "sugar yield",
+        "sucrose content",
+        "ratooning cycle"
+      ],
+      "independent_group_count": null,
+      "geometry_timing_limitations": "Four planting series have unique sets of locations; exact unique farm count is unverified. Second workbook derives ratooning index from the same raw yield data and is not an independent source. Plot geometry is not reported.",
+      "license_identifier": "U.S. Public Domain",
+      "license_url": "https://www.usa.gov/publicdomain/label/1.0/",
+      "license_evidence_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Data_from_Sugarcane_Genotype_by_Environment_interaction_G_E_in_Clonal_Trials_in_the_U_S_Texas_Rio_Grande_Valley/28074515",
+      "access_status": "public workbooks; metadata verified; no bytes acquired by researcher",
+      "files": [
+        {
+          "name": "Texas Data series 11-14.xlsx",
+          "url": "https://ndownloader.figshare.com/files/51334985",
+          "size_bytes": 337026
+        },
+        {
+          "name": "Texas Ratooning data series 11-14.xlsx",
+          "url": "https://ndownloader.figshare.com/files/51362912",
+          "size_bytes": 100797
+        }
+      ],
+      "proposed_use": "Source-distinct multi-location yield and genotype interaction analysis; block by location and series.",
+      "overlap_check": "No DOI/title in old catalog; not G2F maize.",
+      "priority": "high"
+    },
+    {
+      "id": "us-ok-tx-cotton-hyperspectral",
+      "title": "Hyperspectral reflectance for multi-site cotton growth monitoring",
+      "doi": "10.15482/USDA.ADC/27765477.v1",
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/Data_from_Hyperspectral_reflectance_and_machine_learning_for_multi-site_monitoring_of_cotton_growth/27765477",
+      "country": "United States",
+      "site": "USDA-ARS El Reno Oklahoma and Temple Texas field research stations",
+      "time": "2019 Oklahoma and 2022 Texas; measurement dates included in CSV",
+      "spatial_support": "research plot/site with hyperspectral measurements",
+      "observed_targets": [
+        "in-situ plant height, node count, LAI, chlorophyll",
+        "hyperspectral reflectance",
+        "N treatment in Oklahoma; planting-date and cultivar factors in Texas"
+      ],
+      "independent_group_count": 2,
+      "geometry_timing_limitations": "Two named research stations. CSV includes measurement dates; exact plot coordinates and plot identifiers require schema inspection. Canopy cover is derived from image pixels and ML trait predictions must be separated from in-situ measurements. No yield is claimed.",
+      "license_identifier": "U.S. Public Domain",
+      "license_url": "https://www.usa.gov/publicdomain/label/1.0/",
+      "license_evidence_url": "https://api.figshare.com/v2/articles/27765477",
+      "access_status": "public CSV manifest; metadata verified; no bytes acquired by researcher",
+      "files": [
+        {
+          "name": "MasterCottonCombinedFinal.csv",
+          "url": "https://ndownloader.figshare.com/files/50534730",
+          "size_bytes": 4227783
+        }
+      ],
+      "proposed_use": "Candidate independent-station spectral/growth comparison once raw observation columns and dates are checked.",
+      "overlap_check": "No DOI/title in old catalog; distinct from Bronson Maricopa cotton.",
+      "priority": "medium"
+    },
+    {
+      "id": "us-colorado-maize-water-2012-13",
+      "title": "USDA-ARS Colorado Maize Water Productivity Dataset 2012\u20132013",
+      "doi": "10.15482/USDA.ADC/1439968",
+      "source_url": "https://agdatacommons.nal.usda.gov/articles/dataset/USDA-ARS_Colorado_Maize_Water_Productivity_Dataset_2012-2013/24662391",
+      "country": "United States",
+      "site": "Limited Irrigation Research Farm, northeastern Colorado",
+      "time": "2012\u20132013",
+      "spatial_support": "replicated irrigation treatment plot-year; plot map PDF",
+      "observed_targets": [
+        "maize grain yield",
+        "harvest index, biomass, LAI, stand density",
+        "irrigation and soil water",
+        "growth stage/plant height"
+      ],
+      "independent_group_count": 1,
+      "geometry_timing_limitations": "One station. Associated 2008\u20132011 record is same trial family, not another independent farm. Crop ET values include estimates; distinguish from plot observations. Plot map needs georeference review before imagery join.",
+      "license_identifier": "U.S. Public Domain",
+      "license_url": "https://www.usa.gov/publicdomain/label/1.0/",
+      "license_evidence_url": "https://agdatacommons.nal.usda.gov/articles/dataset/USDA-ARS_Colorado_Maize_Water_Productivity_Dataset_2012-2013/24662391",
+      "access_status": "public individual files; metadata verified; no bytes acquired by researcher",
+      "files": [
+        {
+          "name": "2012-2013_Maize_Compiled database 06012018.xlsx",
+          "url": "https://ndownloader.figshare.com/files/44526245",
+          "size_bytes": 4312151
+        },
+        {
+          "name": "Plot map 2012 2013.pdf",
+          "url": "https://ndownloader.figshare.com/files/44526239",
+          "size_bytes": 325724
+        },
+        {
+          "name": "Data_Dictionary_Water_Prod_2012.csv",
+          "url": "https://ndownloader.figshare.com/files/44526248",
+          "size_bytes": 16017
+        }
+      ],
+      "proposed_use": "Observed plot-level irrigation/yield and growth-stage benchmark with single-site caveat.",
+      "overlap_check": "No DOI/title in old catalog; Colorado sunflower is separate crop/station, check proximity and treatment protocols.",
+      "priority": "medium"
+    }
+  ]
+}

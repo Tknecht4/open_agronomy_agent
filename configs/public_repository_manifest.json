@@ -542,7 +542,20 @@
     "tests/test_imagery_storage_audit.py",
     "docs/reviews/artifacts/field-imagery-20260927/storage-audit.md",
     "docs/reviews/artifacts/field-imagery-20260927/storage-audit.json",
-    "docs/reviews/artifacts/field-imagery-20260927/integration-review.md"
+    "docs/reviews/artifacts/field-imagery-20260927/integration-review.md",
+    "docs/reviews/field-data-expansion-20260927.md",
+    "docs/reviews/artifacts/field-data-expansion-20260927/acquisition-receipts.json",
+    "docs/reviews/artifacts/field-data-expansion-20260927/canada-candidates.json",
+    "docs/reviews/artifacts/field-data-expansion-20260927/canada-notes.md",
+    "docs/reviews/artifacts/field-data-expansion-20260927/group-profiles.json",
+    "docs/reviews/artifacts/field-data-expansion-20260927/inspection-profiles.json",
+    "docs/reviews/artifacts/field-data-expansion-20260927/owner-candidates.json",
+    "docs/reviews/artifacts/field-data-expansion-20260927/review.md",
+    "docs/reviews/artifacts/field-data-expansion-20260927/search-activation.json",
+    "docs/reviews/artifacts/field-data-expansion-20260927/source-catalog.csv",
+    "docs/reviews/artifacts/field-data-expansion-20260927/source-catalog.json",
+    "docs/reviews/artifacts/field-data-expansion-20260927/us-candidates.json",
+    "docs/reviews/artifacts/field-data-expansion-20260927/us-notes.md"
   ],
   "trees": [
     "src",
