@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-08-21T06:23:35+00:00",
+  "generated_at": "2026-09-27T03:44:53+00:00",
   "status": "pass",
-  "contract_sha256": "453e3e7731191ce59c0d35825fea1e063c08291cd7be6ed8f39ce4d0d1545720",
+  "contract_sha256": "164140a48250b02c3f2dd3e02301e679a7e33a9d6893ffd49ff590aa8432184f",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -407,15 +407,15 @@
   "runtime_assets": [
     {
       "path": "src/agronomy_agent",
-      "file_count": 154,
-      "bytes": 5470428,
-      "sha256": "594dead29c50bf2dd070f55c7cad1ed78a6ce5b77f2c6f81a1aeea4b775aa1f2"
+      "file_count": 125,
+      "bytes": 5024402,
+      "sha256": "a46b577f2836c4e8716435ddbdbcfbd19dcd4f39ba241323bb26a124d75f4bd7"
     },
     {
       "path": "frontend/src",
-      "file_count": 73,
-      "bytes": 1142442,
-      "sha256": "b2b9fd035c875d9f38ecf82fe37cc058e880a7e1ba74a892ef97214e0996b3be"
+      "file_count": 83,
+      "bytes": 1283012,
+      "sha256": "66d7c37972959104b045e2e116d69fb14cb9a840d4380a5ff333a9edc70138c3"
     },
     {
       "path": "frontend/public",
@@ -425,15 +425,15 @@
     },
     {
       "path": "scripts",
-      "file_count": 115,
-      "bytes": 1637925,
-      "sha256": "63bd0c7ab05203ec36c34005be3a9facd778780d9e43e47bb792934cda8544c4"
+      "file_count": 118,
+      "bytes": 1626389,
+      "sha256": "fb515feb2df75b1543cc0bbecd0b36e4e740efa62b4dd943066bd15e71c4ad4b"
     },
     {
       "path": "configs",
-      "file_count": 80,
-      "bytes": 229716,
-      "sha256": "abd4f19f5041da2605b01384607e22ce842317c6bfcc2598441b98516e8c6402"
+      "file_count": 82,
+      "bytes": 234830,
+      "sha256": "bb42fb6721adfc02148ba81ac38e0c73a7d3209acd4e1431bf59d95e7bf8809b"
     },
     {
       "path": "data/manifests",
@@ -455,16 +455,16 @@
     },
     {
       "path": "docs/public",
-      "file_count": 84,
-      "bytes": 8735996,
-      "sha256": "e87a532812b20367aec9dc2765cbdaaf8355ed69f56a03467145b8eaddf6cc27"
+      "file_count": 90,
+      "bytes": 8803245,
+      "sha256": "241a7e16db8ec6317e9a5d38e1e8736bba112d842f86f444f6a16e949b0278ad"
     }
   ],
   "geo_cache_seed": {
     "path": "data/derived/geo_cache",
-    "file_count": 606,
-    "bytes": 10868679,
-    "sha256": "627442546f439f392c067e354921e83b9a9ab00faeb1177b225c7e483239b8b3"
+    "file_count": 0,
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   },
   "bundled_geo_layers": {
     "path": "data/derived/geo_layers",
@@ -504,8 +504,8 @@
     {
       "path": "Containerfile",
       "role": "runtime_control",
-      "bytes": 3921,
-      "sha256": "0fe7ebf225817f3516530fda57b7b6f542bdc833e936c8e83e42c4b6066501a2"
+      "bytes": 3781,
+      "sha256": "05cb8c3fa49a376f370a8982645ab13e04f1a678b1699729b2abcab1fb634d21"
     },
     {
       "path": "Containerfile.overlay",
@@ -528,8 +528,8 @@
     {
       "path": "pyproject.toml",
       "role": "runtime_control",
-      "bytes": 1015,
-      "sha256": "b64b04a88df2e5af83e829bba8c309a53bc1749e4cb36a561ee5473e957c120d"
+      "bytes": 1116,
+      "sha256": "68b075044b04489ed7baadbbab3869ee5b5e22fd7c7ea5218be87757f160961c"
     },
     {
       "path": "docker-compose.edge.yml",
@@ -540,14 +540,14 @@
     {
       "path": "frontend/package.json",
       "role": "runtime_control",
-      "bytes": 825,
-      "sha256": "7c9357749d61f727d49faf5f4ef6b03a7f30201d7f60b0afffbcacae395404ab"
+      "bytes": 826,
+      "sha256": "c8586e3e458f599ef16be3614b1dcf30ecd08d5808ce7ae74c7b2a4dde5670ae"
     },
     {
       "path": "frontend/package-lock.json",
       "role": "runtime_control",
-      "bytes": 160628,
-      "sha256": "5578bfef76e183399f168078d2b4a5e978cca14bec0761cd5d1e7576778c7f7e"
+      "bytes": 157378,
+      "sha256": "07597bd8800dc8335a05385e790a3a0dfe1c81a71bf46d18ed25abfba5bb1241"
     },
     {
       "path": "frontend/index.html",
@@ -564,8 +564,8 @@
     {
       "path": "frontend/vite.config.ts",
       "role": "runtime_control",
-      "bytes": 1435,
-      "sha256": "9437b51d9bd845c0e5bbcdd504f7c9ad463d72bd07166638b9e7e99bda0d02fe"
+      "bytes": 1356,
+      "sha256": "9c1f5339b0e539504afb1af364da50bb64dd7b2d56411889b03d39b9fed36cdf"
     },
     {
       "path": "container/.env.example",
@@ -582,8 +582,8 @@
     {
       "path": "container/README.md",
       "role": "runtime_control",
-      "bytes": 4718,
-      "sha256": "1e5d9fa221747f97f034a70680b801f47f83105d3517f12fc9c37281d0432ba0"
+      "bytes": 5599,
+      "sha256": "541db5181bd048bd1dbb9ce78fa57dd3d0bf2e1488110b554a42b9cc5c188e20"
     },
     {
       "path": "container/runtime-common.sh",

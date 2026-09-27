@@ -16,6 +16,26 @@ from agronomy_agent.knowledge_update_trust import (
 from agronomy_agent.runtime_profiles import DEFAULT_MODEL_CONFIG, DEFAULT_RAG_CONFIG
 
 
+RETIRED_HOSTED_BACKEND_ENV_VARS = (
+    "AGRONOMY_AGENT_RATE_LIMIT_BACKEND",
+    "AGRONOMY_AGENT_RATE_LIMIT_FAIL_OPEN",
+    "AGRONOMY_AGENT_REDIS_URL",
+    "AGRONOMY_AGENT_JOB_QUEUE_BACKEND",
+    "AGRONOMY_AGENT_JOB_QUEUE_NAME",
+    "AGRONOMY_AGENT_EVAL_QUEUE_NAME",
+    "AGRONOMY_AGENT_EXPORT_QUEUE_NAME",
+    "AGRONOMY_AGENT_EMBEDDING_QUEUE_NAME",
+    "AGRONOMY_AGENT_IMAGE_QUEUE_NAME",
+    "AGRONOMY_AGENT_JOB_QUEUE_FAIL_OPEN",
+    "AGRONOMY_AGENT_OBJECT_STORE_BACKEND",
+    "AGRONOMY_AGENT_OBJECT_STORE_ENDPOINT",
+    "AGRONOMY_AGENT_OBJECT_STORE_BUCKET",
+    "AGRONOMY_AGENT_OBJECT_STORE_REGION",
+    "AGRONOMY_AGENT_OBJECT_STORE_ACCESS_KEY",
+    "AGRONOMY_AGENT_OBJECT_STORE_SECRET_KEY",
+)
+
+
 @dataclass(frozen=True)
 class ServerSettings:
     db_path: Path
@@ -46,26 +66,10 @@ class ServerSettings:
     oidc_scopes: str = "openid email profile"
     rate_limit_requests: int = 600
     rate_limit_window_seconds: int = 60
-    rate_limit_backend: str = "memory"
-    redis_url: str | None = None
-    rate_limit_fail_open: bool = False
-    job_queue_backend: str = "local"
-    job_queue_name: str = "agronomy:jobs:ingest"
-    eval_queue_name: str = "agronomy:jobs:eval"
-    export_queue_name: str = "agronomy:jobs:exports"
-    embedding_queue_name: str = "agronomy:jobs:embedding"
-    image_queue_name: str = "agronomy:jobs:image"
-    job_queue_fail_open: bool = False
     structured_access_logs: bool = True
     otel_enabled: bool = False
     otel_service_name: str = "agronomy-agent-api"
     network_mode: str = "online"
-    object_store_backend: str = "local"
-    object_store_endpoint: str | None = None
-    object_store_bucket: str | None = None
-    object_store_region: str = "us-east-1"
-    object_store_access_key: str | None = None
-    object_store_secret_key: str | None = None
     vlm_observation_backend: str = "local"
     vlm_observation_endpoint: str | None = None
     vlm_observation_api_key: str | None = None
@@ -136,26 +140,10 @@ def build_settings(
     oidc_scopes: str | None = None,
     rate_limit_requests: int | None = None,
     rate_limit_window_seconds: int | None = None,
-    rate_limit_backend: str | None = None,
-    redis_url: str | None = None,
-    rate_limit_fail_open: bool | None = None,
-    job_queue_backend: str | None = None,
-    job_queue_name: str | None = None,
-    eval_queue_name: str | None = None,
-    export_queue_name: str | None = None,
-    embedding_queue_name: str | None = None,
-    image_queue_name: str | None = None,
-    job_queue_fail_open: bool | None = None,
     structured_access_logs: bool | None = None,
     otel_enabled: bool | None = None,
     otel_service_name: str | None = None,
     network_mode: str | None = None,
-    object_store_backend: str | None = None,
-    object_store_endpoint: str | None = None,
-    object_store_bucket: str | None = None,
-    object_store_region: str | None = None,
-    object_store_access_key: str | None = None,
-    object_store_secret_key: str | None = None,
     vlm_observation_backend: str | None = None,
     vlm_observation_endpoint: str | None = None,
     vlm_observation_api_key: str | None = None,
@@ -177,6 +165,14 @@ def build_settings(
     allow_rag_config_override: bool | None = None,
     allow_model_id_override: bool | None = None,
 ) -> ServerSettings:
+    retired_environment = sorted(
+        name for name in RETIRED_HOSTED_BACKEND_ENV_VARS if name in os.environ
+    )
+    if retired_environment:
+        raise ValueError(
+            "Redis/S3 hosted backends were removed from the local-private runtime; "
+            "unset retired environment variables: " + ", ".join(retired_environment)
+        )
     db = _coerce_path(str(db_path or os.getenv("AGRONOMY_AGENT_DB_PATH") or "outputs/cockpit/phase3.sqlite3"))
     artifact = _coerce_path(str(artifact_root or os.getenv("AGRONOMY_AGENT_ARTIFACT_ROOT") or "outputs/cockpit/artifacts"))
     static_value = static_dir if static_dir is not None else os.getenv("AGRONOMY_AGENT_STATIC_DIR")
@@ -203,42 +199,6 @@ def build_settings(
         raise ValueError("AGRONOMY_AGENT_RATE_LIMIT_REQUESTS must be > 0")
     if window_seconds <= 0:
         raise ValueError("AGRONOMY_AGENT_RATE_LIMIT_WINDOW_SECONDS must be > 0")
-    limiter_backend = (rate_limit_backend or os.getenv("AGRONOMY_AGENT_RATE_LIMIT_BACKEND") or "memory").strip().lower()
-    if limiter_backend not in {"memory", "redis"}:
-        raise ValueError("AGRONOMY_AGENT_RATE_LIMIT_BACKEND must be 'memory' or 'redis'")
-    limiter_redis_url = redis_url or os.getenv("AGRONOMY_AGENT_REDIS_URL") or os.getenv("REDIS_URL")
-    if limiter_backend == "redis" and not limiter_redis_url:
-        raise ValueError("AGRONOMY_AGENT_REDIS_URL or REDIS_URL is required when AGRONOMY_AGENT_RATE_LIMIT_BACKEND=redis")
-    queue_backend = (job_queue_backend or os.getenv("AGRONOMY_AGENT_JOB_QUEUE_BACKEND") or "local").strip().lower()
-    if queue_backend not in {"local", "redis"}:
-        raise ValueError("AGRONOMY_AGENT_JOB_QUEUE_BACKEND must be 'local' or 'redis'")
-    if queue_backend == "redis" and not limiter_redis_url:
-        raise ValueError("AGRONOMY_AGENT_REDIS_URL or REDIS_URL is required when AGRONOMY_AGENT_JOB_QUEUE_BACKEND=redis")
-    queue_name = (job_queue_name or os.getenv("AGRONOMY_AGENT_JOB_QUEUE_NAME") or "agronomy:jobs:ingest").strip()
-    if not queue_name:
-        raise ValueError("AGRONOMY_AGENT_JOB_QUEUE_NAME must be non-empty")
-    eval_job_queue_name = (eval_queue_name or os.getenv("AGRONOMY_AGENT_EVAL_QUEUE_NAME") or "agronomy:jobs:eval").strip()
-    if not eval_job_queue_name:
-        raise ValueError("AGRONOMY_AGENT_EVAL_QUEUE_NAME must be non-empty")
-    export_job_queue_name = (export_queue_name or os.getenv("AGRONOMY_AGENT_EXPORT_QUEUE_NAME") or "agronomy:jobs:exports").strip()
-    if not export_job_queue_name:
-        raise ValueError("AGRONOMY_AGENT_EXPORT_QUEUE_NAME must be non-empty")
-    embedding_job_queue_name = (embedding_queue_name or os.getenv("AGRONOMY_AGENT_EMBEDDING_QUEUE_NAME") or "agronomy:jobs:embedding").strip()
-    if not embedding_job_queue_name:
-        raise ValueError("AGRONOMY_AGENT_EMBEDDING_QUEUE_NAME must be non-empty")
-    image_job_queue_name = (image_queue_name or os.getenv("AGRONOMY_AGENT_IMAGE_QUEUE_NAME") or "agronomy:jobs:image").strip()
-    if not image_job_queue_name:
-        raise ValueError("AGRONOMY_AGENT_IMAGE_QUEUE_NAME must be non-empty")
-    limiter_fail_open = (
-        rate_limit_fail_open
-        if rate_limit_fail_open is not None
-        else os.getenv("AGRONOMY_AGENT_RATE_LIMIT_FAIL_OPEN", "false").lower() in {"1", "true", "yes"}
-    )
-    queue_fail_open = (
-        job_queue_fail_open
-        if job_queue_fail_open is not None
-        else os.getenv("AGRONOMY_AGENT_JOB_QUEUE_FAIL_OPEN", "false").lower() in {"1", "true", "yes"}
-    )
     access_logs_enabled = (
         structured_access_logs
         if structured_access_logs is not None
@@ -290,12 +250,6 @@ def build_settings(
     ).strip().lower()
     if resolved_network_mode not in {"online", "offline"}:
         raise ValueError("AGRONOMY_AGENT_NETWORK_MODE must be 'online' or 'offline'")
-    storage_backend = (object_store_backend or os.getenv("AGRONOMY_AGENT_OBJECT_STORE_BACKEND") or "local").strip().lower()
-    if storage_backend not in {"local", "s3"}:
-        raise ValueError("AGRONOMY_AGENT_OBJECT_STORE_BACKEND must be 'local' or 's3'")
-    storage_region = (object_store_region or os.getenv("AGRONOMY_AGENT_OBJECT_STORE_REGION") or "us-east-1").strip()
-    if not storage_region:
-        raise ValueError("AGRONOMY_AGENT_OBJECT_STORE_REGION must be non-empty")
     vlm_backend = (vlm_observation_backend or os.getenv("AGRONOMY_AGENT_VLM_OBSERVATION_BACKEND") or "local").strip().lower()
     if vlm_backend not in {"local", "http"}:
         raise ValueError("AGRONOMY_AGENT_VLM_OBSERVATION_BACKEND must be 'local' or 'http'")
@@ -475,26 +429,10 @@ def build_settings(
         oidc_scopes=(oidc_scopes or os.getenv("AGRONOMY_AGENT_OIDC_SCOPES") or "openid email profile").strip(),
         rate_limit_requests=limit,
         rate_limit_window_seconds=window_seconds,
-        rate_limit_backend=limiter_backend,
-        redis_url=limiter_redis_url,
-        rate_limit_fail_open=limiter_fail_open,
-        job_queue_backend=queue_backend,
-        job_queue_name=queue_name,
-        eval_queue_name=eval_job_queue_name,
-        export_queue_name=export_job_queue_name,
-        embedding_queue_name=embedding_job_queue_name,
-        image_queue_name=image_job_queue_name,
-        job_queue_fail_open=queue_fail_open,
         structured_access_logs=access_logs_enabled,
         otel_enabled=telemetry_enabled,
         otel_service_name=telemetry_service_name,
         network_mode=resolved_network_mode,
-        object_store_backend=storage_backend,
-        object_store_endpoint=object_store_endpoint or os.getenv("AGRONOMY_AGENT_OBJECT_STORE_ENDPOINT"),
-        object_store_bucket=object_store_bucket or os.getenv("AGRONOMY_AGENT_OBJECT_STORE_BUCKET"),
-        object_store_region=storage_region,
-        object_store_access_key=object_store_access_key or os.getenv("AGRONOMY_AGENT_OBJECT_STORE_ACCESS_KEY"),
-        object_store_secret_key=object_store_secret_key or os.getenv("AGRONOMY_AGENT_OBJECT_STORE_SECRET_KEY"),
         vlm_observation_backend=vlm_backend,
         vlm_observation_endpoint=vlm_observation_endpoint or os.getenv("AGRONOMY_AGENT_VLM_OBSERVATION_ENDPOINT"),
         vlm_observation_api_key=vlm_observation_api_key or os.getenv("AGRONOMY_AGENT_VLM_OBSERVATION_API_KEY"),

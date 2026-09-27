@@ -35,6 +35,8 @@ For a new shared source, record publisher, URL or exact bytes, retrieval date, r
 
 Graphs require a stable graph ID, version, source and licence, namespace/relation ownership, checksum, and collision policy in a manifest. The runtime must fail closed on an invalid required graph. A capability requires a canonical registry specification and typed executor before adding an API button or chat trigger; see [extending the system](extending.md).
 
+Artifacts use the local filesystem and request limits run in memory. Ingest, export, image and evaluation records stay in the configured application database. Redis/S3 backend selection and the standalone queue worker were removed; do not build extensions around those retired paths.
+
 ## Measure before changing answer behavior
 
 Use a fresh output directory for each run. The mock workspace profiler creates a synthetic SQLite database, measures cold/warm API paths and the production core, emits cProfile summaries, and retains failures without a model or provider call:

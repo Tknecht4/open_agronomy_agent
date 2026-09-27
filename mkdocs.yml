@@ -74,6 +74,7 @@ nav:
   - Developer guide:
       - Code and contracts: developer/index.md
       - Customize the harness: developer/customizing-the-harness.md
+      - Repository map: developer/repository-map.md
       - Extending the system: developer/extending.md
       - Testing and claims: developer/testing.md
       - Release-candidate gates: developer/release-readiness.md

@@ -2923,7 +2923,7 @@ export function OpenAgronomyApp() {
 
   const fieldSaveBusyRef = useRef(false)
   const storeCurrentField = async (saveAsNew = false) => {
-    if (fieldSaveBusyRef.current || isAnalyzing) return
+    if (!fieldsHydrated || fieldSaveBusyRef.current || isAnalyzing) return
     fieldSaveBusyRef.current = true
     setSavingField(true)
     try { await persistCurrentField(saveAsNew) }

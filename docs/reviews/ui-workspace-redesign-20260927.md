@@ -1,6 +1,6 @@
 # Workspace redesign: plan and execution record
 
-Status: implemented; final independent acceptance reconciliation in progress. Branch: `codex/ui-workspace-redesign`.
+Status: implemented. Technical checks are recorded below; human PR acceptance remains outstanding. Branch: `codex/ui-workspace-redesign`.
 Reference: remote `main`, `7a34111` (verified 2026-09-27 UTC).
 
 ## Working contract
@@ -148,3 +148,33 @@ studies and slow-network distributions remain unexercised. The hosted/image rese
 extensions are not silently promoted into ordinary field advice. The human still
 accepts the PR and decides deployment. This work did not publish GitHub Pages or
 change model/corpus authority. No durable memory update was requested or made.
+
+## Integration with the updated main branch
+
+The branch was initially created from `7a34111` before any implementation. During
+work, main advanced through repository cleanup and local-backend removal. The UI
+candidate was saved as `d93953a`, then explicitly integrated with pinned main
+`7c502d8`. Removed Redis/S3 and disconnected scaffolding remain removed; the
+architecture, repository map, optional spatial setup, dependency lock and CI fixes
+from main are retained. Both independent versions of the hermetic matrix test kept
+the original assertions; the integrated tree uses main's fixture implementation.
+
+The merged dependency install reports zero npm vulnerabilities. The frontend passes
+241 tests plus typecheck and build on Vitest 4.1.11. Post-merge mock and actual pinned
+Gemma profiles confirm the integrated source without changing prior receipts:
+field-history calls load eight selected turns; the two capped model turns completed
+with 17/17 stages in 17.75 s and 15.65 s. These are integration observations, not a
+speedup comparison or a quality claim. Exact hashes and limits are in
+`artifacts/ui-post-merge-profile-20260927.json`.
+
+The final review also found a storage-bootstrap race. Creating or saving a field is
+now gated until storage mode resolves, and superseded initial field-list responses
+cannot replace a subsequently created field. Both deferred-response cases pass in
+the 43-case workflow suite.
+
+An extra disposable public-package copy exhausted temporary disk space. The failed
+log was retained; only this task's regenerable package trees were removed after
+retaining available receipts. The package retry passed before the integration
+commit. No model cache, personal data, or historical benchmark was removed.
+
+Final integrated validation: **1,019 Python tests passed**, **241 frontend tests passed**, frontend typecheck/build passed, strict MkDocs passed, and the public documentation checker passed. The container runtime inventory was regenerated from the integrated source. The final public-package receipt and independent review bind the delivered merge candidate; human PR acceptance remains separate.

@@ -106,45 +106,6 @@ def run_local_data_source_ingest(store: Any, job_id: str, *, worker_name: str = 
     )
 
 
-def run_queued_data_source_ingests(store: Any, *, limit: int = 1, worker_name: str = "local_worker") -> dict[str, Any]:
-    if limit <= 0:
-        raise ValueError("limit must be > 0")
-    jobs = store.list_phase4_queued_ingest_jobs(limit=limit)
-    return run_data_source_ingest_jobs(store, [job["id"] for job in jobs], requested_limit=limit, worker_name=worker_name, queue_name="ingest")
-
-
-def run_data_source_ingest_jobs(
-    store: Any,
-    job_ids: list[str],
-    *,
-    requested_limit: int,
-    worker_name: str = "local_worker",
-    queue_name: str = "ingest",
-) -> dict[str, Any]:
-    results: list[dict[str, Any]] = []
-    for job_id in job_ids:
-        try:
-            result = run_local_data_source_ingest(store, job_id, worker_name=worker_name)
-        except Exception as exc:
-            result = store.update_phase4_ingest_job(
-                job_id=job_id,
-                status="failed",
-                result={"chunk_count": 0, "worker": worker_name, "unhandled_error": exc.__class__.__name__},
-                error_message=str(exc),
-                finished_at=_now_iso(),
-            )
-        results.append(result)
-    return {
-        "queue": queue_name,
-        "worker": worker_name,
-        "requested_limit": requested_limit,
-        "processed": len(results),
-        "completed": sum(1 for item in results if item.get("status") == "completed"),
-        "failed": sum(1 for item in results if item.get("status") == "failed"),
-        "job_ids": [item.get("id") for item in results],
-    }
-
-
 def _load_data_source_text(data_source: dict[str, Any]) -> tuple[str, str]:
     metadata = data_source.get("metadata") or {}
     inline_text = str(metadata.get("text_content") or "")

@@ -154,3 +154,15 @@ def test_pages_workflow_audit_rejects_floating_action(tmp_path: Path) -> None:
     errors = check_public_docs.audit_pages_workflow(workflow)
 
     assert "pages_workflow:action_not_commit_pinned:v6" in errors
+
+
+def test_pages_workflow_audit_requires_default_branch_configuration(tmp_path: Path) -> None:
+    source = ROOT / ".github/workflows/docs.yml"
+    workflow = tmp_path / "docs.yml"
+    lines = source.read_text(encoding="utf-8").splitlines()
+    start = lines.index("      - name: Configure GitHub Pages")
+    workflow.write_text("\n".join(lines[:start] + lines[start + 3 :]) + "\n", encoding="utf-8")
+
+    errors = check_public_docs.audit_pages_workflow(workflow)
+
+    assert "pages_workflow:configuration_not_default_branch_push_only" in errors

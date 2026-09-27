@@ -201,7 +201,7 @@
  .workspace-shell { display: block; }
  .workspace-shell .demo-header { position: relative; height: auto; padding: 16px 24px; display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 15px; border: 0; border-bottom: 1px solid var(--line); }
  .workspace-shell .brand-block { display: flex; align-items: center; gap: 10px; }
- .workspace-shell .brand-block > strong, .workspace-shell .brand-agent, .workspace-shell .brand-block .network-mode-badge { display: none; }
+ .workspace-shell .brand-block > strong, .workspace-shell .brand-block .brand-agent, .workspace-shell .brand-block .network-mode-badge { display: none; }
  .workspace-shell .brand-block > span { font-size: 16px; }
  .brand-symbol { width: 34px; height: 34px; border-radius: 9px; }
  .workspace-shell .demo-nav { flex-direction: row; width: auto; gap: 4px; }

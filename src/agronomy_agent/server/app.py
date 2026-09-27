@@ -149,10 +149,9 @@ from agronomy_agent.server.services.tool_service import (
     run_local_tool,
 )
 from agronomy_agent.server.observability import build_telemetry, log_request, request_id
-from agronomy_agent.server.queue import JobQueueUnavailable, build_job_queue
-from agronomy_agent.server.rate_limit import FixedWindowRateLimiter, RateLimiterUnavailable, RedisFixedWindowRateLimiter
+from agronomy_agent.server.rate_limit import FixedWindowRateLimiter
 from agronomy_agent.server.settings import ServerSettings, build_settings, make_corpus_audit_id
-from agronomy_agent.server.storage.object_store import build_object_store
+from agronomy_agent.server.storage.object_store import LocalObjectStore
 from agronomy_agent.server.storage.runtime import build_trace_store, storage_db_path_for, storage_label_for
 from agronomy_agent.server.trace_timer import PHASE5_TURN_METRICS_SCHEMA_VERSION, TraceProfiler
 
@@ -2240,26 +2239,10 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         oidc_scopes=settings.oidc_scopes,
         rate_limit_requests=settings.rate_limit_requests,
         rate_limit_window_seconds=settings.rate_limit_window_seconds,
-        rate_limit_backend=settings.rate_limit_backend,
-        redis_url=settings.redis_url,
-        rate_limit_fail_open=settings.rate_limit_fail_open,
-        job_queue_backend=settings.job_queue_backend,
-        job_queue_name=settings.job_queue_name,
-        eval_queue_name=settings.eval_queue_name,
-        export_queue_name=settings.export_queue_name,
-        embedding_queue_name=settings.embedding_queue_name,
-        image_queue_name=settings.image_queue_name,
-        job_queue_fail_open=settings.job_queue_fail_open,
         structured_access_logs=settings.structured_access_logs,
         otel_enabled=settings.otel_enabled,
         otel_service_name=settings.otel_service_name,
         network_mode=settings.network_mode,
-        object_store_backend=settings.object_store_backend,
-        object_store_endpoint=settings.object_store_endpoint,
-        object_store_bucket=settings.object_store_bucket,
-        object_store_region=settings.object_store_region,
-        object_store_access_key=settings.object_store_access_key,
-        object_store_secret_key=settings.object_store_secret_key,
         vlm_observation_backend=settings.vlm_observation_backend,
         vlm_observation_endpoint=settings.vlm_observation_endpoint,
         vlm_observation_api_key=settings.vlm_observation_api_key,
@@ -2285,8 +2268,13 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
     app.state.frontend_event_records = []
     app.state.local_pairing_consumed = False
     local_pairing_lock = asyncio.Lock()
-    object_store = build_object_store(settings)
-    job_queue = build_job_queue(settings)
+    object_store = LocalObjectStore(settings.artifact_root)
+    job_execution = {
+        "backend": "database-recorded",
+        "database_backend": settings.database_backend,
+        "fail_open": False,
+        "scope": "application_private",
+    }
     attachment_scanner = build_attachment_scanner(settings)
     ephemeral_private_scanner = LocalAttachmentScanner()
     image_observation_adapter = _build_image_observation_adapter(settings)
@@ -2362,47 +2350,21 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             )
         return mode
 
-    if settings.rate_limit_backend == "redis":
-        rate_limiter = RedisFixedWindowRateLimiter(
-            limit=settings.rate_limit_requests,
-            window_seconds=settings.rate_limit_window_seconds,
-            redis_url=str(settings.redis_url or ""),
-        )
-    else:
-        rate_limiter = FixedWindowRateLimiter(
-            limit=settings.rate_limit_requests,
-            window_seconds=settings.rate_limit_window_seconds,
-        )
+    rate_limiter = FixedWindowRateLimiter(
+        limit=settings.rate_limit_requests,
+        window_seconds=settings.rate_limit_window_seconds,
+    )
 
     @app.middleware("http")
     async def enforce_rate_limit(request: Request, call_next: Any) -> Any:
         if _rate_limit_exempt_path(request.url.path):
             return await call_next(request)
-        try:
-            result = rate_limiter.check(_rate_limit_key(request), now=time.monotonic())
-        except RateLimiterUnavailable as exc:
-            if settings.rate_limit_fail_open:
-                response = await call_next(request)
-                response.headers["X-RateLimit-Backend"] = settings.rate_limit_backend
-                response.headers["X-RateLimit-Fail-Open"] = "true"
-                return response
-            return JSONResponse(
-                status_code=503,
-                content={
-                    "detail": {
-                        "error": "rate limiter unavailable",
-                        "backend": settings.rate_limit_backend,
-                        "fail_open": False,
-                        "reason": str(exc),
-                    }
-                },
-                headers={"Retry-After": "1", "X-RateLimit-Backend": settings.rate_limit_backend},
-            )
+        result = rate_limiter.check(_rate_limit_key(request), now=time.monotonic())
         headers = {
             "X-RateLimit-Limit": str(result.limit),
             "X-RateLimit-Remaining": str(result.remaining),
             "X-RateLimit-Reset": str(result.reset_after_seconds),
-            "X-RateLimit-Backend": settings.rate_limit_backend,
+            "X-RateLimit-Backend": rate_limiter.backend,
         }
         if not result.allowed:
             headers["Retry-After"] = str(result.reset_after_seconds)
@@ -3423,20 +3385,6 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 "Latest eval replay did not complete successfully.",
                 {"latest_run_status": metrics["eval"]["latest_run_status"]},
             )
-        if settings.rate_limit_fail_open:
-            add_alert(
-                "rate_limit_fail_open",
-                "critical",
-                "Rate limiter is configured fail-open, which is unsafe for public demos.",
-                {"backend": settings.rate_limit_backend},
-            )
-        if settings.job_queue_fail_open:
-            add_alert(
-                "job_queue_fail_open",
-                "critical",
-                "Job queue enqueue failures are configured fail-open.",
-                {"backend": job_queue.backend},
-            )
         if not settings.structured_access_logs:
             add_alert(
                 "structured_access_logs_disabled",
@@ -3463,8 +3411,8 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 "metrics": {
                     "storage": metrics["storage"]["backend"],
                     "database_backend": settings.database_backend,
-                    "rate_limit_backend": settings.rate_limit_backend,
-                    "job_queue_backend": job_queue.backend,
+                    "rate_limit_backend": rate_limiter.backend,
+                    "job_queue_backend": job_execution["backend"],
                 },
             },
             {
@@ -3747,18 +3695,10 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 "external_calls_allowed": settings.network_mode == "online",
             },
             "telemetry": telemetry.status(),
-            "object_store": {"backend": settings.object_store_backend},
+            "object_store": {"backend": object_store.backend},
             "vlm_observation": {"backend": settings.vlm_observation_backend},
-            "rate_limit": {"backend": settings.rate_limit_backend, "fail_open": settings.rate_limit_fail_open},
-            "job_queue": {
-                "backend": job_queue.backend,
-                "fail_open": settings.job_queue_fail_open,
-                "ingest_queue": settings.job_queue_name,
-                "eval_queue": settings.eval_queue_name,
-                "export_queue": settings.export_queue_name,
-                "embedding_queue": settings.embedding_queue_name,
-                "image_queue": settings.image_queue_name,
-            },
+            "rate_limit": {"backend": rate_limiter.backend, "fail_open": False},
+            "job_queue": job_execution,
         }
 
     @app.get("/api/configs")
@@ -4028,18 +3968,10 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 "mode": settings.network_mode,
                 "external_calls_allowed": settings.network_mode == "online",
             },
-            "object_store": {"backend": settings.object_store_backend},
+            "object_store": {"backend": object_store.backend},
             "vlm_observation": {"backend": settings.vlm_observation_backend},
-            "rate_limit": {"backend": settings.rate_limit_backend, "fail_open": settings.rate_limit_fail_open},
-            "job_queue": {
-                "backend": job_queue.backend,
-                "fail_open": settings.job_queue_fail_open,
-                "ingest_queue": settings.job_queue_name,
-                "eval_queue": settings.eval_queue_name,
-                "export_queue": settings.export_queue_name,
-                "embedding_queue": settings.embedding_queue_name,
-                "image_queue": settings.image_queue_name,
-            },
+            "rate_limit": {"backend": rate_limiter.backend, "fail_open": False},
+            "job_queue": job_execution,
             "corpus_audit_id": settings.corpus_audit_id,
             "telemetry": telemetry.status(),
         }
@@ -4066,18 +3998,10 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 "mode": settings.network_mode,
                 "external_calls_allowed": settings.network_mode == "online",
             },
-            "object_store": {"backend": settings.object_store_backend},
+            "object_store": {"backend": object_store.backend},
             "vlm_observation": {"backend": settings.vlm_observation_backend},
-            "rate_limit": {"backend": settings.rate_limit_backend, "fail_open": settings.rate_limit_fail_open},
-            "job_queue": {
-                "backend": job_queue.backend,
-                "fail_open": settings.job_queue_fail_open,
-                "ingest_queue": settings.job_queue_name,
-                "eval_queue": settings.eval_queue_name,
-                "export_queue": settings.export_queue_name,
-                "embedding_queue": settings.embedding_queue_name,
-                "image_queue": settings.image_queue_name,
-            },
+            "rate_limit": {"backend": rate_limiter.backend, "fail_open": False},
+            "job_queue": job_execution,
             "quota_blocked": quota_report["blocked"],
             "corpus_status": corpus_health["status"],
             "corpus_audit_id": settings.corpus_audit_id,
@@ -5567,29 +5491,6 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 },
                 source_hash=digest,
             )
-        if settings.job_queue_backend == "redis":
-            try:
-                embedding_job = store.create_phase4_embedding_job(
-                    attachment=attachment,
-                    created_by_user_id=user["id"],
-                    queue_name=settings.embedding_queue_name,
-                )
-                enqueue = job_queue.enqueue_embedding_job(embedding_job["id"])
-            except JobQueueUnavailable as exc:
-                if not settings.job_queue_fail_open:
-                    raise HTTPException(
-                        status_code=503,
-                        detail={
-                            "error": "job queue unavailable",
-                            "backend": job_queue.backend,
-                            "fail_open": False,
-                            "reason": str(exc),
-                            "attachment_id": attachment["id"],
-                        },
-                    ) from exc
-                attachment["embedding_job"] = {"enqueued": False, "fail_open": True, "reason": str(exc)}
-            else:
-                attachment["embedding_job"] = {**embedding_job, "queue_enqueue": enqueue}
         return attachment
 
     @app.delete("/attachments/{attachment_id}")
@@ -5722,43 +5623,6 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             raise HTTPException(status_code=400, detail="eval run requires at least one reviewed candidate")
         candidate_ids = [candidate["id"] for candidate in candidates]
         eval_corpus_audit_id = _corpus_audit(settings, store)
-        if settings.job_queue_backend == "redis":
-            run = store.create_phase4_eval_run(
-                workspace=workspace,
-                created_by_user_id=user["id"],
-                name=payload.name,
-                candidate_ids=candidate_ids,
-                metadata={
-                    "include_statuses": payload.include_statuses,
-                    "queue_backend": job_queue.backend,
-                    "queue_name": settings.eval_queue_name,
-                    "corpus_audit_id": eval_corpus_audit_id,
-                },
-                status="queued",
-            )
-            try:
-                enqueue = job_queue.enqueue_eval_run(run["id"])
-            except JobQueueUnavailable as exc:
-                store.update_phase4_eval_run(
-                    run_id=run["id"],
-                    status="failed",
-                    metadata={"queue_enqueue_error": str(exc), "queue_backend": job_queue.backend},
-                    finished_at=datetime.now(timezone.utc).isoformat(),
-                )
-                if not settings.job_queue_fail_open:
-                    raise HTTPException(
-                        status_code=503,
-                        detail={
-                            "error": "job queue unavailable",
-                            "backend": job_queue.backend,
-                            "fail_open": False,
-                            "reason": str(exc),
-                            "run_id": run["id"],
-                        },
-                    ) from exc
-                enqueue = {"backend": job_queue.backend, "enqueued": False, "fail_open": True, "reason": str(exc)}
-            return {**(store.get_phase4_eval_run(run["id"]) or run), "queue_enqueue": enqueue}
-
         metrics = _eval_run_metrics(candidates)
         gates = _eval_run_gates(metrics)
         run = store.create_phase4_eval_run(
@@ -5768,7 +5632,11 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             candidate_ids=candidate_ids,
             metrics=metrics,
             gates=gates,
-            metadata={"include_statuses": payload.include_statuses, "queue_backend": job_queue.backend, "corpus_audit_id": eval_corpus_audit_id},
+            metadata={
+                "include_statuses": payload.include_statuses,
+                "queue_backend": "in_process",
+                "corpus_audit_id": eval_corpus_audit_id,
+            },
         )
         return run
 
@@ -5938,21 +5806,12 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="data source not found")
         require_workspace_role(user, data_source["workspace_id"], ORG_ADMIN_ROLES)
         job = store.create_phase4_ingest_job(data_source=data_source, created_by_user_id=user["id"])
-        try:
-            enqueue = job_queue.enqueue_ingest_job(job["id"])
-        except JobQueueUnavailable as exc:
-            if not settings.job_queue_fail_open:
-                raise HTTPException(
-                    status_code=503,
-                    detail={
-                        "error": "job queue unavailable",
-                        "backend": job_queue.backend,
-                        "fail_open": False,
-                        "reason": str(exc),
-                        "job_id": job["id"],
-                    },
-                ) from exc
-            enqueue = {"backend": job_queue.backend, "enqueued": False, "fail_open": True, "reason": str(exc)}
+        enqueue = {
+            "backend": job_execution["backend"],
+            "database_backend": settings.database_backend,
+            "enqueued": True,
+            "job_id": job["id"],
+        }
         return {**job, "queue_enqueue": enqueue}
 
     @app.get("/ingest-jobs")
@@ -6134,38 +5993,6 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         if payload.export_type == "data_source_audit":
             require_workspace_role(user, thread["workspace_id"], ORG_ADMIN_ROLES)
         enforce_workspace_quota(workspace, "max_exports")
-        if settings.job_queue_backend == "redis":
-            job = store.create_phase4_export_job(
-                thread=thread,
-                created_by_user_id=user["id"],
-                export_type=payload.export_type,
-                redaction_status=payload.redaction_status,
-                queue_name=settings.export_queue_name,
-            )
-            try:
-                enqueue = job_queue.enqueue_export_job(job["id"])
-            except JobQueueUnavailable as exc:
-                store.update_phase4_export_job(
-                    job_id=job["id"],
-                    status="failed",
-                    result={"queue_backend": job_queue.backend},
-                    error_message=str(exc),
-                    finished_at=datetime.now(timezone.utc).isoformat(),
-                )
-                if not settings.job_queue_fail_open:
-                    raise HTTPException(
-                        status_code=503,
-                        detail={
-                            "error": "job queue unavailable",
-                            "backend": job_queue.backend,
-                            "fail_open": False,
-                            "reason": str(exc),
-                            "job_id": job["id"],
-                        },
-                    ) from exc
-                enqueue = {"backend": job_queue.backend, "enqueued": False, "fail_open": True, "reason": str(exc)}
-            return {"export_job": store.get_phase4_export_job(job["id"]) or job, "queue_enqueue": enqueue}
-
         phase5_metrics = _latest_phase5_metrics_for_thread(store, thread)
         if not phase5_metrics:
             result = create_phase4_thread_export(
@@ -6175,7 +6002,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 created_by_user_id=user["id"],
                 export_type=payload.export_type,
                 redaction_status=payload.redaction_status,
-                storage_backend=settings.object_store_backend,
+                storage_backend=object_store.backend,
             )
             return {
                 **result,
@@ -6191,7 +6018,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 metadata={
                     "export_type": payload.export_type,
                     "redaction_status": payload.redaction_status,
-                    "storage_backend": settings.object_store_backend,
+                    "storage_backend": object_store.backend,
                 },
             ) as export_span:
                 result = create_phase4_thread_export(
@@ -6201,7 +6028,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                     created_by_user_id=user["id"],
                     export_type=payload.export_type,
                     redaction_status=payload.redaction_status,
-                    storage_backend=settings.object_store_backend,
+                    storage_backend=object_store.backend,
                 )
                 export = result["export"]
                 files = (export.get("metadata") or {}).get("files") or {}
@@ -6228,40 +6055,6 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         attachments = []
         for attachment_id in payload.attachment_ids:
             attachments.append(require_attachment_for_workspace(workspace, str(attachment_id)))
-        if settings.job_queue_backend == "redis":
-            job = store.create_phase4_image_job(
-                workspace=workspace,
-                created_by_user_id=user["id"],
-                question=payload.question,
-                attachment_ids=[attachment["id"] for attachment in attachments],
-                thread_id=thread["id"] if thread else None,
-                crop=payload.crop,
-                region=payload.region,
-                queue_name=settings.image_queue_name,
-            )
-            try:
-                enqueue = job_queue.enqueue_image_job(job["id"])
-            except JobQueueUnavailable as exc:
-                store.update_phase4_image_job(
-                    job_id=job["id"],
-                    status="failed",
-                    result={"queue_backend": job_queue.backend},
-                    error_message=str(exc),
-                    finished_at=datetime.now(timezone.utc).isoformat(),
-                )
-                if not settings.job_queue_fail_open:
-                    raise HTTPException(
-                        status_code=503,
-                        detail={
-                            "error": "job queue unavailable",
-                            "backend": job_queue.backend,
-                            "fail_open": False,
-                            "reason": str(exc),
-                            "job_id": job["id"],
-                        },
-                    ) from exc
-                enqueue = {"backend": job_queue.backend, "enqueued": False, "fail_open": True, "reason": str(exc)}
-            return {"image_job": store.get_phase4_image_job(job["id"]) or job, "queue_enqueue": enqueue}
         image_search = _image_embedding_search(
             query_attachments=attachments,
             candidate_embeddings=store.list_phase4_image_embeddings(workspace["id"]),

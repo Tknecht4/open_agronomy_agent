@@ -39,7 +39,47 @@ Model weights are not committed or fetched while answering. Provision the active
 python scripts/download_model.py --model-config configs/model.yaml
 ```
 
-The serving snapshot is `mlx-community/gemma-4-e2b-it-4bit` at revision `238767527555cb75a05732a84dff5d6ba0dd6809`. It occupied about 3.34 GiB in the exercised cache; leave additional room for dependencies, indexes, runtime state, and generation. Start the API and workspace:
+The serving snapshot is `mlx-community/gemma-4-e2b-it-4bit` at revision `238767527555cb75a05732a84dff5d6ba0dd6809`. It occupied about 3.34 GiB in the exercised cache; leave additional room for dependencies, indexes, runtime state, and generation.
+
+## Data and optional spatial setup
+
+The clone already contains the active hash-bound document and graph corpus,
+including the context-only U.S. NRCS analogue pack. Normal question answering
+does not require a second corpus download. Verify those checked-in bytes before
+launching:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/audit_runtime_corpus.py
+```
+
+Prairie map layers are different: the Alberta, Saskatchewan, and Manitoba
+Detailed Soil Survey archives are not committed. The cockpit works without
+them and reports map coverage as `not_installed`. To enable that optional
+offline map context, choose a dedicated state directory outside the checkout,
+inspect the one-time operation, and then run it:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/setup_offline_data.py \
+  --profile prairie-dss-v1 \
+  --data-root /absolute/path/to/open-agronomy-state \
+  --download --build --verify --dry-run
+
+PYTHONPATH=src .venv/bin/python scripts/setup_offline_data.py \
+  --profile prairie-dss-v1 \
+  --data-root /absolute/path/to/open-agronomy-state \
+  --download --build --verify
+
+export AGRONOMY_AGENT_SPATIAL_PACK_ROOT=/absolute/path/to/open-agronomy-state/spatial-pack/prairie-dss-v1
+```
+
+The profile requires at least 1.5 GB free and pins the official source bytes.
+Mapped soil context remains a regional prior, not a soil test or field truth.
+See the [complete offline data procedure](docs/public/operations/offline-data-setup.md)
+for verification, raw-archive retention, and RAG-only operation.
+
+## Start the application
+
+Start the API and workspace:
 
 ```bash
 PYTHONPATH=src python scripts/run_cockpit.py \
@@ -76,6 +116,8 @@ PYTHONPATH=src .venv/bin/python scripts/profile_workspace_backend.py \
 
 The explicit pinned-model profiler requires a locally provisioned snapshot and `--execute-local-pinned`; both write non-claim receipts to a new output directory. The [measured backend findings](docs/reviews/artifacts/ui-backend-findings-20260927.md) report cold-start and two local Gemma turns, including the timing and memory limits. They are diagnostics, not latency budgets or answer-quality evidence.
 
+Artifacts use the configured local filesystem, request limits are in memory, and records use the application database (SQLite by default). Redis queues/rate limits and S3-compatible storage are unsupported; retired namespaced settings fail closed. Retained Postgres and identity-provider interfaces are separate and are not newly deployment-qualified.
+
 ## Evidence and contribution boundaries
 
 The checked-in active corpus is hash-admitted and includes Canadian evidence, project policy, SoilWise context, and a 218,258-row U.S. NRCS analogue pack available only for explicit U.S./MLRA comparison. U.S. material cannot establish Canadian decisive authority. Evaluation cases never enter runtime retrieval or training. Runtime databases, traces, model caches, private overlays, credentials, and raw benchmark answers stay outside the public package. Historical RC1–RC3 and the [current two-Gemma assessment](docs/public/two-gemma-colab-assessment-20260926.md) retain their original identities; passing tests or a small profile does not establish agronomic competence.
@@ -83,3 +125,5 @@ The checked-in active corpus is hash-admitted and includes Canadian evidence, pr
 Project-authored content is [Apache-2.0](LICENSE). Third-party data, evaluation material, dependencies, and model weights keep their own terms; consult [third-party notices](THIRD_PARTY_NOTICES.md). The [documentation site](docs/public/index.md), [governance guide](docs/public/governance.md), and [evaluation contract](docs/public/evaluation.md) explain evidence, privacy, and claim limits.
 
 Before a repository-wide claim, run the Python suite, public-doc checker, strict MkDocs build, and frontend typecheck/tests/build listed in [release readiness](docs/public/developer/release-readiness.md). Run corpus, retrieval, release, or model gates when their controlling inputs change.
+
+Maintainer references: [repository architecture](ARCHITECTURE.md), [coding-agent guidance](AGENTS.md), and [repository map](docs/public/developer/repository-map.md).

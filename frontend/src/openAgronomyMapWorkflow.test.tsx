@@ -1472,7 +1472,9 @@ describe('Open Agronomy map upload workflow', () => {
     )
     expect(screen.getByText(/0 field records · 0 answers/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Refresh field timeline' })).toBeEnabled()
-    expect(screen.queryByText('Save or load the field in this workspace first.')).not.toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.queryByText('Save or load the field in this workspace first.')).not.toBeInTheDocument(),
+    )
     expect(window.localStorage.getItem('open-agronomy-agent.active-field.v1')).toBe('field-restored')
   })
 
@@ -1549,7 +1551,9 @@ describe('Open Agronomy map upload workflow', () => {
     render(<OpenAgronomyApp />)
 
     openPrimaryPage('Fields')
-    fireEvent.click(screen.getByRole('button', { name: 'New field' }))
+    const newField = screen.getByRole('button', { name: 'New field' })
+    await waitFor(() => expect(newField).toBeEnabled())
+    fireEvent.click(newField)
     const setup = await screen.findByRole('dialog', { name: 'Add a field' })
     fireEvent.change(within(setup).getByLabelText('Field name'), { target: { value: 'West quarter' } })
     fireEvent.change(within(setup).getByLabelText(/Crop/), { target: { value: 'oats' } })
@@ -2583,5 +2587,71 @@ describe('Open Agronomy map upload workflow', () => {
     })
     expect(await screen.findByText('Selected field answer')).toBeInTheDocument()
     expect(screen.queryByText('General answer')).not.toBeInTheDocument()
+  })
+
+  it('keeps field creation closed until the initial field library response settles', async () => {
+    const fetchMock = installFetchMock()
+    const baseImplementation = fetchMock.getMockImplementation()!
+    let releaseFields!: (value: Response) => void
+    const pendingFields = new Promise<Response>(resolve => { releaseFields = resolve })
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) =>
+      String(input) === '/api/demo/fields' && (!init?.method || init.method === 'GET')
+        ? pendingFields
+        : baseImplementation(input, init))
+    render(<OpenAgronomyApp />)
+
+    const addField = screen.getByRole('button', { name: 'Add field' })
+    expect(addField).toBeDisabled()
+    fireEvent.click(addField)
+    expect(screen.queryByRole('dialog', { name: 'Add a field' })).not.toBeInTheDocument()
+    openPrimaryPage('Fields')
+    const newField = screen.getByRole('button', { name: 'New field' })
+    expect(newField).toBeDisabled()
+    fireEvent.click(newField)
+    expect(screen.queryByRole('dialog', { name: 'Add a field' })).not.toBeInTheDocument()
+    expect(fetchMock.mock.calls.some(([url, init]) => String(url) === '/api/demo/fields' && init?.method === 'POST')).toBe(false)
+
+    await act(async () => {
+      releaseFields(jsonResponse(emptyDemoFields))
+      await pendingFields
+    })
+    expect(addField).toBeEnabled()
+    expect(newField).toBeEnabled()
+  })
+
+  it('keeps a newly created field when the first StrictMode field bootstrap resolves late', async () => {
+    const fetchMock = installFetchMock()
+    const baseImplementation = fetchMock.getMockImplementation()!
+    let releaseFirst!: (value: Response) => void
+    const firstFields = new Promise<Response>(resolve => { releaseFirst = resolve })
+    let fieldGetCount = 0
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === '/api/demo/fields' && (!init?.method || init.method === 'GET')) {
+        fieldGetCount += 1
+        return fieldGetCount === 1 ? firstFields : jsonResponse(emptyDemoFields)
+      }
+      return baseImplementation(input, init)
+    })
+    render(<StrictMode><OpenAgronomyApp /></StrictMode>)
+    const addField = await screen.findByRole('button', { name: 'Add field' })
+    await waitFor(() => expect(addField).toBeEnabled())
+    fireEvent.click(addField)
+    const setup = await screen.findByRole('dialog', { name: 'Add a field' })
+    fireEvent.change(within(setup).getByLabelText('Field name'), { target: { value: 'StrictMode field' } })
+    fireEvent.click(within(setup).getByRole('button', { name: 'Continue' }))
+    fireEvent.click(await within(setup).findByRole('button', { name: 'Mock drop point' }))
+    fireEvent.click(within(setup).getByRole('button', { name: 'Continue' }))
+    fireEvent.click(within(setup).getByRole('button', { name: 'Save field' }))
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'StrictMode field' })).toBeInTheDocument())
+    expect(fetchMock.mock.calls.filter(([url, init]) => String(url) === '/api/demo/fields' && init?.method === 'POST')).toHaveLength(1)
+
+    await act(async () => {
+      releaseFirst(jsonResponse(emptyDemoFields))
+      await firstFields
+    })
+    openPrimaryPage('Fields')
+    expect(screen.getByRole('button', { name: /^StrictMode field/ })).toBeInTheDocument()
+    expect(screen.getByLabelText('Field name')).toHaveValue('StrictMode field')
+    expect(fieldGetCount).toBe(2)
   })
 })
