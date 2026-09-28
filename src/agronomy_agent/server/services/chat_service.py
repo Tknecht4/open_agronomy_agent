@@ -74,6 +74,10 @@ from agronomy_agent.server.services.conversation_context import (
     cache_scope,
     compile_conversation_prompt,
 )
+from agronomy_agent.server.services.conversation_resolution import (
+    ConversationResolution,
+    resolve_numeric_follow_up,
+)
 from agronomy_agent.server.settings import ServerSettings
 from agronomy_agent.server.storage.db import TraceStore
 from agronomy_agent.runtime_profiles import DEFAULT_MODEL_CONFIG
@@ -403,6 +407,18 @@ def _run_turn_impl(
     total_history_turns = store.count_session_turns(
         session_id, before_turn_id=history_cutoff, exclude_replays=True,
     )
+    original_message = message
+    reference_history_verified = (
+        not isinstance(session_context, dict)
+        or session_context.get("conversation_reference_history_verified") is not False
+    )
+    if not typed_tools_enabled or mode in {"baseline", "mock"}:
+        conversation_resolution = ConversationResolution(message, "typed_resolution_disabled")
+    elif not reference_history_verified:
+        conversation_resolution = ConversationResolution(message, "conversation_reference_gap")
+    else:
+        conversation_resolution = resolve_numeric_follow_up(message, recent_turns)
+    message = conversation_resolution.effective_question
     if queue_circuit and queue_circuit.get("tripped"):
         if profiler:
             profiler.add_skipped("model.load_or_reuse", reason="model_queue_circuit_breaker")
@@ -1119,6 +1135,16 @@ def _run_turn_impl(
             trace_store_payload["metadata"]["evidence_fabric"] = fabric_record
 
     trace_store_payload["metadata"]["execution_class"] = execution_class
+    trace_store_payload["metadata"]["conversation_resolution"] = {
+        "policy_version": conversation_resolution.policy_version,
+        "status": conversation_resolution.status,
+        "source_turn_id": conversation_resolution.source_turn_id,
+        "chain_depth": conversation_resolution.chain_depth,
+        "original_question_sha256": sha256_text(original_message),
+        "effective_question": message,
+        "effective_question_sha256": sha256_text(message),
+        "authority": "same_session_user_calculation_reference_not_field_evidence",
+    }
     trace_store_payload["metadata"]["execution_arm_id"] = arm_id
     arm_record = {
         "arm_id": arm_id,
@@ -1151,6 +1177,9 @@ def _run_turn_impl(
         "rag_config": rag_config,
         "intervention_profile": model_config.get("intervention_profile"),
         "verification_mode": verification_config.get("mode"),
+        "conversation_resolution_sha256": execution_stable_sha256(
+            trace_store_payload["metadata"]["conversation_resolution"]
+        ),
     }
     model_record = {
         "model_id": model_to_use if mode != "mock" else "mock",
@@ -1233,7 +1262,7 @@ def _run_turn_impl(
     with persist_span:
         turn_id = store.create_turn(
             session_id=session_id,
-            user_message=message,
+            user_message=original_message,
             answer=answer,
             parent_turn_id=parent_turn_id,
             system_state=system_state,
@@ -1715,6 +1744,9 @@ def _production_stage_observations(
         ),
         "conversation_history_included_turn_ids": (
             (metadata.get("context_budget") or {}).get("history_included_turn_ids") or []
+        ),
+        "conversation_resolution_sha256": execution_stable_sha256(
+            metadata.get("conversation_resolution") or {}
         ),
     }
     if context_present:

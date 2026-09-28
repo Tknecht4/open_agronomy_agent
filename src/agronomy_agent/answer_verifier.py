@@ -1960,7 +1960,21 @@ def verify_answer(
             "model_conditioned": False,
             "development_basis": "exposed_successor_development_suites",
         }
-        if not blocking and assessment.score < threshold:
+        # Checklist coverage and lexical alignment are review hints, not proof
+        # that a supported answer is wrong. Do not turn their accumulated score
+        # into authority to replace the answer. Reviewed sampling/application
+        # protocols retain their explicit completeness gate.
+        advisory_only = (
+            not blocking
+            and not (
+                _protocol_kind(question) is not None
+                and assessment.missing_intent_facets
+            )
+        )
+        threshold_receipt["advisory_only_preserved"] = bool(
+            advisory_only and assessment.requires_review
+        )
+        if advisory_only or (not blocking and assessment.score < threshold):
             return AnswerVerificationResult(
                 answer=draft.strip(),
                 triggered=False,
@@ -4177,10 +4191,10 @@ def _decision_route_failure_answer(
             map_name = (
                 "agro-pedological atlas polygon"
                 if re.search(r"\bagro[- ]pedological atlas\b|\batlas agro[- ]p[ée]dologique\b", lower)
-                else "regional suitability map"
+                else "map"
             )
             return (
-                f"No. A favourable {map_name} is regional screening context and cannot select a "
+                f"No. The {map_name} alone cannot select a "
                 f"{crop} variety for the field. Ground-truth soil, drainage, topography, salinity, and other field "
                 "constraints, then match relative maturity or crop heat-unit fit to the planting window and harvest "
                 "risk. Compare replicated local multi-year and multi-location variety trials for statistical "
