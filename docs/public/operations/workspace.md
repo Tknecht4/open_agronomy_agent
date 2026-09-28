@@ -83,8 +83,8 @@ Esri imagery credits follow the [provider's current service metadata](https://se
 ## Add and manage a field
 
 1. In **Fields**, select **Add field**. Enter a field name; crop, region, and province are optional. Reusing the region from a previous field is an explicit action, not an automatic assumption.
-2. Place a pin, draw a boundary, enter coordinates, or import one from `.geojson`, `.json`, `.zip`, or `.gpkg`. For files with multiple features, choose the intended field. A pin is enough to start; a full boundary can be edited later. The map checks geometry before save.
-3. Review the location and any imported provenance note, then save. A polygon-derived acreage is an estimate. A pin does not establish acreage.
+2. Choose **No location yet · data only**, or place a pin, draw a boundary, enter coordinates, or import one from `.geojson`, `.json`, `.zip`, or `.gpkg`. For files with multiple features, choose the intended field. A location can be added later. The map checks supplied geometry before save.
+3. Review the supplied details and any imported provenance note, then save. A polygon-derived acreage is an estimate. A pin does not establish acreage. With no location, table imports and records remain usable; map context and imagery remain unavailable.
 
 **Fields** has **Overview**, **Records & soil tests**, and **Map context**. Overview holds supplied details; Records & soil tests retains observations, measurements, corrections, and linked answer history; Map context shows regional matches with source and uncertainty. Field-event sync and recovery are available with the records. A browser draft is not a synchronized record until the API confirms it.
 

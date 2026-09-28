@@ -153,6 +153,7 @@ from agronomy_agent.server.observability import build_telemetry, log_request, re
 from agronomy_agent.server.rate_limit import FixedWindowRateLimiter
 from agronomy_agent.server.settings import ServerSettings, build_settings, make_corpus_audit_id, validate_desktop_local_auth
 from agronomy_agent.server.storage.object_store import LocalObjectStore
+from agronomy_agent.server.storage.db import TraceStore
 from agronomy_agent.server.storage.runtime import build_trace_store, storage_db_path_for, storage_label_for
 from agronomy_agent.server.trace_timer import PHASE5_TURN_METRICS_SCHEMA_VERSION, TraceProfiler
 
@@ -2570,6 +2571,9 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         return response
 
     def _ensure_personal_workspace(user: dict[str, Any]) -> None:
+        if isinstance(store, TraceStore):
+            store.ensure_personal_workspace(user["id"])
+            return
         if store.list_phase4_workspaces_for_user(user["id"]):
             return
         org = store.create_phase4_organization(

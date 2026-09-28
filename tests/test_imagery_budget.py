@@ -15,6 +15,7 @@ PROVIDER = "hls-s30-planetary-computer"
 
 
 def test_capacity_and_free_space_refuse_before_egress(tmp_path, monkeypatch):
+    monkeypatch.setattr(budget.shutil, "disk_usage", lambda _: SimpleNamespace(free=10 * 1024**3))
     monkeypatch.setattr(analytics, "_analyze_scene_admitted", lambda *a, **k: pytest.fail("must not launch processing"))
     result = analytics.analyze_scene(GEOMETRY, PROVIDER, cache_root=tmp_path / "cache",
         network_mode="online", start_date="2021-06-01", end_date="2021-06-15", max_cache_bytes=1024)

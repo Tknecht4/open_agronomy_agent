@@ -1,0 +1,147 @@
+{
+  "base_main": "210c55310248fe21f1669b8fde0787be8174de99",
+  "changes": [
+    "Retain named field-sync/soil-entry exports and updated modal/history-first UI; insert one field-table/imagery pair in the current timeline.",
+    "Preserve new sampling-time provenance helpers alongside authorized source-table snapshot and exact answer rendering.",
+    "Clarify named data-only field setup in frontend and public workspace documentation."
+  ],
+  "checks": {
+    "frontend": {
+      "build": "pass",
+      "evidence": "Owner tool output from npm run typecheck && npm test && npm run build; source hashes below.",
+      "files": 40,
+      "passed": 289,
+      "typecheck": "pass"
+    },
+    "mkdocs_strict": {
+      "log_sha256": "2671341cdc2d8a7e964794863aa1cce4e6b4834d4f5aed2a44d077bd24780b0b",
+      "status": "pass"
+    },
+    "optional_eo": {
+      "prior_passed": 89,
+      "reuse_boundary": "All optional EO source modules remain byte-identical to the reviewed 0b16045 candidate; rebase changes UI/field-history integration only."
+    },
+    "pilot": {
+      "case_count": 96,
+      "failed_case_count": 0,
+      "runtime_code_stable": true,
+      "source_group_product_contract_counts": {
+        "akron": {
+          "pass": 36,
+          "unscored_semantic": 12
+        },
+        "nitrate": {
+          "pass": 36,
+          "unscored_semantic": 12
+        }
+      }
+    },
+    "public_docs": {
+      "log_sha256": "2e7283cbed443cb0ba2a4eab4ffcecd84d03705f9b2ffb84785d7726aa5530ff",
+      "status": "pass"
+    },
+    "python": {
+      "log_sha256": "c40e7b56b27af173dcce4a56979f9e18d9c1575c2536870ff73987f69cb7798a",
+      "passed": 1328,
+      "seconds": 178.01,
+      "skipped": 2,
+      "warnings": 26
+    },
+    "source_rehearsal": {
+      "all_answer_binding_checks": true,
+      "groups": 9,
+      "raw_receipt_sha256": "af5796f3688e0bf903ac956de070f774f62aa11212e6b674143692adbf3f9463",
+      "source_inputs_unchanged": true,
+      "status": "verified_complete_answer_and_source_binding",
+      "storage": {
+        "blob_count": 6,
+        "blobs": [
+          {
+            "codec": "zlib-v1",
+            "encoded_size": 857,
+            "raw_size": 3753,
+            "source_sha256": "35f6d6c1ba191c6a4ec6bab643eef57f410d6a7578cd1dfe696dd88fd727325f"
+          },
+          {
+            "codec": "zlib-v1",
+            "encoded_size": 1083,
+            "raw_size": 4988,
+            "source_sha256": "619f39443fc6e6d26e37eb7d5f2de0903e3e7f0418616cb198392444cbbc84f3"
+          },
+          {
+            "codec": "zlib-v1",
+            "encoded_size": 222568,
+            "raw_size": 227409,
+            "source_sha256": "7ab51a52725515fe9de93166fb4146aa5b09dd07ef6e3b96a40b8c411767553d"
+          },
+          {
+            "codec": "zlib-v1",
+            "encoded_size": 717,
+            "raw_size": 3710,
+            "source_sha256": "7be092e6bfa71a58ca1a535569241a875c36403bcef7aa861434bb8f228a497b"
+          },
+          {
+            "codec": "zlib-v1",
+            "encoded_size": 9936,
+            "raw_size": 77820,
+            "source_sha256": "8478eb7a1bb0673c00b7482992e05dafb49e0de6cc80918b9bc8b23d4aa19f56"
+          },
+          {
+            "codec": "zlib-v1",
+            "encoded_size": 729,
+            "raw_size": 4178,
+            "source_sha256": "f8bd4fc95cf9aa98262b39dcce91891ebedf164c7ee1425ed90edfc433071b1b"
+          }
+        ],
+        "compressed_bytes": 235890,
+        "import_count": 9,
+        "inline_bytes": 0,
+        "source_storage": [
+          "workspace-blob-v1"
+        ],
+        "unique_raw_bytes": 321858,
+        "unshared_raw_bytes": 1004085
+      }
+    }
+  },
+  "controls_sha256": {
+    "docs/public/operations/workspace.md": "494fd573f56c91d80f9524c10fe62715d2ce23a4f9023b16adf3ea62c6cfea15",
+    "frontend/README.md": "f626ed3b0928ef9daf5a000d3fdd488d85a298a89df696742685998adcd58696",
+    "frontend/src/FieldImageryAnalyticsPanel.tsx": "f19d4eef3f932cb10d35998cc9c58b9804f5562b73f6ba986a3ca623aed7668f",
+    "frontend/src/FieldMapInsights.tsx": "4ce80465a80f5824898b703d3e6890e5e502c4c40898ce5ba9c34ae422821f00",
+    "frontend/src/FieldSyncPanel.tsx": "8f4e4664a0b6dffa87c9c9c58c30f7f34432d77060c64a296da5c19adb1c382f",
+    "frontend/src/OpenAgronomyApp.tsx": "519abd49c2217c30cfe3c4a7b0c1716af15bd9766cd63d66662f7276ab973d7b",
+    "frontend/src/SoilTestEntryPanel.test.tsx": "8631eeb3747852f7047a2f746c1df730dfbbb11c347d7a1ae3733b3ab1693873",
+    "frontend/src/openAgronomyMapWorkflow.test.tsx": "2b35b8ca9512d6df40b4aeab8f897c5ba330ef32cc8999c9102f47fb68db9458",
+    "requirements-phase4-ci.txt": "71fd6a358ba6cfdb203574e899a58343bbb78df3b4c1f916fda798d1ff39f717",
+    "scripts/migrate_field_source_blobs.py": "721799144ae8be2b780dacde90205639c9e989bd6acc5c9b8ac90315790d8077",
+    "scripts/prepare_field_sources.py": "ec9b4b457c58410914ec21ce8bab8b49805a90a5886ae47fd6875adc3699abe6",
+    "scripts/rehearse_field_source_imports.py": "886a9aaf7a8bd0d63ccf07143096366a417d475de4960f084b87ec0b13923dd6",
+    "src/agronomy_agent/field_source_preparation.py": "aefc5dac51067ca2037a33185b1c57c63cd6688a24cadad2083f8a7832d253be",
+    "src/agronomy_agent/imagery_analytics.py": "3e5c9aba9acb76023b22871f7036e63262f6ec9a0480d70e02d87a056b9304c7",
+    "src/agronomy_agent/imagery_budget.py": "44221209a25fdc27deffd47cf119e3d45903602f88db362a81cf903eda1b9164",
+    "src/agronomy_agent/imagery_store.py": "98794b4d1d258dd7a79a26c223201a0f0a8e05f1d3fded2fbf242068623730e7",
+    "src/agronomy_agent/imagery_worker.py": "dd969e1c0303cc179bbc93dae9a8e0d5d4f03fa000b9338651dcea182674228b",
+    "src/agronomy_agent/leak_guard.py": "cbd0dcd6faf2a43236f03cdb5800470b7638e53cc0d07af5029c2c6ed789184a",
+    "src/agronomy_agent/server/services/answer_renderer.py": "0f966caca7832e6b0bed3fb23356058a475fd1c57cec3b1d78be6ec28032247e",
+    "src/agronomy_agent/server/services/chat_service.py": "e198b2567cb19d4cb214fb41eb333d5de9c65c5f68692aeb9d82a12df39d6889",
+    "src/agronomy_agent/server/services/imagery_service.py": "4be523cd43e53e6e8c19cc9714db2825543f6fe643fa1caf09d8e7dbaadfa307",
+    "src/agronomy_agent/server/settings.py": "5bc86513df2457af95db84cc9ca4cac37667eedc051624067b9aa12e5013e761",
+    "src/agronomy_agent/server/storage/db.py": "d2a05f192948f15b740ba6073952a033bf49508f998394e92e3ae82f79c7bcf8",
+    "src/agronomy_agent/server/storage/field_data_store.py": "2b46f9f75cec38d600d2254b44878e26e98bf0dcf693920dd041113bda9b1c89",
+    "src/agronomy_agent/server/storage/field_source_blobs.py": "8a27f39e383874814ca93677ba4acc3e436bf656629335c8bc512ddaaf19ac55",
+    "tests/test_chat_service_field_context.py": "accd5ea337c2473ca9bd656e46947c02236010d726829877218517de82b55790",
+    "tests/test_field_data_rendering.py": "415cff8a0ff28a9b469c65356e587bd63b84f46a74916155249c31c182887b87",
+    "tests/test_field_data_routes.py": "20ef8dce3d4310d5df703dd09c37a28be7ff6fde093569061788a2ecfde2eb7c"
+  },
+  "previous_reviewed_head": "0b16045188f38083347a6b4e862976e6633536f7",
+  "residuals": [
+    "Four conservative phase5 raw_source_id false positives for legitimate source_* columns remain documented.",
+    "Scientific/source-rights/unknown-geometry and historical raster-reference limits remain unchanged.",
+    "New-base public/runtime inventories and remote backend/frontend/docs/Mac gates must be verified before merge."
+  ],
+  "sampling_time_boundary": "Source table dates remain literal source columns. Imports create no typed soil events and do not promote created/committed timestamps or date-only values to timezone-aware sampled_at.",
+  "schema_version": "field_data_pr12_integration.v1",
+  "source_rebase_head": "9f09dfd",
+  "status": "local_integration_verified_remote_gates_pending"
+}

@@ -568,7 +568,11 @@
     "docs/reviews/artifacts/field-data-merge-20260927/review.md",
     "docs/reviews/artifacts/field-data-merge-20260927/product-rehearsal.json",
     "docs/reviews/artifacts/field-data-merge-20260927/product-rehearsal.md",
-    "docs/reviews/artifacts/field-data-merge-20260927/verification.json"
+    "docs/reviews/artifacts/field-data-merge-20260927/verification.json",
+    "docs/reviews/artifacts/field-data-merge-20260927/pr12-integration.json",
+    "tests/test_sqlite_request_concurrency.py",
+    "tests/test_field_data_concurrent_http.py",
+    "docs/reviews/artifacts/field-data-merge-20260927/sqlite-final-integration.json"
   ],
   "trees": [
     "src",

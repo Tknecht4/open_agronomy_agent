@@ -1,6 +1,6 @@
 # Independent final acceptance review — 2026-09-27
 
-Final review verdict: **ACCEPT the reviewed closure code, documentation, and local evidence after the repairs below.** No unresolved implementation finding remains in this scope. Final package/runtime regeneration and green remote checks, including the Mac candidate, remain merge prerequisites owned by the integrator. This review does not claim that merge or those remote gates have completed. All initial findings, failed checks, and invalidated rehearsal claims remain recorded below.
+Final review verdict: **ACCEPT the reviewed closure implementation and local evidence, including the repaired SQLite concurrency boundary on main `7d6f1bd`.** No unresolved implementation finding remains in this review scope. All earlier failures, invalidated claims, and accepted deltas remain preserved below. Final generated-artifact checks and green remote checks on the tested head, including the Mac candidate, remain integrator prerequisites before merge; this review does not claim merge completion.
 
 ## Scope and boundary
 
@@ -177,3 +177,94 @@ The pin matches the existing optional imagery-model requirements and macOS const
 Preserve the failed remote run. The local rerun and dependency metadata do not establish a successful clean Ubuntu installation or green replacement CI. Refresh generated artifacts/public packaging for this delta, then require all remote checks on the new candidate, including the Mac candidate workflow, before merge.
 
 Changed: this review appendix only. Verified: targeted CI dependency delta, raw six-failure diagnosis, compatible declared dependency bounds, and 17 passing local assessment tests. Residual Risk: clean remote rerun and final-head release checks remain pending; earlier documented scientific and audit limits are unchanged. Memory Delta: none.
+
+## UI PR 12 rebase integration — accepted, new-head release gates required
+
+**ACCEPT** the inspected integration of the previously reviewed `0b16045188f38083347a6b4e862976e6633536f7` candidate onto main `210c55310248fe21f1669b8fde0787be8174de99` (source rebase head `9f09dfd`, followed by the documented setup clarifications). Earlier sections remain evidence for their original bases. The new `pr12-integration.json` binds this later working-tree candidate through 28 current control hashes, all independently rechecked.
+
+The initial two-base comparison found 16 files changed by new main and 187 by the prior PR, with five shared files: README, runtime inventory, the main React app, map workflow tests, and chat service. All 11 main-only files and 182 prior-PR-only files were initially preserved byte-for-byte. Inspection of the shared app confirms the named `FieldSyncPanel` and `SoilTestEntryPanel` exports, history-first layout, modal entry/recovery, and current map-insights behavior remain; one `FieldDataPanel` and one `FieldImageryAnalyticsPanel` appear in the updated timeline. The old duplicate timeline is absent. Main's sampling-time helpers coexist with the authorized table snapshot and exact deterministic renderer path. No active model/profile, source preparation, imagery-processing, or storage code was changed by this integration. The two inherited setup documents were then explicitly corrected to describe the supported named data-only field option.
+
+Independent verification:
+
+- Focused chat-field-context, table-rendering, and table-HTTP integration tests: **53 passed in 31.48s**, including main's sampling provenance cases.
+- A separate isolated dated-table fixture preserved `2020-06-12`, `July 15 - 19`, and an empty source-date cell exactly. Preview/commit and both context loaders produced one table snapshot, **zero field events**, and no synthesized sampling-history record. Source dates and import/commit times do not become typed soil sampling dates.
+- Rehearsal `-09`: independently checked all nine persisted answers and structured answer/Markdown against their executed tool answers, HTTP/payload hashes, complete binding checks, 17-stage receipts, and verified decompressed source blobs. It retains nine imports/six blobs and **zero `phase4_field_events`**. Prior `-08` and earlier artifacts remain frozen.
+- Inspected the hash-bound full Python log: **1,328 passed, two skipped, 26 warnings in 178.01s**. The public-doc and strict MkDocs raw logs pass and match the integration receipt. The new 96-case pilot has zero failures, 72 exact product-contract passes, and 24 unscored semantic cases; every end-of-run code hash matches current files. Frontend typecheck/build and **289 tests** are owner-observed tool evidence retained in the integration receipt, not independently rerun by this reviewer. Optional EO code remains byte-identical to its prior 89-test scope.
+
+| Integration/evidence | SHA-256 |
+|---|---|
+| `docs/reviews/artifacts/field-data-merge-20260927/pr12-integration.json` | `d582bae386316f6f773b2dd3582b163dc0f15fc04d0362c0c183706d2e2edc7f` |
+| `frontend/src/OpenAgronomyApp.tsx` | `519abd49c2217c30cfe3c4a7b0c1716af15bd9766cd63d66662f7276ab973d7b` |
+| `frontend/src/FieldSyncPanel.tsx` | `8f4e4664a0b6dffa87c9c9c58c30f7f34432d77060c64a296da5c19adb1c382f` |
+| `src/agronomy_agent/server/services/chat_service.py` | `e198b2567cb19d4cb214fb41eb333d5de9c65c5f68692aeb9d82a12df39d6889` |
+| `tests/test_chat_service_field_context.py` | `accd5ea337c2473ca9bd656e46947c02236010d726829877218517de82b55790` |
+| `frontend/src/openAgronomyMapWorkflow.test.tsx` | `2b35b8ca9512d6df40b4aeab8f897c5ba330ef32cc8999c9102f47fb68db9458` |
+| `frontend/README.md` | `f626ed3b0928ef9daf5a000d3fdd488d85a298a89df696742685998adcd58696` |
+| `docs/public/operations/workspace.md` | `494fd573f56c91d80f9524c10fe62715d2ce23a4f9023b16adf3ea62c6cfea15` |
+| `docs/reviews/field-data-merge-readiness-20260927.md` | `ebfa604cf6bbcf39794efcbbda727be119c5f56ae11b1f7807d9f3d6a180fc14` |
+| `outputs/field-source-rehearsal-20260927-09/receipt.json` | `af5796f3688e0bf903ac956de070f774f62aa11212e6b674143692adbf3f9463` |
+| `outputs/field-data-merge-validation/python-pr12.log` | `c40e7b56b27af173dcce4a56979f9e18d9c1575c2536870ff73987f69cb7798a` |
+| `outputs/field-data-merge-validation/pilot-pr12/summary.json` | `92385e8ad828b131b917ca2bc420ba700b831ca80903c24f5bfb485dc0240007` |
+
+No unresolved code finding remains in the reviewed integration. Refresh the generated runtime/public inventories and public review copy after this appendix, complete the owner browser check, and require green backend/frontend/docs/Mac checks on the final rebased head before merge. Older remote passes establish only their recorded heads. Four conservative audit false positives and the scientific/source-rights/geometry/raster-reference limitations remain unchanged.
+
+Changed: review appendix only. Verified: two-base preservation, panel integration, separate source/event timekeeping, 53 focused checks, nine complete rehearsal bindings, and source-bound local gate evidence. Residual Risk: final generated-artifact, browser, and new-head remote gates remain integrator prerequisites; prior substantive limits remain. Memory Delta: none.
+
+## Live SQLite concurrency contradiction — acceptance held
+
+After the PR 12 integration checks, the owner live-browser inspection exposed failures when the mounted field panels concurrently read history, table data, and imagery readiness. Retained `sqlite-live-before.json` records three sequential 200 responses, followed by 36 parallel GET requests from the same local actor: **32 status 200, one 403, two 500, and one 404**. The successful sequential/unit/rehearsal evidence does not establish safe concurrent use of the shared SQLite connection.
+
+**P1 — Request cursors share transaction ownership.** `TraceStore` uses one `check_same_thread=False` connection. Its prior `_cursor` context committed/rolled back on every exit without a shared connection lock. Field-table/event methods held `_field_event_lock`, but authentication and general readers/writers did not; a reader could therefore observe or commit another thread's transaction, and concurrent auth upserts could race. Inspection found real nested cursor callers (session/turn reads, password flows, workspace/thread deletion), so a non-reentrant lock would deadlock. A common RLock plus outermost commit/rollback ownership and rollback-only propagation is under review. A failed final commit must roll back before this connection is reused.
+
+**Related P2 — First personal-workspace creation is a multi-call race.** Before the interruption, the reviewer ran an isolated TestClient fixture after the initial per-cursor lock change. Two fresh-actor requests were synchronized to both observe no personal workspace, then continued through `_ensure_personal_workspace`'s separate list/create-organization/create-workspace calls. One request returned 500 `IntegrityError` and one correctly returned 403 for the other actor's field. Both should have denied access without a server error. Per-cursor serialization alone does not make that check/create sequence atomic. The reproduction used only a new temporary database; no retained rehearsal or live state was modified.
+
+The worker's transaction implementation and new tests are still being finalized, so no tests are being run against those changing interfaces in this checkpoint. Prior review acceptance does not cover these unresolved live concurrency findings.
+
+| Retained failure | SHA-256 |
+|---|---|
+| `outputs/field-data-merge-validation/sqlite-live-before.json` | `b87b6b8c46503cf2c19750573dd4093ae2b83137adeebce8dd20442f07318eae` |
+
+Changed: review checkpoint only. Verified: live failure receipt, shared/nested cursor ownership, and isolated first-workspace race. Residual Risk: concurrency repair, focused and live request checks, regenerated artifacts, and final-head remote gates remain required. Memory Delta: none.
+
+## SQLite concurrency repair and PR 13 final delta — accepted
+
+**ACCEPT** the bounded concurrency repair, one-line deterministic imagery-budget fixture correction, and PR 13 integration on base `7d6f1bdbca3820a6a72d505e6ef73bcb47c4b950` (source rebase head `530d756`, with the reviewed closure changes). Both concurrency findings above are closed by the inspected implementation and the following evidence.
+
+`TraceStore._cursor` holds the existing shared RLock from cursor creation through close and transaction finalization. The outermost scope alone commits or rolls back. Nested scopes can call existing store getters without deadlock or premature commit; propagated or caught inner failures mark the outer transaction rollback-only, and a swallowed failure is reported rather than silently committing. A failed final commit invokes rollback before connection reuse. The same lock is used by field-event/table callers, avoiding an added lock-order inversion. Inspection found no other runtime code directly executing statements on this private connection outside the store cursor boundary. This serializes local database work, not a whole agent/model execution.
+
+The SQLite `ensure_personal_workspace` helper encloses its initial lookup, organization creation, and workspace creation in one transaction with `BEGIN IMMEDIATE`; app authentication dispatches to that helper for `TraceStore`. Organization and workspace creation therefore roll back together. The separate Postgres path is unchanged. General multi-process authentication or Postgres qualification is not established by this fix.
+
+Independent reviewer verification:
+
+- **Nine focused tests passed in 6.78s**: all eight new store/helper regressions plus the concurrent HTTP regression. They exercise cross-thread rollback visibility, repeated concurrent same-user auth, real nested getters, swallowed nested failure, deferred-constraint commit failure followed by reuse, owner panel requests, single-workspace bootstrap, and rollback of failed workspace creation. The HTTP case sends 48 owner requests that preserve the committed import identity and 48 first-workspace outsider requests that consistently return 403, with one outsider organization/workspace.
+- The previous fresh-actor race was rechecked with a deterministic isolated fixture: hold the first empty workspace lookup inside the new outer transaction, start the second endpoint, then release. Both responses are **403**, only one empty lookup occurs, and exactly one organization/workspace remains. A separate two-connection/one-database barrier probe also creates only one organization/workspace. That second probe establishes this helper's behavior for that fixture, not broader deployment qualification.
+- Parsed the owner live replay: **96/96 GETs return 200 at concurrency eight**, with **24/24 table-list responses** reporting the expected import. The saved live receipt binds the new `-10` source receipt; the earlier 36-request failure remains intact. Browser table and offline cached-HLS observations are owner tool evidence, not an independently repeated reviewer browser session.
+- Independently read the new `-10` database: all **nine** saved answers, structured answers/Markdown, executed payload answers, HTTP/payload hashes, and complete binding checks agree; all 17-stage receipts match. Source blobs decode to the recorded original hashes. Nine imports use six blobs and create **zero field events**. Prior rehearsal databases and receipts remain unchanged.
+- The first full rerun is retained as **one failed, 1,336 passed, two skipped**. Its sole failure correctly reached the real low-disk refusal before a test intended to isolate capacity. The correction fixes available space at 10 GiB for the capacity cell, then zero for the reserve cell, preserving both exact reason assertions and the no-processing condition. No runtime admission policy changed. Independent budget tests then passed **six cases in 0.23s**.
+- The accepted full-suite raw log reports **1,337 passed, two skipped, 26 warnings in 156.55s**. Its SHA-256 matches the final integration receipt. All **34 control hashes**, including the app dispatch, match current files. Public-doc, strict MkDocs, focused HTTP, failed-run, before/after live, and new rehearsal hashes verify. The latest pilot retains **96 cases / zero failures**, with 72 exact contract passes and 24 unscored semantic cases; all recorded end-of-run source hashes match.
+
+PR 13 adds seven narrow-pane responsive CSS lines and a generated inventory update. The final workspace CSS matches new main; no further runtime behavior was introduced by that rebase. Frontend typecheck/build and **289 tests** remain owner-observed tool evidence bound by the final receipt. The documented source/date distinction, conservative audit false positives, scientific/source-rights/geometry holds, and historical raster-reference limits remain unchanged. Package-copy retention fields in the integration receipt are operator evidence outside this concurrency review; this appendix does not independently certify deletion/reclamation accounting.
+
+Final accepted delta/evidence identities:
+
+| File | SHA-256 |
+|---|---|
+| `src/agronomy_agent/server/storage/db.py` | `76c689b9e3844765050bea978e68f8860aea08b60efbb77c2b991b5e75e55704` |
+| `src/agronomy_agent/server/app.py` | `f49bc4d0f8f84d31d983a9faaabfbfe5cf8df72835246a66f63794e91ebb2845` |
+| `tests/test_sqlite_request_concurrency.py` | `dfb9c2e55f987841bd487e6565703256ba5f29c3bb65a0b93579ee5b7d07941a` |
+| `tests/test_field_data_concurrent_http.py` | `5e723fdea52abdeddb8fa46fc8f730d7419bf6a7d6465a8419edc4f2c4c38149` |
+| `tests/test_imagery_budget.py` | `ea92b16da390b83ee0a796c30585a9c3e5c586e3dc030cada7c18929c6b12762` |
+| `frontend/src/workspace.css` | `6476f4351b4c59f36d983a0e586112dedceaefaef51e7fed73d7545f21e2d42f` |
+| `ARCHITECTURE.md` | `6f4485ef13942d1e18dd5dd2f1f1ede0ae65ae1a68adea9d133b6d748887591b` |
+| `docs/reviews/artifacts/field-data-merge-20260927/sqlite-final-integration.json` | `0757f15b25e92871bf823509f0bd82b5ed436a3f0ac0b45c05803fef910e12cd` |
+| `docs/reviews/field-data-merge-readiness-20260927.md` | `023635f3945717a3dbee2b4f3abfa32e659d6e14928e83d7ad74639f54bd91f9` |
+| `outputs/field-data-merge-validation/sqlite-live-before.json` | `b87b6b8c46503cf2c19750573dd4093ae2b83137adeebce8dd20442f07318eae` |
+| `outputs/field-data-merge-validation/sqlite-live-after.json` | `4d6d722004b1dc78c87bef1fb5d01cd8973f8ff2d213e8704a88397c1622465c` |
+| `outputs/field-data-merge-validation/python-sqlite-final.log` | `40ad658c3bbf9655e607c778436a3eab6a0129e1991671f9ff0424e370d30fea` |
+| `outputs/field-data-merge-validation/python-sqlite-accepted.log` | `d3ffade49cd570cee23ea09b220b0191ffea002eb852a10e717507f53330f63c` |
+| `outputs/field-source-rehearsal-20260927-10/receipt.json` | `44a77e5931bce8a3274a89daceee70c7fc1638fe58e1754130a5328a6697cd98` |
+| `outputs/field-data-merge-validation/pilot-sqlite-final/summary.json` | `da477bdb4190c10c25a81017206de19b99e77e9eada0c71af2dff6c3c6bd663a` |
+
+Refresh the final generated runtime/public inventories and public review copy after this appendix. Verify their source-exact identities and all required remote backend/frontend/docs/Mac checks on the final rebased candidate before merge. Prior remote passes remain evidence only for their original heads.
+
+Changed: review appendix and current verdict only. Verified: shared/nested transaction ownership, atomic first-workspace creation, deterministic failure regressions, complete source/answer preservation, successful parallel live receipts, and source-bound final local gates. Residual Risk: final generated artifacts and new-head remote release gates remain integrator prerequisites; four documented audit false positives and substantive scientific/source limits remain. Memory Delta: none.

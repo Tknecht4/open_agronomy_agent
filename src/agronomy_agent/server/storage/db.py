@@ -74,20 +74,53 @@ class TraceStore:
         self._conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._field_event_lock = threading.RLock()
+        self._cursor_depth = 0
+        self._cursor_rollback_only = False
         self._init_schema()
         self.db_path.chmod(0o600)
 
     @contextlib.contextmanager
     def _cursor(self) -> Iterator[sqlite3.Cursor]:
-        cursor = self._conn.cursor()
-        try:
-            yield cursor
-            self._conn.commit()
-        except Exception:
-            self._conn.rollback()
-            raise
-        finally:
-            cursor.close()
+        # SQLite transactions belong to the connection, not the cursor. A
+        # second request must not read, commit, or roll back another thread's
+        # work on this shared connection. The existing RLock also permits
+        # field-event methods to enter _cursor while holding their lock.
+        with self._field_event_lock:
+            outermost = self._cursor_depth == 0
+            if outermost:
+                self._cursor_rollback_only = False
+            self._cursor_depth += 1
+            cursor: sqlite3.Cursor | None = None
+            failed = False
+            try:
+                cursor = self._conn.cursor()
+                yield cursor
+            except BaseException:
+                failed = True
+                self._cursor_rollback_only = True
+                raise
+            finally:
+                try:
+                    if cursor is not None:
+                        cursor.close()
+                except BaseException:
+                    failed = True
+                    self._cursor_rollback_only = True
+                    raise
+                finally:
+                    self._cursor_depth -= 1
+                    if outermost:
+                        if self._cursor_rollback_only:
+                            self._conn.rollback()
+                            self._cursor_rollback_only = False
+                            if not failed:
+                                raise RuntimeError("nested cursor failure rolled back SQLite transaction")
+                        else:
+                            try:
+                                self._conn.commit()
+                            except BaseException:
+                                self._conn.rollback()
+                                raise
 
     def _init_schema(self) -> None:
         with self._cursor() as cursor:
@@ -2375,6 +2408,31 @@ class TraceStore:
                 created_at=now,
             )
         return self.get_phase4_workspace(workspace_id) or {}
+
+    def ensure_personal_workspace(self, user_id: str) -> None:
+        """Create a user's first local workspace as one SQLite transaction.
+
+        The enclosing cursor owns the transaction; nested store calls may read
+        and write, but cannot commit the organization before the workspace.
+        BEGIN IMMEDIATE also serializes competing SQLite connections before
+        they inspect whether a workspace already exists.
+        """
+        with self._cursor() as cursor:
+            cursor.execute("BEGIN IMMEDIATE")
+            if self.list_phase4_workspaces_for_user(user_id):
+                return
+            organization = self.create_phase4_organization(
+                name="Personal Workspace",
+                slug=f"personal-{str(user_id)[:8]}",
+                plan="demo",
+                created_by_user_id=user_id,
+            )
+            self.create_phase4_workspace(
+                organization_id=organization["id"],
+                name="My agronomy workspace",
+                created_by_user_id=user_id,
+                settings={"workspace_type": "personal", "phase": "6"},
+            )
 
     def list_phase4_workspaces_for_user(self, user_id: str, organization_id: str | None = None) -> list[dict[str, Any]]:
         with self._cursor() as cursor:

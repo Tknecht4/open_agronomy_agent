@@ -40,7 +40,7 @@ path observed; it is not a second agent implementation.
 | Safety/verification | `answerability.py`, `answer_verifier.py`, `answer_safety.py`, `high_consequence.py` | Validation cannot create evidence or current authority |
 | Deterministic tools | `agronomic_calculations.py`, `local_tools.py`, `tools/` | Supported calculations bypass model drafting |
 | Public adapters | `local_tools.py`, `server/services/chat_service.py` | Network/cache/jurisdiction dependent; unavailable is a typed state |
-| Persistence | `server/storage/db.py`, `server/storage/runtime.py` | SQLite product path and schema-checked Postgres boundary |
+| Persistence | `server/storage/db.py`, `server/storage/runtime.py` | SQLite serializes cursor scopes on its shared connection, with outermost commit/rollback ownership and atomic personal workspace creation; Postgres remains a separate schema-checked boundary |
 | Local runtime services | `server/rate_limit.py`, `server/storage/object_store.py` | In-memory rate limits and filesystem artifacts only; Redis/S3 selection was removed |
 | Training helpers | `training/` | Offline maintainer tooling only; no current Canadian source is training-authorized |
 | UI | `frontend/src/` | React cockpit, map, field state, source cards, benchmark viewer |
