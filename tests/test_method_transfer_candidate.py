@@ -74,7 +74,7 @@ def test_method_scope_survives_final_context_without_field_authority() -> None:
     assert method_coverage["required_authority"] == "method_context_only"
     assert method_coverage["status"] == "ADEQUATE"
     answer, receipt = source_bound_method_appendix(context, question)
-    assert answer and "Source-supported method background" in answer
+    assert answer and "Method background from cited card" in answer
     assert "do not establish this farm's target" in answer
     assert receipt and receipt["doc_ids"] == [doc.doc_id]
     assert receipt["authority"] == "method_context_only_not_complete_answer"
@@ -94,6 +94,16 @@ def test_unreviewed_or_out_of_scope_method_cannot_bypass_query_fit() -> None:
     assert not result.docs and result.dropped[0]["reason"] == "invalid_method_scope"
     assert method_fit_reason(doc, question, None) == "method_target_country_unknown"
     assert method_fit_reason(doc, "Explain the embryo of a germinating bean seed on a Quebec farm", "canada") == "method_mismatch"
+
+    seed = next(row for row in resources.retriever.search("seed mass", top_k=10) if row.doc_id == "method_seed_mass")
+    for foreign_question in (
+        "I farm in Australia using an Ontario seed guide. Explain seed mass.",
+        "For my farms in Ontario and Australia, explain seed mass.",
+        "we farm in ontario and australia. explain seed mass.",
+    ):
+        foreign_fit = filter_docs_for_query([seed], analyze_query_context(foreign_question))
+        assert not foreign_fit.docs
+        assert foreign_fit.dropped[0]["reason"] == "method_target_scope_unresolved"
 
 
 def test_method_recognition_does_not_swallow_unrelated_or_regulated_requests() -> None:
@@ -129,6 +139,8 @@ def test_method_appendix_keeps_local_authority_separate() -> None:
         "Explain nutrient planning, and may I use this Canadian-labeled herbicide on my North Dakota field?",
         "For our Australian farm, explain the Ontario enterprise budget method.",
         "For our Ontario farm and our Australian farm, explain seed mass.",
+        "I farm in Australia using an Ontario budget. Explain enterprise budgets.",
+        "For my farms in Ontario and Australia, explain enterprise budgets.",
     ):
         context = build_context(question, rag_config=CANDIDATE, use_context_cache=False, use_search_cache=False)
         assert source_bound_method_appendix(context, question) == (None, None)
@@ -213,6 +225,8 @@ def test_product_path_calls_generator_and_records_method_as_background(tmp_path)
         if idx == 0:
             assert metadata["method_appendix"]["authority"] == "method_context_only_not_complete_answer"
             assert "method_cash_flow" in metadata["method_appendix"]["doc_ids"]
+            assert "Method background from cited card method_cash_flow" in execution.answer
             assert "Start with opening cash" in execution.answer
+            assert "These project-authored summaries explain general methods only" in execution.answer
         else:
             assert "This farm decision needs its own current evidence" in execution.answer

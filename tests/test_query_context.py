@@ -769,25 +769,6 @@ def test_mixed_country_source_does_not_override_named_farm_destination() -> None
     assert signals.field_context["province_state"] == "alberta"
     assert analyze_query_context(source_first, signals.field_context).target_jurisdictions == ("alberta",)
 
-    foreign = analyze_query_context("I farm in Australia and want to understand a Manitoba seed guide.")
-    assert foreign.country is None
-    assert foreign.target_jurisdictions == ()
-    assert foreign.field_context.get("province_state") is None
-    mixed_foreign = analyze_query_context("I farm in Alberta and in Australia. Explain a Manitoba seed guide.")
-    assert mixed_foreign.country is None
-    assert mixed_foreign.target_jurisdictions == ()
-    lower_mixed = analyze_query_context("i farm in alberta and in australia. explain a manitoba seed guide.")
-    assert lower_mixed.country is None
-    assert lower_mixed.target_jurisdictions == ()
-    for question in (
-        "For our Australian farm, explain the Ontario enterprise budget method.",
-        "For our Ontario farm and our Australian farm, explain seed mass.",
-        "We farm in Ontario and Australia. Explain the seed mass method.",
-        "we farm in ontario and australia. explain the seed mass method.",
-    ):
-        foreign_owned = analyze_query_context(question)
-        assert foreign_owned.country is None
-        assert foreign_owned.target_jurisdictions == ()
     temporal = analyze_query_context("My farm is in Ontario. Should I apply manure in spring or in autumn?")
     assert temporal.country == "canada"
     assert temporal.target_jurisdictions == ("ontario",)
@@ -795,6 +776,8 @@ def test_mixed_country_source_does_not_override_named_farm_destination() -> None
         ("I farm in Alberta and plant barley in spring. Explain the seed mass method.", "alberta"),
         ("My farm is in Ontario and I apply manure in spring or in autumn. What records matter?", "ontario"),
         ("I farm in Alberta and in dry years rely on stored seed.", "alberta"),
+        ("I farm in Alberta and need to plan cash flow.", "alberta"),
+        ("My farm is in Ontario and prices change often. Explain enterprise budgets.", "ontario"),
     ):
         signals = analyze_query_context(question)
         assert signals.country == "canada"

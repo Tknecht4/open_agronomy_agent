@@ -48,6 +48,7 @@ _NON_SITE_CONJOINED_PREFIXES = frozenset({
     "practice", "general", "addition", "many", "most", "some", "i", "we",
     "plant", "seed", "grow", "found", "read", "use", "uses", "have", "want",
     "bought", "sold", "heard", "saw", "work", "plan", "keep", "apply", "harvest",
+    "need", "intend", "rotate", "price", "prices", "change", "changes",
 })
 
 
@@ -273,9 +274,6 @@ def analyze_query_context(question: str, field_context: dict[str, Any] | None = 
         target_jurisdictions = jurisdictions[-1:]
     else:
         target_jurisdictions = jurisdictions
-    if not explicit_jurisdiction and _unrecognized_operation_site(text):
-        target_jurisdictions = ()
-        country = None
     if unsupported_country:
         target_jurisdictions = (explicit_jurisdiction.lower(),) if explicit_jurisdiction else ()
         country = None
@@ -1042,10 +1040,13 @@ def _unrecognized_operation_site(text: str) -> bool:
     Ambiguous multiple sites and explicitly foreign sites remain unknown.
     """
 
-    place = r"[A-Za-z-]+(?:\s+(?!(?:and|or|but|with)\b)[A-Za-z-]+){0,3}"
+    place = (
+        r"[A-Za-z-]+(?:\s+(?!(?:and|or|but|with|using|from|about|under|after|before|"
+        r"following|according|looking)\b)[A-Za-z-]+){0,3}"
+    )
     patterns = (
         rf"\b(?:I|we)\s+(?:farm|grow|operate|raise|manage)\b[^.!?]{{0,75}}?\bin\s+(?P<place>{place})",
-        rf"\b(?:my|our)\s+(?:farm|field|crop|dairy|operation|orchard|ranch)\b[^.!?]{{0,75}}?\bin\s+(?P<place>{place})",
+        rf"\b(?:my|our)\s+(?:farms?|fields?|crops?|dairy|operations?|orchards?|ranches?)\b[^.!?]{{0,75}}?\bin\s+(?P<place>{place})",
     )
     locations: list[str] = []
     for pattern in patterns:
@@ -1053,13 +1054,18 @@ def _unrecognized_operation_site(text: str) -> bool:
             locations.append(match.group("place"))
             tail = text[match.end():]
             conjoined = re.match(
-                r"\s+(?:and|or)\s+(?:also\s+)?(?:in\s+)?"
+                r"\s+(?:and|or)\s+(?:also\s+)?(?P<preposition>in\s+)?"
                 r"(?P<place>[A-Za-z-]+(?:\s+[A-Za-z-]+){0,3})",
                 tail,
                 re.IGNORECASE,
             )
-            if conjoined and conjoined.group("place").split()[0].lower() not in _NON_SITE_CONJOINED_PREFIXES:
-                locations.append(conjoined.group("place"))
+            if conjoined:
+                second = conjoined.group("place")
+                first_token = second.split()[0]
+                if (
+                    first_token.lower() not in _NON_SITE_CONJOINED_PREFIXES
+                ):
+                    locations.append(second)
     # A named foreign demonym before an owned farm is also a site cue.
     # Common descriptive farm adjectives stay outside this narrow test.
     owned_demonyms = re.finditer(
