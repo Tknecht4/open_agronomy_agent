@@ -1,0 +1,12 @@
+{
+  "initial_checkpoint_utc": "2026-09-28T07:36:34Z",
+  "observed_completed_tasks": "four cache tasks and Gemma budget task; Qwen budget task running",
+  "measured_colab_rate_cu_per_hour": 1.54,
+  "active_assignments": 1,
+  "decision": "Finish fixed Qwen budget sweep, queued same-origin8token follow-up, hash/collect; no additional matrix",
+  "extension_minutes_max": 10,
+  "same_origin_external_timeout_seconds": 180,
+  "extension_max_rate_based_estimate_cu": 0.257,
+  "estimate_is_not_measured_usage": true,
+  "stop_deadline_utc": "2026-09-28T07:46:34Z"
+}

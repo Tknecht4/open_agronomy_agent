@@ -1,0 +1,813 @@
+{
+  "status": "project_authored_exploratory_in_sample_selector_probe",
+  "labels_sha256": "d7c676376b178ed97c5809c68e549357507453a90be0d9bfbc619c3ad3ecbe34",
+  "selector_sha256": "0b7fdc5b4ffc38ea0a233cf0fcb6f3ae591ac8a6fccf9745773824aded0c59bb",
+  "supported_family_count": 7,
+  "overall": {
+    "tp": 24,
+    "fp": 24,
+    "fn": 8,
+    "precision": 0.5,
+    "recall": 0.75,
+    "cases": 47,
+    "exact": 19,
+    "exact_rate": 0.4043
+  },
+  "by_group": {
+    "abstain": {
+      "tp": 0,
+      "fp": 2,
+      "fn": 0,
+      "precision": 0.0,
+      "recall": null,
+      "cases": 6,
+      "exact": 4,
+      "exact_rate": 0.6667
+    },
+    "contrast": {
+      "tp": 3,
+      "fp": 7,
+      "fn": 4,
+      "precision": 0.3,
+      "recall": 0.4286,
+      "cases": 7,
+      "exact": 0,
+      "exact_rate": 0.0
+    },
+    "explicit": {
+      "tp": 12,
+      "fp": 0,
+      "fn": 2,
+      "precision": 1.0,
+      "recall": 0.8571,
+      "cases": 14,
+      "exact": 12,
+      "exact_rate": 0.8571
+    },
+    "multiple": {
+      "tp": 9,
+      "fp": 1,
+      "fn": 2,
+      "precision": 0.9,
+      "recall": 0.8182,
+      "cases": 6,
+      "exact": 3,
+      "exact_rate": 0.5
+    },
+    "negated": {
+      "tp": 0,
+      "fp": 7,
+      "fn": 0,
+      "precision": 0.0,
+      "recall": null,
+      "cases": 7,
+      "exact": 0,
+      "exact_rate": 0.0
+    },
+    "topic_only": {
+      "tp": 0,
+      "fp": 7,
+      "fn": 0,
+      "precision": 0.0,
+      "recall": null,
+      "cases": 7,
+      "exact": 0,
+      "exact_rate": 0.0
+    }
+  },
+  "by_family": {
+    "cash_flow": {
+      "tp": 0,
+      "fp": 5,
+      "fn": 6,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    "enterprise_budget": {
+      "tp": 5,
+      "fp": 6,
+      "fn": 0,
+      "precision": 0.4545,
+      "recall": 1.0
+    },
+    "liquidity": {
+      "tp": 5,
+      "fp": 2,
+      "fn": 1,
+      "precision": 0.7143,
+      "recall": 0.8333
+    },
+    "nutrient_plan_inputs": {
+      "tp": 3,
+      "fp": 3,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1.0
+    },
+    "partial_budget": {
+      "tp": 4,
+      "fp": 2,
+      "fn": 1,
+      "precision": 0.6667,
+      "recall": 0.8
+    },
+    "seed_mass": {
+      "tp": 4,
+      "fp": 3,
+      "fn": 0,
+      "precision": 0.5714,
+      "recall": 1.0
+    },
+    "thermal_time": {
+      "tp": 3,
+      "fp": 3,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1.0
+    }
+  },
+  "records": [
+    {
+      "id": "E01",
+      "group": "explicit",
+      "question": "For our Alberta wheat lot, how should thousand-kernel weight and germination affect the seed mass needed for a chosen stand?",
+      "expected": [
+        "seed_mass"
+      ],
+      "observed": [
+        "seed_mass"
+      ],
+      "false_positive": [],
+      "false_negative": [],
+      "exact": true
+    },
+    {
+      "id": "E02",
+      "group": "explicit",
+      "question": "How do I convert a target number of plants per square metre into kilograms of this tested seed lot per hectare?",
+      "expected": [
+        "seed_mass"
+      ],
+      "observed": [
+        "seed_mass"
+      ],
+      "false_positive": [],
+      "false_negative": [],
+      "exact": true
+    },
+    {
+      "id": "E03",
+      "group": "explicit",
+      "question": "Explain growing degree days for our Manitoba corn field, including the base temperature and accumulation interval.",
+      "expected": [
+        "thermal_time"
+      ],
+      "observed": [
+        "thermal_time"
+      ],
+      "false_positive": [],
+      "false_negative": [],
+      "exact": true
+    },
+    {
+      "id": "E04",
+      "group": "explicit",
+      "question": "How should we add daily heat units and interpret them against field observations?",
+      "expected": [
+        "thermal_time"
+      ],
+      "observed": [
+        "thermal_time"
+      ],
+      "false_positive": [],
+      "false_negative": [],
+      "exact": true
+    },
+    {
+      "id": "E05",
+      "group": "explicit",
+      "question": "We may rent a weeder instead of using our current contractor. Which added and saved costs and returns belong in the comparison?",
+      "expected": [
+        "partial_budget"
+      ],
+      "observed": [
+        "partial_budget"
+      ],
+      "false_positive": [],
+      "false_negative": [],
+      "exact": true
+    },
+    {
+      "id": "E06",
+      "group": "explicit",
+      "question": "Explain a partial budget for changing the irrigation schedule on our Kansas farm.",
+      "expected": [
+        "partial_budget"
+      ],
+      "observed": [
+        "partial_budget"
+      ],
+      "false_positive": [],
+      "false_negative": [],
+      "exact": true
+    },
+    {
+      "id": "E07",
+      "group": "explicit",
+      "question": "Build the structure of a crop enterprise budget with production units, saleable yield, price and a stated cost boundary.",
+      "expected": [
+        "enterprise_budget"
+      ],
+      "observed": [
+        "enterprise_budget"
+      ],
+      "false_positive": [],
+      "false_negative": [],
+      "exact": true
+    },
+    {
+      "id": "E08",
+      "group": "explicit",
+      "question": "How do we calculate a break-even sale price for one crop enterprise, distinguishing variable from total cost?",
+      "expected": [
+        "enterprise_budget"
+      ],
+      "observed": [
+        "enterprise_budget"
+      ],
+      "false_positive": [],
+      "false_negative": [],
+      "exact": true
+    },
+    {
+      "id": "E09",
+      "group": "explicit",
+      "question": "Which dated balance-sheet measures show whether current assets can cover current liabilities despite high land equity?",
+      "expected": [
+        "liquidity"
+      ],
+      "observed": [
+        "liquidity"
+      ],
+      "false_positive": [],
+      "false_negative": [],
+      "exact": true
+    },
+    {
+      "id": "E10",
+      "group": "explicit",
+      "question": "Explain working capital and the current ratio for our Saskatchewan farm.",
+      "expected": [
+        "liquidity"
+      ],
+      "observed": [
+        "liquidity"
+      ],
+      "false_positive": [],
+      "false_negative": [],
+      "exact": true
+    },
+    {
+      "id": "E11",
+      "group": "explicit",
+      "question": "Lay out opening cash, monthly receipts, supplier bills and loan payments to reveal a seasonal cash gap.",
+      "expected": [
+        "cash_flow"
+      ],
+      "observed": [],
+      "false_positive": [],
+      "false_negative": [
+        "cash_flow"
+      ],
+      "exact": false
+    },
+    {
+      "id": "E12",
+      "group": "explicit",
+      "question": "Our annual surplus is positive, but spring bills precede autumn crop sales. How should we make a dated cash plan?",
+      "expected": [
+        "cash_flow"
+      ],
+      "observed": [],
+      "false_positive": [],
+      "false_negative": [
+        "cash_flow"
+      ],
+      "exact": false
+    },
+    {
+      "id": "E13",
+      "group": "explicit",
+      "question": "What field history, soil tests, manure analyses and crop needs should an adviser collect before drafting a nutrient plan?",
+      "expected": [
+        "nutrient_plan_inputs"
+      ],
+      "observed": [
+        "nutrient_plan_inputs"
+      ],
+      "false_positive": [],
+      "false_negative": [],
+      "exact": true
+    },
+    {
+      "id": "E14",
+      "group": "explicit",
+      "question": "List the information needed to organize a manure nutrient plan for our Ontario field without setting an application rate.",
+      "expected": [
+        "nutrient_plan_inputs"
+      ],
+      "observed": [
+        "nutrient_plan_inputs"
+      ],
+      "false_positive": [],
+      "false_negative": [],
+      "exact": true
+    },
+    {
+      "id": "T01",
+      "group": "topic_only",
+      "question": "The invoice footer says cash flow. What does the supplier's delivery address say?",
+      "expected": [],
+      "observed": [
+        "cash_flow"
+      ],
+      "false_positive": [
+        "cash_flow"
+      ],
+      "false_negative": [],
+      "exact": false
+    },
+    {
+      "id": "T02",
+      "group": "topic_only",
+      "question": "A trial plot is labelled enterprise budget. What does its soil texture note mean?",
+      "expected": [],
+      "observed": [
+        "enterprise_budget"
+      ],
+      "false_positive": [
+        "enterprise_budget"
+      ],
+      "false_negative": [],
+      "exact": false
+    },
+    {
+      "id": "T03",
+      "group": "topic_only",
+      "question": "The seed bag mentions thousand-kernel weight. Who issued its phytosanitary certificate?",
+      "expected": [],
+      "observed": [
+        "seed_mass"
+      ],
+      "false_positive": [
+        "seed_mass"
+      ],
+      "false_negative": [],
+      "exact": false
+    },
+    {
+      "id": "T04",
+      "group": "topic_only",
+      "question": "Our weather station exported a column named GDD. How do I repair the missing timestamps in that CSV?",
+      "expected": [],
+      "observed": [
+        "thermal_time"
+      ],
+      "false_positive": [
+        "thermal_time"
+      ],
+      "false_negative": [],
+      "exact": false
+    },
+    {
+      "id": "T05",
+      "group": "topic_only",
+      "question": "The grant file mentions a partial budget. Which grant deadline applies to our county?",
+      "expected": [],
+      "observed": [
+        "partial_budget"
+      ],
+      "false_positive": [
+        "partial_budget"
+      ],
+      "false_negative": [],
+      "exact": false
+    },
+    {
+      "id": "T06",
+      "group": "topic_only",
+      "question": "A land-equity brochure lists working capital. Is its author licensed in Alberta?",
+      "expected": [],
+      "observed": [
+        "liquidity"
+      ],
+      "false_positive": [
+        "liquidity"
+      ],
+      "false_negative": [],
+      "exact": false
+    },
+    {
+      "id": "T07",
+      "group": "topic_only",
+      "question": "Our binder has a manure analysis and a nutrient plan. Where should the signed laboratory PDF be stored?",
+      "expected": [],
+      "observed": [
+        "nutrient_plan_inputs"
+      ],
+      "false_positive": [
+        "nutrient_plan_inputs"
+      ],
+      "false_negative": [],
+      "exact": false
+    },
+    {
+      "id": "N01",
+      "group": "negated",
+      "question": "Do not calculate seed mass or drill rate; just explain why this seed lot label has a lot number.",
+      "expected": [],
+      "observed": [
+        "seed_mass"
+      ],
+      "false_positive": [
+        "seed_mass"
+      ],
+      "false_negative": [],
+      "exact": false
+    },
+    {
+      "id": "N02",
+      "group": "negated",
+      "question": "I do not need growing degree days. Tell me how to repair the temperature sensor.",
+      "expected": [],
+      "observed": [
+        "thermal_time"
+      ],
+      "false_positive": [
+        "thermal_time"
+      ],
+      "false_negative": [],
+      "exact": false
+    },
+    {
+      "id": "N03",
+      "group": "negated",
+      "question": "No partial budget or rent-versus-buy analysis, please. What are the machine's safety guards?",
+      "expected": [],
+      "observed": [
+        "partial_budget"
+      ],
+      "false_positive": [
+        "partial_budget"
+      ],
+      "false_negative": [],
+      "exact": false
+    },
+    {
+      "id": "N04",
+      "group": "negated",
+      "question": "Skip the enterprise budget and break-even analysis. Identify the crop in this description.",
+      "expected": [],
+      "observed": [
+        "enterprise_budget"
+      ],
+      "false_positive": [
+        "enterprise_budget"
+      ],
+      "false_negative": [],
+      "exact": false
+    },
+    {
+      "id": "N05",
+      "group": "negated",
+      "question": "Do not assess liquidity or current ratio. I only need the name on the land title.",
+      "expected": [],
+      "observed": [
+        "liquidity"
+      ],
+      "false_positive": [
+        "liquidity"
+      ],
+      "false_negative": [],
+      "exact": false
+    },
+    {
+      "id": "N06",
+      "group": "negated",
+      "question": "Do not prepare a cash-flow schedule; I am asking for the date of the next extension workshop.",
+      "expected": [],
+      "observed": [
+        "cash_flow"
+      ],
+      "false_positive": [
+        "cash_flow"
+      ],
+      "false_negative": [],
+      "exact": false
+    },
+    {
+      "id": "N07",
+      "group": "negated",
+      "question": "Do not draft a nutrient plan or interpret manure analysis. Tell me the sample courier address.",
+      "expected": [],
+      "observed": [
+        "nutrient_plan_inputs"
+      ],
+      "false_positive": [
+        "nutrient_plan_inputs"
+      ],
+      "false_negative": [],
+      "exact": false
+    },
+    {
+      "id": "M01",
+      "group": "multiple",
+      "question": "For our Alberta farm, compare a partial budget for renting a weeder with a full crop enterprise budget.",
+      "expected": [
+        "enterprise_budget",
+        "partial_budget"
+      ],
+      "observed": [
+        "enterprise_budget",
+        "partial_budget"
+      ],
+      "false_positive": [],
+      "false_negative": [],
+      "exact": true
+    },
+    {
+      "id": "M02",
+      "group": "multiple",
+      "question": "Show both a dated balance-sheet liquidity check and a monthly cash schedule for our Saskatchewan operation.",
+      "expected": [
+        "cash_flow",
+        "liquidity"
+      ],
+      "observed": [
+        "liquidity"
+      ],
+      "false_positive": [],
+      "false_negative": [
+        "cash_flow"
+      ],
+      "exact": false
+    },
+    {
+      "id": "M03",
+      "group": "multiple",
+      "question": "Explain how seed mass depends on germination, then how heat units track emergence; keep the two calculations separate.",
+      "expected": [
+        "seed_mass",
+        "thermal_time"
+      ],
+      "observed": [
+        "seed_mass",
+        "thermal_time"
+      ],
+      "false_positive": [],
+      "false_negative": [],
+      "exact": true
+    },
+    {
+      "id": "M04",
+      "group": "multiple",
+      "question": "For our Ontario field, identify nutrient-plan inputs and explain how a partial budget would compare buying a manure spreader with hiring one.",
+      "expected": [
+        "nutrient_plan_inputs",
+        "partial_budget"
+      ],
+      "observed": [
+        "nutrient_plan_inputs",
+        "partial_budget"
+      ],
+      "false_positive": [],
+      "false_negative": [],
+      "exact": true
+    },
+    {
+      "id": "M05",
+      "group": "multiple",
+      "question": "Make a crop cost-of-production template and a monthly cash plan showing when those expenses are paid.",
+      "expected": [
+        "cash_flow",
+        "enterprise_budget"
+      ],
+      "observed": [
+        "enterprise_budget"
+      ],
+      "false_positive": [],
+      "false_negative": [
+        "cash_flow"
+      ],
+      "exact": false
+    },
+    {
+      "id": "M06",
+      "group": "multiple",
+      "question": "Assess current assets and liabilities, but do not build a cash-flow forecast even though sales arrive later.",
+      "expected": [
+        "liquidity"
+      ],
+      "observed": [
+        "cash_flow",
+        "liquidity"
+      ],
+      "false_positive": [
+        "cash_flow"
+      ],
+      "false_negative": [],
+      "exact": false
+    },
+    {
+      "id": "A01",
+      "group": "abstain",
+      "question": "Can you help with the farm budget?",
+      "expected": [],
+      "observed": [
+        "enterprise_budget"
+      ],
+      "false_positive": [
+        "enterprise_budget"
+      ],
+      "false_negative": [],
+      "exact": false
+    },
+    {
+      "id": "A02",
+      "group": "abstain",
+      "question": "What should I do about our cash situation?",
+      "expected": [],
+      "observed": [],
+      "false_positive": [],
+      "false_negative": [],
+      "exact": true
+    },
+    {
+      "id": "A03",
+      "group": "abstain",
+      "question": "What is the right seed rate for my field?",
+      "expected": [],
+      "observed": [
+        "seed_mass"
+      ],
+      "false_positive": [
+        "seed_mass"
+      ],
+      "false_negative": [],
+      "exact": false
+    },
+    {
+      "id": "A04",
+      "group": "abstain",
+      "question": "Should I apply this manure now?",
+      "expected": [],
+      "observed": [],
+      "false_positive": [],
+      "false_negative": [],
+      "exact": true
+    },
+    {
+      "id": "A05",
+      "group": "abstain",
+      "question": "Our crops look behind schedule. What is wrong?",
+      "expected": [],
+      "observed": [],
+      "false_positive": [],
+      "false_negative": [],
+      "exact": true
+    },
+    {
+      "id": "A06",
+      "group": "abstain",
+      "question": "Can you choose a lender based on our finances?",
+      "expected": [],
+      "observed": [],
+      "false_positive": [],
+      "false_negative": [],
+      "exact": true
+    },
+    {
+      "id": "C01",
+      "group": "contrast",
+      "question": "What balance-sheet ratios explain why our valuable land does not pay supplier invoices due before grain sales?",
+      "expected": [
+        "liquidity"
+      ],
+      "observed": [
+        "cash_flow"
+      ],
+      "false_positive": [
+        "cash_flow"
+      ],
+      "false_negative": [
+        "liquidity"
+      ],
+      "exact": false
+    },
+    {
+      "id": "C02",
+      "group": "contrast",
+      "question": "Our annual farm budget shows a surplus. How do we schedule receipts against spring bills and an autumn loan payment?",
+      "expected": [
+        "cash_flow"
+      ],
+      "observed": [
+        "enterprise_budget"
+      ],
+      "false_positive": [
+        "enterprise_budget"
+      ],
+      "false_negative": [
+        "cash_flow"
+      ],
+      "exact": false
+    },
+    {
+      "id": "C03",
+      "group": "contrast",
+      "question": "Use the current cash-flow table as background; calculate the crop's break-even price from its total costs and yield.",
+      "expected": [
+        "enterprise_budget"
+      ],
+      "observed": [
+        "cash_flow",
+        "enterprise_budget"
+      ],
+      "false_positive": [
+        "cash_flow"
+      ],
+      "false_negative": [],
+      "exact": false
+    },
+    {
+      "id": "C04",
+      "group": "contrast",
+      "question": "The enterprise budget is complete. What changes if we rent a different weeder next season? Compare only the changed returns and costs.",
+      "expected": [
+        "partial_budget"
+      ],
+      "observed": [
+        "enterprise_budget"
+      ],
+      "false_positive": [
+        "enterprise_budget"
+      ],
+      "false_negative": [
+        "partial_budget"
+      ],
+      "exact": false
+    },
+    {
+      "id": "C05",
+      "group": "contrast",
+      "question": "The manure plan is attached as background. Explain monthly cash payments for storage and hauling.",
+      "expected": [
+        "cash_flow"
+      ],
+      "observed": [
+        "nutrient_plan_inputs"
+      ],
+      "false_positive": [
+        "nutrient_plan_inputs"
+      ],
+      "false_negative": [
+        "cash_flow"
+      ],
+      "exact": false
+    },
+    {
+      "id": "C06",
+      "group": "contrast",
+      "question": "The seed order mentions GDD. Calculate seed kilograms from the lot's germination and kernel weight at our selected stand.",
+      "expected": [
+        "seed_mass"
+      ],
+      "observed": [
+        "seed_mass",
+        "thermal_time"
+      ],
+      "false_positive": [
+        "thermal_time"
+      ],
+      "false_negative": [],
+      "exact": false
+    },
+    {
+      "id": "C07",
+      "group": "contrast",
+      "question": "An enterprise margin appears in the report, but my question is whether current assets cover current liabilities at the balance-sheet date.",
+      "expected": [
+        "liquidity"
+      ],
+      "observed": [
+        "enterprise_budget",
+        "liquidity"
+      ],
+      "false_positive": [
+        "enterprise_budget"
+      ],
+      "false_negative": [],
+      "exact": false
+    }
+  ]
+}

@@ -1,0 +1,237 @@
+{
+  "schema": "residual_review_candidate.v1",
+  "created_utc": "2026-09-28T07:45:27.778959+00:00",
+  "reference_head": "3ff64813ce14833f3c819044b96ebda738a60cbe",
+  "runtime_source_modified": false,
+  "files": {
+    "configs/public_repository_manifest.json": {
+      "bytes": 40909,
+      "sha256": "548b7d16736bb6fcd384e098be805b7ce281e522bba3835716e10842116b3440"
+    },
+    "container/runtime_manifest.json": {
+      "bytes": 24791,
+      "sha256": "dcaa1bdd57072c084fa09830a88fdb6e24bf9ae0ddf8c6e0d3334b6a96cf556c"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/analyze_budget.py": {
+      "bytes": 2408,
+      "sha256": "c171b736426f7147272236c85342c65fc85ec72526aff3cf5f06d98045565c28"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/analyze_cache.py": {
+      "bytes": 2983,
+      "sha256": "aa0c197e172f02039afe281e071f82f8b3cfcde7e5691f6ae8c538d2cafbc813"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/budget-analysis.json": {
+      "bytes": 16930,
+      "sha256": "f044661d0c83ccbad381ca30cc8ee38173dc3be675b75c2c3abb3a272946aa7c"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/budget-gemma.json.gz": {
+      "bytes": 10517,
+      "sha256": "e86973343d275d00eb9cfe542f1457107ff51f3a22524dad4aebeaa2b31b6453"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/budget-qwen.json.gz": {
+      "bytes": 12228,
+      "sha256": "476538cf1f295ff9f8552ce95856b1e64a80e431c471a7c1c24d45dd0a59178d"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/budget_probe.py": {
+      "bytes": 3766,
+      "sha256": "cd4eb7800942524c3106e20c802e2db014b28c5befc80b93ce44fbef783df353"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/cache-analysis.json": {
+      "bytes": 38380,
+      "sha256": "dd143ac3f18224409783415570eba40073a2a469046fea3f48630ec08063dd30"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/cache-gemma-active.json.gz": {
+      "bytes": 208078,
+      "sha256": "32a8aa4a7bf8cb4c1391eea046a6ea51be379c23c1fd531c3f4412d31aa9dae5"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/cache-gemma-analysis.md": {
+      "bytes": 11022,
+      "sha256": "2c300672bbc2ae462ae18b215e7928a675685e365e1a3c218a148058078163f7"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/cache-gemma-method_candidate.json.gz": {
+      "bytes": 205169,
+      "sha256": "f5f068c2c964f7db360de65756a61c7e297ad8a79b3ba029170b7406d04cb661"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/cache-qwen-active.json.gz": {
+      "bytes": 290866,
+      "sha256": "2fa0406b94992350d2fd8538952a9551c336199d92a5b0585f9e742e4fd4478b"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/cache-qwen-method_candidate.json.gz": {
+      "bytes": 291656,
+      "sha256": "2193bbf9659e97a158912df2d1db695e235db942314caaf3d3a219b0b6f72a1b"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/cache_probe.py": {
+      "bytes": 16700,
+      "sha256": "700bf18f03412e214bb8969cae0e615e2b94fbfa852450de4fc57bf6b5d87399"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/cache_same_origin_probe.py": {
+      "bytes": 12580,
+      "sha256": "c2ca19d7b91d75042c23c420efa4a08a72dd30e88edd0f1ac706b762d142b1e2"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/collection-done.json": {
+      "bytes": 31,
+      "sha256": "a9a8d5129e018dd77959f898ef0529b50ca50e9cdec71608739007963ae94e51"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/compute-accounting.json": {
+      "bytes": 585,
+      "sha256": "72e8f7a6446bf269e540ae380b0f3204c566d1efa5650bbb3fc99014b3be0177"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/driver-done.json": {
+      "bytes": 947,
+      "sha256": "661851a797904265fa711dc113e197f0e1a44428818c4c09538923340639ef83"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/driver-start.json": {
+      "bytes": 2072,
+      "sha256": "3a2e21b5b1c79543326bcfcdf5f5c57272ad008969da69a251dea57286f6779d"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/driver-status.json": {
+      "bytes": 822,
+      "sha256": "2f5011f66b15ade774fb5cd201ab467d78fdd92ab7dde8eae1fdc1a14f582132"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/engineering-checks.json": {
+      "bytes": 1276,
+      "sha256": "9025f8c3ab9cf8aaa3bb2027574ace8e8c3668f4f3209777791a55b5a2b3b376"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/experiment-plan.json": {
+      "bytes": 1829,
+      "sha256": "8b619f69d5fbbdc2f3edd058655554af3a380bad5413eef464532efdbb66d426"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/followup-plan.json": {
+      "bytes": 751,
+      "sha256": "112c6982cf8efe6c345977fcfd54a9e522cdac2167bc216875e858c91e6c9885"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/followup-status.json": {
+      "bytes": 126,
+      "sha256": "ce19bb478cc1f28936fc4b9c6a811db358d7c5bd754eb6cfdeafae0162b9bf50"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/local-device.json": {
+      "bytes": 379,
+      "sha256": "ca89c96d5ba3f922a1e5035861a030b850398f1304f43545d8925f4e2f2f4465"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/method-analysis.json": {
+      "bytes": 19769,
+      "sha256": "5f7911e72b0ccfc2bde3070bd5330f45d89b32bdcb7c707e8590e57ebd39df27"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/method-consumer-probe.py": {
+      "bytes": 6037,
+      "sha256": "b516f04dd8a1db3d87df9844b888cdb5e4cf1c5696b73f6b57f977f5ded66195"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/method-consumer-results.json": {
+      "bytes": 17137,
+      "sha256": "5f32144aa4c6956fd0b9cf13b2dbcf5170dc8a1208548b28919a9d138b9ddfcc"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/method-contrasts.json": {
+      "bytes": 8653,
+      "sha256": "d7c676376b178ed97c5809c68e549357507453a90be0d9bfbc619c3ad3ecbe34"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/method-investigation.md": {
+      "bytes": 8978,
+      "sha256": "ce90de73b5d030114db2cae02e36e663423cfb451bbf9e5da5ca2fda2b2d7e99"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/method_probe.py": {
+      "bytes": 3543,
+      "sha256": "24b33c782fa1089d3f04786df8c4fb416e791337c241c1c8a89232eee69ba71f"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/model-residency-probe.py": {
+      "bytes": 1366,
+      "sha256": "88d87ecc2f99b8873a58679635260cf0cd068d7ecf0f0dc1d4a34808b9a6f26f"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/model-residency-results.json": {
+      "bytes": 1294,
+      "sha256": "6e763b7c59296a35776aa566807c9a7d6159db78d02ec7086db5ee51e0ff810c"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/operational-events.json": {
+      "bytes": 1012,
+      "sha256": "58f1d4e4788a4192a5fdac49b00e03efeb9647e02d3907559bd0910f7117569f"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/raw-bundle.json": {
+      "bytes": 357,
+      "sha256": "2cc9b33137e69ae66d3b3dcf815596e32068f60fa44b8cce4cdd7cf47ec554c7"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/remote-results.zip": {
+      "bytes": 21833502,
+      "sha256": "5f78c49303453ab95932f39be9b7b9f1b9d3cbf401601341d9db1c201a648cb8"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/remote_followup_collect.py": {
+      "bytes": 2191,
+      "sha256": "19e6636da76b30e008aed6045f8e1792da5606ecd01fddbe476851d0ccd83626"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/remote_launch.py": {
+      "bytes": 582,
+      "sha256": "e124f8355d9833c56d424d207520474ff4e648184fb582a2a1ab1ce2837283e3"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/remote_queue_collect.py": {
+      "bytes": 510,
+      "sha256": "4f16b4f6e1d4fd8029f6e178fae2b98a481df67b9d2ce8cf65b22c3f1533a907"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/remote_run.py": {
+      "bytes": 2101,
+      "sha256": "299a39bc59109268db1d5c1edf7c13096eef91470133aace88c5986c3857a9ac"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/remote_setup.py": {
+      "bytes": 1702,
+      "sha256": "f4940d10e9548cbebcffe7bec8eefa72858b605d65b7543cd03957e22d9aec58"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/resource-checkpoint.json": {
+      "bytes": 559,
+      "sha256": "b21b879264882b3bf5231bbb868ae909c45b366edbf688228bd3de7c5e837b2c"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/runtime-preinstall.json": {
+      "bytes": 753,
+      "sha256": "795633ffb0fdb439b51654f7ed77de07ff8462aeb5b6d710cba4aba064b8ddc8"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/same-origin-gemma-active.json.gz": {
+      "bytes": 34764,
+      "sha256": "174f15e9fa5ae9e804f483ecc0561ec17fb97b9cb370d09b0fb03271d377b1ea"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/setup.json": {
+      "bytes": 3272,
+      "sha256": "867f16eca368e2db4305bf3e78cc3d2ca4bd093215213a9db42762ca162fb35b"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/snapshot-file-manifests.json": {
+      "bytes": 4545,
+      "sha256": "11156c1c51c3cf7436400c4e421ac9cf73419b4600cae184462c7dcb8628b9dc"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/ui-desktop.jpg": {
+      "bytes": 85725,
+      "sha256": "8f68e533e59a79fdf199b3c78647643e0dc5f18fe376207016d1aba2c632bce5"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/ui-mobile.jpg": {
+      "bytes": 3568,
+      "sha256": "00bdf1e4caf2ec1164b4bea3b2b54ff0ecff75042a0031e89d5c7448dc3d2937"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/ui-observation.json": {
+      "bytes": 1944,
+      "sha256": "6cce8e763bd63c8da54da565a751ba15304feddafd4462001e340346c6144b1a"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/verifier-contrasts.json": {
+      "bytes": 5565,
+      "sha256": "762ce116080a19750cdf07825f5c19d119e8788feff417b78b57e9c971dcf4f6"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/verifier-investigation.md": {
+      "bytes": 8033,
+      "sha256": "2ae10614d7d773b583382de76fe26e7fd566d956679c4c458b132f8a0eda216f"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/verifier-results.json": {
+      "bytes": 21951,
+      "sha256": "9df196af19bf07a74270e6fa0362f688006f6642557f454ce6444426c7d69631"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/verifier-trigger-probe.py": {
+      "bytes": 2985,
+      "sha256": "769f8bb9dbd2acbc5caa3d4943c647787149d44e99626d5ab34d6bb50e44081f"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/verifier-trigger-results.json": {
+      "bytes": 11026,
+      "sha256": "e07d6ac79888dfe46a9ce81c617b4af2269a03244ab326d6dd9cd2c6937f3497"
+    },
+    "docs/reviews/artifacts/portable-residual-20260928/verifier_probe.py": {
+      "bytes": 7121,
+      "sha256": "d1e79dcd0a88fca04ccbfec4edad7481d793049ce14ab22dcc3d46b3ec813666"
+    },
+    "docs/reviews/portable-agronomy-residual-investigation-20260928.md": {
+      "bytes": 18331,
+      "sha256": "f7e1cfef3c58eac68b23168f5d65739299b756fbc0ce6a90b9e70506dabe5171"
+    }
+  },
+  "review_scope": "Investigation fidelity, source/probe validity, honest residual boundaries and public packaging; no deployment/efficacy/activation approval."
+}

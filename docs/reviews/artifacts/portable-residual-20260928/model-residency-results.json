@@ -1,0 +1,47 @@
+{
+  "schema": "model_residency_source_probe.v1",
+  "status": "model_free_exploratory",
+  "source_head": "3ff64813ce14833f3c819044b96ebda738a60cbe",
+  "source_sha256": "6ab428890d65201018b4a1ca47f28577e355023cb35a12ffcac24a84d4ad2a72",
+  "observations": [
+    {
+      "request": "fixture-a",
+      "resident_keys": [
+        "fixture-a@fixture-r1"
+      ],
+      "load_calls": 1
+    },
+    {
+      "request": "fixture-b",
+      "resident_keys": [
+        "fixture-a@fixture-r1",
+        "fixture-b@fixture-r1"
+      ],
+      "load_calls": 2
+    },
+    {
+      "request": "fixture-c",
+      "resident_keys": [
+        "fixture-a@fixture-r1",
+        "fixture-b@fixture-r1",
+        "fixture-c@fixture-r1"
+      ],
+      "load_calls": 3
+    },
+    {
+      "request": "fixture-a",
+      "resident_keys": [
+        "fixture-a@fixture-r1",
+        "fixture-b@fixture-r1",
+        "fixture-c@fixture-r1"
+      ],
+      "load_calls": 3
+    }
+  ],
+  "after_prompt_cache_reset_resident_keys": [
+    "fixture-a@fixture-r1",
+    "fixture-b@fixture-r1",
+    "fixture-c@fixture-r1"
+  ],
+  "interpretation": "Distinct model cache keys remain resident without automatic capacity eviction; prompt cache reset does not unload weights. This probe used plain Python objects and measured no model memory or OOM."
+}

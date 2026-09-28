@@ -1,0 +1,134 @@
+{
+  "start_unix": 1790579634.021121,
+  "packages": {
+    "mlx": "0.32.2",
+    "mlx-lm": "0.31.3",
+    "mlx-vlm": "0.7.3",
+    "transformers": "5.17.0",
+    "huggingface-hub": "1.33.0"
+  },
+  "default_device": "Device(gpu, 0)",
+  "gpu_count": 1,
+  "models": [
+    {
+      "repo": "mlx-community/gemma-4-e2b-it-4bit",
+      "revision": "238767527555cb75a05732a84dff5d6ba0dd6809",
+      "snapshot": "/content/oa-hf/hub/models--mlx-community--gemma-4-e2b-it-4bit/snapshots/238767527555cb75a05732a84dff5d6ba0dd6809",
+      "seconds": 13.776426792144775,
+      "files": [
+        {
+          "path": ".gitattributes",
+          "bytes": 1570
+        },
+        {
+          "path": "README.md",
+          "bytes": 593
+        },
+        {
+          "path": "chat_template.jinja",
+          "bytes": 17336
+        },
+        {
+          "path": "config.json",
+          "bytes": 6395
+        },
+        {
+          "path": "generation_config.json",
+          "bytes": 208
+        },
+        {
+          "path": "model.safetensors",
+          "bytes": 3550670554
+        },
+        {
+          "path": "model.safetensors.index.json",
+          "bytes": 218323
+        },
+        {
+          "path": "processor_config.json",
+          "bytes": 1316
+        },
+        {
+          "path": "tokenizer.json",
+          "bytes": 32169626
+        },
+        {
+          "path": "tokenizer_config.json",
+          "bytes": 2740
+        }
+      ],
+      "weight_hash_status": "not_independently_hashed"
+    },
+    {
+      "repo": "mlx-community/Qwen3.5-27B-4bit",
+      "revision": "45797d2985a12c55e6473686e9ea91b95e959553",
+      "snapshot": "/content/oa-hf/hub/models--mlx-community--Qwen3.5-27B-4bit/snapshots/45797d2985a12c55e6473686e9ea91b95e959553",
+      "seconds": 45.49448847770691,
+      "files": [
+        {
+          "path": ".gitattributes",
+          "bytes": 1570
+        },
+        {
+          "path": "README.md",
+          "bytes": 636
+        },
+        {
+          "path": "chat_template.jinja",
+          "bytes": 7756
+        },
+        {
+          "path": "config.json",
+          "bytes": 4399
+        },
+        {
+          "path": "generation_config.json",
+          "bytes": 244
+        },
+        {
+          "path": "model-00001-of-00003.safetensors",
+          "bytes": 5343270082
+        },
+        {
+          "path": "model-00002-of-00003.safetensors",
+          "bytes": 5354186905
+        },
+        {
+          "path": "model-00003-of-00003.safetensors",
+          "bytes": 5357089172
+        },
+        {
+          "path": "model.safetensors.index.json",
+          "bytes": 218281
+        },
+        {
+          "path": "preprocessor_config.json",
+          "bytes": 390
+        },
+        {
+          "path": "processor_config.json",
+          "bytes": 1300
+        },
+        {
+          "path": "tokenizer.json",
+          "bytes": 19989343
+        },
+        {
+          "path": "tokenizer_config.json",
+          "bytes": 1139
+        },
+        {
+          "path": "video_preprocessor_config.json",
+          "bytes": 385
+        },
+        {
+          "path": "vocab.json",
+          "bytes": 6722759
+        }
+      ],
+      "weight_hash_status": "not_independently_hashed"
+    }
+  ],
+  "matmul_passed": true,
+  "end_unix": 1790579693.407554
+}

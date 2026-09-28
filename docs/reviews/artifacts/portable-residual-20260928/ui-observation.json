@@ -1,0 +1,31 @@
+{
+  "schema_version": "portable_residual_ui_observation.v1",
+  "source_commit": "3ff64813ce14833f3c819044b96ebda738a60cbe",
+  "date": "2026-09-28",
+  "fixture": "copied prior declared synthetic SQLite fixture; no user database or generated model answer",
+  "network_mode": "offline",
+  "observations": [
+    "Saved general conversation loads its synthetic answer and estimated input receipt.",
+    "Keyboard focus opens Details with aria-expanded=true and visible popup.",
+    "Escape closes popup and aria-expanded=false while retaining focus.",
+    "Click pins Details and pin survives keyboard blur.",
+    "New chat resets to unsaved general conversation and removes previous runtime receipt; saved conversation remains available.",
+    "At measured CSS width390 and height844 the popover stays horizontally within viewport, with document scrollWidth390; observed bounds near x9..359,y583..812.",
+    "At measured CSS width1280 and height900 popover bounds are x434..804,y341..554 and document scrollWidth1280.",
+    "Estimated context, omitted-history count and unavailable speed/cache status are displayed as such."
+  ],
+  "coverage_limits": [
+    "Pointer hover and pointer-exit behavior were not isolated in the available browser interaction API; automated component checks remain the evidence for those transitions.",
+    "Browser viewport settings were scaled: requested390 initially measured166CSSpx. Subsequent controls were checked against actual DOM dimensions; requested917 and3008 measured390 and1280 respectively.",
+    "Screenshots have browser capture scaling/cropping behavior; CSS measurements and DOM states are retained separately.",
+    "No model generation, field data or provider capability was validated."
+  ],
+  "screenshots": [
+    "ui-mobile.jpg",
+    "ui-desktop.jpg"
+  ],
+  "owned_tab_closed": true,
+  "viewport_override_reset": true,
+  "server_stop_requested": true,
+  "server_stop_verified_no_listener": true
+}

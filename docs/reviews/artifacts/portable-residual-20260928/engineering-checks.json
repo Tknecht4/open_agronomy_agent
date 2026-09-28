@@ -1,0 +1,27 @@
+{
+  "source_head": "3ff64813ce14833f3c819044b96ebda738a60cbe",
+  "runtime_source_modified": false,
+  "focused_tests": {
+    "command": "PYTHONPATH=src .venv/bin/python -m pytest -q tests/test_mlx_runtime_contract.py tests/test_method_transfer_candidate.py tests/test_risk_conditioned_selective_v3.py tests/test_answer_verifier_exam_review.py",
+    "passed": 25,
+    "seconds": 1.51
+  },
+  "full_repository_suite_rerun": false,
+  "boundary": "Focused contracts and public documentation/package checks on unchanged runtime source; does not validate stress-case correctness or agronomic competence.",
+  "public_docs_audit": {
+    "status": "pass",
+    "command": "PYTHONPATH=src .venv/bin/python scripts/check_public_docs.py"
+  },
+  "mkdocs_strict": {
+    "status": "pass",
+    "command": "PYTHONPATH=src .venv/bin/mkdocs build --strict"
+  },
+  "public_package_build": {
+    "status": "pass",
+    "command": "PYTHONPATH=src .venv/bin/python scripts/build_public_repository.py --destination <fresh-output-directory>",
+    "file_count": 1171,
+    "total_bytes": 1080739654,
+    "receipt_sha256": "01afc7dc8925fbbff9184a90aaeee832776c91f49adcfbc6974edb697adeb7e6",
+    "scope": "pre-review artifact inventory; final review documents will be included in a later final package"
+  }
+}

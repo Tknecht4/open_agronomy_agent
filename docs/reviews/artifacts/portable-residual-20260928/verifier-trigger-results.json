@@ -1,0 +1,300 @@
+{
+  "schema": "verifier_trigger_ablation.v1",
+  "status": "posthoc_exposed_lexical_sensitivity_not_truth_or_answer_quality",
+  "source_head": "3ff64813ce14833f3c819044b96ebda738a60cbe",
+  "source_sha256": "6da36abd0cc02feb7fa14b6a1ea5dc640425288de330dd89e9818891be40fa58",
+  "ledger_sha256": "24aa97a34ea88b995f71cd0aafbd17a60625064c99a788a711a1a8e4370f0039",
+  "original_draft_sha256": "77441c9184c4679ef79295fabc5fb3098f78b39d3eec07b6aba02fa656170c8c",
+  "reconstructed_evidence_text_sha256": "73cc7f5b2834c5993cff271bbaa81fa1b99c288cd33b325fb1c8d2a5b42a3f6b",
+  "operations": [
+    [
+      "drop_unfinished_tail",
+      " This adjustment immediately reduces",
+      ""
+    ],
+    [
+      "drop_depth_parenthetical",
+      " (typically 2 to 4 inches deep)",
+      ""
+    ],
+    [
+      "rot_synonym",
+      "rot",
+      "decay"
+    ]
+  ],
+  "historical_full_evidence_available": false,
+  "results": [
+    {
+      "transformations": [],
+      "text_sha256": "77441c9184c4679ef79295fabc5fb3098f78b39d3eec07b6aba02fa656170c8c",
+      "assessment": {
+        "requires_review": true,
+        "score": 8,
+        "reasons": [
+          "unsupported_numeric_specificity",
+          "unsupported_named_condition",
+          "incomplete_generation"
+        ],
+        "unsupported_numbers": [
+          "2 to 4 inches"
+        ],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [
+          "rot"
+        ],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": [
+          "soilwise_https_soilwise_he_github_io_soil_health_deciduoustreespecies_eed9fdd238",
+          "soilwise_https_soilwise_he_github_io_soil_health_coniferoustreespecies_de8bb05cd2",
+          "nitrate_leaching",
+          "soilwise_https_soilwise_he_github_io_soil_health_treegrowth_01171a3b1a",
+          "soilwise_https_soilwise_he_github_io_soil_health_densityofnewurbanisation_cf639caef3"
+        ]
+      }
+    },
+    {
+      "transformations": [
+        "rot_synonym"
+      ],
+      "text_sha256": "5e43bbba4e827725eac0a0abf02350c748227b5493ba2327e72c1678b0d84983",
+      "assessment": {
+        "requires_review": true,
+        "score": 5,
+        "reasons": [
+          "unsupported_numeric_specificity",
+          "incomplete_generation"
+        ],
+        "unsupported_numbers": [
+          "2 to 4 inches"
+        ],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": [
+          "soilwise_https_soilwise_he_github_io_soil_health_deciduoustreespecies_eed9fdd238",
+          "soilwise_https_soilwise_he_github_io_soil_health_coniferoustreespecies_de8bb05cd2",
+          "nitrate_leaching",
+          "soilwise_https_soilwise_he_github_io_soil_health_treegrowth_01171a3b1a",
+          "soilwise_https_soilwise_he_github_io_soil_health_densityofnewurbanisation_cf639caef3"
+        ]
+      }
+    },
+    {
+      "transformations": [
+        "drop_depth_parenthetical"
+      ],
+      "text_sha256": "10c5993613761be45de6df5ba8e586b31d38c116d77f9e8f1db34134cefb1813",
+      "assessment": {
+        "requires_review": true,
+        "score": 4,
+        "reasons": [
+          "unsupported_named_condition",
+          "incomplete_generation"
+        ],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [
+          "rot"
+        ],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": [
+          "soilwise_https_soilwise_he_github_io_soil_health_deciduoustreespecies_eed9fdd238",
+          "soilwise_https_soilwise_he_github_io_soil_health_coniferoustreespecies_de8bb05cd2",
+          "nitrate_leaching",
+          "soilwise_https_soilwise_he_github_io_soil_health_treegrowth_01171a3b1a",
+          "soilwise_https_soilwise_he_github_io_soil_health_densityofnewurbanisation_cf639caef3"
+        ]
+      }
+    },
+    {
+      "transformations": [
+        "drop_depth_parenthetical",
+        "rot_synonym"
+      ],
+      "text_sha256": "f995e1a2a73ceec9bfae488c0eaea8a4c1172655eb8ee7a58c06552e127d8bad",
+      "assessment": {
+        "requires_review": true,
+        "score": 1,
+        "reasons": [
+          "incomplete_generation"
+        ],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": [
+          "soilwise_https_soilwise_he_github_io_soil_health_deciduoustreespecies_eed9fdd238",
+          "soilwise_https_soilwise_he_github_io_soil_health_coniferoustreespecies_de8bb05cd2",
+          "nitrate_leaching",
+          "soilwise_https_soilwise_he_github_io_soil_health_treegrowth_01171a3b1a",
+          "soilwise_https_soilwise_he_github_io_soil_health_densityofnewurbanisation_cf639caef3"
+        ]
+      }
+    },
+    {
+      "transformations": [
+        "drop_unfinished_tail"
+      ],
+      "text_sha256": "491a66e6e65915a140e7b64d85bcfdfdff4e16b60f61591e3ef9275b733707e4",
+      "assessment": {
+        "requires_review": true,
+        "score": 7,
+        "reasons": [
+          "unsupported_numeric_specificity",
+          "unsupported_named_condition"
+        ],
+        "unsupported_numbers": [
+          "2 to 4 inches"
+        ],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [
+          "rot"
+        ],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": [
+          "soilwise_https_soilwise_he_github_io_soil_health_deciduoustreespecies_eed9fdd238",
+          "soilwise_https_soilwise_he_github_io_soil_health_coniferoustreespecies_de8bb05cd2",
+          "nitrate_leaching",
+          "soilwise_https_soilwise_he_github_io_soil_health_treegrowth_01171a3b1a",
+          "soilwise_https_soilwise_he_github_io_soil_health_densityofnewurbanisation_cf639caef3"
+        ]
+      }
+    },
+    {
+      "transformations": [
+        "drop_unfinished_tail",
+        "rot_synonym"
+      ],
+      "text_sha256": "151ebb17a6c46a6e135ad423ba1e43a6be8abae81a366af4eabcc1083fffbcde",
+      "assessment": {
+        "requires_review": true,
+        "score": 4,
+        "reasons": [
+          "unsupported_numeric_specificity"
+        ],
+        "unsupported_numbers": [
+          "2 to 4 inches"
+        ],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": [
+          "soilwise_https_soilwise_he_github_io_soil_health_deciduoustreespecies_eed9fdd238",
+          "soilwise_https_soilwise_he_github_io_soil_health_coniferoustreespecies_de8bb05cd2",
+          "nitrate_leaching",
+          "soilwise_https_soilwise_he_github_io_soil_health_treegrowth_01171a3b1a",
+          "soilwise_https_soilwise_he_github_io_soil_health_densityofnewurbanisation_cf639caef3"
+        ]
+      }
+    },
+    {
+      "transformations": [
+        "drop_unfinished_tail",
+        "drop_depth_parenthetical"
+      ],
+      "text_sha256": "e201ba6dcd413088500e007557f1292851e9b01f75d721bf363666acd3ea259a",
+      "assessment": {
+        "requires_review": true,
+        "score": 3,
+        "reasons": [
+          "unsupported_named_condition"
+        ],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [
+          "rot"
+        ],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": [
+          "soilwise_https_soilwise_he_github_io_soil_health_deciduoustreespecies_eed9fdd238",
+          "soilwise_https_soilwise_he_github_io_soil_health_coniferoustreespecies_de8bb05cd2",
+          "nitrate_leaching",
+          "soilwise_https_soilwise_he_github_io_soil_health_treegrowth_01171a3b1a",
+          "soilwise_https_soilwise_he_github_io_soil_health_densityofnewurbanisation_cf639caef3"
+        ]
+      }
+    },
+    {
+      "transformations": [
+        "drop_unfinished_tail",
+        "drop_depth_parenthetical",
+        "rot_synonym"
+      ],
+      "text_sha256": "85b084ad86259949888c96ebb3aef0a4d8a2ab1d802c9292da072d5bf99f2e5e",
+      "assessment": {
+        "requires_review": false,
+        "score": 0,
+        "reasons": [],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": [
+          "soilwise_https_soilwise_he_github_io_soil_health_deciduoustreespecies_eed9fdd238",
+          "soilwise_https_soilwise_he_github_io_soil_health_coniferoustreespecies_de8bb05cd2",
+          "nitrate_leaching",
+          "soilwise_https_soilwise_he_github_io_soil_health_treegrowth_01171a3b1a",
+          "soilwise_https_soilwise_he_github_io_soil_health_densityofnewurbanisation_cf639caef3"
+        ]
+      }
+    }
+  ],
+  "boundary": "Replacing rot with decay preserves much of the meaning; disappearance of a rule is not evidence the remaining claim is supported. No model/editor or final selection ran."
+}
