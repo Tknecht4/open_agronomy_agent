@@ -717,7 +717,8 @@
     "docs/reviews/artifacts/residual-repair-20260928/remote-results.zip",
     "docs/reviews/artifacts/residual-repair-20260928/run_final_checks.py",
     "docs/reviews/artifacts/residual-repair-20260928/final-reconciliation.json",
-    "docs/reviews/artifacts/residual-repair-20260928/frontend-docs-checks.json"
+    "docs/reviews/artifacts/residual-repair-20260928/frontend-docs-checks.json",
+    "tests/test_turn_generation_telemetry.py"
   ],
   "trees": [
     "src",
