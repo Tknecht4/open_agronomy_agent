@@ -75,7 +75,7 @@ If a development process remains, inspect the reported PID/command and terminate
 
 ## Troubleshooting
 
-- **Model setup required:** rerun the pinned download and restart the API; model availability is resolved at process startup.
+- **Model setup required:** rerun the pinned download and restart the API. Missing or incomplete model files are checked when the model loads, including lazy loading for a question. Chat reports the setup error without saving a substitute answer; it does not download model files automatically.
 - **Page loads but questions fail:** check `/api/health` and the API listener independently.
 - **Port occupied:** inspect `lsof` output and stop the owning development process or choose different ports.
 - **Adapter blocked:** check network mode, credential/provider readiness, and source timestamp. Do not substitute a stale/current-looking value.

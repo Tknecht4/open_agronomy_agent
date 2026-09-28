@@ -47,6 +47,7 @@ from agronomy_agent.execution_core import (
     stable_sha256 as execution_stable_sha256,
 )
 from agronomy_agent.model_identity import bind_response_identity, model_identity_contract
+from agronomy_agent.model_errors import LocalModelSnapshotUnavailable
 from agronomy_agent.high_consequence import apply_high_consequence_boundary, evaluate_high_consequence_policy
 from agronomy_agent.geographic_context import (
     TRUSTED_GEOGRAPHIC_LAYER_IDS,
@@ -238,6 +239,8 @@ def _generate_with_backend_fallback(
 ) -> tuple[str, dict[str, Any]]:
     try:
         return str(generator.generate(messages)), {}
+    except LocalModelSnapshotUnavailable:
+        raise
     except RuntimeError as exc:
         if mode == "mock" or isinstance(generator, MockGenerator) or not fallback_enabled:
             raise
@@ -528,7 +531,9 @@ def _run_turn_impl(
                 scope_generator("draft")
                 decode_span = profiler.span("model.decode_stream", input_size=sum(len(item["content"]) for item in messages)) if profiler else nullcontext()
                 with decode_span:
-                    answer, generation_metadata = _generate_with_backend_fallback(generator, messages, mode)
+                    answer, generation_metadata = _generate_with_backend_fallback(
+                        generator, messages, mode, fallback_enabled=fallback_enabled,
+                    )
         if context_budget_receipt is None:
             compile_prompt(will_generate=False)
         if trace_options.get("store_prompt_messages"):
@@ -2003,9 +2008,12 @@ def _production_stage_observations(
             },
         },
         "fallback_origin": {
-            "state": "executed" if fallback_enabled else "disabled_by_arm",
+            # Origin accounting always runs. The exception-fallback switch does
+            # not disable verifier replacement or resource-limit responses.
+            "state": "executed",
             "evidence": {
                 "reason": fallback_reason,
+                "generation_exception_fallback_enabled": fallback_enabled,
                 "origin_class": origin_class,
                 "fallback_used": fallback_used,
                 "fallback_kind": fallback_kind,

@@ -59,6 +59,16 @@ RETRIEVAL_COMPONENT_CONFIGURATIONS: dict[str, dict[str, bool]] = {
     ),
 }
 
+# Existing callers use the request's default production_full arm ID even for a
+# named retrieval configuration. The configuration ID is authoritative there;
+# also accept the corresponding explicit arm ID, but no unrelated arm family.
+_REQUEST_ARM_IDS_BY_CONFIGURATION = {
+    RETRIEVAL_NEITHER_CONFIGURATION_ID: {"production_full", "retrieval_neither"},
+    RETRIEVAL_DOCUMENT_ONLY_CONFIGURATION_ID: {"production_full", "retrieval_document_only"},
+    RETRIEVAL_GRAPH_ONLY_CONFIGURATION_ID: {"production_full", "retrieval_graph_only"},
+    RETRIEVAL_BOTH_CONFIGURATION_ID: {"production_full", "retrieval_document_and_graph", "retrieval_both"},
+}
+
 # Compatibility names now identify the explicit both-enabled arm; the adapter
 # exposes exactly four supported retrieval configurations.
 PRODUCTION_FULL_CONFIGURATION_ID = RETRIEVAL_BOTH_CONFIGURATION_ID
@@ -208,6 +218,27 @@ class ObservedSystemBenchmarkAdapter:
             raise ValueError(
                 "request graph_retrieval_enabled does not match the named "
                 "retrieval configuration"
+            )
+        disabled_request_controls = sorted(
+            name
+            for name in (
+                "field_context_enabled",
+                "typed_tools_enabled",
+                "risk_intervention_enabled",
+                "verifier_enabled",
+                "fallback_enabled",
+            )
+            if getattr(request, name) is not True
+        )
+        if disabled_request_controls:
+            raise ValueError(
+                "the observed-system rehearsal adapter does not support "
+                "non-retrieval request controls: "
+                + ", ".join(disabled_request_controls)
+            )
+        if request.arm_id not in _REQUEST_ARM_IDS_BY_CONFIGURATION[component_configuration_id]:
+            raise ValueError(
+                "request arm_id does not match the named retrieval configuration"
             )
         execution = execute_agent_request(request)
         return ObservedSystemRehearsalResult(

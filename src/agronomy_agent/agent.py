@@ -21,6 +21,8 @@ from typing import Any, Mapping
 import httpx
 import yaml
 
+from agronomy_agent.model_errors import LocalModelSnapshotUnavailable
+
 from agronomy_agent.advisor_plan import answer_coverage_checklist
 from agronomy_agent.agno_runtime.knowledge_factory import build_knowledge
 from agronomy_agent.agno_runtime.retriever_adapter import knowledge_filter_cache_key, route_to_knowledge_filters
@@ -307,7 +309,7 @@ def resolve_local_model_snapshot(
             ).resolve()
         except Exception as exc:
             revision_label = revision or "the configured default revision"
-            raise RuntimeError(
+            raise LocalModelSnapshotUnavailable(
                 f"Local model snapshot unavailable for {model_id}@{revision_label}. "
                 "No automatic download was attempted. Provision it explicitly with "
                 "scripts/download_model.py before starting the answer engine."
@@ -328,7 +330,7 @@ def resolve_local_model_snapshot(
         and weights
         and all(path.stat().st_size > 0 for path in weights)
     ):
-        raise RuntimeError(
+        raise LocalModelSnapshotUnavailable(
             f"Local model snapshot is incomplete for {model_id}@{revision or 'configured default'}. "
             "No automatic download was attempted; rerun scripts/download_model.py while online."
         )

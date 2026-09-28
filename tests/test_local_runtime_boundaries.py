@@ -27,6 +27,82 @@ def test_local_rate_limiter_has_no_remote_backend() -> None:
     assert blocked.allowed is False
 
 
+def test_incomplete_local_snapshot_has_a_specific_setup_error(tmp_path: Path) -> None:
+    from agronomy_agent.agent import LocalModelSnapshotUnavailable, resolve_local_model_snapshot
+
+    with pytest.raises(LocalModelSnapshotUnavailable, match="incomplete"):
+        resolve_local_model_snapshot(str(tmp_path))
+
+
+@pytest.mark.parametrize("stream", [False, True])
+@pytest.mark.parametrize("failure_stage", ["construction", "tokenization", "generation"])
+def test_expected_model_setup_failure_is_actionable_without_a_saved_answer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, stream: bool, failure_stage: str,
+) -> None:
+    from agronomy_agent.agent import LocalModelSnapshotUnavailable
+    import agronomy_agent.server.services.chat_service as service
+
+    settings = build_settings(
+        db_path=tmp_path / "setup.sqlite3", artifact_root=tmp_path / "artifacts",
+        network_mode="offline",
+    )
+    client = TestClient(create_app(settings), raise_server_exceptions=False)
+    created = client.post("/api/sessions", json={"title": "Synthetic setup recovery", "consent": {}})
+    assert created.status_code == 200, created.text
+    session = created.json()
+
+    def missing(*args, **kwargs):
+        raise LocalModelSnapshotUnavailable("private snapshot path must not reach the client")
+
+    class LazyMissingBackend:
+        model_id = settings.default_model_id
+        max_tokens = 640
+
+        def count_prompt_tokens(self, messages):
+            if failure_stage == "tokenization":
+                missing()
+            return 100
+
+        def generate(self, messages):
+            missing()
+
+    monkeypatch.setattr(service, "_build_mlx_generator", missing if failure_stage == "construction"
+                        else lambda *args, **kwargs: LazyMissingBackend())
+    suffix = "/stream" if stream else ""
+    response = client.post(f"/api/sessions/{session['session_id']}/turns{suffix}", json={
+        "message": "Explain crop rotation.", "mode": "agronomic_rag",
+        "model_id": settings.default_model_id, "rag_config": "configs/rag.yaml",
+    })
+    assert response.status_code == (200 if stream else 503)
+    assert "local_model_setup_required" in response.text
+    assert "Complete model setup" in response.text
+    assert "private snapshot path" not in response.text
+    assert client.get(f"/api/sessions/{session['session_id']}").json()["turns"] == []
+
+
+def test_unrelated_missing_file_is_not_misreported_as_model_setup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import agronomy_agent.server.services.chat_service as service
+
+    settings = build_settings(db_path=tmp_path / "unexpected.sqlite3", artifact_root=tmp_path / "artifacts")
+    client = TestClient(create_app(settings), raise_server_exceptions=False)
+    created = client.post("/api/sessions", json={"title": "Synthetic unrelated failure", "consent": {}})
+    assert created.status_code == 200, created.text
+    session = created.json()
+
+    def missing(*args, **kwargs):
+        raise FileNotFoundError("unrelated runtime artifact")
+
+    monkeypatch.setattr(service, "_build_mlx_generator", missing)
+    response = client.post(f"/api/sessions/{session['session_id']}/turns", json={
+        "message": "Explain crop rotation.", "mode": "agronomic_rag",
+        "model_id": settings.default_model_id, "rag_config": "configs/rag.yaml",
+    })
+    assert response.status_code == 500
+    assert "local_model_setup_required" not in response.text
+
+
 def test_local_artifact_store_round_trips_root_relative_references(
     tmp_path: Path,
 ) -> None:

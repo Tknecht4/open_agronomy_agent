@@ -47,6 +47,8 @@ def execution_arm(arm_id: str) -> ExecutionArmConfiguration:
     elif arm_id == "full_minus_verifier":
         disabled = {"verifier_enabled": False}
     elif arm_id == "full_minus_fallback":
+        # Retained experiment ID: disables generator-exception recovery only,
+        # not verifier replacement, resource limits, or origin accounting.
         disabled = {"fallback_enabled": False}
     return ExecutionArmConfiguration(arm_id=arm_id, **disabled)
 

@@ -5,6 +5,8 @@ from __future__ import annotations
 import math
 from typing import Any
 
+from agronomy_agent.model_errors import LocalModelSnapshotUnavailable
+
 
 def positive_int(value: Any, default: int) -> int:
     try:
@@ -21,6 +23,8 @@ def count_prompt_tokens(
     if callable(method):
         try:
             exact = method(messages)
+        except LocalModelSnapshotUnavailable:
+            raise
         except (RuntimeError, ValueError, TypeError):
             exact = None
         if type(exact) is int and exact >= 0:
