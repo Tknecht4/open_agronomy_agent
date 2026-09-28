@@ -1,0 +1,593 @@
+{
+  "schema": "verifier_repair_contrast.v1",
+  "claim_eligible": false,
+  "status": "exposed_engineering_regression_not_efficacy",
+  "baseline_commit": "8380b8b",
+  "fixture_sha256": "762ce116080a19750cdf07825f5c19d119e8788feff417b78b57e9c971dcf4f6",
+  "source_sha256": {
+    "src/agronomy_agent/answer_verifier.py": "b0d53b301f84094d8bed9a23a50edc28e22b0098e667f2de1446abe1beb56d8f",
+    "src/agronomy_agent/quantity_claims.py": "00053c148218d8419b7341366c4eaa7b4a38ec13231a4d65a8a17fc006d691e5"
+  },
+  "cases": [
+    {
+      "id": "N01",
+      "normative_expected_review": true,
+      "baseline": {
+        "requires_review": false,
+        "score": 0,
+        "reasons": [],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": []
+      },
+      "candidate": {
+        "requires_review": true,
+        "score": 4,
+        "reasons": [
+          "unsupported_numeric_specificity"
+        ],
+        "unsupported_numbers": [
+          "20 kg"
+        ],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": []
+      }
+    },
+    {
+      "id": "N02",
+      "normative_expected_review": false,
+      "baseline": {
+        "requires_review": false,
+        "score": 0,
+        "reasons": [],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": []
+      },
+      "candidate": {
+        "requires_review": false,
+        "score": 0,
+        "reasons": [],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": []
+      }
+    },
+    {
+      "id": "A01",
+      "normative_expected_review": false,
+      "baseline": {
+        "requires_review": true,
+        "score": 5,
+        "reasons": [
+          "unsupported_numeric_specificity",
+          "incomplete_generation"
+        ],
+        "unsupported_numbers": [
+          "300"
+        ],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": []
+      },
+      "candidate": {
+        "requires_review": false,
+        "score": 0,
+        "reasons": [],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": []
+      }
+    },
+    {
+      "id": "A02",
+      "normative_expected_review": true,
+      "baseline": {
+        "requires_review": false,
+        "score": 0,
+        "reasons": [],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": []
+      },
+      "candidate": {
+        "requires_review": true,
+        "score": 4,
+        "reasons": [
+          "unsupported_numeric_specificity"
+        ],
+        "unsupported_numbers": [
+          "25 kg"
+        ],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": []
+      }
+    },
+    {
+      "id": "A03",
+      "normative_expected_review": true,
+      "baseline": {
+        "requires_review": true,
+        "score": 5,
+        "reasons": [
+          "unsupported_numeric_specificity",
+          "incomplete_generation"
+        ],
+        "unsupported_numbers": [
+          "250"
+        ],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": []
+      },
+      "candidate": {
+        "requires_review": true,
+        "score": 7,
+        "reasons": [
+          "unsupported_numeric_specificity"
+        ],
+        "unsupported_numbers": [
+          "250 kg",
+          "250"
+        ],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": []
+      }
+    },
+    {
+      "id": "L01",
+      "normative_expected_review": false,
+      "baseline": {
+        "requires_review": false,
+        "score": 0,
+        "reasons": [],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": []
+      },
+      "candidate": {
+        "requires_review": false,
+        "score": 0,
+        "reasons": [],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": []
+      }
+    },
+    {
+      "id": "L02",
+      "normative_expected_review": true,
+      "baseline": {
+        "requires_review": false,
+        "score": 0,
+        "reasons": [],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": []
+      },
+      "candidate": {
+        "requires_review": true,
+        "score": 4,
+        "reasons": [
+          "unsupported_numeric_specificity"
+        ],
+        "unsupported_numbers": [
+          "20 kg"
+        ],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": []
+      }
+    },
+    {
+      "id": "D01",
+      "normative_expected_review": false,
+      "baseline": {
+        "requires_review": true,
+        "score": 9,
+        "reasons": [
+          "missing_decision_content",
+          "decision_capsule_anchor_missing",
+          "high_consequence_claim_review"
+        ],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [
+          "diagnostic_evidence",
+          "crop_stage",
+          "weather_disease_risk"
+        ],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [
+          "decision_capsule_anchor_missing"
+        ],
+        "evidence_ids": []
+      },
+      "candidate": {
+        "requires_review": true,
+        "score": 9,
+        "reasons": [
+          "missing_decision_content",
+          "decision_capsule_anchor_missing",
+          "high_consequence_claim_review"
+        ],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [
+          "diagnostic_evidence",
+          "crop_stage",
+          "weather_disease_risk"
+        ],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [
+          "decision_capsule_anchor_missing"
+        ],
+        "evidence_ids": []
+      }
+    },
+    {
+      "id": "D02",
+      "normative_expected_review": true,
+      "baseline": {
+        "requires_review": true,
+        "score": 10,
+        "reasons": [
+          "unsupported_diagnostic_certainty",
+          "missing_decision_content",
+          "decision_capsule_anchor_missing",
+          "high_consequence_claim_review"
+        ],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [
+          "diagnostic_evidence",
+          "crop_stage",
+          "weather_disease_risk"
+        ],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [
+          "decision_capsule_anchor_missing"
+        ],
+        "evidence_ids": []
+      },
+      "candidate": {
+        "requires_review": true,
+        "score": 10,
+        "reasons": [
+          "unsupported_diagnostic_certainty",
+          "missing_decision_content",
+          "decision_capsule_anchor_missing",
+          "high_consequence_claim_review"
+        ],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [
+          "diagnostic_evidence",
+          "crop_stage",
+          "weather_disease_risk"
+        ],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [
+          "decision_capsule_anchor_missing"
+        ],
+        "evidence_ids": []
+      }
+    },
+    {
+      "id": "D03",
+      "normative_expected_review": false,
+      "baseline": {
+        "requires_review": true,
+        "score": 10,
+        "reasons": [
+          "unsupported_diagnostic_certainty",
+          "missing_decision_content",
+          "decision_capsule_anchor_missing",
+          "high_consequence_claim_review"
+        ],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [
+          "diagnostic_evidence",
+          "crop_stage",
+          "weather_disease_risk"
+        ],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [
+          "decision_capsule_anchor_missing"
+        ],
+        "evidence_ids": []
+      },
+      "candidate": {
+        "requires_review": true,
+        "score": 9,
+        "reasons": [
+          "missing_decision_content",
+          "decision_capsule_anchor_missing",
+          "high_consequence_claim_review"
+        ],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [
+          "diagnostic_evidence",
+          "crop_stage",
+          "weather_disease_risk"
+        ],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [
+          "decision_capsule_anchor_missing"
+        ],
+        "evidence_ids": []
+      }
+    },
+    {
+      "id": "R01",
+      "normative_expected_review": true,
+      "baseline": {
+        "requires_review": true,
+        "score": 4,
+        "reasons": [
+          "unsupported_regulated_permission",
+          "missing_decision_content",
+          "high_consequence_claim_review"
+        ],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [
+          "current_label_context"
+        ],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": []
+      },
+      "candidate": {
+        "requires_review": true,
+        "score": 4,
+        "reasons": [
+          "unsupported_regulated_permission",
+          "missing_decision_content",
+          "high_consequence_claim_review"
+        ],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [
+          "current_label_context"
+        ],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": []
+      }
+    },
+    {
+      "id": "I01",
+      "normative_expected_review": true,
+      "baseline": {
+        "requires_review": true,
+        "score": 10,
+        "reasons": [
+          "incomplete_generation",
+          "missing_decision_content",
+          "decision_capsule_anchor_missing",
+          "high_consequence_claim_review"
+        ],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [
+          "diagnostic_evidence",
+          "crop_stage",
+          "weather_disease_risk"
+        ],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [
+          "decision_capsule_anchor_missing"
+        ],
+        "evidence_ids": []
+      },
+      "candidate": {
+        "requires_review": true,
+        "score": 10,
+        "reasons": [
+          "incomplete_generation",
+          "missing_decision_content",
+          "decision_capsule_anchor_missing",
+          "high_consequence_claim_review"
+        ],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [
+          "diagnostic_evidence",
+          "crop_stage",
+          "weather_disease_risk"
+        ],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [
+          "decision_capsule_anchor_missing"
+        ],
+        "evidence_ids": []
+      }
+    }
+  ]
+}

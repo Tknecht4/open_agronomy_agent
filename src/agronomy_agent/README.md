@@ -91,3 +91,21 @@ remain outside it. Their parity requires separate integration evidence.
 ## Failure modes
 
 The intended failure mode is explicit: setup-required model, blocked-offline adapter, excluded corpus, missing authority, insufficient evidence, failed validation, or persisted error trace. Silent graph omission, registry drift, untyped capability output, and fallback text presented as model reasoning are defects.
+
+### Residual repair contracts
+
+The verifier compares complete quantities rather than numeric substrings. Its
+small arithmetic checker can validate an explicit question phrase binding container count and per-container
+mass; arbitrary numerical reasoning still needs typed calculation evidence.
+A matched number is not action authority. Diagnostic exclusion requires explicit
+source exclusion, not a disease name appearing somewhere in the question.
+Verifier replacement audit and claim edit ledger version 2 distinguish answer
+review triggers from localized lexical triggers; neither asserts semantic proof
+against every changed sentence.
+
+MLX adapters retain at most one target/draft model pair across serialized public
+operations. Generators release temporary references after token counting,
+warmup and generation, and reload if another pair displaced theirs. Pair changes
+invalidate old KV namespaces. This bounds weight ownership by pair count, not
+peak device memory; model changes can incur reload latency. Prompt caching remains
+disabled in the active profile.

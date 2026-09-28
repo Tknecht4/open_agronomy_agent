@@ -1,0 +1,34 @@
+{
+  "schema": "frontend_and_docs_verification.v1",
+  "frontend_tree_sha1": "53441872b68bc7fd859651b95755a75f69038a41",
+  "frontend_source_unchanged_from_base": true,
+  "node": "20.20.2",
+  "commands": [
+    {
+      "command": "npm run typecheck",
+      "exit_code": 0
+    },
+    {
+      "command": "npm test",
+      "exit_code": 0,
+      "files_passed": 41,
+      "tests_passed": 366,
+      "seconds": 5.46
+    },
+    {
+      "command": "npm run build",
+      "exit_code": 0,
+      "modules": 1992
+    },
+    {
+      "command": "PYTHONPATH=src .venv/bin/python scripts/check_public_docs.py",
+      "exit_code": 0,
+      "markdown_files": 28
+    },
+    {
+      "command": "PYTHONPATH=src .venv/bin/mkdocs build --strict",
+      "exit_code": 0
+    }
+  ],
+  "evidence_basis": "observed local tool outputs; full source paths remain private operator logs"
+}

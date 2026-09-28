@@ -19,21 +19,23 @@ from agronomy_agent.query_context import (
 )
 from agronomy_agent.router import request_focus
 from agronomy_agent.model_prompt_budget import positive_int, prompt_budget_receipt
+from agronomy_agent.quantity_claims import unsupported_quantities
 
 
 EVIDENCE_EDITOR_SYSTEM_PROMPT = """You are a conservative evidence editor for an agronomy assistant. The user's question and allowed evidence are the only factual record. Preserve useful supported content from a usable draft; change only unsupported claims and decision-critical omissions. When the draft is corrupt, repetitive, incomplete, or exposes internal controls, answer afresh instead. Never add a fact, number, rate, threshold, crop stage, named soil, pathogen, pest, product, law, diagnosis, or management permission. Every item under MISSING DECISION CONTENT is mandatory. When the question names multiple public data products, give each product its own sentence. For a named public data product, preserve equations, model names, units, complete enumerated values, resolution, lineage, and regional-versus-field limitations exactly from the allowed evidence. Answer only what was asked. Weather or regional context may indicate risk; it does not prove a field condition or diagnosis. If the record cannot support a diagnosis or recommendation, state the boundary and identify only the observation or test needed to resolve it. Return the user-facing answer only, no audit commentary."""
 
 
-_NUMBER_RE = re.compile(
-    r"(?<![A-Za-z0-9])(?:\d+(?:\.\d+)?(?:\s*(?:-|to)\s*\d+(?:\.\d+)?)?)"
-    r"(?:\s*(?:%|ppm|ppb|mg/?L|kg/?ha|lb(?:s)?(?:/?acre)?|bu/?acre|mph|km/?h|mm|cm|"
-    r"inches?|feet|ft|days?|hours?|acres?|°?[CF]))?\b",
-    re.IGNORECASE,
+_NUMBER_WORD = (
+    r"(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|"
+    r"fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|"
+    r"eighty|ninety|hundred|thousand|million|billion|half|quarter|third|dozen)"
 )
 _SPELLED_QUANTITY_RE = re.compile(
-    r"\b(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|half|quarter)\s+"
+    rf"(?<![\w-])(?:(?:minus|negative)\s+)?{_NUMBER_WORD}"
+    rf"(?:[\s-]+(?:and\s+)?{_NUMBER_WORD})*\s+"
     r"(?:pounds?|lbs?|kilograms?|kg|litres?|liters?|gallons?|quarts?|ounces?|cups?|acres?|days?|hours?|"
-    r"samples?|increments?)\b",
+    r"hectares?|millilitres?|milliliters?|grams?|mg|cm|mm|inches?|percent|samples?|increments?)\b"
+    r"(?:\s*(?:/|per\s+)\s*[A-Za-z]+\b)?",
     re.IGNORECASE,
 )
 _LIST_MARKER_RE = re.compile(r"(?m)^\s*\d+[.)]\s+")
@@ -243,8 +245,10 @@ class AnswerVerificationResult:
                 "defect_id": f"verifier_defect::{reason}",
                 "rule_id": rule_id,
                 "reason": reason,
-                "failed_claims": list(failed_claims),
+                "failed_claims": list(_defect_claims(self.draft_output or "", self.draft_assessment, reason)),
+                "localization": "lexical_trigger_or_unlocalized",
                 "evidence_ids": list(self.draft_assessment.evidence_ids),
+                "evidence_scope": "answer_review_context_not_claim_support",
             }
             for reason, rule_id in zip(self.draft_assessment.reasons, failed_rule_ids, strict=True)
         )
@@ -268,7 +272,7 @@ class AnswerVerificationResult:
             "draft_output": self.draft_output,
             "editor_output": self.editor_output,
             "replacement_audit": {
-                "schema_version": "open_agronomy_agent.verifier_replacement_audit.v1",
+                "schema_version": "open_agronomy_agent.verifier_replacement_audit.v2",
                 "failed_claims": list(failed_claims),
                 "failed_rule_reasons": list(self.draft_assessment.reasons),
                 "failed_rule_ids": list(failed_rule_ids),
@@ -1128,8 +1132,8 @@ def assess_claim_risk(
     candidate = _LIST_MARKER_RE.sub("", answer)
     unsupported_numbers = _dedupe(
         (
-            *_unsupported_values(_NUMBER_RE, candidate, allowed),
-            *_unsupported_values(_SPELLED_QUANTITY_RE, candidate, allowed),
+            *unsupported_quantities(candidate, question=question, evidence=evidence_text),
+            *_unsupported_values(_SPELLED_QUANTITY_RE, candidate, allowed, complete_values=True),
         )
     )
     unsupported_stages = _unsupported_values(_CROP_STAGE_RE, candidate, allowed)
@@ -1174,7 +1178,7 @@ def assess_claim_risk(
         reasons.append("unsupported_named_condition")
     if unsupported_pests:
         reasons.append("unsupported_named_pest")
-    if _DIAGNOSIS_ASSERTION_RE.search(candidate) and not _diagnosis_is_supported(candidate, allowed):
+    if _unsupported_diagnostic_assertion(candidate, evidence_text):
         reasons.append("unsupported_diagnostic_certainty")
     if _MAP_ASSERTION_RE.search(candidate):
         reasons.append("map_prior_presented_as_field_truth")
@@ -2007,6 +2011,32 @@ def verify_answer(
     )
 
 
+def _defect_claims(answer: str, assessment: ClaimRiskAssessment, reason: str) -> tuple[str, ...]:
+    """Locate a rule's lexical trigger; omissions stay answer-scoped.
+
+    This attribution does not prove the whole sentence false, or assign a
+    source as claim-level support. Those semantic relationships are unknown.
+    """
+    markers = {
+        "unsupported_numeric_specificity": assessment.unsupported_numbers,
+        "unsupported_crop_stage": assessment.unsupported_crop_stages,
+        "unsupported_scientific_name": assessment.unsupported_scientific_names,
+        "unsupported_named_condition": assessment.unsupported_named_conditions,
+        "unsupported_named_pest": assessment.unsupported_named_pests,
+    }.get(reason, ())
+    pattern = {
+        "unsupported_diagnostic_certainty": _DIAGNOSIS_ASSERTION_RE,
+        "unsupported_regulated_permission": _REGULATED_ASSERTION_RE,
+        "map_prior_presented_as_field_truth": _MAP_ASSERTION_RE,
+        "unsupported_field_certainty": _UNSUPPORTED_CERTAINTY_RE,
+    }.get(reason)
+    claims = tuple(value.strip() for value in re.split(r"(?<=[.!?])\s+|\n+", answer) if value.strip())
+    return tuple(claim for claim in claims if (
+        any(re.search(rf"(?<!\w){re.escape(marker)}(?!\w)", claim, re.IGNORECASE) for marker in markers)
+        or (pattern is not None and pattern.search(claim))
+    ))
+
+
 def _claim_edit_ledger(
     *,
     draft: str,
@@ -2025,20 +2055,23 @@ def _claim_edit_ledger(
     )
     changed = tuple(value for value in draft_claims if value not in final)
     return {
-        "schema_version": "open_agronomy_agent.claim_edit_ledger.v1",
+        "schema_version": "open_agronomy_agent.claim_edit_ledger.v2",
         "draft_claim_count": len(draft_claims),
         "changed_claim_count": len(changed),
         "changed_claims": [
             {
                 "claim_sha256": hashlib.sha256(claim.encode("utf-8")).hexdigest(),
-                "defect_ids": [item["defect_id"] for item in defects],
+                "defect_ids": [item["defect_id"] for item in defects if claim in item.get("failed_claims", ())],
+                "localization": "lexical_trigger_not_semantic_proof",
                 "evidence_ids": sorted(
                     {
                         str(evidence_id)
                         for item in defects
+                        if claim in item.get("failed_claims", ())
                         for evidence_id in item.get("evidence_ids", ())
                     }
                 ),
+                "evidence_scope": "answer_review_context_not_claim_support",
             }
             for claim in changed
         ],
@@ -2050,6 +2083,10 @@ def _claim_edit_ledger(
             else "none"
         ),
         "named_defect_required_for_replacement": True,
+        "answer_level_defect_ids": [item["defect_id"] for item in defects],
+        "all_changed_claims_have_localized_trigger": all(
+            any(claim in item.get("failed_claims", ()) for item in defects) for claim in changed
+        ),
         "replacement_has_named_defect": not changed or bool(defects),
     }
 
@@ -5253,17 +5290,64 @@ def _integrated_specialty_decision_answer() -> str:
     )
 
 
-def _diagnosis_is_supported(answer: str, allowed: str) -> bool:
-    names = (*_ITALIC_BINOMIAL_RE.findall(answer), *_PAREN_BINOMIAL_RE.findall(answer))
-    return bool(names) and all(_normalize_for_matching(name) in allowed for name in names)
+def _unsupported_diagnostic_assertion(answer: str, evidence: str) -> bool:
+    """A named organism is not evidence of an asserted field diagnosis.
+
+    Only an explicit source exclusion can support the narrow negative form.
+    Positive certainty still requires review; mere name overlap is insufficient.
+    Questions are deliberately not a source of diagnostic confirmation.
+    """
+    for match in _DIAGNOSIS_ASSERTION_RE.finditer(answer):
+        tail = answer[match.end():].split(";", 1)[0].split("\n", 1)[0]
+        negative = re.match(r"\s+not\s+([^.!?]+)", tail, re.IGNORECASE)
+        if not negative:
+            return True
+        condition = negative.group(1).strip().rstrip(".,")
+        if not condition or len(condition) > 100:
+            return True
+        # Multiple mentions or correction language make a source record
+        # potentially contradictory. Do not resolve those conflicts by choosing
+        # the first affirmative sentence. Such records still need review.
+        if len(re.findall(rf"(?<!\w){re.escape(condition)}(?!\w)", evidence, re.IGNORECASE)) != 1:
+            return True
+        if re.search(
+            r"\b(?:wrong|incorrect|overturned|withdrawn|retracted|disproved|invalid|"
+            r"superseded|unreliable|unverified|uncertain|contradict\w*)\b", evidence, re.IGNORECASE,
+        ):
+            return True
+        # Same-clause attribution prevents 'not ruled out' and another disease's
+        # laboratory result from licensing this exclusion.
+        exclusion = re.compile(
+            rf"\s*(?:{re.escape(condition)}\s+(?:was|has been|is)\s+ruled out"
+            rf"(?:\s+by\s+(?:the\s+)?(?:lab|laboratory))?"
+            rf"|(?:the\s+)?(?:lab|laboratory)\s+(?:has\s+)?ruled out\s+{re.escape(condition)})\s*[.!]?\s*",
+            re.IGNORECASE,
+        )
+        supported = False
+        for clause in re.split(r"(?<=[.!?;])\s+|\n+", evidence):
+            if exclusion.fullmatch(clause.rstrip(";")):
+                supported = True
+        if not supported:
+            return True
+    return False
 
 
-def _unsupported_values(pattern: re.Pattern[str], text: str, allowed: str) -> tuple[str, ...]:
+def _unsupported_values(
+    pattern: re.Pattern[str], text: str, allowed: str, *, complete_values: bool = False,
+) -> tuple[str, ...]:
     values: list[str] = []
+    allowed_values = {
+        _normalize_for_matching(match.group()) for match in pattern.finditer(allowed)
+    } if complete_values else set()
     for match in pattern.finditer(text):
         value = match.group(1) if match.lastindex else match.group(0)
         value = re.sub(r"[\*_]", "", value).strip()
-        if value and _normalize_for_matching(value) not in allowed:
+        normalized = _normalize_for_matching(value)
+        supported = (
+            normalized in allowed_values if complete_values else
+            re.search(rf"(?<!\w){re.escape(normalized)}(?!\w)", allowed) is not None
+        )
+        if value and not supported:
             values.append(value)
     return _dedupe(values)
 
@@ -5290,7 +5374,7 @@ def _looks_incomplete(answer: str, *, question: str = "") -> bool:
     stripped = answer.rstrip()
     if question and len(re.findall(r"\b\w+\b", question)) >= 8 and len(re.findall(r"\b\w+\b", stripped)) < 5:
         return True
-    if re.search(r"(?:^|\s)(?:\d+[.)]|[*+-])\s*(?:[*_`#]+)?$", stripped):
+    if re.search(r"(?:^|\n)\s*(?:\d+[.)]|[*+-])\s*(?:[*_`#]+)?$", stripped):
         return True
     if re.search(r"(?:^|\n)[^\n]{1,80}:\s*$", stripped):
         return True

@@ -1,0 +1,370 @@
+{
+  "schema": "repair_colab_summary.v1",
+  "claim_eligible": false,
+  "status": "completed",
+  "source_scope": "public synthetic fixed-draft verifier and model-switch adapter regression; no full product retrieval or agronomic quality grading",
+  "bundle_sha256": "e8eb73bc77f4169af50f0fe343118aac7de9e80d9fe4ee0a12550792d6931256",
+  "runs": [
+    {
+      "name": "first",
+      "source_capsule_sha256": "923de8a02376886c032f76c6a672cdbd15465b3d7bd80549188f85f14eb5e2dd",
+      "status": "completed",
+      "seconds": 242.03310656547546,
+      "cells": 24,
+      "backend_errors": 0,
+      "lifecycle": [
+        {
+          "name": "gemma_first",
+          "seconds": 85.00405966299996,
+          "tokens": 18,
+          "active_model_uses": 0,
+          "released_after_count": true,
+          "released_after_generate": true,
+          "load_calls": [
+            "/content/oa-hf/hub/models--mlx-community--gemma-4-e2b-it-4bit/snapshots/238767527555cb75a05732a84dff5d6ba0dd6809"
+          ],
+          "mlx_peak_memory_bytes": 2612722736
+        },
+        {
+          "name": "qwen",
+          "seconds": 97.65667214400003,
+          "tokens": 22,
+          "active_model_uses": 0,
+          "released_after_count": true,
+          "released_after_generate": true,
+          "load_calls": [
+            "/content/oa-hf/hub/models--mlx-community--gemma-4-e2b-it-4bit/snapshots/238767527555cb75a05732a84dff5d6ba0dd6809",
+            "/content/oa-hf/hub/models--mlx-community--Qwen3.5-0.8B-OptiQ-4bit/snapshots/ef60586933bd2cc02b763f77eb8839a5114bbec1"
+          ],
+          "mlx_peak_memory_bytes": 711906856
+        },
+        {
+          "name": "gemma_reused",
+          "seconds": 6.349699026999929,
+          "tokens": 18,
+          "active_model_uses": 0,
+          "released_after_count": true,
+          "released_after_generate": true,
+          "load_calls": [
+            "/content/oa-hf/hub/models--mlx-community--gemma-4-e2b-it-4bit/snapshots/238767527555cb75a05732a84dff5d6ba0dd6809",
+            "/content/oa-hf/hub/models--mlx-community--Qwen3.5-0.8B-OptiQ-4bit/snapshots/ef60586933bd2cc02b763f77eb8839a5114bbec1",
+            "/content/oa-hf/hub/models--mlx-community--gemma-4-e2b-it-4bit/snapshots/238767527555cb75a05732a84dff5d6ba0dd6809"
+          ],
+          "mlx_peak_memory_bytes": 2614845000
+        }
+      ],
+      "same_gemma_text_before_after_switch": true,
+      "interventions": [
+        {
+          "case_id": "N01",
+          "arm": "baseline",
+          "action": "preserve_draft"
+        },
+        {
+          "case_id": "N01",
+          "arm": "candidate",
+          "action": "accept_rewrite"
+        },
+        {
+          "case_id": "N02",
+          "arm": "baseline",
+          "action": "preserve_draft"
+        },
+        {
+          "case_id": "N02",
+          "arm": "candidate",
+          "action": "preserve_draft"
+        },
+        {
+          "case_id": "A01",
+          "arm": "baseline",
+          "action": "fallback_or_degraded"
+        },
+        {
+          "case_id": "A01",
+          "arm": "candidate",
+          "action": "preserve_draft"
+        },
+        {
+          "case_id": "A02",
+          "arm": "baseline",
+          "action": "preserve_draft"
+        },
+        {
+          "case_id": "A02",
+          "arm": "candidate",
+          "action": "accept_rewrite"
+        },
+        {
+          "case_id": "A03",
+          "arm": "baseline",
+          "action": "fallback_or_degraded"
+        },
+        {
+          "case_id": "A03",
+          "arm": "candidate",
+          "action": "fallback_or_degraded"
+        },
+        {
+          "case_id": "L01",
+          "arm": "baseline",
+          "action": "preserve_draft"
+        },
+        {
+          "case_id": "L01",
+          "arm": "candidate",
+          "action": "preserve_draft"
+        },
+        {
+          "case_id": "L02",
+          "arm": "baseline",
+          "action": "preserve_draft"
+        },
+        {
+          "case_id": "L02",
+          "arm": "candidate",
+          "action": "accept_rewrite"
+        },
+        {
+          "case_id": "D01",
+          "arm": "baseline",
+          "action": "fallback_or_degraded"
+        },
+        {
+          "case_id": "D01",
+          "arm": "candidate",
+          "action": "fallback_or_degraded"
+        },
+        {
+          "case_id": "D02",
+          "arm": "baseline",
+          "action": "fallback_or_degraded"
+        },
+        {
+          "case_id": "D02",
+          "arm": "candidate",
+          "action": "fallback_or_degraded"
+        },
+        {
+          "case_id": "D03",
+          "arm": "baseline",
+          "action": "fallback_or_degraded"
+        },
+        {
+          "case_id": "D03",
+          "arm": "candidate",
+          "action": "fallback_or_degraded"
+        },
+        {
+          "case_id": "R01",
+          "arm": "baseline",
+          "action": "fallback_or_degraded"
+        },
+        {
+          "case_id": "R01",
+          "arm": "candidate",
+          "action": "fallback_or_degraded"
+        },
+        {
+          "case_id": "I01",
+          "arm": "baseline",
+          "action": "fallback_or_degraded"
+        },
+        {
+          "case_id": "I01",
+          "arm": "candidate",
+          "action": "fallback_or_degraded"
+        }
+      ]
+    },
+    {
+      "name": "final",
+      "source_capsule_sha256": "c7e52cdcbc7f99ba846b38b0352c280704d15bf731eff410e82c6b93ff5ff610",
+      "status": "completed",
+      "seconds": 30.558762788772583,
+      "cells": 24,
+      "backend_errors": 0,
+      "lifecycle": [
+        {
+          "name": "gemma_first",
+          "seconds": 6.839664456000037,
+          "tokens": 18,
+          "active_model_uses": 0,
+          "released_after_count": true,
+          "released_after_generate": true,
+          "load_calls": [
+            "/content/oa-hf/hub/models--mlx-community--gemma-4-e2b-it-4bit/snapshots/238767527555cb75a05732a84dff5d6ba0dd6809"
+          ],
+          "mlx_peak_memory_bytes": 2613259352
+        },
+        {
+          "name": "qwen",
+          "seconds": 5.367901370000027,
+          "tokens": 22,
+          "active_model_uses": 0,
+          "released_after_count": true,
+          "released_after_generate": true,
+          "load_calls": [
+            "/content/oa-hf/hub/models--mlx-community--gemma-4-e2b-it-4bit/snapshots/238767527555cb75a05732a84dff5d6ba0dd6809",
+            "/content/oa-hf/hub/models--mlx-community--Qwen3.5-0.8B-OptiQ-4bit/snapshots/ef60586933bd2cc02b763f77eb8839a5114bbec1"
+          ],
+          "mlx_peak_memory_bytes": 710444488
+        },
+        {
+          "name": "gemma_reused",
+          "seconds": 6.288140914999985,
+          "tokens": 18,
+          "active_model_uses": 0,
+          "released_after_count": true,
+          "released_after_generate": true,
+          "load_calls": [
+            "/content/oa-hf/hub/models--mlx-community--gemma-4-e2b-it-4bit/snapshots/238767527555cb75a05732a84dff5d6ba0dd6809",
+            "/content/oa-hf/hub/models--mlx-community--Qwen3.5-0.8B-OptiQ-4bit/snapshots/ef60586933bd2cc02b763f77eb8839a5114bbec1",
+            "/content/oa-hf/hub/models--mlx-community--gemma-4-e2b-it-4bit/snapshots/238767527555cb75a05732a84dff5d6ba0dd6809"
+          ],
+          "mlx_peak_memory_bytes": 2615126104
+        }
+      ],
+      "same_gemma_text_before_after_switch": true,
+      "interventions": [
+        {
+          "case_id": "N01",
+          "arm": "baseline",
+          "action": "preserve_draft"
+        },
+        {
+          "case_id": "N01",
+          "arm": "candidate",
+          "action": "accept_rewrite"
+        },
+        {
+          "case_id": "N02",
+          "arm": "baseline",
+          "action": "preserve_draft"
+        },
+        {
+          "case_id": "N02",
+          "arm": "candidate",
+          "action": "preserve_draft"
+        },
+        {
+          "case_id": "A01",
+          "arm": "baseline",
+          "action": "fallback_or_degraded"
+        },
+        {
+          "case_id": "A01",
+          "arm": "candidate",
+          "action": "preserve_draft"
+        },
+        {
+          "case_id": "A02",
+          "arm": "baseline",
+          "action": "preserve_draft"
+        },
+        {
+          "case_id": "A02",
+          "arm": "candidate",
+          "action": "accept_rewrite"
+        },
+        {
+          "case_id": "A03",
+          "arm": "baseline",
+          "action": "fallback_or_degraded"
+        },
+        {
+          "case_id": "A03",
+          "arm": "candidate",
+          "action": "fallback_or_degraded"
+        },
+        {
+          "case_id": "L01",
+          "arm": "baseline",
+          "action": "preserve_draft"
+        },
+        {
+          "case_id": "L01",
+          "arm": "candidate",
+          "action": "preserve_draft"
+        },
+        {
+          "case_id": "L02",
+          "arm": "baseline",
+          "action": "preserve_draft"
+        },
+        {
+          "case_id": "L02",
+          "arm": "candidate",
+          "action": "fallback_or_degraded"
+        },
+        {
+          "case_id": "D01",
+          "arm": "baseline",
+          "action": "fallback_or_degraded"
+        },
+        {
+          "case_id": "D01",
+          "arm": "candidate",
+          "action": "fallback_or_degraded"
+        },
+        {
+          "case_id": "D02",
+          "arm": "baseline",
+          "action": "fallback_or_degraded"
+        },
+        {
+          "case_id": "D02",
+          "arm": "candidate",
+          "action": "fallback_or_degraded"
+        },
+        {
+          "case_id": "D03",
+          "arm": "baseline",
+          "action": "fallback_or_degraded"
+        },
+        {
+          "case_id": "D03",
+          "arm": "candidate",
+          "action": "fallback_or_degraded"
+        },
+        {
+          "case_id": "R01",
+          "arm": "baseline",
+          "action": "fallback_or_degraded"
+        },
+        {
+          "case_id": "R01",
+          "arm": "candidate",
+          "action": "fallback_or_degraded"
+        },
+        {
+          "case_id": "I01",
+          "arm": "baseline",
+          "action": "fallback_or_degraded"
+        },
+        {
+          "case_id": "I01",
+          "arm": "candidate",
+          "action": "fallback_or_degraded"
+        }
+      ]
+    }
+  ],
+  "final_helper_repair": "final-decision-replay.json",
+  "hardware": {
+    "gpu": "NVIDIA L4",
+    "vram_mib": 23034,
+    "driver": "580.82.07",
+    "python": "3.13.15"
+  },
+  "model_revisions": [
+    {
+      "repo": "mlx-community/gemma-4-e2b-it-4bit",
+      "revision": "238767527555cb75a05732a84dff5d6ba0dd6809"
+    },
+    {
+      "repo": "mlx-community/Qwen3.5-0.8B-OptiQ-4bit",
+      "revision": "ef60586933bd2cc02b763f77eb8839a5114bbec1"
+    }
+  ]
+}

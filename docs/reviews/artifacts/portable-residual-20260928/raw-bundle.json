@@ -1,0 +1,7 @@
+{
+  "bundle": "remote-results.zip",
+  "bytes": 21833502,
+  "sha256": "5f78c49303453ab95932f39be9b7b9f1b9d3cbf401601341d9db1c201a648cb8",
+  "scope": "public synthetic/exposed prompts and task-owned runtime receipts; no weights, account balances, credentials, private knowledge or customer data",
+  "source_head": "3ff64813ce14833f3c819044b96ebda738a60cbe"
+}

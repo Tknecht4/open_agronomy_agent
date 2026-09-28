@@ -1,0 +1,10 @@
+{
+  "session": "oa-repair-20260928",
+  "status": "stopped_verified_no_active_sessions",
+  "measured_rounded_account_balance_decrease_cu": 0.49,
+  "observed_running_usage_rate_cu_per_hour": 1.54,
+  "ending_usage_rate_cu_per_hour": 0.0,
+  "ending_active_assignments": 0,
+  "absolute_account_balances": "private_not_published",
+  "scope": "account balance delta during task; not provider token usage or isolated GPU kernel cost"
+}

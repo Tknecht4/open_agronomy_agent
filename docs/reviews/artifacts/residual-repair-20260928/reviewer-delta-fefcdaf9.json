@@ -1,0 +1,507 @@
+{
+  "candidate_digest": "fefcdaf935df30efbdf515aaa6be5d1130a93b8a4d539d683a17dbb9f19a4a07",
+  "checked_source_hashes": true,
+  "count": 47,
+  "passed": 47,
+  "rows": [
+    {
+      "kind": "numeric",
+      "inputs": {
+        "evidence": "Mass: 120 kg.",
+        "answer": "Mass: 20 kg."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "numeric",
+      "inputs": {
+        "evidence": "Mass: 1,200 kilograms.",
+        "answer": "Mass: 1200 kg."
+      },
+      "expected": false,
+      "actual": false,
+      "passed": true
+    },
+    {
+      "kind": "numeric",
+      "inputs": {
+        "evidence": "Temperature: -5 C.",
+        "answer": "Temperature: 5 C."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "numeric",
+      "inputs": {
+        "evidence": "Depth: .5 cm.",
+        "answer": "Depth: 0.5 cm."
+      },
+      "expected": false,
+      "actual": false,
+      "passed": true
+    },
+    {
+      "kind": "numeric",
+      "inputs": {
+        "evidence": "Depth: -.5 cm.",
+        "answer": "Depth: .5 cm."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "numeric",
+      "inputs": {
+        "evidence": "No rate supplied.",
+        "answer": "The rate is .5 kg/ha."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "numeric",
+      "inputs": {
+        "evidence": "No depth supplied.",
+        "answer": "The depth is -.5 cm."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "numeric",
+      "inputs": {
+        "evidence": "Mass: 20 kg.",
+        "answer": "The area is 20 hectares."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "numeric",
+      "inputs": {
+        "evidence": "Mass: 20 kg.",
+        "answer": "The volume is 20 gallons."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "numeric",
+      "inputs": {
+        "evidence": "Mass: 20 kg.",
+        "answer": "The volume is 20 millilitres."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "numeric",
+      "inputs": {
+        "evidence": "Mass: 20 kg.",
+        "answer": "The pressure is 20 kPa."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "numeric",
+      "inputs": {
+        "evidence": "Mass: 20 kg.",
+        "answer": "The rate is 20 kg/ha."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "numeric",
+      "inputs": {
+        "evidence": "Mass: 120 kg.",
+        "answer": "20 kg is wrong; the source value is 120 kg."
+      },
+      "expected": false,
+      "actual": false,
+      "passed": true
+    },
+    {
+      "kind": "arithmetic",
+      "inputs": {
+        "question": "What is the total mass of 12 bags weighing 25 kg each?",
+        "evidence": "",
+        "answer": "The total mass is 300 kg."
+      },
+      "expected": false,
+      "actual": false,
+      "passed": true
+    },
+    {
+      "kind": "arithmetic",
+      "inputs": {
+        "question": "What is the total mass of 12 bags weighing 25 kg each?",
+        "evidence": "",
+        "answer": "The total mass is 25 kg."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "arithmetic",
+      "inputs": {
+        "question": "What is the total mass of 12 bags weighing 25 kg each?",
+        "evidence": "",
+        "answer": "12 \u00d7 25 = 300."
+      },
+      "expected": false,
+      "actual": false,
+      "passed": true
+    },
+    {
+      "kind": "arithmetic",
+      "inputs": {
+        "question": "What is the total mass of 12 bags weighing 25 kg each?",
+        "evidence": "",
+        "answer": "12 \u00d7 12 = 300."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "arithmetic",
+      "inputs": {
+        "question": "What is the total mass of 12 bags of barley and 12 bags of wheat? Each bag weighs 25 kg.",
+        "evidence": "",
+        "answer": "The total mass is 300 kg."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "arithmetic",
+      "inputs": {
+        "question": "What is the total mass of 12 bags of barley?",
+        "evidence": "12 bags of wheat weigh 25 kg each.",
+        "answer": "The total mass is 300 kg."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "arithmetic",
+      "inputs": {
+        "question": "What is the total weight of 7 boxes weighing 2.5 pounds each?",
+        "evidence": "",
+        "answer": "The total weight is 17.5 lb."
+      },
+      "expected": false,
+      "actual": false,
+      "passed": true
+    },
+    {
+      "kind": "arithmetic",
+      "inputs": {
+        "question": "What is the total weight of 7 boxes weighing 2.5 pounds each?",
+        "evidence": "Each box weighs 3 pounds.",
+        "answer": "The total weight is 17.5 lb."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "diagnostic_exclusion",
+      "inputs": {
+        "evidence": "Gray leaf spot was ruled out by the laboratory.",
+        "answer": "The diagnosis is not gray leaf spot."
+      },
+      "expected": false,
+      "actual": false,
+      "passed": true
+    },
+    {
+      "kind": "diagnostic_exclusion",
+      "inputs": {
+        "evidence": "The lab ruled out gray leaf spot.",
+        "answer": "The diagnosis is not gray leaf spot."
+      },
+      "expected": false,
+      "actual": false,
+      "passed": true
+    },
+    {
+      "kind": "diagnostic_exclusion",
+      "inputs": {
+        "evidence": "There is no evidence that gray leaf spot was ruled out by the laboratory.",
+        "answer": "The diagnosis is not gray leaf spot."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "diagnostic_exclusion",
+      "inputs": {
+        "evidence": "Whether gray leaf spot was ruled out by the laboratory is unknown.",
+        "answer": "The diagnosis is not gray leaf spot."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "diagnostic_exclusion",
+      "inputs": {
+        "evidence": "Gray leaf spot was not ruled out by the laboratory.",
+        "answer": "The diagnosis is not gray leaf spot."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "diagnostic_exclusion",
+      "inputs": {
+        "evidence": "Gray leaf spot was ruled out by the laboratory?",
+        "answer": "The diagnosis is not gray leaf spot."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "diagnostic_exclusion",
+      "inputs": {
+        "evidence": "If gray leaf spot was ruled out by the laboratory, another cause needs testing.",
+        "answer": "The diagnosis is not gray leaf spot."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "diagnostic_exclusion",
+      "inputs": {
+        "evidence": "Gray leaf spot was ruled out by the laboratory. A later test confirmed gray leaf spot.",
+        "answer": "The diagnosis is not gray leaf spot."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "diagnostic_exclusion",
+      "inputs": {
+        "evidence": "Gray leaf spot was ruled out by the laboratory. That exclusion was overturned.",
+        "answer": "The diagnosis is not gray leaf spot."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "diagnostic_exclusion",
+      "inputs": {
+        "evidence": "Rust was ruled out by the laboratory.",
+        "answer": "The diagnosis is not gray leaf spot."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "spelled_quantity",
+      "inputs": {
+        "evidence": "The shipment mass is one hundred and twenty kg.",
+        "answer": "The shipment mass is twenty kg."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "spelled_quantity",
+      "inputs": {
+        "evidence": "The shipment mass is minus twenty kg.",
+        "answer": "The shipment mass is twenty kg."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "spelled_quantity",
+      "inputs": {
+        "evidence": "The shipment mass is twenty kg.",
+        "answer": "The application rate is twenty kg/ha."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "spelled_quantity",
+      "inputs": {
+        "evidence": "The shipment mass is 120 kg.",
+        "answer": "The shipment mass is twenty kg."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "kind": "spelled_quantity",
+      "inputs": {
+        "evidence": "The shipment mass is twenty kg.",
+        "answer": "The shipment mass is twenty kg."
+      },
+      "expected": false,
+      "actual": false,
+      "passed": true
+    },
+    {
+      "kind": "method",
+      "inputs": {
+        "question": "Avoid mentioning liquidity and explain cash flow."
+      },
+      "expected": [
+        "cash_flow"
+      ],
+      "actual": [
+        "cash_flow"
+      ],
+      "passed": true
+    },
+    {
+      "kind": "method",
+      "inputs": {
+        "question": "Ignore the cash plan and explain working capital."
+      },
+      "expected": [
+        "liquidity"
+      ],
+      "actual": [
+        "liquidity"
+      ],
+      "passed": true
+    },
+    {
+      "kind": "method",
+      "inputs": {
+        "question": "Explain why cash flow is not liquidity."
+      },
+      "expected": [
+        "cash_flow",
+        "liquidity"
+      ],
+      "actual": [
+        "cash_flow",
+        "liquidity"
+      ],
+      "passed": true
+    },
+    {
+      "kind": "method",
+      "inputs": {
+        "question": "Explain why liquidity does not imply cash flow."
+      },
+      "expected": [
+        "cash_flow",
+        "liquidity"
+      ],
+      "actual": [
+        "cash_flow",
+        "liquidity"
+      ],
+      "passed": true
+    },
+    {
+      "kind": "method",
+      "inputs": {
+        "question": "No cash plan please, only compute working capital."
+      },
+      "expected": [
+        "liquidity"
+      ],
+      "actual": [
+        "liquidity"
+      ],
+      "passed": true
+    },
+    {
+      "kind": "method",
+      "inputs": {
+        "question": "The sample label reads 'cash flow'; explain soil texture."
+      },
+      "expected": [],
+      "actual": [],
+      "passed": true
+    },
+    {
+      "kind": "method",
+      "inputs": {
+        "question": "Explain cash flow with no numbers."
+      },
+      "expected": [
+        "cash_flow"
+      ],
+      "actual": [
+        "cash_flow"
+      ],
+      "passed": true
+    },
+    {
+      "kind": "method",
+      "inputs": {
+        "question": "Do not omit a cash plan and do not calculate growing degree days."
+      },
+      "expected": [
+        "cash_flow"
+      ],
+      "actual": [
+        "cash_flow"
+      ],
+      "passed": true
+    },
+    {
+      "kind": "completion",
+      "inputs": {
+        "answer": "The total is 300."
+      },
+      "expected": false,
+      "actual": false,
+      "passed": true
+    },
+    {
+      "kind": "completion",
+      "inputs": {
+        "answer": "12 \u00d7 25 = 300."
+      },
+      "expected": false,
+      "actual": false,
+      "passed": true
+    },
+    {
+      "kind": "completion",
+      "inputs": {
+        "answer": "First item.\n2."
+      },
+      "expected": true,
+      "actual": true,
+      "passed": true
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "failures_preserved": [
+    {
+      "stage": "setup connection before script execution",
+      "result": "Connection was lost",
+      "recovery": "Event log showed no execution; retried once successfully"
+    },
+    {
+      "stage": "read-only status calls",
+      "result": "Connection lost or HTTP read timeout",
+      "recovery": "Used file download for existing progress receipts; no duplicate jobs"
+    },
+    {
+      "stage": "premature completion-file read",
+      "result": "file not found while driver still running",
+      "recovery": "Waited for actual completion"
+    }
+  ],
+  "transfer_approval": {
+    "initial_result": "automatic reviewer rejected sensitivity/authorization unknown",
+    "resolution": "Verified GitHub API visibility public; both ledger bytes equal published origin/main; enumerated narrow capsule; retry approved",
+    "capsule_sha256": "1f2485a899e72cc92365b7a2efee4bb5ffa925d6f11305d6b4af65cba52bb7f1"
+  },
+  "no_private_balance_or_credentials_in_public_artifacts": true
+}

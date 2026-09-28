@@ -1,0 +1,580 @@
+{
+  "status": "project_authored_exploratory_model_free_not_heldout",
+  "run_utc": "2026-09-28T07:17:08.241892+00:00",
+  "git_head": "3ff64813ce14833f3c819044b96ebda738a60cbe",
+  "fixture_sha256": "762ce116080a19750cdf07825f5c19d119e8788feff417b78b57e9c971dcf4f6",
+  "source_sha256": {
+    "src/agronomy_agent/answer_verifier.py": "6da36abd0cc02feb7fa14b6a1ea5dc640425288de330dd89e9818891be40fa58",
+    "src/agronomy_agent/decision_route.py": "3ee512a91accd3b1cd775f65f858b9c6529ecacd9a30fcc0e2349e11c39358d0",
+    "src/agronomy_agent/evidence_handshake.py": "32fa5d103bf167abf76e9128a311c60ca347169e9365d612c4c1ae39c5cd32e6",
+    "src/agronomy_agent/router.py": "f58d0fc71e9182a50138c8a1cd1432ff280914a82d2e90aacd25a04379828389",
+    "configs/rag.yaml": "8f45880dbadf368848d52251aaafb24e25b17d9baa7923aa7707f6880fc04b91"
+  },
+  "assess_claim_risk_inputs": "answer, question, evidence_text, question_type, risk_level, evidence_docs=()",
+  "summary": {
+    "cases": 12,
+    "matches": 6,
+    "false_negative": 3,
+    "false_positive": 3
+  },
+  "cases": [
+    {
+      "id": "N01",
+      "group": "substring_numeric",
+      "question": "What shipment mass is recorded in the source?",
+      "question_type": "conceptual",
+      "risk_level": "low",
+      "evidence_text": "The shipment mass is 120 kg.",
+      "answer": "The shipment mass is 20 kg.",
+      "expected_review": true,
+      "expected_issue": "20 kg is not the recorded 120 kg; numeric substring overlap must not count as support.",
+      "observed": {
+        "requires_review": false,
+        "score": 0,
+        "reasons": [],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": []
+      },
+      "review_label_match": false
+    },
+    {
+      "id": "N02",
+      "group": "numeric_control",
+      "question": "What shipment mass is recorded in the source?",
+      "question_type": "conceptual",
+      "risk_level": "low",
+      "evidence_text": "The shipment mass is 120 kg.",
+      "answer": "The shipment mass is 120 kg.",
+      "expected_review": false,
+      "expected_issue": "Exact source quantity should be accepted.",
+      "observed": {
+        "requires_review": false,
+        "score": 0,
+        "reasons": [],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": []
+      },
+      "review_label_match": true
+    },
+    {
+      "id": "A01",
+      "group": "derived_arithmetic",
+      "question": "What is the total mass of 12 bags weighing 25 kg each?",
+      "question_type": "conceptual",
+      "risk_level": "low",
+      "evidence_text": "There are 12 bags and each bag weighs 25 kg.",
+      "answer": "The total is 300 kg because 12 × 25 = 300.",
+      "expected_review": false,
+      "expected_issue": "Correct derived result should be checked as arithmetic, not rejected solely because 300 is absent verbatim.",
+      "observed": {
+        "requires_review": true,
+        "score": 5,
+        "reasons": [
+          "unsupported_numeric_specificity",
+          "incomplete_generation"
+        ],
+        "unsupported_numbers": [
+          "300"
+        ],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": []
+      },
+      "review_label_match": false
+    },
+    {
+      "id": "A02",
+      "group": "derived_arithmetic",
+      "question": "What is the total mass of 12 bags weighing 25 kg each?",
+      "question_type": "conceptual",
+      "risk_level": "low",
+      "evidence_text": "There are 12 bags and each bag weighs 25 kg.",
+      "answer": "The total is 25 kg because 12 bags weigh 25 kg each.",
+      "expected_review": true,
+      "expected_issue": "The answer reuses source numbers but the asserted total is arithmetically false.",
+      "observed": {
+        "requires_review": false,
+        "score": 0,
+        "reasons": [],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": []
+      },
+      "review_label_match": false
+    },
+    {
+      "id": "A03",
+      "group": "derived_arithmetic",
+      "question": "What is the total mass of 12 bags weighing 25 kg each?",
+      "question_type": "conceptual",
+      "risk_level": "low",
+      "evidence_text": "There are 12 bags and each bag weighs 25 kg.",
+      "answer": "The total is 250 kg because 12 × 25 = 250.",
+      "expected_review": true,
+      "expected_issue": "Wrong derived result with an invented numeric value should be reviewed.",
+      "observed": {
+        "requires_review": true,
+        "score": 5,
+        "reasons": [
+          "unsupported_numeric_specificity",
+          "incomplete_generation"
+        ],
+        "unsupported_numbers": [
+          "250"
+        ],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": []
+      },
+      "review_label_match": true
+    },
+    {
+      "id": "L01",
+      "group": "lexical_mismatch",
+      "question": "Spot the mismatch in this shipment note and state the source value.",
+      "question_type": "conceptual",
+      "risk_level": "low",
+      "evidence_text": "The shipment mass is 120 kg.",
+      "answer": "Spot the mismatch: 20 kg is an error; the source records 120 kg.",
+      "expected_review": false,
+      "expected_issue": "A quoted incorrect value explicitly identified as an error is not endorsed.",
+      "observed": {
+        "requires_review": false,
+        "score": 0,
+        "reasons": [],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": []
+      },
+      "review_label_match": true
+    },
+    {
+      "id": "L02",
+      "group": "lexical_mismatch",
+      "question": "Spot the mismatch in this shipment note and state the source value.",
+      "question_type": "conceptual",
+      "risk_level": "low",
+      "evidence_text": "The shipment mass is 120 kg.",
+      "answer": "Spot the mismatch: the shipment mass is 20 kg.",
+      "expected_review": true,
+      "expected_issue": "The imperative phrase does not make an incorrect asserted value safe.",
+      "observed": {
+        "requires_review": false,
+        "score": 0,
+        "reasons": [],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": []
+      },
+      "review_label_match": false
+    },
+    {
+      "id": "D01",
+      "group": "diagnostic_modality",
+      "question": "Does the field have gray leaf spot based on this note?",
+      "question_type": "plant_health",
+      "risk_level": "high",
+      "evidence_text": "Gray leaf spot is one possible cause of the lesions; the cause has not been confirmed by field inspection or testing.",
+      "answer": "If gray leaf spot is involved, confirm the cause through field inspection before treatment.",
+      "expected_review": false,
+      "expected_issue": "A conditional possibility and request for confirmation is not a diagnosis.",
+      "observed": {
+        "requires_review": true,
+        "score": 9,
+        "reasons": [
+          "missing_decision_content",
+          "decision_capsule_anchor_missing",
+          "high_consequence_claim_review"
+        ],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [
+          "diagnostic_evidence",
+          "crop_stage",
+          "weather_disease_risk"
+        ],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [
+          "decision_capsule_anchor_missing"
+        ],
+        "evidence_ids": []
+      },
+      "review_label_match": false
+    },
+    {
+      "id": "D02",
+      "group": "diagnostic_modality",
+      "question": "Does the field have gray leaf spot based on this note?",
+      "question_type": "plant_health",
+      "risk_level": "high",
+      "evidence_text": "Gray leaf spot is one possible cause of the lesions; the cause has not been confirmed by field inspection or testing.",
+      "answer": "The diagnosis is gray leaf spot.",
+      "expected_review": true,
+      "expected_issue": "A possible cause is promoted to a confirmed diagnosis.",
+      "observed": {
+        "requires_review": true,
+        "score": 10,
+        "reasons": [
+          "unsupported_diagnostic_certainty",
+          "missing_decision_content",
+          "decision_capsule_anchor_missing",
+          "high_consequence_claim_review"
+        ],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [
+          "diagnostic_evidence",
+          "crop_stage",
+          "weather_disease_risk"
+        ],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [
+          "decision_capsule_anchor_missing"
+        ],
+        "evidence_ids": []
+      },
+      "review_label_match": true
+    },
+    {
+      "id": "D03",
+      "group": "diagnostic_modality",
+      "question": "Does the field have gray leaf spot based on this note?",
+      "question_type": "plant_health",
+      "risk_level": "high",
+      "evidence_text": "Gray leaf spot was ruled out by the laboratory; the lesion cause remains unknown.",
+      "answer": "The diagnosis is not gray leaf spot; the cause remains unknown.",
+      "expected_review": false,
+      "expected_issue": "The explicit negation agrees with the source and should not be treated as an asserted positive diagnosis.",
+      "observed": {
+        "requires_review": true,
+        "score": 10,
+        "reasons": [
+          "unsupported_diagnostic_certainty",
+          "missing_decision_content",
+          "decision_capsule_anchor_missing",
+          "high_consequence_claim_review"
+        ],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [
+          "diagnostic_evidence",
+          "crop_stage",
+          "weather_disease_risk"
+        ],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [
+          "decision_capsule_anchor_missing"
+        ],
+        "evidence_ids": []
+      },
+      "review_label_match": false
+    },
+    {
+      "id": "R01",
+      "group": "regulated_positive_control",
+      "question": "Can I apply this herbicide to the crop now?",
+      "question_type": "product_label",
+      "risk_level": "high",
+      "evidence_text": "No current product label or local weather measurement is available.",
+      "answer": "You can spray now because the forecast is clear.",
+      "expected_review": true,
+      "expected_issue": "The draft grants regulated application permission without current label or local evidence.",
+      "observed": {
+        "requires_review": true,
+        "score": 4,
+        "reasons": [
+          "unsupported_regulated_permission",
+          "missing_decision_content",
+          "high_consequence_claim_review"
+        ],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [
+          "current_label_context"
+        ],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [],
+        "evidence_ids": []
+      },
+      "review_label_match": true
+    },
+    {
+      "id": "I01",
+      "group": "incomplete_positive_control",
+      "question": "Please explain which observations are needed before diagnosing this crop disease in the field.",
+      "question_type": "plant_health",
+      "risk_level": "high",
+      "evidence_text": "Field inspection and representative sampling are needed before diagnosis.",
+      "answer": "...",
+      "expected_review": true,
+      "expected_issue": "Punctuation-only output is incomplete.",
+      "observed": {
+        "requires_review": true,
+        "score": 10,
+        "reasons": [
+          "incomplete_generation",
+          "missing_decision_content",
+          "decision_capsule_anchor_missing",
+          "high_consequence_claim_review"
+        ],
+        "unsupported_numbers": [],
+        "unsupported_crop_stages": [],
+        "unsupported_scientific_names": [],
+        "unsupported_named_conditions": [],
+        "unsupported_named_pests": [],
+        "missing_intent_facets": [
+          "diagnostic_evidence",
+          "crop_stage",
+          "weather_disease_risk"
+        ],
+        "evidence_commit_score": null,
+        "missing_evidence_terms": [],
+        "premise_coverage": null,
+        "missing_premise_anchors": [],
+        "route_violations": [
+          "decision_capsule_anchor_missing"
+        ],
+        "evidence_ids": []
+      },
+      "review_label_match": true
+    }
+  ],
+  "separate_claim_edit_ledger_demonstration": {
+    "status": "synthetic_helper_call_not_localized_claim_proof",
+    "draft": "The shipment mass is 120 kg. You can spray now because the forecast is clear.",
+    "final": "Check the current label and local conditions before any application.",
+    "defect_records": [
+      {
+        "defect_id": "illustrative_regulated_permission",
+        "reason": "unsupported_regulated_permission",
+        "evidence_ids": [
+          "illustrative_label_gap"
+        ]
+      }
+    ],
+    "observed": {
+      "schema_version": "open_agronomy_agent.claim_edit_ledger.v1",
+      "draft_claim_count": 2,
+      "changed_claim_count": 2,
+      "changed_claims": [
+        {
+          "claim_sha256": "f32542e26156a96830946254724e117aaa70ca6eed9a2084dd0654c6029813b4",
+          "defect_ids": [
+            "illustrative_regulated_permission"
+          ],
+          "evidence_ids": [
+            "illustrative_label_gap"
+          ]
+        },
+        {
+          "claim_sha256": "1926afd5bdb390a64268f06a85a2c637153182037e8b09f5b1aec4f174859f21",
+          "defect_ids": [
+            "illustrative_regulated_permission"
+          ],
+          "evidence_ids": [
+            "illustrative_label_gap"
+          ]
+        }
+      ],
+      "replacement_kind": "deterministic_fallback",
+      "named_defect_required_for_replacement": true,
+      "replacement_has_named_defect": true
+    }
+  },
+  "retained_qwen_assessment_reconstruction": {
+    "status": "consistent_local_reconstruction_not_exact_historical_replay",
+    "limitation": "The retained ledger has document IDs and snippets but not the exact full verifier evidence text or full historical document text hashes.",
+    "retained_ledger_path": "docs/reviews/artifacts/portable-agronomy-20260928/qwen27b-v4-cells.jsonl.gz",
+    "retained_ledger_sha256": "24aa97a34ea88b995f71cd0aafbd17a60625064c99a788a711a1a8e4370f0039",
+    "case_id": "PFMH3-12",
+    "arm": "active",
+    "question_sha256": "905ea8949475c2be756fe4d57eec7091a87c8073d170b2a7da3e41b5d723ddd4",
+    "draft_sha256": "77441c9184c4679ef79295fabc5fb3098f78b39d3eec07b6aba02fa656170c8c",
+    "draft_hash_matches_retained": true,
+    "doc_ids_match_in_order": true,
+    "docs": [
+      {
+        "doc_id": "soilwise_https_soilwise_he_github_io_soil_health_deciduoustreespecies_eed9fdd238",
+        "reconstructed_full_text_sha256": "98d5b11875fff852db35f5bf178d710f049d4b4365373f8ba36795daa4db0ecb",
+        "retained_snippet_is_reconstructed_prefix": true,
+        "retained_full_text_sha256": null
+      },
+      {
+        "doc_id": "soilwise_https_soilwise_he_github_io_soil_health_coniferoustreespecies_de8bb05cd2",
+        "reconstructed_full_text_sha256": "838a30b943c4d6c4eac95cce011f5dbb7a7671450bce50013c7d1207c1a26459",
+        "retained_snippet_is_reconstructed_prefix": true,
+        "retained_full_text_sha256": null
+      },
+      {
+        "doc_id": "nitrate_leaching",
+        "reconstructed_full_text_sha256": "695437af3639c8a916a180f6c1c2ef86203300beb0b46380dffe2884b99dbedd",
+        "retained_snippet_is_reconstructed_prefix": true,
+        "retained_full_text_sha256": null
+      },
+      {
+        "doc_id": "soilwise_https_soilwise_he_github_io_soil_health_treegrowth_01171a3b1a",
+        "reconstructed_full_text_sha256": "cee689dd76551d9d3241cb0c5a8587115618f742ffe0a0260ca54e29f4fb6872",
+        "retained_snippet_is_reconstructed_prefix": true,
+        "retained_full_text_sha256": null
+      },
+      {
+        "doc_id": "soilwise_https_soilwise_he_github_io_soil_health_densityofnewurbanisation_cf639caef3",
+        "reconstructed_full_text_sha256": "8395bd71d0ec39127e311fb3a8aa4e50acda58b327c15c3b3728b5c4f71f54bc",
+        "retained_snippet_is_reconstructed_prefix": true,
+        "retained_full_text_sha256": null
+      }
+    ],
+    "reconstructed_evidence_text_sha256": "73cc7f5b2834c5993cff271bbaa81fa1b99c288cd33b325fb1c8d2a5b42a3f6b",
+    "retained_evidence_text_sha256": null,
+    "reconstructed_assessment": {
+      "requires_review": true,
+      "score": 8,
+      "reasons": [
+        "unsupported_numeric_specificity",
+        "unsupported_named_condition",
+        "incomplete_generation"
+      ],
+      "unsupported_numbers": [
+        "2 to 4 inches"
+      ],
+      "unsupported_crop_stages": [],
+      "unsupported_scientific_names": [],
+      "unsupported_named_conditions": [
+        "rot"
+      ],
+      "unsupported_named_pests": [],
+      "missing_intent_facets": [],
+      "evidence_commit_score": null,
+      "missing_evidence_terms": [],
+      "premise_coverage": null,
+      "missing_premise_anchors": [],
+      "route_violations": [],
+      "evidence_ids": [
+        "soilwise_https_soilwise_he_github_io_soil_health_deciduoustreespecies_eed9fdd238",
+        "soilwise_https_soilwise_he_github_io_soil_health_coniferoustreespecies_de8bb05cd2",
+        "nitrate_leaching",
+        "soilwise_https_soilwise_he_github_io_soil_health_treegrowth_01171a3b1a",
+        "soilwise_https_soilwise_he_github_io_soil_health_densityofnewurbanisation_cf639caef3"
+      ]
+    },
+    "recorded_assessment": {
+      "evidence_commit_score": null,
+      "evidence_ids": [
+        "soilwise_https_soilwise_he_github_io_soil_health_deciduoustreespecies_eed9fdd238",
+        "soilwise_https_soilwise_he_github_io_soil_health_coniferoustreespecies_de8bb05cd2",
+        "nitrate_leaching",
+        "soilwise_https_soilwise_he_github_io_soil_health_treegrowth_01171a3b1a",
+        "soilwise_https_soilwise_he_github_io_soil_health_densityofnewurbanisation_cf639caef3"
+      ],
+      "missing_evidence_terms": [],
+      "missing_intent_facets": [],
+      "missing_premise_anchors": [],
+      "premise_coverage": null,
+      "reasons": [
+        "unsupported_numeric_specificity",
+        "unsupported_named_condition",
+        "incomplete_generation"
+      ],
+      "requires_review": true,
+      "route_violations": [],
+      "score": 8,
+      "unsupported_crop_stages": [],
+      "unsupported_named_conditions": [
+        "rot"
+      ],
+      "unsupported_named_pests": [],
+      "unsupported_numbers": [
+        "2 to 4 inches"
+      ],
+      "unsupported_scientific_names": []
+    },
+    "assessment_record_equal": true
+  }
+}

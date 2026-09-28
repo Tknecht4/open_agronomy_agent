@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gc
 import hashlib
 import json
 import os
@@ -409,8 +410,11 @@ _AGNO_CONTEXT_CACHE: Phase5LRUCache[AgentContext] = Phase5LRUCache(max_entries=1
 _COVERAGE_CHECKLIST_CACHE: Phase5LRUCache[tuple[str, ...]] = Phase5LRUCache(max_entries=512)
 _AGNO_KNOWLEDGE_CACHE: dict[str, Any] = {}
 _MLX_MODEL_LOCK = RLock()
-_MLX_MODEL_CACHE: dict[str, tuple[Any, Any]] = {}
-_MLX_GENERATION_LOCKS: dict[str, RLock] = {}
+# One complete target/draft pair is retained between serialized MLX operations.
+# A model-count bound limits Python ownership, not device allocation or byte fit.
+_MLX_MODEL_CACHE: dict[tuple[str, str | None], tuple[Any, Any, Any | None]] = {}
+_MLX_ACTIVE_MODEL_USES = 0
+_MLX_GENERATION_LOCK = RLock()
 _MLX_PREFIX_CACHES: OrderedDict[tuple[Any, ...], Any] = OrderedDict()
 _MLX_PREFIX_CACHE_MAX_NAMESPACES = 16
 _MLX_PREFIX_CACHE_MAX_TOTAL_BYTES = 512 * 1024 * 1024
@@ -2880,6 +2884,7 @@ class MLXGenerator:
         self._model = None
         self._tokenizer = None
         self._draft_model = None
+        self._managed_model = False
         self._resolved_model_snapshot: Path | None = None
         self._context_window_tokens: int | None = None
         self._cache_scope = "unscoped"
@@ -2888,9 +2893,12 @@ class MLXGenerator:
         os.environ.setdefault("HF_HOME", str(repo_path(".hf_cache")))
         os.environ.setdefault("HF_HUB_CACHE", str(repo_path(".hf_cache/hub")))
 
-    def _load(self) -> None:
+    def _load(self) -> bool:
+        """Acquire the current model pair; return whether weights were loaded."""
+
+        global _MLX_ACTIVE_MODEL_USES
         if self._model is not None:
-            return
+            return False
         from mlx_lm import load
 
         resolved_model = resolve_local_model_snapshot(
@@ -2907,23 +2915,58 @@ class MLXGenerator:
             )
         except (OSError, ValueError, TypeError, AttributeError):
             self._context_window_tokens = None
-        self._model, self._tokenizer = self._load_cached(
-            load,
-            str(resolved_model),
-            cache_key=f"{self.model_id}@{self.model_revision or 'main'}#{resolved_model}",
-        )
+        target_key = f"{self.model_id}@{self.model_revision or 'main'}#{resolved_model}"
+        resolved_draft = None
+        draft_key = None
         if self.draft_model_id:
             resolved_draft = resolve_local_model_snapshot(self.draft_model_id)
-            self._draft_model, _ = self._load_cached(
-                load,
-                str(resolved_draft),
-                cache_key=f"{self.draft_model_id}@main",
-            )
+            draft_key = f"{self.draft_model_id}@main#{resolved_draft}"
+        pair_key = (target_key, draft_key)
+        with _MLX_MODEL_LOCK:
+            cached = _MLX_MODEL_CACHE.get(pair_key)
+            loaded_now = cached is None
+            if cached is None:
+                if _MLX_ACTIVE_MODEL_USES:
+                    raise RuntimeError("Cannot replace an MLX model pair during an active operation")
+                # Drop old weights and KV namespaces before loading another pair.
+                # The public load/count/generate paths run on one MLX executor.
+                replacing_pair = bool(_MLX_MODEL_CACHE)
+                _MLX_MODEL_CACHE.clear()
+                _MLX_PREFIX_CACHES.clear()
+                if replacing_pair:
+                    gc.collect()
+                target, tokenizer = load(str(resolved_model))
+                draft = load(str(resolved_draft))[0] if resolved_draft is not None else None
+                cached = (target, tokenizer, draft)
+                _MLX_MODEL_CACHE[pair_key] = cached
+            self._model, self._tokenizer, self._draft_model = cached
+            self._managed_model = True
+            _MLX_ACTIVE_MODEL_USES += 1
+            return loaded_now
+
+    def _release_model(self) -> None:
+        """A reusable generator must not pin an evicted pair."""
+
+        global _MLX_ACTIVE_MODEL_USES
+        with _MLX_MODEL_LOCK:
+            if self._managed_model:
+                self._model = None
+                self._tokenizer = None
+                self._draft_model = None
+                self._managed_model = False
+                _MLX_ACTIVE_MODEL_USES -= 1
 
     def warmup(self) -> None:
         """Load model weights without generating user-visible text."""
 
-        _run_on_mlx_thread(self._load)
+        def warm() -> None:
+            try:
+                self._load()
+            finally:
+                self._pending_model_load_ms = None
+                self._release_model()
+
+        _run_on_mlx_thread(warm)
 
     @property
     def context_window_tokens(self) -> int | None:
@@ -2935,16 +2978,23 @@ class MLXGenerator:
         """Count the exact MLX chat-template input on the generation thread."""
 
         def count() -> int:
-            was_loaded = self._model is not None
             load_started = perf_counter()
-            self._load()
-            if not was_loaded:
-                self._pending_model_load_ms = round((perf_counter() - load_started) * 1000.0, 3)
-            assert self._tokenizer is not None
-            return len(self._tokenizer.apply_chat_template(
-                messages, tokenize=True, add_generation_prompt=True,
-                enable_thinking=False,
-            ))
+            try:
+                loaded_now = self._load()
+                if loaded_now:
+                    self._pending_model_load_ms = round(
+                        (perf_counter() - load_started) * 1000.0, 3
+                    )
+                assert self._tokenizer is not None
+                return len(self._tokenizer.apply_chat_template(
+                    messages, tokenize=True, add_generation_prompt=True,
+                    enable_thinking=False,
+                ))
+            except BaseException:
+                self._pending_model_load_ms = None
+                raise
+            finally:
+                self._release_model()
 
         return int(_run_on_mlx_thread(count))
 
@@ -2955,27 +3005,8 @@ class MLXGenerator:
             raise ValueError("cache scope must be a non-empty string")
         self._cache_scope = scope
 
-    @staticmethod
-    def _load_cached(
-        load_fn: Any,
-        model_id: str,
-        *,
-        revision: str | None = None,
-        cache_key: str | None = None,
-    ) -> tuple[Any, Any]:
-        cache_key = cache_key or f"{model_id}@{revision or 'main'}"
-        with _MLX_MODEL_LOCK:
-            cached = _MLX_MODEL_CACHE.get(cache_key)
-            if cached is not None:
-                return cached
-            loaded = load_fn(model_id, revision=revision) if revision else load_fn(model_id)
-            _MLX_MODEL_CACHE[cache_key] = loaded
-            return loaded
-
     def _generation_lock(self) -> RLock:
-        cache_key = f"{self.model_id}@{self.model_revision or 'main'}#{self._resolved_model_snapshot or ''}"
-        with _MLX_MODEL_LOCK:
-            return _MLX_GENERATION_LOCKS.setdefault(cache_key, RLock())
+        return _MLX_GENERATION_LOCK
 
     def _prefix_cache(self, scope: str | None = None) -> Any:
         from mlx_lm.models.cache import LRUPromptCache
@@ -3111,33 +3142,36 @@ class MLXGenerator:
     ) -> str:
         request_started_at = request_started_at or perf_counter()
         load_started = perf_counter()
-        was_loaded = self._model is not None
-        self._load()
-        model_load_ms = (
-            round((perf_counter() - load_started) * 1000.0, 3)
-            if not was_loaded else None
-        )
-        wait_started = perf_counter()
-        with self._generation_lock():
-            lock_wait_ms = round((perf_counter() - wait_started) * 1000.0, 3)
-            output = self._generate_locked(
-                messages, cache_scope=cache_scope,
-                request_started_at=request_started_at,
+        try:
+            loaded_now = self._load()
+            model_load_ms = (
+                round((perf_counter() - load_started) * 1000.0, 3)
+                if loaded_now else None
             )
-            if was_loaded and self._pending_model_load_ms is not None:
-                model_load_ms = self._pending_model_load_ms
-                load_status = "loaded_during_prompt_count"
-            else:
-                load_status = "already_loaded" if was_loaded else "loaded_during_generation"
+            wait_started = perf_counter()
+            with self._generation_lock():
+                lock_wait_ms = round((perf_counter() - wait_started) * 1000.0, 3)
+                output = self._generate_locked(
+                    messages, cache_scope=cache_scope,
+                    request_started_at=request_started_at,
+                )
+                if not loaded_now and self._pending_model_load_ms is not None:
+                    model_load_ms = self._pending_model_load_ms
+                    load_status = "loaded_during_prompt_count"
+                else:
+                    load_status = "loaded_during_generation" if loaded_now else "already_loaded"
+                self._pending_model_load_ms = None
+                self.last_generation_stats["model_load_ms"] = model_load_ms
+                self.last_generation_stats["model_load_status"] = load_status
+                if queue_wait_ms is not None:
+                    self.last_generation_stats["queue_wait_ms"] = queue_wait_ms
+                self.last_generation_stats["generation_lock_wait_ms"] = lock_wait_ms
+                self.last_generation_stats["generation_lock_model_id"] = self.model_id
+                self.last_generation_stats["generation_lock_model_revision"] = self.model_revision
+                return output
+        finally:
             self._pending_model_load_ms = None
-            self.last_generation_stats["model_load_ms"] = model_load_ms
-            self.last_generation_stats["model_load_status"] = load_status
-            if queue_wait_ms is not None:
-                self.last_generation_stats["queue_wait_ms"] = queue_wait_ms
-            self.last_generation_stats["generation_lock_wait_ms"] = lock_wait_ms
-            self.last_generation_stats["generation_lock_model_id"] = self.model_id
-            self.last_generation_stats["generation_lock_model_revision"] = self.model_revision
-            return output
+            self._release_model()
 
     def _generate_locked(
         self, messages: list[dict[str, str]], *,

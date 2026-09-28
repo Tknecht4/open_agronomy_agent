@@ -1,0 +1,11 @@
+{
+  "date": "2026-09-28",
+  "observed": {
+    "physical_memory_bytes": 17179869184,
+    "hardware_model": "Mac16,13",
+    "architecture": "arm64"
+  },
+  "measurement": "sysctl -n hw.memsize hw.model; uname -m",
+  "model_loading_executed": false,
+  "qualification": "unqualified_for_Qwen3.5_27B_profile; no Metal inference, memory-pressure or sustained-performance observation"
+}

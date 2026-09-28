@@ -1,0 +1,30 @@
+[
+  {
+    "evidence": "The shipment mass is one hundred and twenty kg.",
+    "answer": "The shipment mass is twenty kg.",
+    "reasons": [],
+    "unsupported_numbers": []
+  },
+  {
+    "evidence": "The shipment mass is minus twenty kg.",
+    "answer": "The shipment mass is twenty kg.",
+    "reasons": [],
+    "unsupported_numbers": []
+  },
+  {
+    "evidence": "The shipment mass is twenty kg.",
+    "answer": "The application rate is twenty kg/ha.",
+    "reasons": [],
+    "unsupported_numbers": []
+  },
+  {
+    "evidence": "The shipment mass is 120 kg.",
+    "answer": "The shipment mass is twenty kg.",
+    "reasons": [
+      "unsupported_numeric_specificity"
+    ],
+    "unsupported_numbers": [
+      "twenty kg"
+    ]
+  }
+]

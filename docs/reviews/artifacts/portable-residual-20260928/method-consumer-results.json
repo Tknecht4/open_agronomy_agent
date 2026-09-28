@@ -1,0 +1,474 @@
+{
+  "status": "model_free_rerun_of_unserialized_spot_checks_exploratory_not_heldout",
+  "reason_for_rerun": "Original six terminal observations were not retained as a structured receipt; this repeats exactly those six question fixtures on the pinned source.",
+  "rerun_utc": "2026-09-28T07:08:50.279558+00:00",
+  "git_head": "3ff64813ce14833f3c819044b96ebda738a60cbe",
+  "profile": "configs/rag_production_foundations_method_candidate.yaml",
+  "fixture_sha256": {
+    "docs/reviews/artifacts/portable-residual-20260928/method-contrasts.json": "d7c676376b178ed97c5809c68e549357507453a90be0d9bfbc619c3ad3ecbe34",
+    "data/eval/production_foundations_method_holdout_v3.jsonl": "cab6ce4888a56ecb1cff2a13c34c736f909d763b8f88571f95af1ff9242c38a3"
+  },
+  "source_sha256": {
+    "src/agronomy_agent/method_context.py": "0b7fdc5b4ffc38ea0a233cf0fcb6f3ae591ac8a6fccf9745773824aded0c59bb",
+    "src/agronomy_agent/decision_contract.py": "4ec80c1ea3aff6e4c5b4997fa57e83fa47970d3a09799e0d1a378c619033965d",
+    "src/agronomy_agent/query_context.py": "6440f53ac488e8507f4cff0824659225878f2fcbdc1423b92d5d3632d5805a98",
+    "src/agronomy_agent/evidence_contracts.py": "56ba8f9b3b97d9152e8dec1f89d7ebc267323a5921c8f032bb687f9b3b7355ec",
+    "src/agronomy_agent/agent.py": "6ab428890d65201018b4a1ca47f28577e355023cb35a12ffcac24a84d4ad2a72",
+    "configs/rag_production_foundations_method_candidate.yaml": "b2bde3e5d6c9e0a9d73d600548649deeeb2889ded9c0a49daca58bf30353876f",
+    "data/manifests/runtime_corpus_policy_production_foundations_method_candidate.json": "fc47dd916d864f655ba382263e1e3d1dc6f4ad8d21ca7f80f4ec796232a84a57",
+    "data/manifests/production_foundations_method_support_v2.json": "494bd2d03009ba4b78564c3701e744aac5042279603e78bdf647f21a31c227e5"
+  },
+  "question_ids": [
+    "T06",
+    "E09",
+    "E12",
+    "M02",
+    "PFMH3-05",
+    "PFMH3-06"
+  ],
+  "case_count": 6,
+  "model_generation_executed": false,
+  "cases": [
+    {
+      "id": "T06",
+      "fixture": "docs/reviews/artifacts/portable-residual-20260928/method-contrasts.json",
+      "question": "A land-equity brochure lists working capital. Is its author licensed in Alberta?",
+      "question_sha256": "b4ee2317dbaf1214d23dcc10df77a0300d7cd5c73c40726438a5e7e8c207dc6f",
+      "expected_original": [],
+      "selected_families": [
+        "liquidity"
+      ],
+      "country": "canada",
+      "method_obligations": [
+        {
+          "key": "method:liquidity",
+          "authority": "method_context_only",
+          "retrieval_terms": [
+            "liquidity"
+          ]
+        }
+      ],
+      "contract_retrieval_queries": [
+        "liquidity"
+      ],
+      "final_method_cards": [
+        {
+          "doc_id": "method_liquidity",
+          "text_sha256": "0c74c92d6cf2a38b5f142f568536477cff6983b3e9cc6d2210d87f7fbf32ab22",
+          "reviewed_method_ids": [
+            "liquidity"
+          ],
+          "answer_role": "method_context",
+          "transfer_scope": "general_method_only",
+          "retrieval_policy": "context_only",
+          "authority_tier": "internal_synthesis",
+          "jurisdictions": [
+            "Canada",
+            "United States"
+          ],
+          "source_jurisdictions": [
+            "United States",
+            "Ontario, Canada"
+          ],
+          "supporting_source_ids": [
+            "usda_ers_financial_ratios",
+            "on_farm_succession_ratios"
+          ],
+          "method_scope": {
+            "applicability_countries": [
+              "Canada",
+              "United States"
+            ],
+            "excluded_claims": [
+              "lender_threshold",
+              "profitability_diagnosis",
+              "payment_capacity_guarantee"
+            ],
+            "method_ids": [
+              "liquidity"
+            ],
+            "permitted_claims": [
+              "definition",
+              "conditional_relationship",
+              "required_inputs"
+            ],
+            "required_local_inputs": [
+              "dated_current_assets",
+              "dated_current_liabilities",
+              "valuation_basis"
+            ],
+            "review_status": "source_supported_method_scope_reviewed",
+            "schema_version": "open_agronomy_agent.method_scope.v1",
+            "source_support_receipt_sha256": "494bd2d03009ba4b78564c3701e744aac5042279603e78bdf647f21a31c227e5"
+          }
+        }
+      ],
+      "method_applicability": [
+        {
+          "methods": [
+            "liquidity"
+          ],
+          "transfer_status": "reviewed_general_method_scope",
+          "capture_status": "reviewed_method_scope"
+        }
+      ],
+      "method_coverage": [
+        {
+          "slot_key": "method:liquidity",
+          "status": "ADEQUATE",
+          "required_authority": "method_context_only",
+          "reasons": [
+            "reviewed general method supports explanation only; local decision evidence remains separate"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "E09",
+      "fixture": "docs/reviews/artifacts/portable-residual-20260928/method-contrasts.json",
+      "question": "Which dated balance-sheet measures show whether current assets can cover current liabilities despite high land equity?",
+      "question_sha256": "151bb073ac9e07a5042ca836537f470de7f3f08fa2a82c101c7aa3997a899f0d",
+      "expected_original": [
+        "liquidity"
+      ],
+      "selected_families": [
+        "liquidity"
+      ],
+      "country": null,
+      "method_obligations": [
+        {
+          "key": "method:liquidity",
+          "authority": "method_context_only",
+          "retrieval_terms": [
+            "liquidity"
+          ]
+        }
+      ],
+      "contract_retrieval_queries": [
+        "liquidity"
+      ],
+      "final_method_cards": [],
+      "method_applicability": [],
+      "method_coverage": [
+        {
+          "slot_key": "method:liquidity",
+          "status": "ABSENT",
+          "required_authority": "method_context_only",
+          "reasons": [
+            "no selected document met the obligation lexical coverage rule"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "E12",
+      "fixture": "docs/reviews/artifacts/portable-residual-20260928/method-contrasts.json",
+      "question": "Our annual surplus is positive, but spring bills precede autumn crop sales. How should we make a dated cash plan?",
+      "question_sha256": "53c29cd255df01917f874f6448055f131feb8de8b4fa32b3c82fbbf767c31f56",
+      "expected_original": [
+        "cash_flow"
+      ],
+      "selected_families": [],
+      "country": null,
+      "method_obligations": [],
+      "contract_retrieval_queries": [
+        "Our annual surplus is positive, but spring bills precede autumn crop sales. How should we make a dated cash plan? representative field observations affected and normal comparison sampling scouting records"
+      ],
+      "final_method_cards": [],
+      "method_applicability": [],
+      "method_coverage": []
+    },
+    {
+      "id": "M02",
+      "fixture": "docs/reviews/artifacts/portable-residual-20260928/method-contrasts.json",
+      "question": "Show both a dated balance-sheet liquidity check and a monthly cash schedule for our Saskatchewan operation.",
+      "question_sha256": "4d54875a96a0160229c435c01c7dff8c4d4c9e467aba3babc4dd7ffa4c36da63",
+      "expected_original": [
+        "liquidity",
+        "cash_flow"
+      ],
+      "selected_families": [
+        "liquidity"
+      ],
+      "country": "canada",
+      "method_obligations": [
+        {
+          "key": "method:liquidity",
+          "authority": "method_context_only",
+          "retrieval_terms": [
+            "liquidity"
+          ]
+        }
+      ],
+      "contract_retrieval_queries": [
+        "liquidity"
+      ],
+      "final_method_cards": [
+        {
+          "doc_id": "method_liquidity",
+          "text_sha256": "0c74c92d6cf2a38b5f142f568536477cff6983b3e9cc6d2210d87f7fbf32ab22",
+          "reviewed_method_ids": [
+            "liquidity"
+          ],
+          "answer_role": "method_context",
+          "transfer_scope": "general_method_only",
+          "retrieval_policy": "context_only",
+          "authority_tier": "internal_synthesis",
+          "jurisdictions": [
+            "Canada",
+            "United States"
+          ],
+          "source_jurisdictions": [
+            "United States",
+            "Ontario, Canada"
+          ],
+          "supporting_source_ids": [
+            "usda_ers_financial_ratios",
+            "on_farm_succession_ratios"
+          ],
+          "method_scope": {
+            "applicability_countries": [
+              "Canada",
+              "United States"
+            ],
+            "excluded_claims": [
+              "lender_threshold",
+              "profitability_diagnosis",
+              "payment_capacity_guarantee"
+            ],
+            "method_ids": [
+              "liquidity"
+            ],
+            "permitted_claims": [
+              "definition",
+              "conditional_relationship",
+              "required_inputs"
+            ],
+            "required_local_inputs": [
+              "dated_current_assets",
+              "dated_current_liabilities",
+              "valuation_basis"
+            ],
+            "review_status": "source_supported_method_scope_reviewed",
+            "schema_version": "open_agronomy_agent.method_scope.v1",
+            "source_support_receipt_sha256": "494bd2d03009ba4b78564c3701e744aac5042279603e78bdf647f21a31c227e5"
+          }
+        }
+      ],
+      "method_applicability": [
+        {
+          "methods": [
+            "liquidity"
+          ],
+          "transfer_status": "reviewed_general_method_scope",
+          "capture_status": "reviewed_method_scope"
+        }
+      ],
+      "method_coverage": [
+        {
+          "slot_key": "method:liquidity",
+          "status": "ADEQUATE",
+          "required_authority": "method_context_only",
+          "reasons": [
+            "reviewed general method supports explanation only; local decision evidence remains separate"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "PFMH3-05",
+      "fixture": "data/eval/production_foundations_method_holdout_v3.jsonl",
+      "question": "Our Saskatchewan farm owns valuable land, but supplier bills fall due before much grain is sold. Which balance-sheet measures would help explain this concern, and why could the land value give us a misleading sense of comfort?",
+      "question_sha256": "634e2117d272f099244770d32db71f44342ace24cf5eda9131e8d2f8de77c48e",
+      "expected_original": "liquidity",
+      "selected_families": [
+        "cash_flow"
+      ],
+      "country": "canada",
+      "method_obligations": [
+        {
+          "key": "method:cash_flow",
+          "authority": "method_context_only",
+          "retrieval_terms": [
+            "cash flow"
+          ]
+        }
+      ],
+      "contract_retrieval_queries": [
+        "Our Saskatchewan farm owns valuable land, but supplier bills fall due before much grain is sold. Which balance-sheet measures would help explain this concern, and why could the land value give us a misleading sense of comfort? saskatchewan canada representative field observations affected and normal comparison sampling scouting records",
+        "cash flow"
+      ],
+      "final_method_cards": [
+        {
+          "doc_id": "method_cash_flow",
+          "text_sha256": "e138de4716e5b2df8e5d76b5402674bf0b798993a581bfd7dbb0f6f91a99173c",
+          "reviewed_method_ids": [
+            "cash_flow"
+          ],
+          "answer_role": "method_context",
+          "transfer_scope": "general_method_only",
+          "retrieval_policy": "context_only",
+          "authority_tier": "internal_synthesis",
+          "jurisdictions": [
+            "Canada",
+            "United States"
+          ],
+          "source_jurisdictions": [
+            "United States",
+            "Ontario, Canada"
+          ],
+          "supporting_source_ids": [
+            "usda_ars_wholefarm",
+            "on_starting_farm_budget"
+          ],
+          "method_scope": {
+            "applicability_countries": [
+              "Canada",
+              "United States"
+            ],
+            "excluded_claims": [
+              "current_price",
+              "lender_approval",
+              "profit_guarantee"
+            ],
+            "method_ids": [
+              "cash_flow"
+            ],
+            "permitted_claims": [
+              "definition",
+              "conditional_relationship",
+              "required_inputs"
+            ],
+            "required_local_inputs": [
+              "opening_cash",
+              "dated_receipts",
+              "dated_payments",
+              "financing_terms"
+            ],
+            "review_status": "source_supported_method_scope_reviewed",
+            "schema_version": "open_agronomy_agent.method_scope.v1",
+            "source_support_receipt_sha256": "494bd2d03009ba4b78564c3701e744aac5042279603e78bdf647f21a31c227e5"
+          }
+        }
+      ],
+      "method_applicability": [
+        {
+          "methods": [
+            "cash_flow"
+          ],
+          "transfer_status": "reviewed_general_method_scope",
+          "capture_status": "reviewed_method_scope"
+        }
+      ],
+      "method_coverage": [
+        {
+          "slot_key": "method:cash_flow",
+          "status": "ADEQUATE",
+          "required_authority": "method_context_only",
+          "reasons": [
+            "reviewed general method supports explanation only; local decision evidence remains separate"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "PFMH3-06",
+      "fixture": "data/eval/production_foundations_method_holdout_v3.jsonl",
+      "question": "A Kansas farm budget shows a surplus for the year, yet the operator worries about spring bills and an autumn loan payment. How would you lay out a cash plan to see whether money arrives in time?",
+      "question_sha256": "5b7bb5f4381687f836938b1095444439260d5f27197a0121787d6bfdbadd55fe",
+      "expected_original": "seasonal_cash_flow",
+      "selected_families": [
+        "enterprise_budget"
+      ],
+      "country": "united states",
+      "method_obligations": [
+        {
+          "key": "method:enterprise_budget",
+          "authority": "method_context_only",
+          "retrieval_terms": [
+            "enterprise budget"
+          ]
+        }
+      ],
+      "contract_retrieval_queries": [
+        "A Kansas farm budget shows a surplus for the year, yet the operator worries about spring bills and an autumn loan payment. How would you lay out a cash plan to see whether money arrives in time? kansas united states representative field observations affected and normal comparison sampling scouting records",
+        "enterprise budget"
+      ],
+      "final_method_cards": [
+        {
+          "doc_id": "method_enterprise_budget",
+          "text_sha256": "429b16081367076c56e8d7dab64095db0783517d29af64867c74b780e71e2a25",
+          "reviewed_method_ids": [
+            "enterprise_budget"
+          ],
+          "answer_role": "method_context",
+          "transfer_scope": "general_method_only",
+          "retrieval_policy": "context_only",
+          "authority_tier": "internal_synthesis",
+          "jurisdictions": [
+            "Canada",
+            "United States"
+          ],
+          "source_jurisdictions": [
+            "Manitoba, Canada",
+            "Ontario, Canada",
+            "United States"
+          ],
+          "supporting_source_ids": [
+            "mb_special_crop_costs",
+            "on_cost_production_framework",
+            "usda_ars_wholefarm"
+          ],
+          "method_scope": {
+            "applicability_countries": [
+              "Canada",
+              "United States"
+            ],
+            "excluded_claims": [
+              "current_market_fact",
+              "profit_guarantee",
+              "regulatory_permission"
+            ],
+            "method_ids": [
+              "enterprise_budget"
+            ],
+            "permitted_claims": [
+              "definition",
+              "conditional_relationship",
+              "required_inputs"
+            ],
+            "required_local_inputs": [
+              "enterprise_and_period",
+              "output_units",
+              "cost_boundary",
+              "farm_costs",
+              "dated_price_assumption"
+            ],
+            "review_status": "source_supported_method_scope_reviewed",
+            "schema_version": "open_agronomy_agent.method_scope.v1",
+            "source_support_receipt_sha256": "494bd2d03009ba4b78564c3701e744aac5042279603e78bdf647f21a31c227e5"
+          }
+        }
+      ],
+      "method_applicability": [
+        {
+          "methods": [
+            "enterprise_budget"
+          ],
+          "transfer_status": "reviewed_general_method_scope",
+          "capture_status": "reviewed_method_scope"
+        }
+      ],
+      "method_coverage": [
+        {
+          "slot_key": "method:enterprise_budget",
+          "status": "ADEQUATE",
+          "required_authority": "method_context_only",
+          "reasons": [
+            "reviewed general method supports explanation only; local decision evidence remains separate"
+          ]
+        }
+      ]
+    }
+  ]
+}

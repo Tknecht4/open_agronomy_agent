@@ -1,0 +1,13 @@
+{
+  "session": "oa-residual-20260928",
+  "hardware": "NVIDIA L4",
+  "creation_utc": "2026-09-28T07:06:34Z",
+  "stop_verified": true,
+  "post_stop_usage_rate_cu_per_hour": 0.0,
+  "post_stop_active_assignments": 0,
+  "measured_account_balance_delta_cu": 0.82,
+  "balance_display_precision_cu": 0.01,
+  "observed_running_rate_cu_per_hour": 1.54,
+  "no_other_preexisting_active_assignments": true,
+  "boundary": "Observed rounded account-balance delta for one task-owned session, not provider token billing; absolute balances excluded. Model/agent token and monetary costs unavailable."
+}

@@ -1,0 +1,54 @@
+{
+  "status": "frozen_before_new_generation_exposed_diagnostic_not_heldout",
+  "created_utc": "2026-09-28T07:15:20.748444+00:00",
+  "source_head": "3ff64813ce14833f3c819044b96ebda738a60cbe",
+  "cache": {
+    "models": [
+      "Gemma E2B 4bit",
+      "Qwen3.5 27B 4bit"
+    ],
+    "units": [
+      "cache/active/PFMH3-01",
+      "cache/method_candidate/PFMH3-01"
+    ],
+    "conditions": [
+      "off",
+      "off_repeat",
+      "split_direct",
+      "split_manual",
+      "split_clone",
+      "lru_cold",
+      "lru_warm"
+    ],
+    "tokens": 320,
+    "boundary": "fixed horizon includes EOS; instrumentation timings not benchmarks"
+  },
+  "budget": {
+    "models": [
+      "Gemma E2B 4bit",
+      "Qwen3.5 27B 4bit"
+    ],
+    "units": [
+      "main/active/PFMH3-12",
+      "direct_reference/PFMH3-06"
+    ],
+    "allowances": [
+      320,
+      640,
+      1024
+    ],
+    "boundary": "raw draft or direct reference; no editor and no blinded efficacy claim"
+  },
+  "initial_checkpoint": "30 minutes from session creation 2026-09-28T07:06:34Z",
+  "timeouts_seconds": {
+    "cache_per_unit": 720,
+    "budget_per_model": 600
+  },
+  "source_files": {
+    "outputs/portable-residual-20260928/cache_probe.py": "700bf18f03412e214bb8969cae0e615e2b94fbfa852450de4fc57bf6b5d87399",
+    "outputs/portable-residual-20260928/budget_probe.py": "cd4eb7800942524c3106e20c802e2db014b28c5befc80b93ce44fbef783df353",
+    "outputs/portable-residual-20260928/remote_run.py": "299a39bc59109268db1d5c1edf7c13096eef91470133aace88c5986c3857a9ac",
+    "docs/reviews/artifacts/portable-agronomy-20260928/gemma-v3-cells.jsonl.gz": "ae198d19800d188bfc2b542d6477e2e2de555db835f6942b38e5671d9347443e",
+    "docs/reviews/artifacts/portable-agronomy-20260928/qwen27b-v4-cells.jsonl.gz": "24aa97a34ea88b995f71cd0aafbd17a60625064c99a788a711a1a8e4370f0039"
+  }
+}

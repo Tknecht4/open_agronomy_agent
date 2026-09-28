@@ -1,0 +1,11 @@
+{
+  "schema": "integrated_checks.v1",
+  "candidate_digest": "fefcdaf935df30efbdf515aaa6be5d1130a93b8a4d539d683a17dbb9f19a4a07",
+  "source_verified_before_and_after": true,
+  "python": "3.12.13 (main, Mar  3 2026, 12:39:30) [Clang 21.0.0 (clang-2100.0.123.102)]",
+  "command": "PYTHONPATH=src .venv/bin/python -m pytest -q",
+  "returncode": 0,
+  "seconds": 100.3202440738678,
+  "summary": "1527 passed, 4 skipped, 26 warnings in 99.93s (0:01:39)",
+  "log_sha256": "7b379e4bf1f155f58fe3bcbecb4a1f2e6027c6edc998818febb46d08ae55bf3b"
+}

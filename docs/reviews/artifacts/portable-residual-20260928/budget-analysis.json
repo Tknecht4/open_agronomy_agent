@@ -1,0 +1,331 @@
+{
+  "schema": "output_budget_analysis.v1",
+  "scope": "exposed fixed prompts; completion mechanism and reconstructed draft assessment, not product quality",
+  "models": {
+    "gemma": {
+      "receipt_gzip_sha256": "e86973343d275d00eb9cfe542f1457107ff51f3a22524dad4aebeaa2b31b6453",
+      "cells": [
+        {
+          "unit": "main/active/PFMH3-12",
+          "max_tokens": 320,
+          "finish_reason": "stop",
+          "generation_tokens": 219,
+          "equals_historical_draft": true,
+          "text_sha256": "6120847ea79f7ea327e96e30b126f587ddccfa80bfb0b95fd1d7715f16930fb2",
+          "prompt_token_ids_sha256": "4ea5e822f0fd6e42e6687a90907d23e88ecfdfc2def4beb08f5a6a367b9dde66",
+          "mlx_peak_memory_bytes": 3607473336,
+          "text_prefix_of_next_allowance": true,
+          "last_160_characters": "g excessive moisture retention or physical damage to the trunk or roots, you may need to adjust it to ensure proper aeration and water movement around the tree.",
+          "reconstructed_draft_assessment": {
+            "requires_review": false,
+            "score": 0,
+            "reasons": [],
+            "unsupported_numbers": [],
+            "unsupported_crop_stages": [],
+            "unsupported_scientific_names": [],
+            "unsupported_named_conditions": [],
+            "unsupported_named_pests": [],
+            "missing_intent_facets": [],
+            "evidence_commit_score": null,
+            "missing_evidence_terms": [],
+            "premise_coverage": null,
+            "missing_premise_anchors": [],
+            "route_violations": [],
+            "evidence_ids": [
+              "soilwise_https_soilwise_he_github_io_soil_health_deciduoustreespecies_eed9fdd238",
+              "soilwise_https_soilwise_he_github_io_soil_health_coniferoustreespecies_de8bb05cd2",
+              "nitrate_leaching",
+              "soilwise_https_soilwise_he_github_io_soil_health_treegrowth_01171a3b1a",
+              "soilwise_https_soilwise_he_github_io_soil_health_densityofnewurbanisation_cf639caef3"
+            ]
+          },
+          "reconstructed_evidence_sha256": "73cc7f5b2834c5993cff271bbaa81fa1b99c288cd33b325fb1c8d2a5b42a3f6b"
+        },
+        {
+          "unit": "main/active/PFMH3-12",
+          "max_tokens": 640,
+          "finish_reason": "stop",
+          "generation_tokens": 219,
+          "equals_historical_draft": true,
+          "text_sha256": "6120847ea79f7ea327e96e30b126f587ddccfa80bfb0b95fd1d7715f16930fb2",
+          "prompt_token_ids_sha256": "4ea5e822f0fd6e42e6687a90907d23e88ecfdfc2def4beb08f5a6a367b9dde66",
+          "mlx_peak_memory_bytes": 3671983352,
+          "text_prefix_of_next_allowance": true,
+          "last_160_characters": "g excessive moisture retention or physical damage to the trunk or roots, you may need to adjust it to ensure proper aeration and water movement around the tree.",
+          "reconstructed_draft_assessment": {
+            "requires_review": false,
+            "score": 0,
+            "reasons": [],
+            "unsupported_numbers": [],
+            "unsupported_crop_stages": [],
+            "unsupported_scientific_names": [],
+            "unsupported_named_conditions": [],
+            "unsupported_named_pests": [],
+            "missing_intent_facets": [],
+            "evidence_commit_score": null,
+            "missing_evidence_terms": [],
+            "premise_coverage": null,
+            "missing_premise_anchors": [],
+            "route_violations": [],
+            "evidence_ids": [
+              "soilwise_https_soilwise_he_github_io_soil_health_deciduoustreespecies_eed9fdd238",
+              "soilwise_https_soilwise_he_github_io_soil_health_coniferoustreespecies_de8bb05cd2",
+              "nitrate_leaching",
+              "soilwise_https_soilwise_he_github_io_soil_health_treegrowth_01171a3b1a",
+              "soilwise_https_soilwise_he_github_io_soil_health_densityofnewurbanisation_cf639caef3"
+            ]
+          },
+          "reconstructed_evidence_sha256": "73cc7f5b2834c5993cff271bbaa81fa1b99c288cd33b325fb1c8d2a5b42a3f6b"
+        },
+        {
+          "unit": "main/active/PFMH3-12",
+          "max_tokens": 1024,
+          "finish_reason": "stop",
+          "generation_tokens": 219,
+          "equals_historical_draft": true,
+          "text_sha256": "6120847ea79f7ea327e96e30b126f587ddccfa80bfb0b95fd1d7715f16930fb2",
+          "prompt_token_ids_sha256": "4ea5e822f0fd6e42e6687a90907d23e88ecfdfc2def4beb08f5a6a367b9dde66",
+          "mlx_peak_memory_bytes": 3671983352,
+          "text_prefix_of_next_allowance": null,
+          "last_160_characters": "g excessive moisture retention or physical damage to the trunk or roots, you may need to adjust it to ensure proper aeration and water movement around the tree.",
+          "reconstructed_draft_assessment": {
+            "requires_review": false,
+            "score": 0,
+            "reasons": [],
+            "unsupported_numbers": [],
+            "unsupported_crop_stages": [],
+            "unsupported_scientific_names": [],
+            "unsupported_named_conditions": [],
+            "unsupported_named_pests": [],
+            "missing_intent_facets": [],
+            "evidence_commit_score": null,
+            "missing_evidence_terms": [],
+            "premise_coverage": null,
+            "missing_premise_anchors": [],
+            "route_violations": [],
+            "evidence_ids": [
+              "soilwise_https_soilwise_he_github_io_soil_health_deciduoustreespecies_eed9fdd238",
+              "soilwise_https_soilwise_he_github_io_soil_health_coniferoustreespecies_de8bb05cd2",
+              "nitrate_leaching",
+              "soilwise_https_soilwise_he_github_io_soil_health_treegrowth_01171a3b1a",
+              "soilwise_https_soilwise_he_github_io_soil_health_densityofnewurbanisation_cf639caef3"
+            ]
+          },
+          "reconstructed_evidence_sha256": "73cc7f5b2834c5993cff271bbaa81fa1b99c288cd33b325fb1c8d2a5b42a3f6b"
+        },
+        {
+          "unit": "direct_reference/PFMH3-06",
+          "max_tokens": 320,
+          "finish_reason": "length",
+          "generation_tokens": 320,
+          "equals_historical_draft": true,
+          "text_sha256": "672608c3c08402e15c832716b5305a2639a3c7bed1cf86e75e28e371a7cbde31",
+          "prompt_token_ids_sha256": "1c49ef3d25544e3d30ec8c2960c08c136997549d8648faa203a44f667a1a963b",
+          "mlx_peak_memory_bytes": 2628854512,
+          "text_prefix_of_next_allowance": true,
+          "last_160_characters": "unt and the due date for each.\n*   **Autumn Loan Payment:**\n    *   Identify the principal and interest due for the loan.\n    *   Determine the exact amount and"
+        },
+        {
+          "unit": "direct_reference/PFMH3-06",
+          "max_tokens": 640,
+          "finish_reason": "length",
+          "generation_tokens": 640,
+          "equals_historical_draft": false,
+          "text_sha256": "f731dc47333d17b208ed710f2470a1605aab022ad26b149289aed1fa860befef",
+          "prompt_token_ids_sha256": "1c49ef3d25544e3d30ec8c2960c08c136997549d8648faa203a44f667a1a963b",
+          "mlx_peak_memory_bytes": 2663050824,
+          "text_prefix_of_next_allowance": true,
+          "last_160_characters": "itigation Strategies\n\nIf the calculation shows a shortfall (a negative result), you need to develop a plan to cover the gap.\n\n*   **If Shortfall Exists:**\n    *"
+        },
+        {
+          "unit": "direct_reference/PFMH3-06",
+          "max_tokens": 1024,
+          "finish_reason": "stop",
+          "generation_tokens": 863,
+          "equals_historical_draft": false,
+          "text_sha256": "bde97b6628b515863bbdd76cefc9f550c7d1ea1a3eff3118b4ba003033dcca34",
+          "prompt_token_ids_sha256": "1c49ef3d25544e3d30ec8c2960c08c136997549d8648faa203a44f667a1a963b",
+          "mlx_peak_memory_bytes": 2663050824,
+          "text_prefix_of_next_allowance": null,
+          "last_160_characters": "le lump sum or multiple installments).\n\n**In short: Create a detailed timeline and use subtraction to see if the surplus covers the required payments on time.**"
+        }
+      ]
+    },
+    "qwen": {
+      "receipt_gzip_sha256": "476538cf1f295ff9f8552ce95856b1e64a80e431c471a7c1c24d45dd0a59178d",
+      "cells": [
+        {
+          "unit": "main/active/PFMH3-12",
+          "max_tokens": 320,
+          "finish_reason": "length",
+          "generation_tokens": 320,
+          "equals_historical_draft": true,
+          "text_sha256": "77441c9184c4679ef79295fabc5fb3098f78b39d3eec07b6aba02fa656170c8c",
+          "prompt_token_ids_sha256": "35969e118013fccce794eb867d5bc4991d8b971f3ab4ea180ad9ad6aea8fa02d",
+          "mlx_peak_memory_bytes": 17770174504,
+          "text_prefix_of_next_allowance": true,
+          "last_160_characters": "hat extends to the tree's drip line (the edge of the canopy) or at least a few feet out, ensuring it never touches the bark. This adjustment immediately reduces",
+          "reconstructed_draft_assessment": {
+            "requires_review": true,
+            "score": 8,
+            "reasons": [
+              "unsupported_numeric_specificity",
+              "unsupported_named_condition",
+              "incomplete_generation"
+            ],
+            "unsupported_numbers": [
+              "2 to 4 inches"
+            ],
+            "unsupported_crop_stages": [],
+            "unsupported_scientific_names": [],
+            "unsupported_named_conditions": [
+              "rot"
+            ],
+            "unsupported_named_pests": [],
+            "missing_intent_facets": [],
+            "evidence_commit_score": null,
+            "missing_evidence_terms": [],
+            "premise_coverage": null,
+            "missing_premise_anchors": [],
+            "route_violations": [],
+            "evidence_ids": [
+              "soilwise_https_soilwise_he_github_io_soil_health_deciduoustreespecies_eed9fdd238",
+              "soilwise_https_soilwise_he_github_io_soil_health_coniferoustreespecies_de8bb05cd2",
+              "nitrate_leaching",
+              "soilwise_https_soilwise_he_github_io_soil_health_treegrowth_01171a3b1a",
+              "soilwise_https_soilwise_he_github_io_soil_health_densityofnewurbanisation_cf639caef3"
+            ]
+          },
+          "reconstructed_evidence_sha256": "73cc7f5b2834c5993cff271bbaa81fa1b99c288cd33b325fb1c8d2a5b42a3f6b"
+        },
+        {
+          "unit": "main/active/PFMH3-12",
+          "max_tokens": 640,
+          "finish_reason": "stop",
+          "generation_tokens": 342,
+          "equals_historical_draft": false,
+          "text_sha256": "55cfa18922f9e242582ce78287af3551d7883e3706d3804567e046171f0290e6",
+          "prompt_token_ids_sha256": "35969e118013fccce794eb867d5bc4991d8b971f3ab4ea180ad9ad6aea8fa02d",
+          "mlx_peak_memory_bytes": 17777006632,
+          "text_prefix_of_next_allowance": true,
+          "last_160_characters": "t never touches the bark. This adjustment immediately reduces the risk of trunk rot and allows the tree to thrive without the hidden dangers of a mulch volcano.",
+          "reconstructed_draft_assessment": {
+            "requires_review": true,
+            "score": 7,
+            "reasons": [
+              "unsupported_numeric_specificity",
+              "unsupported_named_condition"
+            ],
+            "unsupported_numbers": [
+              "2 to 4 inches"
+            ],
+            "unsupported_crop_stages": [],
+            "unsupported_scientific_names": [],
+            "unsupported_named_conditions": [
+              "rot"
+            ],
+            "unsupported_named_pests": [],
+            "missing_intent_facets": [],
+            "evidence_commit_score": null,
+            "missing_evidence_terms": [],
+            "premise_coverage": null,
+            "missing_premise_anchors": [],
+            "route_violations": [],
+            "evidence_ids": [
+              "soilwise_https_soilwise_he_github_io_soil_health_deciduoustreespecies_eed9fdd238",
+              "soilwise_https_soilwise_he_github_io_soil_health_coniferoustreespecies_de8bb05cd2",
+              "nitrate_leaching",
+              "soilwise_https_soilwise_he_github_io_soil_health_treegrowth_01171a3b1a",
+              "soilwise_https_soilwise_he_github_io_soil_health_densityofnewurbanisation_cf639caef3"
+            ]
+          },
+          "reconstructed_evidence_sha256": "73cc7f5b2834c5993cff271bbaa81fa1b99c288cd33b325fb1c8d2a5b42a3f6b"
+        },
+        {
+          "unit": "main/active/PFMH3-12",
+          "max_tokens": 1024,
+          "finish_reason": "stop",
+          "generation_tokens": 342,
+          "equals_historical_draft": false,
+          "text_sha256": "55cfa18922f9e242582ce78287af3551d7883e3706d3804567e046171f0290e6",
+          "prompt_token_ids_sha256": "35969e118013fccce794eb867d5bc4991d8b971f3ab4ea180ad9ad6aea8fa02d",
+          "mlx_peak_memory_bytes": 17777006632,
+          "text_prefix_of_next_allowance": null,
+          "last_160_characters": "t never touches the bark. This adjustment immediately reduces the risk of trunk rot and allows the tree to thrive without the hidden dangers of a mulch volcano.",
+          "reconstructed_draft_assessment": {
+            "requires_review": true,
+            "score": 7,
+            "reasons": [
+              "unsupported_numeric_specificity",
+              "unsupported_named_condition"
+            ],
+            "unsupported_numbers": [
+              "2 to 4 inches"
+            ],
+            "unsupported_crop_stages": [],
+            "unsupported_scientific_names": [],
+            "unsupported_named_conditions": [
+              "rot"
+            ],
+            "unsupported_named_pests": [],
+            "missing_intent_facets": [],
+            "evidence_commit_score": null,
+            "missing_evidence_terms": [],
+            "premise_coverage": null,
+            "missing_premise_anchors": [],
+            "route_violations": [],
+            "evidence_ids": [
+              "soilwise_https_soilwise_he_github_io_soil_health_deciduoustreespecies_eed9fdd238",
+              "soilwise_https_soilwise_he_github_io_soil_health_coniferoustreespecies_de8bb05cd2",
+              "nitrate_leaching",
+              "soilwise_https_soilwise_he_github_io_soil_health_treegrowth_01171a3b1a",
+              "soilwise_https_soilwise_he_github_io_soil_health_densityofnewurbanisation_cf639caef3"
+            ]
+          },
+          "reconstructed_evidence_sha256": "73cc7f5b2834c5993cff271bbaa81fa1b99c288cd33b325fb1c8d2a5b42a3f6b"
+        },
+        {
+          "unit": "direct_reference/PFMH3-06",
+          "max_tokens": 320,
+          "finish_reason": "length",
+          "generation_tokens": 320,
+          "equals_historical_draft": true,
+          "text_sha256": "cd3646e26f0f0b04bfd675f4d477b2e30756f3b44369f07a0405587c9138e267",
+          "prompt_token_ids_sha256": "288ab58660d348104c8ccac8b0c244c7318884ba6a6c531b26c8f95527ac35b1",
+          "mlx_peak_memory_bytes": 16001874712,
+          "text_prefix_of_next_allowance": true,
+          "last_160_characters": ".\n    *   *Spring:* Are there any early sales (e.g., seed corn, early wheat, livestock sales, or government payments)?\n    *   *Autumn:* When are the bulk grain"
+        },
+        {
+          "unit": "direct_reference/PFMH3-06",
+          "max_tokens": 640,
+          "finish_reason": "length",
+          "generation_tokens": 640,
+          "equals_historical_draft": false,
+          "text_sha256": "5f7a3464cdacc65d02d7eff78ae29677ed77f307909ddad0f1986371e5a99d83",
+          "prompt_token_ids_sha256": "288ab58660d348104c8ccac8b0c244c7318884ba6a6c531b26c8f95527ac35b1",
+          "mlx_peak_memory_bytes": 15911680600,
+          "text_prefix_of_next_allowance": true,
+          "last_160_characters": "g/summer).\n\n### 4. Calculate the Cumulative Cash Balance\nFor each month, perform the following calculation:\n$$ \\text{Ending Balance}_n = \\text{Beginning Balance"
+        },
+        {
+          "unit": "direct_reference/PFMH3-06",
+          "max_tokens": 1024,
+          "finish_reason": "length",
+          "generation_tokens": 1024,
+          "equals_historical_draft": false,
+          "text_sha256": "f8127263ae762e9c667b54bfd4f2729c3cb3e47e1467309571ba8a6aea63c653",
+          "prompt_token_ids_sha256": "288ab58660d348104c8ccac8b0c244c7318884ba6a6c531b26c8f95527ac35b1",
+          "mlx_peak_memory_bytes": 15943253384,
+          "text_prefix_of_next_allowance": null,
+          "last_160_characters": "ainst future crop sales?\n\n### 6. Develop Mitigation Strategies (If a Deficit Exists)\nIf the cash plan shows a negative balance in spring or autumn, the operator"
+        }
+      ]
+    }
+  },
+  "source_sha256": {
+    "src/agronomy_agent/answer_verifier.py": "6da36abd0cc02feb7fa14b6a1ea5dc640425288de330dd89e9818891be40fa58",
+    "src/agronomy_agent/agent.py": "6ab428890d65201018b4a1ca47f28577e355023cb35a12ffcac24a84d4ad2a72",
+    "configs/rag.yaml": "8f45880dbadf368848d52251aaafb24e25b17d9baa7923aa7707f6880fc04b91"
+  }
+}

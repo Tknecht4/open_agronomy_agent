@@ -1,0 +1,41 @@
+{
+  "end_unix": 1790581118.6291816,
+  "results": [
+    {
+      "task": "cache-gemma-active",
+      "start_unix": 1790579805.161351,
+      "end_unix": 1790579960.7893558,
+      "returncode": 0
+    },
+    {
+      "task": "cache-gemma-method_candidate",
+      "start_unix": 1790579960.78974,
+      "end_unix": 1790580023.604886,
+      "returncode": 0
+    },
+    {
+      "task": "budget-gemma",
+      "start_unix": 1790580023.6052134,
+      "end_unix": 1790580070.9850547,
+      "returncode": 0
+    },
+    {
+      "task": "cache-qwen-active",
+      "start_unix": 1790580070.985563,
+      "end_unix": 1790580464.5483446,
+      "returncode": 0
+    },
+    {
+      "task": "cache-qwen-method_candidate",
+      "start_unix": 1790580464.5487342,
+      "end_unix": 1790580815.6023622,
+      "returncode": 0
+    },
+    {
+      "task": "budget-qwen",
+      "start_unix": 1790580815.60276,
+      "end_unix": 1790581118.6288009,
+      "returncode": 0
+    }
+  ]
+}

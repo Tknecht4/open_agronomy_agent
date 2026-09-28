@@ -1,0 +1,767 @@
+{
+  "schema": "public_source_regression_capsule.v1",
+  "base_commit": "8380b8b",
+  "scope": "public source plus authorized repaired diff and synthetic fixture; no corpus or private artifacts",
+  "files": [
+    {
+      "path": "src/agronomy_agent/__init__.py",
+      "bytes": 57,
+      "sha256": "565d00359d274169b0c43a8e3448a7e16c224a063fc26209e76d872ce90b9b4a"
+    },
+    {
+      "path": "src/agronomy_agent/advisor_plan.py",
+      "bytes": 9803,
+      "sha256": "aeb2338bd89f632b364226fe6c89cb736b4034e9302f2d6d728dcce895fa13a8"
+    },
+    {
+      "path": "src/agronomy_agent/agent.py",
+      "bytes": 235138,
+      "sha256": "1070f970a21335f011a69a1b60bebcc23ecec5939a57830fe7fd0ffb402e5975"
+    },
+    {
+      "path": "src/agronomy_agent/agno_runtime/__init__.py",
+      "bytes": 181,
+      "sha256": "62916f82af891a1b7f0349b498bcd57ead2623a2a0eff660f2c1bbb06c586435"
+    },
+    {
+      "path": "src/agronomy_agent/agno_runtime/knowledge_factory.py",
+      "bytes": 71851,
+      "sha256": "e6f1ffb7657c9e4260727e718f39fd7d5f78004ce8841980ea3069a6da5eed8a"
+    },
+    {
+      "path": "src/agronomy_agent/agno_runtime/knowledge_graph.py",
+      "bytes": 29378,
+      "sha256": "71a9f3c78e53481771b88ec9a725ad373bdcf3d8b3ddee947266e4b60a8d4b1c"
+    },
+    {
+      "path": "src/agronomy_agent/agno_runtime/local_index.py",
+      "bytes": 48645,
+      "sha256": "02c1226e34033c486500c865b7f925a5df920ffe0287c3f841d2c755bad4bb93"
+    },
+    {
+      "path": "src/agronomy_agent/agno_runtime/retriever_adapter.py",
+      "bytes": 2792,
+      "sha256": "926778aaa4b073131fb4001c148b21ac21a844556ce9c6b6fbc2f83781cdb335"
+    },
+    {
+      "path": "src/agronomy_agent/agno_runtime/runtime.py",
+      "bytes": 809,
+      "sha256": "41e4830212cac205960769a4ff3194b6673ec766dfc848cac055c574c4289477"
+    },
+    {
+      "path": "src/agronomy_agent/agno_runtime/source_ingest.py",
+      "bytes": 44275,
+      "sha256": "af8982c35ba08678ef3d19104464fc2d3b34e50af05557c24a23536a5a973512"
+    },
+    {
+      "path": "src/agronomy_agent/agno_runtime/tool_adapters.py",
+      "bytes": 14866,
+      "sha256": "79682978bbb0b05405656c34ea9eef36a914a99430ac2518c76c80837ef99221"
+    },
+    {
+      "path": "src/agronomy_agent/agronomic_calculations.py",
+      "bytes": 35286,
+      "sha256": "97be4e716744a3e1e9b9d9cdb86d15b6f5192669dad508056768375304fdb137"
+    },
+    {
+      "path": "src/agronomy_agent/answer_receipts.py",
+      "bytes": 4134,
+      "sha256": "5a6cf72ee1d274714a2542527494e17b612fcffee9926663a89156567b540280"
+    },
+    {
+      "path": "src/agronomy_agent/answer_safety.py",
+      "bytes": 216423,
+      "sha256": "bdb4375c1d074ce2afae004c710c670cee39a54f4d5ae13e32ed5774e8d24186"
+    },
+    {
+      "path": "src/agronomy_agent/answer_verifier.py",
+      "bytes": 488360,
+      "sha256": "ee204526b511568a81b32c5b997be1b0133183591ced89b691715e6cdc580de2"
+    },
+    {
+      "path": "src/agronomy_agent/answerability.py",
+      "bytes": 48051,
+      "sha256": "566275863c1030315b42096664e990e27ef03d43a96d0e04534db5742381fc4f"
+    },
+    {
+      "path": "src/agronomy_agent/artifact_signature.py",
+      "bytes": 3868,
+      "sha256": "97d185e06e5b05b9c778609d5c86e833eb2de75a08b02941b090b26422d583bb"
+    },
+    {
+      "path": "src/agronomy_agent/benchmark_arms.py",
+      "bytes": 2713,
+      "sha256": "b0226a7052a2fb8c7a1621926cdc4a790e351961cb2e7cf3311865dbea3ae0b8"
+    },
+    {
+      "path": "src/agronomy_agent/benchmark_contract.py",
+      "bytes": 12371,
+      "sha256": "42b6b8708cbd9325f5012a6d67e5b3805d14f01fc89039a1ac1b74882b061b3d"
+    },
+    {
+      "path": "src/agronomy_agent/benchmark_harness_compatibility.py",
+      "bytes": 40707,
+      "sha256": "210a2a16f61b8f87d215c86c5a5b3d0650edd91fbaa3a6ef6db2ca7c773751de"
+    },
+    {
+      "path": "src/agronomy_agent/benchmark_rehearsal.py",
+      "bytes": 9031,
+      "sha256": "d3db479d5c33384ad3a5415052e1550b72fe345901c565f94c478a79cedda24a"
+    },
+    {
+      "path": "src/agronomy_agent/benchmark_report.py",
+      "bytes": 21115,
+      "sha256": "956c9101a324a13c4c72546eb30b4f31d08bd0d2ce96f1b0266ed611c8ea2f6c"
+    },
+    {
+      "path": "src/agronomy_agent/benchmark_v2_metrics.py",
+      "bytes": 47037,
+      "sha256": "62e4135c7ef5b857598c2bff0f9a3d9a5e40edabca8331f71cfa10e6d303ad02"
+    },
+    {
+      "path": "src/agronomy_agent/benchmark_v2_runner.py",
+      "bytes": 78022,
+      "sha256": "b73bfa0d4a6dec06f01f476f03f29c721e261f2fdf96e0889fe9e5f5b58b3a29"
+    },
+    {
+      "path": "src/agronomy_agent/calculator_contracts.py",
+      "bytes": 1228,
+      "sha256": "cef4e50383d8ec5b8e78d3415725372ce83ce84a10b2c19643ffb97c495644d7"
+    },
+    {
+      "path": "src/agronomy_agent/canada_sources.py",
+      "bytes": 36617,
+      "sha256": "6d0f85ada475481c19996ed51d949302dc89adcb441c9fe824a222c528fcea16"
+    },
+    {
+      "path": "src/agronomy_agent/capability_planner.py",
+      "bytes": 16306,
+      "sha256": "b6b9a30ddaa67e5cb5977abe66c54dbf782c334cee317267b369a9598650cf10"
+    },
+    {
+      "path": "src/agronomy_agent/capability_registry.py",
+      "bytes": 57107,
+      "sha256": "4fe78768512e20a31b6bc100fe1fb992a0a8a15e0401af0cd9d09a365b350d49"
+    },
+    {
+      "path": "src/agronomy_agent/cli.py",
+      "bytes": 2341,
+      "sha256": "430bce7389d52b39ecc7aad67ef215e2ee5535687b373184766de83fa571abd3"
+    },
+    {
+      "path": "src/agronomy_agent/codex_app_server.py",
+      "bytes": 105884,
+      "sha256": "536dc372058674e7b12b033c510ad2a75e92ff3fed7d09e0efc720b804254c79"
+    },
+    {
+      "path": "src/agronomy_agent/context_packer.py",
+      "bytes": 34026,
+      "sha256": "802df79f1f6af3f51b35676326ba5fa474e9a90d2868040d28887023e73512f2"
+    },
+    {
+      "path": "src/agronomy_agent/corpus_governance.py",
+      "bytes": 20494,
+      "sha256": "597dfefb83fd1797ac839c07e83f9d27c84c8bc07dcf37115229ebcc4e03dc97"
+    },
+    {
+      "path": "src/agronomy_agent/corpus_release.py",
+      "bytes": 9498,
+      "sha256": "e3350b9e220f425aa8490b34cb968a651e22142d5d98da5dd5b668b86fd1f286"
+    },
+    {
+      "path": "src/agronomy_agent/curated_knowledge_store.py",
+      "bytes": 68108,
+      "sha256": "11f4fb049440c3ee1d4652f1a97032cf8e009c9f2eed8f1dc1c66ea76535a48a"
+    },
+    {
+      "path": "src/agronomy_agent/decision_capsule.py",
+      "bytes": 21856,
+      "sha256": "4b25916bb073e5c40daeccf872d2617577c1f82656b2cfb0249cf867d4f15e34"
+    },
+    {
+      "path": "src/agronomy_agent/decision_contract.py",
+      "bytes": 26043,
+      "sha256": "4ec80c1ea3aff6e4c5b4997fa57e83fa47970d3a09799e0d1a378c619033965d"
+    },
+    {
+      "path": "src/agronomy_agent/decision_route.py",
+      "bytes": 124037,
+      "sha256": "3ee512a91accd3b1cd775f65f858b9c6529ecacd9a30fcc0e2349e11c39358d0"
+    },
+    {
+      "path": "src/agronomy_agent/eval_diagnostics.py",
+      "bytes": 6192,
+      "sha256": "f3f4ede4f3b9b09e4e10ec8b5f69e8df98400f33b709d50db0124718135ae943"
+    },
+    {
+      "path": "src/agronomy_agent/evals.py",
+      "bytes": 110970,
+      "sha256": "eff9e43f0cfe5d6c2cb3ee2264fbd4615c462a64a0ebb5d7c839c78feccce661"
+    },
+    {
+      "path": "src/agronomy_agent/evaluation_validity.py",
+      "bytes": 12601,
+      "sha256": "7201e519c89ab29ec5992750d33c74efd679805b6c1a4a8a5a2b07dcf89ebd60"
+    },
+    {
+      "path": "src/agronomy_agent/evidence_authority.py",
+      "bytes": 4263,
+      "sha256": "8ce30b829ca44ccc3ffebbd0e580d1ae7c44d3eb2716019bad774c29ef2cac27"
+    },
+    {
+      "path": "src/agronomy_agent/evidence_contracts.py",
+      "bytes": 37323,
+      "sha256": "56ba8f9b3b97d9152e8dec1f89d7ebc267323a5921c8f032bb687f9b3b7355ec"
+    },
+    {
+      "path": "src/agronomy_agent/evidence_handshake.py",
+      "bytes": 33017,
+      "sha256": "32fa5d103bf167abf76e9128a311c60ca347169e9365d612c4c1ae39c5cd32e6"
+    },
+    {
+      "path": "src/agronomy_agent/execution_core.py",
+      "bytes": 47451,
+      "sha256": "4e309bb79867cedcf6c9cf41b93d3d429d8206ead03793f4633cf6633dfdc9b4"
+    },
+    {
+      "path": "src/agronomy_agent/field_data.py",
+      "bytes": 9071,
+      "sha256": "ce2b09d2a31653e245a3369a2a7b9663d915e4bdce3f3c840a084f202aa56778"
+    },
+    {
+      "path": "src/agronomy_agent/field_data_benchmark.py",
+      "bytes": 29938,
+      "sha256": "80542bc2859b2e165f2260d671cbe96f4440affd85c2f148fe0a73df64932e91"
+    },
+    {
+      "path": "src/agronomy_agent/field_data_capability.py",
+      "bytes": 13777,
+      "sha256": "07b8fa315808d93f7b9080c6044b59d5627e1f82dbdd2a8882f9aac0e99f6e76"
+    },
+    {
+      "path": "src/agronomy_agent/field_events.py",
+      "bytes": 14440,
+      "sha256": "c52ea86a4194993d7e52488099adad232f82fa00fee2517faacb893bf635c5f2"
+    },
+    {
+      "path": "src/agronomy_agent/field_imagery.py",
+      "bytes": 16767,
+      "sha256": "59498a333b184351367c085fb1a00e2fd332ec6a0c7ab90f5df7a7aa13af93b1"
+    },
+    {
+      "path": "src/agronomy_agent/field_measurements.py",
+      "bytes": 8494,
+      "sha256": "57ae687a0759a999371e771dc075a8af0e511bcfb6a14494148c0c6c4a79bf7c"
+    },
+    {
+      "path": "src/agronomy_agent/field_source_preparation.py",
+      "bytes": 18022,
+      "sha256": "aefc5dac51067ca2037a33185b1c57c63cd6688a24cadad2083f8a7832d253be"
+    },
+    {
+      "path": "src/agronomy_agent/foundation_math_parser.py",
+      "bytes": 20995,
+      "sha256": "240a60f72dafa3bb903f6a8816236301b0f0c382af4d210aa395f023122733d3"
+    },
+    {
+      "path": "src/agronomy_agent/geographic_context.py",
+      "bytes": 13398,
+      "sha256": "c4038b47a79a9e0b256c7f8ee0c266347e1bedb34fd876a1099d2257c6ae8e69"
+    },
+    {
+      "path": "src/agronomy_agent/harness_intervention_replay.py",
+      "bytes": 13115,
+      "sha256": "650b251c80ce24ed01097085d1e97bbece7564bd80d7a6d2d84fcf5fa3d368d4"
+    },
+    {
+      "path": "src/agronomy_agent/high_consequence.py",
+      "bytes": 12148,
+      "sha256": "e90a7f11f78f44ed42484a19aaa21fc31e97a362266a7949f4c3c6ce6fb46344"
+    },
+    {
+      "path": "src/agronomy_agent/imagery_analytics.py",
+      "bytes": 38602,
+      "sha256": "44d167d0d3aa48475caca5220567c38233e5e865e88fb830a2539cd600856436"
+    },
+    {
+      "path": "src/agronomy_agent/imagery_assessment.py",
+      "bytes": 33654,
+      "sha256": "e6ec92a9ea0670652c87c606ff8a1791cde7bb3f67885ad6b8e95cb03bcf7b3d"
+    },
+    {
+      "path": "src/agronomy_agent/imagery_budget.py",
+      "bytes": 4324,
+      "sha256": "44221209a25fdc27deffd47cf119e3d45903602f88db362a81cf903eda1b9164"
+    },
+    {
+      "path": "src/agronomy_agent/imagery_models.py",
+      "bytes": 26806,
+      "sha256": "00def233bd0ce0eef7e927018a7ea8f865d9d0780ce4d755c76db16b5adb93a5"
+    },
+    {
+      "path": "src/agronomy_agent/imagery_receipts.py",
+      "bytes": 8504,
+      "sha256": "74e18e8d2db4e182a1c6914f0ebd2607b7c6a6b70766455a53dcec351e72b3bf"
+    },
+    {
+      "path": "src/agronomy_agent/imagery_sampling.py",
+      "bytes": 6211,
+      "sha256": "9c24a1f972118d9db31a4413b8f8311ef5808898dbfd60790b495759356bae24"
+    },
+    {
+      "path": "src/agronomy_agent/imagery_store.py",
+      "bytes": 22580,
+      "sha256": "d7a2f0bdc82fc6ab4c6280c1ade81164f4e7390a96db36963500e2a6c4981e1a"
+    },
+    {
+      "path": "src/agronomy_agent/imagery_worker.py",
+      "bytes": 2512,
+      "sha256": "7f0a97316c454c91b9db72d2a6cc3a12afe9378f3f0bf33671b1b9563d816477"
+    },
+    {
+      "path": "src/agronomy_agent/judge_authorization.py",
+      "bytes": 4927,
+      "sha256": "d7b761981c82d5e927264026cce7ecdc01931e3221fc474ad2b0c62817df2a63"
+    },
+    {
+      "path": "src/agronomy_agent/knowledge_update_trust.py",
+      "bytes": 19224,
+      "sha256": "d91a6cde40a8e40bcadae7f5ae376439cd78241928a0a4f2432cefd451d9b3f7"
+    },
+    {
+      "path": "src/agronomy_agent/knowledge_updates.py",
+      "bytes": 72302,
+      "sha256": "0e848df42911a1af1feb7a38f8e07395fb21bc1a4b8ad9a6811a312d2ecfe4da"
+    },
+    {
+      "path": "src/agronomy_agent/leak_guard.py",
+      "bytes": 5563,
+      "sha256": "cbd0dcd6faf2a43236f03cdb5800470b7638e53cc0d07af5029c2c6ed789184a"
+    },
+    {
+      "path": "src/agronomy_agent/local_tools.py",
+      "bytes": 196025,
+      "sha256": "c9d844bfef5710049f7e58af73074771e1fed7edcb87e7decdf940c3a464920c"
+    },
+    {
+      "path": "src/agronomy_agent/map_component_interpretation.py",
+      "bytes": 1805,
+      "sha256": "bccfd1c9b0c09ad17fdb837b322dfd1754ec46b59111fecd1e2fd89670901294"
+    },
+    {
+      "path": "src/agronomy_agent/method_context.py",
+      "bytes": 17460,
+      "sha256": "5aeeafd21df7fbae786ef86791ca0544b26f3366c6284d2af9001162be2bc9ea"
+    },
+    {
+      "path": "src/agronomy_agent/mock_candidate_executor.py",
+      "bytes": 424,
+      "sha256": "bb489dae79740abc2393c9ee6c08dfd0573de434f3ec81408662789a5d379b60"
+    },
+    {
+      "path": "src/agronomy_agent/model_identity.py",
+      "bytes": 6749,
+      "sha256": "f9c91ed473ce73cffbebb5fd6f62767da999eb04e8282339624746a3f5daad42"
+    },
+    {
+      "path": "src/agronomy_agent/model_prompt_budget.py",
+      "bytes": 2630,
+      "sha256": "f78257e2a8ef64ed3345d20e8b1438bf4d8b90732ec0ba5b50bf257d78a4aa07"
+    },
+    {
+      "path": "src/agronomy_agent/offline_context_packs.py",
+      "bytes": 43287,
+      "sha256": "83b00dce8df1b2409709b16cd43e2d863cc465e2d40c9fa1cec563c41b4cfa97"
+    },
+    {
+      "path": "src/agronomy_agent/offline_readiness.py",
+      "bytes": 16248,
+      "sha256": "7d83678c53021954d5be7bfc1a2661b1f557885ef66d847825a953395e92d613"
+    },
+    {
+      "path": "src/agronomy_agent/offline_source_admission.py",
+      "bytes": 16313,
+      "sha256": "3d8594a4b31a950c2d727e1cdaa4be68e5fc6529ca36a52a00a58a11ecd40b61"
+    },
+    {
+      "path": "src/agronomy_agent/on_demand_corpus.py",
+      "bytes": 13995,
+      "sha256": "945f79af1f2f8a17ea1f9fc382dfda25472fe9d0715a511b2dbce4ee74e7a0e5"
+    },
+    {
+      "path": "src/agronomy_agent/paths.py",
+      "bytes": 1112,
+      "sha256": "a8bc5fccfa7f351ec22b3ec19d90b4937a0931bad4f3e4f1702267a798379858"
+    },
+    {
+      "path": "src/agronomy_agent/phase5_cache.py",
+      "bytes": 3243,
+      "sha256": "a51a9da02d79ecc53a66fbd4951926a781a9684b034b879cbea1b5767b50885f"
+    },
+    {
+      "path": "src/agronomy_agent/phase5_optimization.py",
+      "bytes": 4832,
+      "sha256": "6a8fa11d0613ed2d4bc1fa94f8a0c9840c5b55719ce5d50b66dddc4464edf398"
+    },
+    {
+      "path": "src/agronomy_agent/phase5_reports.py",
+      "bytes": 15072,
+      "sha256": "0f4e0a700546910efd55e5ee6836bdbc27866f84e38d9f0d8388d7ce3203157b"
+    },
+    {
+      "path": "src/agronomy_agent/phase5_retrieval_diagnostics.py",
+      "bytes": 6073,
+      "sha256": "61957ed49d5ecd9f35516217db6d73d19eb5eb25975494e6b27265aaa5f605c1"
+    },
+    {
+      "path": "src/agronomy_agent/phase5_sft.py",
+      "bytes": 8564,
+      "sha256": "e4c91a699e66698a100216d0cc6ea5e7da6832b92e3c4484701a98afed3c1fed"
+    },
+    {
+      "path": "src/agronomy_agent/portable_field_receipt.py",
+      "bytes": 23501,
+      "sha256": "0c95b1bb55c592c126ea293c7eced157c412d3965fea522b5e9e198df4a69bae"
+    },
+    {
+      "path": "src/agronomy_agent/private_knowledge.py",
+      "bytes": 7774,
+      "sha256": "38065cef4fec818cb24973cc93208878b192bd28d469668f9eec84bee4585cfa"
+    },
+    {
+      "path": "src/agronomy_agent/quantity_claims.py",
+      "bytes": 6912,
+      "sha256": "99e661ac7a2049edfad82bae9b6f4ad9b077d98bebf6cd1f4d541c998a8510af"
+    },
+    {
+      "path": "src/agronomy_agent/query_context.py",
+      "bytes": 58252,
+      "sha256": "6440f53ac488e8507f4cff0824659225878f2fcbdc1423b92d5d3632d5805a98"
+    },
+    {
+      "path": "src/agronomy_agent/router.py",
+      "bytes": 172170,
+      "sha256": "f58d0fc71e9182a50138c8a1cd1432ff280914a82d2e90aacd25a04379828389"
+    },
+    {
+      "path": "src/agronomy_agent/runtime_profiles.py",
+      "bytes": 8904,
+      "sha256": "570a05f76ae6fc9b059572d31c6198cdc6836e0c327b780b9d3e52d64d98dec4"
+    },
+    {
+      "path": "src/agronomy_agent/security_evidence.py",
+      "bytes": 3224,
+      "sha256": "63e2781f4647fa7a533289a040523fec8f7097d00344ea920718a53f765f3a65"
+    },
+    {
+      "path": "src/agronomy_agent/server/__init__.py",
+      "bytes": 109,
+      "sha256": "431037c618a68f26eb668772d8daa347d9c298f6bc34d3e9e25c758a5597cae6"
+    },
+    {
+      "path": "src/agronomy_agent/server/app.py",
+      "bytes": 341468,
+      "sha256": "e039303482aa2da0d72a6366ab70adcd7c221145d42aa58183aa058e143544f6"
+    },
+    {
+      "path": "src/agronomy_agent/server/field_data_routes.py",
+      "bytes": 9662,
+      "sha256": "0c2e65f2fb09ea6bcb6df5bff54ac1b65dc3b14c6065330b1cab2367ea4efb27"
+    },
+    {
+      "path": "src/agronomy_agent/server/map_analysis_routes.py",
+      "bytes": 1117,
+      "sha256": "a2512c8bd976a7a171e3864085972297d45c1a2768d5b6d36c6825f19a09e988"
+    },
+    {
+      "path": "src/agronomy_agent/server/observability.py",
+      "bytes": 4105,
+      "sha256": "85a6a044042d9f55ab2e3c8e5c0613bb03fa0f025b4a18bc70241ddba5106266"
+    },
+    {
+      "path": "src/agronomy_agent/server/rate_limit.py",
+      "bytes": 1602,
+      "sha256": "b04d776071c2909f36d7829e7ee231b7ccd2aa9471a201a7e373dc16142e2f3b"
+    },
+    {
+      "path": "src/agronomy_agent/server/schemas.py",
+      "bytes": 45526,
+      "sha256": "4ac4c7bb6021c7fe0f8f639e773aa88c6825dc0a460d4a33ce14a9e88e0d7164"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/advisory_readiness_service.py",
+      "bytes": 21585,
+      "sha256": "fc2a482df54b7b31cd4b72575dd318a1d038e57c6842dc016949f39042753afa"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/answer_renderer.py",
+      "bytes": 66586,
+      "sha256": "0f966caca7832e6b0bed3fb23356058a475fd1c57cec3b1d78be6ec28032247e"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/attachment_scanner.py",
+      "bytes": 4679,
+      "sha256": "7edae214cb73c2c61ffc95527ef4d13b1ae378eb1836ff6b8b9f257aa6e93474"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/benchmark_service.py",
+      "bytes": 161441,
+      "sha256": "1ad4d8016168ed8ed12b70e73845f0e83983e802c8da561794e9e0cec1007655"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/chat_service.py",
+      "bytes": 224223,
+      "sha256": "7db5ed05d5b85f6789518b690ea6c475a3b3c3d222aec2841de3600a994e6457"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/conversation_context.py",
+      "bytes": 7933,
+      "sha256": "bacbb749ec4b8abbda120216d9c9e2c5db8a4ca02f9e3ec9815be1e0e98b5496"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/conversation_scope.py",
+      "bytes": 3760,
+      "sha256": "d3138b148e53b1a746f1aab52b316bf5e2ccdd8ef55a42c25019053da895d0f3"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/datasource_service.py",
+      "bytes": 5973,
+      "sha256": "9c1abf1bdfaddf51a5f28b5807bcaa40d068224cd6371f8aee0633bcd7207d9a"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/eval_service.py",
+      "bytes": 3840,
+      "sha256": "d96d984b9dd5d406af548969783517ebf6c57d8ac608febaa4fddb1759fec25d"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/export_service.py",
+      "bytes": 153993,
+      "sha256": "a6a102074d7b48bfda1eb3902af164fcd92d7c4b12e77729d97e177a460de257"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/field_context_compiler.py",
+      "bytes": 10735,
+      "sha256": "c9e073a4898e7c7af26668a8e2858971c2838a1beb96ed8b3f8efdc1e870d689"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/field_context_quality.py",
+      "bytes": 4818,
+      "sha256": "13d369e5086383cb77f358b4171696e0e6f9884e40b621df425e7678ef82bd64"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/field_map_analysis.py",
+      "bytes": 22655,
+      "sha256": "ef7dc8de1f689230fc9281237f6dfb3ca66bb08b07b2161bb0ada2241b7af962"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/geospatial_service.py",
+      "bytes": 81381,
+      "sha256": "a791f58ca5625ff537ac3a0f330361fe30924112fa2eaefc7ff5283a4af03d51"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/image_eval_service.py",
+      "bytes": 6914,
+      "sha256": "6ca661e9f75c492b493b398cac7a323f5a8107a66b4183acc7eaa16adb7cd198"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/image_observation.py",
+      "bytes": 7165,
+      "sha256": "868994f3c86200cdad5acd0fa7b35f3c9605de8e1183d721685ec246fc7e0a8d"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/image_rag_service.py",
+      "bytes": 7430,
+      "sha256": "dc9afd6fe1c35536047cc88adeabf40fdcc8557a1de1c9966893584e6f348f9a"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/imagery_service.py",
+      "bytes": 8751,
+      "sha256": "e89fabdf36a071db23c98b93300309196cae44c257a36617ce3ef8b2659aea82"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/knowledge_coverage_service.py",
+      "bytes": 104898,
+      "sha256": "52ae75e094d3b9f7e30f063376fa640194ad26d330b7a556567841af007f9273"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/leak_guard.py",
+      "bytes": 163,
+      "sha256": "5ecbe85521563c88be725a672eea5a41849cf5167310deb2e849ea1fb3146007"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/model_adaptation_service.py",
+      "bytes": 24791,
+      "sha256": "5bd0ed55782034505f9e9b5d1038c6a6e239cca3a74f80c4ab6b5b882a87d7ce"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/model_decision_service.py",
+      "bytes": 12017,
+      "sha256": "3c7df627fdc02a8bf15f70b426d9091e17290b756b5c64a314743c43f89462f0"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/privacy_boundary.py",
+      "bytes": 6566,
+      "sha256": "43dd7f0c365909897137e97925229d40953e85f169a090eba3a2d8aef038a22d"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/replay_service.py",
+      "bytes": 10227,
+      "sha256": "5b9936670fffe39500be9c7d946988d60d3e0a7ccd1bcdd95c1a74f131b5719a"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/retrieval_service.py",
+      "bytes": 1196,
+      "sha256": "7c0d1f9edc253105a26883fa116a1d0699f40fe4489498636859efcc4fe72841"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/router_service.py",
+      "bytes": 231,
+      "sha256": "21a3535994db8e0cb9e9e64b2b228fc51c6d3f9a9866d6721a32db56a988494d"
+    },
+    {
+      "path": "src/agronomy_agent/server/services/tool_service.py",
+      "bytes": 55769,
+      "sha256": "066a103e33e8c99f2214ca32c8ff28aac5086adac238730f54916078381be2a8"
+    },
+    {
+      "path": "src/agronomy_agent/server/settings.py",
+      "bytes": 24608,
+      "sha256": "5bc86513df2457af95db84cc9ca4cac37667eedc051624067b9aa12e5013e761"
+    },
+    {
+      "path": "src/agronomy_agent/server/storage/backup.py",
+      "bytes": 35034,
+      "sha256": "e3231ca3769ad13e38010c93cbed4381ce8e5c67eba799d43d9686fe3b8ae1a8"
+    },
+    {
+      "path": "src/agronomy_agent/server/storage/db.py",
+      "bytes": 275882,
+      "sha256": "bab4eed8c4a97da1913c1ef8eb120be83a6a37426ab6f939c55c968082b13bc5"
+    },
+    {
+      "path": "src/agronomy_agent/server/storage/field_data_store.py",
+      "bytes": 24929,
+      "sha256": "2b46f9f75cec38d600d2254b44878e26e98bf0dcf693920dd041113bda9b1c89"
+    },
+    {
+      "path": "src/agronomy_agent/server/storage/field_source_blobs.py",
+      "bytes": 8603,
+      "sha256": "8a27f39e383874814ca93677ba4acc3e436bf656629335c8bc512ddaaf19ac55"
+    },
+    {
+      "path": "src/agronomy_agent/server/storage/object_store.py",
+      "bytes": 2621,
+      "sha256": "b4bb3ffb6fa0b758b7fd84a6f4ff5955389c80f2fceca57e34afb3df78c8fb0a"
+    },
+    {
+      "path": "src/agronomy_agent/server/storage/postgres_migrations.py",
+      "bytes": 11581,
+      "sha256": "d42b7d71dc94c9ffd70b9f6cc57a1858c3ad6f7421451598ee60973bfd8ccdb8"
+    },
+    {
+      "path": "src/agronomy_agent/server/storage/runtime.py",
+      "bytes": 207602,
+      "sha256": "b49d0c84cef0b077faa3b455a2cd10a6d71b207ac36aee9b8da8aca05585de11"
+    },
+    {
+      "path": "src/agronomy_agent/server/trace_timer.py",
+      "bytes": 7060,
+      "sha256": "eba77b3fe22fd134bc77809ea52faaa7f2300b181ab1b54378e06d21163ff0c0"
+    },
+    {
+      "path": "src/agronomy_agent/skill_registry.py",
+      "bytes": 13055,
+      "sha256": "96214dca53ef33ec5b9549e0036b67faf74591f7ee2d94b96937c5fc21e59ba8"
+    },
+    {
+      "path": "src/agronomy_agent/source_freshness.py",
+      "bytes": 4622,
+      "sha256": "f9d669bbb55cc28734994ac409a09a9d66937fecc7a45605b16cf9b4ba00096d"
+    },
+    {
+      "path": "src/agronomy_agent/source_permission_receipts.py",
+      "bytes": 17705,
+      "sha256": "07424eb7f59a2f3ad84d9ea61ea89f4d7cef2b1f0170f92b703274634269cfb7"
+    },
+    {
+      "path": "src/agronomy_agent/tool_cli.py",
+      "bytes": 15444,
+      "sha256": "e8f1346e717905c3d659b4f529e52259c013220ba04b79edf6d27ff922f5b11f"
+    },
+    {
+      "path": "src/agronomy_agent/tool_planner.py",
+      "bytes": 18315,
+      "sha256": "01b7add61c563daf4ba215aae9c50d74ff5d4a38aa06190fd1693e20ec39973b"
+    },
+    {
+      "path": "src/agronomy_agent/tools/__init__.py",
+      "bytes": 69,
+      "sha256": "e656d83954d7b986f72129b64f0673690c9bf5c4a807d38cfe45da2c4eaaefb2"
+    },
+    {
+      "path": "src/agronomy_agent/tools/registry.py",
+      "bytes": 16185,
+      "sha256": "371181f6a9bda0db175137553cfc4e4946e2b4b2819e4c728bd1220cb6fcdae7"
+    },
+    {
+      "path": "src/agronomy_agent/training/__init__.py",
+      "bytes": 49,
+      "sha256": "b89814ba93f406514fede8f8cff3ecf5f5c66262b9a9fd59035b1f19497ea2ba"
+    },
+    {
+      "path": "src/agronomy_agent/training/build_sft_mix.py",
+      "bytes": 6380,
+      "sha256": "fa815dff2c84b5f0fc69f15dae2fc0212e0c04eea1a117db4d028ec561a3e303"
+    },
+    {
+      "path": "src/agronomy_agent/training/postprocess_sft.py",
+      "bytes": 5965,
+      "sha256": "e1b711c768ad6ac47422ce8c961c2d90f115fde3bc0fae7c9351fef47c31266c"
+    },
+    {
+      "path": "src/agronomy_agent/v3_candidate_runner.py",
+      "bytes": 11826,
+      "sha256": "2e99a78f17ea111345c9cdb0c995be76d1fcf6dfee9df89045ebfe73ead4152e"
+    },
+    {
+      "path": "src/agronomy_agent/v3_competence_candidate.py",
+      "bytes": 12674,
+      "sha256": "66be0e7d23c3b3da38acfb5eaa98eefe47500c1fd5508669cc6a37533f9efac6"
+    },
+    {
+      "path": "configs/runtime_profiles.json",
+      "bytes": 1778,
+      "sha256": "86a96cb74aef7c81276695371d6f731413f940d094b45fbf67ba2a7182f9b45a"
+    },
+    {
+      "path": "configs/model.yaml",
+      "bytes": 1611,
+      "sha256": "02311ba0dca40e33abf0efa396c7f17593d87b42a4f01d8c2e0af786f1fa8946"
+    },
+    {
+      "path": "configs/risk_conditioned_selective_v3.json",
+      "bytes": 493,
+      "sha256": "46444af5ee436cf6ecfa5c804346f7b76ee9922f21c2d77a0d9d3b4d1f8d163d"
+    },
+    {
+      "path": "remote_benchmark.py",
+      "bytes": 4016,
+      "sha256": "316b4f2fc2cf863e934fc21c0d4aa49ae5b42acb8c563b1ad96bbbbf1ea0819e"
+    },
+    {
+      "path": "remote_driver.py",
+      "bytes": 575,
+      "sha256": "f35e4ffdba65691b6c01d6e90b16f99b1a6e61c66b7935a84fb4e9fe8cc919b1"
+    },
+    {
+      "path": "baseline_answer_verifier.py",
+      "bytes": 484229,
+      "sha256": "6da36abd0cc02feb7fa14b6a1ea5dc640425288de330dd89e9818891be40fa58"
+    },
+    {
+      "path": "verifier-contrasts.json",
+      "bytes": 5565,
+      "sha256": "762ce116080a19750cdf07825f5c19d119e8788feff417b78b57e9c971dcf4f6"
+    }
+  ]
+}

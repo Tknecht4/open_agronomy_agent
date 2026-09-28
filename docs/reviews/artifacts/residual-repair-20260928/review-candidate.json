@@ -1,0 +1,51 @@
+{
+  "schema": "repair_review_candidate.v1",
+  "base_commit": "8380b8b",
+  "runtime_and_tests": [
+    {
+      "path": "src/agronomy_agent/agent.py",
+      "sha256": "1070f970a21335f011a69a1b60bebcc23ecec5939a57830fe7fd0ffb402e5975"
+    },
+    {
+      "path": "src/agronomy_agent/answer_verifier.py",
+      "sha256": "f33ec835e1b184428cde0a45934e0207130d5a515fcd40a1d6a55fcbd60d4304"
+    },
+    {
+      "path": "src/agronomy_agent/quantity_claims.py",
+      "sha256": "99e661ac7a2049edfad82bae9b6f4ad9b077d98bebf6cd1f4d541c998a8510af"
+    },
+    {
+      "path": "src/agronomy_agent/method_context.py",
+      "sha256": "5aeeafd21df7fbae786ef86791ca0544b26f3366c6284d2af9001162be2bc9ea"
+    },
+    {
+      "path": "src/agronomy_agent/README.md",
+      "sha256": "5ba9b237de7b569e49ebc2d4640dbc26387bad88f51fe40fe2fd0903a0b4b8e6"
+    },
+    {
+      "path": "tests/test_mlx_model_residency.py",
+      "sha256": "bd17d9106161f56a04d143a3c7f33cdfe41519b9cfc69684fe498c40b887bcee"
+    },
+    {
+      "path": "tests/test_verifier_quantity_contract.py",
+      "sha256": "39bd11cb35f04ab91cd6a22d632c45f68a57353c152d4c2c57ba0d1c4b3c9d6e"
+    },
+    {
+      "path": "tests/test_method_task_frame.py",
+      "sha256": "d232e069e9d675b0d18e23ca69e526be272414d489ac7449b25bb949401ef119"
+    },
+    {
+      "path": "configs/model.yaml",
+      "sha256": "02311ba0dca40e33abf0efa396c7f17593d87b42a4f01d8c2e0af786f1fa8946"
+    },
+    {
+      "path": "configs/rag.yaml",
+      "sha256": "8f45880dbadf368848d52251aaafb24e25b17d9baa7923aa7707f6880fc04b91"
+    },
+    {
+      "path": "configs/runtime_profiles.json",
+      "sha256": "86a96cb74aef7c81276695371d6f731413f940d094b45fbf67ba2a7182f9b45a"
+    }
+  ],
+  "sha256": "fefcdaf935df30efbdf515aaa6be5d1130a93b8a4d539d683a17dbb9f19a4a07"
+}

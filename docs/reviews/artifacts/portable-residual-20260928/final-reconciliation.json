@@ -1,0 +1,23 @@
+{
+  "schema": "residual_final_reconciliation.v1",
+  "independent_verdict": "accept_bounded_investigation",
+  "reviewed_candidate_sha256": "5bb90c6791fc99ee97358fe1cff81f59df25a2c5abf9282991e44eaa43bee3c3",
+  "independent_review_sha256": "b7b1eaed909981bac44ca2ac41214a2390797e0971ae0393c25bf1f8220f647b",
+  "reference_source_head": "3ff64813ce14833f3c819044b96ebda738a60cbe",
+  "runtime_source_and_active_configuration_unchanged": true,
+  "all_reviewed_evidence_bytes_unchanged": true,
+  "post_review_changed_frozen_paths": [
+    "configs/public_repository_manifest.json",
+    "container/runtime_manifest.json",
+    "docs/reviews/portable-agronomy-residual-investigation-20260928.md"
+  ],
+  "post_review_change_scope": "Report review-status link only; public inventory adds review/candidate/reconciliation records; generated container config-tree identity updated. No substantive findings changed.",
+  "final_control_sha256": {
+    "configs/public_repository_manifest.json": "6498e260c0cd7a549995c0666baf97da52a414a31a1465769e2d6f7e94c59ed3",
+    "container/runtime_manifest.json": "4781722f4c5d8838d1d38b4047580092e0a5007c21c62fd5cafea917e9b16b93",
+    "docs/reviews/portable-agronomy-residual-investigation-20260928.md": "94a1682ba605b346e2bf94bd9dd507c128623629331522ef23fb6fc22b995042"
+  },
+  "public_package_boundary": "Final builder runs after this record. Its receipt remains in operator outputs to avoid a self-referential inventory.",
+  "memory_delta": "none",
+  "gpu_cleanup_verified": true
+}
