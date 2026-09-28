@@ -710,7 +710,10 @@
     "tests/test_conversation_resolution.py",
     "tests/test_conversation_resolution_service.py",
     "tests/test_conversation_resolution_http.py",
-    "docs/reviews/system-validation-20260928.md"
+    "docs/reviews/system-validation-20260928.md",
+    "docs/reviews/residual-polish-checkpoint-20260928.md",
+    "docs/reviews/artifacts/residual-polish-20260928/summary.json",
+    "docs/reviews/artifacts/residual-polish-20260928/workspace-media.json"
   ],
   "trees": [
     "src",
