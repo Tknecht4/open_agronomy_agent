@@ -8,6 +8,7 @@ policy still decides which hash-bound records may enter the runtime.
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from typing import Any
 
 
@@ -55,26 +56,190 @@ METHODS: dict[str, tuple[str, str]] = {
 }
 
 
-def requested_methods(question: str) -> tuple[str, ...]:
-    """Recognize an explicit method need without using retrieved text as input."""
+@dataclass(frozen=True)
+class MethodTask:
+    """A question-owned operation; span indexes refer to the original question."""
 
-    text = str(question or "")
-    selected = [method for method, (pattern, _) in METHODS.items() if re.search(pattern, text, re.IGNORECASE)]
-    if (re.search(r"\bseed\w*\b", text, re.IGNORECASE)
-        and re.search(r"\b(?:germinat\w*|seed size|seeds? per|kernel weight)\b", text, re.IGNORECASE)
-        and re.search(r"\b(?:stand|drill|mass|quantity|rate|lot)\b", text, re.IGNORECASE)):
-        selected.append("seed_mass")
-    if re.search(r"\benterprise\b", text, re.IGNORECASE) and re.search(r"\bbudget\b", text, re.IGNORECASE):
-        selected.append("enterprise_budget")
-    if re.search(r"\benterprise\b", text, re.IGNORECASE) and re.search(
-        r"\b(?:output|sales?|receipts?|expenses?|costs?|margins?|viability|template)\b", text, re.IGNORECASE
-    ):
-        selected.append("enterprise_budget")
-    if re.search(r"\b(?:manure|amendment)\b", text, re.IGNORECASE) and re.search(
-        r"\b(?:nutrient|advis(?:er|or)|field|soil test|history|analysis|storage)\b", text, re.IGNORECASE
-    ):
-        selected.append("nutrient_plan_inputs")
-    return tuple(dict.fromkeys(selected))
+    method_id: str
+    operation: str
+    disposition: str  # requested, background, negated, unresolved
+    span: tuple[int, int]
+    text: str
+
+
+# Cues identify a method, while the clause parser below decides whether that
+# method is actually requested. They are deliberately narrower than topical
+# retrieval keywords: a vague farm budget or cash problem does not select a card.
+_CUES = {
+    "seed_mass": re.compile(r"\b(?:seed(?:ing)?[- ](?:mass|rate|size)|seed (?:kilograms?|kg)|drill (?:rate|calibration)|target stand|plant population|thousand[- ]kernel weight|kernel weight|seeds? per (?:pound|lb|kilogram|kg))\b", re.I),
+    "thermal_time": re.compile(r"\b(?:growing degree[- ]days?|gdd|heat units?|thermal time|temperature accumulation)\b", re.I),
+    "partial_budget": re.compile(r"\b(?:partial budgets?|incremental (?:farm )?(?:budget|comparison)|rent[- ]versus[- ]buy|rent (?:instead of|versus|vs\.?|or) buy|(?:added|saved)(?: and (?:added|saved))? costs? and returns?|changed (?:returns? and costs?|costs? and returns?))\b", re.I),
+    "enterprise_budget": re.compile(r"\b(?:enterprise budgets?|crop (?:enterprise )?budgets?|cost[- ]of[- ]production|break[- ]even|breakeven)\b", re.I),
+    "liquidity": re.compile(r"\b(?:liquidit\w*|working capital|current ratio|current assets?|current liabilities|balance[- ]sheet (?:ratios?|measures?|check))\b", re.I),
+    "cash_flow": re.compile(r"\b(?:cash[- ]flow|cash (?:plan|schedule|forecast|budget|gap|shortage|pinch|timing)|monthly cash|dated cash|schedule (?:receipts|payments|inflows|outflows)|(?:receipts|inflows) against (?:bills|payments|outflows))\b", re.I),
+    "nutrient_plan_inputs": re.compile(r"\b(?:nutrient[- ]plan\w*|manure (?:nutrient )?plan\w*|manure analys\w*|nutrient advis(?:er|or)|soil and manure analys\w*)\b", re.I),
+}
+_REQUEST = re.compile(
+    r"\b(?:how|what|which|why|whether|can|could|should|would|explain|describe|show|compare|calculate|compute|convert|lay out|make|build|list|identify|organize|schedule|assess|draft|prepare|help|tell|use|gather)\b",
+    re.I,
+)
+_NEGATION = re.compile(r"\b(?:do not|don't|no need to|i do not need|i don't need|skip|avoid|ignore|no)\b", re.I)
+_DOUBLE_NEGATION = re.compile(r"\b(?:do not|don't|never)\s+(?:omit|forget|skip|exclude|leave out)\b", re.I)
+_BACKGROUND = re.compile(r"\b(?:mentions?|says?|lists?|labelled|labeled|appears?|attached|shows?|contains?|includes?|as background)\b", re.I)
+_METADATA_REQUEST = re.compile(
+    r"\b(?:address|author|wrote|publisher|publication|doi|deadline|filing year|"
+    r"workshop date|license|licensed|certificate|file location|where (?:is|was))\b",
+    re.I,
+)
+_SPLIT = re.compile(
+    r"[.!?;]+\s*|\s+\b(?:but|then|even though|whereas)\b\s+|"
+    r"\s+\band\b\s+(?=\b(?:do not|don't|ignore|avoid|skip|explain|describe|show|compare|calculate|compute|convert|lay out|make|build|list|identify|organize|schedule|assess|draft|prepare)\b)|"
+    r",\s*(?=\b(?:only|just|instead|rather|explain|show|compare|calculate|compute|assess|prepare|make|build)\b)",
+    re.I,
+)
+_QUOTED = re.compile(r'"[^"\n]*"|“[^”\n]*”|‘[^’\n]*’|(?<!\w)\'[^\'\n]*\'(?!\w)')
+_FOLLOW_ON = {
+    "seed_mass": re.compile(r"\b(?:stand|drill|seed|germination|plant population)\b", re.I),
+    "partial_budget": re.compile(r"\b(?:comparison|changed costs?|changed returns?)\b", re.I),
+    "enterprise_budget": re.compile(r"\b(?:budget|saleable|output|sales?|expenses?|costs?|margins?)\b", re.I),
+    "nutrient_plan_inputs": re.compile(r"\b(?:inputs?|records?|evidence|manure|plan)\b", re.I),
+}
+
+
+def _cue_directive(clause: str, cue_start: int) -> str | None:
+    """Use the last directive before this cue, not sentence-wide polarity."""
+
+    prefix = clause[:cue_start]
+    inclusions = list(_DOUBLE_NEGATION.finditer(prefix))
+    directives = [(*match.span(), "negative") for match in _NEGATION.finditer(prefix)
+                  if not any(item.start() <= match.start() < item.end() for item in inclusions)]
+    directives += [(*match.span(), "include") for match in inclusions]
+    # Predicate negation ("cash flow is not liquidity") expresses a relation
+    # between two requested concepts. Bare "not liquidity" excludes a task.
+    directives += [(*match.span(), "negative") for match in re.finditer(
+        r"(?<!do )(?<!is )(?<!are )(?<!was )(?<!were )(?<!does )(?<!did )"
+        r"(?<!can )(?<!could )(?<!should )(?<!would )(?<!will )\bnot\b",
+        prefix, re.I)
+                  if cue_start - match.end() <= 18]
+    if not directives:
+        return None
+    start, end, kind = max(directives, key=lambda item: (item[0], item[1]))
+    # Bare "no" is only a method denial when adjacent to that method; "no
+    # numbers" after a cash-flow request cannot retroactively negate it.
+    if prefix[start:end].lower() == "no" and cue_start - end > 3:
+        return None
+    return kind
+
+
+def _operation(clause: str) -> str:
+    match = _REQUEST.search(clause)
+    return match.group(0).lower() if match else "unspecified"
+
+
+def method_task_frame(question: str) -> tuple[MethodTask, ...]:
+    """Parse bounded, explicit method tasks from the user's question alone.
+
+    Unrecognized paraphrases stay unresolved by omission; this frame does not
+    infer an operation from retrieved text or a model. Quoted material is treated
+    as background unless the method is also named outside the quotation.
+    """
+
+    source = str(question or "")
+    quoted = list(_QUOTED.finditer(source))
+    masked = _QUOTED.sub(lambda m: " " * (m.end() - m.start()), source)
+    boundaries = [0, *(match.end() for match in _SPLIT.finditer(masked)), len(source)]
+    tasks: list[MethodTask] = []
+    for quote in quoted:
+        for method_id, cue in _CUES.items():
+            for match in cue.finditer(quote.group(0)):
+                span = (quote.start() + match.start(), quote.start() + match.end())
+                tasks.append(MethodTask(method_id, "unspecified", "background", span, source[span[0]:span[1]]))
+    history: list[tuple[int, str]] = []
+    for start, end in zip(boundaries, boundaries[1:]):
+        clause = masked[start:end]
+        original = source[start:end]
+        if not clause.strip():
+            continue
+        operation = _operation(clause)
+        double_negation = bool(_DOUBLE_NEGATION.search(clause))
+        if double_negation and operation == "unspecified":
+            operation = "include"
+        has_request = operation != "unspecified"
+        # A leading denial scopes only this clause. "Do not omit" requests
+        # inclusion and must not turn a cash plan into a negated task.
+        negated = bool(_NEGATION.search(clause)) and not double_negation
+        background = (bool(re.search(r"\bas background\b", clause, re.I)) or
+                      bool(_METADATA_REQUEST.search(clause)) or
+                      (bool(_BACKGROUND.search(clause)) and not has_request))
+        for method_id, cue in _CUES.items():
+            for match in cue.finditer(clause):
+                directive = _cue_directive(clause, match.start())
+                disposition = (
+                    "negated" if directive == "negative" else
+                    "background" if background else
+                    "requested" if has_request else
+                    "unresolved"
+                )
+                if method_id == "seed_mass" and re.search(r"\b(?:right|best|recommended|optimal) seed(?:ing)? rate\b", clause, re.I):
+                    # This asks for a local target, not the transfer method.
+                    disposition = "unresolved"
+                tasks.append(MethodTask(method_id, "include" if directive == "include" else operation, disposition,
+                                        (start + match.start(), start + match.end()),
+                                        original[match.start():match.end()]))
+        # A few compositional expressions name the calculation without its
+        # conventional title. Require both operands in the same requested clause.
+        directive_denial = bool(re.match(r"\s*(?:do not|don't|no\b|skip\b|avoid\b|ignore\b)", clause, re.I)) and not double_negation
+        if has_request and not directive_denial and not background:
+            composed = (
+                ("seed_mass", r"\bseed\w*\b.*\b(?:germinat\w*|seed size|kernel weight)\b.*\b(?:stand|drill|mass|kilograms?|kg)\b"),
+                ("seed_mass", r"\btarget (?:number|stand|population)\b.*\b(?:plants?|seeds?)\b.*\b(?:kilograms?|kg)\b.*\bseed lot\b"),
+                ("enterprise_budget", r"\benterprise\b.*\b(?:output|saleable|sales?|expenses?|costs?|margins?)\b"),
+                ("nutrient_plan_inputs", r"\b(?:manure|amendment)\b.*\b(?:field history|soil tests?|advis(?:er|or)|storage)\b"),
+                ("partial_budget", r"\b(?:rent|buy|hire|switch|replace)\b.*\b(?:weeder|spreader|contractor|machine)\b.*\b(?:changed|added|saved) (?:returns?|costs?)\b"),
+                ("cash_flow", r"\b(?:schedule|lay out|plan)\b.*\b(?:receipts?|inflows?|bills?|payments?)\b.*\b(?:bills?|payments?|cash gap|loan)\b"),
+            )
+            for method_id, pattern in composed:
+                match = re.search(pattern, clause, re.I)
+                if match and not any(task.method_id == method_id and start <= task.span[0] < end for task in tasks):
+                    tasks.append(MethodTask(method_id, operation, "requested",
+                                            (start + match.start(), start + match.end()),
+                                            original[match.start():match.end()]))
+            # A method named in an immediately preceding background clause may
+            # be the antecedent of a method-specific follow-up operation.
+            # Generic follow-ups (author, address, deadline, file location)
+            # cannot inherit that method.
+            explicit_requested = any(task.disposition == "requested" and start <= task.span[0] < end
+                                     for task in tasks)
+            for method_id, reference in _FOLLOW_ON.items():
+                if explicit_requested:
+                    break
+                if not reference.search(clause):
+                    continue
+                if any(task.method_id == method_id and task.disposition == "requested"
+                       and start <= task.span[0] < end for task in tasks):
+                    continue
+                for previous_start, previous_text in reversed(history[-3:]):
+                    antecedent = (_CUES[method_id].search(previous_text) or
+                                  (method_id == "enterprise_budget" and re.search(r"\benterprise\b", previous_text, re.I)) or
+                                  (method_id == "partial_budget" and re.search(
+                                      r"\b(?:hire|rent|buy|switch|replace)\b.*\b(?:instead|versus|vs\.?|alternative)\b",
+                                      previous_text, re.I)))
+                    if method_id == "nutrient_plan_inputs" and re.search(r"\bevidence\b", clause, re.I):
+                        antecedent = (re.search(r"\b(?:manure|nutrient)\b", previous_text, re.I)
+                                      and re.search(r"\b(?:field history|soil test|advis(?:er|or)|storage)\b", previous_text, re.I))
+                    if antecedent and not _NEGATION.search(previous_text):
+                        tasks.append(MethodTask(method_id, operation, "requested",
+                                                (previous_start, end), source[previous_start:end]))
+                        break
+        history.append((start, clause))
+    return tuple(sorted(tasks, key=lambda task: task.span))
+
+
+def requested_methods(question: str) -> tuple[str, ...]:
+    """Project only requested tasks for both obligations and method-card fit."""
+
+    return tuple(dict.fromkeys(task.method_id for task in method_task_frame(question)
+                               if task.disposition == "requested"))
 
 
 def reviewed_method_ids(doc: Any) -> tuple[str, ...]:

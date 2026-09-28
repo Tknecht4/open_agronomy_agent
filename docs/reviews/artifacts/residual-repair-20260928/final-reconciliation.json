@@ -1,0 +1,16 @@
+{
+  "schema": "repair_final_reconciliation.v1",
+  "candidate_digest": "fefcdaf935df30efbdf515aaa6be5d1130a93b8a4d539d683a17dbb9f19a4a07",
+  "independent_review_sha256": "69393c3770824a7e55e2d34fe6e3de026d647ca273cd2e340a1a26227581f95b",
+  "accepted_scope": "bounded verifier, METHOD task selection and MLX ownership contracts",
+  "active_configs_and_data_unchanged_from": "8380b8b",
+  "post_review_changes": "review report, public evidence records, curated manifest and generated inventory only; runtime and tests unchanged",
+  "pending_gates": [
+    "fresh final public package",
+    "GitHub CI",
+    "merge and verify main"
+  ],
+  "memory_delta": "none",
+  "public_manifest_sha256": "1f9ddac59b7497ae2bf158456a22c3029a4af5dc4fcab8b2312a7a631f603aa3",
+  "runtime_manifest_sha256": "ca5583a8f2ac0f77574e09ba68b9a9de99c4f5608c5dcbb44d00bc5c0982d18e"
+}

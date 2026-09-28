@@ -1,0 +1,1243 @@
+{
+  "schema": "method_repair_contrast.v1",
+  "claim_eligible": false,
+  "status": "exposed_engineering_regression_not_efficacy",
+  "baseline_commit": "8380b8b",
+  "fixture_sha256": "d7c676376b178ed97c5809c68e549357507453a90be0d9bfbc619c3ad3ecbe34",
+  "source_sha256": "4f98de546a96bc95305c908bf5c5f9adb240b2b532ecb7a89f6b0458d89093bb",
+  "summary": {
+    "cases": 47,
+    "baseline_exact": 19,
+    "candidate_exact": 47
+  },
+  "cases": [
+    {
+      "id": "E01",
+      "expected": [
+        "seed_mass"
+      ],
+      "baseline": [
+        "seed_mass"
+      ],
+      "candidate": [
+        "seed_mass"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "seed_mass",
+          "operation": "how",
+          "disposition": "requested",
+          "span": [
+            38,
+            60
+          ],
+          "text": "thousand-kernel weight"
+        },
+        {
+          "method_id": "seed_mass",
+          "operation": "how",
+          "disposition": "requested",
+          "span": [
+            88,
+            97
+          ],
+          "text": "seed mass"
+        }
+      ]
+    },
+    {
+      "id": "E02",
+      "expected": [
+        "seed_mass"
+      ],
+      "baseline": [
+        "seed_mass"
+      ],
+      "candidate": [
+        "seed_mass"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "seed_mass",
+          "operation": "how",
+          "disposition": "requested",
+          "span": [
+            19,
+            98
+          ],
+          "text": "target number of plants per square metre into kilograms of this tested seed lot"
+        }
+      ]
+    },
+    {
+      "id": "E03",
+      "expected": [
+        "thermal_time"
+      ],
+      "baseline": [
+        "thermal_time"
+      ],
+      "candidate": [
+        "thermal_time"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "thermal_time",
+          "operation": "explain",
+          "disposition": "requested",
+          "span": [
+            8,
+            27
+          ],
+          "text": "growing degree days"
+        }
+      ]
+    },
+    {
+      "id": "E04",
+      "expected": [
+        "thermal_time"
+      ],
+      "baseline": [
+        "thermal_time"
+      ],
+      "candidate": [
+        "thermal_time"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "thermal_time",
+          "operation": "how",
+          "disposition": "requested",
+          "span": [
+            24,
+            34
+          ],
+          "text": "heat units"
+        }
+      ]
+    },
+    {
+      "id": "E05",
+      "expected": [
+        "partial_budget"
+      ],
+      "baseline": [
+        "partial_budget"
+      ],
+      "candidate": [
+        "partial_budget"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "partial_budget",
+          "operation": "which",
+          "disposition": "requested",
+          "span": [
+            68,
+            101
+          ],
+          "text": "added and saved costs and returns"
+        }
+      ]
+    },
+    {
+      "id": "E06",
+      "expected": [
+        "partial_budget"
+      ],
+      "baseline": [
+        "partial_budget"
+      ],
+      "candidate": [
+        "partial_budget"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "partial_budget",
+          "operation": "explain",
+          "disposition": "requested",
+          "span": [
+            10,
+            24
+          ],
+          "text": "partial budget"
+        }
+      ]
+    },
+    {
+      "id": "E07",
+      "expected": [
+        "enterprise_budget"
+      ],
+      "baseline": [
+        "enterprise_budget"
+      ],
+      "candidate": [
+        "enterprise_budget"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "enterprise_budget",
+          "operation": "build",
+          "disposition": "requested",
+          "span": [
+            25,
+            47
+          ],
+          "text": "crop enterprise budget"
+        }
+      ]
+    },
+    {
+      "id": "E08",
+      "expected": [
+        "enterprise_budget"
+      ],
+      "baseline": [
+        "enterprise_budget"
+      ],
+      "candidate": [
+        "enterprise_budget"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "enterprise_budget",
+          "operation": "how",
+          "disposition": "requested",
+          "span": [
+            22,
+            32
+          ],
+          "text": "break-even"
+        }
+      ]
+    },
+    {
+      "id": "E09",
+      "expected": [
+        "liquidity"
+      ],
+      "baseline": [
+        "liquidity"
+      ],
+      "candidate": [
+        "liquidity"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "liquidity",
+          "operation": "which",
+          "disposition": "requested",
+          "span": [
+            12,
+            34
+          ],
+          "text": "balance-sheet measures"
+        },
+        {
+          "method_id": "liquidity",
+          "operation": "which",
+          "disposition": "requested",
+          "span": [
+            48,
+            62
+          ],
+          "text": "current assets"
+        },
+        {
+          "method_id": "liquidity",
+          "operation": "which",
+          "disposition": "requested",
+          "span": [
+            73,
+            92
+          ],
+          "text": "current liabilities"
+        }
+      ]
+    },
+    {
+      "id": "E10",
+      "expected": [
+        "liquidity"
+      ],
+      "baseline": [
+        "liquidity"
+      ],
+      "candidate": [
+        "liquidity"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "liquidity",
+          "operation": "explain",
+          "disposition": "requested",
+          "span": [
+            8,
+            23
+          ],
+          "text": "working capital"
+        },
+        {
+          "method_id": "liquidity",
+          "operation": "explain",
+          "disposition": "requested",
+          "span": [
+            32,
+            45
+          ],
+          "text": "current ratio"
+        }
+      ]
+    },
+    {
+      "id": "E11",
+      "expected": [
+        "cash_flow"
+      ],
+      "baseline": [],
+      "candidate": [
+        "cash_flow"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "cash_flow",
+          "operation": "lay out",
+          "disposition": "requested",
+          "span": [
+            94,
+            102
+          ],
+          "text": "cash gap"
+        }
+      ]
+    },
+    {
+      "id": "E12",
+      "expected": [
+        "cash_flow"
+      ],
+      "baseline": [],
+      "candidate": [
+        "cash_flow"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "cash_flow",
+          "operation": "how",
+          "disposition": "requested",
+          "span": [
+            97,
+            107
+          ],
+          "text": "dated cash"
+        }
+      ]
+    },
+    {
+      "id": "E13",
+      "expected": [
+        "nutrient_plan_inputs"
+      ],
+      "baseline": [
+        "nutrient_plan_inputs"
+      ],
+      "candidate": [
+        "nutrient_plan_inputs"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "nutrient_plan_inputs",
+          "operation": "what",
+          "disposition": "requested",
+          "span": [
+            32,
+            47
+          ],
+          "text": "manure analyses"
+        },
+        {
+          "method_id": "nutrient_plan_inputs",
+          "operation": "what",
+          "disposition": "requested",
+          "span": [
+            107,
+            120
+          ],
+          "text": "nutrient plan"
+        }
+      ]
+    },
+    {
+      "id": "E14",
+      "expected": [
+        "nutrient_plan_inputs"
+      ],
+      "baseline": [
+        "nutrient_plan_inputs"
+      ],
+      "candidate": [
+        "nutrient_plan_inputs"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "nutrient_plan_inputs",
+          "operation": "list",
+          "disposition": "requested",
+          "span": [
+            42,
+            62
+          ],
+          "text": "manure nutrient plan"
+        }
+      ]
+    },
+    {
+      "id": "T01",
+      "expected": [],
+      "baseline": [
+        "cash_flow"
+      ],
+      "candidate": [],
+      "candidate_frame": [
+        {
+          "method_id": "cash_flow",
+          "operation": "unspecified",
+          "disposition": "background",
+          "span": [
+            24,
+            33
+          ],
+          "text": "cash flow"
+        }
+      ]
+    },
+    {
+      "id": "T02",
+      "expected": [],
+      "baseline": [
+        "enterprise_budget"
+      ],
+      "candidate": [],
+      "candidate_frame": [
+        {
+          "method_id": "enterprise_budget",
+          "operation": "unspecified",
+          "disposition": "background",
+          "span": [
+            25,
+            42
+          ],
+          "text": "enterprise budget"
+        }
+      ]
+    },
+    {
+      "id": "T03",
+      "expected": [],
+      "baseline": [
+        "seed_mass"
+      ],
+      "candidate": [],
+      "candidate_frame": [
+        {
+          "method_id": "seed_mass",
+          "operation": "unspecified",
+          "disposition": "background",
+          "span": [
+            22,
+            44
+          ],
+          "text": "thousand-kernel weight"
+        }
+      ]
+    },
+    {
+      "id": "T04",
+      "expected": [],
+      "baseline": [
+        "thermal_time"
+      ],
+      "candidate": [],
+      "candidate_frame": [
+        {
+          "method_id": "thermal_time",
+          "operation": "unspecified",
+          "disposition": "unresolved",
+          "span": [
+            44,
+            47
+          ],
+          "text": "GDD"
+        }
+      ]
+    },
+    {
+      "id": "T05",
+      "expected": [],
+      "baseline": [
+        "partial_budget"
+      ],
+      "candidate": [],
+      "candidate_frame": [
+        {
+          "method_id": "partial_budget",
+          "operation": "unspecified",
+          "disposition": "background",
+          "span": [
+            26,
+            40
+          ],
+          "text": "partial budget"
+        }
+      ]
+    },
+    {
+      "id": "T06",
+      "expected": [],
+      "baseline": [
+        "liquidity"
+      ],
+      "candidate": [],
+      "candidate_frame": [
+        {
+          "method_id": "liquidity",
+          "operation": "unspecified",
+          "disposition": "background",
+          "span": [
+            29,
+            44
+          ],
+          "text": "working capital"
+        }
+      ]
+    },
+    {
+      "id": "T07",
+      "expected": [],
+      "baseline": [
+        "nutrient_plan_inputs"
+      ],
+      "candidate": [],
+      "candidate_frame": [
+        {
+          "method_id": "nutrient_plan_inputs",
+          "operation": "unspecified",
+          "disposition": "unresolved",
+          "span": [
+            17,
+            32
+          ],
+          "text": "manure analysis"
+        },
+        {
+          "method_id": "nutrient_plan_inputs",
+          "operation": "unspecified",
+          "disposition": "unresolved",
+          "span": [
+            39,
+            52
+          ],
+          "text": "nutrient plan"
+        }
+      ]
+    },
+    {
+      "id": "N01",
+      "expected": [],
+      "baseline": [
+        "seed_mass"
+      ],
+      "candidate": [],
+      "candidate_frame": [
+        {
+          "method_id": "seed_mass",
+          "operation": "calculate",
+          "disposition": "negated",
+          "span": [
+            17,
+            26
+          ],
+          "text": "seed mass"
+        },
+        {
+          "method_id": "seed_mass",
+          "operation": "calculate",
+          "disposition": "negated",
+          "span": [
+            30,
+            40
+          ],
+          "text": "drill rate"
+        }
+      ]
+    },
+    {
+      "id": "N02",
+      "expected": [],
+      "baseline": [
+        "thermal_time"
+      ],
+      "candidate": [],
+      "candidate_frame": [
+        {
+          "method_id": "thermal_time",
+          "operation": "unspecified",
+          "disposition": "negated",
+          "span": [
+            14,
+            33
+          ],
+          "text": "growing degree days"
+        }
+      ]
+    },
+    {
+      "id": "N03",
+      "expected": [],
+      "baseline": [
+        "partial_budget"
+      ],
+      "candidate": [],
+      "candidate_frame": [
+        {
+          "method_id": "partial_budget",
+          "operation": "unspecified",
+          "disposition": "negated",
+          "span": [
+            3,
+            17
+          ],
+          "text": "partial budget"
+        },
+        {
+          "method_id": "partial_budget",
+          "operation": "unspecified",
+          "disposition": "unresolved",
+          "span": [
+            21,
+            36
+          ],
+          "text": "rent-versus-buy"
+        }
+      ]
+    },
+    {
+      "id": "N04",
+      "expected": [],
+      "baseline": [
+        "enterprise_budget"
+      ],
+      "candidate": [],
+      "candidate_frame": [
+        {
+          "method_id": "enterprise_budget",
+          "operation": "unspecified",
+          "disposition": "negated",
+          "span": [
+            9,
+            26
+          ],
+          "text": "enterprise budget"
+        },
+        {
+          "method_id": "enterprise_budget",
+          "operation": "unspecified",
+          "disposition": "negated",
+          "span": [
+            31,
+            41
+          ],
+          "text": "break-even"
+        }
+      ]
+    },
+    {
+      "id": "N05",
+      "expected": [],
+      "baseline": [
+        "liquidity"
+      ],
+      "candidate": [],
+      "candidate_frame": [
+        {
+          "method_id": "liquidity",
+          "operation": "assess",
+          "disposition": "negated",
+          "span": [
+            14,
+            23
+          ],
+          "text": "liquidity"
+        },
+        {
+          "method_id": "liquidity",
+          "operation": "assess",
+          "disposition": "negated",
+          "span": [
+            27,
+            40
+          ],
+          "text": "current ratio"
+        }
+      ]
+    },
+    {
+      "id": "N06",
+      "expected": [],
+      "baseline": [
+        "cash_flow"
+      ],
+      "candidate": [],
+      "candidate_frame": [
+        {
+          "method_id": "cash_flow",
+          "operation": "prepare",
+          "disposition": "negated",
+          "span": [
+            17,
+            26
+          ],
+          "text": "cash-flow"
+        }
+      ]
+    },
+    {
+      "id": "N07",
+      "expected": [],
+      "baseline": [
+        "nutrient_plan_inputs"
+      ],
+      "candidate": [],
+      "candidate_frame": [
+        {
+          "method_id": "nutrient_plan_inputs",
+          "operation": "draft",
+          "disposition": "negated",
+          "span": [
+            15,
+            28
+          ],
+          "text": "nutrient plan"
+        },
+        {
+          "method_id": "nutrient_plan_inputs",
+          "operation": "draft",
+          "disposition": "negated",
+          "span": [
+            42,
+            57
+          ],
+          "text": "manure analysis"
+        }
+      ]
+    },
+    {
+      "id": "M01",
+      "expected": [
+        "partial_budget",
+        "enterprise_budget"
+      ],
+      "baseline": [
+        "partial_budget",
+        "enterprise_budget"
+      ],
+      "candidate": [
+        "partial_budget",
+        "enterprise_budget"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "partial_budget",
+          "operation": "compare",
+          "disposition": "requested",
+          "span": [
+            32,
+            46
+          ],
+          "text": "partial budget"
+        },
+        {
+          "method_id": "enterprise_budget",
+          "operation": "compare",
+          "disposition": "requested",
+          "span": [
+            80,
+            102
+          ],
+          "text": "crop enterprise budget"
+        }
+      ]
+    },
+    {
+      "id": "M02",
+      "expected": [
+        "liquidity",
+        "cash_flow"
+      ],
+      "baseline": [
+        "liquidity"
+      ],
+      "candidate": [
+        "liquidity",
+        "cash_flow"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "liquidity",
+          "operation": "show",
+          "disposition": "requested",
+          "span": [
+            32,
+            41
+          ],
+          "text": "liquidity"
+        },
+        {
+          "method_id": "cash_flow",
+          "operation": "show",
+          "disposition": "requested",
+          "span": [
+            54,
+            66
+          ],
+          "text": "monthly cash"
+        }
+      ]
+    },
+    {
+      "id": "M03",
+      "expected": [
+        "seed_mass",
+        "thermal_time"
+      ],
+      "baseline": [
+        "seed_mass",
+        "thermal_time"
+      ],
+      "candidate": [
+        "seed_mass",
+        "thermal_time"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "seed_mass",
+          "operation": "explain",
+          "disposition": "requested",
+          "span": [
+            12,
+            21
+          ],
+          "text": "seed mass"
+        },
+        {
+          "method_id": "thermal_time",
+          "operation": "how",
+          "disposition": "requested",
+          "span": [
+            55,
+            65
+          ],
+          "text": "heat units"
+        }
+      ]
+    },
+    {
+      "id": "M04",
+      "expected": [
+        "partial_budget",
+        "nutrient_plan_inputs"
+      ],
+      "baseline": [
+        "partial_budget",
+        "nutrient_plan_inputs"
+      ],
+      "candidate": [
+        "nutrient_plan_inputs",
+        "partial_budget"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "nutrient_plan_inputs",
+          "operation": "identify",
+          "disposition": "requested",
+          "span": [
+            32,
+            45
+          ],
+          "text": "nutrient-plan"
+        },
+        {
+          "method_id": "partial_budget",
+          "operation": "identify",
+          "disposition": "requested",
+          "span": [
+            71,
+            85
+          ],
+          "text": "partial budget"
+        }
+      ]
+    },
+    {
+      "id": "M05",
+      "expected": [
+        "enterprise_budget",
+        "cash_flow"
+      ],
+      "baseline": [
+        "enterprise_budget"
+      ],
+      "candidate": [
+        "enterprise_budget",
+        "cash_flow"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "enterprise_budget",
+          "operation": "make",
+          "disposition": "requested",
+          "span": [
+            12,
+            30
+          ],
+          "text": "cost-of-production"
+        },
+        {
+          "method_id": "cash_flow",
+          "operation": "make",
+          "disposition": "requested",
+          "span": [
+            46,
+            58
+          ],
+          "text": "monthly cash"
+        }
+      ]
+    },
+    {
+      "id": "M06",
+      "expected": [
+        "liquidity"
+      ],
+      "baseline": [
+        "liquidity",
+        "cash_flow"
+      ],
+      "candidate": [
+        "liquidity"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "liquidity",
+          "operation": "assess",
+          "disposition": "requested",
+          "span": [
+            7,
+            21
+          ],
+          "text": "current assets"
+        },
+        {
+          "method_id": "cash_flow",
+          "operation": "build",
+          "disposition": "negated",
+          "span": [
+            58,
+            67
+          ],
+          "text": "cash-flow"
+        }
+      ]
+    },
+    {
+      "id": "A01",
+      "expected": [],
+      "baseline": [
+        "enterprise_budget"
+      ],
+      "candidate": [],
+      "candidate_frame": []
+    },
+    {
+      "id": "A02",
+      "expected": [],
+      "baseline": [],
+      "candidate": [],
+      "candidate_frame": []
+    },
+    {
+      "id": "A03",
+      "expected": [],
+      "baseline": [
+        "seed_mass"
+      ],
+      "candidate": [],
+      "candidate_frame": [
+        {
+          "method_id": "seed_mass",
+          "operation": "what",
+          "disposition": "unresolved",
+          "span": [
+            18,
+            27
+          ],
+          "text": "seed rate"
+        }
+      ]
+    },
+    {
+      "id": "A04",
+      "expected": [],
+      "baseline": [],
+      "candidate": [],
+      "candidate_frame": []
+    },
+    {
+      "id": "A05",
+      "expected": [],
+      "baseline": [],
+      "candidate": [],
+      "candidate_frame": []
+    },
+    {
+      "id": "A06",
+      "expected": [],
+      "baseline": [],
+      "candidate": [],
+      "candidate_frame": []
+    },
+    {
+      "id": "C01",
+      "expected": [
+        "liquidity"
+      ],
+      "baseline": [
+        "cash_flow"
+      ],
+      "candidate": [
+        "liquidity"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "liquidity",
+          "operation": "what",
+          "disposition": "requested",
+          "span": [
+            5,
+            25
+          ],
+          "text": "balance-sheet ratios"
+        }
+      ]
+    },
+    {
+      "id": "C02",
+      "expected": [
+        "cash_flow"
+      ],
+      "baseline": [
+        "enterprise_budget"
+      ],
+      "candidate": [
+        "cash_flow"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "cash_flow",
+          "operation": "how",
+          "disposition": "requested",
+          "span": [
+            50,
+            67
+          ],
+          "text": "schedule receipts"
+        }
+      ]
+    },
+    {
+      "id": "C03",
+      "expected": [
+        "enterprise_budget"
+      ],
+      "baseline": [
+        "enterprise_budget",
+        "cash_flow"
+      ],
+      "candidate": [
+        "enterprise_budget"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "cash_flow",
+          "operation": "use",
+          "disposition": "background",
+          "span": [
+            16,
+            25
+          ],
+          "text": "cash-flow"
+        },
+        {
+          "method_id": "enterprise_budget",
+          "operation": "calculate",
+          "disposition": "requested",
+          "span": [
+            68,
+            78
+          ],
+          "text": "break-even"
+        }
+      ]
+    },
+    {
+      "id": "C04",
+      "expected": [
+        "partial_budget"
+      ],
+      "baseline": [
+        "enterprise_budget"
+      ],
+      "candidate": [
+        "partial_budget"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "enterprise_budget",
+          "operation": "unspecified",
+          "disposition": "unresolved",
+          "span": [
+            4,
+            21
+          ],
+          "text": "enterprise budget"
+        },
+        {
+          "method_id": "partial_budget",
+          "operation": "compare",
+          "disposition": "requested",
+          "span": [
+            108,
+            133
+          ],
+          "text": "changed returns and costs"
+        }
+      ]
+    },
+    {
+      "id": "C05",
+      "expected": [
+        "cash_flow"
+      ],
+      "baseline": [
+        "nutrient_plan_inputs"
+      ],
+      "candidate": [
+        "cash_flow"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "nutrient_plan_inputs",
+          "operation": "unspecified",
+          "disposition": "background",
+          "span": [
+            4,
+            15
+          ],
+          "text": "manure plan"
+        },
+        {
+          "method_id": "cash_flow",
+          "operation": "explain",
+          "disposition": "requested",
+          "span": [
+            51,
+            63
+          ],
+          "text": "monthly cash"
+        }
+      ]
+    },
+    {
+      "id": "C06",
+      "expected": [
+        "seed_mass"
+      ],
+      "baseline": [
+        "seed_mass",
+        "thermal_time"
+      ],
+      "candidate": [
+        "seed_mass"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "thermal_time",
+          "operation": "unspecified",
+          "disposition": "background",
+          "span": [
+            24,
+            27
+          ],
+          "text": "GDD"
+        },
+        {
+          "method_id": "seed_mass",
+          "operation": "calculate",
+          "disposition": "requested",
+          "span": [
+            39,
+            53
+          ],
+          "text": "seed kilograms"
+        },
+        {
+          "method_id": "seed_mass",
+          "operation": "calculate",
+          "disposition": "requested",
+          "span": [
+            85,
+            98
+          ],
+          "text": "kernel weight"
+        }
+      ]
+    },
+    {
+      "id": "C07",
+      "expected": [
+        "liquidity"
+      ],
+      "baseline": [
+        "enterprise_budget",
+        "liquidity"
+      ],
+      "candidate": [
+        "liquidity"
+      ],
+      "candidate_frame": [
+        {
+          "method_id": "liquidity",
+          "operation": "whether",
+          "disposition": "requested",
+          "span": [
+            71,
+            85
+          ],
+          "text": "current assets"
+        },
+        {
+          "method_id": "liquidity",
+          "operation": "whether",
+          "disposition": "requested",
+          "span": [
+            92,
+            111
+          ],
+          "text": "current liabilities"
+        }
+      ]
+    }
+  ]
+}

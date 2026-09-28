@@ -1,0 +1,106 @@
+{
+  "schema": "fixed_editor_output_replay.v1",
+  "scope": "Final deterministic decision and prompt-byte equivalence using captured model outputs; not a new generation or tokenizer measurement",
+  "source_run_sha256": "11043175f39100e55b5629de5c132de88ed68110605f28730afffec35baf14d9",
+  "prior_capsule_sha256": "c7e52cdcbc7f99ba846b38b0352c280704d15bf731eff410e82c6b93ff5ff610",
+  "final_verifier_sha256": "f33ec835e1b184428cde0a45934e0207130d5a515fcd40a1d6a55fcbd60d4304",
+  "other_runtime_source_matches_capsule": true,
+  "cases": [
+    {
+      "case_id": "N01",
+      "prior_record_matches_retained": true,
+      "current_record_matches_retained": true,
+      "editor_prompts_identical": true,
+      "editor_calls": 1,
+      "editor_prompts_sha256": "efe91a2b338683ad74984399a9e58e744cb90267f912b8329ef1d533d10df4dc"
+    },
+    {
+      "case_id": "N02",
+      "prior_record_matches_retained": true,
+      "current_record_matches_retained": true,
+      "editor_prompts_identical": true,
+      "editor_calls": 0,
+      "editor_prompts_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "case_id": "A01",
+      "prior_record_matches_retained": true,
+      "current_record_matches_retained": true,
+      "editor_prompts_identical": true,
+      "editor_calls": 0,
+      "editor_prompts_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "case_id": "A02",
+      "prior_record_matches_retained": true,
+      "current_record_matches_retained": true,
+      "editor_prompts_identical": true,
+      "editor_calls": 1,
+      "editor_prompts_sha256": "b53cac4517218c256346e8310b6141f937f86201a09c3ff7eccf5f3c1ebd46d9"
+    },
+    {
+      "case_id": "A03",
+      "prior_record_matches_retained": true,
+      "current_record_matches_retained": true,
+      "editor_prompts_identical": true,
+      "editor_calls": 1,
+      "editor_prompts_sha256": "08c21424a70d28b979112dc2eceb7f95a25c07d96e10f369664004054785393f"
+    },
+    {
+      "case_id": "L01",
+      "prior_record_matches_retained": true,
+      "current_record_matches_retained": true,
+      "editor_prompts_identical": true,
+      "editor_calls": 0,
+      "editor_prompts_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "case_id": "L02",
+      "prior_record_matches_retained": true,
+      "current_record_matches_retained": true,
+      "editor_prompts_identical": true,
+      "editor_calls": 1,
+      "editor_prompts_sha256": "c3a9fdd530c5f3794cb1c439d38cf60764c442ee5a7f836f571c6063981399ff"
+    },
+    {
+      "case_id": "D01",
+      "prior_record_matches_retained": true,
+      "current_record_matches_retained": true,
+      "editor_prompts_identical": true,
+      "editor_calls": 0,
+      "editor_prompts_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "case_id": "D02",
+      "prior_record_matches_retained": true,
+      "current_record_matches_retained": true,
+      "editor_prompts_identical": true,
+      "editor_calls": 0,
+      "editor_prompts_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "case_id": "D03",
+      "prior_record_matches_retained": true,
+      "current_record_matches_retained": true,
+      "editor_prompts_identical": true,
+      "editor_calls": 0,
+      "editor_prompts_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "case_id": "R01",
+      "prior_record_matches_retained": true,
+      "current_record_matches_retained": true,
+      "editor_prompts_identical": true,
+      "editor_calls": 0,
+      "editor_prompts_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "case_id": "I01",
+      "prior_record_matches_retained": true,
+      "current_record_matches_retained": true,
+      "editor_prompts_identical": true,
+      "editor_calls": 0,
+      "editor_prompts_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    }
+  ]
+}

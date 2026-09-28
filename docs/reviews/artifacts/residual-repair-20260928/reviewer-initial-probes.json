@@ -1,0 +1,89 @@
+[
+  {
+    "evidence": "There is no evidence that gray leaf spot was ruled out by the laboratory.",
+    "answer": "The diagnosis is not gray leaf spot.",
+    "reasons": [],
+    "unsupported_numbers": []
+  },
+  {
+    "evidence": "Whether gray leaf spot was ruled out by the laboratory is unknown.",
+    "answer": "The diagnosis is not gray leaf spot.",
+    "reasons": [],
+    "unsupported_numbers": []
+  },
+  {
+    "evidence": "The laboratory has not ruled out gray leaf spot.",
+    "answer": "The diagnosis is not gray leaf spot.",
+    "reasons": [
+      "unsupported_diagnostic_certainty"
+    ],
+    "unsupported_numbers": []
+  },
+  {
+    "evidence": "Gray leaf spot was ruled out by the laboratory.",
+    "answer": "The diagnosis is not gray leaf spot.",
+    "reasons": [],
+    "unsupported_numbers": []
+  },
+  {
+    "evidence": "Mass: 20 kg.",
+    "answer": "The area is 20 hectares.",
+    "reasons": [],
+    "unsupported_numbers": []
+  },
+  {
+    "evidence": "Mass: 20 kg.",
+    "answer": "The capacity is 20 gallons.",
+    "reasons": [],
+    "unsupported_numbers": []
+  },
+  {
+    "evidence": "Mass: 20 kg.",
+    "answer": "The capacity is 20 millilitres.",
+    "reasons": [],
+    "unsupported_numbers": []
+  },
+  {
+    "question": "What is the total mass of 12 bags of barley and 12 bags of wheat? Each bag weighs 25 kg.",
+    "answer": "The total mass is 300 kg.",
+    "unsupported_numbers": [],
+    "derived": "(Decimal('12'), Decimal('25'), Quantity(value=Decimal('300'), upper=None, unit='kg'))"
+  },
+  {
+    "question": "Do not explain cash flow and calculate working capital.",
+    "requested_methods": []
+  },
+  {
+    "question": "Do not explain cash flow; calculate working capital.",
+    "requested_methods": [
+      "liquidity"
+    ]
+  },
+  {
+    "question": "Explain cash flow and do not discuss liquidity.",
+    "requested_methods": [
+      "cash_flow"
+    ]
+  },
+  {
+    "question": "The brochure mentions cash flow and I only want its author.",
+    "requested_methods": []
+  },
+  {
+    "question": "Explain why cash flow is not liquidity.",
+    "requested_methods": [
+      "cash_flow"
+    ]
+  },
+  {
+    "question": "Ignore the cash plan and explain working capital.",
+    "requested_methods": [
+      "cash_flow",
+      "liquidity"
+    ]
+  },
+  {
+    "question": "Avoid mentioning liquidity and explain cash flow.",
+    "requested_methods": []
+  }
+]

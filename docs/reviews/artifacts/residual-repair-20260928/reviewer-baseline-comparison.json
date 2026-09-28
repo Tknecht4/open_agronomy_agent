@@ -1,0 +1,76 @@
+[
+  {
+    "question": "What does this note establish?",
+    "evidence": "There is no evidence that gray leaf spot was ruled out by the laboratory.",
+    "answer": "The diagnosis is not gray leaf spot.",
+    "baseline_reasons": [
+      "unsupported_diagnostic_certainty"
+    ],
+    "candidate_reasons": [],
+    "candidate_review_triggered": false,
+    "candidate_verifier_output": "The diagnosis is not gray leaf spot.",
+    "quantity_matches": []
+  },
+  {
+    "question": "What does this note establish?",
+    "evidence": "Whether gray leaf spot was ruled out by the laboratory is unknown.",
+    "answer": "The diagnosis is not gray leaf spot.",
+    "baseline_reasons": [
+      "unsupported_diagnostic_certainty"
+    ],
+    "candidate_reasons": [],
+    "candidate_review_triggered": false,
+    "candidate_verifier_output": "The diagnosis is not gray leaf spot.",
+    "quantity_matches": []
+  },
+  {
+    "question": "What is the total mass of 12 bags of barley and 12 bags of wheat? Each bag weighs 25 kg.",
+    "evidence": "",
+    "answer": "The total mass is 300 kg.",
+    "baseline_reasons": [
+      "unsupported_numeric_specificity"
+    ],
+    "candidate_reasons": [],
+    "candidate_review_triggered": false,
+    "candidate_verifier_output": "The total mass is 300 kg.",
+    "quantity_matches": [
+      "300 kg"
+    ]
+  },
+  {
+    "question": "What does this note establish?",
+    "evidence": "No rate was supplied.",
+    "answer": "The rate is .5 kg/ha.",
+    "baseline_reasons": [
+      "unsupported_numeric_specificity"
+    ],
+    "candidate_reasons": [],
+    "candidate_review_triggered": false,
+    "candidate_verifier_output": "The rate is .5 kg/ha.",
+    "quantity_matches": []
+  },
+  {
+    "question": "What does this note establish?",
+    "evidence": "No depth was supplied.",
+    "answer": "The depth is -.5 cm.",
+    "baseline_reasons": [
+      "unsupported_numeric_specificity"
+    ],
+    "candidate_reasons": [],
+    "candidate_review_triggered": false,
+    "candidate_verifier_output": "The depth is -.5 cm.",
+    "quantity_matches": []
+  },
+  {
+    "question": "What does this note establish?",
+    "evidence": "Mass: 20 kg.",
+    "answer": "The area is 20 hectares.",
+    "baseline_reasons": [],
+    "candidate_reasons": [],
+    "candidate_review_triggered": false,
+    "candidate_verifier_output": "The area is 20 hectares.",
+    "quantity_matches": [
+      "20"
+    ]
+  }
+]
