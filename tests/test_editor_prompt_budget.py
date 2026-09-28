@@ -1,12 +1,36 @@
 from __future__ import annotations
 
+import pytest
+
 from agronomy_agent.answer_verifier import verify_answer
+from agronomy_agent.model_errors import LocalModelSnapshotUnavailable
 
 
 BROKEN_DRAFT = "Answer the question directly.\n```json\n" + (
     "import math_utils_utils as math_utils_utils\n" * 12
 )
 QUESTION = "What is crop rotation, and why can it help manage disease pressure?"
+
+
+@pytest.mark.parametrize("failure_stage", ["tokenization", "generation"])
+def test_missing_editor_model_remains_an_actionable_setup_error(failure_stage: str) -> None:
+    class MissingEditor:
+        max_tokens = 60
+
+        def count_prompt_tokens(self, messages):
+            if failure_stage == "tokenization":
+                raise LocalModelSnapshotUnavailable("synthetic missing editor snapshot")
+            return 100
+
+        def generate(self, messages):
+            raise LocalModelSnapshotUnavailable("synthetic missing editor snapshot")
+
+    with pytest.raises(LocalModelSnapshotUnavailable):
+        verify_answer(
+            BROKEN_DRAFT, question=QUESTION, evidence_text="", question_type="exam_review",
+            risk_level="low", editor=MissingEditor(), review_mode="risk_gated",
+            editor_context_management={"context_limit_tokens": 8192}, editor_max_tokens=60,
+        )
 
 
 class Editor:

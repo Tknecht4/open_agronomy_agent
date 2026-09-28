@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import re
+from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import nullcontext
 from time import perf_counter
@@ -47,6 +48,7 @@ from agronomy_agent.execution_core import (
     stable_sha256 as execution_stable_sha256,
 )
 from agronomy_agent.model_identity import bind_response_identity, model_identity_contract
+from agronomy_agent.model_errors import LocalModelSnapshotUnavailable
 from agronomy_agent.high_consequence import apply_high_consequence_boundary, evaluate_high_consequence_policy
 from agronomy_agent.geographic_context import (
     TRUSTED_GEOGRAPHIC_LAYER_IDS,
@@ -238,6 +240,8 @@ def _generate_with_backend_fallback(
 ) -> tuple[str, dict[str, Any]]:
     try:
         return str(generator.generate(messages)), {}
+    except LocalModelSnapshotUnavailable:
+        raise
     except RuntimeError as exc:
         if mode == "mock" or isinstance(generator, MockGenerator) or not fallback_enabled:
             raise
@@ -485,6 +489,23 @@ def _run_turn_impl(
     verification_metadata: dict[str, Any] | None = None
     verification: Any | None = None
     draft_generation_stats: dict[str, Any] | None = None
+    draft_model_identity: dict[str, Any] | None = None
+    draft_completed = False
+
+    def capture_completed_draft_receipts() -> None:
+        nonlocal draft_generation_stats, draft_model_identity, draft_completed
+        if any(generation_metadata.get(key) for key in (
+            "generation_bypass", "generation_fallback", "generation_unavailable"
+        )):
+            return
+        draft_completed = True
+        stats = getattr(generator, "last_generation_stats", None)
+        if isinstance(stats, dict) and stats:
+            draft_generation_stats = deepcopy(stats)
+        identity = getattr(generator, "model_identity", None)
+        if isinstance(identity, dict) and identity:
+            draft_model_identity = deepcopy(identity)
+
     context: Any | None = None
     source_grounded = False
     evidence_conflicts = _detect_evidence_conflicts(field_context, [])
@@ -528,7 +549,10 @@ def _run_turn_impl(
                 scope_generator("draft")
                 decode_span = profiler.span("model.decode_stream", input_size=sum(len(item["content"]) for item in messages)) if profiler else nullcontext()
                 with decode_span:
-                    answer, generation_metadata = _generate_with_backend_fallback(generator, messages, mode)
+                    answer, generation_metadata = _generate_with_backend_fallback(
+                        generator, messages, mode, fallback_enabled=fallback_enabled,
+                    )
+                    capture_completed_draft_receipts()
         if context_budget_receipt is None:
             compile_prompt(will_generate=False)
         if trace_options.get("store_prompt_messages"):
@@ -761,6 +785,7 @@ def _run_turn_impl(
                             mode,
                             fallback_enabled=fallback_enabled,
                         )
+                        capture_completed_draft_receipts()
                 if intervention is not None:
                     generation_metadata["evidence_intervention"] = intervention.as_record()
         if context_budget_receipt is None:
@@ -931,8 +956,6 @@ def _run_turn_impl(
         and not generation_metadata.get("generation_unavailable")
         and not generation_metadata.get("generation_bypass")
     ):
-        if getattr(generator, "last_generation_stats", None):
-            draft_generation_stats = dict(generator.last_generation_stats)
         verifier_model_id = str(verification_config.get("model_id") or model_to_use)
         editor = _build_mlx_generator(verifier_model_id, model_config, settings.model_config_path)
         editor_max_tokens = int(verification_config.get("max_tokens", 180))
@@ -982,8 +1005,8 @@ def _run_turn_impl(
             )
         answer = verification.answer
         verification_metadata = verification.as_record()
-        if getattr(editor, "last_generation_stats", None) and verification.triggered:
-            verification_metadata["generation_stats"] = dict(editor.last_generation_stats)
+        if getattr(verification, "editor_output", None) is not None and getattr(editor, "last_generation_stats", None):
+            verification_metadata["generation_stats"] = deepcopy(editor.last_generation_stats)
         store.append_event(
             session_id,
             "answer.verification_completed",
@@ -1016,20 +1039,11 @@ def _run_turn_impl(
         trace_store_payload["metadata"]["answer_verification"] = verification_metadata
     if draft_generation_stats is not None:
         trace_store_payload["metadata"]["generation_stats"] = draft_generation_stats
-    elif generator is not None and getattr(generator, "last_generation_stats", None):
-        trace_store_payload["metadata"]["generation_stats"] = dict(generator.last_generation_stats)
-    if generator is not None and getattr(generator, "model_identity", None):
-        identity = dict(generator.model_identity)
-        generation_stats = draft_generation_stats or getattr(generator, "last_generation_stats", None)
-        if (
-            isinstance(generation_stats, dict)
-            and int(generation_stats.get("generation_tokens") or 0) > 0
-            and not generation_metadata.get("generation_bypass")
-            and not generation_metadata.get("generation_fallback")
-            and not generation_metadata.get("generation_unavailable")
-        ):
-            identity = bind_response_identity(identity, model_to_use)
-        trace_store_payload["metadata"]["model_identity"] = identity
+    identity = draft_model_identity if draft_completed else getattr(generator, "model_identity", None)
+    if isinstance(identity, dict) and identity:
+        trace_store_payload["metadata"]["model_identity"] = bind_response_identity(
+            deepcopy(identity), model_to_use if draft_completed else None,
+        )
 
     safety_answer = enforce_answer_safety_postconditions(
         answer,
@@ -2003,9 +2017,12 @@ def _production_stage_observations(
             },
         },
         "fallback_origin": {
-            "state": "executed" if fallback_enabled else "disabled_by_arm",
+            # Origin accounting always runs. The exception-fallback switch does
+            # not disable verifier replacement or resource-limit responses.
+            "state": "executed",
             "evidence": {
                 "reason": fallback_reason,
+                "generation_exception_fallback_enabled": fallback_enabled,
                 "origin_class": origin_class,
                 "fallback_used": fallback_used,
                 "fallback_kind": fallback_kind,

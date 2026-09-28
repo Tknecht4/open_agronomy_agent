@@ -10,6 +10,11 @@ The image uses synthetic records. It contains no personal field data.
 
 Open **Workspace** and type a general question. A field is optional: the app must not invent a crop, location, soil test, or measurement to make a general question look field-specific. If the local runtime is unavailable, the text remains a device-local draft; sending it later requires a working API. A saved answer can show source cards, tool use, missing inputs, and a trace through **Sources & checks**. These records show what the system did, not that its answer is correct.
 
+After restarting the local API, use **Retry local runtime**. Recovery reloads
+saved fields, conversations, and model settings before enabling questions, while
+preserving the unsent draft. A delayed recovery does not replace a newer field or
+chat selection. Device-only field notes remain on the device.
+
 Select a field when its known details matter to the question. Field observations and soil tests are user records; map intersections and provider data are separate contextual inputs. If a field is incomplete, leave unknowns blank and ask a bounded question. A model answer should not turn an unknown into a zero, a pass, or a prescription.
 
 ## Continue a saved conversation

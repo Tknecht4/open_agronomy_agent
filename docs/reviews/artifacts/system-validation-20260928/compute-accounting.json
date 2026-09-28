@@ -1,0 +1,41 @@
+{
+  "schema_version": "system_validation_compute_accounting.v1",
+  "session": "oa-validation-20260928",
+  "hardware": "NVIDIA L4, 23034 MiB",
+  "session_owned_by_task": true,
+  "terminal_state": "stopped",
+  "active_sessions_after_stop": 0,
+  "active_assignments_after_stop": 0,
+  "observed_rate_after_stop_CU_per_hour": 0.0,
+  "observed_account_balance_delta_CU": 3.19,
+  "measurement_precision_CU": 0.01,
+  "attribution": "Difference between initial CLI account balance observed in the task transcript and final balance after session termination. Account-wide measurement includes setup, superseded runs, corrected runs, and session idle time; it is not a per-job invoice and cannot exclude unrelated account activity. Private balances are not published.",
+  "observed_running_rate_CU_per_hour": 1.54,
+  "corrected_run_elapsed_seconds": {
+    "gemma": 573.8068356513977,
+    "qwen": 2805.4255735874176
+  },
+  "planning_estimate_corrected_runs_minutes": [
+    40,
+    80
+  ],
+  "currency_cost": null,
+  "provider_model_token_cost": null,
+  "owner_reviewer_grader_token_cost": null,
+  "unavailable_costs_are_not_zero": true,
+  "local_evidence": {
+    "stop-session.txt": {
+      "path": "outputs/system-validation-20260928/colab/stop-session.txt",
+      "sha256": "eddb8c010c374ebe9c25e37d42e2016764e71ebee87cc3be7ee3812f048d1811"
+    },
+    "sessions-after-stop.txt": {
+      "path": "outputs/system-validation-20260928/colab/sessions-after-stop.txt",
+      "sha256": "dec807c11992d9001acb723d969c49727402fe62c5e6cbd3899944bfdd03c140"
+    },
+    "usage-after-stop.txt": {
+      "path": "outputs/system-validation-20260928/colab/usage-after-stop.txt",
+      "sha256": "fc48503ba5ce51c87235f20280241fe1f410488742a7582882bdb145308b8e93"
+    }
+  },
+  "scope": "No pre-existing user session was stopped. Final session listing reported no active sessions."
+}

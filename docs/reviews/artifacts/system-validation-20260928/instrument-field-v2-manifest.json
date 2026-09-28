@@ -1,0 +1,137 @@
+{
+  "archive": "instrument-field-v2.tar.gz",
+  "boundary": "Exposed development evaluation archive, including frozen gold and rubrics. Keep local for grading; never upload the complete archive to a model host, runtime retrieval, or training. Original instrument.tar.gz is unchanged.",
+  "bytes": 78092,
+  "extraction": "Extract at repository root to restore original repository-relative paths.",
+  "files": {
+    "docs/reviews/artifacts/system-validation-20260928/field-v2-mock-proof.json": {
+      "bytes": 436,
+      "sha256": "a7c5b7d6d43a903dd0f5c043fb3a342bd579c79bb16db6ebb71d9bc8b7de7bba"
+    },
+    "docs/reviews/artifacts/system-validation-20260928/field-v2-runner-delta.json": {
+      "bytes": 592,
+      "sha256": "bdb56da38c28e4a11927e36d5527e5001e268ec0a464984df9cc22269bb7bcca"
+    },
+    "outputs/system-validation-20260928/analysis/export_public_run.py": {
+      "bytes": 2184,
+      "sha256": "dfaef73ac49259d1a3343c71159c0c03ec3c9ae85c4430078383ec9e6cb3255e"
+    },
+    "outputs/system-validation-20260928/analysis/package_evaluation_artifacts.py": {
+      "bytes": 13136,
+      "sha256": "3666da40be4d3d47498c7af55b82791ebf6c9b792149cfee7d696c24b5df1996"
+    },
+    "outputs/system-validation-20260928/analysis/restore_public_run.py": {
+      "bytes": 5884,
+      "sha256": "fe0cbca098c705689d33c19ee87659626706569743bbe99b5a57b75de01013e2"
+    },
+    "outputs/system-validation-20260928/cohort/README.md": {
+      "bytes": 3222,
+      "sha256": "99768616795db8c6d197399873f4a1d385385ea32e1d0cb555f932c21b4d094e"
+    },
+    "outputs/system-validation-20260928/cohort/build_cohort.py": {
+      "bytes": 24014,
+      "sha256": "30fd951b135a504446877c466d40e2ec71d6f2a4323081ba755dfdc0c5785c26"
+    },
+    "outputs/system-validation-20260928/cohort/cohort.json": {
+      "bytes": 43887,
+      "sha256": "1d7165c4252f8a38f22d60bf56c44a1b96de67342a608d653d3963309b98c4dc"
+    },
+    "outputs/system-validation-20260928/cohort/manifest.json": {
+      "bytes": 5872,
+      "sha256": "90db579b49f92bdeb37ecad0b9573d4ca47279c37af582581853534928d54b4a"
+    },
+    "outputs/system-validation-20260928/cohort/table_setup.py": {
+      "bytes": 7526,
+      "sha256": "c0e0dc3927deb27664ce73559191cd42e72e10350742f63fd02cdfc1e42191b2"
+    },
+    "outputs/system-validation-20260928/cohort/table_setup_proof.json": {
+      "bytes": 1188,
+      "sha256": "9b408bf328b36ea608a30c879086c1293f8e6230ae2c90488ddc71e68e26b05c"
+    },
+    "outputs/system-validation-20260928/colab/build_capsule_v2.py": {
+      "bytes": 3142,
+      "sha256": "674a5d7f50ec92e552e7caa5a6c0cf6fabdc4697368c77c61d1a0a83b5225602"
+    },
+    "outputs/system-validation-20260928/colab/capsule-files-v2.json": {
+      "bytes": 42620,
+      "sha256": "34b2e56db480f3c5f7c6ef169e5cbc4d02a30d640d7de02f1e4787118ccbe7be"
+    },
+    "outputs/system-validation-20260928/colab/capsule-summary-v2.json": {
+      "bytes": 161,
+      "sha256": "8c8bacb227010d32f0c9b57f6edf5fecc64dd5f718b03acb62b36a9aeefc8778"
+    },
+    "outputs/system-validation-20260928/colab/collect_gemma_field_v2.py": {
+      "bytes": 1320,
+      "sha256": "9680b3404965d20fb27c8c2ef55742164e031c3341784880559eba2de08f12dd"
+    },
+    "outputs/system-validation-20260928/colab/collect_qwen_field_v2.py": {
+      "bytes": 1237,
+      "sha256": "aeeb6b6fe7d194bb3ab66519f658cb60f747807c963502f9c73a468e60a3cc3b"
+    },
+    "outputs/system-validation-20260928/colab/launch_calibration.py": {
+      "bytes": 2615,
+      "sha256": "d7867c9762bc18d730d836993d764cb2d4f3cb0b97009d2ec2fb476476188483"
+    },
+    "outputs/system-validation-20260928/colab/launch_field_v2.py": {
+      "bytes": 4912,
+      "sha256": "d348b7fa1a4f0e5a1cf7206333e706e6680d2ffd7483f56b21ff23e09b9f8942"
+    },
+    "outputs/system-validation-20260928/colab/launch_qwen_calibration.py": {
+      "bytes": 2153,
+      "sha256": "03916b8605878667a38f97ba39ea5f1e0e9e76d73fd26197daf0fd71dd3cf786"
+    },
+    "outputs/system-validation-20260928/colab/verify_field_v2.py": {
+      "bytes": 2611,
+      "sha256": "de36cb5e5202df04a484937556554a730ba7cd0ea23bdfcc54532d41d5e3b034"
+    },
+    "outputs/system-validation-20260928/runner/README-field-v2.md": {
+      "bytes": 4341,
+      "sha256": "b61572da6a2dcc3f506e9d689047be8b127b32877b100063c030b849a8b339e9"
+    },
+    "outputs/system-validation-20260928/runner/README.md": {
+      "bytes": 7542,
+      "sha256": "36e7e495da3e730653d99baef84db4eab0618feab578380f67c7e21b7f81e521"
+    },
+    "outputs/system-validation-20260928/runner/audit_preflight.py": {
+      "bytes": 4650,
+      "sha256": "c6f791c10c08bcfb93539b4df9633626baa4e11225d6911e7a18e737ae91e4e1"
+    },
+    "outputs/system-validation-20260928/runner/derive_model_profile.py": {
+      "bytes": 3005,
+      "sha256": "b83819310f9da7ce3ae2d554c1df11461a717f464edd1c939d4494ffcc0e4676"
+    },
+    "outputs/system-validation-20260928/runner/grading_local.json": {
+      "bytes": 25109,
+      "sha256": "9c467ad2183925dda509b43f3c388d83ef1a007843eeb8ef0c560d17f0fff76d"
+    },
+    "outputs/system-validation-20260928/runner/grading_local.json.sha256": {
+      "bytes": 65,
+      "sha256": "c30c7db429f3a4f2df09b25d6a48c846c6db4b161348b72ba8696b1a896435c9"
+    },
+    "outputs/system-validation-20260928/runner/prepare_inputs.py": {
+      "bytes": 3061,
+      "sha256": "2cc9d53df486bb904513ff61eb42ee13630b4d74df44dfd5285221114fc38618"
+    },
+    "outputs/system-validation-20260928/runner/run_retrieval_2x2.py": {
+      "bytes": 33329,
+      "sha256": "da9d533bca463ec17d3a0a2d99eeef82c3dc177d4445978a539175902926ae9b"
+    },
+    "outputs/system-validation-20260928/runner/run_retrieval_2x2_field_v2.py": {
+      "bytes": 38448,
+      "sha256": "84e64d8d045d156cc17ceb7bad1d1b90e607974bc316d623dbbfa1c2c6c069ec"
+    },
+    "outputs/system-validation-20260928/runner/runtime_cases.json": {
+      "bytes": 12364,
+      "sha256": "b1ae061a306d920cc2536fdfa6eba38a2b6eab19cbc27f57924d461b2b2178cb"
+    },
+    "outputs/system-validation-20260928/runner/runtime_cases.json.sha256": {
+      "bytes": 65,
+      "sha256": "e2469b24fc63c02d85a2610e2e1593146c0a8c058e4f57b2393efa7f53503657"
+    }
+  },
+  "privacy_scan": "Explicit safe-file allowlist; reject actual private home-directory paths and credential-shaped literals. A bare source-code guard prefix without a username is not a private path.",
+  "runner_sha256": "84e64d8d045d156cc17ceb7bad1d1b90e607974bc316d623dbbfa1c2c6c069ec",
+  "schema_version": "system_validation_field_v2_instrument_manifest.v1",
+  "sha256": "4a75fdeb3a37d6e9fd05a2d8bcbacce48d22aecb7e67f08f3d2553f8aa39c383",
+  "verification": "python outputs/system-validation-20260928/analysis/package_evaluation_artifacts.py verify"
+}

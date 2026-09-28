@@ -1,0 +1,8 @@
+{
+  "source_file": "outputs/system-validation-20260928/analysis/qwen-field-v2-mechanics.json",
+  "source_sha256": "e31306e9b3185bc59a8dfd5a23f988c212c655190fef9aa9b0d502da3621f3e4",
+  "public_file": "qwen-field-v2-mechanics.json",
+  "public_sha256": "93bf7fed7568fbfb1257850120c3a89cc2ae42dd38ee499e441ee441f5810277",
+  "derivation": "JSON sorted/indented; local repository prefix removed from path strings only",
+  "path_prefix_replacements": 2
+}

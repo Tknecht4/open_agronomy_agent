@@ -1,0 +1,11 @@
+{
+  "name": "gemma-field-v2",
+  "attempts": 192,
+  "planned_cells": 192,
+  "run_sha256": "193f5acd1959b1d75b1957ec43046b5d971ce945795fbd1eb6f9aa934e12cb61",
+  "raw_file": "gemma-field-v2-raw.jsonl.gz",
+  "raw_sha256": "cb8d70b9c96587a782dc5b36d4f74b437035275b05719432a0ce0a36e8562fa5",
+  "bytes": 5791185,
+  "ledger_sha256": "082002d6fc4eb77f2327c7818b4f039150b04693fdef49a9d95ff9bcbee297fb",
+  "scope": "Original full execution JSON content, every ledger attempt, and table setup receipts. Raw generation statistics are preserved, including known stale bypass statistics. Original SQLite stores are retained locally rather than published; the separate linkage audit records whether their table receipt joins passed."
+}

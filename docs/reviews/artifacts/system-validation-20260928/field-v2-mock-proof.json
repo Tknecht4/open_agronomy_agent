@@ -1,0 +1,9 @@
+{
+  "status": "passed",
+  "completed": 192,
+  "run_sha256": "f1bbea85176fe2114c19be5ebfbdfbcef643b1d25df70e42878030782afd4bd4",
+  "runner_sha256": "84e64d8d045d156cc17ceb7bad1d1b90e607974bc316d623dbbfa1c2c6c069ec",
+  "source_count": 147,
+  "source_binding": "unchanged capsule inventory and frozen source 2b4028560c18def902463b4da44ef2c5c69467b1",
+  "ledger_sha256": "393e950a51ce5bacd036d95b8ec4cfc5de38d949630c262e4fe045f4bb38e61f"
+}

@@ -1,0 +1,278 @@
+{
+  "status": "post_hoc_diagnostic_not_frozen_score",
+  "source_sha256": {
+    "src/agronomy_agent/high_consequence.py": "e90a7f11f78f44ed42484a19aaa21fc31e97a362266a7949f4c3c6ce6fb46344",
+    "src/agronomy_agent/quantity_claims.py": "99e661ac7a2049edfad82bae9b6f4ad9b077d98bebf6cd1f4d541c998a8510af",
+    "src/agronomy_agent/router.py": "f58d0fc71e9182a50138c8a1cd1432ff280914a82d2e90aacd25a04379828389"
+  },
+  "route_probes": [
+    {
+      "id": "yield_record_should",
+      "question": "My calibrated combine reports 2,400 kg/ha canola. Which record should control the field result?",
+      "high_consequence_domains": [
+        "numeric_rate"
+      ],
+      "route": {
+        "question_type": "conceptual",
+        "risk_level": "low",
+        "namespaces": [
+          "crop_management",
+          "exam_review",
+          "soil_health"
+        ],
+        "required_tools": [],
+        "answer_style": "plain",
+        "audience": "farmer",
+        "query_expansion": [],
+        "guidance": "Answer directly. Use field caveats briefly when needed.",
+        "knowledge_bucket": "farmer_knowledge",
+        "knowledge_domains": [
+          "crop_management",
+          "farmer_knowledge",
+          "machinery",
+          "operations",
+          "soil_health"
+        ]
+      }
+    },
+    {
+      "id": "yield_record_does",
+      "question": "My calibrated combine reports 2,400 kg/ha canola. Which record controls the field result?",
+      "high_consequence_domains": [],
+      "route": {
+        "question_type": "conceptual",
+        "risk_level": "low",
+        "namespaces": [
+          "crop_management",
+          "exam_review",
+          "soil_health"
+        ],
+        "required_tools": [],
+        "answer_style": "plain",
+        "audience": "farmer",
+        "query_expansion": [],
+        "guidance": "Answer directly. Use field caveats briefly when needed.",
+        "knowledge_bucket": "farmer_knowledge",
+        "knowledge_domains": [
+          "crop_management",
+          "farmer_knowledge",
+          "machinery",
+          "operations",
+          "soil_health"
+        ]
+      }
+    },
+    {
+      "id": "nutrient_prescription",
+      "question": "How much nitrogen should I apply to this canola field?",
+      "high_consequence_domains": [
+        "numeric_rate"
+      ],
+      "route": {
+        "question_type": "fertility_rate",
+        "risk_level": "medium",
+        "namespaces": [
+          "economics",
+          "fertility",
+          "soil_water"
+        ],
+        "required_tools": [],
+        "answer_style": "plain",
+        "audience": "farmer",
+        "query_expansion": [
+          "applied water",
+          "calibration",
+          "credits",
+          "crop removal",
+          "crop uptake",
+          "flowmeter",
+          "irrigation water nitrate",
+          "leaching",
+          "legume credits",
+          "manure credits",
+          "nitrate test",
+          "previous crop credits",
+          "right place",
+          "right rate",
+          "right source",
+          "right time",
+          "soil moisture",
+          "soil nitrate test",
+          "soil test method",
+          "split timing",
+          "water allocation",
+          "water nitrate test",
+          "yield goal",
+          "yield potential"
+        ],
+        "guidance": "For nitrogen rate changes under heat, irrigation, water-allocation, salinity, or leaching stress, keep the answer a nitrogen decision: check soil or nitrate test, yield goal or yield potential, manure, legume, previous-crop and irrigation-water credits, crop uptake timing, split timing, soil moisture, and loss risk before increasing N.",
+        "knowledge_bucket": "farmer_knowledge",
+        "knowledge_domains": [
+          "farmer_knowledge",
+          "market",
+          "operations",
+          "soil_health",
+          "soil_water",
+          "water_management"
+        ]
+      }
+    },
+    {
+      "id": "product_arithmetic",
+      "question": "For an arithmetic check only, product rate is already fixed at 80 kg/ha and area is 40 ha. What is the total mass?",
+      "high_consequence_domains": [
+        "product_label",
+        "numeric_rate"
+      ],
+      "route": {
+        "question_type": "exam_review",
+        "risk_level": "low",
+        "namespaces": [
+          "crop_management",
+          "exam_review"
+        ],
+        "required_tools": [],
+        "answer_style": "exam_review",
+        "audience": "farmer",
+        "query_expansion": [
+          "buffer",
+          "crop",
+          "jurisdiction",
+          "label",
+          "target pest",
+          "wind"
+        ],
+        "guidance": "Explain the agronomy practice or mechanism directly. Distinguish the general concept from a field diagnosis or prescription without requesting case-specific evidence the user did not need.",
+        "knowledge_bucket": "farmer_knowledge",
+        "knowledge_domains": [
+          "crop_management",
+          "farmer_knowledge"
+        ]
+      }
+    },
+    {
+      "id": "mass_arithmetic",
+      "question": "For an arithmetic check only, material mass per area is already fixed at 80 kg/ha and area is 40 ha. What is the total mass?",
+      "high_consequence_domains": [],
+      "route": {
+        "question_type": "exam_review",
+        "risk_level": "low",
+        "namespaces": [
+          "crop_management",
+          "exam_review",
+          "soil_health"
+        ],
+        "required_tools": [],
+        "answer_style": "exam_review",
+        "audience": "farmer",
+        "query_expansion": [],
+        "guidance": "Explain the agronomy practice or mechanism directly. Distinguish the general concept from a field diagnosis or prescription without requesting case-specific evidence the user did not need.",
+        "knowledge_bucket": "farmer_knowledge",
+        "knowledge_domains": [
+          "crop_management",
+          "farmer_knowledge",
+          "soil_health"
+        ]
+      }
+    },
+    {
+      "id": "full_product_reference",
+      "question": "In the AAFC crop development stage raster, what does soybean stage 3 mean?",
+      "high_consequence_domains": [],
+      "route": {
+        "question_type": "regional_context",
+        "risk_level": "low",
+        "namespaces": [
+          "regional_environment"
+        ],
+        "required_tools": [],
+        "answer_style": "plain",
+        "audience": "farmer",
+        "query_expansion": [
+          "5 km regional model",
+          "AAFC crop health indices",
+          "MLRA",
+          "NASDI",
+          "Versatile Soil Moisture Budget VSMB",
+          "actual evapotranspiration AET",
+          "climate",
+          "crop development stage",
+          "crop stress index",
+          "ecological site",
+          "ecoregion",
+          "landform",
+          "physiography",
+          "potential evapotranspiration PET",
+          "precipitation",
+          "regional context",
+          "soil landscape"
+        ],
+        "guidance": "Treat the named regional data product as context: explain its scope and interpretation, and do not use it as a current field measurement, grower record, current weather source, or prescription.",
+        "knowledge_bucket": "regional_environment_context",
+        "knowledge_domains": [
+          "conservation",
+          "farmer_knowledge",
+          "regional_environment_context",
+          "soil_water"
+        ]
+      }
+    },
+    {
+      "id": "followup_product_reference",
+      "question": "Correction: the crop is soybean, not wheat. What does stage 3 mean now?",
+      "high_consequence_domains": [],
+      "route": {
+        "question_type": "conceptual",
+        "risk_level": "low",
+        "namespaces": [
+          "crop_management",
+          "exam_review",
+          "soil_health"
+        ],
+        "required_tools": [],
+        "answer_style": "plain",
+        "audience": "farmer",
+        "query_expansion": [],
+        "guidance": "Answer directly. Use field caveats briefly when needed.",
+        "knowledge_bucket": "farmer_knowledge",
+        "knowledge_domains": [
+          "crop_management",
+          "farmer_knowledge",
+          "soil_health"
+        ]
+      }
+    }
+  ],
+  "quantity_probes": [
+    {
+      "id": "plain",
+      "question": "The record says 2,400 kg/ha. Report that recorded value.",
+      "answer": "The recorded value is 2,400 kg/ha.",
+      "unsupported": []
+    },
+    {
+      "id": "latex",
+      "question": "The record says 2,400 kg/ha. Report that recorded value.",
+      "answer": "The recorded value is $2,400 \\text{ kg/ha}$.",
+      "unsupported": [
+        "2,400"
+      ]
+    },
+    {
+      "id": "wrong_units",
+      "question": "The record says 2,400 kg/ha. Report that recorded value.",
+      "answer": "The recorded value is 2,400 lb/ac.",
+      "unsupported": [
+        "2,400 lb/ac"
+      ]
+    },
+    {
+      "id": "wrong_value",
+      "question": "The record says 2,400 kg/ha. Report that recorded value.",
+      "answer": "The recorded value is 2,500 kg/ha.",
+      "unsupported": [
+        "2,500 kg/ha"
+      ]
+    }
+  ]
+}

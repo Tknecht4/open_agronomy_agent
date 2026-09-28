@@ -2331,6 +2331,198 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.getByLabelText('Offline field notes')).toHaveValue('Wet patch expanded after 18 mm rain; photograph roots.')
   })
 
+  it('rehydrates saved fields, chats, and model settings after an offline boot without losing the draft', async () => {
+    const storedField = {
+      id: 'field-recovered', field_context_id: 'field-recovered', name: 'Recovered field',
+      crop: 'barley', region: 'Leduc County', jurisdiction: 'Alberta', acres: '', concern: '', notes: '',
+      geometry: { kind: 'none' }, regionalContext: '', createdAt: '2026-09-28T12:00:00Z',
+      storageMode: 'account_workspace',
+    }
+    const savedSession = {
+      session_id: 'session-recovered', title: 'Saved barley chat', turns_included: false,
+      context: { field_context_id: 'field-recovered', field_conversation_key: 'field:field-recovered' },
+      turns: [],
+    }
+    const modelConfig = {
+      ...bootConfig,
+      models: ['mlx-community/gemma-4-e2b-it-4bit'],
+      model_profiles: [{ id: 'mlx-community/gemma-4-e2b-it-4bit', label: 'Gemma', role: 'answer', max_tokens: 640, local_ready: true }],
+    }
+    let serverAvailable = false
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (!serverAvailable) throw new Error('Failed to fetch')
+      if (url === '/api/health') return jsonResponse({ status: 'ok' })
+      if (url === '/api/sessions?include_archived=true&include_turns=false') return jsonResponse([savedSession])
+      if (url === '/api/sessions/session-recovered') return jsonResponse({
+        ...savedSession, turns_included: true,
+        turns: [{ turn_id: 'turn-recovered', user_message: 'What did we inspect?', answer: 'We inspected the wet patch.', trace: { retrieved_docs: [], graph_hits: [], tool_invocations: [] } }],
+      })
+      if (url === '/api/configs') return jsonResponse(modelConfig)
+      if (url === '/api/demo/fields') return jsonResponse({ ...emptyDemoFields, fields: [storedField] })
+      return jsonResponse({})
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    window.localStorage.setItem('open-agronomy-agent.active-field.v1', 'field-recovered')
+    render(<OpenAgronomyApp />)
+
+    expect(await screen.findByText('Runtime unavailable · notes only')).toBeInTheDocument()
+    const question = screen.getByLabelText('Ask about this field')
+    fireEvent.change(question, { target: { value: 'Inspect the wet patch tomorrow.' } })
+    serverAvailable = true
+    fireEvent.click(screen.getByRole('button', { name: 'Retry local runtime' }))
+
+    expect(await screen.findByText('Local runtime · connected mode')).toBeInTheDocument()
+    expect(question).toHaveValue('Inspect the wet patch tomorrow.')
+    expect(await screen.findByRole('heading', { name: 'Recovered field' })).toBeInTheDocument()
+    expect(screen.getByText('What did we inspect?')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Saved conversations' })).toHaveTextContent('Saved barley chat')
+    fireEvent.click(screen.getByLabelText('Model settings'))
+    expect(screen.getByRole('combobox', { name: 'Model' })).toHaveValue('mlx-community/gemma-4-e2b-it-4bit')
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual(expect.arrayContaining([
+      '/api/health', '/api/sessions?include_archived=true&include_turns=false', '/api/configs', '/api/demo/fields',
+    ]))
+  })
+
+  it('keeps the runtime unavailable when a recovery workspace read fails after health succeeds', async () => {
+    let serverAvailable = false
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (!serverAvailable) throw new Error('Failed to fetch')
+      if (url === '/api/health') return jsonResponse({ status: 'ok' })
+      if (url === '/api/configs') throw new Error('Failed to fetch configs')
+      if (url === '/api/sessions?include_archived=true&include_turns=false') return jsonResponse([])
+      if (url === '/api/demo/fields') return jsonResponse(emptyDemoFields)
+      return jsonResponse({})
+    }))
+    render(<OpenAgronomyApp />)
+    expect(await screen.findByText('Runtime unavailable · notes only')).toBeInTheDocument()
+    serverAvailable = true
+    fireEvent.click(screen.getByRole('button', { name: 'Retry local runtime' }))
+    expect(await screen.findByText('Failed to fetch configs')).toBeInTheDocument()
+    expect(screen.getByText('Runtime unavailable · notes only')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Ask' })).toBeDisabled()
+  })
+
+  it('does not apply a delayed recovery transcript after the user switches fields and edits a draft', async () => {
+    const field = (id: string, name: string) => ({
+      id, field_context_id: id, name, crop: 'barley', region: 'Alberta', jurisdiction: 'Alberta',
+      acres: '', concern: '', notes: '', geometry: { kind: 'none' }, regionalContext: '',
+      createdAt: '2026-09-28T12:00:00Z', storageMode: 'account_workspace',
+    })
+    const fields = [field('field-a', 'Field A'), field('field-b', 'Field B')]
+    const listed = fields.map((item) => ({
+      session_id: `chat-${item.id}`, title: `Chat ${item.name}`, turns_included: false, turns: [],
+      context: { field_context_id: item.id, field_conversation_key: `field:${item.id}` },
+    }))
+    const baseFetch = installFetchMock({ ...emptyDemoFields, fields }, uploadPayload, listed)
+    const baseImplementation = baseFetch.getMockImplementation()!
+    let resolveDelayedRecovery: ((response: Response) => void) | undefined
+    let fieldAReads = 0
+    baseFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url === '/api/health') return jsonResponse({ status: 'ok' })
+      const id = url.match(/^\/api\/sessions\/(chat-field-[ab])$/)?.[1]
+      if (id) {
+        const item = listed.find((candidate) => candidate.session_id === id)!
+        const detail = jsonResponse({ ...item, turns_included: true, turns: [{
+          turn_id: `${id}-turn`, user_message: `Question ${id}`, answer: `Answer ${id}`,
+          trace: { retrieved_docs: [], graph_hits: [], tool_invocations: [] },
+        }] })
+        if (id === 'chat-field-a' && ++fieldAReads === 2) {
+          return new Promise<Response>((resolve) => { resolveDelayedRecovery = resolve })
+        }
+        return detail
+      }
+      return baseImplementation(input, init)
+    })
+    window.localStorage.setItem('open-agronomy-agent.active-field.v1', 'field-a')
+    render(<OpenAgronomyApp />)
+    expect(await screen.findByText('Answer chat-field-a')).toBeInTheDocument()
+
+    fireEvent(window, new Event('offline'))
+    expect(await screen.findByText('Runtime unavailable · notes only')).toBeInTheDocument()
+    fireEvent(window, new Event('online'))
+    await waitFor(() => expect(resolveDelayedRecovery).toBeDefined())
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Active field' }), { target: { value: 'field-b' } })
+    expect(await screen.findByText('Answer chat-field-b')).toBeInTheDocument()
+    const question = screen.getByLabelText('Ask about this field')
+    fireEvent.change(question, { target: { value: 'Keep these notes for Field B.' } })
+    await act(async () => { resolveDelayedRecovery!(jsonResponse({ ...listed[0], turns_included: true, turns: [{
+      turn_id: 'chat-field-a-turn', user_message: 'Question chat-field-a', answer: 'Answer chat-field-a',
+      trace: { retrieved_docs: [], graph_hits: [], tool_invocations: [] },
+    }] })) })
+
+    expect(await screen.findByText('Local runtime · connected mode')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Active field' })).toHaveValue('field-b')
+    expect(screen.getByRole('combobox', { name: 'Saved conversations' })).toHaveValue('chat-field-b')
+    expect(screen.getByText('Answer chat-field-b')).toBeInTheDocument()
+    expect(screen.queryByText('Answer chat-field-a')).not.toBeInTheDocument()
+    expect(question).toHaveValue('Keep these notes for Field B.')
+  })
+
+  it('keeps a newly selected chat when an earlier recovery transcript arrives late', async () => {
+    const listed = [
+      { session_id: 'chat-old', title: 'Old chat', turns_included: false, turns: [], context: { field_conversation_key: 'general' } },
+      { session_id: 'chat-new', title: 'New chat', turns_included: false, turns: [], context: { field_conversation_key: 'general:chat:new' } },
+    ]
+    const baseFetch = installFetchMock(emptyDemoFields, uploadPayload, listed)
+    const baseImplementation = baseFetch.getMockImplementation()!
+    let oldReads = 0
+    let resolveDelayedRecovery: ((response: Response) => void) | undefined
+    const detail = (id: string) => jsonResponse({
+      ...listed.find((item) => item.session_id === id), turns_included: true,
+      turns: [{ turn_id: `${id}-turn`, user_message: `Question ${id}`, answer: `Answer ${id}`,
+        trace: { retrieved_docs: [], graph_hits: [], tool_invocations: [] } }],
+    })
+    baseFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url === '/api/health') return jsonResponse({ status: 'ok' })
+      if (url === '/api/sessions/chat-old' && ++oldReads === 2) {
+        return new Promise<Response>((resolve) => { resolveDelayedRecovery = resolve })
+      }
+      if (url === '/api/sessions/chat-old' || url === '/api/sessions/chat-new') return detail(url.split('/').pop()!)
+      return baseImplementation(input, init)
+    })
+    render(<OpenAgronomyApp />)
+    expect(await screen.findByText('Answer chat-old')).toBeInTheDocument()
+
+    fireEvent(window, new Event('offline'))
+    expect(await screen.findByText('Runtime unavailable · notes only')).toBeInTheDocument()
+    fireEvent(window, new Event('online'))
+    await waitFor(() => expect(resolveDelayedRecovery).toBeDefined())
+    fireEvent.change(screen.getByRole('combobox', { name: 'Saved conversations' }), { target: { value: 'chat-new' } })
+    expect(await screen.findByText('Answer chat-new')).toBeInTheDocument()
+    await act(async () => { resolveDelayedRecovery!(detail('chat-old')) })
+
+    expect(await screen.findByText('Local runtime · connected mode')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Saved conversations' })).toHaveValue('chat-new')
+    expect(screen.getByText('Answer chat-new')).toBeInTheDocument()
+    expect(screen.queryByText('Answer chat-old')).not.toBeInTheDocument()
+  })
+
+  it('keeps unsaved field edits through an automatic online recovery', async () => {
+    const storedField = {
+      id: 'field-edit', field_context_id: 'field-edit', name: 'Original field',
+      crop: 'barley', region: 'Leduc County', jurisdiction: 'Alberta', acres: '', concern: '', notes: '',
+      geometry: { kind: 'none' }, regionalContext: '', createdAt: '2026-09-28T12:00:00Z',
+      storageMode: 'account_workspace',
+    }
+    const fetchMock = installFetchMock({ ...emptyDemoFields, fields: [storedField] })
+    window.localStorage.setItem('open-agronomy-agent.active-field.v1', 'field-edit')
+    render(<OpenAgronomyApp />)
+    expect(await screen.findByRole('heading', { name: 'Original field' })).toBeInTheDocument()
+    openPrimaryPage('Fields')
+    fireEvent.change(screen.getByRole('textbox', { name: 'Field name' }), { target: { value: 'Edited but not saved' } })
+    fireEvent(window, new Event('offline'))
+    expect(await screen.findByText('Runtime unavailable · notes only')).toBeInTheDocument()
+    fireEvent(window, new Event('online'))
+    expect(await screen.findByText('Local runtime · connected mode')).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Field name' })).toHaveValue('Edited but not saved')
+    expect(fetchMock.mock.calls.some(([url, init]) => String(url) === '/api/demo/fields/field-edit' && init?.method === 'PATCH')).toBe(false)
+  })
+
   it('surfaces unreadable local field data and preserves it for explicit recovery', async () => {
     const privateRaw = '{unreadable west-field notes after storm'
     window.localStorage.setItem(PHASE6_SCRATCHPAD_STORAGE_KEY, privateRaw)

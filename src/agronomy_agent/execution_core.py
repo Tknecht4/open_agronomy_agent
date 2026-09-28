@@ -101,6 +101,8 @@ class ExecutionArmConfiguration:
     typed_tools_enabled: bool = True
     risk_intervention_enabled: bool = True
     verifier_enabled: bool = True
+    # Controls recovery from generator RuntimeError only. Verifier replacement
+    # and resource-limit responses have their own observed origins.
     fallback_enabled: bool = True
 
     def __post_init__(self) -> None:

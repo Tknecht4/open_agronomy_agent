@@ -1,0 +1,60 @@
+{
+  "clearances": [
+    {
+      "blind_id": "3526de2e202f5a3b",
+      "status": "verified",
+      "reason": "All generated table identifiers and13-record count independently joined to this run committed SQLite/source/row receipts; exact answer and run bindings checked. Semantic grade unchanged.",
+      "evidence_path": "analysis/gemma-field-v2-table-linkage-bound.json",
+      "evidence_sha256": "93e9c461b24189b53534a21402b5a9bddea88207d8c51a3fc98f293f2253e86a"
+    },
+    {
+      "blind_id": "c5b0015d0c409ecc",
+      "status": "verified",
+      "reason": "All generated table identifiers and13-record count independently joined to this run committed SQLite/source/row receipts; exact answer and run bindings checked. Semantic grade unchanged.",
+      "evidence_path": "analysis/gemma-field-v2-table-linkage-bound.json",
+      "evidence_sha256": "93e9c461b24189b53534a21402b5a9bddea88207d8c51a3fc98f293f2253e86a"
+    },
+    {
+      "blind_id": "87dffa5d9608235f",
+      "status": "verified",
+      "reason": "All generated table identifiers and13-record count independently joined to this run committed SQLite/source/row receipts; exact answer and run bindings checked. Semantic grade unchanged.",
+      "evidence_path": "analysis/gemma-field-v2-table-linkage-bound.json",
+      "evidence_sha256": "93e9c461b24189b53534a21402b5a9bddea88207d8c51a3fc98f293f2253e86a"
+    },
+    {
+      "blind_id": "cbf5d03b7cc52ac7",
+      "status": "verified",
+      "reason": "All generated table identifiers and13-record count independently joined to this run committed SQLite/source/row receipts; exact answer and run bindings checked. Semantic grade unchanged.",
+      "evidence_path": "analysis/gemma-field-v2-table-linkage-bound.json",
+      "evidence_sha256": "93e9c461b24189b53534a21402b5a9bddea88207d8c51a3fc98f293f2253e86a"
+    },
+    {
+      "blind_id": "0209dcc2aec9dd51",
+      "status": "verified",
+      "reason": "All generated table identifiers and13-record count independently joined to this run committed SQLite/source/row receipts; exact answer and run bindings checked. Semantic grade unchanged.",
+      "evidence_path": "analysis/gemma-field-v2-table-linkage-bound.json",
+      "evidence_sha256": "93e9c461b24189b53534a21402b5a9bddea88207d8c51a3fc98f293f2253e86a"
+    },
+    {
+      "blind_id": "17642b3a0c7ea716",
+      "status": "verified",
+      "reason": "All generated table identifiers and13-record count independently joined to this run committed SQLite/source/row receipts; exact answer and run bindings checked. Semantic grade unchanged.",
+      "evidence_path": "analysis/gemma-field-v2-table-linkage-bound.json",
+      "evidence_sha256": "93e9c461b24189b53534a21402b5a9bddea88207d8c51a3fc98f293f2253e86a"
+    },
+    {
+      "blind_id": "1d8fb4336591a752",
+      "status": "verified",
+      "reason": "All generated table identifiers and13-record count independently joined to this run committed SQLite/source/row receipts; exact answer and run bindings checked. Semantic grade unchanged.",
+      "evidence_path": "analysis/gemma-field-v2-table-linkage-bound.json",
+      "evidence_sha256": "93e9c461b24189b53534a21402b5a9bddea88207d8c51a3fc98f293f2253e86a"
+    },
+    {
+      "blind_id": "b23558f52282ba6e",
+      "status": "verified",
+      "reason": "All generated table identifiers and13-record count independently joined to this run committed SQLite/source/row receipts; exact answer and run bindings checked. Semantic grade unchanged.",
+      "evidence_path": "analysis/gemma-field-v2-table-linkage-bound.json",
+      "evidence_sha256": "93e9c461b24189b53534a21402b5a9bddea88207d8c51a3fc98f293f2253e86a"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "source_file": "outputs/system-validation-20260928/analysis/gemma-field-v2-mechanics.json",
+  "source_sha256": "413ee3b984aabc90a9c2b579180786b0e51ec10da8c935b2891affba3e53b2aa",
+  "public_file": "gemma-field-v2-mechanics.json",
+  "public_sha256": "44aa7b6d7cfd6cd5faa7f2f01aa3b1dcb72c7716beb36ad0fb24ec20aef881dd",
+  "derivation": "JSON sorted/indented; local repository prefix removed from path strings only",
+  "path_prefix_replacements": 6
+}

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from dataclasses import replace
+from types import SimpleNamespace
 
 import pytest
 
@@ -294,6 +296,69 @@ def test_nonclaim_adapter_keeps_non_retrieval_toggles_unsupported(tmp_path) -> N
         )
 
 
+@pytest.mark.parametrize(
+    "disabled_control",
+    (
+        "field_context_enabled",
+        "typed_tools_enabled",
+        "risk_intervention_enabled",
+        "verifier_enabled",
+        "fallback_enabled",
+    ),
+)
+def test_nonclaim_adapter_rejects_hidden_request_control_ablation(
+    tmp_path,  # noqa: ANN001
+    disabled_control: str,
+) -> None:
+    request = _nonclaim_request(
+        tmp_path,
+        f"hidden_{disabled_control}",
+        **{disabled_control: False},
+    )
+    with pytest.raises(ValueError, match=f"non-retrieval request controls: {disabled_control}"):
+        ObservedSystemBenchmarkAdapter().execute(request)
+
+
+@pytest.mark.parametrize(
+    ("configuration_id", "arm_id", "document_enabled", "graph_enabled"),
+    (
+        ("retrieval_neither", "retrieval_neither", False, False),
+        ("retrieval_document_only", "retrieval_document_only", True, False),
+        ("retrieval_graph_only", "retrieval_graph_only", False, True),
+        ("retrieval_both", "retrieval_document_and_graph", True, True),
+    ),
+)
+def test_nonclaim_adapter_accepts_matching_explicit_retrieval_arm_ids(
+    tmp_path,  # noqa: ANN001
+    configuration_id: str,
+    arm_id: str,
+    document_enabled: bool,
+    graph_enabled: bool,
+) -> None:
+    result = ObservedSystemBenchmarkAdapter().execute(
+        _nonclaim_request(
+            tmp_path,
+            f"explicit_{configuration_id}",
+            question=RETRIEVAL_QUESTION,
+            arm_id=arm_id,
+            document_retrieval_enabled=document_enabled,
+            graph_retrieval_enabled=graph_enabled,
+        ),
+        component_configuration_id=configuration_id,
+    )
+    assert result.execution.turn["trace"]["metadata"]["execution_arm_id"] == arm_id
+
+
+def test_nonclaim_adapter_rejects_unrelated_arm_id_with_matching_retrieval_flags(tmp_path) -> None:  # noqa: ANN001
+    request = _nonclaim_request(
+        tmp_path,
+        "misnamed_retrieval",
+        arm_id="full_minus_verifier",
+    )
+    with pytest.raises(ValueError, match="arm_id does not match the named retrieval"):
+        ObservedSystemBenchmarkAdapter().execute(request)
+
+
 def test_shared_core_executes_typed_tool_disabled_arm_without_contamination(tmp_path) -> None:  # noqa: ANN001
     execution = execute_agent_request(
         _nonclaim_request(
@@ -317,7 +382,6 @@ def test_shared_core_executes_typed_tool_disabled_arm_without_contamination(tmp_
         ("full_minus_field_context", {"field_context_enabled": False}, "typed_field_context"),
         ("full_minus_risk_intervention_private_only", {"risk_intervention_enabled": False}, "pre_generation_answerability_risk_intervention"),
         ("full_minus_verifier", {"verifier_enabled": False}, "verification"),
-        ("full_minus_fallback", {"fallback_enabled": False}, "fallback_origin"),
     ],
 )
 def test_shared_core_marks_each_disabled_diagnostic_stage(
@@ -331,6 +395,51 @@ def test_shared_core_marks_each_disabled_diagnostic_stage(
     )
     receipts = {row["stage_id"]: row for row in execution.stage_receipts}
     assert receipts[stage_id]["state"] == "disabled_by_arm"
+
+
+@pytest.mark.parametrize("mode", ["baseline", "agronomic_rag"])
+def test_generation_exception_fallback_control_is_honored_in_each_mode(tmp_path, mode):
+    class FailingBackend(_DeterministicBackend):
+        def generate(self, messages):
+            raise RuntimeError("injected unavailable generator")
+
+    request = replace(
+        _nonclaim_request(tmp_path, mode, question="Explain crop rotation."),
+        mode=mode, model_id="injected", generation_backend=FailingBackend(),
+        fallback_enabled=False, arm_id="full_minus_fallback",
+    )
+    with pytest.raises(RuntimeError, match="injected unavailable generator"):
+        execute_agent_request(request)
+    assert request.store.count_session_turns(request.session_id) == 0
+
+
+def test_origin_accounting_records_verifier_fallback_when_generation_recovery_is_disabled(
+    tmp_path, monkeypatch,
+):
+    import agronomy_agent.server.services.chat_service as service
+
+    verifier_record = {
+        "selection_policy": "synthetic_probe", "triggered": True,
+        "rewrite_accepted": False, "fallback_applied": True,
+    }
+    monkeypatch.setattr(service, "_build_mlx_generator", lambda *a, **k: _DeterministicBackend())
+    monkeypatch.setattr(service, "verify_answer", lambda *a, **k: SimpleNamespace(
+        answer="Synthetic conservative replacement.", triggered=True, rewrite_accepted=False,
+        draft_assessment=SimpleNamespace(reasons=("synthetic_review_trigger",)),
+        as_record=lambda: verifier_record,
+    ))
+    request = replace(
+        _nonclaim_request(tmp_path, "origin", question="Explain crop rotation."),
+        model_id="injected", generation_backend=_DeterministicBackend(),
+        fallback_enabled=False, arm_id="full_minus_fallback",
+    )
+    result = execute_agent_request(request)
+    origin = next(row for row in result.stage_receipts if row["stage_id"] == "fallback_origin")
+    assert origin["state"] == "executed"
+    assert origin["evidence"]["generation_exception_fallback_enabled"] is False
+    assert origin["evidence"]["verification_fallback_applied"] is True
+    assert origin["evidence"]["fallback_used"] is True
+    assert result.answer == "Synthetic conservative replacement."
 
 
 def test_disabled_retrieval_trace_contamination_is_rejected(tmp_path) -> None:  # noqa: ANN001

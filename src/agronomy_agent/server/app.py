@@ -26,7 +26,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Resp
 from starlette.datastructures import UploadFile as StarletteUploadFile
 from starlette.staticfiles import StaticFiles
 
-from agronomy_agent.agent import load_model_config, local_model_snapshot_status, phase5_cache_stats
+from agronomy_agent.agent import LocalModelSnapshotUnavailable, load_model_config, local_model_snapshot_status, phase5_cache_stats
 from agronomy_agent.corpus_governance import audit_runtime_corpora
 from agronomy_agent.field_events import FieldEventSyncError
 from agronomy_agent.knowledge_updates import read_activation, validate_activation_freshness
@@ -6867,6 +6867,11 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 session_context=authorized_session_context,
                 profiler=profiler,
             )
+        except LocalModelSnapshotUnavailable as exc:
+            raise HTTPException(
+                status_code=503,
+                detail={"code": exc.code, "message": exc.public_message},
+            ) from exc
         except ValueError as exc:
             raise HTTPException(
                 status_code=404 if "session not found" in str(exc) else 400,
@@ -7005,6 +7010,17 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
 
             try:
                 result = task.result()
+            except LocalModelSnapshotUnavailable as exc:
+                yield sse(
+                    "error",
+                    {
+                        "code": exc.code,
+                        "message": exc.public_message,
+                        "label": "Model setup required",
+                        "elapsed_ms": int((time.perf_counter() - started) * 1000),
+                    },
+                )
+                return
             except Exception as exc:
                 yield sse(
                     "error",

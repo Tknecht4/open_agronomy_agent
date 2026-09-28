@@ -19,6 +19,7 @@ from agronomy_agent.query_context import (
 )
 from agronomy_agent.router import request_focus
 from agronomy_agent.model_prompt_budget import positive_int, prompt_budget_receipt
+from agronomy_agent.model_errors import LocalModelSnapshotUnavailable
 from agronomy_agent.quantity_claims import unsupported_quantities
 
 
@@ -1838,6 +1839,8 @@ def _verify_answer_impl(
                     "generate_with_egress"
                 )
             editor_output = str(editor.generate(messages)).strip()
+    except LocalModelSnapshotUnavailable:
+        raise
     except (RuntimeError, ValueError) as exc:
         if bool(getattr(editor, "transport_control_active", False)):
             raise

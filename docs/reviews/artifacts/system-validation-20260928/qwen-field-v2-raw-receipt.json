@@ -1,0 +1,11 @@
+{
+  "name": "qwen-field-v2",
+  "attempts": 96,
+  "planned_cells": 96,
+  "run_sha256": "ce9b317bbf014577f240edd6efaf6733d1df32a02c4cef7c9c8ecd07fdd08d4f",
+  "raw_file": "qwen-field-v2-raw.jsonl.gz",
+  "raw_sha256": "3865f7afbf1d66b010a509457b337a876b9783f36b0267f4e4bdcd690c14998e",
+  "bytes": 2988181,
+  "ledger_sha256": "b440d3156633af4fae23932579f880dcfa5d715ea0dc2fde7f5561684ef07de3",
+  "scope": "Original full execution JSON content, every ledger attempt, and table setup receipts. Raw generation statistics are preserved, including known stale bypass statistics. Original SQLite stores are retained locally rather than published; the separate linkage audit records whether their table receipt joins passed."
+}

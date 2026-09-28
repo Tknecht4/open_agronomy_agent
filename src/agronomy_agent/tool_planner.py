@@ -205,14 +205,19 @@ def _parse_calculation(question: str) -> tuple[str, dict[str, Any], tuple[str, .
     lower = text.casefold()
     if _unsafe_action_request(lower):
         return None
+    if _explanation_or_method_request(lower) or _record_lookup_request(lower):
+        return None
     foundation = parse_foundation_calculation(text)
     if foundation is not None and not foundation[2]:
+        # The foundation parser has bound every required numeric input. Its
+        # complete operation is stronger evidence of arithmetic intent than a
+        # broad wording gate (for example, "saved costs" is a budget term).
         return foundation
     if foundation is not None and any(item.startswith("invalid ") for item in foundation[2]):
+        # An identified operation with an invalid supplied input must retain
+        # its typed clarification even when the wording contains a term such
+        # as "measured" or "saved costs".
         return foundation
-    if not _explicit_arithmetic_request(lower):
-        return foundation
-
     parsers = (
         _parse_unit_conversion,
         _parse_seed_rate,
@@ -234,6 +239,16 @@ def _parse_calculation(question: str) -> tuple[str, dict[str, Any], tuple[str, .
                 return parsed
             legacy_clarification = legacy_clarification or parsed
 
+    # A recognized operation with supplied operands retains its clarification
+    # even if the question mentions a measured input or an unsupplied field.
+    # Recognition without any bound operand still needs clear arithmetic
+    # wording; this keeps saved-record lookups out of calculator prompts.
+    if not _explicit_arithmetic_request(lower) and not (
+        (foundation is not None and foundation[1])
+        or (legacy_clarification is not None and legacy_clarification[1])
+    ):
+        return None
+
     if (
         foundation is not None
         and legacy_clarification is not None
@@ -246,6 +261,12 @@ def _parse_calculation(question: str) -> tuple[str, dict[str, Any], tuple[str, .
     if legacy_clarification is not None:
         return legacy_clarification
 
+    # A generic "what is" with a supplied measurement is not, by itself, a
+    # request to calculate product mass or seed mass. These final clarifications
+    # require an explicit calculation request; parsed numeric operations above
+    # can still run from an operand-bearing "what is" question.
+    if not _strong_arithmetic_request(lower):
+        return None
     if any(token in lower for token in ("fertilizer", "urea", "map", "potash", "nitrogen", "p₂o₅", "k₂o")):
         return "fertilizer_product_mass", {}, (
             "the supplied nutrient target with units",
@@ -262,14 +283,48 @@ def _parse_calculation(question: str) -> tuple[str, dict[str, Any], tuple[str, .
 
 
 def _explicit_arithmetic_request(lower: str) -> bool:
-    if re.search(r"\b(?:what is the difference|why (?:is|does|do)|how does|what does .+ represent)\b", lower):
+    if _explanation_or_method_request(lower):
         return False
+    explicit_operator = bool(re.search(r"\b(?:calculate|compute|convert|work out|arithmetic check)\b", lower))
+    if explicit_operator:
+        return True
+    # Saved observations and lab values are lookup questions unless the user
+    # explicitly asks to compute from them. "How many" alone can still be a
+    # request to read a recorded count.
+    if re.search(r"\b(?:saved|recorded|observed|measured|latest|previous|soil test|lab result)\b", lower):
+        return False
+    if _strong_arithmetic_request(lower):
+        return True
     return bool(
-        re.search(
-            r"\b(calculate|convert|how many|what is (?:the|one|this|five-day|area-weighted)|arithmetic check|required in)\b",
+        re.search(r"\bwhat is (?:the|one|this|five-day|area-weighted)\b", lower)
+        and re.search(
+            r"(?:\b(?:cad|usd)\s*|\$\s*)\d|"
+            r"\d[\d,.]*\s*(?:%|°?c\b|kg\b|lb\b|l\b|m\b|ha\b|ac\b|plants?\b|bu\b|tonnes?\b)",
             lower,
         )
     )
+
+
+def _explanation_or_method_request(lower: str) -> bool:
+    if re.search(r"^\s*(?:what is the difference|why\b|how does\b|what does\b|explain\b|define\b)", lower):
+        return True
+    if re.search(r"^\s*(?:how (?:do|can|would) (?:i|we|you|one) (?:calculate|compute|work out)\b|how many (?:steps|inputs|factors|variables)\b)", lower):
+        return True
+    return bool(
+        re.search(r"\b(?:formula|method|steps|factors|variables)\b", lower)
+        and not re.search(r"\b(?:calculate|compute|convert|work out|arithmetic check|how many)\b", lower)
+    )
+
+
+def _record_lookup_request(lower: str) -> bool:
+    return bool(re.search(
+        r"^\s*what is (?:the|my|this) (?:current )?(?:recorded|saved|observed|measured|latest|previous)\b",
+        lower,
+    ))
+
+
+def _strong_arithmetic_request(lower: str) -> bool:
+    return bool(re.search(r"\b(?:calculate|compute|convert|work out|how many|arithmetic check|required in)\b", lower))
 
 
 def _parse_unit_conversion(text: str, lower: str):  # noqa: ANN202

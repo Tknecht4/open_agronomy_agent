@@ -1,0 +1,201 @@
+{
+  "schema": "system_validation_posthoc_mechanism.v1",
+  "status": "observed_not_repaired",
+  "case": "sv24-04",
+  "run_sha256": "193f5acd1959b1d75b1957ec43046b5d971ce945795fbd1eb6f9aa934e12cb61",
+  "source_commit": "2b4028560c18def902463b4da44ef2c5c69467b1",
+  "source_path": "src/agronomy_agent/answer_verifier.py",
+  "source_sha256": "eb5ceeff88d65a7c89fe358ad051a49ce27b35c2f87c5c5c5df2fee1cd91b4dc",
+  "source_lines": [
+    4174,
+    4186
+  ],
+  "mechanism": "The variety_trial_selection deterministic fallback handles any map mention as an agro-pedological atlas or, otherwise, a regional suitability map. A crop-inventory explanation triggers missing selection facets; rejected editing then installs that generic suitability answer.",
+  "observations": [
+    {
+      "cell_id": "sv24-04__retrieval_neither__t1",
+      "execution_sha256": "86a803f03b1872edf8e30f02a317bc76726aa0ba01372b48fcfdb5d6c39e9a78",
+      "replacement_kind": "deterministic_fallback",
+      "fallback_applied": true,
+      "rejection_reasons": [
+        "decision_content_not_improved",
+        "decision_content_still_incomplete"
+      ],
+      "draft_missing_facets": [
+        "variety_trial_scope",
+        "variety_statistics",
+        "variety_cost_risk"
+      ],
+      "all_changed_claims_localized": false,
+      "editor_output": "The federal crop inventory map cannot tell you which corn hybrid succeeded in the Nova Scotia field next door because the map provides broad, regional data, whereas success in a specific field depends on numerous local, site-specific factors that the map does not capture. The map is a public data product that offers a general overview, not a detailed, site-specific performance record for individual hybrids in a particular location. Success in a field is determined by a complex interplay of factors, including local soil characteristics, microclimate variations, pest and disease pressure unique to that adjacent field, and the specific management practices employed on that plot. To determine which hybrid succeeded, you would need local, on-farm evidence such as grower records, scouting reports from that specific field, or direct performance data from the adjacent plot. This local data would account for the unique conditions of that field, which are necessary to accurately assess the success of a specific corn hybrid.",
+      "editor_generation_tokens": 186,
+      "editor_budget_status": "within_budget",
+      "draft_sha256": "0e9bfe544363ac18f1ed16f134ac265bfce0e08349c076f275667d4e8718d281",
+      "post_verification_sha256": "6d082bbecbc055418e09712dced8a6650426981442e8565943c7ca932d3b2f1c",
+      "final_sha256": "6d082bbecbc055418e09712dced8a6650426981442e8565943c7ca932d3b2f1c",
+      "final_text": "No. A favourable regional suitability map is regional screening context and cannot select a corn variety for the field. Ground-truth soil, drainage, topography, salinity, and other field constraints, then match relative maturity or crop heat-unit fit to the planting window and harvest risk. Compare replicated local multi-year and multi-location variety trials for statistical separation, yield stability, disease package, lodging, quality, herbicide trait, and adaptation. Also check seed availability, market requirements, seed cost, and downside risk; retain an on-farm comparison where the local evidence is thin."
+    },
+    {
+      "cell_id": "sv24-04__retrieval_document_only__t1",
+      "execution_sha256": "aeb93ce87f0e139aa25255dca1d7ca72f6a4f068ddf37560ba9a58c0cb7b1e58",
+      "replacement_kind": "deterministic_fallback",
+      "fallback_applied": true,
+      "rejection_reasons": [
+        "decision_content_not_improved",
+        "decision_content_still_incomplete"
+      ],
+      "draft_missing_facets": [
+        "variety_trial_scope",
+        "variety_statistics",
+        "variety_cost_risk"
+      ],
+      "all_changed_claims_localized": false,
+      "editor_output": "The federal crop inventory map cannot tell you which corn hybrid succeeded in the Nova Scotia field next door because the map provides broad, regional data, whereas success in a specific field depends on numerous local, site-specific factors that the map does not capture. The map is a public data product that offers a general overview, not a detailed, site-specific performance record for individual hybrids in a particular location. Success in a field is determined by a complex interplay of factors, including local soil characteristics, microclimate variations, pest and disease pressure unique to that adjacent field, and the specific management practices employed on that plot. To determine which hybrid succeeded, you would need local, on-farm evidence such as grower records, scouting reports from that specific field, or direct performance data from the adjacent plot. This local data would account for the unique conditions of that field, which are necessary to accurately assess the success of a specific corn hybrid.",
+      "editor_generation_tokens": 186,
+      "editor_budget_status": "within_budget",
+      "draft_sha256": "0e9bfe544363ac18f1ed16f134ac265bfce0e08349c076f275667d4e8718d281",
+      "post_verification_sha256": "6d082bbecbc055418e09712dced8a6650426981442e8565943c7ca932d3b2f1c",
+      "final_sha256": "6d082bbecbc055418e09712dced8a6650426981442e8565943c7ca932d3b2f1c",
+      "final_text": "No. A favourable regional suitability map is regional screening context and cannot select a corn variety for the field. Ground-truth soil, drainage, topography, salinity, and other field constraints, then match relative maturity or crop heat-unit fit to the planting window and harvest risk. Compare replicated local multi-year and multi-location variety trials for statistical separation, yield stability, disease package, lodging, quality, herbicide trait, and adaptation. Also check seed availability, market requirements, seed cost, and downside risk; retain an on-farm comparison where the local evidence is thin."
+    },
+    {
+      "cell_id": "sv24-04__retrieval_graph_only__t1",
+      "execution_sha256": "0327f3fdbf75aa48ba6ae76cadf81d01ebdbbff236d6474e346e14c50d510911",
+      "replacement_kind": "deterministic_fallback",
+      "fallback_applied": true,
+      "rejection_reasons": [
+        "decision_content_not_improved",
+        "decision_content_still_incomplete"
+      ],
+      "draft_missing_facets": [
+        "variety_trial_scope",
+        "variety_statistics",
+        "variety_cost_risk"
+      ],
+      "all_changed_claims_localized": false,
+      "editor_output": "The federal crop inventory map cannot tell you which corn hybrid succeeded in the Nova Scotia field next door because the map provides broad, regional data, whereas success in a specific field depends on numerous local, site-specific factors that the map does not capture. Success in a specific field is determined by a complex interplay of factors, including the performance of a particular hybrid under those exact conditions. The federal map offers a general overview, which lacks the necessary detail to predict the performance of a specific hybrid in an adjacent field. To determine which hybrid succeeded, you would need local, site-specific data such as grower records, scouting reports from that adjacent field, or performance trials conducted under similar local conditions. These local records would account for the unique environmental variables that dictate which corn hybrid will perform best in that particular location.",
+      "editor_generation_tokens": 162,
+      "editor_budget_status": "within_budget",
+      "draft_sha256": "47ca61fdde330e014d84fc0905375729da04ba7bb63a6335ddf91a5b5b32c03d",
+      "post_verification_sha256": "6d082bbecbc055418e09712dced8a6650426981442e8565943c7ca932d3b2f1c",
+      "final_sha256": "6d082bbecbc055418e09712dced8a6650426981442e8565943c7ca932d3b2f1c",
+      "final_text": "No. A favourable regional suitability map is regional screening context and cannot select a corn variety for the field. Ground-truth soil, drainage, topography, salinity, and other field constraints, then match relative maturity or crop heat-unit fit to the planting window and harvest risk. Compare replicated local multi-year and multi-location variety trials for statistical separation, yield stability, disease package, lodging, quality, herbicide trait, and adaptation. Also check seed availability, market requirements, seed cost, and downside risk; retain an on-farm comparison where the local evidence is thin."
+    },
+    {
+      "cell_id": "sv24-04__retrieval_both__t1",
+      "execution_sha256": "efdc3105570039ea57b978ebc4903cf4d35bd6b4982a7a5c04d76f4926cfb6c8",
+      "replacement_kind": "deterministic_fallback",
+      "fallback_applied": true,
+      "rejection_reasons": [
+        "decision_content_not_improved",
+        "decision_content_still_incomplete"
+      ],
+      "draft_missing_facets": [
+        "variety_trial_scope",
+        "variety_statistics",
+        "variety_cost_risk"
+      ],
+      "all_changed_claims_localized": false,
+      "editor_output": "The federal crop inventory map cannot tell you which corn hybrid succeeded in the Nova Scotia field next door because the map provides broad, regional data, whereas success in a specific field depends on numerous local, site-specific factors that the map does not capture. Success in a specific field is determined by a complex interplay of factors, including the performance of a particular hybrid under those exact conditions. The federal map offers a general overview, which lacks the necessary detail to predict the performance of a specific hybrid in an adjacent field. To determine which hybrid succeeded, you would need local, site-specific data such as grower records, scouting reports from that adjacent field, or performance trials conducted under similar local conditions. These local records would account for the unique environmental variables that dictate which corn hybrid will perform best in that particular location.",
+      "editor_generation_tokens": 162,
+      "editor_budget_status": "within_budget",
+      "draft_sha256": "47ca61fdde330e014d84fc0905375729da04ba7bb63a6335ddf91a5b5b32c03d",
+      "post_verification_sha256": "6d082bbecbc055418e09712dced8a6650426981442e8565943c7ca932d3b2f1c",
+      "final_sha256": "6d082bbecbc055418e09712dced8a6650426981442e8565943c7ca932d3b2f1c",
+      "final_text": "No. A favourable regional suitability map is regional screening context and cannot select a corn variety for the field. Ground-truth soil, drainage, topography, salinity, and other field constraints, then match relative maturity or crop heat-unit fit to the planting window and harvest risk. Compare replicated local multi-year and multi-location variety trials for statistical separation, yield stability, disease package, lodging, quality, herbicide trait, and adaptation. Also check seed availability, market requirements, seed cost, and downside risk; retain an on-farm comparison where the local evidence is thin."
+    },
+    {
+      "cell_id": "sv24-04__retrieval_both__t2",
+      "execution_sha256": "62feafd786fb16ff6a7096c3d8f2a8c1ca94e389e026dabef7d068ff2b7051f1",
+      "replacement_kind": "deterministic_fallback",
+      "fallback_applied": true,
+      "rejection_reasons": [
+        "decision_content_not_improved",
+        "decision_content_still_incomplete"
+      ],
+      "draft_missing_facets": [
+        "variety_trial_scope",
+        "variety_statistics",
+        "variety_cost_risk"
+      ],
+      "all_changed_claims_localized": false,
+      "editor_output": "The federal crop inventory map cannot tell you which corn hybrid succeeded in the Nova Scotia field next door because the map provides broad, regional data, whereas success in a specific field depends on numerous local, site-specific factors that the map does not capture. Success in a specific field is determined by a complex interplay of factors, including the performance of a particular hybrid under those exact conditions. The federal map offers a general overview, which lacks the necessary detail to predict the performance of a specific hybrid in an adjacent field. To determine which hybrid succeeded, you would need local, site-specific data such as grower records, scouting reports from that adjacent field, or performance trials conducted under similar local conditions. These local records would account for the unique environmental variables that dictate which corn hybrid will perform best in that particular location.",
+      "editor_generation_tokens": 162,
+      "editor_budget_status": "within_budget",
+      "draft_sha256": "47ca61fdde330e014d84fc0905375729da04ba7bb63a6335ddf91a5b5b32c03d",
+      "post_verification_sha256": "6d082bbecbc055418e09712dced8a6650426981442e8565943c7ca932d3b2f1c",
+      "final_sha256": "6d082bbecbc055418e09712dced8a6650426981442e8565943c7ca932d3b2f1c",
+      "final_text": "No. A favourable regional suitability map is regional screening context and cannot select a corn variety for the field. Ground-truth soil, drainage, topography, salinity, and other field constraints, then match relative maturity or crop heat-unit fit to the planting window and harvest risk. Compare replicated local multi-year and multi-location variety trials for statistical separation, yield stability, disease package, lodging, quality, herbicide trait, and adaptation. Also check seed availability, market requirements, seed cost, and downside risk; retain an on-farm comparison where the local evidence is thin."
+    },
+    {
+      "cell_id": "sv24-04__retrieval_graph_only__t2",
+      "execution_sha256": "69cbb6fef13f261c6d10a42ac08ef0ea3edb58ccc0be689daecdcfebcbf8ec58",
+      "replacement_kind": "deterministic_fallback",
+      "fallback_applied": true,
+      "rejection_reasons": [
+        "decision_content_not_improved",
+        "decision_content_still_incomplete"
+      ],
+      "draft_missing_facets": [
+        "variety_trial_scope",
+        "variety_statistics",
+        "variety_cost_risk"
+      ],
+      "all_changed_claims_localized": false,
+      "editor_output": "The federal crop inventory map cannot tell you which corn hybrid succeeded in the Nova Scotia field next door because the map provides broad, regional data, whereas success in a specific field depends on numerous local, site-specific factors that the map does not capture. Success in a specific field is determined by a complex interplay of factors, including the performance of a particular hybrid under those exact conditions. The federal map offers a general overview, which lacks the necessary detail to predict the performance of a specific hybrid in an adjacent field. To determine which hybrid succeeded, you would need local, site-specific data such as grower records, scouting reports from that adjacent field, or performance trials conducted under similar local conditions. These local records would account for the unique environmental variables that dictate which corn hybrid will perform best in that particular location.",
+      "editor_generation_tokens": 162,
+      "editor_budget_status": "within_budget",
+      "draft_sha256": "47ca61fdde330e014d84fc0905375729da04ba7bb63a6335ddf91a5b5b32c03d",
+      "post_verification_sha256": "6d082bbecbc055418e09712dced8a6650426981442e8565943c7ca932d3b2f1c",
+      "final_sha256": "6d082bbecbc055418e09712dced8a6650426981442e8565943c7ca932d3b2f1c",
+      "final_text": "No. A favourable regional suitability map is regional screening context and cannot select a corn variety for the field. Ground-truth soil, drainage, topography, salinity, and other field constraints, then match relative maturity or crop heat-unit fit to the planting window and harvest risk. Compare replicated local multi-year and multi-location variety trials for statistical separation, yield stability, disease package, lodging, quality, herbicide trait, and adaptation. Also check seed availability, market requirements, seed cost, and downside risk; retain an on-farm comparison where the local evidence is thin."
+    },
+    {
+      "cell_id": "sv24-04__retrieval_document_only__t2",
+      "execution_sha256": "8ff1094023e215f77ac566b541bb246b94fbb4cf4f5715379630d6134a509157",
+      "replacement_kind": "deterministic_fallback",
+      "fallback_applied": true,
+      "rejection_reasons": [
+        "decision_content_not_improved",
+        "decision_content_still_incomplete"
+      ],
+      "draft_missing_facets": [
+        "variety_trial_scope",
+        "variety_statistics",
+        "variety_cost_risk"
+      ],
+      "all_changed_claims_localized": false,
+      "editor_output": "The federal crop inventory map cannot tell you which corn hybrid succeeded in the Nova Scotia field next door because the map provides broad, regional data, whereas success in a specific field depends on numerous local, site-specific factors that the map does not capture. The map is a public data product that offers a general overview, not a detailed, site-specific performance record for individual hybrids in a particular location. Success in a field is determined by a complex interplay of factors, including local soil characteristics, microclimate variations, pest and disease pressure unique to that adjacent field, and the specific management practices employed on that plot. To determine which hybrid succeeded, you would need local, on-farm evidence such as grower records, scouting reports from that specific field, or direct performance data from the adjacent plot. This local data would account for the unique conditions of that field, which are necessary to accurately assess the success of a specific corn hybrid.",
+      "editor_generation_tokens": 186,
+      "editor_budget_status": "within_budget",
+      "draft_sha256": "0e9bfe544363ac18f1ed16f134ac265bfce0e08349c076f275667d4e8718d281",
+      "post_verification_sha256": "6d082bbecbc055418e09712dced8a6650426981442e8565943c7ca932d3b2f1c",
+      "final_sha256": "6d082bbecbc055418e09712dced8a6650426981442e8565943c7ca932d3b2f1c",
+      "final_text": "No. A favourable regional suitability map is regional screening context and cannot select a corn variety for the field. Ground-truth soil, drainage, topography, salinity, and other field constraints, then match relative maturity or crop heat-unit fit to the planting window and harvest risk. Compare replicated local multi-year and multi-location variety trials for statistical separation, yield stability, disease package, lodging, quality, herbicide trait, and adaptation. Also check seed availability, market requirements, seed cost, and downside risk; retain an on-farm comparison where the local evidence is thin."
+    },
+    {
+      "cell_id": "sv24-04__retrieval_neither__t2",
+      "execution_sha256": "e9ebb92d4b70355e93132a771547b20b925f07470ec7397a3e69113bb279f8ce",
+      "replacement_kind": "deterministic_fallback",
+      "fallback_applied": true,
+      "rejection_reasons": [
+        "decision_content_not_improved",
+        "decision_content_still_incomplete"
+      ],
+      "draft_missing_facets": [
+        "variety_trial_scope",
+        "variety_statistics",
+        "variety_cost_risk"
+      ],
+      "all_changed_claims_localized": false,
+      "editor_output": "The federal crop inventory map cannot tell you which corn hybrid succeeded in the Nova Scotia field next door because the map provides broad, regional data, whereas success in a specific field depends on numerous local, site-specific factors that the map does not capture. The map is a public data product that offers a general overview, not a detailed, site-specific performance record for individual hybrids in a particular location. Success in a field is determined by a complex interplay of factors, including local soil characteristics, microclimate variations, pest and disease pressure unique to that adjacent field, and the specific management practices employed on that plot. To determine which hybrid succeeded, you would need local, on-farm evidence such as grower records, scouting reports from that specific field, or direct performance data from the adjacent plot. This local data would account for the unique conditions of that field, which are necessary to accurately assess the success of a specific corn hybrid.",
+      "editor_generation_tokens": 186,
+      "editor_budget_status": "within_budget",
+      "draft_sha256": "0e9bfe544363ac18f1ed16f134ac265bfce0e08349c076f275667d4e8718d281",
+      "post_verification_sha256": "6d082bbecbc055418e09712dced8a6650426981442e8565943c7ca932d3b2f1c",
+      "final_sha256": "6d082bbecbc055418e09712dced8a6650426981442e8565943c7ca932d3b2f1c",
+      "final_text": "No. A favourable regional suitability map is regional screening context and cannot select a corn variety for the field. Ground-truth soil, drainage, topography, salinity, and other field constraints, then match relative maturity or crop heat-unit fit to the planting window and harvest risk. Compare replicated local multi-year and multi-location variety trials for statistical separation, yield stability, disease package, lodging, quality, herbicide trait, and adaptation. Also check seed availability, market requirements, seed cost, and downside risk; retain an on-farm comparison where the local evidence is thin."
+    }
+  ],
+  "interpretation": "This specific product-identity error is introduced by deterministic verifier fallback, not by the saved draft/editor text. All observed editor calls here remained below220tokens and withinbudget; this excludes the editor cap for these cells, not for other tasks. No active behavior or frozen rubric changed."
+}

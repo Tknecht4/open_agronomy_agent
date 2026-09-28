@@ -1,0 +1,9 @@
+{
+  "runner_relative_path": "outputs/system-validation-20260928/runner/run_retrieval_2x2_field_v2.py",
+  "runner_sha256": "84e64d8d045d156cc17ceb7bad1d1b90e607974bc316d623dbbfa1c2c6c069ec",
+  "remote_verified_sha256": "84e64d8d045d156cc17ceb7bad1d1b90e607974bc316d623dbbfa1c2c6c069ec",
+  "base_capsule_sha256": "1cabf50610fba86017b0126fa0e24545df2cc239b45cc851640137dd3c8b6c90",
+  "source_commit": "2b4028560c18def902463b4da44ef2c5c69467b1",
+  "adapter_version": "stored_field_to_product_context.v2",
+  "reason": "Explicit canonical field delivery, preserving frozen inputs and old runner"
+}

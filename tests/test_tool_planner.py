@@ -54,6 +54,176 @@ def test_planner_does_not_turn_a_benign_nutrient_definition_into_a_calculation()
     assert not plan.invocations
 
 
+@pytest.mark.parametrize(
+    "question",
+    [
+        "What is the current recorded seeding rate?",
+        "What is the measured soil nitrogen here?",
+        "How many soil nitrogen values were measured in my saved records?",
+        "What is the recorded 4.7 lb/ac seeding rate for this field?",
+        "What is the recorded seed rate for 260 plants/m² target, TKW 40 g, germination 90%, and field survival 85%?",
+        "What is the soil nitrogen result of 15 mg/kg in the lab report?",
+        "What is the seed-rate formula?",
+        "What is the seed-rate formula for 260 plants/m² and 40 g TKW?",
+        "What is the seed-rate formula for 260 plants/m² target, TKW 40 g, germination 90%, and field survival 85%?",
+        "What is the seed-rate formula for 260 plants/m² target, TKW 40 g, germination 0%, and field survival 85%?",
+        "Explain how a fertilizer product mass is calculated.",
+        "How do I calculate a seed rate?",
+        "How do I calculate a seed rate if germination is 0%?",
+        "How many inputs are needed for a seed-rate calculation?",
+    ],
+)
+def test_record_lookup_and_method_questions_do_not_request_calculator_inputs(question: str) -> None:
+    plan = plan_tools(question)
+
+    assert plan.status == "not_applicable"
+    assert not plan.invocations
+
+
+@pytest.mark.parametrize(
+    ("question", "status", "operation"),
+    [
+        ("Calculate the wheat seed rate.", "clarification_required", "seed_rate_mass"),
+        ("How many kg of urea supplies 80 kg N/ha?", "clarification_required", "fertilizer_product_mass"),
+        (
+            "What is the seed rate for 260 plants/m² target, TKW 40 g, germination 90%, and field survival 85%?",
+            "ready", "seed_rate_mass",
+        ),
+        (
+            "A sprayer has 24 nozzles, each flowing 0.80 L/min. It travels at 8.0 km/h with a 12 m boom. What is the application volume in L/ha?",
+            "ready", "sprayer_application_volume",
+        ),
+        (
+            "These are measured values: A sprayer has 24 nozzles, each flowing 0.80 L/min. It travels at 8.0 km/h with a 12 m boom. What is the application volume in L/ha?",
+            "ready", "sprayer_application_volume",
+        ),
+    ],
+)
+def test_arithmetic_questions_keep_typed_plans_with_or_without_all_inputs(
+    question: str, status: str, operation: str,
+) -> None:
+    plan = plan_tools(question)
+
+    assert plan.status == status
+    assert len(plan.invocations) == 1
+    assert plan.invocations[0].operation == operation
+
+
+@pytest.mark.parametrize(
+    ("question", "operation", "value"),
+    [
+        (
+            "What is my current ratio from current assets USD 300,000 and current liabilities USD 120,000?",
+            "current_ratio", 2.5,
+        ),
+        (
+            "What yield breaks even from total cost CAD 500/ac and assumed price CAD 10/bu?",
+            "break_even_yield", 50,
+        ),
+        (
+            "What is the partial-budget net change: added revenue USD 100/ac, saved costs USD 25/ac, added costs USD 80/ac and lost revenue USD 15/ac?",
+            "partial_budget", 30,
+        ),
+        (
+            "What is the seed rate for 260 plants/m² target, measured TKW 40 g, germination 90%, and field survival 85%?",
+            "seed_rate_mass", 135.9477,
+        ),
+    ],
+)
+def test_complete_foundation_operands_bypass_lookup_word_gate(
+    question: str, operation: str, value: float,
+) -> None:
+    plan, results = plan_and_execute_tools(question)
+
+    assert plan.status == "ready"
+    assert len(plan.invocations) == len(results) == 1
+    assert plan.invocations[0].operation == operation
+    assert float(results[0].payload["value"]) == pytest.approx(value, rel=1e-4)
+
+
+@pytest.mark.parametrize(
+    ("question", "operation", "missing_input"),
+    [
+        (
+            "What yield breaks even from total cost CAD 500/ac and assumed price CAD 0/bu?",
+            "break_even_yield", "invalid assumed selling price must be positive",
+        ),
+        (
+            "What is the seed rate for 260 plants/m² target, measured TKW 40 g, germination 0%, and field survival 85%?",
+            "seed_rate_mass", "invalid germination: use a percentage above zero and at most 100",
+        ),
+        (
+            "What is the partial-budget net change: added revenue USD 100/ac, saved costs USD 25/ac, added costs USD -80/ac and lost revenue USD 15/ac?",
+            "partial_budget", "invalid budget component: use nonnegative amounts in each named category",
+        ),
+        (
+            "An Ontario soybean count found 18 established plants per metre of row. What is the stand in plants/m²? The row spacing has not been supplied.",
+            "row_population", "row_spacing_m",
+        ),
+    ],
+)
+def test_recognized_invalid_or_incomplete_arithmetic_retains_typed_clarification(
+    question: str, operation: str, missing_input: str,
+) -> None:
+    plan, results = plan_and_execute_tools(question)
+
+    assert plan.status == "clarification_required"
+    assert not results
+    assert len(plan.invocations) == 1
+    assert plan.invocations[0].operation == operation
+    assert missing_input in plan.invocations[0].missing_inputs
+
+
+@pytest.mark.parametrize(
+    ("family", "complete", "one_missing", "invalid", "operation"),
+    [
+        (
+            "seed", "What is the seed rate for 260 plants/m² target, measured TKW 40 g, germination 90%, and field survival 85%?",
+            "What is the seed rate for 260 plants/m² target, measured TKW 40 g, and germination 90%? Field survival is unknown.",
+            "What is the seed rate for 260 plants/m² target, measured TKW 40 g, germination 0%, and field survival 85%?", "seed_rate_mass",
+        ),
+        (
+            "gdd", "What is the GDD from Tmax 25 C, Tmin 9 C, and base 7 C?",
+            "What is the GDD from Tmax 25 C and base 7 C? Tmin is unknown.",
+            "What is the GDD from Tmax 5 C, Tmin 9 C, and base 7 C?", "daily_gdd",
+        ),
+        (
+            "partial_budget", "What is the partial-budget net change: added revenue USD 100/ac, saved costs USD 25/ac, added costs USD 80/ac and lost revenue USD 15/ac?",
+            "What is the partial-budget net change: added revenue USD 100/ac, saved costs USD 25/ac, added costs USD 80/ac? Lost revenue is unknown.",
+            "What is the partial-budget net change: added revenue USD 100/ac, saved costs USD 25/ac, added costs USD -80/ac and lost revenue USD 15/ac?", "partial_budget",
+        ),
+        (
+            "break_even", "What yield breaks even from total cost CAD 500/ac and assumed price CAD 10/bu?",
+            "What yield breaks even from total cost CAD 500/ac? The assumed price has not been supplied.",
+            "What yield breaks even from total cost CAD 500/ac and assumed price CAD 0/bu?", "break_even_yield",
+        ),
+        (
+            "current_ratio", "What is my current ratio from current assets USD 300,000 and current liabilities USD 120,000?",
+            "What is my current ratio from current assets USD 300,000? Current liabilities are not supplied.",
+            "What is my current ratio from current assets USD 300,000 and current liabilities USD 0?", "current_ratio",
+        ),
+        (
+            "debt_asset", "What is the debt-to-asset ratio from total debt CAD 275,000 and total assets CAD 1,100,000?",
+            "What is the debt-to-asset ratio from total debt CAD 275,000? Total assets are unknown.",
+            "What is the debt-to-asset ratio from total debt CAD 275,000 and total assets CAD 0?", "debt_to_asset_percent",
+        ),
+    ],
+)
+def test_foundation_operation_status_matrix_preserves_complete_missing_and_invalid_inputs(
+    family: str, complete: str, one_missing: str, invalid: str, operation: str,
+) -> None:
+    for question, expected_status in (
+        (complete, "ready"),
+        (one_missing, "clarification_required"),
+        (invalid, "clarification_required"),
+    ):
+        plan = plan_tools(question)
+        assert plan.status == expected_status, (family, question)
+        assert len(plan.invocations) == 1, (family, question)
+        assert plan.invocations[0].operation == operation, (family, question)
+        assert bool(plan.invocations[0].missing_inputs) == (expected_status == "clarification_required")
+
+
 def test_planner_requests_only_missing_calculation_inputs() -> None:
     plan = plan_tools("How many kg of urea supplies 80 kg N/ha?")
 

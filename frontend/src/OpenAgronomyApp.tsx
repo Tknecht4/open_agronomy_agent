@@ -2152,8 +2152,16 @@ export function OpenAgronomyApp() {
   const [savingField, setSavingField] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<StoredField | null>(null)
   const historyRequestRef = useRef(0)
+  const runtimeRecoveryRequestRef = useRef(0)
   const activeFieldRef = useRef(activeFieldContextId)
   activeFieldRef.current = activeFieldContextId
+  const recoveryViewRef = useRef({ fieldId: activeFieldContextId, conversationKey: activeFieldConversationKey, sessionId, turns, isAnalyzing, savingField, revision: 0 })
+  const recoveryView = recoveryViewRef.current
+  if (recoveryView.fieldId !== activeFieldContextId || recoveryView.conversationKey !== activeFieldConversationKey
+    || recoveryView.sessionId !== sessionId || recoveryView.turns !== turns
+    || recoveryView.isAnalyzing !== isAnalyzing || recoveryView.savingField !== savingField) {
+    recoveryViewRef.current = { fieldId: activeFieldContextId, conversationKey: activeFieldConversationKey, sessionId, turns, isAnalyzing, savingField, revision: recoveryView.revision + 1 }
+  }
   const followConversationRef = useRef(true)
 
 
@@ -2233,27 +2241,91 @@ export function OpenAgronomyApp() {
     }
   }, [])
 
+  const recoverRuntime = async () => {
+    const requestId = ++runtimeRecoveryRequestRef.current
+    setRuntimeAccess('checking')
+    try {
+      const [, loadedSessions, configs, payload] = await Promise.all([
+        apiGet('/api/health'),
+        apiGet<SessionRecord[]>('/api/sessions?include_archived=true&include_turns=false'),
+        apiGet<ConfigResponse>('/api/configs'),
+        apiGet<DemoFieldsResponse>('/api/demo/fields'),
+      ])
+      if (requestId !== runtimeRecoveryRequestRef.current) return
+      const matchingSession = sessionForField(loadedSessions, activeConversationKeyRef.current, activeFieldRef.current)
+      const currentSession = activeSessionRef.current
+      const viewRevision = recoveryViewRef.current.revision
+      const hydratedSession = matchingSession && !recoveryViewRef.current.isAnalyzing
+        ? await apiGet<SessionRecord>(`/api/sessions/${encodeURIComponent(matchingSession.session_id)}`)
+        : null
+      if (requestId !== runtimeRecoveryRequestRef.current) return
+      if (hydratedSession && hydratedSession.session_id !== matchingSession?.session_id) {
+        throw new Error('Saved conversation changed during runtime recovery.')
+      }
+      const viewUnchanged = viewRevision === recoveryViewRef.current.revision && !recoveryViewRef.current.isAnalyzing
+      const persistedFieldId = loadActiveStoredFieldId()
+      const fieldToRestore = viewUnchanged && persistedFieldId && !activeFieldRef.current && !scenarioId && !savingField
+        ? (payload.fields || []).find((field) => (field.field_context_id || field.id) === persistedFieldId)
+        : undefined
+      const nextModels = configs.models.length > 0 ? configs.models : ['mock']
+      const nextProfiles = configs.model_profiles || []
+      setSessions((current) => [
+        ...loadedSessions.map((session) => {
+          const selected = viewUnchanged && session.session_id === hydratedSession?.session_id
+            ? { ...hydratedSession, turns_included: true }
+            : session
+          const existing = current.find((item) => item.session_id === session.session_id)
+          return existing?.turns_included && !selected.turns_included ? existing : selected
+        }),
+        ...current.filter((session) => !loadedSessions.some((loaded) => loaded.session_id === session.session_id)),
+      ])
+      if (fieldToRestore) {
+        loadStoredField(fieldToRestore)
+        setStoredFieldRestoreAttempted(true)
+      }
+      if (viewUnchanged && (hydratedSession || currentSession !== matchingSession?.session_id)) {
+        setSessionId(matchingSession?.session_id || '')
+        setTurns(hydratedSession?.turns || matchingSession?.turns || [])
+      }
+      setModelProfiles(nextProfiles)
+      setNetworkMode(configs.network?.mode === 'offline' ? 'offline' : configs.network?.mode === 'online' ? 'online' : 'unknown')
+      setModelId((current) => modelProfiles.length > 0 && nextModels.includes(current)
+        ? current
+        : nextProfiles.find((profile) => profile.local_ready !== false)?.id || nextModels[0])
+      setRagConfig(configs.default_rag_config || configs.rag_configs[0] || 'configs/rag.yaml')
+      setStoredFields((current) => [
+        ...(payload.fields || []),
+        ...current.filter((field) => field.storageMode === 'device'
+          && !(payload.fields || []).some((serverField) => (serverField.field_context_id || serverField.id) === (field.field_context_id || field.id))),
+      ])
+      setFieldStorageMode('account_workspace')
+      setFieldStorageStatus(payload.storage.workspace_name ? `Saved to ${payload.storage.workspace_name}.` : 'Saved to the local account workspace.')
+      setFieldsHydrated(true)
+      setError('')
+      setRuntimeAccess('available')
+    } catch (err) {
+      if (requestId !== runtimeRecoveryRequestRef.current) return
+      setError(String((err as Error).message || err))
+      setRuntimeAccess('unavailable')
+    }
+  }
+
   useEffect(() => {
     if (typeof window === 'undefined') {
       return
     }
-    const markUnavailable = () => setRuntimeAccess('unavailable')
-    const checkRuntime = async () => {
-      setRuntimeAccess('checking')
-      try {
-        await apiGet('/api/health')
-        setRuntimeAccess('available')
-      } catch {
-        setRuntimeAccess('unavailable')
-      }
+    const markUnavailable = () => {
+      runtimeRecoveryRequestRef.current += 1
+      setRuntimeAccess('unavailable')
     }
+    const checkRuntime = () => { if (runtimeAccess === 'unavailable') void recoverRuntime() }
     window.addEventListener('offline', markUnavailable)
     window.addEventListener('online', checkRuntime)
     return () => {
       window.removeEventListener('offline', markUnavailable)
       window.removeEventListener('online', checkRuntime)
     }
-  }, [])
+  }, [runtimeAccess, isAnalyzing])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -2358,7 +2430,11 @@ export function OpenAgronomyApp() {
       try {
         const payload = await apiGet<DemoFieldsResponse>('/api/demo/fields')
         if (!active) return
-        setStoredFields(payload.fields || [])
+        setStoredFields([
+          ...(payload.fields || []),
+          ...loadStoredFields().filter((field) => field.storageMode === 'device'
+            && !(payload.fields || []).some((serverField) => (serverField.field_context_id || serverField.id) === (field.field_context_id || field.id))),
+        ])
         setFieldStorageMode('account_workspace')
         setFieldStorageStatus(
           payload.storage.workspace_name
@@ -2378,10 +2454,12 @@ export function OpenAgronomyApp() {
   }, [])
 
   useEffect(() => {
-    if (!fieldsHydrated || fieldStorageMode !== 'device') {
+    if (!fieldsHydrated) {
       return
     }
-    window.localStorage.setItem(storedFieldsKey, JSON.stringify(storedFields))
+    window.localStorage.setItem(storedFieldsKey, JSON.stringify(
+      fieldStorageMode === 'device' ? storedFields : storedFields.filter((stored) => stored.storageMode === 'device'),
+    ))
   }, [fieldStorageMode, fieldsHydrated, storedFields])
 
   useEffect(() => {
@@ -3029,7 +3107,7 @@ export function OpenAgronomyApp() {
     }
     const updatingCurrentField = Boolean(activeFieldContextId) && !saveAsNew
     try {
-      if (fieldStorageMode === 'account_workspace') {
+      if (fieldStorageMode === 'account_workspace' && (!updatingCurrentField || storedFields.find((item) => (item.field_context_id || item.id) === activeFieldContextId)?.storageMode !== 'device')) {
         const saved = updatingCurrentField
           ? await apiPatch<DemoFieldSavedResponse>(`/api/demo/fields/${encodeURIComponent(activeFieldContextId)}`, payload)
           : await apiPost<DemoFieldSavedResponse>('/api/demo/fields', payload)
@@ -3148,28 +3226,36 @@ export function OpenAgronomyApp() {
   }
 
   useEffect(() => {
-    if (!fieldsHydrated || storedFieldRestoreAttempted) {
+    if (!fieldsHydrated || storedFieldRestoreAttempted || isAnalyzing || savingField) {
       return
     }
-    setStoredFieldRestoreAttempted(true)
+    if (activeFieldContextId || scenarioId) {
+      setStoredFieldRestoreAttempted(true)
+      return
+    }
     const persistedFieldId = loadActiveStoredFieldId()
     if (!persistedFieldId) {
+      setStoredFieldRestoreAttempted(true)
       return
     }
     const stored = storedFields.find(
       (candidate) => (candidate.field_context_id || candidate.id) === persistedFieldId,
     )
+    if (!stored && fieldStorageMode === 'device') {
+      return
+    }
+    setStoredFieldRestoreAttempted(true)
     if (!stored) {
       persistActiveStoredFieldId('')
       setActiveFieldConversationKey(selectedConversation('general'))
       return
     }
     loadStoredField(stored)
-  }, [fieldsHydrated, storedFieldRestoreAttempted, storedFields])
+  }, [activeFieldContextId, fieldsHydrated, fieldStorageMode, isAnalyzing, savingField, scenarioId, storedFieldRestoreAttempted, storedFields])
 
   const deleteStoredField = async (id: string) => {
     const target = storedFields.find((stored) => stored.id === id)
-    if (target && (target.storageMode === 'account_workspace' || fieldStorageMode === 'account_workspace')) {
+    if (target && target.storageMode !== 'device' && fieldStorageMode === 'account_workspace') {
       try {
         await apiDelete<DemoFieldSavedResponse>(`/api/demo/fields/${encodeURIComponent(target.field_context_id || target.id)}`)
       } catch (err) {
@@ -3194,7 +3280,7 @@ export function OpenAgronomyApp() {
     const storedFieldId = stored.field_context_id || stored.id
     try {
       let renamed: StoredField
-      if (stored.storageMode === 'account_workspace' || fieldStorageMode === 'account_workspace') {
+      if (stored.storageMode !== 'device' && fieldStorageMode === 'account_workspace') {
         const saved = await apiPatch<DemoFieldSavedResponse>(
           `/api/demo/fields/${encodeURIComponent(storedFieldId)}`,
           {
@@ -4452,12 +4538,7 @@ export function OpenAgronomyApp() {
               {runtimeAccess === 'unavailable' ? (
                 <button
                   type="button"
-                  onClick={() => {
-                    setRuntimeAccess('checking')
-                    void apiGet('/api/health')
-                      .then(() => setRuntimeAccess('available'))
-                      .catch(() => setRuntimeAccess('unavailable'))
-                  }}
+                  onClick={() => void recoverRuntime()}
                 >
                   Retry local runtime
                 </button>

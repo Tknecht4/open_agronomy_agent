@@ -717,14 +717,17 @@
     "docs/reviews/artifacts/residual-repair-20260928/remote-results.zip",
     "docs/reviews/artifacts/residual-repair-20260928/run_final_checks.py",
     "docs/reviews/artifacts/residual-repair-20260928/final-reconciliation.json",
-    "docs/reviews/artifacts/residual-repair-20260928/frontend-docs-checks.json"
+    "docs/reviews/artifacts/residual-repair-20260928/frontend-docs-checks.json",
+    "tests/test_turn_generation_telemetry.py",
+    "docs/reviews/system-validation-20260928.md"
   ],
   "trees": [
     "src",
     "frontend",
     "container",
     "macos_app",
-    "docs/public"
+    "docs/public",
+    "docs/reviews/artifacts/system-validation-20260928"
   ],
   "globs": [
     "data/derived/rag/offline_agronomy/**/*",

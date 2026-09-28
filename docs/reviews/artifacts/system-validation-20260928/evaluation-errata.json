@@ -1,0 +1,12 @@
+{
+  "scope": "Post-freeze disclosed rubric defect; original cohort and grading text remain immutable. Applies identically to both models and all arms.",
+  "case_id": "sv24-09",
+  "original_criterion_fragment": "300\u00d735/(95\u00d790) = 122.8",
+  "problem": "Literal expression is missing a factor100 when germination/survival are written as percentages; original numeric reference122.8kg/ha is correct.",
+  "original_literal_value": 1.2280701754385965,
+  "correct_percent_expression": "300 * 35 * 100 / (95 * 90)",
+  "correct_fraction_expression": "300 * 35 / (0.95 * 0.90 * 100)",
+  "correct_kg_per_ha": 122.80701754385964,
+  "grading_treatment": "Use original supplied inputs, reference numeric tolerance and correct dimensional arithmetic. Preserve literal criterion and annotate; never change case inputs, model prompts, frozen gold file or historical scores.",
+  "interpretation": "Adjudication clarification, not evidence of a model improvement."
+}
