@@ -261,6 +261,7 @@ def analyze_query_context(question: str, field_context: dict[str, Any] | None = 
             unsupported_country = True
     destination = _inferred_destination_jurisdiction(text, named_jurisdictions) if not explicit_jurisdiction else None
     destination_country = _inferred_owned_country(text) if not explicit_jurisdiction and destination is None else None
+    mixed_named_countries = len({item[2] for item in named_jurisdictions}) > 1
     if explicit_jurisdiction:
         target_jurisdictions = (explicit_jurisdiction.lower(),)
     elif destination:
@@ -270,6 +271,11 @@ def analyze_query_context(question: str, field_context: dict[str, Any] | None = 
         target_jurisdictions = (destination_country,)
         country = destination_country
         jurisdictions = _ordered_unique((destination_country, *jurisdictions))
+    elif mixed_named_countries:
+        # Multiple named countries without a unique operation site cannot
+        # silently inherit the last mention while retaining the first country.
+        target_jurisdictions = ()
+        country = None
     elif len(jurisdictions) > 1 and not _cross_jurisdiction_comparison_requested(text):
         target_jurisdictions = jurisdictions[-1:]
     else:
@@ -1070,14 +1076,33 @@ def _unrecognized_operation_site(text: str) -> bool:
     # Common descriptive farm adjectives stay outside this narrow test.
     owned_demonyms = re.finditer(
         r"\b(?:my|our)\s+(?P<place>[A-Za-z-]+(?:\s+[A-Za-z-]+){0,2})\s+"
-        r"(?:farm|field|dairy|crop|operation|orchard|ranch)\b",
+        r"(?:farms?|fields?|dairy|crops?|operations?|orchards?|ranches?)\b",
         text,
         re.IGNORECASE,
     )
+    owned_scopes: set[tuple[tuple[str, ...], tuple[str, ...]]] = set()
     for match in owned_demonyms:
         place = match.group("place")
-        countries, _ = _normalize_jurisdiction_scope((place,))
-        if not countries and re.search(r"(?:ian|ican|ese|ish)\b", place, re.IGNORECASE):
+        countries, subdivisions = _normalize_jurisdiction_scope((place,))
+        if not countries and (
+            place[0].isupper()
+            or re.search(r"(?:ian|ican|ese|ish)\b", place, re.IGNORECASE)
+        ):
+            return True
+        if countries:
+            owned_scopes.add((tuple(sorted(countries)), tuple(sorted(subdivisions))))
+    if len(owned_scopes) > 1:
+        return True
+    for match in re.finditer(
+        r"\b(?:my|our)\s+(?P<first>[A-Za-z-]+(?:\s+[A-Za-z-]+){0,2})\s+"
+        r"(?:and|or)\s+(?P<second>[A-Za-z-]+(?:\s+[A-Za-z-]+){0,2})\s+"
+        r"(?:farms?|fields?|operations?|orchards?|ranches?)\b",
+        text,
+        re.IGNORECASE,
+    ):
+        first_scope = _normalize_jurisdiction_scope((match.group("first"),))
+        second_scope = _normalize_jurisdiction_scope((match.group("second"),))
+        if not first_scope[0] or not second_scope[0] or first_scope != second_scope:
             return True
     if not locations:
         return False

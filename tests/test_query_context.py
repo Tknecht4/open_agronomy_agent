@@ -782,6 +782,9 @@ def test_mixed_country_source_does_not_override_named_farm_destination() -> None
         signals = analyze_query_context(question)
         assert signals.country == "canada"
         assert signals.target_jurisdictions == (expected,)
+    mixed_us_can = analyze_query_context("For our Ontario farm and our Iowa farm, explain cash flow.")
+    assert mixed_us_can.country is None
+    assert mixed_us_can.target_jurisdictions == ()
 
 
 def test_map_field_context_rejects_named_out_of_province_source_guidance() -> None:

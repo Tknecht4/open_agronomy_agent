@@ -165,28 +165,11 @@ def source_bound_method_appendix(context: Any, question: str) -> tuple[str | Non
     targets = tuple(query_context.get("target_jurisdictions") or ())
     if country not in {"canada", "united states"} or len(targets) != 1:
         return None, None
-    from agronomy_agent.query_context import _normalize_jurisdiction_scope, _unrecognized_operation_site
+    from agronomy_agent.query_context import _unrecognized_operation_site
 
     if _unrecognized_operation_site(question):
         return None, None
 
-    # A cited province in a later clause cannot turn an explicitly foreign
-    # operation into a US/Canada method application.
-    for match in re.finditer(r"\b(?:I|we)\s+farm\s+in\s+(?P<site>[A-Za-z-]+)", question, re.IGNORECASE):
-        site_countries, _ = _normalize_jurisdiction_scope((match.group("site"),))
-        if country not in site_countries:
-            return None, None
-    for match in re.finditer(
-        r"\b(?:farm|field|orchard|ranch)s?\s+in\s+(?P<first>[A-Za-z-]+)\s+"
-        r"(?:and|or)\s+(?P<second>[A-Za-z-]+)",
-        question,
-        re.IGNORECASE,
-    ):
-        first_countries, _ = _normalize_jurisdiction_scope((match.group("first"),))
-        if first_countries:
-            second_countries, _ = _normalize_jurisdiction_scope((match.group("second"),))
-            if country not in second_countries:
-                return None, None
     admitted = {
         source_id
         for section in getattr(getattr(context, "packed_context", None), "sections", ())
