@@ -1051,8 +1051,8 @@ def _unrecognized_operation_site(text: str) -> bool:
         r"following|according|looking)\b)[A-Za-z-]+){0,3}"
     )
     patterns = (
-        rf"\b(?:I|we)\s+(?:farm|grow|operate|raise|manage)\b[^.!?]{{0,75}}?\bin\s+(?P<place>{place})",
-        rf"\b(?:my|our)\s+(?:farms?|fields?|crops?|dairy|operations?|orchards?|ranches?)\b[^.!?]{{0,75}}?\bin\s+(?P<place>{place})",
+        rf"\b(?:I|we)\s+(?:farm|grow|operate|raise|manage)\b[^.!?]{{0,75}}?\b(?:in|near|at)\s+(?P<place>{place})",
+        rf"\b(?:my|our)\s+(?:farms?|fields?|crops?|dairy|operations?|orchards?|ranches?)\b[^.!?]{{0,75}}?\b(?:in|near|at)\s+(?P<place>{place})",
     )
     locations: list[str] = []
     for pattern in patterns:

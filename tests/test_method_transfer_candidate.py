@@ -104,6 +104,11 @@ def test_unreviewed_or_out_of_scope_method_cannot_bypass_query_fit() -> None:
         foreign_fit = filter_docs_for_query([seed], analyze_query_context(foreign_question))
         assert not foreign_fit.docs
         assert foreign_fit.dropped[0]["reason"] == "method_target_scope_unresolved"
+    cash_flow = next(row for row in resources.retriever.search("cash flow", top_k=10) if row.doc_id == "method_cash_flow")
+    near_foreign = "I farm near Perth, Australia. Explain cash flow using an Ontario guide."
+    near_fit = filter_docs_for_query([cash_flow], analyze_query_context(near_foreign))
+    assert not near_fit.docs
+    assert near_fit.dropped[0]["reason"] == "method_target_scope_unresolved"
 
 
 def test_method_recognition_does_not_swallow_unrelated_or_regulated_requests() -> None:
@@ -141,6 +146,7 @@ def test_method_appendix_keeps_local_authority_separate() -> None:
         "For our Ontario farm and our Australian farm, explain seed mass.",
         "I farm in Australia using an Ontario budget. Explain enterprise budgets.",
         "For my farms in Ontario and Australia, explain enterprise budgets.",
+        "I farm near Perth, Australia. Explain cash flow using an Ontario guide.",
     ):
         context = build_context(question, rag_config=CANDIDATE, use_context_cache=False, use_search_cache=False)
         assert source_bound_method_appendix(context, question) == (None, None)
@@ -223,8 +229,13 @@ def test_product_path_calls_generator_and_records_method_as_background(tmp_path)
         assert metadata.get("generation_path") != "deterministic_method_context"
         assert "generation_bypass" not in metadata
         if idx == 0:
-            assert metadata["method_appendix"]["authority"] == "method_context_only_not_complete_answer"
-            assert "method_cash_flow" in metadata["method_appendix"]["doc_ids"]
+            appendix_receipt = metadata["method_appendix"]
+            assert appendix_receipt["authority"] == "method_context_only_not_complete_answer"
+            assert "method_cash_flow" in appendix_receipt["doc_ids"]
+            assert appendix_receipt["model_draft_sha256"] == hashlib.sha256(
+                "This farm decision needs its own current evidence and terms.".encode()
+            ).hexdigest()
+            assert appendix_receipt["combined_draft_sha256"] == metadata["answer_stages"]["draft"]["sha256"]
             assert "Method background from cited card method_cash_flow" in execution.answer
             assert "Start with opening cash" in execution.answer
             assert "These project-authored summaries explain general methods only" in execution.answer
