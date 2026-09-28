@@ -9,7 +9,7 @@ from pathlib import Path
 
 from agronomy_agent.agent import build_context, load_agent_resources
 from agronomy_agent.decision_contract import build_decision_contract, obligation_coverage
-from agronomy_agent.method_context import method_fit_reason, requested_methods, reviewed_method_ids, source_bound_method_appendix
+from agronomy_agent.method_context import method_fit_reason, requested_methods, reviewed_method_ids
 from agronomy_agent.query_context import analyze_query_context, filter_docs_for_query
 from agronomy_agent.server.services.chat_service import _build_doc_snapshot
 from agronomy_agent.execution_core import AgentExecutionRequest
@@ -73,15 +73,10 @@ def test_method_scope_survives_final_context_without_field_authority() -> None:
     method_coverage = next(row for row in packet["coverage"] if row["slot_key"] == "method:seed_mass")
     assert method_coverage["required_authority"] == "method_context_only"
     assert method_coverage["status"] == "ADEQUATE"
-    answer, receipt = source_bound_method_appendix(context, question)
-    assert answer and "Method background from cited card" in answer
-    assert "do not establish this farm's target" in answer
-    assert receipt and receipt["doc_ids"] == [doc.doc_id]
-    assert receipt["authority"] == "method_context_only_not_complete_answer"
-    forged_context = replace(context, retrieved_docs=[replace(doc, method_scope={**doc.method_scope, "source_support_receipt_sha256": "0" * 64})])
-    assert source_bound_method_appendix(forged_context, question) == (None, None)
+    forged_context = replace(context, retrieved_docs=[replace(doc, method_scope={**doc.method_scope, "source_support_receipt_sha256": "missing"})])
+    assert reviewed_method_ids(forged_context.retrieved_docs[0]) == ()
     active_context = build_context(question, rag_config="configs/rag.yaml", use_context_cache=False, use_search_cache=False)
-    assert source_bound_method_appendix(active_context, question) == (None, None)
+    assert not any(doc.doc_id.startswith("method_") for doc in active_context.retrieved_docs)
 
 
 def test_unreviewed_or_out_of_scope_method_cannot_bypass_query_fit() -> None:
@@ -138,10 +133,17 @@ def test_method_recognition_uses_independent_concepts_without_a_topic_word() -> 
     )
 
 
-def test_method_appendix_keeps_local_authority_separate() -> None:
+def test_method_context_keeps_local_authority_separate() -> None:
     for question in (
         "Can I copy a Pennsylvania manure application rate to my Prince Edward Island field without a soil or manure analysis?",
         "Explain nutrient planning, and may I use this Canadian-labeled herbicide on my North Dakota field?",
+    ):
+        context = build_context(question, rag_config=CANDIDATE, use_context_cache=False, use_search_cache=False)
+        methods = [doc for doc in context.retrieved_docs if doc.doc_id.startswith("method_")]
+        assert methods and all(doc.retrieval_policy == "context_only" for doc in methods)
+        assert all(doc.authority_tier == "internal_synthesis" for doc in methods)
+
+    for question in (
         "For our Australian farm, explain the Ontario enterprise budget method.",
         "For our Ontario farm and our Australian farm, explain seed mass.",
         "I farm in Australia using an Ontario budget. Explain enterprise budgets.",
@@ -149,15 +151,14 @@ def test_method_appendix_keeps_local_authority_separate() -> None:
         "I farm near Perth, Australia. Explain cash flow using an Ontario guide.",
     ):
         context = build_context(question, rag_config=CANDIDATE, use_context_cache=False, use_search_cache=False)
-        assert source_bound_method_appendix(context, question) == (None, None)
+        assert not any(doc.doc_id.startswith("method_") for doc in context.retrieved_docs)
 
     question = "Our British Columbia farm has land equity but cash is short before invoices are paid. How do working capital, current ratio and a cash-flow schedule help explain this?"
     context = build_context(question, rag_config=CANDIDATE, use_context_cache=False, use_search_cache=False)
-    appendix, receipt = source_bound_method_appendix(context, question)
-    assert appendix and "current assets minus current liabilities" in appendix
-    assert "financing proceeds" in appendix and "cash payment" in appendix
-    assert receipt and set(receipt["included_method_ids"]) == {"liquidity", "cash_flow"}
-    assert receipt["authority"] == "method_context_only_not_complete_answer"
+    assert {doc.doc_id for doc in context.retrieved_docs if doc.doc_id.startswith("method_")} >= {
+        "method_liquidity", "method_cash_flow"
+    }
+    assert "GENERAL METHOD ONLY" in context.packed_context.text
 
 
 def test_source_first_jurisdiction_reaches_contract_and_evidence_frame() -> None:
@@ -169,7 +170,8 @@ def test_source_first_jurisdiction_reaches_contract_and_evidence_frame() -> None
         assert context.runtime_metadata["evidence_fabric"]["question_frame"]["jurisdiction_scope"] == ("alberta",)
         if profile == CANDIDATE:
             assert context.route.question_type == "fertility_diagnostic"
-            assert source_bound_method_appendix(context, question) == (None, None)
+            methods = [doc for doc in context.retrieved_docs if doc.doc_id.startswith("method_")]
+            assert methods and all(doc.retrieval_policy == "context_only" for doc in methods)
 
 
 def test_comparison_between_two_method_families_keeps_both() -> None:
@@ -179,12 +181,11 @@ def test_comparison_between_two_method_families_keeps_both() -> None:
     assert {doc.doc_id for doc in context.retrieved_docs if doc.doc_id.startswith("method_")} >= {
         "method_partial_budget", "method_enterprise_budget"
     }
-    answer, receipt = source_bound_method_appendix(context, question)
-    assert answer and "Incremental farm-change" in answer and "Enterprise cost-boundary" in answer
-    assert receipt and set(receipt["included_method_ids"]) == {"partial_budget", "enterprise_budget"}
+    assert "Incremental farm-change" in context.packed_context.text
+    assert "Enterprise cost-boundary" in context.packed_context.text
 
 
-def test_product_path_calls_generator_and_records_method_as_background(tmp_path) -> None:  # noqa: ANN001
+def test_product_path_calls_generator_without_method_answer_injection(tmp_path) -> None:  # noqa: ANN001
     class Backend:
         backend_id = "method_path_probe_v1"
 
@@ -228,16 +229,6 @@ def test_product_path_calls_generator_and_records_method_as_background(tmp_path)
         metadata = execution.turn["trace"]["metadata"]
         assert metadata.get("generation_path") != "deterministic_method_context"
         assert "generation_bypass" not in metadata
-        if idx == 0:
-            appendix_receipt = metadata["method_appendix"]
-            assert appendix_receipt["authority"] == "method_context_only_not_complete_answer"
-            assert "method_cash_flow" in appendix_receipt["doc_ids"]
-            assert appendix_receipt["model_draft_sha256"] == hashlib.sha256(
-                "This farm decision needs its own current evidence and terms.".encode()
-            ).hexdigest()
-            assert appendix_receipt["combined_draft_sha256"] == metadata["answer_stages"]["draft"]["sha256"]
-            assert "Method background from cited card method_cash_flow" in execution.answer
-            assert "Start with opening cash" in execution.answer
-            assert "These project-authored summaries explain general methods only" in execution.answer
-        else:
-            assert "This farm decision needs its own current evidence" in execution.answer
+        assert "method_appendix" not in metadata
+        assert "Method background from cited card" not in execution.answer
+        assert "This farm decision needs its own current evidence" in execution.answer

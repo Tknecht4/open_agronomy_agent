@@ -38,11 +38,12 @@ active or candidate retrieval; it does not activate the candidate cards.
 
 `rag_production_foundations_method_candidate.yaml` is a second nonselectable
 profile for seven source-supported general METHOD rows. Its release profile
-binds the source-support receipt hash and explicitly selects
-`source_bound_appendix_v1` for evidence background added to the model draft
-before verification. The appendix receipt identifies its source and separate
-model draft; it does not replace the full answer. The active
-`rag.yaml`, active policy, and selectable profile registry remain unchanged.
+binds the source-support receipt hash. The source-distinct holdout found three
+new material finance errors after an experimental method appendix was added to
+model drafts. That response path was removed. The METHOD rows remain
+context-only and non-active; retrieval success is not answer-quality evidence.
+The active `rag.yaml`, active policy, and selectable profile registry remain
+unchanged.
 
 ## RC3 egress and completed execution boundary
 

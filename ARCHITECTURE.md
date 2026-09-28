@@ -52,12 +52,11 @@ path observed; it is not a second agent implementation.
 | Operator workflows | `scripts/` | Thin CLIs around package contracts; generated outputs belong under ignored paths |
 
 The nonselectable production-foundations method candidate adds seven reviewed,
-project-authored METHOD rows. Its RAG profile can append admitted, source-bound
-method background to the model draft before verification. The product trace
-separates the model draft hash from the appendix and its source-support receipt.
-This is background evidence, not a complete answer or field-action authority;
-the ordinary generation, verification, safety, and high-consequence paths
-still handle the entire request.
+project-authored METHOD rows to typed retrieval and context. They carry a
+source-support receipt and general-method scope, not complete-answer or
+field-action authority. An experimental answer appendix failed the independent
+holdout safety gate and was removed. The ordinary generation, verification,
+safety, and high-consequence paths handle the entire request.
 
 ## Harnesses and what they prove
 

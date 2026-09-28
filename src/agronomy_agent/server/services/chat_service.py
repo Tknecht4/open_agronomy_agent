@@ -26,7 +26,6 @@ from agronomy_agent.agent import (
     load_model_config,
     system_prompt,
 )
-from agronomy_agent.method_context import source_bound_method_appendix
 from agronomy_agent.query_context import is_source_grounded_question
 from agronomy_agent.capability_planner import select_public_capability_plan
 from agronomy_agent.router import classify_query, refine_query_route
@@ -836,22 +835,6 @@ def _run_turn_impl(
             },
         )
 
-    if (
-        mode == "agronomic_rag"
-        and not source_grounded
-        and not generation_metadata.get("generation_bypass")
-        and not generation_metadata.get("generation_fallback")
-        and not generation_metadata.get("generation_unavailable")
-    ):
-        appendix, method_receipt = source_bound_method_appendix(context, message)
-        if appendix and method_receipt:
-            model_draft_sha256 = sha256_text(answer)
-            answer = answer.rstrip() + "\n\n" + appendix
-            generation_metadata["method_appendix"] = {
-                **method_receipt,
-                "model_draft_sha256": model_draft_sha256,
-                "combined_draft_sha256": sha256_text(answer),
-            }
     draft_answer = answer
     if generation_metadata.get("generation_path") == "deterministic_tool_result":
         result_ids = [

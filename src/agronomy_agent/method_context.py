@@ -8,7 +8,6 @@ policy still decides which hash-bound records may enter the runtime.
 from __future__ import annotations
 
 import re
-from pathlib import PurePosixPath
 from typing import Any
 
 
@@ -130,89 +129,3 @@ def method_fit_reason(doc: Any, question: str, country: str | None) -> str | Non
     if not set(method_ids).intersection(requested_methods(question)):
         return "method_mismatch"
     return "method_context_match"
-
-
-
-def source_bound_method_appendix(context: Any, question: str) -> tuple[str | None, dict[str, Any] | None]:
-    """Prepare admitted method background for the ordinary answer path.
-
-    This optional candidate component is evidence text, not a final answer.
-    The model still drafts for the full request, and verification and safety
-    evaluate the combined draft. Missing scope or support fails closed.
-    """
-
-    if context is None:
-        return None, None
-    runtime = getattr(context, "runtime_metadata", None) or {}
-    if runtime.get("method_response_mode") != "source_bound_appendix_v1":
-        return None, None
-    route = getattr(context, "route", None)
-    if str(getattr(route, "risk_level", "") or "") in {"high", "regulated"}:
-        return None, None
-    if str(getattr(route, "question_type", "") or "") in {
-        "product_label", "fertility_rate", "fertility_diagnostic", "plant_health"
-    }:
-        return None, None
-    expected_hash = str(runtime.get("method_support_receipt_sha256") or "")
-    store_path = str(runtime.get("method_transfer_store") or "")
-    if not re.fullmatch(r"[0-9a-f]{64}", expected_hash) or not store_path:
-        return None, None
-    wanted = requested_methods(question)
-    if not wanted:
-        return None, None
-    query_context = runtime.get("query_context") or {}
-    country = str(query_context.get("country") or "")
-    targets = tuple(query_context.get("target_jurisdictions") or ())
-    if country not in {"canada", "united states"} or len(targets) != 1:
-        return None, None
-    from agronomy_agent.query_context import _unrecognized_operation_site
-
-    if _unrecognized_operation_site(question):
-        return None, None
-
-    admitted = {
-        source_id
-        for section in getattr(getattr(context, "packed_context", None), "sections", ())
-        for source_id in getattr(section, "source_ids", ())
-    }
-    expected_dir = PurePosixPath(store_path).parent.as_posix() + "/"
-    from agronomy_agent.evidence_contracts import applicability_from_retrieved_doc
-
-    selected: list[tuple[Any, tuple[str, ...]]] = []
-    included_methods: set[str] = set()
-    for doc in getattr(context, "retrieved_docs", ()):
-        if doc.doc_id not in admitted or not str(getattr(doc, "corpus_path", "")).startswith(expected_dir):
-            continue
-        scope = getattr(doc, "method_scope", None) or {}
-        if scope.get("source_support_receipt_sha256") != expected_hash:
-            continue
-        methods = tuple(method for method in reviewed_method_ids(doc) if method in wanted)
-        if not methods:
-            continue
-        envelope = applicability_from_retrieved_doc(doc, question_jurisdictions=targets)
-        if envelope.transfer_status != "reviewed_general_method_scope":
-            continue
-        selected.append((doc, methods))
-        included_methods.update(methods)
-    if not selected:
-        return None, None
-    sections = [
-        f"Method background from cited card {doc.doc_id} ({doc.title}): {doc.text}"
-        for doc, _ in selected
-    ]
-    boundary = (
-        "These project-authored summaries explain general methods only. "
-        "They do not establish this farm's target, measured field condition, "
-        "current price, application rate, product permission, or legal duty."
-    )
-    text = "\n\n".join((*sections, boundary))
-    receipt = {
-        "schema_version": "open_agronomy_agent.method_answer_appendix.v1",
-        "renderer": "source_bound_appendix_v1",
-        "requested_method_ids": list(wanted),
-        "included_method_ids": sorted(included_methods),
-        "doc_ids": [doc.doc_id for doc, _ in selected],
-        "source_support_receipt_sha256": expected_hash,
-        "authority": "method_context_only_not_complete_answer",
-    }
-    return text, receipt

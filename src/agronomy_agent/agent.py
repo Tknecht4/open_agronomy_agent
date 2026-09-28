@@ -1556,7 +1556,6 @@ def build_context(
     runtime_metadata: dict[str, Any] = {
         "agent_runtime": runtime_mode,
         **({
-            "method_response_mode": (cfg.get("release_profile") or {}).get("method_response_mode"),
             "method_transfer_store": (cfg.get("release_profile") or {}).get("method_transfer_store"),
             "method_support_receipt_sha256": (cfg.get("release_profile") or {}).get("method_support_receipt_sha256"),
         } if (cfg.get("release_profile") or {}).get("method_transfer_store") else {}),
