@@ -103,12 +103,10 @@ Verifier replacement audit and claim edit ledger version 2 distinguish answer
 review triggers from localized lexical triggers; neither asserts semantic proof
 against every changed sentence.
 
-The active verifier preserves a draft when its only findings are advisory
-checklist omissions or weak lexical alignment. Those findings remain in the
-trace; they do not by themselves justify an edit or a canned replacement.
-Concrete claim violations and the explicit completeness gate for reviewed
-sampling/application protocols still trigger review. An unknown map type is not
-renamed as a suitability product by a fallback.
+The active verifier retains its risk-conditioned review thresholds. A proposed
+advisory-only bypass was withdrawn after a paired development run exposed an
+unsupported field-action recommendation. An unknown map type is not renamed as
+a suitability product by a fallback.
 
 MLX adapters retain at most one target/draft model pair across serialized public
 operations. Generators release temporary references after token counting,

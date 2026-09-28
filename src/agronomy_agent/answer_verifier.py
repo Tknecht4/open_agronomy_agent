@@ -1960,21 +1960,7 @@ def verify_answer(
             "model_conditioned": False,
             "development_basis": "exposed_successor_development_suites",
         }
-        # Checklist coverage and lexical alignment are review hints, not proof
-        # that a supported answer is wrong. Do not turn their accumulated score
-        # into authority to replace the answer. Reviewed sampling/application
-        # protocols retain their explicit completeness gate.
-        advisory_only = (
-            not blocking
-            and not (
-                _protocol_kind(question) is not None
-                and assessment.missing_intent_facets
-            )
-        )
-        threshold_receipt["advisory_only_preserved"] = bool(
-            advisory_only and assessment.requires_review
-        )
-        if advisory_only or (not blocking and assessment.score < threshold):
+        if not blocking and assessment.score < threshold:
             return AnswerVerificationResult(
                 answer=draft.strip(),
                 triggered=False,
