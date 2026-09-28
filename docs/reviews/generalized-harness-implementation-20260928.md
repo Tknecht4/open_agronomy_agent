@@ -368,3 +368,13 @@ now pins 512-token prefill. Its replacement run keeps all 44 questions/sequences
 8,192-token context allowance and 320-token output ceiling, and does not combine
 partial OOM rows with the new run's denominator. The 16 GiB laptop is unqualified
 for this 27B profile; the reported allocation already exceeds its total memory.
+
+The acceptance reviewer found an additional diagnostic-accounting edge: a real
+draft followed by an editor RuntimeError could still appear product-quality
+eligible. The runner now marks the final pipeline `editor_backend_failure`,
+retains successful draft eligibility separately, and preserves the editor's
+rejection/fallback receipt. Intentional content or budget fallbacks keep their
+existing status. Fourteen focused runner tests passed, including the new failure
+regression. This changes diagnostic accounting only, not the runtime source or
+the frozen remote run. Final analysis must audit/reclassify preserved raw
+verification receipts explicitly and retain their original source identities.

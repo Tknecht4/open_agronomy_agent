@@ -323,6 +323,12 @@ def model_execution_disposition(metadata: dict[str, Any], execution: dict[str, A
     stats = metadata.get("generation_stats") or {}
     draft = _stage(execution, "draft_generation") or {}
     evidence = draft.get("evidence") or {}
+    verification = metadata.get("answer_verification") or {}
+    rejection_reasons = verification.get("rejection_reasons") or []
+    editor_failure = None
+    if "editor_error" in rejection_reasons:
+        editor_failure = {"rejection_reasons": rejection_reasons,
+                          "fallback_applied": verification.get("fallback_applied")}
     if fallback or unavailable or evidence.get("fallback_used"):
         disposition = "backend_fallback_or_unavailable"
         product_quality_eligible = False
@@ -339,8 +345,15 @@ def model_execution_disposition(metadata: dict[str, Any], execution: dict[str, A
         disposition = "unknown"
         product_quality_eligible = False
         model_generation_eligible = False
+    # A successful draft does not qualify a final answer produced after an
+    # unavailable editor. Keep draft eligibility and the failure independently.
+    if editor_failure:
+        disposition = "editor_backend_failure"
+        product_quality_eligible = False
     return {"disposition": disposition, "product_quality_eligible": product_quality_eligible,
             "model_generation_eligible": model_generation_eligible,
+            "draft_generation_eligible": model_generation_eligible,
+            "editor_failure": editor_failure,
             "generation_path": metadata.get("generation_path"),
             "generation_fallback": fallback, "generation_unavailable": unavailable,
             "generation_bypass": bypass, "draft_generation_evidence": evidence}

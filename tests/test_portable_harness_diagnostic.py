@@ -327,3 +327,29 @@ def test_model_execution_is_distinct_from_executor_completion() -> None:
     bypass = runner.model_execution_disposition({"generation_bypass": {"reason": "typed result"}}, execution)
     assert bypass["product_quality_eligible"] is True
     assert bypass["model_generation_eligible"] is False
+
+
+def test_editor_failure_does_not_qualify_final_product_after_successful_draft() -> None:
+    execution = {"stage_receipts": [{"stage_id": "draft_generation", "evidence": {
+        "model_call_executed": True, "fallback_used": False}}]}
+    verification = {"rejection_reasons": ["editor_error", "RuntimeError"], "fallback_applied": True}
+    result = runner.model_execution_disposition({
+        "generation_stats": {"generation_tokens": 17}, "answer_verification": verification,
+    }, execution)
+    assert result["disposition"] == "editor_backend_failure"
+    assert result["product_quality_eligible"] is False
+    assert result["draft_generation_eligible"] is True
+    assert result["model_generation_eligible"] is True
+    assert result["editor_failure"] == verification
+
+
+def test_editor_content_rejection_keeps_successful_product_eligible() -> None:
+    execution = {"stage_receipts": [{"stage_id": "draft_generation", "evidence": {
+        "model_call_executed": True, "fallback_used": False}}]}
+    result = runner.model_execution_disposition({
+        "generation_stats": {"generation_tokens": 17},
+        "answer_verification": {"rejection_reasons": ["claim_risk_not_cleared"], "fallback_applied": True},
+    }, execution)
+    assert result["disposition"] == "model_generated"
+    assert result["product_quality_eligible"] is True
+    assert result["editor_failure"] is None

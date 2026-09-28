@@ -333,3 +333,6 @@ stages and exact prompts, records failures and timeouts, and permits `--resume`
 only when its manifest matches. Use synthetic/public questions only: retained
 prompts and SQLite traces are not automatically safe to publish. These exposed
 cases cannot establish held-out competence or promote a runtime profile.
+A completed executor is not proof of model availability. Draft generation and
+final product eligibility are recorded separately; an editor backend error
+invalidates final product quality while retaining a successfully generated draft.
