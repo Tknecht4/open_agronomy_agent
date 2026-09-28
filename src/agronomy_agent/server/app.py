@@ -93,6 +93,9 @@ from agronomy_agent.server.schemas import (
     WorkspaceInviteCreate,
     WorkspaceCreate,
 )
+from agronomy_agent.server.services.conversation_scope import (
+    ConversationScopeError, bind_conversation_context,
+)
 from agronomy_agent.server.services.chat_service import run_turn
 from agronomy_agent.server.services.answer_renderer import render_structured_answer
 from agronomy_agent.server.services.attachment_scanner import (
@@ -2749,9 +2752,10 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         session_id: str,
         *,
         user: dict[str, Any] | None = None,
+        include_turns: bool = True,
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         resolved_user = user or _demo_field_user(request)
-        session = store.get_session(session_id)
+        session = store.get_session(session_id, include_turns=include_turns)
         if not session or not _session_visible_to_user(session, request=request, user=resolved_user):
             raise HTTPException(status_code=404, detail="session not found")
         return session, resolved_user
@@ -2873,7 +2877,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         inner.update(
             {
                 "field_context_id": field_context_id,
-                "field_conversation_key": f"field:{field_context_id}",
+                "field_conversation_key": str(outer.get("field_conversation_key") or f"field:{field_context_id}"),
                 "crop": stored.get("crop") or inner.get("crop"),
                 "region": stored.get("region") or inner.get("region"),
                 "jurisdiction": stored.get("jurisdiction") or inner.get("jurisdiction"),
@@ -2911,7 +2915,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         outer.update(
             {
                 "field_context_id": field_context_id,
-                "field_conversation_key": f"field:{field_context_id}",
+                "field_conversation_key": str(outer.get("field_conversation_key") or f"field:{field_context_id}"),
                 "field_record_updated_at": record.get("updated_at"),
                 "field_access_authorized": True,
                 "field_access_workspace_id": record["workspace_id"],
@@ -2924,12 +2928,27 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         )
         return outer
 
+    def _bind_turn_context(session: dict[str, Any], incoming: dict[str, Any] | None) -> dict[str, Any]:
+        try:
+            return bind_conversation_context(
+                session.get("context"), incoming,
+                has_turns=store.count_session_turns(session["session_id"]) > 0,
+            )
+        except ConversationScopeError as exc:
+            raise HTTPException(status_code=409, detail={
+                "code": "conversation_scope_mismatch", "boundary": str(exc),
+            }) from exc
+
     def _persistable_demo_turn_context(session_context: dict[str, Any] | None) -> dict[str, Any] | None:
         if not isinstance(session_context, dict):
             return session_context
         persisted = dict(session_context)
         persisted.pop("workspace_retrieved_docs", None)
         persisted.pop("ephemeral_private_source_summary", None)
+        if isinstance(persisted.get("field_context"), dict):
+            persisted["field_context"] = dict(persisted["field_context"])
+            for name in ("field_history", "field_answer_history", "field_data"):
+                persisted["field_context"].pop(name, None)
         return persisted
 
     def _demo_field_metadata(record: dict[str, Any]) -> dict[str, Any]:
@@ -6727,11 +6746,15 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
     @app.post("/api/sessions")
     async def create_session(payload: CreateSessionRequest, request: Request) -> dict[str, Any]:
         user = _demo_field_user(request)
+        context = payload.context.model_dump()
+        if context.get("field_context_id") or context.get("field_conversation_key"):
+            context = _bind_turn_context({"session_id": "", "context": {}}, context)
+            context = _persistable_demo_turn_context(_authorize_demo_turn_field_context(request, context)) or {}
         session = store.create_session(
             title=payload.title,
             user_pseudonym=payload.user_pseudonym,
             tags=payload.tags,
-            context=_context_with_session_owner(payload.context.model_dump(), str(user["id"])),
+            context=_context_with_session_owner(context, str(user["id"])),
             consent=payload.consent.model_dump(),
         )
         return _session_response(session)
@@ -6748,7 +6771,9 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         merged_context = None
         if payload.context:
             merged_context = _context_with_session_owner(
-                _merge_context(session.get("context"), payload.context.model_dump()),
+                _persistable_demo_turn_context(_authorize_demo_turn_field_context(
+                    request, _bind_turn_context(session, payload.context.model_dump(exclude_unset=True)),
+                )) or {},
                 str(user["id"]),
             )
 
@@ -6770,7 +6795,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         payload: CreateTurnRequest,
         request: Request,
     ) -> dict[str, Any]:
-        session, user = _require_owned_session(request, session_id)
+        session, user = _require_owned_session(request, session_id, include_turns=False)
         if payload.mode not in {"baseline", "agronomic_rag", "mock"}:
             raise HTTPException(status_code=400, detail="invalid mode")
         runtime_mode(payload.mode)
@@ -6779,12 +6804,13 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
 
         authorized_session_context = _authorize_demo_turn_field_context(
             request,
-            payload.session_context,
+            _bind_turn_context(session, payload.session_context),
         )
         persistable_session_context = _persistable_demo_turn_context(authorized_session_context)
         if persistable_session_context:
             store.update_session(
                 session_id,
+                include_turns=False,
                 context=_context_with_session_owner(
                     _merge_context(session.get("context"), persistable_session_context),
                     str(user["id"]),
@@ -6846,7 +6872,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         payload: CreateTurnRequest,
         request: Request,
     ) -> StreamingResponse:
-        session, user = _require_owned_session(request, session_id)
+        session, user = _require_owned_session(request, session_id, include_turns=False)
         if payload.mode not in {"baseline", "agronomic_rag", "mock"}:
             raise HTTPException(status_code=400, detail="invalid mode")
         runtime_mode(payload.mode)
@@ -6854,12 +6880,13 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         selected_model_id = runtime_model_id(payload.model_id, mode=payload.mode)
         authorized_session_context = _authorize_demo_turn_field_context(
             request,
-            payload.session_context,
+            _bind_turn_context(session, payload.session_context),
         )
         persistable_session_context = _persistable_demo_turn_context(authorized_session_context)
         if persistable_session_context:
             store.update_session(
                 session_id,
+                include_turns=False,
                 context=_context_with_session_owner(
                     _merge_context(session.get("context"), persistable_session_context),
                     str(user["id"]),

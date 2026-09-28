@@ -2,7 +2,7 @@
   "schema_version": "open_agronomy_agent.runtime_profiles.v1",
   "release_model": {
     "path": "configs/model.yaml",
-    "sha256": "8cd880ac68b3631a4eccc11bd9716be3e1768b1a5d49653ac13acc7ec6aeba10",
+    "sha256": "02311ba0dca40e33abf0efa396c7f17593d87b42a4f01d8c2e0af786f1fa8946",
     "status": "active"
   },
   "default_rag_config": "configs/rag.yaml",

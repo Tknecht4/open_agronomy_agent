@@ -295,3 +295,19 @@ is atomically published.
 ## Failure modes
 
 Missing inputs, identity mismatch, non-empty destination, insufficient authority, unavailable network/provider, dirty release state, checksum drift, and insufficient disk should stop with a diagnostic. Do not automatically delete or overwrite evidence to make a rerun pass.
+
+## Offline answer-intervention diagnostics
+
+`replay_harness_interventions.py --input <trace.jsonl> --output <new-receipt.json>`
+reads retained benchmark `answer_stages.v1` rows or observed-system rehearsal
+JSON. It validates captured stage hashes and reports draft/editor/final text
+changes without calling a model or modifying the input. Exact verifier evidence
+and route must be present for shadow claim-risk assessment; absent fields remain
+unavailable. Output contains input and implementation hashes, not raw answer
+text or local input paths. The output must be new. Changed text and risk flags
+are not intervention regret scores, semantic quality, or causal evidence. The
+frozen document/graph rehearsal matrix remains unchanged.
+
+`profile_workspace_backend.py` also compares complete saved-transcript loading
+with the bounded eight-turn read on the same synthetic session. These are
+storage timings; they do not establish an end-to-end speedup or model throughput.

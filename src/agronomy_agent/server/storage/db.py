@@ -1138,6 +1138,7 @@ class TraceStore:
                 """
             )
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_turns_session ON turns(session_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_turns_session_created ON turns(session_id, created_at)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_events_session ON turn_events(session_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_events_turn ON turn_events(turn_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_data_source_type ON data_sources(source_type)")
@@ -1283,14 +1284,18 @@ class TraceStore:
                     session["turns"] = self._get_turns_for_session(session["session_id"])
             return sessions
 
-    def get_session(self, session_id: str) -> dict[str, Any] | None:
+    def session_exists(self, session_id: str) -> bool:
+        with self._cursor() as cursor:
+            return cursor.execute("SELECT 1 FROM sessions WHERE id = ?", (session_id,)).fetchone() is not None
+
+    def get_session(self, session_id: str, *, include_turns: bool = True) -> dict[str, Any] | None:
         with self._cursor() as cursor:
             row = cursor.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
             if not row:
                 return None
             session = self._normalize_session_row(dict(row))
-            turns = self._get_turns_for_session(session_id)
-            session["turns"] = turns
+            if include_turns:
+                session["turns"] = self._get_turns_for_session(session_id)
             return session
 
     def _normalize_session_row(self, raw: dict[str, Any]) -> dict[str, Any]:
@@ -1318,9 +1323,10 @@ class TraceStore:
         consent: dict[str, Any] | None = None,
         archived: bool | None = None,
         status: str | None = None,
+        include_turns: bool = True,
     ) -> dict[str, Any] | None:
         now = _now()
-        session = self.get_session(session_id)
+        session = self.get_session(session_id, include_turns=False)
         if not session:
             return None
         updates: list[str] = []
@@ -1356,7 +1362,7 @@ class TraceStore:
         q = "UPDATE sessions SET " + ", ".join(updates) + " WHERE id = ?"
         with self._cursor() as cursor:
             cursor.execute(q, values)
-        return self.get_session(session_id)
+        return self.get_session(session_id, include_turns=include_turns)
 
     def create_turn(
         self,
@@ -1497,6 +1503,39 @@ class TraceStore:
             turn["trace"]["route"] = _from_json(route_rows["payload"], None) if route_rows else None
             turn["answer_integrity_receipt"] = verify_answer_integrity_receipt(turn)
             return turn
+
+    def count_session_turns(self, session_id: str) -> int:
+        with self._cursor() as cursor:
+            return int(cursor.execute(
+                "SELECT COUNT(*) FROM turns WHERE session_id = ?", (session_id,),
+            ).fetchone()[0])
+
+    def get_recent_session_turns(self, session_id: str, *, limit: int = 8) -> list[dict[str, Any]]:
+        """Bounded, chronological conversation records; never retrieval evidence.
+
+        Feedback is joined so rejected answers and user corrections can be
+        distinguished without loading trace, prompt, or evidence payloads.
+        Rowid breaks timestamp ties in actual insertion order.
+        """
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 64:
+            raise ValueError("history limit must be an integer from 1 to 64")
+        with self._cursor() as cursor:
+            rows = cursor.execute(
+                """SELECT t.id, t.session_id, t.user_message, t.answer, t.answer_status,
+                          t.created_at, f.payload AS feedback_payload
+                   FROM turns AS t LEFT JOIN feedback AS f ON f.turn_id = t.id
+                   WHERE t.session_id = ?
+                   ORDER BY t.created_at DESC, t.rowid DESC LIMIT ?""",
+                (session_id, limit),
+            ).fetchall()
+        turns = []
+        for row in reversed(rows):
+            turn = dict(row)
+            turn["turn_id"] = turn["id"]
+            turn["message"] = turn["user_message"]
+            turn["feedback"] = _from_json(turn.pop("feedback_payload"), {})
+            turns.append(turn)
+        return turns
 
     def _get_turns_for_session(self, session_id: str) -> list[dict[str, Any]]:
         with self._cursor() as cursor:

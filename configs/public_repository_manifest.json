@@ -578,7 +578,15 @@
     "docs/reviews/point-imagery-review-20260927.md",
     "tests/test_point_imagery_routes.py",
     "tests/test_point_imagery_analytics.py",
-    "docs/reviews/artifacts/point-imagery-20260927/validation.json"
+    "docs/reviews/artifacts/point-imagery-20260927/validation.json",
+    "scripts/replay_harness_interventions.py",
+    "tests/test_conversation_context.py",
+    "tests/test_conversation_scope.py",
+    "tests/test_mlx_runtime_contract.py",
+    "tests/test_harness_intervention_replay.py",
+    "docs/reviews/generalized-harness-implementation-20260928.md",
+    "docs/reviews/artifacts/portable-agronomy-20260928/storage-profile.json",
+    "tests/test_editor_prompt_budget.py"
   ],
   "trees": [
     "src",

@@ -77,3 +77,27 @@ Expected states include invalid request, unauthenticated/unauthorized, blocked
 offline, model setup required, local storage unavailable, provider unavailable,
 and validation failure. Fail closed when authority or egress is ambiguous;
 return a useful status rather than fabricating a successful capability result.
+
+## Conversation and runtime context
+
+`conversation_scope.py` binds a session to general questions, one saved field,
+or one example. Both turn routes and session updates enforce the binding before
+field authorization. A missing field snapshot is freshly loaded from authorized
+storage. New turns use metadata-only session reads and a narrow, indexed latest-
+turn query. Loading a saved conversation still returns its complete transcript.
+
+`conversation_context.py` compiles a bounded, same-session active window into the
+final model prompt. It preserves current input/evidence, drops oldest history
+first, and refuses mandatory prompt overflow. Exact local tokenizer counts use
+the actual chat template; HTTP/custom backends without a tokenizer receive a
+labelled UTF-8 character estimate, which is not a hard provider token guarantee.
+The configured budget includes the requested output allowance and is clamped to
+a smaller declared native limit. Deterministic answers do not load a model for a
+context indicator. Receipts live in `trace.metadata.context_budget`.
+
+Cache scope is an opaque hash of session identity plus draft/editor role. Cache
+entries also bind model revision/snapshot and KV configuration, with aggregate
+namespace/byte limits. Caching remains disabled in the active profile pending
+matched real-model performance and quality measurements. Generation measurements
+separate queueing, loading, tokenization, cache preparation and decode; HTTP rates
+remain unavailable unless the backend supplies a meaningful measured boundary.

@@ -136,3 +136,22 @@ is not a useful cleanup target by itself.
 See `AGENTS.md` for safe repository work and
 `docs/reviews/repository-cleanup-investigation-20260926.md` for the current
 cleanup backlog and evidence status.
+
+## Bounded conversations
+
+Sessions retain complete local transcripts and an immutable general/field/example
+identity. The product turn boundary authorizes that identity before compiling
+server-owned recent turns. `server/services/conversation_context.py` injects a
+bounded, explicitly non-evidentiary conversation block at final prompt assembly;
+`server/services/conversation_scope.py` controls scope. Current governed evidence
+and requested output reserve take priority over history. The existing 17-stage
+execution topology is retained: policy/version, included turn identities and the
+budget receipt hash bind this change within evidence selection and prompt
+assembly. This is a new prompt policy, so it requires a new evaluation run identity;
+old single-turn results do not validate multi-turn behavior or model portability.
+
+MLX exposes exact template counts, explicitly declared native capacity, scoped
+KV caching and phase measurements. Backend capabilities may be unavailable; the
+UI labels estimates and missing measurements instead of inferring native capacity
+or speed from streamed display events. The full saved transcript and the active
+model window are separate representations.
