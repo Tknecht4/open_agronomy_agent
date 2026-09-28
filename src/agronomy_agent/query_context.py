@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any, Iterable
 
 from agronomy_agent.decision_capsule import build_decision_capsule, merge_topics
+from agronomy_agent.method_context import method_fit_reason
 
 
 _AAFC_CROP_HEALTH_PRODUCT_PATTERN = (
@@ -41,6 +42,11 @@ _CANADIAN_REGIONAL_CONTEXT_PRODUCT_PATTERN = (
 _GENERIC_CROP_CONTEXT = {"crop", "crops", "field crop", "field crops", "annual crop", "annual crops"}
 _CROP_SCOPE_WILDCARDS = {"all"}
 _DETAILED_SOIL_LAYER_IDS = {"ab_detailed_soil", "sk_detailed_soil", "mb_detailed_soil"}
+_NON_SITE_CONJOINED_PREFIXES = frozenset({
+    "spring", "summer", "autumn", "fall", "winter", "dry", "wet", "rainy",
+    "hot", "cold", "drought", "year", "years", "the", "a", "an",
+    "practice", "general", "addition", "many", "most", "some",
+})
 
 
 US_STATE_NAME_TO_ALPHA = {
@@ -199,6 +205,11 @@ def analyze_query_context(question: str, field_context: dict[str, Any] | None = 
         crops = _ordered_unique((*normalized_explicit_crops, *(crops or fallback_crops)))
 
     jurisdictions, country = _extract_jurisdictions(text)
+    named_jurisdictions = _named_jurisdiction_spans(text)
+    if len({item[2] for item in named_jurisdictions}) > 1:
+        # Preserve both the field and source geographies. The legacy extractor
+        # returned only Canadian provinces when a U.S. state was also named.
+        jurisdictions = _ordered_unique(item[1] for item in named_jurisdictions)
     if country is None and (
         re.search(r"\b(?:US|USA)\b", text)
         or re.search(r"\bU\.S\.?A?\.?", text, re.IGNORECASE)
@@ -224,6 +235,8 @@ def analyze_query_context(question: str, field_context: dict[str, Any] | None = 
         explicit_upper = explicit_jurisdiction.upper()
         if explicit_upper == "CANADA":
             country = "canada"
+        elif explicit_upper in {"UNITED STATES", "US", "USA", "U.S.", "U.S.A."}:
+            country = "united states"
         elif (
             explicit_upper in CANADIAN_PROVINCE_CODES
             or explicit_upper in CANADIAN_PROVINCE_NAMES_TO_CODE
@@ -232,12 +245,38 @@ def analyze_query_context(question: str, field_context: dict[str, Any] | None = 
             country = "canada"
         elif explicit_upper in US_STATE_NAME_TO_ALPHA.values() or explicit_upper in US_STATE_NAME_TO_ALPHA:
             country = "united states"
+    provided_country = _clean(provided.get("country"))
+    unsupported_country = False
+    if provided_country:
+        normalized_country = provided_country.casefold().replace(".", "").strip()
+        if normalized_country in {"canada", "canadian", "ca", "can"}:
+            country = "canada"
+        elif normalized_country in {"united states", "us", "usa", "american"}:
+            country = "united states"
+        else:
+            country = None
+            unsupported_country = True
+    destination = _inferred_destination_jurisdiction(text, named_jurisdictions) if not explicit_jurisdiction else None
+    destination_country = _inferred_owned_country(text) if not explicit_jurisdiction and destination is None else None
     if explicit_jurisdiction:
         target_jurisdictions = (explicit_jurisdiction.lower(),)
+    elif destination:
+        target_jurisdictions = (destination[0],)
+        country = destination[1]
+    elif destination_country:
+        target_jurisdictions = (destination_country,)
+        country = destination_country
+        jurisdictions = _ordered_unique((destination_country, *jurisdictions))
     elif len(jurisdictions) > 1 and not _cross_jurisdiction_comparison_requested(text):
         target_jurisdictions = jurisdictions[-1:]
     else:
         target_jurisdictions = jurisdictions
+    if not explicit_jurisdiction and _unrecognized_operation_site(text):
+        target_jurisdictions = ()
+        country = None
+    if unsupported_country:
+        target_jurisdictions = (explicit_jurisdiction.lower(),) if explicit_jurisdiction else ()
+        country = None
 
     regional_terms = list(jurisdictions)
     regional_terms.extend(_extract_place_terms(text))
@@ -253,8 +292,8 @@ def analyze_query_context(question: str, field_context: dict[str, Any] | None = 
     merged_context = dict(provided)
     if crops and not _clean(merged_context.get("crop_current")):
         merged_context["crop_current"] = crops[0]
-    if jurisdictions and not _clean(merged_context.get("province_state")):
-        merged_context["province_state"] = jurisdictions[0]
+    if target_jurisdictions and not _clean(merged_context.get("province_state")):
+        merged_context["province_state"] = target_jurisdictions[0]
     if regional_terms and not _clean(merged_context.get("region_text")):
         merged_context["region_text"] = ", ".join(regional_terms[:4])
 
@@ -503,6 +542,13 @@ def _graph_evidence_is_substantive(name: str, evidence: str) -> bool:
 
 
 def _doc_rejection_reason(doc: Any, signals: QueryContextSignals, *, primary_intent: str | None = None) -> str | None:
+    method_disposition = method_fit_reason(doc, signals.query_text, signals.country)
+    if method_disposition == "method_context_match":
+        # A reviewed method's applicability is distinct from its supporting
+        # publishers' jurisdictions. It remains context-only downstream.
+        return None
+    if method_disposition is not None:
+        return method_disposition
     source_type = str(getattr(doc, "source_type", "")).lower()
     source_id = str(getattr(doc, "source_id", "")).lower()
     haystack = _doc_text(doc)
@@ -930,6 +976,97 @@ def _extract_jurisdictions(text: str) -> tuple[tuple[str, ...], str | None]:
     if re.search(r"\b(?:UNITED STATES|U\.S\.|USA|AMERICAN)\b", upper):
         return (), "united states"
     return (), None
+
+
+def _named_jurisdiction_spans(text: str) -> tuple[tuple[int, str, str, int], ...]:
+    """Locate named provinces/states without treating a cited source as target."""
+
+    spans: list[tuple[int, str, str, int]] = []
+    for country, names in (("canada", CANADIAN_PROVINCE_NAMES_TO_CODE), ("united states", US_STATE_NAME_TO_ALPHA)):
+        for name in names:
+            for match in re.finditer(rf"\b{re.escape(name)}\b", text, re.IGNORECASE):
+                spans.append((match.start(), name.lower(), country, match.end()))
+    return tuple(sorted(spans))
+
+
+def _inferred_destination_jurisdiction(
+    text: str,
+    spans: tuple[tuple[int, str, str, int], ...],
+    *,
+    require_multiple: bool = True,
+) -> tuple[str, str] | None:
+    """Use explicit operation-site grammar when a source and field are named."""
+
+    if not spans or (require_multiple and len({name for _, name, _, _ in spans}) < 2):
+        return None
+    scored: list[tuple[int, int, str, str]] = []
+    for start, name, country, end in spans:
+        left = text[max(0, start - 100):start].lower()
+        right = text[end:end + 50].lower()
+        score = 0
+        if re.search(r"\b(?:my|our)\b[^.!?]{0,85}$", left):
+            score += 3
+        if re.search(r"\b(?:i|we)\s+(?:farm|grow|operate|raise|manage|run|own)\b[^.!?]{0,80}\b(?:in|near|on|at)\s+(?:\w+\s+){0,2}$", left):
+            score += 5
+        if re.match(r"\s+(?:\w+\s+){0,2}(?:farm|field|dairy|crop|enterprise|operation|orchard|ranch|grower|farmer|producer)\b", right):
+            score += 4
+        if re.search(r"\b(?:farm|field|dairy|crop|enterprise|operation|orchard|ranch|grower|farmer|producer)\b[^.!?]{0,30}\b(?:in|near|on|at)\s+(?:\w+\s+){0,2}$", left):
+            score += 3
+        if re.match(r"\s+(?:\w+[ -]){0,3}(?:guide|chart|worksheet|table|budget|example|label|publication|report)\b", right):
+            score -= 4
+        scored.append((score, -start, name, country))
+    best = max(scored)
+    return (best[2], best[3]) if best[0] >= 3 and sum(item[0] == best[0] for item in scored) == 1 else None
+
+
+def _inferred_owned_country(text: str) -> str | None:
+    """Resolve an owned field's country when a foreign province/state is cited."""
+
+    country_pattern = r"(?P<country>U\.?S\.?A?\.?|United States|American|Canada|Canadian)"
+    site_pattern = r"(?:farm|field|crop|dairy|operation|orchard|ranch)"
+    patterns = (
+        rf"\b(?:my|our|the|this)\s+{country_pattern}\s+{site_pattern}\b",
+        rf"\b(?:my|our|the|this)\s+(?:\w+\s+){{0,2}}{site_pattern}\s+in\s+(?:the\s+)?{country_pattern}\b",
+    )
+    found = [match.group("country").lower() for pattern in patterns for match in re.finditer(pattern, text, re.IGNORECASE)]
+    countries = {"canada" if value.startswith("canad") else "united states" for value in found}
+    return next(iter(countries)) if len(countries) == 1 else None
+
+
+def _unrecognized_operation_site(text: str) -> bool:
+    """Resolve the first farm-site location, then immediate conjoined sites.
+
+    A later ``in spring`` or ``in dry years`` is not a second operation site.
+    Ambiguous multiple sites and explicitly foreign sites remain unknown.
+    """
+
+    place = r"[A-Za-z-]+(?:\s+(?!(?:and|or|but|with)\b)[A-Za-z-]+){0,3}"
+    patterns = (
+        rf"\b(?:I|we)\s+(?:farm|grow|operate|raise|manage)\b[^.!?]{{0,75}}?\bin\s+(?P<place>{place})",
+        rf"\b(?:my|our)\s+(?:farm|field|crop|dairy|operation|orchard|ranch)\b[^.!?]{{0,75}}?\bin\s+(?P<place>{place})",
+    )
+    locations: list[str] = []
+    for pattern in patterns:
+        for match in re.finditer(pattern, text, re.IGNORECASE):
+            locations.append(match.group("place"))
+            tail = text[match.end():]
+            conjoined = re.match(
+                r"\s+(?:and|or)\s+(?:also\s+)?in\s+"
+                r"(?P<place>[A-Za-z-]+(?:\s+[A-Za-z-]+){0,3})",
+                tail,
+                re.IGNORECASE,
+            )
+            if conjoined and conjoined.group("place").split()[0].lower() not in _NON_SITE_CONJOINED_PREFIXES:
+                locations.append(conjoined.group("place"))
+    if not locations:
+        return False
+    normalized: set[tuple[tuple[str, ...], tuple[str, ...]]] = set()
+    for location in locations:
+        countries, subdivisions = _normalize_jurisdiction_scope((location,))
+        if not countries:
+            return True
+        normalized.add((tuple(sorted(countries)), tuple(sorted(subdivisions))))
+    return len(normalized) > 1
 
 
 def _canadian_jurisdictions_in_text(text: str) -> tuple[str, ...]:

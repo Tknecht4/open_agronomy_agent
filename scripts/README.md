@@ -149,6 +149,14 @@ context release from `data/seed/production_foundations_v1.jsonl` and its
 external-source registry. The external snapshots are inspected and hash
 recorded but not copied into the public package. The builder refuses a
 nonempty output directory; save a prior candidate before rebuilding.
+For the separate v2 method candidate, pass
+`--seed data/seed/production_foundations_methods_v2.jsonl`,
+`--sources data/manifests/production_foundations_sources_v2.json`,
+`--support-receipt data/manifests/production_foundations_method_support_v2.json`,
+`--store-id production-foundations-method-v2`, and a new output directory.
+Compose its profile with `--supplement-store` pointing at that release
+manifest. The checked-in v2 config and policy are non-active and source-hash
+bound.
 `build_production_foundations_profile.py` composes an ignored candidate profile
 by default. The checked-in `configs/rag_production_foundations_candidate.yaml`
 and companion policy are nonselectable development artifacts. Writing the

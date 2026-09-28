@@ -36,6 +36,13 @@ numeric calculations after evaluation-derived worked examples were removed.
 The separate typed-calculation follow-up improved those calculations with either
 active or candidate retrieval; it does not activate the candidate cards.
 
+`rag_production_foundations_method_candidate.yaml` is a second nonselectable
+profile for seven source-supported general METHOD rows. Its release profile
+binds the source-support receipt hash and explicitly selects
+`curated_method_text_v1` for bounded conceptual explanations. The renderer's
+receipt identifies a deterministic answer, not a local-model draft. The active
+`rag.yaml`, active policy, and selectable profile registry remain unchanged.
+
 ## RC3 egress and completed execution boundary
 
 The completed RC3 run was governed by `final_benchmark_round_rc3.json`, which requires

@@ -12,7 +12,9 @@
 - `source_licensing_matrix.json` and source-specific manifests preserve rights and redistribution state.
 - `rag_sources.json` and Canadian supplement/source manifests preserve retrieval lineage.
 - `production_foundations_sources_v1.json` identifies seven inspected US/Canadian external source snapshots, rights, locators, and hashes for the nine project-authored context cards; it does not redistribute or train on external text.
+- `production_foundations_sources_v2.json` adds source snapshots for seven general-method cards, retaining the v1 registry by exact hash. `production_foundations_method_support_v2.json` joins method claims to source IDs, locators, snapshot hashes, jurisdiction and rights through the registry. The v2 shard contains only project-authored text.
 - `runtime_corpus_policy_production_foundations_candidate.json` admits those cards only for the nonselectable candidate RAG profile; the active policy remains unchanged.
+- `runtime_corpus_policy_production_foundations_method_candidate.json` separately admits the seven v2 METHOD rows as context only. It is not the active policy.
 - `canada_geospatial_sources.json` preserves source/derivation boundaries for map layers.
 - `eval_benchmark_sources.json` records evaluation-source identity and separation.
 - `source_retention_receipt.json` is retained historical compact-NRCS evidence; it is not the active offline-corpus gate or standing deletion authority. The active source-exact gate is `offline_corpus_quality_audit.json` plus each active-store source receipt.

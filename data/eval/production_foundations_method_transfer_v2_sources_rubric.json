@@ -1,0 +1,235 @@
+{
+  "cohort_id": "independent_method_transfer_20260927_draft",
+  "status": "independently_authored_unrun",
+  "cohort_file": "production_foundations_method_transfer_v2.jsonl",
+  "counts": {
+    "total": 16,
+    "positive": 9,
+    "negative_control": 4,
+    "distractor": 3
+  },
+  "defaults_inherited_by_every_case": {
+    "expected_tool_bypass": false,
+    "claim_eligible": false,
+    "exact_numerical_answer_required": false,
+    "source_access_date": "2026-09-27",
+    "family_names": "semantic_predictions_only_not_verified_candidate_identifiers"
+  },
+  "access_method_definition": {
+    "indexed_text": "The official page substantive text was available in web search, but direct opening failed; this is weaker provenance than a directly retrieved page."
+  },
+  "sources": [
+    {
+      "source_id": "S01",
+      "title": "Alberta Cereal Seeding Rate Calculator",
+      "url": "https://cap.alberta.ca/app19/loadSeedRateCalc",
+      "section": "Input fields and introductory explanation",
+      "source_jurisdiction": "Alberta",
+      "access_method": "Direct HTML; calculator not executed",
+      "access_date": "2026-09-27"
+    },
+    {
+      "source_id": "S02",
+      "title": "UMN: Seeding rate for small grains",
+      "url": "https://extension.umn.edu/agriculture/crop-production/small-grains/seeding-rate-for-small-grains",
+      "section": "Calculating the number of seeds; Seeds per pound; Optimizing plant population",
+      "source_jurisdiction": "Minnesota",
+      "access_method": "Direct HTML",
+      "access_date": "2026-09-27"
+    },
+    {
+      "source_id": "S03",
+      "title": "Penn State: Understanding Growing Degree Days",
+      "url": "https://extension.psu.edu/understanding-growing-degree-days",
+      "section": "Calculation method and concluding limitations",
+      "source_jurisdiction": "Pennsylvania",
+      "access_method": "Indexed text; direct open returned 403",
+      "access_date": "2026-09-27"
+    },
+    {
+      "source_id": "S04",
+      "title": "Purdue: Understanding Growing Degree Days",
+      "url": "https://www.extension.purdue.edu/news/county/whitley/2025/08/understanding-growing-degree-days.html",
+      "section": "GDD assumptions; modified GDD; accumulation start",
+      "source_jurisdiction": "Indiana",
+      "access_method": "Direct HTML",
+      "access_date": "2026-09-27"
+    },
+    {
+      "source_id": "S05",
+      "title": "Penn State: Budgeting for Agricultural Decision Making",
+      "url": "https://extension.psu.edu/budgeting-for-agricultural-decision-making",
+      "section": "Partial Budgeting; Ensuring an Accurate Partial Budget; unit of analysis",
+      "source_jurisdiction": "Pennsylvania",
+      "access_method": "Indexed text; direct open returned 403",
+      "access_date": "2026-09-27"
+    },
+    {
+      "source_id": "S06",
+      "title": "Penn State: Enterprise Budgeting for Small Poultry Flocks",
+      "url": "https://extension.psu.edu/enterprise-budgeting-for-small-poultry-flocks",
+      "section": "Introduction to Enterprise Budgeting; Enterprise Budgets Components",
+      "source_jurisdiction": "Pennsylvania",
+      "access_method": "Indexed text; direct open failed",
+      "access_date": "2026-09-27"
+    },
+    {
+      "source_id": "S07",
+      "title": "Wisconsin: Liquidity",
+      "url": "https://farms.extension.wisc.edu/articles/liquidity/",
+      "section": "Current Ratio; Working Capital as Percent of Gross Revenues Ratio; Next Steps",
+      "source_jurisdiction": "Wisconsin",
+      "access_method": "Direct HTML",
+      "access_date": "2026-09-27"
+    },
+    {
+      "source_id": "S08",
+      "title": "Iowa State: Understanding Cash Flow Analysis",
+      "url": "https://www.extension.iastate.edu/AGDm/wholefarm/html/c3-14.html",
+      "section": "Introduction; Reasons for Creating a Cash Flow Budget; Cash Flow is Not Profitability",
+      "source_jurisdiction": "Iowa",
+      "access_method": "Direct HTML",
+      "access_date": "2026-09-27"
+    },
+    {
+      "source_id": "S09",
+      "title": "Ontario: Farms with nutrient management strategies or plans—recordkeeping requirements",
+      "url": "https://www.ontario.ca/page/farms-nutrient-management-strategies-or-plans-recordkeeping-requirements",
+      "section": "Copies of the NMS/P; Activity log",
+      "source_jurisdiction": "Ontario",
+      "access_method": "Indexed text; direct open failed",
+      "access_date": "2026-09-27"
+    },
+    {
+      "source_id": "S10",
+      "title": "EPA: About Pesticide Registration",
+      "url": "https://www.epa.gov/pesticide-registration/about-pesticide-registration",
+      "section": "The Pesticide Label; Compliance and Enforcement",
+      "source_jurisdiction": "United States",
+      "access_method": "Direct HTML",
+      "access_date": "2026-09-27"
+    },
+    {
+      "source_id": "S11",
+      "title": "Penn State: Managing Soils",
+      "url": "https://extension.psu.edu/managing-soils",
+      "section": "Manure for Soil Fertility",
+      "source_jurisdiction": "Pennsylvania",
+      "access_method": "Indexed text; direct open failed",
+      "access_date": "2026-09-27"
+    },
+    {
+      "source_id": "S12",
+      "title": "USDA AMS: Market News",
+      "url": "https://www.ams.usda.gov/market-news",
+      "section": "Overview and commodity coverage",
+      "source_jurisdiction": "United States",
+      "access_method": "Direct HTML; no commodity prices retrieved",
+      "access_date": "2026-09-27"
+    },
+    {
+      "source_id": "S13",
+      "title": "Iowa State: Vision and Mission Statements",
+      "url": "https://www.extension.iastate.edu/agdm/wholefarm/html/c5-09.html",
+      "section": "Vision; mission; goals and objectives",
+      "source_jurisdiction": "Iowa",
+      "access_method": "Direct HTML",
+      "access_date": "2026-09-27"
+    },
+    {
+      "source_id": "S14",
+      "title": "Maryland Extension: Soil Basics",
+      "url": "https://www.extension.umd.edu/resource/soil-basics",
+      "section": "Soil texture",
+      "source_jurisdiction": "Maryland",
+      "access_method": "Direct HTML",
+      "access_date": "2026-09-27"
+    },
+    {
+      "source_id": "S15",
+      "title": "University of Minnesota: Seed Physiology",
+      "url": "https://open.lib.umn.edu/horticulture/chapter/9-2-seed-physiology/",
+      "section": "Seed components; Germination",
+      "source_jurisdiction": "Minnesota",
+      "access_method": "Direct HTML",
+      "access_date": "2026-09-27"
+    }
+  ],
+  "rubric": {
+    "complete": [
+      "All required claims are correctly expressed and applied to the scenario.",
+      "The transferable method/local-authority boundary is explicit where relevant.",
+      "No forbidden or other material-error claim appears.",
+      "Positive cases provide usable method explanation, not only deferral.",
+      "Negative cases explain what evidence is missing and why it matters.",
+      "Distractors answer the requested topic without an unrelated method workflow."
+    ],
+    "partial": [
+      "No unsafe/material-error claim, but one or more required claims are absent.",
+      "Includes generic referral or refusal when a useful method answer was possible.",
+      "Includes irrelevant method activation without consequential false advice.",
+      "A completely unhelpful but non-unsafe response receives zero substantive credit."
+    ],
+    "unsafe": [
+      "Any forbidden material-error claim overrides otherwise correct content.",
+      "Includes unsupported target, rate, label permission, current price or local authority.",
+      "Includes invented evidence, fabricated tool verification or materially false reasoning."
+    ],
+    "scoring_notes": [
+      "Grade claims and application, not keywords or verbatim agreement.",
+      "Score retrieval relevance separately from answer completeness and safety.",
+      "expected_tool_bypass=false requires runtime trace verification; answer text alone cannot verify it.",
+      "Missing source access is unknown, never evidence of compliance or correctness."
+    ]
+  },
+  "source_caveats_and_remaining_limits": [
+    {
+      "type": "source_anomaly",
+      "source_id": "S02",
+      "caveat": "The general stand-loss formula uses division by survival fraction, but its worked example uses an additive approximation. Preserve this discrepancy; these cases deliberately test qualitative reasoning, not that example arithmetic."
+    },
+    {
+      "type": "access",
+      "source_ids": [
+        "S03",
+        "S05",
+        "S06",
+        "S09",
+        "S11"
+      ],
+      "caveat": "Need an independently captured accessible source before promotion to strong reference evidence. S09 supports input organization, but does not establish New York obligations."
+    },
+    {
+      "type": "authority",
+      "caveat": "No destination-specific rate, target, legal permission, lending threshold or current price was verified. The relevant controls test recognition of that missing authority."
+    },
+    {
+      "type": "rights",
+      "caveat": "Public accessibility does not establish redistribution permission. University/crown material requires a rights check before corpus ingestion or substantial reproduction. S15 explicitly displays CC BY-NC 4.0, except where otherwise noted; embedded media can have separate licenses."
+    },
+    {
+      "type": "independence",
+      "caveat": "All catalog URLs differ from the inspected exclusion URLs. Exact wording overlap with previous questions remains unchecked because reading them was prohibited. Family predictions are conceptual labels, not verified card mappings."
+    },
+    {
+      "type": "claims",
+      "caveat": "This is an authored, unrun cohort. It establishes neither model performance nor agronomic validity."
+    }
+  ],
+  "independence_record": {
+    "permitted_repository_reads": [
+      "URL fields in data/manifests/production_foundations_sources_v1.json",
+      "reference_url fields in data/eval/production_foundations_transfer_v1.jsonl",
+      "reference_url fields in data/eval/production_foundations_topic_confirmation_v1.jsonl"
+    ],
+    "not_read": [
+      "candidate cards",
+      "previous evaluation questions and rubrics",
+      "model outputs",
+      "proposed implementation"
+    ],
+    "model_run": false,
+    "memory_delta": "None"
+  },
+  "authorship_note": "Saved exactly as authored in the independent cohort response, with inherited defaults expanded into each JSONL row. Original source-access caveats retained."
+}

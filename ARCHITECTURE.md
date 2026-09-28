@@ -37,6 +37,7 @@ path observed; it is not a second agent implementation.
 | Agronomy kernel/model | `agent.py` | Resource loading, prompt construction, MLX generation, legacy evaluator path |
 | Planning/routing | `router.py`, `decision_contract.py`, `capability_planner.py`, `tool_planner.py` | Router classifies; planners own capability selection |
 | Evidence/retrieval | `evidence_*.py`, `context_packer.py`, `agno_runtime/`, `corpus_governance.py` | Preserve provenance, applicability, authority, and admission |
+| Candidate general-method transfer | `method_context.py`, `query_context.py`, `decision_contract.py` | Country-scoped method obligations and source/applicability separation; active profile has no method release |
 | Safety/verification | `answerability.py`, `answer_verifier.py`, `answer_safety.py`, `high_consequence.py` | Validation cannot create evidence or current authority |
 | Deterministic tools | `agronomic_calculations.py`, `local_tools.py`, `tools/` | Supported calculations bypass model drafting |
 | Public adapters | `local_tools.py`, `server/services/chat_service.py` | Network/cache/jurisdiction dependent; unavailable is a typed state |
@@ -49,6 +50,14 @@ path observed; it is not a second agent implementation.
 | Anonymous imagery | `field_imagery.py`, `imagery_analytics.py`, `imagery_store.py`, `imagery_budget.py`, `imagery_worker.py`, `server/services/imagery_service.py`, `server/field_data_routes.py` | Polygon-bound HLS discovery, optional isolated raster worker, storage admission, private content-addressed chips, observed QA/NDVI/NDMI and authenticated previews; no operational yield prediction |
 | Imagery research | `imagery_assessment.py`, `imagery_models.py`, `scripts/assess_field_imagery.py`, `scripts/probe_imagery_model.py` | Frozen label/split assessments and bounded CPU/MPS encoder probes; outputs remain research evidence, not serving capability or active model profile |
 | Operator workflows | `scripts/` | Thin CLIs around package contracts; generated outputs belong under ignored paths |
+
+The nonselectable production-foundations method candidate adds seven reviewed,
+project-authored METHOD rows. Its RAG profile explicitly enables a bounded
+`curated_method_text_v1` explanation renderer when the matching card reached the
+final packed context. The product trace records a deterministic bypass and
+source-support receipt. Numeric calculation, farm-action, local-rate, market,
+and product-label requests continue through their existing paths; answer
+safety and high-consequence policy still run after a method explanation.
 
 ## Harnesses and what they prove
 

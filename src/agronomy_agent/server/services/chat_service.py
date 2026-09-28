@@ -26,6 +26,7 @@ from agronomy_agent.agent import (
     load_model_config,
     system_prompt,
 )
+from agronomy_agent.method_context import curated_method_response
 from agronomy_agent.query_context import is_source_grounded_question
 from agronomy_agent.capability_planner import select_public_capability_plan
 from agronomy_agent.router import classify_query, refine_query_route
@@ -614,6 +615,11 @@ def _run_turn_impl(
             context,
             question=message,
         )
+        method_answer, method_receipt = (
+            curated_method_response(context, message)
+            if mode == "agronomic_rag" and not source_grounded
+            else (None, None)
+        )
         if map_interpretation_answer:
             if profiler:
                 profiler.add_skipped("model.decode_stream", reason=f"tool_grounded_{tool_grounded_renderer}")
@@ -655,6 +661,19 @@ def _run_turn_impl(
                     "invocations": (context.runtime_metadata or {}).get("tool_invocations") if context is not None else [],
                     "results": (context.runtime_metadata or {}).get("tool_results") if context is not None else [],
                 },
+            }
+        elif method_answer is not None:
+            if profiler:
+                profiler.add_skipped("model.decode_stream", reason="curated_method_context")
+            answer = method_answer
+            generation_metadata = {
+                "generation_bypass": {
+                    "reason": "curated_method_context",
+                    "renderer": "curated_method_text_v1",
+                    "receipt": method_receipt,
+                },
+                "generation_path": "deterministic_method_context",
+                "method_response": method_receipt,
             }
         elif queue_circuit and queue_circuit.get("tripped"):
             if profiler:
@@ -4990,6 +5009,12 @@ def _build_doc_snapshot(idx: int, doc: Any, *, store_text: bool) -> dict[str, An
         "manifest_sha256": doc.manifest_sha256,
         "distribution_scope": doc.distribution_scope,
         "answer_role": doc.answer_role,
+        **({
+            "authority_tier": doc.authority_tier,
+            "supporting_source_ids": list(doc.supporting_source_ids),
+            "source_jurisdictions": list(doc.source_jurisdictions),
+            "method_scope": dict(doc.method_scope) if doc.method_scope else None,
+        } if doc.answer_role == "method_context" else {}),
     }
 
 

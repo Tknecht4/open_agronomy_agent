@@ -1542,7 +1542,8 @@ def build_context(
         build_decision_contract(
             question,
             route,
-            field_context=query_signals.field_context,
+            field_context=field_context,
+            method_context_enabled=bool((cfg.get("release_profile") or {}).get("method_transfer_store")),
         )
     )
     contract_elapsed_ms = (perf_counter() - contract_started) * 1000.0
@@ -1554,6 +1555,11 @@ def build_context(
     cache_status = {"route": route_result.cache_status}
     runtime_metadata: dict[str, Any] = {
         "agent_runtime": runtime_mode,
+        **({
+            "method_response_mode": (cfg.get("release_profile") or {}).get("method_response_mode"),
+            "method_transfer_store": (cfg.get("release_profile") or {}).get("method_transfer_store"),
+            "method_support_receipt_sha256": (cfg.get("release_profile") or {}).get("method_support_receipt_sha256"),
+        } if (cfg.get("release_profile") or {}).get("method_transfer_store") else {}),
         "selected_retriever": "agno",
         "retrieval_controls": _retrieval_control_record(
             document_retrieval_enabled=document_retrieval_enabled,
@@ -1809,7 +1815,13 @@ def build_context(
     )
     contract_query_docs: dict[str, list[RetrievedDoc]] = {}
     if document_retrieval_enabled and decision_contract is not None:
+        method_queries = {
+            obligation.key.removeprefix("method:").replace("_", " ")
+            for obligation in decision_contract.evidence_obligations
+            if obligation.key.startswith("method:")
+        }
         for contract_query in decision_contract.retrieval_queries[:8]:
+            method_query = contract_query in method_queries
             contract_query_docs[contract_query] = loaded.retriever.search(
                 contract_query,
                 top_k=raw_candidate_k,
@@ -1817,8 +1829,8 @@ def build_context(
                 source_types=filters.get("source_type") or (),
                 retrieval_policies=filters.get("retrieval_policy")
                 or ("standard", "context_only"),
-                query_expansion=field_query_expansion,
-                jurisdictions=query_signals.target_jurisdictions or (),
+                query_expansion=() if method_query else field_query_expansion,
+                jurisdictions=(query_signals.country,) if method_query and query_signals.country else query_signals.target_jurisdictions or (),
             )
     merged_docs: dict[str, RetrievedDoc] = {doc.doc_id: doc for doc in agno_result.docs}
     contract_docs = tuple(
@@ -2224,6 +2236,12 @@ def build_context(
                 ),
                 "distribution_scope": doc.distribution_scope,
                 "answer_role": doc.answer_role,
+                **({
+                    "authority_tier": doc.authority_tier,
+                    "supporting_source_ids": list(doc.supporting_source_ids),
+                    "source_jurisdictions": list(doc.source_jurisdictions),
+                    "method_scope": dict(doc.method_scope) if doc.method_scope else None,
+                } if doc.answer_role == "method_context" else {}),
             }
             for doc in docs
         ],
@@ -4813,6 +4831,12 @@ def generate_answer(
                         "score": doc.score,
                         "retrieval_policy": doc.retrieval_policy,
                         "answer_role": doc.answer_role,
+                        **({
+                            "authority_tier": doc.authority_tier,
+                            "supporting_source_ids": list(doc.supporting_source_ids),
+                            "source_jurisdictions": list(doc.source_jurisdictions),
+                            "method_scope": dict(doc.method_scope) if doc.method_scope else None,
+                        } if doc.answer_role == "method_context" else {}),
                         "distribution_scope": doc.distribution_scope,
                         "jurisdictions": list(doc.jurisdictions),
                         "crops": list(doc.crops),

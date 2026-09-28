@@ -1,0 +1,26 @@
+{
+  "schema_version": "open_agronomy_agent.production_foundations_source_receipt.v2",
+  "seed_path": "data/seed/production_foundations_methods_v2.jsonl",
+  "seed_sha256": "931911ba215acedfe806f2cf03a35dc2539026acdab48780ae67a6b2ddc6f8f7",
+  "external_source_registry_path": "data/manifests/production_foundations_sources_v2.json",
+  "external_source_registry_sha256": "bcf14417d7069d485c21279c9b7345f70b62da8e98af9e4fabc051d39e0bbd05",
+  "external_snapshots_in_public_package": false,
+  "source_ids": [
+    "aafc_growing_degree_days_service",
+    "isu_partial_budget",
+    "mb_nutrient_plan_inputs",
+    "mb_special_crop_costs",
+    "mb_spring_cereal_seeding_rates",
+    "on_cost_production_framework",
+    "on_farm_succession_ratios",
+    "on_starting_farm_budget",
+    "purdue_gdd_conventions",
+    "unl_winter_wheat_seed_count",
+    "usda_ars_wholefarm",
+    "usda_ers_financial_ratios",
+    "usda_nrcs_nutrient_management"
+  ],
+  "source_support_receipt_path": "data/manifests/production_foundations_method_support_v2.json",
+  "source_support_receipt_sha256": "494bd2d03009ba4b78564c3701e744aac5042279603e78bdf647f21a31c227e5",
+  "rights_boundary": "Only project-authored summaries are distributed; source-specific terms remain with the publishers."
+}

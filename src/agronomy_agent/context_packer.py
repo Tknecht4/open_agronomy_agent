@@ -646,11 +646,24 @@ def _doc_policy_note(doc: Any) -> str:
     policy = str(getattr(doc, "retrieval_policy", "standard") or "standard").strip().lower()
     risks = set(getattr(doc, "content_risk_tags", ()))
     notes: list[str] = []
-    if policy == "context_only":
+    method_context = str(getattr(doc, "answer_role", "") or "") == "method_context"
+    if policy == "context_only" and method_context:
+        notes.append(
+            "METHOD CONTEXT ONLY: explain conditional relationships and required inputs; "
+            "use a validated calculation tool for supplied-input arithmetic; "
+            "FIELD ACTION: NOT AUTHORIZED"
+        )
+    elif policy == "context_only":
         notes.append(
             "CONTEXT ONLY: use qualitative background only; do not copy numeric thresholds, "
             "rates, product uses, or timing into the answer; FIELD ACTION: NOT AUTHORIZED; "
             "validate against current local guidance"
+        )
+    if method_context:
+        notes.append(
+            "GENERAL METHOD ONLY: explain conditional relationships and required inputs; "
+            "source geography is provenance, not local authority; no local target, "
+            "field observation, current price, nutrient rate, pesticide use or legal permission"
         )
     if str(getattr(doc, "transfer_scope", "") or "").strip().lower() in {
         "cross_border_analogue",
