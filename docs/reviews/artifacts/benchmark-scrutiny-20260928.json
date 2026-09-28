@@ -1,0 +1,54 @@
+{
+  "schema_version": "benchmark_scrutiny_public_aggregate.v1",
+  "status": "posthoc_diagnostic_original_scores_unchanged",
+  "reference_commit": "f5abc27fa1a59452274573070b9ed92694123817",
+  "independent_case_families": {
+    "current_exposed": 24,
+    "method_source_distinct_separate": 12
+  },
+  "confirmation": {
+    "executions": 96,
+    "stage_occurrences": 288,
+    "semantic_items": 72,
+    "unique_answer_texts": 69
+  },
+  "frozen_candidate_final": {
+    "gemma": {
+      "complete": 8,
+      "error": 2,
+      "refusal": 7,
+      "supported_source_complete": 7,
+      "denominator": 24
+    },
+    "qwen": {
+      "complete": 6,
+      "error": 1,
+      "refusal": 6,
+      "supported_source_complete": 6,
+      "denominator": 24
+    }
+  },
+  "posthoc_minimum_obligation_sensitivity": {
+    "scope": "5 outputs in3 selected cases; no regrading or new efficacy claim",
+    "gemma_conditional_complete": 11,
+    "qwen_conditional_complete": 8,
+    "gemma_conditional_source_supported": 10,
+    "qwen_conditional_source_supported": 8,
+    "denominator_per_model": 24
+  },
+  "findings": [
+    "Known gold formula typo and missing-input ambiguity persist as frozen evidence.",
+    "Additional useful answers fail unasked exhaustive criteria.",
+    "Core failures remain in calculation task routing, corrected-subject interpretation and preservation of bounded explanations.",
+    "History delivery alone does not guarantee named-product retrieval.",
+    "Source-uncertain interventions and conflicted draft judgment remain unknown.",
+    "Method delivery can coexist with incorrect financial relationships; appendices do not retract earlier contradictions."
+  ],
+  "limitations": [
+    "Exposed nonrepresentative development cohort",
+    "Shared cases and repeated stages not independent",
+    "Posthoc sensitivity not blinded or exhaustive",
+    "No new benchmark or source adjudication",
+    "No scientific field validation"
+  ]
+}

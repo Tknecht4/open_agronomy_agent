@@ -116,6 +116,14 @@ Fixed ordering, one trial, unresolved source claims and an explicit draft-stage
 judge conflict limit interpretation. Calculator shorthand is covered separately
 by deterministic and app checks; this model cohort does not exercise it.
 
+A subsequent [case and stage audit](https://github.com/Tknecht4/open_agronomy_agent/blob/main/docs/reviews/conversation-integrity-and-learning-loop-20260928.md)
+separates overextended completion criteria from actual task-resolution,
+retrieval and verification failures. Its selected-case minimum-obligation
+sensitivity is post hoc and leaves the frozen scores above unchanged. The
+resulting conversation-integrity repairs are mechanical checks, not a new
+model-quality result. Future experiments must separate required completion,
+optional usefulness, source support and introduced errors.
+
 Benchmark outputs are evidence packages, not product documentation. The public
 packages preserve their contracts, measurements, limits, and regeneration
 instructions without converting an exposed development result into a product

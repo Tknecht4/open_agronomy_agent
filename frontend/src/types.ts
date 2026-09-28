@@ -158,6 +158,7 @@ export type AnswerIntegrityReceipt = {
 export type Turn = {
   turn_id: string
   session_id?: string
+  metadata?: { client_operation_id?: string } & Record<string, unknown>
   parent_turn_id?: string | null
   created_at?: string
   user_message: string

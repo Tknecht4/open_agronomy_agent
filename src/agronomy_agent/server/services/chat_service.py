@@ -7,7 +7,8 @@ import os
 import re
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import nullcontext
+from contextlib import contextmanager, nullcontext
+from threading import Lock, RLock
 from time import perf_counter
 from typing import Any, Callable
 
@@ -356,6 +357,8 @@ def _run_turn_impl(
     trace_options: dict[str, Any],
     session_context: dict[str, Any] | None = None,
     parent_turn_id: str | None = None,
+    client_operation_id: str | None = None,
+    operation_request_sha256: str | None = None,
     profiler: Any | None = None,
     generation_backend: Any | None = None,
     execution_class: str = "product_turn",
@@ -379,9 +382,8 @@ def _run_turn_impl(
         if generation_backend is not None
         else _model_queue_circuit_breaker(settings, mode=mode, model_id=model_to_use)
     )
-    queue_span = profiler.span("model.queue_wait", metadata=queue_circuit) if profiler else nullcontext()
-    with queue_span:
-        pass
+    if profiler:
+        profiler.add_skipped("model.queue_wait", reason="actual_worker_wait_recorded_in_generation_stats")
     generator: Any | None = None
     use_mock_generator = mode == "mock" or model_to_use == "mock"
     model_config = load_model_config(settings.model_config_path)
@@ -412,12 +414,25 @@ def _run_turn_impl(
         not isinstance(session_context, dict)
         or session_context.get("conversation_reference_history_verified") is not False
     )
+    resolution_turns = recent_turns
+    if isinstance(session_context, dict) and "conversation_reference_turn_ids" in session_context:
+        allowed = session_context["conversation_reference_turn_ids"]
+        if not isinstance(allowed, list) or any(not isinstance(item, str) for item in allowed):
+            reference_history_verified = False
+        elif allowed:
+            suffix = recent_turns[-len(allowed):]
+            if [str(item.get("turn_id")) for item in suffix] != allowed:
+                reference_history_verified = False
+            else:
+                resolution_turns = suffix
+        else:
+            resolution_turns = []
     if not typed_tools_enabled or mode in {"baseline", "mock"}:
         conversation_resolution = ConversationResolution(message, "typed_resolution_disabled")
     elif not reference_history_verified:
         conversation_resolution = ConversationResolution(message, "conversation_reference_gap")
     else:
-        conversation_resolution = resolve_numeric_follow_up(message, recent_turns)
+        conversation_resolution = resolve_numeric_follow_up(message, resolution_turns)
     message = conversation_resolution.effective_question
     if queue_circuit and queue_circuit.get("tripped"):
         if profiler:
@@ -1276,9 +1291,12 @@ def _run_turn_impl(
                     else execution_class
                 ),
                 "prompt_hash": _now_hash(messages),
+                **({"client_operation_id": client_operation_id} if client_operation_id else {}),
             },
             feedback={"rating": None, "accepted": None, "failure_tags": [], "evidence_feedback": []},
             event_stream=False,
+            client_operation_id=client_operation_id,
+            operation_request_sha256=operation_request_sha256,
         )
         store.append_event(session_id, "prompt.built", {"turn_id": turn_id, "message_hash": _now_hash(messages)}, turn_id=turn_id)
         store.append_event(session_id, "answer.completed", {"turn_id": turn_id, "latency_ms": latency_ms}, turn_id=turn_id)
@@ -1295,36 +1313,54 @@ def _run_turn_impl(
 
 def execute_agent_request(request: AgentExecutionRequest) -> AgentExecutionResult:
     """Execute and validate one request through the production cockpit core."""
+    with _session_turn_guard(request.store, request.session_id):
+        if request.client_operation_id and request.operation_request_sha256:
+            existing = request.store.get_turn_operation(request.session_id, request.client_operation_id)
+            if existing is not None:
+                if existing["request_sha256"] != request.operation_request_sha256:
+                    raise ConversationOperationConflict("client operation ID was reused with different request data")
+                saved = request.store.get_turn(existing["turn_id"])
+                if saved is None:
+                    raise RuntimeError("client operation points to a missing saved turn")
+                payload = {
+                    "turn_id": existing["turn_id"],
+                    "parent_turn_id": saved.get("parent_turn_id"),
+                    "turn": saved,
+                    "operation_replayed": True,
+                }
+                return AgentExecutionResult.from_run_turn_payload(request, payload)
 
-    payload = _run_turn_impl(
-        store=request.store,
-        settings=request.settings,
-        session_id=request.session_id,
-        message=request.message,
-        mode=request.mode,
-        model_id=request.model_id,
-        rag_config=request.rag_config,
-        max_tokens=request.max_tokens,
-        trace_options=dict(request.trace_options),
-        session_context=(
-            dict(request.session_context)
-            if request.session_context is not None
-            else None
-        ),
-        parent_turn_id=request.parent_turn_id,
-        profiler=request.profiler,
-        generation_backend=request.generation_backend,
-        execution_class=request.execution_class,
-        document_retrieval_enabled=request.document_retrieval_enabled,
-        graph_retrieval_enabled=request.graph_retrieval_enabled,
-        field_context_enabled=request.field_context_enabled,
-        typed_tools_enabled=request.typed_tools_enabled,
-        risk_intervention_enabled=request.risk_intervention_enabled,
-        verifier_enabled=request.verifier_enabled,
-        fallback_enabled=request.fallback_enabled,
-        arm_id=request.arm_id,
-    )
-    return AgentExecutionResult.from_run_turn_payload(request, payload)
+        payload = _run_turn_impl(
+            store=request.store,
+            settings=request.settings,
+            session_id=request.session_id,
+            message=request.message,
+            mode=request.mode,
+            model_id=request.model_id,
+            rag_config=request.rag_config,
+            max_tokens=request.max_tokens,
+            trace_options=dict(request.trace_options),
+            session_context=(
+                dict(request.session_context)
+                if request.session_context is not None
+                else None
+            ),
+            parent_turn_id=request.parent_turn_id,
+            client_operation_id=request.client_operation_id,
+            operation_request_sha256=request.operation_request_sha256,
+            profiler=request.profiler,
+            generation_backend=request.generation_backend,
+            execution_class=request.execution_class,
+            document_retrieval_enabled=request.document_retrieval_enabled,
+            graph_retrieval_enabled=request.graph_retrieval_enabled,
+            field_context_enabled=request.field_context_enabled,
+            typed_tools_enabled=request.typed_tools_enabled,
+            risk_intervention_enabled=request.risk_intervention_enabled,
+            verifier_enabled=request.verifier_enabled,
+            fallback_enabled=request.fallback_enabled,
+            arm_id=request.arm_id,
+        )
+        return AgentExecutionResult.from_run_turn_payload(request, payload)
 
 
 def run_turn(
@@ -1340,6 +1376,8 @@ def run_turn(
     trace_options: dict[str, Any],
     session_context: dict[str, Any] | None = None,
     parent_turn_id: str | None = None,
+    client_operation_id: str | None = None,
+    operation_request_sha256: str | None = None,
     profiler: Any | None = None,
 ) -> dict[str, Any]:
     """Compatibility facade used by the cockpit and replay services."""
@@ -1356,6 +1394,8 @@ def run_turn(
         trace_options=trace_options,
         session_context=session_context,
         parent_turn_id=parent_turn_id,
+        client_operation_id=client_operation_id,
+        operation_request_sha256=operation_request_sha256,
         profiler=profiler,
         execution_class="product_turn",
     )
@@ -5149,3 +5189,30 @@ def _build_graph_snapshot(idx: int, hit: Any) -> dict[str, Any]:
         "authority_role": getattr(hit, "authority_role", "vocabulary_hint"),
         "relation_paths": list(getattr(hit, "relation_paths", ())),
     }
+class ConversationOperationConflict(ValueError):
+    """A client operation identifier was reused for a different request."""
+
+
+_TURN_LOCK_REGISTRY_GUARD = Lock()
+_TURN_LOCKS: dict[tuple[str, str], tuple[RLock, int]] = {}
+
+
+@contextmanager
+def _session_turn_guard(store: TraceStore, session_id: str):
+    """Serialize one session through history read and durable turn commit."""
+    db_path = getattr(store, "db_path", None)
+    storage_identity = str(db_path.resolve()) if db_path is not None else f"object:{id(store)}"
+    key = (storage_identity, session_id)
+    with _TURN_LOCK_REGISTRY_GUARD:
+        lock, users = _TURN_LOCKS.get(key, (RLock(), 0))
+        _TURN_LOCKS[key] = (lock, users + 1)
+    try:
+        with lock:
+            yield
+    finally:
+        with _TURN_LOCK_REGISTRY_GUARD:
+            _, users = _TURN_LOCKS[key]
+            if users == 1:
+                del _TURN_LOCKS[key]
+            else:
+                _TURN_LOCKS[key] = (lock, users - 1)

@@ -96,7 +96,7 @@ from agronomy_agent.server.schemas import (
 from agronomy_agent.server.services.conversation_scope import (
     ConversationScopeError, bind_conversation_context, identity as conversation_identity,
 )
-from agronomy_agent.server.services.chat_service import run_turn
+from agronomy_agent.server.services.chat_service import ConversationOperationConflict, run_turn
 from agronomy_agent.server.services.answer_renderer import render_structured_answer
 from agronomy_agent.server.services.attachment_scanner import (
     AttachmentRejected,
@@ -483,6 +483,31 @@ def _slugify(value: str) -> str:
 
 def _hash_payload(value: Any) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, default=str).encode("utf-8")).hexdigest()
+
+
+def _completed_hosted_reference_turn_ids(
+    messages: list[dict[str, Any]], legacy_recent: list[dict[str, Any]],
+) -> list[str]:
+    """Return only the receipt-linked completed suffix of visible user turns."""
+    ids: list[str] = []
+    position = len(messages) - 1
+    for turn in reversed(legacy_recent):
+        if position < 1:
+            break
+        assistant = messages[position]
+        user = messages[position - 1]
+        metadata = assistant.get("metadata") if isinstance(assistant.get("metadata"), dict) else {}
+        if (
+            assistant.get("actor") != "assistant"
+            or user.get("actor") != "user"
+            or metadata.get("legacy_turn_id") != turn.get("turn_id")
+            or user.get("content") != turn.get("user_message")
+        ):
+            break
+        ids.append(str(turn["turn_id"]))
+        position -= 2
+    ids.reverse()
+    return ids
 
 
 def _field_event_sync_http_error(exc: FieldEventSyncError) -> HTTPException:
@@ -2747,6 +2772,13 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         ]
         return response
 
+    def _require_local_conversation_runtime() -> None:
+        if not isinstance(store, TraceStore):
+            raise HTTPException(status_code=501, detail={
+                "code": "conversation_storage_unavailable",
+                "message": "Saved conversation routes require the supported local SQLite runtime.",
+            })
+
     def _require_owned_session(
         request: Request,
         session_id: str,
@@ -2755,6 +2787,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         include_turns: bool = True,
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         resolved_user = user or _demo_field_user(request)
+        _require_local_conversation_runtime()
         session = store.get_session(session_id, include_turns=include_turns)
         if not session or not _session_visible_to_user(session, request=request, user=resolved_user):
             raise HTTPException(status_code=404, detail="session not found")
@@ -5257,27 +5290,17 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
 
         with profiler.span("thread.persist_trace", metadata={"phase": "user_message"}):
             metadata, legacy_session_id = ensure_legacy_session(thread)
-            # A failed streamed request can leave a visible user message without
-            # a legacy turn. References may use legacy turns only while the two
-            # user-message histories agree through the bounded active window.
-            visible_user_messages = [
-                item["content"] for item in thread.get("messages", [])
-                if item.get("actor") == "user"
-            ]
-            legacy_turn_count = store.count_session_turns(
-                legacy_session_id, exclude_replays=True,
-            )
-            compare_count = min(8, len(visible_user_messages))
+            # A failed streamed request leaves a visible user message without
+            # a legacy turn. Only completed adjacent pairs with exact turn IDs
+            # can anchor references; a later explicit turn restores a suffix.
             legacy_recent = store.get_recent_session_turns(
-                legacy_session_id, limit=max(1, compare_count), exclude_replays=True,
+                legacy_session_id, limit=8, exclude_replays=True,
+            )
+            reference_turn_ids = _completed_hosted_reference_turn_ids(
+                thread.get("messages", []), legacy_recent,
             )
             conversation_reference_history_verified = (
-                len(visible_user_messages) == legacy_turn_count
-                and (
-                    compare_count == 0
-                    or visible_user_messages[-compare_count:]
-                    == [item["user_message"] for item in legacy_recent[-compare_count:]]
-                )
+                bool(reference_turn_ids) or not thread.get("messages")
             )
             user_message = store.create_phase4_message(
                 thread=thread,
@@ -5401,6 +5424,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                     "field_context": active_field_context,
                     "workspace_retrieved_docs": workspace_retrieved_docs,
                     "conversation_reference_history_verified": conversation_reference_history_verified,
+                    "conversation_reference_turn_ids": reference_turn_ids,
                 },
                 profiler=profiler,
             )
@@ -6248,6 +6272,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         include_archived: bool = False,
         include_turns: bool = True,
     ) -> list[dict[str, Any]]:
+        _require_local_conversation_runtime()
         user = _demo_field_user(request)
         sessions = (
             store.list_sessions(include_archived=include_archived)
@@ -6797,6 +6822,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
 
     @app.post("/api/sessions")
     async def create_session(payload: CreateSessionRequest, request: Request) -> dict[str, Any]:
+        _require_local_conversation_runtime()
         user = _demo_field_user(request)
         context = payload.context.model_dump()
         try:
@@ -6876,8 +6902,10 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             )
 
         profiler = TraceProfiler()
+        operation_id = str(payload.client_operation_id) if payload.client_operation_id else None
+        operation_hash = _hash_payload(payload.model_dump(mode="json", exclude={"client_operation_id"})) if operation_id else None
         try:
-            result = run_turn(
+            result = await asyncio.to_thread(run_turn,
                 store=store,
                 settings=settings,
                 session_id=session_id,
@@ -6889,7 +6917,11 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 trace_options=payload.trace_options.model_dump(),
                 session_context=authorized_session_context,
                 profiler=profiler,
+                client_operation_id=operation_id,
+                operation_request_sha256=operation_hash,
             )
+        except ConversationOperationConflict as exc:
+            raise HTTPException(status_code=409, detail={"code": "operation_conflict", "message": str(exc)}) from exc
         except LocalModelSnapshotUnavailable as exc:
             raise HTTPException(
                 status_code=503,
@@ -6903,6 +6935,9 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         turn = result.get("turn") if isinstance(result, dict) else None
         if not isinstance(turn, dict):
             raise HTTPException(status_code=500, detail="turn persistence failed")
+        if result.get("operation_replayed"):
+            turn["knowledge_coverage"] = _answer_time_knowledge_coverage(turn.get("trace"))
+            return {"turn_id": result["turn_id"], "turn": turn}
         profiler.add_observed(
             "http.request",
             start_ns=profiler.started_ns,
@@ -6957,6 +6992,12 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             )
 
         model_id = None if payload.mode == "mock" else selected_model_id
+        operation_id = str(payload.client_operation_id) if payload.client_operation_id else None
+        operation_hash = _hash_payload(payload.model_dump(mode="json", exclude={"client_operation_id"})) if operation_id else None
+        if operation_id and operation_hash:
+            existing_operation = store.get_turn_operation(session_id, operation_id)
+            if existing_operation and existing_operation["request_sha256"] != operation_hash:
+                raise HTTPException(status_code=409, detail={"code": "operation_conflict", "message": "client operation ID was reused with different request data"})
 
         async def event_stream() -> Any:
             def sse(event_name: str, data: dict[str, Any]) -> str:
@@ -7001,6 +7042,8 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                     trace_options=payload.trace_options.model_dump(),
                     session_context=authorized_session_context,
                     profiler=profiler,
+                    client_operation_id=operation_id,
+                    operation_request_sha256=operation_hash,
                 )
             )
             heartbeat_count = 0
@@ -7033,6 +7076,9 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
 
             try:
                 result = task.result()
+            except ConversationOperationConflict as exc:
+                yield sse("error", {"code": "operation_conflict", "message": str(exc), "label": "Request conflict", "elapsed_ms": int((time.perf_counter() - started) * 1000)})
+                return
             except LocalModelSnapshotUnavailable as exc:
                 yield sse(
                     "error",
@@ -7068,35 +7114,35 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 return
             turn = result["turn"] if isinstance(result.get("turn"), dict) else {}
             answer = str(turn.get("answer") or "")
-            profiler.add_observed(
-                "http.request",
-                start_ns=profiler.started_ns,
-                metadata={"path": f"/api/sessions/{session_id}/turns/stream", "mode": payload.mode},
-            )
-            profiler.add_observed(
-                "ui.stream_response",
-                start_ns=stream_started_ns,
-                metadata={"chunk_size": 48},
-            )
-            phase5_metrics = persist_phase5_turn_record(
-                profiler=profiler,
-                thread_id=session_id,
-                turn_id=str(turn_id),
-                user_id=None,
-                workspace_id=None,
-                answer_text=answer,
-                trace=turn.get("trace", {}) or {},
-                system_state=turn.get("system_state", {}) or {},
-                model_id=str(
-                    (turn.get("system_state") or {}).get("model_id")
-                    or selected_model_id
-                    or settings.default_model_id,
-                ),
-                rag_config_id=selected_rag_config,
-                max_tokens=payload.max_tokens,
-            )
-            turn.setdefault("metadata", {})["phase5_trace_id"] = phase5_metrics["trace_id"]
-            turn["knowledge_coverage"] = _answer_time_knowledge_coverage(turn.get("trace"))
+            if result.get("operation_replayed"):
+                turn["knowledge_coverage"] = _answer_time_knowledge_coverage(turn.get("trace"))
+                phase5_metrics = {"trace_id": None}
+            else:
+                profiler.add_observed(
+                    "http.request",
+                    start_ns=profiler.started_ns,
+                    metadata={"path": f"/api/sessions/{session_id}/turns/stream", "mode": payload.mode},
+                )
+                profiler.add_skipped("ui.stream_response", reason="bytes_sent_after_metric_flush")
+                phase5_metrics = persist_phase5_turn_record(
+                    profiler=profiler,
+                    thread_id=session_id,
+                    turn_id=str(turn_id),
+                    user_id=None,
+                    workspace_id=None,
+                    answer_text=answer,
+                    trace=turn.get("trace", {}) or {},
+                    system_state=turn.get("system_state", {}) or {},
+                    model_id=str(
+                        (turn.get("system_state") or {}).get("model_id")
+                        or selected_model_id
+                        or settings.default_model_id,
+                    ),
+                    rag_config_id=selected_rag_config,
+                    max_tokens=payload.max_tokens,
+                )
+                turn.setdefault("metadata", {})["phase5_trace_id"] = phase5_metrics["trace_id"]
+                turn["knowledge_coverage"] = _answer_time_knowledge_coverage(turn.get("trace"))
 
             while not progress_queue.empty():
                 progress_event = _stream_progress_event_from_span(

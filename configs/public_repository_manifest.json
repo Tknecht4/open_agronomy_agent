@@ -713,7 +713,10 @@
     "docs/reviews/system-validation-20260928.md",
     "docs/reviews/residual-polish-checkpoint-20260928.md",
     "docs/reviews/artifacts/residual-polish-20260928/summary.json",
-    "docs/reviews/artifacts/residual-polish-20260928/workspace-media.json"
+    "docs/reviews/artifacts/residual-polish-20260928/workspace-media.json",
+    "docs/reviews/conversation-integrity-and-learning-loop-20260928.md",
+    "docs/reviews/artifacts/benchmark-scrutiny-20260928.json",
+    "tests/test_conversation_integrity.py"
   ],
   "trees": [
     "src",

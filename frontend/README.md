@@ -27,6 +27,8 @@ Inputs are API responses, user-entered questions/field records, map geometry, pe
 
 General questions do not require a fabricated field. The field wizard requires a name and accepts either a reviewed pin/boundary/import or **No location yet · data only**; crop and region remain optional. Missing geometry stays unknown. Imported geometry is reviewed before persistence. Regional overlays and calculated polygon area are labelled context/estimates, never field measurements. **Sources & checks** opens answer evidence without hiding the question or saved answer.
 
+If the user switches fields, selects another saved conversation, or starts a new chat while an answer stream is pending, late progress and answer events cannot overwrite the new view. The original request may still complete on the server; reopening its saved conversation refreshes the persisted turn. After an interrupted stream, the question remains in the composer. Submitting the unchanged request refreshes the session first and reuses its operation ID, so the server can return the same saved turn instead of creating a duplicate.
+
 ## Invariants
 
 - Never present map context as sampled field truth.

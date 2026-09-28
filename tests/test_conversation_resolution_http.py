@@ -138,3 +138,13 @@ def test_failed_visible_stream_turn_breaks_legacy_reference_chain(tmp_path, monk
     assert resolution["effective_question"] == "What about 200 instead?"
     assert resolution["source_turn_id"] is None
     assert final_trace["tool_invocations"] == []
+
+    explicit = ask("Convert 150 lb/ac to kg/ha")
+    assert explicit.status_code == 200
+    recovered = ask("What about 200 instead?")
+    assert recovered.status_code == 200
+    assert "224.17 kg/ha" in recovered.text
+    latest = store.get_recent_session_turns(legacy_id, limit=1)[0]
+    recovered_resolution = store.get_turn(latest["turn_id"])["trace"]["metadata"]["conversation_resolution"]
+    assert recovered_resolution["status"] == "resolved_unique_user_number"
+    assert recovered_resolution["effective_question"] == "Convert 200 lb/ac to kg/ha"

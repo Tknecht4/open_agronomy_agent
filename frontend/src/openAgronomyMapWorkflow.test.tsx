@@ -2821,6 +2821,261 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.queryByText('Partial')).not.toBeInTheDocument()
   })
 
+  it('refreshes before retry and reuses the operation ID for the same submitted payload', async () => {
+    const session = { session_id: 'session-retry', turns_included: true,
+      context: { field_conversation_key: 'general' }, turns: [] }
+    const baseFetch = installFetchMock(emptyDemoFields, uploadPayload, [session])
+    const baseImplementation = baseFetch.getMockImplementation()!
+    let posts = 0
+    baseFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url === '/api/sessions/session-retry') return jsonResponse(session)
+      if (url === '/api/sessions/session-retry/turns/stream' && init?.method === 'POST') {
+        posts += 1
+        if (posts === 1) return { ok: true, status: 200, body: null, text: async () => '' } as Response
+        const request = JSON.parse(String(init.body || '{}'))
+        const turn = { turn_id: 'retried-turn', user_message: request.message, answer: 'One saved answer',
+          metadata: { client_operation_id: request.client_operation_id },
+          trace: { retrieved_docs: [], graph_hits: [], tool_invocations: [] } }
+        return { ok: true, status: 200, body: null,
+          text: async () => `event: answer.completed\ndata: ${JSON.stringify({ turn_id: turn.turn_id, turn })}\n\n` } as Response
+      }
+      return baseImplementation(input, init)
+    })
+    render(<OpenAgronomyApp />)
+    expect(await screen.findByText('Local runtime · connected mode')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Ask about this field'), { target: { value: 'Can I review this field?' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Ask' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('connection ended before the answer receipt arrived')
+    expect(baseFetch.mock.calls.filter(([url]) => String(url) === '/api/sessions/session-retry')).toHaveLength(0)
+    fireEvent.click(screen.getByRole('button', { name: 'Ask' }))
+    await waitFor(() => expect(posts).toBe(2))
+    expect(await screen.findByText('One saved answer')).toBeInTheDocument()
+    const submitted = baseFetch.mock.calls.filter(([url, init]) =>
+      String(url) === '/api/sessions/session-retry/turns/stream' && init?.method === 'POST')
+      .map(([, init]) => JSON.parse(String(init?.body || '{}')))
+    expect(submitted).toHaveLength(2)
+    expect(submitted[0].client_operation_id).toMatch(/^[0-9a-f-]{36}$/)
+    expect(submitted[1].client_operation_id).toBe(submitted[0].client_operation_id)
+    expect(baseFetch.mock.calls.filter(([url]) => String(url) === '/api/sessions/session-retry')).toHaveLength(1)
+    expect(screen.getAllByText('One saved answer')).toHaveLength(1)
+  })
+
+  it('reconciles unresolved operation IDs at the memory bound before allowing another distinct request', async () => {
+    const session = { session_id: 'session-unresolved', turns_included: true,
+      context: { field_conversation_key: 'general' }, turns: [] }
+    const baseFetch = installFetchMock(emptyDemoFields, uploadPayload, [session])
+    const baseImplementation = baseFetch.getMockImplementation()!
+    let posts = 0
+    let refreshes = 0
+    baseFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url === '/api/sessions/session-unresolved') {
+        refreshes += 1
+        return jsonResponse(session)
+      }
+      if (url === '/api/sessions/session-unresolved/turns/stream' && init?.method === 'POST') {
+        posts += 1
+        return { ok: true, status: 200, body: null, text: async () => '' } as Response
+      }
+      return baseImplementation(input, init)
+    })
+    render(<OpenAgronomyApp />)
+    expect(await screen.findByText('Local runtime · connected mode')).toBeInTheDocument()
+    for (let index = 0; index < 8; index += 1) {
+      fireEvent.change(screen.getByLabelText('Ask about this field'), { target: { value: `Unresolved question ${index}` } })
+      fireEvent.click(screen.getByRole('button', { name: 'Ask' }))
+      await waitFor(() => expect(posts).toBe(index + 1))
+      expect(await screen.findByRole('alert')).toHaveTextContent('connection ended before the answer receipt arrived')
+    }
+    fireEvent.change(screen.getByLabelText('Ask about this field'), { target: { value: 'Ninth question' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Ask' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Eight earlier requests still have no saved answer receipt')
+    expect(refreshes).toBe(1)
+    expect(posts).toBe(8)
+    const firstOperation = JSON.parse(String(baseFetch.mock.calls.find(([url, init]) =>
+      String(url) === '/api/sessions/session-unresolved/turns/stream' && init?.method === 'POST')?.[1]?.body || '{}')).client_operation_id
+    fireEvent.change(screen.getByLabelText('Ask about this field'), { target: { value: 'Unresolved question 0' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Ask' }))
+    await waitFor(() => expect(posts).toBe(9))
+    const retryOperation = JSON.parse(String(baseFetch.mock.calls.filter(([url, init]) =>
+      String(url) === '/api/sessions/session-unresolved/turns/stream' && init?.method === 'POST').at(-1)?.[1]?.body || '{}')).client_operation_id
+    expect(retryOperation).toBe(firstOperation)
+  })
+
+  it('rejects a completed turn carrying a different session identity', async () => {
+    const session = { session_id: 'session-bound', turns_included: true,
+      context: { field_conversation_key: 'general' }, turns: [] }
+    const baseFetch = installFetchMock(emptyDemoFields, uploadPayload, [session])
+    const baseImplementation = baseFetch.getMockImplementation()!
+    baseFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === '/api/sessions/session-bound/turns/stream' && init?.method === 'POST') {
+        return { ok: true, status: 200, body: null,
+          text: async () => `event: answer.completed\ndata: ${JSON.stringify({ turn_id: 'wrong-turn', turn: {
+            turn_id: 'wrong-turn', session_id: 'another-session', user_message: 'Bound question', answer: 'Wrong session answer',
+          } })}\n\n` } as Response
+      }
+      return baseImplementation(input, init)
+    })
+    render(<OpenAgronomyApp />)
+    expect(await screen.findByText('Local runtime · connected mode')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Ask about this field'), { target: { value: 'Bound question' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Ask' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('answer receipt belongs to a different request')
+    expect(screen.queryByText('Wrong session answer')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Ask about this field')).toHaveValue('Bound question')
+  })
+
+  it('ignores late stream events after switching fields and reloads the saved source conversation', async () => {
+    const baseField = {
+      crop: 'canola', region: 'Leduc County', jurisdiction: 'Alberta', acres: '', concern: '', notes: '',
+      geometry: { kind: 'point', point: { lat: 53.3, lon: -113.6 } }, regionalContext: '',
+      geoPriors: null, sourceBoundary: 'Regional context is not field truth.',
+      createdAt: '2026-07-20T12:00:00Z', storageMode: 'account_workspace',
+    }
+    const alpha = { session_id: 'session-alpha-stream', turns_included: true,
+      context: { field_context_id: 'field-alpha-stream', field_conversation_key: 'field:field-alpha-stream' }, turns: [] }
+    const beta = { session_id: 'session-beta-stream', turns_included: true,
+      context: { field_context_id: 'field-beta-stream', field_conversation_key: 'field:field-beta-stream' }, turns: [] }
+    const baseFetch = installFetchMock({ ...emptyDemoFields, fields: [
+      { ...baseField, id: 'field-alpha-stream', field_context_id: 'field-alpha-stream', name: 'Alpha stream field' },
+      { ...baseField, id: 'field-beta-stream', field_context_id: 'field-beta-stream', name: 'Beta stream field' },
+    ] }, uploadPayload, [alpha, beta])
+    const baseImplementation = baseFetch.getMockImplementation()!
+    let controller!: ReadableStreamDefaultController<Uint8Array>
+    const stream = new ReadableStream<Uint8Array>({ start(value) { controller = value } })
+    const encode = (event: string, payload: unknown) => new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`)
+    let savedAlphaTurns: Array<Record<string, unknown>> = []
+    baseFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url === '/api/sessions/session-alpha-stream/turns/stream' && init?.method === 'POST') {
+        return { ok: true, status: 200, body: stream, text: async () => '' } as Response
+      }
+      if (url === '/api/sessions/session-alpha-stream') return jsonResponse({ ...alpha, turns: savedAlphaTurns })
+      return baseImplementation(input, init)
+    })
+    render(<OpenAgronomyApp />)
+    openPrimaryPage('Fields')
+    fireEvent.click(await screen.findByRole('button', { name: /^Alpha stream field/ }))
+    openPrimaryPage('Map')
+    fireEvent.change(screen.getByLabelText('Ask about this field'), { target: { value: 'Alpha-only question' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Ask' }))
+    await waitFor(() => expect(baseFetch.mock.calls.some(([url]) => String(url) === '/api/sessions/session-alpha-stream/turns/stream')).toBe(true))
+    await act(async () => { controller.enqueue(encode('generation.token', { token: 'Early alpha draft' })) })
+    expect(screen.getByText('Early alpha draft')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Active field'), { target: { value: 'field-beta-stream' } })
+    expect(screen.getByLabelText('Active field')).toHaveValue('field-beta-stream')
+    expect(screen.queryByText('Early alpha draft')).not.toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Ask about this field'), { target: { value: 'Beta-only question' } })
+    expect(screen.getByRole('button', { name: 'Ask' })).toBeEnabled()
+    const requestBody = JSON.parse(String(baseFetch.mock.calls.find(([url]) =>
+      String(url) === '/api/sessions/session-alpha-stream/turns/stream')?.[1]?.body || '{}'))
+    const savedTurn = { turn_id: 'alpha-delayed-turn', user_message: 'Alpha-only question',
+      answer: 'Saved alpha answer', metadata: { client_operation_id: requestBody.client_operation_id },
+      trace: { retrieved_docs: [], graph_hits: [], tool_invocations: [] } }
+    fireEvent.change(screen.getByLabelText('Active field'), { target: { value: 'field-alpha-stream' } })
+    await waitFor(() => expect(baseFetch.mock.calls.some(([url]) => String(url) === '/api/sessions/session-alpha-stream')).toBe(true))
+    expect(screen.queryByText('Saved alpha answer')).not.toBeInTheDocument()
+    savedAlphaTurns = [savedTurn]
+    await act(async () => {
+      controller.enqueue(encode('progress.step', { label: 'Late alpha progress', progress: 90 }))
+      controller.enqueue(encode('generation.token', { token: 'Late alpha token' }))
+      controller.enqueue(encode('answer.completed', { turn_id: savedTurn.turn_id, turn: savedTurn }))
+      controller.enqueue(encode('error', { message: 'Late alpha error' }))
+      controller.close()
+    })
+    expect(screen.queryByText('Late alpha token')).not.toBeInTheDocument()
+    expect(screen.queryByText('Late alpha error')).not.toBeInTheDocument()
+    expect(await screen.findByText('Saved alpha answer')).toBeInTheDocument()
+    expect(screen.queryByText('Late alpha error')).not.toBeInTheDocument()
+  })
+
+  it('keeps a new chat working when the previous stream finishes late', async () => {
+    const oldSession = { session_id: 'session-old-stream', turns_included: true,
+      context: { field_conversation_key: 'general' }, turns: [] }
+    const baseFetch = installFetchMock(emptyDemoFields, uploadPayload, [oldSession])
+    const baseImplementation = baseFetch.getMockImplementation()!
+    let oldController!: ReadableStreamDefaultController<Uint8Array>
+    let newController!: ReadableStreamDefaultController<Uint8Array>
+    const oldStream = new ReadableStream<Uint8Array>({ start(value) { oldController = value } })
+    const newStream = new ReadableStream<Uint8Array>({ start(value) { newController = value } })
+    const encode = (event: string, payload: unknown) => new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`)
+    baseFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url === '/api/sessions' && init?.method === 'POST') {
+        const payload = JSON.parse(String(init.body || '{}'))
+        return jsonResponse({ session_id: 'session-new-stream', context: payload.context, turns: [] })
+      }
+      if (url === '/api/sessions/session-old-stream/turns/stream') {
+        return { ok: true, status: 200, body: oldStream, text: async () => '' } as Response
+      }
+      if (url === '/api/sessions/session-new-stream/turns/stream') {
+        return { ok: true, status: 200, body: newStream, text: async () => '' } as Response
+      }
+      return baseImplementation(input, init)
+    })
+    render(<OpenAgronomyApp />)
+    expect(await screen.findByText('Local runtime · connected mode')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Ask about this field'), { target: { value: 'Old question' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Ask' }))
+    await waitFor(() => expect(baseFetch.mock.calls.some(([url]) => String(url) === '/api/sessions/session-old-stream/turns/stream')).toBe(true))
+    fireEvent.click(screen.getByTestId('reset-chat'))
+    fireEvent.change(screen.getByLabelText('Ask about this field'), { target: { value: 'New question' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Ask' }))
+    await waitFor(() => expect(baseFetch.mock.calls.some(([url]) => String(url) === '/api/sessions/session-new-stream/turns/stream')).toBe(true))
+    await act(async () => {
+      oldController.enqueue(encode('progress.step', { label: 'Old progress', progress: 90 }))
+      oldController.enqueue(encode('generation.token', { token: 'Old token' }))
+      oldController.enqueue(encode('answer.completed', { turn: { turn_id: 'old-late', user_message: 'Old question', answer: 'Old answer' } }))
+      oldController.enqueue(encode('error', { message: 'Old error' }))
+      oldController.close()
+    })
+    expect(screen.getAllByText('New question').length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: 'Working' })).toBeDisabled()
+    expect(screen.queryByText('Old answer')).not.toBeInTheDocument()
+    expect(screen.queryByText('Old token')).not.toBeInTheDocument()
+    expect(screen.queryByText('Old error')).not.toBeInTheDocument()
+    await act(async () => {
+      newController.enqueue(encode('answer.completed', { turn: {
+        turn_id: 'new-completed', user_message: 'New question', answer: 'New answer',
+        trace: { retrieved_docs: [], graph_hits: [], tool_invocations: [] },
+      } }))
+      newController.close()
+    })
+    expect(await screen.findByText('New answer')).toBeInTheDocument()
+    expect(screen.queryByText('Old answer')).not.toBeInTheDocument()
+  })
+
+  it('cancels an unread response body when the user leaves before fetch resolves', async () => {
+    const session = { session_id: 'session-late-response', turns_included: true,
+      context: { field_conversation_key: 'general' }, turns: [] }
+    const baseFetch = installFetchMock(emptyDemoFields, uploadPayload, [session])
+    const baseImplementation = baseFetch.getMockImplementation()!
+    let releaseResponse!: (response: Response) => void
+    const pendingResponse = new Promise<Response>(resolve => { releaseResponse = resolve })
+    const cancel = vi.fn(async () => {})
+    baseFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === '/api/sessions/session-late-response/turns/stream' && init?.method === 'POST') {
+        return pendingResponse
+      }
+      return baseImplementation(input, init)
+    })
+    render(<OpenAgronomyApp />)
+    expect(await screen.findByText('Local runtime · connected mode')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Ask about this field'), { target: { value: 'Question before switch' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Ask' }))
+    await waitFor(() => expect(baseFetch.mock.calls.some(([url]) => String(url) === '/api/sessions/session-late-response/turns/stream')).toBe(true))
+    fireEvent.click(screen.getByTestId('reset-chat'))
+    await act(async () => {
+      releaseResponse({ ok: true, status: 200, body: { cancel }, text: async () => '' } as unknown as Response)
+      await pendingResponse
+    })
+    expect(cancel).toHaveBeenCalledTimes(1)
+    expect(screen.queryByText('Question before switch')).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
   it('ignores a delayed conversation refresh after switching fields or starting a new chat', async () => {
     const baseField = {
       crop: 'canola', region: 'Leduc County', jurisdiction: 'Alberta', acres: '', concern: '', notes: '',

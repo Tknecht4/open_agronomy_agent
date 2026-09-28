@@ -104,10 +104,31 @@ stay unresolved. The original user text is saved unchanged; the effective
 question, source turn and policy are recorded in the trace and execution hashes.
 The current tool recomputes the result, independent of the prior model's success.
 Typed-tool ablations and baseline modes disable this interpretation. The legacy
-stream bridge also disables it when visible user messages and retained turns
-disagree, so a failed visible topic change cannot be silently skipped. Such a
-chat requires complete requests or a fresh chat; the guard does not reconcile
-the missing history.
+stream bridge resolves references only from a contiguous suffix of completed
+visible user/assistant pairs linked to saved turn IDs. A failed visible message
+blocks the immediate follow-up; a later explicit completed calculation can
+establish a fresh antecedent without deleting the failed message. Matching text
+alone does not establish lineage.
+
+Production turns for one in-process session are serialized from history read
+through durable commit using the SQLite path and session identity; other sessions
+can progress independently, including when separate store handles share that
+path in one process. The optional
+`client_operation_id` (UUID) on either `/api/sessions/{id}/turns` route binds a
+submission to its exact request payload. A retry with the same ID and payload
+returns the original completed turn, including its ID in turn metadata. A reused
+ID with different payload returns `operation_conflict` (HTTP 409 for a saved
+operation; an in-flight stream can emit the same error event). The operation
+mapping and turn are committed atomically. A dropped stream is not evidence
+that model work stopped; refresh the saved conversation before retrying. The
+ordering lock is process-local, consistent with the supported single-process
+local runtime; cross-process deployment would need a database coordination
+contract before claiming the same ordering behavior. The retained Postgres
+runtime does not implement saved conversation persistence; those endpoints
+return `conversation_storage_unavailable` (HTTP 501) rather than pretending
+that the SQLite operation mapping applies there. SQLite backup/restore carries
+the mapping with the database snapshot. There is no session-deletion API;
+archiving leaves turns and operation receipts available.
 
 Cache scope is an opaque hash of session identity plus draft/editor role. Cache
 entries also bind model revision/snapshot and KV configuration, with aggregate

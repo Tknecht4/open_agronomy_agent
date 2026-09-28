@@ -271,6 +271,7 @@ class TraceOptions(BaseModel):
 class CreateTurnRequest(BaseModel):
     message: str
     mode: Mode
+    client_operation_id: UUID | None = None
     model_id: str | None = None
     rag_config: str | None = None
     max_tokens: int = 360
