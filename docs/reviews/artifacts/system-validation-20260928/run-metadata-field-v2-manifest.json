@@ -1,0 +1,63 @@
+{
+  "archive": "run-metadata-field-v2.tar.gz",
+  "boundary": "Exact native cell_plan.json and run_manifest.json bytes for four retained runs. No raw traces, SQLite, model weights, private balances, or grades. Pair with separately hash-bound public raw exports.",
+  "bytes": 40691,
+  "files": {
+    "outputs/system-validation-20260928/colab/results-gemma-field-v2/outputs/gemma-field-v2-192/cell_plan.json": {
+      "bytes": 25731,
+      "sha256": "e9f2a586204613d6b5f108bad07a429fec320cc84fc419257fac58ac5f3421b7"
+    },
+    "outputs/system-validation-20260928/colab/results-gemma-field-v2/outputs/gemma-field-v2-192/run_manifest.json": {
+      "bytes": 22188,
+      "sha256": "2c7644eca5bbebc35244da0fadb6e022abd1c3852b72f106e8b83dc2ca7de2f8"
+    },
+    "outputs/system-validation-20260928/colab/results-qwen-field-v2/outputs/qwen-field-v2-96/cell_plan.json": {
+      "bytes": 12291,
+      "sha256": "3fa5f30ab0e527dd379e8c3d4f165acf31fbb524755ec6b5e8e6fa74eded2012"
+    },
+    "outputs/system-validation-20260928/colab/results-qwen-field-v2/outputs/qwen-field-v2-96/run_manifest.json": {
+      "bytes": 22201,
+      "sha256": "2bf0f4218d7bb23bbaa7f6bcb7fc81f8a3361adb8ad77ce68801f10775610989"
+    },
+    "outputs/system-validation-20260928/colab/results-qwen-partial-v1/outputs/qwen-retrieval-96/cell_plan.json": {
+      "bytes": 12291,
+      "sha256": "3fa5f30ab0e527dd379e8c3d4f165acf31fbb524755ec6b5e8e6fa74eded2012"
+    },
+    "outputs/system-validation-20260928/colab/results-qwen-partial-v1/outputs/qwen-retrieval-96/run_manifest.json": {
+      "bytes": 22122,
+      "sha256": "b2d7c72598b94659eb679bfd09b4654476f02d89c463d12e1b1a934d09c4d551"
+    },
+    "outputs/system-validation-20260928/colab/results-v1/outputs/gemma-retrieval-192/cell_plan.json": {
+      "bytes": 25731,
+      "sha256": "e9f2a586204613d6b5f108bad07a429fec320cc84fc419257fac58ac5f3421b7"
+    },
+    "outputs/system-validation-20260928/colab/results-v1/outputs/gemma-retrieval-192/run_manifest.json": {
+      "bytes": 22109,
+      "sha256": "f69befef8191f39b556ec4ba1a5ba79a7209845c1d022365923b93d58bf2e3b8"
+    }
+  },
+  "runs": {
+    "gemma-field-v2": {
+      "native_run_dir": "outputs/system-validation-20260928/colab/results-gemma-field-v2/outputs/gemma-field-v2-192",
+      "raw_receipt_sha256": "3d9b955128c4591cc5863c77c7d418bf4915b713e314e56677c9640060b2007a",
+      "run_sha256": "193f5acd1959b1d75b1957ec43046b5d971ce945795fbd1eb6f9aa934e12cb61"
+    },
+    "gemma-v1": {
+      "native_run_dir": "outputs/system-validation-20260928/colab/results-v1/outputs/gemma-retrieval-192",
+      "raw_receipt_sha256": "bd3f766a31277eb5d726d38fa9ff4f720fb76df445207081e66dc651a8425c8c",
+      "run_sha256": "1b462845b341872493f9b5cd3979e77e43e40ee0ce11104f4dfcf2f555523e31"
+    },
+    "qwen-field-v2": {
+      "native_run_dir": "outputs/system-validation-20260928/colab/results-qwen-field-v2/outputs/qwen-field-v2-96",
+      "raw_receipt_sha256": "cded7d105684f6f70fe2e025194d24016eb69a38e7345188f411badce6d93fc4",
+      "run_sha256": "ce9b317bbf014577f240edd6efaf6733d1df32a02c4cef7c9c8ecd07fdd08d4f"
+    },
+    "qwen-v1-partial": {
+      "native_run_dir": "outputs/system-validation-20260928/colab/results-qwen-partial-v1/outputs/qwen-retrieval-96",
+      "raw_receipt_sha256": "ad37199a3f2d53df36231cc3fb335dfdc306cfe39e3d80cfaa329a5ed35e90e8",
+      "run_sha256": "75abd58415630a8125a79353e16f08397608f2a8f44564744fea085d82adb969"
+    }
+  },
+  "schema_version": "system_validation_field_v2_run_metadata_manifest.v1",
+  "sha256": "b4d24219bc89cfefc7855835e277082b55b34c1a67ff1c343295fe4a376dcc9a"
+}

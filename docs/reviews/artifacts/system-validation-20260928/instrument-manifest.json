@@ -1,0 +1,52 @@
+{
+  "archive": "instrument.tar.gz",
+  "sha256": "17f0ef2f17c3147e5dc194f7009f9d30d4f556fc305ed532feb9dffe0dc6248c",
+  "bytes": 34437,
+  "files": {
+    "outputs/system-validation-20260928/runner/run_retrieval_2x2.py": {
+      "sha256": "da9d533bca463ec17d3a0a2d99eeef82c3dc177d4445978a539175902926ae9b",
+      "bytes": 33329
+    },
+    "outputs/system-validation-20260928/runner/runtime_cases.json": {
+      "sha256": "b1ae061a306d920cc2536fdfa6eba38a2b6eab19cbc27f57924d461b2b2178cb",
+      "bytes": 12364
+    },
+    "outputs/system-validation-20260928/runner/runtime_cases.json.sha256": {
+      "sha256": "e2469b24fc63c02d85a2610e2e1593146c0a8c058e4f57b2393efa7f53503657",
+      "bytes": 65
+    },
+    "outputs/system-validation-20260928/runner/audit_preflight.py": {
+      "sha256": "c6f791c10c08bcfb93539b4df9633626baa4e11225d6911e7a18e737ae91e4e1",
+      "bytes": 4650
+    },
+    "outputs/system-validation-20260928/runner/README.md": {
+      "sha256": "36e7e495da3e730653d99baef84db4eab0618feab578380f67c7e21b7f81e521",
+      "bytes": 7542
+    },
+    "outputs/system-validation-20260928/runner/grading_local.json": {
+      "sha256": "9c467ad2183925dda509b43f3c388d83ef1a007843eeb8ef0c560d17f0fff76d",
+      "bytes": 25109
+    },
+    "outputs/system-validation-20260928/runner/grading_local.json.sha256": {
+      "sha256": "c30c7db429f3a4f2df09b25d6a48c846c6db4b161348b72ba8696b1a896435c9",
+      "bytes": 65
+    },
+    "outputs/system-validation-20260928/cohort/table_setup.py": {
+      "sha256": "c0e0dc3927deb27664ce73559191cd42e72e10350742f63fd02cdfc1e42191b2",
+      "bytes": 7526
+    },
+    "outputs/system-validation-20260928/cohort/cohort.json": {
+      "sha256": "1d7165c4252f8a38f22d60bf56c44a1b96de67342a608d653d3963309b98c4dc",
+      "bytes": 43887
+    },
+    "outputs/system-validation-20260928/cohort/manifest.json": {
+      "sha256": "90db579b49f92bdeb37ecad0b9573d4ca47279c37af582581853534928d54b4a",
+      "bytes": 5872
+    },
+    "outputs/system-validation-20260928/cohort/README.md": {
+      "sha256": "99768616795db8c6d197399873f4a1d385385ea32e1d0cb555f932c21b4d094e",
+      "bytes": 3222
+    }
+  },
+  "boundary": "Exposed development evaluation artifact. Gold/rubrics must remain offline for grading; never enter runtime retrieval or training. Extract at repository root to reconstruct the original ignored diagnostic paths."
+}

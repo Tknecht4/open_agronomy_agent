@@ -1,0 +1,196 @@
+{
+  "absent_evidence": "The retained Gemma field-v2 collection has no standalone driver log; its audit records this limitation rather than inventing a receipt.",
+  "archive": "runtime-receipts.tar.gz",
+  "boundary": "Collection-root mechanics evidence only. No isolated database, gold, model weights, source bundles, resource balances, or run-output records. Extract at repository root to preserve native relative paths.",
+  "bytes": 97195,
+  "collections": {
+    "results-gemma-field-v2": [
+      "capsule-files.json",
+      "pip-freeze.txt",
+      "gemma-field-v2-status.json",
+      "field-v2-runner-delta.json",
+      "field-v2-mock-proof.json",
+      "field-v2-mock.log",
+      "system-validation-provision.json",
+      "system-validation-runtime-probe.json"
+    ],
+    "results-qwen-field-v2": [
+      "capsule-files.json",
+      "pip-freeze.txt",
+      "qwen-field-v2-status.json",
+      "field-v2-runner-delta.json",
+      "field-v2-mock-proof.json",
+      "field-v2-driver.log",
+      "system-validation-qwen-provision.json"
+    ],
+    "results-qwen-partial-v1": [
+      "capsule-files.json",
+      "pip-freeze.txt",
+      "calibration-status.json",
+      "calibration-driver.log",
+      "primary-status.json",
+      "primary-driver.log",
+      "qwen-calibration-status.json",
+      "qwen-calibration-driver.log",
+      "qwen-primary-status.json",
+      "qwen-primary-driver.log",
+      "qwen-instrument-stop.json",
+      "system-validation-qwen-provision.json"
+    ],
+    "results-v1": [
+      "capsule-files.json",
+      "pip-freeze.txt",
+      "calibration-status.json",
+      "calibration-driver.log",
+      "primary-status.json",
+      "primary-driver.log",
+      "system-validation-provision.json",
+      "system-validation-runtime-probe.json"
+    ]
+  },
+  "files": {
+    "outputs/system-validation-20260928/colab/results-gemma-field-v2/capsule-files.json": {
+      "bytes": 42620,
+      "sha256": "34b2e56db480f3c5f7c6ef169e5cbc4d02a30d640d7de02f1e4787118ccbe7be"
+    },
+    "outputs/system-validation-20260928/colab/results-gemma-field-v2/field-v2-mock-proof.json": {
+      "bytes": 436,
+      "sha256": "a7c5b7d6d43a903dd0f5c043fb3a342bd579c79bb16db6ebb71d9bc8b7de7bba"
+    },
+    "outputs/system-validation-20260928/colab/results-gemma-field-v2/field-v2-mock.log": {
+      "bytes": 19263,
+      "sha256": "957a3bda1469ad907905e811c06283b69a3db80300a2171fe13a5c9a6c7bfdc6"
+    },
+    "outputs/system-validation-20260928/colab/results-gemma-field-v2/field-v2-runner-delta.json": {
+      "bytes": 592,
+      "sha256": "bdb56da38c28e4a11927e36d5527e5001e268ec0a464984df9cc22269bb7bcca"
+    },
+    "outputs/system-validation-20260928/colab/results-gemma-field-v2/gemma-field-v2-status.json": {
+      "bytes": 637,
+      "sha256": "5fbf656608308d71d19349758d810c0e84e89c73334532178b7c195182edaeab"
+    },
+    "outputs/system-validation-20260928/colab/results-gemma-field-v2/pip-freeze.txt": {
+      "bytes": 14458,
+      "sha256": "b366519d8f3d1ec600a3e52e0bacfe56c644ead5baaee747c89a73be51112e13"
+    },
+    "outputs/system-validation-20260928/colab/results-gemma-field-v2/system-validation-provision.json": {
+      "bytes": 2154,
+      "sha256": "f46ee099ec949c1c4cab3ebe68aaa2f588709f7c62396d9b191241c6495df6ea"
+    },
+    "outputs/system-validation-20260928/colab/results-gemma-field-v2/system-validation-runtime-probe.json": {
+      "bytes": 2430,
+      "sha256": "14faab22620acf3075ac012b618d4c6e8163fa18b9a005dcad3b48882d9aecd9"
+    },
+    "outputs/system-validation-20260928/colab/results-qwen-field-v2/capsule-files.json": {
+      "bytes": 42620,
+      "sha256": "34b2e56db480f3c5f7c6ef169e5cbc4d02a30d640d7de02f1e4787118ccbe7be"
+    },
+    "outputs/system-validation-20260928/colab/results-qwen-field-v2/field-v2-driver.log": {
+      "bytes": 32462,
+      "sha256": "7d52c8e16a0335f2406675c17c894d2ac3b8b8677d42d680c0a2b411c884b990"
+    },
+    "outputs/system-validation-20260928/colab/results-qwen-field-v2/field-v2-mock-proof.json": {
+      "bytes": 436,
+      "sha256": "a7c5b7d6d43a903dd0f5c043fb3a342bd579c79bb16db6ebb71d9bc8b7de7bba"
+    },
+    "outputs/system-validation-20260928/colab/results-qwen-field-v2/field-v2-runner-delta.json": {
+      "bytes": 592,
+      "sha256": "bdb56da38c28e4a11927e36d5527e5001e268ec0a464984df9cc22269bb7bcca"
+    },
+    "outputs/system-validation-20260928/colab/results-qwen-field-v2/pip-freeze.txt": {
+      "bytes": 14458,
+      "sha256": "b366519d8f3d1ec600a3e52e0bacfe56c644ead5baaee747c89a73be51112e13"
+    },
+    "outputs/system-validation-20260928/colab/results-qwen-field-v2/qwen-field-v2-status.json": {
+      "bytes": 703,
+      "sha256": "3e721d5f9d8b8cb22b7f0e84e6779493a7a96430d8b545ecc65ea4ffea7a39fd"
+    },
+    "outputs/system-validation-20260928/colab/results-qwen-field-v2/system-validation-qwen-provision.json": {
+      "bytes": 2580,
+      "sha256": "596ee05552b25feabe838915c1d53bd5f9a6b991c5db0f9a91b9869de1e82d44"
+    },
+    "outputs/system-validation-20260928/colab/results-qwen-partial-v1/calibration-driver.log": {
+      "bytes": 986,
+      "sha256": "9705ccf55b7d250a57b9821a38b0c7435c395eb48e9e0c38c5a875ed29a6f0cf"
+    },
+    "outputs/system-validation-20260928/colab/results-qwen-partial-v1/calibration-status.json": {
+      "bytes": 466,
+      "sha256": "68d0df4f80adbb103c03ec71196ff1950c81426d87db0cc635ad4eb264c127ae"
+    },
+    "outputs/system-validation-20260928/colab/results-qwen-partial-v1/capsule-files.json": {
+      "bytes": 42620,
+      "sha256": "34b2e56db480f3c5f7c6ef169e5cbc4d02a30d640d7de02f1e4787118ccbe7be"
+    },
+    "outputs/system-validation-20260928/colab/results-qwen-partial-v1/pip-freeze.txt": {
+      "bytes": 14458,
+      "sha256": "b366519d8f3d1ec600a3e52e0bacfe56c644ead5baaee747c89a73be51112e13"
+    },
+    "outputs/system-validation-20260928/colab/results-qwen-partial-v1/primary-driver.log": {
+      "bytes": 21417,
+      "sha256": "5487bd5ddfa41410ee57e801778766c96aa9d237ef60e5f9eb399e4ab5aebb43"
+    },
+    "outputs/system-validation-20260928/colab/results-qwen-partial-v1/primary-status.json": {
+      "bytes": 564,
+      "sha256": "2a957a37e5dcea053ba9e37ac85ffb73a010ce477dfaedadbc7cb408f704f1c0"
+    },
+    "outputs/system-validation-20260928/colab/results-qwen-partial-v1/qwen-calibration-driver.log": {
+      "bytes": 1029,
+      "sha256": "12ff2d060c7392531d4cd019c7efc926b097026a66e44d748e41df6fb584db32"
+    },
+    "outputs/system-validation-20260928/colab/results-qwen-partial-v1/qwen-calibration-status.json": {
+      "bytes": 494,
+      "sha256": "48fa8eb1a662881506254ad0f14fc6ee3b2e703d50a267fe4816c4f48c1dc2ca"
+    },
+    "outputs/system-validation-20260928/colab/results-qwen-partial-v1/qwen-instrument-stop.json": {
+      "bytes": 932,
+      "sha256": "3d3c2b06092c212cc5a5893a13d953205c7c922ae1300c98666c9d4dfb3a92e6"
+    },
+    "outputs/system-validation-20260928/colab/results-qwen-partial-v1/qwen-primary-driver.log": {
+      "bytes": 6548,
+      "sha256": "9f4f2b7ef8a311053a44f4e83ed20d4c6cb0cfdb057d558172fce1349c1c6f7d"
+    },
+    "outputs/system-validation-20260928/colab/results-qwen-partial-v1/qwen-primary-status.json": {
+      "bytes": 629,
+      "sha256": "a55bce6b7e25b78fd65ae04231d57f160f54f9eece768e4bbd584e0f4b5bf981"
+    },
+    "outputs/system-validation-20260928/colab/results-qwen-partial-v1/system-validation-qwen-provision.json": {
+      "bytes": 2580,
+      "sha256": "596ee05552b25feabe838915c1d53bd5f9a6b991c5db0f9a91b9869de1e82d44"
+    },
+    "outputs/system-validation-20260928/colab/results-v1/calibration-driver.log": {
+      "bytes": 986,
+      "sha256": "9705ccf55b7d250a57b9821a38b0c7435c395eb48e9e0c38c5a875ed29a6f0cf"
+    },
+    "outputs/system-validation-20260928/colab/results-v1/calibration-status.json": {
+      "bytes": 466,
+      "sha256": "68d0df4f80adbb103c03ec71196ff1950c81426d87db0cc635ad4eb264c127ae"
+    },
+    "outputs/system-validation-20260928/colab/results-v1/capsule-files.json": {
+      "bytes": 42620,
+      "sha256": "34b2e56db480f3c5f7c6ef169e5cbc4d02a30d640d7de02f1e4787118ccbe7be"
+    },
+    "outputs/system-validation-20260928/colab/results-v1/pip-freeze.txt": {
+      "bytes": 14458,
+      "sha256": "b366519d8f3d1ec600a3e52e0bacfe56c644ead5baaee747c89a73be51112e13"
+    },
+    "outputs/system-validation-20260928/colab/results-v1/primary-driver.log": {
+      "bytes": 21417,
+      "sha256": "5487bd5ddfa41410ee57e801778766c96aa9d237ef60e5f9eb399e4ab5aebb43"
+    },
+    "outputs/system-validation-20260928/colab/results-v1/primary-status.json": {
+      "bytes": 564,
+      "sha256": "2a957a37e5dcea053ba9e37ac85ffb73a010ce477dfaedadbc7cb408f704f1c0"
+    },
+    "outputs/system-validation-20260928/colab/results-v1/system-validation-provision.json": {
+      "bytes": 2154,
+      "sha256": "f46ee099ec949c1c4cab3ebe68aaa2f588709f7c62396d9b191241c6495df6ea"
+    },
+    "outputs/system-validation-20260928/colab/results-v1/system-validation-runtime-probe.json": {
+      "bytes": 2430,
+      "sha256": "14faab22620acf3075ac012b618d4c6e8163fa18b9a005dcad3b48882d9aecd9"
+    }
+  },
+  "schema_version": "system_validation_runtime_receipts_manifest.v1",
+  "sha256": "4d60989b75705f9812182c474f04e05fdad89af5687647f386b1c9cd328b1870",
+  "verification": "python3 outputs/system-validation-20260928/analysis/package_runtime_receipts.py verify"
+}

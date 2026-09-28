@@ -1,0 +1,39 @@
+{
+  "name": "qwen-v1-partial",
+  "attempts": 51,
+  "planned_cells": 96,
+  "run_sha256": "75abd58415630a8125a79353e16f08397608f2a8f44564744fea085d82adb969",
+  "raw_file": "qwen-v1-partial-raw.jsonl.gz",
+  "raw_sha256": "e80cc2d983dcda650e4b811efe4d66a0b86818738a02091abbb67f10f00331d8",
+  "bytes": 1589596,
+  "ledger_sha256": "9ab7839500789e2087b4b3fd7a350eedc862e8cc06703b766b446dac13633889",
+  "scope": "Original full execution JSON content, every ledger attempt, and table setup receipts. Raw generation statistics are preserved, including known stale bypass statistics. Original SQLite stores are retained locally rather than published; the separate linkage audit records whether their table receipt joins passed. Superseded partial-delivery run, stopped deliberately after instrument defect; no inference of quality for uncompleted cells.",
+  "status": "operator_stopped_superseded_partial_delivery",
+  "completed_attempts": 51,
+  "uncompleted_planned_cells": 45,
+  "one_additional_started_cell_without_ledger_result": true,
+  "driver_status": {
+    "status": "failed",
+    "started_epoch": 1790615199.063511,
+    "command": [
+      "/usr/bin/python3",
+      "/content/oa-validation-v2/outputs/system-validation-20260928/runner/run_retrieval_2x2.py",
+      "--max-tokens",
+      "640",
+      "--model-config",
+      "/content/oa-validation-v2/configs/model_qwen35_27b_diagnostic.yaml",
+      "--table-setup-module",
+      "/content/oa-validation-v2/outputs/system-validation-20260928/cohort/table_setup.py",
+      "--arms",
+      "retrieval_neither,retrieval_both",
+      "--output-dir",
+      "/content/oa-validation-v2/outputs/qwen-retrieval-96",
+      "--timeout-seconds",
+      "7200",
+      "--cell-timeout-seconds",
+      "600"
+    ],
+    "exit_code": -2,
+    "seconds": 1684.8987894058228
+  }
+}

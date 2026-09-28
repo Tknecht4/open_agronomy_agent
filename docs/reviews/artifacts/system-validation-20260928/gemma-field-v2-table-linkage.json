@@ -1,0 +1,461 @@
+{
+  "cell_count": 8,
+  "cells": [
+    {
+      "arm": "retrieval_neither",
+      "cell_id": "sv24-08__retrieval_neither__t1",
+      "claims": {
+        "import_id": {
+          "actual": "3c8c9ac1-bbfa-4b40-bfb7-7f1b309c6dbb",
+          "claimed": "3c8c9ac1-bbfa-4b40-bfb7-7f1b309c6dbb",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "record_count": {
+          "actual": "13",
+          "claimed": "13",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "selection_locator_digest": {
+          "actual": "7fde472195d937c7131702ee77f3963e99690370f18212ae34e06877a2c12529",
+          "claimed": "7fde472195d937c7131702ee77f3963e99690370f18212ae34e06877a2c12529",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "snapshot_receipt_sha256": {
+          "actual": "0d3c5d0a7c87ab03beb1839f7a3c8f27fd788223ee55b1fed8f574cd31493b3d",
+          "claimed": "0d3c5d0a7c87ab03beb1839f7a3c8f27fd788223ee55b1fed8f574cd31493b3d",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "source_query_receipt_sha256": {
+          "actual": "7cc2b68956aba47669f76e98d42cf88f5a3df165b9b1532d9a2f04baf1edc920",
+          "claimed": "7cc2b68956aba47669f76e98d42cf88f5a3df165b9b1532d9a2f04baf1edc920",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "source_sha256": {
+          "actual": "af86b791af0b8b7aeb667c3c5cc73107f913812228201c7a6f4a4221d711a104",
+          "claimed": "af86b791af0b8b7aeb667c3c5cc73107f913812228201c7a6f4a4221d711a104",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        }
+      },
+      "failures": [],
+      "full_answer_sha256": "be6f9b45b0ddb4f34781e6ee975bac730aacd2a17279832ea5f8e4a30174ef1b",
+      "ledger_status": "completed_execution",
+      "sqlite_checks": {
+        "mapping_sha256": "16a85567673e91627eba5b031e9389c2371445d79c20520ebe3ec944d607cdd0",
+        "query_receipt_sha256": "7cc2b68956aba47669f76e98d42cf88f5a3df165b9b1532d9a2f04baf1edc920",
+        "snapshot_receipt_sha256": "0d3c5d0a7c87ab03beb1839f7a3c8f27fd788223ee55b1fed8f574cd31493b3d",
+        "source_blob_verified": true,
+        "stored_rows_verified": 13
+      },
+      "status": "pass",
+      "tool_payload_sha256": "30f61ecd0664c6f25cd8c762301a826548df6c97745d3a9de458fafce5ff2702",
+      "trial": 1,
+      "unknowns": []
+    },
+    {
+      "arm": "retrieval_document_only",
+      "cell_id": "sv24-08__retrieval_document_only__t1",
+      "claims": {
+        "import_id": {
+          "actual": "f917cbdb-5d28-4be3-8ed5-56e77ccc7848",
+          "claimed": "f917cbdb-5d28-4be3-8ed5-56e77ccc7848",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "record_count": {
+          "actual": "13",
+          "claimed": "13",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "selection_locator_digest": {
+          "actual": "7fde472195d937c7131702ee77f3963e99690370f18212ae34e06877a2c12529",
+          "claimed": "7fde472195d937c7131702ee77f3963e99690370f18212ae34e06877a2c12529",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "snapshot_receipt_sha256": {
+          "actual": "8db0277535f024b4e5dc9aa63eac15986896d8a8ee246cbbb258326fe9137599",
+          "claimed": "8db0277535f024b4e5dc9aa63eac15986896d8a8ee246cbbb258326fe9137599",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "source_query_receipt_sha256": {
+          "actual": "21bfe93316ed564147fb354a8d46cf0cf737d1502698cfd3e1308ce8219b4053",
+          "claimed": "21bfe93316ed564147fb354a8d46cf0cf737d1502698cfd3e1308ce8219b4053",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "source_sha256": {
+          "actual": "af86b791af0b8b7aeb667c3c5cc73107f913812228201c7a6f4a4221d711a104",
+          "claimed": "af86b791af0b8b7aeb667c3c5cc73107f913812228201c7a6f4a4221d711a104",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        }
+      },
+      "failures": [],
+      "full_answer_sha256": "c9955d0ac4da55a7d4d478f591168b5d17fed2bc4ffb6a4c79fcf852e71a1422",
+      "ledger_status": "completed_execution",
+      "sqlite_checks": {
+        "mapping_sha256": "16a85567673e91627eba5b031e9389c2371445d79c20520ebe3ec944d607cdd0",
+        "query_receipt_sha256": "21bfe93316ed564147fb354a8d46cf0cf737d1502698cfd3e1308ce8219b4053",
+        "snapshot_receipt_sha256": "8db0277535f024b4e5dc9aa63eac15986896d8a8ee246cbbb258326fe9137599",
+        "source_blob_verified": true,
+        "stored_rows_verified": 13
+      },
+      "status": "pass",
+      "tool_payload_sha256": "a2f8214d0c4b6edeacf28dc72860c9f047c1a3a9502ce7bcf29c4f5e0064c449",
+      "trial": 1,
+      "unknowns": []
+    },
+    {
+      "arm": "retrieval_graph_only",
+      "cell_id": "sv24-08__retrieval_graph_only__t1",
+      "claims": {
+        "import_id": {
+          "actual": "114e6366-fc75-4171-972a-089f80217bec",
+          "claimed": "114e6366-fc75-4171-972a-089f80217bec",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "record_count": {
+          "actual": "13",
+          "claimed": "13",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "selection_locator_digest": {
+          "actual": "7fde472195d937c7131702ee77f3963e99690370f18212ae34e06877a2c12529",
+          "claimed": "7fde472195d937c7131702ee77f3963e99690370f18212ae34e06877a2c12529",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "snapshot_receipt_sha256": {
+          "actual": "8376f3273bf84429328ea609b1c14a92a28f1826adbfe7101ee9fe882df98f5a",
+          "claimed": "8376f3273bf84429328ea609b1c14a92a28f1826adbfe7101ee9fe882df98f5a",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "source_query_receipt_sha256": {
+          "actual": "3bf21b78ff16e4c3cd99a3a7ae68263195817f6ec25951ec77df56ee273dcf14",
+          "claimed": "3bf21b78ff16e4c3cd99a3a7ae68263195817f6ec25951ec77df56ee273dcf14",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "source_sha256": {
+          "actual": "af86b791af0b8b7aeb667c3c5cc73107f913812228201c7a6f4a4221d711a104",
+          "claimed": "af86b791af0b8b7aeb667c3c5cc73107f913812228201c7a6f4a4221d711a104",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        }
+      },
+      "failures": [],
+      "full_answer_sha256": "9b6e85472c48fced4e4d6bec7f2001b563da1cc5379e8303d61380cbf43c97b6",
+      "ledger_status": "completed_execution",
+      "sqlite_checks": {
+        "mapping_sha256": "16a85567673e91627eba5b031e9389c2371445d79c20520ebe3ec944d607cdd0",
+        "query_receipt_sha256": "3bf21b78ff16e4c3cd99a3a7ae68263195817f6ec25951ec77df56ee273dcf14",
+        "snapshot_receipt_sha256": "8376f3273bf84429328ea609b1c14a92a28f1826adbfe7101ee9fe882df98f5a",
+        "source_blob_verified": true,
+        "stored_rows_verified": 13
+      },
+      "status": "pass",
+      "tool_payload_sha256": "afabff46e5ea1499b9fc2d027de94ff805d999f875315170f1277fa92039bf9b",
+      "trial": 1,
+      "unknowns": []
+    },
+    {
+      "arm": "retrieval_both",
+      "cell_id": "sv24-08__retrieval_both__t1",
+      "claims": {
+        "import_id": {
+          "actual": "b24678fe-eb39-4a07-adfd-d642ebf814f1",
+          "claimed": "b24678fe-eb39-4a07-adfd-d642ebf814f1",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "record_count": {
+          "actual": "13",
+          "claimed": "13",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "selection_locator_digest": {
+          "actual": "7fde472195d937c7131702ee77f3963e99690370f18212ae34e06877a2c12529",
+          "claimed": "7fde472195d937c7131702ee77f3963e99690370f18212ae34e06877a2c12529",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "snapshot_receipt_sha256": {
+          "actual": "974e4c043e802ba46b10b79fca31d9c5de5123d1c8834d19f5d56a7db4dd68a2",
+          "claimed": "974e4c043e802ba46b10b79fca31d9c5de5123d1c8834d19f5d56a7db4dd68a2",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "source_query_receipt_sha256": {
+          "actual": "b3cbb728005f292fee133520fb2da53897192343d4c9307f9bb733dd00e3db39",
+          "claimed": "b3cbb728005f292fee133520fb2da53897192343d4c9307f9bb733dd00e3db39",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "source_sha256": {
+          "actual": "af86b791af0b8b7aeb667c3c5cc73107f913812228201c7a6f4a4221d711a104",
+          "claimed": "af86b791af0b8b7aeb667c3c5cc73107f913812228201c7a6f4a4221d711a104",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        }
+      },
+      "failures": [],
+      "full_answer_sha256": "c9b1b4aa982ab1c34d98d84ec7117e0e851f98872057ea56e453485a434beb1c",
+      "ledger_status": "completed_execution",
+      "sqlite_checks": {
+        "mapping_sha256": "16a85567673e91627eba5b031e9389c2371445d79c20520ebe3ec944d607cdd0",
+        "query_receipt_sha256": "b3cbb728005f292fee133520fb2da53897192343d4c9307f9bb733dd00e3db39",
+        "snapshot_receipt_sha256": "974e4c043e802ba46b10b79fca31d9c5de5123d1c8834d19f5d56a7db4dd68a2",
+        "source_blob_verified": true,
+        "stored_rows_verified": 13
+      },
+      "status": "pass",
+      "tool_payload_sha256": "7abf061f873e2ae4eb4eaa081e7755896107ed4ecde55c9854d4496f82dea7cb",
+      "trial": 1,
+      "unknowns": []
+    },
+    {
+      "arm": "retrieval_both",
+      "cell_id": "sv24-08__retrieval_both__t2",
+      "claims": {
+        "import_id": {
+          "actual": "899c6ea6-afa8-432c-9050-446bc0c409fd",
+          "claimed": "899c6ea6-afa8-432c-9050-446bc0c409fd",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "record_count": {
+          "actual": "13",
+          "claimed": "13",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "selection_locator_digest": {
+          "actual": "7fde472195d937c7131702ee77f3963e99690370f18212ae34e06877a2c12529",
+          "claimed": "7fde472195d937c7131702ee77f3963e99690370f18212ae34e06877a2c12529",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "snapshot_receipt_sha256": {
+          "actual": "50649f591041f8f326305352a89243f9ba0412d6febe109133f812a7a2ebc6ed",
+          "claimed": "50649f591041f8f326305352a89243f9ba0412d6febe109133f812a7a2ebc6ed",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "source_query_receipt_sha256": {
+          "actual": "3a82770fbb92718a54df492421945988be688b9b7b6ffd34c83ae5c95c8412e6",
+          "claimed": "3a82770fbb92718a54df492421945988be688b9b7b6ffd34c83ae5c95c8412e6",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "source_sha256": {
+          "actual": "af86b791af0b8b7aeb667c3c5cc73107f913812228201c7a6f4a4221d711a104",
+          "claimed": "af86b791af0b8b7aeb667c3c5cc73107f913812228201c7a6f4a4221d711a104",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        }
+      },
+      "failures": [],
+      "full_answer_sha256": "38ee85c5f5e0075ecf8f8168043fba0cab47a8adac55c7347969ae01301cfc4d",
+      "ledger_status": "completed_execution",
+      "sqlite_checks": {
+        "mapping_sha256": "16a85567673e91627eba5b031e9389c2371445d79c20520ebe3ec944d607cdd0",
+        "query_receipt_sha256": "3a82770fbb92718a54df492421945988be688b9b7b6ffd34c83ae5c95c8412e6",
+        "snapshot_receipt_sha256": "50649f591041f8f326305352a89243f9ba0412d6febe109133f812a7a2ebc6ed",
+        "source_blob_verified": true,
+        "stored_rows_verified": 13
+      },
+      "status": "pass",
+      "tool_payload_sha256": "75de582d65eb1b324871cbb1e175cfcb9c32c2f1c53e272dfe467053960cfde7",
+      "trial": 2,
+      "unknowns": []
+    },
+    {
+      "arm": "retrieval_graph_only",
+      "cell_id": "sv24-08__retrieval_graph_only__t2",
+      "claims": {
+        "import_id": {
+          "actual": "b0cd045f-9224-415f-8eec-8e0d320632ca",
+          "claimed": "b0cd045f-9224-415f-8eec-8e0d320632ca",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "record_count": {
+          "actual": "13",
+          "claimed": "13",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "selection_locator_digest": {
+          "actual": "7fde472195d937c7131702ee77f3963e99690370f18212ae34e06877a2c12529",
+          "claimed": "7fde472195d937c7131702ee77f3963e99690370f18212ae34e06877a2c12529",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "snapshot_receipt_sha256": {
+          "actual": "706271fdb5f8542f171cbf502d9c4f33d81959d8de3944cbd6e0592ee06d22ca",
+          "claimed": "706271fdb5f8542f171cbf502d9c4f33d81959d8de3944cbd6e0592ee06d22ca",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "source_query_receipt_sha256": {
+          "actual": "fe754ae28e8459d56915bdcedae2a44a753d614fd2ae648578f28db5b9260d7c",
+          "claimed": "fe754ae28e8459d56915bdcedae2a44a753d614fd2ae648578f28db5b9260d7c",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "source_sha256": {
+          "actual": "af86b791af0b8b7aeb667c3c5cc73107f913812228201c7a6f4a4221d711a104",
+          "claimed": "af86b791af0b8b7aeb667c3c5cc73107f913812228201c7a6f4a4221d711a104",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        }
+      },
+      "failures": [],
+      "full_answer_sha256": "b28df27ce0ae61ed2251e1b7e8a1e143ccc669fce8b1e3aabcb03306fe8a4b9c",
+      "ledger_status": "completed_execution",
+      "sqlite_checks": {
+        "mapping_sha256": "16a85567673e91627eba5b031e9389c2371445d79c20520ebe3ec944d607cdd0",
+        "query_receipt_sha256": "fe754ae28e8459d56915bdcedae2a44a753d614fd2ae648578f28db5b9260d7c",
+        "snapshot_receipt_sha256": "706271fdb5f8542f171cbf502d9c4f33d81959d8de3944cbd6e0592ee06d22ca",
+        "source_blob_verified": true,
+        "stored_rows_verified": 13
+      },
+      "status": "pass",
+      "tool_payload_sha256": "b5a3f5753eab00f61870de8eb23ef2d577c85b6f53526f9f6d55801f738a3ac0",
+      "trial": 2,
+      "unknowns": []
+    },
+    {
+      "arm": "retrieval_document_only",
+      "cell_id": "sv24-08__retrieval_document_only__t2",
+      "claims": {
+        "import_id": {
+          "actual": "b1293f9d-4c5f-45e5-8f27-397621cf21d7",
+          "claimed": "b1293f9d-4c5f-45e5-8f27-397621cf21d7",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "record_count": {
+          "actual": "13",
+          "claimed": "13",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "selection_locator_digest": {
+          "actual": "7fde472195d937c7131702ee77f3963e99690370f18212ae34e06877a2c12529",
+          "claimed": "7fde472195d937c7131702ee77f3963e99690370f18212ae34e06877a2c12529",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "snapshot_receipt_sha256": {
+          "actual": "aa4a9b08570690ab224aa66f7c146a6b2507eab0d8baf1161ef87effe8dbcf1b",
+          "claimed": "aa4a9b08570690ab224aa66f7c146a6b2507eab0d8baf1161ef87effe8dbcf1b",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "source_query_receipt_sha256": {
+          "actual": "4584f32cd3441311a522fa36b0cf20d0a803f75b66ca972dab0bcf59485ff64b",
+          "claimed": "4584f32cd3441311a522fa36b0cf20d0a803f75b66ca972dab0bcf59485ff64b",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "source_sha256": {
+          "actual": "af86b791af0b8b7aeb667c3c5cc73107f913812228201c7a6f4a4221d711a104",
+          "claimed": "af86b791af0b8b7aeb667c3c5cc73107f913812228201c7a6f4a4221d711a104",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        }
+      },
+      "failures": [],
+      "full_answer_sha256": "acd2dbba27eb7d9813895f6a2af3aa2f9fcb8e572f8a54b226099a2f02128762",
+      "ledger_status": "completed_execution",
+      "sqlite_checks": {
+        "mapping_sha256": "16a85567673e91627eba5b031e9389c2371445d79c20520ebe3ec944d607cdd0",
+        "query_receipt_sha256": "4584f32cd3441311a522fa36b0cf20d0a803f75b66ca972dab0bcf59485ff64b",
+        "snapshot_receipt_sha256": "aa4a9b08570690ab224aa66f7c146a6b2507eab0d8baf1161ef87effe8dbcf1b",
+        "source_blob_verified": true,
+        "stored_rows_verified": 13
+      },
+      "status": "pass",
+      "tool_payload_sha256": "eff8196e0b31248e03122c893e0218c1d041281241c02257fa4098608493193e",
+      "trial": 2,
+      "unknowns": []
+    },
+    {
+      "arm": "retrieval_neither",
+      "cell_id": "sv24-08__retrieval_neither__t2",
+      "claims": {
+        "import_id": {
+          "actual": "456b2a6a-b41d-4ae7-9306-d7d55dfca8dd",
+          "claimed": "456b2a6a-b41d-4ae7-9306-d7d55dfca8dd",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "record_count": {
+          "actual": "13",
+          "claimed": "13",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "selection_locator_digest": {
+          "actual": "7fde472195d937c7131702ee77f3963e99690370f18212ae34e06877a2c12529",
+          "claimed": "7fde472195d937c7131702ee77f3963e99690370f18212ae34e06877a2c12529",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "snapshot_receipt_sha256": {
+          "actual": "ba7ac210789e1e08f3544ab2195ddc6d159b2d843db963dfa2dae41ed7f1f385",
+          "claimed": "ba7ac210789e1e08f3544ab2195ddc6d159b2d843db963dfa2dae41ed7f1f385",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "source_query_receipt_sha256": {
+          "actual": "c6461e84d938b527840297465b6196eb9412f6ae72f87f31aeef4565e25e0e09",
+          "claimed": "c6461e84d938b527840297465b6196eb9412f6ae72f87f31aeef4565e25e0e09",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        },
+        "source_sha256": {
+          "actual": "af86b791af0b8b7aeb667c3c5cc73107f913812228201c7a6f4a4221d711a104",
+          "claimed": "af86b791af0b8b7aeb667c3c5cc73107f913812228201c7a6f4a4221d711a104",
+          "source": "committed cell SQLite import, source blob, stored rows and recomputed receipts",
+          "status": "pass"
+        }
+      },
+      "failures": [],
+      "full_answer_sha256": "e287fddc09f8fab6eb97c9146824ca9cccb0084ab4bb57967a961d39c798df73",
+      "ledger_status": "completed_execution",
+      "sqlite_checks": {
+        "mapping_sha256": "16a85567673e91627eba5b031e9389c2371445d79c20520ebe3ec944d607cdd0",
+        "query_receipt_sha256": "c6461e84d938b527840297465b6196eb9412f6ae72f87f31aeef4565e25e0e09",
+        "snapshot_receipt_sha256": "ba7ac210789e1e08f3544ab2195ddc6d159b2d843db963dfa2dae41ed7f1f385",
+        "source_blob_verified": true,
+        "stored_rows_verified": 13
+      },
+      "status": "pass",
+      "tool_payload_sha256": "5755a815ec89a38b8b063d39083e0f22ce430effc6c1115dd13b0ba96dd9999a",
+      "trial": 2,
+      "unknowns": []
+    }
+  ],
+  "counts": {
+    "fail": 0,
+    "pass": 8,
+    "unknown": 0
+  },
+  "run": "outputs/system-validation-20260928/colab/results-gemma-field-v2/outputs/gemma-field-v2-192",
+  "schema_version": "system_validation_table_receipt_linkage.v1",
+  "scope": "mechanical source linkage only; no gold or grading files read"
+}

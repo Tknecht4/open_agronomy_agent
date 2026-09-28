@@ -1,0 +1,32 @@
+{
+  "clearances": [
+    {
+      "blind_id": "de2c1a5ebe14e09f",
+      "status": "verified",
+      "reason": "All generated table identifiers and 13-record count independently joined to this run committed SQLite, source and row receipts; exact answer and run bindings checked. Semantic grade unchanged.",
+      "evidence_path": "analysis/qwen-field-v2-table-linkage-bound.json",
+      "evidence_sha256": "6c03c33d77540ec7ebd39c8254378f5d32cad6f579b8fb73e1afac20109c0c68"
+    },
+    {
+      "blind_id": "9fa8092109ded97f",
+      "status": "verified",
+      "reason": "All generated table identifiers and 13-record count independently joined to this run committed SQLite, source and row receipts; exact answer and run bindings checked. Semantic grade unchanged.",
+      "evidence_path": "analysis/qwen-field-v2-table-linkage-bound.json",
+      "evidence_sha256": "6c03c33d77540ec7ebd39c8254378f5d32cad6f579b8fb73e1afac20109c0c68"
+    },
+    {
+      "blind_id": "ff021e26ce12fff3",
+      "status": "verified",
+      "reason": "All generated table identifiers and 13-record count independently joined to this run committed SQLite, source and row receipts; exact answer and run bindings checked. Semantic grade unchanged.",
+      "evidence_path": "analysis/qwen-field-v2-table-linkage-bound.json",
+      "evidence_sha256": "6c03c33d77540ec7ebd39c8254378f5d32cad6f579b8fb73e1afac20109c0c68"
+    },
+    {
+      "blind_id": "4c4868df874c02ad",
+      "status": "verified",
+      "reason": "All generated table identifiers and 13-record count independently joined to this run committed SQLite, source and row receipts; exact answer and run bindings checked. Semantic grade unchanged.",
+      "evidence_path": "analysis/qwen-field-v2-table-linkage-bound.json",
+      "evidence_sha256": "6c03c33d77540ec7ebd39c8254378f5d32cad6f579b8fb73e1afac20109c0c68"
+    }
+  ]
+}

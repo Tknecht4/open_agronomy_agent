@@ -1,0 +1,26 @@
+{
+  "schema": "system_validation_prefix_full_reconciliation.v1",
+  "full_run_sha256": "ce9b317bbf014577f240edd6efaf6733d1df32a02c4cef7c9c8ecd07fdd08d4f",
+  "full_ledger_sha256": "b440d3156633af4fae23932579f880dcfa5d715ea0dc2fde7f5561684ef07de3",
+  "prefixes": [
+    {
+      "prefix_cells": 12,
+      "ledger_rows_identical": true,
+      "native_manifest_and_plan_identical": true,
+      "execution_files_byte_identical": 12
+    },
+    {
+      "prefix_cells": 32,
+      "ledger_rows_identical": true,
+      "native_manifest_and_plan_identical": true,
+      "execution_files_byte_identical": 32
+    },
+    {
+      "prefix_cells": 64,
+      "ledger_rows_identical": true,
+      "native_manifest_and_plan_identical": true,
+      "execution_files_byte_identical": 64
+    }
+  ],
+  "scope": "Overlapping grading snapshots reconcile to the same full-run observations; they are never pooled as independent samples."
+}

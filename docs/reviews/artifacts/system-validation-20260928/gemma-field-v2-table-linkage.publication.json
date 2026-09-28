@@ -1,0 +1,8 @@
+{
+  "source_file": "outputs/system-validation-20260928/analysis/gemma-field-v2-table-linkage.json",
+  "source_sha256": "69eb8c79760f91defa0bd41c071c76bf4708a8f5d4e96a3c9ed8614e3f48dcd6",
+  "public_file": "gemma-field-v2-table-linkage.json",
+  "public_sha256": "3fedba67ae0b69516a9461e7bfcf73cb8589cc2a24a6f6c84920f8c92bcd4f1b",
+  "derivation": "JSON sorted/indented; local repository prefix removed from path strings only",
+  "path_prefix_replacements": 1
+}

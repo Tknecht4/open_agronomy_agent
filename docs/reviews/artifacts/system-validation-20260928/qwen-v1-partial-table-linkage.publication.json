@@ -1,0 +1,8 @@
+{
+  "source_file": "outputs/system-validation-20260928/analysis/qwen-v1-partial-table-linkage.json",
+  "source_sha256": "b36ac1385f79a4713cda5d66c969352a909ad60e8b6bcc727101c4ff54cd3fb7",
+  "public_file": "qwen-v1-partial-table-linkage.json",
+  "public_sha256": "06375bb44bac6bfcc60d665c32dc675fa2cc83fdb9acafd7ee1d0bd71122a46d",
+  "derivation": "JSON sorted/indented; local repository prefix removed from path strings only",
+  "path_prefix_replacements": 1
+}

@@ -1,0 +1,124 @@
+{
+  "schema_version": "system_validation_engineering_v1",
+  "checks": [
+    {
+      "check": "Python integrated before telemetry",
+      "status": "pass",
+      "result": "1582 passed, 4 skipped",
+      "retained_local_log": "outputs/system-validation-20260928/python-suite-final.txt",
+      "log_sha256": "121cddd2aef97bc6b131a4c351e64c59c468548b2b2a4f5b28fe6cdfa01beb42"
+    },
+    {
+      "check": "Python final telemetry",
+      "status": "pass",
+      "result": "1585 passed, 4 skipped",
+      "retained_local_log": "outputs/system-validation-20260928/python-suite-telemetry-final.txt",
+      "log_sha256": "5e1ce5cdd74409afaa0e0c4fdfcdfdfb962feba5212bc38ecc1fffe0a083bd11"
+    },
+    {
+      "check": "Frontend tests",
+      "status": "pass",
+      "result": "371",
+      "retained_local_log": "outputs/system-validation-20260928/frontend-suite-reviewed.txt",
+      "log_sha256": "43a5869b5a9094a0c455c98cf1b1a054db97e2f46303a4360aed32313ba37c5b"
+    },
+    {
+      "check": "Frontend typecheck",
+      "status": "pass",
+      "result": "exit0 observed",
+      "retained_local_log": "outputs/system-validation-20260928/frontend-typecheck-reviewed.txt",
+      "log_sha256": "1ae381a6ca2eca6afa8a52e29aea9428679c0e68bac8ebeb31c79b89bbd66eac"
+    },
+    {
+      "check": "Frontend build",
+      "status": "pass",
+      "result": "exit0 observed",
+      "retained_local_log": "outputs/system-validation-20260928/frontend-build-reviewed.txt",
+      "log_sha256": "4049808455eda2ee684be7bdbce68d0f69fbb12d8d76ca6ca322cebe018293e8"
+    },
+    {
+      "check": "Public docs",
+      "status": "pass",
+      "result": "exit0 observed",
+      "retained_local_log": "outputs/system-validation-20260928/public-docs-telemetry-final.txt",
+      "log_sha256": "2e7283cbed443cb0ba2a4eab4ffcecd84d03705f9b2ffb84785d7726aa5530ff"
+    },
+    {
+      "check": "MkDocs strict",
+      "status": "pass",
+      "result": "exit0 observed",
+      "retained_local_log": "outputs/system-validation-20260928/mkdocs-telemetry-final.txt",
+      "log_sha256": "8bd227a2497bd87891aed835bbe901481c597c8f16eaafb9f618cf23ec577617"
+    },
+    {
+      "check": "Public docs with final publication scope",
+      "status": "pass",
+      "result": "pass",
+      "retained_local_log": "outputs/system-validation-20260928/public-docs-artifact-scope.txt",
+      "log_sha256": "2e7283cbed443cb0ba2a4eab4ffcecd84d03705f9b2ffb84785d7726aa5530ff"
+    },
+    {
+      "check": "Runtime inventory with final publication scope",
+      "status": "pass",
+      "result": "pass",
+      "retained_local_log": "outputs/system-validation-20260928/runtime-manifest-artifact-scope.txt",
+      "log_sha256": "3bd77fd98505fb2753a681c76fe493bd33d6aceb88d87523998a61152783429e"
+    },
+    {
+      "check": "Package and profile regressions with final publication scope",
+      "status": "pass",
+      "result": "12 passed",
+      "retained_local_log": "outputs/system-validation-20260928/package-profile-final.txt",
+      "log_sha256": "c7b1a491c9c9b20f67c4f993b9d0fd6fbf13f2460b618a4c15f437a69c303efe"
+    },
+    {
+      "check": "MkDocs strict with final publication scope",
+      "status": "pass",
+      "result": "pass",
+      "retained_local_log": "outputs/system-validation-20260928/mkdocs-artifact-scope.txt",
+      "log_sha256": "b1e8bf4834a8a45aa59a27d06e205b5efe6707e7aff9229d21ecca7d3cdb54ec"
+    },
+    {
+      "check": "Public package including corrected results and grading archives",
+      "status": "pass",
+      "result": "1271 files; 1102817147 bytes; curated scope check passed",
+      "retained_local_log": "outputs/system-validation-20260928/public-package-checkpoint.txt",
+      "log_sha256": "14cde3a5cc6fba4fa32595e049170b7df3e981966996a43f29a747c043c91b58",
+      "scope": "Before adding the final independent-review note and final status wording; final CI rebuilds the committed package."
+    }
+  ],
+  "source_sha256": {
+    "src/agronomy_agent/server/services/chat_service.py": "68daf615aad9a4d2039be225253d50c41e8f23f19a8a518a1e63a397993f1586",
+    "tests/test_turn_generation_telemetry.py": "c70be89606e597acccd91ed945fb088769110c5e121638048481ee2558ccf668",
+    "frontend/src/OpenAgronomyApp.tsx": "155341d6d5a4649e6e80303cc577a9440e86e3ed1cb319ca1b3ad6007088fc8f",
+    "frontend/src/openAgronomyMapWorkflow.test.tsx": "f3049e104bd4f9c3e523063fec0ceacf97d326a8fab3e78ea04eb0fc854b8ab7"
+  },
+  "known_prior_failures": [
+    {
+      "artifact": "python-suite.txt",
+      "result": "Interrupted around 41 percent with an observed failure; no completed diagnosis",
+      "status": "interrupted"
+    },
+    {
+      "artifact": "python-suite-reviewed.txt",
+      "result": "20 failed, 1547 passed, 4 skipped; planner regression repaired against existing contracts",
+      "status": "failed"
+    },
+    {
+      "artifact": "model-setup-tests.txt",
+      "result": "Initial fixture consent omission: 3 failed, 36 passed; repaired run: 39 passed",
+      "status": "failed"
+    },
+    {
+      "artifact": "analysis/gemma-quality",
+      "result": "Superseded analysis v1: malformed mapping could duplicate counts and omit denominators; successor independently verified",
+      "status": "superseded"
+    },
+    {
+      "artifact": "colab/capsule-v1",
+      "result": "Stale inputs; retained, not uploaded or run",
+      "status": "rejected"
+    }
+  ],
+  "claim_limit": "Unit, API, browser and packaging checks establish engineering contracts, not agronomic answer validation. Final package and CI receipts recorded separately."
+}

@@ -1,0 +1,9 @@
+{
+  "status": "pass",
+  "benchmark_source_commit": "2b4028560c18def902463b4da44ef2c5c69467b1",
+  "runtime_python_files_checked": 147,
+  "mismatches": [],
+  "gemma_run_sha256": "1b462845b341872493f9b5cd3979e77e43e40ee0ce11104f4dfcf2f555523e31",
+  "capsule_sha256": "1cabf50610fba86017b0126fa0e24545df2cc239b45cc851640137dd3c8b6c90",
+  "scope": "Runtime Python source identity only; docs-generated container inventory was regenerated after capsule, with no model/prompt/corpus change. Later telemetry correction is a separate source delta and is not represented as benchmarked."
+}
