@@ -127,6 +127,10 @@ class RetrievedDoc:
     answer_role: str = ""
     transfer_scope: str = ""
     applicability_boundary: str = ""
+    authority_tier: str = ""
+    supporting_source_ids: tuple[str, ...] = ()
+    source_jurisdictions: tuple[str, ...] = ()
+    method_scope: dict[str, Any] | None = None
     source_locator: dict[str, Any] | None = None
 
 
@@ -717,6 +721,10 @@ class LexicalRetriever:
                     answer_role=str(doc.get("answer_role") or ""),
                     transfer_scope=str(doc.get("transfer_scope") or ""),
                     applicability_boundary=str(doc.get("applicability_boundary") or ""),
+                    authority_tier=str(doc.get("authority_tier") or ""),
+                    supporting_source_ids=tuple(_preserve_string_values(doc.get("supporting_source_ids"))),
+                    source_jurisdictions=tuple(_preserve_string_values(doc.get("source_jurisdictions"))),
+                    method_scope=(dict(doc.get("method_scope")) if isinstance(doc.get("method_scope"), dict) else None),
                     source_locator=(dict(doc.get("source_locator")) if isinstance(doc.get("source_locator"), dict) else None),
                 )
             )

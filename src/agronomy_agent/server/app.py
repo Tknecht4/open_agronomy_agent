@@ -93,6 +93,9 @@ from agronomy_agent.server.schemas import (
     WorkspaceInviteCreate,
     WorkspaceCreate,
 )
+from agronomy_agent.server.services.conversation_scope import (
+    ConversationScopeError, bind_conversation_context, identity as conversation_identity,
+)
 from agronomy_agent.server.services.chat_service import run_turn
 from agronomy_agent.server.services.answer_renderer import render_structured_answer
 from agronomy_agent.server.services.attachment_scanner import (
@@ -2749,9 +2752,10 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         session_id: str,
         *,
         user: dict[str, Any] | None = None,
+        include_turns: bool = True,
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         resolved_user = user or _demo_field_user(request)
-        session = store.get_session(session_id)
+        session = store.get_session(session_id, include_turns=include_turns)
         if not session or not _session_visible_to_user(session, request=request, user=resolved_user):
             raise HTTPException(status_code=404, detail="session not found")
         return session, resolved_user
@@ -2873,7 +2877,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         inner.update(
             {
                 "field_context_id": field_context_id,
-                "field_conversation_key": f"field:{field_context_id}",
+                "field_conversation_key": str(outer.get("field_conversation_key") or f"field:{field_context_id}"),
                 "crop": stored.get("crop") or inner.get("crop"),
                 "region": stored.get("region") or inner.get("region"),
                 "jurisdiction": stored.get("jurisdiction") or inner.get("jurisdiction"),
@@ -2911,7 +2915,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         outer.update(
             {
                 "field_context_id": field_context_id,
-                "field_conversation_key": f"field:{field_context_id}",
+                "field_conversation_key": str(outer.get("field_conversation_key") or f"field:{field_context_id}"),
                 "field_record_updated_at": record.get("updated_at"),
                 "field_access_authorized": True,
                 "field_access_workspace_id": record["workspace_id"],
@@ -2924,12 +2928,27 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         )
         return outer
 
+    def _bind_turn_context(session: dict[str, Any], incoming: dict[str, Any] | None) -> dict[str, Any]:
+        try:
+            return bind_conversation_context(
+                session.get("context"), incoming,
+                has_turns=store.count_session_turns(session["session_id"]) > 0,
+            )
+        except ConversationScopeError as exc:
+            raise HTTPException(status_code=409, detail={
+                "code": "conversation_scope_mismatch", "boundary": str(exc),
+            }) from exc
+
     def _persistable_demo_turn_context(session_context: dict[str, Any] | None) -> dict[str, Any] | None:
         if not isinstance(session_context, dict):
             return session_context
         persisted = dict(session_context)
         persisted.pop("workspace_retrieved_docs", None)
         persisted.pop("ephemeral_private_source_summary", None)
+        if isinstance(persisted.get("field_context"), dict):
+            persisted["field_context"] = dict(persisted["field_context"])
+            for name in ("field_history", "field_answer_history", "field_data"):
+                persisted["field_context"].pop(name, None)
         return persisted
 
     def _demo_field_metadata(record: dict[str, Any]) -> dict[str, Any]:
@@ -3571,25 +3590,41 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
     def ensure_legacy_session(thread: dict[str, Any]) -> tuple[dict[str, Any], str]:
         metadata = dict(thread.get("metadata", {}))
         legacy_session_id = metadata.get("legacy_session_id")
+        field_id = str(thread["field_context_id"]) if thread.get("field_context_id") else None
+        scope = f"field:{field_id}" if field_id else "general"
         if legacy_session_id:
-            existing = store.get_session(str(legacy_session_id))
+            existing = store.get_session(str(legacy_session_id), include_turns=False)
             if existing:
-                if not _session_owner_id(existing):
-                    store.update_session(
-                        str(legacy_session_id),
-                        context=_context_with_session_owner(
-                            existing.get("context"),
-                            str(thread["created_by_user_id"]),
-                        ),
-                    )
-                return metadata, str(legacy_session_id)
-        field_context = store.get_phase4_field_context(thread["field_context_id"]) if thread.get("field_context_id") else None
+                context = existing.get("context") or {}
+                try:
+                    existing_scope, existing_key = conversation_identity(context)
+                except ConversationScopeError:
+                    existing_scope, existing_key = "", ""
+                if (
+                    metadata.get("legacy_scope_bound_session_id") == str(legacy_session_id)
+                    and context.get("_legacy_bridge_scope_version") == 1
+                    and _session_owner_id(existing) == str(thread["created_by_user_id"])
+                    and existing_scope == scope
+                    and existing_key == scope
+                ):
+                    return metadata, str(legacy_session_id)
+                # Old bridge sessions did not carry a reliable immutable scope.
+                # Their turns and phase4 traces remain readable, but cannot be
+                # promoted into the new session's prompt history.
+                quarantined = list(metadata.get("quarantined_legacy_session_ids") or [])
+                if str(legacy_session_id) not in quarantined:
+                    quarantined.append(str(legacy_session_id))
+                metadata["quarantined_legacy_session_ids"] = quarantined
+        field_context = store.get_phase4_field_context(field_id) if field_id else None
         legacy = store.create_session(
             title=f"Hosted thread: {thread['title']}",
             user_pseudonym=thread["created_by_user_id"],
             tags=["phase4", "hosted"],
             context=_context_with_session_owner(
                 {
+                    "field_context_id": field_id,
+                    "field_conversation_key": scope,
+                    "_legacy_bridge_scope_version": 1,
                     "crop": (field_context or {}).get("crop_current"),
                     "region": (field_context or {}).get("region_text"),
                     "jurisdiction": (field_context or {}).get("province_state") or (field_context or {}).get("country"),
@@ -3605,6 +3640,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             },
         )
         metadata["legacy_session_id"] = legacy["session_id"]
+        metadata["legacy_scope_bound_session_id"] = legacy["session_id"]
         updated = store.update_phase4_thread_metadata(thread["id"], metadata=metadata)
         return dict((updated or thread).get("metadata", metadata)), legacy["session_id"]
 
@@ -5180,14 +5216,24 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         with profiler.span("thread.load", input_size=len(payload.message)):
             workspace = require_workspace_role(user, str(payload.workspace_id), WORKSPACE_WRITE_ROLES)
             enforce_workspace_quota(workspace, "max_messages", increment=2)
-            field_context_id = str(payload.field_context_id) if payload.field_context_id else None
-            if field_context_id:
-                require_field_context_for_workspace(workspace, field_context_id)
+            supplied_field_id = str(payload.field_context_id) if payload.field_context_id else None
             attachments = [require_attachment_for_workspace(workspace, str(item)) for item in payload.attachment_ids]
             if payload.thread_id:
                 thread = require_thread_for_user(user, str(payload.thread_id))
+                if thread["workspace_id"] != workspace["id"]:
+                    raise HTTPException(status_code=403, detail="thread is outside workspace")
+                bound_field_id = str(thread["field_context_id"]) if thread.get("field_context_id") else None
+                if supplied_field_id and supplied_field_id != bound_field_id:
+                    raise HTTPException(status_code=409, detail={
+                        "code": "conversation_scope_mismatch",
+                        "boundary": "Start a new chat to change the conversation's field or general scope.",
+                    })
+                field_context_id = bound_field_id
             else:
+                field_context_id = supplied_field_id
                 enforce_workspace_quota(workspace, "max_threads")
+                if field_context_id:
+                    require_field_context_for_workspace(workspace, field_context_id)
                 thread = store.create_phase4_thread(
                     workspace=workspace,
                     created_by_user_id=user["id"],
@@ -5203,9 +5249,11 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         if thread["workspace_id"] != workspace["id"]:
             raise HTTPException(status_code=403, detail="thread is outside workspace")
 
+        if field_context_id:
+            require_field_context_for_workspace(workspace, field_context_id)
+
         with profiler.span("field_context.load", metadata={"field_context_id": field_context_id}):
-            effective_field_context_id = field_context_id or thread.get("field_context_id")
-            active_field_context = store.get_phase4_field_context(str(effective_field_context_id)) if effective_field_context_id else None
+            active_field_context = store.get_phase4_field_context(field_context_id) if field_context_id else None
 
         with profiler.span("thread.persist_trace", metadata={"phase": "user_message"}):
             metadata, legacy_session_id = ensure_legacy_session(thread)
@@ -5215,7 +5263,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 content=payload.message,
                 metadata={
                     "attachment_ids": [str(item) for item in payload.attachment_ids],
-                    "field_context_id": field_context_id or thread.get("field_context_id"),
+                    "field_context_id": field_context_id,
                 },
             )
             store.append_phase4_trace_event(
@@ -5324,7 +5372,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                     "redaction_mode": "none",
                 },
                 session_context={
-                    "field_context_id": str(effective_field_context_id) if effective_field_context_id else None,
+                    "field_context_id": field_context_id,
                     "field_record_updated_at": (active_field_context or {}).get("updated_at"),
                     "field_access_authorized": bool(active_field_context),
                     "field_access_workspace_id": workspace["id"] if active_field_context else None,
@@ -6727,11 +6775,21 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
     @app.post("/api/sessions")
     async def create_session(payload: CreateSessionRequest, request: Request) -> dict[str, Any]:
         user = _demo_field_user(request)
+        context = payload.context.model_dump()
+        try:
+            declared_scope, _ = conversation_identity(context)
+        except ConversationScopeError as exc:
+            raise HTTPException(status_code=409, detail={
+                "code": "conversation_scope_mismatch", "boundary": str(exc),
+            }) from exc
+        if declared_scope:
+            context = _bind_turn_context({"session_id": "", "context": {}}, context)
+            context = _persistable_demo_turn_context(_authorize_demo_turn_field_context(request, context)) or {}
         session = store.create_session(
             title=payload.title,
             user_pseudonym=payload.user_pseudonym,
             tags=payload.tags,
-            context=_context_with_session_owner(payload.context.model_dump(), str(user["id"])),
+            context=_context_with_session_owner(context, str(user["id"])),
             consent=payload.consent.model_dump(),
         )
         return _session_response(session)
@@ -6748,7 +6806,9 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         merged_context = None
         if payload.context:
             merged_context = _context_with_session_owner(
-                _merge_context(session.get("context"), payload.context.model_dump()),
+                _persistable_demo_turn_context(_authorize_demo_turn_field_context(
+                    request, _bind_turn_context(session, payload.context.model_dump(exclude_unset=True)),
+                )) or {},
                 str(user["id"]),
             )
 
@@ -6770,7 +6830,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         payload: CreateTurnRequest,
         request: Request,
     ) -> dict[str, Any]:
-        session, user = _require_owned_session(request, session_id)
+        session, user = _require_owned_session(request, session_id, include_turns=False)
         if payload.mode not in {"baseline", "agronomic_rag", "mock"}:
             raise HTTPException(status_code=400, detail="invalid mode")
         runtime_mode(payload.mode)
@@ -6779,12 +6839,13 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
 
         authorized_session_context = _authorize_demo_turn_field_context(
             request,
-            payload.session_context,
+            _bind_turn_context(session, payload.session_context),
         )
         persistable_session_context = _persistable_demo_turn_context(authorized_session_context)
         if persistable_session_context:
             store.update_session(
                 session_id,
+                include_turns=False,
                 context=_context_with_session_owner(
                     _merge_context(session.get("context"), persistable_session_context),
                     str(user["id"]),
@@ -6846,7 +6907,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         payload: CreateTurnRequest,
         request: Request,
     ) -> StreamingResponse:
-        session, user = _require_owned_session(request, session_id)
+        session, user = _require_owned_session(request, session_id, include_turns=False)
         if payload.mode not in {"baseline", "agronomic_rag", "mock"}:
             raise HTTPException(status_code=400, detail="invalid mode")
         runtime_mode(payload.mode)
@@ -6854,12 +6915,13 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         selected_model_id = runtime_model_id(payload.model_id, mode=payload.mode)
         authorized_session_context = _authorize_demo_turn_field_context(
             request,
-            payload.session_context,
+            _bind_turn_context(session, payload.session_context),
         )
         persistable_session_context = _persistable_demo_turn_context(authorized_session_context)
         if persistable_session_context:
             store.update_session(
                 session_id,
+                include_turns=False,
                 context=_context_with_session_owner(
                     _merge_context(session.get("context"), persistable_session_context),
                     str(user["id"]),
@@ -7222,7 +7284,38 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         base_turn = store.get_turn(payload.base_turn_id)
         if not base_turn:
             raise HTTPException(status_code=404, detail="turn not found")
-        _require_owned_session(request, str(base_turn.get("session_id") or ""))
+        session, user = _require_owned_session(
+            request, str(base_turn.get("session_id") or ""), include_turns=False,
+        )
+        replay_context = _bind_turn_context(session, payload.override_session_context)
+        scope, _ = conversation_identity(replay_context)
+        for server_key in (
+            "field_access_authorized", "field_access_workspace_id",
+            "field_record_updated_at", "workspace_retrieved_docs",
+            "ephemeral_private_source_summary",
+        ):
+            replay_context.pop(server_key, None)
+        if scope.startswith("field:"):
+            field_id = scope.removeprefix("field:")
+            field_record = store.get_phase4_field_context(field_id)
+            if not field_record:
+                raise HTTPException(status_code=404, detail="field context not found")
+            require_workspace_for_user(user, field_record["workspace_id"])
+            if _demo_field_metadata(field_record).get("kind") == "map_field":
+                replay_context = _authorize_demo_turn_field_context(request, replay_context)
+            else:
+                if (payload.override_session_context or {}).get("field_context") is not None:
+                    raise HTTPException(status_code=409, detail={
+                        "code": "field_context_snapshot_mismatch",
+                        "boundary": "Replay field snapshots must be loaded from the saved field.",
+                    })
+                replay_context.update({
+                    "field_context": field_record,
+                    "field_access_authorized": True,
+                    "field_access_workspace_id": field_record["workspace_id"],
+                })
+        else:
+            replay_context.pop("field_context", None)
         replay_rag_config = (
             None
             if settings.allow_rag_config_override and payload.rag_config is None
@@ -7247,7 +7340,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                     "trace_options": payload.trace_options.model_dump(),
                     "top_k": payload.top_k,
                     "pipeline": payload.pipeline,
-                    "override_session_context": payload.override_session_context,
+                    "authorized_session_context": replay_context,
                 },
             )
         except ValueError as exc:

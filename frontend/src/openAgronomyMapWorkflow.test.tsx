@@ -2402,6 +2402,95 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.queryByText('BC field history only')).not.toBeInTheDocument()
   })
 
+  it('reopens saved general and current-field chats without rebinding their scope, including after reload', async () => {
+    const savedField = {
+      id: 'field-saved', field_context_id: 'field-saved', name: 'Saved field',
+      crop: 'canola', region: 'Alberta', jurisdiction: 'Alberta', acres: '', concern: '', notes: '',
+      geometry: { kind: 'none' }, regionalContext: '', geoPriors: null,
+      sourceBoundary: 'Regional context is not field truth.', createdAt: '2026-07-20T12:00:00Z',
+      storageMode: 'account_workspace',
+    }
+    const session = (id: string, key: string, title: string) => ({
+      session_id: id, title, context: { field_conversation_key: key,
+        ...(key.startsWith('field:field-saved') ? { field_context_id: 'field-saved' } : {}) },
+      turns_included: false, turns: [], created_at: '2026-09-27T12:00:00Z',
+    })
+    const listed = [
+      session('general-one', 'general', 'First general'),
+      session('general-two', 'general:chat:second', 'Second general'),
+      session('field-one', 'field:field-saved', 'First field'),
+      session('field-two', 'field:field-saved:chat:second', 'Second field'),
+      session('other-field', 'field:elsewhere', 'Other field'),
+    ]
+    const baseFetch = installFetchMock({ ...emptyDemoFields, fields: [savedField] }, uploadPayload, listed)
+    const baseImplementation = baseFetch.getMockImplementation()!
+    baseFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const id = String(input).match(/^\/api\/sessions\/([^/]+)$/)?.[1]
+      if (id) {
+        const item = listed.find(candidate => candidate.session_id === id)!
+        return jsonResponse({ ...item, turns_included: true, turns: [{
+          turn_id: `${id}-turn`, user_message: `Question ${id}`, answer: `Answer ${id}`,
+          trace: { retrieved_docs: [], graph_hits: [], tool_invocations: [] },
+        }] })
+      }
+      return baseImplementation(input, init)
+    })
+    const first = render(<OpenAgronomyApp />)
+    expect(await screen.findByText('Answer general-one')).toBeInTheDocument()
+    const picker = screen.getByRole('combobox', { name: 'Saved conversations' })
+    expect(within(picker).getByRole('group', { name: 'General' })).toHaveTextContent('Second general')
+    expect(within(picker).queryByText('Other field')).not.toBeInTheDocument()
+    fireEvent.change(picker, { target: { value: 'general-two' } })
+    expect(await screen.findByText('Answer general-two')).toBeInTheDocument()
+    expect(screen.queryByText('Answer general-one')).not.toBeInTheDocument()
+
+    openPrimaryPage('Fields')
+    fireEvent.click(await screen.findByRole('button', { name: /^Saved field/ }))
+    openPrimaryPage('Map')
+    expect(await screen.findByText('Answer field-one')).toBeInTheDocument()
+    const fieldPicker = screen.getByRole('combobox', { name: 'Saved conversations' })
+    expect(within(fieldPicker).getByRole('group', { name: 'Current field · Saved field' })).toHaveTextContent('Second field')
+    expect(within(fieldPicker).queryByText('Other field')).not.toBeInTheDocument()
+    fireEvent.change(fieldPicker, { target: { value: 'field-two' } })
+    expect(await screen.findByText('Answer field-two')).toBeInTheDocument()
+    expect(screen.queryByText('Answer general-two')).not.toBeInTheDocument()
+
+    first.unmount()
+    render(<OpenAgronomyApp />)
+    openPrimaryPage('Map')
+    expect(await screen.findByText('Answer field-two')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Saved conversations' })).toHaveValue('field-two')
+  })
+
+  it('ignores a delayed conversation detail after selecting another saved chat', async () => {
+    const listed = [
+      { session_id: 'slow', title: 'Slow general', context: { field_conversation_key: 'general' }, turns_included: false, turns: [] },
+      { session_id: 'fast', title: 'Fast general', context: { field_conversation_key: 'general:chat:fast' }, turns_included: false, turns: [] },
+    ]
+    const baseFetch = installFetchMock(emptyDemoFields, uploadPayload, listed)
+    const baseImplementation = baseFetch.getMockImplementation()!
+    let releaseSlow!: (value: Response) => void
+    const slowResponse = new Promise<Response>(resolve => { releaseSlow = resolve })
+    baseFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url === '/api/sessions/slow') return slowResponse
+      if (url === '/api/sessions/fast') return jsonResponse({ ...listed[1], turns_included: true,
+        turns: [{ turn_id: 'fast-turn', user_message: 'Fast question', answer: 'Fast answer', trace: {} }] })
+      return baseImplementation(input, init)
+    })
+    render(<OpenAgronomyApp />)
+    await waitFor(() => expect(baseFetch.mock.calls.some(([url]) => String(url) === '/api/sessions/slow')).toBe(true))
+    fireEvent.change(screen.getByRole('combobox', { name: 'Saved conversations' }), { target: { value: 'fast' } })
+    expect(await screen.findByText('Fast answer')).toBeInTheDocument()
+    await act(async () => {
+      releaseSlow(jsonResponse({ ...listed[0], turns_included: true,
+        turns: [{ turn_id: 'slow-turn', user_message: 'Slow question', answer: 'Slow answer', trace: {} }] }))
+      await slowResponse
+    })
+    expect(screen.getByText('Fast answer')).toBeInTheDocument()
+    expect(screen.queryByText('Slow answer')).not.toBeInTheDocument()
+  })
+
   it('positions a newly loaded answer at its opening instead of its tail', async () => {
     let releaseSessions!: (response: Response) => void
     const sessionsResponse = new Promise<Response>((resolve) => {

@@ -1,0 +1,285 @@
+{
+  "boundary": "posthoc_exact_method_family_check_from_frozen_question_rubrics_not_frozen_quality_metric",
+  "models": {
+    "gemma": [
+      {
+        "case_id": "PFMH3-01",
+        "expected_card_posthoc": "method_seed_mass",
+        "expected_card_present": true,
+        "ids_found_in_prompt": [
+          "method_seed_mass"
+        ],
+        "requested_method_ids": [
+          "seed_mass"
+        ],
+        "retrieved_method_ids": [
+          "method_seed_mass"
+        ]
+      },
+      {
+        "case_id": "PFMH3-02",
+        "expected_card_posthoc": "method_thermal_time",
+        "expected_card_present": true,
+        "ids_found_in_prompt": [
+          "method_thermal_time"
+        ],
+        "requested_method_ids": [
+          "thermal_time"
+        ],
+        "retrieved_method_ids": [
+          "method_thermal_time"
+        ]
+      },
+      {
+        "case_id": "PFMH3-03",
+        "expected_card_posthoc": "method_partial_budget",
+        "expected_card_present": true,
+        "ids_found_in_prompt": [
+          "method_partial_budget"
+        ],
+        "requested_method_ids": [
+          "partial_budget"
+        ],
+        "retrieved_method_ids": [
+          "method_partial_budget"
+        ]
+      },
+      {
+        "case_id": "PFMH3-04",
+        "expected_card_posthoc": "method_enterprise_budget",
+        "expected_card_present": true,
+        "ids_found_in_prompt": [
+          "method_enterprise_budget"
+        ],
+        "requested_method_ids": [
+          "enterprise_budget"
+        ],
+        "retrieved_method_ids": [
+          "method_enterprise_budget"
+        ]
+      },
+      {
+        "case_id": "PFMH3-05",
+        "expected_card_posthoc": "method_liquidity",
+        "expected_card_present": false,
+        "ids_found_in_prompt": [
+          "method_cash_flow"
+        ],
+        "requested_method_ids": [
+          "cash_flow"
+        ],
+        "retrieved_method_ids": [
+          "method_cash_flow"
+        ]
+      },
+      {
+        "case_id": "PFMH3-06",
+        "expected_card_posthoc": "method_cash_flow",
+        "expected_card_present": false,
+        "ids_found_in_prompt": [
+          "method_enterprise_budget"
+        ],
+        "requested_method_ids": [
+          "enterprise_budget"
+        ],
+        "retrieved_method_ids": [
+          "method_enterprise_budget"
+        ]
+      },
+      {
+        "case_id": "PFMH3-07",
+        "expected_card_posthoc": "method_nutrient_inputs",
+        "expected_card_present": true,
+        "ids_found_in_prompt": [
+          "method_nutrient_inputs"
+        ],
+        "requested_method_ids": [
+          "nutrient_plan_inputs"
+        ],
+        "retrieved_method_ids": [
+          "method_nutrient_inputs"
+        ]
+      },
+      {
+        "case_id": "PFMH3-08",
+        "expected_card_posthoc": null,
+        "expected_card_present": null,
+        "ids_found_in_prompt": [],
+        "requested_method_ids": [],
+        "retrieved_method_ids": []
+      },
+      {
+        "case_id": "PFMH3-09",
+        "expected_card_posthoc": null,
+        "expected_card_present": null,
+        "ids_found_in_prompt": [],
+        "requested_method_ids": [],
+        "retrieved_method_ids": []
+      },
+      {
+        "case_id": "PFMH3-10",
+        "expected_card_posthoc": null,
+        "expected_card_present": null,
+        "ids_found_in_prompt": [],
+        "requested_method_ids": [],
+        "retrieved_method_ids": []
+      },
+      {
+        "case_id": "PFMH3-11",
+        "expected_card_posthoc": null,
+        "expected_card_present": null,
+        "ids_found_in_prompt": [],
+        "requested_method_ids": [],
+        "retrieved_method_ids": []
+      },
+      {
+        "case_id": "PFMH3-12",
+        "expected_card_posthoc": null,
+        "expected_card_present": null,
+        "ids_found_in_prompt": [],
+        "requested_method_ids": [],
+        "retrieved_method_ids": []
+      }
+    ],
+    "qwen27b": [
+      {
+        "case_id": "PFMH3-01",
+        "expected_card_posthoc": "method_seed_mass",
+        "expected_card_present": true,
+        "ids_found_in_prompt": [
+          "method_seed_mass"
+        ],
+        "requested_method_ids": [
+          "seed_mass"
+        ],
+        "retrieved_method_ids": [
+          "method_seed_mass"
+        ]
+      },
+      {
+        "case_id": "PFMH3-02",
+        "expected_card_posthoc": "method_thermal_time",
+        "expected_card_present": true,
+        "ids_found_in_prompt": [
+          "method_thermal_time"
+        ],
+        "requested_method_ids": [
+          "thermal_time"
+        ],
+        "retrieved_method_ids": [
+          "method_thermal_time"
+        ]
+      },
+      {
+        "case_id": "PFMH3-03",
+        "expected_card_posthoc": "method_partial_budget",
+        "expected_card_present": true,
+        "ids_found_in_prompt": [
+          "method_partial_budget"
+        ],
+        "requested_method_ids": [
+          "partial_budget"
+        ],
+        "retrieved_method_ids": [
+          "method_partial_budget"
+        ]
+      },
+      {
+        "case_id": "PFMH3-04",
+        "expected_card_posthoc": "method_enterprise_budget",
+        "expected_card_present": true,
+        "ids_found_in_prompt": [
+          "method_enterprise_budget"
+        ],
+        "requested_method_ids": [
+          "enterprise_budget"
+        ],
+        "retrieved_method_ids": [
+          "method_enterprise_budget"
+        ]
+      },
+      {
+        "case_id": "PFMH3-05",
+        "expected_card_posthoc": "method_liquidity",
+        "expected_card_present": false,
+        "ids_found_in_prompt": [
+          "method_cash_flow"
+        ],
+        "requested_method_ids": [
+          "cash_flow"
+        ],
+        "retrieved_method_ids": [
+          "method_cash_flow"
+        ]
+      },
+      {
+        "case_id": "PFMH3-06",
+        "expected_card_posthoc": "method_cash_flow",
+        "expected_card_present": false,
+        "ids_found_in_prompt": [
+          "method_enterprise_budget"
+        ],
+        "requested_method_ids": [
+          "enterprise_budget"
+        ],
+        "retrieved_method_ids": [
+          "method_enterprise_budget"
+        ]
+      },
+      {
+        "case_id": "PFMH3-07",
+        "expected_card_posthoc": "method_nutrient_inputs",
+        "expected_card_present": true,
+        "ids_found_in_prompt": [
+          "method_nutrient_inputs"
+        ],
+        "requested_method_ids": [
+          "nutrient_plan_inputs"
+        ],
+        "retrieved_method_ids": [
+          "method_nutrient_inputs"
+        ]
+      },
+      {
+        "case_id": "PFMH3-08",
+        "expected_card_posthoc": null,
+        "expected_card_present": null,
+        "ids_found_in_prompt": [],
+        "requested_method_ids": [],
+        "retrieved_method_ids": []
+      },
+      {
+        "case_id": "PFMH3-09",
+        "expected_card_posthoc": null,
+        "expected_card_present": null,
+        "ids_found_in_prompt": [],
+        "requested_method_ids": [],
+        "retrieved_method_ids": []
+      },
+      {
+        "case_id": "PFMH3-10",
+        "expected_card_posthoc": null,
+        "expected_card_present": null,
+        "ids_found_in_prompt": [],
+        "requested_method_ids": [],
+        "retrieved_method_ids": []
+      },
+      {
+        "case_id": "PFMH3-11",
+        "expected_card_posthoc": null,
+        "expected_card_present": null,
+        "ids_found_in_prompt": [],
+        "requested_method_ids": [],
+        "retrieved_method_ids": []
+      },
+      {
+        "case_id": "PFMH3-12",
+        "expected_card_posthoc": null,
+        "expected_card_present": null,
+        "ids_found_in_prompt": [],
+        "requested_method_ids": [],
+        "retrieved_method_ids": []
+      }
+    ]
+  }
+}

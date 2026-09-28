@@ -36,6 +36,15 @@ numeric calculations after evaluation-derived worked examples were removed.
 The separate typed-calculation follow-up improved those calculations with either
 active or candidate retrieval; it does not activate the candidate cards.
 
+`rag_production_foundations_method_candidate.yaml` is a second nonselectable
+profile for seven source-supported general METHOD rows. Its release profile
+binds the source-support receipt hash. The source-distinct holdout found three
+new material finance errors after an experimental method appendix was added to
+model drafts. That response path was removed. The METHOD rows remain
+context-only and non-active; retrieval success is not answer-quality evidence.
+The active `rag.yaml`, active policy, and selectable profile registry remain
+unchanged.
+
 ## RC3 egress and completed execution boundary
 
 The completed RC3 run was governed by `final_benchmark_round_rc3.json`, which requires
@@ -139,3 +148,14 @@ explicit compatibility and cohort decision.
 ## Failure modes
 
 Reject malformed schemas, unpinned required models, missing active artifacts, hash drift, evaluation/retrieval overlap, unknown capability IDs, and unsupported runtime modes. Historical configs may reference artifacts intentionally absent from a public checkout; label that state rather than silently selecting them.
+
+## Conversation operating budget
+
+`model.yaml:context_management` sets `context_limit_tokens` (8,192 inclusive of
+output), `history_budget_tokens` (2,048), and `max_history_turns` (8). This is an
+operator budget, not a promise that every model supports that capacity. A smaller
+explicit native model limit wins. The requested generation allowance is always
+reserved. Unknown tokenizers use labelled estimates; provider enforcement can
+still reject input. No automatic KV quantization, rotating cache, or new model
+selection is enabled by these settings. Context policy changes require a new
+runtime identity and fresh evaluation; historical benchmark scores stay frozen.

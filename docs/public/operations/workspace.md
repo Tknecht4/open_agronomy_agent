@@ -12,6 +12,27 @@ Open **Workspace** and type a general question. A field is optional: the app mus
 
 Select a field when its known details matter to the question. Field observations and soil tests are user records; map intersections and provider data are separate contextual inputs. If a field is incomplete, leave unknowns blank and ask a bounded question. A model answer should not turn an unknown into a zero, a pass, or a prescription.
 
+## Continue a saved conversation
+
+Use **Saved conversations** to reopen a general chat or a chat for the selected
+field. **New chat** starts a separate conversation in that scope. Select the
+field to find its other conversations. Changing a conversation's field requires
+a new chat; previous answers remain attached to their original context.
+
+The complete transcript stays in local storage. Each model request includes only
+a bounded recent window. Earlier user statements are unverified reports and
+previous model answers are continuity context, never source evidence. Rejected
+answers are excluded; feedback corrections remain labelled as human reports.
+Older omitted details may need to be stated again. Save durable observations and
+soil tests as field records so they remain available independently of chat.
+
+The **Last request** indicator shows input context and measured model decode
+speed. Hover, focus, or open **Details** for the operating budget, reserved output,
+omitted history, prompt-processing speed and cache status. Counts are labelled
+exact, estimated or unavailable. The operating budget is distinct from the
+model's declared maximum. These are saved measurements, not a live typing rate
+or a prediction for the next question. Model-free answers can have no token rate.
+
 ## Map and connected sources
 
 Use **Conversation**, **Together**, or **Map** to give the current task more room.

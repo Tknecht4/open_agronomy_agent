@@ -13,6 +13,7 @@ import re
 from typing import Any, Iterable, Mapping, Sequence
 
 from agronomy_agent.query_context import QueryContextSignals, analyze_query_context
+from agronomy_agent.method_context import METHODS, requested_methods, reviewed_method_ids
 
 
 POLICY_ID = "open_agronomy_agent.decision_contract.v1"
@@ -399,6 +400,11 @@ def _retrieval_query(
     signals: QueryContextSignals,
     obligation: EvidenceObligation,
 ) -> str:
+    if obligation.key.startswith("method:"):
+        # The original question can contain many unrelated field terms. A
+        # typed obligation retrieves its small method family directly; query
+        # fit and the hash-bound corpus policy still control admission.
+        return obligation.key.removeprefix("method:").replace("_", " ")
     scope = " ".join(_scope_terms(signals))
     terms = " ".join(obligation.retrieval_terms)
     return " ".join(part for part in (question.strip(), scope, terms) if part).strip()
@@ -409,6 +415,7 @@ def build_decision_contract(
     route: Any,
     *,
     field_context: dict[str, Any] | None = None,
+    method_context_enabled: bool = False,
 ) -> AgronomyDecisionContract:
     """Build a deterministic, monotonic decision contract.
 
@@ -458,6 +465,19 @@ def build_decision_contract(
         tools.update(rule.tools)
         authorities.add(rule.authority)
         missing.update(missing_inputs)
+
+    if method_context_enabled:
+        for method_id in requested_methods(question):
+            obligations.append(EvidenceObligation(
+                key=f"method:{method_id}",
+                description=METHODS[method_id][1],
+                authority="method_context_only",
+                retrieval_terms=(method_id.replace("_", " "),),
+                required_inputs=(),
+                missing_inputs=(),
+                required_tools=(),
+            ))
+            authorities.add("method_context_only")
 
     if len({intent for intent in intents if intent not in {"field_data", "regional_context"}}) >= 3:
         intents.add("integrated_management")
@@ -533,8 +553,17 @@ def obligation_coverage(
         )
     )
     tokens = _normalized_tokens(haystack)
+    method_ids = set(reviewed_method_ids(doc))
     covered: list[str] = []
     for obligation in contract.evidence_obligations:
+        if obligation.key.startswith("method:"):
+            if obligation.key.removeprefix("method:") in method_ids:
+                covered.append(obligation.key)
+            continue
+        if method_ids:
+            # A METHOD row can fill only a METHOD obligation. Its topical
+            # vocabulary is not field, market, rate or label evidence.
+            continue
         term_sets = [
             _normalized_tokens(term) for term in obligation.retrieval_terms
         ]

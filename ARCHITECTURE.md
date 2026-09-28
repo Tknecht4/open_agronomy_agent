@@ -37,6 +37,7 @@ path observed; it is not a second agent implementation.
 | Agronomy kernel/model | `agent.py` | Resource loading, prompt construction, MLX generation, legacy evaluator path |
 | Planning/routing | `router.py`, `decision_contract.py`, `capability_planner.py`, `tool_planner.py` | Router classifies; planners own capability selection |
 | Evidence/retrieval | `evidence_*.py`, `context_packer.py`, `agno_runtime/`, `corpus_governance.py` | Preserve provenance, applicability, authority, and admission |
+| Candidate general-method transfer | `method_context.py`, `query_context.py`, `decision_contract.py` | Country-scoped method obligations and source/applicability separation; active profile has no method release |
 | Safety/verification | `answerability.py`, `answer_verifier.py`, `answer_safety.py`, `high_consequence.py` | Validation cannot create evidence or current authority |
 | Deterministic tools | `agronomic_calculations.py`, `local_tools.py`, `tools/` | Supported calculations bypass model drafting |
 | Public adapters | `local_tools.py`, `server/services/chat_service.py` | Network/cache/jurisdiction dependent; unavailable is a typed state |
@@ -49,6 +50,13 @@ path observed; it is not a second agent implementation.
 | Anonymous imagery | `field_imagery.py`, `imagery_analytics.py`, `imagery_sampling.py`, `imagery_receipts.py`, `imagery_store.py`, `imagery_budget.py`, `imagery_worker.py`, `server/services/imagery_service.py`, `server/field_data_routes.py` | Saved input geometry is distinct from statistical support: native point pixel, explicit point buffer, or field polygon. Optional isolated worker, storage admission, private source-bound chips, QA/NDVI/NDMI and authenticated previews; no operational yield prediction |
 | Imagery research | `imagery_assessment.py`, `imagery_models.py`, `scripts/assess_field_imagery.py`, `scripts/probe_imagery_model.py` | Frozen label/split assessments and bounded CPU/MPS encoder probes; outputs remain research evidence, not serving capability or active model profile |
 | Operator workflows | `scripts/` | Thin CLIs around package contracts; generated outputs belong under ignored paths |
+
+The nonselectable production-foundations method candidate adds seven reviewed,
+project-authored METHOD rows to typed retrieval and context. They carry a
+source-support receipt and general-method scope, not complete-answer or
+field-action authority. An experimental answer appendix failed the independent
+holdout safety gate and was removed. The ordinary generation, verification,
+safety, and high-consequence paths handle the entire request.
 
 ## Harnesses and what they prove
 
@@ -136,3 +144,30 @@ is not a useful cleanup target by itself.
 See `AGENTS.md` for safe repository work and
 `docs/reviews/repository-cleanup-investigation-20260926.md` for the current
 cleanup backlog and evidence status.
+
+## Bounded conversations
+
+Sessions retain complete local transcripts and an immutable general/field/example
+identity. The product turn boundary authorizes that identity before compiling
+server-owned recent turns. `server/services/conversation_context.py` injects a
+bounded, explicitly non-evidentiary conversation block at final prompt assembly;
+`server/services/conversation_scope.py` controls scope. Current governed evidence
+and requested output reserve take priority over history. The existing 17-stage
+execution topology is retained: policy/version, included turn identities and the
+budget receipt hash bind this change within evidence selection and prompt
+assembly. This is a new prompt policy, so it requires a new evaluation run identity;
+old single-turn results do not validate multi-turn behavior or model portability.
+
+MLX exposes exact template counts, explicitly declared native capacity, scoped
+KV caching and phase measurements. Backend capabilities may be unavailable; the
+UI labels estimates and missing measurements instead of inferring native capacity
+or speed from streamed display events. The full saved transcript and the active
+model window are separate representations.
+
+The retained `/chat/stream` API uses its thread's immutable field/general scope.
+Legacy bridges without server-recorded scope provenance receive fresh scoped
+sessions; their older messages and traces stay available for audit. Replay
+overrides are ephemeral and reauthorize field access. Prompt history excludes
+replay outputs and stops before the original turn at the root of a replay chain;
+the immediate parent remains recorded separately for lineage. Replays use current
+code, authorized field context and feedback, not guaranteed original prompt bytes.

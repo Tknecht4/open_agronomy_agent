@@ -1,0 +1,42 @@
+{
+  "schema_version": "open_agronomy_agent.method_transfer_holdout_freeze.v1",
+  "status": "unopened_pre_execution_development_candidate",
+  "captured_at_utc": "2026-09-28T02:02:10+00:00",
+  "commit": "f50d88732950384a1df1ff626f7aa1a2f73b5b2d",
+  "base_commit": "7d6f1bdbca3820a6a72d505e6ef73bcb47c4b950",
+  "model_id": "mlx-community/gemma-4-e2b-it-4bit",
+  "model_revision": "238767527555cb75a05732a84dff5d6ba0dd6809",
+  "max_tokens": 320,
+  "files": {
+    "src/agronomy_agent/method_context.py": "8114e34563be94d2a1462ac2cbf605f9288ecb0227ba92a9c9c3b02e6c5f2352",
+    "src/agronomy_agent/query_context.py": "fe0c74a3f4c01fc4bdc536ee3df03ba8cb18dfd7678851506fccab046c96a358",
+    "src/agronomy_agent/decision_contract.py": "4ec80c1ea3aff6e4c5b4997fa57e83fa47970d3a09799e0d1a378c619033965d",
+    "src/agronomy_agent/evidence_contracts.py": "56ba8f9b3b97d9152e8dec1f89d7ebc267323a5921c8f032bb687f9b3b7355ec",
+    "src/agronomy_agent/agent.py": "f1c39f9ccab05f417ea3788af1a8ef170cdc3fceee9835547421213fcb46b0fc",
+    "src/agronomy_agent/server/services/chat_service.py": "fc14472a8773f7a92ee4c29b5196771e8d2d651ec60f95bc55b518301713267d",
+    "scripts/run_production_foundations_development.py": "63676563d23eb5aabe88f9e970cac325b12ee9ba2fb4a4dc0968137a3846acee",
+    "configs/rag.yaml": "8f45880dbadf368848d52251aaafb24e25b17d9baa7923aa7707f6880fc04b91",
+    "configs/rag_production_foundations_method_candidate.yaml": "341c0edcb37c6627bea8ca0ef48d207a7195e9202fee7b184707e8913db097b4",
+    "configs/model.yaml": "8cd880ac68b3631a4eccc11bd9716be3e1768b1a5d49653ac13acc7ec6aeba10",
+    "data/manifests/runtime_corpus_policy_production_foundations_method_candidate.json": "fc47dd916d864f655ba382263e1e3d1dc6f4ad8d21ca7f80f4ec796232a84a57",
+    "data/derived/rag/offline_agronomy/production_foundations/v2/store_manifest.json": "8f0f3cd65c28097db283264ccb904364f88ed7d0b7d77ae0b1fcb6faf59e89bb",
+    "data/derived/rag/offline_agronomy/production_foundations/v2/shards/foundations-0001.jsonl": "7803574be7fe623de50cc59da7a35c554a4b9cbbb135976faf5f3edb85304153",
+    "data/eval/production_foundations_method_holdout_v3.jsonl": "cab6ce4888a56ecb1cff2a13c34c736f909d763b8f88571f95af1ff9242c38a3",
+    "data/eval/production_foundations_method_holdout_v3_sources_rubric.json": "d470044b086d37b61a73706a7642ae72677359ca7aa39d8e48fd0f769293dcdf"
+  },
+  "preregistered_gate": {
+    "positive_cases": 7,
+    "controls": 5,
+    "method_in_final_context_min": 7,
+    "complete_positives_min": 5,
+    "complete_positive_gain_over_active_min": 3,
+    "new_unsafe_max": 0,
+    "lost_complete_controls_max": 0,
+    "false_curated_method_controls_max": 0
+  },
+  "limitations": [
+    "Candidate non-active; no product activation from this record.",
+    "Author was source-distinct and implementation-blind; source bytes include indexed-only pages.",
+    "Earlier cohorts are exposed development evidence and do not qualify this holdout."
+  ]
+}

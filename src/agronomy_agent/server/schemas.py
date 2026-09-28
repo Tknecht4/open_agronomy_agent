@@ -128,7 +128,8 @@ class SessionContextSchema(BaseModel):
             "field_conversation_key",
             "field_record_updated_at",
         }
-        extra = {k: v for k, v in values.items() if k not in known}
+        extra = dict(values.get("extra") or {})
+        extra.update({k: v for k, v in values.items() if k not in known and k != "extra"})
         values = {k: v for k, v in values.items() if k in known}
         values["extra"] = extra
         return values

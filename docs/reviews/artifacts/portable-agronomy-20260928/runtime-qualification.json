@@ -1,0 +1,71 @@
+{
+  "boundary": "CUDA_resource_measurements_not_Metal_or_field_validation",
+  "full_offline_snapshot_lookup": {
+    "exit_code": 0,
+    "stderr": "\nFetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]\nFetching 10 files:  90%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 | 9/10 [00:00<00:00, 28.60it/s]\nFetching 10 files: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 10/10 [00:00<00:00, 31.59it/s]\n\nFetching 15 files:   0%|          | 0/15 [00:00<?, ?it/s]Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n\nFetching 15 files:  93%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258e| 14/15 [00:00<00:00, 27.44it/s]\nFetching 15 files: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 15/15 [00:00<00:00, 21.10it/s]\n",
+    "stdout": "{\"repo\": \"mlx-community/gemma-4-e2b-it-4bit\", \"revision\": \"238767527555cb75a05732a84dff5d6ba0dd6809\", \"snapshot\": \"/content/oa-hf/hub/models--mlx-community--gemma-4-e2b-it-4bit/snapshots/238767527555cb75a05732a84dff5d6ba0dd6809\", \"offline_repository_lookup\": \"/content/oa-hf/hub/models--mlx-community--gemma-4-e2b-it-4bit/snapshots/238767527555cb75a05732a84dff5d6ba0dd6809\"}\n{\"repo\": \"mlx-community/Qwen3.5-27B-4bit\", \"revision\": \"45797d2985a12c55e6473686e9ea91b95e959553\", \"snapshot\": \"/content/oa-hf/hub/models--mlx-community--Qwen3.5-27B-4bit/snapshots/45797d2985a12c55e6473686e9ea91b95e959553\", \"offline_repository_lookup\": \"/content/oa-hf/hub/models--mlx-community--Qwen3.5-27B-4bit/snapshots/45797d2985a12c55e6473686e9ea91b95e959553\"}\n"
+  },
+  "long_prompt_qwen_prefill512": {
+    "active_memory_bytes": 15134488592,
+    "answer": "The provided synthetic notes explicitly identify three critical gaps that prevent any field-specific management decision: the soil sample identity is unknown, the regional map is only context and not a field measurement, and no rate, diagnosis, or label authority has been supplied. Without a verified soil sample tied to a specific field location, the data cannot be treated as a measurement of your current soil conditions, and regional maps cannot substitute for on-site truth. Furthermore, the absence of a current product label or jurisdiction-specific authority means no application rates, diagnoses, or treatment permissions can be legally or agronomically supported.\n\nBecause the evidence is strictly defined as \"context only\" and lacks the necessary field grounding, no nutrient treatment, pest control, or soil amendment recommendation can be made at this time. Attempting to apply a rate or diagnose a condition based on these notes would violate the requirement to distinguish between regional priors and field-specific truth. To move forward, you must obtain a verified soil sample with a clear chain of custody for the specific field in question and provide the current product label relevant to your crop, target, and jurisdiction.\n\nThe immediate next step is to collect representative soil samples from the area of concern and submit them for analysis to establish a field-specific baseline. Simultaneously, you must identify the specific product and target pest or nutrient need to locate the current, jurisdiction-specific label. Only once you have the lab results from your specific samples and the legal constraints from the active label can a valid management plan be developed. Until these missing pieces of evidence are supplied, any decision regarding rates or diagnoses remains unsupported.",
+    "boundary": "long_public_product_prompt_runtime_fit_not_quality_score",
+    "cache_memory_bytes": 603732880,
+    "input_tokens": 5548,
+    "peak_memory_bytes": 18005080104,
+    "prefill_step_size": 512,
+    "seconds": 86.09872624699983,
+    "stats": {
+      "cache_prepare_ms": 0.006,
+      "cached_prompt_tokens": 0,
+      "decode_ms": 25407.039,
+      "draft_accept_tokens": null,
+      "draft_fallback_reason": null,
+      "draft_model_id": null,
+      "generation_elapsed_ms": 68019.548,
+      "generation_lock_model_id": "mlx-community/Qwen3.5-27B-4bit",
+      "generation_lock_model_revision": "45797d2985a12c55e6473686e9ea91b95e959553",
+      "generation_lock_wait_ms": 0.011,
+      "generation_tokens": 320,
+      "generation_tps": 12.6023,
+      "generation_tps_basis": "mlx_lm_stream_response",
+      "kv_bits": null,
+      "kv_group_size": null,
+      "max_kv_size": null,
+      "model_load_ms": 18002.582,
+      "model_load_status": "loaded_during_prompt_count",
+      "num_draft_tokens": null,
+      "prefill_step_size": 512,
+      "prompt_cache_enabled": false,
+      "prompt_cache_hit": false,
+      "prompt_cache_status": "disabled",
+      "prompt_tokens": 5548,
+      "prompt_tps": 131.8871,
+      "prompt_tps_basis": "mlx_lm_stream_response_uncached_input",
+      "quantized_kv_start": null,
+      "queue_wait_ms": 0.075,
+      "seed_application": {
+        "application_count": 1,
+        "application_point": "serialized_generation_lock_before_sampler",
+        "applied_seed": 42,
+        "backend": "mlx_local",
+        "implementation": "mlx.core.random.seed",
+        "requested_seed": 42,
+        "sampler": {
+          "factory": "mlx_lm.sample_utils.make_sampler",
+          "sampling_mode": "argmax",
+          "temperature": 0.0,
+          "top_k": 0,
+          "top_p": 0.9
+        },
+        "schema_version": "open_agronomy_agent.mlx_seed_application.v1",
+        "status": "applied"
+      },
+      "stream_time_to_first_token_ms": 42612.509,
+      "streamed": true,
+      "time_to_first_token_ms": 42633.725,
+      "tokenization_ms": 18.501,
+      "uncached_prompt_tokens": 5548
+    },
+    "status": "passed"
+  }
+}

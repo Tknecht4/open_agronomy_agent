@@ -1138,6 +1138,7 @@ class TraceStore:
                 """
             )
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_turns_session ON turns(session_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_turns_session_created ON turns(session_id, created_at)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_events_session ON turn_events(session_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_events_turn ON turn_events(turn_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_data_source_type ON data_sources(source_type)")
@@ -1283,14 +1284,18 @@ class TraceStore:
                     session["turns"] = self._get_turns_for_session(session["session_id"])
             return sessions
 
-    def get_session(self, session_id: str) -> dict[str, Any] | None:
+    def session_exists(self, session_id: str) -> bool:
+        with self._cursor() as cursor:
+            return cursor.execute("SELECT 1 FROM sessions WHERE id = ?", (session_id,)).fetchone() is not None
+
+    def get_session(self, session_id: str, *, include_turns: bool = True) -> dict[str, Any] | None:
         with self._cursor() as cursor:
             row = cursor.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
             if not row:
                 return None
             session = self._normalize_session_row(dict(row))
-            turns = self._get_turns_for_session(session_id)
-            session["turns"] = turns
+            if include_turns:
+                session["turns"] = self._get_turns_for_session(session_id)
             return session
 
     def _normalize_session_row(self, raw: dict[str, Any]) -> dict[str, Any]:
@@ -1318,9 +1323,10 @@ class TraceStore:
         consent: dict[str, Any] | None = None,
         archived: bool | None = None,
         status: str | None = None,
+        include_turns: bool = True,
     ) -> dict[str, Any] | None:
         now = _now()
-        session = self.get_session(session_id)
+        session = self.get_session(session_id, include_turns=False)
         if not session:
             return None
         updates: list[str] = []
@@ -1356,7 +1362,7 @@ class TraceStore:
         q = "UPDATE sessions SET " + ", ".join(updates) + " WHERE id = ?"
         with self._cursor() as cursor:
             cursor.execute(q, values)
-        return self.get_session(session_id)
+        return self.get_session(session_id, include_turns=include_turns)
 
     def create_turn(
         self,
@@ -1497,6 +1503,88 @@ class TraceStore:
             turn["trace"]["route"] = _from_json(route_rows["payload"], None) if route_rows else None
             turn["answer_integrity_receipt"] = verify_answer_integrity_receipt(turn)
             return turn
+
+    def resolve_replay_history_cutoff(self, session_id: str, turn_id: str) -> str:
+        """Follow replay lineage to its original turn without loading traces."""
+        visited: set[str] = set()
+        with self._cursor() as cursor:
+            while turn_id not in visited:
+                visited.add(turn_id)
+                row = cursor.execute(
+                    "SELECT id, parent_turn_id FROM turns WHERE id = ? AND session_id = ?",
+                    (turn_id, session_id),
+                ).fetchone()
+                if row is None:
+                    raise ValueError("replay history ancestor is not in this session")
+                if row["parent_turn_id"] is None:
+                    return str(row["id"])
+                turn_id = str(row["parent_turn_id"])
+        raise ValueError("replay history lineage contains a cycle")
+
+    @staticmethod
+    def _history_where(
+        cursor: sqlite3.Cursor, session_id: str, *, before_turn_id: str | None,
+        exclude_replays: bool,
+    ) -> tuple[str, list[Any]]:
+        where = "t.session_id = ?"
+        values: list[Any] = [session_id]
+        if exclude_replays:
+            where += " AND t.parent_turn_id IS NULL"
+        if before_turn_id is not None:
+            cutoff = cursor.execute(
+                "SELECT created_at, rowid AS insertion_id FROM turns WHERE id = ? AND session_id = ?",
+                (before_turn_id, session_id),
+            ).fetchone()
+            if cutoff is None:
+                raise ValueError("history cutoff turn is not in this session")
+            where += " AND (t.created_at < ? OR (t.created_at = ? AND t.rowid < ?))"
+            values.extend((cutoff["created_at"], cutoff["created_at"], cutoff["insertion_id"]))
+        return where, values
+
+    def count_session_turns(
+        self, session_id: str, *, before_turn_id: str | None = None,
+        exclude_replays: bool = False,
+    ) -> int:
+        with self._cursor() as cursor:
+            where, values = self._history_where(
+                cursor, session_id, before_turn_id=before_turn_id, exclude_replays=exclude_replays,
+            )
+            return int(cursor.execute(
+                f"SELECT COUNT(*) FROM turns AS t WHERE {where}", values,
+            ).fetchone()[0])
+
+    def get_recent_session_turns(
+        self, session_id: str, *, limit: int = 8, before_turn_id: str | None = None,
+        exclude_replays: bool = False,
+    ) -> list[dict[str, Any]]:
+        """Bounded, chronological conversation records; never retrieval evidence.
+
+        Feedback is joined so rejected answers and user corrections can be
+        distinguished without loading trace, prompt, or evidence payloads.
+        Rowid breaks timestamp ties in actual insertion order.
+        """
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 64:
+            raise ValueError("history limit must be an integer from 1 to 64")
+        with self._cursor() as cursor:
+            where, values = self._history_where(
+                cursor, session_id, before_turn_id=before_turn_id, exclude_replays=exclude_replays,
+            )
+            rows = cursor.execute(
+                f"""SELECT t.id, t.session_id, t.user_message, t.answer, t.answer_status,
+                          t.created_at, f.payload AS feedback_payload
+                   FROM turns AS t LEFT JOIN feedback AS f ON f.turn_id = t.id
+                   WHERE {where}
+                   ORDER BY t.created_at DESC, t.rowid DESC LIMIT ?""",
+                (*values, limit),
+            ).fetchall()
+        turns = []
+        for row in reversed(rows):
+            turn = dict(row)
+            turn["turn_id"] = turn["id"]
+            turn["message"] = turn["user_message"]
+            turn["feedback"] = _from_json(turn.pop("feedback_payload"), {})
+            turns.append(turn)
+        return turns
 
     def _get_turns_for_session(self, session_id: str) -> list[dict[str, Any]]:
         with self._cursor() as cursor:

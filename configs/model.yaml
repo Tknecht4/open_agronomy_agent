@@ -33,6 +33,12 @@ quantized_kv_start: 0
 max_kv_size:
 draft_model_id:
 num_draft_tokens: 4
+# Inclusive operational context budget, clamped to a smaller declared model limit.
+# Saved transcript size is independent of the active model window.
+context_management:
+  context_limit_tokens: 8192
+  history_budget_tokens: 2048
+  max_history_turns: 8
 answer_verification:
   enabled: true
   mode: risk_conditioned_selective_v3

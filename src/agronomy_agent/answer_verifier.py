@@ -18,6 +18,7 @@ from agronomy_agent.query_context import (
     analyze_query_context,
 )
 from agronomy_agent.router import request_focus
+from agronomy_agent.model_prompt_budget import positive_int, prompt_budget_receipt
 
 
 EVIDENCE_EDITOR_SYSTEM_PROMPT = """You are a conservative evidence editor for an agronomy assistant. The user's question and allowed evidence are the only factual record. Preserve useful supported content from a usable draft; change only unsupported claims and decision-critical omissions. When the draft is corrupt, repetitive, incomplete, or exposes internal controls, answer afresh instead. Never add a fact, number, rate, threshold, crop stage, named soil, pathogen, pest, product, law, diagnosis, or management permission. Every item under MISSING DECISION CONTENT is mandatory. When the question names multiple public data products, give each product its own sentence. For a named public data product, preserve equations, model names, units, complete enumerated values, resolution, lineage, and regional-versus-field limitations exactly from the allowed evidence. Answer only what was asked. Weather or regional context may indicate risk; it does not prove a field condition or diagnosis. If the record cannot support a diagnosis or recommendation, state the boundary and identify only the observation or test needed to resolve it. Return the user-facing answer only, no audit commentary."""
@@ -229,6 +230,7 @@ class AnswerVerificationResult:
     fallback_applied: bool = False
     selection_policy: str = "hard_safety_then_specificity_v2"
     risk_threshold_receipt: Mapping[str, Any] | None = None
+    editor_context_budget: Mapping[str, Any] | None = None
 
     def as_record(self) -> dict[str, Any]:
         failed_claims = _risk_excerpts(self.draft_output or "", self.draft_assessment)
@@ -291,6 +293,11 @@ class AnswerVerificationResult:
             "risk_threshold_receipt": (
                 dict(self.risk_threshold_receipt)
                 if self.risk_threshold_receipt is not None
+                else None
+            ),
+            "editor_context_budget": (
+                dict(self.editor_context_budget)
+                if self.editor_context_budget is not None
                 else None
             ),
         }
@@ -1266,6 +1273,8 @@ def _verify_answer_impl(
     review_mode: str = "risk_gated",
     jurisdiction: str | None = None,
     egress_envelope_factory: Any | None = None,
+    editor_context_management: dict[str, Any] | None = None,
+    editor_max_tokens: int | None = None,
 ) -> AnswerVerificationResult:
     docs = tuple(evidence_docs)
     entities = tuple(preserve_entities)
@@ -1756,11 +1765,12 @@ def _verify_answer_impl(
                 f"Source: {doc.title}: {doc.text}"
                 for doc in editor_docs
             )
+    bounded_editor_evidence = editor_evidence_text[:max_evidence_chars]
     messages = build_evidence_editor_messages(
         draft=draft,
         question=question,
         question_type=question_type,
-        evidence_text=editor_evidence_text[:max_evidence_chars],
+        evidence_text=bounded_editor_evidence,
         failed_claims=_risk_excerpts(draft, draft_assessment),
         forbidden_terms=_forbidden_terms(draft, draft_assessment, question=question, evidence_text=evidence_text),
         missing_intent_facets=draft_assessment.missing_intent_facets,
@@ -1778,6 +1788,32 @@ def _verify_answer_impl(
             & set(draft_assessment.reasons)
         ),
     )
+    editor_budget = prompt_budget_receipt(
+        messages,
+        editor,
+        config=editor_context_management,
+        reserved_output_tokens=positive_int(
+            editor_max_tokens,
+            positive_int(getattr(editor, "max_tokens", None), 180),
+        ),
+    )
+    editor_budget["evidence_chars_available"] = len(editor_evidence_text)
+    editor_budget["evidence_chars_included"] = len(bounded_editor_evidence)
+    editor_budget["evidence_truncated"] = len(bounded_editor_evidence) < len(editor_evidence_text)
+    if editor_budget["status"] == "over_limit":
+        fallback = fallback_answer()
+        final_assessment = assess(fallback)
+        return AnswerVerificationResult(
+            answer=fallback,
+            triggered=True,
+            rewrite_accepted=False,
+            draft_assessment=draft_assessment,
+            rejection_reasons=("editor_context_budget_exceeded",),
+            fallback_applied=True,
+            final_assessment=final_assessment,
+            draft_output=draft,
+            editor_context_budget=editor_budget,
+        )
     try:
         generate_with_egress = getattr(editor, "generate_with_egress", None)
         if callable(generate_with_egress):
@@ -1788,7 +1824,7 @@ def _verify_answer_impl(
             egress_envelope = egress_envelope_factory(
                 messages=messages,
                 candidate_draft=draft,
-                verifier_evidence_text=editor_evidence_text[:max_evidence_chars],
+                verifier_evidence_text=bounded_editor_evidence,
             )
             editor_output = str(generate_with_egress(messages, egress_envelope)).strip()
         else:
@@ -1812,6 +1848,7 @@ def _verify_answer_impl(
             fallback_applied=True,
             final_assessment=final_assessment,
             draft_output=draft,
+            editor_context_budget=editor_budget,
         )
     rewrite_assessment = assess(editor_output)
     rejection_reasons = _rewrite_rejection_reasons(
@@ -1849,6 +1886,7 @@ def _verify_answer_impl(
         editor_output=editor_output,
         fallback_applied=not accepted and final_answer.strip() != draft.strip(),
         final_assessment=final_assessment,
+        editor_context_budget=editor_budget,
     )
 
 
@@ -1875,6 +1913,8 @@ def verify_answer(
     review_mode: str = "risk_gated",
     jurisdiction: str | None = None,
     egress_envelope_factory: Any | None = None,
+    editor_context_management: dict[str, Any] | None = None,
+    editor_max_tokens: int | None = None,
 ) -> AnswerVerificationResult:
     """Apply model-independent consequence thresholds before editing."""
 
@@ -1938,6 +1978,8 @@ def verify_answer(
             review_mode=review_mode,
             jurisdiction=jurisdiction,
             egress_envelope_factory=egress_envelope_factory,
+            editor_context_management=editor_context_management,
+            editor_max_tokens=editor_max_tokens,
         )
         return AnswerVerificationResult(
             **{
@@ -1960,6 +2002,8 @@ def verify_answer(
         review_mode=review_mode,
         jurisdiction=jurisdiction,
         egress_envelope_factory=egress_envelope_factory,
+        editor_context_management=editor_context_management,
+        editor_max_tokens=editor_max_tokens,
     )
 
 

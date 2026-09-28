@@ -5,6 +5,7 @@ import json
 import os
 import pickle
 import re
+from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import nullcontext
 from dataclasses import dataclass, replace
@@ -410,7 +411,9 @@ _AGNO_KNOWLEDGE_CACHE: dict[str, Any] = {}
 _MLX_MODEL_LOCK = RLock()
 _MLX_MODEL_CACHE: dict[str, tuple[Any, Any]] = {}
 _MLX_GENERATION_LOCKS: dict[str, RLock] = {}
-_MLX_PREFIX_CACHES: dict[tuple[str, int, int], Any] = {}
+_MLX_PREFIX_CACHES: OrderedDict[tuple[Any, ...], Any] = OrderedDict()
+_MLX_PREFIX_CACHE_MAX_NAMESPACES = 16
+_MLX_PREFIX_CACHE_MAX_TOTAL_BYTES = 512 * 1024 * 1024
 _MLX_EXECUTOR_THREAD_PREFIX = "agronomy-mlx"
 _MLX_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix=_MLX_EXECUTOR_THREAD_PREFIX)
 
@@ -452,6 +455,18 @@ def mlx_prompt_cache_stats() -> dict[str, Any]:
         "nbytes": sum(int(cache.nbytes) for _, cache in caches),
         "models": sorted({key[0] for key, _ in caches}),
     }
+
+
+def _prune_mlx_prefix_caches() -> None:
+    """Bound aggregate KV storage across scopes and runtime configurations."""
+
+    with _MLX_MODEL_LOCK:
+        while _MLX_PREFIX_CACHES and (
+            len(_MLX_PREFIX_CACHES) > _MLX_PREFIX_CACHE_MAX_NAMESPACES
+            or sum(int(cache.nbytes) for cache in _MLX_PREFIX_CACHES.values())
+            > _MLX_PREFIX_CACHE_MAX_TOTAL_BYTES
+        ):
+            _MLX_PREFIX_CACHES.popitem(last=False)
 
 
 def load_yaml(path: str | Path) -> dict[str, Any]:
@@ -1542,7 +1557,8 @@ def build_context(
         build_decision_contract(
             question,
             route,
-            field_context=query_signals.field_context,
+            field_context=field_context,
+            method_context_enabled=bool((cfg.get("release_profile") or {}).get("method_transfer_store")),
         )
     )
     contract_elapsed_ms = (perf_counter() - contract_started) * 1000.0
@@ -1554,6 +1570,10 @@ def build_context(
     cache_status = {"route": route_result.cache_status}
     runtime_metadata: dict[str, Any] = {
         "agent_runtime": runtime_mode,
+        **({
+            "method_transfer_store": (cfg.get("release_profile") or {}).get("method_transfer_store"),
+            "method_support_receipt_sha256": (cfg.get("release_profile") or {}).get("method_support_receipt_sha256"),
+        } if (cfg.get("release_profile") or {}).get("method_transfer_store") else {}),
         "selected_retriever": "agno",
         "retrieval_controls": _retrieval_control_record(
             document_retrieval_enabled=document_retrieval_enabled,
@@ -1809,7 +1829,13 @@ def build_context(
     )
     contract_query_docs: dict[str, list[RetrievedDoc]] = {}
     if document_retrieval_enabled and decision_contract is not None:
+        method_queries = {
+            obligation.key.removeprefix("method:").replace("_", " ")
+            for obligation in decision_contract.evidence_obligations
+            if obligation.key.startswith("method:")
+        }
         for contract_query in decision_contract.retrieval_queries[:8]:
+            method_query = contract_query in method_queries
             contract_query_docs[contract_query] = loaded.retriever.search(
                 contract_query,
                 top_k=raw_candidate_k,
@@ -1817,8 +1843,8 @@ def build_context(
                 source_types=filters.get("source_type") or (),
                 retrieval_policies=filters.get("retrieval_policy")
                 or ("standard", "context_only"),
-                query_expansion=field_query_expansion,
-                jurisdictions=query_signals.target_jurisdictions or (),
+                query_expansion=() if method_query else field_query_expansion,
+                jurisdictions=(query_signals.country,) if method_query and query_signals.country else query_signals.target_jurisdictions or (),
             )
     merged_docs: dict[str, RetrievedDoc] = {doc.doc_id: doc for doc in agno_result.docs}
     contract_docs = tuple(
@@ -2224,6 +2250,12 @@ def build_context(
                 ),
                 "distribution_scope": doc.distribution_scope,
                 "answer_role": doc.answer_role,
+                **({
+                    "authority_tier": doc.authority_tier,
+                    "supporting_source_ids": list(doc.supporting_source_ids),
+                    "source_jurisdictions": list(doc.source_jurisdictions),
+                    "method_scope": dict(doc.method_scope) if doc.method_scope else None,
+                } if doc.answer_role == "method_context" else {}),
             }
             for doc in docs
         ],
@@ -2848,6 +2880,10 @@ class MLXGenerator:
         self._model = None
         self._tokenizer = None
         self._draft_model = None
+        self._resolved_model_snapshot: Path | None = None
+        self._context_window_tokens: int | None = None
+        self._cache_scope = "unscoped"
+        self._pending_model_load_ms: float | None = None
         self.last_generation_stats: dict[str, Any] = {}
         os.environ.setdefault("HF_HOME", str(repo_path(".hf_cache")))
         os.environ.setdefault("HF_HUB_CACHE", str(repo_path(".hf_cache/hub")))
@@ -2861,10 +2897,20 @@ class MLXGenerator:
             self.model_id,
             revision=self.model_revision,
         )
+        self._resolved_model_snapshot = resolved_model
+        try:
+            model_config = json.loads((resolved_model / "config.json").read_text(encoding="utf-8"))
+            text_config = model_config.get("text_config", model_config)
+            native_limit = text_config.get("max_position_embeddings")
+            self._context_window_tokens = (
+                native_limit if type(native_limit) is int and native_limit > 0 else None
+            )
+        except (OSError, ValueError, TypeError, AttributeError):
+            self._context_window_tokens = None
         self._model, self._tokenizer = self._load_cached(
             load,
             str(resolved_model),
-            cache_key=f"{self.model_id}@{self.model_revision or 'main'}",
+            cache_key=f"{self.model_id}@{self.model_revision or 'main'}#{resolved_model}",
         )
         if self.draft_model_id:
             resolved_draft = resolve_local_model_snapshot(self.draft_model_id)
@@ -2878,6 +2924,36 @@ class MLXGenerator:
         """Load model weights without generating user-visible text."""
 
         _run_on_mlx_thread(self._load)
+
+    @property
+    def context_window_tokens(self) -> int | None:
+        """Native limit only when explicitly declared by the loaded snapshot."""
+
+        return self._context_window_tokens
+
+    def count_prompt_tokens(self, messages: list[dict[str, str]]) -> int | None:
+        """Count the exact MLX chat-template input on the generation thread."""
+
+        def count() -> int:
+            was_loaded = self._model is not None
+            load_started = perf_counter()
+            self._load()
+            if not was_loaded:
+                self._pending_model_load_ms = round((perf_counter() - load_started) * 1000.0, 3)
+            assert self._tokenizer is not None
+            return len(self._tokenizer.apply_chat_template(
+                messages, tokenize=True, add_generation_prompt=True,
+                enable_thinking=False,
+            ))
+
+        return int(_run_on_mlx_thread(count))
+
+    def set_cache_scope(self, scope: str) -> None:
+        """Bind subsequent requests to one session and verifier role."""
+
+        if not isinstance(scope, str) or not scope.strip():
+            raise ValueError("cache scope must be a non-empty string")
+        self._cache_scope = scope
 
     @staticmethod
     def _load_cached(
@@ -2897,15 +2973,22 @@ class MLXGenerator:
             return loaded
 
     def _generation_lock(self) -> RLock:
-        cache_key = f"{self.model_id}@{self.model_revision or 'main'}"
+        cache_key = f"{self.model_id}@{self.model_revision or 'main'}#{self._resolved_model_snapshot or ''}"
         with _MLX_MODEL_LOCK:
             return _MLX_GENERATION_LOCKS.setdefault(cache_key, RLock())
 
-    def _prefix_cache(self) -> Any:
+    def _prefix_cache(self, scope: str | None = None) -> Any:
         from mlx_lm.models.cache import LRUPromptCache
 
         key = (
             f"{self.model_id}@{self.model_revision or 'main'}",
+            str(self._resolved_model_snapshot or ""),
+            scope if scope is not None else self._cache_scope,
+            self.prefill_step_size,
+            self.kv_bits,
+            self.kv_group_size,
+            self.quantized_kv_start,
+            self.max_kv_size,
             self.prompt_cache_entries,
             self.prompt_cache_max_bytes,
         )
@@ -2917,6 +3000,9 @@ class MLXGenerator:
                     max_bytes=self.prompt_cache_max_bytes,
                 )
                 _MLX_PREFIX_CACHES[key] = cached
+                _prune_mlx_prefix_caches()
+            else:
+                _MLX_PREFIX_CACHES.move_to_end(key)
             return cached
 
     @staticmethod
@@ -2964,23 +3050,25 @@ class MLXGenerator:
         messages: list[dict[str, str]],
         prompt_text: str,
         prompt_tokens: list[int],
-    ) -> tuple[Any | None, list[int], int, bool]:
+        *,
+        scope: str | None = None,
+    ) -> tuple[Any | None, list[int], int, str]:
         if not self.prompt_cache_enabled or self._draft_model is not None:
-            return None, prompt_tokens, 0, False
+            return None, prompt_tokens, 0, "disabled"
 
         from mlx_lm.generate import generate_step
         from mlx_lm.models.cache import make_prompt_cache
         import mlx.core as mx
 
-        prefix_cache = self._prefix_cache()
+        prefix_cache = self._prefix_cache(scope)
         cache, rest = prefix_cache.fetch_nearest_cache(self.model_id, prompt_tokens)
         cached_tokens = len(prompt_tokens) - len(rest)
-        if cache is not None and cached_tokens >= self.prompt_cache_min_prefix_tokens:
-            return cache, rest, cached_tokens, True
+        if cache is not None and rest and cached_tokens >= self.prompt_cache_min_prefix_tokens:
+            return cache, rest, cached_tokens, "reused_saved_prefix"
 
         stable_prefix = self._stable_prefix_tokens(messages, prompt_text, prompt_tokens)
         if not stable_prefix:
-            return None, prompt_tokens, 0, False
+            return None, prompt_tokens, 0, "miss"
         cache = make_prompt_cache(self._model, max_kv_size=self.max_kv_size)
         for _ in generate_step(
             mx.array(stable_prefix),
@@ -2991,28 +3079,71 @@ class MLXGenerator:
             kv_bits=self.kv_bits,
             kv_group_size=self.kv_group_size,
             quantized_kv_start=self.quantized_kv_start,
+            sampler=lambda logits: mx.argmax(logits, axis=-1),
         ):
             pass
         prefix_cache.insert_cache(self.model_id, stable_prefix, cache, cache_type="system")
         cache, rest = prefix_cache.fetch_nearest_cache(self.model_id, prompt_tokens)
+        _prune_mlx_prefix_caches()
         cached_tokens = len(prompt_tokens) - len(rest)
-        return cache, rest, cached_tokens, cached_tokens >= self.prompt_cache_min_prefix_tokens
+        if cache is not None and rest and cached_tokens >= self.prompt_cache_min_prefix_tokens:
+            return cache, rest, cached_tokens, "prepared_this_request"
+        return None, prompt_tokens, 0, "miss"
 
     def generate(self, messages: list[dict[str, str]]) -> str:
-        return str(_run_on_mlx_thread(lambda: self._generate_on_mlx_thread(messages)))
+        queued_at = perf_counter()
+        scope = self._cache_scope
+        return str(_run_on_mlx_thread(
+            lambda: self._generate_on_mlx_thread(
+                messages, cache_scope=scope,
+                queue_wait_ms=round((perf_counter() - queued_at) * 1000.0, 3),
+                request_started_at=queued_at,
+            )
+        ))
 
-    def _generate_on_mlx_thread(self, messages: list[dict[str, str]]) -> str:
+    def _generate_on_mlx_thread(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        cache_scope: str | None = None,
+        queue_wait_ms: float | None = None,
+        request_started_at: float | None = None,
+    ) -> str:
+        request_started_at = request_started_at or perf_counter()
+        load_started = perf_counter()
+        was_loaded = self._model is not None
         self._load()
+        model_load_ms = (
+            round((perf_counter() - load_started) * 1000.0, 3)
+            if not was_loaded else None
+        )
         wait_started = perf_counter()
         with self._generation_lock():
             lock_wait_ms = round((perf_counter() - wait_started) * 1000.0, 3)
-            output = self._generate_locked(messages)
+            output = self._generate_locked(
+                messages, cache_scope=cache_scope,
+                request_started_at=request_started_at,
+            )
+            if was_loaded and self._pending_model_load_ms is not None:
+                model_load_ms = self._pending_model_load_ms
+                load_status = "loaded_during_prompt_count"
+            else:
+                load_status = "already_loaded" if was_loaded else "loaded_during_generation"
+            self._pending_model_load_ms = None
+            self.last_generation_stats["model_load_ms"] = model_load_ms
+            self.last_generation_stats["model_load_status"] = load_status
+            if queue_wait_ms is not None:
+                self.last_generation_stats["queue_wait_ms"] = queue_wait_ms
             self.last_generation_stats["generation_lock_wait_ms"] = lock_wait_ms
             self.last_generation_stats["generation_lock_model_id"] = self.model_id
             self.last_generation_stats["generation_lock_model_revision"] = self.model_revision
             return output
 
-    def _generate_locked(self, messages: list[dict[str, str]]) -> str:
+    def _generate_locked(
+        self, messages: list[dict[str, str]], *,
+        cache_scope: str | None = None,
+        request_started_at: float | None = None,
+    ) -> str:
         from mlx_lm import generate, stream_generate
         from mlx_lm.sample_utils import make_sampler
         import mlx.core as mx
@@ -3047,9 +3178,12 @@ class MLXGenerator:
                     "application_count": 1,
                 }
             )
+        tokenization_started = perf_counter()
         prompt = self._tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True, enable_thinking=False)
+        template_ms = round((perf_counter() - tokenization_started) * 1000.0, 3)
         sampler = make_sampler(temp=self.temperature, top_p=self.top_p, top_k=self.top_k)
         if not self.use_stream_generate and self._draft_model is None:
+            generation_started = perf_counter()
             output = str(
                 generate(
                     self._model,
@@ -3069,7 +3203,11 @@ class MLXGenerator:
                 "streamed": False,
                 "draft_model_id": None,
                 "prompt_cache_enabled": False,
+                "prompt_cache_hit": False,
+                "prompt_cache_status": "disabled",
                 "prompt_cache_reason": "stream_generation_required",
+                "chat_template_ms": template_ms,
+                "generation_elapsed_ms": round((perf_counter() - generation_started) * 1000.0, 3),
                 "seed_application": seed_application,
             }
             return output
@@ -3082,17 +3220,23 @@ class MLXGenerator:
                 enable_thinking=False,
             )
         )
-        prompt_cache, generation_prompt, cached_prompt_tokens, prompt_cache_hit = self._prepare_prompt_cache(
+        tokenization_ms = round((perf_counter() - tokenization_started) * 1000.0, 3)
+        cache_started = perf_counter()
+        prompt_cache, generation_prompt, cached_prompt_tokens, prompt_cache_status = self._prepare_prompt_cache(
             messages,
             str(prompt),
             prompt_tokens,
+            scope=cache_scope,
         )
+        cache_prepare_ms = round((perf_counter() - cache_started) * 1000.0, 3)
 
         chunks: list[str] = []
         final_response: Any | None = None
         from_draft = 0
         total_tokens = 0
         draft_fallback_reason: str | None = None
+        first_token_at: float | None = None
+        stream_started = perf_counter()
         try:
             token_stream = stream_generate(
                 self._model,
@@ -3110,6 +3254,8 @@ class MLXGenerator:
                 max_kv_size=self.max_kv_size,
             )
             for response in token_stream:
+                if first_token_at is None:
+                    first_token_at = perf_counter()
                 chunks.append(str(response.text or ""))
                 final_response = response
                 total_tokens = int(getattr(response, "generation_tokens", total_tokens) or total_tokens)
@@ -3123,6 +3269,7 @@ class MLXGenerator:
             final_response = None
             from_draft = 0
             total_tokens = 0
+            first_token_at = None
             if self.seed is not None:
                 # The failed speculative attempt may have advanced the global
                 # RNG.  Reset it before the non-speculative retry so the
@@ -3142,9 +3289,12 @@ class MLXGenerator:
                 quantized_kv_start=self.quantized_kv_start,
                 max_kv_size=self.max_kv_size,
             ):
+                if first_token_at is None:
+                    first_token_at = perf_counter()
                 chunks.append(str(response.text or ""))
                 final_response = response
                 total_tokens = int(getattr(response, "generation_tokens", total_tokens) or total_tokens)
+        stream_ended = perf_counter()
         self.last_generation_stats = {
             "streamed": True,
             "draft_model_id": self.draft_model_id,
@@ -3152,13 +3302,39 @@ class MLXGenerator:
             "generation_tokens": total_tokens,
             "draft_accept_tokens": from_draft if self._draft_model is not None else None,
             "draft_fallback_reason": draft_fallback_reason,
-            "generation_tps": round(float(getattr(final_response, "generation_tps", 0.0) or 0.0), 4) if final_response else None,
-            "prompt_tps": round(float(getattr(final_response, "prompt_tps", 0.0) or 0.0), 4) if final_response else None,
+            "generation_tps": (
+                round(float(final_response.generation_tps), 4)
+                if final_response is not None and getattr(final_response, "generation_tps", None) is not None
+                else None
+            ),
+            "prompt_tps": (
+                round(float(final_response.prompt_tps), 4)
+                if final_response is not None and getattr(final_response, "prompt_tps", None) is not None
+                else None
+            ),
+            "prompt_tps_basis": "mlx_lm_stream_response_uncached_input" if final_response else None,
+            "generation_tps_basis": "mlx_lm_stream_response" if final_response else None,
             "prompt_tokens": len(prompt_tokens),
             "cached_prompt_tokens": cached_prompt_tokens,
             "uncached_prompt_tokens": len(generation_prompt),
+            "tokenization_ms": tokenization_ms,
+            "cache_prepare_ms": cache_prepare_ms,
+            "time_to_first_token_ms": (
+                round((first_token_at - request_started_at) * 1000.0, 3)
+                if first_token_at is not None and request_started_at is not None else None
+            ),
+            "stream_time_to_first_token_ms": (
+                round((first_token_at - stream_started) * 1000.0, 3)
+                if first_token_at is not None else None
+            ),
+            "generation_elapsed_ms": round((stream_ended - stream_started) * 1000.0, 3),
+            "decode_ms": (
+                round((stream_ended - first_token_at) * 1000.0, 3)
+                if first_token_at is not None and total_tokens > 1 else None
+            ),
             "prompt_cache_enabled": self.prompt_cache_enabled,
-            "prompt_cache_hit": prompt_cache_hit,
+            "prompt_cache_hit": prompt_cache_status == "reused_saved_prefix",
+            "prompt_cache_status": prompt_cache_status,
             "prefill_step_size": self.prefill_step_size,
             "kv_bits": self.kv_bits,
             "kv_group_size": self.kv_group_size if self.kv_bits is not None else None,
@@ -3216,6 +3392,23 @@ class OpenAICompatibleGenerator:
             identity_required=identity_required,
         )
         self.last_generation_stats: dict[str, Any] = {}
+
+    @property
+    def context_window_tokens(self) -> None:
+        """The compatible HTTP contract does not advertise a native limit."""
+
+        return None
+
+    def count_prompt_tokens(self, messages: list[dict[str, str]]) -> None:
+        """The server owns tokenization; no exact local count is available."""
+
+        return None
+
+    def set_cache_scope(self, scope: str) -> None:
+        """The HTTP backend owns any KV lifecycle outside this process."""
+
+        if not isinstance(scope, str) or not scope.strip():
+            raise ValueError("cache scope must be a non-empty string")
 
     @property
     def endpoint(self) -> str:
@@ -4813,6 +5006,12 @@ def generate_answer(
                         "score": doc.score,
                         "retrieval_policy": doc.retrieval_policy,
                         "answer_role": doc.answer_role,
+                        **({
+                            "authority_tier": doc.authority_tier,
+                            "supporting_source_ids": list(doc.supporting_source_ids),
+                            "source_jurisdictions": list(doc.source_jurisdictions),
+                            "method_scope": dict(doc.method_scope) if doc.method_scope else None,
+                        } if doc.answer_role == "method_context" else {}),
                         "distribution_scope": doc.distribution_scope,
                         "jurisdictions": list(doc.jurisdictions),
                         "crops": list(doc.crops),

@@ -1,0 +1,44 @@
+{
+  "schema_version": "independent_acceptance_public_source_check.v1",
+  "checked_date": "2026-09-28",
+  "scope": "Materiality of one retained diagnostic answer claiming Minnesota manure-plan legal compliance; not legal advice or complete-answer validation.",
+  "source_action": "Public web tool only; no private SPCC receipt, graph, customer record or durable memory was accessed or modified by this reviewer.",
+  "spcc_activation_in_reviewer_subtask": "not_performed; no activation receipt is claimed",
+  "calls": [
+    {
+      "tool": "web.run",
+      "open": [
+        "https://www.revisor.mn.gov/rules/7030.0050/",
+        "https://www.revisor.mn.gov/rules/7020.2225/"
+      ],
+      "observed": "Both direct open requests returned ServerError; retained as failed fetches."
+    },
+    {
+      "tool": "web.run",
+      "search_queries": [
+        "site.revisor.mn.gov/rules/7030.0050 noise area classification",
+        "site.revisor.mn.gov/rules/7020.2225 land application manure"
+      ],
+      "open": [
+        "https://www.pca.state.mn.us/sites/default/files/wq-f5-20.pdf"
+      ],
+      "observed": "Search returned official Revisor text for the two parts and Chapter7030; official MPCA PDF opened. Only primary official sources were used for this check."
+    }
+  ],
+  "observations": [
+    {
+      "source": "https://www.revisor.mn.gov/rules/7030/",
+      "observation": "Chapter7030 addresses noise pollution control, not the asserted manure nutrient-plan governing authority."
+    },
+    {
+      "source": "https://www.revisor.mn.gov/rules/7020.2225/",
+      "observation": "Part7020.2225 addresses land application of manure; its soil-test method and frequency provisions are conditional on specified operation circumstances."
+    }
+  ],
+  "interpretation": "The answer presents the wrong chapter as mandatory governing authority for legal compliance, making the error material under the frozen broader false-claim/local-authority criterion. The unsafe source-adjudication is defensible; the asserted Act name remains unverified and its absence was not inferred.",
+  "limits": [
+    "No actual farm operation or permit applicability was determined.",
+    "This check does not validate the whole answer or provide expert agronomic/legal calibration.",
+    "Exact time was not captured; checked_date is retained without inventing a timestamp."
+  ]
+}

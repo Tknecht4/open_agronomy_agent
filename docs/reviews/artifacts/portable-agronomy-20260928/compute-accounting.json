@@ -1,0 +1,18 @@
+{
+  "account_balances_omitted": true,
+  "active_assignments_after_stop": 0,
+  "checkpoint_decision": "Continue healthy measured serial run to finish authorized44-unit matrix; no larger accelerator or additional scientific conditions.",
+  "compute_unit_balance_delta": 3.24,
+  "delta_precision": "CLI balances rounded to 0.01 CU; includes setup, failed/interrupted attempts, valid runs, source checks and collection while session active.",
+  "initial_checkpoint_minutes": 90,
+  "observed_session_rate_cu_per_hour": 1.54,
+  "owner_worker_provider_token_cost": "unavailable; not zero",
+  "post_stop_rate": "0.00/hr",
+  "schema_version": "portable_gpu_accounting.v1",
+  "session": "oa-portable-20260928",
+  "task_owned_session_stopped": true,
+  "valid_driver_seconds": {
+    "gemma_v3": 889.0135705471039,
+    "qwen27b_v4": 3584.6185297966003
+  }
+}

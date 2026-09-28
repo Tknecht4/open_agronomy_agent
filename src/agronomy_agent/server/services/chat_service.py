@@ -67,6 +67,11 @@ from agronomy_agent.server.services.answer_renderer import (
     render_structured_answer,
 )
 from agronomy_agent.server.services.field_context_compiler import compile_field_context
+from agronomy_agent.server.services.conversation_context import (
+    OVER_LIMIT_ANSWER,
+    cache_scope,
+    compile_conversation_prompt,
+)
 from agronomy_agent.server.settings import ServerSettings
 from agronomy_agent.server.storage.db import TraceStore
 from agronomy_agent.runtime_profiles import DEFAULT_MODEL_CONFIG
@@ -355,7 +360,7 @@ def _run_turn_impl(
     fallback_enabled: bool = True,
     arm_id: str = "production_full",
 ) -> dict[str, Any]:
-    if not store.get_session(session_id):
+    if not store.session_exists(session_id):
         raise ValueError("session not found")
     if max_tokens <= 0:
         raise ValueError("max_tokens must be greater than 0")
@@ -372,6 +377,28 @@ def _run_turn_impl(
     generator: Any | None = None
     use_mock_generator = mode == "mock" or model_to_use == "mock"
     model_config = load_model_config(settings.model_config_path)
+    conversation_config = model_config.get("context_management")
+    try:
+        max_history_turns = (
+            int(conversation_config.get("max_history_turns", 8))
+            if isinstance(conversation_config, dict)
+            else 8
+        )
+    except (TypeError, ValueError):
+        max_history_turns = 8
+    if max_history_turns <= 0:
+        max_history_turns = 8
+    history_cutoff = (
+        store.resolve_replay_history_cutoff(session_id, parent_turn_id)
+        if parent_turn_id is not None else None
+    )
+    recent_turns = store.get_recent_session_turns(
+        session_id, limit=max(1, min(max_history_turns, 32)),
+        before_turn_id=history_cutoff, exclude_replays=True,
+    )
+    total_history_turns = store.count_session_turns(
+        session_id, before_turn_id=history_cutoff, exclude_replays=True,
+    )
     if queue_circuit and queue_circuit.get("tripped"):
         if profiler:
             profiler.add_skipped("model.load_or_reuse", reason="model_queue_circuit_breaker")
@@ -433,6 +460,27 @@ def _run_turn_impl(
         else []
     )
     prompt_messages: list[dict[str, Any]] | None = None
+    context_budget_receipt: dict[str, Any] | None = None
+
+    def compile_prompt(*, will_generate: bool) -> bool:
+        nonlocal messages, context_budget_receipt
+        messages, context_budget_receipt = compile_conversation_prompt(
+            messages,
+            recent_turns,
+            total_turns=total_history_turns,
+            generator=generator,
+            config=conversation_config,
+            reserved_output_tokens=max_tokens,
+            count_tokens=will_generate,
+        )
+        context_budget_receipt["history_before_turn_id"] = history_cutoff
+        context_budget_receipt["history_excludes_replays"] = True
+        return context_budget_receipt["status"] == "over_limit"
+
+    def scope_generator(role: str) -> None:
+        setter = getattr(generator, "set_cache_scope", None)
+        if callable(setter):
+            setter(cache_scope(session_id, role))
     generation_metadata: dict[str, Any] = {}
     verification_metadata: dict[str, Any] | None = None
     verification: Any | None = None
@@ -470,9 +518,19 @@ def _run_turn_impl(
             answer = ANALYSIS_UNAVAILABLE_ANSWER
             generation_metadata = _generation_unavailable_metadata(queue_circuit, model_to_use)
         else:
-            decode_span = profiler.span("model.decode_stream", input_size=sum(len(item["content"]) for item in messages)) if profiler else nullcontext()
-            with decode_span:
-                answer, generation_metadata = _generate_with_backend_fallback(generator, messages, mode)
+            over_limit = compile_prompt(will_generate=True)
+            if over_limit:
+                answer = OVER_LIMIT_ANSWER
+                generation_metadata = {
+                    "generation_unavailable": {"reason": "context_budget_exceeded", "model_id": model_to_use}
+                }
+            else:
+                scope_generator("draft")
+                decode_span = profiler.span("model.decode_stream", input_size=sum(len(item["content"]) for item in messages)) if profiler else nullcontext()
+                with decode_span:
+                    answer, generation_metadata = _generate_with_backend_fallback(generator, messages, mode)
+        if context_budget_receipt is None:
+            compile_prompt(will_generate=False)
         if trace_options.get("store_prompt_messages"):
             prompt_messages = messages
     else:
@@ -687,16 +745,26 @@ def _run_turn_impl(
                     "evidence_intervention": intervention.as_record(),
                 }
             else:
-                decode_span = profiler.span("model.decode_stream", input_size=sum(len(item["content"]) for item in messages)) if profiler else nullcontext()
-                with decode_span:
-                    answer, generation_metadata = _generate_with_backend_fallback(
-                        generator,
-                        messages,
-                        mode,
-                        fallback_enabled=fallback_enabled,
-                    )
+                over_limit = compile_prompt(will_generate=True)
+                if over_limit:
+                    answer = OVER_LIMIT_ANSWER
+                    generation_metadata = {
+                        "generation_unavailable": {"reason": "context_budget_exceeded", "model_id": model_to_use}
+                    }
+                else:
+                    scope_generator("draft")
+                    decode_span = profiler.span("model.decode_stream", input_size=sum(len(item["content"]) for item in messages)) if profiler else nullcontext()
+                    with decode_span:
+                        answer, generation_metadata = _generate_with_backend_fallback(
+                            generator,
+                            messages,
+                            mode,
+                            fallback_enabled=fallback_enabled,
+                        )
                 if intervention is not None:
                     generation_metadata["evidence_intervention"] = intervention.as_record()
+        if context_budget_receipt is None:
+            compile_prompt(will_generate=False)
         if trace_options.get("store_prompt_messages"):
             prompt_messages = messages
 
@@ -867,8 +935,12 @@ def _run_turn_impl(
             draft_generation_stats = dict(generator.last_generation_stats)
         verifier_model_id = str(verification_config.get("model_id") or model_to_use)
         editor = _build_mlx_generator(verifier_model_id, model_config, settings.model_config_path)
+        editor_max_tokens = int(verification_config.get("max_tokens", 180))
         if hasattr(editor, "max_tokens"):
-            editor.max_tokens = int(verification_config.get("max_tokens", 180))
+            editor.max_tokens = editor_max_tokens
+        editor_scope = getattr(editor, "set_cache_scope", None)
+        if callable(editor_scope):
+            editor_scope(cache_scope(session_id, "verifier_editor"))
         store.append_event(session_id, "answer.verification_started", {"mode": "risk_gated"})
         verify_span = (
             profiler.span("model.decode_stream", input_size=len(answer), metadata={"phase": "evidence_verification"})
@@ -891,6 +963,8 @@ def _run_turn_impl(
                 question_type="source_grounded" if source_grounded or context is None else context.route.question_type,
                 risk_level="low" if context is None else context.route.risk_level,
                 editor=editor,
+                editor_context_management=conversation_config,
+                editor_max_tokens=editor_max_tokens,
                 max_evidence_chars=int(verification_config.get("max_evidence_chars", 9000)),
                 evidence_docs=() if context is None else context.retrieved_docs,
                 preserve_entities=()
@@ -922,6 +996,7 @@ def _run_turn_impl(
 
     post_verification_answer = answer
     trace_store_payload["prompt_messages"] = prompt_messages or []
+    trace_store_payload["metadata"]["context_budget"] = context_budget_receipt
     trace_store_payload["metadata"].setdefault(
         "field_context_compiler", compiled_field_context["receipt"]
     )
@@ -1621,6 +1696,12 @@ def _production_stage_observations(
         "context_tokens_est": metadata.get("context_tokens_est"),
         "evidence_conflict_summary": evidence_conflict_summary,
         "evidence_fabric_sha256": execution_stable_sha256(evidence_fabric or {}),
+        "conversation_history_policy": (
+            (metadata.get("context_budget") or {}).get("history_policy_version")
+        ),
+        "conversation_history_included_turn_ids": (
+            (metadata.get("context_budget") or {}).get("history_included_turn_ids") or []
+        ),
     }
     if context_present:
         evidence_selection_state = "executed"
@@ -1844,6 +1925,9 @@ def _production_stage_observations(
                 "message_count": len(messages),
                 "messages_sha256": prompt_sha256,
                 "raw_messages_retained": bool(trace.get("prompt_messages")),
+                "context_budget_sha256": execution_stable_sha256(
+                    metadata.get("context_budget") or {}
+                ),
             },
         },
         "pre_generation_answerability_risk_intervention": {
@@ -4990,6 +5074,12 @@ def _build_doc_snapshot(idx: int, doc: Any, *, store_text: bool) -> dict[str, An
         "manifest_sha256": doc.manifest_sha256,
         "distribution_scope": doc.distribution_scope,
         "answer_role": doc.answer_role,
+        **({
+            "authority_tier": doc.authority_tier,
+            "supporting_source_ids": list(doc.supporting_source_ids),
+            "source_jurisdictions": list(doc.source_jurisdictions),
+            "method_scope": dict(doc.method_scope) if doc.method_scope else None,
+        } if doc.answer_role == "method_context" else {}),
     }
 
 

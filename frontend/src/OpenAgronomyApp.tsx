@@ -25,6 +25,7 @@ import {
   PanelLeftClose,
 } from 'lucide-react'
 import { WorkspacePerformancePanel } from './workspacePerformance'
+import { ConversationRuntimeStatus } from './ConversationRuntimeStatus'
 import type { NewFieldDraft } from './FieldSetupDialog'
 import { selectedConversation, rememberConversation } from './conversationSelection'
 import { powerCoverage } from './weatherPresentation'
@@ -1187,6 +1188,12 @@ const sessionContextValue = (session: SessionRecord, key: string): string => {
   return ''
 }
 
+const conversationLabel = (session: SessionRecord, fallback: string): string => {
+  const title = session.title?.trim() || fallback
+  const date = (session.updated_at || session.created_at || '').slice(0, 10)
+  return date ? `${title} · ${date}` : title
+}
+
 const sessionForField = (
   candidates: SessionRecord[],
   fieldConversationKey: string,
@@ -2151,6 +2158,18 @@ export function OpenAgronomyApp() {
 
 
   const latestTurn = turns[turns.length - 1] || null
+  const conversationBaseKey = activeFieldContextId
+    ? storedFieldConversationKey(activeFieldContextId)
+    : scenarioId ? sampleConversationKey(scenarioId) : 'general'
+  const scopedSessions = (scope: string) => sessions.filter((session) => {
+    const key = sessionContextValue(session, 'field_conversation_key')
+    const boundFieldId = sessionContextValue(session, 'field_context_id')
+    return !session.archived && session.status !== 'archived'
+      && (key === scope || key.startsWith(`${scope}:chat:`))
+      && (scope === 'general' ? !boundFieldId : !activeFieldContextId || !boundFieldId || boundFieldId === activeFieldContextId)
+  })
+  const generalConversations = scopedSessions('general')
+  const fieldConversations = conversationBaseKey === 'general' ? [] : scopedSessions(conversationBaseKey)
   const evidenceTurn = turns.find((turn) => turn.turn_id === evidenceTurnId) || latestTurn
   const activeScenario: SampleProfile = sampleProfiles.find((sample) => sample.id === scenarioId) || { ...emptyFieldProfile, id: '', name: '', mlra: '', geometry: 'Location not set' }
   const evidenceDocs = topDocs(evidenceTurn)
@@ -2475,8 +2494,8 @@ export function OpenAgronomyApp() {
       return matchingSession.session_id
     }
     const created = await apiPost<SessionRecord>('/api/sessions', {
-      title: `${field.crop || 'Field'} · ${field.region || field.jurisdiction || 'field review'}`,
-      tags: ['open-agronomy-agent', 'field-analysis'],
+      title: message.trim().slice(0, 72) || (activeFieldContextId ? fieldName : 'General chat'),
+      tags: ['open-agronomy-agent', activeFieldContextId ? 'field-analysis' : 'general-question'],
       consent: {
         local_trace_capture: true,
         research_export_allowed: true,
@@ -2520,6 +2539,28 @@ export function OpenAgronomyApp() {
     setStatus('Fresh chat ready')
   }
 
+  const openSavedConversation = (id: string) => {
+    if (isAnalyzing) return
+    const selected = sessions.find((session) => session.session_id === id)
+    if (!selected) return
+    const key = sessionContextValue(selected, 'field_conversation_key')
+    const selectedBase = key === 'general' || key.startsWith('general:chat:') ? 'general' : conversationBaseKey
+    if (selectedBase === 'general' && conversationBaseKey !== 'general') startNewField()
+    if (selectedBase !== 'general' && !sessionForField([selected], key, activeFieldContextId)) return
+    rememberConversation(selectedBase, key)
+    setActiveFieldConversationKey(key)
+    setSessionId(id)
+    setTurns(selected.turns_included === false ? [] : selected.turns || [])
+    setEvidenceTurnId('')
+    setStreamDraft('')
+    setStreamProgress([])
+    setPendingQuestion('')
+    setVisibleTurnCount(20)
+    setError('')
+    setStatus('Saved chat selected')
+    navigateToPage('analyze')
+  }
+
   const sendQuestion = async (event: FormEvent) => {
     event.preventDefault()
     if (isAnalyzing || loadingConversation || !fieldsHydrated || !message.trim()) {
@@ -2533,14 +2574,16 @@ export function OpenAgronomyApp() {
     }
     followConversationRef.current = true
     setError('')
-    setStatus('Analyzing field context')
+    setStatus(activeFieldContextId || scenarioId ? 'Analyzing field context' : 'Analyzing question')
     setIsAnalyzing(true)
     setPendingQuestion(message.trim())
     setStreamDraft('')
     setStreamProgress([
       {
-        label: 'Submitting field question',
-        detail: 'Sending map and field context to the local agent.',
+        label: 'Submitting question',
+        detail: activeFieldContextId || scenarioId
+          ? 'Sending the question and selected field context to the local agent.'
+          : 'Sending the general question to the local agent.',
         progress: 4,
         elapsedMs: 0,
         kind: 'step',
@@ -3376,6 +3419,12 @@ export function OpenAgronomyApp() {
     try {
       const session = await apiGet<SessionRecord>(`/api/sessions/${encodeURIComponent(id)}`)
       if (requestId !== conversationRequestRef.current || activeSessionRef.current !== id) return
+      const returnedFieldId = sessionContextValue(session, 'field_context_id')
+      if (!sessionForField([session], activeConversationKeyRef.current)
+        || (activeFieldRef.current ? Boolean(returnedFieldId && returnedFieldId !== activeFieldRef.current) : Boolean(returnedFieldId))) {
+        setError('Saved conversation scope changed. Select the conversation again.')
+        return
+      }
       const hydrated = { ...session, turns_included: true }
       setTurns(hydrated.turns || [])
       setSessions(current => current.map(item => item.session_id === id ? hydrated : item))
@@ -4364,11 +4413,30 @@ export function OpenAgronomyApp() {
                 onClick={resetChat}
                 disabled={isAnalyzing}
                 data-testid="reset-chat"
-                title="Start a fresh chat for this field"
+                title={fieldName ? 'Start a fresh chat for this field' : 'Start a fresh general chat'}
               >
                 <Plus size={15} /> New chat
               </button>
             </div>
+            <div className="conversation-controls">
+              <label htmlFor="saved-conversation">Saved conversations</label>
+              <select
+                id="saved-conversation"
+                aria-label="Saved conversations"
+                value={sessionId && [...generalConversations, ...fieldConversations].some(item => item.session_id === sessionId) ? sessionId : ''}
+                disabled={isAnalyzing}
+                onChange={(event) => openSavedConversation(event.target.value)}
+              >
+                <option value="" disabled>{sessionId ? 'Select a saved chat' : 'New chat · unsaved until asked'}</option>
+                <optgroup label="General">
+                  {generalConversations.map(item => <option key={item.session_id} value={item.session_id}>{conversationLabel(item, 'General chat')}</option>)}
+                </optgroup>
+                {conversationBaseKey !== 'general' ? <optgroup label={activeFieldContextId ? `Current field · ${fieldName}` : `Example field · ${fieldName}`}>
+                  {fieldConversations.map(item => <option key={item.session_id} value={item.session_id}>{conversationLabel(item, 'Field chat')}</option>)}
+                </optgroup> : null}
+              </select>
+            </div>
+            {latestTurn ? <ConversationRuntimeStatus turn={latestTurn} /> : null}
             <div className={`network-answer-state ${answerCapability.state}`}>
               <strong title={answerCapability.detail}>
                 {answerCapability.state === 'runtime_online'
@@ -4456,7 +4524,9 @@ export function OpenAgronomyApp() {
                 onChange={(event) => setMessage(event.target.value)}
                 onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (!isAnalyzing && !loadingConversation && fieldsHydrated && message.trim() && answerCapability.canGenerateAnswer && selectedModelReady) event.currentTarget.form?.requestSubmit() } }}
                 disabled={isAnalyzing}
-                placeholder="Ask a field question, compare observations, or request an evidence check…"
+                placeholder={fieldName
+                  ? 'Ask a field question, compare observations, or request an evidence check…'
+                  : 'Ask a general agronomy question or request an evidence check…'}
                 rows={2}
               />
               <div className="composer-actions">

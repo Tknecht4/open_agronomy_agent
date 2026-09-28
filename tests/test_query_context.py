@@ -741,6 +741,52 @@ def test_map_field_context_is_authoritative_for_target_jurisdiction() -> None:
     assert signals.primary_region == "alberta"
 
 
+def test_mixed_country_source_does_not_override_named_farm_destination() -> None:
+    examples = (
+        ("I grow barley in Montana. An Alberta seed worksheet has a useful method.", "united states", "montana"),
+        ("We are preparing a nutrient meeting on a New York dairy. An Ontario guide looks useful.", "united states", "new york"),
+        ("On our Alberta corn field, an Indiana heat-unit chart differs from our observations.", "canada", "alberta"),
+        ("I farm spring wheat in southern Alberta. A Minnesota guide lists a stand target.", "canada", "alberta"),
+    )
+    for question, country, destination in examples:
+        signals = analyze_query_context(question)
+        assert signals.country == country
+        assert signals.target_jurisdictions == (destination,)
+        assert destination in signals.jurisdictions
+
+    country_only = (
+        ("My US farm found an Ontario cost guide.", "united states"),
+        ("Our Canadian field uses a Wisconsin budget method.", "canada"),
+    )
+    for question, country in country_only:
+        signals = analyze_query_context(question)
+        assert signals.country == country
+        assert signals.target_jurisdictions == (country,)
+
+    source_first = "I saw an Iowa guide to nutrient planning. Explain which inputs matter on my Alberta farm."
+    signals = analyze_query_context(source_first)
+    assert signals.target_jurisdictions == ("alberta",)
+    assert signals.field_context["province_state"] == "alberta"
+    assert analyze_query_context(source_first, signals.field_context).target_jurisdictions == ("alberta",)
+
+    temporal = analyze_query_context("My farm is in Ontario. Should I apply manure in spring or in autumn?")
+    assert temporal.country == "canada"
+    assert temporal.target_jurisdictions == ("ontario",)
+    for question, expected in (
+        ("I farm in Alberta and plant barley in spring. Explain the seed mass method.", "alberta"),
+        ("My farm is in Ontario and I apply manure in spring or in autumn. What records matter?", "ontario"),
+        ("I farm in Alberta and in dry years rely on stored seed.", "alberta"),
+        ("I farm in Alberta and need to plan cash flow.", "alberta"),
+        ("My farm is in Ontario and prices change often. Explain enterprise budgets.", "ontario"),
+    ):
+        signals = analyze_query_context(question)
+        assert signals.country == "canada"
+        assert signals.target_jurisdictions == (expected,)
+    mixed_us_can = analyze_query_context("For our Ontario farm and our Iowa farm, explain cash flow.")
+    assert mixed_us_can.country is None
+    assert mixed_us_can.target_jurisdictions == ()
+
+
 def test_map_field_context_rejects_named_out_of_province_source_guidance() -> None:
     signals = analyze_query_context(
         "Use the bundled Alberta guide to set an exact manure credit for my Saskatchewan field.",

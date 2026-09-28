@@ -195,6 +195,8 @@ export type SessionStatus = 'active' | 'paused' | 'archived'
 export type SessionRecord = {
   turns_included?: boolean
   session_id: string
+  created_at?: string
+  updated_at?: string | null
   title: string
   tags: string[]
   status: SessionStatus

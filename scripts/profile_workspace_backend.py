@@ -197,6 +197,8 @@ def main() -> int:
                 ROOT / "src/agronomy_agent/server/app.py",
                 ROOT / "src/agronomy_agent/server/services/chat_service.py",
                 ROOT / "src/agronomy_agent/server/storage/db.py",
+                ROOT / "src/agronomy_agent/server/services/conversation_context.py",
+                ROOT / "src/agronomy_agent/server/services/conversation_scope.py",
                 ROOT / "src/agronomy_agent/execution_core.py",
                 ROOT / "configs/model.yaml",
                 ROOT / "configs/rag.yaml",
@@ -285,6 +287,27 @@ def main() -> int:
                 lambda: expect_json(client, "GET", "/api/sessions", headers=OWNER),
                 repeats=args.warm_repeats,
                 profile=True,
+            )
+
+        # Matched storage boundary: full saved transcript versus the active
+        # window used before a model request. This is not end-to-end latency.
+        seeded_sessions = store.list_sessions(include_turns=False)
+        if seeded_sessions:
+            history_session_id = seeded_sessions[0]["session_id"]
+            receipt["history_read_comparison"] = {
+                "scope": "storage_only_same_synthetic_session",
+                "stored_turns": store.count_session_turns(history_session_id),
+                "active_window_turn_limit": 8,
+                "quality_claim": False,
+            }
+            run_cell(
+                receipt, "full_session_history_read_warm",
+                lambda: store.get_session(history_session_id), repeats=args.warm_repeats,
+            )
+            run_cell(
+                receipt, "bounded_session_history_read_warm",
+                lambda: store.get_recent_session_turns(history_session_id, limit=8),
+                repeats=args.warm_repeats,
             )
 
         session = store.create_session("Synthetic core profile", {}, {})

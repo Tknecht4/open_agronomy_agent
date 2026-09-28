@@ -152,6 +152,14 @@ context release from `data/seed/production_foundations_v1.jsonl` and its
 external-source registry. The external snapshots are inspected and hash
 recorded but not copied into the public package. The builder refuses a
 nonempty output directory; save a prior candidate before rebuilding.
+For the separate v2 method candidate, pass
+`--seed data/seed/production_foundations_methods_v2.jsonl`,
+`--sources data/manifests/production_foundations_sources_v2.json`,
+`--support-receipt data/manifests/production_foundations_method_support_v2.json`,
+`--store-id production-foundations-method-v2`, and a new output directory.
+Compose its profile with `--supplement-store` pointing at that release
+manifest. The checked-in v2 config and policy are non-active and source-hash
+bound.
 `build_production_foundations_profile.py` composes an ignored candidate profile
 by default. The checked-in `configs/rag_production_foundations_candidate.yaml`
 and companion policy are nonselectable development artifacts. Writing the
@@ -295,3 +303,36 @@ is atomically published.
 ## Failure modes
 
 Missing inputs, identity mismatch, non-empty destination, insufficient authority, unavailable network/provider, dirty release state, checksum drift, and insufficient disk should stop with a diagnostic. Do not automatically delete or overwrite evidence to make a rerun pass.
+
+## Offline answer-intervention diagnostics
+
+`replay_harness_interventions.py --input <trace.jsonl> --output <new-receipt.json>`
+reads retained benchmark `answer_stages.v1` rows or observed-system rehearsal
+JSON. It validates captured stage hashes and reports draft/editor/final text
+changes without calling a model or modifying the input. Exact verifier evidence
+and route must be present for shadow claim-risk assessment; absent fields remain
+unavailable. Output contains input and implementation hashes, not raw answer
+text or local input paths. The output must be new. Changed text and risk flags
+are not intervention regret scores, semantic quality, or causal evidence. The
+frozen document/graph rehearsal matrix remains unchanged.
+
+`profile_workspace_backend.py` also compares complete saved-transcript loading
+with the bounded eight-turn read on the same synthetic session. These are
+storage timings; they do not establish an end-to-end speedup or model throughput.
+
+`run_portable_harness_diagnostic.py --run-id <new-id> --output-dir <new-dir>`
+freezes a public-only, exposed diagnostic manifest without executing models.
+`--execute` runs paired active and experimental METHOD profiles through the
+product core with a pinned, pre-provisioned MLX model. `--include-direct-reference`
+adds a fixed minimal-prompt comparison; this bundled comparison cannot isolate
+retrieval from intervention effects. `--include-continuity`,
+`--include-long-context`, and `--include-cache` add synthetic infrastructure
+checks. Cache parity repeats identical retained prompt bytes separately from
+product answer quality. The runner disables private overlays, retains raw answer
+stages and exact prompts, records failures and timeouts, and permits `--resume`
+only when its manifest matches. Use synthetic/public questions only: retained
+prompts and SQLite traces are not automatically safe to publish. These exposed
+cases cannot establish held-out competence or promote a runtime profile.
+A completed executor is not proof of model availability. Draft generation and
+final product eligibility are recorded separately; an editor backend error
+invalidates final product quality while retaining a successfully generated draft.
