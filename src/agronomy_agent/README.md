@@ -32,7 +32,7 @@ The supported cockpit composes the system through `server/app.py`. A normal answ
 | Runtime adapters | `agno_runtime/` | Local retrieval/graph/model/tool/trace adapters |
 | Application | `server/` | FastAPI composition, services, auth/network settings, storage |
 | Field state | `field_events.py`, `field_measurements.py`, `query_context.py` | Append-oriented field observations and usable question context |
-| Candidate method knowledge | `method_context.py`, `decision_contract.py` | Reviewed method IDs, bounded explanation routing, and method-only coverage; enabled only by the non-active method profile |
+| Candidate method knowledge | `method_context.py`, `decision_contract.py` | Reviewed method IDs, source-bound draft background, and method-only coverage; enabled only by the non-active method profile |
 
 ## Inputs and outputs
 

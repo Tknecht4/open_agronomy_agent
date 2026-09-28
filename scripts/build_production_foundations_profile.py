@@ -58,7 +58,7 @@ def compose(*, output_config: Path, output_policy: Path, supplement_store: Path 
         config["release_profile"]["method_transfer_store"] = supplement_store.relative_to(ROOT).as_posix()
     receipt = json.loads((supplement_store.parent / str(manifest["source_receipt_path"])).read_text(encoding="utf-8"))
     if store_id == "production-foundations-method-v2":
-        config["release_profile"]["method_response_mode"] = "curated_method_text_v1"
+        config["release_profile"]["method_response_mode"] = "source_bound_appendix_v1"
         config["release_profile"]["method_support_receipt_sha256"] = receipt["source_support_receipt_sha256"]
     policy["corpora"].append({
         "evidence_tier": "internal_synthesis",

@@ -9,9 +9,13 @@ from pathlib import Path
 
 from agronomy_agent.agent import build_context, load_agent_resources
 from agronomy_agent.decision_contract import build_decision_contract, obligation_coverage
-from agronomy_agent.method_context import curated_method_response, method_fit_reason, requested_methods, reviewed_method_ids
+from agronomy_agent.method_context import method_fit_reason, requested_methods, reviewed_method_ids, source_bound_method_appendix
 from agronomy_agent.query_context import analyze_query_context, filter_docs_for_query
 from agronomy_agent.server.services.chat_service import _build_doc_snapshot
+from agronomy_agent.execution_core import AgentExecutionRequest
+from agronomy_agent.server.services.chat_service import execute_agent_request
+from agronomy_agent.server.settings import build_settings
+from agronomy_agent.server.storage.db import TraceStore
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -69,14 +73,15 @@ def test_method_scope_survives_final_context_without_field_authority() -> None:
     method_coverage = next(row for row in packet["coverage"] if row["slot_key"] == "method:seed_mass")
     assert method_coverage["required_authority"] == "method_context_only"
     assert method_coverage["status"] == "ADEQUATE"
-    answer, receipt = curated_method_response(context, question)
-    assert answer and "Saskatchewan" in answer and "local" in answer
+    answer, receipt = source_bound_method_appendix(context, question)
+    assert answer and "Source-supported method background" in answer
+    assert "do not establish this farm's target" in answer
     assert receipt and receipt["doc_ids"] == [doc.doc_id]
-    assert receipt["authority"] == "method_context_only"
+    assert receipt["authority"] == "method_context_only_not_complete_answer"
     forged_context = replace(context, retrieved_docs=[replace(doc, method_scope={**doc.method_scope, "source_support_receipt_sha256": "0" * 64})])
-    assert curated_method_response(forged_context, question) == (None, None)
+    assert source_bound_method_appendix(forged_context, question) == (None, None)
     active_context = build_context(question, rag_config="configs/rag.yaml", use_context_cache=False, use_search_cache=False)
-    assert curated_method_response(active_context, question) == (None, None)
+    assert source_bound_method_appendix(active_context, question) == (None, None)
 
 
 def test_unreviewed_or_out_of_scope_method_cannot_bypass_query_fit() -> None:
@@ -118,68 +123,23 @@ def test_method_recognition_uses_independent_concepts_without_a_topic_word() -> 
     )
 
 
-def test_curated_method_response_requires_explanation_not_a_transferred_rate() -> None:
-    question = "Can I copy a Pennsylvania manure application rate to my Prince Edward Island field without a soil or manure analysis?"
-    context = build_context(question, rag_config=CANDIDATE, use_context_cache=False, use_search_cache=False)
-    assert curated_method_response(context, question) == (None, None)
-    question = "Explain nutrient planning, and may I use this Canadian-labeled herbicide on my North Dakota field?"
-    context = build_context(question, rag_config=CANDIDATE, use_context_cache=False, use_search_cache=False)
-    assert curated_method_response(context, question) == (None, None)
-    question = "Our British Columbia farm has land equity but cash is short before invoices are paid. How do working capital, current ratio and a cash-flow schedule help explain this?"
-    context = build_context(question, rag_config=CANDIDATE, use_context_cache=False, use_search_cache=False)
-    answer, receipt = curated_method_response(context, question)
-    assert answer and "current assets minus current liabilities" in answer
-    assert "financing proceeds" in answer and "cash payment" in answer
-    assert receipt and set(receipt["method_ids"]) == {"liquidity", "cash_flow"}
-
-
-def test_curated_method_response_rejects_foreign_sites_and_competing_decisions() -> None:
-    blocked = (
-        "I farm in Australia and want to understand a Manitoba guide to seed mass and target stand.",
-        "For my Alberta farm, should I sell land to improve working capital?",
-        "Our Ontario farm uses a Manitoba enterprise budget. Explain the framework and tell me current wheat prices.",
-        "I farm in Ontario. Explain a Manitoba crop budget, and tell me if my field is deficient in nitrogen.",
-        "I farm in Alberta. Explain cash flow and advise whether to borrow to buy land.",
-        "For my Ontario farm, how should I sell land to improve working capital?",
-        "For my Alberta farm, explain growing degree days and whether the wheat is ready to harvest.",
-        "For my Ontario farm, explain the enterprise budget and what wheat prices are now.",
-        "I farm in Alberta and in Australia. Explain the Manitoba seed mass method.",
-        "Our Alberta farm uses growing degree days. Explain the method. Is the wheat ready to harvest?",
-        "Explain working capital for my Ontario farm. Is selling land the best choice?",
-        "Explain the enterprise budget for my Ontario farm. What is wheat selling for at the local elevator?",
-        "Explain the seed mass method for my Saskatchewan farm. Give me a target stand for wheat.",
-        "Explain the enterprise budget for my Ontario farm. Please estimate wheat prices for next month.",
-        "Explain cash flow for my Ontario farm, and is buying a combine sensible?",
-        "For our Alberta farm, explain growing degree days. Describe the weather tomorrow.",
-        "Explain working capital for our Ontario farm. Explain why buying the neighbouring farm is a good investment.",
-        "i farm in alberta and in australia. explain the manitoba seed mass method.",
-        "For our Alberta farm, explain cash flow. Decide whether we can afford a new tractor.",
-        "For my Saskatchewan farm, explain seed mass and suggest a target stand.",
-        "For my Ontario farm, explain an enterprise budget including the wheat price at our elevator this morning.",
+def test_method_appendix_keeps_local_authority_separate() -> None:
+    for question in (
+        "Can I copy a Pennsylvania manure application rate to my Prince Edward Island field without a soil or manure analysis?",
+        "Explain nutrient planning, and may I use this Canadian-labeled herbicide on my North Dakota field?",
         "For our Australian farm, explain the Ontario enterprise budget method.",
         "For our Ontario farm and our Australian farm, explain seed mass.",
-        "We farm in Ontario and Australia. Explain the seed mass method.",
-        "For our Alberta farm, explain cash flow and select the best lender for us.",
-        "Explain the current ratio for my Ontario farm. Assess whether our ratio supports purchasing another farm.",
-        "For our Manitoba farm, explain growing degree days, including when the barley will be harvestable.",
-        "For our Ontario farm, explain an enterprise budget and give me yesterday's wheat price.",
-        "Explain seed mass for my Saskatchewan farm and write a poem about it.",
-    )
-    for question in blocked:
+    ):
         context = build_context(question, rag_config=CANDIDATE, use_context_cache=False, use_search_cache=False)
-        assert curated_method_response(context, question) == (None, None)
+        assert source_bound_method_appendix(context, question) == (None, None)
 
-    question = "I farm in Australia and want to understand a Manitoba guide to seed mass and target stand."
-    context = build_context(
-        question,
-        rag_config=CANDIDATE,
-        field_context={"province_state": "New South Wales", "country": "Australia"},
-        use_context_cache=False,
-        use_search_cache=False,
-    )
-    packet = context.runtime_metadata["evidence_fabric"]["evidence_packet"]
-    assert curated_method_response(context, question) == (None, None)
-    assert not any(row["slot_key"].startswith("method:") and row["status"] == "ADEQUATE" for row in packet["coverage"])
+    question = "Our British Columbia farm has land equity but cash is short before invoices are paid. How do working capital, current ratio and a cash-flow schedule help explain this?"
+    context = build_context(question, rag_config=CANDIDATE, use_context_cache=False, use_search_cache=False)
+    appendix, receipt = source_bound_method_appendix(context, question)
+    assert appendix and "current assets minus current liabilities" in appendix
+    assert "financing proceeds" in appendix and "cash payment" in appendix
+    assert receipt and set(receipt["included_method_ids"]) == {"liquidity", "cash_flow"}
+    assert receipt["authority"] == "method_context_only_not_complete_answer"
 
 
 def test_source_first_jurisdiction_reaches_contract_and_evidence_frame() -> None:
@@ -191,7 +151,7 @@ def test_source_first_jurisdiction_reaches_contract_and_evidence_frame() -> None
         assert context.runtime_metadata["evidence_fabric"]["question_frame"]["jurisdiction_scope"] == ("alberta",)
         if profile == CANDIDATE:
             assert context.route.question_type == "fertility_diagnostic"
-            assert curated_method_response(context, question) == (None, None)
+            assert source_bound_method_appendix(context, question) == (None, None)
 
 
 def test_comparison_between_two_method_families_keeps_both() -> None:
@@ -201,6 +161,58 @@ def test_comparison_between_two_method_families_keeps_both() -> None:
     assert {doc.doc_id for doc in context.retrieved_docs if doc.doc_id.startswith("method_")} >= {
         "method_partial_budget", "method_enterprise_budget"
     }
-    answer, receipt = curated_method_response(context, question)
+    answer, receipt = source_bound_method_appendix(context, question)
     assert answer and "Incremental farm-change" in answer and "Enterprise cost-boundary" in answer
-    assert receipt and set(receipt["method_ids"]) == {"partial_budget", "enterprise_budget"}
+    assert receipt and set(receipt["included_method_ids"]) == {"partial_budget", "enterprise_budget"}
+
+
+def test_product_path_calls_generator_and_records_method_as_background(tmp_path) -> None:  # noqa: ANN001
+    class Backend:
+        backend_id = "method_path_probe_v1"
+
+        def __init__(self) -> None:
+            self.calls: list[list[dict[str, str]]] = []
+
+        def generate(self, messages):  # noqa: ANN001, ANN201
+            self.calls.append([dict(row) for row in messages])
+            return "This farm decision needs its own current evidence and terms."
+
+    for idx, question in enumerate((
+        "For our Alberta farm, explain seasonal cash flow.",
+        "For our Alberta farm, explain cash flow and select the best lender for us.",
+    )):
+        db_path = tmp_path / f"method_{idx}.sqlite3"
+        store = TraceStore(db_path)
+        session = store.create_session("method probe", {}, {})
+        settings = build_settings(
+            db_path=db_path,
+            artifact_root=tmp_path / f"artifacts_{idx}",
+            model_config_path="configs/model.yaml",
+            default_rag_config=CANDIDATE,
+            network_mode="offline",
+        )
+        backend = Backend()
+        execution = execute_agent_request(AgentExecutionRequest(
+            store=store,
+            settings=settings,
+            session_id=session["session_id"],
+            message=question,
+            mode="agronomic_rag",
+            model_id="mock",
+            rag_config=CANDIDATE,
+            max_tokens=100,
+            trace_options={"store_prompt_messages": False, "store_retrieved_text": False},
+            execution_class="observed_system_execution_nonclaim",
+            generation_backend=backend,
+        ))
+        assert len(backend.calls) == 1
+        assert len(execution.stage_receipts) == 17
+        metadata = execution.turn["trace"]["metadata"]
+        assert metadata.get("generation_path") != "deterministic_method_context"
+        assert "generation_bypass" not in metadata
+        if idx == 0:
+            assert metadata["method_appendix"]["authority"] == "method_context_only_not_complete_answer"
+            assert "method_cash_flow" in metadata["method_appendix"]["doc_ids"]
+            assert "Start with opening cash" in execution.answer
+        else:
+            assert "This farm decision needs its own current evidence" in execution.answer

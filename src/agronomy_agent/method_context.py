@@ -128,206 +128,82 @@ def method_fit_reason(doc: Any, question: str, country: str | None) -> str | Non
     return "method_context_match"
 
 
-def curated_method_response(context: Any, question: str) -> tuple[str | None, dict[str, Any] | None]:
-    """Render admitted project-authored methods for explanation-only requests.
 
-    This is a candidate-only deterministic skill. It cannot calculate supplied
-    values, decide a farm action, or substitute a method for current authority.
-    The normal safety and high-consequence policies still run afterward.
+def source_bound_method_appendix(context: Any, question: str) -> tuple[str | None, dict[str, Any] | None]:
+    """Prepare admitted method background for the ordinary answer path.
+
+    This optional candidate component is evidence text, not a final answer.
+    The model still drafts for the full request, and verification and safety
+    evaluate the combined draft. Missing scope or support fails closed.
     """
 
     if context is None:
         return None, None
     runtime = getattr(context, "runtime_metadata", None) or {}
-    if runtime.get("method_response_mode") != "curated_method_text_v1":
+    if runtime.get("method_response_mode") != "source_bound_appendix_v1":
         return None, None
     route = getattr(context, "route", None)
-    if str(getattr(route, "risk_level", "") or "") in {"high", "regulated"} or str(getattr(route, "question_type", "") or "") == "product_label":
+    if str(getattr(route, "risk_level", "") or "") in {"high", "regulated"}:
         return None, None
-    if re.search(r"\b(?:pesticide|herbicide|fungicide|insecticide|spray|label|registration)\b", question, re.IGNORECASE):
+    if str(getattr(route, "question_type", "") or "") in {
+        "product_label", "fertility_rate", "fertility_diagnostic", "plant_health"
+    }:
         return None, None
-    if str(getattr(route, "question_type", "") or "") in {"fertility_diagnostic", "plant_health"}:
-        return None, None
-    if not re.search(r"\b(?:explain|describe|understand|how|what|which|why|framework|method|concept)\b", question, re.IGNORECASE):
-        return None, None
-    if re.search(r"\b(?:and|also)\s+(?:advise|tell|recommend|decide|judge|assess|determine|predict)\b", question, re.IGNORECASE):
-        return None, None
-    if re.search(
-        r"\b(?:and|also)\s+(?:please\s+)?(?:select|choose|suggest|recommend|decide|assess|judge|"
-        r"determine|predict|forecast|estimate|buy|sell|apply|plant|harvest|write|compose|draft|create)\b|"
-        r"\b(?:assess|decide|judge|determine|evaluate)\s+(?:whether|if)\b|"
-        r"\b(?:including|and)\s+when\b[^?.!]{0,80}\b(?:harvest|plant|spray|treat|apply|sell|buy)\w*\b|"
-        r"\b(?:select|assess|suggest|recommend|decide|determine|forecast|predict)\b[^?.!]{0,55}\b"
-        r"(?:best|lender|purchase|buy|sell|afford|harvest|investment|rate|target|price)\w*\b",
-        question,
-        re.IGNORECASE,
-    ):
-        return None, None
-    if re.search(r"\b(?:lender|purchas\w*|harvestable|poem|story|joke|yesterday'?s|tomorrow'?s)\b", question, re.IGNORECASE):
-        return None, None
-    for match in re.finditer(r"\bhow\s+(?:should|could|would)\s+(?:i|we)\s+(?P<verb>\w+)", question, re.IGNORECASE):
-        if match.group("verb").lower() not in {"use", "adapt", "interpret", "organize", "compare", "record", "reconcile", "explain", "check", "think", "evaluate"}:
-            return None, None
-    if re.search(r"\buse\s+(?:this|the)\s+(?:fertilizer|manure|seed|pesticide|herbicide|product)\b", question, re.IGNORECASE):
-        return None, None
-    for match in re.finditer(r"\b(?:should|could|would)\s+(?:i|we)\b", question, re.IGNORECASE):
-        prefix = question[max(0, match.start() - 90):match.start()]
-        if re.search(r"\b(?:how|what|which)\b[^?.!;]{0,75}$", prefix, re.IGNORECASE) is None:
-            return None, None
-    if re.search(r"\b(?:can|may)\s+(?:i|we)\s+(?:sell|buy|finance|borrow|hire|choose|rank|copy|adopt|apply|spray|treat)\b", question, re.IGNORECASE):
-        return None, None
-    if re.search(r"\btell me if\b|\b(?:diagnos\w*|deficien\w*)\b", question, re.IGNORECASE):
-        return None, None
-    if re.search(r"\b(?:current|today'?s|live|latest)\b[^?]{0,55}\b(?:prices?|quotes?|bids?|market values?)\b", question, re.IGNORECASE):
-        return None, None
-    if re.search(r"\b(?:prices?|quotes?|bids?|market values?)\b[^?]{0,40}\b(?:now|today|currently|latest|live)\b", question, re.IGNORECASE):
-        return None, None
-    if re.search(
-        r"\b(?:prices?|quotes?|bids?)\b[^?]{0,75}\b(?:at|from)\s+(?:our|the|a)\s+"
-        r"(?:local\s+)?(?:elevator|buyer|market|exchange|broker)\b|"
-        r"\b(?:cash bid|spot price|market quote)\b",
-        question,
-        re.IGNORECASE,
-    ):
-        return None, None
-    if re.search(r"\b(?:suggest|choose|set|give|pick)\b[^?]{0,55}\b(?:target stand|plant population|seeding rate)\b", question, re.IGNORECASE):
-        return None, None
-    if re.search(r"\b(?:give me|tell me|advise|recommend|decide for me|ready to harvest|best choice|selling for|sell land|buy land|borrow to)\b", question, re.IGNORECASE):
-        return None, None
-    if re.search(r"\b(?:estimate|forecast|predict)\b", question, re.IGNORECASE):
-        return None, None
-    request_start = re.compile(r"^\s*(?:please|explain|describe|outline|list|show|how|what|which|why|can|could|would|should|is|are|do|does|will|may|give|tell|recommend|advise|decide|suggest|assess|judge|evaluate|determine|write|compose|draft|create|select)\b", re.IGNORECASE)
-    method_request_terms = re.compile(
-        r"\b(?:method|framework|reasoning|inputs?|conventions?|comparison|compare|belong|adapt|chart|budget|"
-        r"ratios?|log|records?|gather|organize|cash[- ]flow|working capital|degree days|measures?|rows?|"
-        r"basis|seed[- ]mass|seed lots?|germination|units?|evidence packet|nutrient advis(?:er|or)|"
-        r"(?:setting|calibrating) the drill)\b",
-        re.IGNORECASE,
-    )
-    request_boundary = (
-        r"(?<=[.!?;])\s+|"
-        r"(?:,\s*|\s+)(?:and|or)\s+(?=(?:please|is|are|do|does|should|can|could|would|will|may|what|how|which|why|give|tell|recommend|advise|decide|suggest|assess|judge|evaluate|determine|write|compose|draft|create|select)\b)"
-    )
-    for sentence in re.split(request_boundary, question, flags=re.IGNORECASE):
-        if request_start.search(sentence):
-            if not method_request_terms.search(sentence):
-                return None, None
     expected_hash = str(runtime.get("method_support_receipt_sha256") or "")
     store_path = str(runtime.get("method_transfer_store") or "")
     if not re.fullmatch(r"[0-9a-f]{64}", expected_hash) or not store_path:
         return None, None
-    if re.search(r"\b(?:how much|how many|calculate|compute|exact(?:ly)?)\b", question, re.IGNORECASE):
-        return None, None
-    if re.search(r"\b(?:can|should)\s+(?:i|we)\s+(?:copy|adopt|rank|apply|spray|treat)\b", question, re.IGNORECASE):
-        return None, None
-    if re.search(r"\b(?:what|which)\s+(?:fertilizer |pesticide |herbicide |manure )?(?:rate|product|dose|threshold)\b", question, re.IGNORECASE):
+    wanted = requested_methods(question)
+    if not wanted:
         return None, None
     query_context = runtime.get("query_context") or {}
     country = str(query_context.get("country") or "")
     targets = tuple(query_context.get("target_jurisdictions") or ())
     if country not in {"canada", "united states"} or len(targets) != 1:
         return None, None
-    from agronomy_agent.query_context import _NON_SITE_CONJOINED_PREFIXES, _normalize_jurisdiction_scope
-
-    # Every explicitly owned site must resolve inside the declared destination.
-    # Unknown descriptors are a safe miss for this optional renderer.
-    owned_site_pattern = (
-        r"\b(?:my|our)\s+(?P<place>[A-Za-z-]+(?:\s+[A-Za-z-]+){0,2})\s+"
-        r"(?:farm|field|dairy|crop|operation|orchard|ranch)\b"
-    )
-    for match in re.finditer(owned_site_pattern, question, re.IGNORECASE):
-        site_countries, site_subdivisions = _normalize_jurisdiction_scope((match.group("place"),))
-        if country not in site_countries or (site_subdivisions and str(targets[0]).lower() not in site_subdivisions):
-            return None, None
-
-    for match in re.finditer(r"\b(?:and|or)\s+in\s+(?P<place>[A-Za-z-]+(?:\s+[A-Za-z-]+){0,2})", question, re.IGNORECASE):
-        place = match.group("place")
-        first = place.split()[0].lower()
-        if first in _NON_SITE_CONJOINED_PREFIXES:
-            continue
-        countries, subdivisions = _normalize_jurisdiction_scope((place,))
-        if country not in countries or (subdivisions and str(targets[0]).lower() not in subdivisions):
-            return None, None
-    # A coordinated place after a supported site is unresolved unless it is
-    # the same supported scope. This optional renderer can safely decline.
-    for match in re.finditer(
-        r"\bin\s+(?P<first>[A-Za-z-]+(?:\s+[A-Za-z-]+){0,2})\s+(?:and|or)\s+"
-        r"(?P<second>[A-Za-z-]+(?:\s+[A-Za-z-]+){0,2})",
-        question,
-        re.IGNORECASE,
-    ):
-        if match.group("second").split()[0].lower() in {
-            "plant", "grow", "found", "read", "use", "uses", "have", "want", "bought",
-            "sold", "heard", "saw", "work", "plan", "keep", "apply", "harvest", "an", "a", "the",
-        }:
-            continue
-        first_countries, _ = _normalize_jurisdiction_scope((match.group("first"),))
-        if not first_countries:
-            continue
-        second_countries, second_subdivisions = _normalize_jurisdiction_scope((match.group("second"),))
-        if country not in second_countries or (second_subdivisions and str(targets[0]).lower() not in second_subdivisions):
-            return None, None
-    from agronomy_agent.query_context import (
-        _inferred_destination_jurisdiction,
-        _inferred_owned_country,
-        _named_jurisdiction_spans,
-    )
-
-    named_site = _inferred_destination_jurisdiction(
-        question, _named_jurisdiction_spans(question), require_multiple=False
-    )
-    owned_country = _inferred_owned_country(question)
-    if named_site:
-        if (str(targets[0]).lower(), country) != named_site:
-            return None, None
-    elif owned_country != country or str(targets[0]).lower() != country:
-        # A cited source's geography is not proof of the user's operation site.
-        return None, None
-    wanted = requested_methods(question)
-    if not wanted or len(wanted) > 2:
-        return None, None
-    expected_dir = PurePosixPath(store_path).parent.as_posix() + "/"
     admitted = {
         source_id
         for section in getattr(getattr(context, "packed_context", None), "sections", ())
         for source_id in getattr(section, "source_ids", ())
     }
-    by_method: dict[str, Any] = {}
+    expected_dir = PurePosixPath(store_path).parent.as_posix() + "/"
+    from agronomy_agent.evidence_contracts import applicability_from_retrieved_doc
+
+    selected: list[tuple[Any, tuple[str, ...]]] = []
+    included_methods: set[str] = set()
     for doc in getattr(context, "retrieved_docs", ()):
         if doc.doc_id not in admitted or not str(getattr(doc, "corpus_path", "")).startswith(expected_dir):
             continue
-        if (getattr(doc, "method_scope", None) or {}).get("source_support_receipt_sha256") != expected_hash:
+        scope = getattr(doc, "method_scope", None) or {}
+        if scope.get("source_support_receipt_sha256") != expected_hash:
             continue
-        for method_id in reviewed_method_ids(doc):
-            by_method.setdefault(method_id, doc)
-    if any(method_id not in by_method for method_id in wanted):
-        return None, None
-    selected = tuple(by_method[method_id] for method_id in wanted)
-    from agronomy_agent.evidence_contracts import applicability_from_retrieved_doc
-
-    for method_id, doc in zip(wanted, selected):
+        methods = tuple(method for method in reviewed_method_ids(doc) if method in wanted)
+        if not methods:
+            continue
         envelope = applicability_from_retrieved_doc(doc, question_jurisdictions=targets)
-        if envelope.transfer_status != "reviewed_general_method_scope" or method_id not in envelope.methods:
-            return None, None
-    target = str(targets[0]).title()
-    opening = (
-        f"For your {target} operation, the following source-supported method can organize the reasoning."
-        if len(selected) == 1 else
-        f"For your {target} operation, these source-supported methods can organize the reasoning."
-    )
-    sections = [f"**{doc.title}**\n{doc.text}" for doc in selected]
+        if envelope.transfer_status != "reviewed_general_method_scope":
+            continue
+        selected.append((doc, methods))
+        included_methods.update(methods)
+    if not selected:
+        return None, None
+    sections = [
+        f"**{doc.title}** [method source: {doc.doc_id}]\n{doc.text}"
+        for doc, _ in selected
+    ]
     boundary = (
-        "The cited source regions support the method only. Use applicable local evidence "
-        "for crop targets, field measurements, current prices, rates, labels and legal duties."
+        "These project-authored source-linked summaries explain general methods only. "
+        "They do not establish this farm's target, measured field condition, "
+        "current price, application rate, product permission, or legal duty."
     )
-    response = "\n\n".join((opening, *sections, boundary))
+    text = "\n\n".join(("Source-supported method background (context only):", *sections, boundary))
     receipt = {
-        "schema_version": "open_agronomy_agent.curated_method_response.v1",
-        "renderer": "curated_method_text_v1",
-        "method_ids": list(wanted),
-        "doc_ids": [doc.doc_id for doc in selected],
+        "schema_version": "open_agronomy_agent.method_answer_appendix.v1",
+        "renderer": "source_bound_appendix_v1",
+        "requested_method_ids": list(wanted),
+        "included_method_ids": sorted(included_methods),
+        "doc_ids": [doc.doc_id for doc, _ in selected],
         "source_support_receipt_sha256": expected_hash,
-        "target_jurisdiction": target,
-        "authority": "method_context_only",
+        "authority": "method_context_only_not_complete_answer",
     }
-    return response, receipt
+    return text, receipt

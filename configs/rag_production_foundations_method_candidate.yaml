@@ -69,5 +69,5 @@ release_profile:
   community_status: no_archive_community_source_has_a_public_runtime_rights_admission
   production_foundations_store: data/derived/rag/offline_agronomy/production_foundations/v2/store_manifest.json
   method_transfer_store: data/derived/rag/offline_agronomy/production_foundations/v2/store_manifest.json
-  method_response_mode: curated_method_text_v1
+  method_response_mode: source_bound_appendix_v1
   method_support_receipt_sha256: 494bd2d03009ba4b78564c3701e744aac5042279603e78bdf647f21a31c227e5

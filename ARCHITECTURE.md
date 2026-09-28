@@ -52,12 +52,12 @@ path observed; it is not a second agent implementation.
 | Operator workflows | `scripts/` | Thin CLIs around package contracts; generated outputs belong under ignored paths |
 
 The nonselectable production-foundations method candidate adds seven reviewed,
-project-authored METHOD rows. Its RAG profile explicitly enables a bounded
-`curated_method_text_v1` explanation renderer when the matching card reached the
-final packed context. The product trace records a deterministic bypass and
-source-support receipt. Numeric calculation, farm-action, local-rate, market,
-and product-label requests continue through their existing paths; answer
-safety and high-consequence policy still run after a method explanation.
+project-authored METHOD rows. Its RAG profile can append admitted, source-bound
+method background to the model draft before verification. The product trace
+separates the model draft hash from the appendix and its source-support receipt.
+This is background evidence, not a complete answer or field-action authority;
+the ordinary generation, verification, safety, and high-consequence paths
+still handle the entire request.
 
 ## Harnesses and what they prove
 
