@@ -76,12 +76,50 @@ def test_direct_cache_probe_reuses_identical_prompt_and_scope(
         enabled_config_path=paths[1], max_tokens=320, session_id="test-session",
     )
     assert probe["answer_equal"] is True
+    assert probe["status"] == "completed"
     assert probe["cache_statuses"] == {"disabled": "disabled", "cold": "prepared_this_request", "warm": "reused_saved_prefix"}
     assert len({scope for _, scope, _ in calls}) == 1
     assert len({prompt_hash for _, _, prompt_hash in calls}) == 1
     assert "diagnostic_isolated_parity" in calls[0][1]
     assert probe["outputs"][0]["resolved_model_snapshot"] == "/synthetic/model-snapshot"
     json.dumps(probe)
+
+
+def test_cache_probe_retains_disabled_and_cold_when_warm_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import yaml
+
+    disabled = tmp_path / "disabled.yaml"
+    enabled = tmp_path / "enabled.yaml"
+    disabled.write_text(yaml.safe_dump(runner.model_config_for_cell(ROOT / "configs/model.yaml", cache_enabled=False)))
+    enabled.write_text(yaml.safe_dump(runner.model_config_for_cell(ROOT / "configs/model.yaml", cache_enabled=True)))
+
+    class FakeGenerator:
+        model_identity = {"status": "test"}
+
+        def __init__(self, cache_enabled: bool) -> None:
+            self.cache_enabled = cache_enabled
+            self.calls = 0
+            self.last_generation_stats = {}
+
+        def set_cache_scope(self, _scope: str) -> None:
+            pass
+
+        def generate(self, _messages: list[dict[str, str]]) -> str:
+            self.calls += 1
+            if self.cache_enabled and self.calls == 2:
+                raise RuntimeError("warm cache failed")
+            self.last_generation_stats = {"prompt_cache_status": "prepared_this_request" if self.cache_enabled else "disabled"}
+            return "answer"
+
+    monkeypatch.setattr(runner, "_build_mlx_generator", lambda _id, cfg, _path: FakeGenerator(cfg["prompt_cache_enabled"]))
+    probe = runner.direct_cache_probe(messages=[{"role": "user", "content": "synthetic"}], model_id="test",
+                                      disabled_config_path=disabled, enabled_config_path=enabled,
+                                      max_tokens=8, session_id="synthetic-session")
+    assert probe["status"] == "failed"
+    assert [row["status"] for row in probe["outputs"]] == ["completed", "completed", "failed"]
+    assert probe["answer_equal"] is None
 
 
 def test_direct_reference_uses_only_fixed_system_and_question(
@@ -149,6 +187,7 @@ def test_parent_preserves_timeout_as_failed_cell(tmp_path: Path, monkeypatch: py
     cases = tmp_path / "cases.jsonl"
     cases.write_text(json.dumps({"id": "x1", "question": "What is a seed lot?"}) + "\n")
     monkeypatch.setattr(runner, "DEFAULT_ARMS", {"active": ROOT / "configs/rag.yaml"})
+    monkeypatch.setattr(runner, "_ensure_preflight", lambda **_kwargs: True)
 
     def timeout(*args: object, **kwargs: object) -> None:
         raise subprocess.TimeoutExpired("worker", 0.01)
@@ -179,6 +218,7 @@ def test_resume_preserves_orphan_worker_and_uses_fresh_attempt(
     cases.write_text(json.dumps({"id": "x1", "question": "What is a seed lot?"}) + "\n")
     monkeypatch.setattr(runner, "DEFAULT_ARMS", {"active": ROOT / "configs/rag.yaml"})
     monkeypatch.setattr(runner, "_source_receipt", lambda: {"source_tree_sha256": "test"})
+    monkeypatch.setattr(runner, "_ensure_preflight", lambda **_kwargs: True)
     seen: list[Path] = []
 
     def child(*argv: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
@@ -209,3 +249,81 @@ def test_resume_preserves_orphan_worker_and_uses_fresh_attempt(
     row = json.loads((tmp_path / "run/cells.jsonl").read_text())
     assert row["status"] == "completed"
     assert row["attempt"] == 2
+
+
+def test_preflight_requires_resolved_snapshot_and_measured_tokens(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import yaml
+
+    config = tmp_path / "model.yaml"
+    config.write_text(yaml.safe_dump(runner.model_config_for_cell(ROOT / "configs/model.yaml", cache_enabled=False)))
+    spec = tmp_path / "spec.json"
+    spec.write_text(json.dumps({"model_config": str(config), "model_id": "synthetic-model",
+                                "manifest_sha256": "test-manifest"}))
+
+    class FakeGenerator:
+        last_generation_stats = {"generation_tokens": 8}
+        model_identity = {"status": "verified_direct_loader"}
+        _resolved_model_snapshot = None
+
+        def set_cache_scope(self, _scope: str) -> None:
+            pass
+
+        def generate(self, _messages: list[dict[str, str]]) -> str:
+            return "Unknown."
+
+    monkeypatch.setattr(runner, "_build_mlx_generator", lambda *_args: FakeGenerator())
+    monkeypatch.setattr(runner, "_runtime_receipt", lambda: {"mlx_device": "Device(gpu, 0)"})
+    result = tmp_path / "preflight.json"
+    assert runner._preflight_child(spec, result) == 1
+    assert json.loads(result.read_text())["status"] == "failed"
+    FakeGenerator._resolved_model_snapshot = Path("/synthetic/pinned-snapshot")
+    result2 = tmp_path / "preflight-passed.json"
+    assert runner._preflight_child(spec, result2) == 0
+    row = json.loads(result2.read_text())
+    assert row["generation_stats"]["generation_tokens"] == 8
+    assert row["resolved_model_snapshot"] == "/synthetic/pinned-snapshot"
+
+
+def test_failed_preflight_stops_before_matrix(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import subprocess
+
+    cases = tmp_path / "cases.jsonl"
+    cases.write_text(json.dumps({"id": "x1", "question": "What is a seed lot?"}) + "\n")
+    monkeypatch.setattr(runner, "DEFAULT_ARMS", {"active": ROOT / "configs/rag.yaml"})
+    monkeypatch.setattr(runner, "_source_receipt", lambda: {"source_tree_sha256": "test"})
+    calls: list[list[str]] = []
+
+    def failed_preflight(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        calls.append(command)
+        assert "--preflight-spec" in command
+        output = Path(command[command.index("--preflight-output") + 1])
+        output.write_text(json.dumps({"status": "failed", "error_type": "FileNotFoundError",
+                                      "error": "model snapshot missing"}) + "\n")
+        return subprocess.CompletedProcess(command, 1, "", "")
+
+    monkeypatch.setattr(runner.subprocess, "run", failed_preflight)
+    arguments = argparse.Namespace(
+        cases=cases, model_config=ROOT / "configs/model.yaml", output_dir=tmp_path / "run",
+        model_id=None, run_id="missing-snapshot", max_tokens=320, cell_timeout_seconds=1.0,
+        include_continuity=False, include_long_context=False, include_cache=False,
+        include_direct_reference=False, cache_case_id=None, execute=True, resume=False,
+    )
+    assert runner._run_parent(arguments) == 1
+    assert len(calls) == 1
+    assert not (tmp_path / "run/cells.jsonl").exists()
+    assert json.loads((tmp_path / "run/preflight.jsonl").read_text())["status"] == "failed"
+
+
+def test_model_execution_is_distinct_from_executor_completion() -> None:
+    execution = {"stage_receipts": [{"stage_id": "draft_generation", "evidence": {"model_call_executed": True}}]}
+    generated = runner.model_execution_disposition({"generation_stats": {"generation_tokens": 8}}, execution)
+    assert generated["disposition"] == "model_generated"
+    assert generated["model_generation_eligible"] is True
+    fallback = runner.model_execution_disposition({"generation_fallback": {"reason": "backend failed"}}, execution)
+    assert fallback["product_quality_eligible"] is False
+    assert fallback["model_generation_eligible"] is False
+    bypass = runner.model_execution_disposition({"generation_bypass": {"reason": "typed result"}}, execution)
+    assert bypass["product_quality_eligible"] is True
+    assert bypass["model_generation_eligible"] is False

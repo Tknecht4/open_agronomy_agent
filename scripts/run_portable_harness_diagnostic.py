@@ -233,6 +233,119 @@ def _runtime_receipt() -> dict[str, Any]:
     return {"python": sys.version, "platform": platform.platform(), "packages": versions, "mlx_device": device}
 
 
+def _preflight_child(spec_path: Path, output_path: Path) -> int:
+    """Exercise the exact source generator in an isolated, killable process."""
+
+    spec = json.loads(spec_path.read_text(encoding="utf-8"))
+    messages = [{"role": "system", "content": DIRECT_REFERENCE_SYSTEM},
+                {"role": "user", "content": "State that an unmeasured synthetic field value is unknown."}]
+    started = time.perf_counter()
+    try:
+        config_path = Path(spec["model_config"])
+        config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+        generator = _build_mlx_generator(spec["model_id"], config, str(config_path))
+        generator.max_tokens = 8
+        generator.set_cache_scope("portable-diagnostic-source-preflight")
+        answer = str(generator.generate(messages))
+        stats = dict(getattr(generator, "last_generation_stats", {}) or {})
+        identity = dict(getattr(generator, "model_identity", {}) or {})
+        snapshot = str(getattr(generator, "_resolved_model_snapshot", "") or "") or None
+        runtime = _runtime_receipt()
+        if not answer.strip() or int(stats.get("generation_tokens") or 0) <= 0 or not snapshot:
+            raise RuntimeError("source generator produced no verified model tokens or resolved snapshot")
+        if "gpu" not in str(runtime.get("mlx_device") or "").lower():
+            raise RuntimeError("source generator did not report an MLX GPU device")
+        row = {"schema_version": SCHEMA, "status": "passed", "boundary": "generator_availability_only_not_quality_cell",
+               "manifest_sha256": spec["manifest_sha256"],
+               "model_id": spec["model_id"], "configured_revision": config.get("model_revision"),
+               "model_config_sha256": sha256_file(config_path), "resolved_model_snapshot": snapshot,
+               "prompt_messages": messages, "prompt_sha256": canonical_hash(messages),
+               "answer": answer, "answer_sha256": hashlib.sha256(answer.encode()).hexdigest(),
+               "generation_stats": stats, "model_identity": identity, "runtime": runtime,
+               "elapsed_ms": round((time.perf_counter() - started) * 1000, 3)}
+        exit_code = 0
+    except Exception as exc:
+        config_path = Path(spec["model_config"])
+        row = {"schema_version": SCHEMA, "status": "failed", "boundary": "generator_availability_only_not_quality_cell",
+               "manifest_sha256": spec["manifest_sha256"],
+               "model_id": spec["model_id"],
+               "model_config_sha256": sha256_file(config_path) if config_path.is_file() else None,
+               "error_type": type(exc).__name__, "error": str(exc)[:1000],
+               "elapsed_ms": round((time.perf_counter() - started) * 1000, 3)}
+        exit_code = 1
+    output_path.write_text(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+    return exit_code
+
+
+def _ensure_preflight(*, output_dir: Path, model_config: Path, model_id: str,
+                      environment: dict[str, str], timeout_seconds: float,
+                      manifest_sha256: str) -> bool:
+    ledger = output_dir / "preflight.jsonl"
+    prior = [json.loads(line) for line in ledger.read_text(encoding="utf-8").splitlines() if line.strip()] if ledger.exists() else []
+    if any(row.get("status") == "passed" and (row.get("child") or {}).get("manifest_sha256") == manifest_sha256
+           for row in prior):
+        return True
+    root = output_dir / "preflight"
+    root.mkdir(exist_ok=True)
+    attempt = 1
+    while (root / f"attempt-{attempt:06d}").exists():
+        attempt += 1
+    cell = root / f"attempt-{attempt:06d}"
+    cell.mkdir(exist_ok=False)
+    spec = cell / "spec.json"
+    result = cell / "result.json"
+    spec.write_text(json.dumps({"model_config": str(model_config), "model_id": model_id,
+                                "manifest_sha256": manifest_sha256}, sort_keys=True) + "\n")
+    try:
+        process = subprocess.run([sys.executable, str(Path(__file__)), "--preflight-spec", str(spec),
+                                  "--preflight-output", str(result)], cwd=ROOT, env=environment,
+                                 capture_output=True, text=True, timeout=timeout_seconds, check=False)
+        exit_code: int | None = process.returncode
+        stderr_tail = process.stderr[-2000:]
+    except subprocess.TimeoutExpired as exc:
+        exit_code = None
+        stderr_tail = str(exc.stderr or b"")[-2000:]
+    child = json.loads(result.read_text(encoding="utf-8")) if result.is_file() else None
+    passed = (exit_code == 0 and isinstance(child, dict) and child.get("status") == "passed"
+              and child.get("manifest_sha256") == manifest_sha256)
+    _append_jsonl(ledger, {"schema_version": SCHEMA, "status": "passed" if passed else "failed",
+                          "attempt": attempt, "attempt_dir": str(cell), "exit_code": exit_code,
+                          "stderr_tail": None if passed else stderr_tail, "child": child,
+                          "recorded_at": datetime.now(timezone.utc).isoformat()})
+    print(json.dumps({"preflight": "passed" if passed else "failed", "attempt": attempt}), flush=True)
+    return passed
+
+
+def model_execution_disposition(metadata: dict[str, Any], execution: dict[str, Any]) -> dict[str, Any]:
+    fallback = metadata.get("generation_fallback")
+    unavailable = metadata.get("generation_unavailable")
+    bypass = metadata.get("generation_bypass")
+    stats = metadata.get("generation_stats") or {}
+    draft = _stage(execution, "draft_generation") or {}
+    evidence = draft.get("evidence") or {}
+    if fallback or unavailable or evidence.get("fallback_used"):
+        disposition = "backend_fallback_or_unavailable"
+        product_quality_eligible = False
+        model_generation_eligible = False
+    elif bypass:
+        disposition = "deterministic_bypass"
+        product_quality_eligible = True
+        model_generation_eligible = False
+    elif evidence.get("model_call_executed") and int(stats.get("generation_tokens") or 0) > 0:
+        disposition = "model_generated"
+        product_quality_eligible = True
+        model_generation_eligible = True
+    else:
+        disposition = "unknown"
+        product_quality_eligible = False
+        model_generation_eligible = False
+    return {"disposition": disposition, "product_quality_eligible": product_quality_eligible,
+            "model_generation_eligible": model_generation_eligible,
+            "generation_path": metadata.get("generation_path"),
+            "generation_fallback": fallback, "generation_unavailable": unavailable,
+            "generation_bypass": bypass, "draft_generation_evidence": evidence}
+
+
 def direct_cache_probe(*, messages: list[dict[str, str]], model_id: str,
                        disabled_config_path: Path, enabled_config_path: Path,
                        max_tokens: int, session_id: str) -> dict[str, Any]:
@@ -249,32 +362,40 @@ def direct_cache_probe(*, messages: list[dict[str, str]], model_id: str,
     enabled_generator: Any | None = None
     for condition, config_path in (("disabled", disabled_config_path), ("cold", enabled_config_path),
                                    ("warm", enabled_config_path)):
-        if condition == "warm":
-            generator = enabled_generator
-            assert generator is not None
-        else:
-            config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
-            generator = _build_mlx_generator(model_id, config, str(config_path))
-            generator.max_tokens = max_tokens
-            generator.set_cache_scope(scope)
-            if condition == "cold":
-                enabled_generator = generator
         started = time.perf_counter()
-        answer = str(generator.generate(messages))
-        outputs.append({"condition": condition, "answer": answer,
-                        "answer_sha256": hashlib.sha256(answer.encode("utf-8")).hexdigest(),
-                        "elapsed_ms": round((time.perf_counter() - started) * 1000, 3),
-                        "generation_stats": dict(getattr(generator, "last_generation_stats", {}) or {}),
-                        "model_identity": dict(getattr(generator, "model_identity", {}) or {}),
-                        "resolved_model_snapshot": str(getattr(generator, "_resolved_model_snapshot", "") or "") or None,
-                        "prompt_sha256": prompt_hash, "cache_scope": scope})
-    statuses = {item["condition"]: item["generation_stats"].get("prompt_cache_status") for item in outputs}
-    if statuses["cold"] == "reused_saved_prefix":
-        raise RuntimeError("isolated cold cache probe unexpectedly reused an earlier prefix")
-    warm_reuse = statuses["warm"] == "reused_saved_prefix"
+        try:
+            if condition == "warm":
+                generator = enabled_generator
+                assert generator is not None
+            else:
+                config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+                generator = _build_mlx_generator(model_id, config, str(config_path))
+                generator.max_tokens = max_tokens
+                generator.set_cache_scope(scope)
+                if condition == "cold":
+                    enabled_generator = generator
+            answer = str(generator.generate(messages))
+            outputs.append({"condition": condition, "status": "completed", "answer": answer,
+                            "answer_sha256": hashlib.sha256(answer.encode("utf-8")).hexdigest(),
+                            "elapsed_ms": round((time.perf_counter() - started) * 1000, 3),
+                            "generation_stats": dict(getattr(generator, "last_generation_stats", {}) or {}),
+                            "model_identity": dict(getattr(generator, "model_identity", {}) or {}),
+                            "resolved_model_snapshot": str(getattr(generator, "_resolved_model_snapshot", "") or "") or None,
+                            "prompt_sha256": prompt_hash, "cache_scope": scope})
+        except Exception as exc:
+            outputs.append({"condition": condition, "status": "failed", "error_type": type(exc).__name__,
+                            "error": str(exc)[:500], "elapsed_ms": round((time.perf_counter() - started) * 1000, 3),
+                            "prompt_sha256": prompt_hash, "cache_scope": scope})
+            break
+    statuses = {item["condition"]: (item.get("generation_stats") or {}).get("prompt_cache_status") for item in outputs}
+    cold_invalid = statuses.get("cold") == "reused_saved_prefix"
+    warm_reuse = statuses.get("warm") == "reused_saved_prefix"
+    complete = len(outputs) == 3 and all(item["status"] == "completed" for item in outputs) and not cold_invalid
     return {"boundary": "direct_generator_same_exact_product_prompt_not_product_answer_quality",
+            "status": "completed" if complete else "failed",
+            "failure_reason": "isolated_cold_reused_prefix" if cold_invalid else "condition_failed_or_missing" if not complete else None,
             "prompt_messages": messages, "prompt_sha256": prompt_hash, "outputs": outputs,
-            "answer_equal": len({item["answer_sha256"] for item in outputs}) == 1,
+            "answer_equal": len({item["answer_sha256"] for item in outputs}) == 1 if complete else None,
             "cache_statuses": statuses,
             "cache_reuse_status": "observed" if warm_reuse else "unavailable_or_not_reused"}
 
@@ -354,6 +475,11 @@ def _worker(spec_path: Path, output_path: Path) -> int:
                 "graph_hits": trace.get("graph_hits"),
                 "graph_hits_sha256": canonical_hash(trace.get("graph_hits") or []),
                 "generation_stats": metadata.get("generation_stats"),
+                "generation_fallback": metadata.get("generation_fallback"),
+                "generation_unavailable": metadata.get("generation_unavailable"),
+                "generation_bypass": metadata.get("generation_bypass"),
+                "generation_path": metadata.get("generation_path"),
+                "model_execution": model_execution_disposition(metadata, execution),
                 "verification_generation_stats": (metadata.get("answer_verification") or {}).get("generation_stats"),
                 "model_identity": metadata.get("model_identity"),
                 "execution_fingerprints": metadata.get("execution_fingerprints"),
@@ -372,6 +498,8 @@ def _worker(spec_path: Path, output_path: Path) -> int:
                     enabled_config_path=Path(spec["cache_model_config"]),
                     max_tokens=spec["max_tokens"], session_id=session["session_id"],
                 )
+                if row["direct_cache_probe"]["status"] != "completed":
+                    row["status"] = "failed"
         except Exception as exc:
             row = {"status": "failed", "turn_index": index, "question": question,
                    "elapsed_ms": round((time.perf_counter() - started) * 1000, 3),
@@ -460,6 +588,12 @@ def _run_parent(args: argparse.Namespace) -> int:
     environment["PYTHONPATH"] = str(ROOT / "src")
     prior_rows = [json.loads(line) for line in ledger_path.read_text(encoding="utf-8").splitlines() if line.strip()] if ledger_path.exists() else []
     failures = sum(row.get("status") != "completed" for row in prior_rows)
+    if len(completed) < len(units) and not _ensure_preflight(
+        output_dir=output_dir, model_config=effective_dir / "model_disabled.yaml",
+        model_id=model_id, environment=environment, timeout_seconds=args.cell_timeout_seconds,
+        manifest_sha256=manifest["manifest_sha256"],
+    ):
+        return 1
     for position, unit in enumerate(units):
         if unit["unit_id"] in completed:
             continue
@@ -526,11 +660,17 @@ def main() -> int:
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--worker-spec", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--worker-output", type=Path, help=argparse.SUPPRESS)
+    parser.add_argument("--preflight-spec", type=Path, help=argparse.SUPPRESS)
+    parser.add_argument("--preflight-output", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.worker_spec:
         if not args.worker_output:
             parser.error("worker output is required")
         return _worker(args.worker_spec, args.worker_output)
+    if args.preflight_spec:
+        if not args.preflight_output:
+            parser.error("preflight output is required")
+        return _preflight_child(args.preflight_spec, args.preflight_output)
     if not args.output_dir or not args.run_id:
         parser.error("--output-dir and --run-id are required")
     try:
