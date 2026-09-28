@@ -432,3 +432,10 @@
 .insights-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 .insights-actions .insight-refresh { display: inline-flex; align-items: center; justify-content: center; width: 40px; min-height: 40px; border: 0; border-radius: 7px; background: transparent; color: #526b48; }
 .insights-actions .insight-refresh:hover { background: #edf1e8; }
+
+/* Keep the field title readable in narrow embedded panes. */
+@media (max-width: 380px) {
+ .insights-intro { flex-wrap: wrap; gap: 8px; }
+ .insights-intro h3 { flex: 1 0 100%; }
+ .insights-actions { margin-left: auto; }
+}
