@@ -17,7 +17,7 @@ OTHER = {"X-Agronomy-User-Email": "conversation-other@example.test"}
 
 def _turn(store: TraceStore, session_id: str, index: int, **kwargs):
     return store.create_turn(
-        session_id, f"Question {index}", f"Answer {index}", parent_turn_id=None,
+        session_id, kwargs.pop("message", f"Question {index}"), f"Answer {index}", parent_turn_id=None,
         system_state={"mode": "mock"}, trace={"metadata": {"large": "x" * 10000}},
         objectives={}, event_stream=False, **kwargs,
     )
@@ -150,3 +150,206 @@ def test_creation_rejects_conflicting_direct_and_extra_identity(client):
     })
     assert response.status_code == 409, response.text
     assert response.json()["detail"]["code"] == "conversation_scope_mismatch"
+
+
+def _hosted_workspace(client):
+    org = client.post("/orgs", headers=OWNER, json={"name": "Scope regression org"})
+    assert org.status_code == 201, org.text
+    workspace = client.post("/workspaces", headers=OWNER, json={
+        "organization_id": org.json()["id"], "name": "Scope regression workspace",
+    })
+    assert workspace.status_code == 201, workspace.text
+    return workspace.json()["id"]
+
+
+def _hosted_field(client, workspace_id, name):
+    response = client.post("/field-contexts", headers=OWNER, json={
+        "workspace_id": workspace_id, "display_name": name,
+        "region_text": "Alberta", "crop_current": "canola",
+    })
+    assert response.status_code == 201, response.text
+    return response.json()["id"]
+
+
+def _hosted_thread(client, workspace_id, field_id=None):
+    response = client.post("/threads", headers=OWNER, json={
+        "workspace_id": workspace_id, "title": "Scope regression",
+        "field_context_id": field_id, "mode": "baseline",
+    })
+    assert response.status_code == 201, response.text
+    return response.json()["id"]
+
+
+def _chat(client, workspace_id, thread_id, message, field_id=None):
+    payload = {"workspace_id": workspace_id, "thread_id": thread_id,
+               "message": message, "mode": "baseline"}
+    if field_id is not None:
+        payload["field_context_id"] = field_id
+    return client.post("/chat/stream", headers=OWNER, json=payload)
+
+
+def _record_hosted_prompts(monkeypatch):
+    prompts = []
+
+    class RecordingGenerator:
+        model_id = "synthetic-local-model"
+        last_generation_stats = None
+
+        def generate(self, messages):
+            prompts.append(str(messages))
+            return "Synthetic response."
+
+        def count_prompt_tokens(self, messages):
+            return sum(len(str(item.get("content", ""))) for item in messages) // 4
+
+    monkeypatch.setattr(
+        "agronomy_agent.server.services.chat_service._build_mlx_generator",
+        lambda *_args, **_kwargs: RecordingGenerator(),
+    )
+    return prompts
+
+
+def test_legacy_stream_keeps_field_scope_and_resolves_omitted_field(client, monkeypatch):
+    workspace_id = _hosted_workspace(client)
+    north = _hosted_field(client, workspace_id, "North")
+    south = _hosted_field(client, workspace_id, "South")
+    thread_id = _hosted_thread(client, workspace_id, north)
+    prompts = _record_hosted_prompts(monkeypatch)
+    first = _chat(client, workspace_id, thread_id, "FIELD_A_ONLY_MARKER", north)
+    assert first.status_code == 200, first.text
+    before = client.get(f"/threads/{thread_id}", headers=OWNER).json()
+    legacy_id = before["metadata"]["legacy_session_id"]
+    store = client.app.state.trace_store
+    assert store.get_session(legacy_id, include_turns=False)["context"]["field_context_id"] == north
+    denied = _chat(client, workspace_id, thread_id, "FIELD_B_SECRET", south)
+    assert denied.status_code == 409, denied.text
+    assert denied.json()["detail"]["code"] == "conversation_scope_mismatch"
+    assert len(client.get(f"/threads/{thread_id}", headers=OWNER).json()["messages"]) == 2
+    assert store.count_session_turns(legacy_id) == 1
+    omitted = _chat(client, workspace_id, thread_id, "Continue on this field")
+    assert omitted.status_code == 200, omitted.text
+    assert "FIELD_A_ONLY_MARKER" in prompts[-1]
+    assert "FIELD_B_SECRET" not in prompts[-1]
+    assert store.get_session(legacy_id, include_turns=False)["context"]["field_context_id"] == north
+
+
+def test_legacy_stream_general_thread_cannot_acquire_field(client, monkeypatch):
+    _record_hosted_prompts(monkeypatch)
+    workspace_id = _hosted_workspace(client)
+    field_id = _hosted_field(client, workspace_id, "North")
+    thread_id = _hosted_thread(client, workspace_id)
+    denied = _chat(client, workspace_id, thread_id, "Move to North", field_id)
+    assert denied.status_code == 409, denied.text
+    assert client.get(f"/threads/{thread_id}", headers=OWNER).json()["messages"] == []
+    accepted = _chat(client, workspace_id, thread_id, "General crop question")
+    assert accepted.status_code == 200, accepted.text
+    thread = client.get(f"/threads/{thread_id}", headers=OWNER).json()
+    legacy = client.app.state.trace_store.get_session(thread["metadata"]["legacy_session_id"], include_turns=False)
+    assert legacy["context"]["field_conversation_key"] == "general"
+    assert "field_context_id" not in legacy["context"] or legacy["context"]["field_context_id"] is None
+
+
+def test_legacy_bridge_quarantines_untrusted_mixed_history_without_deleting_receipts(client, monkeypatch):
+    workspace_id = _hosted_workspace(client)
+    north = _hosted_field(client, workspace_id, "North")
+    south = _hosted_field(client, workspace_id, "South")
+    thread_id = _hosted_thread(client, workspace_id, north)
+    store = client.app.state.trace_store
+    thread = store.get_phase4_thread(thread_id)
+    old = store.create_session(title="Old bridge", context={
+        "field_context_id": north,
+        "field_conversation_key": f"field:{north}",
+        "_legacy_bridge_scope_version": 1,
+        "extra": {"_session_owner_user_id": thread["created_by_user_id"]},
+    }, consent={})["session_id"]
+    _turn(store, old, 1, message="OLD_NORTH_MARKER", metadata={"scope": north})
+    _turn(store, old, 2, message="OLD_SOUTH_MARKER", metadata={"scope": south})
+    store.create_phase4_message(thread=thread, actor="user", content="OLD_NORTH_MARKER",
+                                metadata={"field_context_id": north})
+    store.create_phase4_message(thread=thread, actor="user", content="OLD_SOUTH_MARKER",
+                                metadata={"field_context_id": south})
+    store.update_phase4_thread_metadata(thread_id, metadata={"legacy_session_id": old})
+    prompts = _record_hosted_prompts(monkeypatch)
+    response = _chat(client, workspace_id, thread_id, "Fresh North question")
+    assert response.status_code == 200, response.text
+    refreshed = store.get_phase4_thread(thread_id)
+    new = refreshed["metadata"]["legacy_session_id"]
+    assert new != old
+    assert old in refreshed["metadata"]["quarantined_legacy_session_ids"]
+    assert store.count_session_turns(old) == 2
+    assert len(store.list_phase4_messages(thread_id)) == 4
+    assert store.count_session_turns(new) == 1
+    assert store.get_session(new, include_turns=False)["context"]["field_context_id"] == north
+    assert "OLD_NORTH_MARKER" not in prompts[-1]
+    assert "OLD_SOUTH_MARKER" not in prompts[-1]
+
+
+def test_replay_override_cannot_rebind_or_persist_a_used_general_session(client):
+    created = client.post("/api/sessions", headers=OWNER, json={
+        "title": "General replay", "consent": {},
+        "context": {"field_conversation_key": "general:chat:one"},
+    })
+    assert created.status_code == 200, created.text
+    session_id = created.json()["session_id"]
+    store = client.app.state.trace_store
+    base_turn_id = _turn(store, session_id, 1)
+    original_context = store.get_session(session_id, include_turns=False)["context"]
+    denied = client.post("/api/replay", headers=OWNER, json={
+        "base_turn_id": base_turn_id, "pipeline": "route_only", "mode": "mock",
+        "override_session_context": {
+            "field_context_id": "not-an-authorized-field",
+            "field_conversation_key": "field:not-an-authorized-field",
+        },
+    })
+    assert denied.status_code == 409, denied.text
+    assert denied.json()["detail"]["code"] == "conversation_scope_mismatch"
+    assert store.get_session(session_id, include_turns=False)["context"] == original_context
+    assert store.count_session_turns(session_id) == 1
+
+    allowed = client.post("/api/replay", headers=OWNER, json={
+        "base_turn_id": base_turn_id, "pipeline": "route_only", "mode": "mock",
+        "override_session_context": {"crop": "canola"},
+    })
+    assert allowed.status_code == 200, allowed.text
+    assert store.get_session(session_id, include_turns=False)["context"] == original_context
+    assert store.count_session_turns(session_id) == 2
+
+
+def test_replay_cannot_promote_used_unbound_general_session_to_field(client):
+    created = client.post("/api/sessions", headers=OWNER, json={
+        "title": "Field replay", "consent": {}, "context": {},
+    })
+    assert created.status_code == 200, created.text
+    session_id = created.json()["session_id"]
+    store = client.app.state.trace_store
+    base_turn_id = _turn(store, session_id, 1)
+    # A used legacy general session is immutable even if its stored context was
+    # empty; field authorization cannot turn unknown history into field history.
+    denied = client.post("/api/replay", headers=OWNER, json={
+        "base_turn_id": base_turn_id, "pipeline": "route_only", "mode": "mock",
+        "override_session_context": {"field_context_id": "missing"},
+    })
+    assert denied.status_code == 409, denied.text
+    assert store.count_session_turns(session_id) == 1
+
+
+def test_replay_without_override_rechecks_saved_field_authority(client, monkeypatch):
+    field_id = _field(client, "Replay field")
+    created = client.post("/api/sessions", headers=OWNER, json={
+        "title": "Field replay", "consent": {},
+        "context": {"field_context_id": field_id},
+    })
+    assert created.status_code == 200, created.text
+    session_id = created.json()["session_id"]
+    store = client.app.state.trace_store
+    base_turn_id = _turn(store, session_id, 1)
+    original_context = store.get_session(session_id, include_turns=False)["context"]
+    get_field = store.get_phase4_field_context
+    monkeypatch.setattr(store, "get_phase4_field_context",
+                        lambda candidate: None if candidate == field_id else get_field(candidate))
+    denied = client.post("/api/replay", headers=OWNER, json={
+        "base_turn_id": base_turn_id, "pipeline": "route_only", "mode": "mock",
+    })
+    assert denied.status_code == 404, denied.text
+    assert store.get_session(session_id, include_turns=False)["context"] == original_context
+    assert store.count_session_turns(session_id) == 1

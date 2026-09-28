@@ -114,7 +114,10 @@ def rag_artifact_receipt(payload: dict[str, Any]) -> dict[str, str]:
     """Hash the active bytes the two public RAG profiles can use in this run."""
 
     retrieval = payload["retrieval"]
-    values = [retrieval["corpus_policy_manifest"], *(retrieval.get("corpus_paths") or []),
+    # Canadian public-source lookups use this registry indirectly through
+    # canada_sources, including for questions with no explicit tool call.
+    values = ["data/manifests/canada_agronomy_sources.json",
+              retrieval["corpus_policy_manifest"], *(retrieval.get("corpus_paths") or []),
               *(retrieval.get("graph_paths") or [])]
     for graph in retrieval.get("graph_paths") or []:
         graph_path = Path(str(graph))

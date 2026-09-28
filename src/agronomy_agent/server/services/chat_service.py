@@ -389,9 +389,12 @@ def _run_turn_impl(
     if max_history_turns <= 0:
         max_history_turns = 8
     recent_turns = store.get_recent_session_turns(
-        session_id, limit=max(1, min(max_history_turns, 32))
+        session_id, limit=max(1, min(max_history_turns, 32)),
+        before_turn_id=parent_turn_id, exclude_replays=True,
     )
-    total_history_turns = store.count_session_turns(session_id)
+    total_history_turns = store.count_session_turns(
+        session_id, before_turn_id=parent_turn_id, exclude_replays=True,
+    )
     if queue_circuit and queue_circuit.get("tripped"):
         if profiler:
             profiler.add_skipped("model.load_or_reuse", reason="model_queue_circuit_breaker")
@@ -466,6 +469,8 @@ def _run_turn_impl(
             reserved_output_tokens=max_tokens,
             count_tokens=will_generate,
         )
+        context_budget_receipt["history_before_turn_id"] = parent_turn_id
+        context_budget_receipt["history_excludes_replays"] = True
         return context_budget_receipt["status"] == "over_limit"
 
     def scope_generator(role: str) -> None:

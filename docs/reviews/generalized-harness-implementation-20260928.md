@@ -284,3 +284,26 @@ qualification precedes the full runs. Measured initial rate is 1.54 CU/hour.
 Only a public-manifest allowlisted capsule is transferred; the 801 MiB dormant
 NRCS shards are omitted because this fixed packet contains no MLRA activation.
 The validated NRCS index/manifest are retained. Private overlays are disabled.
+
+The first remote packet stopped after nine completed and six failed Gemma
+units: the narrow transfer omitted `canada_agronomy_sources.json`. Raw ledgers,
+partial work and the interruption receipt remain in the v1 archive. Adding this
+108 KB public registry makes all 30 product units pass a copied-capsule mock
+preflight, with identical answer/retrieval/graph hashes to the broader public
+closure. No model score is inferred from that preflight.
+
+Independent review also repaired three boundary defects: interrupted diagnostic
+attempts now receive separate preserved directories; retained `/chat/stream`
+cannot override a thread's field; `/api/replay` cannot rebind a saved conversation
+or mutate its context. Every replay rechecks current field access. Old bridge
+sessions lack trustworthy scope provenance, so a new scoped bridge is created
+while old messages/traces remain retained. New history compilation excludes
+replay outputs and stops before the replay's base turn, including timestamp ties.
+Replay remains a current-code reconstruction with current authorized context
+and feedback; it is not a guarantee of reproducing original retained bytes.
+
+The initial integrated Python gate recorded a native Metal abort inside a mock
+CPU contract test (1,423 passes, four skips). Device reporting is now mocked in
+that test, and the repaired full run passed 1,424 tests with four skips. Frontend
+passed 366 tests, typecheck and build; docs audit and strict MkDocs passed. New
+scope/replay tests require a refreshed final gate before merge.

@@ -1504,13 +1504,42 @@ class TraceStore:
             turn["answer_integrity_receipt"] = verify_answer_integrity_receipt(turn)
             return turn
 
-    def count_session_turns(self, session_id: str) -> int:
+    @staticmethod
+    def _history_where(
+        cursor: sqlite3.Cursor, session_id: str, *, before_turn_id: str | None,
+        exclude_replays: bool,
+    ) -> tuple[str, list[Any]]:
+        where = "t.session_id = ?"
+        values: list[Any] = [session_id]
+        if exclude_replays:
+            where += " AND t.parent_turn_id IS NULL"
+        if before_turn_id is not None:
+            cutoff = cursor.execute(
+                "SELECT created_at, rowid AS insertion_id FROM turns WHERE id = ? AND session_id = ?",
+                (before_turn_id, session_id),
+            ).fetchone()
+            if cutoff is None:
+                raise ValueError("history cutoff turn is not in this session")
+            where += " AND (t.created_at < ? OR (t.created_at = ? AND t.rowid < ?))"
+            values.extend((cutoff["created_at"], cutoff["created_at"], cutoff["insertion_id"]))
+        return where, values
+
+    def count_session_turns(
+        self, session_id: str, *, before_turn_id: str | None = None,
+        exclude_replays: bool = False,
+    ) -> int:
         with self._cursor() as cursor:
+            where, values = self._history_where(
+                cursor, session_id, before_turn_id=before_turn_id, exclude_replays=exclude_replays,
+            )
             return int(cursor.execute(
-                "SELECT COUNT(*) FROM turns WHERE session_id = ?", (session_id,),
+                f"SELECT COUNT(*) FROM turns AS t WHERE {where}", values,
             ).fetchone()[0])
 
-    def get_recent_session_turns(self, session_id: str, *, limit: int = 8) -> list[dict[str, Any]]:
+    def get_recent_session_turns(
+        self, session_id: str, *, limit: int = 8, before_turn_id: str | None = None,
+        exclude_replays: bool = False,
+    ) -> list[dict[str, Any]]:
         """Bounded, chronological conversation records; never retrieval evidence.
 
         Feedback is joined so rejected answers and user corrections can be
@@ -1520,13 +1549,16 @@ class TraceStore:
         if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 64:
             raise ValueError("history limit must be an integer from 1 to 64")
         with self._cursor() as cursor:
+            where, values = self._history_where(
+                cursor, session_id, before_turn_id=before_turn_id, exclude_replays=exclude_replays,
+            )
             rows = cursor.execute(
-                """SELECT t.id, t.session_id, t.user_message, t.answer, t.answer_status,
+                f"""SELECT t.id, t.session_id, t.user_message, t.answer, t.answer_status,
                           t.created_at, f.payload AS feedback_payload
                    FROM turns AS t LEFT JOIN feedback AS f ON f.turn_id = t.id
-                   WHERE t.session_id = ?
+                   WHERE {where}
                    ORDER BY t.created_at DESC, t.rowid DESC LIMIT ?""",
-                (session_id, limit),
+                (*values, limit),
             ).fetchall()
         turns = []
         for row in reversed(rows):

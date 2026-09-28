@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from copy import deepcopy
 
+import pytest
+
 from agronomy_agent.execution_core import AgentExecutionRequest
 from agronomy_agent.server.services.chat_service import execute_agent_request
 from agronomy_agent.server.settings import build_settings
@@ -266,3 +268,60 @@ def test_deterministic_capability_bypass_never_counts_model_tokens(tmp_path) -> 
     assert budget["input_tokens"] is None
     assert budget["token_count_basis"] == "unavailable"
     assert budget["status"] == "generation_bypassed"
+
+
+def test_replay_history_stops_before_base_and_excludes_replay_outputs(tmp_path, monkeypatch) -> None:
+    from agronomy_agent.server.storage import db
+
+    # Exercise timestamp ties without mutating immutable saved turn content.
+    monkeypatch.setattr(db, "_now", lambda: "2026-09-28T00:00:00Z")
+    store = TraceStore(tmp_path / "replay.sqlite3")
+    session_id = store.create_session("History", {}, {})["session_id"]
+    other_id = store.create_session("Other", {}, {})["session_id"]
+
+    def saved(question, parent=None, session=session_id):
+        return store.create_turn(
+            session, question, "Synthetic answer", parent_turn_id=parent,
+            system_state={}, trace={}, objectives={}, event_stream=False,
+        )
+
+    earlier = saved("EARLIER_PRIMARY_MARKER")
+    saved("EARLIER_REPLAY_MARKER", earlier)
+    base = saved("BASE_CURRENT_MARKER")
+    saved("FUTURE_PRIMARY_MARKER")
+    foreign = saved("FOREIGN_MARKER", session=other_id)
+    assert store.count_session_turns(session_id) == 4
+    assert store.count_session_turns(session_id, before_turn_id=base, exclude_replays=True) == 1
+    recent = store.get_recent_session_turns(session_id, before_turn_id=base, exclude_replays=True)
+    assert [item["turn_id"] for item in recent] == [earlier]
+    for method in (store.get_recent_session_turns, store.count_session_turns):
+        with pytest.raises(ValueError, match="not in this session"):
+            method(session_id, before_turn_id=foreign)
+        with pytest.raises(ValueError, match="not in this session"):
+            method(session_id, before_turn_id="missing")
+
+    settings = build_settings(
+        db_path=store.db_path, artifact_root=tmp_path / "artifacts",
+        model_config_path="configs/model.yaml", default_rag_config="configs/rag.yaml",
+        network_mode="offline",
+    )
+    backend = RecordingBackend()
+    replay = execute_agent_request(AgentExecutionRequest(
+        store=store, settings=settings, session_id=session_id,
+        message="BASE_CURRENT_MARKER", mode="baseline", model_id="mock",
+        rag_config="configs/rag.yaml", max_tokens=100,
+        trace_options={"store_prompt_messages": True}, generation_backend=backend,
+        parent_turn_id=base, execution_class="observed_system_execution_nonclaim",
+    )).turn
+    prompt = str(backend.calls[-1])
+    assert "EARLIER_PRIMARY_MARKER" in prompt
+    assert "EARLIER_REPLAY_MARKER" not in prompt
+    assert "FUTURE_PRIMARY_MARKER" not in prompt
+    assert "FOREIGN_MARKER" not in prompt
+    receipt = replay["trace"]["metadata"]["context_budget"]
+    assert receipt["history_before_turn_id"] == base
+    assert receipt["history_turns_available"] == 1
+    assert receipt["history_included_turn_ids"] == [earlier]
+    # Replays remain saved for inspection but cannot become normal chat memory.
+    assert store.count_session_turns(session_id) == 5
+    assert store.count_session_turns(session_id, exclude_replays=True) == 3

@@ -35,6 +35,7 @@ def test_public_config_disables_inherited_private_overlay(monkeypatch: pytest.Mo
     assert payload["private_knowledge"] == {"enabled": False, "required": False}
     assert runner.model_config_for_cell(ROOT / "configs/model.yaml", cache_enabled=False)["prompt_cache_enabled"] is False
     assert runner.model_config_for_cell(ROOT / "configs/model.yaml", cache_enabled=True)["prompt_cache_enabled"] is True
+    assert "data/manifests/canada_agronomy_sources.json" in runner.rag_artifact_receipt(payload)
 
 
 def test_direct_cache_probe_reuses_identical_prompt_and_scope(

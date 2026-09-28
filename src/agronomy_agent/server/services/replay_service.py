@@ -57,16 +57,6 @@ def _coerce_int(value: Any, default: int, *, name: str) -> int:
     return parsed
 
 
-def _merge_context(base: dict[str, Any], updates: dict[str, Any] | None) -> dict[str, Any]:
-    if not updates:
-        return base
-    merged = dict(base)
-    for key, value in updates.items():
-        if value is not None:
-            merged[key] = value
-    return merged
-
-
 def _resolve_mode(base_turn: dict[str, Any], override_mode: str | None) -> str:
     base_system = base_turn.get("system_state", {}) or {}
     return override_mode or base_system.get("mode", "mock")
@@ -191,12 +181,6 @@ def replay_turn(
     if not session_id:
         raise ValueError("base turn missing session")
 
-    if override.get("override_session_context"):
-        session = store.get_session(session_id)
-        if session:
-            context = _merge_context(session.get("context", {}), override["override_session_context"])
-            store.update_session(session_id, context=context)
-
     pipeline = override.get("pipeline", "full")
     if pipeline not in {"full", "route_only", "retrieve_only", "answer_only"}:
         raise ValueError(f"unsupported replay pipeline: {pipeline}")
@@ -279,6 +263,7 @@ def replay_turn(
             rag_config=rag_config or settings.default_rag_config,
             max_tokens=max_tokens,
             trace_options=trace_options,
+            session_context=override.get("authorized_session_context"),
             parent_turn_id=base_turn_id,
         )
         replay_turn_record = output.get("turn")
