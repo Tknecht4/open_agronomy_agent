@@ -282,14 +282,13 @@ the existing safety controls retained until a replacement clears its gates.
 
 ## Reproducible evidence
 
-The [run manifests](artifacts/portable-agronomy-20260928/run-manifests.json)
-bind model snapshots, source/configuration hashes and the complete unit lists to
-the compressed [Gemma ledger](artifacts/portable-agronomy-20260928/gemma-v3-cells.jsonl.gz)
-and [Qwen ledger](artifacts/portable-agronomy-20260928/qwen27b-v4-cells.jsonl.gz).
-The [semantic record](artifacts/portable-agronomy-20260928/semantic-grades.json)
-retains anonymous packets, original grades, separate adjudication, mapping and
-counts. [Failed attempts](artifacts/portable-agronomy-20260928/failed-attempts.json.gz),
-[runtime analysis](artifacts/portable-agronomy-20260928/runtime-analysis.json),
+The [public run-manifest projection](artifacts/experiment-raw-archive-20260928/run-manifests-public.json)
+retains source, configuration, run and unit identities and hashes. The [raw
+archive catalog](artifacts/experiment-raw-archive-20260928/catalog.json) binds
+the original Gemma and Qwen ledgers, exact run manifests, semantic grades,
+failed attempts and runtime analysis by source commit, SHA-256 and byte count.
+Those answer-rich files require the separately verified private restore for
+exact replay; the current public tree alone cannot reproduce those grades.
 [eligibility reconciliation](artifacts/portable-agronomy-20260928/quality-eligibility.json),
 [METHOD delivery](artifacts/portable-agronomy-20260928/method-delivery.json),
 [engineering checks](artifacts/portable-agronomy-20260928/engineering-validation.json)

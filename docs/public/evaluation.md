@@ -105,6 +105,17 @@ other non-regular inputs.
 
 ## Historical checkpoints and development suites
 
+The [September 28 residual-repair checkpoint](https://github.com/Tknecht4/open_agronomy_agent/blob/main/docs/reviews/residual-polish-checkpoint-20260928.md)
+uses the product execution path for 24 exposed cases, two models and two source
+versions: 96 observations in one matched session. The accepted map-identity
+repair removes one final material error per model with no completion or refusal
+gain. Final rubric completion remains 8/24 for Gemma E2B and 6/24 for Qwen 27B;
+completion with supported source review is 7/24 and 6/24 respectively. The
+earlier broad verifier bypass introduced an unsupported action and was rejected.
+Fixed ordering, one trial, unresolved source claims and an explicit draft-stage
+judge conflict limit interpretation. Calculator shorthand is covered separately
+by deterministic and app checks; this model cohort does not exercise it.
+
 Benchmark outputs are evidence packages, not product documentation. The public
 packages preserve their contracts, measurements, limits, and regeneration
 instructions without converting an exposed development result into a product
@@ -116,11 +127,12 @@ claim:
   development evidence; its advisory judge measurements do not evaluate the
   current runtime.
 
-The [current two-Gemma Colab assessment](two-gemma-colab-assessment-20260926.md)
+The [frozen September 26 two-Gemma Colab assessment](two-gemma-colab-assessment-20260926.md)
 is a separate successor execution of the same exposed 241-case development
 instrument against commit `d43ade7`. It covers Gemma 3 270M and Gemma 4 E2B,
-three trials, and all four arms. It is useful for current-code QA/QC but does
-not recover holdout status or provide semantic answer-quality adjudication.
+three trials, and all four arms. It supports QA/QC of that evaluated system,
+not the present checkout, and does not recover holdout status or provide
+semantic answer-quality adjudication.
 
 The former Benchmark v2 fixture is likewise an exposed internal regression
 suite. Its deterministic executor and metric contracts support implementation

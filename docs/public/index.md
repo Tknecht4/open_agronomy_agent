@@ -4,9 +4,9 @@ Open Agronomy Agent is a local-first field workspace and a customizable research
 
 It is not an agronomist replacement or a regulatory, diagnostic, or field-outcome authority. Its central design rule is to preserve the difference between **observation**, **model output**, and **interpretation**.
 
-![Workspace with a selected synthetic field, conversation, and map](assets/workspace.jpg)
+![Compact general chat and calculator example, with no field selected](assets/workspace.png)
 
-*Synthetic example data; no personal field record is shown.* [Use the workspace](operations/workspace.md) · [Run it locally](operations/native-setup.md) · [Customize the agent](developer/customizing-the-harness.md)
+*Compact general chat and calculator example with synthetic inputs; no field is selected or personal record shown.* [Use the workspace](operations/workspace.md) · [Run it locally](operations/native-setup.md) · [Customize the agent](developer/customizing-the-harness.md)
 
 ## One workspace, three entry points
 
@@ -30,16 +30,16 @@ The [workspace guide](operations/workspace.md) covers field setup, offline draft
 
 | Capability | Implemented | Automated tests | Frozen benchmark evidence | Boundary |
 |---|---|---|---|---|
-| Local text generation | Yes, with explicitly provisioned MLX profile | Model/profile and service contracts | Current-code A100 assessment: three four-arm trials each for Gemma 3 270M and Gemma 4 E2B; 5,784 retained responses | Model output is advisory; the assessment is exposed development evidence without calibrated semantic or agronomist review |
+| Local text generation | Yes, with explicitly provisioned MLX profile | Model/profile and service contracts | Frozen September 26 A100 assessment of `d43ade7`: three four-arm trials each for Gemma 3 270M and Gemma 4 E2B; 5,784 retained responses | Model output is advisory; the assessment is exposed development evidence without calibrated semantic or agronomist review |
 | Governed retrieval | Yes, local policy-admitted lexical/Agno path | Retrieval and corpus policy tests | RC3 surfaced the expected source in 22/26 positive probes and 46/50 required patterns | Retrieval presence is not answer use, quality, or field truth |
 | Knowledge graphs | Multiple manifest-bound JSON graphs configured and merged | Manifest, checksum, collision, provenance, and routing tests | Graph hints present in governed arm | Relationship context, not decision authority; runtime profiles require admitted manifests |
-| Structured calculator | Typed offline executor plus bounded explicit-request planner | Deterministic, service, and natural-language end-to-end tests | Current-code full system scored 16/16 in every trial for both assessed models | Computes supplied inputs only; this does not validate target selection or broader advice quality |
+| Structured calculator | Typed offline executor plus bounded explicit-request planner | Deterministic, service, and natural-language end-to-end tests | The frozen September 26 system at `d43ade7` scored 16/16 in every trial for both assessed models | Computes supplied inputs only; this does not validate target selection or broader advice quality |
 | Public adapters | Several provider/cache contracts exist | Offline-fixture and readiness tests | Traced but live service orchestration not executed | Optional, date/provider/jurisdiction dependent |
 | Field history and traces | Local persistence and trace APIs exist | Field-event/storage/service tests | Interface/lineage lanes exercised | Local records remain private; historical trace does not validate a later answer |
 | Prairie spatial pack | Optional verified local asset | Package/intersection gates | Not a primary RC1 geometry capability | Mapped historical prior, not a sample or point truth |
 | Risk/evidence validation | Implemented and intervention-visible | Safety/evidence regression tests | RC3 retained verifier, hold, rewrite, fallback, and guard traces | Activation counts do not establish whether answers improved; validation cannot create evidence |
 
-“Automated tests” means a named contract has coverage, not that every combination or live provider was exercised. RC1 and RC3 retain their historical identities. The current-code two-Gemma assessment binds evaluated commit `d43ade7`; its checked-in report was added afterward and does not alter that evaluated system identity.
+“Automated tests” means a named contract has coverage, not that every combination or live provider was exercised. RC1 and RC3 retain their historical identities. The frozen September 26 two-Gemma assessment evaluated commit `d43ade7`; its report was added afterward and does not describe the present checkout or alter that evaluated system identity.
 
 ## Where to go
 
@@ -48,7 +48,7 @@ The [workspace guide](operations/workspace.md) covers field setup, offline draft
 - [Knowledge and data](knowledge-and-data.md): source admission, retrieval, graphs, and geospatial priors.
 - [Tools and adapters](tools-and-adapters.md): calculator, public adapters, offline behavior, and extension rules.
 - [Evaluation](evaluation.md): the four benchmark arms, RC1 history, completed RC3 checkpoint, and claim limits.
-- [Current two-Gemma assessment](two-gemma-colab-assessment-20260926.md): current-code A100 results, merge decision, residual fallback dependence, and reproducibility limits.
+- [Frozen September 26 two-Gemma assessment](two-gemma-colab-assessment-20260926.md): A100 results at `d43ade7`, merge decision, residual fallback dependence, and reproducibility limits.
 - [RC3 development checkpoint](development-benchmark-rc3-20260815/README.md): paper, scientific figures, public-safe measurements, and reproducibility receipts.
 - [Developer guide](developer/index.md): code map and how to add a graph, tool, source, or service.
 - [Customizing the harness](developer/customizing-the-harness.md): supported fork seams, data ingestion paths, profiling, and public packaging.
@@ -60,4 +60,4 @@ The [workspace guide](operations/workspace.md) covers field setup, offline draft
 
 Do not use the system as the sole basis for pesticide use, legal compliance, diagnosis, fertilizer prescription, financial commitment, or another high-consequence action. Confirm current labels/regulations and representative field evidence and involve a qualified local professional when warranted.
 
-Runtime databases, traces, model caches, raw benchmark answers, private overlays, credentials, and generated spatial databases are excluded from this documentation site.
+Runtime databases, traces, model caches, raw benchmark answers, private overlays, credentials, and generated spatial databases are excluded from this documentation site. The [historical raw experiment catalog](https://github.com/Tknecht4/open_agronomy_agent/blob/main/docs/reviews/artifacts/experiment-raw-archive-20260928/catalog.json) identifies selected artifacts retained in a verified private archive by source commit and hash. Earlier Git commits may still expose the original bytes; this public site alone cannot replay the answer-level grades.

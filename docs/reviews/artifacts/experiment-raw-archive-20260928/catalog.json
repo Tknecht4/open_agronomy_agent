@@ -1,0 +1,166 @@
+{
+  "archive_id": "raw-experiment-v1-sha256-a3a947e0c44eff87df4d0885beca2a9b0341e65fc7d048df5873338ba8f22fdd",
+  "availability": "private_archive_verified",
+  "files": [
+    {
+      "archive_id": "raw-experiment-v1-sha256-a3a947e0c44eff87df4d0885beca2a9b0341e65fc7d048df5873338ba8f22fdd",
+      "availability": "private_archive_verified",
+      "bytes": 538801,
+      "old_path": "docs/reviews/artifacts/portable-agronomy-20260928/failed-attempts.json.gz",
+      "sha256": "7c117f0e914d463a2f7f704e687675764c77fa4d0e642c559121c1f55f610bbb"
+    },
+    {
+      "archive_id": "raw-experiment-v1-sha256-a3a947e0c44eff87df4d0885beca2a9b0341e65fc7d048df5873338ba8f22fdd",
+      "availability": "private_archive_verified",
+      "bytes": 489527,
+      "old_path": "docs/reviews/artifacts/portable-agronomy-20260928/gemma-v3-cells.jsonl.gz",
+      "sha256": "ae198d19800d188bfc2b542d6477e2e2de555db835f6942b38e5671d9347443e"
+    },
+    {
+      "archive_id": "raw-experiment-v1-sha256-a3a947e0c44eff87df4d0885beca2a9b0341e65fc7d048df5873338ba8f22fdd",
+      "availability": "private_archive_verified",
+      "bytes": 528136,
+      "old_path": "docs/reviews/artifacts/portable-agronomy-20260928/qwen27b-v4-cells.jsonl.gz",
+      "sha256": "24aa97a34ea88b995f71cd0aafbd17a60625064c99a788a711a1a8e4370f0039"
+    },
+    {
+      "archive_id": "raw-experiment-v1-sha256-a3a947e0c44eff87df4d0885beca2a9b0341e65fc7d048df5873338ba8f22fdd",
+      "availability": "private_archive_verified",
+      "bytes": 274924,
+      "old_path": "docs/reviews/artifacts/portable-agronomy-20260928/run-manifests.json",
+      "sha256": "c37088d9fc2aa684f04b68657362de5661d8e49c5dba3c4daa3ecf94d6ba7c2c"
+    },
+    {
+      "archive_id": "raw-experiment-v1-sha256-a3a947e0c44eff87df4d0885beca2a9b0341e65fc7d048df5873338ba8f22fdd",
+      "availability": "private_archive_verified",
+      "bytes": 212265,
+      "old_path": "docs/reviews/artifacts/portable-agronomy-20260928/runtime-analysis.json",
+      "sha256": "b4d1a772f0f7146e553a569e65744e9e840375bbe9907b232b10e669f4b2b21c"
+    },
+    {
+      "archive_id": "raw-experiment-v1-sha256-a3a947e0c44eff87df4d0885beca2a9b0341e65fc7d048df5873338ba8f22fdd",
+      "availability": "private_archive_verified",
+      "bytes": 608293,
+      "old_path": "docs/reviews/artifacts/portable-agronomy-20260928/semantic-grades.json",
+      "sha256": "25b51e85dd5a7d2ecfbbc88141372a2c541106f03687a8feaa2c7d11196c8345"
+    },
+    {
+      "archive_id": "raw-experiment-v1-sha256-a3a947e0c44eff87df4d0885beca2a9b0341e65fc7d048df5873338ba8f22fdd",
+      "availability": "private_archive_verified",
+      "bytes": 10517,
+      "old_path": "docs/reviews/artifacts/portable-residual-20260928/budget-gemma.json.gz",
+      "sha256": "e86973343d275d00eb9cfe542f1457107ff51f3a22524dad4aebeaa2b31b6453"
+    },
+    {
+      "archive_id": "raw-experiment-v1-sha256-a3a947e0c44eff87df4d0885beca2a9b0341e65fc7d048df5873338ba8f22fdd",
+      "availability": "private_archive_verified",
+      "bytes": 12228,
+      "old_path": "docs/reviews/artifacts/portable-residual-20260928/budget-qwen.json.gz",
+      "sha256": "476538cf1f295ff9f8552ce95856b1e64a80e431c471a7c1c24d45dd0a59178d"
+    },
+    {
+      "archive_id": "raw-experiment-v1-sha256-a3a947e0c44eff87df4d0885beca2a9b0341e65fc7d048df5873338ba8f22fdd",
+      "availability": "private_archive_verified",
+      "bytes": 208078,
+      "old_path": "docs/reviews/artifacts/portable-residual-20260928/cache-gemma-active.json.gz",
+      "sha256": "32a8aa4a7bf8cb4c1391eea046a6ea51be379c23c1fd531c3f4412d31aa9dae5"
+    },
+    {
+      "archive_id": "raw-experiment-v1-sha256-a3a947e0c44eff87df4d0885beca2a9b0341e65fc7d048df5873338ba8f22fdd",
+      "availability": "private_archive_verified",
+      "bytes": 205169,
+      "old_path": "docs/reviews/artifacts/portable-residual-20260928/cache-gemma-method_candidate.json.gz",
+      "sha256": "f5f068c2c964f7db360de65756a61c7e297ad8a79b3ba029170b7406d04cb661"
+    },
+    {
+      "archive_id": "raw-experiment-v1-sha256-a3a947e0c44eff87df4d0885beca2a9b0341e65fc7d048df5873338ba8f22fdd",
+      "availability": "private_archive_verified",
+      "bytes": 290866,
+      "old_path": "docs/reviews/artifacts/portable-residual-20260928/cache-qwen-active.json.gz",
+      "sha256": "2fa0406b94992350d2fd8538952a9551c336199d92a5b0585f9e742e4fd4478b"
+    },
+    {
+      "archive_id": "raw-experiment-v1-sha256-a3a947e0c44eff87df4d0885beca2a9b0341e65fc7d048df5873338ba8f22fdd",
+      "availability": "private_archive_verified",
+      "bytes": 291656,
+      "old_path": "docs/reviews/artifacts/portable-residual-20260928/cache-qwen-method_candidate.json.gz",
+      "sha256": "2193bbf9659e97a158912df2d1db695e235db942314caaf3d3a219b0b6f72a1b"
+    },
+    {
+      "archive_id": "raw-experiment-v1-sha256-a3a947e0c44eff87df4d0885beca2a9b0341e65fc7d048df5873338ba8f22fdd",
+      "availability": "private_archive_verified",
+      "bytes": 21833502,
+      "old_path": "docs/reviews/artifacts/portable-residual-20260928/remote-results.zip",
+      "sha256": "5f78c49303453ab95932f39be9b7b9f1b9d3cbf401601341d9db1c201a648cb8"
+    },
+    {
+      "archive_id": "raw-experiment-v1-sha256-a3a947e0c44eff87df4d0885beca2a9b0341e65fc7d048df5873338ba8f22fdd",
+      "availability": "private_archive_verified",
+      "bytes": 34764,
+      "old_path": "docs/reviews/artifacts/portable-residual-20260928/same-origin-gemma-active.json.gz",
+      "sha256": "174f15e9fa5ae9e804f483ecc0561ec17fb97b9cb370d09b0fb03271d377b1ea"
+    },
+    {
+      "archive_id": "raw-experiment-v1-sha256-a3a947e0c44eff87df4d0885beca2a9b0341e65fc7d048df5873338ba8f22fdd",
+      "availability": "private_archive_verified",
+      "bytes": 1350223,
+      "old_path": "docs/reviews/artifacts/residual-repair-20260928/capsule-initial.zip",
+      "sha256": "923de8a02376886c032f76c6a672cdbd15465b3d7bd80549188f85f14eb5e2dd"
+    },
+    {
+      "archive_id": "raw-experiment-v1-sha256-a3a947e0c44eff87df4d0885beca2a9b0341e65fc7d048df5873338ba8f22fdd",
+      "availability": "private_archive_verified",
+      "bytes": 1351329,
+      "old_path": "docs/reviews/artifacts/residual-repair-20260928/capsule-second.zip",
+      "sha256": "c7e52cdcbc7f99ba846b38b0352c280704d15bf731eff410e82c6b93ff5ff610"
+    },
+    {
+      "archive_id": "raw-experiment-v1-sha256-a3a947e0c44eff87df4d0885beca2a9b0341e65fc7d048df5873338ba8f22fdd",
+      "availability": "private_archive_verified",
+      "bytes": 22005,
+      "old_path": "docs/reviews/artifacts/residual-repair-20260928/remote-results.zip",
+      "sha256": "e8eb73bc77f4169af50f0fe343118aac7de9e80d9fe4ee0a12550792d6931256"
+    },
+    {
+      "archive_id": "raw-experiment-v1-sha256-a3a947e0c44eff87df4d0885beca2a9b0341e65fc7d048df5873338ba8f22fdd",
+      "availability": "private_archive_verified",
+      "bytes": 5791185,
+      "old_path": "docs/reviews/artifacts/system-validation-20260928/gemma-field-v2-raw.jsonl.gz",
+      "sha256": "cb8d70b9c96587a782dc5b36d4f74b437035275b05719432a0ce0a36e8562fa5"
+    },
+    {
+      "archive_id": "raw-experiment-v1-sha256-a3a947e0c44eff87df4d0885beca2a9b0341e65fc7d048df5873338ba8f22fdd",
+      "availability": "private_archive_verified",
+      "bytes": 5676294,
+      "old_path": "docs/reviews/artifacts/system-validation-20260928/gemma-v1-raw.jsonl.gz",
+      "sha256": "da3e3053e5d2a03082ea38d0af8a6b3e05af7ee80dfe9db3f8c5935c27847437"
+    },
+    {
+      "archive_id": "raw-experiment-v1-sha256-a3a947e0c44eff87df4d0885beca2a9b0341e65fc7d048df5873338ba8f22fdd",
+      "availability": "private_archive_verified",
+      "bytes": 810517,
+      "old_path": "docs/reviews/artifacts/system-validation-20260928/grading-analysis.tar.gz",
+      "sha256": "331a3ee145ddcc20eafb3eb19d9adde03932d0832bc0cd6bcb08b42b58c536a5"
+    },
+    {
+      "archive_id": "raw-experiment-v1-sha256-a3a947e0c44eff87df4d0885beca2a9b0341e65fc7d048df5873338ba8f22fdd",
+      "availability": "private_archive_verified",
+      "bytes": 2988181,
+      "old_path": "docs/reviews/artifacts/system-validation-20260928/qwen-field-v2-raw.jsonl.gz",
+      "sha256": "3865f7afbf1d66b010a509457b337a876b9783f36b0267f4e4bdcd690c14998e"
+    },
+    {
+      "archive_id": "raw-experiment-v1-sha256-a3a947e0c44eff87df4d0885beca2a9b0341e65fc7d048df5873338ba8f22fdd",
+      "availability": "private_archive_verified",
+      "bytes": 1589596,
+      "old_path": "docs/reviews/artifacts/system-validation-20260928/qwen-v1-partial-raw.jsonl.gz",
+      "sha256": "e80cc2d983dcda650e4b811efe4d66a0b86818738a02091abbb67f10f00331d8"
+    }
+  ],
+  "historical_git_visibility": "Original bytes remain reachable from pre-migration Git commits and clones; no Git history rewrite is planned. This catalog describes availability in the current tree, not secrecy of historical Git objects.",
+  "public_tree_reproduction": "The new public tree alone cannot replay raw runs, answer-level grades, or exact prompt/adjudication packets. Those require the verified private archive and other pinned run dependencies.",
+  "reproduction_limit": "Public summaries and receipts remain; exact raw replay needs access to the verified private archive and other run dependencies.",
+  "schema_version": "open_agronomy_agent.private_experiment_catalog.v1",
+  "source_commit": "7caa942df0eac1328dcbffd953494dcfd2ad4281",
+  "status": "private_archive_and_exact_restore_verified"
+}

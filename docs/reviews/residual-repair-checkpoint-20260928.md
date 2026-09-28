@@ -81,7 +81,7 @@ records and computed editor prompt bytes are identical to the prior candidate;
 all other runtime source matches the GPU capsule. This is deterministic reuse of
 captured model outputs, not another generation or tokenizer measurement.
 
-The [raw bundle](artifacts/residual-repair-20260928/remote-results.zip) preserves
+The [raw archive catalog](artifacts/experiment-raw-archive-20260928/catalog.json) locates a verified private bundle preserving
 both runs, pinned snapshot file hashes, setup, lifecycle receipts and logs.
 The owned Colab session is stopped and no sessions remain. The measured rounded
 account balance decrease was **0.49 CU**, with an observed running rate of

@@ -1,4 +1,4 @@
-Prepared-stage analysis retained for provenance. The completed same-origin result and EOS-qualified conclusions are in [the final investigation](../../portable-agronomy-residual-investigation-20260928.md) and `same-origin-gemma-active.json.gz`; pending statements below describe the earlier stage.
+Prepared-stage analysis retained for provenance. The completed same-origin result and EOS-qualified conclusions are in [the final investigation](../../portable-agronomy-residual-investigation-20260928.md) and the [raw archive catalog](../experiment-raw-archive-20260928/catalog.json), which locates the original `same-origin-gemma-active.json.gz`; pending statements below describe the earlier stage.
 
 # Gemma active runtime receipt: prefix-state confound
 

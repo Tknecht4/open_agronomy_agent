@@ -2,9 +2,9 @@
 
 **A local-first field workspace and a customizable research-agent foundation.** Ask general agronomy questions, attach a field when it matters, inspect the sources and checks behind an answer, and keep observations distinct from mapped context and model output. The repository includes the React workspace, FastAPI service, pinned local model profile, governed document and graph retrieval, deterministic tools, tests, and evidence-preserving research workflows.
 
-![Open Agronomy Agent workspace with synthetic example data](docs/public/assets/workspace.jpg)
+![Compact general chat and calculator example, with no field selected](docs/public/assets/workspace.png)
 
-The screenshot shows synthetic example data. [Explore the workspace](docs/public/operations/workspace.md) · [Customize the agent](docs/public/developer/customizing-the-harness.md) · [Read the architecture](docs/public/architecture.md)
+The screenshot shows a compact general chat and calculator example with synthetic inputs; no field is selected. The [short workspace demo](docs/public/assets/workspace-demo.gif) uses condensed pauses to show the flow and is not a latency measurement. [Explore the workspace](docs/public/operations/workspace.md) · [Customize the agent](docs/public/developer/customizing-the-harness.md) · [Read the architecture](docs/public/architecture.md)
 
 ## What you can do
 
@@ -131,7 +131,9 @@ contracts; imagery prediction and training are not qualified by that pilot.
 
 ## Evidence and contribution boundaries
 
-The checked-in active corpus is hash-admitted and includes Canadian evidence, project policy, SoilWise context, and a 218,258-row U.S. NRCS analogue pack available only for explicit U.S./MLRA comparison. U.S. material cannot establish Canadian decisive authority. Evaluation cases never enter runtime retrieval or training. Runtime databases, traces, model caches, private overlays, credentials, and raw benchmark answers stay outside the public package. Historical RC1–RC3 and the [current two-Gemma assessment](docs/public/two-gemma-colab-assessment-20260926.md) retain their original identities; passing tests or a small profile does not establish agronomic competence.
+The [September 28 repair checkpoint](docs/reviews/residual-polish-checkpoint-20260928.md) records a fresh matched Gemma E2B/Qwen 27B comparison through the product path. Preserving map identity removed one final-answer error per model on the exposed 24-case set; task completion and unnecessary refusals did not improve. A broader verifier relaxation was rejected after it introduced an unsupported action. These internal results support the narrow repair, not general agronomic expertise.
+
+The checked-in active corpus is hash-admitted and includes Canadian evidence, project policy, SoilWise context, and a 218,258-row U.S. NRCS analogue pack available only for explicit U.S./MLRA comparison. U.S. material cannot establish Canadian decisive authority. Evaluation cases never enter runtime retrieval or training. Runtime databases, traces, model caches, private overlays, credentials, and raw benchmark answers stay outside the public package. The [historical raw experiment catalog](docs/reviews/artifacts/experiment-raw-archive-20260928/catalog.json) binds selected privately retained artifacts by source commit and hash; earlier Git history may still expose the original bytes, and a current public checkout alone cannot replay their answer-level grades. Historical RC1–RC3 and the [frozen September 26 two-Gemma assessment](docs/public/two-gemma-colab-assessment-20260926.md), which evaluated commit `d43ade7`, retain their original identities; passing tests or a small profile does not establish agronomic competence.
 
 Nine source-linked production and farm-business method cards are a separately benchmarked, **non-active candidate** under `configs/rag_production_foundations_candidate.yaml`. The [corpus and typed-calculation record](docs/reviews/production-foundations-benchmark-20260927.md) distinguishes deterministic-tool gains from card effects. A later [source-distinct transfer audit](docs/reviews/production-foundations-efficacy-audit-20260927.md) found no complete-answer gain and two new materially misleading candidate answers; the cards did not qualify as a product default.
 

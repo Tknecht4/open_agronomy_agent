@@ -87,7 +87,7 @@ tokens still agree. This reproduces state/logit non-repeatability without requir
 LRU lookup as the cause. Instrumentation, allocation/evaluation order and backend
 numerics remain unresolved rivals; this is not a diagnosis of a specific kernel.
 
-The follow-up is preserved in [its receipt](artifacts/portable-residual-20260928/same-origin-gemma-active.json.gz)
+The follow-up is preserved in [the raw archive catalog](artifacts/experiment-raw-archive-20260928/catalog.json)
 and raw arrays in the bundle. It does not certify a long continuation, another
 backend or real product serving. Keep prompt caching disabled. The next cache
 qualification needs counterbalanced repeats and a trusted numerical reference,

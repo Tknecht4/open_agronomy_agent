@@ -1,0 +1,175 @@
+{
+  "boundary": "This is a condensed capture sequence. The source PNG frames are retained byte-for-byte; GIF palette encoding is lossy and timings are presentation pauses, not measured runtime latency.",
+  "capture_source": "actual local application with synthetic general chat; no field selected",
+  "css_sha256": "259020e3225deeeb77fc45990f16f055543e39243f02536aa88fa2be95fdc143",
+  "frame_size_px": [
+    544,
+    553
+  ],
+  "frontend_build_sha256_by_path": {
+    "assets/BenchmarksRoute-CjMLTum-.js": "ad7e307e494782c1fbe2fb0e40169294f0e9da6aa009bcb943f2cb1a154bf4e5",
+    "assets/BenchmarksRoute-DIbtkViM.css": "1d6c15cc335d7b59906245a8353cb06d3110414ff2c5ad14932285f98dcce9b0",
+    "assets/CanadianKnowledgeCoveragePanel-CcCWLoBX.js": "ed6c62c98dff8b4fbc4cbccd382f858474c6b3f958fb2c6bfb20e69d943933fe",
+    "assets/CanadianKnowledgeCoveragePanel-IhxD79IP.css": "698965e718bcbf4bba743e32fa7a06eac2e466d1d3e5273770674d4ba67c6538",
+    "assets/FieldDataPanel-DuWtLEn5.js": "9b84c8cb748e169829acf176a5cf513a766e630a682f11419daabdce53a7798b",
+    "assets/FieldDataPanel-aXROx65_.css": "ccbbfa19db290a445c1853410ea4bd401192dc707d737933c1e7fe3a7ddb434b",
+    "assets/FieldImageryAnalyticsPanel-feKGIWfc.css": "eabad9f691ca9222aaceaaa4f172e52d86e3f82e380f9852047fc60bc3896f90",
+    "assets/FieldImageryAnalyticsPanel-wnOD_In6.js": "360a384303119c228d7572d54723a2b842c9e4dafd8e33db320938743d56c8a7",
+    "assets/FieldMapInsights-BjzzeFA1.js": "f5ab4812e2c9c4727799ba4f6481cbe05f559818f4328915af32bd127be4aa1d",
+    "assets/FieldSetupDialog-C7tUooYe.js": "e1e653ab6a07da3dcb11cdf891770f91b1a21d42d71b36205b4be72e9534a185",
+    "assets/FieldSyncPanel-CufFN_U0.js": "3d87df5a86bb6ce842ef56bcf194e0c3f7a9f5f50874f5f055e06947defff153",
+    "assets/LeafletFieldMap-A20ulyox.css": "a2c7fb28572ced02ff82d190b205a6fb65c525270081ec01d17623b2e072da10",
+    "assets/LeafletFieldMap-kQP5RrIQ.js": "32d4608b4b04a67a93949604bb936879cc9b43d5fec2f86b3fd74cac416f33c6",
+    "assets/OfflineTerrainContextPanel-DoK25ArR.js": "8d1fc963406898f6e24fcf29b1dff2b921c2067255bc7836f33f6bdfb5166a04",
+    "assets/OpenAgronomyInfoPages-DWJJ9xgz.js": "5112bbb775293198f3d35505f56fb6516f07bfafd4a81f406d7d835647a38ae2",
+    "assets/PrivateKnowledgePanel-BDavTqKZ.js": "1c84190b4374e71f0b0483ac029ba07928ee56f5a0e91786cf894c16c50551db",
+    "assets/PrivateKnowledgePanel-xAuinKN2.css": "4fc4ff85b83e8af60ff98f628623f0ce7918cfdda361df0a94048e31a7d03ca1",
+    "assets/index-B7o2Uhdq.css": "0d637caf72f8c3e1ae8e1d66ca63e93f21b3714836c5969a5e573217a267ce55",
+    "assets/index-C68wSnSU.js": "7f1a19367736820756b187fab86a37d833b7294c195c2d8f40483bfbc8ef2b86",
+    "assets/mapPresentation-DzyzgsfV.js": "535d36ce61af5c0020c76c38d9e582c1772e5b901fe2389dd766dd2a918bfc0d",
+    "icons/agronomy-agent.svg": "a8b0e59553bd733268bb9a753c7367b1fd357ae9af8e0ef0d9c4018f7effd18c",
+    "index.html": "aa3df06fe75aa720608ad38f7db9c84102c0bac6f92ccfb3f8d4167ffe5d45af",
+    "manifest.webmanifest": "b4495103b6a11a5223cd69dd2aca7b51425b51d86af31ed165b86667614298f3",
+    "offline.html": "59f6df44a2aa3ffb7e9a996019680573a68135bb701d0658e65ec303862a9f36",
+    "service-worker.js": "9ea88f525fe2793fcfebd3044d7a42d696bb6f8b530bf6a7faf634f0019c7d17"
+  },
+  "geometry_boundary": "geometry measured on the earlier scratch frontend; its source and build are byte-identical to the integrated presentation",
+  "gif": {
+    "bytes": 399529,
+    "duration_ms": 14000,
+    "frame_count": 6,
+    "observed_frame_durations_ms": [
+      1800,
+      2200,
+      1800,
+      3000,
+      2200,
+      3000
+    ],
+    "palette": "shared 256-color median-cut palette from all six source captures",
+    "sha256": "17d5d9762e155bbb12b955fba593371b8e0d1dab51bb082db7a2d6760f4a049c"
+  },
+  "integrated_build_matches_captured_build": true,
+  "integrated_presentation_commit": "6ab5a64",
+  "raw_frame_retention": "local evaluation evidence; original source frames not included in public package",
+  "responsive_checks": [
+    {
+      "chatHeight": 736.5558471679688,
+      "composerHeight": 69.29521179199219,
+      "height": 568,
+      "label": "small phone",
+      "narrow": true,
+      "pageHeight": 1096,
+      "pageWidth": 320,
+      "threadHeight": 312.4468078613281,
+      "threadScrollHeight": 932,
+      "wideControls": false,
+      "width": 320
+    },
+    {
+      "chatHeight": 888.447509765625,
+      "composerHeight": 69.29521179199219,
+      "height": 844,
+      "label": "tall phone",
+      "narrow": true,
+      "pageHeight": 1248,
+      "pageWidth": 390,
+      "threadHeight": 464.33843994140625,
+      "threadScrollHeight": 825,
+      "wideControls": false,
+      "width": 390
+    },
+    {
+      "chatHeight": 691.96142578125,
+      "composerHeight": 69.29521179199219,
+      "height": 553,
+      "label": "short narrow",
+      "narrow": true,
+      "pageHeight": 1052,
+      "pageWidth": 544,
+      "threadHeight": 304.2553405761719,
+      "threadScrollHeight": 742,
+      "wideControls": false,
+      "width": 544
+    },
+    {
+      "chatHeight": 738.377685546875,
+      "composerHeight": 69.29521179199219,
+      "height": 700,
+      "label": "inside narrow breakpoint",
+      "narrow": true,
+      "pageHeight": 1002,
+      "pageWidth": 1049,
+      "threadHeight": 384.9966735839844,
+      "threadScrollHeight": 682,
+      "wideControls": false,
+      "width": 1049
+    },
+    {
+      "chatHeight": 508.3045349121094,
+      "composerHeight": 69.29521179199219,
+      "height": 700,
+      "label": "outside narrow breakpoint",
+      "narrow": false,
+      "pageHeight": 700,
+      "pageWidth": 1051,
+      "threadHeight": 154.9235382080078,
+      "threadScrollHeight": 767,
+      "wideControls": true,
+      "width": 1051
+    },
+    {
+      "chatHeight": 601.988037109375,
+      "composerHeight": 69.29521179199219,
+      "height": 800,
+      "label": "desktop",
+      "narrow": false,
+      "pageHeight": 800,
+      "pageWidth": 1280,
+      "threadHeight": 248.6070556640625,
+      "threadScrollHeight": 725,
+      "wideControls": true,
+      "width": 1280
+    }
+  ],
+  "schema_version": "open_agronomy_agent.workspace_media_receipt.v1",
+  "source_backend_commit": "5eb1a0d0118610a9bc8d2c1f8a041471a69eacff",
+  "source_frames": [
+    {
+      "duration_ms": 1800,
+      "frame": "01-question.png",
+      "sha256": "d524e1887018507e8f980a5b3ec931d90efd93117328fca85c260c2eadb9177a"
+    },
+    {
+      "duration_ms": 2200,
+      "frame": "02-result.png",
+      "sha256": "df9bde1fa9654e6c0f17c692bd89630712c580571291816a9a0c927dc4a8eba9"
+    },
+    {
+      "duration_ms": 1800,
+      "frame": "03-followup.png",
+      "sha256": "746cb0b71470fa70b66311fb368c6d339c0fd9502662c3890f5ad557b28f6bbc"
+    },
+    {
+      "duration_ms": 3000,
+      "frame": "04-result.png",
+      "sha256": "4ec814a99bf63bfde632bce4d4debad78584d95b13dc6128e2b7f9d0132c4afa"
+    },
+    {
+      "duration_ms": 2200,
+      "frame": "05-checks.png",
+      "sha256": "ad551a2ece394051d7a099b49809cbe037d2a7e6e187fe13e8d3053d97881709"
+    },
+    {
+      "duration_ms": 3000,
+      "frame": "06-calculator-check.png",
+      "sha256": "4603ce0c41e9266e758291b4fed2cd49b0232349b2c90c7b4e4678c49e21b309"
+    }
+  ],
+  "static_image": {
+    "bytes": 29757,
+    "caption": "Actual synthetic general chat arithmetic follow-up, with no field selected.",
+    "sha256": "4ec814a99bf63bfde632bce4d4debad78584d95b13dc6128e2b7f9d0132c4afa",
+    "source_frame": "04-result.png"
+  }
+}

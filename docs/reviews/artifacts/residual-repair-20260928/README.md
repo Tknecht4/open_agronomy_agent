@@ -20,3 +20,8 @@ contents include only public source, synthetic inputs and drivers. Model weights
 are not bundled. The raw
 result ZIP contains only the two synthetic runs and their public model/runtime
 receipts. Usage receipts omit absolute account balances.
+
+The exact source capsules and raw result ZIP are indexed by the
+[raw archive catalog](../experiment-raw-archive-20260928/catalog.json).
+They are historical files retained in the verified private archive; this compact public
+record alone cannot replay the runs.
