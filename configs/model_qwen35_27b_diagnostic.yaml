@@ -18,7 +18,9 @@ prompt_cache_enabled: false
 prompt_cache_entries: 8
 prompt_cache_max_bytes_mb: 256
 prompt_cache_min_prefix_tokens: 64
-prefill_step_size: 2048
+# The 2048-token prefill exhausted L4 memory at product prompt sizes.
+# 512 passed the retained 5548-token prompt with the same 320-token test output.
+prefill_step_size: 512
 kv_bits: null
 kv_group_size: 64
 quantized_kv_start: 0

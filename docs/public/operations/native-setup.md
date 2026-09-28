@@ -32,6 +32,14 @@ python scripts/download_model.py \
 
 The profile pins `mlx-community/gemma-4-e2b-it-4bit` revision `238767527555cb75a05732a84dff5d6ba0dd6809`. The exercised snapshot occupied approximately 3.34 GiB in the local Hugging Face cache. The download command requires network access; question answering never triggers it.
 
+Prompt KV caching remains disabled by default. Its bounded, conversation-scoped
+implementation is experimental: a CUDA diagnostic observed saved-prefix reuse
+but different cached and uncached answer text. A cache hit therefore does not
+establish answer equivalence or a speed benefit. Qualify a pinned model, backend,
+and cache configuration before enabling it. The non-active 27B diagnostic profile
+is not a claim that the model fits a particular laptop; weights, KV state, working
+memory, and other applications share the available memory.
+
 ## Launch
 
 ```bash

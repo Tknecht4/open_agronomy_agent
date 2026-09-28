@@ -308,3 +308,63 @@ CPU contract test (1,423 passes, four skips). Device reporting is now mocked in
 that test, and the repaired full run passed 1,424 tests with four skips. Frontend
 passed 366 tests, typecheck and build; docs audit and strict MkDocs passed. New
 scope/replay tests require a refreshed final gate before merge.
+
+## Corrected remote execution record
+
+The second remote attempt had the corrected public transfer closure but remained
+invalid for model-quality comparison. The owner provisioned weight/tokenizer
+files using an allow-pattern filter; Hugging Face Hub 1.33's offline repository
+lookup rejected both partial snapshots because `.gitattributes` and `README.md`
+were missing. Explicit-path MLX qualification had passed, so that check did not
+exercise the product's repository-ID loader. The project's supported downloader
+already downloads a complete snapshot; its loader was not weakened. Product
+execution returned conservative backend fallbacks, and those completed executor
+rows are not treated as real model answers. The driver was stopped and its raw
+archive retained (SHA-256
+`bce90c6a137952c7e045555d413acb4f8381e5304ba646a4d03c4bc6cc516a3a`).
+
+After completing both pinned snapshots, offline repository lookup passed for
+both models. Source `7b41a189298251e0f61bc977c3f6758d67150ee6` adds an isolated
+preflight through the exact product generator/config/environment. It requires a
+resolved snapshot, measured generated tokens and the MLX GPU device before any
+scientific cell. Executor status, deterministic bypass, backend fallback and
+measured model generation now have distinct receipts/eligibility. A cache
+condition error preserves earlier returned conditions; process-timeout output
+that was not written remains unavailable. Independent review found no new
+blocking issue in this runner delta; 12 focused tests passed independently.
+
+The fresh v3 public capsule contains 248 files, 40,364,220 uncompressed bytes and
+5,404,987 archive bytes, SHA-256
+`04b180ed4353b5d9777e08cafeffa0d7897dd6436331be5532c0bc9c17c52d15`.
+It retains the same frozen 44 scientific units per model. The first exact-loader
+preflight passed and real product-generated token receipts are observed. No
+final answer-quality conclusion follows from this progress entry.
+
+The refreshed source gate passed **1,436 tests, four skips**, with 26 existing
+sklearn warnings. The unchanged frontend retains its **366-test**, typecheck and
+production-build pass; public docs audit and strict MkDocs passed again. Final
+benchmark evidence, blind grading and acceptance reconciliation are pending.
+
+Gemma v3 completed all 44 units (54 turns) in 889.014 seconds. Its two cache
+probes observed saved-prefix reuse, with identical cold/warm text but different
+uncached text. Exact parity is failed; no cache activation or matched-speed
+claim follows. Independent inspection found no reproduced offset/state-sharing
+bug. Different prefill partitioning is consistent with numerical divergence,
+but first-divergent-token/cache-state evidence would be required to establish
+that cause.
+
+Qwen v3 passed the tiny availability preflight but two product prompts at 1,930
+and 1,803 input tokens exhausted L4 CUDA memory with 2,048-token prefill chunks.
+Those rows are explicitly backend-unavailable and quality-ineligible. The owner
+stopped the driver and retained the completed Gemma and partial Qwen archive,
+SHA-256 `df3a82b4daa0a92f71f34fd0de5a687cb64cb32504ac61296f2aca12da38d881`.
+A separate direct runtime qualification on the retained long public product
+prompt succeeded with 512-token prefill: 5,548 input tokens, 320 generated tokens,
+reported peak allocation 18,005,080,104 bytes, 86.099 seconds including load.
+The CLI reply timed out, but the remote child completed and its result was
+retrieved without a duplicate launch. This establishes one prompt's resource
+fit, not quality or the entire 8,192-token envelope. The non-active Qwen profile
+now pins 512-token prefill. Its replacement run keeps all 44 questions/sequences,
+8,192-token context allowance and 320-token output ceiling, and does not combine
+partial OOM rows with the new run's denominator. The 16 GiB laptop is unqualified
+for this 27B profile; the reported allocation already exceeds its total memory.
