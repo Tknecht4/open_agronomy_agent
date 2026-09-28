@@ -152,6 +152,19 @@ def curated_method_response(context: Any, question: str) -> tuple[str | None, di
         return None, None
     if re.search(r"\b(?:and|also)\s+(?:advise|tell|recommend|decide|judge|assess|determine|predict)\b", question, re.IGNORECASE):
         return None, None
+    if re.search(
+        r"\b(?:and|also)\s+(?:please\s+)?(?:select|choose|suggest|recommend|decide|assess|judge|"
+        r"determine|predict|forecast|estimate|buy|sell|apply|plant|harvest|write|compose|draft|create)\b|"
+        r"\b(?:assess|decide|judge|determine|evaluate)\s+(?:whether|if)\b|"
+        r"\b(?:including|and)\s+when\b[^?.!]{0,80}\b(?:harvest|plant|spray|treat|apply|sell|buy)\w*\b|"
+        r"\b(?:select|assess|suggest|recommend|decide|determine|forecast|predict)\b[^?.!]{0,55}\b"
+        r"(?:best|lender|purchase|buy|sell|afford|harvest|investment|rate|target|price)\w*\b",
+        question,
+        re.IGNORECASE,
+    ):
+        return None, None
+    if re.search(r"\b(?:lender|purchas\w*|harvestable|poem|story|joke|yesterday'?s|tomorrow'?s)\b", question, re.IGNORECASE):
+        return None, None
     for match in re.finditer(r"\bhow\s+(?:should|could|would)\s+(?:i|we)\s+(?P<verb>\w+)", question, re.IGNORECASE):
         if match.group("verb").lower() not in {"use", "adapt", "interpret", "organize", "compare", "record", "reconcile", "explain", "check", "think", "evaluate"}:
             return None, None
@@ -183,7 +196,7 @@ def curated_method_response(context: Any, question: str) -> tuple[str | None, di
         return None, None
     if re.search(r"\b(?:estimate|forecast|predict)\b", question, re.IGNORECASE):
         return None, None
-    request_start = re.compile(r"^\s*(?:please|explain|describe|outline|list|show|how|what|which|why|can|could|would|should|is|are|do|does|will|may|give|tell|recommend|advise|decide|suggest|assess|judge|evaluate|determine)\b", re.IGNORECASE)
+    request_start = re.compile(r"^\s*(?:please|explain|describe|outline|list|show|how|what|which|why|can|could|would|should|is|are|do|does|will|may|give|tell|recommend|advise|decide|suggest|assess|judge|evaluate|determine|write|compose|draft|create|select)\b", re.IGNORECASE)
     method_request_terms = re.compile(
         r"\b(?:method|framework|reasoning|inputs?|conventions?|comparison|compare|belong|adapt|chart|budget|"
         r"ratios?|log|records?|gather|organize|cash[- ]flow|working capital|degree days|measures?|rows?|"
@@ -193,7 +206,7 @@ def curated_method_response(context: Any, question: str) -> tuple[str | None, di
     )
     request_boundary = (
         r"(?<=[.!?;])\s+|"
-        r"(?:,\s*|\s+)(?:and|or)\s+(?=(?:please|is|are|do|does|should|can|could|would|will|may|what|how|which|why|give|tell|recommend|advise|decide|suggest|assess|judge|evaluate|determine)\b)"
+        r"(?:,\s*|\s+)(?:and|or)\s+(?=(?:please|is|are|do|does|should|can|could|would|will|may|what|how|which|why|give|tell|recommend|advise|decide|suggest|assess|judge|evaluate|determine|write|compose|draft|create|select)\b)"
     )
     for sentence in re.split(request_boundary, question, flags=re.IGNORECASE):
         if request_start.search(sentence):
@@ -234,6 +247,25 @@ def curated_method_response(context: Any, question: str) -> tuple[str | None, di
             continue
         countries, subdivisions = _normalize_jurisdiction_scope((place,))
         if country not in countries or (subdivisions and str(targets[0]).lower() not in subdivisions):
+            return None, None
+    # A coordinated place after a supported site is unresolved unless it is
+    # the same supported scope. This optional renderer can safely decline.
+    for match in re.finditer(
+        r"\bin\s+(?P<first>[A-Za-z-]+(?:\s+[A-Za-z-]+){0,2})\s+(?:and|or)\s+"
+        r"(?P<second>[A-Za-z-]+(?:\s+[A-Za-z-]+){0,2})",
+        question,
+        re.IGNORECASE,
+    ):
+        if match.group("second").split()[0].lower() in {
+            "plant", "grow", "found", "read", "use", "uses", "have", "want", "bought",
+            "sold", "heard", "saw", "work", "plan", "keep", "apply", "harvest", "an", "a", "the",
+        }:
+            continue
+        first_countries, _ = _normalize_jurisdiction_scope((match.group("first"),))
+        if not first_countries:
+            continue
+        second_countries, second_subdivisions = _normalize_jurisdiction_scope((match.group("second"),))
+        if country not in second_countries or (second_subdivisions and str(targets[0]).lower() not in second_subdivisions):
             return None, None
     from agronomy_agent.query_context import (
         _inferred_destination_jurisdiction,

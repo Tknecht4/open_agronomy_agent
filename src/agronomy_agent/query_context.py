@@ -45,7 +45,9 @@ _DETAILED_SOIL_LAYER_IDS = {"ab_detailed_soil", "sk_detailed_soil", "mb_detailed
 _NON_SITE_CONJOINED_PREFIXES = frozenset({
     "spring", "summer", "autumn", "fall", "winter", "dry", "wet", "rainy",
     "hot", "cold", "drought", "year", "years", "the", "a", "an",
-    "practice", "general", "addition", "many", "most", "some",
+    "practice", "general", "addition", "many", "most", "some", "i", "we",
+    "plant", "seed", "grow", "found", "read", "use", "uses", "have", "want",
+    "bought", "sold", "heard", "saw", "work", "plan", "keep", "apply", "harvest",
 })
 
 
@@ -1051,7 +1053,7 @@ def _unrecognized_operation_site(text: str) -> bool:
             locations.append(match.group("place"))
             tail = text[match.end():]
             conjoined = re.match(
-                r"\s+(?:and|or)\s+(?:also\s+)?in\s+"
+                r"\s+(?:and|or)\s+(?:also\s+)?(?:in\s+)?"
                 r"(?P<place>[A-Za-z-]+(?:\s+[A-Za-z-]+){0,3})",
                 tail,
                 re.IGNORECASE,

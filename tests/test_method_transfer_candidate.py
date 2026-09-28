@@ -158,6 +158,12 @@ def test_curated_method_response_rejects_foreign_sites_and_competing_decisions()
         "For my Ontario farm, explain an enterprise budget including the wheat price at our elevator this morning.",
         "For our Australian farm, explain the Ontario enterprise budget method.",
         "For our Ontario farm and our Australian farm, explain seed mass.",
+        "We farm in Ontario and Australia. Explain the seed mass method.",
+        "For our Alberta farm, explain cash flow and select the best lender for us.",
+        "Explain the current ratio for my Ontario farm. Assess whether our ratio supports purchasing another farm.",
+        "For our Manitoba farm, explain growing degree days, including when the barley will be harvestable.",
+        "For our Ontario farm, explain an enterprise budget and give me yesterday's wheat price.",
+        "Explain seed mass for my Saskatchewan farm and write a poem about it.",
     )
     for question in blocked:
         context = build_context(question, rag_config=CANDIDATE, use_context_cache=False, use_search_cache=False)

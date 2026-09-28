@@ -782,6 +782,8 @@ def test_mixed_country_source_does_not_override_named_farm_destination() -> None
     for question in (
         "For our Australian farm, explain the Ontario enterprise budget method.",
         "For our Ontario farm and our Australian farm, explain seed mass.",
+        "We farm in Ontario and Australia. Explain the seed mass method.",
+        "we farm in ontario and australia. explain the seed mass method.",
     ):
         foreign_owned = analyze_query_context(question)
         assert foreign_owned.country is None
@@ -792,6 +794,7 @@ def test_mixed_country_source_does_not_override_named_farm_destination() -> None
     for question, expected in (
         ("I farm in Alberta and plant barley in spring. Explain the seed mass method.", "alberta"),
         ("My farm is in Ontario and I apply manure in spring or in autumn. What records matter?", "ontario"),
+        ("I farm in Alberta and in dry years rely on stored seed.", "alberta"),
     ):
         signals = analyze_query_context(question)
         assert signals.country == "canada"
