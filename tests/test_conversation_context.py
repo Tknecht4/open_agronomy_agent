@@ -325,3 +325,29 @@ def test_replay_history_stops_before_base_and_excludes_replay_outputs(tmp_path, 
     # Replays remain saved for inspection but cannot become normal chat memory.
     assert store.count_session_turns(session_id) == 5
     assert store.count_session_turns(session_id, exclude_replays=True) == 3
+    replay_again = execute_agent_request(AgentExecutionRequest(
+        store=store, settings=settings, session_id=session_id,
+        message="BASE_CURRENT_MARKER", mode="baseline", model_id="mock",
+        rag_config="configs/rag.yaml", max_tokens=100,
+        trace_options={"store_prompt_messages": True}, generation_backend=backend,
+        parent_turn_id=replay["turn_id"], execution_class="observed_system_execution_nonclaim",
+    )).turn
+    repeated_prompt = str(backend.calls[-1])
+    assert "FUTURE_PRIMARY_MARKER" not in repeated_prompt
+    assert repeated_prompt.count("BASE_CURRENT_MARKER") == 1
+    repeated_receipt = replay_again["trace"]["metadata"]["context_budget"]
+    assert repeated_receipt["history_before_turn_id"] == base
+    assert repeated_receipt["history_included_turn_ids"] == [earlier]
+    assert replay_again["parent_turn_id"] == replay["turn_id"]
+    assert store.resolve_replay_history_cutoff(session_id, replay_again["turn_id"]) == base
+    with pytest.raises(ValueError, match="not in this session"):
+        store.resolve_replay_history_cutoff(other_id, replay_again["turn_id"])
+    ids = iter(("cycle-a", "cycle-b", "foreign-parent"))
+    monkeypatch.setattr(store, "_new_id", lambda _prefix: next(ids))
+    saved("Cycle A", "cycle-b")
+    saved("Cycle B", "cycle-a")
+    saved("Invalid ancestor", foreign)
+    with pytest.raises(ValueError, match="cycle"):
+        store.resolve_replay_history_cutoff(session_id, "cycle-a")
+    with pytest.raises(ValueError, match="not in this session"):
+        store.resolve_replay_history_cutoff(session_id, "foreign-parent")

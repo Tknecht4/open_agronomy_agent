@@ -298,7 +298,8 @@ cannot override a thread's field; `/api/replay` cannot rebind a saved conversati
 or mutate its context. Every replay rechecks current field access. Old bridge
 sessions lack trustworthy scope provenance, so a new scoped bridge is created
 while old messages/traces remain retained. New history compilation excludes
-replay outputs and stops before the replay's base turn, including timestamp ties.
+replay outputs and stops before the original base at the root of a replay chain,
+including timestamp ties and validating same-session, acyclic lineage.
 Replay remains a current-code reconstruction with current authorized context
 and feedback; it is not a guarantee of reproducing original retained bytes.
 

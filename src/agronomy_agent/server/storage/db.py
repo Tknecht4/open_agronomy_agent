@@ -1504,6 +1504,23 @@ class TraceStore:
             turn["answer_integrity_receipt"] = verify_answer_integrity_receipt(turn)
             return turn
 
+    def resolve_replay_history_cutoff(self, session_id: str, turn_id: str) -> str:
+        """Follow replay lineage to its original turn without loading traces."""
+        visited: set[str] = set()
+        with self._cursor() as cursor:
+            while turn_id not in visited:
+                visited.add(turn_id)
+                row = cursor.execute(
+                    "SELECT id, parent_turn_id FROM turns WHERE id = ? AND session_id = ?",
+                    (turn_id, session_id),
+                ).fetchone()
+                if row is None:
+                    raise ValueError("replay history ancestor is not in this session")
+                if row["parent_turn_id"] is None:
+                    return str(row["id"])
+                turn_id = str(row["parent_turn_id"])
+        raise ValueError("replay history lineage contains a cycle")
+
     @staticmethod
     def _history_where(
         cursor: sqlite3.Cursor, session_id: str, *, before_turn_id: str | None,

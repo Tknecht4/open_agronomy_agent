@@ -388,12 +388,16 @@ def _run_turn_impl(
         max_history_turns = 8
     if max_history_turns <= 0:
         max_history_turns = 8
+    history_cutoff = (
+        store.resolve_replay_history_cutoff(session_id, parent_turn_id)
+        if parent_turn_id is not None else None
+    )
     recent_turns = store.get_recent_session_turns(
         session_id, limit=max(1, min(max_history_turns, 32)),
-        before_turn_id=parent_turn_id, exclude_replays=True,
+        before_turn_id=history_cutoff, exclude_replays=True,
     )
     total_history_turns = store.count_session_turns(
-        session_id, before_turn_id=parent_turn_id, exclude_replays=True,
+        session_id, before_turn_id=history_cutoff, exclude_replays=True,
     )
     if queue_circuit and queue_circuit.get("tripped"):
         if profiler:
@@ -469,7 +473,7 @@ def _run_turn_impl(
             reserved_output_tokens=max_tokens,
             count_tokens=will_generate,
         )
-        context_budget_receipt["history_before_turn_id"] = parent_turn_id
+        context_budget_receipt["history_before_turn_id"] = history_cutoff
         context_budget_receipt["history_excludes_replays"] = True
         return context_budget_receipt["status"] == "over_limit"
 

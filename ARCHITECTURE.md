@@ -163,3 +163,11 @@ KV caching and phase measurements. Backend capabilities may be unavailable; the
 UI labels estimates and missing measurements instead of inferring native capacity
 or speed from streamed display events. The full saved transcript and the active
 model window are separate representations.
+
+The retained `/chat/stream` API uses its thread's immutable field/general scope.
+Legacy bridges without server-recorded scope provenance receive fresh scoped
+sessions; their older messages and traces stay available for audit. Replay
+overrides are ephemeral and reauthorize field access. Prompt history excludes
+replay outputs and stops before the original turn at the root of a replay chain;
+the immediate parent remains recorded separately for lineage. Replays use current
+code, authorized field context and feedback, not guaranteed original prompt bytes.
