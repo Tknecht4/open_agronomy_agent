@@ -45,9 +45,9 @@ priors cannot become observed field evidence through answer generation.
 
 ## Imagery without a personal account
 
-Scene search uses a saved WGS84 polygon and explicit dates, sending those
-inputs to the selected public source. Offline mode blocks network access.
-A point or county centroid is insufficient for a field imagery footprint.
+Scene search uses a saved WGS84 point or polygon and explicit dates, sending
+those inputs to the selected public source. Offline mode blocks network access.
+A point locates a sample; it does not establish a field boundary or acreage.
 
 | Provider | Personal account | Current capability |
 |---|---|---|
@@ -66,6 +66,21 @@ expand the polygon used for field statistics. These spectral observations are
 not diagnoses, treatment effects, yield estimates or predictions. Empty valid
 area remains an explicit result.
 
+For a saved point, choose **Pixel at location** to inspect its containing native
+30 m HLS cell. **Area around location** uses an explicit 15–1,500 m radius and
+weights intersecting cells by their overlap with that sampling circle in the
+native projected CRS. The selected pixel or circle can include other crops,
+roads or uncropped ground. Point results report sample area and valid sample
+fraction; they never report field area or whole-field coverage. Positional
+uncertainty and the point's role remain unknown rather than being guessed.
+
+The receipt preserves the original point separately from its actual sampling
+footprint, radius, grid, quality mask and pixel counts. Counts passing QA can
+still have an undefined index denominator; such indices remain unavailable and
+transparent. A point-to-polygon upgrade creates a different analysis identity.
+Moving or editing geometry, mode, radius, provider or date clears the displayed
+result. Save geometry edits before asking for new imagery.
+
 ### Optional isolated HLS worker
 
 Install the raster worker in a separate Python 3.12 environment outside the
@@ -80,15 +95,16 @@ export AGRONOMY_AGENT_IMAGERY_PYTHON=/absolute/path/to/imagery-venv/bin/python
 
 Create the cache directory on private local storage outside the repository.
 Both settings are required for the workspace analysis panel. The worker gets
-only the saved field polygon and bounded request, runs with a narrow environment
+only the saved input geometry and bounded request, runs with a narrow environment
 that excludes normal application credentials, and keeps public HLS access tokens
-in memory. It cannot analyze an unsaved polygon or a point. With
+in memory. It cannot analyze unsaved geometry or invent a missing location. With
 `AGRONOMY_AGENT_NETWORK_MODE=offline`, only an exact verified cached analysis
-can be reused; online requests send polygon and dates to the public catalog.
+can be reused; online requests send point/polygon and dates to the public catalog
+and request the required raster byte ranges.
 The cache is private field-scoped state, not a public source or model profile.
 
-In **Fields**, save a polygon, then open **Imagery analysis** to choose HLS S30
-or L30 and a date interval. The panel reports missing setup, offline cache
+In **Fields**, save a point or polygon, then open **Observed satellite indices**
+to choose HLS S30 or L30 and a date interval. The panel reports missing setup, offline cache
 misses, no scene, and unavailable data explicitly. The receipt shows valid
 area, excluded QA area, source item and band identities, dates and hashes;
 inspect these before comparing fields or seasons.
@@ -99,7 +115,7 @@ List providers without network access:
 PYTHONPATH=src .venv/bin/python scripts/inspect_field_imagery.py --providers
 ```
 
-For a local GeoJSON Polygon/Feature, find two HLS scenes and probe up to
+For a local GeoJSON Point/Polygon/Feature, find two HLS scenes and probe up to
 16 KiB of the first red-band COG:
 
 ```bash
@@ -118,6 +134,13 @@ PYTHONPATH=src /absolute/path/to/imagery-venv/bin/python scripts/analyze_field_i
   --start-date 2025-06-01 --end-date 2025-06-15 \
   --cache-root /absolute/path/to/private-imagery-cache --online
 ```
+
+For a Point, the same command defaults to its containing pixel. Add
+`--sampling-mode point_buffer --sample-radius-m 60` for a 60 m radius sample.
+`--buffer-m` remains polygon display context and is rejected for point modes;
+`--context-pixels` is a separate polygon research-model context, also rejected
+for points. Neither option can silently substitute for point sample radius.
+Changing point sampling does not rewrite or evict existing polygon analyses.
 
 ## Development benchmark
 

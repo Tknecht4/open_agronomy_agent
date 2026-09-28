@@ -35,6 +35,11 @@ def _geometry():
 
 def _fixture(tmp_path, monkeypatch, *, all_cloud=False, source_crs="EPSG:32613",
              source_transform=None, side=4):
+    # Numerical raster fixtures do not depend on unrelated host disk pressure.
+    # Storage admission/refusal is asserted separately in test_imagery_budget.
+    from types import SimpleNamespace
+    from agronomy_agent import imagery_budget
+    monkeypatch.setattr(imagery_budget.shutil, "disk_usage", lambda _: SimpleNamespace(free=10 * 1024**3))
     keys = (*analytics.BAND_KEYS[PROVIDER][1], "Fmask")
     urls = {}
     source_transform = source_transform or from_origin(500000, 4427810, 30, 30)

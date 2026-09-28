@@ -1516,7 +1516,11 @@ const geometrySummary = (geometry: FieldGeometry): string => {
   return 'No location or boundary recorded'
 }
 
-const samePolygonCoordinates = (saved: FieldGeometry | undefined, current: FieldGeometry): boolean => {
+const sameImageryCoordinates = (saved: FieldGeometry | undefined, current: FieldGeometry): boolean => {
+  if (saved?.kind === 'point' && current.kind === 'point') {
+    return Number.isFinite(saved.point?.lat) && Number.isFinite(saved.point?.lon) &&
+      saved.point.lat === current.point.lat && saved.point.lon === current.point.lon
+  }
   if (saved?.kind !== 'polygon' || current.kind !== 'polygon' ||
       !Array.isArray(saved.points) || !Array.isArray(current.points)) return false
   const coordinates = (geometry: Extract<FieldGeometry, { kind: 'polygon' }>) => {
@@ -2162,8 +2166,8 @@ export function OpenAgronomyApp() {
   const geometryIssue = fieldGeometryIssue(fieldGeometry)
   const geometryReady = isUsableFieldGeometry(fieldGeometry)
   const savedImageryField = storedFields.find((stored) => (stored.field_context_id || stored.id) === activeFieldContextId)
-  const imageryReady = fieldGeometry.kind === 'polygon' && geometryReady && !isEditingGeometry
-    && samePolygonCoordinates(savedImageryField?.geometry, fieldGeometry)
+  const imageryReady = fieldGeometry.kind !== 'none' && geometryReady && !isEditingGeometry
+    && sameImageryCoordinates(savedImageryField?.geometry, fieldGeometry)
   const fieldCanSave = !isEditingGeometry && (geometryReady || (fieldGeometry.kind === 'none' && Boolean(fieldName.trim())))
   const activeArea = fieldGeometry.kind === 'polygon' ? String(Math.round(fieldGeometry.acres)) : field.acres
   const selectedModelProfile = modelProfiles.find((profile) => profile.id === modelId)
@@ -4099,6 +4103,8 @@ export function OpenAgronomyApp() {
                     key={activeFieldContextId}
                     fieldContextId={activeFieldContextId}
                     imageryReady={imageryReady}
+                    geometryKind={fieldGeometry.kind}
+                    geometryKey={JSON.stringify({ geometry: fieldGeometry, updatedAt: activeFieldRecordUpdatedAt })}
                     onAskQuestion={(question) => {
                       setMessage(question)
                       navigateToPage('analyze')
@@ -4108,6 +4114,7 @@ export function OpenAgronomyApp() {
                     key={`analytics-${activeFieldContextId}`}
                     fieldContextId={activeFieldContextId}
                     geometryKey={JSON.stringify({ geometry: fieldGeometry, updatedAt: activeFieldRecordUpdatedAt })}
+                    geometry={fieldGeometry}
                     imageryReady={imageryReady}
                   />
                 </Suspense>

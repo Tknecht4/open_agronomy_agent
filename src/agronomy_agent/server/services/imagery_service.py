@@ -15,8 +15,9 @@ import tempfile
 import threading
 from typing import Any
 
-from agronomy_agent.field_imagery import _valid_geometry
+from agronomy_agent.field_imagery import _valid_search_geometry
 from agronomy_agent.imagery_analytics import _request_identity
+from agronomy_agent.imagery_receipts import validate_point_receipt
 from agronomy_agent.imagery_store import ImageryStore
 from agronomy_agent.paths import REPO_ROOT
 
@@ -26,18 +27,20 @@ _PUBLIC_KEYS = frozenset((
     "request_hash", "geometry_hash", "process_version", "source_native_grid",
     "process_hash", "chip_hash", "source", "grid", "qa", "zonal_stats",
     "model_refs", "created_at", "elapsed_seconds", "cog_transfer_bytes", "preview_version",
-    "cog_range_requests", "cog_transfer_limit_bytes", "cache_hit", "reason",
+    "cog_range_requests", "cog_transfer_limit_bytes", "cache_hit", "reason", "sampling", "request",
 ))
 
 
 def geometry_hash(geometry: dict[str, Any]) -> str:
-    polygon, _ = _valid_geometry(geometry)
+    polygon, _ = _valid_search_geometry(geometry)
     return hashlib.sha256(json.dumps(polygon, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
 
 
 def readiness(settings: Any) -> dict[str, Any]:
     configured = bool(settings.imagery_cache_root and settings.imagery_worker_python)
     return {"status": "ready" if configured else "not_configured", "network_mode": settings.network_mode,
+            "sampling_modes": ["field_polygon", "point_pixel", "point_buffer"],
+            "sample_radius_bounds_m": {"min": 15, "max": 1500},
             "storage_policy": {"max_cache_bytes": settings.imagery_cache_max_bytes,
                                "min_free_bytes": settings.imagery_min_free_bytes,
                                "eviction": "none"}}
@@ -79,9 +82,9 @@ def _run_worker(settings: Any, cache: Path, geometry: dict[str, Any], payload: d
                    "--budget-root", str(settings.imagery_cache_root),
                    "--max-cache-bytes", str(settings.imagery_cache_max_bytes),
                    "--min-free-bytes", str(settings.imagery_min_free_bytes)]
-        for name in ("scene_id", "start_date", "end_date"):
-            if payload.get(name):
-                command.extend(["--" + name.replace("_", "-"), payload[name]])
+        for name in ("scene_id", "start_date", "end_date", "sampling_mode", "sample_radius_m"):
+            if payload.get(name) is not None:
+                command.extend(["--" + name.replace("_", "-"), str(payload[name])])
         if settings.network_mode == "online":
             command.append("--online")
         with tempfile.TemporaryFile() as output:
@@ -100,7 +103,8 @@ def _run_worker(settings: Any, cache: Path, geometry: dict[str, Any], payload: d
 def analyze(settings: Any, field: dict[str, Any], geometry: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
     _, _, expected_geometry, expected_request = _request_identity(
         geometry, payload["provider_id"], payload.get("scene_id"), payload.get("start_date"),
-        payload.get("end_date"), payload.get("buffer_m", 0), None)
+        payload.get("end_date"), payload.get("buffer_m", 0), None,
+        sampling_mode=payload.get("sampling_mode"), sample_radius_m=payload.get("sample_radius_m"))
     cache = field_cache(settings, field)
     if cache is None or settings.imagery_worker_python is None:
         return {"status": "not_configured"}
@@ -109,6 +113,13 @@ def analyze(settings: Any, field: dict[str, Any], geometry: dict[str, Any], payl
     except (OSError, RuntimeError, sqlite3.Error, ValueError):
         return {"status": "storage_unavailable", "reason": "imagery_cache_unavailable"}
     if cached:
+        if geometry["type"] == "Point":
+            try:
+                validate_point_receipt(cached, geometry=geometry,
+                    sampling_mode=payload.get("sampling_mode") or "point_pixel",
+                    sample_radius_m=payload.get("sample_radius_m"))
+            except (ValueError, TypeError, KeyError):
+                return {"status": "storage_unavailable", "reason": "imagery_sample_binding_failed"}
         return public_receipt({**cached, "cache_hit": True}, field["id"])
     if settings.network_mode == "offline":
         return {"status": "blocked_offline", "reason": "no matching local chip"}
@@ -121,6 +132,10 @@ def analyze(settings: Any, field: dict[str, Any], geometry: dict[str, Any], payl
             stored = ImageryStore(cache, read_only=True).get_by_chip_hash(result.get("chip_hash", ""))
             if not stored or stored.get("geometry_hash") != expected_geometry or stored.get("request_hash") != expected_request:
                 raise ValueError("imagery worker result binding failed")
+            if geometry["type"] == "Point":
+                validate_point_receipt(stored, geometry=geometry,
+                    sampling_mode=payload.get("sampling_mode") or "point_pixel",
+                    sample_radius_m=payload.get("sample_radius_m"))
             result = stored
         return public_receipt(result, field["id"])
     except (OSError, ValueError, RuntimeError, sqlite3.Error, subprocess.TimeoutExpired):
@@ -142,4 +157,9 @@ def preview(settings: Any, field: dict[str, Any], geometry: dict[str, Any], chip
     if (result is None or result.get("geometry_hash") != geometry_hash(geometry)
             or result.get("preview_version") != PREVIEW_VERSION):
         return None
+    if geometry["type"] == "Point":
+        try:
+            validate_point_receipt(result, geometry=geometry)
+        except (ValueError, TypeError, KeyError):
+            return None
     return store.preview_bytes(chip_hash)

@@ -1,4 +1,4 @@
-"""Bounded HLS COG chips, field QA and observed spectral indices.
+"""Bounded HLS COG chips, spatial QA and observed spectral indices.
 
 One request processes one public HLS scene. Raster dependencies are optional;
 the serving environment need not install them to import this module.
@@ -25,9 +25,13 @@ from urllib.parse import parse_qsl
 import httpx
 
 from agronomy_agent.field_imagery import (
-    _PC_TOKEN, _PLANETARY_COMPUTER, _clean_asset, _request_json, _valid_geometry,
+    _PC_TOKEN, _PLANETARY_COMPUTER, _clean_asset, _request_json, _valid_search_geometry,
 )
 from agronomy_agent.imagery_store import ImageryStore
+from agronomy_agent.imagery_sampling import (
+    MAX_SAMPLE_RADIUS_M, MIN_SAMPLE_RADIUS_M, POINT_PROCESS_VERSION,
+    outside_source_mask, point_grid_and_weights,
+)
 
 PROCESS_VERSION = "hls-chip-v2-native-asset-grid-fmask-v1"
 PREVIEW_VERSION = "ndvi-preview-v2-finite-alpha"
@@ -73,14 +77,32 @@ def _dependencies() -> tuple[Any, Any, Any, Any, Any, Any]:
 
 def _request_identity(geometry: dict[str, Any], provider_id: str, scene_id: str | None,
                       start_date: str | None, end_date: str | None, buffer_m: int,
-                      context_pixels: int | None) -> tuple[dict[str, Any], tuple[float, float, float, float], str, str]:
+                      context_pixels: int | None, *, sampling_mode: str | None = None,
+                      sample_radius_m: int | None = None,
+                      ) -> tuple[dict[str, Any], tuple[float, float, float, float], str, str]:
     if provider_id not in BAND_KEYS:
         raise ValueError("only anonymous HLS S30/L30 analytics is supported")
-    polygon, bounds = _valid_geometry(geometry)
+    canonical_geometry, bounds = _valid_search_geometry(geometry)
+    is_point = canonical_geometry["type"] == "Point"
+    mode = sampling_mode if sampling_mode is not None else ("point_pixel" if is_point else "field_polygon")
+    if (is_point and mode not in ("point_pixel", "point_buffer")) or (not is_point and mode != "field_polygon"):
+        raise ValueError("sampling_mode does not match saved geometry")
     if type(buffer_m) is not int or not 0 <= buffer_m <= MAX_BUFFER_M:
         raise ValueError("buffer_m must be an integer from 0 to 3000")
-    if context_pixels not in (None, 224) or (context_pixels is not None and buffer_m):
-        raise ValueError("context_pixels supports 224 with buffer_m=0")
+    if is_point:
+        if buffer_m != 0 or context_pixels is not None:
+            raise ValueError("point samples do not support polygon buffer or model context")
+        if mode == "point_buffer":
+            if (type(sample_radius_m) is not int or
+                    not MIN_SAMPLE_RADIUS_M <= sample_radius_m <= MAX_SAMPLE_RADIUS_M):
+                raise ValueError("sample_radius_m must be an integer from 15 to 1500 for point_buffer")
+        elif sample_radius_m is not None:
+            raise ValueError("sample_radius_m applies only to point_buffer")
+    else:
+        if sample_radius_m is not None:
+            raise ValueError("sample_radius_m applies only to point_buffer")
+        if context_pixels not in (None, 224) or (context_pixels is not None and buffer_m):
+            raise ValueError("context_pixels supports 224 with buffer_m=0")
     if scene_id is None:
         if not start_date or not end_date:
             raise ValueError("scene_id or bounded date interval required")
@@ -95,19 +117,21 @@ def _request_identity(geometry: dict[str, Any], provider_id: str, scene_id: str 
         if start_date is not None:
             from agronomy_agent.field_imagery import _dates
             _dates(start_date, end_date)
-    geometry_hash = _hash(polygon)
-    request_hash = _hash({"version": PROCESS_VERSION, "preview_version": PREVIEW_VERSION,
-                          "geometry_hash": geometry_hash,
-                          "provider": provider_id, "scene_id": scene_id,
-                          "start_date": start_date, "end_date": end_date,
-                          "buffer_m": buffer_m, "context_pixels": context_pixels})
-    return polygon, tuple(bounds), geometry_hash, request_hash
+    geometry_hash = _hash(canonical_geometry)
+    identity = {"version": POINT_PROCESS_VERSION if is_point else PROCESS_VERSION,
+                "preview_version": PREVIEW_VERSION, "geometry_hash": geometry_hash,
+                "provider": provider_id, "scene_id": scene_id,
+                "start_date": start_date, "end_date": end_date,
+                "buffer_m": buffer_m, "context_pixels": context_pixels}
+    if is_point:
+        identity.update({"sampling_mode": mode, "sample_radius_m": sample_radius_m})
+    return canonical_geometry, tuple(bounds), geometry_hash, _hash(identity)
 
 
-def _scene_item(polygon: dict[str, Any], provider_id: str, scene_id: str | None,
+def _scene_item(geometry: dict[str, Any], provider_id: str, scene_id: str | None,
                 start_date: str | None, end_date: str | None) -> dict[str, Any]:
     collection, band_keys = BAND_KEYS[provider_id]
-    body: dict[str, Any] = {"collections": [collection], "limit": 1, "intersects": polygon}
+    body: dict[str, Any] = {"collections": [collection], "limit": 1, "intersects": geometry}
     if scene_id:
         body["ids"] = [scene_id.split(":", 1)[1]]
     else:
@@ -406,7 +430,8 @@ def _read_assets(item: dict[str, Any], hrefs: dict[str, str], grid: tuple[Any, .
     return raw, fmask, {"source_meta": source_meta, "nodata_invalid": invalid}
 
 
-def _qa_indices(raw: Any, fmask: Any, invalid: Any, weights: Any, deps: tuple[Any, ...]) -> tuple[Any, Any, Any, dict[str, Any], dict[str, Any]]:
+def _qa_indices(raw: Any, fmask: Any, invalid: Any, weights: Any, deps: tuple[Any, ...],
+                *, point_mode: bool = False) -> tuple[Any, Any, Any, dict[str, Any], dict[str, Any]]:
     np = deps[0]
     reasons = {name: (fmask & (1 << bit)) != 0 for name, bit in EXCLUDE_BITS.items()}
     reasons["high_aerosol"] = (fmask & 0xC0) == 0xC0
@@ -422,8 +447,12 @@ def _qa_indices(raw: Any, fmask: Any, invalid: Any, weights: Any, deps: tuple[An
         return result
     ndvi = index(bands[3], bands[2])
     ndmi = index(bands[3], bands[4])
-    total = float(weights.sum())
-    clear = float(weights[valid].sum())
+    # Point weights enter here as float64. Restrict both reductions to the
+    # same positive-weight sequence, so excluded zero-weight bbox corners
+    # cannot make an all-clear sample fraction exceed one by rounding.
+    support = weights > 0
+    total = float(weights[support].sum()) if point_mode else float(weights.sum())
+    clear = float(weights[valid & support].sum()) if point_mode else float(weights[valid].sum())
     def stat(values: Any) -> dict[str, Any]:
         use = np.isfinite(values) & valid & (weights > 0)
         area = float(weights[use].sum())
@@ -434,8 +463,11 @@ def _qa_indices(raw: Any, fmask: Any, invalid: Any, weights: Any, deps: tuple[An
                 "area_m2": area * 900}
     qa = {"field_area_m2": total * 900, "valid_area_m2": clear * 900,
           "valid_area_fraction": clear / total if total > 0 else None,
-          "excluded_area_m2_by_reason": {name: float(weights[mask].sum()) * 900 for name, mask in reasons.items()},
-          "nodata_area_m2": float(weights[invalid].sum()) * 900,
+          "excluded_area_m2_by_reason": {
+              name: float(weights[mask & support].sum()) * 900 if point_mode else float(weights[mask].sum()) * 900
+              for name, mask in reasons.items()},
+          "nodata_area_m2": (float(weights[invalid & support].sum()) if point_mode
+                             else float(weights[invalid].sum())) * 900,
           "overlap_note": "QA reason areas may overlap; do not sum them"}
     return bands, valid, ndvi, qa, {"NDVI": stat(ndvi), "NDMI": stat(ndmi)}
 
@@ -458,6 +490,7 @@ def analyze_scene(
     cache_root: str | Path, network_mode: str = "offline",
     start_date: str | None = None, end_date: str | None = None,
     buffer_m: int = 0, context_pixels: int | None = None,
+    sampling_mode: str | None = None, sample_radius_m: int | None = None,
     budget_root: str | Path | None = None,
     max_cache_bytes: int = 2 * 1024**3, min_free_bytes: int = 1024**3,
 ) -> dict[str, Any]:
@@ -467,7 +500,8 @@ def analyze_scene(
     if network_mode not in ("offline", "online"):
         raise ValueError("network_mode must be offline or online")
     _, _, _, request_hash = _request_identity(
-        geometry, provider_id, scene_id, start_date, end_date, buffer_m, context_pixels)
+        geometry, provider_id, scene_id, start_date, end_date, buffer_m, context_pixels,
+        sampling_mode=sampling_mode, sample_radius_m=sample_radius_m)
     supplied = Path(cache_root).expanduser()
     if supplied.is_symlink():
         raise ValueError("imagery cache root cannot be a symlink")
@@ -491,7 +525,8 @@ def analyze_scene(
             return _analyze_scene_admitted(
                 geometry, provider_id, scene_id, cache_root=root, network_mode=network_mode,
                 start_date=start_date, end_date=end_date, buffer_m=buffer_m,
-                context_pixels=context_pixels, admission=admission)
+                context_pixels=context_pixels, sampling_mode=sampling_mode,
+                sample_radius_m=sample_radius_m, admission=admission)
     except StorageRefusal as exc:
         return {"status": exc.status, "reason": exc.reason, "request_hash": request_hash}
     except (OSError, RuntimeError, ValueError, sqlite3.Error) as exc:
@@ -503,7 +538,9 @@ def _analyze_scene_admitted(
     geometry: dict[str, Any], provider_id: str, scene_id: str | None = None, *,
     cache_root: str | Path, network_mode: str = "offline",
     start_date: str | None = None, end_date: str | None = None,
-    buffer_m: int = 0, context_pixels: int | None = None, admission: Any,
+    buffer_m: int = 0, context_pixels: int | None = None,
+    sampling_mode: str | None = None, sample_radius_m: int | None = None,
+    admission: Any,
 ) -> dict[str, Any]:
     """Return a source-bound single-scene receipt; offline reuses exact cached work.
 
@@ -513,8 +550,17 @@ def _analyze_scene_admitted(
     """
     if network_mode not in ("offline", "online"):
         raise ValueError("network_mode must be offline or online")
-    polygon, bounds, geometry_hash, request_hash = _request_identity(
-        geometry, provider_id, scene_id, start_date, end_date, buffer_m, context_pixels)
+    canonical_geometry, bounds, geometry_hash, request_hash = _request_identity(
+        geometry, provider_id, scene_id, start_date, end_date, buffer_m, context_pixels,
+        sampling_mode=sampling_mode, sample_radius_m=sample_radius_m)
+    is_point = canonical_geometry["type"] == "Point"
+    mode = sampling_mode if sampling_mode is not None else ("point_pixel" if is_point else "field_polygon")
+    process_version = POINT_PROCESS_VERSION if is_point else PROCESS_VERSION
+    point_request = ({"provider_id": provider_id, "scene_id": scene_id,
+                      "start_date": start_date, "end_date": end_date,
+                      "buffer_m": 0, "context_pixels": None,
+                      "sampling_mode": mode, "sample_radius_m": sample_radius_m}
+                     if is_point else None)
     root = Path(cache_root).expanduser().resolve()
     repository = Path(__file__).resolve().parents[2]
     if root == repository or repository in root.parents:
@@ -530,22 +576,41 @@ def _analyze_scene_admitted(
     started = time.monotonic()
     try:
         deps = _dependencies()
-        item = _scene_item(polygon, provider_id, scene_id, start_date, end_date)
+        item = _scene_item(canonical_geometry, provider_id, scene_id, start_date, end_date)
         hrefs = _signed_hrefs(item)
         with _bounded_cog_proxy(hrefs) as (local_hrefs, transfer):
             source_grid = _source_grid(local_hrefs, deps)
-            grid = _grid(polygon, buffer_m, context_pixels, source_grid, deps)
-            crs, transform, width, height, projected, _ = grid
-            weights = _field_weights(projected, transform, width, height, deps)
+            if is_point:
+                grid, weights, sampling, bounds = point_grid_and_weights(
+                    canonical_geometry, mode, sample_radius_m, source_grid, deps)
+            else:
+                grid = _grid(canonical_geometry, buffer_m, context_pixels, source_grid, deps)
+                crs, transform, width, height, projected, _ = grid
+                weights = _field_weights(projected, transform, width, height, deps)
+                sampling = None
+            crs, transform, width, height, _, _ = grid
             if float(weights.sum()) <= 0:
-                return {"status": "empty_field_mask", "provider_id": provider_id,
+                return {"status": "empty_valid_area" if is_point else "empty_field_mask",
+                        "provider_id": provider_id,
                         "scene_id": item["id"], "request_hash": request_hash}
             raw, fmask, source = _read_assets(item, local_hrefs, grid, provider_id, source_grid, deps)
-        bands, valid, ndvi, qa, zonal = _qa_indices(raw, fmask, source["nodata_invalid"], weights, deps)
+            if is_point:
+                source["nodata_invalid"] |= outside_source_mask(grid, source_grid, deps)
+        np = deps[0]
+        qa_weights = weights.astype(np.float64) if is_point else weights
+        bands, valid, ndvi, qa, zonal = _qa_indices(
+            raw, fmask, source["nodata_invalid"], qa_weights, deps, point_mode=is_point)
         np, _, _, _, _, Image = deps
-        process_hash = _hash({"version": PROCESS_VERSION, "band_keys": BAND_KEYS[provider_id][1],
-                              "scale": SCALE, "excluded_bits": EXCLUDE_BITS, "aerosol_high": 3,
-                              "resampling_method": "nearest", "preview_version": PREVIEW_VERSION})
+        if is_point:
+            sampling["valid_pixel_count"] = int(np.count_nonzero(valid & (weights > 0)))
+            qa["sample_area_m2"] = qa.pop("field_area_m2")
+        process_spec = {"version": process_version, "band_keys": BAND_KEYS[provider_id][1],
+                        "scale": SCALE, "excluded_bits": EXCLUDE_BITS, "aerosol_high": 3,
+                        "resampling_method": "nearest", "preview_version": PREVIEW_VERSION}
+        if is_point:
+            process_spec["sampling_schema_version"] = "imagery_sampling.v1"
+            process_spec["qa_accumulator_dtype"] = "float64"
+        process_hash = _hash(process_spec)
         native_grid = {"crs": source_grid[0].to_string(),
                        "transform": list(source_grid[1])[:6],
                        "width": source_grid[2], "height": source_grid[3],
@@ -554,12 +619,15 @@ def _analyze_scene_admitted(
                      "width": width, "height": height, "resolution_m": 30,
                      "resampling_method": "nearest", "native_asset_grid": native_grid}
         array_hash = hashlib.sha256(bands.tobytes() + fmask.tobytes() + weights.tobytes()).hexdigest()
-        chip_hash = _hash({"request": request_hash, "scene": item["id"], "asset_ids":
-                           [v["id"] for v in item["assets"].values()], "process": process_hash,
-                           "arrays": array_hash, "grid": chip_grid})
+        chip_binding = {"request": request_hash, "scene": item["id"], "asset_ids":
+                        [v["id"] for v in item["assets"].values()], "process": process_hash,
+                        "arrays": array_hash, "grid": chip_grid}
+        if is_point:
+            chip_binding["sampling"] = sampling
+        chip_hash = _hash(chip_binding)
         names = {"npz": f"{chip_hash}.npz", "png": f"{chip_hash}.png",
                  "receipt": f"{chip_hash}.json"}
-        metadata = {"process_version": PROCESS_VERSION, "preview_version": PREVIEW_VERSION,
+        metadata = {"process_version": process_version, "preview_version": PREVIEW_VERSION,
                     "source_native_grid": True,
                     "resampling_method": "nearest", "native_asset_grid": native_grid,
                     "band_names": list(BAND_NAMES), "band_keys": list(BAND_KEYS[provider_id][1]),
@@ -571,11 +639,15 @@ def _analyze_scene_admitted(
                                "scene_cloud_percent": item["scene_cloud_percent"],
                                "asset_ids": {key: value["id"] for key, value in item["assets"].items()},
                                "band_metadata": source["source_meta"]}}
+        if is_point:
+            metadata["sampling"] = sampling
+            metadata["request"] = point_request
+            metadata["qa_accumulator_dtype"] = "float64"
         receipt = {"status": "available" if qa["valid_area_m2"] > 0 else "empty_valid_area",
                    "evidence_role": "observation", "interpretation": "spectral indices only; no stress diagnosis",
                    "provider_id": provider_id, "scene_id": item["id"],
                    "request_hash": request_hash, "geometry_hash": geometry_hash,
-                   "process_version": PROCESS_VERSION, "preview_version": PREVIEW_VERSION,
+                   "process_version": process_version, "preview_version": PREVIEW_VERSION,
                    "source_native_grid": True,
                    "process_hash": process_hash, "chip_hash": chip_hash,
                    "source": metadata["source"], "grid": chip_grid,
@@ -586,11 +658,20 @@ def _analyze_scene_admitted(
                    "cog_range_requests": transfer["requests"],
                    "cog_transfer_limit_bytes": MAX_COG_TRANSFER_BYTES,
                    "cache_hit": False}
+        if is_point:
+            receipt["sampling"] = sampling
+            receipt["request"] = point_request
         temp_names = {ext: root / f".{chip_hash}.{os.getpid()}.{threading.get_ident()}{ext}"
                       for ext in (".npz", ".png", ".json")}
         try:
             packed = io.BytesIO()
-            np.savez_compressed(packed, bands=bands, valid_mask=valid, field_mask=weights > 0,
+            if is_point:
+                np.savez_compressed(packed, bands=bands, valid_mask=valid,
+                                    sample_mask=weights > 0, sample_weights=weights,
+                                    fmask=fmask, ndvi=ndvi,
+                                    metadata_json=_canonical(metadata).decode())
+            else:
+                np.savez_compressed(packed, bands=bands, valid_mask=valid, field_mask=weights > 0,
                                     field_weights=weights, fmask=fmask, ndvi=ndvi,
                                     metadata_json=_canonical(metadata).decode())
             payloads = {".npz": packed.getvalue(), ".png": _png(ndvi, valid, weights, Image),

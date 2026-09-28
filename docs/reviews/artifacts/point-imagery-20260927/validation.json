@@ -1,0 +1,174 @@
+{
+  "base_commit": "d2454360f8b384f01924794c69d324b98d5f7244",
+  "checks": {
+    "frontend": {
+      "build": "pass",
+      "build_log_sha256": "cc450e987f8083d9375aa9711aead9b6224668f4610336c013046b4a8398653d",
+      "files": 40,
+      "passed": 358,
+      "test_log_sha256": "4dd0a869ee5d203673174e12deaee1c58e4bda52d4c38fdfce7fb56ab1e32985",
+      "typecheck": "pass",
+      "typecheck_log_sha256": "1ae381a6ca2eca6afa8a52e29aea9428679c0e68bac8ebeb31c79b89bbd66eac"
+    },
+    "mkdocs_strict": {
+      "log_sha256": "f0bbffd413fd57e678156385ce7bd06eb178fa32d566850f2b57cfc7934476af",
+      "status": "pass"
+    },
+    "optional_eo": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src outputs/imagery-env/bin/python -m pytest -q -o addopts='' -p no:cacheprovider --basetemp=<external_scratch> tests/test_point_imagery_analytics.py tests/test_imagery_analytics.py tests/test_imagery_store.py tests/test_imagery_budget.py tests/test_imagery_assessment.py tests/test_imagery_models.py tests/test_imagery_storage_audit.py tests/test_field_imagery.py",
+      "log_sha256": "765a73a18e2e7df7b13fbb3a6f31c5eae0cfa7d588f9abf63bbd37127b45a1ba",
+      "note": "Local synthetic rasters and loopback HTTP fixtures; serving environment omits optional raster modules, covered here.",
+      "passed": 107,
+      "seconds": 5.96,
+      "warnings": 130
+    },
+    "public_docs": {
+      "log_sha256": "2e7283cbed443cb0ba2a4eab4ffcecd84d03705f9b2ffb84785d7726aa5530ff",
+      "status": "pass"
+    },
+    "python": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python -m pytest -q -n 0 -o tmp_path_retention_policy=failed --basetemp=<external_scratch>",
+      "log_sha256": "ff62a2f66ddb8c6e2d1cfe89ec6d0dd13f40d751c3b43b4027cf3825ac2741b3",
+      "passed": 1372,
+      "seconds": 191.9,
+      "skipped": 3,
+      "warnings": 26
+    },
+    "synthetic_rehearsal": {
+      "browser_observed": "Point default, point/polygon wording separation, authenticated sample previews, mode/radius invalidation, 61m offline cache miss and restored60m match.",
+      "different_radius_status": "blocked_offline",
+      "external_provider_calls": 0,
+      "fixture_source_sha256": "f3e6622b5bf262cedbc11e28f0bc394223af3ebaba25d2fdf1263cfaa3405a27",
+      "modes": [
+        {
+          "chip_sha256": "05415ef4c91dc70c80fb88ba4285a0688ba122585fc414579cc8eca518a460d4",
+          "indices": {
+            "NDMI": {
+              "area_m2": 900.0,
+              "max": 0.6428571939468384,
+              "mean": 0.6428571939468384,
+              "min": 0.6428571939468384
+            },
+            "NDVI": {
+              "area_m2": 900.0,
+              "max": 0.39393940567970276,
+              "mean": 0.39393940567970276,
+              "min": 0.39393940567970276
+            }
+          },
+          "mode": "point_pixel",
+          "outsider_status": 403,
+          "pixel_count": 1,
+          "preview_sha256": "2325d82302439f9a852dcbc7f760bfb97705bf1f645c14f15762772110947782",
+          "qa": {
+            "excluded_area_m2_by_reason": {
+              "adjacent_cloud_shadow": 0.0,
+              "cirrus": 0.0,
+              "cloud": 0.0,
+              "high_aerosol": 0.0,
+              "shadow": 0.0,
+              "snow_ice": 0.0
+            },
+            "nodata_area_m2": 0.0,
+            "overlap_note": "QA reason areas may overlap; do not sum them",
+            "sample_area_m2": 900.0,
+            "valid_area_fraction": 1.0,
+            "valid_area_m2": 900.0
+          },
+          "request_sha256": "452aa7ef7d3881d7d06f0d16fbe50e931ca4b9b791402db4ffb40b8166fe1328",
+          "valid_pixel_count": 1
+        },
+        {
+          "chip_sha256": "af4832ad927b92c2d70c345af10e7304fd4867d2888e7d4d83d1165555eed11d",
+          "indices": {
+            "NDMI": {
+              "area_m2": 10408.598113059998,
+              "max": 0.6874999403953552,
+              "mean": 0.6406149198565806,
+              "min": 0.5833333730697632
+            },
+            "NDVI": {
+              "area_m2": 10408.598113059998,
+              "max": 0.45945945382118225,
+              "mean": 0.39121023769575763,
+              "min": 0.3103448450565338
+            }
+          },
+          "mode": "point_buffer",
+          "outsider_status": 403,
+          "pixel_count": 21,
+          "preview_sha256": "1e236e12f209d194f0a647cb7c7dde05952c1a470461dc64271c6afeb6cf9b16",
+          "qa": {
+            "excluded_area_m2_by_reason": {
+              "adjacent_cloud_shadow": 0.0,
+              "cirrus": 0.0,
+              "cloud": 900.0,
+              "high_aerosol": 0.0,
+              "shadow": 0.0,
+              "snow_ice": 0.0
+            },
+            "nodata_area_m2": 0.0,
+            "overlap_note": "QA reason areas may overlap; do not sum them",
+            "sample_area_m2": 11308.598113059998,
+            "valid_area_fraction": 0.9204145384775312,
+            "valid_area_m2": 10408.598113059998
+          },
+          "request_sha256": "0696596bbf03099322eac8bf3228e3f0c23cd31c6e9b2dcac4409f4c13d0f637",
+          "valid_pixel_count": 20
+        }
+      ],
+      "original_point_unchanged": true,
+      "receipt_sha256": "bd9c8affd0177428570c4293c815a29f5058338451c7f8a7601abcd75f9d7cb2"
+    }
+  },
+  "claim": "Point sample meaning, numerical/support integrity, authority and UI/cache contracts; not real satellite accuracy or agronomic validation.",
+  "limits": [
+    "All new acquisition evidence uses synthetic rasters; no new real imagery or model call.",
+    "The saved point role and positional uncertainty remain unspecified/unknown.",
+    "One selected tile can leave a partial buffer with nodata; no multi-tile mosaic.",
+    "No boundary inference, whole-field accuracy claim, yield model, seasonal monitor or automatic agent imagery-tool activation.",
+    "Independent source review and final public package/remote checks remain separate acceptance gates."
+  ],
+  "retained_findings": [
+    "Outside-source zero fill without nodata metadata; explicit source extent mask and versioned point processing.",
+    "Malformed point receipt/UI scope; consistent mode, area, grid, counts, footprint, radius, QA and per-index support checks.",
+    "HTTP nullable requested scene/date provenance omitted; now returned and hash-reconstructed.",
+    "Float32 weighted-area inconsistency and tiny extrema drift; point-only float64 reductions with documented numeric tolerance, legacy polygon path unchanged."
+  ],
+  "schema_version": "point_imagery_validation.v1",
+  "scope": {
+    "external_provider_calls": 0,
+    "point_modes": [
+      "point_pixel",
+      "point_buffer"
+    ],
+    "point_process_version": "hls-point-sample-v3-native-grid-source-extent-float64-qa",
+    "polygon_process_version_unchanged": true,
+    "radius_m": [
+      15,
+      1500
+    ],
+    "training_or_model_activation": false
+  },
+  "source_sha256": {
+    "frontend/src/FieldDataPanel.test.tsx": "383df0d02682d50d6cb1da295d447c6b27af049dbebe7f9cfa46e7460e256743",
+    "frontend/src/FieldDataPanel.tsx": "1d2b42a60f305903fd3c837464ee13fb1c1769005fdfdca4c8d314ca518435e1",
+    "frontend/src/FieldImageryAnalyticsPanel.css": "9d385bc6696dd205f6f40fab3a41c3cad5a061c5af1b112a78cb74a5a02793f2",
+    "frontend/src/FieldImageryAnalyticsPanel.test.tsx": "d636df16c01d2c39813f2f46a4735e6c43c89314c9c625d87dad8dd2dcea8672",
+    "frontend/src/FieldImageryAnalyticsPanel.tsx": "0382f9d1c5621ce9a36e25b2766f43c0d506d9f2f90588c3883e780db5ed3841",
+    "frontend/src/OpenAgronomyApp.tsx": "59c0735272eda44441f8636a0c60e8ffd99c336596bbae364f7da0a554334f0c",
+    "frontend/src/openAgronomyMapWorkflow.test.tsx": "d71db7e3beac1ef47f71f1f02ba040ddca14074d8f648c62cde13de45d081a02",
+    "src/agronomy_agent/field_imagery.py": "59498a333b184351367c085fb1a00e2fd332ec6a0c7ab90f5df7a7aa13af93b1",
+    "src/agronomy_agent/imagery_analytics.py": "44d167d0d3aa48475caca5220567c38233e5e865e88fb830a2539cd600856436",
+    "src/agronomy_agent/imagery_receipts.py": "74e18e8d2db4e182a1c6914f0ebd2607b7c6a6b70766455a53dcec351e72b3bf",
+    "src/agronomy_agent/imagery_sampling.py": "9c24a1f972118d9db31a4413b8f8311ef5808898dbfd60790b495759356bae24",
+    "src/agronomy_agent/imagery_store.py": "d7a2f0bdc82fc6ab4c6280c1ade81164f4e7390a96db36963500e2a6c4981e1a",
+    "src/agronomy_agent/imagery_worker.py": "7f0a97316c454c91b9db72d2a6cc3a12afe9378f3f0bf33671b1b9563d816477",
+    "src/agronomy_agent/server/field_data_routes.py": "0c2e65f2fb09ea6bcb6df5bff54ac1b65dc3b14c6065330b1cab2367ea4efb27",
+    "src/agronomy_agent/server/services/imagery_service.py": "e89fabdf36a071db23c98b93300309196cae44c257a36617ce3ef8b2659aea82",
+    "tests/test_field_imagery.py": "c3d84529f4e57717469c99c2cc5b602de363cc41c154e6526b14366d508e3e8e",
+    "tests/test_imagery_analytics.py": "2981f0c406142afb19018c2b0be03981984b91c2a2948f1f2b8c797e0e4769ef",
+    "tests/test_point_imagery_analytics.py": "45e185aed24a61df940b2db324a36e0b44f9a55cb79d520c451d2878158f4e4b",
+    "tests/test_point_imagery_routes.py": "2ccd001de3b0277641f7f83dc80c45227b8bd7307ccb0a26419bb3319210c460"
+  }
+}

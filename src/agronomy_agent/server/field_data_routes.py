@@ -47,15 +47,18 @@ class FieldImageryAnalyzeRequest(BaseModel):
     end_date: str = Field(min_length=10, max_length=10)
     scene_id: str | None = Field(default=None, max_length=180)
     buffer_m: int = Field(default=0, ge=0, le=3000, strict=True)
+    sampling_mode: Literal["field_polygon", "point_pixel", "point_buffer"] | None = None
+    sample_radius_m: int | None = Field(default=None, ge=15, le=1500, strict=True)
 
 
-def _stored_polygon(field: dict[str, Any]) -> dict[str, Any]:
-    """Use the persisted geometry; a point or centroid cannot become a field."""
+def _stored_geometry(field: dict[str, Any]) -> dict[str, Any]:
+    """Use the saved input geometry; never expand a point into a boundary."""
+    from agronomy_agent.field_imagery import _valid_search_geometry
     metadata = field.get("metadata") or {}
     entry = metadata.get("open_agronomy_agent") or {}
     geometry = entry.get("geometry")
     if not isinstance(geometry, dict):
-        raise ValueError("Save a field polygon before searching imagery; a field point is insufficient.")
+        raise ValueError("Save a point location or field polygon before requesting imagery.")
     if geometry.get("kind") == "polygon":
         points = geometry.get("points")
         if not isinstance(points, list) or len(points) < 3:
@@ -63,10 +66,15 @@ def _stored_polygon(field: dict[str, Any]) -> dict[str, Any]:
         ring = [[point["lon"], point["lat"]] for point in points]
         if ring[0] != ring[-1]:
             ring.append(ring[0])
-        return {"type": "Polygon", "coordinates": [ring]}
-    if geometry.get("type") in {"Polygon", "MultiPolygon"}:
-        return geometry
-    raise ValueError("Save a field polygon before searching imagery; a field point is insufficient.")
+        return _valid_search_geometry({"type": "Polygon", "coordinates": [ring]})[0]
+    if geometry.get("kind") == "point":
+        point = geometry.get("point")
+        if not isinstance(point, dict):
+            raise ValueError("Stored point location is incomplete.")
+        return _valid_search_geometry({"type": "Point", "coordinates": [point.get("lon"), point.get("lat")]})[0]
+    if geometry.get("type") in {"Polygon", "Point"}:
+        return _valid_search_geometry(geometry)[0]
+    raise ValueError("Save a point location or field polygon before requesting imagery.")
 
 
 def register_field_data_routes(
@@ -94,11 +102,11 @@ def register_field_data_routes(
     def analyze_field_scene(field_id: str, payload: FieldImageryAnalyzeRequest, request: Request) -> dict[str, Any]:
         field, _ = authorize(request, field_id, True)
         try:
-            geometry = _stored_polygon(field)
+            geometry = _stored_geometry(field)
             before = imagery_service.geometry_hash(geometry)
             result = imagery_service.analyze(settings, field, geometry, payload.model_dump())
             current, _ = authorize(request, field_id, True)
-            if imagery_service.geometry_hash(_stored_polygon(current)) != before:
+            if imagery_service.geometry_hash(_stored_geometry(current)) != before:
                 raise HTTPException(status_code=409, detail="Field boundary changed during analysis. Run it again for the saved boundary.")
             return result
         except (ValueError, KeyError, TypeError) as exc:
@@ -108,10 +116,10 @@ def register_field_data_routes(
     def field_imagery_preview(field_id: str, chip_hash: str, request: Request) -> Response:
         field, _ = authorize(request, field_id, False)
         try:
-            geometry = _stored_polygon(field)
+            geometry = _stored_geometry(field)
             image = imagery_service.preview(settings, field, geometry, chip_hash)
             current, _ = authorize(request, field_id, False)
-            if imagery_service.geometry_hash(_stored_polygon(current)) != imagery_service.geometry_hash(geometry):
+            if imagery_service.geometry_hash(_stored_geometry(current)) != imagery_service.geometry_hash(geometry):
                 image = None
         except (ValueError, KeyError, TypeError, OSError):
             image = None
@@ -170,13 +178,18 @@ def register_field_data_routes(
     def search_field_scenes(field_id: str, payload: FieldImagerySearchRequest, request: Request) -> dict[str, Any]:
         field, _ = authorize(request, field_id, False)
         try:
-            return search_field_imagery(
-                _stored_polygon(field),
+            geometry = _stored_geometry(field)
+            result = search_field_imagery(
+                geometry,
                 provider_id=payload.provider_id,
                 start_date=payload.start_date,
                 end_date=payload.end_date,
                 limit=payload.limit,
                 network_mode=settings.network_mode,
             )
+            current, _ = authorize(request, field_id, False)
+            if imagery_service.geometry_hash(_stored_geometry(current)) != imagery_service.geometry_hash(geometry):
+                raise HTTPException(status_code=409, detail="Saved field geometry changed during imagery search; try again.")
+            return result
         except (ValueError, KeyError, TypeError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc

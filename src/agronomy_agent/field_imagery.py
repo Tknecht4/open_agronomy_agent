@@ -1,4 +1,4 @@
-"""Bounded, anonymous STAC discovery for a field polygon.
+"""Bounded, anonymous STAC discovery for a saved point or field polygon.
 
 This module returns *metadata*, not field pixels or a vegetation diagnosis.
 Planetary Computer asset signing is confined to a single bounded range probe;
@@ -132,6 +132,24 @@ def _valid_geometry(geometry: dict[str, Any]) -> tuple[dict[str, Any], list[floa
     return {"type": "Polygon", "coordinates": coordinates}, [west, south, east, north]
 
 
+def _valid_search_geometry(geometry: dict[str, Any]) -> tuple[dict[str, Any], list[float]]:
+    """Validate a location without expanding a point into a field boundary."""
+    if not isinstance(geometry, dict) or geometry.get("type") != "Point":
+        return _valid_geometry(geometry)
+    crs = geometry.get("crs")
+    if crs not in (None, "EPSG:4326", {"type": "name", "properties": {"name": "EPSG:4326"}}):
+        raise ValueError("only WGS84 EPSG:4326 points are supported")
+    coordinates = geometry.get("coordinates")
+    if (not isinstance(coordinates, (list, tuple)) or len(coordinates) != 2
+            or any(isinstance(value, bool) or not isinstance(value, (int, float))
+                   or not math.isfinite(value) for value in coordinates)):
+        raise ValueError("finite two-dimensional point coordinates required")
+    lon, lat = map(float, coordinates)
+    if not (-180 <= lon <= 180 and -90 <= lat <= 90):
+        raise ValueError("point coordinates must be WGS84 longitude/latitude")
+    return {"type": "Point", "coordinates": [lon, lat]}, [lon, lat, lon, lat]
+
+
 def _dates(start_date: str, end_date: str) -> tuple[str, str]:
     try:
         start, end = date.fromisoformat(start_date), date.fromisoformat(end_date)
@@ -184,7 +202,7 @@ def search_field_imagery(
 ) -> dict[str, Any]:
     """Discover up to ten scenes; no pixels are fetched or interpreted."""
     provider = _provider(provider_id)
-    polygon, bbox = _valid_geometry(geometry)
+    polygon, bbox = _valid_search_geometry(geometry)
     start, end = _dates(start_date, end_date)
     if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 10:
         raise ValueError("limit must be an integer from 1 to 10")
@@ -192,7 +210,9 @@ def search_field_imagery(
         raise ValueError("network_mode must be offline or online")
     result: dict[str, Any] = {
         "status": "blocked_offline", "provider": dict(provider), "count": 0, "scenes": [],
-        "query": {"start_date": start_date, "end_date": end_date, "limit": limit, "bbox": bbox},
+        "query": {"start_date": start_date, "end_date": end_date, "limit": limit, "bbox": bbox,
+                  "geometry_type": polygon["type"],
+                  "spatial_scope": "at_location" if polygon["type"] == "Point" else "field_polygon"},
         "limitations": provider["limitations"],
     }
     if provider_id == "hls-earth-engine":

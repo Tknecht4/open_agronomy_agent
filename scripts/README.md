@@ -56,8 +56,11 @@ Run a script-specific fixture/preflight before any expensive, networked, or rele
 ## Optional field imagery
 
 `analyze_field_imagery.py` processes one HLS S30/L30 scene from a WGS84
-GeoJSON polygon or Feature. It records native-grid/asset identity, QA coverage,
-observed NDVI/NDMI and an authenticated field-only preview in a private cache.
+GeoJSON Point, Polygon or Feature. It records native-grid/asset identity, QA,
+observed NDVI/NDMI and an authenticated preview in a private cache. A point
+defaults to its containing native pixel; `--sampling-mode point_buffer
+--sample-radius-m 60` selects a 60 m sampling radius with fractional pixel
+weights. Point support stays separate from saved geometry and is not field area.
 It needs `requirements-imagery.txt` in an isolated worker environment. Set
 `AGRONOMY_AGENT_IMAGERY_CACHE_ROOT` to a private directory outside the checkout
 and `AGRONOMY_AGENT_IMAGERY_PYTHON` to that environment's absolute executable
@@ -65,8 +68,8 @@ Python path before launching the app. Both are required for the UI analysis
 panel. The app starts the worker with a narrow environment; normal application
 credentials and private overlays are not forwarded. Offline mode reuses only an
 exact verified cache entry; `--online` on the standalone CLI permits public
-STAC and COG requests. A point or unsaved polygon cannot stand in for a field
-boundary. See the [field-data operator guide](../docs/public/operations/field-data-pilot.md).
+STAC and COG requests. Unsaved geometry is not usable, and a point cannot stand
+in for a field boundary. See the [field-data operator guide](../docs/public/operations/field-data-pilot.md).
 
 The worker is also available as `python -m agronomy_agent.imagery_worker`.
 Cache admission defaults to 2 GiB logical capacity and a 1 GiB free-space
