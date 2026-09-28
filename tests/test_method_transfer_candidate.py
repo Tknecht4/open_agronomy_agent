@@ -153,6 +153,11 @@ def test_curated_method_response_rejects_foreign_sites_and_competing_decisions()
         "For our Alberta farm, explain growing degree days. Describe the weather tomorrow.",
         "Explain working capital for our Ontario farm. Explain why buying the neighbouring farm is a good investment.",
         "i farm in alberta and in australia. explain the manitoba seed mass method.",
+        "For our Alberta farm, explain cash flow. Decide whether we can afford a new tractor.",
+        "For my Saskatchewan farm, explain seed mass and suggest a target stand.",
+        "For my Ontario farm, explain an enterprise budget including the wheat price at our elevator this morning.",
+        "For our Australian farm, explain the Ontario enterprise budget method.",
+        "For our Ontario farm and our Australian farm, explain seed mass.",
     )
     for question in blocked:
         context = build_context(question, rag_config=CANDIDATE, use_context_cache=False, use_search_cache=False)
@@ -181,3 +186,15 @@ def test_source_first_jurisdiction_reaches_contract_and_evidence_frame() -> None
         if profile == CANDIDATE:
             assert context.route.question_type == "fertility_diagnostic"
             assert curated_method_response(context, question) == (None, None)
+
+
+def test_comparison_between_two_method_families_keeps_both() -> None:
+    question = "For our Maine farm, how do partial budgets and enterprise budgets differ in their cost boundary?"
+    context = build_context(question, rag_config=CANDIDATE, use_context_cache=False, use_search_cache=False)
+    assert set(requested_methods(question)) == {"partial_budget", "enterprise_budget"}
+    assert {doc.doc_id for doc in context.retrieved_docs if doc.doc_id.startswith("method_")} >= {
+        "method_partial_budget", "method_enterprise_budget"
+    }
+    answer, receipt = curated_method_response(context, question)
+    assert answer and "Incremental farm-change" in answer and "Enterprise cost-boundary" in answer
+    assert receipt and set(receipt["method_ids"]) == {"partial_budget", "enterprise_budget"}

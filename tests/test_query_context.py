@@ -779,6 +779,13 @@ def test_mixed_country_source_does_not_override_named_farm_destination() -> None
     lower_mixed = analyze_query_context("i farm in alberta and in australia. explain a manitoba seed guide.")
     assert lower_mixed.country is None
     assert lower_mixed.target_jurisdictions == ()
+    for question in (
+        "For our Australian farm, explain the Ontario enterprise budget method.",
+        "For our Ontario farm and our Australian farm, explain seed mass.",
+    ):
+        foreign_owned = analyze_query_context(question)
+        assert foreign_owned.country is None
+        assert foreign_owned.target_jurisdictions == ()
     temporal = analyze_query_context("My farm is in Ontario. Should I apply manure in spring or in autumn?")
     assert temporal.country == "canada"
     assert temporal.target_jurisdictions == ("ontario",)

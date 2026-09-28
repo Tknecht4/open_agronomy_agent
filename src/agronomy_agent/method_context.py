@@ -24,14 +24,14 @@ METHODS: dict[str, tuple[str, str]] = {
         "Explain thermal-time arithmetic with an explicit crop base, units, accumulation interval and model limits; compare with field observations.",
     ),
     "partial_budget": (
-        r"\b(?:partial.budget|incremental[^.!?]{0,40}budget|incremental comparison|"
+        r"\b(?:partial.budgets?|incremental[^.!?]{0,40}budget|incremental comparison|"
         r"budget[^.!?]{0,70}(?:rent|switch|instead)|"
         r"(?:rent|buy|hire|switch|replace|change|adopt)\w*[^.!?]{0,90}(?:instead|versus|vs\.?|alternative|current|existing|present)|"
         r"(?:instead|versus|vs\.?) [^.!?]{0,90}(?:cost|return|profit|farm|cultivat|weeder))\b",
         "Compare only added returns, saved costs, added costs and lost returns on the same time and area basis.",
     ),
     "enterprise_budget": (
-        r"\b(?:enterprise budget|crop budget|cost.of.production|break.even|breakeven|"
+        r"\b(?:enterprise budgets?|crop budgets?|cost.of.production|break.even|breakeven|"
         r"(?:enterprise|crop|farm) [^.!?]{0,55}(?:viabilit|margin|profitab|costs?|budget))\b",
         "State the enterprise, period, units and cost boundary; use farm-specific price, yield and cost scenarios.",
     ),
@@ -169,11 +169,21 @@ def curated_method_response(context: Any, question: str) -> tuple[str | None, di
         return None, None
     if re.search(r"\b(?:prices?|quotes?|bids?|market values?)\b[^?]{0,40}\b(?:now|today|currently|latest|live)\b", question, re.IGNORECASE):
         return None, None
+    if re.search(
+        r"\b(?:prices?|quotes?|bids?)\b[^?]{0,75}\b(?:at|from)\s+(?:our|the|a)\s+"
+        r"(?:local\s+)?(?:elevator|buyer|market|exchange|broker)\b|"
+        r"\b(?:cash bid|spot price|market quote)\b",
+        question,
+        re.IGNORECASE,
+    ):
+        return None, None
+    if re.search(r"\b(?:suggest|choose|set|give|pick)\b[^?]{0,55}\b(?:target stand|plant population|seeding rate)\b", question, re.IGNORECASE):
+        return None, None
     if re.search(r"\b(?:give me|tell me|advise|recommend|decide for me|ready to harvest|best choice|selling for|sell land|buy land|borrow to)\b", question, re.IGNORECASE):
         return None, None
     if re.search(r"\b(?:estimate|forecast|predict)\b", question, re.IGNORECASE):
         return None, None
-    request_start = re.compile(r"^\s*(?:please|explain|describe|outline|list|show|how|what|which|why|can|could|would|should|is|are|do|does|will|may|give|tell|recommend|advise)\b", re.IGNORECASE)
+    request_start = re.compile(r"^\s*(?:please|explain|describe|outline|list|show|how|what|which|why|can|could|would|should|is|are|do|does|will|may|give|tell|recommend|advise|decide|suggest|assess|judge|evaluate|determine)\b", re.IGNORECASE)
     method_request_terms = re.compile(
         r"\b(?:method|framework|reasoning|inputs?|conventions?|comparison|compare|belong|adapt|chart|budget|"
         r"ratios?|log|records?|gather|organize|cash[- ]flow|working capital|degree days|measures?|rows?|"
@@ -183,7 +193,7 @@ def curated_method_response(context: Any, question: str) -> tuple[str | None, di
     )
     request_boundary = (
         r"(?<=[.!?;])\s+|"
-        r"(?:,\s*|\s+)(?:and|or)\s+(?=(?:please|is|are|do|does|should|can|could|would|will|may|what|how|which|why|give|tell|recommend|advise)\b)"
+        r"(?:,\s*|\s+)(?:and|or)\s+(?=(?:please|is|are|do|does|should|can|could|would|will|may|what|how|which|why|give|tell|recommend|advise|decide|suggest|assess|judge|evaluate|determine)\b)"
     )
     for sentence in re.split(request_boundary, question, flags=re.IGNORECASE):
         if request_start.search(sentence):
@@ -205,6 +215,17 @@ def curated_method_response(context: Any, question: str) -> tuple[str | None, di
     if country not in {"canada", "united states"} or len(targets) != 1:
         return None, None
     from agronomy_agent.query_context import _NON_SITE_CONJOINED_PREFIXES, _normalize_jurisdiction_scope
+
+    # Every explicitly owned site must resolve inside the declared destination.
+    # Unknown descriptors are a safe miss for this optional renderer.
+    owned_site_pattern = (
+        r"\b(?:my|our)\s+(?P<place>[A-Za-z-]+(?:\s+[A-Za-z-]+){0,2})\s+"
+        r"(?:farm|field|dairy|crop|operation|orchard|ranch)\b"
+    )
+    for match in re.finditer(owned_site_pattern, question, re.IGNORECASE):
+        site_countries, site_subdivisions = _normalize_jurisdiction_scope((match.group("place"),))
+        if country not in site_countries or (site_subdivisions and str(targets[0]).lower() not in site_subdivisions):
+            return None, None
 
     for match in re.finditer(r"\b(?:and|or)\s+in\s+(?P<place>[A-Za-z-]+(?:\s+[A-Za-z-]+){0,2})", question, re.IGNORECASE):
         place = match.group("place")

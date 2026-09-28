@@ -1058,6 +1058,19 @@ def _unrecognized_operation_site(text: str) -> bool:
             )
             if conjoined and conjoined.group("place").split()[0].lower() not in _NON_SITE_CONJOINED_PREFIXES:
                 locations.append(conjoined.group("place"))
+    # A named foreign demonym before an owned farm is also a site cue.
+    # Common descriptive farm adjectives stay outside this narrow test.
+    owned_demonyms = re.finditer(
+        r"\b(?:my|our)\s+(?P<place>[A-Za-z-]+(?:\s+[A-Za-z-]+){0,2})\s+"
+        r"(?:farm|field|dairy|crop|operation|orchard|ranch)\b",
+        text,
+        re.IGNORECASE,
+    )
+    for match in owned_demonyms:
+        place = match.group("place")
+        countries, _ = _normalize_jurisdiction_scope((place,))
+        if not countries and re.search(r"(?:ian|ican|ese|ish)\b", place, re.IGNORECASE):
+            return True
     if not locations:
         return False
     normalized: set[tuple[tuple[str, ...], tuple[str, ...]]] = set()
