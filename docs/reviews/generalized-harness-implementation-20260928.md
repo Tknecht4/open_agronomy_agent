@@ -240,7 +240,8 @@ a candidate by merging its source/experimental record.
 Phase envelope: owner integration plus bounded benchmark-capsule and UI polish
 workers, then independent combined review. Estimate 2–4 hours including remote
 setup, repairs and CI; this is a planning estimate. Colab initially reports no
-sessions, 170.78 CU, zero current hourly use. Freeze an explicit public/synthetic
+sessions and zero current hourly use. Account balances remain in local operator
+receipts. Freeze an explicit public/synthetic
 matrix before a named L4 session; use a 90-minute initial GPU checkpoint and
 reassess from measured rate/progress rather than assume hardware parity or spend.
 No private field records, SPCC receipts, unrelated files or credentials transfer.
@@ -378,3 +379,45 @@ existing status. Fourteen focused runner tests passed, including the new failure
 regression. This changes diagnostic accounting only, not the runtime source or
 the frozen remote run. Final analysis must audit/reclassify preserved raw
 verification receipts explicitly and retain their original source identities.
+
+## Completed diagnostic and integration disposition
+
+The replacement Qwen v4 run completed all 44 units and 54 turns in 3,584.619
+seconds, separately from the preserved resource-failed v3 condition. Together
+with Gemma v3 this is 88 units and 108 turns, plus the cache probes' extra direct
+generator calls. The Qwen archive SHA-256 is
+`db3e2695e2202d39945e3b166f2d3cde3603b446bd63ee05d498e23aa18cd642`.
+The raw Qwen ledger SHA-256 is
+`46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60`.
+The Colab session was stopped and the CLI reported no active assignments and a
+zero compute rate. Observed task consumption was 3.24 compute units, including
+setup, failed/interrupted attempts and collection; controller-model billing is
+unavailable.
+
+The [combined diagnostic report](portable-agronomy-diagnostic-20260928.md) and
+its explicitly allowlisted evidence preserve raw stage text, anonymous grading,
+independent source adjudication, runtime boundaries and failed attempts. The
+corrected classifier audited 84 product turns without changing eligibility or
+finding a draft/editor backend error. Across 84 unique graded answers and 168
+stage occurrences, none of the 72 single-turn final/reference answers cleared the
+complete rubric under the fixed
+320-token output ceiling. Qwen lost a complete tree-mulch draft in each product
+arm while each arm also removed an unsafe draft. This is evidence for a matched
+intervention experiment, not for removing the whole harness. METHOD delivery
+was 7/7 positive and 0/5 control prompts, but exact-family selection was only 5/7;
+no active improvement is claimed. All four exact cache-parity probes failed.
+Both METHOD and KV-cache activation remain off.
+
+The user explicitly authorized coordinating these branches, obtaining independent
+review, and merging both works if accepted. PR16 contains the frozen PR15 source
+`f4dc97c0bbc3a64d799edb78de8024876f11f349`. Engineering CI at
+`c90e81dae28390d471e5db64b537094ca551b899` passed 1,438 Python tests with 4 skips,
+366 frontend tests, typecheck/build, docs and macOS smoke. The final evidence-only
+delta additionally passed 15 public-doc/package tests and strict documentation
+build. Final independent acceptance and exact-source CI govern the merge; neither
+engineering acceptance nor merge promotes the non-active research candidates.
+
+The independent reviewer accepted the implementation and reconciled public
+evidence with no remaining P1/P2 findings. Its [review receipt](artifacts/portable-agronomy-20260928/independent-review.md)
+retains the repaired defects, negative results and coverage limits. This accepts
+the engineering integration only; the final candidate must still pass CI.

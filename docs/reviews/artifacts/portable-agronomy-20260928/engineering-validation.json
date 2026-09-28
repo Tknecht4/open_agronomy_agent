@@ -1,0 +1,90 @@
+{
+  "boundary": "Implementation checks do not establish agronomic validity or cache qualification.",
+  "ci_checks": [
+    {
+      "link": "https://github.com/Tknecht4/open_agronomy_agent/actions/runs/36382692572/job/108801624744",
+      "name": "deploy",
+      "state": "SKIPPED"
+    },
+    {
+      "link": "https://github.com/Tknecht4/open_agronomy_agent/actions/runs/36382692563/job/108801533481",
+      "name": "build-and-smoke",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/Tknecht4/open_agronomy_agent/actions/runs/36382692610/job/108801533527",
+      "name": "python",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/Tknecht4/open_agronomy_agent/actions/runs/36382692610/job/108801533842",
+      "name": "frontend",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/Tknecht4/open_agronomy_agent/actions/runs/36382692572/job/108801533647",
+      "name": "build",
+      "state": "SUCCESS"
+    }
+  ],
+  "controller_model_accounting": {
+    "owner_and_worker_token_billing": "unavailable",
+    "unavailable_is_not_zero": true
+  },
+  "evidence_delta_checks": {
+    "candidate_public_package": {
+      "bytes": 1057449273,
+      "files": 1114,
+      "receipt_sha256": "9e8d92591d48a26aa11e737c708fb45da9ff4cb9fe992fe08abd1490c9ed57bc",
+      "scope": "Pre-final-review candidate; final review/report bytes are verified in the final builder before commit."
+    },
+    "decoded_public_artifact_scan": "pass",
+    "public_doc_and_package_tests": {
+      "passed": 15,
+      "seconds": 5.24
+    },
+    "public_docs_audit": "pass",
+    "strict_mkdocs": "pass"
+  },
+  "frontend": {
+    "ci_log_sha256": "ff349f0df19f7c131653aed9e9843f2be9d1c9dde4a3460e7363802c5d059faa",
+    "passed": 366,
+    "production_build": "passed",
+    "test_files": 41,
+    "typecheck": "passed"
+  },
+  "implementation_commit": "c90e81dae28390d471e5db64b537094ca551b899",
+  "macos": {
+    "conclusion": "success",
+    "headSha": "c90e81dae28390d471e5db64b537094ca551b899",
+    "status": "completed",
+    "updatedAt": "2026-09-28T05:50:36Z"
+  },
+  "private_state": {
+    "account_balances_included": false,
+    "customer_field_data_included": false,
+    "durable_memory_changed": false,
+    "research_graph_changed": false,
+    "spcc_receipts_included": false
+  },
+  "python": {
+    "ci_log_sha256": "529015d71202c9cbb351e006482921b30262ec57b03d59d6924328e2f2fb9a3f",
+    "passed": 1438,
+    "seconds": 294.42,
+    "skipped": 4,
+    "warnings": 26
+  },
+  "runtime_source_files_checked": 144,
+  "runtime_source_mismatches": [],
+  "runtime_source_tree_sha256": "b94f1dc93d8ddd78ca1ac79b9ab62b451587b49860ba90ec2be2b1875c35551a",
+  "schema_version": "portable_engineering_validation.v1",
+  "ui_observation": {
+    "automated_validation": "Interaction/component tests and full frontend suite passed; these do not substitute for the missing final live observation.",
+    "earlier_live_layout_widths_px": [
+      1280,
+      390
+    ],
+    "final_live_repeat": "unavailable",
+    "final_repeat_reason": "Computer-use browser inventory was empty and native Safari selection did not complete; parent agent ended the stalled attempt. No final hover, focus, Escape or mobile interaction was observed in that repeat."
+  }
+}

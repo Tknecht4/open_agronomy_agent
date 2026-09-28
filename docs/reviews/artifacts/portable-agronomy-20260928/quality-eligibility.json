@@ -1,0 +1,3608 @@
+{
+  "classifier_path": "scripts/run_portable_harness_diagnostic.py",
+  "classifier_sha256": "041cd532042840a12a8add74d843aa2e863331583f1ca2293c5816ec206baf47",
+  "raw_ledgers_unchanged": true,
+  "rows": [
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "345d9baf079c4a32078bcc3928323cb3367f22c96147705fe0702835a4a15927",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "345d9baf079c4a32078bcc3928323cb3367f22c96147705fe0702835a4a15927",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "main/active/PFMH3-01"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "d64f5cf7fbd0636336a3e86ee5eda036b74acf8e25755669459b7c2a4c2548d9",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "d64f5cf7fbd0636336a3e86ee5eda036b74acf8e25755669459b7c2a4c2548d9",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "main/active/PFMH3-02"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "edf219d09d3644e91501b2ecc32e20a8b288e297f0173154fef3e1a3d71f4b55",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "edf219d09d3644e91501b2ecc32e20a8b288e297f0173154fef3e1a3d71f4b55",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "main/active/PFMH3-03"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "83a043845135027602511bfb868d97e7f2c7ad27d308021bbd5f389f3915a805",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "83a043845135027602511bfb868d97e7f2c7ad27d308021bbd5f389f3915a805",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "main/active/PFMH3-04"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "64199744f87af670bc59e9174c333912a757b9096180ae2217e285a534a36670",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "64199744f87af670bc59e9174c333912a757b9096180ae2217e285a534a36670",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "main/active/PFMH3-05"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "dfbdd00ac3626750d166ecefffe438e6afcef05cadbfb9babcb25f27c118bea7",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "dfbdd00ac3626750d166ecefffe438e6afcef05cadbfb9babcb25f27c118bea7",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "main/active/PFMH3-06"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "18cfd5bc3e3a31f91c254ec73da5c3871a8367cca3a690d96d8672c60db30374",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "18cfd5bc3e3a31f91c254ec73da5c3871a8367cca3a690d96d8672c60db30374",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "main/active/PFMH3-07"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "f14f136e176c59f1271e6701cd37521e88c6570fce7a2d8a5faf312e47ee0f7d",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "f14f136e176c59f1271e6701cd37521e88c6570fce7a2d8a5faf312e47ee0f7d",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "main/active/PFMH3-08"
+    },
+    {
+      "derived": {
+        "disposition": "deterministic_bypass",
+        "draft_generation_eligible": false,
+        "draft_generation_evidence": {
+          "draft_sha256": "c9601238303dacc795cb8b6c42ad60d00e99cde4a728fe8b715f5029277c04ab",
+          "fallback_used": false,
+          "generation_path": "deterministic_evidence_sufficiency_hold",
+          "model_call_executed": false,
+          "reason": "regulated_action_claim_lacks_current_local_authority"
+        },
+        "editor_failure": null,
+        "generation_bypass": {
+          "reason": "regulated_action_claim_lacks_current_local_authority",
+          "renderer": "evidence_intervention.v1"
+        },
+        "generation_fallback": null,
+        "generation_path": "deterministic_evidence_sufficiency_hold",
+        "generation_unavailable": null,
+        "model_generation_eligible": false,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "deterministic_bypass",
+        "draft_generation_evidence": {
+          "draft_sha256": "c9601238303dacc795cb8b6c42ad60d00e99cde4a728fe8b715f5029277c04ab",
+          "fallback_used": false,
+          "generation_path": "deterministic_evidence_sufficiency_hold",
+          "model_call_executed": false,
+          "reason": "regulated_action_claim_lacks_current_local_authority"
+        },
+        "generation_bypass": {
+          "reason": "regulated_action_claim_lacks_current_local_authority",
+          "renderer": "evidence_intervention.v1"
+        },
+        "generation_fallback": null,
+        "generation_path": "deterministic_evidence_sufficiency_hold",
+        "generation_unavailable": null,
+        "model_generation_eligible": false,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "main/active/PFMH3-09"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "fe81e234701ac3ec359d7a927371492579da15d84343ac325b1ad4c3e1497c50",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "fe81e234701ac3ec359d7a927371492579da15d84343ac325b1ad4c3e1497c50",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "main/active/PFMH3-10"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "301adbb52128b5d67340a18408803be6ec94edc291be90a00b2b57cbe0ef2f80",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "301adbb52128b5d67340a18408803be6ec94edc291be90a00b2b57cbe0ef2f80",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "main/active/PFMH3-11"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "6120847ea79f7ea327e96e30b126f587ddccfa80bfb0b95fd1d7715f16930fb2",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "6120847ea79f7ea327e96e30b126f587ddccfa80bfb0b95fd1d7715f16930fb2",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "main/active/PFMH3-12"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "a2b7e429b4b6ae8fa63bd3b3cfe2ecdb8224e90eca46eb1350b427ff439710dd",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "a2b7e429b4b6ae8fa63bd3b3cfe2ecdb8224e90eca46eb1350b427ff439710dd",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "continuity/active/synthetic_rate_correction"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "33df607bd96518826402dc2a2460466ca6b98e2fbd157e6eebe9506831b4cacf",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "33df607bd96518826402dc2a2460466ca6b98e2fbd157e6eebe9506831b4cacf",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 1,
+      "unit_id": "continuity/active/synthetic_rate_correction"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "19f98f39dcafb3a922058fa7338ca85523c22bbd608b3dd5126d11eb0321b053",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "19f98f39dcafb3a922058fa7338ca85523c22bbd608b3dd5126d11eb0321b053",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 2,
+      "unit_id": "continuity/active/synthetic_rate_correction"
+    },
+    {
+      "derived": {
+        "disposition": "deterministic_bypass",
+        "draft_generation_eligible": false,
+        "draft_generation_evidence": {
+          "draft_sha256": "c9601238303dacc795cb8b6c42ad60d00e99cde4a728fe8b715f5029277c04ab",
+          "fallback_used": false,
+          "generation_path": "deterministic_evidence_sufficiency_hold",
+          "model_call_executed": false,
+          "reason": "regulated_action_claim_lacks_current_local_authority"
+        },
+        "editor_failure": null,
+        "generation_bypass": {
+          "reason": "regulated_action_claim_lacks_current_local_authority",
+          "renderer": "evidence_intervention.v1"
+        },
+        "generation_fallback": null,
+        "generation_path": "deterministic_evidence_sufficiency_hold",
+        "generation_unavailable": null,
+        "model_generation_eligible": false,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "deterministic_bypass",
+        "draft_generation_evidence": {
+          "draft_sha256": "c9601238303dacc795cb8b6c42ad60d00e99cde4a728fe8b715f5029277c04ab",
+          "fallback_used": false,
+          "generation_path": "deterministic_evidence_sufficiency_hold",
+          "model_call_executed": false,
+          "reason": "regulated_action_claim_lacks_current_local_authority"
+        },
+        "generation_bypass": {
+          "reason": "regulated_action_claim_lacks_current_local_authority",
+          "renderer": "evidence_intervention.v1"
+        },
+        "generation_fallback": null,
+        "generation_path": "deterministic_evidence_sufficiency_hold",
+        "generation_unavailable": null,
+        "model_generation_eligible": false,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "continuity/active/synthetic_authority_correction"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "3c6903341f3a8424eb331787374bb8d923fffb9c6d495516497e6cdf8a82e7f5",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "3c6903341f3a8424eb331787374bb8d923fffb9c6d495516497e6cdf8a82e7f5",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 1,
+      "unit_id": "continuity/active/synthetic_authority_correction"
+    },
+    {
+      "derived": {
+        "disposition": "deterministic_bypass",
+        "draft_generation_eligible": false,
+        "draft_generation_evidence": {
+          "draft_sha256": "c9601238303dacc795cb8b6c42ad60d00e99cde4a728fe8b715f5029277c04ab",
+          "fallback_used": false,
+          "generation_path": "deterministic_evidence_sufficiency_hold",
+          "model_call_executed": false,
+          "reason": "regulated_action_claim_lacks_current_local_authority"
+        },
+        "editor_failure": null,
+        "generation_bypass": {
+          "reason": "regulated_action_claim_lacks_current_local_authority",
+          "renderer": "evidence_intervention.v1"
+        },
+        "generation_fallback": null,
+        "generation_path": "deterministic_evidence_sufficiency_hold",
+        "generation_unavailable": null,
+        "model_generation_eligible": false,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "deterministic_bypass",
+        "draft_generation_evidence": {
+          "draft_sha256": "c9601238303dacc795cb8b6c42ad60d00e99cde4a728fe8b715f5029277c04ab",
+          "fallback_used": false,
+          "generation_path": "deterministic_evidence_sufficiency_hold",
+          "model_call_executed": false,
+          "reason": "regulated_action_claim_lacks_current_local_authority"
+        },
+        "generation_bypass": {
+          "reason": "regulated_action_claim_lacks_current_local_authority",
+          "renderer": "evidence_intervention.v1"
+        },
+        "generation_fallback": null,
+        "generation_path": "deterministic_evidence_sufficiency_hold",
+        "generation_unavailable": null,
+        "model_generation_eligible": false,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 2,
+      "unit_id": "continuity/active/synthetic_authority_correction"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "5d75076b26243e9f15f4ded67840a90ad5e62fd17451d6acb5e9558afc42c377",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "5d75076b26243e9f15f4ded67840a90ad5e62fd17451d6acb5e9558afc42c377",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "long_context/active/synthetic_history_boundary"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "725497521f8168f9bbc65575de7c984f853184dbb0075841d4a520bbf1fbd1ad",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "725497521f8168f9bbc65575de7c984f853184dbb0075841d4a520bbf1fbd1ad",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 1,
+      "unit_id": "long_context/active/synthetic_history_boundary"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "345d9baf079c4a32078bcc3928323cb3367f22c96147705fe0702835a4a15927",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "345d9baf079c4a32078bcc3928323cb3367f22c96147705fe0702835a4a15927",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "cache/active/PFMH3-01"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "5fa9cc64753855715663aca828aca1b421be63bef2aa20477d4eaad48b2ffdfb",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "5fa9cc64753855715663aca828aca1b421be63bef2aa20477d4eaad48b2ffdfb",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "main/method_candidate/PFMH3-01"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "30e3f73107a5d670378f4eafe796eb78d2ce6b4b32ae6c2f741c76ecae3efa9e",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "30e3f73107a5d670378f4eafe796eb78d2ce6b4b32ae6c2f741c76ecae3efa9e",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "main/method_candidate/PFMH3-02"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "09805d8a718ff482b2d2b18a9b9e9e0c4163dad0d0cafe63da8c20e162ed28cb",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "09805d8a718ff482b2d2b18a9b9e9e0c4163dad0d0cafe63da8c20e162ed28cb",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "main/method_candidate/PFMH3-03"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "597ff0aa84ef3a6975fb0e81c8f28c93b374ad5076c5fa1aaf14c7591fb78949",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "597ff0aa84ef3a6975fb0e81c8f28c93b374ad5076c5fa1aaf14c7591fb78949",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "main/method_candidate/PFMH3-04"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "784ba6a410fac2a4df21f16df7fe9fd3990a9ca61d8bde946f423bf4b7ef794d",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "784ba6a410fac2a4df21f16df7fe9fd3990a9ca61d8bde946f423bf4b7ef794d",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "main/method_candidate/PFMH3-05"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "339937b4ff9a77f20b1aacf3b76beb13ee00c471e9952506c63a6487813a119d",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "339937b4ff9a77f20b1aacf3b76beb13ee00c471e9952506c63a6487813a119d",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "main/method_candidate/PFMH3-06"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "82fa9f42d718503edc7aec6fd755e1a360902e51d4a81d5aa5d4dc055744ce98",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "82fa9f42d718503edc7aec6fd755e1a360902e51d4a81d5aa5d4dc055744ce98",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "main/method_candidate/PFMH3-07"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "073867d7e942edcd5c761945585cd14585591026804d105bc66b87557976e16c",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "073867d7e942edcd5c761945585cd14585591026804d105bc66b87557976e16c",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "main/method_candidate/PFMH3-08"
+    },
+    {
+      "derived": {
+        "disposition": "deterministic_bypass",
+        "draft_generation_eligible": false,
+        "draft_generation_evidence": {
+          "draft_sha256": "c9601238303dacc795cb8b6c42ad60d00e99cde4a728fe8b715f5029277c04ab",
+          "fallback_used": false,
+          "generation_path": "deterministic_evidence_sufficiency_hold",
+          "model_call_executed": false,
+          "reason": "regulated_action_claim_lacks_current_local_authority"
+        },
+        "editor_failure": null,
+        "generation_bypass": {
+          "reason": "regulated_action_claim_lacks_current_local_authority",
+          "renderer": "evidence_intervention.v1"
+        },
+        "generation_fallback": null,
+        "generation_path": "deterministic_evidence_sufficiency_hold",
+        "generation_unavailable": null,
+        "model_generation_eligible": false,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "deterministic_bypass",
+        "draft_generation_evidence": {
+          "draft_sha256": "c9601238303dacc795cb8b6c42ad60d00e99cde4a728fe8b715f5029277c04ab",
+          "fallback_used": false,
+          "generation_path": "deterministic_evidence_sufficiency_hold",
+          "model_call_executed": false,
+          "reason": "regulated_action_claim_lacks_current_local_authority"
+        },
+        "generation_bypass": {
+          "reason": "regulated_action_claim_lacks_current_local_authority",
+          "renderer": "evidence_intervention.v1"
+        },
+        "generation_fallback": null,
+        "generation_path": "deterministic_evidence_sufficiency_hold",
+        "generation_unavailable": null,
+        "model_generation_eligible": false,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "main/method_candidate/PFMH3-09"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "fe81e234701ac3ec359d7a927371492579da15d84343ac325b1ad4c3e1497c50",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "fe81e234701ac3ec359d7a927371492579da15d84343ac325b1ad4c3e1497c50",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "main/method_candidate/PFMH3-10"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "301adbb52128b5d67340a18408803be6ec94edc291be90a00b2b57cbe0ef2f80",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "301adbb52128b5d67340a18408803be6ec94edc291be90a00b2b57cbe0ef2f80",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "main/method_candidate/PFMH3-11"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "6120847ea79f7ea327e96e30b126f587ddccfa80bfb0b95fd1d7715f16930fb2",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "6120847ea79f7ea327e96e30b126f587ddccfa80bfb0b95fd1d7715f16930fb2",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "main/method_candidate/PFMH3-12"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "6f297ef63e2d46fb2d7bf85176fc3f09b03daa958c17c5f37c8efe3981bdf4c5",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "6f297ef63e2d46fb2d7bf85176fc3f09b03daa958c17c5f37c8efe3981bdf4c5",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "continuity/method_candidate/synthetic_rate_correction"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "71c7cdba45f6d388132934b6c456a33a14cf43bb2a4dde6f69e82a4bdd252d08",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "71c7cdba45f6d388132934b6c456a33a14cf43bb2a4dde6f69e82a4bdd252d08",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 1,
+      "unit_id": "continuity/method_candidate/synthetic_rate_correction"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "fcfd7837099f8f2ddd66b7e5c9d4a74fb391c10e8a24fbdf25873e3d838436b1",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "fcfd7837099f8f2ddd66b7e5c9d4a74fb391c10e8a24fbdf25873e3d838436b1",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 2,
+      "unit_id": "continuity/method_candidate/synthetic_rate_correction"
+    },
+    {
+      "derived": {
+        "disposition": "deterministic_bypass",
+        "draft_generation_eligible": false,
+        "draft_generation_evidence": {
+          "draft_sha256": "c9601238303dacc795cb8b6c42ad60d00e99cde4a728fe8b715f5029277c04ab",
+          "fallback_used": false,
+          "generation_path": "deterministic_evidence_sufficiency_hold",
+          "model_call_executed": false,
+          "reason": "regulated_action_claim_lacks_current_local_authority"
+        },
+        "editor_failure": null,
+        "generation_bypass": {
+          "reason": "regulated_action_claim_lacks_current_local_authority",
+          "renderer": "evidence_intervention.v1"
+        },
+        "generation_fallback": null,
+        "generation_path": "deterministic_evidence_sufficiency_hold",
+        "generation_unavailable": null,
+        "model_generation_eligible": false,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "deterministic_bypass",
+        "draft_generation_evidence": {
+          "draft_sha256": "c9601238303dacc795cb8b6c42ad60d00e99cde4a728fe8b715f5029277c04ab",
+          "fallback_used": false,
+          "generation_path": "deterministic_evidence_sufficiency_hold",
+          "model_call_executed": false,
+          "reason": "regulated_action_claim_lacks_current_local_authority"
+        },
+        "generation_bypass": {
+          "reason": "regulated_action_claim_lacks_current_local_authority",
+          "renderer": "evidence_intervention.v1"
+        },
+        "generation_fallback": null,
+        "generation_path": "deterministic_evidence_sufficiency_hold",
+        "generation_unavailable": null,
+        "model_generation_eligible": false,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "continuity/method_candidate/synthetic_authority_correction"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "3c6903341f3a8424eb331787374bb8d923fffb9c6d495516497e6cdf8a82e7f5",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "3c6903341f3a8424eb331787374bb8d923fffb9c6d495516497e6cdf8a82e7f5",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 1,
+      "unit_id": "continuity/method_candidate/synthetic_authority_correction"
+    },
+    {
+      "derived": {
+        "disposition": "deterministic_bypass",
+        "draft_generation_eligible": false,
+        "draft_generation_evidence": {
+          "draft_sha256": "c9601238303dacc795cb8b6c42ad60d00e99cde4a728fe8b715f5029277c04ab",
+          "fallback_used": false,
+          "generation_path": "deterministic_evidence_sufficiency_hold",
+          "model_call_executed": false,
+          "reason": "regulated_action_claim_lacks_current_local_authority"
+        },
+        "editor_failure": null,
+        "generation_bypass": {
+          "reason": "regulated_action_claim_lacks_current_local_authority",
+          "renderer": "evidence_intervention.v1"
+        },
+        "generation_fallback": null,
+        "generation_path": "deterministic_evidence_sufficiency_hold",
+        "generation_unavailable": null,
+        "model_generation_eligible": false,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "deterministic_bypass",
+        "draft_generation_evidence": {
+          "draft_sha256": "c9601238303dacc795cb8b6c42ad60d00e99cde4a728fe8b715f5029277c04ab",
+          "fallback_used": false,
+          "generation_path": "deterministic_evidence_sufficiency_hold",
+          "model_call_executed": false,
+          "reason": "regulated_action_claim_lacks_current_local_authority"
+        },
+        "generation_bypass": {
+          "reason": "regulated_action_claim_lacks_current_local_authority",
+          "renderer": "evidence_intervention.v1"
+        },
+        "generation_fallback": null,
+        "generation_path": "deterministic_evidence_sufficiency_hold",
+        "generation_unavailable": null,
+        "model_generation_eligible": false,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 2,
+      "unit_id": "continuity/method_candidate/synthetic_authority_correction"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "2326bdb057f2679e5b3518c5293057f93169376cbbc89fd39ebbdfafd71b9eb7",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "2326bdb057f2679e5b3518c5293057f93169376cbbc89fd39ebbdfafd71b9eb7",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "long_context/method_candidate/synthetic_history_boundary"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "725497521f8168f9bbc65575de7c984f853184dbb0075841d4a520bbf1fbd1ad",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "725497521f8168f9bbc65575de7c984f853184dbb0075841d4a520bbf1fbd1ad",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 1,
+      "unit_id": "long_context/method_candidate/synthetic_history_boundary"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "5fa9cc64753855715663aca828aca1b421be63bef2aa20477d4eaad48b2ffdfb",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "83a8fa1e3d2db58ab3aa6f71e7d2150642edd12c69dd27a99fb9fb11478a136e",
+      "model": "gemma",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "5fa9cc64753855715663aca828aca1b421be63bef2aa20477d4eaad48b2ffdfb",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v3",
+      "turn_index": 0,
+      "unit_id": "cache/method_candidate/PFMH3-01"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "4796e6ddb41e7d082354a75d29f5fbc78d140e96f314356ef18c8e11bf3153ca",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "4796e6ddb41e7d082354a75d29f5fbc78d140e96f314356ef18c8e11bf3153ca",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "main/active/PFMH3-01"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "e24b11f881d9172312cd0a761145fb2043c3294458c014a631d756e8cb041d32",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "e24b11f881d9172312cd0a761145fb2043c3294458c014a631d756e8cb041d32",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "main/active/PFMH3-02"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "67c2571e2e08915a6ba8e54715325df885c2a4ace691f1cd07526fc125efa3b2",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "67c2571e2e08915a6ba8e54715325df885c2a4ace691f1cd07526fc125efa3b2",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "main/active/PFMH3-03"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "d1da4b17848c04ded18af03423dbf2e68610a8570558c1d37fee6fa600c3231b",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "d1da4b17848c04ded18af03423dbf2e68610a8570558c1d37fee6fa600c3231b",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "main/active/PFMH3-04"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "7f67a93cbdf54bfe00d9a22a15fff413d3f2246cb7b054fb93ad6710352a94da",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "7f67a93cbdf54bfe00d9a22a15fff413d3f2246cb7b054fb93ad6710352a94da",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "main/active/PFMH3-05"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "476dddc80fd9a4db47782ddfa7d5837a8f9a5b7e2e8692fa4296bbafefc7b376",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "476dddc80fd9a4db47782ddfa7d5837a8f9a5b7e2e8692fa4296bbafefc7b376",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "main/active/PFMH3-06"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "244d3f66976fa5b426f9b011715fe6d15273881e688c0979239864ade1f4bb2c",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "244d3f66976fa5b426f9b011715fe6d15273881e688c0979239864ade1f4bb2c",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "main/active/PFMH3-07"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "8224d01cc017647ec9b7739602f53248f0ef5bfc4c8fa6b2333cb9568778a6a5",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "8224d01cc017647ec9b7739602f53248f0ef5bfc4c8fa6b2333cb9568778a6a5",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "main/active/PFMH3-08"
+    },
+    {
+      "derived": {
+        "disposition": "deterministic_bypass",
+        "draft_generation_eligible": false,
+        "draft_generation_evidence": {
+          "draft_sha256": "c9601238303dacc795cb8b6c42ad60d00e99cde4a728fe8b715f5029277c04ab",
+          "fallback_used": false,
+          "generation_path": "deterministic_evidence_sufficiency_hold",
+          "model_call_executed": false,
+          "reason": "regulated_action_claim_lacks_current_local_authority"
+        },
+        "editor_failure": null,
+        "generation_bypass": {
+          "reason": "regulated_action_claim_lacks_current_local_authority",
+          "renderer": "evidence_intervention.v1"
+        },
+        "generation_fallback": null,
+        "generation_path": "deterministic_evidence_sufficiency_hold",
+        "generation_unavailable": null,
+        "model_generation_eligible": false,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "deterministic_bypass",
+        "draft_generation_evidence": {
+          "draft_sha256": "c9601238303dacc795cb8b6c42ad60d00e99cde4a728fe8b715f5029277c04ab",
+          "fallback_used": false,
+          "generation_path": "deterministic_evidence_sufficiency_hold",
+          "model_call_executed": false,
+          "reason": "regulated_action_claim_lacks_current_local_authority"
+        },
+        "generation_bypass": {
+          "reason": "regulated_action_claim_lacks_current_local_authority",
+          "renderer": "evidence_intervention.v1"
+        },
+        "generation_fallback": null,
+        "generation_path": "deterministic_evidence_sufficiency_hold",
+        "generation_unavailable": null,
+        "model_generation_eligible": false,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "main/active/PFMH3-09"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "568f2328e0ed517841d351856c3eeee088b7be2899da5a8dd5504aa32d44f84c",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "568f2328e0ed517841d351856c3eeee088b7be2899da5a8dd5504aa32d44f84c",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "main/active/PFMH3-10"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "6241ae046c6ec7c81746d3e3da81a6f22bd8ff8b0eef7860ad2f56b1c58a6ac7",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "6241ae046c6ec7c81746d3e3da81a6f22bd8ff8b0eef7860ad2f56b1c58a6ac7",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "main/active/PFMH3-11"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "77441c9184c4679ef79295fabc5fb3098f78b39d3eec07b6aba02fa656170c8c",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "77441c9184c4679ef79295fabc5fb3098f78b39d3eec07b6aba02fa656170c8c",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "main/active/PFMH3-12"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "8a00540e1ff04bcbb8094a14617c6c827de89a3dc2e9c3266dd50a3b779544a4",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "8a00540e1ff04bcbb8094a14617c6c827de89a3dc2e9c3266dd50a3b779544a4",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "continuity/active/synthetic_rate_correction"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "f1ef942e2f7375bed5e122cf14f296984a527daa409c4da3043980318a617024",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "f1ef942e2f7375bed5e122cf14f296984a527daa409c4da3043980318a617024",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 1,
+      "unit_id": "continuity/active/synthetic_rate_correction"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "d8669a878307104371a093e738ce295eeae423f17c6c4f0376202f38061e965d",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "d8669a878307104371a093e738ce295eeae423f17c6c4f0376202f38061e965d",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 2,
+      "unit_id": "continuity/active/synthetic_rate_correction"
+    },
+    {
+      "derived": {
+        "disposition": "deterministic_bypass",
+        "draft_generation_eligible": false,
+        "draft_generation_evidence": {
+          "draft_sha256": "c9601238303dacc795cb8b6c42ad60d00e99cde4a728fe8b715f5029277c04ab",
+          "fallback_used": false,
+          "generation_path": "deterministic_evidence_sufficiency_hold",
+          "model_call_executed": false,
+          "reason": "regulated_action_claim_lacks_current_local_authority"
+        },
+        "editor_failure": null,
+        "generation_bypass": {
+          "reason": "regulated_action_claim_lacks_current_local_authority",
+          "renderer": "evidence_intervention.v1"
+        },
+        "generation_fallback": null,
+        "generation_path": "deterministic_evidence_sufficiency_hold",
+        "generation_unavailable": null,
+        "model_generation_eligible": false,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "deterministic_bypass",
+        "draft_generation_evidence": {
+          "draft_sha256": "c9601238303dacc795cb8b6c42ad60d00e99cde4a728fe8b715f5029277c04ab",
+          "fallback_used": false,
+          "generation_path": "deterministic_evidence_sufficiency_hold",
+          "model_call_executed": false,
+          "reason": "regulated_action_claim_lacks_current_local_authority"
+        },
+        "generation_bypass": {
+          "reason": "regulated_action_claim_lacks_current_local_authority",
+          "renderer": "evidence_intervention.v1"
+        },
+        "generation_fallback": null,
+        "generation_path": "deterministic_evidence_sufficiency_hold",
+        "generation_unavailable": null,
+        "model_generation_eligible": false,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "continuity/active/synthetic_authority_correction"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "c0e23e58c976907c8e21015e7be194f14a300ac69f422f295d086f687d54602b",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "c0e23e58c976907c8e21015e7be194f14a300ac69f422f295d086f687d54602b",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 1,
+      "unit_id": "continuity/active/synthetic_authority_correction"
+    },
+    {
+      "derived": {
+        "disposition": "deterministic_bypass",
+        "draft_generation_eligible": false,
+        "draft_generation_evidence": {
+          "draft_sha256": "c9601238303dacc795cb8b6c42ad60d00e99cde4a728fe8b715f5029277c04ab",
+          "fallback_used": false,
+          "generation_path": "deterministic_evidence_sufficiency_hold",
+          "model_call_executed": false,
+          "reason": "regulated_action_claim_lacks_current_local_authority"
+        },
+        "editor_failure": null,
+        "generation_bypass": {
+          "reason": "regulated_action_claim_lacks_current_local_authority",
+          "renderer": "evidence_intervention.v1"
+        },
+        "generation_fallback": null,
+        "generation_path": "deterministic_evidence_sufficiency_hold",
+        "generation_unavailable": null,
+        "model_generation_eligible": false,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "deterministic_bypass",
+        "draft_generation_evidence": {
+          "draft_sha256": "c9601238303dacc795cb8b6c42ad60d00e99cde4a728fe8b715f5029277c04ab",
+          "fallback_used": false,
+          "generation_path": "deterministic_evidence_sufficiency_hold",
+          "model_call_executed": false,
+          "reason": "regulated_action_claim_lacks_current_local_authority"
+        },
+        "generation_bypass": {
+          "reason": "regulated_action_claim_lacks_current_local_authority",
+          "renderer": "evidence_intervention.v1"
+        },
+        "generation_fallback": null,
+        "generation_path": "deterministic_evidence_sufficiency_hold",
+        "generation_unavailable": null,
+        "model_generation_eligible": false,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 2,
+      "unit_id": "continuity/active/synthetic_authority_correction"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "98847836310a748200941e28a1803f3094cef1e9d6f1f75e57ee0500c298a91f",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "98847836310a748200941e28a1803f3094cef1e9d6f1f75e57ee0500c298a91f",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "long_context/active/synthetic_history_boundary"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "0f729638de89ad5daf1daa904c99d773c1d55b339fa170ba42369b16c8ae0b13",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "0f729638de89ad5daf1daa904c99d773c1d55b339fa170ba42369b16c8ae0b13",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 1,
+      "unit_id": "long_context/active/synthetic_history_boundary"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "4796e6ddb41e7d082354a75d29f5fbc78d140e96f314356ef18c8e11bf3153ca",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "4796e6ddb41e7d082354a75d29f5fbc78d140e96f314356ef18c8e11bf3153ca",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "cache/active/PFMH3-01"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "470b3f50234339f4fd221c9e3d68a92f5c087ccc70688b902ec9827a95ac93c0",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "470b3f50234339f4fd221c9e3d68a92f5c087ccc70688b902ec9827a95ac93c0",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "main/method_candidate/PFMH3-01"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "e606bda9a9d4ed489b20cc30cf15e1a4879927ef761b16673f5191cbed266d1c",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "e606bda9a9d4ed489b20cc30cf15e1a4879927ef761b16673f5191cbed266d1c",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "main/method_candidate/PFMH3-02"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "66372907a588cd54acc0e06dfc4a2b3917bb0f127fc6a1c700a7dbc62480ed57",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "66372907a588cd54acc0e06dfc4a2b3917bb0f127fc6a1c700a7dbc62480ed57",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "main/method_candidate/PFMH3-03"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "220b0d2160116b8ea4404c109bb77731862935206749610b65f392df7c69a4ab",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "220b0d2160116b8ea4404c109bb77731862935206749610b65f392df7c69a4ab",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "main/method_candidate/PFMH3-04"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "4ac2fa32958a1f4e0e7100bc6f270305f40d0244cc51826228d8042b8caaba65",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "4ac2fa32958a1f4e0e7100bc6f270305f40d0244cc51826228d8042b8caaba65",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "main/method_candidate/PFMH3-05"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "253faa7f13729ae4e39aee628cb32d53b791614222e98499e28be7294ec44def",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "253faa7f13729ae4e39aee628cb32d53b791614222e98499e28be7294ec44def",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "main/method_candidate/PFMH3-06"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "4330467877c2e2b63a1d79e4879cdb70dc622915ae0df7ba4990fba81a8e9259",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "4330467877c2e2b63a1d79e4879cdb70dc622915ae0df7ba4990fba81a8e9259",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "main/method_candidate/PFMH3-07"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "8224d01cc017647ec9b7739602f53248f0ef5bfc4c8fa6b2333cb9568778a6a5",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "8224d01cc017647ec9b7739602f53248f0ef5bfc4c8fa6b2333cb9568778a6a5",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "main/method_candidate/PFMH3-08"
+    },
+    {
+      "derived": {
+        "disposition": "deterministic_bypass",
+        "draft_generation_eligible": false,
+        "draft_generation_evidence": {
+          "draft_sha256": "c9601238303dacc795cb8b6c42ad60d00e99cde4a728fe8b715f5029277c04ab",
+          "fallback_used": false,
+          "generation_path": "deterministic_evidence_sufficiency_hold",
+          "model_call_executed": false,
+          "reason": "regulated_action_claim_lacks_current_local_authority"
+        },
+        "editor_failure": null,
+        "generation_bypass": {
+          "reason": "regulated_action_claim_lacks_current_local_authority",
+          "renderer": "evidence_intervention.v1"
+        },
+        "generation_fallback": null,
+        "generation_path": "deterministic_evidence_sufficiency_hold",
+        "generation_unavailable": null,
+        "model_generation_eligible": false,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "deterministic_bypass",
+        "draft_generation_evidence": {
+          "draft_sha256": "c9601238303dacc795cb8b6c42ad60d00e99cde4a728fe8b715f5029277c04ab",
+          "fallback_used": false,
+          "generation_path": "deterministic_evidence_sufficiency_hold",
+          "model_call_executed": false,
+          "reason": "regulated_action_claim_lacks_current_local_authority"
+        },
+        "generation_bypass": {
+          "reason": "regulated_action_claim_lacks_current_local_authority",
+          "renderer": "evidence_intervention.v1"
+        },
+        "generation_fallback": null,
+        "generation_path": "deterministic_evidence_sufficiency_hold",
+        "generation_unavailable": null,
+        "model_generation_eligible": false,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "main/method_candidate/PFMH3-09"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "568f2328e0ed517841d351856c3eeee088b7be2899da5a8dd5504aa32d44f84c",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "568f2328e0ed517841d351856c3eeee088b7be2899da5a8dd5504aa32d44f84c",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "main/method_candidate/PFMH3-10"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "6241ae046c6ec7c81746d3e3da81a6f22bd8ff8b0eef7860ad2f56b1c58a6ac7",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "6241ae046c6ec7c81746d3e3da81a6f22bd8ff8b0eef7860ad2f56b1c58a6ac7",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "main/method_candidate/PFMH3-11"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "77441c9184c4679ef79295fabc5fb3098f78b39d3eec07b6aba02fa656170c8c",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "77441c9184c4679ef79295fabc5fb3098f78b39d3eec07b6aba02fa656170c8c",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "main/method_candidate/PFMH3-12"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "7b3852ad4577075197ed8cb0f526797f904b093d040a3220ff01b3a776353ffe",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "7b3852ad4577075197ed8cb0f526797f904b093d040a3220ff01b3a776353ffe",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "continuity/method_candidate/synthetic_rate_correction"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "b3b7de6c1b187925a8abb9f117ab756b68c703381bd19c8c25572ad0f8913681",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "b3b7de6c1b187925a8abb9f117ab756b68c703381bd19c8c25572ad0f8913681",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 1,
+      "unit_id": "continuity/method_candidate/synthetic_rate_correction"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "ccce1262ac1b4a591f941997a4bcb004bb8ceec1bd1c51f5daeaf9ec732bfd45",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "ccce1262ac1b4a591f941997a4bcb004bb8ceec1bd1c51f5daeaf9ec732bfd45",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 2,
+      "unit_id": "continuity/method_candidate/synthetic_rate_correction"
+    },
+    {
+      "derived": {
+        "disposition": "deterministic_bypass",
+        "draft_generation_eligible": false,
+        "draft_generation_evidence": {
+          "draft_sha256": "c9601238303dacc795cb8b6c42ad60d00e99cde4a728fe8b715f5029277c04ab",
+          "fallback_used": false,
+          "generation_path": "deterministic_evidence_sufficiency_hold",
+          "model_call_executed": false,
+          "reason": "regulated_action_claim_lacks_current_local_authority"
+        },
+        "editor_failure": null,
+        "generation_bypass": {
+          "reason": "regulated_action_claim_lacks_current_local_authority",
+          "renderer": "evidence_intervention.v1"
+        },
+        "generation_fallback": null,
+        "generation_path": "deterministic_evidence_sufficiency_hold",
+        "generation_unavailable": null,
+        "model_generation_eligible": false,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "deterministic_bypass",
+        "draft_generation_evidence": {
+          "draft_sha256": "c9601238303dacc795cb8b6c42ad60d00e99cde4a728fe8b715f5029277c04ab",
+          "fallback_used": false,
+          "generation_path": "deterministic_evidence_sufficiency_hold",
+          "model_call_executed": false,
+          "reason": "regulated_action_claim_lacks_current_local_authority"
+        },
+        "generation_bypass": {
+          "reason": "regulated_action_claim_lacks_current_local_authority",
+          "renderer": "evidence_intervention.v1"
+        },
+        "generation_fallback": null,
+        "generation_path": "deterministic_evidence_sufficiency_hold",
+        "generation_unavailable": null,
+        "model_generation_eligible": false,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "continuity/method_candidate/synthetic_authority_correction"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "c0e23e58c976907c8e21015e7be194f14a300ac69f422f295d086f687d54602b",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "c0e23e58c976907c8e21015e7be194f14a300ac69f422f295d086f687d54602b",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 1,
+      "unit_id": "continuity/method_candidate/synthetic_authority_correction"
+    },
+    {
+      "derived": {
+        "disposition": "deterministic_bypass",
+        "draft_generation_eligible": false,
+        "draft_generation_evidence": {
+          "draft_sha256": "c9601238303dacc795cb8b6c42ad60d00e99cde4a728fe8b715f5029277c04ab",
+          "fallback_used": false,
+          "generation_path": "deterministic_evidence_sufficiency_hold",
+          "model_call_executed": false,
+          "reason": "regulated_action_claim_lacks_current_local_authority"
+        },
+        "editor_failure": null,
+        "generation_bypass": {
+          "reason": "regulated_action_claim_lacks_current_local_authority",
+          "renderer": "evidence_intervention.v1"
+        },
+        "generation_fallback": null,
+        "generation_path": "deterministic_evidence_sufficiency_hold",
+        "generation_unavailable": null,
+        "model_generation_eligible": false,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "deterministic_bypass",
+        "draft_generation_evidence": {
+          "draft_sha256": "c9601238303dacc795cb8b6c42ad60d00e99cde4a728fe8b715f5029277c04ab",
+          "fallback_used": false,
+          "generation_path": "deterministic_evidence_sufficiency_hold",
+          "model_call_executed": false,
+          "reason": "regulated_action_claim_lacks_current_local_authority"
+        },
+        "generation_bypass": {
+          "reason": "regulated_action_claim_lacks_current_local_authority",
+          "renderer": "evidence_intervention.v1"
+        },
+        "generation_fallback": null,
+        "generation_path": "deterministic_evidence_sufficiency_hold",
+        "generation_unavailable": null,
+        "model_generation_eligible": false,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 2,
+      "unit_id": "continuity/method_candidate/synthetic_authority_correction"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "d89fe3e46126d33c7030c37a8dfbaaa47d7c6d8d40166c0476b15eeac09cf87b",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "d89fe3e46126d33c7030c37a8dfbaaa47d7c6d8d40166c0476b15eeac09cf87b",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "long_context/method_candidate/synthetic_history_boundary"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "ad6e20f595dd931dfcb3969b207a593cf1acc4fe9a72989968efa1f560e7de46",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "ad6e20f595dd931dfcb3969b207a593cf1acc4fe9a72989968efa1f560e7de46",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 1,
+      "unit_id": "long_context/method_candidate/synthetic_history_boundary"
+    },
+    {
+      "derived": {
+        "disposition": "model_generated",
+        "draft_generation_eligible": true,
+        "draft_generation_evidence": {
+          "draft_sha256": "470b3f50234339f4fd221c9e3d68a92f5c087ccc70688b902ec9827a95ac93c0",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "editor_failure": null,
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "ledger_sha256": "46395fb5f901748cb34ab293b6f605ab5da45c57f667c56cf54d951f1258dc60",
+      "model": "qwen27b",
+      "original": {
+        "disposition": "model_generated",
+        "draft_generation_evidence": {
+          "draft_sha256": "470b3f50234339f4fd221c9e3d68a92f5c087ccc70688b902ec9827a95ac93c0",
+          "fallback_used": false,
+          "generation_path": "model_generation",
+          "model_call_executed": true,
+          "reason": "draft_generation_completed"
+        },
+        "generation_bypass": null,
+        "generation_fallback": null,
+        "generation_path": null,
+        "generation_unavailable": null,
+        "model_generation_eligible": true,
+        "product_quality_eligible": true
+      },
+      "product_eligibility_changed": false,
+      "run_version": "v4",
+      "turn_index": 0,
+      "unit_id": "cache/method_candidate/PFMH3-01"
+    }
+  ],
+  "schema_version": "portable_eligibility_reconciliation.v1"
+}

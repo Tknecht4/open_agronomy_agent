@@ -609,7 +609,21 @@
     "tests/test_editor_prompt_budget.py",
     "scripts/run_portable_harness_diagnostic.py",
     "tests/test_portable_harness_diagnostic.py",
-    "configs/model_qwen35_27b_diagnostic.yaml"
+    "configs/model_qwen35_27b_diagnostic.yaml",
+    "docs/reviews/portable-agronomy-diagnostic-20260928.md",
+    "docs/reviews/artifacts/portable-agronomy-20260928/compute-accounting.json",
+    "docs/reviews/artifacts/portable-agronomy-20260928/engineering-validation.json",
+    "docs/reviews/artifacts/portable-agronomy-20260928/failed-attempts.json.gz",
+    "docs/reviews/artifacts/portable-agronomy-20260928/gemma-v3-cells.jsonl.gz",
+    "docs/reviews/artifacts/portable-agronomy-20260928/method-delivery.json",
+    "docs/reviews/artifacts/portable-agronomy-20260928/quality-eligibility.json",
+    "docs/reviews/artifacts/portable-agronomy-20260928/qwen27b-v4-cells.jsonl.gz",
+    "docs/reviews/artifacts/portable-agronomy-20260928/run-manifests.json",
+    "docs/reviews/artifacts/portable-agronomy-20260928/runtime-analysis.json",
+    "docs/reviews/artifacts/portable-agronomy-20260928/runtime-qualification.json",
+    "docs/reviews/artifacts/portable-agronomy-20260928/semantic-grades.json",
+    "docs/reviews/artifacts/portable-agronomy-20260928/independent-review.md",
+    "docs/reviews/artifacts/portable-agronomy-20260928/independent-source-check.json"
   ],
   "trees": [
     "src",
