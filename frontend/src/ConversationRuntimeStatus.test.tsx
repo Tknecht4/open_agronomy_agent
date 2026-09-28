@@ -65,4 +65,44 @@ describe('last request runtime status', () => {
     expect(screen.getByText('Prompt KV cache: status unavailable (not recorded)')).toBeInTheDocument()
     expect(screen.queryByText(/reused saved prefix/)).not.toBeInTheDocument()
   })
+
+  it('opens on hover, pins on click, and stays closed after a second click while focused', () => {
+    render(<ConversationRuntimeStatus turn={turnWith(null, null)} />)
+    const button = screen.getByRole('button', { name: 'Details' })
+    const wrapper = button.parentElement!
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+
+    fireEvent.mouseEnter(wrapper)
+    expect(button).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.mouseLeave(wrapper)
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+
+    fireEvent.focus(button)
+    fireEvent.click(button)
+    fireEvent.mouseLeave(wrapper)
+    expect(button).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(button)
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.focus(button, { relatedTarget: button })
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('dismisses with Escape until the next focus or hover entry', () => {
+    render(<ConversationRuntimeStatus turn={turnWith(null, null)} />)
+    const button = screen.getByRole('button', { name: 'Details' })
+    const wrapper = button.parentElement!
+    fireEvent.focus(button)
+    expect(button).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.keyDown(button, { key: 'Escape' })
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.focus(button, { relatedTarget: button })
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.blur(button)
+    fireEvent.focus(button)
+    expect(button).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.blur(button)
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.mouseEnter(wrapper)
+    expect(button).toHaveAttribute('aria-expanded', 'true')
+  })
 })

@@ -1,6 +1,6 @@
 # Portable agronomy runtime and conversation implementation
 
-Status: locally accepted implementation; publication awaits explicit user approval. User authorized proceeding from the source-bound harness
+Status: combined polish and Colab diagnostic in progress; user authorized review and merge. User authorized proceeding from the source-bound harness
 review, adding model/KV/context management, useful runtime indicators, backend
 performance, and separate field-linked and general conversations. Full model
 benchmark suites use the Colab operator. No competence or candidate-corpus
@@ -222,3 +222,65 @@ remain unverified. These limits do not establish model quality or authorize
 release. Caching remains disabled by default. No full benchmark or Colab session
 was run. No SPCC graph or durable memory was changed. Publication is the only
 remaining action requiring direct user authorization.
+
+## Authorized polish, combined benchmark and merge phase
+
+The user now explicitly authorizes coordination with the corpus chat, resolving
+branch conflicts, addressing residual risks, running the benchmark through the
+Colab operator, independent review, and merging both works if satisfactory. This
+supersedes the earlier publication-approval block, not any scientific gate.
+
+Working state: owner branch `codex/portable-agronomy` at `2f484d4`, base/main
+`8f4c33f`; corpus draft PR #15 `codex/foundations-transfer-methods` at
+`f4dc97c0bbc3a64d799edb78de8024876f11f349`. Its active profile is unchanged.
+Read the corpus chat and initiated direct coordination before implementation.
+Preserve the failed appendix cohort and post-removal model gap; do not activate
+a candidate by merging its source/experimental record.
+
+Phase envelope: owner integration plus bounded benchmark-capsule and UI polish
+workers, then independent combined review. Estimate 2–4 hours including remote
+setup, repairs and CI; this is a planning estimate. Colab initially reports no
+sessions, 170.78 CU, zero current hourly use. Freeze an explicit public/synthetic
+matrix before a named L4 session; use a 90-minute initial GPU checkpoint and
+reassess from measured rate/progress rather than assume hardware parity or spend.
+No private field records, SPCC receipts, unrelated files or credentials transfer.
+Do not provision larger hardware before a concrete fit/compatibility result.
+
+Acceptance: integrate compatible corpus/runtime source without resurrecting the
+failed answer appendix; render and exercise field/general chat and indicators;
+measure real model context/cache behavior and compare active versus non-active
+method context on the exposed corpus cohort with fresh run identity; include
+multi-turn correction and long-context boundaries plus broader agronomy controls;
+retain unsupported/failed model cells. Blind semantic review must distinguish
+unsafe changes, supported content lost, unnecessary refusal and method delivery.
+Green lexical proxies are not evidence of agronomic improvement. Obtain review
+on exact combined source and raw benchmark evidence, run local/CI gates, merge
+only within that accepted scope and verify the resulting main checkout.
+
+The clean local merge is `9e1a495`; the corpus owner has frozen PR #15 for this
+combined integration. Eighty-six focused corpus/query/history/editor-budget
+tests passed. The live synthetic preview succeeded at desktop 1280 px and
+mobile 390 px. It verified saved general/example-field separation and found
+mobile picker width and runtime-popover clipping defects, now repaired. Hover,
+focus, pinning and Escape share the component's actual disclosure state.
+
+Frozen diagnostic design: per model, 24 active/METHOD single-turn cells on the
+12 exposed PFMH3 questions, 12 fixed minimal-prompt direct references, four
+three-turn correction sequences, two long-context sequences, and two exact-
+prompt disabled/cold/warm cache probes. These are 44 units per model; generation
+uses 320 output tokens and the existing 8,192 inclusive operating budget.
+Each verifier uses that arm's same pinned model and its existing 220-token
+allowance. The direct comparison changes a bundle of retrieval, instructions
+and intervention; it is not a causal stage ablation. Blind semantic grading
+uses the existing public rubric and conceals arm identity. The exposed cohort
+is diagnostic only and cannot justify promotion.
+
+Reference model: Gemma 4 E2B at
+`238767527555cb75a05732a84dff5d6ba0dd6809`. Larger diagnostic: Qwen3.5 27B 4-bit at
+`45797d2985a12c55e6473686e9ea91b95e959553`, in a non-active model config. The
+Colab L4 reports 23,034 MiB VRAM, driver 580.82.07, CUDA toolkit 12.8, Python
+3.13.15 and glibc 2.39. MLX 0.32.2 CUDA matrix multiplication passed; model-level
+qualification precedes the full runs. Measured initial rate is 1.54 CU/hour.
+Only a public-manifest allowlisted capsule is transferred; the 801 MiB dormant
+NRCS shards are omitted because this fixed packet contains no MLRA activation.
+The validated NRCS index/manifest are retained. Private overlays are disabled.

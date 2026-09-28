@@ -16,7 +16,11 @@ const rate = (value: unknown): number | null =>
 const quantity = (value: number | null): string => value === null ? 'unavailable' : value.toLocaleString()
 
 export function ConversationRuntimeStatus({ turn }: { turn: Turn | null }) {
-  const [expanded, setExpanded] = useState(false)
+  const [pinned, setPinned] = useState(false)
+  const [hovered, setHovered] = useState(false)
+  const [focused, setFocused] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
+  const expanded = pinned || (!dismissed && (hovered || focused))
   const metadata = record(turn?.trace?.metadata)
   const budget = record(metadata.context_budget)
   const stats = record(metadata.generation_stats)
@@ -52,8 +56,34 @@ export function ConversationRuntimeStatus({ turn }: { turn: Turn | null }) {
         <span>Context {input === null ? 'unavailable' : `${quantity(input)}${limit === null ? '' : ` / ${quantity(limit)}`} · ${basis}`}</span>
         <span>Decode {decode === null ? 'unavailable' : formatRate(decode)}</span>
       </div>
-      <div className={`conversation-runtime-details${expanded ? ' expanded' : ''}`}>
-        <button type="button" aria-expanded={expanded} aria-controls="last-request-details" onClick={() => setExpanded(value => !value)}>Details</button>
+      <div
+        className={`conversation-runtime-details${expanded ? ' expanded' : ''}`}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => {
+          setHovered(false)
+          if (!focused) setDismissed(false)
+        }}
+        onFocus={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) setFocused(true)
+        }}
+        onBlur={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) {
+            setFocused(false)
+            if (!hovered) setDismissed(false)
+          }
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape' && expanded) {
+            event.preventDefault()
+            setPinned(false)
+            setDismissed(true)
+          }
+        }}
+      >
+        <button type="button" aria-expanded={expanded} aria-controls="last-request-details" onClick={() => {
+          setPinned(!pinned)
+          setDismissed(pinned)
+        }}>Details</button>
         <div id="last-request-details" className="conversation-runtime-popover">
           <strong>Last retained answer</strong>
           <p>Input: {quantity(input)} tokens ({basis}{basis === 'estimated' ? ' character estimate' : ''})</p>

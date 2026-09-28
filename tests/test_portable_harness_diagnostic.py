@@ -1,0 +1,164 @@
+from __future__ import annotations
+
+import argparse
+import importlib.util
+import json
+from pathlib import Path
+
+import pytest
+
+
+ROOT = Path(__file__).resolve().parents[1]
+SPEC = importlib.util.spec_from_file_location(
+    "run_portable_harness_diagnostic", ROOT / "scripts/run_portable_harness_diagnostic.py"
+)
+assert SPEC and SPEC.loader
+runner = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(runner)
+
+
+def test_case_ids_accept_exposed_id_without_loading_rubric(tmp_path: Path) -> None:
+    cases = tmp_path / "exposed.jsonl"
+    cases.write_text(json.dumps({"id": "x1", "question": "How do units work?"}) + "\n")
+    loaded = runner.load_cases(cases)
+    units = runner.build_units(loaded, continuity=True, long_context=True, cache_case_id="x1")
+    assert len(units) == 2 * (1 + len(runner.CONTINUITY) + 1 + 1)
+    assert all(unit["case_id"] == "x1" for unit in units if unit["kind"] in {"exposed_pair", "cache_cold_warm"})
+    with pytest.raises(ValueError, match="distinct"):
+        cases.write_text(cases.read_text() * 2)
+        runner.load_cases(cases)
+
+
+def test_public_config_disables_inherited_private_overlay(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGRONOMY_AGENT_PRIVATE_KNOWLEDGE", "1")
+    payload = runner.public_rag_config(ROOT / "configs/rag.yaml")
+    assert payload["private_knowledge"] == {"enabled": False, "required": False}
+    assert runner.model_config_for_cell(ROOT / "configs/model.yaml", cache_enabled=False)["prompt_cache_enabled"] is False
+    assert runner.model_config_for_cell(ROOT / "configs/model.yaml", cache_enabled=True)["prompt_cache_enabled"] is True
+
+
+def test_direct_cache_probe_reuses_identical_prompt_and_scope(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import yaml
+
+    paths = []
+    for enabled in (False, True):
+        path = tmp_path / f"model_{enabled}.yaml"
+        path.write_text(yaml.safe_dump(runner.model_config_for_cell(ROOT / "configs/model.yaml", cache_enabled=enabled)))
+        paths.append(path)
+    calls: list[tuple[bool, str, str]] = []
+
+    class FakeGenerator:
+        def __init__(self, enabled: bool) -> None:
+            self.enabled = enabled
+            self.count = 0
+            self.model_identity = {"status": "test"}
+            self._resolved_model_snapshot = Path("/synthetic/model-snapshot")
+            self.last_generation_stats: dict[str, str] = {}
+
+        def set_cache_scope(self, scope: str) -> None:
+            self.scope = scope
+
+        def generate(self, messages: list[dict[str, str]]) -> str:
+            self.count += 1
+            calls.append((self.enabled, self.scope, runner.canonical_hash(messages)))
+            self.last_generation_stats = {"prompt_cache_status": (
+                "disabled" if not self.enabled else "reused_saved_prefix" if self.count == 2 else "prepared_this_request"
+            )}
+            return "same answer"
+
+    monkeypatch.setattr(runner, "_build_mlx_generator", lambda _id, config, _path: FakeGenerator(config["prompt_cache_enabled"]))
+    messages = [{"role": "system", "content": "Synthetic"}, {"role": "user", "content": "How?"}]
+    probe = runner.direct_cache_probe(
+        messages=messages, model_id="test", disabled_config_path=paths[0],
+        enabled_config_path=paths[1], max_tokens=320, session_id="test-session",
+    )
+    assert probe["answer_equal"] is True
+    assert probe["cache_statuses"] == {"disabled": "disabled", "cold": "prepared_this_request", "warm": "reused_saved_prefix"}
+    assert len({scope for _, scope, _ in calls}) == 1
+    assert len({prompt_hash for _, _, prompt_hash in calls}) == 1
+    assert "diagnostic_isolated_parity" in calls[0][1]
+    assert probe["outputs"][0]["resolved_model_snapshot"] == "/synthetic/model-snapshot"
+    json.dumps(probe)
+
+
+def test_direct_reference_uses_only_fixed_system_and_question(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import yaml
+
+    model = tmp_path / "model.yaml"
+    model.write_text(yaml.safe_dump(runner.model_config_for_cell(ROOT / "configs/model.yaml", cache_enabled=False)))
+
+    class FakeGenerator:
+        model_identity = {"status": "test"}
+        last_generation_stats = {"prompt_cache_status": "disabled"}
+
+        def generate(self, messages: list[dict[str, str]]) -> str:
+            assert messages == [
+                {"role": "system", "content": runner.DIRECT_REFERENCE_SYSTEM},
+                {"role": "user", "content": "How do units work?"},
+            ]
+            return "Use consistent units."
+
+    monkeypatch.setattr(runner, "_build_mlx_generator", lambda *_args: FakeGenerator())
+    row = runner.direct_reference(question="How do units work?", model_id="test",
+                                  model_config_path=model, max_tokens=320)
+    assert row["answer"] == "Use consistent units."
+    assert row["prompt_sha256"] == runner.canonical_hash(row["prompt_messages"])
+    assert "not_product_mode" in row["boundary"]
+
+
+@pytest.mark.parametrize("rag_source", ["rag.yaml", "rag_production_foundations_method_candidate.yaml"])
+def test_worker_retains_product_trace_with_mock(tmp_path: Path, rag_source: str) -> None:
+    import yaml
+
+    rag = tmp_path / "rag.yaml"
+    rag.write_text(yaml.safe_dump(runner.public_rag_config(ROOT / "configs" / rag_source)))
+    model = tmp_path / "model.yaml"
+    model.write_text(yaml.safe_dump(runner.model_config_for_cell(ROOT / "configs/model.yaml", cache_enabled=False)))
+    spec = {
+        "unit": {"kind": "exposed_pair", "turns": ["What does lb/ac mean?"], "cache_enabled": False},
+        "db_path": str(tmp_path / "traces.sqlite3"),
+        "artifact_root": str(tmp_path / "artifacts"),
+        "rag_config": str(rag), "model_config": str(model),
+        "model_id": "mock", "max_tokens": 64,
+    }
+    spec_path = tmp_path / "spec.json"
+    spec_path.write_text(json.dumps(spec))
+    result = tmp_path / "worker.jsonl"
+    assert runner._worker(spec_path, result) == 0
+    row = json.loads(result.read_text())
+    assert row["status"] == "completed"
+    assert row["answer_stages"]["final"]["text"] == row["answer"]
+    assert row["prompt_messages"]
+    assert row["context_budget"]["status"]
+    assert len(row["stage_receipts"]) == 17
+
+
+def test_parent_preserves_timeout_as_failed_cell(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import subprocess
+
+    cases = tmp_path / "cases.jsonl"
+    cases.write_text(json.dumps({"id": "x1", "question": "What is a seed lot?"}) + "\n")
+    monkeypatch.setattr(runner, "DEFAULT_ARMS", {"active": ROOT / "configs/rag.yaml"})
+
+    def timeout(*args: object, **kwargs: object) -> None:
+        raise subprocess.TimeoutExpired("worker", 0.01)
+
+    monkeypatch.setattr(runner.subprocess, "run", timeout)
+    arguments = argparse.Namespace(
+        cases=cases, model_config=ROOT / "configs/model.yaml", output_dir=tmp_path / "run",
+        model_id=None, run_id="timeout-test", max_tokens=320, cell_timeout_seconds=0.01,
+        include_continuity=False, include_long_context=False, include_cache=False,
+        include_direct_reference=False, cache_case_id=None,
+        execute=True, resume=False,
+    )
+    assert runner._run_parent(arguments) == 1
+    row = json.loads((tmp_path / "run/cells.jsonl").read_text())
+    assert row["status"] == "timed_out"
+    assert row["observed_turns"] == 0
+    arguments.resume = True
+    assert runner._run_parent(arguments) == 1
+    assert len((tmp_path / "run/cells.jsonl").read_text().splitlines()) == 1

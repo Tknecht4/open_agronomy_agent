@@ -606,7 +606,10 @@
     "tests/test_harness_intervention_replay.py",
     "docs/reviews/generalized-harness-implementation-20260928.md",
     "docs/reviews/artifacts/portable-agronomy-20260928/storage-profile.json",
-    "tests/test_editor_prompt_budget.py"
+    "tests/test_editor_prompt_budget.py",
+    "scripts/run_portable_harness_diagnostic.py",
+    "tests/test_portable_harness_diagnostic.py",
+    "configs/model_qwen35_27b_diagnostic.yaml"
   ],
   "trees": [
     "src",

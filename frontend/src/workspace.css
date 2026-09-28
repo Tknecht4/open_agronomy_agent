@@ -59,9 +59,8 @@
 .workspace-shell .conversation-runtime-summary span:first-child { font-weight: 700; color: #3e604b; }
 .workspace-shell .conversation-runtime-details > button { border: 0; padding: 3px 5px; background: transparent; color: #365e49; text-decoration: underline; font: inherit; }
 .workspace-shell .conversation-runtime-popover { display: none; position: absolute; z-index: 1200; top: calc(100% - 1px); right: 16px; width: min(370px, calc(100vw - 40px)); padding: 14px 16px; border: 1px solid #dce6dc; border-radius: 8px; box-shadow: 0 8px 22px #233d321c; background: #fff; color: #425c4b; line-height: 1.5; }
-.workspace-shell .conversation-runtime-details:hover .conversation-runtime-popover,
-.workspace-shell .conversation-runtime-details:focus-within .conversation-runtime-popover,
 .workspace-shell .conversation-runtime-details.expanded .conversation-runtime-popover { display: block; }
+.workspace-shell .chat-panel:has(.conversation-runtime-details.expanded) { overflow: visible; }
 .workspace-shell .conversation-runtime-popover p { margin: 7px 0; }
 .workspace-shell .conversation-runtime-popover small { color: #697b6c; }
 .workspace-shell .network-answer-state { display: block; margin: 0; padding: 8px 24px; border: 0; border-radius: 0; color: #5f715f; background: #f9fbf6; font-size: 10px; line-height: 1.5; }
@@ -257,6 +256,8 @@
  .workspace-shell .chat-panel, .workspace-shell .map-stage { height: max(570px, calc(100dvh - 230px)); }
  .workspace-shell .chat-heading { padding: 15px 16px; }
  .workspace-shell .conversation-controls, .workspace-shell .conversation-runtime { padding-left: 16px; padding-right: 16px; }
+ .workspace-shell .conversation-controls { flex-wrap: wrap; }
+ .workspace-shell .conversation-controls select { flex-basis: 100%; max-width: none; }
  .workspace-shell .conversation-thread { padding: 20px 18px; }
  .workspace-shell .conversation-empty { padding: 12px 0; gap: 12px; }
  .workspace-shell .conversation-empty > strong { font-size: 27px; }

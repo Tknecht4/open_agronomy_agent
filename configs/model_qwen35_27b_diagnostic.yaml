@@ -1,0 +1,38 @@
+# Non-active, revision-pinned paired diagnostic; not a supported release profile.
+model_id: mlx-community/Qwen3.5-27B-4bit
+serving_model_id: mlx-community/Qwen3.5-27B-4bit
+serving_label: "Qwen3.5 27B \xB7 diagnostic only"
+serving_role: experimental_diagnostic
+serving_quality_gate: unqualified_nonclaim
+model_revision: 45797d2985a12c55e6473686e9ea91b95e959553
+license: apache-2.0
+max_tokens: 640
+serving_max_tokens: 640
+temperature: 0.0
+top_p: 0.9
+top_k: 0
+intervention_profile: balanced
+seed: 42
+use_stream_generate: true
+prompt_cache_enabled: false
+prompt_cache_entries: 8
+prompt_cache_max_bytes_mb: 256
+prompt_cache_min_prefix_tokens: 64
+prefill_step_size: 2048
+kv_bits: null
+kv_group_size: 64
+quantized_kv_start: 0
+max_kv_size: null
+draft_model_id: null
+num_draft_tokens: 4
+context_management:
+  context_limit_tokens: 8192
+  history_budget_tokens: 2048
+  max_history_turns: 8
+answer_verification:
+  enabled: true
+  mode: risk_conditioned_selective_v3
+  model_id: mlx-community/Qwen3.5-27B-4bit
+  model_revision: 45797d2985a12c55e6473686e9ea91b95e959553
+  max_tokens: 220
+  max_evidence_chars: 9000

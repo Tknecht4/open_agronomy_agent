@@ -319,3 +319,17 @@ frozen document/graph rehearsal matrix remains unchanged.
 `profile_workspace_backend.py` also compares complete saved-transcript loading
 with the bounded eight-turn read on the same synthetic session. These are
 storage timings; they do not establish an end-to-end speedup or model throughput.
+
+`run_portable_harness_diagnostic.py --run-id <new-id> --output-dir <new-dir>`
+freezes a public-only, exposed diagnostic manifest without executing models.
+`--execute` runs paired active and experimental METHOD profiles through the
+product core with a pinned, pre-provisioned MLX model. `--include-direct-reference`
+adds a fixed minimal-prompt comparison; this bundled comparison cannot isolate
+retrieval from intervention effects. `--include-continuity`,
+`--include-long-context`, and `--include-cache` add synthetic infrastructure
+checks. Cache parity repeats identical retained prompt bytes separately from
+product answer quality. The runner disables private overlays, retains raw answer
+stages and exact prompts, records failures and timeouts, and permits `--resume`
+only when its manifest matches. Use synthetic/public questions only: retained
+prompts and SQLite traces are not automatically safe to publish. These exposed
+cases cannot establish held-out competence or promote a runtime profile.
