@@ -1,0 +1,215 @@
+{
+  "schema_version": "open_agronomy_agent.method_source_support.v1",
+  "date_utc": "2026-09-27",
+  "reviewer": "Codex source and boundary review; no human product approval",
+  "status": "candidate_method_scope_reviewed_source_linked_not_active",
+  "source_registry_path": "data/manifests/production_foundations_sources_v2.json",
+  "scope": "General methods applicable as conditional reasoning in Canada and the United States; no local management authority",
+  "rights_boundary": "Only project-authored paraphrases enter the candidate. External page/PDF bytes and evaluation content are excluded.",
+  "methods": {
+    "method_seed_mass": {
+      "method_id": "seed_mass",
+      "source_ids": [
+        "mb_spring_cereal_seeding_rates",
+        "unl_winter_wheat_seed_count"
+      ],
+      "source_jurisdictions": [
+        "Manitoba, Canada",
+        "Nebraska, United States"
+      ],
+      "claims": [
+        {
+          "id": "seed_count_to_mass",
+          "supports": [
+            "mb_spring_cereal_seeding_rates",
+            "unl_winter_wheat_seed_count"
+          ],
+          "limit": "Conversion method only; neither guide's desired stand is a destination target."
+        },
+        {
+          "id": "lot_germination_and_establishment",
+          "supports": [
+            "mb_spring_cereal_seeding_rates",
+            "unl_winter_wheat_seed_count"
+          ],
+          "limit": "Germination and field establishment are distinct; use actual lot and field estimates."
+        }
+      ]
+    },
+    "method_thermal_time": {
+      "method_id": "thermal_time",
+      "source_ids": [
+        "aafc_growing_degree_days_service",
+        "purdue_gdd_conventions"
+      ],
+      "source_jurisdictions": [
+        "Canada",
+        "Indiana, United States"
+      ],
+      "claims": [
+        {
+          "id": "daily_heat_accumulation",
+          "supports": [
+            "aafc_growing_degree_days_service",
+            "purdue_gdd_conventions"
+          ],
+          "limit": "Base, caps, units and accumulation start depend on the crop/model."
+        },
+        {
+          "id": "thermal_model_not_observation",
+          "supports": [
+            "purdue_gdd_conventions"
+          ],
+          "limit": "No imported stage threshold, harvest trigger or yield forecast."
+        }
+      ]
+    },
+    "method_partial_budget": {
+      "method_id": "partial_budget",
+      "source_ids": [
+        "isu_partial_budget",
+        "on_starting_farm_budget"
+      ],
+      "source_jurisdictions": [
+        "United States",
+        "Ontario, Canada"
+      ],
+      "claims": [
+        {
+          "id": "incremental_four_quadrant_comparison",
+          "supports": [
+            "isu_partial_budget",
+            "on_starting_farm_budget"
+          ],
+          "limit": "Only truly changing items; consistent acreage and period."
+        },
+        {
+          "id": "uncertainty_boundary",
+          "supports": [
+            "isu_partial_budget",
+            "on_starting_farm_budget"
+          ],
+          "limit": "No local quote or guarantee from a worked example."
+        }
+      ]
+    },
+    "method_enterprise_budget": {
+      "method_id": "enterprise_budget",
+      "source_ids": [
+        "mb_special_crop_costs",
+        "on_cost_production_framework",
+        "usda_ars_wholefarm"
+      ],
+      "source_jurisdictions": [
+        "Manitoba, Canada",
+        "Ontario, Canada",
+        "United States"
+      ],
+      "claims": [
+        {
+          "id": "enterprise_cost_boundary",
+          "supports": [
+            "mb_special_crop_costs",
+            "on_cost_production_framework",
+            "usda_ars_wholefarm"
+          ],
+          "limit": "Operating and total costs differ; compare matched periods, units and categories."
+        },
+        {
+          "id": "scenario_not_price",
+          "supports": [
+            "mb_special_crop_costs",
+            "on_cost_production_framework"
+          ],
+          "limit": "Historical budget assumptions are not current bids."
+        }
+      ]
+    },
+    "method_liquidity": {
+      "method_id": "liquidity",
+      "source_ids": [
+        "usda_ers_financial_ratios",
+        "on_farm_succession_ratios"
+      ],
+      "source_jurisdictions": [
+        "United States",
+        "Ontario, Canada"
+      ],
+      "claims": [
+        {
+          "id": "current_ratio",
+          "supports": [
+            "usda_ers_financial_ratios",
+            "on_farm_succession_ratios"
+          ],
+          "limit": "Dated balance-sheet definition; not a lender approval threshold."
+        },
+        {
+          "id": "wealth_not_cash_timing",
+          "supports": [
+            "on_farm_succession_ratios"
+          ],
+          "limit": "Land wealth and solvency do not prove near-term cash availability."
+        }
+      ]
+    },
+    "method_cash_flow": {
+      "method_id": "cash_flow",
+      "source_ids": [
+        "usda_ars_wholefarm",
+        "on_starting_farm_budget"
+      ],
+      "source_jurisdictions": [
+        "United States",
+        "Ontario, Canada"
+      ],
+      "claims": [
+        {
+          "id": "cash_schedule",
+          "supports": [
+            "usda_ars_wholefarm",
+            "on_starting_farm_budget"
+          ],
+          "limit": "Use farm-specific payment dates, financing and receipts."
+        },
+        {
+          "id": "cash_not_accrual_profit",
+          "supports": [
+            "usda_ars_wholefarm",
+            "on_starting_farm_budget"
+          ],
+          "limit": "Depreciation and noncash accounting entries do not represent same-period cash payments."
+        }
+      ]
+    },
+    "method_nutrient_inputs": {
+      "method_id": "nutrient_plan_inputs",
+      "source_ids": [
+        "usda_nrcs_nutrient_management",
+        "mb_nutrient_plan_inputs"
+      ],
+      "source_jurisdictions": [
+        "United States",
+        "Manitoba, Canada"
+      ],
+      "claims": [
+        {
+          "id": "planning_inputs",
+          "supports": [
+            "usda_nrcs_nutrient_management",
+            "mb_nutrient_plan_inputs"
+          ],
+          "limit": "Collect field maps, crop history, tests, amendments and nutrient credits."
+        },
+        {
+          "id": "rate_authority_excluded",
+          "supports": [
+            "usda_nrcs_nutrient_management",
+            "mb_nutrient_plan_inputs"
+          ],
+          "limit": "Current local calibration, regulation and field samples are required for rates; recordkeeping is not compliance certification."
+        }
+      ]
+    }
+  }
+}

@@ -5065,6 +5065,12 @@ def _build_doc_snapshot(idx: int, doc: Any, *, store_text: bool) -> dict[str, An
         "manifest_sha256": doc.manifest_sha256,
         "distribution_scope": doc.distribution_scope,
         "answer_role": doc.answer_role,
+        **({
+            "authority_tier": doc.authority_tier,
+            "supporting_source_ids": list(doc.supporting_source_ids),
+            "source_jurisdictions": list(doc.source_jurisdictions),
+            "method_scope": dict(doc.method_scope) if doc.method_scope else None,
+        } if doc.answer_role == "method_context" else {}),
     }
 
 

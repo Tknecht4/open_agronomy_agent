@@ -432,12 +432,25 @@ def applicability_from_retrieved_doc(
     question_jurisdictions: Sequence[str] = (),
     region_layer_versions: Sequence[str] = (),
 ) -> ApplicabilityEnvelope:
+    from agronomy_agent.method_context import reviewed_method_ids
+
     jurisdictions = _clean_tuple(getattr(doc, "jurisdictions", ()) or ())
     crops = _clean_tuple(getattr(doc, "crops", ()) or ())
     target = {value.casefold() for value in _clean_tuple(question_jurisdictions)}
     actual = {value.casefold() for value in jurisdictions}
     source_type = str(getattr(doc, "source_type", "") or "")
-    if target and actual and not target.intersection(actual):
+    method_ids = reviewed_method_ids(doc)
+    if method_ids:
+        from agronomy_agent.query_context import _normalize_jurisdiction_scope
+
+        target_countries, _ = _normalize_jurisdiction_scope(question_jurisdictions)
+        actual_countries, _ = _normalize_jurisdiction_scope(jurisdictions)
+        transfer_status = (
+            "reviewed_general_method_scope"
+            if target_countries and target_countries.intersection(actual_countries)
+            else "blocked_jurisdiction_mismatch"
+        )
+    elif target and actual and not target.intersection(actual):
         transfer_status = "blocked_jurisdiction_mismatch"
     elif source_type in {"regional_environment", "regional_environment_profile"}:
         transfer_status = "regional_prior"
@@ -452,6 +465,9 @@ def applicability_from_retrieved_doc(
         "transfer_status": transfer_status,
         "region_layers": _clean_tuple(region_layer_versions),
     }
+    if method_ids:
+        payload["methods"] = method_ids
+        payload["source_support_receipt_sha256"] = doc.method_scope["source_support_receipt_sha256"]
     return ApplicabilityEnvelope(
         schema_version="open_agronomy_agent.applicability_envelope.v1",
         applicability_id=content_id("applicability", payload),
@@ -459,7 +475,7 @@ def applicability_from_retrieved_doc(
         crops=crops,
         crop_stages=(),
         practices=(),
-        methods=(),
+        methods=method_ids,
         units=(),
         depth_scope=(),
         temporal_scope=(str(getattr(doc, "currency_status", "") or "unspecified"),),
@@ -467,9 +483,11 @@ def applicability_from_retrieved_doc(
         overlap_fractions=(),
         transfer_status=transfer_status,
         limitations=(
-            "retrieved chunk does not carry normalized stage, practice, method, unit, or depth applicability"
+            ("General method only; source jurisdictions remain provenance, not local field or regulatory authority"
+             if method_ids else
+             "retrieved chunk does not carry normalized stage, practice, method, unit, or depth applicability"),
         ),
-        capture_status="partial_legacy_applicability",
+        capture_status="reviewed_method_scope" if method_ids else "partial_legacy_applicability",
     )
 
 
@@ -493,6 +511,12 @@ def span_and_capsule_from_retrieved_doc(
     source_locator = getattr(doc, "source_locator", None)
     if isinstance(source_locator, Mapping):
         locator["source_locator"] = dict(source_locator)
+    if getattr(doc, "supporting_source_ids", ()):
+        locator["supporting_source_ids"] = list(doc.supporting_source_ids)
+        locator["source_jurisdictions"] = list(getattr(doc, "source_jurisdictions", ()))
+        scope = getattr(doc, "method_scope", None)
+        if isinstance(scope, Mapping):
+            locator["source_support_receipt_sha256"] = scope.get("source_support_receipt_sha256")
     if page_match:
         locator["page"] = int(page_match.group(1))
     transformation_sha = _valid_sha(getattr(doc, "chunk_sha256", None))
@@ -554,11 +578,13 @@ def span_and_capsule_from_retrieved_doc(
                 "regional evidence is context, not field truth"
                 if applicability.transfer_status == "regional_prior"
                 else "",
-                "capsule is adapted from a retrieved chunk and has not received claim-level human review",
+                ("reviewed method scope does not authorize field action or local evidence"
+                 if applicability.methods else
+                 "capsule is adapted from a retrieved chunk and has not received claim-level human review"),
             )
             if value
         ),
-        review_state="legacy_chunk_not_claim_reviewed",
+        review_state="source_supported_method_scope_reviewed" if applicability.methods else "legacy_chunk_not_claim_reviewed",
         retrieval_eligible=str(getattr(doc, "retrieval_policy", "standard") or "standard") != "excluded",
         training_eligible=None,
         capture_status="adapter_generated_not_curated",
@@ -609,6 +635,7 @@ def _coverage_states(
     decision_contract: Any | None,
     docs: Sequence[Any],
     capsules_by_doc_id: Mapping[str, EvidenceCapsule],
+    applicability_by_doc_id: Mapping[str, ApplicabilityEnvelope],
 ) -> tuple[CoverageState, ...]:
     if decision_contract is None or not question_frame.evidence_slots:
         return (
@@ -628,6 +655,13 @@ def _coverage_states(
     obligations = {str(item.get("key")): item for item in question_frame.evidence_slots}
     for key, obligation in obligations.items():
         supporting = [doc for doc in docs if key in obligation_coverage(doc, decision_contract)]
+        if key.startswith("method:"):
+            supporting = [
+                doc for doc in supporting
+                if (applicability_by_doc_id.get(str(getattr(doc, "doc_id", ""))) or None)
+                and applicability_by_doc_id[str(getattr(doc, "doc_id", ""))].transfer_status
+                == "reviewed_general_method_scope"
+            ]
         capsule_ids = tuple(
             capsules_by_doc_id[str(getattr(doc, "doc_id", ""))].capsule_id
             for doc in supporting
@@ -649,6 +683,9 @@ def _coverage_states(
         elif stale:
             status = "STALE"
             reasons = ("supporting evidence is marked historical, stale, or expired",)
+        elif key.startswith("method:") and not missing_inputs:
+            status = "ADEQUATE"
+            reasons = ("reviewed general method supports explanation only; local decision evidence remains separate",)
         elif boundary_only or missing_inputs:
             status = "PARTIAL"
             reasons = tuple(
@@ -696,6 +733,7 @@ def evidence_packet_from_runtime(
     spans: list[EvidenceSpan] = []
     capsules: list[EvidenceCapsule] = []
     capsules_by_doc_id: dict[str, EvidenceCapsule] = {}
+    applicability_by_doc_id: dict[str, ApplicabilityEnvelope] = {}
     region_layers = _clean_tuple(version_ledger.get("region_layer_versions") or ())
     for doc in docs:
         asset, version = source_contracts_from_retrieved_doc(doc)
@@ -718,11 +756,13 @@ def evidence_packet_from_runtime(
         spans.append(span)
         capsules.append(capsule)
         capsules_by_doc_id[doc_id] = capsule
+        applicability_by_doc_id[doc_id] = envelope
     coverage = _coverage_states(
         question_frame=question_frame,
         decision_contract=decision_contract,
         docs=docs,
         capsules_by_doc_id=capsules_by_doc_id,
+        applicability_by_doc_id=applicability_by_doc_id,
     )
     capability_evidence = capability_evidence_from_records(capability_records)
     if capability_evidence:

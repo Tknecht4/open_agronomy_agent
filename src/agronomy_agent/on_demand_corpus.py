@@ -190,6 +190,11 @@ class OnDemandCorpusRelease:
             corpus_path=str(record.get("_corpus_path") or ""),
             transfer_scope=str(record.get("transfer_scope") or ""),
             applicability_boundary=str(record.get("applicability_boundary") or ""),
+            answer_role=str(record.get("answer_role") or ""),
+            authority_tier=str(record.get("authority_tier") or ""),
+            supporting_source_ids=tuple(str(value) for value in record.get("supporting_source_ids") or []),
+            source_jurisdictions=tuple(str(value) for value in record.get("source_jurisdictions") or []),
+            method_scope=(dict(record.get("method_scope")) if isinstance(record.get("method_scope"), dict) else None),
             source_locator=dict(locator) if locator else None,
         )
 
