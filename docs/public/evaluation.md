@@ -116,11 +116,12 @@ claim:
   development evidence; its advisory judge measurements do not evaluate the
   current runtime.
 
-The [current two-Gemma Colab assessment](two-gemma-colab-assessment-20260926.md)
+The [frozen September 26 two-Gemma Colab assessment](two-gemma-colab-assessment-20260926.md)
 is a separate successor execution of the same exposed 241-case development
 instrument against commit `d43ade7`. It covers Gemma 3 270M and Gemma 4 E2B,
-three trials, and all four arms. It is useful for current-code QA/QC but does
-not recover holdout status or provide semantic answer-quality adjudication.
+three trials, and all four arms. It supports QA/QC of that evaluated system,
+not the present checkout, and does not recover holdout status or provide
+semantic answer-quality adjudication.
 
 The former Benchmark v2 fixture is likewise an exposed internal regression
 suite. Its deterministic executor and metric contracts support implementation

@@ -31,7 +31,7 @@ PYTHONPATH=src python -m agronomy_agent.tool_cli calculate unit_conversion \
 
 ## Guard capabilities
 
-Guards add field-data, fertility, weather, label, product-safety, resistance, soil-structure, salinity/sodicity, or 4R decision checks. They supply boundaries and missing-input logic, not missing observations. RC1 showed that broad whole-answer intervention can reduce usefulness for capable models, so the upgrade policy applies safeguards according to claim/action consequence rather than simply the presence of any missing field evidence. Frozen RC3 expected local guards were complete on 134/154 eligible case routes. After the planner-v2 repair, the current-code production replay is 154/154 with all 154 cases retaining 17 stage receipts. Both figures are routing/trace diagnostics, not evidence that every intervention improved the answer.
+Guards add field-data, fertility, weather, label, product-safety, resistance, soil-structure, salinity/sodicity, or 4R decision checks. They supply boundaries and missing-input logic, not missing observations. RC1 showed that broad whole-answer intervention can reduce usefulness for capable models, so the upgrade policy applies safeguards according to claim/action consequence rather than simply the presence of any missing field evidence. Frozen RC3 expected local guards were complete on 134/154 eligible case routes. The September 26 two-Gemma assessment of commit `d43ade7` recorded a production replay of 154/154 required guard routes with all 17 stages present; that is a frozen checkpoint, not a measurement of the present checkout. Both figures are routing/trace diagnostics, not evidence that every intervention improved the answer.
 
 ## Public and local-data adapters
 

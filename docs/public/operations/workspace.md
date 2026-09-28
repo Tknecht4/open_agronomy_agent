@@ -2,9 +2,13 @@
 
 The workspace puts a question and its selected field together. **Workspace**, **Fields**, and **Data** are the primary views; **Evidence**, **Benchmarks**, **Privacy**, and **About** are under **More**. The interface is a client of the local API. A page that loads does not establish that the model or optional data providers are ready; check [native setup](native-setup.md) and `/api/health` separately.
 
-![Workspace using synthetic example data](../assets/workspace.jpg)
+![Compact general chat and calculator example, with no field selected](../assets/workspace.png)
 
-The image uses synthetic records. It contains no personal field data.
+The image shows a compact general chat and calculator example using synthetic inputs. No field is selected and no personal field data is shown.
+
+![Condensed workspace demo of a general question and calculator flow](../assets/workspace-demo.gif)
+
+The demo shortens pauses between steps for viewing; its timing is not a measure of model or API latency.
 
 ## Ask a question
 

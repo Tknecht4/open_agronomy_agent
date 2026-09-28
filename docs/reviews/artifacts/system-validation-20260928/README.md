@@ -32,6 +32,19 @@ Run manifests bind 147 production Python files, the corpus, fixture, model revis
 runner and generation settings. Runtime receipts identify NVIDIA L4/MLX CUDA;
 these results do not measure 27B inference on a laptop.
 
+The raw exports and grading archive are indexed by the [raw archive catalog](../experiment-raw-archive-20260928/catalog.json). Exact raw grading reproduction requires an authorized, separately restored private tree; the public tree alone cannot perform it. Before opening any raw export or grading archive, set `OA_PRIVATE_RAW_RESTORE_ROOT` to that existing restored directory and verify the independently pinned public catalog and every restored file:
+
+```bash
+: "${OA_PRIVATE_RAW_RESTORE_ROOT:?set this to an existing verified private restore root}"
+export OA_PRIVATE_RAW_RESTORE_ROOT
+python3 docs/reviews/artifacts/experiment-raw-archive-20260928/verify_private_restore.py \
+  --catalog docs/reviews/artifacts/experiment-raw-archive-20260928/catalog.json \
+  --expected-catalog-sha256 4d4f5b21b85c6a34c5f442fd14ee6f15fcbc790452e137de75845a7e075796b0 \
+  --root "$OA_PRIVATE_RAW_RESTORE_ROOT"
+```
+
+The catalog hash above is pinned to the verified archive and exact 22-file restore. The verifier refuses missing, linked or hash-mismatched files.
+
 Extract instrument archives at the repository root to recover the original
 ignored `outputs/system-validation-20260928/` paths. The old instrument is retained
 for reproducibility; use the separately identified field-v2 runner for corrected
@@ -46,11 +59,11 @@ raw exports are normalized derivatives. `runtime-receipts.tar.gz` preserves
 35 explicitly selected collection-root capsule inventories, environment,
 status, provisioning, delta, mock and driver receipts. It does not contain
 run outputs or model weights. From the repository root, verify and extract the
-four archives (the fourth contains local-only evaluation material):
+three public archives and the verified private grading archive:
 
 ```bash
 python3 - <<'PY'
-import hashlib, io, json, tarfile
+import hashlib, io, json, os, tarfile
 from pathlib import Path
 base = Path('docs/reviews/artifacts/system-validation-20260928')
 for manifest_name in ('instrument-field-v2-manifest.json',
@@ -58,7 +71,10 @@ for manifest_name in ('instrument-field-v2-manifest.json',
                       'runtime-receipts-manifest.json',
                       'grading-analysis-manifest.json'):
     manifest = json.loads((base / manifest_name).read_text())
-    archive = (base / manifest['archive']).read_bytes()
+    archive_path = (Path(os.environ['OA_PRIVATE_RAW_RESTORE_ROOT']) / base / manifest['archive']
+                    if manifest_name == 'grading-analysis-manifest.json'
+                    else base / manifest['archive'])
+    archive = archive_path.read_bytes()
     assert hashlib.sha256(archive).hexdigest() == manifest['sha256']
     assert len(archive) == manifest['bytes']
     with tarfile.open(fileobj=io.BytesIO(archive), mode='r:gz') as tar:
@@ -74,7 +90,7 @@ PY
 tar -xzf docs/reviews/artifacts/system-validation-20260928/instrument-field-v2.tar.gz -C .
 tar -xzf docs/reviews/artifacts/system-validation-20260928/run-metadata-field-v2.tar.gz -C .
 tar -xzf docs/reviews/artifacts/system-validation-20260928/runtime-receipts.tar.gz -C .
-tar -xzf docs/reviews/artifacts/system-validation-20260928/grading-analysis.tar.gz -C .
+tar -xzf "$OA_PRIVATE_RAW_RESTORE_ROOT/docs/reviews/artifacts/system-validation-20260928/grading-analysis.tar.gz" -C .
 python3 outputs/system-validation-20260928/analysis/package_evaluation_artifacts.py verify
 python3 outputs/system-validation-20260928/analysis/package_evaluation_artifacts.py verify-metadata
 ```
@@ -85,7 +101,8 @@ the separate `field_delivery.json` bytes. Each output directory must be new;
 the metadata copies complete the run directories for aggregation.
 
 ```bash
-base=docs/reviews/artifacts/system-validation-20260928
+base="$OA_PRIVATE_RAW_RESTORE_ROOT/docs/reviews/artifacts/system-validation-20260928"
+publicbase=docs/reviews/artifacts/system-validation-20260928
 analysis=outputs/system-validation-20260928/analysis
 remote=outputs/system-validation-20260928/colab
 for spec in \
@@ -96,7 +113,7 @@ for spec in \
   IFS=: read -r export_name run_name collection_name <<< "$spec"
   python3 "$analysis/restore_public_run.py" \
     --raw "$base/$export_name-raw.jsonl.gz" \
-    --receipt "$base/$export_name-raw-receipt.json" \
+    --receipt "$publicbase/$export_name-raw-receipt.json" \
     --output-dir "$analysis/public-reconstructed/$run_name"
   cp "$remote/$collection_name/outputs/$run_name/cell_plan.json" \
      "$remote/$collection_name/outputs/$run_name/run_manifest.json" \
@@ -117,8 +134,7 @@ passed for all four retained collections: Gemma v1 restored 192 executions and
 these public archives; private table import/snapshot/query joins cannot be
 rerun from these reconstructed files alone and rely on the separate table audit.
 
-Together, the instrument, run-metadata and runtime-receipt archives plus restored
-raw exports permit public
+Together, the public instrument, run-metadata and runtime-receipt archives plus separately verified private raw exports permit
 rechecks of run/plan identities, cell counts and status, prompt and field
 delivery receipts, ledger timing and token arithmetic, runner/delta hashes,
 capsule inventory, provisioned model identity, and available driver-end logs.
@@ -129,7 +145,7 @@ needs the exact production source, configurations, corpus and fixture named in
 the manifests, plus run-level offline RAG profiles and worker logs that are
 not in those three mechanical-evidence archives. The original isolated SQLite stores are private;
 their import, snapshot, query, and table-join checks cannot be independently
-rerun from public raw exports. The published table-audit receipts preserve the
+rerun from a private raw restore. The published table-audit receipts preserve the
 observed joins, not a substitute database.
 
 The frozen `grading-analysis.tar.gz` contains the anonymous packets, their exact

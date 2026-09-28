@@ -30,10 +30,11 @@ live in `agronomic_calculations.py`, `local_tools.py`, and `tools/`.
 | Production execution rehearsal | Cockpit-core parity and 17-stage trace QA | Claim-ineligible and normally deterministic/mock |
 | V3 candidate matrix | Frozen cohort, arm, process, timeout, and ledger identity | Real executor/authority and independent review remain separate gates |
 
-The current two-Gemma assessment is exposed development evidence. Its strongest
+The frozen September 26 two-Gemma assessment of commit `d43ade7` is exposed
+development evidence, not a measurement of the present checkout. Its strongest
 small-model improvements came from deterministic calculations, selective holds,
 clarifications, field context, and trace-complete guards. High verifier fallback
-dependence and Gemma 4 full-system repeatability remain open work.
+dependence and Gemma 4 full-system repeatability remained open at that checkpoint.
 
 ## Where things belong
 

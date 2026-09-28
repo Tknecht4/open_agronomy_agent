@@ -335,6 +335,23 @@
  .workspace-shell .historical-benchmark-disclosure > summary span { text-align: left; }
  .workspace-shell .source-private-knowledge { grid-template-columns: 1fr; }
 }
+@media (max-width: 1050px) {
+ /* Collapsed workspaces need page flow around a readable transcript. */
+ .workspace-shell[data-page="analyze"] .workspace-content:has(.analyze-workspace:not(.view-map)) {
+  height: auto;
+  min-height: 0;
+ }
+ .workspace-shell[data-page="analyze"] .analyze-workspace:not(.view-map) {
+  flex: none;
+  grid-template-rows: auto;
+ }
+ .workspace-shell[data-page="analyze"] .analyze-workspace:not(.view-map) .chat-panel { height: auto; }
+ .workspace-shell[data-page="analyze"] .analyze-workspace:not(.view-map) .conversation-thread {
+  flex: 0 1 auto;
+  min-height: 260px;
+  max-height: 55svh;
+ }
+}
 
 .workspace-shell .demo-nav-more > summary { display: flex; align-items: center; gap: 8px; }
 .workspace-shell .conversation-mark { width: 48px; height: 48px; margin-bottom: 0; }

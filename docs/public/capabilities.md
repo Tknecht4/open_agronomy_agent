@@ -14,19 +14,25 @@ These states must not be collapsed into a single checkmark.
 
 | Capability | Implementation | Availability | Test evidence | Benchmark evidence | Known limit |
 |---|---|---|---|---|---|
-| Gemma 4 E2B local generation | MLX model adapter and pinned profile | Requires explicit ~3.34 GiB snapshot provision; exercised locally and with MLX CUDA on A100 | Model identity/profile and generation-path checks | Current-code assessment retained three four-arm trials; full system scored 16/16 calculations and 154/154 guard traces | Remains a candidate: 27 full-system cases varied across trials and fallback/degraded handling remained 98–100/241 |
-| Fast optional local model | Selectable pinned Gemma 3 270M profile | Requires separate download | Profile/UI contracts | Current-code assessment retained three four-arm trials; full system scored 16/16 calculations and 154/154 guard traces | Not selected for production; fallback/degraded handling was 148/241 in every trial |
+| Gemma 4 E2B local generation | MLX model adapter and pinned profile | Requires explicit ~3.34 GiB snapshot provision; exercised locally and with MLX CUDA on A100 | Model identity/profile and generation-path checks | Frozen September 26 assessment of `d43ade7` retained three four-arm trials; full system scored 16/16 calculations and 154/154 guard traces | At that checkpoint, 27 full-system cases varied across trials and fallback/degraded handling remained 98–100/241; no competence approval |
+| Fast optional local model | Selectable pinned Qwen3.5 0.8B OptiQ profile | Requires separate provisioned snapshot | Profile/UI and model-selection contracts | No result for this fast profile in the frozen September 26 two-Gemma assessment | Historical Gemma 3 scores do not transfer to this profile; answer quality is not established by model selection |
 | Governed corpus retrieval | Policy partition plus local/Agno search | Admitted checked-in corpus available; optional private overlay local only | Corpus governance and retrieval tests | RC3 expected-source presence: 22/26 positive probes; required patterns: 46/50 | Presence is not relevance, use, answer quality, or local calibration |
 | Knowledge graph search | Manifest-bound graph composition and name/token search | Seed and released SoilWise manifests are present | Manifest, checksum, collision, provenance, and retrieval tests | Governed context included graph hits | Graph authority roles are contextual; a relationship is not a field observation or recommendation |
 | Agronomic calculator | Typed decimal executor, CLI/API adapters, and bounded explicit-request planner | Offline with supplied inputs | Deterministic operations, services, registry parity, and natural-language end-to-end path | RC1 route failed at 0/16; RC3 full-system frozen parser scored 14/16 and typed-payload audit found 16/16 within tolerance | The audit exposes two unit-alias false negatives; it is not a replacement for the frozen result and the calculator does not choose target rates |
-| Guard capabilities | Registry-planned decision checks | Offline | Planner/guard/evidence regressions | Frozen RC3: 134/154; current planner-v2 production replay: 154/154 with 17-stage receipts | Completeness is a trace contract, not evidence that each intervention improved the answer |
+| Guard capabilities | Registry-planned decision checks | Offline | Planner/guard/evidence regressions | Frozen RC3: 134/154; September 26 assessment of `d43ade7`: 154/154 production replay with 17-stage receipts | Completeness is a trace contract, not evidence that each intervention improved the answer |
 | Weather and climate adapters | NASA POWER, Daymet and related adapters | Network/provider/cache dependent | Offline-fixture/readiness smokes | Adapters traced, not live-executed in RC1 | Gridded context is not field sensor or guaranteed forecast |
 | Soil/crop map adapters | Local pack and public soil/crop-cover adapters | Varies by installed pack, network, geography | Fixture, package, and intersection gates | No primary executable-geometry cases | Map class/component is a regional prior |
 | Statistics adapters | Canadian/US regional statistics paths | Snapshot/cache/provider dependent | Fixture/readiness tests | Not live-executed in RC1 | Regional distributions do not establish a field value |
 | Label metadata adapters | PMRA/EPA metadata search paths | Network/cache/provider/jurisdiction dependent | Fixture/readiness tests | Not live-executed in RC1 | Metadata is not the current full label or legal interpretation |
-| Field history | Append-oriented field/session/event persistence | Local DB by default; optional hosted dependencies | Field event, measurement, and storage tests | Lineage regression lane | User records are observations; reuse must preserve time/source |
+| Field history | Append-oriented field/session/event persistence | Local SQLite by default; retained Postgres boundary is separate and not deployment-qualified | Field event, measurement, and storage tests | Lineage regression lane | User records are observations; reuse must preserve time/source |
 | Image observation/RAG | Service and UI paths exist | Backend/model/config dependent | Focused image/service contracts | Not a primary RC1 capability | Image inference is not diagnosis and needs representative context |
 | Offline/field-LAN | Explicit offline network mode, TLS/pairing path | Requires built client, trusted cert, operator setup | Launcher/topology/package tests | Not portable-field outcome proof | A lab topology is not an independently witnessed field deployment |
+
+The frozen September 26 assessment also tested Gemma 3 270M as a historical
+comparator: its full-system verifier fell back or degraded in 148/241 cases in
+every trial. It is not the current fast profile. The retained identity-provider
+interface is separate and not deployment-qualified; Redis queues/rate limits
+and S3-compatible storage are unsupported.
 
 ## Source of truth
 
