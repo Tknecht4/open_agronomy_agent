@@ -69,7 +69,7 @@ def _spec(
 def test_default_registry_covers_current_surfaces_without_drift() -> None:
     registry = capability_registry()
 
-    assert len(registry.specs) == 57
+    assert len(registry.specs) == 58
     assert set(ROUTE_REQUIRED_CAPABILITY_IDS) == set(registry.surface_names("router"))
     assert set(registry.surface_names("agno")) == set(load_agno_tool_adapters())
     assert set(registry.surface_names("readiness")) == {
@@ -100,6 +100,7 @@ def test_capability_claims_require_specific_execution_evidence() -> None:
     assert natural_language_ids == {
         *ROUTE_REQUIRED_CAPABILITY_IDS,
         "agronomic_calculator",
+        "field_table_query",
         *{
             spec.capability_id
             for spec in registry.specs

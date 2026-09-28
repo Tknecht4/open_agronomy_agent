@@ -1,0 +1,733 @@
+{
+  "observed_at": "2026-09-27",
+  "status": "metadata_only_candidates_not_acquired",
+  "reference_catalog": "docs/reviews/artifacts/field-data-20260927/source-catalog.csv",
+  "records": [
+    {
+      "id": "ca-dryad-precision-yield-real-component",
+      "title": "Precision agricultural data and ecosystem services: can we put the pieces together?",
+      "doi": "10.5061/dryad.5x69p8d90",
+      "source_url": "https://datadryad.org/dataset/doi:10.5061/dryad.5x69p8d90",
+      "country_site_time": {
+        "country": null,
+        "author_affiliation": "Canada (University of Calgary and Agriculture and Agri-Food Canada)",
+        "geographic_coverage": null,
+        "time_period": null
+      },
+      "spatial_support": "anonymized precision yield-monitor examples with one donated real-data component and generated examples",
+      "observed_targets": [
+        "real donated yield-monitor observations in Supplemental 1 only"
+      ],
+      "independent_group_count": null,
+      "geometry_timing_limitations": "Publisher states Supplemental 1 is donated combined yield-monitor data with absolute location anonymized; Supplemental 2 entirely generated; Supplemental 3 only a correlation matrix from unpublished yield data. Do not treat all examplePYD.csv rows as measured or join shifted geometry to imagery. Canadian location of the donated real rows is not established from publisher metadata.",
+      "license_identifier": "CC0-1.0",
+      "license_evidence_url": "https://api.datacite.org/dois/10.5061/dryad.5x69p8d90",
+      "license_terms": null,
+      "access_status": "public_download_mixed_real_simulated",
+      "files": [
+        {
+          "filename": "examplePYD.csv",
+          "bytes_approx": 824240,
+          "file_id": 2458753,
+          "download_url": "https://datadryad.org/downloads/file_stream/2458753",
+          "restricted": false
+        },
+        {
+          "filename": "README.md",
+          "bytes_approx": 2470,
+          "file_id": 2458859,
+          "download_url": "https://datadryad.org/downloads/file_stream/2458859",
+          "restricted": false
+        }
+      ],
+      "proposed_use": "Methods-only precision-yield ingest after README/component-level real-versus-generated tagging; unsuitable for georeferenced HLS benchmark.",
+      "overlap_check": "DOI absent from frozen 51; donated precision data may be from an existing farm source, identity unverified.",
+      "evidence_note": "Dryad dataset webpage and source-specific DataCite rightsList read 2026-09-27; no data downloaded."
+    },
+    {
+      "id": "ca-borealis-wheat-pgr-onfarm",
+      "spatial_support": "anonymized yield-monitor GIS, treatment strips and shifted rasters",
+      "observed_targets": [
+        "winter wheat yield response",
+        "PGR treatment/control",
+        "field terrain/soil context"
+      ],
+      "independent_group_count": null,
+      "geometry_timing_limitations": "Location deliberately shifted; one unreplicated treatment strip; actual farms and years need file-level inspection. Shifted coordinates cannot support true satellite joins.",
+      "proposed_use": "Methods test for yield geometry and treatment linkage after small-file inspection; do not claim causal PGR effect.",
+      "overlap_check": "New DOI and study absent from frozen 51; possible generic overlap with Ontario trial sites, no shared records verified.",
+      "title": "Replication data for: On-farm data for wheat yield response to plant growth regulator",
+      "doi": "10.5683/SP3/1I77DM",
+      "source_url": "https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP3/1I77DM",
+      "country_site_time": {
+        "country": "Canada",
+        "geographic_coverage": [
+          {
+            "country": "Canada",
+            "state": "Ontario"
+          }
+        ],
+        "time_period": []
+      },
+      "license_identifier": "CC-BY-SA-4.0",
+      "license_evidence_url": "https://borealisdata.ca/api/datasets/:persistentId/?persistentId=doi%3A10.5683%2FSP3%2F1I77DM",
+      "license_terms": null,
+      "access_status": "public_metadata_public_files",
+      "files": [
+        {
+          "filename": "100A_README.txt",
+          "bytes": 6889,
+          "file_id": 1100115,
+          "download_url": "https://borealisdata.ca/api/access/datafile/1100115?format=original",
+          "restricted": false
+        },
+        {
+          "filename": "Yield_shifted.zip",
+          "bytes": 26328437,
+          "file_id": 954433,
+          "download_url": "https://borealisdata.ca/api/access/datafile/954433?format=original",
+          "restricted": false
+        },
+        {
+          "filename": "Yield_shifted.zip",
+          "bytes": 513162,
+          "file_id": 954498,
+          "download_url": "https://borealisdata.ca/api/access/datafile/954498?format=original",
+          "restricted": false
+        },
+        {
+          "filename": "treatment_shifted.tif",
+          "bytes": 283546,
+          "file_id": 954490,
+          "download_url": "https://borealisdata.ca/api/access/datafile/954490?format=original",
+          "restricted": false
+        }
+      ],
+      "evidence_note": "Borealis latestVersion metadata and file inventory read 2026-09-27; contents not downloaded or schema-verified."
+    },
+    {
+      "id": "ca-borealis-oat-lodging",
+      "spatial_support": "research-station plot and plant observations",
+      "observed_targets": [
+        "oat yield",
+        "lodging",
+        "grain quality",
+        "seeding rate/depth/row spacing",
+        "split nitrogen",
+        "PGR"
+      ],
+      "independent_group_count": 2,
+      "geometry_timing_limitations": "Two named research stations in Ontario, 2020–21; plot coordinates/boundaries not established from metadata, so imagery join remains unverified.",
+      "proposed_use": "High-priority observed management/yield benchmark candidate with station-held-out split; inspect plot identifiers and per-site rows first.",
+      "overlap_check": "New DOI and oat trial absent from frozen 51; distinct from Bowles/DRIVES maize rotations.",
+      "title": "Increasing lodging resistance in oats for enhanced quality and yield",
+      "doi": "10.5683/SP2/CSROC9",
+      "source_url": "https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP2/CSROC9",
+      "country_site_time": {
+        "country": "Canada",
+        "geographic_coverage": [
+          {
+            "country": "Canada",
+            "state": "Ontario",
+            "otherGeographicCoverage": "Ontario Crops Research Centre – Winchester"
+          },
+          {
+            "country": "Canada",
+            "state": "Ontario",
+            "otherGeographicCoverage": "Ontario Crops Research Centre – New Liskeard"
+          }
+        ],
+        "time_period": [
+          {
+            "timePeriodCoveredStart": "2020",
+            "timePeriodCoveredEnd": "2021"
+          }
+        ]
+      },
+      "license_identifier": "CC-BY-NC-4.0",
+      "license_evidence_url": "https://borealisdata.ca/api/datasets/:persistentId/?persistentId=doi%3A10.5683%2FSP2%2FCSROC9",
+      "license_terms": null,
+      "access_status": "public_metadata_public_files",
+      "files": [
+        {
+          "filename": "meta_data_oat_plot_data.txt",
+          "bytes": 5762,
+          "file_id": 332802,
+          "download_url": "https://borealisdata.ca/api/access/datafile/332802?format=original",
+          "restricted": false
+        },
+        {
+          "filename": "moddus_pgr_plot_level.tab",
+          "bytes": 63073,
+          "file_id": 332797,
+          "download_url": "https://borealisdata.ca/api/access/datafile/332797?format=original",
+          "restricted": false
+        },
+        {
+          "filename": "row_width_plot_level.tab",
+          "bytes": 21488,
+          "file_id": 332794,
+          "download_url": "https://borealisdata.ca/api/access/datafile/332794?format=original",
+          "restricted": false
+        }
+      ],
+      "evidence_note": "Borealis latestVersion metadata and file inventory read 2026-09-27; contents not downloaded or schema-verified."
+    },
+    {
+      "id": "ca-borealis-bean-ayd-field",
+      "spatial_support": "replicated genotype trial plot across four environments",
+      "observed_targets": [
+        "common bean yield and agronomic traits",
+        "CBB disease traits",
+        "genotype"
+      ],
+      "independent_group_count": 3,
+      "geometry_timing_limitations": "Three geographic research stations explicitly listed (Elora, Woodstock, Harrow); four environments, 2015–16, need site-year mapping; no plot polygons verified.",
+      "proposed_use": "High-priority plot-yield phenotyping; group by station and environment, keep genotype and field outcomes distinct.",
+      "overlap_check": "New DOI and bean breeding study absent from frozen 51; not the existing US G2F maize dataset.",
+      "title": "Common bean (Phaseolus vulgaris) antiyield (AYD_AM) genotype description table, raw phenotypic data, and single nucleotide polymorphism genotype data",
+      "doi": "10.5683/SP3/FD81LR",
+      "source_url": "https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP3/FD81LR",
+      "country_site_time": {
+        "country": "Canada",
+        "geographic_coverage": [
+          {
+            "country": "Canada",
+            "state": "Ontario",
+            "city": "Elora",
+            "otherGeographicCoverage": "Ontario Crops Research Centre – Elora"
+          },
+          {
+            "country": "Canada",
+            "state": "Ontario",
+            "city": "Woodstock",
+            "otherGeographicCoverage": "Ontario Crops Research Centre – Woodstock"
+          },
+          {
+            "country": "Canada",
+            "state": "Ontario",
+            "city": "Essex",
+            "otherGeographicCoverage": "Harrow Research and Development Centre"
+          }
+        ],
+        "time_period": [
+          {
+            "timePeriodCoveredStart": "2015-06-01",
+            "timePeriodCoveredEnd": "2016-10-31"
+          }
+        ]
+      },
+      "license_identifier": "CC-BY-4.0",
+      "license_evidence_url": "https://borealisdata.ca/api/datasets/:persistentId/?persistentId=doi%3A10.5683%2FSP3%2FFD81LR",
+      "license_terms": null,
+      "access_status": "public_metadata_public_files",
+      "files": [
+        {
+          "filename": "AYD_AM_Codebook_YRKPP.docx",
+          "bytes": 54783,
+          "file_id": 669348,
+          "download_url": "https://borealisdata.ca/api/access/datafile/669348?format=original",
+          "restricted": false
+        },
+        {
+          "filename": "AYD_Field_Data_4environments_YRKPP.tab",
+          "bytes": 202869,
+          "file_id": 667623,
+          "download_url": "https://borealisdata.ca/api/access/datafile/667623?format=original",
+          "restricted": false
+        }
+      ],
+      "evidence_note": "Borealis latestVersion metadata and file inventory read 2026-09-27; contents not downloaded or schema-verified."
+    },
+    {
+      "id": "ca-borealis-onion-tissue-yield",
+      "spatial_support": "commercial grower field sampling plus replicated Bradford fertilizer trial plots",
+      "observed_targets": [
+        "onion tissue nutrients",
+        "Stemphylium severity",
+        "onion yield and bulb size grades",
+        "fertilizer/foliar micronutrient program"
+      ],
+      "independent_group_count": null,
+      "geometry_timing_limitations": "2024–25 multiple commercial fields and one research station; field count and coordinates unverified, repeated sampling rounds must be grouped; research-trial yield is separate from grower tissue observations.",
+      "proposed_use": "High-priority multi-field nutrient-observation and trial-yield schema; inspect identifiers and protect against joining unrelated grower and research plots.",
+      "overlap_check": "New DOI absent from frozen 51; shares Holland Marsh region with other candidates but different 2024–25 onion study.",
+      "title": "Comparative evaluation of tissue testing methods and fertilizer impacts on onion nutrition, yield, and Stemphylium leaf blight severity in the Holland Marsh, Ontario (2024–2025)",
+      "doi": "10.5683/SP3/YJTMRB",
+      "source_url": "https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP3/YJTMRB",
+      "country_site_time": {
+        "country": "Canada",
+        "geographic_coverage": [
+          {
+            "country": "Canada",
+            "state": "Ontario",
+            "city": "Holland Marsh",
+            "otherGeographicCoverage": "Ontario Crops Research Centre - Bradford"
+          }
+        ],
+        "time_period": [
+          {
+            "timePeriodCoveredStart": "2024-05",
+            "timePeriodCoveredEnd": "2025-08"
+          }
+        ]
+      },
+      "license_identifier": "CC-BY-4.0",
+      "license_evidence_url": "https://borealisdata.ca/api/datasets/:persistentId/?persistentId=doi%3A10.5683%2FSP3%2FYJTMRB",
+      "license_terms": null,
+      "access_status": "public_metadata_public_files",
+      "files": [
+        {
+          "filename": "100A_README.txt",
+          "bytes": 12791,
+          "file_id": 1046557,
+          "download_url": "https://borealisdata.ca/api/access/datafile/1046557?format=original",
+          "restricted": false
+        },
+        {
+          "filename": "growerFieldOnion_2024And2025.tab",
+          "bytes": 42217,
+          "file_id": 1046488,
+          "download_url": "https://borealisdata.ca/api/access/datafile/1046488?format=original",
+          "restricted": false
+        },
+        {
+          "filename": "micronutrientTrialOnion_2024And2025.tab",
+          "bytes": 30604,
+          "file_id": 1046490,
+          "download_url": "https://borealisdata.ca/api/access/datafile/1046490?format=original",
+          "restricted": false
+        },
+        {
+          "filename": "stemphyliumLeafBlightOnionYield_2024And2025.tab",
+          "bytes": 7087,
+          "file_id": 1046489,
+          "download_url": "https://borealisdata.ca/api/access/datafile/1046489?format=original",
+          "restricted": false
+        }
+      ],
+      "evidence_note": "Borealis latestVersion metadata and file inventory read 2026-09-27; contents not downloaded or schema-verified."
+    },
+    {
+      "id": "ca-borealis-holland-marsh-soil-health",
+      "spatial_support": "sampled muck-soil fields and lab assays",
+      "observed_targets": [
+        "active carbon",
+        "ACE protein",
+        "soil organic carbon",
+        "total nitrogen",
+        "commercial soil health indicators"
+      ],
+      "independent_group_count": null,
+      "geometry_timing_limitations": "Bradford/Holland Marsh samples analyzed at Guelph and London laboratories; lab cities are not independent field sites. Sampling dates/count and coordinates need README inspection.",
+      "proposed_use": "Observed soil-test method comparison and field-context candidate; use raw samples before derived PCA/field averages.",
+      "overlap_check": "New DOI absent from frozen 51; same thesis program as SP3/X9S5EW and SP3/4WMIFN, not independent site blocks.",
+      "title": "Soil health assessment and cover crops for the Holland Marsh: Soil health test results from lab",
+      "doi": "10.5683/SP3/FHKKIF",
+      "source_url": "https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP3/FHKKIF",
+      "country_site_time": {
+        "country": "Canada",
+        "geographic_coverage": [
+          {
+            "country": "Canada",
+            "state": "Ontario",
+            "city": "Guelph",
+            "otherGeographicCoverage": "University of Guelph"
+          },
+          {
+            "country": "Canada",
+            "state": "Ontario",
+            "city": "London",
+            "otherGeographicCoverage": "A&L Laboratories"
+          },
+          {
+            "country": "Canada",
+            "state": "Ontario",
+            "city": "Bradford",
+            "otherGeographicCoverage": "Holland Marsh"
+          }
+        ],
+        "time_period": []
+      },
+      "license_identifier": "CC0-1.0",
+      "license_evidence_url": "https://borealisdata.ca/api/datasets/:persistentId/?persistentId=doi%3A10.5683%2FSP3%2FFHKKIF",
+      "license_terms": null,
+      "access_status": "public_metadata_public_files",
+      "files": [
+        {
+          "filename": "100A_readme.txt",
+          "bytes": 8710,
+          "file_id": 826573,
+          "download_url": "https://borealisdata.ca/api/access/datafile/826573?format=original",
+          "restricted": false
+        },
+        {
+          "filename": "soilHealthTest.tab",
+          "bytes": 12305,
+          "file_id": 826397,
+          "download_url": "https://borealisdata.ca/api/access/datafile/826397?format=original",
+          "restricted": false
+        },
+        {
+          "filename": "soilHealthTestFieldAvg.tab",
+          "bytes": 5655,
+          "file_id": 826398,
+          "download_url": "https://borealisdata.ca/api/access/datafile/826398?format=original",
+          "restricted": false
+        }
+      ],
+      "evidence_note": "Borealis latestVersion metadata and file inventory read 2026-09-27; contents not downloaded or schema-verified."
+    },
+    {
+      "id": "ca-borealis-holland-marsh-cover-crop",
+      "spatial_support": "Holland Marsh field experiments after carrot/onion harvest",
+      "observed_targets": [
+        "cover-crop canopy cover",
+        "biomass",
+        "plant counts",
+        "seed priming/transplant treatments"
+      ],
+      "independent_group_count": 1,
+      "geometry_timing_limitations": "One reported geographic research area, 2021–23; three experiments are not three farms; no plot polygons verified.",
+      "proposed_use": "Observed establishment/phenology and biomass target for cover-crop intake, not harvested carrot/onion yield.",
+      "overlap_check": "New DOI absent from frozen 51; same thesis program as SP3/FHKKIF and SP3/4WMIFN; deduplicate sites before cross-study split.",
+      "title": "Soil health assessment and cover crops  for the Holland Marsh: Cover crops after carrot and onion harvest",
+      "doi": "10.5683/SP3/X9S5EW",
+      "source_url": "https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP3/X9S5EW",
+      "country_site_time": {
+        "country": "Canada",
+        "geographic_coverage": [
+          {
+            "country": "Canada",
+            "state": "Ontario",
+            "city": "Bradford",
+            "otherGeographicCoverage": "Holland Marsh"
+          }
+        ],
+        "time_period": [
+          {
+            "timePeriodCoveredStart": "2021-09-01",
+            "timePeriodCoveredEnd": "2023-11-15"
+          }
+        ]
+      },
+      "license_identifier": "CC0-1.0",
+      "license_evidence_url": "https://borealisdata.ca/api/datasets/:persistentId/?persistentId=doi%3A10.5683%2FSP3%2FX9S5EW",
+      "license_terms": null,
+      "access_status": "public_metadata_public_files",
+      "files": [
+        {
+          "filename": "100A_readme.txt",
+          "bytes": 4459,
+          "file_id": 826570,
+          "download_url": "https://borealisdata.ca/api/access/datafile/826570?format=original",
+          "restricted": false
+        },
+        {
+          "filename": "coverCropsAfterCarrots.tab",
+          "bytes": 933,
+          "file_id": 826386,
+          "download_url": "https://borealisdata.ca/api/access/datafile/826386?format=original",
+          "restricted": false
+        },
+        {
+          "filename": "coverCropsAfterOnions.tab",
+          "bytes": 1108,
+          "file_id": 826387,
+          "download_url": "https://borealisdata.ca/api/access/datafile/826387?format=original",
+          "restricted": false
+        },
+        {
+          "filename": "coverCropsSeedPrimeTransplant.tab",
+          "bytes": 3074,
+          "file_id": 826385,
+          "download_url": "https://borealisdata.ca/api/access/datafile/826385?format=original",
+          "restricted": false
+        }
+      ],
+      "evidence_note": "Borealis latestVersion metadata and file inventory read 2026-09-27; contents not downloaded or schema-verified."
+    },
+    {
+      "id": "ca-borealis-holland-marsh-biofumigant",
+      "spatial_support": "Holland Marsh cover-crop field plots",
+      "observed_targets": [
+        "carrot yield 2022",
+        "biofumigant cover-crop biomass/establishment"
+      ],
+      "independent_group_count": 1,
+      "geometry_timing_limitations": "One Bradford research area; tiny yield table may contain summaries; 2022 harvest time known from filename only; plot geometry unverified.",
+      "proposed_use": "Small-file observed carrot yield/cover-crop linkage candidate after schema inspection.",
+      "overlap_check": "New DOI absent from frozen 51; same thesis program and likely site as SP3/FHKKIF and SP3/X9S5EW.",
+      "title": "Soil health assessment and cover crops for the Holland Marsh: Biofumigant cover crops",
+      "doi": "10.5683/SP3/4WMIFN",
+      "source_url": "https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP3/4WMIFN",
+      "country_site_time": {
+        "country": "Canada",
+        "geographic_coverage": [
+          {
+            "country": "Canada",
+            "state": "Ontario",
+            "city": "Bradford",
+            "otherGeographicCoverage": "Holland Marsh"
+          }
+        ],
+        "time_period": []
+      },
+      "license_identifier": "CC0-1.0",
+      "license_evidence_url": "https://borealisdata.ca/api/datasets/:persistentId/?persistentId=doi%3A10.5683%2FSP3%2F4WMIFN",
+      "license_terms": null,
+      "access_status": "public_metadata_public_files",
+      "files": [
+        {
+          "filename": "100A_readme.txt",
+          "bytes": 3904,
+          "file_id": 826574,
+          "download_url": "https://borealisdata.ca/api/access/datafile/826574?format=original",
+          "restricted": false
+        },
+        {
+          "filename": "biofumigantCoverCropsCarrotYield2022.tab",
+          "bytes": 380,
+          "file_id": 826432,
+          "download_url": "https://borealisdata.ca/api/access/datafile/826432?format=original",
+          "restricted": false
+        },
+        {
+          "filename": "biofumigantCoverCropsFall.tab",
+          "bytes": 1255,
+          "file_id": 826433,
+          "download_url": "https://borealisdata.ca/api/access/datafile/826433?format=original",
+          "restricted": false
+        },
+        {
+          "filename": "biofumigantCoverCropsSpring2022.tab",
+          "bytes": 618,
+          "file_id": 826434,
+          "download_url": "https://borealisdata.ca/api/access/datafile/826434?format=original",
+          "restricted": false
+        }
+      ],
+      "evidence_note": "Borealis latestVersion metadata and file inventory read 2026-09-27; contents not downloaded or schema-verified."
+    },
+    {
+      "id": "ca-borealis-carrot-cavity-spot",
+      "spatial_support": "Holland Marsh carrot cultivar field-trial plots",
+      "observed_targets": [
+        "cavity-spot incidence",
+        "disease severity index at mid-season and harvest"
+      ],
+      "independent_group_count": 1,
+      "geometry_timing_limitations": "2020–22 trials in Holland Marsh; two assessment windows per year, no yield in advertised files and no georeferenced plot boundary verified.",
+      "proposed_use": "Observed scouting/disease benchmark with year-held-out checks; no yield claim.",
+      "overlap_check": "New DOI absent from frozen 51; may share station with Holland Marsh candidates but distinct study/years; verify plot overlap.",
+      "title": "Differences in incidence and DSI of cavity spot among carrot cultivars in field trials",
+      "doi": "10.5683/SP3/JK5M8I",
+      "source_url": "https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP3/JK5M8I",
+      "country_site_time": {
+        "country": "Canada",
+        "geographic_coverage": [
+          {
+            "country": "Canada",
+            "state": "Ontario",
+            "city": "Holland Marsh"
+          }
+        ],
+        "time_period": [
+          {
+            "timePeriodCoveredStart": "2020",
+            "timePeriodCoveredEnd": "2022"
+          }
+        ]
+      },
+      "license_identifier": "CC0-1.0",
+      "license_evidence_url": "https://borealisdata.ca/api/datasets/:persistentId/?persistentId=doi%3A10.5683%2FSP3%2FJK5M8I",
+      "license_terms": null,
+      "access_status": "public_metadata_public_files",
+      "files": [
+        {
+          "filename": "100A_README.txt",
+          "bytes": 5939,
+          "file_id": 969544,
+          "download_url": "https://borealisdata.ca/api/access/datafile/969544?format=original",
+          "restricted": false
+        },
+        {
+          "filename": "Cultivar_DSI_Harvest_2020_2022.csv",
+          "bytes": 2903,
+          "file_id": 959389,
+          "download_url": "https://borealisdata.ca/api/access/datafile/959389?format=original",
+          "restricted": false
+        },
+        {
+          "filename": "Cultivar_DSI_Midseason_2020_2022.tab",
+          "bytes": 3168,
+          "file_id": 959390,
+          "download_url": "https://borealisdata.ca/api/access/datafile/959390?format=original",
+          "restricted": false
+        }
+      ],
+      "evidence_note": "Borealis latestVersion metadata and file inventory read 2026-09-27; contents not downloaded or schema-verified."
+    },
+    {
+      "id": "ca-borealis-bc-carrot-variety",
+      "spatial_support": "replicated UBC Farm variety trial plots",
+      "observed_targets": [
+        "carrot production and quality traits",
+        "variety"
+      ],
+      "independent_group_count": 1,
+      "geometry_timing_limitations": "UBC Farm only in this deposit, 2017–19; mother-baby design described but other farms not necessarily in this file; varieties and traits vary across years, substantial missingness; plot geometry unverified.",
+      "proposed_use": "Small public vegetable-variety outcome table; separate trial outcomes from UBC operational planting records.",
+      "overlap_check": "New DOI absent from frozen 51, but same UBC Farm as eight existing entries; do not count as an independent farm.",
+      "title": "BC Seed Trials and CANOVI Replicated Carrot Variety Trials 2017-2019 - UBC Farm",
+      "doi": "10.5683/SP2/OVACVN",
+      "source_url": "https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP2/OVACVN",
+      "country_site_time": {
+        "country": "Canada",
+        "geographic_coverage": [],
+        "time_period": []
+      },
+      "license_identifier": "CC-BY-NC-SA-4.0",
+      "license_evidence_url": "https://borealisdata.ca/api/datasets/:persistentId/?persistentId=doi%3A10.5683%2FSP2%2FOVACVN",
+      "license_terms": null,
+      "access_status": "public_metadata_public_files",
+      "files": [
+        {
+          "filename": "CANOVI_BCST_Carrot_2017_18_19_Data.tab",
+          "bytes": 44715,
+          "file_id": 197987,
+          "download_url": "https://borealisdata.ca/api/access/datafile/197987?format=original",
+          "restricted": false
+        },
+        {
+          "filename": "CANOVI_BCST_Carrot_2017_18_19_Metadata.tab",
+          "bytes": 3475,
+          "file_id": 197988,
+          "download_url": "https://borealisdata.ca/api/access/datafile/197988?format=original",
+          "restricted": false
+        }
+      ],
+      "evidence_note": "Borealis latestVersion metadata and file inventory read 2026-09-27; contents not downloaded or schema-verified."
+    },
+    {
+      "id": "ca-borealis-ontario-long-rotation-restricted",
+      "spatial_support": "long-term Ontario cropping-system experiment plots",
+      "observed_targets": [
+        "crop yield",
+        "soil organic carbon",
+        "soil nitrogen",
+        "tillage/rotation/N-rate treatments"
+      ],
+      "independent_group_count": null,
+      "geometry_timing_limitations": "1995–2019 Ontario; exact station and plot geometry unverified; tabular data and README restricted.",
+      "proposed_use": "High-value request-only long-term yield/soil candidate; metadata inventory only until owner permission.",
+      "overlap_check": "New DOI absent from frozen 51; possible site/year overlap with Bowles Ontario rotation and DRIVES, require plot/site lineage check.",
+      "title": "Replication Data for: Long-term crop rotation diversity, tillage system, and nitrogen fertilizer effects on crop productivity, soil organic carbon and nitrogen concentration in a temperate humid climate",
+      "doi": "10.5683/SP3/XFJNZD",
+      "source_url": "https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP3/XFJNZD",
+      "country_site_time": {
+        "country": "Canada",
+        "geographic_coverage": [
+          {
+            "country": "Canada",
+            "state": "Ontario"
+          }
+        ],
+        "time_period": [
+          {
+            "timePeriodCoveredStart": "1995",
+            "timePeriodCoveredEnd": "2019"
+          }
+        ]
+      },
+      "license_identifier": null,
+      "license_evidence_url": "https://borealisdata.ca/api/datasets/:persistentId/?persistentId=doi%3A10.5683%2FSP3%2FXFJNZD",
+      "license_terms": "Permission from the author must be requested to access this dataset. This dataset may be used for educational or research purposes",
+      "access_status": "restricted_request_required",
+      "files": [
+        {
+          "filename": "100A_README.txt",
+          "bytes": 8892,
+          "file_id": 1115968,
+          "download_url": null,
+          "restricted": true
+        },
+        {
+          "filename": "A2_SOC_AverageCropYield.tab",
+          "bytes": 21637,
+          "file_id": 947012,
+          "download_url": null,
+          "restricted": true
+        },
+        {
+          "filename": "B2_SOC_TotalN.tab",
+          "bytes": 68370,
+          "file_id": 947014,
+          "download_url": null,
+          "restricted": true
+        }
+      ],
+      "evidence_note": "Borealis latestVersion metadata and file inventory read 2026-09-27; contents not downloaded or schema-verified."
+    },
+    {
+      "id": "ca-borealis-ridgetown-covercrop-restricted",
+      "spatial_support": "Ridgetown Ontario cover-crop and fresh-bean/sweet-corn experiment plots",
+      "observed_targets": [
+        "fresh bean and sweet corn yield",
+        "cover-crop biomass",
+        "soil nitrogen"
+      ],
+      "independent_group_count": 1,
+      "geometry_timing_limitations": "2008–14 Ridgetown; all listed files restricted; plot polygons unavailable in metadata.",
+      "proposed_use": "Request-only observed cover-crop to yield and N linkage; no ingestion before permission.",
+      "overlap_check": "New DOI absent from frozen 51; Ridgetown may overlap DRIVES regional site but experiment identity unverified.",
+      "title": "Replication Data for: Nitrogen dynamics and yields of fresh bean and sweet corn with different cover crops and planting dates",
+      "doi": "10.5683/SP3/4ZB7RH",
+      "source_url": "https://borealisdata.ca/dataset.xhtml?persistentId=doi:10.5683/SP3/4ZB7RH",
+      "country_site_time": {
+        "country": "Canada",
+        "geographic_coverage": [
+          {
+            "country": "Canada",
+            "state": "Ontario",
+            "city": "Ridgetown"
+          }
+        ],
+        "time_period": [
+          {
+            "timePeriodCoveredStart": "2008",
+            "timePeriodCoveredEnd": "2014"
+          }
+        ]
+      },
+      "license_identifier": null,
+      "license_evidence_url": "https://borealisdata.ca/api/datasets/:persistentId/?persistentId=doi%3A10.5683%2FSP3%2F4ZB7RH",
+      "license_terms": "Permission from the author must be requested to access this dataset. This dataset may be used for educational or research purposes.",
+      "access_status": "restricted_request_required",
+      "files": [
+        {
+          "filename": "A2_CC_biomass.tab",
+          "bytes": 29031,
+          "file_id": 831310,
+          "download_url": null,
+          "restricted": true
+        },
+        {
+          "filename": "D2_Crop.tab",
+          "bytes": 79141,
+          "file_id": 830516,
+          "download_url": null,
+          "restricted": true
+        },
+        {
+          "filename": "E2_Soil.tab",
+          "bytes": 111455,
+          "file_id": 830517,
+          "download_url": null,
+          "restricted": true
+        }
+      ],
+      "evidence_note": "Borealis latestVersion metadata and file inventory read 2026-09-27; contents not downloaded or schema-verified."
+    }
+  ]
+}

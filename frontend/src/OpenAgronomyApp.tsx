@@ -164,6 +164,8 @@ const BenchmarksRoute = lazy(() => import('./BenchmarksRoute').then((module) => 
 const LeafletFieldMap = lazy(() => import('./LeafletFieldMap').then((module) => ({ default: module.LeafletFieldMap })))
 const FieldSyncPanel = lazy(() => import('./FieldSyncPanel').then(module => ({ default: module.FieldSyncPanel })))
 const SoilTestEntryPanel = lazy(() => import('./FieldSyncPanel').then(module => ({ default: module.SoilTestEntryPanel })))
+const FieldDataPanel = lazy(() => import('./FieldDataPanel'))
+const FieldImageryAnalyticsPanel = lazy(() => import('./FieldImageryAnalyticsPanel'))
 const PrivateKnowledgePanel = lazy(() => import('./PrivateKnowledgePanel'))
 const OfflineTerrainContextPanel = lazy(() => import('./OfflineTerrainContextPanel'))
 const CanadianKnowledgeCoveragePanel = lazy(() => import('./CanadianKnowledgeCoveragePanel'))
@@ -1504,14 +1506,30 @@ const sensitivityLabel = (riskLevel: string | undefined): string => {
 const publicToolCards = (turn: Turn | null): ToolInvocation[] =>
   (turn?.trace?.tool_invocations || []).filter((tool) => tool.payload?.kind === 'public_adapter')
 
-const geometrySummary = (geometry: FieldGeometry, fallback: string): string => {
+const geometrySummary = (geometry: FieldGeometry): string => {
   if (geometry.kind === 'point') {
     return `point ${geometry.point.lat.toFixed(5)}, ${geometry.point.lon.toFixed(5)} · prior-only match`
   }
   if (geometry.kind === 'polygon') {
     return `${geometry.points.length} vertices · approx ${Math.round(geometry.acres).toLocaleString()} ac · editable boundary`
   }
-  return fallback
+  return 'No location or boundary recorded'
+}
+
+const samePolygonCoordinates = (saved: FieldGeometry | undefined, current: FieldGeometry): boolean => {
+  if (saved?.kind !== 'polygon' || current.kind !== 'polygon' ||
+      !Array.isArray(saved.points) || !Array.isArray(current.points)) return false
+  const coordinates = (geometry: Extract<FieldGeometry, { kind: 'polygon' }>) => {
+    const points = geometry.points.map((point) => [point.lon, point.lat] as const)
+    if (points.length > 3 && points[0][0] === points[points.length - 1][0] &&
+        points[0][1] === points[points.length - 1][1]) points.pop()
+    return points
+  }
+  const savedPoints = coordinates(saved)
+  const currentPoints = coordinates(current)
+  return savedPoints.length >= 3 && savedPoints.length === currentPoints.length &&
+    savedPoints.every(([lon, lat], index) => Number.isFinite(lon) && Number.isFinite(lat) &&
+      lon === currentPoints[index][0] && lat === currentPoints[index][1])
 }
 
 const fieldGeometryToGeoJson = (geometry: FieldGeometry) => {
@@ -2143,6 +2161,10 @@ export function OpenAgronomyApp() {
   const committedWeatherPoint = fieldWeatherPoint(fieldGeometry)
   const geometryIssue = fieldGeometryIssue(fieldGeometry)
   const geometryReady = isUsableFieldGeometry(fieldGeometry)
+  const savedImageryField = storedFields.find((stored) => (stored.field_context_id || stored.id) === activeFieldContextId)
+  const imageryReady = fieldGeometry.kind === 'polygon' && geometryReady && !isEditingGeometry
+    && samePolygonCoordinates(savedImageryField?.geometry, fieldGeometry)
+  const fieldCanSave = !isEditingGeometry && (geometryReady || (fieldGeometry.kind === 'none' && Boolean(fieldName.trim())))
   const activeArea = fieldGeometry.kind === 'polygon' ? String(Math.round(fieldGeometry.acres)) : field.acres
   const selectedModelProfile = modelProfiles.find((profile) => profile.id === modelId)
   const selectedModelReady = selectedModelProfile?.local_ready !== false
@@ -2540,7 +2562,7 @@ export function OpenAgronomyApp() {
           field_conversation_key: activeFieldConversationKey,
           field_record_updated_at: activeFieldRecordUpdatedAt || undefined,
           field_context: {
-            enable_public_adapters: true,
+            enable_public_adapters: fieldGeometry.kind !== 'none',
             crop: field.crop,
             region: field.region,
             jurisdiction: field.jurisdiction,
@@ -2550,10 +2572,10 @@ export function OpenAgronomyApp() {
             field_record_updated_at: activeFieldRecordUpdatedAt || undefined,
             geometry: fieldGeometryToGeoJson(fieldGeometry),
             representative_point: representativePointForGeometry(fieldGeometry),
-            geometry_summary: geometrySummary(fieldGeometry, activeScenario.geometry),
+            geometry_summary: geometrySummary(fieldGeometry),
             regional_context: primaryGeoCandidate
               ? `${primaryGeoCandidate.system} ${primaryGeoCandidate.code} ${primaryGeoCandidate.name}`
-              : activeScenario.mlra,
+              : fieldGeometry.kind === 'none' ? '' : activeScenario.mlra,
             regional_intersections: fieldContextIntersections(officialIntersections),
             official_layer_status: fieldContextLayerStatus(officialLayerStatus),
             upload_warnings: uploadContext?.warnings || [],
@@ -2917,16 +2939,20 @@ export function OpenAgronomyApp() {
   }
 
   const persistCurrentField = async (saveAsNew = false) => {
-    if (!geometryReady) {
-      setBoundaryStatus(geometryIssue || 'Draw a boundary or add a point before storing the field.')
+    if (!fieldCanSave) {
+      setBoundaryStatus(fieldGeometry.kind === 'none' && !fieldName.trim()
+        ? 'Name this data-only field before saving it.'
+        : geometryIssue || 'Save or cancel the current map edit before storing the field.')
       return
     }
-    const candidate = primaryGeoCandidate
+    const candidate = fieldGeometry.kind === 'none' ? '' : primaryGeoCandidate
       ? `${primaryGeoCandidate.system} ${primaryGeoCandidate.code}`
       : activeScenario.mlra
     const selectedName = fieldName.trim() || `${field.crop || 'Field'} · ${field.region || field.jurisdiction || 'new field'}`
     const name = saveAsNew && activeFieldContextId ? `${selectedName} copy` : selectedName
-    const sourceBoundary = geoPriors?.disclaimer || 'Map and public-source context are decision-support priors, not field truth.'
+    const sourceBoundary = fieldGeometry.kind === 'none'
+      ? 'No location or boundary supplied; regional map context is unavailable.'
+      : geoPriors?.disclaimer || 'Map and public-source context are decision-support priors, not field truth.'
     const payload = {
       name,
       field: {
@@ -2939,7 +2965,7 @@ export function OpenAgronomyApp() {
       },
       geometry: fieldGeometry,
       regionalContext: candidate,
-      geoPriors,
+      geoPriors: fieldGeometry.kind === 'none' ? null : geoPriors,
       sourceBoundary,
     }
     const stored: StoredField = {
@@ -2951,7 +2977,7 @@ export function OpenAgronomyApp() {
       regionalContext: candidate,
       createdAt: new Date().toISOString(),
       storageMode: fieldStorageMode,
-      geoPriors,
+      geoPriors: fieldGeometry.kind === 'none' ? null : geoPriors,
       sourceBoundary,
     }
     const updatingCurrentField = Boolean(activeFieldContextId) && !saveAsNew
@@ -3060,7 +3086,10 @@ export function OpenAgronomyApp() {
       notes: stored.notes,
     })
     setFieldName(stored.name)
-    setFieldGeometry(stored.geometry)
+    setFieldGeometry(stored.geometry.kind === 'polygon' && Array.isArray(stored.geometry.points) &&
+      !(Number.isFinite(stored.geometry.acres) && stored.geometry.acres > 0)
+      ? { ...stored.geometry, acres: estimatePolygonAcres(stored.geometry.points) }
+      : stored.geometry)
     setGeometryDraft(null)
     setGeometryEditSnapshot(null)
     setFieldToolsOpen(false)
@@ -3316,7 +3345,9 @@ export function OpenAgronomyApp() {
 
   const createFieldFromDraft = async (draft: NewFieldDraft) => {
     if (!fieldsHydrated) throw new Error('Field storage is still connecting. Please wait before saving.')
-    const sourceBoundary = 'User-entered location. Calculated area and regional maps are context, not a survey or field measurement.'
+    const sourceBoundary = draft.geometry.kind === 'none'
+      ? 'No location or boundary supplied; regional map context and imagery are unavailable.'
+      : 'User-entered location. Calculated area and regional maps are context, not a survey or field measurement.'
     const payload = { name: draft.name, field: { crop: draft.crop, region: draft.region, jurisdiction: draft.jurisdiction,
       concern: draft.concern, acres: draft.acres, notes: draft.notes }, geometry: draft.geometry, regionalContext: '', geoPriors: null, sourceBoundary }
     let saved: StoredField
@@ -3332,7 +3363,7 @@ export function OpenAgronomyApp() {
     navigateToPage('analyze')
     setWorkspaceView('split')
     // Geometry priors remain separate from the supplied facts, and may be unavailable.
-    void lookupRegionalContext(draft.geometry, { ...draft })
+    if (isUsableFieldGeometry(draft.geometry)) void lookupRegionalContext(draft.geometry, { ...draft })
   }
 
   const retrieveConversation = async (id: string) => {
@@ -3376,11 +3407,13 @@ export function OpenAgronomyApp() {
         acres: activeArea,
         concern: field.concern,
         notes: field.notes,
-        geometrySummary: geometrySummary(fieldGeometry, activeScenario.geometry),
+        geometrySummary: geometrySummary(fieldGeometry),
         regionalContext: officialIntersections.map(
           (item) => `${item.system} ${item.code}: ${item.name} (${Math.round(item.coverage_estimate * 100)}% field coverage estimate)`,
         ),
-        sourceBoundary: geoPriors?.disclaimer || 'Map and public-source context are decision-support priors, not field truth.',
+        sourceBoundary: fieldGeometry.kind === 'none'
+          ? 'No location or boundary supplied; regional map context is unavailable.'
+          : geoPriors?.disclaimer || 'Map and public-source context are decision-support priors, not field truth.',
       },
       turn: evidenceTurn,
       docs: evidenceDocs,
@@ -3571,10 +3604,10 @@ export function OpenAgronomyApp() {
                 <h2>{activeFieldContextId ? 'Edit field' : 'New field setup'}</h2>
               </div>
               <span className={`context-state ${geometryReady ? 'ready' : 'pending'}`}>
-                {activeFieldContextId ? 'Saved field' : scenarioId ? 'Example · not saved' : fieldGeometry.kind === 'none' ? 'Add a boundary' : geometryReady ? 'Ready to save' : 'Fix geometry'}
+                {activeFieldContextId ? fieldGeometry.kind === 'none' ? 'Saved · no location' : 'Saved field' : scenarioId ? 'Example · not saved' : fieldGeometry.kind === 'none' ? 'Boundary optional' : geometryReady ? 'Ready to save' : 'Fix geometry'}
               </span>
             </div>
-            <p className="field-workflow-hint">{activeFieldContextId ? "Keep the details that matter. Add measurements in Records & soil tests." : "Add a field to start a private record, or explore an example below."}</p>
+            <p className="field-workflow-hint">{activeFieldContextId ? 'Keep the details that matter. Add measurements in Records & soil tests.' : 'Name the field, add a location if known, and save. Map context needs a location.'}</p>
             {!geometryReady ? (
               <button type="button" className="field-copy-action field-draw-action" onClick={() => { navigateToPage('analyze'); setWorkspaceView('map'); beginGeometryEdit('boundary') }}>
                 <MapPin size={15} /> Draw boundary on map
@@ -3698,7 +3731,7 @@ export function OpenAgronomyApp() {
                 className="map-primary-action field-save-action"
                 aria-label="Save field"
                 onClick={() => void storeCurrentField()}
-                disabled={!geometryReady}
+                disabled={!fieldCanSave}
               >
                 <Save size={16} /> {activeFieldContextId ? 'Save changes' : 'Save new field'}
               </button>
@@ -3707,7 +3740,7 @@ export function OpenAgronomyApp() {
                   type="button"
                   className="field-copy-action"
                   onClick={() => void storeCurrentField(true)}
-                  disabled={!geometryReady}
+                  disabled={!fieldCanSave}
                 >
                   Save as new field
                 </button>
@@ -4061,6 +4094,21 @@ export function OpenAgronomyApp() {
                     key={activeFieldContextId}
                     fieldContextId={activeFieldContextId}
                     onImported={() => activeFieldRef.current === activeFieldContextId ? refreshFieldHistory(activeFieldContextId) : undefined}
+                  />
+                  <FieldDataPanel
+                    key={activeFieldContextId}
+                    fieldContextId={activeFieldContextId}
+                    imageryReady={imageryReady}
+                    onAskQuestion={(question) => {
+                      setMessage(question)
+                      navigateToPage('analyze')
+                    }}
+                  />
+                  <FieldImageryAnalyticsPanel
+                    key={`analytics-${activeFieldContextId}`}
+                    fieldContextId={activeFieldContextId}
+                    geometryKey={JSON.stringify({ geometry: fieldGeometry, updatedAt: activeFieldRecordUpdatedAt })}
+                    imageryReady={imageryReady}
                   />
                 </Suspense>
               ) : null}

@@ -1,0 +1,4 @@
+Field_ID,Sample_number,Year,Previous_crop,N_fertilizer_form,Total_N_rate_kgha,Stalk_nitrate_CSNT,County_centroid_latitude,County_centroid_longitude
+GSS2010OHMM015,1,2010,Soybean,UAN,131.04,2129,,
+GSS2010OHMM015,2,2010,Soybean,UAN,131.04,290,,
+GSS2010OHMM015,3,2010,Soybean,UAN,131.04,101,,

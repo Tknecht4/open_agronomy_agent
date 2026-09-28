@@ -9,6 +9,7 @@ with historical files or another repository.
 from __future__ import annotations
 
 import argparse
+import ctypes
 import datetime as dt
 import fnmatch
 import hashlib
@@ -23,6 +24,28 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MANIFEST = ROOT / "configs/public_repository_manifest.json"
+
+
+def _try_clone(source: Path, target: Path) -> bool:
+    """APFS clones share immutable extents, never a writable inode."""
+    if sys.platform != "darwin":
+        return False
+    try:
+        clone = ctypes.CDLL(None, use_errno=True).clonefile
+        clone.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int]
+        clone.restype = ctypes.c_int
+        return clone(os.fsencode(source), os.fsencode(target), 0) == 0
+    except (AttributeError, OSError):
+        return False
+
+
+def _copy_independent(source: Path, target: Path) -> None:
+    # clonefile falls back on other filesystems/platforms. Both paths produce
+    # independently writable files; the package inventory still hashes bytes.
+    if _try_clone(source, target):
+        shutil.copystat(source, target)
+    else:
+        shutil.copy2(source, target)
 
 
 def _sha256(path: Path) -> str:
@@ -207,7 +230,7 @@ def build(destination: Path, manifest_path: Path = DEFAULT_MANIFEST) -> dict[str
         relative = _relative(source)
         target = destination / relative
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, target)
+        _copy_independent(source, target)
     _regenerate_runtime_manifest(destination)
     _validate_destination_inventory(destination, {_relative(source) for source in files})
 

@@ -14,8 +14,11 @@
 | Ingestion/build | `ingest_*`, `build_*corpus*`, geospatial builders | Require source, rights, hashes, deterministic outputs |
 | Evaluation | `run_open_agronomy_benchmark.py`, `run_open_agronomy_benchmark_v2.py`, `run_observed_system_rehearsal.py`, `run_benchmark_capability_conformance.py`, v2/v3 audits, model matrix, judges, analyzers | Preserve identities and separation; v2 dry execution, capability conformance, and observed-system rehearsal are harness QA, not performance evidence |
 | Workspace profiling | `profile_workspace_backend.py`, `profile_workspace_model.py`, `profile_frontend_build.mjs` | Synthetic local timing and build receipts; never agronomic quality, provider availability, or a release latency budget |
+| Optional field imagery | `inspect_field_imagery.py`, `analyze_field_imagery.py`, `collect_imagery_assessment.py` | Public HLS discovery/chips and bounded research acquisition; explicit online mode, saved polygon and outside-checkout private cache |
+| Imagery research | `assess_field_imagery.py`, `probe_imagery_model.py` | Source/split-bound labels and frozen encoder CPU/MPS diagnostics; no runtime activation or operational prediction |
 | Packaging/release | `audit_release_candidate_checkout.py`, `capture_release_environment.py`, `build_public_repository.py`, edge manifest/container/SBOM scripts | Curated scope only; no private/generated state; the Python environment receipt observes range resolution and is not a portable lock |
-| Recovery | Transaction-safe backup primitives in `server/storage/backup.py` | Programmatic maintenance boundary; no supported standalone recovery CLI is currently published |
+| Field source preparation | `prepare_field_sources.py`, `rehearse_field_source_imports.py` | Hash-pinned source-only study groups and offline product-path rehearsal; no benchmark answers or automatic geometry |
+| Recovery/storage | `migrate_field_source_blobs.py`, backup primitives in `server/storage/backup.py` | Back up first; explicit reversible SQLite source deduplication, logical read-only dry run by default; no automatic deletion or vacuum |
 
 ## Inputs and outputs
 
@@ -50,10 +53,51 @@ PYTHONPATH=src .venv/bin/python -m pytest -q
 
 Run a script-specific fixture/preflight before any expensive, networked, or release execution.
 
+## Optional field imagery
+
+`analyze_field_imagery.py` processes one HLS S30/L30 scene from a WGS84
+GeoJSON polygon or Feature. It records native-grid/asset identity, QA coverage,
+observed NDVI/NDMI and an authenticated field-only preview in a private cache.
+It needs `requirements-imagery.txt` in an isolated worker environment. Set
+`AGRONOMY_AGENT_IMAGERY_CACHE_ROOT` to a private directory outside the checkout
+and `AGRONOMY_AGENT_IMAGERY_PYTHON` to that environment's absolute executable
+Python path before launching the app. Both are required for the UI analysis
+panel. The app starts the worker with a narrow environment; normal application
+credentials and private overlays are not forwarded. Offline mode reuses only an
+exact verified cache entry; `--online` on the standalone CLI permits public
+STAC and COG requests. A point or unsaved polygon cannot stand in for a field
+boundary. See the [field-data operator guide](../docs/public/operations/field-data-pilot.md).
+
+The worker is also available as `python -m agronomy_agent.imagery_worker`.
+Cache admission defaults to 2 GiB logical capacity and a 1 GiB free-space
+reserve, with a shared process-held writer lock and typed capacity refusal.
+`--max-cache-bytes`, `--min-free-bytes` and `--budget-root` expose the standalone
+policy; the server supplies operator settings rather than accepting them from
+requests. Cached reads do not require new-write admission. No automatic
+eviction occurs. The operator guide documents the matching server settings and
+source-blob migration, including SQLite sidecar and physical-size limits.
+
+`collect_imagery_assessment.py` plans a frozen label-protocol cohort by default
+and fetches bounded public HLS imagery only with `--online`. Use an explicit
+outside-checkout `--cache-root` and a new output path; keep raw labels and
+assessment answers isolated from runtime retrieval. `assess_field_imagery.py`
+requires an explicit source and frozen protocol, never overwrites an output,
+and scores only that research task/split. `probe_imagery_model.py` requires a
+pinned local snapshot and an isolated environment with
+`requirements-imagery-models.txt`. It supervises batch-one CPU/MPS probes with
+120-second stage deadlines, an 8 GiB RSS limit, and a 64 MiB observed
+system-swap-growth stop. A successful CPU cell does not erase an MPS failure.
+Feature generation and fixed-readout scores are experimental receipts, not
+field diagnosis, yield prediction in the app, or serving-profile activation.
+
 `build_public_repository.py` materializes only the explicit public manifest
 allowlist, rejects forbidden paths and machine-local path literals, and honors
 `SOURCE_DATE_EPOCH` for a reproducible receipt timestamp. It never treats the
 whole `configs/` or `data/` tree as public by default.
+On supported macOS filesystems it uses APFS copy-on-write clones to avoid
+duplicating the large corpus during local builds, falling back to ordinary
+copies elsewhere. Destination files have independent inodes; writing either
+copy cannot change the other. The builder still computes every output hash.
 
 `build_edge_runtime_manifest.py` regenerates the container runtime inventory
 for the selected active RAG profile. Because its contract hashes governed

@@ -153,6 +153,7 @@ from agronomy_agent.server.observability import build_telemetry, log_request, re
 from agronomy_agent.server.rate_limit import FixedWindowRateLimiter
 from agronomy_agent.server.settings import ServerSettings, build_settings, make_corpus_audit_id, validate_desktop_local_auth
 from agronomy_agent.server.storage.object_store import LocalObjectStore
+from agronomy_agent.server.storage.db import TraceStore
 from agronomy_agent.server.storage.runtime import build_trace_store, storage_db_path_for, storage_label_for
 from agronomy_agent.server.trace_timer import PHASE5_TURN_METRICS_SCHEMA_VERSION, TraceProfiler
 
@@ -2273,6 +2274,10 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         knowledge_update_allow_unsigned=settings.knowledge_update_allow_unsigned,
         allow_rag_config_override=settings.allow_rag_config_override,
         allow_model_id_override=settings.allow_model_id_override,
+        imagery_cache_root=settings.imagery_cache_root,
+        imagery_worker_python=settings.imagery_worker_python,
+        imagery_cache_max_bytes=settings.imagery_cache_max_bytes,
+        imagery_min_free_bytes=settings.imagery_min_free_bytes,
         corpus_audit_id=_corpus_audit(settings, store),
     )
     app = FastAPI(title="Agronomy Agent Cockpit")
@@ -2566,6 +2571,9 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         return response
 
     def _ensure_personal_workspace(user: dict[str, Any]) -> None:
+        if isinstance(store, TraceStore):
+            store.ensure_personal_workspace(user["id"])
+            return
         if store.list_phase4_workspaces_for_user(user["id"]):
             return
         org = store.create_phase4_organization(
@@ -2799,6 +2807,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         # history as though it came from the integrity-checked field store.
         inner.pop("field_history", None)
         inner.pop("field_answer_history", None)
+        inner.pop("field_data", None)
         outer_field_id = str(outer.get("field_context_id") or "").strip()
         inner_field_id = str(inner.get("field_context_id") or "").strip()
         if outer_field_id and inner_field_id and outer_field_id != inner_field_id:
@@ -2811,6 +2820,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             )
         field_context_id = outer_field_id or inner_field_id
         if not field_context_id:
+            outer["field_context"] = inner
             return outer
 
         user = _demo_field_user(request)
@@ -3064,6 +3074,8 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         if not isinstance(value, dict):
             raise HTTPException(status_code=422, detail="field geometry is required")
         kind = str(value.get("kind") or "")
+        if kind == "none":
+            return {"kind": "none"}
         if kind == "point":
             point = value.get("point")
             if not isinstance(point, dict) or not isinstance(point.get("lat"), (int, float)) or not isinstance(point.get("lon"), (int, float)):
@@ -3128,6 +3140,25 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         supplied: Any,
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         """Bind browser context to a server-recomputed bundled-layer snapshot."""
+
+        if geometry.get("kind") == "none":
+            governed = {
+                "regional_intersections": [],
+                "regional_feature_collection": {"type": "FeatureCollection", "features": []},
+                "official_layer_status": [],
+                "geo_errors": [],
+                "used_as_prior_only": True,
+                "not_field_specific_fact": True,
+                "disclaimer": "Field location is unknown. No geographic prior or imagery footprint is inferred from uploaded tables.",
+            }
+            return governed, {
+                "schema_version": "open_agronomy_agent.geo_context_lineage.v1",
+                "snapshot_sha256": _hash_payload(governed),
+                "server_recomputed_layer_ids": [],
+                "server_recomputed_match_count": 0,
+                "client_snapshot_remote_match_count": 0,
+                "binding_boundary": "No geometry supplied; mapped context is unavailable.",
+            }
 
         supplied_priors = dict(supplied) if isinstance(supplied, dict) else {}
         local_layer_ids = [
@@ -6182,6 +6213,23 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             )
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    def _authorize_field_data(
+        request: Request, field_id: str, write: bool,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        user = _demo_field_user(request)
+        record = store.get_phase4_field_context(field_id)
+        if not record or _demo_field_metadata(record).get("kind") != "map_field":
+            raise HTTPException(status_code=404, detail="demo field not found")
+        if write:
+            require_workspace_role(user, record["workspace_id"], WORKSPACE_WRITE_ROLES)
+        else:
+            require_workspace_for_user(user, record["workspace_id"])
+        return record, user
+
+    from agronomy_agent.server.field_data_routes import register_field_data_routes
+
+    register_field_data_routes(app, store=store, settings=settings, authorize=_authorize_field_data)
 
     @app.get("/api/demo/fields")
     async def public_demo_fields(request: Request) -> dict[str, Any]:

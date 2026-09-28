@@ -1,0 +1,4 @@
+Field_ID,Sample_number,Year,Previous_crop,N_fertilizer_form,Total_N_rate_kgha,Stalk_nitrate_CSNT,County_centroid_latitude,County_centroid_longitude
+ARND35,1,2006,Corn,UAN,168.15,4350,42.732791232137,-93.2625952954095
+ARND35,2,2006,Corn,UAN,168.15,1180,42.732791232137,-93.2625952954095
+ARND35,3,2006,Corn,UAN,168.15,268,42.732791232137,-93.2625952954095

@@ -1,0 +1,440 @@
+{
+  "scope": "pre-score research grid interpretation; not formal datum equality",
+  "source_specification": "https://lpdaac.usgs.gov/documents/1698/HLS_User_Guide_V2.pdf",
+  "source_claim": "HLS L30 and S30 share 30m MGRS UTM tiles; guide does not establish the unknown-header datum",
+  "acceptance_inference": "only exact native affine/shape with same MGRS HLS source tile and SHA-allowlisted unknown-datum WKT plus matching UTM13 conversion/WGS84 ellipsoid/metre axes",
+  "pixel_resampling": false,
+  "years": [
+    {
+      "year": 2020,
+      "native_grid": [
+        [
+          30.0,
+          0.0,
+          655920.0,
+          0.0,
+          -30.0,
+          4450440.0
+        ],
+        "EPSG:32613"
+      ],
+      "comparisons": [
+        {
+          "reference_crs": "EPSG:32613",
+          "candidate_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+          "reference_datum": "World Geodetic System 1984 ensemble",
+          "candidate_datum": "Not specified (based on WGS 84 spheroid)",
+          "formal_crs_equal": false,
+          "resampling_performed": false,
+          "status": "qualified_hls_same_numeric_utm13_lattice",
+          "mgrs_tile": "13TFE",
+          "known_unknown_datum_wkt_sha256": "9c151a666a9e7a41ce65ed2b837108933f4fcca355eff22f9dcc4d880b3f19a2",
+          "projection_parameters": [
+            [
+              8801,
+              0,
+              "degree"
+            ],
+            [
+              8802,
+              -105,
+              "degree"
+            ],
+            [
+              8805,
+              0.9996,
+              "unity"
+            ],
+            [
+              8806,
+              500000,
+              "metre"
+            ],
+            [
+              8807,
+              0,
+              "metre"
+            ]
+          ],
+          "axes": [
+            [
+              "east",
+              "metre",
+              1.0
+            ],
+            [
+              "north",
+              "metre",
+              1.0
+            ]
+          ],
+          "ellipsoid": {
+            "semi_major_metre": 6378137.0,
+            "inverse_flattening": 298.257223563
+          },
+          "proj_operation": "Inverse of UTM zone 13N + Ballpark geographic offset from WGS 84 to Unknown datum based upon the WGS 84 ellipsoid + UTM zone 13N",
+          "proj_accuracy_metres": -1.0,
+          "datum_status": "unresolved_header_datum_assumed_same_HLS_product_lattice_not_formal_CRS_equality",
+          "basis": "official HLS L30/S30 same MGRS UTM tile specification plus exact affine/shape/projection/ellipsoid/axes",
+          "source_specification": "https://lpdaac.usgs.gov/documents/1698/HLS_User_Guide_V2.pdf"
+        },
+        {
+          "reference_crs": "EPSG:32613",
+          "candidate_crs": "EPSG:32613",
+          "reference_datum": "World Geodetic System 1984 ensemble",
+          "candidate_datum": "World Geodetic System 1984 ensemble",
+          "formal_crs_equal": true,
+          "resampling_performed": false,
+          "status": "semantic_crs_equal"
+        },
+        {
+          "reference_crs": "EPSG:32613",
+          "candidate_crs": "EPSG:32613",
+          "reference_datum": "World Geodetic System 1984 ensemble",
+          "candidate_datum": "World Geodetic System 1984 ensemble",
+          "formal_crs_equal": true,
+          "resampling_performed": false,
+          "status": "semantic_crs_equal"
+        }
+      ],
+      "source_files": [
+        {
+          "name": "870f4eb4d586491dbbb04bc8ef2ab9918fbb117123066291d9dc91bd76557846.npz",
+          "sha256": "870f4eb4d586491dbbb04bc8ef2ab9918fbb117123066291d9dc91bd76557846",
+          "declared_sha256_verified": true,
+          "original_crs": "EPSG:32613",
+          "scene_id": "hls2-s30:HLS.S30.T13TFE.2020124T173911.v2.0",
+          "acquired_at": "2020-05-03T17:52:55.586640Z"
+        },
+        {
+          "name": "5cfa18c2cb557c9c6bcdd59b9e47739ebdfa6c96082a365cfe64db0e6eac823b.npz",
+          "sha256": "5cfa18c2cb557c9c6bcdd59b9e47739ebdfa6c96082a365cfe64db0e6eac823b",
+          "declared_sha256_verified": true,
+          "original_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+          "scene_id": "hls2-l30:HLS.L30.T13TFE.2020138T173032.v2.0",
+          "acquired_at": "2020-05-17T17:30:32.716391Z"
+        },
+        {
+          "name": "d3fc3fca4c0cba7baaf9485ccfe12d23d19b062e619fb2cd8eaf16e399b118df.npz",
+          "sha256": "d3fc3fca4c0cba7baaf9485ccfe12d23d19b062e619fb2cd8eaf16e399b118df",
+          "declared_sha256_verified": true,
+          "original_crs": "EPSG:32613",
+          "scene_id": "hls2-s30:HLS.S30.T13TFE.2020159T173909.v2.0",
+          "acquired_at": "2020-06-07T17:52:54.264260Z"
+        },
+        {
+          "name": "da2e01feca2db93bc2587d01f4b1984e69b0c219ac1bf0001eda65ee07624b1d.npz",
+          "sha256": "da2e01feca2db93bc2587d01f4b1984e69b0c219ac1bf0001eda65ee07624b1d",
+          "declared_sha256_verified": true,
+          "original_crs": "EPSG:32613",
+          "scene_id": "hls2-s30:HLS.S30.T13TFE.2020164T173911.v2.0",
+          "acquired_at": "2020-06-12T17:52:58.329960Z"
+        }
+      ]
+    },
+    {
+      "year": 2021,
+      "native_grid": [
+        [
+          30.0,
+          0.0,
+          655920.0,
+          0.0,
+          -30.0,
+          4450440.0
+        ],
+        "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]"
+      ],
+      "comparisons": [
+        {
+          "reference_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+          "candidate_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+          "reference_datum": "Not specified (based on WGS 84 spheroid)",
+          "candidate_datum": "Not specified (based on WGS 84 spheroid)",
+          "formal_crs_equal": true,
+          "resampling_performed": false,
+          "status": "semantic_crs_equal"
+        },
+        {
+          "reference_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+          "candidate_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+          "reference_datum": "Not specified (based on WGS 84 spheroid)",
+          "candidate_datum": "Not specified (based on WGS 84 spheroid)",
+          "formal_crs_equal": true,
+          "resampling_performed": false,
+          "status": "semantic_crs_equal"
+        },
+        {
+          "reference_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+          "candidate_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+          "reference_datum": "Not specified (based on WGS 84 spheroid)",
+          "candidate_datum": "Not specified (based on WGS 84 spheroid)",
+          "formal_crs_equal": true,
+          "resampling_performed": false,
+          "status": "semantic_crs_equal"
+        }
+      ],
+      "source_files": [
+        {
+          "name": "304fb5cf7dd0c1d146d84621e968d2e395f98445533bb7d90c696c1b83c5dc5c.npz",
+          "sha256": "304fb5cf7dd0c1d146d84621e968d2e395f98445533bb7d90c696c1b83c5dc5c",
+          "declared_sha256_verified": true,
+          "original_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+          "scene_id": "hls2-s30:HLS.S30.T13TFE.2021153T173909.v2.0",
+          "acquired_at": "2021-06-02T17:52:53.018970Z"
+        },
+        {
+          "name": "25378d4bdde09f2e444a406d72d372ac72f995313684a86cce1f32db041d8471.npz",
+          "sha256": "25378d4bdde09f2e444a406d72d372ac72f995313684a86cce1f32db041d8471",
+          "declared_sha256_verified": true,
+          "original_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+          "scene_id": "hls2-l30:HLS.L30.T13TFE.2021156T173053.v2.0",
+          "acquired_at": "2021-06-05T17:30:53.808563Z"
+        },
+        {
+          "name": "62e8e8812a509582b8a6939b20f08610cfca52f662f4db3d23a158f583b11132.npz",
+          "sha256": "62e8e8812a509582b8a6939b20f08610cfca52f662f4db3d23a158f583b11132",
+          "declared_sha256_verified": true,
+          "original_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+          "scene_id": "hls2-s30:HLS.S30.T13TFE.2021158T173901.v2.0",
+          "acquired_at": "2021-06-07T17:52:52.868950Z"
+        },
+        {
+          "name": "9a8e54cf59e784a21609e2d73e6bdaa96d237b8db3c94f8eed65f23c8bf74df0.npz",
+          "sha256": "9a8e54cf59e784a21609e2d73e6bdaa96d237b8db3c94f8eed65f23c8bf74df0",
+          "declared_sha256_verified": true,
+          "original_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+          "scene_id": "hls2-s30:HLS.S30.T13TFE.2021163T173909.v2.0",
+          "acquired_at": "2021-06-12T17:52:53.187280Z"
+        }
+      ]
+    },
+    {
+      "year": 2022,
+      "native_grid": [
+        [
+          30.0,
+          0.0,
+          655920.0,
+          0.0,
+          -30.0,
+          4450440.0
+        ],
+        "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]"
+      ],
+      "comparisons": [
+        {
+          "reference_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+          "candidate_crs": "EPSG:32613",
+          "reference_datum": "Not specified (based on WGS 84 spheroid)",
+          "candidate_datum": "World Geodetic System 1984 ensemble",
+          "formal_crs_equal": false,
+          "resampling_performed": false,
+          "status": "qualified_hls_same_numeric_utm13_lattice",
+          "mgrs_tile": "13TFE",
+          "known_unknown_datum_wkt_sha256": "9c151a666a9e7a41ce65ed2b837108933f4fcca355eff22f9dcc4d880b3f19a2",
+          "projection_parameters": [
+            [
+              8801,
+              0,
+              "degree"
+            ],
+            [
+              8802,
+              -105,
+              "degree"
+            ],
+            [
+              8805,
+              0.9996,
+              "unity"
+            ],
+            [
+              8806,
+              500000,
+              "metre"
+            ],
+            [
+              8807,
+              0,
+              "metre"
+            ]
+          ],
+          "axes": [
+            [
+              "east",
+              "metre",
+              1.0
+            ],
+            [
+              "north",
+              "metre",
+              1.0
+            ]
+          ],
+          "ellipsoid": {
+            "semi_major_metre": 6378137.0,
+            "inverse_flattening": 298.257223563
+          },
+          "proj_operation": "Inverse of UTM zone 13N + Ballpark geographic offset from Unknown datum based upon the WGS 84 ellipsoid to WGS 84 + UTM zone 13N",
+          "proj_accuracy_metres": -1.0,
+          "datum_status": "unresolved_header_datum_assumed_same_HLS_product_lattice_not_formal_CRS_equality",
+          "basis": "official HLS L30/S30 same MGRS UTM tile specification plus exact affine/shape/projection/ellipsoid/axes",
+          "source_specification": "https://lpdaac.usgs.gov/documents/1698/HLS_User_Guide_V2.pdf"
+        },
+        {
+          "reference_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+          "candidate_crs": "EPSG:32613",
+          "reference_datum": "Not specified (based on WGS 84 spheroid)",
+          "candidate_datum": "World Geodetic System 1984 ensemble",
+          "formal_crs_equal": false,
+          "resampling_performed": false,
+          "status": "qualified_hls_same_numeric_utm13_lattice",
+          "mgrs_tile": "13TFE",
+          "known_unknown_datum_wkt_sha256": "9c151a666a9e7a41ce65ed2b837108933f4fcca355eff22f9dcc4d880b3f19a2",
+          "projection_parameters": [
+            [
+              8801,
+              0,
+              "degree"
+            ],
+            [
+              8802,
+              -105,
+              "degree"
+            ],
+            [
+              8805,
+              0.9996,
+              "unity"
+            ],
+            [
+              8806,
+              500000,
+              "metre"
+            ],
+            [
+              8807,
+              0,
+              "metre"
+            ]
+          ],
+          "axes": [
+            [
+              "east",
+              "metre",
+              1.0
+            ],
+            [
+              "north",
+              "metre",
+              1.0
+            ]
+          ],
+          "ellipsoid": {
+            "semi_major_metre": 6378137.0,
+            "inverse_flattening": 298.257223563
+          },
+          "proj_operation": "Inverse of UTM zone 13N + Ballpark geographic offset from Unknown datum based upon the WGS 84 ellipsoid to WGS 84 + UTM zone 13N",
+          "proj_accuracy_metres": -1.0,
+          "datum_status": "unresolved_header_datum_assumed_same_HLS_product_lattice_not_formal_CRS_equality",
+          "basis": "official HLS L30/S30 same MGRS UTM tile specification plus exact affine/shape/projection/ellipsoid/axes",
+          "source_specification": "https://lpdaac.usgs.gov/documents/1698/HLS_User_Guide_V2.pdf"
+        },
+        {
+          "reference_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+          "candidate_crs": "EPSG:32613",
+          "reference_datum": "Not specified (based on WGS 84 spheroid)",
+          "candidate_datum": "World Geodetic System 1984 ensemble",
+          "formal_crs_equal": false,
+          "resampling_performed": false,
+          "status": "qualified_hls_same_numeric_utm13_lattice",
+          "mgrs_tile": "13TFE",
+          "known_unknown_datum_wkt_sha256": "9c151a666a9e7a41ce65ed2b837108933f4fcca355eff22f9dcc4d880b3f19a2",
+          "projection_parameters": [
+            [
+              8801,
+              0,
+              "degree"
+            ],
+            [
+              8802,
+              -105,
+              "degree"
+            ],
+            [
+              8805,
+              0.9996,
+              "unity"
+            ],
+            [
+              8806,
+              500000,
+              "metre"
+            ],
+            [
+              8807,
+              0,
+              "metre"
+            ]
+          ],
+          "axes": [
+            [
+              "east",
+              "metre",
+              1.0
+            ],
+            [
+              "north",
+              "metre",
+              1.0
+            ]
+          ],
+          "ellipsoid": {
+            "semi_major_metre": 6378137.0,
+            "inverse_flattening": 298.257223563
+          },
+          "proj_operation": "Inverse of UTM zone 13N + Ballpark geographic offset from Unknown datum based upon the WGS 84 ellipsoid to WGS 84 + UTM zone 13N",
+          "proj_accuracy_metres": -1.0,
+          "datum_status": "unresolved_header_datum_assumed_same_HLS_product_lattice_not_formal_CRS_equality",
+          "basis": "official HLS L30/S30 same MGRS UTM tile specification plus exact affine/shape/projection/ellipsoid/axes",
+          "source_specification": "https://lpdaac.usgs.gov/documents/1698/HLS_User_Guide_V2.pdf"
+        }
+      ],
+      "source_files": [
+        {
+          "name": "084be77be1f3b8b7beb11ff430e2322c2feeab9f3d9b11d15a947b5437f8cae7.npz",
+          "sha256": "084be77be1f3b8b7beb11ff430e2322c2feeab9f3d9b11d15a947b5437f8cae7",
+          "declared_sha256_verified": true,
+          "original_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+          "scene_id": "hls2-s30:HLS.S30.T13TFE.2022133T173911.v2.0",
+          "acquired_at": "2022-05-13T17:52:55.921040Z"
+        },
+        {
+          "name": "91f3bd576645dace7a20838c1d3c7d3465fb47afaca98ac414dbd1dc476a897b.npz",
+          "sha256": "91f3bd576645dace7a20838c1d3c7d3465fb47afaca98ac414dbd1dc476a897b",
+          "declared_sha256_verified": true,
+          "original_crs": "EPSG:32613",
+          "scene_id": "hls2-s30:HLS.S30.T13TFE.2022158T173909.v2.0",
+          "acquired_at": "2022-06-07T17:52:53.577960Z"
+        },
+        {
+          "name": "f5fb5747d39c06b7ead7983475fe9288871f89431308e7cfc18d605026aac7b9.npz",
+          "sha256": "f5fb5747d39c06b7ead7983475fe9288871f89431308e7cfc18d605026aac7b9",
+          "declared_sha256_verified": true,
+          "original_crs": "EPSG:32613",
+          "scene_id": "hls2-l30:HLS.L30.T13TFE.2022159T173113.v2.0",
+          "acquired_at": "2022-06-08T17:31:13.174753Z"
+        },
+        {
+          "name": "a6cbdf3e60c5691be4db18f8ff6e6d8ea0da7a392872df220c593d713e9a0173.npz",
+          "sha256": "a6cbdf3e60c5691be4db18f8ff6e6d8ea0da7a392872df220c593d713e9a0173",
+          "declared_sha256_verified": true,
+          "original_crs": "EPSG:32613",
+          "scene_id": "hls2-s30:HLS.S30.T13TFE.2022163T173911.v2.0",
+          "acquired_at": "2022-06-12T17:53:02.119140Z"
+        }
+      ]
+    }
+  ]
+}

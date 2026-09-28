@@ -1,9 +1,8 @@
 """Typed, bounded capability planning for deterministic local tools.
 
-The first production vertical slice is the agronomic calculator.  Natural
-language extraction is deliberately limited to explicit arithmetic requests;
-ambiguous agronomic targets remain model/human decisions and are never sent to
-the calculator as if they were supplied facts.
+Natural language extraction is deliberately limited to explicit arithmetic and
+reviewed private-table queries. Ambiguous agronomic targets remain model/human
+decisions and are never sent to an executor as if they were supplied facts.
 """
 
 from __future__ import annotations
@@ -14,7 +13,7 @@ import json
 import re
 from typing import Any, Mapping
 
-from agronomy_agent.agronomic_calculations import agronomic_calculator, calculation_tool_schema
+from agronomy_agent.agronomic_calculations import calculation_tool_schema
 from agronomy_agent.calculator_contracts import CALCULATOR_VERSION, TOOL_PLANNER_VERSION, format_calculator_clarification, tool_version_for
 from agronomy_agent.foundation_math_parser import _unsafe_action_request, parse_foundation_calculation
 
@@ -94,9 +93,23 @@ class ToolPlan:
 
 
 def plan_tools(question: str, *, field_context: Mapping[str, Any] | None = None) -> ToolPlan:
-    """Plan only explicit, deterministic arithmetic supported by the calculator."""
+    """Plan explicit deterministic queries through registered capability contracts."""
 
-    del field_context  # Reserved for typed field-measurement inputs in later specs.
+    from agronomy_agent.field_data_capability import select_query, CAPABILITY_ID, CAPABILITY_VERSION, AUTHORITY_ROLE
+    selected = select_query(question, field_context)
+    if selected is not None:
+        operation, inputs, missing, clarification = selected
+        seed = {"planner_version": PLANNER_VERSION, "tool_id": CAPABILITY_ID,
+                "tool_version": CAPABILITY_VERSION, "operation": operation, "inputs": inputs,
+                "question_sha256": hashlib.sha256(question.encode("utf-8")).hexdigest()}
+        invocation = ToolInvocation(
+            "open_agronomy_agent.tool_invocation.v1", _identifier("invocation", seed),
+            PLANNER_VERSION, CAPABILITY_ID, CAPABILITY_VERSION, operation, inputs,
+            seed["question_sha256"], "clarification_required" if missing else "planned",
+            missing, AUTHORITY_ROLE, "low_arithmetic",
+        )
+        return ToolPlan(TOOL_PLAN_SCHEMA_VERSION, PLANNER_VERSION,
+                        "clarification_required" if missing else "ready", (invocation,), clarification)
     parsed = _parse_calculation(question)
     if parsed is None:
         return ToolPlan(TOOL_PLAN_SCHEMA_VERSION, PLANNER_VERSION, "not_applicable", ())
@@ -140,9 +153,13 @@ def execute_tool_plan(plan: ToolPlan) -> tuple[ToolResult, ...]:
     for invocation in plan.invocations:
         if invocation.status != "planned":
             continue
-        if invocation.tool_id != CALCULATOR_ID:
+        from agronomy_agent.capability_registry import capability_registry, execute_registered_capability
+        spec = capability_registry().require(invocation.tool_id)
+        if spec.kind not in {"calculator", "local_data"}:
             raise ValueError(f"unsupported planned tool: {invocation.tool_id}")
-        payload = agronomic_calculator(invocation.operation, invocation.inputs)
+        payload = execute_registered_capability(invocation.tool_id, {
+            "operation": invocation.operation, "inputs": dict(invocation.inputs),
+        })
         payload_sha256 = hashlib.sha256(_canonical(payload).encode("utf-8")).hexdigest()
         results.append(
             ToolResult(
@@ -163,8 +180,8 @@ def execute_tool_plan(plan: ToolPlan) -> tuple[ToolResult, ...]:
                 payload_sha256=payload_sha256,
                 authority_role=invocation.authority_role,
                 freshness_status="not_time_sensitive",
-                provenance="agronomy_agent.agronomic_calculations",
-                limitations=(str(payload.get("boundary") or ""),),
+                provenance=("agronomy_agent.agronomic_calculations" if invocation.tool_id == CALCULATOR_ID else spec.executor_ref.split(":")[0]),
+                limitations=(str(payload.get("boundary") or ""), *(str(item) for item in payload.get("limitations", ()))),
             )
         )
     return tuple(results)

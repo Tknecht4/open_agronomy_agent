@@ -1,0 +1,32 @@
+{
+  "artifacts": {
+    "label-protocol.json": "2975f8a158b056715eecf226aedb7fa2dd3eae1e9ae063794447a4265584799e",
+    "numerical-independent-audit-summary.json": "3f026a7e56c868f0a2d9e4fef1acfef11ac00901836d79a9a9df4f3c8c1503d6",
+    "numerical-warning-audit.json": "92d6e0b05ae0cdd711c5ed0bce66c9d02798d7196a8706df953e8717967a097b",
+    "paired-primary-assessment.json": "dda5b6fea6de3035ee9eb6f5abe9ae02e52786f7e59cf345c11ee91f7912a674",
+    "prithvi-primary-final-features.json": "f4b8768f87008196f4aa53ffed8dede4889b8b939c9bf2620c7ad8b87dc517df",
+    "spectral-primary-final-features.json": "a3ee0caa99c4db67251ef898ad430b53c6e009a866eee70cda6b3d5f9c2462c9"
+  },
+  "first_warning_probe": "numerical-warning-audit.json was emitted by an inline diagnostic; its executed standalone script was not retained. The portable file reproduces the later independent fsum/normal-equation audit, not a falsely reconstructed original of that inline probe.",
+  "mechanical_binding": "Numerical fit/prediction wrappers and metric/summary construction copied verbatim from original, apart from enclosing indentation; exact block equality checked during packaging. Only input/output path parameterization, import-safe main guard, output preflight, and analysis-only lineage/status metadata added.",
+  "original_environment": {
+    "blas": "Apple Accelerate",
+    "numpy": "2.0.2",
+    "python": "3.12",
+    "scikit_learn": "1.9.1",
+    "scipy": "1.18.1"
+  },
+  "original_executed_script_sha256": "5f4b0480f4ae6f9bbe1d3ca75716441ceccd55f3b99cc4bf10734e6b241b42a6",
+  "original_full_audit_sha256": "dd7d34ae2af60542cfe172b6794fe19c6a2f92d53efe09a64a460e3ca42eef39",
+  "portable_script": "audit_imagery_numerics.py",
+  "portable_script_sha256": "705c9b4a7f0fbd15dde4e1ad0f983254a05bc18cf7ec6a3fe7b6a647fae2f55e",
+  "raw_label_source": {
+    "relative_path": "data/raw/field_data_research/20260927/us/akron_modeling_data.csv",
+    "sha256": "a1599b9c523f4ed44efd9b7f0c3ba6baf9f263f7c274415c77b4eb81d623f38b",
+    "source_url": "https://ndownloader.figshare.com/files/54132527"
+  },
+  "scope": "portable analysis-only reproduction; no rerun performed during packaging",
+  "unchanged_comparison_and_summary_block_sha256": "9fb8c888297d178b9e23e0c04f37ce43a5f85926f900a319dfbcdc3b4a88ae00",
+  "unchanged_numerical_check_block_sha256": "8e4a4e814f9c1cfad42dec78988578816c272d3088c63302af5907c835879a14",
+  "verification": "Compile, --help, path scan, and exact operation-block comparison only; no readouts or model rerun."
+}

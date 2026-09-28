@@ -1,0 +1,3695 @@
+{
+  "status": "numerical_outputs_verified_warning_cause_unresolved",
+  "summary": {
+    "prediction_checks": 168,
+    "ridge_fit_checks": 114,
+    "all_finite": true,
+    "all_classes_exact": true,
+    "max_fsum_absolute_difference": 1.8189894035458565e-12,
+    "max_fsum_scaled_difference": 1.4693117941016323e-15,
+    "max_ridge_relative_residual": 7.393419563789294e-15,
+    "all_metrics_exact_replay": true,
+    "warnings_count": 6450
+  },
+  "method": "Independent Python math.fsum for every fitted linear/logistic prediction and Ridge normal equation; no hyperparameter/input changes; warnings retained. Does not independently reproduce optimizer trajectory.",
+  "checks": [
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.695307232697897,
+      "decision_absmax": 9.934525467897547,
+      "fsum_max_absolute_difference": 1.7763568394002505e-15,
+      "fsum_max_scaled_difference": 1.6906130454322433e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.4252358503456213,
+      "decision_absmax": 4561.180226098603,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.7454985247614863,
+      "decision_absmax": 2.05649352999947,
+      "fsum_max_absolute_difference": 8.881784197001252e-16,
+      "fsum_max_scaled_difference": 2.9058737111093406e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.752835895433665,
+      "decision_absmax": 769.7723465400295,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.7008124070543371,
+      "decision_absmax": 5.419276742373394,
+      "fsum_max_absolute_difference": 1.1102230246251565e-16,
+      "fsum_max_scaled_difference": 5.552245900099879e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.1584797863095055,
+      "decision_absmax": 2728.620693678125,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.2255420231973049,
+      "decision_absmax": 5.966915005242239,
+      "fsum_max_absolute_difference": 2.220446049250313e-16,
+      "fsum_max_scaled_difference": 1.168496732313509e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.0574492957930999,
+      "decision_absmax": 3426.2161549046023,
+      "fsum_max_absolute_difference": 4.547473508864641e-13,
+      "fsum_max_scaled_difference": 1.326870936447025e-16,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.0845529321216407,
+      "decision_absmax": 3.4889649455114213,
+      "fsum_max_absolute_difference": 1.7763568394002505e-15,
+      "fsum_max_scaled_difference": 3.95716353538571e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.1336225037110315,
+      "decision_absmax": 2097.804031605383,
+      "fsum_max_absolute_difference": 4.547473508864641e-13,
+      "fsum_max_scaled_difference": 2.1666975288713645e-16,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.6349339950805348,
+      "decision_absmax": 1.3183020755253838,
+      "fsum_max_absolute_difference": 2.220446049250313e-16,
+      "fsum_max_scaled_difference": 1.856346596398728e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 4.013793721481892,
+      "decision_absmax": 619.5792949430736,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.0818288532231994,
+      "decision_absmax": 2.4543713646936753,
+      "fsum_max_absolute_difference": 6.938893903907228e-17,
+      "fsum_max_scaled_difference": 6.572533058728323e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.7751813741975693,
+      "decision_absmax": 1105.5441244014837,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 0.6008202603498006,
+      "decision_absmax": 2.3847400524205336,
+      "fsum_max_absolute_difference": 4.440892098500626e-16,
+      "fsum_max_scaled_difference": 1.3120334293692082e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.2570181631765505,
+      "decision_absmax": 1934.5822059295483,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.3463821257921151,
+      "decision_absmax": 4.509650607949198,
+      "fsum_max_absolute_difference": 8.881784197001252e-16,
+      "fsum_max_scaled_difference": 1.6120412761177302e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.3663425733085264,
+      "decision_absmax": 2759.197405220243,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.032579367347617,
+      "decision_absmax": 1.5328533584043385,
+      "fsum_max_absolute_difference": 6.661338147750939e-16,
+      "fsum_max_scaled_difference": 3.9847116284404973e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.8469785245899684,
+      "decision_absmax": 116.5697378659961,
+      "fsum_max_absolute_difference": 1.2789769243681803e-13,
+      "fsum_max_scaled_difference": 1.0878453482867649e-15,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 0.9080310739764195,
+      "decision_absmax": 4.758078743047253,
+      "fsum_max_absolute_difference": 2.220446049250313e-16,
+      "fsum_max_scaled_difference": 1.0812224524215939e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.1687862673034466,
+      "decision_absmax": 2431.1393880312503,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.3579771960031755,
+      "decision_absmax": 3.520206663400282,
+      "fsum_max_absolute_difference": 4.440892098500626e-16,
+      "fsum_max_scaled_difference": 1.2336749087570993e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.263785487909456,
+      "decision_absmax": 3096.600225456502,
+      "fsum_max_absolute_difference": 4.547473508864641e-13,
+      "fsum_max_scaled_difference": 1.4680633967846728e-16,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.7500833853880435,
+      "decision_absmax": 1.155565921959047,
+      "fsum_max_absolute_difference": 4.440892098500626e-16,
+      "fsum_max_scaled_difference": 2.060197766749162e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.7616192682804948,
+      "decision_absmax": 1899.7415297953742,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.391117649731986,
+      "decision_absmax": 2.168324334790127,
+      "fsum_max_absolute_difference": 4.440892098500626e-16,
+      "fsum_max_scaled_difference": 2.7370575241495364e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.068373885807678,
+      "decision_absmax": 658.8769940533703,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 0.6405263379572027,
+      "decision_absmax": 2.5048191187804343,
+      "fsum_max_absolute_difference": 4.440892098500626e-16,
+      "fsum_max_scaled_difference": 1.2670816803937987e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.5300254097487154,
+      "decision_absmax": 2138.7132656787458,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.231795811853746,
+      "decision_absmax": 3.782729899336166,
+      "fsum_max_absolute_difference": 4.440892098500626e-16,
+      "fsum_max_scaled_difference": 1.357475918486393e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.1323125654689656,
+      "decision_absmax": 1380.9194702902996,
+      "fsum_max_absolute_difference": 2.2737367544323206e-13,
+      "fsum_max_scaled_difference": 1.645346782728719e-16,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.0080111876466105,
+      "decision_absmax": 2.772107939830924,
+      "fsum_max_absolute_difference": 2.220446049250313e-16,
+      "fsum_max_scaled_difference": 1.067888949414712e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.6402551312409221,
+      "decision_absmax": 1585.9346259359233,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.4473676746402666,
+      "decision_absmax": 2.0995514017175796,
+      "fsum_max_absolute_difference": 2.220446049250313e-16,
+      "fsum_max_scaled_difference": 9.3256047231948e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 456.64816007908234,
+      "decision_absmax": 4938.223326061313,
+      "fsum_max_absolute_difference": 1.8189894035458565e-12,
+      "fsum_max_scaled_difference": 3.682743790806425e-16,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.4789198264127092,
+      "decision_absmax": 9.05610384605136,
+      "fsum_max_absolute_difference": 1.7763568394002505e-15,
+      "fsum_max_scaled_difference": 1.8560214774247724e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.1008259465427916,
+      "decision_absmax": 4753.611769239269,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.8943454206387675,
+      "decision_absmax": 2.520569018425353,
+      "fsum_max_absolute_difference": 4.440892098500626e-16,
+      "fsum_max_scaled_difference": 1.3203608057954723e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.655855337909198,
+      "decision_absmax": 585.4275657102584,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.56991447572541,
+      "decision_absmax": 9.100482715086686,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.9247188040836067,
+      "decision_absmax": 5350.4853061883705,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.018358541965775,
+      "decision_absmax": 2.6167156211541283,
+      "fsum_max_absolute_difference": 4.440892098500626e-16,
+      "fsum_max_scaled_difference": 1.2278798124259202e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 7.909912813007844,
+      "decision_absmax": 2828.858688026937,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.333845693755473,
+      "decision_absmax": 2.4704431245820078,
+      "fsum_max_absolute_difference": 4.440892098500626e-16,
+      "fsum_max_scaled_difference": 1.3199794669056139e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.47121493492449,
+      "decision_absmax": 0.9948045055578396,
+      "fsum_max_absolute_difference": 2.220446049250313e-16,
+      "fsum_max_scaled_difference": 1.468545097558793e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.3302809791124663,
+      "decision_absmax": 2482.279620029567,
+      "fsum_max_absolute_difference": 4.547473508864641e-13,
+      "fsum_max_scaled_difference": 1.831236994894074e-16,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.8228635547257324,
+      "decision_absmax": 3.2166130146499046,
+      "fsum_max_absolute_difference": 4.440892098500626e-16,
+      "fsum_max_scaled_difference": 1.26180680810043e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.2932425968750643,
+      "decision_absmax": 2634.524397222099,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.345509444308006,
+      "decision_absmax": 2.2861305862651222,
+      "fsum_max_absolute_difference": 4.440892098500626e-16,
+      "fsum_max_scaled_difference": 1.4496017149193618e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.7494932101867957,
+      "decision_absmax": 0.5193718422500572,
+      "fsum_max_absolute_difference": 4.440892098500626e-16,
+      "fsum_max_scaled_difference": 3.143759396963497e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.6385127466419065,
+      "decision_absmax": 2373.1798333064744,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.8168340413753468,
+      "decision_absmax": 2.5069703058096526,
+      "fsum_max_absolute_difference": 2.220446049250313e-16,
+      "fsum_max_scaled_difference": 7.591468122937599e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.266462850432797,
+      "decision_absmax": 2712.6370209126044,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.255385762806642,
+      "decision_absmax": 2.9650169788214775,
+      "fsum_max_absolute_difference": 4.440892098500626e-16,
+      "fsum_max_scaled_difference": 1.1200184317547596e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        32
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 8.30330295976646,
+      "decision_absmax": 3370.744192195919,
+      "fsum_max_absolute_difference": 4.547473508864641e-13,
+      "fsum_max_scaled_difference": 1.348700627820465e-16,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.20760296702859,
+      "decision_absmax": 2.701828978388339,
+      "fsum_max_absolute_difference": 8.881784197001252e-16,
+      "fsum_max_scaled_difference": 2.616361228211081e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.043405449754528,
+      "decision_absmax": 3750.0976160989258,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.025805210954105,
+      "decision_absmax": 4.717608569778197,
+      "fsum_max_absolute_difference": 2.220446049250313e-15,
+      "fsum_max_scaled_difference": 6.368042159322962e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 9.30755434685867,
+      "decision_absmax": 2164.858073852024,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.60859867043961,
+      "decision_absmax": 2.3499740909073297,
+      "fsum_max_absolute_difference": 4.440892098500626e-16,
+      "fsum_max_scaled_difference": 2.172482105258771e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.760528778997847,
+      "decision_absmax": 4686.159088111204,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.9846528111866664,
+      "decision_absmax": 3.469463027300736,
+      "fsum_max_absolute_difference": 4.440892098500626e-16,
+      "fsum_max_scaled_difference": 2.333087113762723e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.719670677291909,
+      "decision_absmax": 1870.5216298267644,
+      "fsum_max_absolute_difference": 2.2737367544323206e-13,
+      "fsum_max_scaled_difference": 1.2149134256293831e-16,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.5853069707042222,
+      "decision_absmax": 1.752735883804102,
+      "fsum_max_absolute_difference": 9.020562075079397e-17,
+      "fsum_max_scaled_difference": 8.869175693520998e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 12.936158557854354,
+      "decision_absmax": 1561.3438248944753,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.3556132730856865,
+      "decision_absmax": 1.5846315763461714,
+      "fsum_max_absolute_difference": 1.2212453270876722e-15,
+      "fsum_max_scaled_difference": 6.959386305494768e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 11898.650188323918,
+      "decision_absmax": 24359.169425626675,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.556991369314425,
+      "decision_absmax": 5.036416921401616,
+      "fsum_max_absolute_difference": 2.6645352591003757e-15,
+      "fsum_max_scaled_difference": 4.4141007716903804e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.7169021609468076,
+      "decision_absmax": 1835.1869960253146,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.4659729433912534,
+      "decision_absmax": 3.4542382369826603,
+      "fsum_max_absolute_difference": 1.7763568394002505e-15,
+      "fsum_max_scaled_difference": 3.988014885803618e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 5.884259347520713,
+      "decision_absmax": 2456.9001410895603,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.335757261269334,
+      "decision_absmax": 4.389609943864533,
+      "fsum_max_absolute_difference": 2.6645352591003757e-15,
+      "fsum_max_scaled_difference": 4.943836913715155e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.47478107601913,
+      "decision_absmax": 286.6111302282816,
+      "fsum_max_absolute_difference": 5.684341886080802e-14,
+      "fsum_max_scaled_difference": 1.9763984382555184e-16,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.393688084399953,
+      "decision_absmax": 4.151222236437125,
+      "fsum_max_absolute_difference": 1.7763568394002505e-15,
+      "fsum_max_scaled_difference": 5.06134022364767e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 7.121483892007554,
+      "decision_absmax": 1407.4560763327418,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.3347693730660937,
+      "decision_absmax": 0.480993075598678,
+      "fsum_max_absolute_difference": 2.7755575615628914e-16,
+      "fsum_max_scaled_difference": 1.8741192023743244e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 4.094394643571155,
+      "decision_absmax": 3900.050790276879,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 4.747143417341169,
+      "decision_absmax": 6.716752283603056,
+      "fsum_max_absolute_difference": 2.6645352591003757e-15,
+      "fsum_max_scaled_difference": 4.023637680487682e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 5.417104118037272,
+      "decision_absmax": 2540.4786657717523,
+      "fsum_max_absolute_difference": 4.547473508864641e-13,
+      "fsum_max_scaled_difference": 1.7893022554583373e-16,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.436402778187986,
+      "decision_absmax": 5.239926939373891,
+      "fsum_max_absolute_difference": 1.1102230246251565e-15,
+      "fsum_max_scaled_difference": 4.741533664108716e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 139.81783046292415,
+      "decision_absmax": 1502.8867774705307,
+      "fsum_max_absolute_difference": 2.2737367544323206e-13,
+      "fsum_max_scaled_difference": 1.5119068725749703e-16,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.158573797418231,
+      "decision_absmax": 6.469609855507098,
+      "fsum_max_absolute_difference": 1.7763568394002505e-15,
+      "fsum_max_scaled_difference": 2.378111941269063e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.564912905334291,
+      "decision_absmax": 1844.8315172923872,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.890672869385388,
+      "decision_absmax": 3.5203013945687966,
+      "fsum_max_absolute_difference": 3.1086244689504383e-15,
+      "fsum_max_scaled_difference": 6.877029201383551e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 4.339617906533986,
+      "decision_absmax": 3706.790381946565,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.691089011719555,
+      "decision_absmax": 2.854426048501117,
+      "fsum_max_absolute_difference": 1.3322676295501878e-15,
+      "fsum_max_scaled_difference": 3.456461773519488e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 7.43162444376865,
+      "decision_absmax": 12079.769578110565,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.888075983833551,
+      "decision_absmax": 3.346655509130822,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 11.368132430503787,
+      "decision_absmax": 834.2005958928188,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.666002984802875,
+      "decision_absmax": 4.255996450395115,
+      "fsum_max_absolute_difference": 8.881784197001252e-16,
+      "fsum_max_scaled_difference": 1.68983831721073e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 685.3679851046699,
+      "decision_absmax": 4240.736198022671,
+      "fsum_max_absolute_difference": 9.094947017729282e-13,
+      "fsum_max_scaled_difference": 2.1441566832866666e-16,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.640722299929858,
+      "decision_absmax": 2.7657738464922352,
+      "fsum_max_absolute_difference": 6.661338147750939e-16,
+      "fsum_max_scaled_difference": 2.8055638677306367e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.784359133963439,
+      "decision_absmax": 4054.827558503408,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.611583028050485,
+      "decision_absmax": 5.459416763186273,
+      "fsum_max_absolute_difference": 8.881784197001252e-16,
+      "fsum_max_scaled_difference": 1.6718185485769427e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 18.259081984401917,
+      "decision_absmax": 863.5643710587299,
+      "fsum_max_absolute_difference": 1.1368683772161603e-13,
+      "fsum_max_scaled_difference": 1.3149609390264047e-16,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.7021636705918484,
+      "decision_absmax": 2.6518787875231897,
+      "fsum_max_absolute_difference": 4.440892098500626e-16,
+      "fsum_max_scaled_difference": 1.2160568181159615e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.784359133963439,
+      "decision_absmax": 5004.224408059428,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 4.775810989692033,
+      "decision_absmax": 4.00658756116529,
+      "fsum_max_absolute_difference": 4.440892098500626e-16,
+      "fsum_max_scaled_difference": 9.796558798953206e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 15.688168323475617,
+      "decision_absmax": 2063.9436894931177,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 5.072127182366174,
+      "decision_absmax": 3.5136278051471135,
+      "fsum_max_absolute_difference": 2.220446049250313e-16,
+      "fsum_max_scaled_difference": 8.403062124073479e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 8.95381782244125,
+      "decision_absmax": 2.81095214266249,
+      "fsum_max_absolute_difference": 1.6653345369377348e-16,
+      "fsum_max_scaled_difference": 1.1570849322050286e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 8.653380213866829,
+      "decision_absmax": 234.27203652974094,
+      "fsum_max_absolute_difference": 3.126388037344441e-13,
+      "fsum_max_scaled_difference": 1.328839620491505e-15,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 8.77083393734202,
+      "decision_absmax": 2.7836300319875944,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 8.663854876827548,
+      "decision_absmax": 269.8097312108921,
+      "fsum_max_absolute_difference": 3.979039320256561e-13,
+      "fsum_max_scaled_difference": 1.4693117941016323e-15,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 4.165979409296203,
+      "decision_absmax": 4.6223676301715475,
+      "fsum_max_absolute_difference": 8.881784197001252e-16,
+      "fsum_max_scaled_difference": 2.6880665959458893e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 4.056796931297974,
+      "decision_absmax": 4.5940946486848215,
+      "fsum_max_absolute_difference": 1.5543122344752192e-15,
+      "fsum_max_scaled_difference": 6.357293807700104e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 4.651193750536647,
+      "decision_absmax": 924.8462199539981,
+      "fsum_max_absolute_difference": 2.2737367544323206e-13,
+      "fsum_max_scaled_difference": 2.45584710012133e-16,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 7.740262542886888,
+      "decision_absmax": 2.71508056645623,
+      "fsum_max_absolute_difference": 1.1102230246251565e-16,
+      "fsum_max_scaled_difference": 6.838570886207689e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 8.36632269796789,
+      "decision_absmax": 999.7752040740338,
+      "fsum_max_absolute_difference": 3.410605131648481e-13,
+      "fsum_max_scaled_difference": 3.4079632646415745e-16,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 7.740262542886888,
+      "decision_absmax": 2.71508056645623,
+      "fsum_max_absolute_difference": 1.1102230246251565e-16,
+      "fsum_max_scaled_difference": 6.838570886207689e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        192
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 16.32529574124659,
+      "decision_absmax": 756.9076884511369,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.961780718670703,
+      "decision_absmax": 0.68862182958221,
+      "fsum_max_absolute_difference": 5.551115123125783e-17,
+      "fsum_max_scaled_difference": 5.258816279786357e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.239536260408569,
+      "decision_absmax": 1112.618729227235,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.961780718670703,
+      "decision_absmax": 1.1255016977205576,
+      "fsum_max_absolute_difference": 5.551115123125783e-17,
+      "fsum_max_scaled_difference": 3.8459546520183296e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.8193993093377987,
+      "decision_absmax": 4053.845542679048,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.3464278649330819,
+      "decision_absmax": 1.0234463228664086,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.1850904692660968,
+      "decision_absmax": 2759.5741115042147,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.3736056394868592,
+      "decision_absmax": 1.4393150246993482,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.3764944032232667,
+      "decision_absmax": 3600.969069152269,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 0.6126212183802767,
+      "decision_absmax": 1.107892578301378,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 0.46768744781777927,
+      "decision_absmax": 971.0134158797035,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.0988845115895436,
+      "decision_absmax": 0.8348412412840422,
+      "fsum_max_absolute_difference": 6.938893903907228e-18,
+      "fsum_max_scaled_difference": 6.5562011683859295e-18,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 28.261674009386827,
+      "decision_absmax": 2296.02197390286,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.2764207522857267,
+      "decision_absmax": 0.4220942628307063,
+      "fsum_max_absolute_difference": 5.551115123125783e-17,
+      "fsum_max_scaled_difference": 3.928860744624719e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.3764944032232664,
+      "decision_absmax": 2792.5894465830097,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.4031215200403038,
+      "decision_absmax": 1.63181117024107,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.2909944487358056,
+      "decision_absmax": 3558.146214979839,
+      "fsum_max_absolute_difference": 4.547473508864641e-13,
+      "fsum_max_scaled_difference": 1.2776866231921297e-16,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.3264418003756235,
+      "decision_absmax": 0.39416990572488714,
+      "fsum_max_absolute_difference": 5.551115123125783e-17,
+      "fsum_max_scaled_difference": 4.7645721872001085e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.2909944487358056,
+      "decision_absmax": 2092.0660762974007,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.6118450905205577,
+      "decision_absmax": 2.0151156686365517,
+      "fsum_max_absolute_difference": 2.220446049250313e-16,
+      "fsum_max_scaled_difference": 8.493788591108047e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.6954638000032116,
+      "decision_absmax": 1139.094368918474,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.3736056394868592,
+      "decision_absmax": 1.2284554674246346,
+      "fsum_max_absolute_difference": 5.551115123125783e-17,
+      "fsum_max_scaled_difference": 4.2115939870698165e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.3764944032232667,
+      "decision_absmax": 4011.977299455104,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 0.8534225761732657,
+      "decision_absmax": 0.8827845369135782,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 0.8359541880080369,
+      "decision_absmax": 1372.944765114862,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.0988845115895436,
+      "decision_absmax": 0.6904023686019058,
+      "fsum_max_absolute_difference": 1.1102230246251565e-16,
+      "fsum_max_scaled_difference": 6.567803294924376e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.3071833648394955,
+      "decision_absmax": 1735.3797001387195,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.056207159261887,
+      "decision_absmax": 0.7396596470794338,
+      "fsum_max_absolute_difference": 1.1102230246251565e-16,
+      "fsum_max_scaled_difference": 7.24599532478372e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.0720944676167354,
+      "decision_absmax": 5243.384632325063,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.4031215200403035,
+      "decision_absmax": 1.4484032877718627,
+      "fsum_max_absolute_difference": 2.220446049250313e-16,
+      "fsum_max_scaled_difference": 9.068955512108471e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.2909944487358056,
+      "decision_absmax": 3570.86935446258,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.1358602781277274,
+      "decision_absmax": 0.33104986847944806,
+      "fsum_max_absolute_difference": 5.551115123125783e-17,
+      "fsum_max_scaled_difference": 4.6402359086171855e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.2909944487358056,
+      "decision_absmax": 1778.2750285977677,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.4260481918147319,
+      "decision_absmax": 2.307661348135775,
+      "fsum_max_absolute_difference": 5.551115123125783e-17,
+      "fsum_max_scaled_difference": 3.8662117226351384e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.603567451474607,
+      "decision_absmax": 2465.437375496602,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 0.8080019776782648,
+      "decision_absmax": 1.4866168126243724,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 14.021538461530998,
+      "decision_absmax": 4441.637481090326,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.3168335948103205,
+      "decision_absmax": 0.7547992059731037,
+      "fsum_max_absolute_difference": 5.551115123125783e-17,
+      "fsum_max_scaled_difference": 4.0560882182751866e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.2185123905998207,
+      "decision_absmax": 2016.2186311873952,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.3168335948103205,
+      "decision_absmax": 0.8614906791545042,
+      "fsum_max_absolute_difference": 5.551115123125783e-17,
+      "fsum_max_scaled_difference": 4.3316326384935807e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.750805215655609,
+      "decision_absmax": 2384.06793570983,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.6782815041973178,
+      "decision_absmax": 0.5520186194236845,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 1.6689827394392838,
+      "decision_absmax": 2147.07731594918,
+      "fsum_max_absolute_difference": 4.547473508864641e-13,
+      "fsum_max_scaled_difference": 2.1169971281295473e-16,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.9317636492799566,
+      "decision_absmax": 1.0150101542063084,
+      "fsum_max_absolute_difference": 2.7755575615628914e-17,
+      "fsum_max_scaled_difference": 2.7019780370472262e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.0,
+      "decision_absmax": 4084.330113230908,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.9317636492799566,
+      "decision_absmax": 0.438503894462965,
+      "fsum_max_absolute_difference": 5.551115123125783e-17,
+      "fsum_max_scaled_difference": 4.051775315819157e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.9317636492799566,
+      "decision_absmax": 0.20844784850722076,
+      "fsum_max_absolute_difference": 8.326672684688674e-17,
+      "fsum_max_scaled_difference": 6.890386453146902e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.0,
+      "decision_absmax": 5266.62479955718,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.9317636492799566,
+      "decision_absmax": 0.033835862635001934,
+      "fsum_max_absolute_difference": 4.163336342344337e-17,
+      "fsum_max_scaled_difference": 4.1612483229018283e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.0,
+      "decision_absmax": 5078.74087127528,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.9317636492799566,
+      "decision_absmax": 0.4389578539695056,
+      "fsum_max_absolute_difference": 2.7755575615628914e-17,
+      "fsum_max_scaled_difference": 2.32815330025487e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.9317636492799566,
+      "decision_absmax": 0.3642026093558415,
+      "fsum_max_absolute_difference": 1.1102230246251565e-16,
+      "fsum_max_scaled_difference": 1.0800630445022052e-16,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.0,
+      "decision_absmax": 6416.583920326445,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.9317636492799566,
+      "decision_absmax": 0.16550347213173455,
+      "fsum_max_absolute_difference": 7.979727989493313e-17,
+      "fsum_max_scaled_difference": 7.747513692662895e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.0,
+      "decision_absmax": 5476.209628066789,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    },
+    {
+      "model": "LogisticRegression",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 2.9317636492799566,
+      "decision_absmax": 0.36716417757893804,
+      "fsum_max_absolute_difference": 4.163336342344337e-17,
+      "fsum_max_scaled_difference": 3.718868653951175e-17,
+      "class_exact_match": true
+    },
+    {
+      "model": "Ridge",
+      "shape": [
+        1,
+        3
+      ],
+      "inputs_finite": true,
+      "coef_finite": true,
+      "intercept_finite": true,
+      "outputs_finite": true,
+      "input_absmax": 3.0,
+      "decision_absmax": 2674.738871194372,
+      "fsum_max_absolute_difference": 0.0,
+      "fsum_max_scaled_difference": 0.0,
+      "class_exact_match": null
+    }
+  ],
+  "ridge_residuals": [
+    {
+      "shape": [
+        11,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 1.9241497284383513e-11,
+      "normal_equation_relative_residual": 1.3692430105804746e-15
+    },
+    {
+      "shape": [
+        5,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 3.694822225952521e-13,
+      "normal_equation_relative_residual": 8.394511346047913e-17
+    },
+    {
+      "shape": [
+        3,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 2.0747847884194925e-12,
+      "normal_equation_relative_residual": 1.9673895326203903e-15
+    },
+    {
+      "shape": [
+        11,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 1.9269918993813917e-11,
+      "normal_equation_relative_residual": 1.1566939658842166e-15
+    },
+    {
+      "shape": [
+        6,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 3.225864020350855e-12,
+      "normal_equation_relative_residual": 5.871951291817189e-16
+    },
+    {
+      "shape": [
+        3,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 2.0747847884194925e-12,
+      "normal_equation_relative_residual": 1.9673895326203903e-15
+    },
+    {
+      "shape": [
+        11,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 1.517719283583574e-11,
+      "normal_equation_relative_residual": 9.320447398713906e-16
+    },
+    {
+      "shape": [
+        5,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 2.9558577807620168e-12,
+      "normal_equation_relative_residual": 7.839932745453205e-16
+    },
+    {
+      "shape": [
+        2,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 1.4566126083082054e-13,
+      "normal_equation_relative_residual": 1.8820958469736057e-16
+    },
+    {
+      "shape": [
+        11,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 1.4978240869822912e-11,
+      "normal_equation_relative_residual": 1.0662390830099312e-15
+    },
+    {
+      "shape": [
+        6,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 3.225864020350855e-12,
+      "normal_equation_relative_residual": 5.871951291817189e-16
+    },
+    {
+      "shape": [
+        3,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 2.0747847884194925e-12,
+      "normal_equation_relative_residual": 1.9673895326203903e-15
+    },
+    {
+      "shape": [
+        10,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 2.4158453015843406e-11,
+      "normal_equation_relative_residual": 1.5675558208438024e-15
+    },
+    {
+      "shape": [
+        6,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 3.225864020350855e-12,
+      "normal_equation_relative_residual": 5.871951291817189e-16
+    },
+    {
+      "shape": [
+        3,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 2.0747847884194925e-12,
+      "normal_equation_relative_residual": 1.9673895326203903e-15
+    },
+    {
+      "shape": [
+        12,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 6.110667527536862e-11,
+      "normal_equation_relative_residual": 3.584002692445325e-15
+    },
+    {
+      "shape": [
+        5,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 1.4637180356658064e-12,
+      "normal_equation_relative_residual": 3.1707459795142324e-16
+    },
+    {
+      "shape": [
+        3,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 2.0747847884194925e-12,
+      "normal_equation_relative_residual": 1.9673895326203903e-15
+    },
+    {
+      "shape": [
+        11,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 9.43600753089413e-12,
+      "normal_equation_relative_residual": 5.754423164035506e-16
+    },
+    {
+      "shape": [
+        5,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 3.844036200462142e-12,
+      "normal_equation_relative_residual": 9.281096872114852e-16
+    },
+    {
+      "shape": [
+        2,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 2.4868995751603507e-14,
+      "normal_equation_relative_residual": 5.3533371871856255e-17
+    },
+    {
+      "shape": [
+        11,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 2.943068011518335e-11,
+      "normal_equation_relative_residual": 2.111606249756307e-15
+    },
+    {
+      "shape": [
+        6,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 3.225864020350855e-12,
+      "normal_equation_relative_residual": 5.871951291817189e-16
+    },
+    {
+      "shape": [
+        3,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 2.0747847884194925e-12,
+      "normal_equation_relative_residual": 1.9673895326203903e-15
+    },
+    {
+      "shape": [
+        10,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 1.340083599643549e-11,
+      "normal_equation_relative_residual": 8.395232022933388e-16
+    },
+    {
+      "shape": [
+        6,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 3.225864020350855e-12,
+      "normal_equation_relative_residual": 5.871951291817189e-16
+    },
+    {
+      "shape": [
+        3,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 2.0747847884194925e-12,
+      "normal_equation_relative_residual": 1.9673895326203903e-15
+    },
+    {
+      "shape": [
+        12,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 6.110667527536862e-11,
+      "normal_equation_relative_residual": 3.584002692445325e-15
+    },
+    {
+      "shape": [
+        5,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 1.3926637620897964e-12,
+      "normal_equation_relative_residual": 2.8457093395651845e-16
+    },
+    {
+      "shape": [
+        2,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 1.7053025658242404e-13,
+      "normal_equation_relative_residual": 1.3769291660201823e-16
+    },
+    {
+      "shape": [
+        11,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 3.8539837987627834e-11,
+      "normal_equation_relative_residual": 2.6556409782139977e-15
+    },
+    {
+      "shape": [
+        5,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 1.2764511669871581e-12,
+      "normal_equation_relative_residual": 2.5368522078795e-16
+    },
+    {
+      "shape": [
+        3,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 2.0747847884194925e-12,
+      "normal_equation_relative_residual": 1.9673895326203903e-15
+    },
+    {
+      "shape": [
+        11,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 1.318767317570746e-11,
+      "normal_equation_relative_residual": 8.261524357484704e-16
+    },
+    {
+      "shape": [
+        6,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 3.225864020350855e-12,
+      "normal_equation_relative_residual": 5.871951291817189e-16
+    },
+    {
+      "shape": [
+        3,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 2.0747847884194925e-12,
+      "normal_equation_relative_residual": 1.9673895326203903e-15
+    },
+    {
+      "shape": [
+        8,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 1.6584067452640738e-11,
+      "normal_equation_relative_residual": 1.940765613268728e-15
+    },
+    {
+      "shape": [
+        4,
+        32
+      ],
+      "normal_equation_max_absolute_residual": 1.5774048733874224e-12,
+      "normal_equation_relative_residual": 4.1405583722511725e-16
+    },
+    {
+      "shape": [
+        11,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 7.738520935163251e-11,
+      "normal_equation_relative_residual": 5.763100398971383e-15
+    },
+    {
+      "shape": [
+        5,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 2.575717417130363e-13,
+      "normal_equation_relative_residual": 5.841062564304043e-17
+    },
+    {
+      "shape": [
+        3,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 2.0627943797535409e-13,
+      "normal_equation_relative_residual": 1.3460230401982572e-16
+    },
+    {
+      "shape": [
+        11,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 8.878942026058212e-11,
+      "normal_equation_relative_residual": 5.6614613296661155e-15
+    },
+    {
+      "shape": [
+        6,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 1.3287149158713873e-12,
+      "normal_equation_relative_residual": 2.459257143514279e-16
+    },
+    {
+      "shape": [
+        3,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 2.0627943797535409e-13,
+      "normal_equation_relative_residual": 1.3460230401982572e-16
+    },
+    {
+      "shape": [
+        11,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 1.0530243343964685e-10,
+      "normal_equation_relative_residual": 6.976442395081846e-15
+    },
+    {
+      "shape": [
+        5,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 3.588240815588506e-13,
+      "normal_equation_relative_residual": 9.50728078660052e-17
+    },
+    {
+      "shape": [
+        2,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 1.2789769243681803e-13,
+      "normal_equation_relative_residual": 1.6525719631963367e-16
+    },
+    {
+      "shape": [
+        11,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 2.6631141736288555e-11,
+      "normal_equation_relative_residual": 1.974263006191092e-15
+    },
+    {
+      "shape": [
+        6,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 1.3287149158713873e-12,
+      "normal_equation_relative_residual": 2.459257143514279e-16
+    },
+    {
+      "shape": [
+        3,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 2.0627943797535409e-13,
+      "normal_equation_relative_residual": 1.3460230401982572e-16
+    },
+    {
+      "shape": [
+        10,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 2.5572433060006006e-11,
+      "normal_equation_relative_residual": 1.7692689016996693e-15
+    },
+    {
+      "shape": [
+        6,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 1.3287149158713873e-12,
+      "normal_equation_relative_residual": 2.459257143514279e-16
+    },
+    {
+      "shape": [
+        3,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 2.0627943797535409e-13,
+      "normal_equation_relative_residual": 1.3460230401982572e-16
+    },
+    {
+      "shape": [
+        12,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 1.1736744909285335e-10,
+      "normal_equation_relative_residual": 7.393419563789294e-15
+    },
+    {
+      "shape": [
+        5,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 1.2523315717771766e-12,
+      "normal_equation_relative_residual": 2.741420984409002e-16
+    },
+    {
+      "shape": [
+        3,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 2.0627943797535409e-13,
+      "normal_equation_relative_residual": 1.3460230401982572e-16
+    },
+    {
+      "shape": [
+        11,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 7.634426424374396e-11,
+      "normal_equation_relative_residual": 4.898487807927031e-15
+    },
+    {
+      "shape": [
+        5,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 7.58726415028832e-13,
+      "normal_equation_relative_residual": 1.899672680477219e-16
+    },
+    {
+      "shape": [
+        2,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 1.4432899320127035e-14,
+      "normal_equation_relative_residual": 3.106847474705943e-17
+    },
+    {
+      "shape": [
+        11,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 6.338396474347974e-11,
+      "normal_equation_relative_residual": 4.9824125025535885e-15
+    },
+    {
+      "shape": [
+        6,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 1.3287149158713873e-12,
+      "normal_equation_relative_residual": 2.459257143514279e-16
+    },
+    {
+      "shape": [
+        3,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 2.0627943797535409e-13,
+      "normal_equation_relative_residual": 1.3460230401982572e-16
+    },
+    {
+      "shape": [
+        10,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 2.688693712116219e-11,
+      "normal_equation_relative_residual": 1.8446291952317905e-15
+    },
+    {
+      "shape": [
+        6,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 1.3287149158713873e-12,
+      "normal_equation_relative_residual": 2.459257143514279e-16
+    },
+    {
+      "shape": [
+        3,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 2.0627943797535409e-13,
+      "normal_equation_relative_residual": 1.3460230401982572e-16
+    },
+    {
+      "shape": [
+        12,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 1.1736744909285335e-10,
+      "normal_equation_relative_residual": 7.393419563789294e-15
+    },
+    {
+      "shape": [
+        5,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 8.091305403468141e-13,
+      "normal_equation_relative_residual": 1.6686366569032865e-16
+    },
+    {
+      "shape": [
+        2,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 2.842170943040401e-14,
+      "normal_equation_relative_residual": 2.2948819433669704e-17
+    },
+    {
+      "shape": [
+        11,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 3.1384672638523625e-11,
+      "normal_equation_relative_residual": 2.3369608349137474e-15
+    },
+    {
+      "shape": [
+        5,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 7.638334409421077e-13,
+      "normal_equation_relative_residual": 1.5154378930522333e-16
+    },
+    {
+      "shape": [
+        3,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 2.0627943797535409e-13,
+      "normal_equation_relative_residual": 1.3460230401982572e-16
+    },
+    {
+      "shape": [
+        11,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 4.879296966464608e-11,
+      "normal_equation_relative_residual": 3.3506612085011778e-15
+    },
+    {
+      "shape": [
+        6,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 1.3287149158713873e-12,
+      "normal_equation_relative_residual": 2.459257143514279e-16
+    },
+    {
+      "shape": [
+        3,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 2.0627943797535409e-13,
+      "normal_equation_relative_residual": 1.3460230401982572e-16
+    },
+    {
+      "shape": [
+        8,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 1.7408297026122455e-11,
+      "normal_equation_relative_residual": 2.2822452173517415e-15
+    },
+    {
+      "shape": [
+        4,
+        192
+      ],
+      "normal_equation_max_absolute_residual": 5.666578317686799e-13,
+      "normal_equation_relative_residual": 1.4794199134817562e-16
+    },
+    {
+      "shape": [
+        11,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 9.094947017729282e-13,
+      "normal_equation_relative_residual": 1.4452510834541237e-16
+    },
+    {
+      "shape": [
+        5,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 9.094947017729282e-13,
+      "normal_equation_relative_residual": 2.0640154937531306e-16
+    },
+    {
+      "shape": [
+        3,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 1.7053025658242404e-13,
+      "normal_equation_relative_residual": 1.4906633977604697e-16
+    },
+    {
+      "shape": [
+        11,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 8.526512829121202e-13,
+      "normal_equation_relative_residual": 1.3549228907382406e-16
+    },
+    {
+      "shape": [
+        6,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 1.7053025658242404e-13,
+      "normal_equation_relative_residual": 9.237284792596543e-17
+    },
+    {
+      "shape": [
+        3,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 1.7053025658242404e-13,
+      "normal_equation_relative_residual": 1.4906633977604697e-16
+    },
+    {
+      "shape": [
+        11,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 1.2363443602225743e-12,
+      "normal_equation_relative_residual": 2.0457597031538427e-16
+    },
+    {
+      "shape": [
+        5,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 5.115907697472721e-13,
+      "normal_equation_relative_residual": 2.2054347649527837e-16
+    },
+    {
+      "shape": [
+        2,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 2.842170943040401e-14,
+      "normal_equation_relative_residual": 3.6723821404363036e-17
+    },
+    {
+      "shape": [
+        11,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 4.547473508864641e-13,
+      "normal_equation_relative_residual": 1.4520000310713634e-16
+    },
+    {
+      "shape": [
+        6,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 1.7053025658242404e-13,
+      "normal_equation_relative_residual": 9.237284792596543e-17
+    },
+    {
+      "shape": [
+        3,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 1.7053025658242404e-13,
+      "normal_equation_relative_residual": 1.4906633977604697e-16
+    },
+    {
+      "shape": [
+        10,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 2.7284841053187847e-12,
+      "normal_equation_relative_residual": 4.2319187503145907e-16
+    },
+    {
+      "shape": [
+        6,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 1.7053025658242404e-13,
+      "normal_equation_relative_residual": 9.237284792596543e-17
+    },
+    {
+      "shape": [
+        3,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 1.7053025658242404e-13,
+      "normal_equation_relative_residual": 1.4906633977604697e-16
+    },
+    {
+      "shape": [
+        12,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 1.6484591469634324e-12,
+      "normal_equation_relative_residual": 2.507997148723917e-16
+    },
+    {
+      "shape": [
+        5,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 3.979039320256561e-13,
+      "normal_equation_relative_residual": 2.8580262588311894e-16
+    },
+    {
+      "shape": [
+        3,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 1.7053025658242404e-13,
+      "normal_equation_relative_residual": 1.4906633977604697e-16
+    },
+    {
+      "shape": [
+        11,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 1.7621459846850485e-12,
+      "normal_equation_relative_residual": 2.6338107605386305e-16
+    },
+    {
+      "shape": [
+        5,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 3.694822225952521e-13,
+      "normal_equation_relative_residual": 4.733536408829862e-16
+    },
+    {
+      "shape": [
+        2,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 0.0,
+      "normal_equation_relative_residual": 0.0
+    },
+    {
+      "shape": [
+        11,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 6.821210263296962e-13,
+      "normal_equation_relative_residual": 1.0713256355478627e-16
+    },
+    {
+      "shape": [
+        6,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 1.7053025658242404e-13,
+      "normal_equation_relative_residual": 9.237284792596543e-17
+    },
+    {
+      "shape": [
+        3,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 1.7053025658242404e-13,
+      "normal_equation_relative_residual": 1.4906633977604697e-16
+    },
+    {
+      "shape": [
+        10,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 9.094947017729282e-13,
+      "normal_equation_relative_residual": 1.1501388465137873e-16
+    },
+    {
+      "shape": [
+        6,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 1.7053025658242404e-13,
+      "normal_equation_relative_residual": 9.237284792596543e-17
+    },
+    {
+      "shape": [
+        3,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 1.7053025658242404e-13,
+      "normal_equation_relative_residual": 1.4906633977604697e-16
+    },
+    {
+      "shape": [
+        12,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 1.6484591469634324e-12,
+      "normal_equation_relative_residual": 2.507997148723917e-16
+    },
+    {
+      "shape": [
+        5,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 3.410605131648481e-13,
+      "normal_equation_relative_residual": 1.5296895222726045e-16
+    },
+    {
+      "shape": [
+        2,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 1.7053025658242404e-13,
+      "normal_equation_relative_residual": 1.3769291660201823e-16
+    },
+    {
+      "shape": [
+        11,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 6.252776074688882e-13,
+      "normal_equation_relative_residual": 9.9361011987471e-17
+    },
+    {
+      "shape": [
+        5,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 3.410605131648481e-13,
+      "normal_equation_relative_residual": 1.3220694697869314e-16
+    },
+    {
+      "shape": [
+        3,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 1.7053025658242404e-13,
+      "normal_equation_relative_residual": 1.4906633977604697e-16
+    },
+    {
+      "shape": [
+        11,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 9.237055564881302e-13,
+      "normal_equation_relative_residual": 1.4678331316330941e-16
+    },
+    {
+      "shape": [
+        6,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 1.7053025658242404e-13,
+      "normal_equation_relative_residual": 9.237284792596543e-17
+    },
+    {
+      "shape": [
+        3,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 1.7053025658242404e-13,
+      "normal_equation_relative_residual": 1.4906633977604697e-16
+    },
+    {
+      "shape": [
+        8,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 1.1368683772161603e-12,
+      "normal_equation_relative_residual": 1.5736648598565241e-16
+    },
+    {
+      "shape": [
+        4,
+        3
+      ],
+      "normal_equation_max_absolute_residual": 2.8421709430404007e-13,
+      "normal_equation_relative_residual": 7.424848777609858e-17
+    }
+  ],
+  "audit_script_sha256": "5f4b0480f4ae6f9bbe1d3ca75716441ceccd55f3b99cc4bf10734e6b241b42a6",
+  "warning_counts": [
+    {
+      "message": "unclosed file <_io.TextIOWrapper name='docs/reviews/artifacts/field-imagery-20260927/label-protocol.json' mode='r' encoding='UTF-8'>",
+      "file": "audit_readout_numerics.py",
+      "line": 41,
+      "count": 1
+    },
+    {
+      "message": "unclosed file <_io.TextIOWrapper name='docs/reviews/artifacts/field-imagery-20260927/spectral-primary-final-features.json' mode='r' encoding='UTF-8'>",
+      "file": "audit_readout_numerics.py",
+      "line": 41,
+      "count": 1
+    },
+    {
+      "message": "unclosed file <_io.TextIOWrapper name='docs/reviews/artifacts/field-imagery-20260927/prithvi-primary-final-features.json' mode='r' encoding='UTF-8'>",
+      "file": "audit_readout_numerics.py",
+      "line": 41,
+      "count": 1
+    },
+    {
+      "message": "divide by zero encountered in matmul",
+      "file": "_linear_loss.py",
+      "line": 222,
+      "count": 1065
+    },
+    {
+      "message": "overflow encountered in matmul",
+      "file": "_linear_loss.py",
+      "line": 222,
+      "count": 1065
+    },
+    {
+      "message": "invalid value encountered in matmul",
+      "file": "_linear_loss.py",
+      "line": 222,
+      "count": 1065
+    },
+    {
+      "message": "divide by zero encountered in matmul",
+      "file": "_linear_loss.py",
+      "line": 368,
+      "count": 1065
+    },
+    {
+      "message": "overflow encountered in matmul",
+      "file": "_linear_loss.py",
+      "line": 368,
+      "count": 1065
+    },
+    {
+      "message": "invalid value encountered in matmul",
+      "file": "_linear_loss.py",
+      "line": 368,
+      "count": 1065
+    },
+    {
+      "message": "divide by zero encountered in matmul",
+      "file": "extmath.py",
+      "line": 229,
+      "count": 19
+    },
+    {
+      "message": "overflow encountered in matmul",
+      "file": "extmath.py",
+      "line": 229,
+      "count": 19
+    },
+    {
+      "message": "invalid value encountered in matmul",
+      "file": "extmath.py",
+      "line": 229,
+      "count": 19
+    }
+  ],
+  "full_warning_audit_sha256": "dd7d34ae2af60542cfe172b6794fe19c6a2f92d53efe09a64a460e3ca42eef39"
+}

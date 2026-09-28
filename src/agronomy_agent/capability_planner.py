@@ -13,7 +13,6 @@ import re
 from typing import Any, Mapping
 
 from agronomy_agent.capability_registry import capability_registry
-from agronomy_agent.calculator_contracts import EXPLICIT_ARITHMETIC_SELECTOR_ID
 from agronomy_agent.execution_core import stable_sha256
 from agronomy_agent.tool_planner import plan_tools
 from agronomy_agent.tools.registry import run_tools
@@ -279,31 +278,31 @@ def plan_capabilities(planner_input: PlannerInput) -> CapabilityPlan:
             )
         )
 
-    calculator_plan = plan_tools(
+    deterministic_plan = plan_tools(
         planner_input.question,
         field_context=planner_input.field_context,
     )
-    calculator_spec = registry.require("agronomic_calculator")
-    for item in calculator_plan.invocations:
+    for item in deterministic_plan.invocations:
+        deterministic_spec = registry.require(item.tool_id)
         invocations.append(
             _invocation(
                 planner_input,
-                capability_id=calculator_spec.capability_id,
-                capability_version=calculator_spec.version,
+                capability_id=deterministic_spec.capability_id,
+                capability_version=deterministic_spec.version,
                 operation=item.operation,
                 inputs=item.inputs,
                 status=item.status,
                 missing_inputs=item.missing_inputs,
                 authority_role=item.authority_role,
                 risk_class=item.risk_class,
-                selector_id=EXPLICIT_ARITHMETIC_SELECTOR_ID,
+                selector_id=str(deterministic_spec.planner.selector_id),
                 invocation_id=item.invocation_id,
             )
         )
     return _finish_plan(
         planner_input,
         tuple(invocations),
-        clarification=calculator_plan.clarification,
+        clarification=deterministic_plan.clarification,
     )
 
 

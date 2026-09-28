@@ -1,0 +1,5419 @@
+{
+  "code_sha256": "e6ec92a9ea0670652c87c606ff8a1791cde7bb3f67885ad6b8e95cb03bcf7b3d",
+  "contexts_manifest_sha256": "e8917e40783353ebbb5100d21eb88d1429f7d423e292205e94869975fea89c32",
+  "datum_transform": {
+    "accuracy_metres": 4.0,
+    "description": "Inverse of UTM zone 13N + NAD83 to WGS 84 (1) + UTM zone 13N"
+  },
+  "eligible": 29,
+  "limitation": "Support and feature stability only; does not resolve source datum or establish shifted prediction accuracy. Primary metrics unchanged.",
+  "method": "Cardinal15m/30m support translations and NAD83-UTM13N to WGS84-UTM13N alternative; fixed imagery; no resampling, labels, readout fitting or offset selection",
+  "nominal_available": 21,
+  "primary_feature_payload_sha256": "596c1ff960bda5570d6836641bf7b052f1c0bb415de53cc3db6218d390e245f7",
+  "primary_feature_provenance": {
+    "adapter_sha256": "e6ec92a9ea0670652c87c606ff8a1791cde7bb3f67885ad6b8e95cb03bcf7b3d",
+    "common_contexts": [
+      {
+        "error": "ValueError: no_catalog_scenes_in_frozen_window",
+        "status": "error",
+        "year": 2019
+      },
+      {
+        "dates_sha256": "d78023929c2a873bb057da8f39d845a02548fdb827e4705a0a523af301211c14",
+        "source": {
+          "attention_mask_supported": false,
+          "bundle_id": null,
+          "center_padding": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "coordinate_order": "latitude_longitude_per_encoder_docstring",
+          "crs_comparisons": [
+            {
+              "axes": [
+                [
+                  "east",
+                  "metre",
+                  1.0
+                ],
+                [
+                  "north",
+                  "metre",
+                  1.0
+                ]
+              ],
+              "basis": "official HLS L30/S30 same MGRS UTM tile specification plus exact affine/shape/projection/ellipsoid/axes",
+              "candidate_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "candidate_datum": "Not specified (based on WGS 84 spheroid)",
+              "datum_status": "unresolved_header_datum_assumed_same_HLS_product_lattice_not_formal_CRS_equality",
+              "ellipsoid": {
+                "inverse_flattening": 298.257223563,
+                "semi_major_metre": 6378137.0
+              },
+              "formal_crs_equal": false,
+              "known_unknown_datum_wkt_sha256": "9c151a666a9e7a41ce65ed2b837108933f4fcca355eff22f9dcc4d880b3f19a2",
+              "mgrs_tile": "13TFE",
+              "proj_accuracy_metres": -1.0,
+              "proj_operation": "Inverse of UTM zone 13N + Ballpark geographic offset from WGS 84 to Unknown datum based upon the WGS 84 ellipsoid + UTM zone 13N",
+              "projection_parameters": [
+                [
+                  8801,
+                  0,
+                  "degree"
+                ],
+                [
+                  8802,
+                  -105,
+                  "degree"
+                ],
+                [
+                  8805,
+                  0.9996,
+                  "unity"
+                ],
+                [
+                  8806,
+                  500000,
+                  "metre"
+                ],
+                [
+                  8807,
+                  0,
+                  "metre"
+                ]
+              ],
+              "reference_crs": "EPSG:32613",
+              "reference_datum": "World Geodetic System 1984 ensemble",
+              "resampling_performed": false,
+              "source_specification": "https://lpdaac.usgs.gov/documents/1698/HLS_User_Guide_V2.pdf",
+              "status": "qualified_hls_same_numeric_utm13_lattice"
+            },
+            {
+              "candidate_crs": "EPSG:32613",
+              "candidate_datum": "World Geodetic System 1984 ensemble",
+              "formal_crs_equal": true,
+              "reference_crs": "EPSG:32613",
+              "reference_datum": "World Geodetic System 1984 ensemble",
+              "resampling_performed": false,
+              "status": "semantic_crs_equal"
+            },
+            {
+              "candidate_crs": "EPSG:32613",
+              "candidate_datum": "World Geodetic System 1984 ensemble",
+              "formal_crs_equal": true,
+              "reference_crs": "EPSG:32613",
+              "reference_datum": "World Geodetic System 1984 ensemble",
+              "resampling_performed": false,
+              "status": "semantic_crs_equal"
+            }
+          ],
+          "cutoff": "2020-06-15",
+          "dates": [
+            "2020-05-03",
+            "2020-05-17",
+            "2020-06-07",
+            "2020-06-12"
+          ],
+          "field_valid_fractions": [
+            0.9655172413793104,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "input_kind": "real_hls_contextual_features_not_accuracy",
+          "label_protocol_id": "9714d8896c97092f81ac283d6ac2025d9460e3eed5733f85aa08776e4ce8455e",
+          "latitude": 40.15898405223337,
+          "limitations": [
+            "patches_mix_field_and_context",
+            "sentinel_is_not_observed_reflectance",
+            "self_attention_mixes_all_tokens"
+          ],
+          "location_source": "native_raster_center_transformed_to_epsg4326",
+          "longitude": -103.12972580780014,
+          "manifest_sha256": "06401b032588312b5762b9119c8b9913a305b1fb8d73f90db9965410cbf3fe20",
+          "model_shape": [
+            1,
+            6,
+            4,
+            224,
+            224
+          ],
+          "native_grid": [
+            [
+              30.0,
+              0.0,
+              655920.0,
+              0.0,
+              -30.0,
+              4450440.0
+            ],
+            "EPSG:32613"
+          ],
+          "native_pixel_metres": 30,
+          "native_shape": [
+            4,
+            6,
+            224,
+            224
+          ],
+          "normalization": "reflectance_statistics_scaled_from_config_DN_by_0.0001",
+          "normalized_nodata_sentinel": 0.0001,
+          "patch_support_metres": 480,
+          "pooling": "last_normalized_non_cls_tokens_weighted_by_valid_field_pixel_count",
+          "preprocessing": "prithvi-hls-reflectance-sentinel-centerpad-fieldpool-v1",
+          "process_versions": [
+            "hls-chip-v2-native-asset-grid-fmask-v1",
+            "hls-chip-v2-native-asset-grid-fmask-v1",
+            "hls-chip-v2-native-asset-grid-fmask-v1",
+            "hls-chip-v2-native-asset-grid-fmask-v1"
+          ],
+          "source_files": [
+            {
+              "acquired_at": "2020-05-03T17:52:55.586640Z",
+              "declared_sha256_verified": true,
+              "name": "870f4eb4d586491dbbb04bc8ef2ab9918fbb117123066291d9dc91bd76557846.npz",
+              "original_crs": "EPSG:32613",
+              "scene_id": "hls2-s30:HLS.S30.T13TFE.2020124T173911.v2.0",
+              "sha256": "870f4eb4d586491dbbb04bc8ef2ab9918fbb117123066291d9dc91bd76557846"
+            },
+            {
+              "acquired_at": "2020-05-17T17:30:32.716391Z",
+              "declared_sha256_verified": true,
+              "name": "5cfa18c2cb557c9c6bcdd59b9e47739ebdfa6c96082a365cfe64db0e6eac823b.npz",
+              "original_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "scene_id": "hls2-l30:HLS.L30.T13TFE.2020138T173032.v2.0",
+              "sha256": "5cfa18c2cb557c9c6bcdd59b9e47739ebdfa6c96082a365cfe64db0e6eac823b"
+            },
+            {
+              "acquired_at": "2020-06-07T17:52:54.264260Z",
+              "declared_sha256_verified": true,
+              "name": "d3fc3fca4c0cba7baaf9485ccfe12d23d19b062e619fb2cd8eaf16e399b118df.npz",
+              "original_crs": "EPSG:32613",
+              "scene_id": "hls2-s30:HLS.S30.T13TFE.2020159T173909.v2.0",
+              "sha256": "d3fc3fca4c0cba7baaf9485ccfe12d23d19b062e619fb2cd8eaf16e399b118df"
+            },
+            {
+              "acquired_at": "2020-06-12T17:52:58.329960Z",
+              "declared_sha256_verified": true,
+              "name": "da2e01feca2db93bc2587d01f4b1984e69b0c219ac1bf0001eda65ee07624b1d.npz",
+              "original_crs": "EPSG:32613",
+              "scene_id": "hls2-s30:HLS.S30.T13TFE.2020164T173911.v2.0",
+              "sha256": "da2e01feca2db93bc2587d01f4b1984e69b0c219ac1bf0001eda65ee07624b1d"
+            }
+          ],
+          "source_native_grid": true,
+          "spatial_overlap": "nearby_contexts_may_overlap_not_spatially_independent",
+          "spatial_regime": "actual_context_no_padding",
+          "valid_model_fraction": 0.9794921875
+        },
+        "status": "ok",
+        "year": 2020
+      },
+      {
+        "dates_sha256": "5d4bc74b099e744cc38d5b429ec631fae212fb24f28aa449303a9108b3c25b29",
+        "source": {
+          "attention_mask_supported": false,
+          "bundle_id": null,
+          "center_padding": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "coordinate_order": "latitude_longitude_per_encoder_docstring",
+          "crs_comparisons": [
+            {
+              "candidate_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "candidate_datum": "Not specified (based on WGS 84 spheroid)",
+              "formal_crs_equal": true,
+              "reference_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "reference_datum": "Not specified (based on WGS 84 spheroid)",
+              "resampling_performed": false,
+              "status": "semantic_crs_equal"
+            },
+            {
+              "candidate_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "candidate_datum": "Not specified (based on WGS 84 spheroid)",
+              "formal_crs_equal": true,
+              "reference_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "reference_datum": "Not specified (based on WGS 84 spheroid)",
+              "resampling_performed": false,
+              "status": "semantic_crs_equal"
+            },
+            {
+              "candidate_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "candidate_datum": "Not specified (based on WGS 84 spheroid)",
+              "formal_crs_equal": true,
+              "reference_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "reference_datum": "Not specified (based on WGS 84 spheroid)",
+              "resampling_performed": false,
+              "status": "semantic_crs_equal"
+            }
+          ],
+          "cutoff": "2021-06-15",
+          "dates": [
+            "2021-06-02",
+            "2021-06-05",
+            "2021-06-07",
+            "2021-06-12"
+          ],
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "input_kind": "real_hls_contextual_features_not_accuracy",
+          "label_protocol_id": "9714d8896c97092f81ac283d6ac2025d9460e3eed5733f85aa08776e4ce8455e",
+          "latitude": 40.15898405223337,
+          "limitations": [
+            "patches_mix_field_and_context",
+            "sentinel_is_not_observed_reflectance",
+            "self_attention_mixes_all_tokens"
+          ],
+          "location_source": "native_raster_center_transformed_to_epsg4326",
+          "longitude": -103.12972580780014,
+          "manifest_sha256": "a9cf5e910f32ecaded53d5c438daa5f2f31ae7cfca138d1a63498e8139c2d6ad",
+          "model_shape": [
+            1,
+            6,
+            4,
+            224,
+            224
+          ],
+          "native_grid": [
+            [
+              30.0,
+              0.0,
+              655920.0,
+              0.0,
+              -30.0,
+              4450440.0
+            ],
+            "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]"
+          ],
+          "native_pixel_metres": 30,
+          "native_shape": [
+            4,
+            6,
+            224,
+            224
+          ],
+          "normalization": "reflectance_statistics_scaled_from_config_DN_by_0.0001",
+          "normalized_nodata_sentinel": 0.0001,
+          "patch_support_metres": 480,
+          "pooling": "last_normalized_non_cls_tokens_weighted_by_valid_field_pixel_count",
+          "preprocessing": "prithvi-hls-reflectance-sentinel-centerpad-fieldpool-v1",
+          "process_versions": [
+            "hls-chip-v2-native-asset-grid-fmask-v1",
+            "hls-chip-v2-native-asset-grid-fmask-v1",
+            "hls-chip-v2-native-asset-grid-fmask-v1",
+            "hls-chip-v2-native-asset-grid-fmask-v1"
+          ],
+          "source_files": [
+            {
+              "acquired_at": "2021-06-02T17:52:53.018970Z",
+              "declared_sha256_verified": true,
+              "name": "304fb5cf7dd0c1d146d84621e968d2e395f98445533bb7d90c696c1b83c5dc5c.npz",
+              "original_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "scene_id": "hls2-s30:HLS.S30.T13TFE.2021153T173909.v2.0",
+              "sha256": "304fb5cf7dd0c1d146d84621e968d2e395f98445533bb7d90c696c1b83c5dc5c"
+            },
+            {
+              "acquired_at": "2021-06-05T17:30:53.808563Z",
+              "declared_sha256_verified": true,
+              "name": "25378d4bdde09f2e444a406d72d372ac72f995313684a86cce1f32db041d8471.npz",
+              "original_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "scene_id": "hls2-l30:HLS.L30.T13TFE.2021156T173053.v2.0",
+              "sha256": "25378d4bdde09f2e444a406d72d372ac72f995313684a86cce1f32db041d8471"
+            },
+            {
+              "acquired_at": "2021-06-07T17:52:52.868950Z",
+              "declared_sha256_verified": true,
+              "name": "62e8e8812a509582b8a6939b20f08610cfca52f662f4db3d23a158f583b11132.npz",
+              "original_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "scene_id": "hls2-s30:HLS.S30.T13TFE.2021158T173901.v2.0",
+              "sha256": "62e8e8812a509582b8a6939b20f08610cfca52f662f4db3d23a158f583b11132"
+            },
+            {
+              "acquired_at": "2021-06-12T17:52:53.187280Z",
+              "declared_sha256_verified": true,
+              "name": "9a8e54cf59e784a21609e2d73e6bdaa96d237b8db3c94f8eed65f23c8bf74df0.npz",
+              "original_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "scene_id": "hls2-s30:HLS.S30.T13TFE.2021163T173909.v2.0",
+              "sha256": "9a8e54cf59e784a21609e2d73e6bdaa96d237b8db3c94f8eed65f23c8bf74df0"
+            }
+          ],
+          "source_native_grid": true,
+          "spatial_overlap": "nearby_contexts_may_overlap_not_spatially_independent",
+          "spatial_regime": "actual_context_no_padding",
+          "valid_model_fraction": 0.9726114078443877
+        },
+        "status": "ok",
+        "year": 2021
+      },
+      {
+        "dates_sha256": "0d87541208b77656d62fef9a6701b537aead58e928edb2e41d64273374b34da8",
+        "source": {
+          "attention_mask_supported": false,
+          "bundle_id": null,
+          "center_padding": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "coordinate_order": "latitude_longitude_per_encoder_docstring",
+          "crs_comparisons": [
+            {
+              "axes": [
+                [
+                  "east",
+                  "metre",
+                  1.0
+                ],
+                [
+                  "north",
+                  "metre",
+                  1.0
+                ]
+              ],
+              "basis": "official HLS L30/S30 same MGRS UTM tile specification plus exact affine/shape/projection/ellipsoid/axes",
+              "candidate_crs": "EPSG:32613",
+              "candidate_datum": "World Geodetic System 1984 ensemble",
+              "datum_status": "unresolved_header_datum_assumed_same_HLS_product_lattice_not_formal_CRS_equality",
+              "ellipsoid": {
+                "inverse_flattening": 298.257223563,
+                "semi_major_metre": 6378137.0
+              },
+              "formal_crs_equal": false,
+              "known_unknown_datum_wkt_sha256": "9c151a666a9e7a41ce65ed2b837108933f4fcca355eff22f9dcc4d880b3f19a2",
+              "mgrs_tile": "13TFE",
+              "proj_accuracy_metres": -1.0,
+              "proj_operation": "Inverse of UTM zone 13N + Ballpark geographic offset from Unknown datum based upon the WGS 84 ellipsoid to WGS 84 + UTM zone 13N",
+              "projection_parameters": [
+                [
+                  8801,
+                  0,
+                  "degree"
+                ],
+                [
+                  8802,
+                  -105,
+                  "degree"
+                ],
+                [
+                  8805,
+                  0.9996,
+                  "unity"
+                ],
+                [
+                  8806,
+                  500000,
+                  "metre"
+                ],
+                [
+                  8807,
+                  0,
+                  "metre"
+                ]
+              ],
+              "reference_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "reference_datum": "Not specified (based on WGS 84 spheroid)",
+              "resampling_performed": false,
+              "source_specification": "https://lpdaac.usgs.gov/documents/1698/HLS_User_Guide_V2.pdf",
+              "status": "qualified_hls_same_numeric_utm13_lattice"
+            },
+            {
+              "axes": [
+                [
+                  "east",
+                  "metre",
+                  1.0
+                ],
+                [
+                  "north",
+                  "metre",
+                  1.0
+                ]
+              ],
+              "basis": "official HLS L30/S30 same MGRS UTM tile specification plus exact affine/shape/projection/ellipsoid/axes",
+              "candidate_crs": "EPSG:32613",
+              "candidate_datum": "World Geodetic System 1984 ensemble",
+              "datum_status": "unresolved_header_datum_assumed_same_HLS_product_lattice_not_formal_CRS_equality",
+              "ellipsoid": {
+                "inverse_flattening": 298.257223563,
+                "semi_major_metre": 6378137.0
+              },
+              "formal_crs_equal": false,
+              "known_unknown_datum_wkt_sha256": "9c151a666a9e7a41ce65ed2b837108933f4fcca355eff22f9dcc4d880b3f19a2",
+              "mgrs_tile": "13TFE",
+              "proj_accuracy_metres": -1.0,
+              "proj_operation": "Inverse of UTM zone 13N + Ballpark geographic offset from Unknown datum based upon the WGS 84 ellipsoid to WGS 84 + UTM zone 13N",
+              "projection_parameters": [
+                [
+                  8801,
+                  0,
+                  "degree"
+                ],
+                [
+                  8802,
+                  -105,
+                  "degree"
+                ],
+                [
+                  8805,
+                  0.9996,
+                  "unity"
+                ],
+                [
+                  8806,
+                  500000,
+                  "metre"
+                ],
+                [
+                  8807,
+                  0,
+                  "metre"
+                ]
+              ],
+              "reference_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "reference_datum": "Not specified (based on WGS 84 spheroid)",
+              "resampling_performed": false,
+              "source_specification": "https://lpdaac.usgs.gov/documents/1698/HLS_User_Guide_V2.pdf",
+              "status": "qualified_hls_same_numeric_utm13_lattice"
+            },
+            {
+              "axes": [
+                [
+                  "east",
+                  "metre",
+                  1.0
+                ],
+                [
+                  "north",
+                  "metre",
+                  1.0
+                ]
+              ],
+              "basis": "official HLS L30/S30 same MGRS UTM tile specification plus exact affine/shape/projection/ellipsoid/axes",
+              "candidate_crs": "EPSG:32613",
+              "candidate_datum": "World Geodetic System 1984 ensemble",
+              "datum_status": "unresolved_header_datum_assumed_same_HLS_product_lattice_not_formal_CRS_equality",
+              "ellipsoid": {
+                "inverse_flattening": 298.257223563,
+                "semi_major_metre": 6378137.0
+              },
+              "formal_crs_equal": false,
+              "known_unknown_datum_wkt_sha256": "9c151a666a9e7a41ce65ed2b837108933f4fcca355eff22f9dcc4d880b3f19a2",
+              "mgrs_tile": "13TFE",
+              "proj_accuracy_metres": -1.0,
+              "proj_operation": "Inverse of UTM zone 13N + Ballpark geographic offset from Unknown datum based upon the WGS 84 ellipsoid to WGS 84 + UTM zone 13N",
+              "projection_parameters": [
+                [
+                  8801,
+                  0,
+                  "degree"
+                ],
+                [
+                  8802,
+                  -105,
+                  "degree"
+                ],
+                [
+                  8805,
+                  0.9996,
+                  "unity"
+                ],
+                [
+                  8806,
+                  500000,
+                  "metre"
+                ],
+                [
+                  8807,
+                  0,
+                  "metre"
+                ]
+              ],
+              "reference_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "reference_datum": "Not specified (based on WGS 84 spheroid)",
+              "resampling_performed": false,
+              "source_specification": "https://lpdaac.usgs.gov/documents/1698/HLS_User_Guide_V2.pdf",
+              "status": "qualified_hls_same_numeric_utm13_lattice"
+            }
+          ],
+          "cutoff": "2022-06-15",
+          "dates": [
+            "2022-05-13",
+            "2022-06-07",
+            "2022-06-08",
+            "2022-06-12"
+          ],
+          "field_valid_fractions": [
+            0.9980842911877394,
+            0.8544061302681992,
+            1.0,
+            0.9980842911877394
+          ],
+          "input_kind": "real_hls_contextual_features_not_accuracy",
+          "label_protocol_id": "9714d8896c97092f81ac283d6ac2025d9460e3eed5733f85aa08776e4ce8455e",
+          "latitude": 40.15898405223337,
+          "limitations": [
+            "patches_mix_field_and_context",
+            "sentinel_is_not_observed_reflectance",
+            "self_attention_mixes_all_tokens"
+          ],
+          "location_source": "native_raster_center_transformed_to_epsg4326",
+          "longitude": -103.12972580780014,
+          "manifest_sha256": "56b11ba464c6ecc08ee9d85fc57e74dc42d4c80b46d1a03fc2db266fe7bedd9c",
+          "model_shape": [
+            1,
+            6,
+            4,
+            224,
+            224
+          ],
+          "native_grid": [
+            [
+              30.0,
+              0.0,
+              655920.0,
+              0.0,
+              -30.0,
+              4450440.0
+            ],
+            "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]"
+          ],
+          "native_pixel_metres": 30,
+          "native_shape": [
+            4,
+            6,
+            224,
+            224
+          ],
+          "normalization": "reflectance_statistics_scaled_from_config_DN_by_0.0001",
+          "normalized_nodata_sentinel": 0.0001,
+          "patch_support_metres": 480,
+          "pooling": "last_normalized_non_cls_tokens_weighted_by_valid_field_pixel_count",
+          "preprocessing": "prithvi-hls-reflectance-sentinel-centerpad-fieldpool-v1",
+          "process_versions": [
+            "hls-chip-v2-native-asset-grid-fmask-v1",
+            "hls-chip-v2-native-asset-grid-fmask-v1",
+            "hls-chip-v2-native-asset-grid-fmask-v1",
+            "hls-chip-v2-native-asset-grid-fmask-v1"
+          ],
+          "source_files": [
+            {
+              "acquired_at": "2022-05-13T17:52:55.921040Z",
+              "declared_sha256_verified": true,
+              "name": "084be77be1f3b8b7beb11ff430e2322c2feeab9f3d9b11d15a947b5437f8cae7.npz",
+              "original_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "scene_id": "hls2-s30:HLS.S30.T13TFE.2022133T173911.v2.0",
+              "sha256": "084be77be1f3b8b7beb11ff430e2322c2feeab9f3d9b11d15a947b5437f8cae7"
+            },
+            {
+              "acquired_at": "2022-06-07T17:52:53.577960Z",
+              "declared_sha256_verified": true,
+              "name": "91f3bd576645dace7a20838c1d3c7d3465fb47afaca98ac414dbd1dc476a897b.npz",
+              "original_crs": "EPSG:32613",
+              "scene_id": "hls2-s30:HLS.S30.T13TFE.2022158T173909.v2.0",
+              "sha256": "91f3bd576645dace7a20838c1d3c7d3465fb47afaca98ac414dbd1dc476a897b"
+            },
+            {
+              "acquired_at": "2022-06-08T17:31:13.174753Z",
+              "declared_sha256_verified": true,
+              "name": "f5fb5747d39c06b7ead7983475fe9288871f89431308e7cfc18d605026aac7b9.npz",
+              "original_crs": "EPSG:32613",
+              "scene_id": "hls2-l30:HLS.L30.T13TFE.2022159T173113.v2.0",
+              "sha256": "f5fb5747d39c06b7ead7983475fe9288871f89431308e7cfc18d605026aac7b9"
+            },
+            {
+              "acquired_at": "2022-06-12T17:53:02.119140Z",
+              "declared_sha256_verified": true,
+              "name": "a6cbdf3e60c5691be4db18f8ff6e6d8ea0da7a392872df220c593d713e9a0173.npz",
+              "original_crs": "EPSG:32613",
+              "scene_id": "hls2-s30:HLS.S30.T13TFE.2022163T173911.v2.0",
+              "sha256": "a6cbdf3e60c5691be4db18f8ff6e6d8ea0da7a392872df220c593d713e9a0173"
+            }
+          ],
+          "source_native_grid": true,
+          "spatial_overlap": "nearby_contexts_may_overlap_not_spatially_independent",
+          "spatial_regime": "actual_context_no_padding",
+          "valid_model_fraction": 0.8578105070153061
+        },
+        "status": "ok",
+        "year": 2022
+      }
+    ],
+    "context_loader_sha256": "00def233bd0ce0eef7e927018a7ea8f865d9d0780ce4d755c76db16b5adb93a5",
+    "contexts_manifest_sha256": "e8917e40783353ebbb5100d21eb88d1429f7d423e292205e94869975fea89c32",
+    "model": "none; fixed spectral arithmetic",
+    "protocol_sha256": "2975f8a158b056715eecf226aedb7fa2dd3eae1e9ae063794447a4265584799e",
+    "recipe": {
+      "date_weighting": "separate chronological slots; no temporal interpolation or duplicate dates",
+      "dates": "four distinct chronological dates from the same frozen context manifests as Prithvi",
+      "dimension": 32,
+      "indices": {
+        "ndmi": "(NarrowNIR-SWIR1)/(NarrowNIR+SWIR1)",
+        "ndvi": "(NarrowNIR-Red)/(NarrowNIR+Red)"
+      },
+      "per_date_order": [
+        "mean_blue",
+        "mean_green",
+        "mean_red",
+        "mean_narrow_nir",
+        "mean_swir1",
+        "mean_swir2",
+        "mean_pixel_ndvi",
+        "mean_pixel_ndmi"
+      ],
+      "ratio_denominator": "absolute denominator > 1e-6; no eligible pixels means failure, no imputation",
+      "selection": "fixed before EO feature/score inspection; prior source-only soil/control scores already observed",
+      "support": "positive-area intersection with frozen sample-hull plus15m research AOI; binary valid pixel weighting, matching Prithvi support",
+      "version": "hls-valid-support-spectral-32-v1"
+    },
+    "recipe_sha256": "9e51786b72071f3ee3537fdbb85edfa5582a5b56ba48e85854c09976de6ed945",
+    "role": "derived_local_spectral_features_not_field_measurements",
+    "source_crs_assumption": "EPSG:32613"
+  },
+  "protocol_id": "9714d8896c97092f81ac283d6ac2025d9460e3eed5733f85aa08776e4ce8455e",
+  "recipe_sha256": "9e51786b72071f3ee3537fdbb85edfa5582a5b56ba48e85854c09976de6ed945",
+  "rows": [
+    {
+      "alternatives": [],
+      "bundle_id": "akron-SB1-2019",
+      "error": "ValueError: no_catalog_scenes_in_frozen_window",
+      "status": "error"
+    },
+    {
+      "alternatives": [
+        {
+          "alternative": "east_15m",
+          "changed_pixels": 8,
+          "feature_sha256": "b85baabeafd3b802b99feb83a7df79046d27b430aca5144d50167dfb57c9142e",
+          "field_mask_sha256": "8329260ef9405210f5a8c113f50f1395a39bf31c42b0a1131f7d4580f0e467ab",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 36,
+          "max_absolute_feature_delta": 0.017941124537701636,
+          "rms_feature_delta": 0.007623537101998202,
+          "status": "ok",
+          "support_jaccard": 0.7894736842105263,
+          "valid_pixel_counts": [
+            36,
+            36,
+            36,
+            36
+          ]
+        },
+        {
+          "alternative": "west_15m",
+          "changed_pixels": 4,
+          "feature_sha256": "392c0f81cfd4a706e1d0cd7627412cdada7624276e60714ef642039640b94b34",
+          "field_mask_sha256": "6619909c8e9d5b11380cbe5b3493d5844d69bd69df1511b64203388edba1ccb6",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 36,
+          "max_absolute_feature_delta": 0.00959679580131001,
+          "rms_feature_delta": 0.0035022941611916876,
+          "status": "ok",
+          "support_jaccard": 0.8888888888888888,
+          "valid_pixel_counts": [
+            36,
+            36,
+            36,
+            36
+          ]
+        },
+        {
+          "alternative": "north_15m",
+          "changed_pixels": 9,
+          "feature_sha256": "facc0be6231745c0dccfe243a783a07fe8c63644a865d8edf23ef1d3b7d86a28",
+          "field_mask_sha256": "b9412460c8f15c98c0ea4ac6e6a220fd0a57b187553d6bfe3968e53f521c8e0b",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 29,
+          "max_absolute_feature_delta": 0.058301903663279364,
+          "rms_feature_delta": 0.022122334983435882,
+          "status": "ok",
+          "support_jaccard": 0.7428571428571429,
+          "valid_pixel_counts": [
+            29,
+            29,
+            29,
+            29
+          ]
+        },
+        {
+          "alternative": "south_15m",
+          "changed_pixels": 3,
+          "feature_sha256": "c3b7344b17c711607a96f1b8488ad353b45586285575ebb31c74b4448f4f2179",
+          "field_mask_sha256": "222557defff217001fd132954af84e0228ec90535fca87c2deffa32a244ad3e3",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 29,
+          "max_absolute_feature_delta": 0.04128201491414185,
+          "rms_feature_delta": 0.01387061271774861,
+          "status": "ok",
+          "support_jaccard": 0.90625,
+          "valid_pixel_counts": [
+            29,
+            29,
+            29,
+            29
+          ]
+        },
+        {
+          "alternative": "east_30m",
+          "changed_pixels": 12,
+          "feature_sha256": "826a0fb2c21784a6de56b47b5e36864e0da64c4db5d7fb44ebd66140da4b897e",
+          "field_mask_sha256": "7b34d92fbf89646fd166ecdbf38ae5cc6e9ffae39c6c49d485e88f06b9a68a44",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 32,
+          "max_absolute_feature_delta": 0.017722759742577532,
+          "rms_feature_delta": 0.007173970618800028,
+          "status": "ok",
+          "support_jaccard": 0.6842105263157895,
+          "valid_pixel_counts": [
+            32,
+            32,
+            32,
+            32
+          ]
+        },
+        {
+          "alternative": "west_30m",
+          "changed_pixels": 12,
+          "feature_sha256": "008ceca8d08c4f7843a4d46414a62e5b27648f03ae031a670ef024ec9d815c6a",
+          "field_mask_sha256": "fa63536ef998136debaa61c8def37657e2f1ec1f592512c0a88aed959a7e5e18",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 32,
+          "max_absolute_feature_delta": 0.03444840220039713,
+          "rms_feature_delta": 0.01419657707993842,
+          "status": "ok",
+          "support_jaccard": 0.6842105263157895,
+          "valid_pixel_counts": [
+            32,
+            32,
+            32,
+            32
+          ]
+        },
+        {
+          "alternative": "north_30m",
+          "changed_pixels": 12,
+          "feature_sha256": "521543e4d619725395324970d30965fc5b27847ed4ad33e29eb0380c39b0f22a",
+          "field_mask_sha256": "385c89ce4b289321331d3fae5e1bd05ab5f127a40c70ed41e5646d37d7fae1ba",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 32,
+          "max_absolute_feature_delta": 0.045936160129432746,
+          "rms_feature_delta": 0.01283985944598142,
+          "status": "ok",
+          "support_jaccard": 0.6842105263157895,
+          "valid_pixel_counts": [
+            32,
+            32,
+            32,
+            32
+          ]
+        },
+        {
+          "alternative": "south_30m",
+          "changed_pixels": 12,
+          "feature_sha256": "56c149196dddbd307342d6ff5db6675aa1d960ef1083bfd8dcd1e7398f829f81",
+          "field_mask_sha256": "09e8ca6974c94c13a2756dc20c7fda9dcf0c3e968d14b6688675ebd1ab896798",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 32,
+          "max_absolute_feature_delta": 0.10842305624496029,
+          "rms_feature_delta": 0.05208952703745435,
+          "status": "ok",
+          "support_jaccard": 0.6842105263157895,
+          "valid_pixel_counts": [
+            32,
+            32,
+            32,
+            32
+          ]
+        },
+        {
+          "alternative": "nad83_utm13n_alternative",
+          "changed_pixels": 0,
+          "feature_sha256": "8b9244592afe4cce7f14f304e69293b36a04f0fa6813445534890a5a148f0800",
+          "field_mask_sha256": "510554dd0aa9c6d026c494e01be7ae7c5e30ee548435c81c3e540711f10322e8",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 32,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            32,
+            32,
+            32,
+            32
+          ]
+        }
+      ],
+      "bundle_id": "akron-SB1-2021",
+      "dates_sha256": "5d4bc74b099e744cc38d5b429ec631fae212fb24f28aa449303a9108b3c25b29",
+      "nominal_feature_sha256": "8b9244592afe4cce7f14f304e69293b36a04f0fa6813445534890a5a148f0800",
+      "nominal_mask_pixels": 32,
+      "nominal_valid_pixel_counts": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "source_sha256": "513bb75d818eab144c23de5906d81208c98caaf58b7f2f0e1591506e9bdd2edd",
+      "status": "ok"
+    },
+    {
+      "alternatives": [
+        {
+          "alternative": "east_15m",
+          "changed_pixels": 8,
+          "feature_sha256": "1df1aaa8c4a49a5cd2c3492f92a92fdf2c82ea22c2c9a241d2dbe5019a4d4b71",
+          "field_mask_sha256": "8329260ef9405210f5a8c113f50f1395a39bf31c42b0a1131f7d4580f0e467ab",
+          "field_valid_fractions": [
+            1.0,
+            0.9444444444444444,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 36,
+          "max_absolute_feature_delta": 0.003412140638877237,
+          "rms_feature_delta": 0.0022217535334587914,
+          "status": "ok",
+          "support_jaccard": 0.7894736842105263,
+          "valid_pixel_counts": [
+            36,
+            34,
+            36,
+            36
+          ]
+        },
+        {
+          "alternative": "west_15m",
+          "changed_pixels": 4,
+          "feature_sha256": "56f825c8185141578fec422222b704a54b817a67618de6afebf3f9f759f21165",
+          "field_mask_sha256": "6619909c8e9d5b11380cbe5b3493d5844d69bd69df1511b64203388edba1ccb6",
+          "field_valid_fractions": [
+            1.0,
+            0.8611111111111112,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 36,
+          "max_absolute_feature_delta": 0.001815277876125454,
+          "rms_feature_delta": 0.0010079967752028149,
+          "status": "ok",
+          "support_jaccard": 0.8888888888888888,
+          "valid_pixel_counts": [
+            36,
+            31,
+            36,
+            36
+          ]
+        },
+        {
+          "alternative": "north_15m",
+          "changed_pixels": 9,
+          "feature_sha256": "8e364395a406ee529ce869b1b06b400be51b66ee0ccd7dec50d75f6cc4997b15",
+          "field_mask_sha256": "b9412460c8f15c98c0ea4ac6e6a220fd0a57b187553d6bfe3968e53f521c8e0b",
+          "field_valid_fractions": [
+            1.0,
+            0.896551724137931,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 29,
+          "max_absolute_feature_delta": 0.01840377245740643,
+          "rms_feature_delta": 0.007392476483123792,
+          "status": "ok",
+          "support_jaccard": 0.7428571428571429,
+          "valid_pixel_counts": [
+            29,
+            26,
+            29,
+            29
+          ]
+        },
+        {
+          "alternative": "south_15m",
+          "changed_pixels": 3,
+          "feature_sha256": "1f02d523da9e4e6be162d50da270a113849561fbc69061532be0ee07bc3f085f",
+          "field_mask_sha256": "222557defff217001fd132954af84e0228ec90535fca87c2deffa32a244ad3e3",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 29,
+          "max_absolute_feature_delta": 0.01430623255439023,
+          "rms_feature_delta": 0.004867718069189459,
+          "status": "ok",
+          "support_jaccard": 0.90625,
+          "valid_pixel_counts": [
+            29,
+            29,
+            29,
+            29
+          ]
+        },
+        {
+          "alternative": "east_30m",
+          "changed_pixels": 12,
+          "feature_sha256": "d24794475b13c302074b26d1f3cbca40bbf08180b76e3d386364277b34fda3c7",
+          "field_mask_sha256": "7b34d92fbf89646fd166ecdbf38ae5cc6e9ffae39c6c49d485e88f06b9a68a44",
+          "field_valid_fractions": [
+            1.0,
+            0.9375,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 32,
+          "max_absolute_feature_delta": 0.0055718738585710526,
+          "rms_feature_delta": 0.003056320994441227,
+          "status": "ok",
+          "support_jaccard": 0.6842105263157895,
+          "valid_pixel_counts": [
+            32,
+            30,
+            32,
+            32
+          ]
+        },
+        {
+          "alternative": "west_30m",
+          "changed_pixels": 12,
+          "feature_sha256": "24cfded5bb7fbdb8eb160f70c9bf3e66c9a66a50ee75888b287f64919c62b45b",
+          "field_mask_sha256": "fa63536ef998136debaa61c8def37657e2f1ec1f592512c0a88aed959a7e5e18",
+          "field_valid_fractions": [
+            1.0,
+            0.8125,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 32,
+          "max_absolute_feature_delta": 0.005945321553575217,
+          "rms_feature_delta": 0.0030587328517601552,
+          "status": "ok",
+          "support_jaccard": 0.6842105263157895,
+          "valid_pixel_counts": [
+            32,
+            26,
+            32,
+            32
+          ]
+        },
+        {
+          "alternative": "north_30m",
+          "changed_pixels": 12,
+          "feature_sha256": "a9795875e533437de66a25b75e3cf52c653e00a316a9ab2b7ffec89e46778ee7",
+          "field_mask_sha256": "385c89ce4b289321331d3fae5e1bd05ab5f127a40c70ed41e5646d37d7fae1ba",
+          "field_valid_fractions": [
+            1.0,
+            0.8125,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 32,
+          "max_absolute_feature_delta": 0.03208322845132641,
+          "rms_feature_delta": 0.01276079006550555,
+          "status": "ok",
+          "support_jaccard": 0.6842105263157895,
+          "valid_pixel_counts": [
+            32,
+            26,
+            32,
+            32
+          ]
+        },
+        {
+          "alternative": "south_30m",
+          "changed_pixels": 12,
+          "feature_sha256": "3e8cf5871a8182a2c5b9573efdbcd14d0b66b6db30ac69859694c7c174e447fb",
+          "field_mask_sha256": "09e8ca6974c94c13a2756dc20c7fda9dcf0c3e968d14b6688675ebd1ab896798",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 32,
+          "max_absolute_feature_delta": 0.0279125003144145,
+          "rms_feature_delta": 0.010935424634430632,
+          "status": "ok",
+          "support_jaccard": 0.6842105263157895,
+          "valid_pixel_counts": [
+            32,
+            32,
+            32,
+            32
+          ]
+        },
+        {
+          "alternative": "nad83_utm13n_alternative",
+          "changed_pixels": 0,
+          "feature_sha256": "4491979acddd4768686aec6f804a709cc1fcc8484888ce0ccb3eb4e9afbf788c",
+          "field_mask_sha256": "510554dd0aa9c6d026c494e01be7ae7c5e30ee548435c81c3e540711f10322e8",
+          "field_valid_fractions": [
+            1.0,
+            0.90625,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 32,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            32,
+            29,
+            32,
+            32
+          ]
+        }
+      ],
+      "bundle_id": "akron-SB1-2022",
+      "dates_sha256": "0d87541208b77656d62fef9a6701b537aead58e928edb2e41d64273374b34da8",
+      "nominal_feature_sha256": "4491979acddd4768686aec6f804a709cc1fcc8484888ce0ccb3eb4e9afbf788c",
+      "nominal_mask_pixels": 32,
+      "nominal_valid_pixel_counts": [
+        32,
+        29,
+        32,
+        32
+      ],
+      "source_sha256": "9f6ef1382e99d8bc889f21568b4ff9c73ed77418bddb356ba63bee2d80d94e15",
+      "status": "ok"
+    },
+    {
+      "alternatives": [],
+      "bundle_id": "akron-SB3-2019",
+      "error": "ValueError: no_catalog_scenes_in_frozen_window",
+      "status": "error"
+    },
+    {
+      "alternatives": [
+        {
+          "alternative": "east_15m",
+          "changed_pixels": 8,
+          "feature_sha256": "3c9ac9165e026fa7d00684250051e091012e0b13d38de7bc1cb5b2afeb90e07b",
+          "field_mask_sha256": "cf204eddce14351acaaa36927e2f37d640319998ae77612909ff5799addd2254",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 33,
+          "max_absolute_feature_delta": 0.023596907772465703,
+          "rms_feature_delta": 0.011917760157827454,
+          "status": "ok",
+          "support_jaccard": 0.7894736842105263,
+          "valid_pixel_counts": [
+            33,
+            33,
+            33,
+            33
+          ]
+        },
+        {
+          "alternative": "west_15m",
+          "changed_pixels": 2,
+          "feature_sha256": "b3869332b43d6dbbab822fa9c210a30e7f147d75c4cb6b2bfb532405a8fce58b",
+          "field_mask_sha256": "f43dd13b1ad94510043daa9481760bc0a358dace2dc105d7e562e6e46ff9cfd7",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 33,
+          "max_absolute_feature_delta": 0.006083826301257034,
+          "rms_feature_delta": 0.0022183857010565,
+          "status": "ok",
+          "support_jaccard": 0.9428571428571428,
+          "valid_pixel_counts": [
+            33,
+            33,
+            33,
+            33
+          ]
+        },
+        {
+          "alternative": "north_15m",
+          "changed_pixels": 13,
+          "feature_sha256": "a53712a27aeb1af16e2ad23f3432ed3c99cbd9929342d1dd22b444241a51adcd",
+          "field_mask_sha256": "0c4763dc1c885389b53118c6f6766377b6821c63eb0287e4fdaa60c80baeab51",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 34,
+          "max_absolute_feature_delta": 0.0538662318830434,
+          "rms_feature_delta": 0.021815260993736,
+          "status": "ok",
+          "support_jaccard": 0.6829268292682927,
+          "valid_pixel_counts": [
+            34,
+            34,
+            34,
+            34
+          ]
+        },
+        {
+          "alternative": "south_15m",
+          "changed_pixels": 1,
+          "feature_sha256": "f0689cafcb2a8f2a342d3a94db3135c9a7796b6442b245099a867b3816f778a6",
+          "field_mask_sha256": "5514f8db78fba171bde42e6f38dc6299ddfc50294022aeb4920cf3b996278200",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 34,
+          "max_absolute_feature_delta": 0.007758212975689904,
+          "rms_feature_delta": 0.003375098209474455,
+          "status": "ok",
+          "support_jaccard": 0.9714285714285714,
+          "valid_pixel_counts": [
+            34,
+            34,
+            34,
+            34
+          ]
+        },
+        {
+          "alternative": "east_30m",
+          "changed_pixels": 10,
+          "feature_sha256": "32e1f4045f929f5b8ab6f41b0a856e52bd171838e348a695dc41c015593434fa",
+          "field_mask_sha256": "cbe0ec192e7df228123d04dede5b15381f295aa86b9286ccac9e318c8b80e26c",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 35,
+          "max_absolute_feature_delta": 0.029250375874199097,
+          "rms_feature_delta": 0.013904018900571538,
+          "status": "ok",
+          "support_jaccard": 0.75,
+          "valid_pixel_counts": [
+            35,
+            35,
+            35,
+            35
+          ]
+        },
+        {
+          "alternative": "west_30m",
+          "changed_pixels": 10,
+          "feature_sha256": "f8a42a962c5dfaf8e5251242cdc0189642f5f962af821146d39b6f8452283bff",
+          "field_mask_sha256": "cd38bf8400b790c0efb87fc7f52fb78483a1ee38bafeb7c6c9110e963d558d64",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 35,
+          "max_absolute_feature_delta": 0.03767475576890736,
+          "rms_feature_delta": 0.01722241034088149,
+          "status": "ok",
+          "support_jaccard": 0.75,
+          "valid_pixel_counts": [
+            35,
+            35,
+            35,
+            35
+          ]
+        },
+        {
+          "alternative": "north_30m",
+          "changed_pixels": 14,
+          "feature_sha256": "69989f88596bf416c6dd903b5963fa85fc2f62f20a1a1b7177cc2bc439228319",
+          "field_mask_sha256": "b87dac1247360b38415bd94de278f641200f2e2fe14572f4ed05a2d372469518",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 35,
+          "max_absolute_feature_delta": 0.05395425937961085,
+          "rms_feature_delta": 0.021145636597198453,
+          "status": "ok",
+          "support_jaccard": 0.6666666666666666,
+          "valid_pixel_counts": [
+            35,
+            35,
+            35,
+            35
+          ]
+        },
+        {
+          "alternative": "south_30m",
+          "changed_pixels": 14,
+          "feature_sha256": "ee8f566e598da3afcdca1a19048b1f000cfee7daac9f67d50c38fd530cb644d7",
+          "field_mask_sha256": "adcada21644860d06251199ddbcbe25dce827649ba5d5d565d2870ce7c7835c0",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 35,
+          "max_absolute_feature_delta": 0.10740726246614352,
+          "rms_feature_delta": 0.05400574849023847,
+          "status": "ok",
+          "support_jaccard": 0.6666666666666666,
+          "valid_pixel_counts": [
+            35,
+            35,
+            35,
+            35
+          ]
+        },
+        {
+          "alternative": "nad83_utm13n_alternative",
+          "changed_pixels": 0,
+          "feature_sha256": "f0a1699f91519079540fd143e5baf02f3b189f72fb6761d2b81a1e4367279f4f",
+          "field_mask_sha256": "090e40d6dc2cc5078f94b2f9760979d5b1af9dc28372ec80383fb2169799b364",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 35,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            35,
+            35,
+            35,
+            35
+          ]
+        }
+      ],
+      "bundle_id": "akron-SB3-2021",
+      "dates_sha256": "5d4bc74b099e744cc38d5b429ec631fae212fb24f28aa449303a9108b3c25b29",
+      "nominal_feature_sha256": "f0a1699f91519079540fd143e5baf02f3b189f72fb6761d2b81a1e4367279f4f",
+      "nominal_mask_pixels": 35,
+      "nominal_valid_pixel_counts": [
+        35,
+        35,
+        35,
+        35
+      ],
+      "source_sha256": "513bb75d818eab144c23de5906d81208c98caaf58b7f2f0e1591506e9bdd2edd",
+      "status": "ok"
+    },
+    {
+      "alternatives": [
+        {
+          "alternative": "east_15m",
+          "changed_pixels": 6,
+          "feature_sha256": "9d40da03fe1d8c5278aa14b88b139a9ddb9943106226276ed5f1ecc9377118bf",
+          "field_mask_sha256": "af95b9fa7a1e8393e392bc7094439cd794c7bc48b755e55d093e27b6e98d690d",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 34,
+          "max_absolute_feature_delta": 0.021294554371799723,
+          "rms_feature_delta": 0.006964959519546776,
+          "status": "ok",
+          "support_jaccard": 0.8285714285714286,
+          "valid_pixel_counts": [
+            34,
+            34,
+            34,
+            34
+          ]
+        },
+        {
+          "alternative": "west_15m",
+          "changed_pixels": 4,
+          "feature_sha256": "eba24a6c9e00b6c600df114075fb7784b36931a37ed633426a73a437b5a9b091",
+          "field_mask_sha256": "080eee37f2a43d575add0cebf229170bdd7486d1dbb41274cd5c043a153ccae0",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 34,
+          "max_absolute_feature_delta": 0.007603286488371053,
+          "rms_feature_delta": 0.0027768825013188667,
+          "status": "ok",
+          "support_jaccard": 0.8823529411764706,
+          "valid_pixel_counts": [
+            34,
+            34,
+            34,
+            34
+          ]
+        },
+        {
+          "alternative": "north_15m",
+          "changed_pixels": 12,
+          "feature_sha256": "ed2274fa2f9f7953199109edcb8f608515d84490c9273d95db428378eeebbd43",
+          "field_mask_sha256": "7ac8c697fa7090f796e182e0fb53c929c638cae8d702394485e01a09f5ffc39d",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.03411307525805218,
+          "rms_feature_delta": 0.011710877949210103,
+          "status": "ok",
+          "support_jaccard": 0.6666666666666666,
+          "valid_pixel_counts": [
+            30,
+            30,
+            30,
+            30
+          ]
+        },
+        {
+          "alternative": "south_15m",
+          "changed_pixels": 0,
+          "feature_sha256": "d875c3a35bae2e42ac4a305d92141f61f68793a7161d6c07c0516fc4ea7b836c",
+          "field_mask_sha256": "7be70f6e590f663aa12840057ee420751f257c9d8f771459e829be452703eaf3",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            30,
+            30,
+            30,
+            30
+          ]
+        },
+        {
+          "alternative": "east_30m",
+          "changed_pixels": 10,
+          "feature_sha256": "c504e6dc3eb8d69af3460b4c578bc12f85827b555e5d6d6403509cd1f7fc50bf",
+          "field_mask_sha256": "f7db33414290eceb18e0add6eb656b21007354a6aef0b224ddfbcfd6991a6397",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.031299909984159546,
+          "rms_feature_delta": 0.011036259132148367,
+          "status": "ok",
+          "support_jaccard": 0.7142857142857143,
+          "valid_pixel_counts": [
+            30,
+            30,
+            30,
+            30
+          ]
+        },
+        {
+          "alternative": "west_30m",
+          "changed_pixels": 10,
+          "feature_sha256": "7ae22488a393a5f771804ad939af64b62ddd0c47a6154238cb11da659aca77b8",
+          "field_mask_sha256": "aa160b9f0c377d290365fc1d1b398662c586c4d2667f42352d5dc136513bda1c",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.021050701161921648,
+          "rms_feature_delta": 0.007082310172650029,
+          "status": "ok",
+          "support_jaccard": 0.7142857142857143,
+          "valid_pixel_counts": [
+            30,
+            30,
+            30,
+            30
+          ]
+        },
+        {
+          "alternative": "north_30m",
+          "changed_pixels": 12,
+          "feature_sha256": "ed2274fa2f9f7953199109edcb8f608515d84490c9273d95db428378eeebbd43",
+          "field_mask_sha256": "7ac8c697fa7090f796e182e0fb53c929c638cae8d702394485e01a09f5ffc39d",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.03411307525805218,
+          "rms_feature_delta": 0.011710877949210103,
+          "status": "ok",
+          "support_jaccard": 0.6666666666666666,
+          "valid_pixel_counts": [
+            30,
+            30,
+            30,
+            30
+          ]
+        },
+        {
+          "alternative": "south_30m",
+          "changed_pixels": 12,
+          "feature_sha256": "8958b253005d4ee8e6a0aba200a370ae87e412b4b9b2c728f2ab1ed075cac60a",
+          "field_mask_sha256": "88a0ce5b4c5e09fc5902d1651fd7cb20202ff45da18db5def3f08a69dbe54e38",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.034962312326163536,
+          "rms_feature_delta": 0.011177762807708682,
+          "status": "ok",
+          "support_jaccard": 0.6666666666666666,
+          "valid_pixel_counts": [
+            30,
+            30,
+            30,
+            30
+          ]
+        },
+        {
+          "alternative": "nad83_utm13n_alternative",
+          "changed_pixels": 0,
+          "feature_sha256": "d875c3a35bae2e42ac4a305d92141f61f68793a7161d6c07c0516fc4ea7b836c",
+          "field_mask_sha256": "7be70f6e590f663aa12840057ee420751f257c9d8f771459e829be452703eaf3",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            30,
+            30,
+            30,
+            30
+          ]
+        }
+      ],
+      "bundle_id": "akron-SB4-2020",
+      "dates_sha256": "d78023929c2a873bb057da8f39d845a02548fdb827e4705a0a523af301211c14",
+      "nominal_feature_sha256": "d875c3a35bae2e42ac4a305d92141f61f68793a7161d6c07c0516fc4ea7b836c",
+      "nominal_mask_pixels": 30,
+      "nominal_valid_pixel_counts": [
+        30,
+        30,
+        30,
+        30
+      ],
+      "source_sha256": "f5944dadf85000bfd62e96c813ede987f58e5bb86457694e96a76d2d22670419",
+      "status": "ok"
+    },
+    {
+      "alternatives": [
+        {
+          "alternative": "east_15m",
+          "changed_pixels": 6,
+          "feature_sha256": "784a1dd7b18de4cadfaf01faa8f5d3585d4bc50d7a4ec768bb4052d03e055272",
+          "field_mask_sha256": "af95b9fa7a1e8393e392bc7094439cd794c7bc48b755e55d093e27b6e98d690d",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 34,
+          "max_absolute_feature_delta": 0.004580195803268294,
+          "rms_feature_delta": 0.0028692942395617286,
+          "status": "ok",
+          "support_jaccard": 0.8285714285714286,
+          "valid_pixel_counts": [
+            34,
+            34,
+            34,
+            34
+          ]
+        },
+        {
+          "alternative": "west_15m",
+          "changed_pixels": 4,
+          "feature_sha256": "490dbe2a90b820c450f83699708c73e4d48517e30cb6de4eba254ae41eaf08ae",
+          "field_mask_sha256": "080eee37f2a43d575add0cebf229170bdd7486d1dbb41274cd5c043a153ccae0",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 34,
+          "max_absolute_feature_delta": 0.0009366365935276622,
+          "rms_feature_delta": 0.0005020130940399819,
+          "status": "ok",
+          "support_jaccard": 0.8823529411764706,
+          "valid_pixel_counts": [
+            34,
+            34,
+            34,
+            34
+          ]
+        },
+        {
+          "alternative": "north_15m",
+          "changed_pixels": 12,
+          "feature_sha256": "ecf8dd93aa0510e60bdda97f0649f5ba10e6e5ddc298e6ff8454c6373aca653a",
+          "field_mask_sha256": "7ac8c697fa7090f796e182e0fb53c929c638cae8d702394485e01a09f5ffc39d",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.04458563250742137,
+          "rms_feature_delta": 0.01950633867440948,
+          "status": "ok",
+          "support_jaccard": 0.6666666666666666,
+          "valid_pixel_counts": [
+            30,
+            30,
+            30,
+            30
+          ]
+        },
+        {
+          "alternative": "south_15m",
+          "changed_pixels": 0,
+          "feature_sha256": "7d3d50716f4d6e4e428be415ecb8c47dff3cb0abc0282d2e7c674cb5e96794ca",
+          "field_mask_sha256": "7be70f6e590f663aa12840057ee420751f257c9d8f771459e829be452703eaf3",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            30,
+            30,
+            30,
+            30
+          ]
+        },
+        {
+          "alternative": "east_30m",
+          "changed_pixels": 10,
+          "feature_sha256": "3f1813bac451fd91bb61373d2478424ea54e47c9d13d3b155a93f7839b11f7b4",
+          "field_mask_sha256": "f7db33414290eceb18e0add6eb656b21007354a6aef0b224ddfbcfd6991a6397",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.007256665825843833,
+          "rms_feature_delta": 0.0044116849371656375,
+          "status": "ok",
+          "support_jaccard": 0.7142857142857143,
+          "valid_pixel_counts": [
+            30,
+            30,
+            30,
+            30
+          ]
+        },
+        {
+          "alternative": "west_30m",
+          "changed_pixels": 10,
+          "feature_sha256": "503e61a71841d7959fffe59efe5511d21f0f910c2152dfd01b04417dc657445f",
+          "field_mask_sha256": "aa160b9f0c377d290365fc1d1b398662c586c4d2667f42352d5dc136513bda1c",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.003303332626819616,
+          "rms_feature_delta": 0.0017116556068224823,
+          "status": "ok",
+          "support_jaccard": 0.7142857142857143,
+          "valid_pixel_counts": [
+            30,
+            30,
+            30,
+            30
+          ]
+        },
+        {
+          "alternative": "north_30m",
+          "changed_pixels": 12,
+          "feature_sha256": "ecf8dd93aa0510e60bdda97f0649f5ba10e6e5ddc298e6ff8454c6373aca653a",
+          "field_mask_sha256": "7ac8c697fa7090f796e182e0fb53c929c638cae8d702394485e01a09f5ffc39d",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.04458563250742137,
+          "rms_feature_delta": 0.01950633867440948,
+          "status": "ok",
+          "support_jaccard": 0.6666666666666666,
+          "valid_pixel_counts": [
+            30,
+            30,
+            30,
+            30
+          ]
+        },
+        {
+          "alternative": "south_30m",
+          "changed_pixels": 12,
+          "feature_sha256": "bd78fcaf26cbaaeb66e333cca27d8e5c000b968b806963e5afd44f1edf5dc106",
+          "field_mask_sha256": "88a0ce5b4c5e09fc5902d1651fd7cb20202ff45da18db5def3f08a69dbe54e38",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.007801417144619349,
+          "rms_feature_delta": 0.003918789112870452,
+          "status": "ok",
+          "support_jaccard": 0.6666666666666666,
+          "valid_pixel_counts": [
+            30,
+            30,
+            30,
+            30
+          ]
+        },
+        {
+          "alternative": "nad83_utm13n_alternative",
+          "changed_pixels": 0,
+          "feature_sha256": "7d3d50716f4d6e4e428be415ecb8c47dff3cb0abc0282d2e7c674cb5e96794ca",
+          "field_mask_sha256": "7be70f6e590f663aa12840057ee420751f257c9d8f771459e829be452703eaf3",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            30,
+            30,
+            30,
+            30
+          ]
+        }
+      ],
+      "bundle_id": "akron-SB4-2021",
+      "dates_sha256": "5d4bc74b099e744cc38d5b429ec631fae212fb24f28aa449303a9108b3c25b29",
+      "nominal_feature_sha256": "7d3d50716f4d6e4e428be415ecb8c47dff3cb0abc0282d2e7c674cb5e96794ca",
+      "nominal_mask_pixels": 30,
+      "nominal_valid_pixel_counts": [
+        30,
+        30,
+        30,
+        30
+      ],
+      "source_sha256": "513bb75d818eab144c23de5906d81208c98caaf58b7f2f0e1591506e9bdd2edd",
+      "status": "ok"
+    },
+    {
+      "alternatives": [
+        {
+          "alternative": "east_15m",
+          "changed_pixels": 6,
+          "feature_sha256": "01777e152cebf1395d6259bbe95db8fd49f74d22051cf5a193db9c8a617e7f8b",
+          "field_mask_sha256": "af95b9fa7a1e8393e392bc7094439cd794c7bc48b755e55d093e27b6e98d690d",
+          "field_valid_fractions": [
+            1.0,
+            0.9705882352941176,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 34,
+          "max_absolute_feature_delta": 0.006424799500769324,
+          "rms_feature_delta": 0.003053433371341275,
+          "status": "ok",
+          "support_jaccard": 0.8285714285714286,
+          "valid_pixel_counts": [
+            34,
+            33,
+            34,
+            34
+          ]
+        },
+        {
+          "alternative": "west_15m",
+          "changed_pixels": 4,
+          "feature_sha256": "8b3be2194b1c1e4ca38e22bced8243c7aae76430384cd3c45b2410cabce43e45",
+          "field_mask_sha256": "080eee37f2a43d575add0cebf229170bdd7486d1dbb41274cd5c043a153ccae0",
+          "field_valid_fractions": [
+            1.0,
+            0.9117647058823529,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 34,
+          "max_absolute_feature_delta": 0.0020241178718267694,
+          "rms_feature_delta": 0.0007545650274329398,
+          "status": "ok",
+          "support_jaccard": 0.8823529411764706,
+          "valid_pixel_counts": [
+            34,
+            31,
+            34,
+            34
+          ]
+        },
+        {
+          "alternative": "north_15m",
+          "changed_pixels": 12,
+          "feature_sha256": "96f27129b241afe63ee4f964d98d1df25a36a4779f257ff5944d0598aebd398b",
+          "field_mask_sha256": "7ac8c697fa7090f796e182e0fb53c929c638cae8d702394485e01a09f5ffc39d",
+          "field_valid_fractions": [
+            1.0,
+            0.9,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.006247517204263031,
+          "rms_feature_delta": 0.0024010500133527526,
+          "status": "ok",
+          "support_jaccard": 0.6666666666666666,
+          "valid_pixel_counts": [
+            30,
+            27,
+            30,
+            30
+          ]
+        },
+        {
+          "alternative": "south_15m",
+          "changed_pixels": 0,
+          "feature_sha256": "9161db46be063c4e6f580d23deb9108e9bf3b9d40e3c1dd9b4da177d18341a69",
+          "field_mask_sha256": "7be70f6e590f663aa12840057ee420751f257c9d8f771459e829be452703eaf3",
+          "field_valid_fractions": [
+            1.0,
+            0.9666666666666667,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            30,
+            29,
+            30,
+            30
+          ]
+        },
+        {
+          "alternative": "east_30m",
+          "changed_pixels": 10,
+          "feature_sha256": "355a13e32a8e59284914db0558206e2db93a3b5993894b5cb95433b9ee59e4c1",
+          "field_mask_sha256": "f7db33414290eceb18e0add6eb656b21007354a6aef0b224ddfbcfd6991a6397",
+          "field_valid_fractions": [
+            1.0,
+            0.9666666666666667,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.007028493731121466,
+          "rms_feature_delta": 0.0037536784315124116,
+          "status": "ok",
+          "support_jaccard": 0.7142857142857143,
+          "valid_pixel_counts": [
+            30,
+            29,
+            30,
+            30
+          ]
+        },
+        {
+          "alternative": "west_30m",
+          "changed_pixels": 10,
+          "feature_sha256": "75bb0add3fb9dfab83d5e8c1a044b4d843269d4e29776e5faddbfc34ab049a94",
+          "field_mask_sha256": "aa160b9f0c377d290365fc1d1b398662c586c4d2667f42352d5dc136513bda1c",
+          "field_valid_fractions": [
+            1.0,
+            0.9,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.0049500008424123165,
+          "rms_feature_delta": 0.0019076790559912006,
+          "status": "ok",
+          "support_jaccard": 0.7142857142857143,
+          "valid_pixel_counts": [
+            30,
+            27,
+            30,
+            30
+          ]
+        },
+        {
+          "alternative": "north_30m",
+          "changed_pixels": 12,
+          "feature_sha256": "96f27129b241afe63ee4f964d98d1df25a36a4779f257ff5944d0598aebd398b",
+          "field_mask_sha256": "7ac8c697fa7090f796e182e0fb53c929c638cae8d702394485e01a09f5ffc39d",
+          "field_valid_fractions": [
+            1.0,
+            0.9,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.006247517204263031,
+          "rms_feature_delta": 0.0024010500133527526,
+          "status": "ok",
+          "support_jaccard": 0.6666666666666666,
+          "valid_pixel_counts": [
+            30,
+            27,
+            30,
+            30
+          ]
+        },
+        {
+          "alternative": "south_30m",
+          "changed_pixels": 12,
+          "feature_sha256": "972d6f10471fd93b8764a6d249f92ff8d28a58f2039af8338d956a846d98b321",
+          "field_mask_sha256": "88a0ce5b4c5e09fc5902d1651fd7cb20202ff45da18db5def3f08a69dbe54e38",
+          "field_valid_fractions": [
+            1.0,
+            0.9666666666666667,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.007400937200392199,
+          "rms_feature_delta": 0.002724343864585293,
+          "status": "ok",
+          "support_jaccard": 0.6666666666666666,
+          "valid_pixel_counts": [
+            30,
+            29,
+            30,
+            30
+          ]
+        },
+        {
+          "alternative": "nad83_utm13n_alternative",
+          "changed_pixels": 0,
+          "feature_sha256": "9161db46be063c4e6f580d23deb9108e9bf3b9d40e3c1dd9b4da177d18341a69",
+          "field_mask_sha256": "7be70f6e590f663aa12840057ee420751f257c9d8f771459e829be452703eaf3",
+          "field_valid_fractions": [
+            1.0,
+            0.9666666666666667,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            30,
+            29,
+            30,
+            30
+          ]
+        }
+      ],
+      "bundle_id": "akron-SB4-2022",
+      "dates_sha256": "0d87541208b77656d62fef9a6701b537aead58e928edb2e41d64273374b34da8",
+      "nominal_feature_sha256": "9161db46be063c4e6f580d23deb9108e9bf3b9d40e3c1dd9b4da177d18341a69",
+      "nominal_mask_pixels": 30,
+      "nominal_valid_pixel_counts": [
+        30,
+        29,
+        30,
+        30
+      ],
+      "source_sha256": "9f6ef1382e99d8bc889f21568b4ff9c73ed77418bddb356ba63bee2d80d94e15",
+      "status": "ok"
+    },
+    {
+      "alternatives": [],
+      "bundle_id": "akron-SB5-2019",
+      "error": "ValueError: no_catalog_scenes_in_frozen_window",
+      "status": "error"
+    },
+    {
+      "alternatives": [
+        {
+          "alternative": "east_15m",
+          "changed_pixels": 2,
+          "feature_sha256": "d1478d55c0dfe06dc151e4049fcb8bd48859282ebbf547f974ff7dce2442b02b",
+          "field_mask_sha256": "ab8a0c60588b4d1e0bcce8fd05e94734bf9c362badc2622a03eb0ec726b2c728",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 39,
+          "max_absolute_feature_delta": 0.0032055794076085165,
+          "rms_feature_delta": 0.0009861885540311144,
+          "status": "ok",
+          "support_jaccard": 0.95,
+          "valid_pixel_counts": [
+            39,
+            39,
+            39,
+            39
+          ]
+        },
+        {
+          "alternative": "west_15m",
+          "changed_pixels": 18,
+          "feature_sha256": "a0a0e627bf764af84f79d30d09c8727ae37dc474df30f2fcec1ed1b7d1e1a4dc",
+          "field_mask_sha256": "e56c6a8986329cd972072db533dcbae6ac486dd226f5ca63c0a04f5591c4e2f5",
+          "field_valid_fractions": [
+            1.0,
+            0.8974358974358975,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 39,
+          "max_absolute_feature_delta": 0.051960245999412846,
+          "rms_feature_delta": 0.023616497107602667,
+          "status": "ok",
+          "support_jaccard": 0.625,
+          "valid_pixel_counts": [
+            39,
+            35,
+            39,
+            39
+          ]
+        },
+        {
+          "alternative": "north_15m",
+          "changed_pixels": 7,
+          "feature_sha256": "941e8e3cc408cd92f5552837b1373f388cd294a2b2cbc7b945784b76d9a04c83",
+          "field_mask_sha256": "62505197994d2073ee66a85d5a0d9c1cbab141acb4955cd8fa4fd66bd3b3be49",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 38,
+          "max_absolute_feature_delta": 0.0017204743012506074,
+          "rms_feature_delta": 0.0007200517453578248,
+          "status": "ok",
+          "support_jaccard": 0.8333333333333334,
+          "valid_pixel_counts": [
+            38,
+            38,
+            38,
+            38
+          ]
+        },
+        {
+          "alternative": "south_15m",
+          "changed_pixels": 1,
+          "feature_sha256": "ac2edd36ba0d20b83401b51d09a5f378dc94384fadb045502c2ad8a1dc724023",
+          "field_mask_sha256": "d633009ec3c31a994dd8f493f26198d96d975d7888248622dd7cc486882ca8d7",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 38,
+          "max_absolute_feature_delta": 0.0005299597777496667,
+          "rms_feature_delta": 0.0002770686674259465,
+          "status": "ok",
+          "support_jaccard": 0.9743589743589743,
+          "valid_pixel_counts": [
+            38,
+            38,
+            38,
+            38
+          ]
+        },
+        {
+          "alternative": "east_30m",
+          "changed_pixels": 20,
+          "feature_sha256": "23baac62b4f76270c3d49dc92c24df3c97b7dd22f0469220146142043f02bd7b",
+          "field_mask_sha256": "4c0c0d3f8ada61756d67210fedb961f6d0e6d7d658414ded8a87b0bebd386819",
+          "field_valid_fractions": [
+            1.0,
+            0.8974358974358975,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 39,
+          "max_absolute_feature_delta": 0.06848065596528374,
+          "rms_feature_delta": 0.031113164494713668,
+          "status": "ok",
+          "support_jaccard": 0.5918367346938775,
+          "valid_pixel_counts": [
+            39,
+            35,
+            39,
+            39
+          ]
+        },
+        {
+          "alternative": "west_30m",
+          "changed_pixels": 20,
+          "feature_sha256": "681ceb3b7aa5380249571dbfc1c8995d518775b8b5ff0b8ef594a03599f59429",
+          "field_mask_sha256": "66bc05d5492ddb32337b14ea28bc8cbeba9638956d4e8fb5c1a129873b67bdf6",
+          "field_valid_fractions": [
+            1.0,
+            0.8974358974358975,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 39,
+          "max_absolute_feature_delta": 0.04931330308129184,
+          "rms_feature_delta": 0.022114666483637708,
+          "status": "ok",
+          "support_jaccard": 0.5918367346938775,
+          "valid_pixel_counts": [
+            39,
+            35,
+            39,
+            39
+          ]
+        },
+        {
+          "alternative": "north_30m",
+          "changed_pixels": 8,
+          "feature_sha256": "4f7c2d80c1af0d90bcffd506fe1ca46f784646f439ad6a7b1f9a160907604606",
+          "field_mask_sha256": "f7f151d021e1d340415e324b181675685321c7ef28d4d2f3fb8f6c27f5c43a95",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 39,
+          "max_absolute_feature_delta": 0.0022387672727061103,
+          "rms_feature_delta": 0.0008566611839349937,
+          "status": "ok",
+          "support_jaccard": 0.813953488372093,
+          "valid_pixel_counts": [
+            39,
+            39,
+            39,
+            39
+          ]
+        },
+        {
+          "alternative": "south_30m",
+          "changed_pixels": 8,
+          "feature_sha256": "fb4250c01d65d71f38f20d4e53b13831a5e27d1d5a8f3fa059a9c85d7bbdf1f5",
+          "field_mask_sha256": "83769ef5bf0cba221337e73791ceca564ceceecf04a1d54768d476296eaeb292",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 39,
+          "max_absolute_feature_delta": 0.005722866302193985,
+          "rms_feature_delta": 0.002493996239630489,
+          "status": "ok",
+          "support_jaccard": 0.813953488372093,
+          "valid_pixel_counts": [
+            39,
+            39,
+            39,
+            39
+          ]
+        },
+        {
+          "alternative": "nad83_utm13n_alternative",
+          "changed_pixels": 0,
+          "feature_sha256": "28b0c80f79eb6e8972c5d5ec05d6fefff15d83e60a1c96717d0ccd4960414640",
+          "field_mask_sha256": "9c50200a1e463930dbdb946c2eb6c38e0a4111e9d656845ea80420d3625a1755",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 39,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            39,
+            39,
+            39,
+            39
+          ]
+        }
+      ],
+      "bundle_id": "akron-SB5-2022",
+      "dates_sha256": "0d87541208b77656d62fef9a6701b537aead58e928edb2e41d64273374b34da8",
+      "nominal_feature_sha256": "28b0c80f79eb6e8972c5d5ec05d6fefff15d83e60a1c96717d0ccd4960414640",
+      "nominal_mask_pixels": 39,
+      "nominal_valid_pixel_counts": [
+        39,
+        39,
+        39,
+        39
+      ],
+      "source_sha256": "9f6ef1382e99d8bc889f21568b4ff9c73ed77418bddb356ba63bee2d80d94e15",
+      "status": "ok"
+    },
+    {
+      "alternatives": [
+        {
+          "alternative": "east_15m",
+          "changed_pixels": 1,
+          "feature_sha256": "53ccd760d24f26f60e9bb03d9b53af8713339422340670b69f7178418d818e21",
+          "field_mask_sha256": "42f6698f03b767e3214ad3437f4af549da905c14368ea3acc715e442d1f3662b",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 43,
+          "max_absolute_feature_delta": 0.0027138017236046363,
+          "rms_feature_delta": 0.0010320982622618116,
+          "status": "ok",
+          "support_jaccard": 0.9772727272727273,
+          "valid_pixel_counts": [
+            43,
+            43,
+            43,
+            43
+          ]
+        },
+        {
+          "alternative": "west_15m",
+          "changed_pixels": 21,
+          "feature_sha256": "02dda9079fd1a532c9070118ad71401fa713da96da3da633d547b6508c539d0f",
+          "field_mask_sha256": "26e07d9746674c0d38d298c6c24a0aefc389ce888f8d0cf4e94f509273377e18",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 43,
+          "max_absolute_feature_delta": 0.04080922202390175,
+          "rms_feature_delta": 0.018748869855620656,
+          "status": "ok",
+          "support_jaccard": 0.6111111111111112,
+          "valid_pixel_counts": [
+            43,
+            43,
+            43,
+            43
+          ]
+        },
+        {
+          "alternative": "north_15m",
+          "changed_pixels": 8,
+          "feature_sha256": "8f1e7ade442c5e70678d09e20d990821594e851bc77b4b86b13b6ac9e6ee0779",
+          "field_mask_sha256": "dd8b85bda880542579487d4b6f27eaf93716002d1d67dab490fd12595fc71c01",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 44,
+          "max_absolute_feature_delta": 0.0016886296248272183,
+          "rms_feature_delta": 0.0006464154364467253,
+          "status": "ok",
+          "support_jaccard": 0.8333333333333334,
+          "valid_pixel_counts": [
+            44,
+            44,
+            44,
+            44
+          ]
+        },
+        {
+          "alternative": "south_15m",
+          "changed_pixels": 0,
+          "feature_sha256": "937a36b72e29202c3f1f9102af002f9032c6b399653a61bdcb621342b93200a2",
+          "field_mask_sha256": "07a0ba30432bbf479069576d308d988f9b2635c062d0e3d60bed3ccb2a7b6a50",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 44,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            44,
+            44,
+            44,
+            44
+          ]
+        },
+        {
+          "alternative": "east_30m",
+          "changed_pixels": 22,
+          "feature_sha256": "6382094d2b620f96b533a7e91d8716e558dab7ca3d7b586f47aad7b7834939f1",
+          "field_mask_sha256": "8bc4d6f4b949f1ebac699b905f5f73968dae74266476b7516db592076d1d3fce",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 44,
+          "max_absolute_feature_delta": 0.045281070265308865,
+          "rms_feature_delta": 0.015709035039892225,
+          "status": "ok",
+          "support_jaccard": 0.6,
+          "valid_pixel_counts": [
+            44,
+            44,
+            44,
+            44
+          ]
+        },
+        {
+          "alternative": "west_30m",
+          "changed_pixels": 22,
+          "feature_sha256": "2ec3bfff6acc5557ed4205531a93c9e1c657bc3bef07d9063527c8b252e7d688",
+          "field_mask_sha256": "2fe9218c2617cc5349f2339ff6ca08306629866c602a1d0c7edb7ed80ae889e0",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 44,
+          "max_absolute_feature_delta": 0.04358779207657315,
+          "rms_feature_delta": 0.020295336866231743,
+          "status": "ok",
+          "support_jaccard": 0.6,
+          "valid_pixel_counts": [
+            44,
+            44,
+            44,
+            44
+          ]
+        },
+        {
+          "alternative": "north_30m",
+          "changed_pixels": 8,
+          "feature_sha256": "8f1e7ade442c5e70678d09e20d990821594e851bc77b4b86b13b6ac9e6ee0779",
+          "field_mask_sha256": "dd8b85bda880542579487d4b6f27eaf93716002d1d67dab490fd12595fc71c01",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 44,
+          "max_absolute_feature_delta": 0.0016886296248272183,
+          "rms_feature_delta": 0.0006464154364467253,
+          "status": "ok",
+          "support_jaccard": 0.8333333333333334,
+          "valid_pixel_counts": [
+            44,
+            44,
+            44,
+            44
+          ]
+        },
+        {
+          "alternative": "south_30m",
+          "changed_pixels": 8,
+          "feature_sha256": "34e0400613a8e43cd72e507b74576f9bd29b56e0736b7308b347c04475bd0cfa",
+          "field_mask_sha256": "87fb854cb2f3c2860f5fa82d96789f79e0254555ff17e8729d12ac6ac9190cc2",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 44,
+          "max_absolute_feature_delta": 0.0074163169332070455,
+          "rms_feature_delta": 0.003379967470353894,
+          "status": "ok",
+          "support_jaccard": 0.8333333333333334,
+          "valid_pixel_counts": [
+            44,
+            44,
+            44,
+            44
+          ]
+        },
+        {
+          "alternative": "nad83_utm13n_alternative",
+          "changed_pixels": 0,
+          "feature_sha256": "937a36b72e29202c3f1f9102af002f9032c6b399653a61bdcb621342b93200a2",
+          "field_mask_sha256": "07a0ba30432bbf479069576d308d988f9b2635c062d0e3d60bed3ccb2a7b6a50",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 44,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            44,
+            44,
+            44,
+            44
+          ]
+        }
+      ],
+      "bundle_id": "akron-SB6-2020",
+      "dates_sha256": "d78023929c2a873bb057da8f39d845a02548fdb827e4705a0a523af301211c14",
+      "nominal_feature_sha256": "937a36b72e29202c3f1f9102af002f9032c6b399653a61bdcb621342b93200a2",
+      "nominal_mask_pixels": 44,
+      "nominal_valid_pixel_counts": [
+        44,
+        44,
+        44,
+        44
+      ],
+      "source_sha256": "f5944dadf85000bfd62e96c813ede987f58e5bb86457694e96a76d2d22670419",
+      "status": "ok"
+    },
+    {
+      "alternatives": [
+        {
+          "alternative": "east_15m",
+          "changed_pixels": 2,
+          "feature_sha256": "028712f71cf484808ee90ea35f85c8eca0c3838f3da336fcfef4843c9acab510",
+          "field_mask_sha256": "fbc70ca673a1b1cccef6be8a5c2bf725b0bb3136e07f7e69f3b7ca437cdeb30f",
+          "field_valid_fractions": [
+            1.0,
+            0.7948717948717948,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 39,
+          "max_absolute_feature_delta": 0.002400569672957431,
+          "rms_feature_delta": 0.000811404475774405,
+          "status": "ok",
+          "support_jaccard": 0.9512195121951219,
+          "valid_pixel_counts": [
+            39,
+            31,
+            39,
+            39
+          ]
+        },
+        {
+          "alternative": "west_15m",
+          "changed_pixels": 20,
+          "feature_sha256": "27b3aa08f3f068ff2e2f933cb0ef088a51b43e08948ff14c3b747bc084607d18",
+          "field_mask_sha256": "e2fe4462a5269ba0f477895a3f7d82efb3754752839545010dca7eca6c51dbaf",
+          "field_valid_fractions": [
+            1.0,
+            0.7948717948717948,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 39,
+          "max_absolute_feature_delta": 0.01857205598389,
+          "rms_feature_delta": 0.006731658298649832,
+          "status": "ok",
+          "support_jaccard": 0.6,
+          "valid_pixel_counts": [
+            39,
+            31,
+            39,
+            39
+          ]
+        },
+        {
+          "alternative": "north_15m",
+          "changed_pixels": 6,
+          "feature_sha256": "638eb5476e0f8f3da81119c0ef4f270820e72712a1ebd36b06462e11eee2942d",
+          "field_mask_sha256": "c7c107857765374436a8da8d8177bac8aacdedacaea86970681d5d1435423acc",
+          "field_valid_fractions": [
+            1.0,
+            0.813953488372093,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 43,
+          "max_absolute_feature_delta": 0.007611320248225195,
+          "rms_feature_delta": 0.0030653964090879473,
+          "status": "ok",
+          "support_jaccard": 0.8666666666666667,
+          "valid_pixel_counts": [
+            43,
+            35,
+            43,
+            43
+          ]
+        },
+        {
+          "alternative": "south_15m",
+          "changed_pixels": 2,
+          "feature_sha256": "bdfbd3d6de962b9661a6135fbc14ddc94a4899023a56365d645c86ddf0363cdc",
+          "field_mask_sha256": "42f6698f03b767e3214ad3437f4af549da905c14368ea3acc715e442d1f3662b",
+          "field_valid_fractions": [
+            1.0,
+            0.813953488372093,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 43,
+          "max_absolute_feature_delta": 0.00298606955426306,
+          "rms_feature_delta": 0.0009603963809228434,
+          "status": "ok",
+          "support_jaccard": 0.9534883720930233,
+          "valid_pixel_counts": [
+            43,
+            35,
+            43,
+            43
+          ]
+        },
+        {
+          "alternative": "east_30m",
+          "changed_pixels": 22,
+          "feature_sha256": "cc95f986c89ef76eb544b105ff1515a73bf1a4eeb33ea3015527c0b743b2ef66",
+          "field_mask_sha256": "192011796341c45e9baf3f07486cdc8fef1872943ffef6d0966ad46fdbd5c5f3",
+          "field_valid_fractions": [
+            1.0,
+            0.8048780487804879,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 41,
+          "max_absolute_feature_delta": 0.08858033044854285,
+          "rms_feature_delta": 0.03486833324876064,
+          "status": "ok",
+          "support_jaccard": 0.5769230769230769,
+          "valid_pixel_counts": [
+            41,
+            33,
+            41,
+            41
+          ]
+        },
+        {
+          "alternative": "west_30m",
+          "changed_pixels": 22,
+          "feature_sha256": "1d0721efce0d5ca38d43f949820dc06eae95f59b532214948c9aea202c6ac629",
+          "field_mask_sha256": "d6110aa051e880e71148d3858e136b9aae7d90138b9330412f8b9a481f303d27",
+          "field_valid_fractions": [
+            1.0,
+            0.8048780487804879,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 41,
+          "max_absolute_feature_delta": 0.016489538906539647,
+          "rms_feature_delta": 0.006143752248462369,
+          "status": "ok",
+          "support_jaccard": 0.5769230769230769,
+          "valid_pixel_counts": [
+            41,
+            33,
+            41,
+            41
+          ]
+        },
+        {
+          "alternative": "north_30m",
+          "changed_pixels": 8,
+          "feature_sha256": "da2df9ef0bcc4cb4b192eb349ba80c8faac79ba3214f54a82bd4222786b19479",
+          "field_mask_sha256": "5ef54bf103566a088b22eff3d8a421ef324f35d48a2dd03b606092c022103c68",
+          "field_valid_fractions": [
+            1.0,
+            0.8048780487804879,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 41,
+          "max_absolute_feature_delta": 0.006159975509901494,
+          "rms_feature_delta": 0.00238318477677442,
+          "status": "ok",
+          "support_jaccard": 0.8222222222222222,
+          "valid_pixel_counts": [
+            41,
+            33,
+            41,
+            41
+          ]
+        },
+        {
+          "alternative": "south_30m",
+          "changed_pixels": 8,
+          "feature_sha256": "8ff4a2b200b96d82d32f3287f38c650aef109f12bb316f7c9ca8faa909cdc671",
+          "field_mask_sha256": "77e0c7fe91622319e13e4831bd659f19ddbc4439524e4aece7334e45bfa39da1",
+          "field_valid_fractions": [
+            1.0,
+            0.8048780487804879,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 41,
+          "max_absolute_feature_delta": 0.0032658533352177277,
+          "rms_feature_delta": 0.0015229806762806807,
+          "status": "ok",
+          "support_jaccard": 0.8222222222222222,
+          "valid_pixel_counts": [
+            41,
+            33,
+            41,
+            41
+          ]
+        },
+        {
+          "alternative": "nad83_utm13n_alternative",
+          "changed_pixels": 0,
+          "feature_sha256": "75f7506a6e0aeb9e46261b20aeb8a2e9d7f8d2648d701bc2ff5fcf0224ca7ab0",
+          "field_mask_sha256": "867d1bd633fb32d7edfa7c6be9584df58710bfed3972af5a0c070a29d331490f",
+          "field_valid_fractions": [
+            1.0,
+            0.8048780487804879,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 41,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            41,
+            33,
+            41,
+            41
+          ]
+        }
+      ],
+      "bundle_id": "akron-SB6-2022",
+      "dates_sha256": "0d87541208b77656d62fef9a6701b537aead58e928edb2e41d64273374b34da8",
+      "nominal_feature_sha256": "75f7506a6e0aeb9e46261b20aeb8a2e9d7f8d2648d701bc2ff5fcf0224ca7ab0",
+      "nominal_mask_pixels": 41,
+      "nominal_valid_pixel_counts": [
+        41,
+        33,
+        41,
+        41
+      ],
+      "source_sha256": "9f6ef1382e99d8bc889f21568b4ff9c73ed77418bddb356ba63bee2d80d94e15",
+      "status": "ok"
+    },
+    {
+      "alternatives": [],
+      "bundle_id": "akron-SB7-2019",
+      "error": "ValueError: no_catalog_scenes_in_frozen_window",
+      "status": "error"
+    },
+    {
+      "alternatives": [
+        {
+          "alternative": "east_15m",
+          "changed_pixels": 13,
+          "feature_sha256": "56a728710eb18114b2fd6235a381f4196e21347ad2fb31854e85149d55412a24",
+          "field_mask_sha256": "4fcd0bd29f32c4e078886cdd1539d3ec741f25f9c84a156d0229f98e7dfdbbc5",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 43,
+          "max_absolute_feature_delta": 0.017510843825774752,
+          "rms_feature_delta": 0.006614308369432327,
+          "status": "ok",
+          "support_jaccard": 0.7291666666666666,
+          "valid_pixel_counts": [
+            43,
+            43,
+            43,
+            43
+          ]
+        },
+        {
+          "alternative": "west_15m",
+          "changed_pixels": 7,
+          "feature_sha256": "0b1a6d83e5b7120d6a0689596e6bcccb883b7c2ed9ff8a56a40f65e7bac1eae3",
+          "field_mask_sha256": "c9f866430a6000d74ca46c16a19cd0443ca6e7f0bb5babb59ba9881d8980e6c2",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 43,
+          "max_absolute_feature_delta": 0.03312671215930682,
+          "rms_feature_delta": 0.013847625118544156,
+          "status": "ok",
+          "support_jaccard": 0.8444444444444444,
+          "valid_pixel_counts": [
+            43,
+            43,
+            43,
+            43
+          ]
+        },
+        {
+          "alternative": "north_15m",
+          "changed_pixels": 8,
+          "feature_sha256": "71b460272022eab50c87a7a46eddf1e65911a497dcb6ff72ebfb9f35e59f4fc7",
+          "field_mask_sha256": "7b7797f39c3956c685073cf08a2f7949b3daf280e8f35a53fe36cddab25fce41",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.006820085983740315,
+          "rms_feature_delta": 0.0023281927223602534,
+          "status": "ok",
+          "support_jaccard": 0.8181818181818182,
+          "valid_pixel_counts": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "alternative": "south_15m",
+          "changed_pixels": 0,
+          "feature_sha256": "f5994f265a815c1e171250848d702780e5d2abdede326d4833e4bb565d43fc7b",
+          "field_mask_sha256": "1aa9e828bf945c9d865d3428732d3ac3afaadcd450c815ff89e0c8eea57d4c0d",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "alternative": "east_30m",
+          "changed_pixels": 20,
+          "feature_sha256": "1d3498529ec0e4b6023e0f71e993c2e09020058368a98ab7d369966d6d661d40",
+          "field_mask_sha256": "223aad0895950185c603bbe3da46d8b44b5fbbbb82e9889328255b71b09ab62a",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.033600372363918024,
+          "rms_feature_delta": 0.013451981444226229,
+          "status": "ok",
+          "support_jaccard": 0.6,
+          "valid_pixel_counts": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "alternative": "west_30m",
+          "changed_pixels": 20,
+          "feature_sha256": "ddd8809fd43bb0ca1bee0175bdeb648124d5aae4cd37c452db46e061f1e7dbe5",
+          "field_mask_sha256": "44039827b5dfcb09f15ef4523aa20bf95e07dee1e084d150b5f3650beb77a5b5",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.07416797081880613,
+          "rms_feature_delta": 0.031535626027652634,
+          "status": "ok",
+          "support_jaccard": 0.6,
+          "valid_pixel_counts": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "alternative": "north_30m",
+          "changed_pixels": 8,
+          "feature_sha256": "71b460272022eab50c87a7a46eddf1e65911a497dcb6ff72ebfb9f35e59f4fc7",
+          "field_mask_sha256": "7b7797f39c3956c685073cf08a2f7949b3daf280e8f35a53fe36cddab25fce41",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.006820085983740315,
+          "rms_feature_delta": 0.0023281927223602534,
+          "status": "ok",
+          "support_jaccard": 0.8181818181818182,
+          "valid_pixel_counts": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "alternative": "south_30m",
+          "changed_pixels": 8,
+          "feature_sha256": "69350e86ef2ae33d2633abc199f16b8aed173e09c0945fe970b4b740c2a782d6",
+          "field_mask_sha256": "5afdcbedae8704d322d462fce216608a520036818cdb56c9d1f895ac1fa9d83f",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.019949381050934495,
+          "rms_feature_delta": 0.008328302020447913,
+          "status": "ok",
+          "support_jaccard": 0.8181818181818182,
+          "valid_pixel_counts": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "alternative": "nad83_utm13n_alternative",
+          "changed_pixels": 0,
+          "feature_sha256": "f5994f265a815c1e171250848d702780e5d2abdede326d4833e4bb565d43fc7b",
+          "field_mask_sha256": "1aa9e828bf945c9d865d3428732d3ac3afaadcd450c815ff89e0c8eea57d4c0d",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            40,
+            40,
+            40,
+            40
+          ]
+        }
+      ],
+      "bundle_id": "akron-SB7-2020",
+      "dates_sha256": "d78023929c2a873bb057da8f39d845a02548fdb827e4705a0a523af301211c14",
+      "nominal_feature_sha256": "f5994f265a815c1e171250848d702780e5d2abdede326d4833e4bb565d43fc7b",
+      "nominal_mask_pixels": 40,
+      "nominal_valid_pixel_counts": [
+        40,
+        40,
+        40,
+        40
+      ],
+      "source_sha256": "f5944dadf85000bfd62e96c813ede987f58e5bb86457694e96a76d2d22670419",
+      "status": "ok"
+    },
+    {
+      "alternatives": [
+        {
+          "alternative": "east_15m",
+          "changed_pixels": 7,
+          "feature_sha256": "f0b073658bcd0c3d5ab4b59007dd294d7ebd4670d2ee1acdf67502b6bc212f1f",
+          "field_mask_sha256": "e3a29ff78a0eca4d96c409c36ff56e57d434c56d5b3ae2532b4fd989fd4cd775",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 35,
+          "max_absolute_feature_delta": 0.009058785157829319,
+          "rms_feature_delta": 0.003385459329514717,
+          "status": "ok",
+          "support_jaccard": 0.8292682926829268,
+          "valid_pixel_counts": [
+            35,
+            35,
+            35,
+            35
+          ]
+        },
+        {
+          "alternative": "west_15m",
+          "changed_pixels": 7,
+          "feature_sha256": "398bcdaf7e67223e6bd59fe668334e6f610c854bb7a1b25c873ddf12bada3ee7",
+          "field_mask_sha256": "43103c7138b2fdd6f800670ff9fa6821e411d2c1112fa07842b52bf253781191",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 35,
+          "max_absolute_feature_delta": 0.010182416124296545,
+          "rms_feature_delta": 0.003685705697058226,
+          "status": "ok",
+          "support_jaccard": 0.8292682926829268,
+          "valid_pixel_counts": [
+            35,
+            35,
+            35,
+            35
+          ]
+        },
+        {
+          "alternative": "north_15m",
+          "changed_pixels": 0,
+          "feature_sha256": "7f956faac8dd2a79e38b3f66737965e5c95f1399f00fe9fcb344b273e6777683",
+          "field_mask_sha256": "10b8aa999baf046f4c30941be53a7ad0468c7e4159dd971c7a079613a0843144",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "alternative": "south_15m",
+          "changed_pixels": 12,
+          "feature_sha256": "7f591b31fafbd116fdefb5052d2e969ac01b002c87123c7f351c07b4bd5bfd29",
+          "field_mask_sha256": "1aec7940b08d961b5669cafea2296d7ff9d25eb40b0f40517747ead2f2a613da",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.04175859226682288,
+          "rms_feature_delta": 0.019374922877917807,
+          "status": "ok",
+          "support_jaccard": 0.7391304347826086,
+          "valid_pixel_counts": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "alternative": "east_30m",
+          "changed_pixels": 14,
+          "feature_sha256": "143ce7420cf5d73f18205153562d64f293684cce5299b0c05ed13c22023727ce",
+          "field_mask_sha256": "e153851c64ffc26ab5c89055a0fd686d4864a05529cce2619f10314d5b97bce8",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.039731855424493756,
+          "rms_feature_delta": 0.01541234298912746,
+          "status": "ok",
+          "support_jaccard": 0.7021276595744681,
+          "valid_pixel_counts": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "alternative": "west_30m",
+          "changed_pixels": 14,
+          "feature_sha256": "f1956df524785d2d2af3959e46e84d11c98542da747ff937d8a3095ebbab8123",
+          "field_mask_sha256": "32ee52664419572305368d2b5ca5273927a9dcc64a0c5e820ed4c922bcc384ff",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.01480198329894794,
+          "rms_feature_delta": 0.004733330764690747,
+          "status": "ok",
+          "support_jaccard": 0.7021276595744681,
+          "valid_pixel_counts": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "alternative": "north_30m",
+          "changed_pixels": 12,
+          "feature_sha256": "3dccbbe60c1061227aaa979c07b267e5d51b9c3bc127208431b4064593cfcea3",
+          "field_mask_sha256": "846377f41258a9a8bd70fb7563c4bee4160fe958d03da3e73a06f754cdaf6a7f",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.022400978705010566,
+          "rms_feature_delta": 0.009794039103513041,
+          "status": "ok",
+          "support_jaccard": 0.7391304347826086,
+          "valid_pixel_counts": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "alternative": "south_30m",
+          "changed_pixels": 12,
+          "feature_sha256": "7f591b31fafbd116fdefb5052d2e969ac01b002c87123c7f351c07b4bd5bfd29",
+          "field_mask_sha256": "1aec7940b08d961b5669cafea2296d7ff9d25eb40b0f40517747ead2f2a613da",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.04175859226682288,
+          "rms_feature_delta": 0.019374922877917807,
+          "status": "ok",
+          "support_jaccard": 0.7391304347826086,
+          "valid_pixel_counts": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "alternative": "nad83_utm13n_alternative",
+          "changed_pixels": 0,
+          "feature_sha256": "7f956faac8dd2a79e38b3f66737965e5c95f1399f00fe9fcb344b273e6777683",
+          "field_mask_sha256": "10b8aa999baf046f4c30941be53a7ad0468c7e4159dd971c7a079613a0843144",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            40,
+            40,
+            40,
+            40
+          ]
+        }
+      ],
+      "bundle_id": "akron-SCD2-2020",
+      "dates_sha256": "d78023929c2a873bb057da8f39d845a02548fdb827e4705a0a523af301211c14",
+      "nominal_feature_sha256": "7f956faac8dd2a79e38b3f66737965e5c95f1399f00fe9fcb344b273e6777683",
+      "nominal_mask_pixels": 40,
+      "nominal_valid_pixel_counts": [
+        40,
+        40,
+        40,
+        40
+      ],
+      "source_sha256": "f5944dadf85000bfd62e96c813ede987f58e5bb86457694e96a76d2d22670419",
+      "status": "ok"
+    },
+    {
+      "alternatives": [
+        {
+          "alternative": "east_15m",
+          "changed_pixels": 7,
+          "feature_sha256": "2acaf4a7242ee81580bc62f6768134d1042d7097345f8f97f27b005c00e83fbc",
+          "field_mask_sha256": "e3a29ff78a0eca4d96c409c36ff56e57d434c56d5b3ae2532b4fd989fd4cd775",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 35,
+          "max_absolute_feature_delta": 0.004753214333738598,
+          "rms_feature_delta": 0.001743090038427427,
+          "status": "ok",
+          "support_jaccard": 0.8292682926829268,
+          "valid_pixel_counts": [
+            35,
+            35,
+            35,
+            35
+          ]
+        },
+        {
+          "alternative": "west_15m",
+          "changed_pixels": 7,
+          "feature_sha256": "cc11afd174c0a1188ede8eb3ec580eed785cae77dedb17324e9a60deb8475675",
+          "field_mask_sha256": "43103c7138b2fdd6f800670ff9fa6821e411d2c1112fa07842b52bf253781191",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 35,
+          "max_absolute_feature_delta": 0.003189642514501323,
+          "rms_feature_delta": 0.0018136874077796235,
+          "status": "ok",
+          "support_jaccard": 0.8292682926829268,
+          "valid_pixel_counts": [
+            35,
+            35,
+            35,
+            35
+          ]
+        },
+        {
+          "alternative": "north_15m",
+          "changed_pixels": 0,
+          "feature_sha256": "22484353fb838b4bfcc115ae8ab023011d18d7819d3931ffe16431ef5ccfefb2",
+          "field_mask_sha256": "10b8aa999baf046f4c30941be53a7ad0468c7e4159dd971c7a079613a0843144",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "alternative": "south_15m",
+          "changed_pixels": 12,
+          "feature_sha256": "7ff15328cad384fec28963024d24d9f0a57ec00d72c18441df39601d4673f067",
+          "field_mask_sha256": "1aec7940b08d961b5669cafea2296d7ff9d25eb40b0f40517747ead2f2a613da",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.004835000634193398,
+          "rms_feature_delta": 0.0029031099192283467,
+          "status": "ok",
+          "support_jaccard": 0.7391304347826086,
+          "valid_pixel_counts": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "alternative": "east_30m",
+          "changed_pixels": 14,
+          "feature_sha256": "de89daa8aa7ce3dea5e0b965772eed2838b97223268a2a4251f72f6a3a4b1210",
+          "field_mask_sha256": "e153851c64ffc26ab5c89055a0fd686d4864a05529cce2619f10314d5b97bce8",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.011802461161305428,
+          "rms_feature_delta": 0.004975404978358584,
+          "status": "ok",
+          "support_jaccard": 0.7021276595744681,
+          "valid_pixel_counts": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "alternative": "west_30m",
+          "changed_pixels": 14,
+          "feature_sha256": "924fbab6231850675f7ce844ec8c890547fa119f42b0a3fed04f73a37517a64e",
+          "field_mask_sha256": "32ee52664419572305368d2b5ca5273927a9dcc64a0c5e820ed4c922bcc384ff",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.004951910773782819,
+          "rms_feature_delta": 0.001935386109452453,
+          "status": "ok",
+          "support_jaccard": 0.7021276595744681,
+          "valid_pixel_counts": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "alternative": "north_30m",
+          "changed_pixels": 12,
+          "feature_sha256": "3e7779a4b595ae84957fd5db5b86fff9d89563ecafd37019720ca9684b53bf61",
+          "field_mask_sha256": "846377f41258a9a8bd70fb7563c4bee4160fe958d03da3e73a06f754cdaf6a7f",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.0033775009214878082,
+          "rms_feature_delta": 0.0015774430254760423,
+          "status": "ok",
+          "support_jaccard": 0.7391304347826086,
+          "valid_pixel_counts": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "alternative": "south_30m",
+          "changed_pixels": 12,
+          "feature_sha256": "7ff15328cad384fec28963024d24d9f0a57ec00d72c18441df39601d4673f067",
+          "field_mask_sha256": "1aec7940b08d961b5669cafea2296d7ff9d25eb40b0f40517747ead2f2a613da",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.004835000634193398,
+          "rms_feature_delta": 0.0029031099192283467,
+          "status": "ok",
+          "support_jaccard": 0.7391304347826086,
+          "valid_pixel_counts": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "alternative": "nad83_utm13n_alternative",
+          "changed_pixels": 0,
+          "feature_sha256": "22484353fb838b4bfcc115ae8ab023011d18d7819d3931ffe16431ef5ccfefb2",
+          "field_mask_sha256": "10b8aa999baf046f4c30941be53a7ad0468c7e4159dd971c7a079613a0843144",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            40,
+            40,
+            40,
+            40
+          ]
+        }
+      ],
+      "bundle_id": "akron-SCD2-2021",
+      "dates_sha256": "5d4bc74b099e744cc38d5b429ec631fae212fb24f28aa449303a9108b3c25b29",
+      "nominal_feature_sha256": "22484353fb838b4bfcc115ae8ab023011d18d7819d3931ffe16431ef5ccfefb2",
+      "nominal_mask_pixels": 40,
+      "nominal_valid_pixel_counts": [
+        40,
+        40,
+        40,
+        40
+      ],
+      "source_sha256": "513bb75d818eab144c23de5906d81208c98caaf58b7f2f0e1591506e9bdd2edd",
+      "status": "ok"
+    },
+    {
+      "alternatives": [
+        {
+          "alternative": "east_15m",
+          "changed_pixels": 7,
+          "feature_sha256": "a7049aa4dc69c7f8f313429224fe36e735c271a9220e385d76109f25d7297703",
+          "field_mask_sha256": "e3a29ff78a0eca4d96c409c36ff56e57d434c56d5b3ae2532b4fd989fd4cd775",
+          "field_valid_fractions": [
+            1.0,
+            0.9142857142857143,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 35,
+          "max_absolute_feature_delta": 0.0012507548344662944,
+          "rms_feature_delta": 0.0006956995958632017,
+          "status": "ok",
+          "support_jaccard": 0.8292682926829268,
+          "valid_pixel_counts": [
+            35,
+            32,
+            35,
+            35
+          ]
+        },
+        {
+          "alternative": "west_15m",
+          "changed_pixels": 7,
+          "feature_sha256": "8217bce898580db48b984da5e971b3a31ae22708395c1b99ed6c72e027ceeeaa",
+          "field_mask_sha256": "43103c7138b2fdd6f800670ff9fa6821e411d2c1112fa07842b52bf253781191",
+          "field_valid_fractions": [
+            1.0,
+            0.9428571428571428,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 35,
+          "max_absolute_feature_delta": 0.001647867456434804,
+          "rms_feature_delta": 0.0006718996734049826,
+          "status": "ok",
+          "support_jaccard": 0.8292682926829268,
+          "valid_pixel_counts": [
+            35,
+            33,
+            35,
+            35
+          ]
+        },
+        {
+          "alternative": "north_15m",
+          "changed_pixels": 0,
+          "feature_sha256": "2b4693bc559b0b415e00a3b8bba9400a9fe56569fcb1d9fdb434bf27239789bf",
+          "field_mask_sha256": "10b8aa999baf046f4c30941be53a7ad0468c7e4159dd971c7a079613a0843144",
+          "field_valid_fractions": [
+            1.0,
+            0.925,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            40,
+            37,
+            40,
+            40
+          ]
+        },
+        {
+          "alternative": "south_15m",
+          "changed_pixels": 12,
+          "feature_sha256": "5809aa25ded13d771682fcb01d1f4a2ea10a36abbe41befd764e7cc475e8b306",
+          "field_mask_sha256": "1aec7940b08d961b5669cafea2296d7ff9d25eb40b0f40517747ead2f2a613da",
+          "field_valid_fractions": [
+            1.0,
+            0.925,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.017828598060277784,
+          "rms_feature_delta": 0.006443820828179136,
+          "status": "ok",
+          "support_jaccard": 0.7391304347826086,
+          "valid_pixel_counts": [
+            40,
+            37,
+            40,
+            40
+          ]
+        },
+        {
+          "alternative": "east_30m",
+          "changed_pixels": 14,
+          "feature_sha256": "68d6eafc95f1a1292aabd879c6fcaf09c96ca68d9de8a7bac0732dd551c59763",
+          "field_mask_sha256": "e153851c64ffc26ab5c89055a0fd686d4864a05529cce2619f10314d5b97bce8",
+          "field_valid_fractions": [
+            1.0,
+            0.925,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.0054801467311337,
+          "rms_feature_delta": 0.0021042989802263095,
+          "status": "ok",
+          "support_jaccard": 0.7021276595744681,
+          "valid_pixel_counts": [
+            40,
+            37,
+            40,
+            40
+          ]
+        },
+        {
+          "alternative": "west_30m",
+          "changed_pixels": 14,
+          "feature_sha256": "bb09b3d362d3cce659050ade83fe4b82447fef2d71bd54a4130423b1c84ee767",
+          "field_mask_sha256": "32ee52664419572305368d2b5ca5273927a9dcc64a0c5e820ed4c922bcc384ff",
+          "field_valid_fractions": [
+            1.0,
+            0.95,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.00263686476882663,
+          "rms_feature_delta": 0.0010242181994345185,
+          "status": "ok",
+          "support_jaccard": 0.7021276595744681,
+          "valid_pixel_counts": [
+            40,
+            38,
+            40,
+            40
+          ]
+        },
+        {
+          "alternative": "north_30m",
+          "changed_pixels": 12,
+          "feature_sha256": "f50df31b83130e17811a9c95a98acab1ae9e52b224c7b348ccbbb8ca2f014b56",
+          "field_mask_sha256": "846377f41258a9a8bd70fb7563c4bee4160fe958d03da3e73a06f754cdaf6a7f",
+          "field_valid_fractions": [
+            1.0,
+            0.925,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.006381792084328541,
+          "rms_feature_delta": 0.0026383486307843657,
+          "status": "ok",
+          "support_jaccard": 0.7391304347826086,
+          "valid_pixel_counts": [
+            40,
+            37,
+            40,
+            40
+          ]
+        },
+        {
+          "alternative": "south_30m",
+          "changed_pixels": 12,
+          "feature_sha256": "5809aa25ded13d771682fcb01d1f4a2ea10a36abbe41befd764e7cc475e8b306",
+          "field_mask_sha256": "1aec7940b08d961b5669cafea2296d7ff9d25eb40b0f40517747ead2f2a613da",
+          "field_valid_fractions": [
+            1.0,
+            0.925,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.017828598060277784,
+          "rms_feature_delta": 0.006443820828179136,
+          "status": "ok",
+          "support_jaccard": 0.7391304347826086,
+          "valid_pixel_counts": [
+            40,
+            37,
+            40,
+            40
+          ]
+        },
+        {
+          "alternative": "nad83_utm13n_alternative",
+          "changed_pixels": 0,
+          "feature_sha256": "2b4693bc559b0b415e00a3b8bba9400a9fe56569fcb1d9fdb434bf27239789bf",
+          "field_mask_sha256": "10b8aa999baf046f4c30941be53a7ad0468c7e4159dd971c7a079613a0843144",
+          "field_valid_fractions": [
+            1.0,
+            0.925,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 40,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            40,
+            37,
+            40,
+            40
+          ]
+        }
+      ],
+      "bundle_id": "akron-SCD2-2022",
+      "dates_sha256": "0d87541208b77656d62fef9a6701b537aead58e928edb2e41d64273374b34da8",
+      "nominal_feature_sha256": "2b4693bc559b0b415e00a3b8bba9400a9fe56569fcb1d9fdb434bf27239789bf",
+      "nominal_mask_pixels": 40,
+      "nominal_valid_pixel_counts": [
+        40,
+        37,
+        40,
+        40
+      ],
+      "source_sha256": "9f6ef1382e99d8bc889f21568b4ff9c73ed77418bddb356ba63bee2d80d94e15",
+      "status": "ok"
+    },
+    {
+      "alternatives": [],
+      "bundle_id": "akron-SCD3-2019",
+      "error": "ValueError: no_catalog_scenes_in_frozen_window",
+      "status": "error"
+    },
+    {
+      "alternatives": [
+        {
+          "alternative": "east_15m",
+          "changed_pixels": 9,
+          "feature_sha256": "61294f03cf7e332b793141307b664371072f765c9172181a82bff3423b0b0047",
+          "field_mask_sha256": "24cc726c45d00bbf8eaf6e6e28eb0f09578a66388ded3bc19fc5ae5319a72eff",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 35,
+          "max_absolute_feature_delta": 0.0038317174945127763,
+          "rms_feature_delta": 0.0015307928441648435,
+          "status": "ok",
+          "support_jaccard": 0.7804878048780488,
+          "valid_pixel_counts": [
+            35,
+            35,
+            35,
+            35
+          ]
+        },
+        {
+          "alternative": "west_15m",
+          "changed_pixels": 5,
+          "feature_sha256": "649e00fd5a82c0f46cf4ae4f7521b16639a3da78705efc39048d6d072ab35557",
+          "field_mask_sha256": "cae763c4bad7ba1008c7dd4d34cd7cde4f09941726fca3534d07f518416564d0",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 35,
+          "max_absolute_feature_delta": 0.008949100313526304,
+          "rms_feature_delta": 0.004184788869842837,
+          "status": "ok",
+          "support_jaccard": 0.8717948717948718,
+          "valid_pixel_counts": [
+            35,
+            35,
+            35,
+            35
+          ]
+        },
+        {
+          "alternative": "north_15m",
+          "changed_pixels": 11,
+          "feature_sha256": "a063f70970995654a3127a9f7dd692852b1cf1522f68a4b299b6f38965cfc603",
+          "field_mask_sha256": "aee39b2dc9bd29a13086c0462b2a51299101e8b723e70c6d77498ebac20b4bd9",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 37,
+          "max_absolute_feature_delta": 0.00904302915841726,
+          "rms_feature_delta": 0.0032900373877566415,
+          "status": "ok",
+          "support_jaccard": 0.7441860465116279,
+          "valid_pixel_counts": [
+            37,
+            37,
+            37,
+            37
+          ]
+        },
+        {
+          "alternative": "south_15m",
+          "changed_pixels": 1,
+          "feature_sha256": "9170d694d18cb0ef2d2a6a7da7c2f6f74c43f1ffc914a435c3efd1b5807468ae",
+          "field_mask_sha256": "9f9802ae45d5ffb2d30b1493329af19789916543054d6111dbfbf08451a0adf0",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 37,
+          "max_absolute_feature_delta": 0.0030088876874715953,
+          "rms_feature_delta": 0.0013329477651036626,
+          "status": "ok",
+          "support_jaccard": 0.9736842105263158,
+          "valid_pixel_counts": [
+            37,
+            37,
+            37,
+            37
+          ]
+        },
+        {
+          "alternative": "east_30m",
+          "changed_pixels": 14,
+          "feature_sha256": "2ee8ca88d445654b41edb65ddf2aba61dd85739d7832f30868b6c5194cef3531",
+          "field_mask_sha256": "0018aaea996f34a8c7a40ca97740fd6d829cba34c8fab746b086e62c918c7c92",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 38,
+          "max_absolute_feature_delta": 0.007370048967791809,
+          "rms_feature_delta": 0.004053966261710567,
+          "status": "ok",
+          "support_jaccard": 0.6888888888888889,
+          "valid_pixel_counts": [
+            38,
+            38,
+            38,
+            38
+          ]
+        },
+        {
+          "alternative": "west_30m",
+          "changed_pixels": 14,
+          "feature_sha256": "410be38a6273698ad2a421d589370b0ab35e0eef7c51a2776345bf6f011b85dd",
+          "field_mask_sha256": "2ac506bb70e8bb794dee39ef48e201cb9b75c5ab0fc957a156263cd32b134b1b",
+          "field_valid_fractions": [
+            1.0,
+            0.9473684210526315,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 38,
+          "max_absolute_feature_delta": 0.0173213946646244,
+          "rms_feature_delta": 0.006777425673903619,
+          "status": "ok",
+          "support_jaccard": 0.6888888888888889,
+          "valid_pixel_counts": [
+            38,
+            36,
+            38,
+            38
+          ]
+        },
+        {
+          "alternative": "north_30m",
+          "changed_pixels": 12,
+          "feature_sha256": "417a938e453cc83ae8e4df513457b3020cbec6187c5eb73feea77b8a876c3751",
+          "field_mask_sha256": "29ba52d0f5aa078bcc65e1bf17235a8debcf94cc9a677c1e06feb128a0c3c3f1",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 38,
+          "max_absolute_feature_delta": 0.008581577947265218,
+          "rms_feature_delta": 0.0029725699805718837,
+          "status": "ok",
+          "support_jaccard": 0.7272727272727273,
+          "valid_pixel_counts": [
+            38,
+            38,
+            38,
+            38
+          ]
+        },
+        {
+          "alternative": "south_30m",
+          "changed_pixels": 12,
+          "feature_sha256": "cba816432a8c311389cfbd7291b762e63e7b487a0f982ffdd3cef1f34fe8635d",
+          "field_mask_sha256": "797f53c4dd2d79399bb0a207b0372c6c4ae140ef03cdfceabb44f890c0426ebd",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 38,
+          "max_absolute_feature_delta": 0.019007292745772564,
+          "rms_feature_delta": 0.0077109198795610925,
+          "status": "ok",
+          "support_jaccard": 0.7272727272727273,
+          "valid_pixel_counts": [
+            38,
+            38,
+            38,
+            38
+          ]
+        },
+        {
+          "alternative": "nad83_utm13n_alternative",
+          "changed_pixels": 0,
+          "feature_sha256": "c1257ceed5fc0c1e1fefb0f6850261c83aa44ebc998b07d220f2f38e6a8bfed3",
+          "field_mask_sha256": "f276d52fa18f3fbcacea26be97caa05d6e8c124ed3f6cd2125210467735f626b",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 38,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            38,
+            38,
+            38,
+            38
+          ]
+        }
+      ],
+      "bundle_id": "akron-SCD3-2022",
+      "dates_sha256": "0d87541208b77656d62fef9a6701b537aead58e928edb2e41d64273374b34da8",
+      "nominal_feature_sha256": "c1257ceed5fc0c1e1fefb0f6850261c83aa44ebc998b07d220f2f38e6a8bfed3",
+      "nominal_mask_pixels": 38,
+      "nominal_valid_pixel_counts": [
+        38,
+        38,
+        38,
+        38
+      ],
+      "source_sha256": "9f6ef1382e99d8bc889f21568b4ff9c73ed77418bddb356ba63bee2d80d94e15",
+      "status": "ok"
+    },
+    {
+      "alternatives": [
+        {
+          "alternative": "east_15m",
+          "changed_pixels": 2,
+          "feature_sha256": "90520f3fce98d1c88a56e95589abd13e6bb608d336b6d7c0dda050bfcd7d3fe8",
+          "field_mask_sha256": "2d7e3ad60d143859bfc3381d3a3b5081515f232d6ad17dd6033bcdc16f05925c",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 29,
+          "max_absolute_feature_delta": 0.0026587607207869957,
+          "rms_feature_delta": 0.001159336082144411,
+          "status": "ok",
+          "support_jaccard": 0.9333333333333333,
+          "valid_pixel_counts": [
+            29,
+            29,
+            29,
+            29
+          ]
+        },
+        {
+          "alternative": "west_15m",
+          "changed_pixels": 4,
+          "feature_sha256": "71341a7adf6f03bfb3a19f1d4c7c902f9d656163807595eafbe3abd097e88207",
+          "field_mask_sha256": "04d08f14470e907aedb36750a2cea73e85b508d78d5c5ff1e540681cc6c7e580",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 29,
+          "max_absolute_feature_delta": 0.0036734128157639625,
+          "rms_feature_delta": 0.0013464313263273483,
+          "status": "ok",
+          "support_jaccard": 0.8709677419354839,
+          "valid_pixel_counts": [
+            29,
+            29,
+            29,
+            29
+          ]
+        },
+        {
+          "alternative": "north_15m",
+          "changed_pixels": 10,
+          "feature_sha256": "41f17752205ecd4ef3bdbd1b2fbf4105cb95699c63096d5ef0e451d0be7fda26",
+          "field_mask_sha256": "666567af832ed4ffff8fb2e758aa64c04a74be621807cc1b326723ce5c166dac",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 33,
+          "max_absolute_feature_delta": 0.011402434348771695,
+          "rms_feature_delta": 0.003961766314436907,
+          "status": "ok",
+          "support_jaccard": 0.7222222222222222,
+          "valid_pixel_counts": [
+            33,
+            33,
+            33,
+            33
+          ]
+        },
+        {
+          "alternative": "south_15m",
+          "changed_pixels": 10,
+          "feature_sha256": "94294030b5d2d3f42a6c510e9e926ceb19405a7fca47d181d7a2364104e673f1",
+          "field_mask_sha256": "ef146b8224976d307b59112b6776a13d9e9cc4cf4908373433c0a9ea445dadae",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 33,
+          "max_absolute_feature_delta": 0.05162393570718742,
+          "rms_feature_delta": 0.02301173441939957,
+          "status": "ok",
+          "support_jaccard": 0.7222222222222222,
+          "valid_pixel_counts": [
+            33,
+            33,
+            33,
+            33
+          ]
+        },
+        {
+          "alternative": "east_30m",
+          "changed_pixels": 6,
+          "feature_sha256": "7f733b9629cd12ddfb96836b9cdd0d07e42576a41b8c950d4134bf5a91caac67",
+          "field_mask_sha256": "c9993ebcfcb91d9cf2db57f52f6b5c3c17542b00b57a99597c443aedcde1c16e",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 29,
+          "max_absolute_feature_delta": 0.0075066008743237544,
+          "rms_feature_delta": 0.0028397916115655087,
+          "status": "ok",
+          "support_jaccard": 0.8125,
+          "valid_pixel_counts": [
+            29,
+            29,
+            29,
+            29
+          ]
+        },
+        {
+          "alternative": "west_30m",
+          "changed_pixels": 6,
+          "feature_sha256": "5b279649f7ebc6f1c95097f1c4fb16c73fb655691b621497b7485ad6c9c3ee94",
+          "field_mask_sha256": "4f9a96d19b2f94d2f264c203d841b8f1d71a7aac44d18167888b6253f1a79365",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 29,
+          "max_absolute_feature_delta": 0.004442500374643204,
+          "rms_feature_delta": 0.0018413903325916643,
+          "status": "ok",
+          "support_jaccard": 0.8125,
+          "valid_pixel_counts": [
+            29,
+            29,
+            29,
+            29
+          ]
+        },
+        {
+          "alternative": "north_30m",
+          "changed_pixels": 20,
+          "feature_sha256": "adb458319ddd9e8426d9c0ca1dda3e8637d8558c871a263baed4e07e8e031ec9",
+          "field_mask_sha256": "bdabebec98846db2e0bdd13dc8dc66d1f48a2dd75be8c782764315542122901f",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 29,
+          "max_absolute_feature_delta": 0.03113392169986137,
+          "rms_feature_delta": 0.009673423631962616,
+          "status": "ok",
+          "support_jaccard": 0.48717948717948717,
+          "valid_pixel_counts": [
+            29,
+            29,
+            29,
+            29
+          ]
+        },
+        {
+          "alternative": "south_30m",
+          "changed_pixels": 20,
+          "feature_sha256": "c037dcc31fcc44bd17b52b72a1b5d5a327b084a8e41526fc86a38be824d038ef",
+          "field_mask_sha256": "62309a01e1f8c825a0a21a0861baf922962c8d4d50f7e606776c36246c297169",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 29,
+          "max_absolute_feature_delta": 0.09991167476911605,
+          "rms_feature_delta": 0.04288299025384641,
+          "status": "ok",
+          "support_jaccard": 0.48717948717948717,
+          "valid_pixel_counts": [
+            29,
+            29,
+            29,
+            29
+          ]
+        },
+        {
+          "alternative": "nad83_utm13n_alternative",
+          "changed_pixels": 0,
+          "feature_sha256": "0d8e87bf691cd4158b9f5d56bf93010dbffdd6de0d2472232a2073deaa7177c7",
+          "field_mask_sha256": "5ba6938aaaa5d3afde43a4fe74ca0aff1d82514d97e5716b614baf53ea48f9cf",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 29,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            29,
+            29,
+            29,
+            29
+          ]
+        }
+      ],
+      "bundle_id": "akron-SCD4-2020",
+      "dates_sha256": "d78023929c2a873bb057da8f39d845a02548fdb827e4705a0a523af301211c14",
+      "nominal_feature_sha256": "0d8e87bf691cd4158b9f5d56bf93010dbffdd6de0d2472232a2073deaa7177c7",
+      "nominal_mask_pixels": 29,
+      "nominal_valid_pixel_counts": [
+        29,
+        29,
+        29,
+        29
+      ],
+      "source_sha256": "f5944dadf85000bfd62e96c813ede987f58e5bb86457694e96a76d2d22670419",
+      "status": "ok"
+    },
+    {
+      "alternatives": [
+        {
+          "alternative": "east_15m",
+          "changed_pixels": 2,
+          "feature_sha256": "59bd12c839c5c5ffa0da4c7a1a735972f7e132b7e033c2a973b99b318c7bbdd6",
+          "field_mask_sha256": "2d7e3ad60d143859bfc3381d3a3b5081515f232d6ad17dd6033bcdc16f05925c",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 29,
+          "max_absolute_feature_delta": 0.0017849599699004126,
+          "rms_feature_delta": 0.000561959438402406,
+          "status": "ok",
+          "support_jaccard": 0.9333333333333333,
+          "valid_pixel_counts": [
+            29,
+            29,
+            29,
+            29
+          ]
+        },
+        {
+          "alternative": "west_15m",
+          "changed_pixels": 4,
+          "feature_sha256": "682a43cfcb376af0ae1d8efb22efe57b0ac1733eb076c4fa6156ec2385ad2eaa",
+          "field_mask_sha256": "04d08f14470e907aedb36750a2cea73e85b508d78d5c5ff1e540681cc6c7e580",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 29,
+          "max_absolute_feature_delta": 0.01595135746524029,
+          "rms_feature_delta": 0.005957558925219868,
+          "status": "ok",
+          "support_jaccard": 0.8709677419354839,
+          "valid_pixel_counts": [
+            29,
+            29,
+            29,
+            29
+          ]
+        },
+        {
+          "alternative": "north_15m",
+          "changed_pixels": 10,
+          "feature_sha256": "336282df8ec6d9b2f4155b67ab85e5c7b286e1ab538737291c4da32f13301305",
+          "field_mask_sha256": "666567af832ed4ffff8fb2e758aa64c04a74be621807cc1b326723ce5c166dac",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 33,
+          "max_absolute_feature_delta": 0.007064209986191894,
+          "rms_feature_delta": 0.0026392497985719137,
+          "status": "ok",
+          "support_jaccard": 0.7222222222222222,
+          "valid_pixel_counts": [
+            33,
+            33,
+            33,
+            33
+          ]
+        },
+        {
+          "alternative": "south_15m",
+          "changed_pixels": 10,
+          "feature_sha256": "5a9037b7c44296e719bdb7383d51c16fd95b2f6ecdc32044a4b356243eb951b2",
+          "field_mask_sha256": "ef146b8224976d307b59112b6776a13d9e9cc4cf4908373433c0a9ea445dadae",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 33,
+          "max_absolute_feature_delta": 0.044835861335173255,
+          "rms_feature_delta": 0.022186581727424184,
+          "status": "ok",
+          "support_jaccard": 0.7222222222222222,
+          "valid_pixel_counts": [
+            33,
+            33,
+            33,
+            33
+          ]
+        },
+        {
+          "alternative": "east_30m",
+          "changed_pixels": 6,
+          "feature_sha256": "0c891c5dc13f8f16da8392ebbfbacc63f06d4c6c62aba74b9f5795bc844c3dcf",
+          "field_mask_sha256": "c9993ebcfcb91d9cf2db57f52f6b5c3c17542b00b57a99597c443aedcde1c16e",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 29,
+          "max_absolute_feature_delta": 0.005699753973124333,
+          "rms_feature_delta": 0.0022237834607684638,
+          "status": "ok",
+          "support_jaccard": 0.8125,
+          "valid_pixel_counts": [
+            29,
+            29,
+            29,
+            29
+          ]
+        },
+        {
+          "alternative": "west_30m",
+          "changed_pixels": 6,
+          "feature_sha256": "1c5a2119edace8639bff081925044a0ecbea6d279a7e7236b6a3f5ae9a0344d4",
+          "field_mask_sha256": "4f9a96d19b2f94d2f264c203d841b8f1d71a7aac44d18167888b6253f1a79365",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 29,
+          "max_absolute_feature_delta": 0.02449639747201532,
+          "rms_feature_delta": 0.009152700105579576,
+          "status": "ok",
+          "support_jaccard": 0.8125,
+          "valid_pixel_counts": [
+            29,
+            29,
+            29,
+            29
+          ]
+        },
+        {
+          "alternative": "north_30m",
+          "changed_pixels": 20,
+          "feature_sha256": "d14b7fb8852ced24c81f60ad03b86e1d33bcbc70ee02200aedd9f58b56267633",
+          "field_mask_sha256": "bdabebec98846db2e0bdd13dc8dc66d1f48a2dd75be8c782764315542122901f",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 29,
+          "max_absolute_feature_delta": 0.010099769101568908,
+          "rms_feature_delta": 0.0037674204837049277,
+          "status": "ok",
+          "support_jaccard": 0.48717948717948717,
+          "valid_pixel_counts": [
+            29,
+            29,
+            29,
+            29
+          ]
+        },
+        {
+          "alternative": "south_30m",
+          "changed_pixels": 20,
+          "feature_sha256": "ada9aeb2e9770fd8dcec1d4ba75e5578db534489dbaad09e4dabeb27935e1fa6",
+          "field_mask_sha256": "62309a01e1f8c825a0a21a0861baf922962c8d4d50f7e606776c36246c297169",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 29,
+          "max_absolute_feature_delta": 0.08222692127800246,
+          "rms_feature_delta": 0.03969763475724585,
+          "status": "ok",
+          "support_jaccard": 0.48717948717948717,
+          "valid_pixel_counts": [
+            29,
+            29,
+            29,
+            29
+          ]
+        },
+        {
+          "alternative": "nad83_utm13n_alternative",
+          "changed_pixels": 0,
+          "feature_sha256": "9794d9097848e4652f32fa5b1f3217249c2718082016b540f2e3c4d26d7d9c17",
+          "field_mask_sha256": "5ba6938aaaa5d3afde43a4fe74ca0aff1d82514d97e5716b614baf53ea48f9cf",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 29,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            29,
+            29,
+            29,
+            29
+          ]
+        }
+      ],
+      "bundle_id": "akron-SCD4-2022",
+      "dates_sha256": "0d87541208b77656d62fef9a6701b537aead58e928edb2e41d64273374b34da8",
+      "nominal_feature_sha256": "9794d9097848e4652f32fa5b1f3217249c2718082016b540f2e3c4d26d7d9c17",
+      "nominal_mask_pixels": 29,
+      "nominal_valid_pixel_counts": [
+        29,
+        29,
+        29,
+        29
+      ],
+      "source_sha256": "9f6ef1382e99d8bc889f21568b4ff9c73ed77418bddb356ba63bee2d80d94e15",
+      "status": "ok"
+    },
+    {
+      "alternatives": [],
+      "bundle_id": "akron-SCD5-2019",
+      "error": "ValueError: no_catalog_scenes_in_frozen_window",
+      "status": "error"
+    },
+    {
+      "alternatives": [
+        {
+          "alternative": "east_15m",
+          "changed_pixels": 4,
+          "feature_sha256": "7ae8f6a5968049bf11cf7a08ca86dd7959e0a802771ea85f0e3b2bfbf993bb59",
+          "field_mask_sha256": "9bc6d8f2e990497538fdbb0372f906fe8574a3c27d16df4655669c1fbd50a8b6",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 27,
+          "max_absolute_feature_delta": 0.0037260854317173187,
+          "rms_feature_delta": 0.0016069824884544955,
+          "status": "ok",
+          "support_jaccard": 0.8620689655172413,
+          "valid_pixel_counts": [
+            27,
+            27,
+            27,
+            27
+          ]
+        },
+        {
+          "alternative": "west_15m",
+          "changed_pixels": 2,
+          "feature_sha256": "e054dd575e4f99ceef9cc3b96cebe28b9bb153cf32d1aa8d283f53ff635783d1",
+          "field_mask_sha256": "1635ad3610a650d90c167c5b1c9cf38d57f67c641cb9eefb3c5c1378690aa79f",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 27,
+          "max_absolute_feature_delta": 0.0034097986452610585,
+          "rms_feature_delta": 0.001374282564095361,
+          "status": "ok",
+          "support_jaccard": 0.9285714285714286,
+          "valid_pixel_counts": [
+            27,
+            27,
+            27,
+            27
+          ]
+        },
+        {
+          "alternative": "north_15m",
+          "changed_pixels": 17,
+          "feature_sha256": "00c1134eb34236daebef2ceb01e129dd127f19ffa721b35bef2d016e2fcf77f0",
+          "field_mask_sha256": "632f169eab33900dbe659a88680312a175156412517d72190955939b43028b86",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 26,
+          "max_absolute_feature_delta": 0.03302961315217562,
+          "rms_feature_delta": 0.015643517263966605,
+          "status": "ok",
+          "support_jaccard": 0.5142857142857142,
+          "valid_pixel_counts": [
+            26,
+            26,
+            26,
+            26
+          ]
+        },
+        {
+          "alternative": "south_15m",
+          "changed_pixels": 1,
+          "feature_sha256": "ef3b11acd2d92c075c86560802585edb816c5e2d0bd995d91a3232fd497d064d",
+          "field_mask_sha256": "bf81308854203e60b403da9822aa6e848e0a6447466276bb8fc7babcdc334e3e",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 26,
+          "max_absolute_feature_delta": 0.0009326205039635327,
+          "rms_feature_delta": 0.00034968490068810115,
+          "status": "ok",
+          "support_jaccard": 0.9629629629629629,
+          "valid_pixel_counts": [
+            26,
+            26,
+            26,
+            26
+          ]
+        },
+        {
+          "alternative": "east_30m",
+          "changed_pixels": 6,
+          "feature_sha256": "b3cbd257fbb2b7a188a07c84a589737357d250c1e0d5463ae9634fbacd31c247",
+          "field_mask_sha256": "99124610464cee9bb1c2d99ef77fe0a3fbfdca529a15ee7ca33345b8ac8a09db",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 27,
+          "max_absolute_feature_delta": 0.002729628924970251,
+          "rms_feature_delta": 0.0010153220167556964,
+          "status": "ok",
+          "support_jaccard": 0.8,
+          "valid_pixel_counts": [
+            27,
+            27,
+            27,
+            27
+          ]
+        },
+        {
+          "alternative": "west_30m",
+          "changed_pixels": 6,
+          "feature_sha256": "37c0ee80468d408354dff35ffff32778809dffbb917856745a2250758bcd5007",
+          "field_mask_sha256": "79db0b203ea4aeec9d1fe55bb25b045c41b43f9b78be3a52f66bbce266bb34ab",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 27,
+          "max_absolute_feature_delta": 0.01171772264721005,
+          "rms_feature_delta": 0.00539601441417671,
+          "status": "ok",
+          "support_jaccard": 0.8,
+          "valid_pixel_counts": [
+            27,
+            27,
+            27,
+            27
+          ]
+        },
+        {
+          "alternative": "north_30m",
+          "changed_pixels": 18,
+          "feature_sha256": "17062fb4e8ce3dd5b221e62baf4f953226e3710aba75d4169b473ba11740735b",
+          "field_mask_sha256": "4e06f052d4a655c77dde86652428afd161637dff81a439c6669f6751cdf21944",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 27,
+          "max_absolute_feature_delta": 0.03566844162499991,
+          "rms_feature_delta": 0.016808793972233775,
+          "status": "ok",
+          "support_jaccard": 0.5,
+          "valid_pixel_counts": [
+            27,
+            27,
+            27,
+            27
+          ]
+        },
+        {
+          "alternative": "south_30m",
+          "changed_pixels": 18,
+          "feature_sha256": "482ebbd5110a2728824458b2fb0bad1f0a5d4bcc31e0b062772380ee7f02bbfb",
+          "field_mask_sha256": "7ad20fcd9c8b2f4e0a0dd04fe81d531b55907346587763e91ee5bb17a1534643",
+          "field_valid_fractions": [
+            0.7407407407407407,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 27,
+          "max_absolute_feature_delta": 0.026617033004657092,
+          "rms_feature_delta": 0.012218130309716491,
+          "status": "ok",
+          "support_jaccard": 0.5,
+          "valid_pixel_counts": [
+            20,
+            27,
+            27,
+            27
+          ]
+        },
+        {
+          "alternative": "nad83_utm13n_alternative",
+          "changed_pixels": 0,
+          "feature_sha256": "822f9f7855771a3b8c77d5e8871bfebe82a679022fe2481b27b637ca7fe3c9ab",
+          "field_mask_sha256": "902ce2e053ca7b5e01e28304583319a7f7806bbd320e0d63e69e0af59f6bd574",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 27,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            27,
+            27,
+            27,
+            27
+          ]
+        }
+      ],
+      "bundle_id": "akron-SCD5-2020",
+      "dates_sha256": "d78023929c2a873bb057da8f39d845a02548fdb827e4705a0a523af301211c14",
+      "nominal_feature_sha256": "822f9f7855771a3b8c77d5e8871bfebe82a679022fe2481b27b637ca7fe3c9ab",
+      "nominal_mask_pixels": 27,
+      "nominal_valid_pixel_counts": [
+        27,
+        27,
+        27,
+        27
+      ],
+      "source_sha256": "f5944dadf85000bfd62e96c813ede987f58e5bb86457694e96a76d2d22670419",
+      "status": "ok"
+    },
+    {
+      "alternatives": [
+        {
+          "alternative": "east_15m",
+          "changed_pixels": 4,
+          "feature_sha256": "ff719259a49e5c382a446e3820b6ba1122e41b3fba2b4ecfcafe506f99beaa6c",
+          "field_mask_sha256": "9bc6d8f2e990497538fdbb0372f906fe8574a3c27d16df4655669c1fbd50a8b6",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 27,
+          "max_absolute_feature_delta": 0.011715705844533797,
+          "rms_feature_delta": 0.005226179469203692,
+          "status": "ok",
+          "support_jaccard": 0.8620689655172413,
+          "valid_pixel_counts": [
+            27,
+            27,
+            27,
+            27
+          ]
+        },
+        {
+          "alternative": "west_15m",
+          "changed_pixels": 2,
+          "feature_sha256": "dce61b57f9653eafdcd5f278d42c615f28f1948bd027fcab33a8c93245907c3c",
+          "field_mask_sha256": "1635ad3610a650d90c167c5b1c9cf38d57f67c641cb9eefb3c5c1378690aa79f",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 27,
+          "max_absolute_feature_delta": 0.020210253515293264,
+          "rms_feature_delta": 0.010103550251445123,
+          "status": "ok",
+          "support_jaccard": 0.9285714285714286,
+          "valid_pixel_counts": [
+            27,
+            27,
+            27,
+            27
+          ]
+        },
+        {
+          "alternative": "north_15m",
+          "changed_pixels": 17,
+          "feature_sha256": "435f3403e8907b1693c588723ae82570658f203d02a7dbf84388ca15f4aab578",
+          "field_mask_sha256": "632f169eab33900dbe659a88680312a175156412517d72190955939b43028b86",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 26,
+          "max_absolute_feature_delta": 0.14958319899356376,
+          "rms_feature_delta": 0.07255678640897581,
+          "status": "ok",
+          "support_jaccard": 0.5142857142857142,
+          "valid_pixel_counts": [
+            26,
+            26,
+            26,
+            26
+          ]
+        },
+        {
+          "alternative": "south_15m",
+          "changed_pixels": 1,
+          "feature_sha256": "ab5773c1108e368b2252e8131dca77dd53d79a53630f65f1734b9efc7d08ce72",
+          "field_mask_sha256": "bf81308854203e60b403da9822aa6e848e0a6447466276bb8fc7babcdc334e3e",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 26,
+          "max_absolute_feature_delta": 0.006471443358914503,
+          "rms_feature_delta": 0.0030072143515177167,
+          "status": "ok",
+          "support_jaccard": 0.9629629629629629,
+          "valid_pixel_counts": [
+            26,
+            26,
+            26,
+            26
+          ]
+        },
+        {
+          "alternative": "east_30m",
+          "changed_pixels": 6,
+          "feature_sha256": "8d32aaaabeb6b40d540f8a9edd73a26cbeceb9e0ef2954e22fc6a6e9135a34da",
+          "field_mask_sha256": "99124610464cee9bb1c2d99ef77fe0a3fbfdca529a15ee7ca33345b8ac8a09db",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 27,
+          "max_absolute_feature_delta": 0.011439414315580154,
+          "rms_feature_delta": 0.0050459393074874966,
+          "status": "ok",
+          "support_jaccard": 0.8,
+          "valid_pixel_counts": [
+            27,
+            27,
+            27,
+            27
+          ]
+        },
+        {
+          "alternative": "west_30m",
+          "changed_pixels": 6,
+          "feature_sha256": "6ec78bca6cb0a5972dbb6e928307f49774c5fb1aaa260f5d9c5ab801b70c63f3",
+          "field_mask_sha256": "79db0b203ea4aeec9d1fe55bb25b045c41b43f9b78be3a52f66bbce266bb34ab",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 27,
+          "max_absolute_feature_delta": 0.022117351362744064,
+          "rms_feature_delta": 0.01014458918846436,
+          "status": "ok",
+          "support_jaccard": 0.8,
+          "valid_pixel_counts": [
+            27,
+            27,
+            27,
+            27
+          ]
+        },
+        {
+          "alternative": "north_30m",
+          "changed_pixels": 18,
+          "feature_sha256": "ab093464c3b3cf7b5afee5fae8758853ee699e81a9251f0e9620ee1c0d40587a",
+          "field_mask_sha256": "4e06f052d4a655c77dde86652428afd161637dff81a439c6669f6751cdf21944",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 27,
+          "max_absolute_feature_delta": 0.15062880948833257,
+          "rms_feature_delta": 0.07292706986987849,
+          "status": "ok",
+          "support_jaccard": 0.5,
+          "valid_pixel_counts": [
+            27,
+            27,
+            27,
+            27
+          ]
+        },
+        {
+          "alternative": "south_30m",
+          "changed_pixels": 18,
+          "feature_sha256": "efb48d3c72c52d5b1e613c9ca48b2c9b16f7916f3c3dc54b622173fc6c636ca9",
+          "field_mask_sha256": "7ad20fcd9c8b2f4e0a0dd04fe81d531b55907346587763e91ee5bb17a1534643",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 27,
+          "max_absolute_feature_delta": 0.25421096460002135,
+          "rms_feature_delta": 0.11571950622178405,
+          "status": "ok",
+          "support_jaccard": 0.5,
+          "valid_pixel_counts": [
+            27,
+            27,
+            27,
+            27
+          ]
+        },
+        {
+          "alternative": "nad83_utm13n_alternative",
+          "changed_pixels": 0,
+          "feature_sha256": "03313691ddec28103e186a8078e48bc4550bfdfa2da546d69d361c57a86db1fe",
+          "field_mask_sha256": "902ce2e053ca7b5e01e28304583319a7f7806bbd320e0d63e69e0af59f6bd574",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 27,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            27,
+            27,
+            27,
+            27
+          ]
+        }
+      ],
+      "bundle_id": "akron-SCD5-2021",
+      "dates_sha256": "5d4bc74b099e744cc38d5b429ec631fae212fb24f28aa449303a9108b3c25b29",
+      "nominal_feature_sha256": "03313691ddec28103e186a8078e48bc4550bfdfa2da546d69d361c57a86db1fe",
+      "nominal_mask_pixels": 27,
+      "nominal_valid_pixel_counts": [
+        27,
+        27,
+        27,
+        27
+      ],
+      "source_sha256": "513bb75d818eab144c23de5906d81208c98caaf58b7f2f0e1591506e9bdd2edd",
+      "status": "ok"
+    },
+    {
+      "alternatives": [],
+      "bundle_id": "akron-SCD6-2019",
+      "error": "ValueError: no_catalog_scenes_in_frozen_window",
+      "status": "error"
+    },
+    {
+      "alternatives": [
+        {
+          "alternative": "east_15m",
+          "changed_pixels": 4,
+          "feature_sha256": "328a7a07a2bf41f6af36dd27933aa8ca6a7b3f3428c05f18fd178d299d9116ad",
+          "field_mask_sha256": "044773b08c5737190b6c0440ba7bb43d54f49a3a2498aeb59fd3a1f71644ab5b",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.014677836269838762,
+          "rms_feature_delta": 0.003971228127442139,
+          "status": "ok",
+          "support_jaccard": 0.8709677419354839,
+          "valid_pixel_counts": [
+            30,
+            30,
+            30,
+            30
+          ]
+        },
+        {
+          "alternative": "west_15m",
+          "changed_pixels": 2,
+          "feature_sha256": "64770fde8810cb6d7cb9bb43fd9d16460cd2d71f7b3c274ed29485f7afa4f716",
+          "field_mask_sha256": "7104b3cce94b1ef6f90ec67a1e9b403cfc3d180ac74169d57dcc49b0f7aeec68",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.012155763169119205,
+          "rms_feature_delta": 0.005183533563876223,
+          "status": "ok",
+          "support_jaccard": 0.9333333333333333,
+          "valid_pixel_counts": [
+            30,
+            30,
+            30,
+            30
+          ]
+        },
+        {
+          "alternative": "north_15m",
+          "changed_pixels": 2,
+          "feature_sha256": "f9112a0afef825e086b70f453b005e081627073da856428c46b23d9f24cbf97c",
+          "field_mask_sha256": "2b7ffae27507fc07c9cfdddc9454dd58de10a19e1b4cda043766447f7e9e6f88",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 28,
+          "max_absolute_feature_delta": 0.011827643264770593,
+          "rms_feature_delta": 0.00499083894452491,
+          "status": "ok",
+          "support_jaccard": 0.9310344827586207,
+          "valid_pixel_counts": [
+            28,
+            28,
+            28,
+            28
+          ]
+        },
+        {
+          "alternative": "south_15m",
+          "changed_pixels": 18,
+          "feature_sha256": "84f7d56cd7df35785e4490f15ff15360b74936e7af5e3bb7878a1ef099082024",
+          "field_mask_sha256": "830d44a065af22f387321c38d04c74a00745ef319f9624a0c1d61722e22618fe",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 28,
+          "max_absolute_feature_delta": 0.0797898959645243,
+          "rms_feature_delta": 0.02935906561030092,
+          "status": "ok",
+          "support_jaccard": 0.5135135135135135,
+          "valid_pixel_counts": [
+            28,
+            28,
+            28,
+            28
+          ]
+        },
+        {
+          "alternative": "east_30m",
+          "changed_pixels": 6,
+          "feature_sha256": "914b58c3dd4facfef08863bb32ab8211407a067af3aedcca5765462b91b47958",
+          "field_mask_sha256": "6c7be028c1ed6cc96290ed704d322209b69131bec08e01b836bf15f219fda5c0",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 28,
+          "max_absolute_feature_delta": 0.008814212551553458,
+          "rms_feature_delta": 0.003432343756043433,
+          "status": "ok",
+          "support_jaccard": 0.8064516129032258,
+          "valid_pixel_counts": [
+            28,
+            28,
+            28,
+            28
+          ]
+        },
+        {
+          "alternative": "west_30m",
+          "changed_pixels": 6,
+          "feature_sha256": "fe1055eb04cd59724fc15b1d52b3bdbc1bf12f4a187a9c89a953601f66662175",
+          "field_mask_sha256": "2e3beacdd01e442d648ae7abad3ab470233d459d9a6fece02f5b5924ebb1f4f1",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 28,
+          "max_absolute_feature_delta": 0.03675614796592719,
+          "rms_feature_delta": 0.016842108984109174,
+          "status": "ok",
+          "support_jaccard": 0.8064516129032258,
+          "valid_pixel_counts": [
+            28,
+            28,
+            28,
+            28
+          ]
+        },
+        {
+          "alternative": "north_30m",
+          "changed_pixels": 20,
+          "feature_sha256": "3d856354cdc829a853c64583bf82dd9b9fe4ecf469131863303e8f2cd810c759",
+          "field_mask_sha256": "704d5a48365062edce6667f017d68c961f6ebc8524cb3443adcfa42d29fe0728",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 28,
+          "max_absolute_feature_delta": 0.21102815374010347,
+          "rms_feature_delta": 0.10901420871746557,
+          "status": "ok",
+          "support_jaccard": 0.47368421052631576,
+          "valid_pixel_counts": [
+            28,
+            28,
+            28,
+            28
+          ]
+        },
+        {
+          "alternative": "south_30m",
+          "changed_pixels": 20,
+          "feature_sha256": "dc0f84da0c64321a35ea6a643dd8784bcc4c6376a9afa7b1491816d89d77d16b",
+          "field_mask_sha256": "3ec78cd285e6982708f9399ef8d0997a09dd4e0c445aa71357ab32a4cc1ca178",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 28,
+          "max_absolute_feature_delta": 0.0812921631458553,
+          "rms_feature_delta": 0.029675761405116442,
+          "status": "ok",
+          "support_jaccard": 0.47368421052631576,
+          "valid_pixel_counts": [
+            28,
+            28,
+            28,
+            28
+          ]
+        },
+        {
+          "alternative": "nad83_utm13n_alternative",
+          "changed_pixels": 0,
+          "feature_sha256": "5578275261be05bcccaabd458257b8dcf651e597fdfb5d09983756726ededa05",
+          "field_mask_sha256": "a7751ae7e7b0f8df7a1221b091c1fda5c4afffa1ace02bd7d56fcaf8e59709fa",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 28,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            28,
+            28,
+            28,
+            28
+          ]
+        }
+      ],
+      "bundle_id": "akron-SCD6-2021",
+      "dates_sha256": "5d4bc74b099e744cc38d5b429ec631fae212fb24f28aa449303a9108b3c25b29",
+      "nominal_feature_sha256": "5578275261be05bcccaabd458257b8dcf651e597fdfb5d09983756726ededa05",
+      "nominal_mask_pixels": 28,
+      "nominal_valid_pixel_counts": [
+        28,
+        28,
+        28,
+        28
+      ],
+      "source_sha256": "513bb75d818eab144c23de5906d81208c98caaf58b7f2f0e1591506e9bdd2edd",
+      "status": "ok"
+    },
+    {
+      "alternatives": [
+        {
+          "alternative": "east_15m",
+          "changed_pixels": 4,
+          "feature_sha256": "b194fa4f3a35e6c15de51af90d1d60d487e4c2295d836ec4e50499324f42d040",
+          "field_mask_sha256": "044773b08c5737190b6c0440ba7bb43d54f49a3a2498aeb59fd3a1f71644ab5b",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.0026197548777349144,
+          "rms_feature_delta": 0.0011182555720786515,
+          "status": "ok",
+          "support_jaccard": 0.8709677419354839,
+          "valid_pixel_counts": [
+            30,
+            30,
+            30,
+            30
+          ]
+        },
+        {
+          "alternative": "west_15m",
+          "changed_pixels": 2,
+          "feature_sha256": "072333a2ff24d4ea5b48dc67e7af9d3d0a673c7afc94ed221c9ee5eb1d7f2e0c",
+          "field_mask_sha256": "7104b3cce94b1ef6f90ec67a1e9b403cfc3d180ac74169d57dcc49b0f7aeec68",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.003341667283148997,
+          "rms_feature_delta": 0.0012238373591157443,
+          "status": "ok",
+          "support_jaccard": 0.9333333333333333,
+          "valid_pixel_counts": [
+            30,
+            30,
+            30,
+            30
+          ]
+        },
+        {
+          "alternative": "north_15m",
+          "changed_pixels": 2,
+          "feature_sha256": "a020d857e715f65d4f5370e452ff7900c1afeef0abea0a382faeadd06f03c4f6",
+          "field_mask_sha256": "2b7ffae27507fc07c9cfdddc9454dd58de10a19e1b4cda043766447f7e9e6f88",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 28,
+          "max_absolute_feature_delta": 0.0016945408086694869,
+          "rms_feature_delta": 0.0006153955136357025,
+          "status": "ok",
+          "support_jaccard": 0.9310344827586207,
+          "valid_pixel_counts": [
+            28,
+            28,
+            28,
+            28
+          ]
+        },
+        {
+          "alternative": "south_15m",
+          "changed_pixels": 18,
+          "feature_sha256": "50166ac2182a41c971072fe52f0991c4c309125edb34f3fac4a3a86e50ff1832",
+          "field_mask_sha256": "830d44a065af22f387321c38d04c74a00745ef319f9624a0c1d61722e22618fe",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 28,
+          "max_absolute_feature_delta": 0.0047581010078960595,
+          "rms_feature_delta": 0.0019067027312999639,
+          "status": "ok",
+          "support_jaccard": 0.5135135135135135,
+          "valid_pixel_counts": [
+            28,
+            28,
+            28,
+            28
+          ]
+        },
+        {
+          "alternative": "east_30m",
+          "changed_pixels": 6,
+          "feature_sha256": "d6927a6c4a9c2a3877adf02c7d01eb08e9a5213823aa67bb8aef085b33a08d9b",
+          "field_mask_sha256": "6c7be028c1ed6cc96290ed704d322209b69131bec08e01b836bf15f219fda5c0",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 28,
+          "max_absolute_feature_delta": 0.002925659608559006,
+          "rms_feature_delta": 0.0011961486157319615,
+          "status": "ok",
+          "support_jaccard": 0.8064516129032258,
+          "valid_pixel_counts": [
+            28,
+            28,
+            28,
+            28
+          ]
+        },
+        {
+          "alternative": "west_30m",
+          "changed_pixels": 6,
+          "feature_sha256": "d6df160d28af68d0bb4e4c479194f0895ee269b872a8d0e724e7bf5d52f5e78b",
+          "field_mask_sha256": "2e3beacdd01e442d648ae7abad3ab470233d459d9a6fece02f5b5924ebb1f4f1",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 28,
+          "max_absolute_feature_delta": 0.006867857916014519,
+          "rms_feature_delta": 0.0026403436270779424,
+          "status": "ok",
+          "support_jaccard": 0.8064516129032258,
+          "valid_pixel_counts": [
+            28,
+            28,
+            28,
+            28
+          ]
+        },
+        {
+          "alternative": "north_30m",
+          "changed_pixels": 20,
+          "feature_sha256": "8c8aaaf750d3c4a8ca66d0925111ac4a7cf91a0a3d73f188bfcde680b5553e41",
+          "field_mask_sha256": "704d5a48365062edce6667f017d68c961f6ebc8524cb3443adcfa42d29fe0728",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 28,
+          "max_absolute_feature_delta": 0.028264283069542484,
+          "rms_feature_delta": 0.012922755240956483,
+          "status": "ok",
+          "support_jaccard": 0.47368421052631576,
+          "valid_pixel_counts": [
+            28,
+            28,
+            28,
+            28
+          ]
+        },
+        {
+          "alternative": "south_30m",
+          "changed_pixels": 20,
+          "feature_sha256": "1d489d10d2bea77c79fab7fb760acd4b3e52427577e2cdf730a5755454c377ae",
+          "field_mask_sha256": "3ec78cd285e6982708f9399ef8d0997a09dd4e0c445aa71357ab32a4cc1ca178",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 28,
+          "max_absolute_feature_delta": 0.004945390048241849,
+          "rms_feature_delta": 0.0019941880181092056,
+          "status": "ok",
+          "support_jaccard": 0.47368421052631576,
+          "valid_pixel_counts": [
+            28,
+            28,
+            28,
+            28
+          ]
+        },
+        {
+          "alternative": "nad83_utm13n_alternative",
+          "changed_pixels": 0,
+          "feature_sha256": "891a0e83136a9f977b69dfcec633dfe13fd9d3e1db438215c21084ccc309fdc6",
+          "field_mask_sha256": "a7751ae7e7b0f8df7a1221b091c1fda5c4afffa1ace02bd7d56fcaf8e59709fa",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 28,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            28,
+            28,
+            28,
+            28
+          ]
+        }
+      ],
+      "bundle_id": "akron-SCD6-2022",
+      "dates_sha256": "0d87541208b77656d62fef9a6701b537aead58e928edb2e41d64273374b34da8",
+      "nominal_feature_sha256": "891a0e83136a9f977b69dfcec633dfe13fd9d3e1db438215c21084ccc309fdc6",
+      "nominal_mask_pixels": 28,
+      "nominal_valid_pixel_counts": [
+        28,
+        28,
+        28,
+        28
+      ],
+      "source_sha256": "9f6ef1382e99d8bc889f21568b4ff9c73ed77418bddb356ba63bee2d80d94e15",
+      "status": "ok"
+    },
+    {
+      "alternatives": [],
+      "bundle_id": "akron-SCD7-2019",
+      "error": "ValueError: no_catalog_scenes_in_frozen_window",
+      "status": "error"
+    },
+    {
+      "alternatives": [
+        {
+          "alternative": "east_15m",
+          "changed_pixels": 4,
+          "feature_sha256": "2126ad1781a7fabcdd280e9c61a830c13f0e56d41d64ceaa49ff3f7e1c114607",
+          "field_mask_sha256": "30dbe9bbd2d232f8dabb8e4bb591dd972286179cc76ca068057cebb98d90c4d7",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.01381026157595655,
+          "rms_feature_delta": 0.005266955513339677,
+          "status": "ok",
+          "support_jaccard": 0.8709677419354839,
+          "valid_pixel_counts": [
+            30,
+            30,
+            30,
+            30
+          ]
+        },
+        {
+          "alternative": "west_15m",
+          "changed_pixels": 2,
+          "feature_sha256": "6da8a6030671f856b971d67142aadfb046499192b243926992222ed43aaca2f1",
+          "field_mask_sha256": "7dec1dc991d5a1a1c2fe110605579137f4cf660cfe133e5ad86637ae996ac579",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 30,
+          "max_absolute_feature_delta": 0.005826646725960893,
+          "rms_feature_delta": 0.002277479857175911,
+          "status": "ok",
+          "support_jaccard": 0.9333333333333333,
+          "valid_pixel_counts": [
+            30,
+            30,
+            30,
+            30
+          ]
+        },
+        {
+          "alternative": "north_15m",
+          "changed_pixels": 2,
+          "feature_sha256": "2b2e9750f500e805f58417212898bb47c518918b9a1421f1657e4c38c4de4139",
+          "field_mask_sha256": "f37055a03ef7057bbebebf2ddf03b628ffd9d66e5db7fc2d16a3df8da663c291",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 28,
+          "max_absolute_feature_delta": 0.003380278073199683,
+          "rms_feature_delta": 0.00131938863687827,
+          "status": "ok",
+          "support_jaccard": 0.9310344827586207,
+          "valid_pixel_counts": [
+            28,
+            28,
+            28,
+            28
+          ]
+        },
+        {
+          "alternative": "south_15m",
+          "changed_pixels": 18,
+          "feature_sha256": "ec63d2a308203fe574d3d5833ce075b9884443a4cc35e9fd70175bbf15dc8a69",
+          "field_mask_sha256": "754392b64e3cd9555d2feee96dd259637ffc2f2514a8d6cf026d662e5b503223",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 28,
+          "max_absolute_feature_delta": 0.1600534421964624,
+          "rms_feature_delta": 0.07248032323844146,
+          "status": "ok",
+          "support_jaccard": 0.5135135135135135,
+          "valid_pixel_counts": [
+            28,
+            28,
+            28,
+            28
+          ]
+        },
+        {
+          "alternative": "east_30m",
+          "changed_pixels": 6,
+          "feature_sha256": "922677786c2831efad65f54dc6267f086e946af330f89e5a177ed15ef207f60e",
+          "field_mask_sha256": "ca4210188df7ed60a90f85cef85ed6e15031650dc3d14d242b4cad631a6eff06",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 28,
+          "max_absolute_feature_delta": 0.014530253837622131,
+          "rms_feature_delta": 0.004848424589659759,
+          "status": "ok",
+          "support_jaccard": 0.8064516129032258,
+          "valid_pixel_counts": [
+            28,
+            28,
+            28,
+            28
+          ]
+        },
+        {
+          "alternative": "west_30m",
+          "changed_pixels": 6,
+          "feature_sha256": "9f24082fb85e50966a0913f6a8c7ff9fdb9e5535ef200fa8f361e5b003df86cf",
+          "field_mask_sha256": "6e3c691d4fa108683dc938382435cdc07235339bd0c13ea9dd95a473e52e2c6c",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 28,
+          "max_absolute_feature_delta": 0.018622119921323566,
+          "rms_feature_delta": 0.009921645476504941,
+          "status": "ok",
+          "support_jaccard": 0.8064516129032258,
+          "valid_pixel_counts": [
+            28,
+            28,
+            28,
+            28
+          ]
+        },
+        {
+          "alternative": "north_30m",
+          "changed_pixels": 20,
+          "feature_sha256": "dc0f84da0c64321a35ea6a643dd8784bcc4c6376a9afa7b1491816d89d77d16b",
+          "field_mask_sha256": "3ec78cd285e6982708f9399ef8d0997a09dd4e0c445aa71357ab32a4cc1ca178",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 28,
+          "max_absolute_feature_delta": 0.09982755277069821,
+          "rms_feature_delta": 0.0306441232705572,
+          "status": "ok",
+          "support_jaccard": 0.47368421052631576,
+          "valid_pixel_counts": [
+            28,
+            28,
+            28,
+            28
+          ]
+        },
+        {
+          "alternative": "south_30m",
+          "changed_pixels": 20,
+          "feature_sha256": "44278db2713c0b0f407d35c56a9f77e74c730b4f585bb3dd4dc57b8713d32b10",
+          "field_mask_sha256": "56584e44838807a6470a8b05ce4de5f887aa45597054dbdafe5cbe103feac7c1",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 28,
+          "max_absolute_feature_delta": 0.1613761658797378,
+          "rms_feature_delta": 0.07292918067187655,
+          "status": "ok",
+          "support_jaccard": 0.47368421052631576,
+          "valid_pixel_counts": [
+            28,
+            28,
+            28,
+            28
+          ]
+        },
+        {
+          "alternative": "nad83_utm13n_alternative",
+          "changed_pixels": 0,
+          "feature_sha256": "b64d4da5a410eace1dd845473ef7ebb3071ce32e8be16b05904b3ff508293388",
+          "field_mask_sha256": "b8b2963e566444934c66f5978464c9fe75529fa70546382bd63b8b567d58a1b2",
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "mask_pixels": 28,
+          "max_absolute_feature_delta": 0.0,
+          "rms_feature_delta": 0.0,
+          "status": "ok",
+          "support_jaccard": 1.0,
+          "valid_pixel_counts": [
+            28,
+            28,
+            28,
+            28
+          ]
+        }
+      ],
+      "bundle_id": "akron-SCD7-2021",
+      "dates_sha256": "5d4bc74b099e744cc38d5b429ec631fae212fb24f28aa449303a9108b3c25b29",
+      "nominal_feature_sha256": "b64d4da5a410eace1dd845473ef7ebb3071ce32e8be16b05904b3ff508293388",
+      "nominal_mask_pixels": 28,
+      "nominal_valid_pixel_counts": [
+        28,
+        28,
+        28,
+        28
+      ],
+      "source_sha256": "513bb75d818eab144c23de5906d81208c98caaf58b7f2f0e1591506e9bdd2edd",
+      "status": "ok"
+    }
+  ],
+  "schema_version": "imagery_spatial_sensitivity.v1",
+  "source_sha256": "a1599b9c523f4ed44efd9b7f0c3ba6baf9f263f7c274415c77b4eb81d623f38b"
+}

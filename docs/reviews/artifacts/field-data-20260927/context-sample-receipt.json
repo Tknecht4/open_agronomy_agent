@@ -1,0 +1,35 @@
+{
+  "id": "context_us_weak_supervision_sample",
+  "source_url": "https://zenodo.org/records/7751191",
+  "download_url": "https://zenodo.org/api/records/7751191/files/YIELD_COUNTY_US.csv/content",
+  "path": "data/raw/field_data_research/20260927/context/YIELD_COUNTY_US.csv",
+  "bytes": 984835,
+  "sha256": "20bed8fee96e614ea7f254d1140f401c77fd16d08eecfb0db1a0cb490852c5b3",
+  "publisher_checksum": "md5:31605b7623e2b6d9461d38ba45ec72a6",
+  "row_count": 45499,
+  "columns": [
+    "COUNTY_ID",
+    "FYEAR",
+    "YIELD"
+  ],
+  "first_three_rows": [
+    {
+      "COUNTY_ID": "AL_AUTAUGA",
+      "FYEAR": "2018",
+      "YIELD": "165.6"
+    },
+    {
+      "COUNTY_ID": "AL_DALLAS",
+      "FYEAR": "2018",
+      "YIELD": "137.3"
+    },
+    {
+      "COUNTY_ID": "AL_ELMORE",
+      "FYEAR": "2018",
+      "YIELD": "170.5"
+    }
+  ],
+  "evidence_role": "county_aggregate_not_field_measurement",
+  "license": "CC-BY-4.0 (record API metadata)",
+  "status": "downloaded_and_inspected"
+}

@@ -1,0 +1,2438 @@
+{
+  "dimension": 32,
+  "feature_set_id": "hls-valid-support-spectral-32-v1",
+  "protocol_id": "9714d8896c97092f81ac283d6ac2025d9460e3eed5733f85aa08776e4ce8455e",
+  "provenance": {
+    "adapter_sha256": "e6ec92a9ea0670652c87c606ff8a1791cde7bb3f67885ad6b8e95cb03bcf7b3d",
+    "common_contexts": [
+      {
+        "error": "ValueError: no_catalog_scenes_in_frozen_window",
+        "status": "error",
+        "year": 2019
+      },
+      {
+        "dates_sha256": "d78023929c2a873bb057da8f39d845a02548fdb827e4705a0a523af301211c14",
+        "source": {
+          "attention_mask_supported": false,
+          "bundle_id": null,
+          "center_padding": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "coordinate_order": "latitude_longitude_per_encoder_docstring",
+          "crs_comparisons": [
+            {
+              "axes": [
+                [
+                  "east",
+                  "metre",
+                  1.0
+                ],
+                [
+                  "north",
+                  "metre",
+                  1.0
+                ]
+              ],
+              "basis": "official HLS L30/S30 same MGRS UTM tile specification plus exact affine/shape/projection/ellipsoid/axes",
+              "candidate_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "candidate_datum": "Not specified (based on WGS 84 spheroid)",
+              "datum_status": "unresolved_header_datum_assumed_same_HLS_product_lattice_not_formal_CRS_equality",
+              "ellipsoid": {
+                "inverse_flattening": 298.257223563,
+                "semi_major_metre": 6378137.0
+              },
+              "formal_crs_equal": false,
+              "known_unknown_datum_wkt_sha256": "9c151a666a9e7a41ce65ed2b837108933f4fcca355eff22f9dcc4d880b3f19a2",
+              "mgrs_tile": "13TFE",
+              "proj_accuracy_metres": -1.0,
+              "proj_operation": "Inverse of UTM zone 13N + Ballpark geographic offset from WGS 84 to Unknown datum based upon the WGS 84 ellipsoid + UTM zone 13N",
+              "projection_parameters": [
+                [
+                  8801,
+                  0,
+                  "degree"
+                ],
+                [
+                  8802,
+                  -105,
+                  "degree"
+                ],
+                [
+                  8805,
+                  0.9996,
+                  "unity"
+                ],
+                [
+                  8806,
+                  500000,
+                  "metre"
+                ],
+                [
+                  8807,
+                  0,
+                  "metre"
+                ]
+              ],
+              "reference_crs": "EPSG:32613",
+              "reference_datum": "World Geodetic System 1984 ensemble",
+              "resampling_performed": false,
+              "source_specification": "https://lpdaac.usgs.gov/documents/1698/HLS_User_Guide_V2.pdf",
+              "status": "qualified_hls_same_numeric_utm13_lattice"
+            },
+            {
+              "candidate_crs": "EPSG:32613",
+              "candidate_datum": "World Geodetic System 1984 ensemble",
+              "formal_crs_equal": true,
+              "reference_crs": "EPSG:32613",
+              "reference_datum": "World Geodetic System 1984 ensemble",
+              "resampling_performed": false,
+              "status": "semantic_crs_equal"
+            },
+            {
+              "candidate_crs": "EPSG:32613",
+              "candidate_datum": "World Geodetic System 1984 ensemble",
+              "formal_crs_equal": true,
+              "reference_crs": "EPSG:32613",
+              "reference_datum": "World Geodetic System 1984 ensemble",
+              "resampling_performed": false,
+              "status": "semantic_crs_equal"
+            }
+          ],
+          "cutoff": "2020-06-15",
+          "dates": [
+            "2020-05-03",
+            "2020-05-17",
+            "2020-06-07",
+            "2020-06-12"
+          ],
+          "field_valid_fractions": [
+            0.9655172413793104,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "input_kind": "real_hls_contextual_features_not_accuracy",
+          "label_protocol_id": "9714d8896c97092f81ac283d6ac2025d9460e3eed5733f85aa08776e4ce8455e",
+          "latitude": 40.15898405223337,
+          "limitations": [
+            "patches_mix_field_and_context",
+            "sentinel_is_not_observed_reflectance",
+            "self_attention_mixes_all_tokens"
+          ],
+          "location_source": "native_raster_center_transformed_to_epsg4326",
+          "longitude": -103.12972580780014,
+          "manifest_sha256": "06401b032588312b5762b9119c8b9913a305b1fb8d73f90db9965410cbf3fe20",
+          "model_shape": [
+            1,
+            6,
+            4,
+            224,
+            224
+          ],
+          "native_grid": [
+            [
+              30.0,
+              0.0,
+              655920.0,
+              0.0,
+              -30.0,
+              4450440.0
+            ],
+            "EPSG:32613"
+          ],
+          "native_pixel_metres": 30,
+          "native_shape": [
+            4,
+            6,
+            224,
+            224
+          ],
+          "normalization": "reflectance_statistics_scaled_from_config_DN_by_0.0001",
+          "normalized_nodata_sentinel": 0.0001,
+          "patch_support_metres": 480,
+          "pooling": "last_normalized_non_cls_tokens_weighted_by_valid_field_pixel_count",
+          "preprocessing": "prithvi-hls-reflectance-sentinel-centerpad-fieldpool-v1",
+          "process_versions": [
+            "hls-chip-v2-native-asset-grid-fmask-v1",
+            "hls-chip-v2-native-asset-grid-fmask-v1",
+            "hls-chip-v2-native-asset-grid-fmask-v1",
+            "hls-chip-v2-native-asset-grid-fmask-v1"
+          ],
+          "source_files": [
+            {
+              "acquired_at": "2020-05-03T17:52:55.586640Z",
+              "declared_sha256_verified": true,
+              "name": "870f4eb4d586491dbbb04bc8ef2ab9918fbb117123066291d9dc91bd76557846.npz",
+              "original_crs": "EPSG:32613",
+              "scene_id": "hls2-s30:HLS.S30.T13TFE.2020124T173911.v2.0",
+              "sha256": "870f4eb4d586491dbbb04bc8ef2ab9918fbb117123066291d9dc91bd76557846"
+            },
+            {
+              "acquired_at": "2020-05-17T17:30:32.716391Z",
+              "declared_sha256_verified": true,
+              "name": "5cfa18c2cb557c9c6bcdd59b9e47739ebdfa6c96082a365cfe64db0e6eac823b.npz",
+              "original_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "scene_id": "hls2-l30:HLS.L30.T13TFE.2020138T173032.v2.0",
+              "sha256": "5cfa18c2cb557c9c6bcdd59b9e47739ebdfa6c96082a365cfe64db0e6eac823b"
+            },
+            {
+              "acquired_at": "2020-06-07T17:52:54.264260Z",
+              "declared_sha256_verified": true,
+              "name": "d3fc3fca4c0cba7baaf9485ccfe12d23d19b062e619fb2cd8eaf16e399b118df.npz",
+              "original_crs": "EPSG:32613",
+              "scene_id": "hls2-s30:HLS.S30.T13TFE.2020159T173909.v2.0",
+              "sha256": "d3fc3fca4c0cba7baaf9485ccfe12d23d19b062e619fb2cd8eaf16e399b118df"
+            },
+            {
+              "acquired_at": "2020-06-12T17:52:58.329960Z",
+              "declared_sha256_verified": true,
+              "name": "da2e01feca2db93bc2587d01f4b1984e69b0c219ac1bf0001eda65ee07624b1d.npz",
+              "original_crs": "EPSG:32613",
+              "scene_id": "hls2-s30:HLS.S30.T13TFE.2020164T173911.v2.0",
+              "sha256": "da2e01feca2db93bc2587d01f4b1984e69b0c219ac1bf0001eda65ee07624b1d"
+            }
+          ],
+          "source_native_grid": true,
+          "spatial_overlap": "nearby_contexts_may_overlap_not_spatially_independent",
+          "spatial_regime": "actual_context_no_padding",
+          "valid_model_fraction": 0.9794921875
+        },
+        "status": "ok",
+        "year": 2020
+      },
+      {
+        "dates_sha256": "5d4bc74b099e744cc38d5b429ec631fae212fb24f28aa449303a9108b3c25b29",
+        "source": {
+          "attention_mask_supported": false,
+          "bundle_id": null,
+          "center_padding": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "coordinate_order": "latitude_longitude_per_encoder_docstring",
+          "crs_comparisons": [
+            {
+              "candidate_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "candidate_datum": "Not specified (based on WGS 84 spheroid)",
+              "formal_crs_equal": true,
+              "reference_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "reference_datum": "Not specified (based on WGS 84 spheroid)",
+              "resampling_performed": false,
+              "status": "semantic_crs_equal"
+            },
+            {
+              "candidate_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "candidate_datum": "Not specified (based on WGS 84 spheroid)",
+              "formal_crs_equal": true,
+              "reference_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "reference_datum": "Not specified (based on WGS 84 spheroid)",
+              "resampling_performed": false,
+              "status": "semantic_crs_equal"
+            },
+            {
+              "candidate_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "candidate_datum": "Not specified (based on WGS 84 spheroid)",
+              "formal_crs_equal": true,
+              "reference_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "reference_datum": "Not specified (based on WGS 84 spheroid)",
+              "resampling_performed": false,
+              "status": "semantic_crs_equal"
+            }
+          ],
+          "cutoff": "2021-06-15",
+          "dates": [
+            "2021-06-02",
+            "2021-06-05",
+            "2021-06-07",
+            "2021-06-12"
+          ],
+          "field_valid_fractions": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "input_kind": "real_hls_contextual_features_not_accuracy",
+          "label_protocol_id": "9714d8896c97092f81ac283d6ac2025d9460e3eed5733f85aa08776e4ce8455e",
+          "latitude": 40.15898405223337,
+          "limitations": [
+            "patches_mix_field_and_context",
+            "sentinel_is_not_observed_reflectance",
+            "self_attention_mixes_all_tokens"
+          ],
+          "location_source": "native_raster_center_transformed_to_epsg4326",
+          "longitude": -103.12972580780014,
+          "manifest_sha256": "a9cf5e910f32ecaded53d5c438daa5f2f31ae7cfca138d1a63498e8139c2d6ad",
+          "model_shape": [
+            1,
+            6,
+            4,
+            224,
+            224
+          ],
+          "native_grid": [
+            [
+              30.0,
+              0.0,
+              655920.0,
+              0.0,
+              -30.0,
+              4450440.0
+            ],
+            "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]"
+          ],
+          "native_pixel_metres": 30,
+          "native_shape": [
+            4,
+            6,
+            224,
+            224
+          ],
+          "normalization": "reflectance_statistics_scaled_from_config_DN_by_0.0001",
+          "normalized_nodata_sentinel": 0.0001,
+          "patch_support_metres": 480,
+          "pooling": "last_normalized_non_cls_tokens_weighted_by_valid_field_pixel_count",
+          "preprocessing": "prithvi-hls-reflectance-sentinel-centerpad-fieldpool-v1",
+          "process_versions": [
+            "hls-chip-v2-native-asset-grid-fmask-v1",
+            "hls-chip-v2-native-asset-grid-fmask-v1",
+            "hls-chip-v2-native-asset-grid-fmask-v1",
+            "hls-chip-v2-native-asset-grid-fmask-v1"
+          ],
+          "source_files": [
+            {
+              "acquired_at": "2021-06-02T17:52:53.018970Z",
+              "declared_sha256_verified": true,
+              "name": "304fb5cf7dd0c1d146d84621e968d2e395f98445533bb7d90c696c1b83c5dc5c.npz",
+              "original_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "scene_id": "hls2-s30:HLS.S30.T13TFE.2021153T173909.v2.0",
+              "sha256": "304fb5cf7dd0c1d146d84621e968d2e395f98445533bb7d90c696c1b83c5dc5c"
+            },
+            {
+              "acquired_at": "2021-06-05T17:30:53.808563Z",
+              "declared_sha256_verified": true,
+              "name": "25378d4bdde09f2e444a406d72d372ac72f995313684a86cce1f32db041d8471.npz",
+              "original_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "scene_id": "hls2-l30:HLS.L30.T13TFE.2021156T173053.v2.0",
+              "sha256": "25378d4bdde09f2e444a406d72d372ac72f995313684a86cce1f32db041d8471"
+            },
+            {
+              "acquired_at": "2021-06-07T17:52:52.868950Z",
+              "declared_sha256_verified": true,
+              "name": "62e8e8812a509582b8a6939b20f08610cfca52f662f4db3d23a158f583b11132.npz",
+              "original_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "scene_id": "hls2-s30:HLS.S30.T13TFE.2021158T173901.v2.0",
+              "sha256": "62e8e8812a509582b8a6939b20f08610cfca52f662f4db3d23a158f583b11132"
+            },
+            {
+              "acquired_at": "2021-06-12T17:52:53.187280Z",
+              "declared_sha256_verified": true,
+              "name": "9a8e54cf59e784a21609e2d73e6bdaa96d237b8db3c94f8eed65f23c8bf74df0.npz",
+              "original_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "scene_id": "hls2-s30:HLS.S30.T13TFE.2021163T173909.v2.0",
+              "sha256": "9a8e54cf59e784a21609e2d73e6bdaa96d237b8db3c94f8eed65f23c8bf74df0"
+            }
+          ],
+          "source_native_grid": true,
+          "spatial_overlap": "nearby_contexts_may_overlap_not_spatially_independent",
+          "spatial_regime": "actual_context_no_padding",
+          "valid_model_fraction": 0.9726114078443877
+        },
+        "status": "ok",
+        "year": 2021
+      },
+      {
+        "dates_sha256": "0d87541208b77656d62fef9a6701b537aead58e928edb2e41d64273374b34da8",
+        "source": {
+          "attention_mask_supported": false,
+          "bundle_id": null,
+          "center_padding": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "coordinate_order": "latitude_longitude_per_encoder_docstring",
+          "crs_comparisons": [
+            {
+              "axes": [
+                [
+                  "east",
+                  "metre",
+                  1.0
+                ],
+                [
+                  "north",
+                  "metre",
+                  1.0
+                ]
+              ],
+              "basis": "official HLS L30/S30 same MGRS UTM tile specification plus exact affine/shape/projection/ellipsoid/axes",
+              "candidate_crs": "EPSG:32613",
+              "candidate_datum": "World Geodetic System 1984 ensemble",
+              "datum_status": "unresolved_header_datum_assumed_same_HLS_product_lattice_not_formal_CRS_equality",
+              "ellipsoid": {
+                "inverse_flattening": 298.257223563,
+                "semi_major_metre": 6378137.0
+              },
+              "formal_crs_equal": false,
+              "known_unknown_datum_wkt_sha256": "9c151a666a9e7a41ce65ed2b837108933f4fcca355eff22f9dcc4d880b3f19a2",
+              "mgrs_tile": "13TFE",
+              "proj_accuracy_metres": -1.0,
+              "proj_operation": "Inverse of UTM zone 13N + Ballpark geographic offset from Unknown datum based upon the WGS 84 ellipsoid to WGS 84 + UTM zone 13N",
+              "projection_parameters": [
+                [
+                  8801,
+                  0,
+                  "degree"
+                ],
+                [
+                  8802,
+                  -105,
+                  "degree"
+                ],
+                [
+                  8805,
+                  0.9996,
+                  "unity"
+                ],
+                [
+                  8806,
+                  500000,
+                  "metre"
+                ],
+                [
+                  8807,
+                  0,
+                  "metre"
+                ]
+              ],
+              "reference_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "reference_datum": "Not specified (based on WGS 84 spheroid)",
+              "resampling_performed": false,
+              "source_specification": "https://lpdaac.usgs.gov/documents/1698/HLS_User_Guide_V2.pdf",
+              "status": "qualified_hls_same_numeric_utm13_lattice"
+            },
+            {
+              "axes": [
+                [
+                  "east",
+                  "metre",
+                  1.0
+                ],
+                [
+                  "north",
+                  "metre",
+                  1.0
+                ]
+              ],
+              "basis": "official HLS L30/S30 same MGRS UTM tile specification plus exact affine/shape/projection/ellipsoid/axes",
+              "candidate_crs": "EPSG:32613",
+              "candidate_datum": "World Geodetic System 1984 ensemble",
+              "datum_status": "unresolved_header_datum_assumed_same_HLS_product_lattice_not_formal_CRS_equality",
+              "ellipsoid": {
+                "inverse_flattening": 298.257223563,
+                "semi_major_metre": 6378137.0
+              },
+              "formal_crs_equal": false,
+              "known_unknown_datum_wkt_sha256": "9c151a666a9e7a41ce65ed2b837108933f4fcca355eff22f9dcc4d880b3f19a2",
+              "mgrs_tile": "13TFE",
+              "proj_accuracy_metres": -1.0,
+              "proj_operation": "Inverse of UTM zone 13N + Ballpark geographic offset from Unknown datum based upon the WGS 84 ellipsoid to WGS 84 + UTM zone 13N",
+              "projection_parameters": [
+                [
+                  8801,
+                  0,
+                  "degree"
+                ],
+                [
+                  8802,
+                  -105,
+                  "degree"
+                ],
+                [
+                  8805,
+                  0.9996,
+                  "unity"
+                ],
+                [
+                  8806,
+                  500000,
+                  "metre"
+                ],
+                [
+                  8807,
+                  0,
+                  "metre"
+                ]
+              ],
+              "reference_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "reference_datum": "Not specified (based on WGS 84 spheroid)",
+              "resampling_performed": false,
+              "source_specification": "https://lpdaac.usgs.gov/documents/1698/HLS_User_Guide_V2.pdf",
+              "status": "qualified_hls_same_numeric_utm13_lattice"
+            },
+            {
+              "axes": [
+                [
+                  "east",
+                  "metre",
+                  1.0
+                ],
+                [
+                  "north",
+                  "metre",
+                  1.0
+                ]
+              ],
+              "basis": "official HLS L30/S30 same MGRS UTM tile specification plus exact affine/shape/projection/ellipsoid/axes",
+              "candidate_crs": "EPSG:32613",
+              "candidate_datum": "World Geodetic System 1984 ensemble",
+              "datum_status": "unresolved_header_datum_assumed_same_HLS_product_lattice_not_formal_CRS_equality",
+              "ellipsoid": {
+                "inverse_flattening": 298.257223563,
+                "semi_major_metre": 6378137.0
+              },
+              "formal_crs_equal": false,
+              "known_unknown_datum_wkt_sha256": "9c151a666a9e7a41ce65ed2b837108933f4fcca355eff22f9dcc4d880b3f19a2",
+              "mgrs_tile": "13TFE",
+              "proj_accuracy_metres": -1.0,
+              "proj_operation": "Inverse of UTM zone 13N + Ballpark geographic offset from Unknown datum based upon the WGS 84 ellipsoid to WGS 84 + UTM zone 13N",
+              "projection_parameters": [
+                [
+                  8801,
+                  0,
+                  "degree"
+                ],
+                [
+                  8802,
+                  -105,
+                  "degree"
+                ],
+                [
+                  8805,
+                  0.9996,
+                  "unity"
+                ],
+                [
+                  8806,
+                  500000,
+                  "metre"
+                ],
+                [
+                  8807,
+                  0,
+                  "metre"
+                ]
+              ],
+              "reference_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "reference_datum": "Not specified (based on WGS 84 spheroid)",
+              "resampling_performed": false,
+              "source_specification": "https://lpdaac.usgs.gov/documents/1698/HLS_User_Guide_V2.pdf",
+              "status": "qualified_hls_same_numeric_utm13_lattice"
+            }
+          ],
+          "cutoff": "2022-06-15",
+          "dates": [
+            "2022-05-13",
+            "2022-06-07",
+            "2022-06-08",
+            "2022-06-12"
+          ],
+          "field_valid_fractions": [
+            0.9980842911877394,
+            0.8544061302681992,
+            1.0,
+            0.9980842911877394
+          ],
+          "input_kind": "real_hls_contextual_features_not_accuracy",
+          "label_protocol_id": "9714d8896c97092f81ac283d6ac2025d9460e3eed5733f85aa08776e4ce8455e",
+          "latitude": 40.15898405223337,
+          "limitations": [
+            "patches_mix_field_and_context",
+            "sentinel_is_not_observed_reflectance",
+            "self_attention_mixes_all_tokens"
+          ],
+          "location_source": "native_raster_center_transformed_to_epsg4326",
+          "longitude": -103.12972580780014,
+          "manifest_sha256": "56b11ba464c6ecc08ee9d85fc57e74dc42d4c80b46d1a03fc2db266fe7bedd9c",
+          "model_shape": [
+            1,
+            6,
+            4,
+            224,
+            224
+          ],
+          "native_grid": [
+            [
+              30.0,
+              0.0,
+              655920.0,
+              0.0,
+              -30.0,
+              4450440.0
+            ],
+            "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]"
+          ],
+          "native_pixel_metres": 30,
+          "native_shape": [
+            4,
+            6,
+            224,
+            224
+          ],
+          "normalization": "reflectance_statistics_scaled_from_config_DN_by_0.0001",
+          "normalized_nodata_sentinel": 0.0001,
+          "patch_support_metres": 480,
+          "pooling": "last_normalized_non_cls_tokens_weighted_by_valid_field_pixel_count",
+          "preprocessing": "prithvi-hls-reflectance-sentinel-centerpad-fieldpool-v1",
+          "process_versions": [
+            "hls-chip-v2-native-asset-grid-fmask-v1",
+            "hls-chip-v2-native-asset-grid-fmask-v1",
+            "hls-chip-v2-native-asset-grid-fmask-v1",
+            "hls-chip-v2-native-asset-grid-fmask-v1"
+          ],
+          "source_files": [
+            {
+              "acquired_at": "2022-05-13T17:52:55.921040Z",
+              "declared_sha256_verified": true,
+              "name": "084be77be1f3b8b7beb11ff430e2322c2feeab9f3d9b11d15a947b5437f8cae7.npz",
+              "original_crs": "PROJCS[\"UTM Zone 13, Northern Hemisphere\",GEOGCS[\"Unknown datum based upon the WGS 84 ellipsoid\",DATUM[\"Not specified (based on WGS 84 spheroid)\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",-105],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH]]",
+              "scene_id": "hls2-s30:HLS.S30.T13TFE.2022133T173911.v2.0",
+              "sha256": "084be77be1f3b8b7beb11ff430e2322c2feeab9f3d9b11d15a947b5437f8cae7"
+            },
+            {
+              "acquired_at": "2022-06-07T17:52:53.577960Z",
+              "declared_sha256_verified": true,
+              "name": "91f3bd576645dace7a20838c1d3c7d3465fb47afaca98ac414dbd1dc476a897b.npz",
+              "original_crs": "EPSG:32613",
+              "scene_id": "hls2-s30:HLS.S30.T13TFE.2022158T173909.v2.0",
+              "sha256": "91f3bd576645dace7a20838c1d3c7d3465fb47afaca98ac414dbd1dc476a897b"
+            },
+            {
+              "acquired_at": "2022-06-08T17:31:13.174753Z",
+              "declared_sha256_verified": true,
+              "name": "f5fb5747d39c06b7ead7983475fe9288871f89431308e7cfc18d605026aac7b9.npz",
+              "original_crs": "EPSG:32613",
+              "scene_id": "hls2-l30:HLS.L30.T13TFE.2022159T173113.v2.0",
+              "sha256": "f5fb5747d39c06b7ead7983475fe9288871f89431308e7cfc18d605026aac7b9"
+            },
+            {
+              "acquired_at": "2022-06-12T17:53:02.119140Z",
+              "declared_sha256_verified": true,
+              "name": "a6cbdf3e60c5691be4db18f8ff6e6d8ea0da7a392872df220c593d713e9a0173.npz",
+              "original_crs": "EPSG:32613",
+              "scene_id": "hls2-s30:HLS.S30.T13TFE.2022163T173911.v2.0",
+              "sha256": "a6cbdf3e60c5691be4db18f8ff6e6d8ea0da7a392872df220c593d713e9a0173"
+            }
+          ],
+          "source_native_grid": true,
+          "spatial_overlap": "nearby_contexts_may_overlap_not_spatially_independent",
+          "spatial_regime": "actual_context_no_padding",
+          "valid_model_fraction": 0.8578105070153061
+        },
+        "status": "ok",
+        "year": 2022
+      }
+    ],
+    "context_loader_sha256": "00def233bd0ce0eef7e927018a7ea8f865d9d0780ce4d755c76db16b5adb93a5",
+    "contexts_manifest_sha256": "e8917e40783353ebbb5100d21eb88d1429f7d423e292205e94869975fea89c32",
+    "model": "none; fixed spectral arithmetic",
+    "protocol_sha256": "2975f8a158b056715eecf226aedb7fa2dd3eae1e9ae063794447a4265584799e",
+    "recipe": {
+      "date_weighting": "separate chronological slots; no temporal interpolation or duplicate dates",
+      "dates": "four distinct chronological dates from the same frozen context manifests as Prithvi",
+      "dimension": 32,
+      "indices": {
+        "ndmi": "(NarrowNIR-SWIR1)/(NarrowNIR+SWIR1)",
+        "ndvi": "(NarrowNIR-Red)/(NarrowNIR+Red)"
+      },
+      "per_date_order": [
+        "mean_blue",
+        "mean_green",
+        "mean_red",
+        "mean_narrow_nir",
+        "mean_swir1",
+        "mean_swir2",
+        "mean_pixel_ndvi",
+        "mean_pixel_ndmi"
+      ],
+      "ratio_denominator": "absolute denominator > 1e-6; no eligible pixels means failure, no imputation",
+      "selection": "fixed before EO feature/score inspection; prior source-only soil/control scores already observed",
+      "support": "positive-area intersection with frozen sample-hull plus15m research AOI; binary valid pixel weighting, matching Prithvi support",
+      "version": "hls-valid-support-spectral-32-v1"
+    },
+    "recipe_sha256": "9e51786b72071f3ee3537fdbb85edfa5582a5b56ba48e85854c09976de6ed945",
+    "role": "derived_local_spectral_features_not_field_measurements",
+    "source_crs_assumption": "EPSG:32613"
+  },
+  "rows": [
+    {
+      "bundle_id": "akron-SB1-2019",
+      "error": "ValueError: no_catalog_scenes_in_frozen_window",
+      "status": "error"
+    },
+    {
+      "acquisition_dates": [
+        "2021-06-02",
+        "2021-06-05",
+        "2021-06-07",
+        "2021-06-12"
+      ],
+      "acquisition_max_date": "2021-06-12",
+      "bundle_id": "akron-SB1-2021",
+      "dates_sha256": "5d4bc74b099e744cc38d5b429ec631fae212fb24f28aa449303a9108b3c25b29",
+      "features": [
+        0.025715624302392825,
+        0.057343748514540493,
+        0.0406906240968965,
+        0.3889656141400337,
+        0.1725468705408275,
+        0.09444999869447201,
+        0.803576883005079,
+        0.3845527435309169,
+        0.035618749097920954,
+        0.0656062486814335,
+        0.05267499852925539,
+        0.4236312359571457,
+        0.17565312096849084,
+        0.10678749706130475,
+        0.7811067775416577,
+        0.42617751843972407,
+        0.03619687381433323,
+        0.07137812313158065,
+        0.059421873767860234,
+        0.4107062378898263,
+        0.19986874517053366,
+        0.12260624719783664,
+        0.7477581811936619,
+        0.3563816525732406,
+        0.03358749905601144,
+        0.07013437314890325,
+        0.05819374858401716,
+        0.383734367787838,
+        0.2026906218379736,
+        0.11837187153287232,
+        0.7345337017388662,
+        0.31289778709110005
+      ],
+      "pooling": {
+        "field_mask_sha256": "510554dd0aa9c6d026c494e01be7ae7c5e30ee548435c81c3e540711f10322e8",
+        "field_valid_fractions": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "field_valid_pixel_counts": [
+          32,
+          32,
+          32,
+          32
+        ],
+        "ratio_valid_pixel_counts": [
+          {
+            "ndmi": 32,
+            "ndvi": 32
+          },
+          {
+            "ndmi": 32,
+            "ndvi": 32
+          },
+          {
+            "ndmi": 32,
+            "ndvi": 32
+          },
+          {
+            "ndmi": 32,
+            "ndvi": 32
+          }
+        ],
+        "valid_mask_sha256": "53ad71238c767cdcc9f448a4f99f6e31f5b9a60910b78eef7ecea718ab683a9b"
+      },
+      "shared_context_year": 2021,
+      "source_sha256": "513bb75d818eab144c23de5906d81208c98caaf58b7f2f0e1591506e9bdd2edd",
+      "status": "ok"
+    },
+    {
+      "acquisition_dates": [
+        "2022-05-13",
+        "2022-06-07",
+        "2022-06-08",
+        "2022-06-12"
+      ],
+      "acquisition_max_date": "2022-06-12",
+      "bundle_id": "akron-SB1-2022",
+      "dates_sha256": "0d87541208b77656d62fef9a6701b537aead58e928edb2e41d64273374b34da8",
+      "features": [
+        0.12731249700300395,
+        0.1806656215339899,
+        0.2419468672014773,
+        0.33481249306350946,
+        0.44303748942911625,
+        0.3201968688517809,
+        0.16173341254045612,
+        -0.13904898300987062,
+        0.11546551461877494,
+        0.1691724092795931,
+        0.22945516684959674,
+        0.31988275051116943,
+        0.41363791967260427,
+        0.28772413319554824,
+        0.16572059222994937,
+        -0.1288484428554932,
+        0.12189999641850591,
+        0.1731499945744872,
+        0.2237562444061041,
+        0.3141999924555421,
+        0.4187281113117933,
+        0.3051906153559685,
+        0.17014199683604628,
+        -0.14225039766886327,
+        0.12246874696575105,
+        0.17446874594315886,
+        0.23077186988666654,
+        0.333590617403388,
+        0.4496031142771244,
+        0.3220281172543764,
+        0.1844046025204592,
+        -0.14791873922619006
+      ],
+      "pooling": {
+        "field_mask_sha256": "510554dd0aa9c6d026c494e01be7ae7c5e30ee548435c81c3e540711f10322e8",
+        "field_valid_fractions": [
+          1.0,
+          0.90625,
+          1.0,
+          1.0
+        ],
+        "field_valid_pixel_counts": [
+          32,
+          29,
+          32,
+          32
+        ],
+        "ratio_valid_pixel_counts": [
+          {
+            "ndmi": 32,
+            "ndvi": 32
+          },
+          {
+            "ndmi": 29,
+            "ndvi": 29
+          },
+          {
+            "ndmi": 32,
+            "ndvi": 32
+          },
+          {
+            "ndmi": 32,
+            "ndvi": 32
+          }
+        ],
+        "valid_mask_sha256": "c84d6b8401ef389af6e020d4dd4f502bfe91d74ea5e0851d08d2b09bf5bc31ab"
+      },
+      "shared_context_year": 2022,
+      "source_sha256": "9f6ef1382e99d8bc889f21568b4ff9c73ed77418bddb356ba63bee2d80d94e15",
+      "status": "ok"
+    },
+    {
+      "bundle_id": "akron-SB3-2019",
+      "error": "ValueError: no_catalog_scenes_in_frozen_window",
+      "status": "error"
+    },
+    {
+      "acquisition_dates": [
+        "2021-06-02",
+        "2021-06-05",
+        "2021-06-07",
+        "2021-06-12"
+      ],
+      "acquisition_max_date": "2021-06-12",
+      "bundle_id": "akron-SB3-2021",
+      "dates_sha256": "5d4bc74b099e744cc38d5b429ec631fae212fb24f28aa449303a9108b3c25b29",
+      "features": [
+        0.035605713512216294,
+        0.06845428390162332,
+        0.06860856988600322,
+        0.3093742770808084,
+        0.212479995403971,
+        0.13259142552103315,
+        0.6405290102154646,
+        0.19059559014458324,
+        0.059785712563565796,
+        0.0964171408542565,
+        0.10331714046852929,
+        0.3710428467818669,
+        0.27296570794922964,
+        0.20023428159100667,
+        0.5745570478895747,
+        0.16714238202002488,
+        0.060311427180256165,
+        0.10043714131627764,
+        0.10766285476940018,
+        0.3799114210265023,
+        0.29451999110834937,
+        0.20995713770389557,
+        0.5680927085572958,
+        0.13922862515289045,
+        0.05693999826908112,
+        0.09709142574242183,
+        0.10254856901509421,
+        0.3713828478540693,
+        0.2862885645457676,
+        0.19746856561728887,
+        0.57325219170228,
+        0.13584833746198205
+      ],
+      "pooling": {
+        "field_mask_sha256": "090e40d6dc2cc5078f94b2f9760979d5b1af9dc28372ec80383fb2169799b364",
+        "field_valid_fractions": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "field_valid_pixel_counts": [
+          35,
+          35,
+          35,
+          35
+        ],
+        "ratio_valid_pixel_counts": [
+          {
+            "ndmi": 35,
+            "ndvi": 35
+          },
+          {
+            "ndmi": 35,
+            "ndvi": 35
+          },
+          {
+            "ndmi": 35,
+            "ndvi": 35
+          },
+          {
+            "ndmi": 35,
+            "ndvi": 35
+          }
+        ],
+        "valid_mask_sha256": "53ad71238c767cdcc9f448a4f99f6e31f5b9a60910b78eef7ecea718ab683a9b"
+      },
+      "shared_context_year": 2021,
+      "source_sha256": "513bb75d818eab144c23de5906d81208c98caaf58b7f2f0e1591506e9bdd2edd",
+      "status": "ok"
+    },
+    {
+      "acquisition_dates": [
+        "2020-05-03",
+        "2020-05-17",
+        "2020-06-07",
+        "2020-06-12"
+      ],
+      "acquisition_max_date": "2020-06-12",
+      "bundle_id": "akron-SB4-2020",
+      "dates_sha256": "d78023929c2a873bb057da8f39d845a02548fdb827e4705a0a523af301211c14",
+      "features": [
+        0.06317666458586851,
+        0.10225333074728647,
+        0.1220299964149793,
+        0.31148665845394136,
+        0.3428866575161616,
+        0.24397665858268738,
+        0.44023342344760596,
+        -0.04724020644482375,
+        0.04653333177169164,
+        0.0784233311812083,
+        0.08057999834418297,
+        0.3224599927663803,
+        0.2466099922855695,
+        0.1548599955936273,
+        0.6014076875014491,
+        0.133691071508832,
+        0.05031999908387661,
+        0.0861499975124995,
+        0.09266333021223545,
+        0.369476655125618,
+        0.28427332590023674,
+        0.18442999571561813,
+        0.6022752966716332,
+        0.13265783781068913,
+        0.05286666514972846,
+        0.08949666495124499,
+        0.10410332990189393,
+        0.3498333255449931,
+        0.29552332709232965,
+        0.2004766618212064,
+        0.5471329239211827,
+        0.08795069028972045
+      ],
+      "pooling": {
+        "field_mask_sha256": "7be70f6e590f663aa12840057ee420751f257c9d8f771459e829be452703eaf3",
+        "field_valid_fractions": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "field_valid_pixel_counts": [
+          30,
+          30,
+          30,
+          30
+        ],
+        "ratio_valid_pixel_counts": [
+          {
+            "ndmi": 30,
+            "ndvi": 30
+          },
+          {
+            "ndmi": 30,
+            "ndvi": 30
+          },
+          {
+            "ndmi": 30,
+            "ndvi": 30
+          },
+          {
+            "ndmi": 30,
+            "ndvi": 30
+          }
+        ],
+        "valid_mask_sha256": "8e8124678c4fb0c63f728ac00f146da8eb8b4f18a899a9456056e6798bf13210"
+      },
+      "shared_context_year": 2020,
+      "source_sha256": "f5944dadf85000bfd62e96c813ede987f58e5bb86457694e96a76d2d22670419",
+      "status": "ok"
+    },
+    {
+      "acquisition_dates": [
+        "2021-06-02",
+        "2021-06-05",
+        "2021-06-07",
+        "2021-06-12"
+      ],
+      "acquisition_max_date": "2021-06-12",
+      "bundle_id": "akron-SB4-2021",
+      "dates_sha256": "5d4bc74b099e744cc38d5b429ec631fae212fb24f28aa449303a9108b3c25b29",
+      "features": [
+        0.09156333133578301,
+        0.13110999738176662,
+        0.1721533308426539,
+        0.26305999259154,
+        0.403646656870842,
+        0.32084332406520844,
+        0.20940642438362028,
+        -0.21126529354509677,
+        0.11629333098729451,
+        0.16164999504884084,
+        0.2069066603978475,
+        0.30581665635108946,
+        0.47530665397644045,
+        0.4065433253844579,
+        0.1935401624226382,
+        -0.21812555237030845,
+        0.1125933309396108,
+        0.15856999655564627,
+        0.20453999638557435,
+        0.31506999135017394,
+        0.47977665563424426,
+        0.39259998897711434,
+        0.21313322533647447,
+        -0.20791193013237988,
+        0.11252999653418859,
+        0.15840666194756825,
+        0.2038233275214831,
+        0.31096665958563485,
+        0.471156652768453,
+        0.3878866543372472,
+        0.20860231167891094,
+        -0.20565467282283736
+      ],
+      "pooling": {
+        "field_mask_sha256": "7be70f6e590f663aa12840057ee420751f257c9d8f771459e829be452703eaf3",
+        "field_valid_fractions": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "field_valid_pixel_counts": [
+          30,
+          30,
+          30,
+          30
+        ],
+        "ratio_valid_pixel_counts": [
+          {
+            "ndmi": 30,
+            "ndvi": 30
+          },
+          {
+            "ndmi": 30,
+            "ndvi": 30
+          },
+          {
+            "ndmi": 30,
+            "ndvi": 30
+          },
+          {
+            "ndmi": 30,
+            "ndvi": 30
+          }
+        ],
+        "valid_mask_sha256": "53ad71238c767cdcc9f448a4f99f6e31f5b9a60910b78eef7ecea718ab683a9b"
+      },
+      "shared_context_year": 2021,
+      "source_sha256": "513bb75d818eab144c23de5906d81208c98caaf58b7f2f0e1591506e9bdd2edd",
+      "status": "ok"
+    },
+    {
+      "acquisition_dates": [
+        "2022-05-13",
+        "2022-06-07",
+        "2022-06-08",
+        "2022-06-12"
+      ],
+      "acquisition_max_date": "2022-06-12",
+      "bundle_id": "akron-SB4-2022",
+      "dates_sha256": "0d87541208b77656d62fef9a6701b537aead58e928edb2e41d64273374b34da8",
+      "features": [
+        0.13380999565124513,
+        0.1891633297006289,
+        0.25582999289035796,
+        0.3646966596444448,
+        0.5009233196576436,
+        0.4386699885129929,
+        0.1756715938045973,
+        -0.1574498039518737,
+        0.08564137693109183,
+        0.13074137630133792,
+        0.18489999503924928,
+        0.27848275159967356,
+        0.38132412680264177,
+        0.29786550998687744,
+        0.20255909305293562,
+        -0.15586071241261693,
+        0.12848332896828651,
+        0.17956666151682535,
+        0.23669999291499455,
+        0.3413399914900462,
+        0.4757766534884771,
+        0.4181699881951014,
+        0.18115649163466882,
+        -0.16450996276138555,
+        0.11364333083232243,
+        0.1612933283050855,
+        0.21838332762320836,
+        0.32414998710155485,
+        0.46778998772303265,
+        0.40043332278728483,
+        0.19504112745905486,
+        -0.181527177643352
+      ],
+      "pooling": {
+        "field_mask_sha256": "7be70f6e590f663aa12840057ee420751f257c9d8f771459e829be452703eaf3",
+        "field_valid_fractions": [
+          1.0,
+          0.9666666666666667,
+          1.0,
+          1.0
+        ],
+        "field_valid_pixel_counts": [
+          30,
+          29,
+          30,
+          30
+        ],
+        "ratio_valid_pixel_counts": [
+          {
+            "ndmi": 30,
+            "ndvi": 30
+          },
+          {
+            "ndmi": 29,
+            "ndvi": 29
+          },
+          {
+            "ndmi": 30,
+            "ndvi": 30
+          },
+          {
+            "ndmi": 30,
+            "ndvi": 30
+          }
+        ],
+        "valid_mask_sha256": "c84d6b8401ef389af6e020d4dd4f502bfe91d74ea5e0851d08d2b09bf5bc31ab"
+      },
+      "shared_context_year": 2022,
+      "source_sha256": "9f6ef1382e99d8bc889f21568b4ff9c73ed77418bddb356ba63bee2d80d94e15",
+      "status": "ok"
+    },
+    {
+      "bundle_id": "akron-SB5-2019",
+      "error": "ValueError: no_catalog_scenes_in_frozen_window",
+      "status": "error"
+    },
+    {
+      "acquisition_dates": [
+        "2022-05-13",
+        "2022-06-07",
+        "2022-06-08",
+        "2022-06-12"
+      ],
+      "acquisition_max_date": "2022-06-12",
+      "bundle_id": "akron-SB5-2022",
+      "dates_sha256": "0d87541208b77656d62fef9a6701b537aead58e928edb2e41d64273374b34da8",
+      "features": [
+        0.11325897161777203,
+        0.1659282014155999,
+        0.21282307039468717,
+        0.3668922957701561,
+        0.4559384485085805,
+        0.3864153753488492,
+        0.26731820643672516,
+        -0.10745239637053856,
+        0.06010512635111809,
+        0.09854102306641065,
+        0.12666666412200683,
+        0.28152563327398056,
+        0.31410768475288,
+        0.22825384101806542,
+        0.38334105867790286,
+        -0.052537162049862064,
+        0.09094102375018291,
+        0.13357179172528097,
+        0.16430768771813467,
+        0.328394863085869,
+        0.37622563044230145,
+        0.3068384520518474,
+        0.33646873418229645,
+        -0.06555343255927676,
+        0.09188974171112745,
+        0.1384333305251904,
+        0.17269230309205177,
+        0.3470692221934979,
+        0.4062846050812648,
+        0.3251461455455193,
+        0.3369541893007227,
+        -0.07772470120043086
+      ],
+      "pooling": {
+        "field_mask_sha256": "9c50200a1e463930dbdb946c2eb6c38e0a4111e9d656845ea80420d3625a1755",
+        "field_valid_fractions": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "field_valid_pixel_counts": [
+          39,
+          39,
+          39,
+          39
+        ],
+        "ratio_valid_pixel_counts": [
+          {
+            "ndmi": 39,
+            "ndvi": 39
+          },
+          {
+            "ndmi": 39,
+            "ndvi": 39
+          },
+          {
+            "ndmi": 39,
+            "ndvi": 39
+          },
+          {
+            "ndmi": 39,
+            "ndvi": 39
+          }
+        ],
+        "valid_mask_sha256": "c84d6b8401ef389af6e020d4dd4f502bfe91d74ea5e0851d08d2b09bf5bc31ab"
+      },
+      "shared_context_year": 2022,
+      "source_sha256": "9f6ef1382e99d8bc889f21568b4ff9c73ed77418bddb356ba63bee2d80d94e15",
+      "status": "ok"
+    },
+    {
+      "acquisition_dates": [
+        "2020-05-03",
+        "2020-05-17",
+        "2020-06-07",
+        "2020-06-12"
+      ],
+      "acquisition_max_date": "2020-06-12",
+      "bundle_id": "akron-SB6-2020",
+      "dates_sha256": "d78023929c2a873bb057da8f39d845a02548fdb827e4705a0a523af301211c14",
+      "features": [
+        0.07023636217821728,
+        0.11232045208188621,
+        0.14229999753561887,
+        0.30461135506629944,
+        0.351159083572301,
+        0.25759544799273665,
+        0.3670425872521505,
+        -0.06981697993601202,
+        0.06350454391742294,
+        0.10213181545788591,
+        0.12169545177708972,
+        0.28967953676527197,
+        0.2846431742337617,
+        0.19875908575274728,
+        0.4152998607393508,
+        0.014230523703909136,
+        0.08390227146446705,
+        0.1277431786398996,
+        0.16165454076095062,
+        0.3429886278781024,
+        0.3830749880183827,
+        0.2934068116274747,
+        0.36105410565574664,
+        -0.05391412149982417,
+        0.08567272499203682,
+        0.13142499801787463,
+        0.16848863119428809,
+        0.3483840823173523,
+        0.39237725937908347,
+        0.30144999447194015,
+        0.35037074038595095,
+        -0.05765104040333549
+      ],
+      "pooling": {
+        "field_mask_sha256": "07a0ba30432bbf479069576d308d988f9b2635c062d0e3d60bed3ccb2a7b6a50",
+        "field_valid_fractions": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "field_valid_pixel_counts": [
+          44,
+          44,
+          44,
+          44
+        ],
+        "ratio_valid_pixel_counts": [
+          {
+            "ndmi": 44,
+            "ndvi": 44
+          },
+          {
+            "ndmi": 44,
+            "ndvi": 44
+          },
+          {
+            "ndmi": 44,
+            "ndvi": 44
+          },
+          {
+            "ndmi": 44,
+            "ndvi": 44
+          }
+        ],
+        "valid_mask_sha256": "8e8124678c4fb0c63f728ac00f146da8eb8b4f18a899a9456056e6798bf13210"
+      },
+      "shared_context_year": 2020,
+      "source_sha256": "f5944dadf85000bfd62e96c813ede987f58e5bb86457694e96a76d2d22670419",
+      "status": "ok"
+    },
+    {
+      "acquisition_dates": [
+        "2022-05-13",
+        "2022-06-07",
+        "2022-06-08",
+        "2022-06-12"
+      ],
+      "acquisition_max_date": "2022-06-12",
+      "bundle_id": "akron-SB6-2022",
+      "dates_sha256": "0d87541208b77656d62fef9a6701b537aead58e928edb2e41d64273374b34da8",
+      "features": [
+        0.0837097547766639,
+        0.12955365511702327,
+        0.1586853621936426,
+        0.37983169788267557,
+        0.3851804776889522,
+        0.30672438151952697,
+        0.4151521360993319,
+        -0.004232123083670757,
+        0.044612120046760094,
+        0.07773333133170099,
+        0.09797575573126475,
+        0.26465150804230664,
+        0.2619242365613128,
+        0.18122423733725693,
+        0.46696999581232657,
+        0.009290289112253103,
+        0.06739999817275419,
+        0.10009999718607926,
+        0.11833902157661391,
+        0.30140974826929046,
+        0.2918731624760279,
+        0.22318048230031642,
+        0.44824610428566863,
+        0.024545896398055406,
+        0.07756829098230456,
+        0.1210804845138294,
+        0.15046828821664904,
+        0.3399829159422619,
+        0.3624438919672152,
+        0.28386584578490837,
+        0.39189852274811426,
+        -0.029103383617253627
+      ],
+      "pooling": {
+        "field_mask_sha256": "867d1bd633fb32d7edfa7c6be9584df58710bfed3972af5a0c070a29d331490f",
+        "field_valid_fractions": [
+          1.0,
+          0.8048780487804879,
+          1.0,
+          1.0
+        ],
+        "field_valid_pixel_counts": [
+          41,
+          33,
+          41,
+          41
+        ],
+        "ratio_valid_pixel_counts": [
+          {
+            "ndmi": 41,
+            "ndvi": 41
+          },
+          {
+            "ndmi": 33,
+            "ndvi": 33
+          },
+          {
+            "ndmi": 41,
+            "ndvi": 41
+          },
+          {
+            "ndmi": 41,
+            "ndvi": 41
+          }
+        ],
+        "valid_mask_sha256": "c84d6b8401ef389af6e020d4dd4f502bfe91d74ea5e0851d08d2b09bf5bc31ab"
+      },
+      "shared_context_year": 2022,
+      "source_sha256": "9f6ef1382e99d8bc889f21568b4ff9c73ed77418bddb356ba63bee2d80d94e15",
+      "status": "ok"
+    },
+    {
+      "bundle_id": "akron-SB7-2019",
+      "error": "ValueError: no_catalog_scenes_in_frozen_window",
+      "status": "error"
+    },
+    {
+      "acquisition_dates": [
+        "2020-05-03",
+        "2020-05-17",
+        "2020-06-07",
+        "2020-06-12"
+      ],
+      "acquisition_max_date": "2020-06-12",
+      "bundle_id": "akron-SB7-2020",
+      "dates_sha256": "d78023929c2a873bb057da8f39d845a02548fdb827e4705a0a523af301211c14",
+      "features": [
+        0.07507999818772078,
+        0.10966999754309655,
+        0.14662749730050564,
+        0.24676999263465405,
+        0.37090248987078667,
+        0.2709649935364723,
+        0.2519208323410349,
+        -0.2024559240306798,
+        0.08894499801099301,
+        0.12865499667823316,
+        0.16553249657154084,
+        0.2623649924993515,
+        0.37962498888373375,
+        0.28146499320864676,
+        0.22747180481936521,
+        -0.18046938653566405,
+        0.0961299978196621,
+        0.13796749673783779,
+        0.18413999453186988,
+        0.297102490067482,
+        0.4353399880230427,
+        0.33681999146938324,
+        0.23407048745792475,
+        -0.18870369886207955,
+        0.1023674974218011,
+        0.1467224981635809,
+        0.19608999453485013,
+        0.3177624925971031,
+        0.451647487282753,
+        0.3591949939727783,
+        0.23682108503164007,
+        -0.1734768019294141
+      ],
+      "pooling": {
+        "field_mask_sha256": "1aa9e828bf945c9d865d3428732d3ac3afaadcd450c815ff89e0c8eea57d4c0d",
+        "field_valid_fractions": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "field_valid_pixel_counts": [
+          40,
+          40,
+          40,
+          40
+        ],
+        "ratio_valid_pixel_counts": [
+          {
+            "ndmi": 40,
+            "ndvi": 40
+          },
+          {
+            "ndmi": 40,
+            "ndvi": 40
+          },
+          {
+            "ndmi": 40,
+            "ndvi": 40
+          },
+          {
+            "ndmi": 40,
+            "ndvi": 40
+          }
+        ],
+        "valid_mask_sha256": "8e8124678c4fb0c63f728ac00f146da8eb8b4f18a899a9456056e6798bf13210"
+      },
+      "shared_context_year": 2020,
+      "source_sha256": "f5944dadf85000bfd62e96c813ede987f58e5bb86457694e96a76d2d22670419",
+      "status": "ok"
+    },
+    {
+      "acquisition_dates": [
+        "2020-05-03",
+        "2020-05-17",
+        "2020-06-07",
+        "2020-06-12"
+      ],
+      "acquisition_max_date": "2020-06-12",
+      "bundle_id": "akron-SCD2-2020",
+      "dates_sha256": "d78023929c2a873bb057da8f39d845a02548fdb827e4705a0a523af301211c14",
+      "features": [
+        0.07110999822616577,
+        0.11208749748766422,
+        0.144202496483922,
+        0.3084499925374985,
+        0.3693599909543991,
+        0.2738324910402298,
+        0.3637734755497397,
+        -0.08953813150342486,
+        0.05468749860301614,
+        0.08875499796122313,
+        0.10019499752670527,
+        0.30349499434232713,
+        0.275582492351532,
+        0.18429999686777593,
+        0.507242308404978,
+        0.050855407379195715,
+        0.05675249882042408,
+        0.09506249744445086,
+        0.10502999704331159,
+        0.3717599920928478,
+        0.30647999197244646,
+        0.20514499582350254,
+        0.5600878779080979,
+        0.09714804170315092,
+        0.062354998849332335,
+        0.10103249792009592,
+        0.12139999698847533,
+        0.35559249073266985,
+        0.3293999910354614,
+        0.23062999360263348,
+        0.4924294201264631,
+        0.040083980973429155
+      ],
+      "pooling": {
+        "field_mask_sha256": "10b8aa999baf046f4c30941be53a7ad0468c7e4159dd971c7a079613a0843144",
+        "field_valid_fractions": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "field_valid_pixel_counts": [
+          40,
+          40,
+          40,
+          40
+        ],
+        "ratio_valid_pixel_counts": [
+          {
+            "ndmi": 40,
+            "ndvi": 40
+          },
+          {
+            "ndmi": 40,
+            "ndvi": 40
+          },
+          {
+            "ndmi": 40,
+            "ndvi": 40
+          },
+          {
+            "ndmi": 40,
+            "ndvi": 40
+          }
+        ],
+        "valid_mask_sha256": "8e8124678c4fb0c63f728ac00f146da8eb8b4f18a899a9456056e6798bf13210"
+      },
+      "shared_context_year": 2020,
+      "source_sha256": "f5944dadf85000bfd62e96c813ede987f58e5bb86457694e96a76d2d22670419",
+      "status": "ok"
+    },
+    {
+      "acquisition_dates": [
+        "2021-06-02",
+        "2021-06-05",
+        "2021-06-07",
+        "2021-06-12"
+      ],
+      "acquisition_max_date": "2021-06-12",
+      "bundle_id": "akron-SCD2-2021",
+      "dates_sha256": "5d4bc74b099e744cc38d5b429ec631fae212fb24f28aa449303a9108b3c25b29",
+      "features": [
+        0.0931299977004528,
+        0.13294249642640352,
+        0.17429499551653863,
+        0.27030249387025834,
+        0.4108824908733368,
+        0.32657249122858045,
+        0.21637323103502543,
+        -0.20640020890498745,
+        0.11776999738067388,
+        0.16560249552130699,
+        0.2135274950414896,
+        0.3251749902963638,
+        0.4917474865913391,
+        0.4250724881887436,
+        0.20756568047374896,
+        -0.20406530160250425,
+        0.11671249754726887,
+        0.16439499631524085,
+        0.21338749453425407,
+        0.33060249388217927,
+        0.4951074868440628,
+        0.41047498881816863,
+        0.21561363815329598,
+        -0.19930127809394071,
+        0.11919249687343836,
+        0.1672649946063757,
+        0.21698499359190465,
+        0.3269574910402298,
+        0.49030748903751376,
+        0.4104249902069569,
+        0.2023104349300268,
+        -0.19998238860207068
+      ],
+      "pooling": {
+        "field_mask_sha256": "10b8aa999baf046f4c30941be53a7ad0468c7e4159dd971c7a079613a0843144",
+        "field_valid_fractions": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "field_valid_pixel_counts": [
+          40,
+          40,
+          40,
+          40
+        ],
+        "ratio_valid_pixel_counts": [
+          {
+            "ndmi": 40,
+            "ndvi": 40
+          },
+          {
+            "ndmi": 40,
+            "ndvi": 40
+          },
+          {
+            "ndmi": 40,
+            "ndvi": 40
+          },
+          {
+            "ndmi": 40,
+            "ndvi": 40
+          }
+        ],
+        "valid_mask_sha256": "53ad71238c767cdcc9f448a4f99f6e31f5b9a60910b78eef7ecea718ab683a9b"
+      },
+      "shared_context_year": 2021,
+      "source_sha256": "513bb75d818eab144c23de5906d81208c98caaf58b7f2f0e1591506e9bdd2edd",
+      "status": "ok"
+    },
+    {
+      "acquisition_dates": [
+        "2022-05-13",
+        "2022-06-07",
+        "2022-06-08",
+        "2022-06-12"
+      ],
+      "acquisition_max_date": "2022-06-12",
+      "bundle_id": "akron-SCD2-2022",
+      "dates_sha256": "0d87541208b77656d62fef9a6701b537aead58e928edb2e41d64273374b34da8",
+      "features": [
+        0.13275999594479798,
+        0.18947749510407447,
+        0.25965749099850655,
+        0.37081499174237254,
+        0.5051099821925163,
+        0.44669498950243,
+        0.17641980848212802,
+        -0.15333215990681356,
+        0.07999459251358702,
+        0.12313783551390106,
+        0.1781513461390057,
+        0.2761999924440642,
+        0.37402972176268295,
+        0.2920783709835362,
+        0.21622900633129738,
+        -0.1505356134590209,
+        0.1256424978375435,
+        0.17822749465703963,
+        0.23843499422073364,
+        0.34837999045848844,
+        0.4777849890291691,
+        0.4240399897098541,
+        0.1875718989392511,
+        -0.15660771653274527,
+        0.11437749750912189,
+        0.1632099959999323,
+        0.22262249402701856,
+        0.3334499917924404,
+        0.47355498746037483,
+        0.4091824904084206,
+        0.19947487142447295,
+        -0.17361796675937266
+      ],
+      "pooling": {
+        "field_mask_sha256": "10b8aa999baf046f4c30941be53a7ad0468c7e4159dd971c7a079613a0843144",
+        "field_valid_fractions": [
+          1.0,
+          0.925,
+          1.0,
+          1.0
+        ],
+        "field_valid_pixel_counts": [
+          40,
+          37,
+          40,
+          40
+        ],
+        "ratio_valid_pixel_counts": [
+          {
+            "ndmi": 40,
+            "ndvi": 40
+          },
+          {
+            "ndmi": 37,
+            "ndvi": 37
+          },
+          {
+            "ndmi": 40,
+            "ndvi": 40
+          },
+          {
+            "ndmi": 40,
+            "ndvi": 40
+          }
+        ],
+        "valid_mask_sha256": "c84d6b8401ef389af6e020d4dd4f502bfe91d74ea5e0851d08d2b09bf5bc31ab"
+      },
+      "shared_context_year": 2022,
+      "source_sha256": "9f6ef1382e99d8bc889f21568b4ff9c73ed77418bddb356ba63bee2d80d94e15",
+      "status": "ok"
+    },
+    {
+      "bundle_id": "akron-SCD3-2019",
+      "error": "ValueError: no_catalog_scenes_in_frozen_window",
+      "status": "error"
+    },
+    {
+      "acquisition_dates": [
+        "2022-05-13",
+        "2022-06-07",
+        "2022-06-08",
+        "2022-06-12"
+      ],
+      "acquisition_max_date": "2022-06-12",
+      "bundle_id": "akron-SCD3-2022",
+      "dates_sha256": "0d87541208b77656d62fef9a6701b537aead58e928edb2e41d64273374b34da8",
+      "features": [
+        0.11866052370322377,
+        0.17342368121209897,
+        0.23006051974861244,
+        0.3622763062778272,
+        0.47964998687568466,
+        0.413892095026217,
+        0.22378068753037805,
+        -0.13903916862170865,
+        0.0628210511058569,
+        0.10077631355900514,
+        0.13460262786400945,
+        0.2784447293532522,
+        0.33200525531643316,
+        0.24473420452130468,
+        0.3501749691822107,
+        -0.08716039814543998,
+        0.09992105023641336,
+        0.1445499964450535,
+        0.18206315330768885,
+        0.3432473595205106,
+        0.41086841335422114,
+        0.34232630776731593,
+        0.3084677953717428,
+        -0.08860039685135872,
+        0.09534736605067003,
+        0.1425736799444023,
+        0.18257894288552434,
+        0.35458946384881673,
+        0.42528946148721797,
+        0.34316052025870275,
+        0.32184064804103274,
+        -0.08988950334781032
+      ],
+      "pooling": {
+        "field_mask_sha256": "f276d52fa18f3fbcacea26be97caa05d6e8c124ed3f6cd2125210467735f626b",
+        "field_valid_fractions": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "field_valid_pixel_counts": [
+          38,
+          38,
+          38,
+          38
+        ],
+        "ratio_valid_pixel_counts": [
+          {
+            "ndmi": 38,
+            "ndvi": 38
+          },
+          {
+            "ndmi": 38,
+            "ndvi": 38
+          },
+          {
+            "ndmi": 38,
+            "ndvi": 38
+          },
+          {
+            "ndmi": 38,
+            "ndvi": 38
+          }
+        ],
+        "valid_mask_sha256": "c84d6b8401ef389af6e020d4dd4f502bfe91d74ea5e0851d08d2b09bf5bc31ab"
+      },
+      "shared_context_year": 2022,
+      "source_sha256": "9f6ef1382e99d8bc889f21568b4ff9c73ed77418bddb356ba63bee2d80d94e15",
+      "status": "ok"
+    },
+    {
+      "acquisition_dates": [
+        "2020-05-03",
+        "2020-05-17",
+        "2020-06-07",
+        "2020-06-12"
+      ],
+      "acquisition_max_date": "2020-06-12",
+      "bundle_id": "akron-SCD4-2020",
+      "dates_sha256": "d78023929c2a873bb057da8f39d845a02548fdb827e4705a0a523af301211c14",
+      "features": [
+        0.06836896376876996,
+        0.10841379006361139,
+        0.13847240985467515,
+        0.2970517185227624,
+        0.35194137075851706,
+        0.2604930991756505,
+        0.3654227581312347,
+        -0.08350849107055745,
+        0.06401379162381435,
+        0.10141723937001722,
+        0.12181723888578086,
+        0.2875689586688732,
+        0.2919965442912332,
+        0.20641378801444482,
+        0.41056975136256757,
+        -9.981997006310076e-05,
+        0.0775137912353565,
+        0.12042413523484921,
+        0.14915861703198532,
+        0.34976895821505577,
+        0.3685896468573603,
+        0.27688964687544726,
+        0.40287813738661893,
+        -0.025308327631538455,
+        0.08456551566206176,
+        0.1286413759506982,
+        0.1640241346482573,
+        0.34774137159873697,
+        0.392255162370616,
+        0.30469999436674444,
+        0.36075883033650846,
+        -0.058255928164261776
+      ],
+      "pooling": {
+        "field_mask_sha256": "5ba6938aaaa5d3afde43a4fe74ca0aff1d82514d97e5716b614baf53ea48f9cf",
+        "field_valid_fractions": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "field_valid_pixel_counts": [
+          29,
+          29,
+          29,
+          29
+        ],
+        "ratio_valid_pixel_counts": [
+          {
+            "ndmi": 29,
+            "ndvi": 29
+          },
+          {
+            "ndmi": 29,
+            "ndvi": 29
+          },
+          {
+            "ndmi": 29,
+            "ndvi": 29
+          },
+          {
+            "ndmi": 29,
+            "ndvi": 29
+          }
+        ],
+        "valid_mask_sha256": "8e8124678c4fb0c63f728ac00f146da8eb8b4f18a899a9456056e6798bf13210"
+      },
+      "shared_context_year": 2020,
+      "source_sha256": "f5944dadf85000bfd62e96c813ede987f58e5bb86457694e96a76d2d22670419",
+      "status": "ok"
+    },
+    {
+      "acquisition_dates": [
+        "2022-05-13",
+        "2022-06-07",
+        "2022-06-08",
+        "2022-06-12"
+      ],
+      "acquisition_max_date": "2022-06-12",
+      "bundle_id": "akron-SCD4-2022",
+      "dates_sha256": "0d87541208b77656d62fef9a6701b537aead58e928edb2e41d64273374b34da8",
+      "features": [
+        0.09192758348995242,
+        0.14005861842426762,
+        0.17547930622922964,
+        0.3795827493585389,
+        0.409106884537072,
+        0.3306930959224701,
+        0.37323133444898476,
+        -0.035408225135022064,
+        0.04691034356324837,
+        0.08133103223196392,
+        0.1047620667979635,
+        0.27129999625271767,
+        0.27130689035201894,
+        0.18828965055531469,
+        0.4518804824478652,
+        0.003021606253799944,
+        0.08221379050920749,
+        0.12188620454278486,
+        0.149537927117841,
+        0.33181723438460253,
+        0.34319309427820405,
+        0.2759413703762252,
+        0.38465729723100867,
+        -0.012522086552604778,
+        0.08301723966824598,
+        0.12710689342227474,
+        0.1599275834601501,
+        0.3460999932782403,
+        0.3805620629211952,
+        0.3001103385769088,
+        0.37323860604645925,
+        -0.0451764062655909
+      ],
+      "pooling": {
+        "field_mask_sha256": "5ba6938aaaa5d3afde43a4fe74ca0aff1d82514d97e5716b614baf53ea48f9cf",
+        "field_valid_fractions": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "field_valid_pixel_counts": [
+          29,
+          29,
+          29,
+          29
+        ],
+        "ratio_valid_pixel_counts": [
+          {
+            "ndmi": 29,
+            "ndvi": 29
+          },
+          {
+            "ndmi": 29,
+            "ndvi": 29
+          },
+          {
+            "ndmi": 29,
+            "ndvi": 29
+          },
+          {
+            "ndmi": 29,
+            "ndvi": 29
+          }
+        ],
+        "valid_mask_sha256": "c84d6b8401ef389af6e020d4dd4f502bfe91d74ea5e0851d08d2b09bf5bc31ab"
+      },
+      "shared_context_year": 2022,
+      "source_sha256": "9f6ef1382e99d8bc889f21568b4ff9c73ed77418bddb356ba63bee2d80d94e15",
+      "status": "ok"
+    },
+    {
+      "bundle_id": "akron-SCD5-2019",
+      "error": "ValueError: no_catalog_scenes_in_frozen_window",
+      "status": "error"
+    },
+    {
+      "acquisition_dates": [
+        "2020-05-03",
+        "2020-05-17",
+        "2020-06-07",
+        "2020-06-12"
+      ],
+      "acquisition_max_date": "2020-06-12",
+      "bundle_id": "akron-SCD5-2020",
+      "dates_sha256": "d78023929c2a873bb057da8f39d845a02548fdb827e4705a0a523af301211c14",
+      "features": [
+        0.08512592398458058,
+        0.12089258929093678,
+        0.16426666412088606,
+        0.24832221589706563,
+        0.39384813882686476,
+        0.2873962863727852,
+        0.20518705398268325,
+        -0.22845728666196619,
+        0.10207407093710369,
+        0.14475925432311165,
+        0.1899036991375464,
+        0.27322962493808184,
+        0.4169444331416377,
+        0.30715184410413104,
+        0.17965508268045094,
+        -0.20918131105886104,
+        0.09813703541402463,
+        0.1414555515404101,
+        0.18979629046387142,
+        0.2973703642686208,
+        0.45018887850973344,
+        0.33618147174517315,
+        0.22018188202720676,
+        -0.2049248365706798,
+        0.1034999969932768,
+        0.14844814439614615,
+        0.19865555178236077,
+        0.3171666595670912,
+        0.47086295154359603,
+        0.3673962884479099,
+        0.22927322211488213,
+        -0.19532717474315292
+      ],
+      "pooling": {
+        "field_mask_sha256": "902ce2e053ca7b5e01e28304583319a7f7806bbd320e0d63e69e0af59f6bd574",
+        "field_valid_fractions": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "field_valid_pixel_counts": [
+          27,
+          27,
+          27,
+          27
+        ],
+        "ratio_valid_pixel_counts": [
+          {
+            "ndmi": 27,
+            "ndvi": 27
+          },
+          {
+            "ndmi": 27,
+            "ndvi": 27
+          },
+          {
+            "ndmi": 27,
+            "ndvi": 27
+          },
+          {
+            "ndmi": 27,
+            "ndvi": 27
+          }
+        ],
+        "valid_mask_sha256": "8e8124678c4fb0c63f728ac00f146da8eb8b4f18a899a9456056e6798bf13210"
+      },
+      "shared_context_year": 2020,
+      "source_sha256": "f5944dadf85000bfd62e96c813ede987f58e5bb86457694e96a76d2d22670419",
+      "status": "ok"
+    },
+    {
+      "acquisition_dates": [
+        "2021-06-02",
+        "2021-06-05",
+        "2021-06-07",
+        "2021-06-12"
+      ],
+      "acquisition_max_date": "2021-06-12",
+      "bundle_id": "akron-SCD5-2021",
+      "dates_sha256": "5d4bc74b099e744cc38d5b429ec631fae212fb24f28aa449303a9108b3c25b29",
+      "features": [
+        0.07897036826169049,
+        0.11758888568039294,
+        0.14789629148112404,
+        0.29807036342444243,
+        0.36847036083539325,
+        0.2939259161551793,
+        0.34258635286242806,
+        -0.09694302015682037,
+        0.09682221945237231,
+        0.14004073678343384,
+        0.17209258758359486,
+        0.3513666601092727,
+        0.4056703602826154,
+        0.345581473575698,
+        0.35397734396917574,
+        -0.04843851591127191,
+        0.09288147933505199,
+        0.13767036685237177,
+        0.16961851398702021,
+        0.3530518423627924,
+        0.40357035729620194,
+        0.33327036323370757,
+        0.3646825365245299,
+        -0.04529156306997346,
+        0.09115925707198956,
+        0.1331888864989634,
+        0.17103703320026398,
+        0.31741480474118833,
+        0.41341850603068314,
+        0.34476295444700455,
+        0.3056197848586809,
+        -0.12323799695414923
+      ],
+      "pooling": {
+        "field_mask_sha256": "902ce2e053ca7b5e01e28304583319a7f7806bbd320e0d63e69e0af59f6bd574",
+        "field_valid_fractions": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "field_valid_pixel_counts": [
+          27,
+          27,
+          27,
+          27
+        ],
+        "ratio_valid_pixel_counts": [
+          {
+            "ndmi": 27,
+            "ndvi": 27
+          },
+          {
+            "ndmi": 27,
+            "ndvi": 27
+          },
+          {
+            "ndmi": 27,
+            "ndvi": 27
+          },
+          {
+            "ndmi": 27,
+            "ndvi": 27
+          }
+        ],
+        "valid_mask_sha256": "53ad71238c767cdcc9f448a4f99f6e31f5b9a60910b78eef7ecea718ab683a9b"
+      },
+      "shared_context_year": 2021,
+      "source_sha256": "513bb75d818eab144c23de5906d81208c98caaf58b7f2f0e1591506e9bdd2edd",
+      "status": "ok"
+    },
+    {
+      "bundle_id": "akron-SCD6-2019",
+      "error": "ValueError: no_catalog_scenes_in_frozen_window",
+      "status": "error"
+    },
+    {
+      "acquisition_dates": [
+        "2021-06-02",
+        "2021-06-05",
+        "2021-06-07",
+        "2021-06-12"
+      ],
+      "acquisition_max_date": "2021-06-12",
+      "bundle_id": "akron-SCD6-2021",
+      "dates_sha256": "5d4bc74b099e744cc38d5b429ec631fae212fb24f28aa449303a9108b3c25b29",
+      "features": [
+        0.03252499916457704,
+        0.06428928420479808,
+        0.051492856083703895,
+        0.3622107037476131,
+        0.19234999428902352,
+        0.11549285400126662,
+        0.7519457955004949,
+        0.3142647242176518,
+        0.03566071301299546,
+        0.06491785523082529,
+        0.05038928446759071,
+        0.41452498733997345,
+        0.16887856700590678,
+        0.10213214072531887,
+        0.7833998644078439,
+        0.42644218059296085,
+        0.03619642775239689,
+        0.07149999761687857,
+        0.05894642682479961,
+        0.407128560755934,
+        0.19869999374662126,
+        0.12717499637178012,
+        0.7461109097499659,
+        0.34547539580227554,
+        0.04360357066616416,
+        0.08026428414242608,
+        0.07509999802070004,
+        0.36983570350067957,
+        0.23483213569436753,
+        0.15310713781842164,
+        0.6631745523159726,
+        0.22950643100775797
+      ],
+      "pooling": {
+        "field_mask_sha256": "a7751ae7e7b0f8df7a1221b091c1fda5c4afffa1ace02bd7d56fcaf8e59709fa",
+        "field_valid_fractions": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "field_valid_pixel_counts": [
+          28,
+          28,
+          28,
+          28
+        ],
+        "ratio_valid_pixel_counts": [
+          {
+            "ndmi": 28,
+            "ndvi": 28
+          },
+          {
+            "ndmi": 28,
+            "ndvi": 28
+          },
+          {
+            "ndmi": 28,
+            "ndvi": 28
+          },
+          {
+            "ndmi": 28,
+            "ndvi": 28
+          }
+        ],
+        "valid_mask_sha256": "53ad71238c767cdcc9f448a4f99f6e31f5b9a60910b78eef7ecea718ab683a9b"
+      },
+      "shared_context_year": 2021,
+      "source_sha256": "513bb75d818eab144c23de5906d81208c98caaf58b7f2f0e1591506e9bdd2edd",
+      "status": "ok"
+    },
+    {
+      "acquisition_dates": [
+        "2022-05-13",
+        "2022-06-07",
+        "2022-06-08",
+        "2022-06-12"
+      ],
+      "acquisition_max_date": "2022-06-12",
+      "bundle_id": "akron-SCD6-2022",
+      "dates_sha256": "0d87541208b77656d62fef9a6701b537aead58e928edb2e41d64273374b34da8",
+      "features": [
+        0.13356071125183785,
+        0.1870499961078167,
+        0.24699642456003598,
+        0.33876427582332064,
+        0.4469607046672276,
+        0.3214749928031649,
+        0.1567024766252905,
+        -0.13770302432330117,
+        0.121928567598973,
+        0.1730857097676822,
+        0.23075356547321593,
+        0.3189749919942447,
+        0.4195035600236484,
+        0.2946071369307382,
+        0.16071529965379358,
+        -0.1362729302357211,
+        0.12292499733822686,
+        0.17529285326600075,
+        0.22598928000245774,
+        0.3078857096178191,
+        0.4237357048051698,
+        0.31148570456675123,
+        0.15352950471735766,
+        -0.1582775214261671,
+        0.12477856901075159,
+        0.17821785222206796,
+        0.2357857088957514,
+        0.33070713175194605,
+        0.4566035590001515,
+        0.3309285640716553,
+        0.16763408508931352,
+        -0.15992869606407045
+      ],
+      "pooling": {
+        "field_mask_sha256": "a7751ae7e7b0f8df7a1221b091c1fda5c4afffa1ace02bd7d56fcaf8e59709fa",
+        "field_valid_fractions": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "field_valid_pixel_counts": [
+          28,
+          28,
+          28,
+          28
+        ],
+        "ratio_valid_pixel_counts": [
+          {
+            "ndmi": 28,
+            "ndvi": 28
+          },
+          {
+            "ndmi": 28,
+            "ndvi": 28
+          },
+          {
+            "ndmi": 28,
+            "ndvi": 28
+          },
+          {
+            "ndmi": 28,
+            "ndvi": 28
+          }
+        ],
+        "valid_mask_sha256": "c84d6b8401ef389af6e020d4dd4f502bfe91d74ea5e0851d08d2b09bf5bc31ab"
+      },
+      "shared_context_year": 2022,
+      "source_sha256": "9f6ef1382e99d8bc889f21568b4ff9c73ed77418bddb356ba63bee2d80d94e15",
+      "status": "ok"
+    },
+    {
+      "bundle_id": "akron-SCD7-2019",
+      "error": "ValueError: no_catalog_scenes_in_frozen_window",
+      "status": "error"
+    },
+    {
+      "acquisition_dates": [
+        "2021-06-02",
+        "2021-06-05",
+        "2021-06-07",
+        "2021-06-12"
+      ],
+      "acquisition_max_date": "2021-06-12",
+      "bundle_id": "akron-SCD7-2021",
+      "dates_sha256": "5d4bc74b099e744cc38d5b429ec631fae212fb24f28aa449303a9108b3c25b29",
+      "features": [
+        0.024507142137736082,
+        0.054385713301599026,
+        0.04031785624101758,
+        0.3507178489650999,
+        0.16450713681323187,
+        0.08842142644737448,
+        0.7925229011372289,
+        0.3609818470836306,
+        0.03752857034227678,
+        0.06648214108177594,
+        0.0557892844080925,
+        0.3943214182342802,
+        0.18509642354079656,
+        0.1133857113974435,
+        0.7522489802733313,
+        0.36295033564364243,
+        0.03798928490972945,
+        0.07252499807093825,
+        0.06433214100876025,
+        0.3960749911410468,
+        0.21897142486912863,
+        0.1397928542324475,
+        0.720647474439622,
+        0.29039043608605514,
+        0.038907141890376806,
+        0.07446071266063622,
+        0.06832499895244837,
+        0.37804284798247473,
+        0.22065713735563414,
+        0.13642499516052858,
+        0.694257787976901,
+        0.26456183441287423
+      ],
+      "pooling": {
+        "field_mask_sha256": "b8b2963e566444934c66f5978464c9fe75529fa70546382bd63b8b567d58a1b2",
+        "field_valid_fractions": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "field_valid_pixel_counts": [
+          28,
+          28,
+          28,
+          28
+        ],
+        "ratio_valid_pixel_counts": [
+          {
+            "ndmi": 28,
+            "ndvi": 28
+          },
+          {
+            "ndmi": 28,
+            "ndvi": 28
+          },
+          {
+            "ndmi": 28,
+            "ndvi": 28
+          },
+          {
+            "ndmi": 28,
+            "ndvi": 28
+          }
+        ],
+        "valid_mask_sha256": "53ad71238c767cdcc9f448a4f99f6e31f5b9a60910b78eef7ecea718ab683a9b"
+      },
+      "shared_context_year": 2021,
+      "source_sha256": "513bb75d818eab144c23de5906d81208c98caaf58b7f2f0e1591506e9bdd2edd",
+      "status": "ok"
+    }
+  ]
+}

@@ -25,6 +25,8 @@ frontend/dist/
 frontend/node_modules/
 
 # Large local state
+.hf_cache
+/frontend/node_modules
 .hf_cache/
 models/
 outputs/

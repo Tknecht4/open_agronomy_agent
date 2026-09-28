@@ -26,6 +26,7 @@ from agronomy_agent.field_measurements import validate_field_event_payload
 from agronomy_agent.server.services.field_context_quality import evaluate_field_context_quality
 from agronomy_agent.server.services.privacy_boundary import minimized_export_trace_payload
 from agronomy_agent.server.storage.backup import assert_no_pending_restore
+from agronomy_agent.server.storage.field_source_blobs import ensure_source_schema
 
 
 def _now() -> str:
@@ -73,23 +74,102 @@ class TraceStore:
         self._conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._field_event_lock = threading.RLock()
+        self._cursor_depth = 0
+        self._cursor_rollback_only = False
         self._init_schema()
         self.db_path.chmod(0o600)
 
     @contextlib.contextmanager
     def _cursor(self) -> Iterator[sqlite3.Cursor]:
-        cursor = self._conn.cursor()
-        try:
-            yield cursor
-            self._conn.commit()
-        except Exception:
-            self._conn.rollback()
-            raise
-        finally:
-            cursor.close()
+        # SQLite transactions belong to the connection, not the cursor. A
+        # second request must not read, commit, or roll back another thread's
+        # work on this shared connection. The existing RLock also permits
+        # field-event methods to enter _cursor while holding their lock.
+        with self._field_event_lock:
+            outermost = self._cursor_depth == 0
+            if outermost:
+                self._cursor_rollback_only = False
+            self._cursor_depth += 1
+            cursor: sqlite3.Cursor | None = None
+            failed = False
+            try:
+                cursor = self._conn.cursor()
+                yield cursor
+            except BaseException:
+                failed = True
+                self._cursor_rollback_only = True
+                raise
+            finally:
+                try:
+                    if cursor is not None:
+                        cursor.close()
+                except BaseException:
+                    failed = True
+                    self._cursor_rollback_only = True
+                    raise
+                finally:
+                    self._cursor_depth -= 1
+                    if outermost:
+                        if self._cursor_rollback_only:
+                            self._conn.rollback()
+                            self._cursor_rollback_only = False
+                            if not failed:
+                                raise RuntimeError("nested cursor failure rolled back SQLite transaction")
+                        else:
+                            try:
+                                self._conn.commit()
+                            except BaseException:
+                                self._conn.rollback()
+                                raise
 
     def _init_schema(self) -> None:
         with self._cursor() as cursor:
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS field_data_imports (
+                    id TEXT PRIMARY KEY,
+                    field_id TEXT NOT NULL,
+                    workspace_id TEXT NOT NULL,
+                    actor_id TEXT NOT NULL,
+                    filename TEXT NOT NULL,
+                    source_bytes BLOB NOT NULL,
+                    source_storage TEXT NOT NULL DEFAULT 'inline-v1',
+                    source_sha256 TEXT NOT NULL,
+                    profile_json TEXT NOT NULL,
+                    status TEXT NOT NULL CHECK(status IN ('preview', 'committed')),
+                    mapping_json TEXT,
+                    mapping_sha256 TEXT,
+                    manifest_json TEXT,
+                    created_at TEXT NOT NULL,
+                    committed_at TEXT,
+                    FOREIGN KEY(field_id) REFERENCES phase4_field_contexts(id)
+                )
+                """
+            )
+            ensure_source_schema(cursor)
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_field_data_imports_field ON field_data_imports(field_id, status)")
+            cursor.execute(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_field_data_committed_identity
+                ON field_data_imports(field_id, source_sha256, mapping_sha256)
+                WHERE status = 'committed'
+                """
+            )
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS field_data_rows (
+                    import_id TEXT NOT NULL,
+                    field_id TEXT NOT NULL,
+                    row_number INTEGER NOT NULL,
+                    locator_json TEXT NOT NULL,
+                    values_json TEXT NOT NULL,
+                    row_sha256 TEXT NOT NULL,
+                    PRIMARY KEY(import_id, row_number),
+                    FOREIGN KEY(import_id) REFERENCES field_data_imports(id)
+                )
+                """
+            )
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_field_data_rows_field ON field_data_rows(field_id, import_id)")
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS sessions (
@@ -2328,6 +2408,31 @@ class TraceStore:
                 created_at=now,
             )
         return self.get_phase4_workspace(workspace_id) or {}
+
+    def ensure_personal_workspace(self, user_id: str) -> None:
+        """Create a user's first local workspace as one SQLite transaction.
+
+        The enclosing cursor owns the transaction; nested store calls may read
+        and write, but cannot commit the organization before the workspace.
+        BEGIN IMMEDIATE also serializes competing SQLite connections before
+        they inspect whether a workspace already exists.
+        """
+        with self._cursor() as cursor:
+            cursor.execute("BEGIN IMMEDIATE")
+            if self.list_phase4_workspaces_for_user(user_id):
+                return
+            organization = self.create_phase4_organization(
+                name="Personal Workspace",
+                slug=f"personal-{str(user_id)[:8]}",
+                plan="demo",
+                created_by_user_id=user_id,
+            )
+            self.create_phase4_workspace(
+                organization_id=organization["id"],
+                name="My agronomy workspace",
+                created_by_user_id=user_id,
+                settings={"workspace_type": "personal", "phase": "6"},
+            )
 
     def list_phase4_workspaces_for_user(self, user_id: str, organization_id: str | None = None) -> list[dict[str, Any]]:
         with self._cursor() as cursor:

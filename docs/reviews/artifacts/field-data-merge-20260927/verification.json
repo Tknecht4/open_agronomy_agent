@@ -1,0 +1,134 @@
+{
+  "base_main": "0a942a37b07f1caee4723d0b704206f53ec32428",
+  "checks": {
+    "browser_offline_cached_imagery": {
+      "acquired": "2021-06-12",
+      "cache_hit": true,
+      "geometry": "existing public Akron research AOI",
+      "ndmi_display": -0.068,
+      "ndvi_display": 0.337,
+      "new_remote_requests": 0,
+      "preview": "authenticated field-only NDVI shown in merged Fields records tab",
+      "status": "pass"
+    },
+    "field_pilot": {
+      "case_count": 96,
+      "cases_sha256": "4fb28e6e2c06c578b24726ba66c0b54186b0c317d35b1978fab221ba90eb83c0",
+      "failed_case_count": 0,
+      "gold_cases_sha256": "744911eee39254e690df25264a5e0deddbe3381889361b5d14b0b4c80f4bd447",
+      "manifest_sha256": "ba4b14e7bfb70fc97c124d0b590a3be41d1b74b3df2a0ebe03faddcf1dc5ffd0",
+      "product_mode": "offline_mock_generator",
+      "runtime_code_stable": true,
+      "source_group_product_contract_counts": {
+        "akron": {
+          "pass": 36,
+          "unscored_semantic": 12
+        },
+        "nitrate": {
+          "pass": 36,
+          "unscored_semantic": 12
+        }
+      }
+    },
+    "frontend": {
+      "commands": [
+        "npm run typecheck",
+        "npm test",
+        "npm run build"
+      ],
+      "files": 40,
+      "passed": 281,
+      "repair": "First run had 280 passed and one data-only map wording assertion failure after rebase; updated to current main wording and reran all gates.",
+      "status": "pass"
+    },
+    "mkdocs_strict": {
+      "status": "pass"
+    },
+    "optional_eo": {
+      "log_sha256": "1c2da36e8a1346902636f9853ebdb1d365b704626a2057bedbb68253af63f2f6",
+      "note": "Optional environment; route tests remain covered by serving-environment full suite. Initial restricted attempt had one loopback sandbox failure; authorized rerun passed.",
+      "passed": 89,
+      "scope": [
+        "test_field_imagery",
+        "test_imagery_analytics",
+        "test_imagery_store",
+        "test_imagery_budget",
+        "test_imagery_assessment",
+        "test_imagery_models",
+        "test_imagery_storage_audit"
+      ],
+      "warnings": 46
+    },
+    "public_docs": {
+      "markdown_files": 28,
+      "status": "pass"
+    },
+    "python": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python -m pytest -q -n 0 -o tmp_path_retention_policy=failed --basetemp=<external-test-scratch>",
+      "log_sha256": "96b4cf69b5969a020323b499eb447ee7b7c8ec74716c505ea6062574bd98be1c",
+      "passed": 1317,
+      "seconds": 277.87,
+      "skipped": 2,
+      "warnings": 26
+    },
+    "runtime_corpus": {
+      "log_sha256": "6add79047096c8fbe9932f80528021033f50bf1d020ada3bc5f2d487057020ce",
+      "status": "pass"
+    },
+    "source_rehearsal": {
+      "browser": "Bean ERS15 final saved mean visibly1942.167191011236 kg/ha;484selected445numeric39missing;unknowngeometry preserved.",
+      "groups": 9,
+      "production_stages_per_answer": 17,
+      "public_record": "product-rehearsal.json",
+      "raw_receipt_sha256": "d45688c539ab7d389f249e55cde54d49716d098a753849a0c664f3b49b707c0a",
+      "status": "verified_complete_answer_and_source_binding"
+    }
+  },
+  "claim": "Source-bound ingestion, storage and integration contracts only; no agronomic or model-quality claim.",
+  "controls_sha256": {
+    "frontend/src/FieldImageryAnalyticsPanel.tsx": "f19d4eef3f932cb10d35998cc9c58b9804f5562b73f6ba986a3ca623aed7668f",
+    "frontend/src/OpenAgronomyApp.tsx": "475a0d57539ff122d46f24027ef6db39d2c5edb0f56a6c9c12d62836291da8af",
+    "scripts/migrate_field_source_blobs.py": "721799144ae8be2b780dacde90205639c9e989bd6acc5c9b8ac90315790d8077",
+    "scripts/prepare_field_sources.py": "ec9b4b457c58410914ec21ce8bab8b49805a90a5886ae47fd6875adc3699abe6",
+    "scripts/rehearse_field_source_imports.py": "886a9aaf7a8bd0d63ccf07143096366a417d475de4960f084b87ec0b13923dd6",
+    "src/agronomy_agent/field_source_preparation.py": "aefc5dac51067ca2037a33185b1c57c63cd6688a24cadad2083f8a7832d253be",
+    "src/agronomy_agent/imagery_analytics.py": "3e5c9aba9acb76023b22871f7036e63262f6ec9a0480d70e02d87a056b9304c7",
+    "src/agronomy_agent/imagery_budget.py": "44221209a25fdc27deffd47cf119e3d45903602f88db362a81cf903eda1b9164",
+    "src/agronomy_agent/imagery_store.py": "98794b4d1d258dd7a79a26c223201a0f0a8e05f1d3fded2fbf242068623730e7",
+    "src/agronomy_agent/imagery_worker.py": "dd969e1c0303cc179bbc93dae9a8e0d5d4f03fa000b9338651dcea182674228b",
+    "src/agronomy_agent/leak_guard.py": "cbd0dcd6faf2a43236f03cdb5800470b7638e53cc0d07af5029c2c6ed789184a",
+    "src/agronomy_agent/server/services/answer_renderer.py": "0f966caca7832e6b0bed3fb23356058a475fd1c57cec3b1d78be6ec28032247e",
+    "src/agronomy_agent/server/services/chat_service.py": "cacc613e0c0c6b1966226ed47756dddf0964a0108bb4f06c5196a61ccebd1b2a",
+    "src/agronomy_agent/server/services/imagery_service.py": "4be523cd43e53e6e8c19cc9714db2825543f6fe643fa1caf09d8e7dbaadfa307",
+    "src/agronomy_agent/server/settings.py": "5bc86513df2457af95db84cc9ca4cac37667eedc051624067b9aa12e5013e761",
+    "src/agronomy_agent/server/storage/db.py": "d2a05f192948f15b740ba6073952a033bf49508f998394e92e3ae82f79c7bcf8",
+    "src/agronomy_agent/server/storage/field_data_store.py": "2b46f9f75cec38d600d2254b44878e26e98bf0dcf693920dd041113bda9b1c89",
+    "src/agronomy_agent/server/storage/field_source_blobs.py": "8a27f39e383874814ca93677ba4acc3e436bf656629335c8bc512ddaaf19ac55",
+    "tests/test_field_data_rendering.py": "415cff8a0ff28a9b469c65356e587bd63b84f46a74916155249c31c182887b87",
+    "tests/test_field_data_routes.py": "20ef8dce3d4310d5df703dd09c37a28be7ff6fde093569061788a2ecfde2eb7c"
+  },
+  "limits": [
+    "Native Mac binary was not rebuilt locally: observed free disk was below its 8 GiB scratch gate. Desktop package/auth contracts are in the full suite; remote Mac candidate CI is required before merge.",
+    "Scientific holds in frozen imagery assessment remain unchanged.",
+    "Pixel-block deduplication and eviction remain a separate reference-preserving migration.",
+    "The later unbound phase5 audit records four raw_source_id false positives for legitimate source_* columns in this rehearsal; these are not confirmed disclosures or a clean leak-rate result."
+  ],
+  "prior_integrated_python": {
+    "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src .venv/bin/python -m pytest -q -n 0 -o tmp_path_retention_policy=failed --basetemp=<external-test-scratch>",
+    "log_sha256": "6ebd1e675508f654bf95d71a6507eabc330077a510453614c8fa8a067e77a87c",
+    "passed": 1306,
+    "seconds": 172.73,
+    "skipped": 2,
+    "warnings": 26
+  },
+  "repairs": [
+    {
+      "detection": "Live UI and independently inspected persisted answers. Runs06/07 had four final-answer mismatches each.",
+      "failed_test_setup": "First regression attempt had34passed1failed7errors from a missing required fixture region and frozen-settings assignment; corrected fixtures passed26; reviewer scope49passed.",
+      "finding": "Correct tool values were erased by raw_source_id leak matching on source_* literal columns.",
+      "fix": "Only exact current planner/result replay against separately server-loaded authorized context can exempt literal reviewed column identifiers from the raw-source-ID heuristic. Other leak classes remain checked.",
+      "new_checks": "HTTP, structured, persisted and payload answer equality; independent source/query/question/invocation binding; spoofed-context/payload/result and same-line leakage regressions."
+    }
+  ],
+  "schema_version": "field_data_merge_verification.v1"
+}

@@ -1,0 +1,144 @@
+.field-data-panel {
+  margin-top: 10px;
+}
+
+.field-data-panel > p,
+.field-data-panel > section {
+  margin: 12px;
+}
+
+.field-data-panel section {
+  padding-top: 10px;
+  border-top: 1px solid #d8e1d3;
+}
+
+.field-data-panel h3,
+.field-data-panel h4 {
+  margin: 0 0 10px;
+  color: #173826;
+}
+
+.field-data-panel form {
+  display: grid;
+  gap: 10px;
+}
+
+.field-data-panel label {
+  display: grid;
+  gap: 4px;
+}
+
+.field-data-panel button {
+  width: fit-content;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid #b8cab5;
+  border-radius: 6px;
+  color: #173826;
+  background: #e4f1e5;
+  font-weight: 700;
+}
+
+.field-data-panel button:disabled {
+  opacity: .55;
+}
+
+.field-data-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.field-data-panel table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.field-data-panel caption {
+  padding: 5px 0;
+  text-align: left;
+}
+
+.field-data-panel th,
+.field-data-panel td {
+  min-width: 80px;
+  padding: 5px;
+  border-bottom: 1px solid #d8e1d3;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.field-data-panel .field-data-mapping input,
+.field-data-panel .field-data-mapping select {
+  min-width: 105px;
+}
+
+.field-data-panel fieldset {
+  min-width: 0;
+  border: 1px solid #d8e1d3;
+}
+
+.field-data-panel fieldset p {
+  margin: 4px 0 8px;
+}
+
+.field-data-checks,
+.field-data-dates,
+.field-data-source,
+.field-data-filter {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+}
+
+.field-data-panel .field-data-checks label,
+.field-data-panel .field-data-review {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.field-data-panel input[type="checkbox"] {
+  width: auto;
+}
+
+.field-data-panel .field-data-warning {
+  padding: 7px;
+  border-left: 3px solid #a46b26;
+  background: #fff2d9;
+}
+
+.field-data-query-result {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #cddbc7;
+  border-radius: 6px;
+  background: #f6faf3;
+  overflow-wrap: anywhere;
+}
+
+.field-data-imports {
+  display: grid;
+  gap: 7px;
+  padding-left: 18px;
+}
+
+.field-data-imports li span {
+  display: block;
+  color: #526258;
+  font-size: 12px;
+}
+
+.field-data-scenes {
+  display: grid;
+  gap: 8px;
+  padding-left: 18px;
+}
+
+.field-data-provider-details p {
+  margin: 5px 0;
+}
+
+.field-data-scenes li span {
+  display: block;
+}

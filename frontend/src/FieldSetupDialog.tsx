@@ -60,6 +60,7 @@ export function FieldSetupDialog({ onClose, onSave, allowNetwork, previousRegion
   const [jurisdiction, setJurisdiction] = useState('')
   const [region, setRegion] = useState('')
   const [geometry, setGeometry] = useState<FieldGeometry>({ kind: 'none' })
+  const [dataOnly, setDataOnly] = useState(false)
   const [mode, setMode] = useState<MapMode>('point')
   const [latitude, setLatitude] = useState('')
   const [longitude, setLongitude] = useState('')
@@ -77,7 +78,7 @@ export function FieldSetupDialog({ onClose, onSave, allowNetwork, previousRegion
     return () => { mountedRef.current = false; requestIdRef.current += 1 }
   }, [])
   const issue = fieldGeometryIssue(geometry)
-  const dirty = Boolean(name || crop || jurisdiction || region || latitude || longitude || uploadNote || geometry.kind !== 'none')
+  const dirty = Boolean(name || crop || jurisdiction || region || latitude || longitude || uploadNote || geometry.kind !== 'none' || dataOnly)
   const requestClose = () => {
     if (busy) return
     if (dirty) setConfirmDiscard(true)
@@ -86,6 +87,7 @@ export function FieldSetupDialog({ onClose, onSave, allowNetwork, previousRegion
   const setManualGeometry = (next: FieldGeometry) => {
     if (busy) return
     requestIdRef.current += 1
+    setDataOnly(false)
     setGeometry(next); setUpload(null); setUploadNote(''); setSelectedFeature('')
   }
   const chooseFeature = (payload: BoundaryResponse, id: string) => {
@@ -97,6 +99,7 @@ export function FieldSetupDialog({ onClose, onSave, allowNetwork, previousRegion
       throw new Error('This file contains multiple fields, but their boundaries are unavailable. Import one field at a time.')
     }
     const next = importedFieldGeometry(selected?.geometry || payload.geometry)
+    setDataOnly(false)
     setGeometry(next); setMode('inspect'); setSelectedFeature(id)
     const label = payload.feature_summaries?.find(feature => feature.id === id)?.label
     if (!name && label) setName(label)
@@ -137,7 +140,7 @@ export function FieldSetupDialog({ onClose, onSave, allowNetwork, previousRegion
         <button type="button" onClick={onClose}>Discard draft</button>
       </div> : null}
       {step === 0 ? <div className="setup-details">
-        <div><span className="eyebrow">A small start</span><h3>Make it yours.</h3><p>A name and a location are enough. Add observations and measurements as you go.</p></div>
+        <div><span className="eyebrow">A small start</span><h3>Make it yours.</h3><p>Start with a name. Add a location now or keep it unknown while you add field records and tables.</p></div>
         <label>Field name<input data-dialog-initial-focus value={name} onChange={event => setName(event.target.value)} placeholder="e.g. North quarter" maxLength={160} /></label>
         <label>Crop <span className="optional">optional</span><input value={crop} list="field-crops" onChange={event => setCrop(event.target.value)} placeholder="Choose or type a crop" /></label>
         <datalist id="field-crops">{['Barley', 'Canola', 'Wheat', 'Oats', 'Corn', 'Soybean', 'Lentils', 'Peas', 'Forage'].map(value => <option key={value} value={value} />)}</datalist>
@@ -148,13 +151,17 @@ export function FieldSetupDialog({ onClose, onSave, allowNetwork, previousRegion
         </details>
       </div> : null}
       {step === 1 ? <div className="setup-location">
-        <div className="setup-location-heading"><div><h3>Where is this field?</h3><p>Use a pin now. You can refine the boundary later.</p></div></div>
+        <div className="setup-location-heading"><div><h3>Where is this field?</h3><p>Use a pin or boundary if known. You can keep the location unknown and add it later.</p></div></div>
         <div className="location-methods" role="group" aria-label="Location method">
           <button type="button" disabled={busy} aria-pressed={mode === 'point'} onClick={() => { setMode('point'); setManualGeometry({ kind: 'none' }); setStatus('Click the map to place a pin.') }}><MapPin size={16} /> Place a pin</button>
           <button type="button" disabled={busy} aria-pressed={mode === 'boundary'} onClick={() => { setMode('boundary'); setManualGeometry({ kind: 'none' }); setStatus('Add corners, then finish your boundary.') }}><Pencil size={16} /> Draw boundary</button>
           <label className="upload-button"><Upload size={16} /> Import boundary<input type="file" aria-label="Import field boundary" accept=".geojson,.json,.zip,.gpkg" disabled={busy} onChange={event => { void importFile(event.target.files?.[0]); event.target.value = '' }} /></label>
+          <button type="button" disabled={busy} aria-pressed={dataOnly} onClick={() => {
+            setManualGeometry({ kind: 'none' }); setDataOnly(true); setMode('inspect'); setLatitude(''); setLongitude(''); setError('')
+            setStatus('Location unknown. Map context and imagery require a valid location.')
+          }}>No location yet · data only</button>
         </div>
-        <div className="setup-map"><Suspense fallback={<p>Loading map…</p>}><LeafletFieldMap fieldKey="new-field-wizard" mode={busy ? 'inspect' : mode} scenarioId="new-field" fieldLabel={name || 'New field'} geometry={geometry}
+        {dataOnly ? <p role="status" className="setup-map-status">Location unknown. You can save field records and tables; map context and imagery require a valid location.</p> : <><div className="setup-map"><Suspense fallback={<p>Loading map…</p>}><LeafletFieldMap fieldKey="new-field-wizard" mode={busy ? 'inspect' : mode} scenarioId="new-field" fieldLabel={name || 'New field'} geometry={geometry}
           regionalCandidates={[]} regionalFeatureCollection={null} onGeometryChange={setManualGeometry} onStatusChange={setStatus} allowNetwork={allowNetwork}
           onFinishBoundary={() => setMode('edit')} onCancelDrawing={() => { setManualGeometry({ kind: 'none' }); setMode('point') }} /></Suspense></div>
         <p role="status" className="setup-map-status">{status}</p>
@@ -168,19 +175,19 @@ export function FieldSetupDialog({ onClose, onSave, allowNetwork, previousRegion
           }}>Use coordinates</button></div></details>
         {upload?.feature_summaries && upload.feature_summaries.length > 1 ? <label>Field in this file<select value={selectedFeature} onChange={event => { try { chooseFeature(upload, event.target.value); setError('') } catch (cause) { setError((cause as Error).message) } }}>{upload.feature_summaries.map(feature => <option key={feature.id} value={feature.id}>{feature.label}</option>)}</select></label> : null}
         {uploadNote ? <p className="prefill-note">{uploadNote}</p> : null}
-        {upload?.warnings?.map(warning => <p key={warning} className="prefill-note">{warning}</p>)}
+        {upload?.warnings?.map(warning => <p key={warning} className="prefill-note">{warning}</p>)}</>}
       </div> : null}
       {step === 2 ? <div className="setup-review"><span className="eyebrow">Ready when you are</span><h3>{name}</h3>
         <dl><div><dt>Crop</dt><dd>{crop || 'Not specified'}</dd></div><div><dt>Region</dt><dd>{[region, jurisdiction].filter(Boolean).join(', ') || 'Not specified'}</dd></div>
-          <div><dt>Location</dt><dd>{geometry.kind === 'point' ? `${geometry.point.lat.toFixed(5)}, ${geometry.point.lon.toFixed(5)}` : geometry.kind === 'polygon' ? `${geometry.points.length} boundary corners` : 'Missing'}</dd></div>
+          <div><dt>Location</dt><dd>{geometry.kind === 'point' ? `${geometry.point.lat.toFixed(5)}, ${geometry.point.lon.toFixed(5)}` : geometry.kind === 'polygon' ? `${geometry.points.length} boundary corners` : 'Unknown · data only'}</dd></div>
           <div><dt>Area</dt><dd>{geometry.kind === 'polygon' ? `About ${Math.round(geometry.acres).toLocaleString()} acres · calculated from boundary` : 'Not measured · add a boundary later'}</dd></div></dl>
-        <p>Only the details you entered will be saved. Regional maps add context; they never replace field observations.</p>
+        <p>{dataOnly ? 'Map context and imagery remain unavailable until you add a valid location.' : 'Only the details you entered will be saved. Regional maps add context; they never replace field observations.'}</p>
         {uploadNote ? <p className="prefill-note">{uploadNote}</p> : null}
       </div> : null}
     </div>
     <footer className="setup-footer"><button type="button" className="secondary-button" disabled={busy} onClick={() => step ? setStep(step - 1) : requestClose()}><ArrowLeft size={16} />{step ? 'Back' : 'Cancel'}</button>
       <span>Step {step + 1} of 3</span>
-      <button type="button" className="primary-button" disabled={busy || !name.trim() || (step > 0 && issue !== null)} onClick={() => step < 2 ? setStep(step + 1) : void save()}>
+      <button type="button" className="primary-button" disabled={busy || !name.trim() || (step > 0 && !dataOnly && issue !== null)} onClick={() => step < 2 ? setStep(step + 1) : void save()}>
         {busy ? 'Saving…' : step < 2 ? 'Continue' : 'Save field'}<ArrowRight size={16} /></button></footer>
   </WorkspaceDialog>
 }

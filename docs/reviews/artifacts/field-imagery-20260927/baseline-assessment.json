@@ -1,0 +1,1531 @@
+{
+  "alias_audit": {
+    "exact_duplicate_groups": [],
+    "max_pairwise_cosine_similarity": null
+  },
+  "baseline": {
+    "crop": {
+      "accuracy": 0.5517241379310345,
+      "accuracy_all_eligible_failures_incorrect": 0.5517241379310345,
+      "balanced_accuracy": 0.3333333333333333,
+      "eligible": 29,
+      "failed": 0,
+      "macro_f1": 0.23703703703703705,
+      "predicted": 29
+    },
+    "yield_by_crop": {
+      "Corn": {
+        "bias_kg_ha": 2.842170943040401e-14,
+        "eligible": 8,
+        "failed": 0,
+        "mae_kg_ha": 1505.6902294501447,
+        "mae_skill_vs_paired_baseline": 0.0,
+        "moisture_percent": 15.5,
+        "paired_baseline_mae_kg_ha": 1505.6902294501447,
+        "predicted": 8,
+        "rmse_kg_ha": 1628.0563709061782
+      },
+      "Millet": {
+        "bias_kg_ha": 4.5474735088646414e-14,
+        "eligible": 5,
+        "failed": 0,
+        "mae_kg_ha": 1128.763781674778,
+        "mae_skill_vs_paired_baseline": 0.0,
+        "moisture_percent": 12.0,
+        "paired_baseline_mae_kg_ha": 1128.763781674778,
+        "predicted": 5,
+        "rmse_kg_ha": 1303.5178645020655
+      },
+      "Wheat": {
+        "bias_kg_ha": -0.7875865241304325,
+        "eligible": 16,
+        "failed": 0,
+        "mae_kg_ha": 1446.804646965256,
+        "mae_skill_vs_paired_baseline": 0.0,
+        "moisture_percent": 12.5,
+        "paired_baseline_mae_kg_ha": 1446.804646965256,
+        "predicted": 16,
+        "rmse_kg_ha": 1709.0513827871414
+      }
+    }
+  },
+  "code_sha256": "01d482712deda8d2d9b381ce5549d362b812498f3cbf194351d0adf42827df08",
+  "estimand": "held-out physical units on same farm and observed years",
+  "evidence_role": "exploratory_model_assessment",
+  "feature_failures": {
+    "akron-SB1-2019": "features_not_supplied",
+    "akron-SB1-2021": "features_not_supplied",
+    "akron-SB1-2022": "features_not_supplied",
+    "akron-SB3-2019": "features_not_supplied",
+    "akron-SB3-2021": "features_not_supplied",
+    "akron-SB4-2020": "features_not_supplied",
+    "akron-SB4-2021": "features_not_supplied",
+    "akron-SB4-2022": "features_not_supplied",
+    "akron-SB5-2019": "features_not_supplied",
+    "akron-SB5-2022": "features_not_supplied",
+    "akron-SB6-2020": "features_not_supplied",
+    "akron-SB6-2022": "features_not_supplied",
+    "akron-SB7-2019": "features_not_supplied",
+    "akron-SB7-2020": "features_not_supplied",
+    "akron-SCD2-2020": "features_not_supplied",
+    "akron-SCD2-2021": "features_not_supplied",
+    "akron-SCD2-2022": "features_not_supplied",
+    "akron-SCD3-2019": "features_not_supplied",
+    "akron-SCD3-2022": "features_not_supplied",
+    "akron-SCD4-2020": "features_not_supplied",
+    "akron-SCD4-2022": "features_not_supplied",
+    "akron-SCD5-2019": "features_not_supplied",
+    "akron-SCD5-2020": "features_not_supplied",
+    "akron-SCD5-2021": "features_not_supplied",
+    "akron-SCD6-2019": "features_not_supplied",
+    "akron-SCD6-2021": "features_not_supplied",
+    "akron-SCD6-2022": "features_not_supplied",
+    "akron-SCD7-2019": "features_not_supplied",
+    "akron-SCD7-2021": "features_not_supplied"
+  },
+  "feature_payload_sha256": null,
+  "feature_provenance": null,
+  "feature_set_id": null,
+  "features": {
+    "crop": {
+      "eligible": 29,
+      "failed": 29,
+      "predicted": 0
+    },
+    "yield_by_crop": {
+      "Corn": {
+        "eligible": 8,
+        "failed": 8,
+        "moisture_percent": 15.5,
+        "predicted": 0
+      },
+      "Millet": {
+        "eligible": 5,
+        "failed": 5,
+        "moisture_percent": 12.0,
+        "predicted": 0
+      },
+      "Wheat": {
+        "eligible": 16,
+        "failed": 16,
+        "moisture_percent": 12.5,
+        "predicted": 0
+      }
+    }
+  },
+  "limitation": "Exploratory one-farm assessment, 12 physical groups; adjacent units and imagery contexts remain dependent. Physical label-group holdout is not spatially disjoint imagery holdout. No external-farm generalization or agronomic validation. Targets are sample-location means, never whole-field harvest yields.",
+  "predictions": [
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 1887.3076067057623
+      },
+      "bundle_id": "akron-SB1-2019",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SB1",
+      "observed_crop": "Millet",
+      "observed_yield_kg_ha": 2734.09075747812,
+      "physical_unit": "SB1",
+      "sample_count": 14,
+      "train_bundle_ids": [
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 3150.3860393534947
+      },
+      "bundle_id": "akron-SB1-2021",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SB1",
+      "observed_crop": "Wheat",
+      "observed_yield_kg_ha": 5245.763142903645,
+      "physical_unit": "SB1",
+      "sample_count": 20,
+      "train_bundle_ids": [
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 2244.7714072972985
+      },
+      "bundle_id": "akron-SB1-2022",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SB1",
+      "observed_crop": "Corn",
+      "observed_yield_kg_ha": 287.28567634850657,
+      "physical_unit": "SB1",
+      "sample_count": 20,
+      "train_bundle_ids": [
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 3141.8604212034456
+      },
+      "bundle_id": "akron-SB3-2019",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SB3",
+      "observed_crop": "Wheat",
+      "observed_yield_kg_ha": 5059.982100440313,
+      "physical_unit": "SB3",
+      "sample_count": 21,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 3141.8604212034456
+      },
+      "bundle_id": "akron-SB3-2021",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SB3",
+      "observed_crop": "Wheat",
+      "observed_yield_kg_ha": 3455.525735917506,
+      "physical_unit": "SB3",
+      "sample_count": 21,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 3278.7124421056214
+      },
+      "bundle_id": "akron-SB4-2020",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SB4",
+      "observed_crop": "Wheat",
+      "observed_yield_kg_ha": 3320.867101621735,
+      "physical_unit": "SB4",
+      "sample_count": 20,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 1898.645798589565
+      },
+      "bundle_id": "akron-SB4-2021",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SB4",
+      "observed_crop": "Corn",
+      "observed_yield_kg_ha": 2710.1649373026403,
+      "physical_unit": "SB4",
+      "sample_count": 20,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 2102.8720598480622
+      },
+      "bundle_id": "akron-SB4-2022",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SB4",
+      "observed_crop": "Millet",
+      "observed_yield_kg_ha": 1871.8329449089204,
+      "physical_unit": "SB4",
+      "sample_count": 20,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 1727.2781364188656
+      },
+      "bundle_id": "akron-SB5-2019",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SB5",
+      "observed_crop": "Corn",
+      "observed_yield_kg_ha": 3909.738572497535,
+      "physical_unit": "SB5",
+      "sample_count": 22,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 3490.258826029541
+      },
+      "bundle_id": "akron-SB5-2022",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SB5",
+      "observed_crop": "Wheat",
+      "observed_yield_kg_ha": 147.67134276294337,
+      "physical_unit": "SB5",
+      "sample_count": 21,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 3454.7789554883097
+      },
+      "bundle_id": "akron-SB6-2020",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SB6",
+      "observed_crop": "Wheat",
+      "observed_yield_kg_ha": 2253.598705282501,
+      "physical_unit": "SB6",
+      "sample_count": 29,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 3454.7789554883097
+      },
+      "bundle_id": "akron-SB6-2022",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SB6",
+      "observed_crop": "Wheat",
+      "observed_yield_kg_ha": 1881.0496510872267,
+      "physical_unit": "SB6",
+      "sample_count": 27,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 3213.7750772300546
+      },
+      "bundle_id": "akron-SB7-2019",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SB7",
+      "observed_crop": "Wheat",
+      "observed_yield_kg_ha": 4294.9275747552365,
+      "physical_unit": "SB7",
+      "sample_count": 26,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 2210.492470957734
+      },
+      "bundle_id": "akron-SB7-2020",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SB7",
+      "observed_crop": "Corn",
+      "observed_yield_kg_ha": 527.23823072546,
+      "physical_unit": "SB7",
+      "sample_count": 26,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 3310.0496333055207
+      },
+      "bundle_id": "akron-SCD2-2020",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SCD2",
+      "observed_crop": "Wheat",
+      "observed_yield_kg_ha": 2850.8092336232507,
+      "physical_unit": "SCD2",
+      "sample_count": 23,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 1925.2698925803484
+      },
+      "bundle_id": "akron-SCD2-2021",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SCD2",
+      "observed_crop": "Corn",
+      "observed_yield_kg_ha": 2523.796279367159,
+      "physical_unit": "SCD2",
+      "sample_count": 23,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 2412.4926648703913
+      },
+      "bundle_id": "akron-SCD2-2022",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SCD2",
+      "observed_crop": "Millet",
+      "observed_yield_kg_ha": 633.350524819603,
+      "physical_unit": "SCD2",
+      "sample_count": 23,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 1696.3038214009466
+      },
+      "bundle_id": "akron-SCD3-2019",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SCD3",
+      "observed_crop": "Corn",
+      "observed_yield_kg_ha": 4126.558777622969,
+      "physical_unit": "SCD3",
+      "sample_count": 22,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 3482.018251212562
+      },
+      "bundle_id": "akron-SCD3-2022",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SCD3",
+      "observed_crop": "Wheat",
+      "observed_yield_kg_ha": 271.2799650176337,
+      "physical_unit": "SCD3",
+      "sample_count": 22,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 3392.638405811524
+      },
+      "bundle_id": "akron-SCD4-2020",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SCD4",
+      "observed_crop": "Wheat",
+      "observed_yield_kg_ha": 2123.0098756082302,
+      "physical_unit": "SCD4",
+      "sample_count": 15,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 3392.638405811524
+      },
+      "bundle_id": "akron-SCD4-2022",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SCD4",
+      "observed_crop": "Wheat",
+      "observed_yield_kg_ha": 2881.6061762364993,
+      "physical_unit": "SCD4",
+      "sample_count": 15,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 3170.6422199473413
+      },
+      "bundle_id": "akron-SCD5-2019",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SCD5",
+      "observed_crop": "Wheat",
+      "observed_yield_kg_ha": 4941.920433995945,
+      "physical_unit": "SCD5",
+      "sample_count": 16,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 2160.268593896742
+      },
+      "bundle_id": "akron-SCD5-2020",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SCD5",
+      "observed_crop": "Corn",
+      "observed_yield_kg_ha": 878.8053701524019,
+      "physical_unit": "SCD5",
+      "sample_count": 16,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 2219.009876699637
+      },
+      "bundle_id": "akron-SCD5-2021",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SCD5",
+      "observed_crop": "Millet",
+      "observed_yield_kg_ha": 1407.281677502622,
+      "physical_unit": "SCD5",
+      "sample_count": 16,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 1661.6389761773164
+      },
+      "bundle_id": "akron-SCD6-2019",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SCD6",
+      "observed_crop": "Millet",
+      "observed_yield_kg_ha": 3636.765279591904,
+      "physical_unit": "SCD6",
+      "sample_count": 13,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 3165.9605887567245
+      },
+      "bundle_id": "akron-SCD6-2021",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SCD6",
+      "observed_crop": "Wheat",
+      "observed_yield_kg_ha": 5012.144901855192,
+      "physical_unit": "SCD6",
+      "sample_count": 16,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 2137.655406288096
+      },
+      "bundle_id": "akron-SCD6-2022",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SCD6",
+      "observed_crop": "Corn",
+      "observed_yield_kg_ha": 1037.0976834129242,
+      "physical_unit": "SCD6",
+      "sample_count": 16,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD7-2019",
+        "akron-SCD7-2021"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 3124.296852936276
+      },
+      "bundle_id": "akron-SCD7-2019",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SCD7",
+      "observed_crop": "Wheat",
+      "observed_yield_kg_ha": 4702.210610145343,
+      "physical_unit": "SCD7",
+      "sample_count": 16,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022"
+      ]
+    },
+    {
+      "baseline": {
+        "crop": "Wheat",
+        "yield_kg_ha": 3124.296852936276
+      },
+      "bundle_id": "akron-SCD7-2021",
+      "feature_train_bundle_ids": [],
+      "features": {
+        "crop": null,
+        "failures": {
+          "features": "features_not_supplied"
+        },
+        "yield_kg_ha": null
+      },
+      "fold_id": "physical-SCD7",
+      "observed_crop": "Wheat",
+      "observed_yield_kg_ha": 4059.187181952858,
+      "physical_unit": "SCD7",
+      "sample_count": 16,
+      "train_bundle_ids": [
+        "akron-SB1-2019",
+        "akron-SB1-2021",
+        "akron-SB1-2022",
+        "akron-SB3-2019",
+        "akron-SB3-2021",
+        "akron-SB4-2020",
+        "akron-SB4-2021",
+        "akron-SB4-2022",
+        "akron-SB5-2019",
+        "akron-SB5-2022",
+        "akron-SB6-2020",
+        "akron-SB6-2022",
+        "akron-SB7-2019",
+        "akron-SB7-2020",
+        "akron-SCD2-2020",
+        "akron-SCD2-2021",
+        "akron-SCD2-2022",
+        "akron-SCD3-2019",
+        "akron-SCD3-2022",
+        "akron-SCD4-2020",
+        "akron-SCD4-2022",
+        "akron-SCD5-2019",
+        "akron-SCD5-2020",
+        "akron-SCD5-2021",
+        "akron-SCD6-2019",
+        "akron-SCD6-2021",
+        "akron-SCD6-2022"
+      ]
+    }
+  ],
+  "protocol_id": "9714d8896c97092f81ac283d6ac2025d9460e3eed5733f85aa08776e4ce8455e",
+  "schema_version": "imagery_assessment_result.v1",
+  "sklearn_version": "1.9.1",
+  "source_sha256": "a1599b9c523f4ed44efd9b7f0c3ba6baf9f263f7c274415c77b4eb81d623f38b",
+  "split_id": "11fce5ab9c883e1898777159d17e9641dbbdb3b6ccc28297512d72294608ec4c",
+  "yield_conditioning": "observed crop supplied to regression and crop-mean baseline; not end-to-end predicted-crop yield"
+}

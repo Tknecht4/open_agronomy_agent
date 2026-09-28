@@ -1,0 +1,48 @@
+{
+  "schema_version": "field_data_research_verification.v1",
+  "checked_date": "2026-09-27",
+  "reference_commit": "7c502d8",
+  "scope": "Research artifacts and source inspection only; no runtime benchmark, agronomic validation or model inference.",
+  "checks": [
+    {
+      "check": "catalog_schema_ids_rights_fields",
+      "status": "passed",
+      "entries": 51,
+      "unique_source_urls": 50
+    },
+    {
+      "check": "all_sample_hashes_bytes_rows_columns",
+      "status": "passed",
+      "files": 10,
+      "total_bytes": 7534085
+    },
+    {
+      "check": "development_question_source_hashes",
+      "status": "passed",
+      "cases": 8,
+      "semantic_review": "not_qualified_as_agronomic_validation"
+    },
+    {
+      "check": "public_search_log",
+      "status": "passed",
+      "query_count": 113,
+      "external_activation_trace_recorded": true,
+      "durable_memory_changed": false,
+      "research_graph_changed": false
+    },
+    {
+      "check": "research_artifact_json_and_private_path_scan",
+      "status": "passed"
+    },
+    {
+      "check": "check_public_docs.py",
+      "status": "passed",
+      "markdown_file_count": 25,
+      "errors": []
+    }
+  ],
+  "public_package_build_receipt": "outputs/field-data-research-20260927/public-package-receipt.json (local, ignored; produced after this artifact is frozen)",
+  "full_test_suite_run": false,
+  "model_inference_run": false,
+  "raw_samples_runtime_admitted": false
+}

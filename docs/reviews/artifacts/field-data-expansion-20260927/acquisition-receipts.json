@@ -1,0 +1,497 @@
+{
+  "files": [
+    {
+      "dataset_id": "us-bronson-field113-2016",
+      "name": "F113_2016_Data_Dictionary.csv",
+      "url": "https://ndownloader.figshare.com/files/44530700",
+      "bytes": 5192,
+      "sha256": "6692fa4fda978d18fe4b1f17702a556aee1ebc66cc458051f43012aa0a94e1a5",
+      "status": "downloaded",
+      "license": "U.S. Public Domain",
+      "license_evidence": "https://api.figshare.com/v2/articles/25213130"
+    },
+    {
+      "dataset_id": "us-bronson-field113-2016",
+      "name": "F113_2016_Activities_Log.csv",
+      "url": "https://ndownloader.figshare.com/files/44530703",
+      "bytes": 5249,
+      "sha256": "6c6782d997b7aaee05ae7501f99849bc04aa90e0f6ea16bf866380f771cb3332",
+      "status": "downloaded",
+      "license": "U.S. Public Domain",
+      "license_evidence": "https://api.figshare.com/v2/articles/25213130"
+    },
+    {
+      "dataset_id": "us-bronson-field113-2016",
+      "name": "F113_2016_MegaTable.xlsx",
+      "url": "https://ndownloader.figshare.com/files/44530706",
+      "bytes": 717730,
+      "sha256": "cab110f7332719a82b2ddc747583b8ea1b11f19cc57895bbcb32c4056942f15c",
+      "status": "downloaded",
+      "license": "U.S. Public Domain",
+      "license_evidence": "https://api.figshare.com/v2/articles/25213130"
+    },
+    {
+      "dataset_id": "us-bronson-field113-2016",
+      "name": "F113_2016_maps.pdf",
+      "url": "https://ndownloader.figshare.com/files/44530718",
+      "bytes": 1379539,
+      "sha256": "fbe68313d38bf37e44042ad3144807945c51cc823ded8f00cccf12405fb7010e",
+      "status": "downloaded",
+      "license": "U.S. Public Domain",
+      "license_evidence": "https://api.figshare.com/v2/articles/25213130"
+    },
+    {
+      "dataset_id": "us-bronson-field113-2016",
+      "name": "README_The Bronson Files, Dataset 8, Field 113, 2016.txt",
+      "url": "https://ndownloader.figshare.com/files/44530724",
+      "bytes": 23099,
+      "sha256": "8f2327d4584520d87b8077b58e74a1dfa1fc67193bc0a582b665316999841ef2",
+      "status": "downloaded",
+      "license": "U.S. Public Domain",
+      "license_evidence": "https://api.figshare.com/v2/articles/25213130"
+    },
+    {
+      "dataset_id": "us-bronson-field113-2016",
+      "name": "file_list_The Bronson Files, Dataset 8, Field 113, 2016.txt",
+      "url": "https://ndownloader.figshare.com/files/44530727",
+      "bytes": 5767,
+      "sha256": "5be3ecc01a48dfa4c6391db8f2d0a9d513e81dc1da4ddab103d9ddabffceff74",
+      "status": "downloaded",
+      "license": "U.S. Public Domain",
+      "license_evidence": "https://api.figshare.com/v2/articles/25213130"
+    },
+    {
+      "dataset": "ca-borealis-bean-ayd-field",
+      "name": "AYD_AM_Codebook_YRKPP.docx",
+      "url": "https://borealisdata.ca/api/access/datafile/669348?format=original",
+      "bytes": 54783,
+      "sha256": "3dda0a8c7edeb15a59f781e6af541d9535b016e11477eee32c99242ec306bd09",
+      "status": "downloaded",
+      "license": "CC-BY-4.0",
+      "metadata_sha256": "389562df8e4d4b1b3c8e7b2e14387cb24a058f6dbd9223a7d02e3aa14fd1f9fe",
+      "content_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "content_disposition": "attachment; filename*=UTF-8''AYD_AM_Codebook_YRKPP.docx"
+    },
+    {
+      "dataset": "ca-borealis-bean-ayd-field",
+      "name": "AYD_Field_Data_4environments_YRKPP.tab",
+      "url": "https://borealisdata.ca/api/access/datafile/667623?format=original",
+      "bytes": 227409,
+      "sha256": "7ab51a52725515fe9de93166fb4146aa5b09dd07ef6e3b96a40b8c411767553d",
+      "status": "downloaded",
+      "license": "CC-BY-4.0",
+      "metadata_sha256": "389562df8e4d4b1b3c8e7b2e14387cb24a058f6dbd9223a7d02e3aa14fd1f9fe",
+      "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "content_disposition": "attachment; filename*=UTF-8''AYD_Field_Data_4environments_YRKPP.xlsx"
+    },
+    {
+      "dataset": "ca-borealis-onion-tissue-yield",
+      "name": "100A_README.txt",
+      "url": "https://borealisdata.ca/api/access/datafile/1046557?format=original",
+      "bytes": 12791,
+      "sha256": "492d9b7cbf7723f447251af329215d23c8ad68a10f1512e68a935fa57234eb64",
+      "status": "downloaded",
+      "license": "CC-BY-4.0",
+      "metadata_sha256": "c4a5b434f508a685b4c746728f1171bc76db66b09c5384af4908d4b95844999c",
+      "content_type": "text/plain",
+      "content_disposition": "attachment; filename*=UTF-8''100A_README.txt"
+    },
+    {
+      "dataset": "ca-borealis-onion-tissue-yield",
+      "name": "growerFieldOnion_2024And2025.tab",
+      "url": "https://borealisdata.ca/api/access/datafile/1046488?format=original",
+      "bytes": 39595,
+      "sha256": "4474725844580681017893421779038ba0080f3313dccb863397eb12fae0878a",
+      "status": "downloaded",
+      "license": "CC-BY-4.0",
+      "metadata_sha256": "c4a5b434f508a685b4c746728f1171bc76db66b09c5384af4908d4b95844999c",
+      "content_type": "text/csv",
+      "content_disposition": "attachment; filename*=UTF-8''growerFieldOnion_2024And2025.csv"
+    },
+    {
+      "dataset": "ca-borealis-onion-tissue-yield",
+      "name": "micronutrientTrialOnion_2024And2025.tab",
+      "url": "https://borealisdata.ca/api/access/datafile/1046490?format=original",
+      "bytes": 28400,
+      "sha256": "e0f3057bc162a59c88c1c6b831894cb72adb23093f7957b8dc0b457eb1bc121e",
+      "status": "downloaded",
+      "license": "CC-BY-4.0",
+      "metadata_sha256": "c4a5b434f508a685b4c746728f1171bc76db66b09c5384af4908d4b95844999c",
+      "content_type": "text/csv",
+      "content_disposition": "attachment; filename*=UTF-8''micronutrientTrialOnion_2024And2025.csv"
+    },
+    {
+      "dataset": "ca-borealis-onion-tissue-yield",
+      "name": "stemphyliumLeafBlightOnionYield_2024And2025.tab",
+      "url": "https://borealisdata.ca/api/access/datafile/1046489?format=original",
+      "bytes": 8184,
+      "sha256": "324f50eb37323495c770241efcc42eb1318a4c27e3217c2b1e635e3fd1181bb1",
+      "status": "downloaded",
+      "license": "CC-BY-4.0",
+      "metadata_sha256": "c4a5b434f508a685b4c746728f1171bc76db66b09c5384af4908d4b95844999c",
+      "content_type": "text/csv",
+      "content_disposition": "attachment; filename*=UTF-8''stemphyliumLeafBlightOnionYield_2024And2025.csv"
+    },
+    {
+      "dataset": "ca-borealis-holland-marsh-soil-health",
+      "name": "100A_readme.txt",
+      "url": "https://borealisdata.ca/api/access/datafile/826573?format=original",
+      "bytes": 8710,
+      "sha256": "05fb2ad2f9f94aac79aa4f8084ea9ecd15d7d57baa7f60e7dd7dbec4f1e88dad",
+      "status": "downloaded",
+      "license": "CC0-1.0",
+      "metadata_sha256": "89762bbae551f75c138aac5b8683da13611831db1d46576e3682081bbfc8c2de",
+      "content_type": "text/plain",
+      "content_disposition": "attachment; filename*=UTF-8''100A_readme.txt"
+    },
+    {
+      "dataset": "ca-borealis-holland-marsh-soil-health",
+      "name": "soilHealthTest.tab",
+      "url": "https://borealisdata.ca/api/access/datafile/826397?format=original",
+      "bytes": 12455,
+      "sha256": "d0183b8ba0d1393c45781b4e423c6ccd36b97be36d10dd603cf7f68dae15aaa8",
+      "status": "downloaded",
+      "license": "CC0-1.0",
+      "metadata_sha256": "89762bbae551f75c138aac5b8683da13611831db1d46576e3682081bbfc8c2de",
+      "content_type": "text/csv",
+      "content_disposition": "attachment; filename*=UTF-8''soilHealthTest.csv"
+    },
+    {
+      "dataset": "ca-borealis-holland-marsh-soil-health",
+      "name": "soilHealthTestFieldAvg.tab",
+      "url": "https://borealisdata.ca/api/access/datafile/826398?format=original",
+      "bytes": 5894,
+      "sha256": "04e843911fbb876891bb3abe340de1c033a3302004cb6b42675475d8a581b3a7",
+      "status": "downloaded",
+      "license": "CC0-1.0",
+      "metadata_sha256": "89762bbae551f75c138aac5b8683da13611831db1d46576e3682081bbfc8c2de",
+      "content_type": "text/csv",
+      "content_disposition": "attachment; filename*=UTF-8''soilHealthTestFieldAvg.csv"
+    },
+    {
+      "dataset": "ca-borealis-carrot-cavity-spot",
+      "name": "100A_README.txt",
+      "url": "https://borealisdata.ca/api/access/datafile/969544?format=original",
+      "bytes": 5939,
+      "sha256": "12561784a0f0b85f3e1f0c2aea868b047f8d6c67cfe14846879fe5cab4793822",
+      "status": "downloaded",
+      "license": "CC0-1.0",
+      "metadata_sha256": "b54d01b21083a1b54a9189068be690b739fbae5500db18aaa5841358fea9000a",
+      "content_type": "text/plain",
+      "content_disposition": "attachment; filename*=UTF-8''100A_README.txt"
+    },
+    {
+      "dataset": "ca-borealis-carrot-cavity-spot",
+      "name": "Cultivar_DSI_Harvest_2020_2022.csv",
+      "url": "https://borealisdata.ca/api/access/datafile/959389?format=original",
+      "bytes": 2903,
+      "sha256": "55d3b182eb89775b34ffea030657741ffc6b27369fda1b81c0d4121a13bce4c4",
+      "status": "downloaded",
+      "license": "CC0-1.0",
+      "metadata_sha256": "b54d01b21083a1b54a9189068be690b739fbae5500db18aaa5841358fea9000a",
+      "content_type": "text/csv",
+      "content_disposition": "attachment; filename*=UTF-8''Cultivar_DSI_Harvest_2020_2022.csv"
+    },
+    {
+      "dataset": "ca-borealis-carrot-cavity-spot",
+      "name": "Cultivar_DSI_Midseason_2020_2022.tab",
+      "url": "https://borealisdata.ca/api/access/datafile/959390?format=original",
+      "bytes": 3130,
+      "sha256": "6f578d9f8ba7c5f4aca41e1a31effd399c61840258490f3b2f8e273484ff642e",
+      "status": "downloaded",
+      "license": "CC0-1.0",
+      "metadata_sha256": "b54d01b21083a1b54a9189068be690b739fbae5500db18aaa5841358fea9000a",
+      "content_type": "text/csv",
+      "content_disposition": "attachment; filename*=UTF-8''Cultivar_DSI_Midseason_2020_2022.csv"
+    },
+    {
+      "dataset": "us-arkansas-soybean-p-39",
+      "name": "Slaton et al., 2021 Dataset.xlsx",
+      "url": "https://ndownloader.figshare.com/files/44545148",
+      "bytes": 656705,
+      "sha256": "64a9be4054f87b7e847483915b9326cf189a721a4cf72bcbbb9114f9c561a852",
+      "status": "downloaded",
+      "license": {
+        "value": 96,
+        "name": "U.S. Public Domain",
+        "url": "https://www.usa.gov/publicdomain/label/1.0/"
+      },
+      "metadata_sha256": "831bd0501503a6d14c70f7be8615c1353d80103d10bfacc018507eda4fb17e60"
+    },
+    {
+      "dataset": "us-iowa-stover-field70-71",
+      "name": "Field 70-71 CornYield_2008-2021_ForR_0.csv",
+      "url": "https://ndownloader.figshare.com/files/44532917",
+      "bytes": 18917,
+      "sha256": "df451cb43e2ce5eee30cb0df97362ea2b83c1d6160981a67bff8fd68c3ca47e9",
+      "status": "downloaded",
+      "license": {
+        "value": 96,
+        "name": "U.S. Public Domain",
+        "url": "https://www.usa.gov/publicdomain/label/1.0/"
+      },
+      "metadata_sha256": "bb80004320deda7c9f09e3a0db737c3e8cbc34503a7a99b57a739eb570542dc6"
+    },
+    {
+      "dataset": "us-iowa-stover-field70-71",
+      "name": "Field 70-71 Plot Status 2007-2021.xlsx",
+      "url": "https://ndownloader.figshare.com/files/44532926",
+      "bytes": 287972,
+      "sha256": "25ef65fb5b40a90e5cb9882b3115d054441a5268d8695befeb4918dd6061d07a",
+      "status": "downloaded",
+      "license": {
+        "value": 96,
+        "name": "U.S. Public Domain",
+        "url": "https://www.usa.gov/publicdomain/label/1.0/"
+      },
+      "metadata_sha256": "bb80004320deda7c9f09e3a0db737c3e8cbc34503a7a99b57a739eb570542dc6"
+    },
+    {
+      "dataset": "us-iowa-stover-field70-71",
+      "name": "Field 70-71 Surface Soil Test Data 2007-2021.xlsx",
+      "url": "https://ndownloader.figshare.com/files/44532956",
+      "bytes": 320439,
+      "sha256": "266bc9482c986f5869676dfb363c8d9be490a0956b4c05c36a3fd512cc3af1b6",
+      "status": "downloaded",
+      "license": {
+        "value": 96,
+        "name": "U.S. Public Domain",
+        "url": "https://www.usa.gov/publicdomain/label/1.0/"
+      },
+      "metadata_sha256": "bb80004320deda7c9f09e3a0db737c3e8cbc34503a7a99b57a739eb570542dc6"
+    },
+    {
+      "dataset": "us-iowa-stover-field70-71",
+      "name": "Field 70-71 Data Dictionary.xlsx",
+      "url": "https://ndownloader.figshare.com/files/44532959",
+      "bytes": 16503,
+      "sha256": "40a8512677fea4b51c0276ee73085e60f1139f1234f4d4f80048294759c5f26a",
+      "status": "downloaded",
+      "license": {
+        "value": 96,
+        "name": "U.S. Public Domain",
+        "url": "https://www.usa.gov/publicdomain/label/1.0/"
+      },
+      "metadata_sha256": "bb80004320deda7c9f09e3a0db737c3e8cbc34503a7a99b57a739eb570542dc6"
+    },
+    {
+      "dataset": "us-texas-sugarcane-ge",
+      "name": "Texas Data series 11-14.xlsx",
+      "url": "https://ndownloader.figshare.com/files/51334985",
+      "bytes": 337026,
+      "sha256": "67d2e918c23621b1927e7e3c6d911396098f38588b017cf4b77ba92808102500",
+      "status": "downloaded",
+      "license": {
+        "value": 96,
+        "name": "U.S. Public Domain",
+        "url": "https://www.usa.gov/publicdomain/label/1.0/"
+      },
+      "metadata_sha256": "57ee328c5b8aac39e49d88db9d627c0844690da8203ea7cecf27a6c2268ae499"
+    },
+    {
+      "dataset": "us-texas-sugarcane-ge",
+      "name": "Texas Ratooning data series 11-14.xlsx",
+      "url": "https://ndownloader.figshare.com/files/51362912",
+      "bytes": 100797,
+      "sha256": "cfe509da7365f5f4a9bff8c31df2ebf782507453699af9fa8d34d198bf751a33",
+      "status": "downloaded",
+      "license": {
+        "value": 96,
+        "name": "U.S. Public Domain",
+        "url": "https://www.usa.gov/publicdomain/label/1.0/"
+      },
+      "metadata_sha256": "57ee328c5b8aac39e49d88db9d627c0844690da8203ea7cecf27a6c2268ae499"
+    },
+    {
+      "dataset": "soy",
+      "name": "README.md",
+      "bytes_expected": 1574,
+      "url": "https://datadryad.org/api/v2/files/4347852/download",
+      "license": "CC0-1.0",
+      "status": "failed",
+      "error": "HTTPStatusError"
+    },
+    {
+      "dataset": "soy",
+      "name": "SeveroSilvaEtal_FCR_Dryad.xlsx",
+      "bytes_expected": 97745,
+      "url": "https://datadryad.org/api/v2/files/4347841/download",
+      "license": "CC0-1.0",
+      "status": "failed",
+      "error": "HTTPStatusError"
+    },
+    {
+      "dataset": "bowles",
+      "name": "ltar.data.csv",
+      "bytes_expected": 567105,
+      "url": "https://datadryad.org/api/v2/files/261887/download",
+      "license": "CC0-1.0",
+      "status": "failed",
+      "error": "HTTPStatusError"
+    },
+    {
+      "dataset": "legume",
+      "name": "Article.csv",
+      "bytes_expected": 30883,
+      "url": "https://datadryad.org/api/v2/files/69314/download",
+      "license": "CC0-1.0",
+      "status": "failed",
+      "error": "HTTPStatusError"
+    },
+    {
+      "dataset": "legume",
+      "name": "Crop_Sequence_Trt.csv",
+      "bytes_expected": 316816,
+      "url": "https://datadryad.org/api/v2/files/69316/download",
+      "license": "CC0-1.0",
+      "status": "failed",
+      "error": "HTTPStatusError"
+    },
+    {
+      "dataset": "legume",
+      "name": "Crop.csv",
+      "bytes_expected": 5824559,
+      "url": "https://datadryad.org/api/v2/files/69317/download",
+      "license": "CC0-1.0",
+      "status": "failed",
+      "error": "HTTPStatusError"
+    },
+    {
+      "dataset": "legume",
+      "name": "Site.csv",
+      "bytes_expected": 93182,
+      "url": "https://datadryad.org/api/v2/files/69315/download",
+      "license": "CC0-1.0",
+      "status": "failed",
+      "error": "HTTPStatusError"
+    },
+    {
+      "dataset": "ohio-nitrogen",
+      "name": "Crop_Data.csv",
+      "bytes_expected": 134861,
+      "url": "https://datadryad.org/api/v2/files/4139094/download",
+      "license": "CC0-1.0",
+      "status": "failed",
+      "error": "HTTPStatusError"
+    },
+    {
+      "dataset": "ohio-nitrogen",
+      "name": "Experimental_Design.csv",
+      "bytes_expected": 36120,
+      "url": "https://datadryad.org/api/v2/files/4139093/download",
+      "license": "CC0-1.0",
+      "status": "failed",
+      "error": "HTTPStatusError"
+    },
+    {
+      "dataset": "ohio-nitrogen",
+      "name": "README.md",
+      "bytes_expected": 6460,
+      "url": "https://datadryad.org/api/v2/files/4139101/download",
+      "license": "CC0-1.0",
+      "status": "failed",
+      "error": "HTTPStatusError"
+    },
+    {
+      "dataset": "soy",
+      "name": "README.md",
+      "bytes_expected": 1574,
+      "url": "https://datadryad.org/downloads/file_stream/4347852",
+      "license": "CC0-1.0",
+      "status": "failed",
+      "error": "Client error '403 Forbidden' for url 'https://datadryad.org/downloads/file_stream/4347852'\nFor more information check: https://developer.mozilla.org/en-US/docs/"
+    },
+    {
+      "dataset": "soy",
+      "name": "SeveroSilvaEtal_FCR_Dryad.xlsx",
+      "bytes_expected": 97745,
+      "url": "https://datadryad.org/downloads/file_stream/4347841",
+      "license": "CC0-1.0",
+      "status": "failed",
+      "error": "Client error '403 Forbidden' for url 'https://datadryad.org/downloads/file_stream/4347841'\nFor more information check: https://developer.mozilla.org/en-US/docs/"
+    },
+    {
+      "dataset": "bowles",
+      "name": "ltar.data.csv",
+      "bytes_expected": 567105,
+      "url": "https://datadryad.org/downloads/file_stream/261887",
+      "license": "CC0-1.0",
+      "status": "failed",
+      "error": "Client error '403 Forbidden' for url 'https://datadryad.org/downloads/file_stream/261887'\nFor more information check: https://developer.mozilla.org/en-US/docs/W"
+    },
+    {
+      "dataset": "legume",
+      "name": "Article.csv",
+      "bytes_expected": 30883,
+      "url": "https://datadryad.org/downloads/file_stream/69314",
+      "license": "CC0-1.0",
+      "status": "failed",
+      "error": "Client error '403 Forbidden' for url 'https://datadryad.org/downloads/file_stream/69314'\nFor more information check: https://developer.mozilla.org/en-US/docs/We"
+    },
+    {
+      "dataset": "legume",
+      "name": "Crop_Sequence_Trt.csv",
+      "bytes_expected": 316816,
+      "url": "https://datadryad.org/downloads/file_stream/69316",
+      "license": "CC0-1.0",
+      "status": "failed",
+      "error": "Client error '403 Forbidden' for url 'https://datadryad.org/downloads/file_stream/69316'\nFor more information check: https://developer.mozilla.org/en-US/docs/We"
+    },
+    {
+      "dataset": "legume",
+      "name": "Crop.csv",
+      "bytes_expected": 5824559,
+      "url": "https://datadryad.org/downloads/file_stream/69317",
+      "license": "CC0-1.0",
+      "status": "failed",
+      "error": "Client error '403 Forbidden' for url 'https://datadryad.org/downloads/file_stream/69317'\nFor more information check: https://developer.mozilla.org/en-US/docs/We"
+    },
+    {
+      "dataset": "legume",
+      "name": "Site.csv",
+      "bytes_expected": 93182,
+      "url": "https://datadryad.org/downloads/file_stream/69315",
+      "license": "CC0-1.0",
+      "status": "failed",
+      "error": "Client error '403 Forbidden' for url 'https://datadryad.org/downloads/file_stream/69315'\nFor more information check: https://developer.mozilla.org/en-US/docs/We"
+    },
+    {
+      "dataset": "ohio-nitrogen",
+      "name": "Crop_Data.csv",
+      "bytes_expected": 134861,
+      "url": "https://datadryad.org/downloads/file_stream/4139094",
+      "license": "CC0-1.0",
+      "status": "failed",
+      "error": "Client error '403 Forbidden' for url 'https://datadryad.org/downloads/file_stream/4139094'\nFor more information check: https://developer.mozilla.org/en-US/docs/"
+    },
+    {
+      "dataset": "ohio-nitrogen",
+      "name": "Experimental_Design.csv",
+      "bytes_expected": 36120,
+      "url": "https://datadryad.org/downloads/file_stream/4139093",
+      "license": "CC0-1.0",
+      "status": "failed",
+      "error": "Client error '403 Forbidden' for url 'https://datadryad.org/downloads/file_stream/4139093'\nFor more information check: https://developer.mozilla.org/en-US/docs/"
+    },
+    {
+      "dataset": "ohio-nitrogen",
+      "name": "README.md",
+      "bytes_expected": 6460,
+      "url": "https://datadryad.org/downloads/file_stream/4139101",
+      "license": "CC0-1.0",
+      "status": "failed",
+      "error": "Client error '403 Forbidden' for url 'https://datadryad.org/downloads/file_stream/4139101'\nFor more information check: https://developer.mozilla.org/en-US/docs/"
+    },
+    {
+      "dataset": "us-soybean-soil-management-2023",
+      "name": "standardized-soybean.zip",
+      "status": "downloaded_derivative",
+      "bytes": 11382,
+      "sha256": "7be309d746699ec03472eeccdbdbaf97928d66449bb9c05924360b24a662508e",
+      "url": "https://geodata.ucdavis.edu/carob/zip/doi_10.5061_dryad.hx3ffbgrk.zip",
+      "role": "standardized_derivative_not_original_workbook"
+    }
+  ],
+  "raw_storage_bytes": 4715913,
+  "raw_storage_policy": "ignored original payloads and metadata; no runtime/training admission"
+}

@@ -30,7 +30,8 @@ def compile_field_context(
     safe_field = safe_field_summary(field_context)
     map_context = _map_context(safe_field.get("regional_intersections"))
     live_context = _live_context(public_adapter_records)
-    status = "available" if map_context or live_context else "limited"
+    imported_data = safe_field.get("field_data") if isinstance(safe_field.get("field_data"), dict) else None
+    status = "available" if map_context or live_context or imported_data else "limited"
     receipt = {
         "schema_version": SCHEMA_VERSION,
         "status": status,
@@ -46,6 +47,8 @@ def compile_field_context(
             "public data are priors, not field truth, a soil test, a field sensor, or management-rate authority."
         ),
     }
+    if imported_data:
+        receipt["imported_data"] = imported_data
     return {"receipt": receipt, "prompt": render_field_context_prompt(receipt)}
 
 
@@ -70,6 +73,12 @@ def render_field_context_prompt(receipt: dict[str, Any]) -> str:
         label = item.get("label") or item.get("adapter") or "Public source"
         facts = item.get("facts") or []
         lines.append(f"- Public check — {label}: {'; '.join(str(value) for value in facts if value)}")
+    imported = receipt.get("imported_data")
+    if isinstance(imported, dict):
+        lines.append(
+            f"- Reviewed uploads: {imported.get('import_count', 0)} committed table(s). "
+            "Use the registered field-table query results for values; this inventory alone supplies no numerical evidence."
+        )
     lines.append(f"- Boundary: {receipt['boundary']}")
     lines.append("- Preserve source identity and uncertainty. Do not turn these priors into a field measurement or a prescription.")
     return "\n".join(lines)

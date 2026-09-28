@@ -90,6 +90,10 @@ class ServerSettings:
     knowledge_update_allow_unsigned: bool = False
     allow_rag_config_override: bool = False
     allow_model_id_override: bool = False
+    imagery_cache_root: Path | None = None
+    imagery_worker_python: Path | None = None
+    imagery_cache_max_bytes: int = 2 * 1024**3
+    imagery_min_free_bytes: int = 1024**3
 
     @property
     def db_name(self) -> str:
@@ -204,6 +208,10 @@ def build_settings(
     knowledge_update_allow_unsigned: bool | None = None,
     allow_rag_config_override: bool | None = None,
     allow_model_id_override: bool | None = None,
+    imagery_cache_root: str | Path | None = None,
+    imagery_worker_python: str | Path | None = None,
+    imagery_cache_max_bytes: int | None = None,
+    imagery_min_free_bytes: int | None = None,
 ) -> ServerSettings:
     retired_environment = sorted(
         name for name in RETIRED_HOSTED_BACKEND_ENV_VARS if name in os.environ
@@ -450,9 +458,27 @@ def build_settings(
                 allow_unsigned=allow_unsigned_update,
             )
         )
+    imagery_root_value = imagery_cache_root or os.getenv("AGRONOMY_AGENT_IMAGERY_CACHE_ROOT")
+    imagery_python_value = imagery_worker_python or os.getenv("AGRONOMY_AGENT_IMAGERY_PYTHON")
+    imagery_root = Path(imagery_root_value).expanduser().absolute() if imagery_root_value else None
+    imagery_python = Path(imagery_python_value).expanduser().absolute() if imagery_python_value else None
+    from agronomy_agent.imagery_budget import validate_policy
+    maximum = imagery_cache_max_bytes if imagery_cache_max_bytes is not None else int(os.getenv("AGRONOMY_AGENT_IMAGERY_CACHE_MAX_BYTES", str(2 * 1024**3)))
+    minimum_free = imagery_min_free_bytes if imagery_min_free_bytes is not None else int(os.getenv("AGRONOMY_AGENT_IMAGERY_MIN_FREE_BYTES", str(1024**3)))
+    validate_policy(maximum, minimum_free)
+    if imagery_root is not None:
+        repository = repo_path(".").resolve()
+        if imagery_root.is_symlink() or imagery_root.resolve().is_relative_to(repository):
+            raise ValueError("imagery cache must be outside the checkout and not a symlink")
+    if imagery_python is not None and (not imagery_python.is_file() or not os.access(imagery_python, os.X_OK)):
+        raise ValueError("imagery worker Python must be an existing executable")
     return ServerSettings(
         db_path=db,
         artifact_root=artifact,
+        imagery_cache_root=imagery_root,
+        imagery_worker_python=imagery_python,
+        imagery_cache_max_bytes=maximum,
+        imagery_min_free_bytes=minimum_free,
         model_config_path=resolved_model_config_path,
         default_rag_config=resolved_rag_config,
         static_dir=static_path,

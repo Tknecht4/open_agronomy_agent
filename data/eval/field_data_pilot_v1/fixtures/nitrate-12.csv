@@ -1,0 +1,4 @@
+Field_ID,Sample_number,Year,Previous_crop,N_fertilizer_form,Total_N_rate_kgha,Stalk_nitrate_CSNT,County_centroid_latitude,County_centroid_longitude
+BAND04,1,2006,Soybean,Swine Manure,156.94,78,41.335746865664,-91.7172666737194
+BAND04,2,2006,Soybean,Swine Manure,156.94,147,41.335746865664,-91.7172666737194
+BAND04,3,2006,Soybean,Swine Manure,156.94,223,41.335746865664,-91.7172666737194

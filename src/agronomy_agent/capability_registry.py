@@ -14,6 +14,7 @@ CapabilityKind = Literal[
     "router",
     "retrieval",
     "calculator",
+    "local_data",
     "decision_frame",
     "public_adapter",
     "source_card",
@@ -715,7 +716,7 @@ def capability_registry() -> CapabilityRegistry:
 
 def _static_spec_issues(specs: Sequence[ToolSpec]) -> list[RegistryIssue]:
     issues: list[RegistryIssue] = []
-    valid_kinds = {"guard", "router", "retrieval", "calculator", "decision_frame", "public_adapter", "source_card"}
+    valid_kinds = {"local_data", "guard", "router", "retrieval", "calculator", "decision_frame", "public_adapter", "source_card"}
     for spec in specs:
         if spec.kind not in valid_kinds:
             issues.append(RegistryIssue("invalid_kind", f"invalid kind for {spec.capability_id}: {spec.kind}", (spec.capability_id,)))
@@ -1068,6 +1069,7 @@ def _default_tool_specs() -> tuple[ToolSpec, ...]:
     specs.extend(_guard_specs())
     for declaration in _CORE_DECLARATIONS:
         specs.append(_core_spec(declaration))
+    specs.append(_field_table_spec())
     specs.extend(_public_adapter_specs())
     return tuple(specs)
 
@@ -1391,3 +1393,30 @@ def _combined_cli_purpose(command: str, specs: Sequence[ToolSpec]) -> str:
     if len(specs) == 1:
         return specs[0].description
     return f"Access {len(specs)} registered capabilities through the {command} command."
+
+
+def _field_table_spec() -> ToolSpec:
+    from agronomy_agent.field_data_capability import CAPABILITY_ID, CAPABILITY_VERSION, AUTHORITY_ROLE, BOUNDARY
+    return ToolSpec(
+        capability_id=CAPABILITY_ID, version=CAPABILITY_VERSION,
+        name="Reviewed private field-table query",
+        description="Bounded counts, declared aggregations and record lookup from authorized committed imports.",
+        kind="local_data",
+        input_schema=DataSchema(f"{CAPABILITY_VERSION}.input", (
+            SchemaField("operation", "string", True), SchemaField("inputs", "object", True))),
+        output_schema=DataSchema(f"{CAPABILITY_VERSION}.output", (
+            SchemaField("status", "string", True), SchemaField("answer", "string", True),
+            SchemaField("query_receipt", "object", True)), additional_properties=True),
+        executor_ref="agronomy_agent.field_data_capability:execute_field_query",
+        risk_class="low_arithmetic", authority_role=AUTHORITY_ROLE, boundary=BOUNDARY,
+        network=NetworkPolicy(mode="none", allowed_in_chat=True),
+        planner=PlannerMetadata(natural_language_enabled=True,
+            natural_language_test_evidence=("tests/test_field_data_capability.py",),
+            selector_id="reviewed_field_table_parser_v1",
+            selector_ref="agronomy_agent.capability_planner:plan_capabilities", phases=("tool_planning",),
+            required_context=("server_authorized_field_data_snapshot",)),
+        surfaces=SurfaceBindings(agno=(CAPABILITY_ID,)),
+        renderer="typed_tool_answer", verifier_adapter="typed_tool_evidence",
+        test_fixtures=("tests/test_field_data_capability.py",), implemented=True, tested=True,
+        docs_path="docs/public/tools-and-adapters.md",
+    )

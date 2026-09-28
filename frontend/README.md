@@ -24,7 +24,7 @@
 
 Inputs are API responses, user-entered questions/field records, map geometry, permitted attachments, and browser-local draft state. Outputs are API requests, progressive answer/trace UI, offline drafts, and explicit readiness/error states.
 
-General questions do not require a fabricated field. The field wizard requires a name and a valid pin/boundary/import before saving; crop and region remain optional. Imported geometry is reviewed before persistence. Regional overlays and calculated polygon area are labelled context/estimates, never field measurements. **Sources & checks** opens answer evidence without hiding the question or saved answer.
+General questions do not require a fabricated field. The field wizard requires a name and accepts either a reviewed pin/boundary/import or **No location yet · data only**; crop and region remain optional. Missing geometry stays unknown. Imported geometry is reviewed before persistence. Regional overlays and calculated polygon area are labelled context/estimates, never field measurements. **Sources & checks** opens answer evidence without hiding the question or saved answer.
 
 ## Invariants
 

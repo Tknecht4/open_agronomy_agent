@@ -40,10 +40,14 @@ path observed; it is not a second agent implementation.
 | Safety/verification | `answerability.py`, `answer_verifier.py`, `answer_safety.py`, `high_consequence.py` | Validation cannot create evidence or current authority |
 | Deterministic tools | `agronomic_calculations.py`, `local_tools.py`, `tools/` | Supported calculations bypass model drafting |
 | Public adapters | `local_tools.py`, `server/services/chat_service.py` | Network/cache/jurisdiction dependent; unavailable is a typed state |
-| Persistence | `server/storage/db.py`, `server/storage/runtime.py` | SQLite product path and schema-checked Postgres boundary |
+| Persistence | `server/storage/db.py`, `server/storage/runtime.py` | SQLite serializes cursor scopes on its shared connection, with outermost commit/rollback ownership and atomic personal workspace creation; Postgres remains a separate schema-checked boundary |
 | Local runtime services | `server/rate_limit.py`, `server/storage/object_store.py` | In-memory rate limits and filesystem artifacts only; Redis/S3 selection was removed |
 | Training helpers | `training/` | Offline maintainer tooling only; no current Canadian source is training-authorized |
 | UI | `frontend/src/` | React cockpit, map, field state, source cards, benchmark viewer |
+| Reviewed field tables | `field_data.py`, `server/storage/field_data_store.py`, `server/storage/field_source_blobs.py`, `field_data_capability.py` | Bounded intake, workspace-scoped compressed original bytes, immutable mappings, private field queries and registered result lineage; explicit reversible SQLite migration |
+| Source preparation | `field_source_preparation.py` | Pinned research-source adapters, row dispositions and reviewable mappings; separate from runtime and benchmark gold |
+| Anonymous imagery | `field_imagery.py`, `imagery_analytics.py`, `imagery_store.py`, `imagery_budget.py`, `imagery_worker.py`, `server/services/imagery_service.py`, `server/field_data_routes.py` | Polygon-bound HLS discovery, optional isolated raster worker, storage admission, private content-addressed chips, observed QA/NDVI/NDMI and authenticated previews; no operational yield prediction |
+| Imagery research | `imagery_assessment.py`, `imagery_models.py`, `scripts/assess_field_imagery.py`, `scripts/probe_imagery_model.py` | Frozen label/split assessments and bounded CPU/MPS encoder probes; outputs remain research evidence, not serving capability or active model profile |
 | Operator workflows | `scripts/` | Thin CLIs around package contracts; generated outputs belong under ignored paths |
 
 ## Harnesses and what they prove

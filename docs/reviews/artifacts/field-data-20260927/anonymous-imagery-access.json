@@ -1,0 +1,71 @@
+{
+  "checked_at_utc": "2026-09-27T04:29:54Z",
+  "status": "observed_live_public_access",
+  "scope": "Anonymous STAC metadata discovery and one 16 KiB HTTP range probe per provider. This is not a decoded field chip, field QA metric, or agronomic validation.",
+  "query": {
+    "geometry_crs": "EPSG:4326 (GeoJSON)",
+    "geometry": {"type": "Polygon", "coordinates": [[[-106.7, 52.1], [-106.69, 52.1], [-106.69, 52.11], [-106.7, 52.11], [-106.7, 52.1]]]},
+    "start_date": "2025-07-01",
+    "end_date": "2025-07-15",
+    "limit": 1,
+    "method": "POST /search with collections, intersects, datetime and limit; GET selected COG with Range: bytes=0-16383"
+  },
+  "results": [
+    {
+      "provider_id": "sentinel2-c1-earth-search",
+      "stac_endpoint": "https://earth-search.aws.element84.com/v1/search",
+      "collection": "sentinel-2-c1-l2a",
+      "scene_id": "S2C_T12UYC_20250715T181632_L2A",
+      "asset_id": "sentinel-2-c1-l2a:S2C_T12UYC_20250715T181632_L2A:red",
+      "asset_host": "e84-earth-search-sentinel-data.s3.us-west-2.amazonaws.com",
+      "catalog_http_status": 200,
+      "range_http_status": 206,
+      "range_bytes": 16384,
+      "tiff_header": true,
+      "account_used": false
+    },
+    {
+      "provider_id": "hls-s30-planetary-computer",
+      "stac_endpoint": "https://planetarycomputer.microsoft.com/api/stac/v1/search",
+      "collection": "hls2-s30",
+      "scene_id": "HLS.S30.T12UYC.2025196T180941.v2.0",
+      "asset_id": "hls2-s30:HLS.S30.T12UYC.2025196T180941.v2.0:B04",
+      "asset_host": "hls2euwest.blob.core.windows.net",
+      "catalog_http_status": 200,
+      "public_sas_http_status": 200,
+      "range_http_status": 206,
+      "range_bytes": 16384,
+      "tiff_header": true,
+      "account_used": false,
+      "sas_token_retained": false
+    },
+    {
+      "provider_id": "hls-l30-planetary-computer",
+      "stac_endpoint": "https://planetarycomputer.microsoft.com/api/stac/v1/search",
+      "collection": "hls2-l30",
+      "scene_id": "HLS.L30.T13UCT.2025194T175835.v2.0",
+      "asset_id": "hls2-l30:HLS.L30.T13UCT.2025194T175835.v2.0:B05",
+      "asset_host": "hls2euwest.blob.core.windows.net",
+      "catalog_http_status": 200,
+      "public_sas_http_status": 200,
+      "range_http_status": 206,
+      "range_bytes": 16384,
+      "tiff_header": true,
+      "account_used": false,
+      "sas_token_retained": false
+    }
+  ],
+  "source_checks": [
+    "https://github.com/Element84/earth-search/blob/main/README.md",
+    "https://planetarycomputer.microsoft.com/api/stac/v1/collections/hls2-s30",
+    "https://planetarycomputer.microsoft.com/api/stac/v1/collections/hls2-l30",
+    "https://github.com/microsoft/planetary-computer-sdk-for-python/blob/main/planetary_computer/sas.py",
+    "https://registry.opendata.aws/nasa-hlss30/",
+    "https://registry.opendata.aws/nasa-hlsl30/"
+  ],
+  "limitations": [
+    "The Planetary Computer STAC collections declare license=proprietary while NASA's source HLS registry lists CC BY 4.0; source and hosting terms remain distinct.",
+    "No raster decoding, per-field cloud mask, reflectance scaling, NDVI or yield inference was performed.",
+    "Availability, mirror coverage and public SAS behavior can change; no service-level guarantee was established."
+  ]
+}
