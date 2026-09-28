@@ -1,6 +1,6 @@
 # Portable agronomy runtime and conversation implementation
 
-Status: local implementation candidate; final review and gates recorded below. User authorized proceeding from the source-bound harness
+Status: locally accepted implementation; publication awaits explicit user approval. User authorized proceeding from the source-bound harness
 review, adding model/KV/context management, useful runtime indicators, backend
 performance, and separate field-linked and general conversations. Full model
 benchmark suites use the Colab operator. No competence or candidate-corpus
@@ -196,3 +196,29 @@ Publishing status: automatic approval review rejected the attempted feature-
 branch push because the user had not explicitly authorized sending this payload
 to GitHub. No branch was pushed and no PR was created. Complete local work and
 request direct publication approval only after the candidate is reviewable.
+
+## Final local acceptance
+
+Independent Astra delta review accepted source commit
+`f44d9be52a861a3c7f8497940f9e9f5c5af726ad` after reproducing the original failures
+and checking the repairs. The reviewer ran 36 focused Python tests, 6 frontend
+tests and expanded direct/extra/nested authorization probes. No actionable
+finding remains within this implementation scope. Full raw review is retained
+locally at `outputs/portable-agronomy-independent-review-20260928.md`, SHA256
+`dd7c41848da1d4896e9912e1b624de803e166688c121a2b0d707814906445c15`.
+
+Final integrated gates at the reviewed source: **1,407 Python tests passed,
+4 skipped; 364 frontend tests passed; frontend typecheck and production build,
+public-doc audit, strict MkDocs, public-package build and diff whitespace check
+passed.** The package contained 1,074 files. The local validation receipt is
+`outputs/portable-agronomy-validation-20260928.json`; it binds source hashes,
+commands and terminal outcomes. This final record is a documentation-only delta
+from the reviewed code.
+
+Accepted scope is bounded conversation infrastructure, accurate runtime
+indicators and offline intervention diagnostics. Real-model agronomic benefit,
+cross-model cached/uncached parity, Metal throughput, and rendered UI appearance
+remain unverified. These limits do not establish model quality or authorize
+release. Caching remains disabled by default. No full benchmark or Colab session
+was run. No SPCC graph or durable memory was changed. Publication is the only
+remaining action requiring direct user authorization.
