@@ -572,7 +572,13 @@
     "docs/reviews/artifacts/field-data-merge-20260927/pr12-integration.json",
     "tests/test_sqlite_request_concurrency.py",
     "tests/test_field_data_concurrent_http.py",
-    "docs/reviews/artifacts/field-data-merge-20260927/sqlite-final-integration.json"
+    "docs/reviews/artifacts/field-data-merge-20260927/sqlite-final-integration.json",
+    "docs/reviews/point-imagery-implementation-20260927.md",
+    "docs/reviews/point-imagery-api-contract-20260927.md",
+    "docs/reviews/point-imagery-review-20260927.md",
+    "tests/test_point_imagery_routes.py",
+    "tests/test_point_imagery_analytics.py",
+    "docs/reviews/artifacts/point-imagery-20260927/validation.json"
   ],
   "trees": [
     "src",

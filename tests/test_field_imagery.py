@@ -37,6 +37,41 @@ def test_offline_and_unconfigured_providers_do_not_make_requests(monkeypatch: py
     assert gee["status"] == "not_configured"
 
 
+def test_saved_point_discovery_does_not_invent_a_polygon(monkeypatch):
+    point = {"type": "Point", "coordinates": [-106.7, 52.1]}
+    seen = []
+    def request(url, *, body):
+        seen.append(body)
+        return {"features": []}
+    monkeypatch.setattr(imagery, "_request_json", request)
+    result = imagery.search_field_imagery(point, "hls-s30-planetary-computer",
+        "2025-07-01", "2025-07-15", network_mode="offline")
+    assert result["status"] == "blocked_offline" and not seen
+    result = imagery.search_field_imagery(point, "hls-s30-planetary-computer",
+        "2025-07-01", "2025-07-15", network_mode="online")
+    assert seen[0]["intersects"] == point
+    assert "bbox" not in seen[0]
+    assert result["query"]["geometry_type"] == "Point"
+    assert result["query"]["spatial_scope"] == "at_location"
+    assert result["query"]["bbox"] == [-106.7, 52.1, -106.7, 52.1]
+
+
+@pytest.mark.parametrize("point", [
+    {"type": "Point", "coordinates": [True, 52]},
+    {"type": "Point", "coordinates": [-106, float("nan")]},
+    {"type": "Point", "coordinates": [-181, 52]},
+    {"type": "Point", "coordinates": [-106, 91]},
+    {"type": "Point", "coordinates": [-106, 52, 100]},
+    {"type": "Point", "coordinates": ["-106", 52]},
+    {"type": "Point", "coordinates": [-106, 52], "crs": "EPSG:3857"},
+])
+def test_invalid_points_fail_before_discovery(point, monkeypatch):
+    monkeypatch.setattr(imagery, "_request_json", lambda *a, **k: pytest.fail("invalid point egress"))
+    with pytest.raises(ValueError):
+        imagery.search_field_imagery(point, "hls-s30-planetary-computer",
+            "2025-07-01", "2025-07-15", network_mode="online")
+
+
 @pytest.mark.parametrize("change", [
     {"type": "Point"},
     {"crs": "EPSG:3857"},

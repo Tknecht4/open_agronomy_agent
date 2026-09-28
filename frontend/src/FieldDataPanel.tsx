@@ -109,10 +109,14 @@ function TablePreview({ columns, rows, limit = PREVIEW_ROWS }: { columns: string
 export function FieldDataPanel({
   fieldContextId,
   imageryReady = true,
+  geometryKind = 'polygon',
+  geometryKey = '',
   onAskQuestion,
 }: {
   fieldContextId: string
   imageryReady?: boolean
+  geometryKind?: 'none' | 'point' | 'polygon'
+  geometryKey?: string
   onAskQuestion?: (question: string) => void
 }) {
   const [preview, setPreview] = useState<Preview | null>(null)
@@ -142,13 +146,27 @@ export function FieldDataPanel({
   const [busy, setBusy] = useState<'preview' | 'commit' | 'query' | 'imagery' | ''>('')
   const [dataError, setDataError] = useState('')
   const imageryRequestRef = useRef(0)
+  const [pointSearchSupport, setPointSearchSupport] = useState<'checking' | 'supported' | 'unsupported' | 'error'>('checking')
+  const point = geometryKind === 'point'
+  const canSearchImagery = imageryReady && geometryKind !== 'none' && (!point || pointSearchSupport === 'supported')
+
+  useEffect(() => {
+    if (!point) return
+    let active = true
+    setPointSearchSupport('checking')
+    void apiGet<{ sampling_modes?: string[] }>(`/api/demo/fields/${encodeURIComponent(fieldContextId)}/imagery/analytics`)
+      .then(result => { if (active) setPointSearchSupport(result.sampling_modes?.includes('point_pixel') ? 'supported' : 'unsupported') })
+      .catch(() => { if (active) setPointSearchSupport('error') })
+    return () => { active = false }
+  }, [fieldContextId, point])
 
   useEffect(() => {
     imageryRequestRef.current += 1
     setScenes([])
     setImageryState('')
     setBusy((current) => current === 'imagery' ? '' : current)
-  }, [fieldContextId, imageryReady])
+    return () => { imageryRequestRef.current += 1 }
+  }, [fieldContextId, geometryKey, geometryKind, imageryReady, selectedProvider, startDate, endDate])
 
   useEffect(() => {
     let active = true
@@ -319,7 +337,7 @@ export function FieldDataPanel({
 
   const searchImagery = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!imageryReady || !selectedProvider || !startDate || !endDate) return
+    if (!canSearchImagery || busy !== '' || !selectedProvider || !startDate || !endDate) return
     if (endDate < startDate) {
       setImageryState('End date must be on or after start date.')
       return
@@ -470,7 +488,9 @@ export function FieldDataPanel({
     </section>
     <section aria-label="Field imagery scenes">
       <h3>Imagery scenes</h3>
-      {!imageryReady ? <p>Imagery needs a saved field polygon. A point or unknown location cannot represent field coverage.</p> : null}
+      {!imageryReady || geometryKind === 'none' ? <p>Save the current location or boundary before searching imagery. Unknown geometry stays unavailable.</p> : null}
+      {point ? <p>Search scenes at the saved location. This is independent of the analysis radius; scene cloud cover does not describe the sampled pixel.</p> : null}
+      {point && pointSearchSupport !== 'supported' ? <p role="status">{pointSearchSupport === 'checking' ? 'Checking point scene-search support…' : pointSearchSupport === 'error' ? 'Point scene-search support could not be checked.' : 'Point scene search is not supported by this runtime.'}</p> : null}
       <p role="status">{providerState}</p>
       {providers.length ? <form onSubmit={(event) => void searchImagery(event)}>
         <label>Imagery source <select value={selectedProvider} onChange={(event) => setSelectedProvider(event.target.value)}>{providers.map((provider) => <option key={providerId(provider)} value={providerId(provider)}>{asText(provider.label || provider.name || providerId(provider))}{needsAccount(provider) ? ' · account required' : ' · public access'}</option>)}</select></label>
@@ -484,16 +504,16 @@ export function FieldDataPanel({
           <p>{asText(selectedProviderDetails.limitations)}</p>
         </div> : null}
         <div className="field-data-dates"><label>Start date <input type="date" required value={startDate} onChange={(event) => setStartDate(event.target.value)} /></label><label>End date <input type="date" required value={endDate} onChange={(event) => setEndDate(event.target.value)} /></label></div>
-        <button type="submit" disabled={!imageryReady || busy !== '' || !selectedProvider || !startDate || !endDate}>{busy === 'imagery' ? 'Searching…' : 'Search scenes'}</button>
+        <button type="submit" disabled={!canSearchImagery || busy !== '' || !selectedProvider || !startDate || !endDate}>{busy === 'imagery' ? 'Searching…' : 'Search scenes'}</button>
       </form> : null}
       {imageryState ? <p role="status">{imageryState}</p> : null}
-      {imageryReady && scenes.length ? <ul className="field-data-scenes">{scenes.map((scene, index) => {
+      {canSearchImagery && scenes.length ? <ul className="field-data-scenes">{scenes.map((scene, index) => {
         const properties = asObject(scene.properties)
         const cloud = scene.scene_cloud_percent ?? scene.cloud_cover ?? properties['eo:cloud_cover']
         return <li key={asText(scene.id) || index}>
           <strong>{asText(scene.title || scene.id || `Scene ${index + 1}`)}</strong>
           <span>Acquired: {asText(scene.acquired_at || scene.datetime || properties.datetime || scene.date) || 'unknown'}</span>
-          <span>Scene cloud: {cloud === undefined || cloud === null ? 'unknown' : `${asText(cloud)}%`} · field cloud: unknown</span>
+          <span>Scene cloud: {cloud === undefined || cloud === null ? 'unknown' : `${asText(cloud)}%`} · {point ? 'sample' : 'field'} cloud: unknown</span>
           {scene.license ? <span>License: {asText(scene.license)}</span> : null}
         </li>
       })}</ul> : null}

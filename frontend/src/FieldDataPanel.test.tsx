@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { FieldDataPanel } from './FieldDataPanel'
 
@@ -139,7 +139,7 @@ describe('FieldDataPanel', () => {
     render(<FieldDataPanel fieldContextId={fieldId} imageryReady={false} />)
     open()
     const imagery = screen.getByRole('region', { name: 'Field imagery scenes' })
-    expect(within(imagery).getByText(/Imagery needs a saved field polygon/)).toBeInTheDocument()
+    expect(within(imagery).getByText(/Save the current location or boundary/)).toBeInTheDocument()
     await within(imagery).findByRole('option', { name: /Sentinel-2 Earth Search/ })
     fireEvent.change(within(imagery).getByLabelText('Start date'), { target: { value: '2025-06-01' } })
     fireEvent.change(within(imagery).getByLabelText('End date'), { target: { value: '2025-06-30' } })
@@ -194,4 +194,56 @@ describe('FieldDataPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Ask about this result' }))
     expect(onAskQuestion).toHaveBeenCalledWith('What is the mean nitrate in committed-1?')
   })
+
+  it('discovers scenes at a saved point without requiring optional raster processing or sending a radius', async () => {
+    const get = apiGet.getMockImplementation()!
+    apiGet.mockImplementation(async (path: string) => path.endsWith('/imagery/analytics')
+      ? { status:'not_configured', sampling_modes:['field_polygon','point_pixel','point_buffer'] } : get(path))
+    apiPost.mockResolvedValue({ status:'available',query:{geometry_type:'Point',spatial_scope:'at_location'},scenes:[{id:'POINT-SCENE',scene_cloud_percent:15}] })
+    render(<FieldDataPanel fieldContextId={fieldId} imageryReady geometryKind="point" geometryKey="point-1" />)
+    open()
+    const imagery = screen.getByRole('region', {name:'Field imagery scenes'})
+    await within(imagery).findByLabelText('Start date')
+    fireEvent.change(within(imagery).getByLabelText('Start date'), {target:{value:'2025-06-01'}})
+    fireEvent.change(within(imagery).getByLabelText('End date'), {target:{value:'2025-06-30'}})
+    await waitFor(() => expect(within(imagery).getByRole('button',{name:'Search scenes'})).toBeEnabled())
+    fireEvent.click(within(imagery).getByRole('button',{name:'Search scenes'}))
+    expect(await within(imagery).findByText('POINT-SCENE')).toBeInTheDocument()
+    expect(within(imagery).getByText('Scene cloud: 15% · sample cloud: unknown')).toBeInTheDocument()
+    expect(within(imagery).getByText(/independent of the analysis radius/)).toBeInTheDocument()
+    expect(apiPost).toHaveBeenCalledWith(`/api/demo/fields/${fieldId}/imagery/search`,{
+      provider_id:'sentinel2-c1-earth-search',start_date:'2025-06-01',end_date:'2025-06-30',limit:10,
+    })
+  })
+
+  it('does not enable point discovery on an older backend with no advertised point support', async () => {
+    render(<FieldDataPanel fieldContextId={fieldId} imageryReady geometryKind="point" geometryKey="point-1" />)
+    open()
+    const imagery = screen.getByRole('region', {name:'Field imagery scenes'})
+    expect(await within(imagery).findByText('Point scene search is not supported by this runtime.')).toBeInTheDocument()
+    fireEvent.change(within(imagery).getByLabelText('Start date'), {target:{value:'2025-06-01'}})
+    fireEvent.change(within(imagery).getByLabelText('End date'), {target:{value:'2025-06-30'}})
+    expect(within(imagery).getByRole('button',{name:'Search scenes'})).toBeDisabled()
+    expect(apiPost).not.toHaveBeenCalled()
+  })
+
+  it('invalidates a pending scene search when a saved point moves even if readiness stays true', async () => {
+    const get = apiGet.getMockImplementation()!
+    apiGet.mockImplementation(async (path:string) => path.endsWith('/imagery/analytics') ? {sampling_modes:['point_pixel']} : get(path))
+    let release!: (value:unknown)=>void
+    apiPost.mockReturnValue(new Promise(resolve=>{release=resolve}))
+    const view=render(<FieldDataPanel fieldContextId={fieldId} imageryReady geometryKind="point" geometryKey="point-1" />)
+    open()
+    const imagery=screen.getByRole('region',{name:'Field imagery scenes'})
+    await within(imagery).findByLabelText('Start date')
+    fireEvent.change(within(imagery).getByLabelText('Start date'),{target:{value:'2025-06-01'}})
+    fireEvent.change(within(imagery).getByLabelText('End date'),{target:{value:'2025-06-30'}})
+    await waitFor(()=>expect(within(imagery).getByRole('button',{name:'Search scenes'})).toBeEnabled())
+    fireEvent.click(within(imagery).getByRole('button',{name:'Search scenes'}))
+    view.rerender(<FieldDataPanel fieldContextId={fieldId} imageryReady geometryKind="point" geometryKey="point-2" />)
+    await act(async()=>{release({scenes:[{id:'STALE-POINT'}]})})
+    expect(within(imagery).queryByText('STALE-POINT')).not.toBeInTheDocument()
+    expect(within(imagery).getByRole('button',{name:'Search scenes'})).toBeEnabled()
+  })
+
 })

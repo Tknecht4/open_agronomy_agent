@@ -11,7 +11,7 @@ from agronomy_agent.imagery_budget import DEFAULT_MAX_CACHE_BYTES, DEFAULT_MIN_F
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--geometry", required=True, type=Path, help="WGS84 GeoJSON Polygon/Feature")
+    parser.add_argument("--geometry", required=True, type=Path, help="WGS84 GeoJSON Point/Polygon/Feature")
     parser.add_argument("--provider", required=True, choices=("hls-s30-planetary-computer", "hls-l30-planetary-computer"))
     parser.add_argument("--scene-id", help="exact HLS scene ID")
     parser.add_argument("--start-date")
@@ -21,6 +21,8 @@ def main() -> None:
     parser.add_argument("--max-cache-bytes", type=int, default=DEFAULT_MAX_CACHE_BYTES)
     parser.add_argument("--min-free-bytes", type=int, default=DEFAULT_MIN_FREE_BYTES)
     parser.add_argument("--buffer-m", type=int, default=0)
+    parser.add_argument("--sampling-mode", choices=("field_polygon", "point_pixel", "point_buffer"))
+    parser.add_argument("--sample-radius-m", type=int)
     parser.add_argument("--context-pixels", type=int, choices=(224,))
     parser.add_argument("--online", action="store_true", help="allow public STAC, token and COG requests")
     args = parser.parse_args()
@@ -33,7 +35,8 @@ def main() -> None:
         budget_root=args.budget_root, max_cache_bytes=args.max_cache_bytes,
         min_free_bytes=args.min_free_bytes, network_mode="online" if args.online else "offline",
         start_date=args.start_date, end_date=args.end_date, buffer_m=args.buffer_m,
-        context_pixels=args.context_pixels)
+        context_pixels=args.context_pixels, sampling_mode=args.sampling_mode,
+        sample_radius_m=args.sample_radius_m)
     print(json.dumps(result, indent=2))
     if result["status"] not in ("available", "empty_valid_area"):
         raise SystemExit(2)

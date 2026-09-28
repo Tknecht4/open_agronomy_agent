@@ -1688,11 +1688,11 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.getByText('No location selected')).toBeInTheDocument()
   })
 
-  it('enables imagery for a saved polygon without acreage and blocks it after unsaved coordinate changes', async () => {
+  it.each(['polygon', 'point'])('enables imagery for a saved %s without acreage and blocks it after unsaved coordinate changes', async (kind) => {
     const savedField = {
       id: 'field-public', field_context_id: 'field-public', name: 'Public support area', crop: '',
       region: 'Colorado', jurisdiction: 'United States', acres: '', concern: '', notes: '',
-      geometry: { kind: 'polygon', points: southRing.slice(0, -1).map(([lon, lat]) => ({ lat, lon })) },
+      geometry: kind === 'point' ? { kind: 'point', point: {lon:-93.68,lat:42.08} } : { kind: 'polygon', points: southRing.slice(0, -1).map(([lon, lat]) => ({ lat, lon })) },
       regionalContext: '', geoPriors: null, sourceBoundary: 'Research support, not a surveyed field boundary.',
       createdAt: '2026-09-27T00:00:00Z', storageMode: 'account_workspace',
     }
@@ -1700,7 +1700,7 @@ describe('Open Agronomy map upload workflow', () => {
     const baseFetch = fetchMock.getMockImplementation()!
     fetchMock.mockImplementation((input: RequestInfo | URL, init?: RequestInit) =>
       String(input) === '/api/demo/fields/field-public/imagery/analytics'
-        ? Promise.resolve(jsonResponse({ status: 'ready', network_mode: 'online' }))
+        ? Promise.resolve(jsonResponse({ status: 'ready', network_mode: 'online', sampling_modes: ['field_polygon','point_pixel','point_buffer'], sample_radius_bounds_m: {min:15,max:1500} }))
         : baseFetch(input, init))
     render(<OpenAgronomyApp />)
 
@@ -1719,7 +1719,7 @@ describe('Open Agronomy map upload workflow', () => {
     await screen.findByTestId('upload-feature-geojson:0')
     openFieldTab('Records & soil tests')
     expect(screen.getByRole('button', { name: 'Analyze scene' })).toBeDisabled()
-    expect(screen.getByText(/Save a valid field polygon before analyzing imagery/)).toBeInTheDocument()
+    expect(screen.getByText(/Save the current location or boundary before analyzing imagery/)).toBeInTheDocument()
   })
 
   it('keeps the active field selected when deleting another field and clears context when deleting the active field', async () => {

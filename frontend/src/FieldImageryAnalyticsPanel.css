@@ -25,3 +25,11 @@
 .field-imagery-provenance dl > div { display: grid; grid-template-columns: 80px 1fr; gap: 10px; }
 .field-imagery-provenance dd { margin: 0; overflow-wrap: anywhere; }
 .field-imagery-provenance ul { padding-left: 20px; font-size: 11px; overflow-wrap: anywhere; }
+
+.field-imagery-sampling { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 10px; }
+.field-imagery-sampling > label { flex: 1 1 165px; min-width: 0; }
+.field-imagery-sampling > label:has(input) { flex: 0 1 180px; }
+.field-imagery-sampling input { width: 100%; min-width: 0; margin: 0; }
+.field-imagery-sampling small, .field-imagery-sampling-note { font-size: 12px; line-height: 1.5; color: #596d50; }
+.field-imagery-analytics input, .field-imagery-analytics select { min-width: 0; max-width: 100%; margin: 0; }
+.field-imagery-analytics .field-imagery-result p, .field-imagery-analytics .field-imagery-result span { overflow-wrap: anywhere; }

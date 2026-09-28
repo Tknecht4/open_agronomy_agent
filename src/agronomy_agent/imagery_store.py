@@ -198,6 +198,13 @@ class ImageryStore:
     def put(self, receipt: dict[str, Any], bounds: tuple[float, float, float, float]) -> None:
         if self.read_only:
             raise RuntimeError("read-only imagery store cannot write")
+        from agronomy_agent.imagery_sampling import POINT_PROCESS_VERSION
+        if "sampling" in receipt or receipt.get("process_version") == POINT_PROCESS_VERSION:
+            from agronomy_agent.imagery_receipts import validate_point_receipt
+            expected_bounds = validate_point_receipt(receipt)
+            if len(bounds) != 4 or any(not math.isclose(a, b, abs_tol=1e-9, rel_tol=0)
+                                       for a, b in zip(bounds, expected_bounds)):
+                raise ValueError("sampling footprint index bounds mismatch")
         names = self._names(receipt)
         payloads = self._payloads(names)
         stored = json.loads(payloads["receipt"])
@@ -221,6 +228,13 @@ class ImageryStore:
 
     def _row_matches_receipt(self, row: sqlite3.Row, receipt: dict[str, Any]) -> bool:
         try:
+            from agronomy_agent.imagery_sampling import POINT_PROCESS_VERSION
+            if "sampling" in receipt or receipt.get("process_version") == POINT_PROCESS_VERSION:
+                from agronomy_agent.imagery_receipts import validate_point_receipt
+                expected_bounds = validate_point_receipt(receipt)
+                if any(not math.isclose(row[name], value, abs_tol=1e-9, rel_tol=0)
+                       for name, value in zip(("minx", "miny", "maxx", "maxy"), expected_bounds)):
+                    return False
             names = self._names(receipt)
             source = receipt["source"]
             return (

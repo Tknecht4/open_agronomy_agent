@@ -13,7 +13,7 @@ from agronomy_agent.field_imagery import provider_catalog, probe_asset_range, se
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--providers", action="store_true", help="show provider catalog without network access")
-    parser.add_argument("--geometry", type=Path, help="path to GeoJSON Polygon or Feature")
+    parser.add_argument("--geometry", type=Path, help="path to GeoJSON Point, Polygon or Feature")
     parser.add_argument("--provider", help="provider ID from --providers")
     parser.add_argument("--start-date")
     parser.add_argument("--end-date")
