@@ -111,9 +111,14 @@ def test_direct_reference_uses_only_fixed_system_and_question(
 
 
 @pytest.mark.parametrize("rag_source", ["rag.yaml", "rag_production_foundations_method_candidate.yaml"])
-def test_worker_retains_product_trace_with_mock(tmp_path: Path, rag_source: str) -> None:
+def test_worker_retains_product_trace_with_mock(
+    tmp_path: Path, rag_source: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
     import yaml
 
+    # This is a product-trace contract test. Native GPU initialization belongs
+    # to the separately recorded real-model diagnostic, not a mock CPU test.
+    monkeypatch.setattr(runner, "_runtime_receipt", lambda: {"mlx_device": "mock"})
     rag = tmp_path / "rag.yaml"
     rag.write_text(yaml.safe_dump(runner.public_rag_config(ROOT / "configs" / rag_source)))
     model = tmp_path / "model.yaml"
@@ -162,3 +167,44 @@ def test_parent_preserves_timeout_as_failed_cell(tmp_path: Path, monkeypatch: py
     arguments.resume = True
     assert runner._run_parent(arguments) == 1
     assert len((tmp_path / "run/cells.jsonl").read_text().splitlines()) == 1
+
+
+def test_resume_preserves_orphan_worker_and_uses_fresh_attempt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import subprocess
+
+    cases = tmp_path / "cases.jsonl"
+    cases.write_text(json.dumps({"id": "x1", "question": "What is a seed lot?"}) + "\n")
+    monkeypatch.setattr(runner, "DEFAULT_ARMS", {"active": ROOT / "configs/rag.yaml"})
+    monkeypatch.setattr(runner, "_source_receipt", lambda: {"source_tree_sha256": "test"})
+    seen: list[Path] = []
+
+    def child(*argv: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+        command = argv[0]
+        assert isinstance(command, list)
+        output = Path(command[command.index("--worker-output") + 1])
+        seen.append(output)
+        output.write_text(json.dumps({"status": "completed", "turn_index": 0}) + "\n")
+        if len(seen) == 1:
+            raise KeyboardInterrupt("parent interrupted after child wrote")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(runner.subprocess, "run", child)
+    arguments = argparse.Namespace(
+        cases=cases, model_config=ROOT / "configs/model.yaml", output_dir=tmp_path / "run",
+        model_id=None, run_id="interrupted-test", max_tokens=320, cell_timeout_seconds=1.0,
+        include_continuity=False, include_long_context=False, include_cache=False,
+        include_direct_reference=False, cache_case_id=None, execute=True, resume=False,
+    )
+    with pytest.raises(KeyboardInterrupt):
+        runner._run_parent(arguments)
+    assert seen[0].is_file()
+    assert not (tmp_path / "run/cells.jsonl").exists()
+    arguments.resume = True
+    assert runner._run_parent(arguments) == 0
+    assert len(seen) == 2 and seen[0] != seen[1]
+    assert seen[0].read_text() == seen[1].read_text()
+    row = json.loads((tmp_path / "run/cells.jsonl").read_text())
+    assert row["status"] == "completed"
+    assert row["attempt"] == 2

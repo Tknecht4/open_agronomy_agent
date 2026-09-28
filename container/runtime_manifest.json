@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-09-28T03:40:48+00:00",
+  "generated_at": "2026-09-28T04:17:02+00:00",
   "status": "pass",
-  "contract_sha256": "26ac7a0a03bc92cf17964671978e949cb7c22883dd624022849ce3b0b31f6159",
+  "contract_sha256": "d77f8fe2a3d8dd50460c801866f4dfff25340094c6a9a9e9cac1526373fd269e",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -407,15 +407,15 @@
   "runtime_assets": [
     {
       "path": "src/agronomy_agent",
-      "file_count": 150,
-      "bytes": 5453111,
-      "sha256": "d911ae089c47ce060d56841feb0f56ac85048f855037159636558267acf4e027"
+      "file_count": 151,
+      "bytes": 5476577,
+      "sha256": "c956dd3f7b4753fcc1b977ec71f03331213d3c385e939b7a0065b1d5b499f9db"
     },
     {
       "path": "frontend/src",
       "file_count": 100,
-      "bytes": 1530900,
-      "sha256": "da7f5c5f3839ea738b75e930ff2051ef028952016c85adbacbb156bdf6d7bb79"
+      "bytes": 1533680,
+      "sha256": "cb29c71c022e02ce001a3c291f22f41bce3bc803b2ae8506872c5a2328a97686"
     },
     {
       "path": "frontend/public",
@@ -425,27 +425,27 @@
     },
     {
       "path": "scripts",
-      "file_count": 139,
-      "bytes": 1813876,
-      "sha256": "99e1a58f2cf714a4929cd45b5524816e89c8c7225e3a6ebe37e93786bd2c8f3f"
+      "file_count": 140,
+      "bytes": 1849634,
+      "sha256": "39477cc0bb48246cba61d9d7827544dde7daa6f4e1bde4887311833cbf025bf2"
     },
     {
       "path": "configs",
-      "file_count": 85,
-      "bytes": 263143,
-      "sha256": "ba493096d94917ee4556b05e9a5d812000c46b4e2f2f06b4bcab28a4df77f6b3"
+      "file_count": 87,
+      "bytes": 269514,
+      "sha256": "a7d15d00908ff15b69a9028d5bf5d4533a9cb06e4fb79a6a204f61bd3709fa5c"
     },
     {
       "path": "data/manifests",
-      "file_count": 29,
-      "bytes": 19477653,
-      "sha256": "f43455c47b5464e6196f6ec38015f8cc400dd7b88c800bc7c7d062aa78ea0eba"
+      "file_count": 32,
+      "bytes": 19536489,
+      "sha256": "468f3ad3868b52535be58413ef9b48d42006e44c8cfe83c0c8a44acaafeb3373"
     },
     {
       "path": "data/eval",
-      "file_count": 68,
-      "bytes": 3220578,
-      "sha256": "ae818f3443d92b3136b03d5bc9f97017c648198000e8a8901aafbb244c15070b"
+      "file_count": 74,
+      "bytes": 3306656,
+      "sha256": "6f44b4231eb8abb24d12e73faec70fa4cc6d47f8ad536a5e0d0dbed56c5340de"
     },
     {
       "path": "data/snapshots",

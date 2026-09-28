@@ -460,8 +460,14 @@ def _run_parent(args: argparse.Namespace) -> int:
     for position, unit in enumerate(units):
         if unit["unit_id"] in completed:
             continue
-        cell_dir = work_dir / f"{position:04d}"
-        cell_dir.mkdir(exist_ok=True)
+        # A child can finish after writing worker.jsonl while the parent is
+        # interrupted before committing cells.jsonl. Resume must keep those
+        # orphan bytes and execute in a fresh attempt directory.
+        attempt = 1
+        while (work_dir / f"{position:04d}-attempt-{attempt:06d}").exists():
+            attempt += 1
+        cell_dir = work_dir / f"{position:04d}-attempt-{attempt:06d}"
+        cell_dir.mkdir(exist_ok=False)
         spec = {"unit": unit, "db_path": str(cell_dir / "traces.sqlite3"),
                 "artifact_root": str(cell_dir / "artifacts"),
                 "model_config": str(effective_dir / "model_disabled.yaml"),
@@ -486,6 +492,7 @@ def _run_parent(args: argparse.Namespace) -> int:
         observed = [json.loads(line) for line in worker_path.read_text(encoding="utf-8").splitlines() if line.strip()] if worker_path.exists() else []
         status = "completed" if exit_code == 0 and len(observed) == len(unit["turns"]) and all(row.get("status") == "completed" for row in observed) else ("timed_out" if timed_out else "failed")
         row = {"schema_version": SCHEMA, "run_id": run_id, "unit_id": unit["unit_id"],
+               "attempt": attempt, "attempt_dir": str(cell_dir),
                "kind": unit["kind"], "arm": unit["arm"], "case_id": unit["case_id"],
                "cache_enabled": unit["cache_enabled"], "status": status,
                "elapsed_ms": round((time.perf_counter() - started) * 1000, 3),
