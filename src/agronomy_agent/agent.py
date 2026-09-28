@@ -3035,9 +3035,9 @@ class MLXGenerator:
         prompt_tokens: list[int],
         *,
         scope: str | None = None,
-    ) -> tuple[Any | None, list[int], int, bool]:
+    ) -> tuple[Any | None, list[int], int, str]:
         if not self.prompt_cache_enabled or self._draft_model is not None:
-            return None, prompt_tokens, 0, False
+            return None, prompt_tokens, 0, "disabled"
 
         from mlx_lm.generate import generate_step
         from mlx_lm.models.cache import make_prompt_cache
@@ -3047,11 +3047,11 @@ class MLXGenerator:
         cache, rest = prefix_cache.fetch_nearest_cache(self.model_id, prompt_tokens)
         cached_tokens = len(prompt_tokens) - len(rest)
         if cache is not None and rest and cached_tokens >= self.prompt_cache_min_prefix_tokens:
-            return cache, rest, cached_tokens, True
+            return cache, rest, cached_tokens, "reused_saved_prefix"
 
         stable_prefix = self._stable_prefix_tokens(messages, prompt_text, prompt_tokens)
         if not stable_prefix:
-            return None, prompt_tokens, 0, False
+            return None, prompt_tokens, 0, "miss"
         cache = make_prompt_cache(self._model, max_kv_size=self.max_kv_size)
         for _ in generate_step(
             mx.array(stable_prefix),
@@ -3069,7 +3069,9 @@ class MLXGenerator:
         cache, rest = prefix_cache.fetch_nearest_cache(self.model_id, prompt_tokens)
         _prune_mlx_prefix_caches()
         cached_tokens = len(prompt_tokens) - len(rest)
-        return cache, rest, cached_tokens, cached_tokens >= self.prompt_cache_min_prefix_tokens
+        if cache is not None and rest and cached_tokens >= self.prompt_cache_min_prefix_tokens:
+            return cache, rest, cached_tokens, "prepared_this_request"
+        return None, prompt_tokens, 0, "miss"
 
     def generate(self, messages: list[dict[str, str]]) -> str:
         queued_at = perf_counter()
@@ -3184,6 +3186,8 @@ class MLXGenerator:
                 "streamed": False,
                 "draft_model_id": None,
                 "prompt_cache_enabled": False,
+                "prompt_cache_hit": False,
+                "prompt_cache_status": "disabled",
                 "prompt_cache_reason": "stream_generation_required",
                 "chat_template_ms": template_ms,
                 "generation_elapsed_ms": round((perf_counter() - generation_started) * 1000.0, 3),
@@ -3201,7 +3205,7 @@ class MLXGenerator:
         )
         tokenization_ms = round((perf_counter() - tokenization_started) * 1000.0, 3)
         cache_started = perf_counter()
-        prompt_cache, generation_prompt, cached_prompt_tokens, prompt_cache_hit = self._prepare_prompt_cache(
+        prompt_cache, generation_prompt, cached_prompt_tokens, prompt_cache_status = self._prepare_prompt_cache(
             messages,
             str(prompt),
             prompt_tokens,
@@ -3312,7 +3316,8 @@ class MLXGenerator:
                 if first_token_at is not None and total_tokens > 1 else None
             ),
             "prompt_cache_enabled": self.prompt_cache_enabled,
-            "prompt_cache_hit": prompt_cache_hit,
+            "prompt_cache_hit": prompt_cache_status == "reused_saved_prefix",
+            "prompt_cache_status": prompt_cache_status,
             "prefill_step_size": self.prefill_step_size,
             "kv_bits": self.kv_bits,
             "kv_group_size": self.kv_group_size if self.kv_bits is not None else None,

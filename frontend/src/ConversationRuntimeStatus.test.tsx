@@ -18,6 +18,7 @@ describe('last request runtime status', () => {
       remaining_tokens: 3056, history_turns_available: 4, history_turns_included: 2,
       history_turns_omitted: 2,
     }, { generation_tps: 31.25, prompt_tps: 80, prompt_cache_enabled: true,
+      prompt_cache_status: 'reused_saved_prefix',
       prompt_cache_hit: true, cached_prompt_tokens: 320, uncached_prompt_tokens: 320 })} />)
     expect(screen.getByLabelText('Last request runtime status')).toHaveTextContent('Context 640 / 4,096 · estimated')
     expect(screen.getByLabelText('Last request runtime status')).toHaveTextContent('Decode 31.3 tokens/s')
@@ -26,7 +27,7 @@ describe('last request runtime status', () => {
     expect(screen.getByText('Budget status: estimated within budget')).toBeInTheDocument()
     expect(screen.getByText(/2 included, 2 omitted, 4 available/)).toBeInTheDocument()
     expect(screen.getByText(/prompt processing: 80 tokens\/s/)).toBeInTheDocument()
-    expect(screen.getByText(/Prompt KV cache: hit; 320 cached and 320 uncached/)).toBeInTheDocument()
+    expect(screen.getByText(/Prompt KV cache: reused saved prefix; 320 cached and 320 uncached/)).toBeInTheDocument()
     expect(screen.getByText(/not a live rate/)).toBeInTheDocument()
   })
 
@@ -42,6 +43,26 @@ describe('last request runtime status', () => {
     expect(screen.getByText(/reported model limit/)).toBeInTheDocument()
     expect(screen.getByText(/0 included, unavailable omitted/)).toBeInTheDocument()
     expect(screen.getByText(/Model decode: unavailable; prompt processing: unavailable/)).toBeInTheDocument()
-    expect(screen.getByText('Prompt KV cache: unavailable')).toBeInTheDocument()
+    expect(screen.getByText('Prompt KV cache: status unavailable (not recorded)')).toBeInTheDocument()
+  })
+
+  it('distinguishes a prefix prepared during this request from a saved-prefix reuse', () => {
+    render(<ConversationRuntimeStatus turn={turnWith(null, {
+      prompt_cache_enabled: true, prompt_cache_status: 'prepared_this_request',
+      prompt_cache_hit: false, cached_prompt_tokens: 120, uncached_prompt_tokens: 30,
+    })} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Details' }))
+    expect(screen.getByText(/Prompt KV cache: prepared this request; 120 cached and 30 uncached/)).toBeInTheDocument()
+    expect(screen.queryByText(/reused saved prefix/)).not.toBeInTheDocument()
+  })
+
+  it('does not infer saved-prefix reuse from a historical hit flag without a cache status', () => {
+    render(<ConversationRuntimeStatus turn={turnWith(null, {
+      prompt_cache_enabled: true, prompt_cache_hit: true,
+      cached_prompt_tokens: 120, uncached_prompt_tokens: 30,
+    })} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Details' }))
+    expect(screen.getByText('Prompt KV cache: status unavailable (not recorded)')).toBeInTheDocument()
+    expect(screen.queryByText(/reused saved prefix/)).not.toBeInTheDocument()
   })
 })

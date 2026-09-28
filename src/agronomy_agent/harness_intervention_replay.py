@@ -58,6 +58,43 @@ def _mapping(value: Any) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
 
 
+def _prompt_identity(
+    generation_input: Mapping[str, Any], trace: Mapping[str, Any], *, row_number: int,
+) -> dict[str, Any]:
+    """Hash only a retained, structurally valid, nonempty prompt message list."""
+
+    candidates = []
+    if "messages" in generation_input:
+        candidates.append(generation_input["messages"])
+    if "prompt_messages" in trace:
+        candidates.append(trace["prompt_messages"])
+    retained: list[list[Mapping[str, Any]]] = []
+    for messages in candidates:
+        if messages is None or messages == []:
+            continue
+        if not isinstance(messages, list) or not all(
+            isinstance(item, Mapping)
+            and isinstance(item.get("role"), str) and bool(item["role"].strip())
+            and isinstance(item.get("content"), str)
+            for item in messages
+        ):
+            raise ValueError(f"row {row_number}: malformed retained prompt_messages")
+        retained.append(messages)
+    if not retained:
+        return {
+            "status": "unavailable",
+            "reason": "prompt_messages_empty" if candidates else "prompt_messages_missing",
+            "sha256": None,
+        }
+    canonical = [
+        json.dumps(messages, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+        for messages in retained
+    ]
+    if len(set(canonical)) != 1:
+        raise ValueError(f"row {row_number}: retained prompt_messages disagree")
+    return {"status": "observed", "reason": None, "sha256": _sha(canonical[0])}
+
+
 def _stage_record(stages: Mapping[str, Any], name: str) -> tuple[dict[str, Any], str | None]:
     raw = stages.get(name)
     if raw is None:
@@ -174,8 +211,7 @@ def replay_trace(row: Mapping[str, Any], *, source_sha256: str, row_number: int)
         "matches_stage" if draft_echo == texts["draft"] else "differs_from_stage"
     ) if isinstance(draft_echo, str) and texts["draft"] is not None else "unavailable"
     generation_input = _mapping(metadata.get("benchmark_generation_input"))
-    messages = generation_input.get("messages") or trace.get("prompt_messages")
-    prompt_sha = _sha(json.dumps(messages, sort_keys=True, ensure_ascii=False, separators=(",", ":"))) if isinstance(messages, list) else None
+    prompt_identity = _prompt_identity(generation_input, trace, row_number=row_number)
     question = row.get("question") or row.get("message") or turn.get("user_message")
     route = _mapping(metadata.get("route")) or _mapping(trace.get("route"))
     return {
@@ -189,7 +225,9 @@ def replay_trace(row: Mapping[str, Any], *, source_sha256: str, row_number: int)
             "result_class": row.get("result_class"),
             "model_id": row.get("model_id"),
             "model_backend": row.get("model_backend"),
-            "prompt_messages_sha256": prompt_sha,
+            "prompt_messages_sha256": prompt_identity["sha256"],
+            "prompt_messages_status": prompt_identity["status"],
+            "prompt_messages_reason": prompt_identity["reason"],
         },
         "stages": stage_records,
         "editor_candidate": editor_record,

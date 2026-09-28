@@ -53,7 +53,35 @@ def test_unchanged_draft_attribution_and_missing_shadow_evidence() -> None:
     assert receipt["verifier_draft_echo"] == "matches_stage"
     assert receipt["shadow_claim_risk"]["status"] == "unavailable"
     assert "input_path" not in receipt["source"]
+    assert receipt["source"]["prompt_messages_sha256"] is None
+    assert receipt["source"]["prompt_messages_reason"] == "prompt_messages_missing"
     assert "Check the soil" not in json.dumps(receipt)
+
+
+def test_empty_prompt_messages_remain_unavailable_and_retained_messages_are_distinct() -> None:
+    row = _row()
+    row["metadata"]["benchmark_generation_input"] = {"messages": []}
+    empty = replay_trace(row, source_sha256="b" * 64, row_number=1)["source"]
+    assert empty["prompt_messages_sha256"] is None
+    assert empty["prompt_messages_status"] == "unavailable"
+    assert empty["prompt_messages_reason"] == "prompt_messages_empty"
+
+    row["metadata"]["benchmark_generation_input"] = {
+        "messages": [{"role": "user", "content": "First prompt"}],
+    }
+    first = replay_trace(row, source_sha256="b" * 64, row_number=1)["source"]
+    assert first["prompt_messages_status"] == "observed"
+    assert first["prompt_messages_sha256"] is not None
+    row["metadata"]["benchmark_generation_input"]["messages"][0]["content"] = "Second prompt"
+    second = replay_trace(row, source_sha256="b" * 64, row_number=1)["source"]
+    assert first["prompt_messages_sha256"] != second["prompt_messages_sha256"]
+
+
+def test_malformed_retained_prompt_fails_closed() -> None:
+    row = _row()
+    row["metadata"]["benchmark_generation_input"] = {"messages": [{"role": "user"}]}
+    with pytest.raises(ValueError, match="malformed retained prompt_messages"):
+        replay_trace(row, source_sha256="b" * 64, row_number=1)
 
 
 def test_missing_stage_is_unknown_not_unchanged() -> None:
@@ -146,6 +174,10 @@ def test_observed_rehearsal_wrapper_and_stage_disagreement() -> None:
     assert receipt["source"]["turn_id"] == "turn-1"
     assert receipt["source"]["result_class"] == "observed_system_execution_nonclaim"
     assert receipt["source"]["prompt_messages_sha256"] is not None
+    wrapped["execution"]["turn"]["trace"]["prompt_messages"] = []
+    unretained = replay_trace(wrapped, source_sha256="b" * 64, row_number=1)
+    assert unretained["source"]["prompt_messages_sha256"] is None
+    assert unretained["source"]["prompt_messages_reason"] == "prompt_messages_empty"
     wrapped["execution"]["answer_stages"] = {**stages, "draft": _stage("Different draft")}
     with pytest.raises(ValueError, match="disagree"):
         replay_trace(wrapped, source_sha256="b" * 64, row_number=1)

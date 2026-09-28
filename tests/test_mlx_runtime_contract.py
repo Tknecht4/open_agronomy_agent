@@ -162,6 +162,8 @@ def test_stream_receipt_preserves_exact_prompt_accounting_and_unknown_rates(
     assert receipt["prompt_tokens"] == len(b"user:hello|assistant:")
     assert receipt["cached_prompt_tokens"] == 0
     assert receipt["uncached_prompt_tokens"] == receipt["prompt_tokens"]
+    assert receipt["prompt_cache_status"] == "disabled"
+    assert receipt["prompt_cache_hit"] is False
     assert receipt["generation_tps"] is None and receipt["prompt_tps"] is None
     assert receipt["time_to_first_token_ms"] is not None
     assert receipt["model_load_status"] == "already_loaded"
@@ -201,10 +203,38 @@ def test_stable_prefix_prefill_uses_deterministic_sampler_and_copied_cache(
     ]
     prompt = generator._tokenizer.apply_chat_template(messages, tokenize=False)
     tokens = generator._tokenizer.apply_chat_template(messages, tokenize=True)
-    first, rest, cached, hit = generator._prepare_prompt_cache(messages, prompt, tokens)
-    assert generated and hit and cached + len(rest) == len(tokens)
+    first, rest, cached, status = generator._prepare_prompt_cache(messages, prompt, tokens)
+    assert generated and status == "prepared_this_request"
+    assert cached + len(rest) == len(tokens)
+    assert cached > 0 and len(rest) > 0
     first[0]["state"].append(99)
-    second, _, second_cached, second_hit = generator._prepare_prompt_cache(messages, prompt, tokens)
-    assert second_hit and second_cached == cached
+    second, second_rest, second_cached, second_status = generator._prepare_prompt_cache(messages, prompt, tokens)
+    assert second_status == "reused_saved_prefix"
+    assert second_cached == cached
+    assert second_cached + len(second_rest) == len(tokens)
     assert second[0]["state"] == [1]
     assert len(generated) == 1
+
+    # Exercise the public generation receipt across a cold preparation and a
+    # later request; only the latter is an inter-request cache hit.
+    agent.reset_mlx_prompt_caches()
+    fake_mlx = types.ModuleType("mlx_lm")
+    fake_mlx.generate = lambda *_args, **_kwargs: "unused"  # type: ignore[attr-defined]
+    fake_mlx.stream_generate = lambda *_args, **_kwargs: iter([  # type: ignore[attr-defined]
+        types.SimpleNamespace(text="answer", generation_tokens=1, from_draft=False),
+    ])
+    sampler = types.ModuleType("mlx_lm.sample_utils")
+    sampler.make_sampler = lambda **_kwargs: None  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "mlx_lm", fake_mlx)
+    monkeypatch.setitem(sys.modules, "mlx_lm.sample_utils", sampler)
+    assert generator._generate_on_mlx_thread(messages) == "answer"
+    cold = dict(generator.last_generation_stats)
+    assert cold["prompt_cache_status"] == "prepared_this_request"
+    assert cold["prompt_cache_hit"] is False
+    assert cold["cached_prompt_tokens"] + cold["uncached_prompt_tokens"] == cold["prompt_tokens"]
+    assert generator._generate_on_mlx_thread(messages) == "answer"
+    reused = generator.last_generation_stats
+    assert reused["prompt_cache_status"] == "reused_saved_prefix"
+    assert reused["prompt_cache_hit"] is True
+    assert reused["cached_prompt_tokens"] + reused["uncached_prompt_tokens"] == reused["prompt_tokens"]
+    assert reused["cached_prompt_tokens"] == cold["cached_prompt_tokens"]

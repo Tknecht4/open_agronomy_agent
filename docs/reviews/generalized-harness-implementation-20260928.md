@@ -1,6 +1,6 @@
 # Portable agronomy runtime and conversation implementation
 
-Status: in progress. User authorized proceeding from the source-bound harness
+Status: local implementation candidate; final review and gates recorded below. User authorized proceeding from the source-bound harness
 review, adding model/KV/context management, useful runtime indicators, backend
 performance, and separate field-linked and general conversations. Full model
 benchmark suites use the Colab operator. No competence or candidate-corpus
@@ -163,3 +163,36 @@ Integration refreshed onto `origin/main` at `8f4c33f` after the saved-point
 imagery work landed. Both additions to the public manifest were retained;
 the generated runtime manifest was rebuilt from the combined source. The
 point-imagery feature is outside this task and was preserved.
+
+## Independent review and repairs
+
+The first independent Astra review, bound to `55e2a384b2c27f73c8824f34276292c0d8001acc`,
+returned repair for three reproducible P2 findings despite green integration
+tests. All three have focused regressions in the candidate:
+
+- An empty unretained-prompt placeholder no longer receives a real prompt hash.
+  Absent/empty prompt bytes remain unavailable; malformed or disagreeing retained
+  prompts fail the diagnostic explicitly.
+- KV status distinguishes a prefix computed during the current request from a
+  prefix reused from an earlier request. Historical ambiguous cache receipts
+  remain unavailable in the UI. Full input = cached prefix + generation suffix
+  remains bound for cold and warm paths.
+- Session creation checks declared identities in direct and legacy `extra`
+  representations, including nested field context. Conflicting aliases are
+  rejected. Unauthorized field declarations fail before persistence; the former
+  defect did not disclose field content because turn authorization still denied it.
+
+The local-only investigation report and SPCC receipts remain preserved, unchanged
+and untracked, outside the publishable commit. They were removed from local Git
+history before any push because the receipt explicitly declares local-only
+privacy. The pre-existing UI-review stash/backup is also preserved.
+
+The integrated pre-repair gate observed 1,401 Python passes / 4 skips and 362
+frontend passes, typecheck/build, public-doc audit, strict MkDocs and a 1,074-file
+public package. These are implementation checks, not agronomic validation.
+Final repair verification is recorded after independent delta review.
+
+Publishing status: automatic approval review rejected the attempted feature-
+branch push because the user had not explicitly authorized sending this payload
+to GitHub. No branch was pushed and no PR was created. Complete local work and
+request direct publication approval only after the candidate is reviewable.

@@ -36,10 +36,11 @@ export function ConversationRuntimeStatus({ turn }: { turn: Turn | null }) {
     : budget.limit_basis === 'model' ? 'reported model limit' : 'unknown limit'
   const decode = rate(stats.generation_tps)
   const prompt = rate(stats.prompt_tps)
-  const cache = stats.prompt_cache_enabled === false ? 'disabled'
-    : stats.prompt_cache_enabled === true && stats.prompt_cache_hit === true ? 'hit'
-      : stats.prompt_cache_enabled === true && stats.prompt_cache_hit === false ? 'miss'
-        : 'unavailable'
+  const cache = stats.prompt_cache_status === 'reused_saved_prefix' ? 'reused saved prefix'
+    : stats.prompt_cache_status === 'prepared_this_request' ? 'prepared this request'
+      : stats.prompt_cache_status === 'miss' ? 'miss'
+        : stats.prompt_cache_status === 'disabled' ? 'disabled'
+          : 'status unavailable (not recorded)'
   const cachedTokens = count(stats.cached_prompt_tokens)
   const uncachedTokens = count(stats.uncached_prompt_tokens)
   const formatRate = (value: number) => `${value.toLocaleString(undefined, { maximumFractionDigits: 1 })} tokens/s`
@@ -60,7 +61,8 @@ export function ConversationRuntimeStatus({ turn }: { turn: Turn | null }) {
           <p>Budget status: {budgetStatus}</p>
           <p>History turns: {quantity(included)} included, {quantity(omitted)} omitted, {quantity(available)} available</p>
           <p>Model decode: {decode === null ? 'unavailable' : formatRate(decode)}; prompt processing: {prompt === null ? 'unavailable' : formatRate(prompt)}</p>
-          <p>Prompt KV cache: {cache}{cache === 'hit' || cache === 'miss' ? `; ${quantity(cachedTokens)} cached and ${quantity(uncachedTokens)} uncached prompt tokens` : ''}</p>
+          <p>Prompt KV cache: {cache}{cache === 'reused saved prefix' || cache === 'prepared this request' || cache === 'miss'
+            ? `; ${quantity(cachedTokens)} cached and ${quantity(uncachedTokens)} uncached prompt tokens` : ''}</p>
           <small>These are saved request measurements, not a live rate or the next draft’s usage.</small>
         </div>
       </div>

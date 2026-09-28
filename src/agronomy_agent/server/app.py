@@ -94,7 +94,7 @@ from agronomy_agent.server.schemas import (
     WorkspaceCreate,
 )
 from agronomy_agent.server.services.conversation_scope import (
-    ConversationScopeError, bind_conversation_context,
+    ConversationScopeError, bind_conversation_context, identity as conversation_identity,
 )
 from agronomy_agent.server.services.chat_service import run_turn
 from agronomy_agent.server.services.answer_renderer import render_structured_answer
@@ -6747,7 +6747,13 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
     async def create_session(payload: CreateSessionRequest, request: Request) -> dict[str, Any]:
         user = _demo_field_user(request)
         context = payload.context.model_dump()
-        if context.get("field_context_id") or context.get("field_conversation_key"):
+        try:
+            declared_scope, _ = conversation_identity(context)
+        except ConversationScopeError as exc:
+            raise HTTPException(status_code=409, detail={
+                "code": "conversation_scope_mismatch", "boundary": str(exc),
+            }) from exc
+        if declared_scope:
             context = _bind_turn_context({"session_id": "", "context": {}}, context)
             context = _persistable_demo_turn_context(_authorize_demo_turn_field_context(request, context)) or {}
         session = store.create_session(

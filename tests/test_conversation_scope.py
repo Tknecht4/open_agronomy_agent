@@ -119,3 +119,34 @@ def test_general_turn_never_loads_full_transcript_or_changes_scope(client, monke
     assert response.status_code == 200, response.text
     assert store.get_session(session_id, include_turns=False)["context"]["field_conversation_key"] == "general:chat:one"
     assert store.count_session_turns(session_id) == 13
+
+
+@pytest.mark.parametrize("shape", ["direct", "extra", "nested_extra"])
+def test_creation_authorizes_every_declared_field_identity_shape(client, shape):
+    field_id = _field(client, "Owner field")
+    context = {"field_context_id": field_id}
+    if shape == "extra":
+        context = {"extra": context}
+    elif shape == "nested_extra":
+        context = {"extra": {"field_context": context}}
+    denied = client.post("/api/sessions", headers=OTHER, json={
+        "title": "Unauthorized alias", "consent": {}, "context": context,
+    })
+    assert denied.status_code == 403, denied.text
+    assert client.get("/api/sessions?include_turns=false", headers=OTHER).json() == []
+    allowed = client.post("/api/sessions", headers=OWNER, json={
+        "title": "Authorized alias", "consent": {}, "context": context,
+    })
+    assert allowed.status_code == 200, allowed.text
+    assert allowed.json()["context"]["field_context_id"] == field_id
+
+
+def test_creation_rejects_conflicting_direct_and_extra_identity(client):
+    field_id = _field(client, "North")
+    response = client.post("/api/sessions", headers=OWNER, json={
+        "title": "Conflicting", "consent": {}, "context": {
+            "field_context_id": field_id, "extra": {"field_context_id": "different-field"},
+        },
+    })
+    assert response.status_code == 409, response.text
+    assert response.json()["detail"]["code"] == "conversation_scope_mismatch"
