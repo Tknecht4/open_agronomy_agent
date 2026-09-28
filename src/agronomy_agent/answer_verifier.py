@@ -4177,10 +4177,10 @@ def _decision_route_failure_answer(
             map_name = (
                 "agro-pedological atlas polygon"
                 if re.search(r"\bagro[- ]pedological atlas\b|\batlas agro[- ]p[ée]dologique\b", lower)
-                else "regional suitability map"
+                else "map"
             )
             return (
-                f"No. A favourable {map_name} is regional screening context and cannot select a "
+                f"No. The {map_name} alone cannot select a "
                 f"{crop} variety for the field. Ground-truth soil, drainage, topography, salinity, and other field "
                 "constraints, then match relative maturity or crop heat-unit fit to the planting window and harvest "
                 "risk. Compare replicated local multi-year and multi-location variety trials for statistical "

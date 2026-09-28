@@ -5257,6 +5257,28 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
 
         with profiler.span("thread.persist_trace", metadata={"phase": "user_message"}):
             metadata, legacy_session_id = ensure_legacy_session(thread)
+            # A failed streamed request can leave a visible user message without
+            # a legacy turn. References may use legacy turns only while the two
+            # user-message histories agree through the bounded active window.
+            visible_user_messages = [
+                item["content"] for item in thread.get("messages", [])
+                if item.get("actor") == "user"
+            ]
+            legacy_turn_count = store.count_session_turns(
+                legacy_session_id, exclude_replays=True,
+            )
+            compare_count = min(8, len(visible_user_messages))
+            legacy_recent = store.get_recent_session_turns(
+                legacy_session_id, limit=max(1, compare_count), exclude_replays=True,
+            )
+            conversation_reference_history_verified = (
+                len(visible_user_messages) == legacy_turn_count
+                and (
+                    compare_count == 0
+                    or visible_user_messages[-compare_count:]
+                    == [item["user_message"] for item in legacy_recent[-compare_count:]]
+                )
+            )
             user_message = store.create_phase4_message(
                 thread=thread,
                 actor="user",
@@ -5378,6 +5400,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                     "field_access_workspace_id": workspace["id"] if active_field_context else None,
                     "field_context": active_field_context,
                     "workspace_retrieved_docs": workspace_retrieved_docs,
+                    "conversation_reference_history_verified": conversation_reference_history_verified,
                 },
                 profiler=profiler,
             )

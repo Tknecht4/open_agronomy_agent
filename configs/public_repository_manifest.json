@@ -719,6 +719,10 @@
     "docs/reviews/artifacts/residual-repair-20260928/final-reconciliation.json",
     "docs/reviews/artifacts/residual-repair-20260928/frontend-docs-checks.json",
     "tests/test_turn_generation_telemetry.py",
+    "tests/test_verifier_map_identity.py",
+    "tests/test_conversation_resolution.py",
+    "tests/test_conversation_resolution_service.py",
+    "tests/test_conversation_resolution_http.py",
     "docs/reviews/system-validation-20260928.md"
   ],
   "trees": [

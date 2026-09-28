@@ -24,6 +24,14 @@ field. **New chat** starts a separate conversation in that scope. Select the
 field to find its other conversations. Changing a conversation's field requires
 a new chat; previous answers remain attached to their original context.
 
+For a complete calculation request with one numeric input, a follow-up such as
+“What about 200 instead?” can reuse the operation and units from your previous
+question. Explicit new questions take precedence. Restate the operation and
+units when the reference is ambiguous; prior assistant answers are not a source
+of calculation inputs or field evidence.
+The current tool recomputes the result from your inputs; this does not certify
+that a previous model answer was correct or even completed successfully.
+
 The complete transcript stays in local storage. Each model request includes only
 a bounded recent window. Earlier user statements are unverified reports and
 previous model answers are continuity context, never source evidence. Rejected

@@ -95,6 +95,20 @@ The configured budget includes the requested output allowance and is clamped to
 a smaller declared native limit. Deterministic answers do not load a model for a
 context indicator. Receipts live in `trace.metadata.context_budget`.
 
+Before routing, `conversation_resolution.py` can resolve a numeric follow-up
+such as “What about 200 instead?” from an immediately preceding complete typed
+calculation request in the same authorized chat. It requires one unambiguous changed
+numeric input and the same calculator operation. Assistant output supplies no
+operand, explicit new requests remain authoritative, and ambiguous references
+stay unresolved. The original user text is saved unchanged; the effective
+question, source turn and policy are recorded in the trace and execution hashes.
+The current tool recomputes the result, independent of the prior model's success.
+Typed-tool ablations and baseline modes disable this interpretation. The legacy
+stream bridge also disables it when visible user messages and retained turns
+disagree, so a failed visible topic change cannot be silently skipped. Such a
+chat requires complete requests or a fresh chat; the guard does not reconcile
+the missing history.
+
 Cache scope is an opaque hash of session identity plus draft/editor role. Cache
 entries also bind model revision/snapshot and KV configuration, with aggregate
 namespace/byte limits. Caching remains disabled in the active profile pending
