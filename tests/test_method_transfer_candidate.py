@@ -96,6 +96,7 @@ def test_method_recognition_does_not_swallow_unrelated_or_regulated_requests() -
     assert requested_methods("Describe sandy and clay soil texture in Saskatchewan") == ()
     assert requested_methods("Explain embryo and stored food in a germinating bean seed") == ()
     assert requested_methods("May I apply a Canadian pesticide in North Dakota with a matching active ingredient?") == ()
+    assert requested_methods("Explain the bean embryo as a seed germinates; no planting population is needed.") == ()
     context = build_context(
         "May I apply a Canadian pesticide in North Dakota with a matching active ingredient?",
         rag_config=CANDIDATE,
@@ -103,6 +104,18 @@ def test_method_recognition_does_not_swallow_unrelated_or_regulated_requests() -
         use_search_cache=False,
     )
     assert not any(doc.doc_id.startswith("method_") for doc in context.retrieved_docs)
+
+
+def test_method_recognition_uses_independent_concepts_without_a_topic_word() -> None:
+    assert "seed_mass" in requested_methods(
+        "Our oat seed lot has a different germination result and seed size; how do we keep the same stand when setting the drill?"
+    )
+    assert "enterprise_budget" in requested_methods(
+        "For a new cut-flower enterprise, compare saleable output with production and marketing expenses."
+    )
+    assert "nutrient_plan_inputs" in requested_methods(
+        "An adviser needs field history after our manure supplier changed storage; what evidence should we gather?"
+    )
 
 
 def test_curated_method_response_requires_explanation_not_a_transferred_rate() -> None:

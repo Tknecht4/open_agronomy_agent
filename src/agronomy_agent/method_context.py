@@ -15,7 +15,7 @@ from typing import Any
 METHOD_SCHEMA = "open_agronomy_agent.method_scope.v1"
 METHODS: dict[str, tuple[str, str]] = {
     "seed_mass": (
-        r"\b(?:seed(?:ing)? (?:rate|mass|lot|order|size)|kernel weight|seeds? per (?:pound|lb)|"
+        r"\b(?:seed(?:ing)?[- ](?:rate|mass|lot|size)|kernel weight|seeds? per (?:pound|lb|kilogram|kg)|"
         r"thousand.kernel.weight|target stand|plant population|drill calibration)\b",
         "Explain how target stand, seed size, germination and expected establishment combine; obtain a local target and lot measurements.",
     ),
@@ -48,7 +48,7 @@ METHODS: dict[str, tuple[str, str]] = {
         "Schedule actual inflows and outflows, financing and debt service by period; distinguish cash from accrual profit.",
     ),
     "nutrient_plan_inputs": (
-        r"\b(?:nutrient.plan\w*|manure (?:plan|analysis|analyses|nutrient)|"
+        r"\b(?:nutrient.plan\w*|nutrient advis(?:er|or)|manure (?:plan|analysis|analyses|nutrient)|"
         r"(?:fertiliz\w*|manure)[^.!?]{0,65}(?:soil test|crop need|application rate)|"
         r"soil (?:and|&) manure analys\w*)\b",
         "Organize field, soil, manure, crop and application records; require local calibration and current rules before any rate or regulated plan.",
@@ -61,8 +61,20 @@ def requested_methods(question: str) -> tuple[str, ...]:
 
     text = str(question or "")
     selected = [method for method, (pattern, _) in METHODS.items() if re.search(pattern, text, re.IGNORECASE)]
+    if (re.search(r"\bseed\w*\b", text, re.IGNORECASE)
+        and re.search(r"\b(?:germinat\w*|seed size|seeds? per|kernel weight)\b", text, re.IGNORECASE)
+        and re.search(r"\b(?:stand|drill|mass|quantity|rate|lot)\b", text, re.IGNORECASE)):
+        selected.append("seed_mass")
     if re.search(r"\benterprise\b", text, re.IGNORECASE) and re.search(r"\bbudget\b", text, re.IGNORECASE):
         selected.append("enterprise_budget")
+    if re.search(r"\benterprise\b", text, re.IGNORECASE) and re.search(
+        r"\b(?:output|sales?|receipts?|expenses?|costs?|margins?|viability|template)\b", text, re.IGNORECASE
+    ):
+        selected.append("enterprise_budget")
+    if re.search(r"\b(?:manure|amendment)\b", text, re.IGNORECASE) and re.search(
+        r"\b(?:nutrient|advis(?:er|or)|field|soil test|history|analysis|storage)\b", text, re.IGNORECASE
+    ):
+        selected.append("nutrient_plan_inputs")
     return tuple(dict.fromkeys(selected))
 
 
@@ -138,15 +150,16 @@ def curated_method_response(context: Any, question: str) -> tuple[str | None, di
         return None, None
     if not re.search(r"\b(?:explain|describe|understand|how|what|which|why|framework|method|concept)\b", question, re.IGNORECASE):
         return None, None
-    if re.search(r"\bwhether\b|\b(?:and|also)\s+(?:advise|tell|recommend|decide|judge|assess|determine|predict)\b", question, re.IGNORECASE):
+    if re.search(r"\b(?:and|also)\s+(?:advise|tell|recommend|decide|judge|assess|determine|predict)\b", question, re.IGNORECASE):
         return None, None
     for match in re.finditer(r"\bhow\s+(?:should|could|would)\s+(?:i|we)\s+(?P<verb>\w+)", question, re.IGNORECASE):
-        if match.group("verb").lower() not in {"use", "adapt", "interpret", "organize", "compare", "record", "explain", "check", "think", "evaluate"}:
+        if match.group("verb").lower() not in {"use", "adapt", "interpret", "organize", "compare", "record", "reconcile", "explain", "check", "think", "evaluate"}:
             return None, None
     if re.search(r"\buse\s+(?:this|the)\s+(?:fertilizer|manure|seed|pesticide|herbicide|product)\b", question, re.IGNORECASE):
         return None, None
     for match in re.finditer(r"\b(?:should|could|would)\s+(?:i|we)\b", question, re.IGNORECASE):
-        if not question[max(0, match.start() - 4):match.start()].lower().endswith("how "):
+        prefix = question[max(0, match.start() - 90):match.start()]
+        if re.search(r"\b(?:how|what|which)\b[^?.!;]{0,75}$", prefix, re.IGNORECASE) is None:
             return None, None
     if re.search(r"\b(?:can|may)\s+(?:i|we)\s+(?:sell|buy|finance|borrow|hire|choose|rank|copy|adopt|apply|spray|treat)\b", question, re.IGNORECASE):
         return None, None
@@ -161,14 +174,21 @@ def curated_method_response(context: Any, question: str) -> tuple[str | None, di
     if re.search(r"\b(?:estimate|forecast|predict)\b", question, re.IGNORECASE):
         return None, None
     request_start = re.compile(r"^\s*(?:please|explain|describe|outline|list|show|how|what|which|why|can|could|would|should|is|are|do|does|will|may|give|tell|recommend|advise)\b", re.IGNORECASE)
-    method_request_terms = re.compile(r"\b(?:method|framework|reasoning|inputs?|conventions?|comparison|compare|belong|adapt|chart|budget|ratios?|log|records?|gather|organize|cash flow|working capital|degree days)\b", re.IGNORECASE)
+    method_request_terms = re.compile(
+        r"\b(?:method|framework|reasoning|inputs?|conventions?|comparison|compare|belong|adapt|chart|budget|"
+        r"ratios?|log|records?|gather|organize|cash[- ]flow|working capital|degree days|measures?|rows?|"
+        r"basis|seed[- ]mass|seed lots?|germination|units?|evidence packet|nutrient advis(?:er|or)|"
+        r"(?:setting|calibrating) the drill)\b",
+        re.IGNORECASE,
+    )
     request_boundary = (
         r"(?<=[.!?;])\s+|"
         r"(?:,\s*|\s+)(?:and|or)\s+(?=(?:please|is|are|do|does|should|can|could|would|will|may|what|how|which|why|give|tell|recommend|advise)\b)"
     )
     for sentence in re.split(request_boundary, question, flags=re.IGNORECASE):
-        if request_start.search(sentence) and not method_request_terms.search(sentence):
-            return None, None
+        if request_start.search(sentence):
+            if not method_request_terms.search(sentence):
+                return None, None
     expected_hash = str(runtime.get("method_support_receipt_sha256") or "")
     store_path = str(runtime.get("method_transfer_store") or "")
     if not re.fullmatch(r"[0-9a-f]{64}", expected_hash) or not store_path:
