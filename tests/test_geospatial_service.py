@@ -2,6 +2,8 @@ import json
 import sqlite3
 from pathlib import Path
 
+import pytest
+
 from agronomy_agent.server.services import geospatial_service as geo
 
 
@@ -266,3 +268,29 @@ def test_default_layer_selection_omits_uninstalled_and_prefers_detailed_sk(
     catalog = {row["id"]: row for row in geo.layer_catalog(network_mode="offline")["layers"]}
     assert catalog["sk_detailed_soil"]["installation_status"] == "installed"
     assert catalog["missing"]["available_in_current_mode"] is False
+
+
+def test_shared_intersection_coverage_is_area_weighted_and_includes_all_members() -> None:
+    from agronomy_agent.geospatial.geometry import geodesic_metrics
+
+    first = {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]]}
+    second = {"type": "Polygon", "coordinates": [[[2, 0], [4, 0], [4, 2], [2, 2], [2, 0]]]}
+    field = {"type": "MultiPolygon", "coordinates": [first["coordinates"], second["coordinates"]]}
+    expected = geodesic_metrics(second)["area_m2"] / geodesic_metrics(field)["area_m2"]
+    assert geo._coverage_estimate(field, second) == pytest.approx(expected, abs=1e-6)
+    assert geo.geometries_intersect(field, second)
+    assert not geo.geometries_intersect(field, {"type": "Point", "coordinates": [1.5, .5]})
+    assert geo._geometry_area_acres(field) == pytest.approx(geodesic_metrics(field)["area_m2"] / 4046.8564224)
+
+
+def test_arcgis_polygon_holes_have_opposite_ring_orientation() -> None:
+    from shapely.geometry import LinearRing
+    geometry = {"type": "Polygon", "coordinates": [
+        [[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]],
+        [[.2, .2], [.4, .2], [.4, .4], [.2, .4], [.2, .2]],
+    ]}
+    rings = json.loads(geo._arcgis_geometry(geometry))["rings"]
+    assert not LinearRing(rings[0]).is_ccw
+    assert LinearRing(rings[1]).is_ccw
+    assert geo._coverage_estimate({"type": "Point", "coordinates": [.3, .3]}, geometry) == 0
+    assert geo._coverage_estimate({"type": "Point", "coordinates": [.2, .3]}, geometry) == 1

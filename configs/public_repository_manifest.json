@@ -731,7 +731,17 @@
     "configs/github_repository_policy.json",
     "docs/reviews/open-source-readiness-20260929.md",
     "scripts/build_source_distribution.py",
-    "tests/test_source_distribution.py"
+    "tests/test_source_distribution.py",
+    "requirements-geospatial.txt",
+    "tests/test_geospatial_discovery.py",
+    "tests/test_geospatial_discovery_routes.py",
+    "tests/test_geospatial_geometry.py",
+    "tests/test_geospatial_raster.py",
+    "tests/test_geospatial_terrain.py",
+    "tests/test_geospatial_vector_io.py",
+    "scripts/analyze_field_terrain.py",
+    "scripts/discover_field_sources.py",
+    "docs/reviews/geospatial-foundation-merge-20260929.md"
   ],
   "trees": [
     "src",

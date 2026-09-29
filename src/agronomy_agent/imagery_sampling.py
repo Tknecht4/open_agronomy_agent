@@ -9,6 +9,8 @@ from __future__ import annotations
 import math
 from typing import Any
 
+from agronomy_agent.geospatial.raster import fractional_weights, source_extent_mask
+
 
 POINT_PROCESS_VERSION = "hls-point-sample-v3-native-grid-source-extent-float64-qa"
 MIN_SAMPLE_RADIUS_M = 15
@@ -17,15 +19,14 @@ MAX_SAMPLE_RADIUS_M = 1500
 
 def outside_source_mask(
     grid: tuple[Any, Any, int, int, Any, Any],
-    source_grid: tuple[Any, Any, int, int], deps: tuple[Any, ...],
+    source_grid: tuple[Any, Any, int, int],
 ) -> Any:
     """Identify chip cells outside the native tile even without nodata tags.
 
-    Point chips follow the source lattice. An absent nodata tag can make a
+    All HLS chips follow the source lattice. An absent nodata tag can make a
     WarpedVRT return valid-looking zeros beyond its extent, so coverage must
     be checked from the observed source grid rather than pixel values.
     """
-    np = deps[0]
     _, transform, width, height, _, _ = grid
     _, native, source_width, source_height = source_grid
     col_offset_float = (transform.c - native.c) / 30
@@ -33,12 +34,10 @@ def outside_source_mask(
     col_offset, row_offset = round(col_offset_float), round(row_offset_float)
     if (not math.isclose(col_offset_float, col_offset, rel_tol=0, abs_tol=1e-6)
             or not math.isclose(row_offset_float, row_offset, rel_tol=0, abs_tol=1e-6)):
-        raise RuntimeError("point chip is not aligned to native HLS grid")
-    columns = col_offset + np.arange(width)
-    rows = row_offset + np.arange(height)
-    covered_columns = (columns >= 0) & (columns < source_width)
-    covered_rows = (rows >= 0) & (rows < source_height)
-    return ~(covered_rows[:, None] & covered_columns[None, :])
+        raise RuntimeError("HLS chip is not aligned to native HLS grid")
+    return ~source_extent_mask(
+        transform, width, height, source_transform=native,
+        source_width=source_width, source_height=source_height)
 
 
 def point_grid_and_weights(
@@ -66,7 +65,7 @@ def point_grid_and_weights(
                       "neighboring land cover and does not describe the whole field.")
     elif mode == "point_buffer" and radius_m is not None:
         # Resolution 64 keeps a 15 m circle's area within 0.011% of pi*r^2.
-        support = projected.buffer(radius_m, resolution=64)
+        support = projected.buffer(radius_m, quad_segs=64)
         xmin, ymin, xmax, ymax = support.bounds
         left = source_transform.c + math.floor((xmin - source_transform.c) / 30) * 30
         top = source_transform.f + math.ceil((ymax - source_transform.f) / 30) * 30
@@ -76,14 +75,9 @@ def point_grid_and_weights(
         if width < 1 or height < 1 or width > 256 or height > 256:
             raise ValueError("point sample exceeds bounded HLS chip")
         transform = from_origin(left, top, 30, 30)
-        weights = np.zeros((height, width), dtype=np.float32)
-        for row in range(height):
-            ytop = top - row * 30
-            for col in range(width):
-                xleft = left + col * 30
-                cell = box(xleft, ytop - 30, xleft + 30, ytop)
-                if support.intersects(cell):
-                    weights[row, col] = support.intersection(cell).area / 900
+        # Preserve the v3 point artifact dtype and numerical contract. Shared
+        # geometry intersections are float64; only stored point weights round.
+        weights = fractional_weights(support, transform, width, height).astype(np.float32)
         limitation = ("An area sampled around the saved location, which can include "
                       "neighboring land cover; it is not a field boundary or whole-field estimate.")
     else:

@@ -3648,9 +3648,14 @@ def _sample_geojson_geometry(geometry: dict[str, Any], max_points: int = DEFAULT
 
 
 def _sample_polygon_points(rings: list[list[tuple[float, float]]], max_points: int) -> list[tuple[float, float]]:
+    from agronomy_agent.geospatial.geometry import canonical_geometry
+    from shapely.geometry import Point, shape
+
+    polygon = shape(canonical_geometry({"type": "Polygon", "coordinates": rings}))
     bbox, _ = _bbox_for_points(point for ring in rings for point in ring)
     west, south, east, north = bbox
-    candidates = [_ring_centroid(rings[0])]
+    interior = polygon.representative_point()
+    candidates = [(interior.x, interior.y)]
     side = max(1, math.ceil(math.sqrt(max_points)))
     for row in range(side):
         lat = south + ((row + 0.5) / side) * (north - south)
@@ -3663,44 +3668,14 @@ def _sample_polygon_points(rings: list[list[tuple[float, float]]], max_points: i
         rounded = (round(point[0], 8), round(point[1], 8))
         if rounded in seen:
             continue
-        if _point_in_polygon_rings(point, rings):
+        if polygon.covers(Point(rounded)):
             out.append(rounded)
             seen.add(rounded)
         if len(out) >= max_points:
             break
     if not out:
-        out.append((round((west + east) / 2, 8), round((south + north) / 2, 8)))
+        raise ValueError("polygon has no sampling point at supported coordinate precision")
     return out
-
-
-def _ring_centroid(ring: list[tuple[float, float]]) -> tuple[float, float]:
-    points = ring[:-1] if len(ring) > 1 and ring[0] == ring[-1] else ring
-    if not points:
-        raise ValueError("polygon ring has no points")
-    return sum(point[0] for point in points) / len(points), sum(point[1] for point in points) / len(points)
-
-
-def _point_in_polygon_rings(point: tuple[float, float], rings: list[list[tuple[float, float]]]) -> bool:
-    if not rings:
-        return False
-    if not _point_in_ring(point, rings[0]):
-        return False
-    return not any(_point_in_ring(point, hole) for hole in rings[1:])
-
-
-def _point_in_ring(point: tuple[float, float], ring: list[tuple[float, float]]) -> bool:
-    x, y = point
-    inside = False
-    points = ring
-    j = len(points) - 1
-    for i, current in enumerate(points):
-        xi, yi = current
-        xj, yj = points[j]
-        intersects = ((yi > y) != (yj > y)) and (x < ((xj - xi) * (y - yi) / ((yj - yi) or 1e-12) + xi))
-        if intersects:
-            inside = not inside
-        j = i
-    return inside
 
 
 def _summarize_cdl_samples(samples: list[dict[str, Any]]) -> dict[str, Any]:

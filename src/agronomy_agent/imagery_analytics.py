@@ -28,12 +28,13 @@ from agronomy_agent.field_imagery import (
     _PC_TOKEN, _PLANETARY_COMPUTER, _clean_asset, _request_json, _valid_search_geometry,
 )
 from agronomy_agent.imagery_store import ImageryStore
+from agronomy_agent.geospatial.raster import fractional_weights, weighted_statistics
 from agronomy_agent.imagery_sampling import (
     MAX_SAMPLE_RADIUS_M, MIN_SAMPLE_RADIUS_M, POINT_PROCESS_VERSION,
     outside_source_mask, point_grid_and_weights,
 )
 
-PROCESS_VERSION = "hls-chip-v2-native-asset-grid-fmask-v1"
+PROCESS_VERSION = "hls-chip-v3-native-grid-source-extent-float64-qa"
 PREVIEW_VERSION = "ndvi-preview-v2-finite-alpha"
 SCALE = 0.0001
 MAX_SIDE = 256
@@ -366,16 +367,8 @@ def _grid(polygon: dict[str, Any], buffer_m: int, context_pixels: int | None,
 
 
 def _field_weights(projected: Any, transform: Any, width: int, height: int, deps: tuple[Any, ...]) -> Any:
-    np, _, (_, geometry_mask, _, _), _, (box, _, _), _ = deps
-    # all_touched restricts exact intersection work to boundary and interior cells.
-    candidate = geometry_mask([projected.__geo_interface__], out_shape=(height, width),
-                              transform=transform, all_touched=True, invert=True)
-    weights = np.zeros((height, width), dtype=np.float32)
-    for row, col in zip(*np.nonzero(candidate)):
-        x0 = transform.c + col * 30
-        y1 = transform.f - row * 30
-        weights[row, col] = projected.intersection(box(x0, y1 - 30, x0 + 30, y1)).area / 900
-    return weights
+    """Preserve float32 support for the frozen assessment collector consumer."""
+    return fractional_weights(projected, transform, width, height).astype(deps[0].float32)
 
 
 def _validate_scale(metadata: Any, key: str) -> None:
@@ -427,11 +420,12 @@ def _read_assets(item: dict[str, Any], hrefs: dict[str, str], grid: tuple[Any, .
     invalid |= np.any(raw == -9999, axis=0)
     fmask = np.asarray(arrays[6]).astype(np.uint8)
     invalid |= masks[6] | (fmask == 255)
+    # Absent nodata metadata must never turn off-tile VRT zeros into observations.
+    invalid |= outside_source_mask(grid, source_grid)
     return raw, fmask, {"source_meta": source_meta, "nodata_invalid": invalid}
 
 
-def _qa_indices(raw: Any, fmask: Any, invalid: Any, weights: Any, deps: tuple[Any, ...],
-                *, point_mode: bool = False) -> tuple[Any, Any, Any, dict[str, Any], dict[str, Any]]:
+def _qa_indices(raw: Any, fmask: Any, invalid: Any, weights: Any, deps: tuple[Any, ...]) -> tuple[Any, Any, Any, dict[str, Any], dict[str, Any]]:
     np = deps[0]
     reasons = {name: (fmask & (1 << bit)) != 0 for name, bit in EXCLUDE_BITS.items()}
     reasons["high_aerosol"] = (fmask & 0xC0) == 0xC0
@@ -447,27 +441,20 @@ def _qa_indices(raw: Any, fmask: Any, invalid: Any, weights: Any, deps: tuple[An
         return result
     ndvi = index(bands[3], bands[2])
     ndmi = index(bands[3], bands[4])
-    # Point weights enter here as float64. Restrict both reductions to the
-    # same positive-weight sequence, so excluded zero-weight bbox corners
-    # cannot make an all-clear sample fraction exceed one by rounding.
+    # Use the same positive support sequence for every reduction, so an
+    # excluded zero-weight bounding-box corner cannot change the denominator.
+    weights = np.asarray(weights, dtype=np.float64)
     support = weights > 0
-    total = float(weights[support].sum()) if point_mode else float(weights.sum())
-    clear = float(weights[valid & support].sum()) if point_mode else float(weights[valid].sum())
+    total = float(weights[support].sum(dtype=np.float64))
+    clear = float(weights[valid & support].sum(dtype=np.float64))
     def stat(values: Any) -> dict[str, Any]:
-        use = np.isfinite(values) & valid & (weights > 0)
-        area = float(weights[use].sum())
-        if area == 0:
-            return {"mean": None, "min": None, "max": None, "area_m2": 0}
-        return {"mean": float(np.average(values[use], weights=weights[use])),
-                "min": float(values[use].min()), "max": float(values[use].max()),
-                "area_m2": area * 900}
+        return weighted_statistics(values, weights, valid=valid, cell_area=900)
     qa = {"field_area_m2": total * 900, "valid_area_m2": clear * 900,
           "valid_area_fraction": clear / total if total > 0 else None,
           "excluded_area_m2_by_reason": {
-              name: float(weights[mask & support].sum()) * 900 if point_mode else float(weights[mask].sum()) * 900
+              name: float(weights[mask & support].sum(dtype=np.float64)) * 900
               for name, mask in reasons.items()},
-          "nodata_area_m2": (float(weights[invalid & support].sum()) if point_mode
-                             else float(weights[invalid].sum())) * 900,
+          "nodata_area_m2": float(weights[invalid & support].sum(dtype=np.float64)) * 900,
           "overlap_note": "QA reason areas may overlap; do not sum them"}
     return bands, valid, ndvi, qa, {"NDVI": stat(ndvi), "NDMI": stat(ndmi)}
 
@@ -586,7 +573,7 @@ def _analyze_scene_admitted(
             else:
                 grid = _grid(canonical_geometry, buffer_m, context_pixels, source_grid, deps)
                 crs, transform, width, height, projected, _ = grid
-                weights = _field_weights(projected, transform, width, height, deps)
+                weights = fractional_weights(projected, transform, width, height)
                 sampling = None
             crs, transform, width, height, _, _ = grid
             if float(weights.sum()) <= 0:
@@ -594,12 +581,9 @@ def _analyze_scene_admitted(
                         "provider_id": provider_id,
                         "scene_id": item["id"], "request_hash": request_hash}
             raw, fmask, source = _read_assets(item, local_hrefs, grid, provider_id, source_grid, deps)
-            if is_point:
-                source["nodata_invalid"] |= outside_source_mask(grid, source_grid, deps)
         np = deps[0]
-        qa_weights = weights.astype(np.float64) if is_point else weights
         bands, valid, ndvi, qa, zonal = _qa_indices(
-            raw, fmask, source["nodata_invalid"], qa_weights, deps, point_mode=is_point)
+            raw, fmask, source["nodata_invalid"], weights, deps)
         np, _, _, _, _, Image = deps
         if is_point:
             sampling["valid_pixel_count"] = int(np.count_nonzero(valid & (weights > 0)))

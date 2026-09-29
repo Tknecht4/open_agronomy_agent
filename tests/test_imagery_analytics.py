@@ -34,7 +34,7 @@ def _geometry():
 
 
 def _fixture(tmp_path, monkeypatch, *, all_cloud=False, source_crs="EPSG:32613",
-             source_transform=None, side=4):
+             source_transform=None, side=4, nodata_metadata=True):
     # Numerical raster fixtures do not depend on unrelated host disk pressure.
     # Storage admission/refusal is asserted separately in test_imagery_budget.
     from types import SimpleNamespace
@@ -56,7 +56,7 @@ def _fixture(tmp_path, monkeypatch, *, all_cloud=False, source_crs="EPSG:32613",
         path = tmp_path / f"{key}.tif"
         with rasterio.open(path, "w", driver="GTiff", width=side, height=side, count=1,
                            dtype="int16", crs=source_crs, transform=source_transform,
-                           nodata=-9999) as dst:
+                           nodata=-9999 if nodata_metadata else None) as dst:
             dst.write(data, 1)
         urls[key] = str(path)
     item = {"id": SCENE, "collection": "hls2-s30", "acquired_at": "2025-07-01T00:00:00Z",
@@ -354,30 +354,64 @@ def test_nodata_and_zero_index_denominator_are_explicit(tmp_path, monkeypatch):
     assert receipt["zonal_stats"]["NDVI"]["mean"] == pytest.approx(.5)
 
 
-def test_legacy_full_native_v2_is_attested_but_partial_v2_is_not(tmp_path, monkeypatch):
+def test_missing_hashes_are_not_attested_or_rewritten(tmp_path, monkeypatch):
     _fixture(tmp_path, monkeypatch)
     cache = tmp_path / "cache"
     receipt = analytics.analyze_scene(_geometry(), PROVIDER, SCENE, cache_root=cache,
                                       network_mode="online")
     store = ImageryStore(cache)
+    originals = {name: (cache / name).read_bytes() for name in receipt["cache_files"].values()}
     with store._connect() as db:
         db.execute("""UPDATE chips SET npz_sha256=NULL,png_sha256=NULL,
                       receipt_sha256=NULL,receipt_file_sha256=NULL""")
-    assert store.get_by_chip_hash(receipt["chip_hash"])["process_version"] == analytics.PROCESS_VERSION
+    assert store.get_by_chip_hash(receipt["chip_hash"]) is None
     with store._connect() as db:
         row = db.execute("SELECT npz_sha256,png_sha256,receipt_sha256 FROM chips").fetchone()
-    assert all(value and len(value) == 64 for value in row)
+    assert list(row) == [None, None, None]
+    assert {name: (cache / name).read_bytes() for name in originals} == originals
 
-    # An old intermediate receipt marked v2 but lacking its native asset grid
-    # remains on disk for evidence and is never promoted into the trusted cache.
-    with store._connect() as db:
-        db.execute("""UPDATE chips SET npz_sha256=NULL,png_sha256=NULL,
-                      receipt_sha256=NULL,receipt_file_sha256=NULL""")
-    path = cache / receipt["cache_files"]["receipt"]
-    partial = json.loads(path.read_text())
-    del partial["grid"]["native_asset_grid"]
-    path.write_text(json.dumps(partial))
-    assert store.get_by_chip_hash(receipt["chip_hash"]) is None
+
+def test_polygon_no_nodata_tile_edge_and_historical_identity(tmp_path, monkeypatch):
+    _fixture(tmp_path, monkeypatch, side=2, nodata_metadata=False)
+    # Support x=500030..500090 crosses the tile edge at x=500060; its
+    # bottom half is also outside. The sole supported source cell is cloudy.
+    cache = tmp_path / "cache"
+    receipt = analytics.analyze_scene(_geometry(), PROVIDER, SCENE, cache_root=cache,
+                                      network_mode="online")
+    assert receipt["status"] == "empty_valid_area"
+    assert receipt["qa"]["field_area_m2"] == pytest.approx(3600, abs=1e-5)
+    assert receipt["qa"]["nodata_area_m2"] == pytest.approx(2700, abs=1e-5)
+    assert receipt["qa"]["valid_area_m2"] == 0
+    assert receipt["zonal_stats"]["NDVI"]["mean"] is None
+    with np.load(cache / receipt["cache_files"]["npz"]) as chip:
+        assert chip["field_weights"].dtype == np.float64
+        assert not chip["valid_mask"].any()
+        assert np.isnan(chip["bands"]).all()
+    image = np.asarray(Image.open(cache / receipt["cache_files"]["png"]))
+    assert not image[..., 3].any()
+    # A prior processing identity cannot satisfy the corrected request.
+    current = analytics.PROCESS_VERSION
+    monkeypatch.setattr(analytics, "PROCESS_VERSION", "hls-chip-v2-native-asset-grid-fmask-v1")
+    historical = analytics._request_identity(_geometry(), PROVIDER, SCENE, None, None, 0, None)[3]
+    monkeypatch.setattr(analytics, "PROCESS_VERSION", current)
+    assert receipt["request_hash"] != historical
+
+
+def test_polygon_partial_clear_coverage_and_context_outside_tile(tmp_path, monkeypatch):
+    _fixture(tmp_path, monkeypatch, side=2, nodata_metadata=False)
+    with rasterio.open(tmp_path / "Fmask.tif", "r+") as dst:
+        dst.write(np.zeros((2, 2), dtype=np.int16), 1)
+    receipt = analytics.analyze_scene(_geometry(), PROVIDER, SCENE,
+                                      cache_root=tmp_path / "cache", network_mode="online",
+                                      context_pixels=224)
+    assert receipt["qa"]["valid_area_fraction"] == pytest.approx(.25, abs=1e-8)
+    assert receipt["qa"]["valid_area_m2"] == pytest.approx(900, abs=1e-5)
+    assert receipt["qa"]["nodata_area_m2"] == pytest.approx(2700, abs=1e-5)
+    assert receipt["zonal_stats"]["NDVI"]["mean"] == pytest.approx(.5)
+    with np.load(tmp_path / "cache" / receipt["cache_files"]["npz"]) as chip:
+        # Validity includes context inside the source tile, independently of
+        # the polygon's reporting support, but never zeros outside the tile.
+        assert np.count_nonzero(chip["valid_mask"]) == 4
 
 
 def test_cog_proxy_counts_ranges_and_rejects_redirects():

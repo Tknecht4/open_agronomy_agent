@@ -29,6 +29,7 @@ The supported cockpit composes the system through `server/app.py`. A normal answ
 | Validation | `answer_verifier.py`, `answer_safety.py`, `high_consequence.py` | Evidence and action-boundary checks |
 | Execution receipts | `execution_core.py`, `benchmark_rehearsal.py` | Typed production-path requests/results, fail-closed stage receipts, and claim-ineligible rehearsals |
 | Capabilities | `skill_registry.py`, `tools/`, `local_tools.py`, `agronomic_calculations.py` | Guard notes, deterministic calculations, and public adapters |
+| Shared GIS/imagery/terrain | `geospatial/` | Library-backed geometry/CRS/imports, source/access catalog, bounded metadata discovery, raster support/statistics and offline terrain derivatives; see its README |
 | Runtime adapters | `agno_runtime/` | Local retrieval/graph/model/tool/trace adapters |
 | Application | `server/` | FastAPI composition, services, auth/network settings, storage |
 | Field state | `field_events.py`, `field_measurements.py`, `query_context.py` | Append-oriented field observations and usable question context |

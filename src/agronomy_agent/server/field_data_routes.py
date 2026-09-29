@@ -51,6 +51,15 @@ class FieldImageryAnalyzeRequest(BaseModel):
     sample_radius_m: int | None = Field(default=None, ge=15, le=1500, strict=True)
 
 
+class FieldGeospatialDiscoverRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    source_id: str = Field(min_length=1, max_length=80)
+    limit: int = Field(default=5, ge=1, le=10, strict=True)
+    context_buffer_m: int = Field(default=0, ge=0, le=5000, strict=True)
+    start_date: str | None = Field(default=None, min_length=10, max_length=10)
+    end_date: str | None = Field(default=None, min_length=10, max_length=10)
+
+
 def _stored_geometry(field: dict[str, Any]) -> dict[str, Any]:
     """Use the saved input geometry; never expand a point into a boundary."""
     from agronomy_agent.field_imagery import _valid_search_geometry
@@ -92,6 +101,28 @@ def register_field_data_routes(
     )
     from agronomy_agent.field_imagery import provider_catalog, search_field_imagery
     from agronomy_agent.server.services import imagery_service
+
+    @app.get("/api/geo/sources")
+    def geospatial_sources() -> dict[str, Any]:
+        from agronomy_agent.geospatial.catalog import source_catalog
+        from agronomy_agent.geospatial.terrain import terrain_readiness
+        return {**source_catalog(), "network_mode": settings.network_mode,
+                "terrain_operator_environment": terrain_readiness(),
+                "terrain_execution": "local_operator_cli_only; HTTP processing is not configured"}
+
+    @app.post("/api/demo/fields/{field_id}/geospatial/discover")
+    def discover_field_sources(field_id: str, payload: FieldGeospatialDiscoverRequest, request: Request) -> dict[str, Any]:
+        from agronomy_agent.geospatial.discovery import discover_sources
+        field, _ = authorize(request, field_id, False)
+        try:
+            geometry = _stored_geometry(field)
+            result = discover_sources(geometry, network_mode=settings.network_mode, **payload.model_dump())
+            current, _ = authorize(request, field_id, False)
+            if imagery_service.geometry_hash(_stored_geometry(current)) != imagery_service.geometry_hash(geometry):
+                raise HTTPException(status_code=409, detail="Saved field geometry changed during discovery; try again.")
+            return result
+        except (ValueError, KeyError, TypeError) as exc:
+            raise HTTPException(status_code=422, detail="Invalid saved geometry or geospatial discovery request.") from exc
 
     @app.get("/api/demo/fields/{field_id}/imagery/analytics")
     def field_imagery_readiness(field_id: str, request: Request) -> dict[str, Any]:

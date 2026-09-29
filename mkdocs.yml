@@ -85,6 +85,7 @@ nav:
       - Use the workspace: operations/workspace.md
       - Native setup: operations/native-setup.md
       - Field uploads and imagery pilot: operations/field-data-pilot.md
+      - Geospatial foundation and terrain: operations/geospatial-foundation.md
       - Compact offline data setup: operations/offline-data-setup.md
       - Canadian source-admission queue: operations/canada-offline-source-admission.md
       - Offline operation: offline-operation.md
