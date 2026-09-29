@@ -10,6 +10,6 @@ python-multipart>=0.0.20
 agno>=2.6,<2.7
 pgvector>=0.4
 PyMuPDF>=1.24.0
-cryptography>=45,<47
+cryptography>=45,<51
 # Synthetic imagery assessment contracts run in backend CI, without EO weights.
 scikit-learn==1.9.1
