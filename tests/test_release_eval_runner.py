@@ -119,6 +119,53 @@ def test_timeout_contains_descendant_and_retains_log(tmp_path):
     assert marker.read_text() == "terminated"
 
 
+@pytest.mark.parametrize("leader_waits", [True, False])
+def test_uncooperative_descendant_cannot_survive_leader_exit(tmp_path, leader_waits):
+    heartbeat = tmp_path / "heartbeat"
+    descendant = "import signal,sys,time; signal.signal(signal.SIGTERM,signal.SIG_IGN); f=open(sys.argv[1],'a');\nwhile True:\n f.write('alive\\n'); f.flush(); time.sleep(.03)"
+    parent = "import subprocess,sys,time; subprocess.Popen([sys.executable,'-c',sys.argv[2],sys.argv[1]]); time.sleep(float(sys.argv[3]))"
+    result = _command(
+        [
+            sys.executable,
+            "-c",
+            parent,
+            str(heartbeat),
+            descendant,
+            "30" if leader_waits else ".3",
+        ],
+        cwd=tmp_path,
+        output=tmp_path / "log",
+        timeout=0.8,
+    )
+    assert result == ((124, "timeout") if leader_waits else (0, "completed"))
+    observed = heartbeat.stat().st_size
+    assert observed > 0
+    time.sleep(0.15)
+    assert heartbeat.stat().st_size == observed
+
+
+def test_owner_cancellation_closes_its_worker(tmp_path, monkeypatch):
+    original = subprocess.Popen.wait
+    raised = False
+
+    def cancel_once(child, timeout=None):
+        nonlocal raised
+        if not raised:
+            raised = True
+            raise KeyboardInterrupt("simulated owner cancellation")
+        return original(child, timeout=timeout)
+
+    monkeypatch.setattr(subprocess.Popen, "wait", cancel_once)
+    with pytest.raises(KeyboardInterrupt):
+        _command(
+            [sys.executable, "-c", "import time; time.sleep(30)"],
+            cwd=tmp_path,
+            output=tmp_path / "log",
+            timeout=3,
+        )
+    assert raised
+
+
 def test_command_excludes_inherited_private_overlay(tmp_path, monkeypatch):
     monkeypatch.setenv("AGRONOMY_AGENT_PRIVATE_KNOWLEDGE", "enabled")
     monkeypatch.setenv("AGRONOMY_AGENT_PRIVATE_KNOWLEDGE_MANIFEST", "SECRET")
@@ -243,3 +290,57 @@ def test_interrupted_resume_preserves_deadline_and_failed_denominators(
     assert report["counts"]["failed"] == 1
     assert len(report["failures"]["components"]) == 5
     assert json.loads((tmp_path / "run-clock.json").read_text()) == clock
+
+
+def test_applied_reviews_use_frozen_initial_bytes(tmp_path, monkeypatch):
+    runner, registry = _tiny_runner(monkeypatch)
+    reviews = tmp_path / "input-reviews.jsonl"
+    reviews.write_text("")
+    output = tmp_path / "run"
+
+    def mutate_external_reviews(spec, *, timeout):
+        reviews.write_text('{"not": "the frozen input"}\n')
+        return _fake_worker(spec, timeout=timeout)
+
+    monkeypatch.setattr(runner, "_subprocess_cell", mutate_external_reviews)
+    result = runner.run_suite(
+        registry_path=registry,
+        profile="ci",
+        output_dir=output,
+        run_id="resume-test",
+        reviews_path=reviews,
+    )
+    assert result["status"] == "engineering_pass"
+    assert result["reviewed_observations"] == 0
+    assert (output / "reviews.private.jsonl").read_bytes() == b""
+    assert (
+        json.loads((output / "plan.json").read_text())["reviews_sha256"]
+        == __import__("hashlib").sha256(b"").hexdigest()
+    )
+
+
+def test_completed_profiler_envelope_cannot_hide_missing_cell_work(
+    tmp_path, monkeypatch
+):
+    import agronomy_agent.release_eval_runner as runner
+    from agronomy_agent.release_evaluation import load_registry
+
+    def incomplete_profile(*_args, **_kwargs):
+        write_new_json(
+            tmp_path / "backend-profile/receipt.json",
+            {"status": "completed", "cells": {}},
+        )
+        return 0, "completed"
+
+    monkeypatch.setattr(runner, "_command", incomplete_profile)
+    report = runner.execute_worker(
+        {
+            "kind": "performance",
+            "directory": str(tmp_path),
+            "registry": load_registry(),
+            "profile": "ci",
+            "timeout": 3,
+        }
+    )
+    assert report["status"] == "blocked"
+    assert report["checks"][0]["passed"] is False

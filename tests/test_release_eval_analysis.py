@@ -6,6 +6,7 @@ import json
 import pytest
 
 from agronomy_agent.release_eval_analysis import (
+    BACKEND_WARM_CELLS,
     bind_reviews,
     compare,
     public_projection,
@@ -15,6 +16,11 @@ from agronomy_agent.release_evaluation import COMPONENTS, digest
 
 REVISION = "a" * 40
 HASH = "b" * 64
+BACKEND_POLICY = {
+    "required_warm_cells": sorted(BACKEND_WARM_CELLS),
+    "minimum_samples": 20,
+    "maximum_p95_ratio": 1.25,
+}
 POLICY = {
     "maximum_new_failed_checks": 0,
     "maximum_numeric_accuracy_regression": 0,
@@ -104,6 +110,8 @@ def fixture(
         "registry_sha256": HASH,
         "cohort_sha256": HASH,
         "scorer_version": "scoring_v1",
+        "scorer_sha256": HASH,
+        "backend_performance_policy": deepcopy(BACKEND_POLICY),
         "model": {"id": "fixture/model", "revision": REVISION, "config_sha256": HASH},
         "sampling": {"seed": 42, "trials": 1, "max_tokens": 640},
         "counts": {
@@ -121,6 +129,22 @@ def fixture(
         }
         for name in sorted(COMPONENTS)
     ]
+    next(row for row in components if row["component"] == "performance")["metrics"] = {
+        "cells": {
+            name: {
+                "status": "completed",
+                "requested_samples": 20,
+                "timing": {
+                    "samples": 20,
+                    "min_ms": 5,
+                    "median_ms": 8,
+                    "p95_ms": 10,
+                    "max_ms": 12,
+                },
+            }
+            for name in BACKEND_WARM_CELLS
+        }
+    }
     return plan, rows, components
 
 
@@ -420,3 +444,328 @@ def test_completed_reference_numeric_failure_is_retained_as_diagnostic_score():
     assert raw["independent_score"]["score"] == 0
     assert raw["numeric_score_status"] == "observed"
     assert result["failures"]["numeric_scores_missing"] == []
+
+
+def completion_reports(
+    reference_values,
+    candidate_values,
+    *,
+    required_coverage=1,
+    same_case=False,
+    material_error=False,
+):
+    plan, rows, components = fixture(
+        review_required=True, required_coverage=required_coverage
+    )
+    if same_case:
+        plan["cases"] = [plan["cases"][0]]
+        for table in (plan["matrix"], rows):
+            table[1].update(
+                case_id=table[0]["case_id"],
+                case_sha256=table[0]["case_sha256"],
+                scenario_family=table[0]["scenario_family"],
+                trial_id="trial-002",
+            )
+    env = {"performance_environment_sha256": HASH}
+    reference = summarize(
+        plan,
+        rows,
+        components,
+        environment=env,
+        reviews=[
+            label(row, required_complete=value, material_error=material_error)
+            for row, value in zip(rows, reference_values)
+        ],
+    )
+    candidate = summarize(
+        plan,
+        rows,
+        components,
+        environment=env,
+        reviews=[
+            label(row, required_complete=value, material_error=material_error)
+            for row, value in zip(rows, candidate_values)
+        ],
+    )
+    return reference, candidate
+
+
+def test_semantic_completion_cancellation_cannot_hide_case_or_family_loss():
+    reference, candidate = completion_reports([True, False], [False, True])
+    result = compare(reference, candidate, POLICY)
+    assert check(result, "required_completion")["passed"] is True
+    assert result["paired_completion_uncertainty"]["mean_delta"] == 0
+    assert check(result, "no_paired_completion_case_regression")["passed"] is False
+    assert check(result, "no_paired_completion_family_regression")["passed"] is False
+    assert result["status"] == "blocked"
+    # A permissible aggregate mean does not change the exact case guard when
+    # the improved case is placed first instead of last.
+    reordered_reference, reordered_candidate = completion_reports(
+        [False, True], [True, False]
+    )
+    reordered = compare(reordered_reference, reordered_candidate, POLICY)
+    assert reordered["status"] == "blocked"
+    assert check(reordered, "required_completion")["passed"] is True
+
+
+def test_paired_trial_loss_cannot_cancel_with_another_trial_of_same_case():
+    reference, candidate = completion_reports(
+        [True, False], [False, True], same_case=True
+    )
+    result = compare(reference, candidate, POLICY)
+    assert check(result, "required_completion")["passed"] is True
+    assert check(result, "no_paired_completion_family_regression")["passed"] is True
+    case_check = check(result, "no_paired_completion_case_regression")
+    assert case_check["passed"] is False
+    assert case_check["detail"]["regressions"][0]["mean_delta"] == 0
+    assert case_check["detail"]["regressions"][0]["worst_paired_delta"] == -1
+    assert result["status"] == "blocked"
+
+
+def test_completion_regression_uses_configured_limit_and_keeps_partial_unknowns():
+    reference, candidate = completion_reports([True, False], [False, True])
+    permitted = compare(
+        reference, candidate, {**POLICY, "maximum_required_completion_regression": 1}
+    )
+    assert permitted["status"] == "pass"
+    assert check(permitted, "no_paired_completion_family_regression")["passed"] is True
+    partial_reference, partial_candidate = completion_reports(
+        [True, None], [False, None], required_coverage=0, material_error=None
+    )
+    partial = compare(partial_reference, partial_candidate, POLICY)
+    assert partial["status"] == "blocked"
+    assert partial["semantic_status"] == "partially_paired_review"
+    assert check(partial, "required_completion")["detail"]["paired_n"] == 1
+    assert check(partial, "required_completion")["detail"]["unknown_pair_n"] == 1
+    assert check(partial, "introduced_material_errors")["passed"] is None
+    assert check(partial, "introduced_material_errors")["detail"]["introduced"] is None
+    assert check(partial, "no_paired_completion_case_regression")["passed"] is False
+
+
+def test_optional_missing_completion_labels_stay_pending_for_new_guards():
+    result = compare(report(review_required=True), report(review_required=True), POLICY)
+    for name in (
+        "no_paired_completion_case_regression",
+        "no_paired_completion_family_regression",
+    ):
+        item = check(result, name)
+        assert item["passed"] is None
+        assert item["required"] is False
+        assert item["detail"]["paired_n"] == 0
+        assert item["detail"]["unknown_pair_n"] == 2
+    assert result["status"] == "pass"
+
+
+def test_semantic_regression_public_projection_keeps_status_without_case_labels():
+    reference, candidate = completion_reports([True, False], [False, True])
+    candidate["comparison"] = compare(reference, candidate, POLICY)
+    projected = public_projection(candidate)
+    encoded = json.dumps(projected)
+    assert "case-0" not in encoded and "family-0" not in encoded
+    assert "regressions" not in encoded
+    assert projected["comparison"]["status"] == "blocked"
+    for name in (
+        "no_paired_completion_case_regression",
+        "no_paired_completion_family_regression",
+    ):
+        item = next(
+            row for row in projected["comparison"]["checks"] if row["id"] == name
+        )
+        assert item == {"id": name, "passed": False, "required": True}
+
+
+@pytest.mark.parametrize("instrument", [None, "", "c" * 64, "b" * 40, "not-a-sha"])
+def test_same_scorer_version_cannot_compare_missing_or_changed_instrument(instrument):
+    reference, candidate = report(), report()
+    candidate["scorer_sha256"] = instrument
+    result = compare(reference, candidate, POLICY)
+    assert check(result, "compatible_scorer_version")["passed"] is True
+    assert check(result, "compatible_scorer_sha256")["passed"] is False
+    assert result["status"] == "blocked"
+    if instrument == "c" * 64:
+        assert public_projection(candidate)["scorer_sha256"] == instrument
+    elif instrument != "b" * 40:
+        assert public_projection(candidate)["scorer_sha256"] is None
+
+
+def backend_cell(result, name="health_warm"):
+    component = next(
+        row for row in result["components"] if row["component"] == "performance"
+    )
+    return component["metrics"]["cells"][name]
+
+
+def test_backend_warm_regression_blocks_when_model_performance_is_unchanged():
+    reference, candidate = report(), report()
+    assert candidate["backend_performance_policy"] == BACKEND_POLICY
+    assert compare(reference, candidate, POLICY)["status"] == "pass"
+    cell = backend_cell(candidate)
+    cell["timing"].update(p95_ms=1000, max_ms=1100)
+    result = compare(reference, candidate, POLICY)
+    assert check(result, "performance_elapsed_ms")["passed"] is True
+    assert check(result, "performance_peak_memory_bytes")["passed"] is True
+    assert check(result, "backend_performance_health_warm")["passed"] is False
+    assert result["status"] == "blocked"
+    # The declared bound is inclusive and applied to each paired cell.
+    cell["timing"].update(p95_ms=12.5, max_ms=13)
+    assert compare(reference, candidate, POLICY)["status"] == "pass"
+
+
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "missing",
+        "failed",
+        "insufficient",
+        "requested_missing",
+        "incomplete",
+        "nonfinite",
+        "null",
+        "incoherent",
+    ],
+)
+def test_required_backend_warm_cell_failures_remain_in_gate(fault):
+    reference, candidate = report(), report()
+    cell = backend_cell(candidate)
+    if fault == "missing":
+        component = next(
+            row for row in candidate["components"] if row["component"] == "performance"
+        )
+        del component["metrics"]["cells"]["health_warm"]
+    elif fault == "failed":
+        cell["status"] = "failed"
+    elif fault == "insufficient":
+        cell["requested_samples"] = cell["timing"]["samples"] = 19
+    elif fault == "requested_missing":
+        del cell["requested_samples"]
+    elif fault == "incomplete":
+        cell["timing"]["samples"] = 19
+    elif fault == "nonfinite":
+        cell["timing"]["p95_ms"] = float("inf")
+    elif fault == "null":
+        cell["timing"]["p95_ms"] = None
+    else:
+        cell["timing"]["median_ms"] = 11
+    result = compare(reference, candidate, POLICY)
+    assert check(result, "backend_performance_health_warm")["passed"] is False
+    assert result["status"] == "blocked"
+    if fault == "missing":
+        coverage = check(result, "backend_performance_required_cell_coverage")
+        assert coverage["passed"] is False
+        assert coverage["detail"]["candidate_missing"] == ["health_warm"]
+    if fault == "nonfinite":
+        assert check(result, "finite_candidate_data")["passed"] is False
+
+
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "missing_policy",
+        "reduced_set",
+        "unknown_cell",
+        "mismatched_policy",
+        "insufficient_policy",
+        "environment",
+        "zero_baseline",
+    ],
+)
+def test_backend_policy_environment_and_positive_baseline_are_required(fault):
+    reference, candidate = report(), report()
+    if fault == "missing_policy":
+        candidate.pop("backend_performance_policy")
+    elif fault == "reduced_set":
+        for item in (reference, candidate):
+            item["backend_performance_policy"]["required_warm_cells"].remove(
+                "health_warm"
+            )
+    elif fault == "unknown_cell":
+        for item in (reference, candidate):
+            item["backend_performance_policy"]["required_warm_cells"].append(
+                "unregistered_warm"
+            )
+    elif fault == "mismatched_policy":
+        candidate["backend_performance_policy"]["maximum_p95_ratio"] = 1.5
+    elif fault == "insufficient_policy":
+        for item in (reference, candidate):
+            item["backend_performance_policy"]["minimum_samples"] = 2
+    elif fault == "environment":
+        candidate["environment"]["performance_environment_sha256"] = "c" * 64
+        # Model metrics still match, proving that backend uses its own retained identity.
+        assert (
+            check(compare(reference, candidate, POLICY), "performance_environment")[
+                "passed"
+            ]
+            is True
+        )
+    else:
+        backend_cell(reference)["timing"].update(
+            min_ms=0, median_ms=0, p95_ms=0, max_ms=0
+        )
+    result = compare(reference, candidate, POLICY)
+    assert result["status"] == "blocked"
+    assert check(result, "backend_performance_health_warm")["passed"] is False
+
+
+def test_public_backend_timings_are_whitelisted_aggregates_with_gate_status():
+    reference, candidate = report(), report()
+    component = next(
+        row for row in candidate["components"] if row["component"] == "performance"
+    )
+    cells = component["metrics"]["cells"]
+    cells["health_warm"]["failure"] = {"message": "/private/secret backend log"}
+    cells["health_warm"]["timing"]["raw_samples_path"] = "/private/secret backend log"
+    cells["health_cold"] = {
+        "status": "completed",
+        "requested_samples": 1,
+        "timing": {
+            "samples": 1,
+            "min_ms": 10000,
+            "median_ms": 10000,
+            "p95_ms": 10000,
+            "max_ms": 10000,
+        },
+        "cprofile_top_cumulative": "/private/secret backend log",
+    }
+    cells["/private/secret backend log"] = deepcopy(cells["health_warm"])
+    assert compare(reference, candidate, POLICY)["status"] == "pass"
+    cells["health_warm"]["timing"].update(p95_ms=1000, max_ms=1100)
+    candidate["comparison"] = compare(reference, candidate, POLICY)
+    projection = public_projection(candidate)
+    public_cells = next(
+        row for row in projection["components"] if row["component"] == "performance"
+    )["metrics"]["cells"]
+    assert public_cells["health_warm"]["timing"]["p95_ms"] == 1000
+    assert public_cells["health_cold"]["timing"]["p95_ms"] == 10000
+    assert set(public_cells) == BACKEND_WARM_CELLS | {"health_cold"}
+    assert projection["backend_performance_policy"] == BACKEND_POLICY
+    assert "/private/secret" not in json.dumps(projection)
+    assert "cprofile" not in json.dumps(
+        projection
+    ) and "raw_samples_path" not in json.dumps(projection)
+    assert projection["comparison"]["status"] == "blocked"
+    assert next(
+        row
+        for row in projection["comparison"]["checks"]
+        if row["id"] == "backend_performance_health_warm"
+    ) == {
+        "id": "backend_performance_health_warm",
+        "passed": False,
+        "required": True,
+    }
+
+
+def test_public_backend_invalid_timings_stay_unknown_and_private_policy_is_not_exposed():
+    candidate = report()
+    backend_cell(candidate)["timing"] = "/private/secret timing"
+    candidate["backend_performance_policy"]["required_warm_cells"].append(
+        "/private/secret cell"
+    )
+    candidate["comparison"] = compare(report(), candidate, POLICY)
+    projected = public_projection(candidate)
+    cells = next(
+        row for row in projected["components"] if row["component"] == "performance"
+    )["metrics"]["cells"]
+    assert set(cells["health_warm"]["timing"].values()) == {None}
+    assert projected["backend_performance_policy"] is None
+    assert "/private/secret" not in json.dumps(projected)
+    assert projected["comparison"]["status"] == "blocked"

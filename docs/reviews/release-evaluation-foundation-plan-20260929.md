@@ -1,6 +1,6 @@
 # Release evaluation foundation
 
-Status: implementation in progress. Base: `d9bb2547d5b3b2bcf246ebeae88eb6270b4c8bba`.
+Status: implementation frozen for final validation and GPU baseline. Base: `d9bb2547d5b3b2bcf246ebeae88eb6270b4c8bba`.
 
 ## Working state
 
@@ -65,3 +65,21 @@ responses and failed attempts remain retained. Optional source-bound stage
 reviews measure verifier gains and introduced errors without treating unknown
 labels as passes. Inherited agronomy environment overrides are discarded for
 child execution, and native model loading is offline after explicit provisioning.
+
+## Independent review repair checkpoint
+
+The first exact-source Astra xhigh review requested five repairs. Owned process
+groups now receive a bounded termination and kill sweep even after their leader
+exits. Review bytes are frozen once before execution. Paired completion checks
+operate per case and family so an aggregate cannot hide a local regression.
+Retained reviewed analyses can serve as comparison references and chain without
+mutating raw runs. Ten backend and storage warm cells have separate environment,
+sample coverage and latency gates. Scorer implementation hashes are part of
+comparison compatibility.
+
+The initial frozen candidate passed 1994 Python tests with 33 skips under local
+socket access. Focused repair checks passed, including process cleanup controls,
+and final full validation is required on the repaired candidate. Colab allocated
+a task-owned L4 (23 GB, driver 580.82.07, CUDA 12.8). The first connection attempt
+failed before setup; reconnecting produced a retained successful hardware probe.
+No Gemma answers have been generated at this checkpoint.

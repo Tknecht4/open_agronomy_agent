@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import fcntl
+import hashlib
 import json
+import math
 import os
 import random
 import signal
@@ -81,6 +83,34 @@ def _instrument_controls() -> dict[str, Any]:
     }
 
 
+def _stop_owned_processes(
+    child: subprocess.Popen, *, new_session: bool, grace: float = 5.0
+) -> None:
+    """A leader's exit does not establish that its process group has exited."""
+    if not new_session and child.poll() is not None:
+        return
+    try:
+        os.killpg(child.pid, signal.SIGTERM) if new_session else child.terminate()
+    except ProcessLookupError:
+        return
+    deadline = time.monotonic() + grace
+    while time.monotonic() < deadline:
+        child.poll()  # reap the leader, while continuing to observe its group
+        try:
+            if new_session:
+                os.killpg(child.pid, 0)
+            elif child.poll() is not None:
+                return
+        except ProcessLookupError:
+            return
+        time.sleep(min(0.02, max(0, deadline - time.monotonic())))
+    try:
+        os.killpg(child.pid, signal.SIGKILL) if new_session else child.kill()
+    except ProcessLookupError:
+        pass
+    child.wait(timeout=5)
+
+
 def _command(
     argv: list[str],
     *,
@@ -116,27 +146,12 @@ def _command(
         try:
             return child.wait(timeout=timeout), "completed"
         except subprocess.TimeoutExpired:
-            try:
-                (
-                    os.killpg(child.pid, signal.SIGTERM)
-                    if new_session
-                    else child.terminate()
-                )
-            except ProcessLookupError:
-                pass
-            try:
-                child.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                try:
-                    (
-                        os.killpg(child.pid, signal.SIGKILL)
-                        if new_session
-                        else child.kill()
-                    )
-                except ProcessLookupError:
-                    pass
-                child.wait(timeout=5)
             return 124, "timeout"
+        finally:
+            # Success, timeout and owner cancellation all close the owned group.
+            # Nested commands share that group; only their direct child is owned
+            # here, and the outer worker owner contains any remaining descendants.
+            _stop_owned_processes(child, new_session=new_session)
 
 
 def execute_worker(spec: Mapping[str, Any]) -> dict[str, Any]:
@@ -298,13 +313,40 @@ def execute_worker(spec: Mapping[str, Any]) -> dict[str, Any]:
         receipt = directory / "backend-profile/receipt.json"
         result = json.loads(receipt.read_text()) if receipt.is_file() else {}
         cells = result.get("cells") or {}
+        repeats = spec["registry"]["profiles"][spec["profile"]]["performance_repeats"]
+        expected_cells = spec["registry"]["backend_performance_policy"][
+            "required_warm_cells"
+        ]
+        completed_cells = all(
+            name in cells
+            and cells[name].get("status") == "completed"
+            and cells[name].get("requested_samples") == repeats
+            and cells[name].get("timing", {}).get("samples") == repeats
+            and isinstance(cells[name].get("timing", {}).get("p95_ms"), (int, float))
+            and not isinstance(cells[name]["timing"]["p95_ms"], bool)
+            and math.isfinite(cells[name]["timing"]["p95_ms"])
+            and cells[name]["timing"]["p95_ms"] >= 0
+            for name in expected_cells
+        )
         return {
             "component": kind,
             "status": (
                 "pass"
-                if status == 0 and result.get("status") == "completed"
+                if status == 0
+                and result.get("status") == "completed"
+                and completed_cells
                 else "blocked"
             ),
+            "checks": [
+                {
+                    "id": "backend_profile_cell_coverage",
+                    "passed": completed_cells,
+                    "detail": {
+                        "required_cells": expected_cells,
+                        "requested_samples": repeats,
+                    },
+                }
+            ],
             "metrics": {
                 "boundary": "synthetic_mock_backend_and_storage_only",
                 "exit_code": status,
@@ -456,6 +498,10 @@ def load_retained_report(path: Path) -> dict[str, Any]:
     if not path.is_dir() and path != report_path:
         raise ValueError("reference must be a retained run or its report.json")
     verify_retention(directory)
+    if not (directory / "plan.json").is_file():
+        from agronomy_agent.release_eval_reanalysis import load_reference_report
+
+        return load_reference_report(path)
     report = json.loads(report_path.read_text())
     plan = json.loads((directory / "plan.json").read_text())
     if report.get("plan_sha256") != plan_identity(plan):
@@ -501,10 +547,24 @@ def run_suite(
     if reference_path is not None and profile not in {"baseline", "release"}:
         raise ValueError("reference comparison requires a complete model profile")
     reference = load_retained_report(reference_path) if reference_path else None
+    reviews_bytes = reviews_path.read_bytes() if reviews_path else None
+    reviews = (
+        [
+            json.loads(line)
+            for line in reviews_bytes.decode("utf-8").splitlines()
+            if line.strip()
+        ]
+        if reviews_bytes is not None
+        else []
+    )
+    if any(not isinstance(row, dict) for row in reviews):
+        raise ValueError("review input must contain JSON objects")
     plan = build_plan(registry, profile=profile, run_id=run_id, limit=limit)
     plan["environment"] = environment_identity()
     plan["reference_sha256"] = digest(reference) if reference else None
-    plan["reviews_sha256"] = file_digest(reviews_path) if reviews_path else None
+    plan["reviews_sha256"] = (
+        hashlib.sha256(reviews_bytes).hexdigest() if reviews_bytes is not None else None
+    )
     plan_sha256 = plan_identity(plan)
     output_dir = output_dir.resolve()
     if output_dir.exists() and any(output_dir.iterdir()) and not resume:
@@ -532,6 +592,27 @@ def run_suite(
         if (output_dir / "report.json").is_file():
             verify_retention(output_dir)
             return json.loads((output_dir / "report.json").read_text())
+        if reviews_bytes is not None:
+            frozen_reviews = output_dir / "reviews.private.jsonl"
+            if frozen_reviews.exists():
+                if (
+                    frozen_reviews.is_symlink()
+                    or frozen_reviews.read_bytes() != reviews_bytes
+                ):
+                    raise ValueError("frozen review input differs from planned bytes")
+            else:
+                with frozen_reviews.open("xb") as handle:
+                    handle.write(reviews_bytes)
+        if reference is not None:
+            frozen_reference = output_dir / "reference-report.json"
+            if frozen_reference.exists():
+                if (
+                    digest(json.loads(frozen_reference.read_text()))
+                    != plan["reference_sha256"]
+                ):
+                    raise ValueError("frozen reference differs from planned bytes")
+            else:
+                write_new_json(frozen_reference, reference)
         effective = output_dir / "effective"
         effective.mkdir(exist_ok=True)
         rag = yaml.safe_load((ROOT / registry["rag_config"]).read_text())
@@ -681,15 +762,6 @@ def run_suite(
                     ),
                     flush=True,
                 )
-        reviews = (
-            [
-                json.loads(line)
-                for line in reviews_path.read_text().splitlines()
-                if line.strip()
-            ]
-            if reviews_path
-            else []
-        )
         report = summarize(
             plan, rows, components, environment=plan["environment"], reviews=reviews
         )

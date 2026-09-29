@@ -125,6 +125,13 @@ def test_offline_reanalysis_binds_reviews_and_never_runs_models(tmp_path, monkey
         raw / "observations.jsonl"
     )
     assert lineage["reviews"]["file_sha256"] == file_digest(reviews)
+    assert lineage["analysis_source_sha256"] == digest(lineage["analysis_source"])
+    assert (
+        report["reanalysis"]["derived_analysis_sha256"]
+        == lineage["analysis_source_sha256"]
+    )
+    frozen_plan = json.loads((raw / "plan.json").read_text())
+    assert report.get("scorer_sha256") == frozen_plan.get("scorer_sha256")
     public = (out / "public-summary.json").read_text()
     assert (
         "PRIVATE_GOLD" not in public
@@ -283,3 +290,111 @@ def test_review_packet_includes_review_required_harness_and_binds_stage_labels(
     review["stage_labels"]["draft"]["sha256"] = "0" * 64
     with pytest.raises(ValueError, match="stage label hash"):
         bind_reviews(run["observations"], [review])
+
+
+def test_derived_review_reference_and_chained_reviews_bind_original_raw(
+    tmp_path, monkeypatch
+):
+    from agronomy_agent.release_eval_reanalysis import load_reference_report
+    import agronomy_agent.release_eval_runner as runner
+
+    raw = retained_run(tmp_path)
+    before = file_digest(raw / "retention.json")
+    first_reviews = tmp_path / "first-reviews.jsonl"
+    first_review = review_for(raw)
+    first_reviews.write_text(json.dumps(first_review) + "\n")
+    first = tmp_path / "first-analysis"
+    reanalyze(run_dir=raw, output_dir=first, reviews_path=first_reviews)
+    reference = load_reference_report(first / "report.json")
+    assert reference["domain_review_coverage"] == 1
+    assert reference["semantic_reviews"][0]["reviewer_id"] == "fixture-reviewer"
+    # The production runner's lazy derived-reference entry uses the same validator.
+    assert (
+        runner.load_retained_report(first)["semantic_reviews"]
+        == reference["semantic_reviews"]
+    )
+    monkeypatch.setattr(
+        runner, "execute_worker", lambda *_: pytest.fail("chaining executed inference")
+    )
+    second_reviews = tmp_path / "second-reviews.jsonl"
+    row = json.loads((raw / "observations.jsonl").read_text())
+    second_review = first_review | {
+        "stage_labels": {
+            "draft": {
+                "sha256": row["turns"][0]["answer_stages"]["draft"]["sha256"],
+                "required_complete": False,
+            }
+        }
+    }
+    second_reviews.write_text(json.dumps(second_review) + "\n")
+    second = tmp_path / "second-analysis"
+    reanalyze(run_dir=first, output_dir=second, reviews_path=second_reviews)
+    loaded = load_reference_report(second)
+    assert loaded["semantic_reviews"][0]["required_complete"] is True
+    assert (
+        loaded["semantic_reviews"][0]["stage_labels"]["draft"]["required_complete"]
+        is False
+    )
+    lineage = json.loads((second / "lineage.json").read_text())
+    assert lineage["raw_run"]["directory"] == str(raw)
+    assert lineage["parent_analysis"]["report_sha256"] == file_digest(
+        first / "report.json"
+    )
+    assert file_digest(raw / "retention.json") == before
+    assert not (second / "observations.jsonl").exists()
+    candidate = tmp_path / "candidate-analysis"
+    compared = reanalyze(
+        run_dir=raw,
+        output_dir=candidate,
+        reviews_path=first_reviews,
+        reference_path=second,
+    )
+    assert compared["comparison"]["reference_run_id"] == raw.name
+    assert json.loads((candidate / "lineage.json").read_text())["reference_analysis"][
+        "directory"
+    ] == str(second)
+    assert load_reference_report(candidate)["comparison"] == compared["comparison"]
+
+
+def test_derived_reference_rejects_raw_missing_and_tampered_derived(tmp_path):
+    from agronomy_agent.release_eval_reanalysis import load_reference_report
+
+    raw = retained_run(tmp_path)
+    derived = tmp_path / "derived"
+    reanalyze(run_dir=raw, output_dir=derived)
+    missing = tmp_path / "moved-raw"
+    raw.rename(missing)
+    with pytest.raises(FileNotFoundError):
+        load_reference_report(derived)
+    missing.rename(raw)
+    with (derived / "report.json").open("a") as handle:
+        handle.write("\n")
+    with pytest.raises(ValueError, match="hash mismatch"):
+        load_reference_report(derived)
+
+
+def test_derived_reference_rejects_resealed_raw_and_resealed_report_changes(tmp_path):
+    from agronomy_agent.release_eval_reanalysis import load_reference_report
+
+    raw = retained_run(tmp_path)
+    derived = tmp_path / "derived"
+    reanalyze(run_dir=raw, output_dir=derived)
+    # Global byte tamper is rejected even if the individual root is resealed.
+    with (raw / "report.json").open("a") as handle:
+        handle.write("\n")
+    (raw / "retention.json").unlink()
+    write_new_json(raw / "retention.json", retention_manifest(raw))
+    with pytest.raises(ValueError, match="binding mismatch"):
+        load_reference_report(derived)
+    raw2 = retained_run(tmp_path, "raw2")
+    derived2 = tmp_path / "derived2"
+    reanalyze(run_dir=raw2, output_dir=derived2)
+    report_path = derived2 / "report.json"
+    report = json.loads(report_path.read_text())
+    report["domain_review_coverage"] = 1
+    report_path.unlink()
+    write_new_json(report_path, report)
+    (derived2 / "retention.json").unlink()
+    write_new_json(derived2 / "retention.json", retention_manifest(derived2))
+    with pytest.raises(ValueError, match="controlled retained-evidence"):
+        load_reference_report(derived2)

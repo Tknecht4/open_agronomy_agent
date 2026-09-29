@@ -11,9 +11,11 @@ import hashlib
 import importlib.metadata
 import json
 import math
+import os
 import platform
 import re
 import subprocess
+import sqlite3
 import sys
 from collections import Counter
 from pathlib import Path
@@ -27,6 +29,12 @@ REGISTRY_SCHEMA = "open_agronomy_agent.release_evaluation_registry.v1"
 PLAN_SCHEMA = "open_agronomy_agent.release_evaluation_plan.v1"
 REPORT_SCHEMA = "open_agronomy_agent.release_evaluation_report.v1"
 SCORER_VERSION = "open_agronomy_agent.release_evaluation_scoring.v1"
+SCORER_FILES = (
+    "src/agronomy_agent/evals.py",
+    "src/agronomy_agent/release_eval_analysis.py",
+    "scripts/evaluate_offline_corpus_retrieval.py",
+    "src/agronomy_agent/field_data_benchmark.py",
+)
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_REGISTRY = ROOT / "configs/release_evaluation_v1.json"
 COMPONENTS = {
@@ -208,6 +216,30 @@ def load_registry(
             raise ValueError("complete model profiles require repeated trials")
     if registry["profiles"]["baseline"] != registry["profiles"]["release"]:
         raise ValueError("baseline and release must use matched measurement profiles")
+    backend_policy = registry.get("backend_performance_policy") or {}
+    cells = backend_policy.get("required_warm_cells") or []
+    if (
+        not cells
+        or len(cells) != len(set(cells))
+        or any(
+            not isinstance(name, str) or not re.fullmatch(r"[a-z_]+_warm", name)
+            for name in cells
+        )
+    ):
+        raise ValueError("backend performance must declare unique warm cell contracts")
+    _positive(
+        backend_policy.get("minimum_samples"), "backend minimum samples", integer=True
+    )
+    _positive(backend_policy.get("maximum_p95_ratio"), "backend p95 ratio")
+    if (
+        backend_policy["minimum_samples"] < 2
+        or backend_policy["maximum_p95_ratio"] < 1
+        or registry["profiles"]["baseline"]["performance_repeats"]
+        < backend_policy["minimum_samples"]
+    ):
+        raise ValueError(
+            "backend performance profile must provide its required samples"
+        )
     return registry
 
 
@@ -348,6 +380,14 @@ def environment_identity() -> dict[str, Any]:
         "PyYAML",
         "transformers",
         "huggingface_hub",
+        "httpx",
+        "httpx2",
+        "shapely",
+        "pyproj",
+        "geopandas",
+        "pyogrio",
+        "rdflib",
+        "cryptography",
     ):
         try:
             versions[name] = importlib.metadata.version(name)
@@ -357,8 +397,30 @@ def environment_identity() -> dict[str, Any]:
         "system": platform.system(),
         "machine": platform.machine(),
         "processor": platform.processor() or None,
+        "logical_cpu_count": os.cpu_count(),
     }
     if platform.system() == "Linux":
+        cpuinfo = Path("/proc/cpuinfo")
+        hardware["cpu_brand"] = (
+            next(
+                (
+                    line.partition(":")[2].strip()
+                    for line in cpuinfo.read_text().splitlines()
+                    if line.startswith("model name")
+                ),
+                None,
+            )
+            if cpuinfo.is_file()
+            else None
+        )
+        hardware["available_cpu_count"] = (
+            len(os.sched_getaffinity(0))
+            if hasattr(os, "sched_getaffinity")
+            else os.cpu_count()
+        )
+        hardware["memory_bytes"] = os.sysconf("SC_PAGE_SIZE") * os.sysconf(
+            "SC_PHYS_PAGES"
+        )
         try:
             result = subprocess.run(
                 [
@@ -390,6 +452,7 @@ def environment_identity() -> dict[str, Any]:
         "python": platform.python_version(),
         "packages": versions,
         "hardware": hardware,
+        "sqlite_version": sqlite3.sqlite_version,
     }
     identity["performance_environment_sha256"] = digest(identity)
     return identity
@@ -538,6 +601,9 @@ def build_plan(
         "registry_sha256": digest(registry),
         "cohort_sha256": digest(cohort),
         "scorer_version": SCORER_VERSION,
+        "scorer_sha256": digest(
+            {name: file_digest(checked_path(root, name)) for name in SCORER_FILES}
+        ),
         "source": source_identity(root),
         "model": {
             "id": model.get("model_id"),
@@ -568,6 +634,7 @@ def build_plan(
             "lanes": dict(Counter(case["lane"] for case in cases)),
         },
         "comparison_policy": registry["comparison_policy"],
+        "backend_performance_policy": registry["backend_performance_policy"],
         "domain_policy": registry["domain_policy"],
     }
 

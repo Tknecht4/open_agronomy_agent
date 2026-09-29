@@ -38,9 +38,16 @@ def _jsonl(path: Path) -> list[dict[str, Any]]:
     return rows
 
 
-def read_completed_run(directory: Path) -> dict[str, Any]:
+def read_completed_run(
+    directory: Path, *, _seen: frozenset[Path] = frozenset()
+) -> dict[str, Any]:
     directory = directory.resolve()
+    if directory in _seen or len(_seen) >= 32:
+        raise ValueError("cyclic or excessive derived-analysis lineage")
+    seen = _seen | {directory}
     verify_retention(directory)
+    if not (directory / "plan.json").is_file():
+        return _read_derived(directory, seen)
     plan = json.loads((directory / "plan.json").read_text())
     frozen_report = load_retained_report(directory)
     identity = plan_identity(plan)
@@ -93,10 +100,120 @@ def read_completed_run(directory: Path) -> dict[str, Any]:
                     raise ValueError("retained final stage differs from answer")
     return {
         "directory": directory,
+        "input_directory": directory,
         "plan": plan,
         "frozen_report": frozen_report,
         **ledgers,
     }
+
+
+def _analysis_binding(directory: Path) -> dict[str, Any]:
+    return {
+        "directory": str(directory),
+        "retention_sha256": file_digest(directory / "retention.json"),
+        "report_sha256": file_digest(directory / "report.json"),
+        "lineage_sha256": file_digest(directory / "lineage.json"),
+    }
+
+
+def _verify_analysis_binding(binding: Mapping[str, Any]) -> Path:
+    directory = Path(binding["directory"]).resolve()
+    if _analysis_binding(directory) != binding:
+        raise ValueError("derived parent/reference analysis binding mismatch")
+    return directory
+
+
+def _read_derived(directory: Path, seen: frozenset[Path]) -> dict[str, Any]:
+    lineage = json.loads((directory / "lineage.json").read_text())
+    report = json.loads((directory / "report.json").read_text())
+    if (
+        lineage.get("schema_version")
+        != "open_agronomy_agent.release_reanalysis_lineage.v1"
+        or lineage.get("inference_executed") is not False
+    ):
+        raise ValueError("unsupported derived-analysis lineage")
+    analysis_hash = digest(lineage.get("analysis_source", {}))
+    if (
+        lineage.get("analysis_source_sha256") != analysis_hash
+        or report.get("reanalysis", {}).get("derived_analysis_sha256") != analysis_hash
+    ):
+        raise ValueError("derived analysis-source binding mismatch")
+    if report.get("reanalysis", {}).get("lineage_sha256") != digest(lineage):
+        raise ValueError("derived report/lineage binding mismatch")
+    raw = read_completed_run(Path(lineage["raw_run"]["directory"]), _seen=seen)
+    if (
+        raw["input_directory"] != raw["directory"]
+        or _lineage(raw) != lineage["raw_run"]
+    ):
+        raise ValueError("derived raw-run retention/file/plan binding mismatch")
+    inherited = raw
+    if lineage.get("parent_analysis"):
+        parent_directory = _verify_analysis_binding(lineage["parent_analysis"])
+        inherited = read_completed_run(parent_directory, _seen=seen)
+        if _lineage(inherited) != lineage["raw_run"]:
+            raise ValueError("parent analysis belongs to another raw run")
+    supplied = []
+    if lineage.get("reviews"):
+        review_path = directory / "reviews.private.jsonl"
+        supplied = _jsonl(review_path)
+        binding = lineage["reviews"]
+        if (
+            file_digest(review_path) != binding["file_sha256"]
+            or digest(supplied) != binding["records_sha256"]
+            or len(supplied) != binding["record_count"]
+        ):
+            raise ValueError("derived retained review binding mismatch")
+    bind_reviews(raw["observations"], supplied)
+    override_ids = {row["observation_id"] for row in supplied}
+    reviews = [
+        row
+        for row in _existing_reviews(inherited)
+        if row["observation_id"] not in override_ids
+    ] + supplied
+    expected = _report(raw, reviews)
+    if lineage.get("reference_run"):
+        if lineage.get("reference_analysis"):
+            reference_directory = _verify_analysis_binding(
+                lineage["reference_analysis"]
+            )
+        else:
+            reference_directory = Path(lineage["reference_run"]["directory"])
+        reference = read_completed_run(reference_directory, _seen=seen)
+        if _lineage(reference) != lineage["reference_run"]:
+            raise ValueError("derived reference raw-run binding mismatch")
+        expected["comparison"] = compare(
+            reference["frozen_report"], expected, raw["plan"]["comparison_policy"]
+        )
+        if expected["comparison"]["status"] != "pass":
+            expected["status"] = "blocked"
+    elif raw["plan"]["profile"] == "release" or inherited["frozen_report"].get(
+        "comparison"
+    ):
+        raise ValueError("derived comparison lacks retained reference binding")
+    if {key: value for key, value in report.items() if key != "reanalysis"} != expected:
+        raise ValueError(
+            "derived report differs from controlled retained-evidence analysis"
+        )
+    if (
+        report["reanalysis"].get("raw_report_sha256")
+        != lineage["raw_run"]["files"]["report.json"]
+        or report["reanalysis"].get("inference_executed") is not False
+    ):
+        raise ValueError("derived raw-report binding mismatch")
+    return {
+        **raw,
+        "input_directory": directory,
+        "frozen_report": report,
+        "derived_lineage": lineage,
+    }
+
+
+def load_reference_report(path: Path) -> dict[str, Any]:
+    """Validate an original or derived retained report without rerunning inference."""
+    path = path.resolve()
+    if not path.is_dir() and path.name != "report.json":
+        raise ValueError("reference must be a retained directory or its report.json")
+    return read_completed_run(path if path.is_dir() else path.parent)["frozen_report"]
 
 
 def _lineage(run: Mapping[str, Any]) -> dict[str, Any]:
@@ -277,6 +394,12 @@ def reanalyze(
     export_review_packet: bool = False,
 ) -> dict[str, Any]:
     run = read_completed_run(run_dir)
+    if reference_path is None and run.get("derived_lineage", {}).get("reference_run"):
+        reference_binding = (
+            run["derived_lineage"].get("reference_analysis")
+            or run["derived_lineage"]["reference_run"]
+        )
+        reference_path = Path(reference_binding["directory"])
     if reference_path is None and (
         run["plan"]["profile"] == "release" or run["frozen_report"].get("comparison")
     ):
@@ -284,7 +407,9 @@ def reanalyze(
             "reanalysis of a compared/release run requires its retained reference"
         )
     output_dir = output_dir.resolve()
-    if output_dir.is_relative_to(run["directory"]):
+    if output_dir.is_relative_to(run["directory"]) or output_dir.is_relative_to(
+        run["input_directory"]
+    ):
         raise ValueError("derived output must be outside the immutable original run")
     reviews = _existing_reviews(run)
     review_bytes = reviews_path.read_bytes() if reviews_path else None
@@ -328,9 +453,12 @@ def reanalyze(
         },
         "inference_executed": False,
     }
+    if run["input_directory"] != run["directory"]:
+        lineage["parent_analysis"] = _analysis_binding(run["input_directory"])
     lineage["analysis_source"]["scripts/analyze_release_evaluation.py"] = file_digest(
         Path(__file__).resolve().parents[2] / "scripts/analyze_release_evaluation.py"
     )
+    lineage["analysis_source_sha256"] = digest(lineage["analysis_source"])
     if reference_path:
         directory = reference_path if reference_path.is_dir() else reference_path.parent
         if not reference_path.is_dir() and reference_path.name != "report.json":
@@ -338,27 +466,36 @@ def reanalyze(
                 "reference must be a completed run directory or its report.json"
             )
         reference = read_completed_run(directory)
-        if output_dir.is_relative_to(reference["directory"]):
+        if output_dir.is_relative_to(
+            reference["directory"]
+        ) or output_dir.is_relative_to(reference["input_directory"]):
             raise ValueError(
                 "derived output must be outside the immutable reference run"
             )
-        reference_report = _report(reference, _existing_reviews(reference))
+        reference_report = reference["frozen_report"]
         report["comparison"] = compare(
             reference_report, report, run["plan"]["comparison_policy"]
         )
         if report["comparison"]["status"] != "pass":
             report["status"] = "blocked"
         lineage["reference_run"] = _lineage(reference)
+        if reference["input_directory"] != reference["directory"]:
+            lineage["reference_analysis"] = _analysis_binding(
+                reference["input_directory"]
+            )
     report["reanalysis"] = {
         "lineage_sha256": digest(lineage),
+        "derived_analysis_sha256": lineage["analysis_source_sha256"],
         "inference_executed": False,
         "raw_report_sha256": lineage["raw_run"]["files"]["report.json"],
     }
     packet = review_packet(run) if export_review_packet else None
     # Verify the inputs again after reading before publishing derived evidence.
     verify_retention(run["directory"])
+    verify_retention(run["input_directory"])
     if reference_path:
         verify_retention(reference["directory"])
+        verify_retention(reference["input_directory"])
     if (
         reviews_path
         and file_digest(reviews_path) != hashlib.sha256(review_bytes).hexdigest()

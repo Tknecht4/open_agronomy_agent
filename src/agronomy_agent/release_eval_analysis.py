@@ -35,6 +35,33 @@ IDENTITY_FIELDS = (
     "backend",
 )
 PRODUCTION_ARM = "production_full"
+BACKEND_WARM_CELLS = frozenset(
+    {
+        "health_warm",
+        "configs_warm",
+        "geo_layers_warm",
+        "fields_list_warm",
+        "sessions_list_warm",
+        "field_history_warm",
+        "sessions_list_seeded_warm",
+        "full_session_history_read_warm",
+        "bounded_session_history_read_warm",
+        "core_mock_warm",
+    }
+)
+BACKEND_COLD_CELLS = frozenset(
+    {
+        "app_create_cold",
+        "health_cold",
+        "configs_cold",
+        "geo_layers_cold",
+        "fields_list_cold",
+        "sessions_list_cold",
+        "field_history_cold",
+        "core_mock_cold",
+    }
+)
+BACKEND_TIMING_FIELDS = ("samples", "min_ms", "median_ms", "p95_ms", "max_ms")
 LIMITATIONS = [
     "Exposed development suites; no independent target-user or field-outcome validation.",
     "Trials and dependent field bundles are not independent scenarios.",
@@ -561,6 +588,10 @@ def summarize(
         "registry_sha256": plan["registry_sha256"],
         "cohort_sha256": plan["cohort_sha256"],
         "scorer_version": plan["scorer_version"],
+        "scorer_sha256": plan.get("scorer_sha256"),
+        "backend_performance_policy": _clean_numbers(
+            plan.get("backend_performance_policy")
+        ),
         "model": plan["model"],
         "sampling": plan["sampling"],
         "environment": _clean_numbers(environment),
@@ -720,6 +751,74 @@ def _arm_benefits(report: Mapping[str, Any]) -> dict[str, Any]:
     return output
 
 
+def _backend_policy(value: Any) -> dict[str, Any] | None:
+    """Only declared, measured warm contracts can authorize a backend gate."""
+    if not isinstance(value, Mapping):
+        return None
+    names = value.get("required_warm_cells")
+    minimum, maximum = value.get("minimum_samples"), value.get("maximum_p95_ratio")
+    if (
+        not isinstance(names, list)
+        or any(not isinstance(name, str) for name in names)
+        or len(names) != len(set(names))
+        or set(names) != BACKEND_WARM_CELLS
+        or not isinstance(minimum, int)
+        or isinstance(minimum, bool)
+        or minimum < 20
+        or not _finite(maximum)
+        or maximum < 1
+    ):
+        return None
+    return {
+        "required_warm_cells": sorted(names),
+        "minimum_samples": minimum,
+        "maximum_p95_ratio": maximum,
+    }
+
+
+def _backend_component(report: Mapping[str, Any]) -> Mapping[str, Any]:
+    components = [
+        row
+        for row in report.get("components") or []
+        if isinstance(row, Mapping) and row.get("component") == "performance"
+    ]
+    return components[0] if len(components) == 1 else {}
+
+
+def _backend_cells(report: Mapping[str, Any]) -> Mapping[str, Any]:
+    metrics = _backend_component(report).get("metrics") or {}
+    cells = metrics.get("cells") if isinstance(metrics, Mapping) else None
+    return cells if isinstance(cells, Mapping) else {}
+
+
+def _backend_timing(cell: Any, minimum: int) -> Mapping[str, Any] | None:
+    if not isinstance(cell, Mapping) or cell.get("status") != "completed":
+        return None
+    timing = cell.get("timing")
+    if not isinstance(timing, Mapping):
+        return None
+    samples, requested = timing.get("samples"), cell.get("requested_samples")
+    if (
+        not isinstance(samples, int)
+        or isinstance(samples, bool)
+        or not isinstance(requested, int)
+        or isinstance(requested, bool)
+        or samples < minimum
+        or requested < minimum
+        or samples != requested
+        or any(
+            not _finite(timing.get(name)) or timing[name] < 0
+            for name in BACKEND_TIMING_FIELDS[1:]
+        )
+        or not timing["min_ms"]
+        <= timing["median_ms"]
+        <= timing["p95_ms"]
+        <= timing["max_ms"]
+    ):
+        return None
+    return timing
+
+
 def compare(
     reference: Mapping[str, Any],
     candidate: Mapping[str, Any],
@@ -753,6 +852,15 @@ def compare(
             reference.get(name) == candidate.get(name),
             {"reference": reference.get(name), "candidate": candidate.get(name)},
         )
+    reference_instrument = reference.get("scorer_sha256")
+    candidate_instrument = candidate.get("scorer_sha256")
+    check(
+        "compatible_scorer_sha256",
+        bool(re.fullmatch(r"[a-fA-F0-9]{64}", str(reference_instrument or "")))
+        and bool(re.fullmatch(r"[a-fA-F0-9]{64}", str(candidate_instrument or "")))
+        and reference_instrument == candidate_instrument,
+        {"reference": reference_instrument, "candidate": candidate_instrument},
+    )
     for label, report in (("reference", reference), ("candidate", candidate)):
         check(
             f"complete_{label}",
@@ -947,6 +1055,73 @@ def compare(
             eligible and after[statistic] <= before[statistic] * policy[limit],
             {"reference": before, "candidate": after, "maximum_ratio": policy[limit]},
         )
+    backend_reference = _backend_policy(reference.get("backend_performance_policy"))
+    backend_candidate = _backend_policy(candidate.get("backend_performance_policy"))
+    backend_compatible = (
+        backend_reference is not None and backend_reference == backend_candidate
+    )
+    check(
+        "compatible_backend_performance_policy",
+        backend_compatible,
+        {"reference": backend_reference, "candidate": backend_candidate},
+    )
+    backend_environment_r = (reference.get("environment") or {}).get(
+        "performance_environment_sha256"
+    )
+    backend_environment_c = (candidate.get("environment") or {}).get(
+        "performance_environment_sha256"
+    )
+    backend_environment = (
+        bool(re.fullmatch(r"[a-fA-F0-9]{64}", str(backend_environment_r or "")))
+        and backend_environment_r == backend_environment_c
+    )
+    check(
+        "backend_performance_environment",
+        backend_environment,
+        {"reference": backend_environment_r, "candidate": backend_environment_c},
+    )
+    backend_cells_r, backend_cells_c = _backend_cells(reference), _backend_cells(
+        candidate
+    )
+    check(
+        "backend_performance_required_cell_coverage",
+        backend_compatible
+        and _backend_component(reference).get("status") == "pass"
+        and _backend_component(candidate).get("status") == "pass"
+        and BACKEND_WARM_CELLS <= set(backend_cells_r)
+        and BACKEND_WARM_CELLS <= set(backend_cells_c),
+        {
+            "required_n": len(BACKEND_WARM_CELLS),
+            "reference_missing": sorted(BACKEND_WARM_CELLS - set(backend_cells_r)),
+            "candidate_missing": sorted(BACKEND_WARM_CELLS - set(backend_cells_c)),
+        },
+    )
+    for name in sorted(BACKEND_WARM_CELLS):
+        minimum = backend_reference["minimum_samples"] if backend_reference else 20
+        before = _backend_timing(backend_cells_r.get(name), minimum)
+        after = _backend_timing(backend_cells_c.get(name), minimum)
+        maximum = backend_reference["maximum_p95_ratio"] if backend_reference else None
+        eligible = (
+            backend_compatible
+            and backend_environment
+            and before is not None
+            and after is not None
+            and before["p95_ms"] > 0
+        )
+        check(
+            f"backend_performance_{name}",
+            eligible and after["p95_ms"] <= before["p95_ms"] * maximum,
+            {
+                "reference": before,
+                "candidate": after,
+                "maximum_p95_ratio": maximum,
+                "status": (
+                    "observed_paired_cells"
+                    if eligible
+                    else "missing_or_invalid_paired_cells"
+                ),
+            },
+        )
     try:
         rlabels = {
             key: value
@@ -998,16 +1173,24 @@ def compare(
         policy_valid,
         {"reference": required_r, "candidate": required_c},
     )
-    core_pairs = [
+    compatible_pairs = [key for key in pair_ids if key not in rubric_mismatch]
+    completion_pairs = [
         key
-        for key in pair_ids
-        if key not in rubric_mismatch
-        and all(
-            isinstance(labels[key].get(name), bool)
+        for key in compatible_pairs
+        if all(
+            isinstance(labels[key].get("required_complete"), bool)
             for labels in (rlabels, clabels)
-            for name in ("required_complete", "material_error")
         )
     ]
+    error_pairs = [
+        key
+        for key in compatible_pairs
+        if all(
+            isinstance(labels[key].get("material_error"), bool)
+            for labels in (rlabels, clabels)
+        )
+    ]
+    core_pairs = sorted(set(completion_pairs) & set(error_pairs))
     paired_coverage = len(core_pairs) / len(review_ids) if review_ids else 1.0
     semantic_required = policy_valid and required_c > 0
     check(
@@ -1021,11 +1204,11 @@ def compare(
     )
     introduced = sum(
         not rlabels[key]["material_error"] and clabels[key]["material_error"]
-        for key in core_pairs
+        for key in error_pairs
     )
     removed = sum(
         rlabels[key]["material_error"] and not clabels[key]["material_error"]
-        for key in core_pairs
+        for key in error_pairs
     )
     deltas = [
         (
@@ -1033,22 +1216,27 @@ def compare(
             int(clabels[key]["required_complete"])
             - int(rlabels[key]["required_complete"]),
         )
-        for key in core_pairs
+        for key in completion_pairs
     ]
     check(
         "introduced_material_errors",
         (
             introduced <= policy["maximum_introduced_material_errors"]
-            if core_pairs
+            if error_pairs
             else None
         ),
         {
-            "paired_n": len(core_pairs),
-            "introduced": introduced if core_pairs else None,
-            "removed": removed if core_pairs else None,
-            "status": "assessed" if core_pairs else "review_pending_not_assessed",
+            "paired_n": len(error_pairs),
+            "unknown_pair_n": len(review_ids) - len(error_pairs),
+            "introduced": introduced if error_pairs else None,
+            "removed": removed if error_pairs else None,
+            "status": (
+                "assessed_observed_pairs"
+                if error_pairs
+                else "review_pending_not_assessed"
+            ),
         },
-        required=semantic_required or bool(core_pairs),
+        required=semantic_required or bool(error_pairs),
     )
     check(
         "required_completion",
@@ -1060,10 +1248,73 @@ def compare(
         ),
         {
             "paired_n": len(deltas),
-            "status": "assessed" if deltas else "review_pending_not_assessed",
+            "unknown_pair_n": len(review_ids) - len(deltas),
+            "status": (
+                "assessed_observed_pairs" if deltas else "review_pending_not_assessed"
+            ),
         },
         required=semantic_required or bool(deltas),
     )
+    completion_by_case: dict[tuple[str, str], list[int]] = defaultdict(list)
+    completion_by_family: dict[str, list[int]] = defaultdict(list)
+    for key in completion_pairs:
+        row = rrows[key]
+        delta = int(clabels[key]["required_complete"]) - int(
+            rlabels[key]["required_complete"]
+        )
+        completion_by_case[(row["suite_id"], row["case_id"])].append(delta)
+        completion_by_family[row["scenario_family"]].append(delta)
+    limit = policy["maximum_required_completion_regression"]
+    case_regressions = [
+        {
+            "suite_id": key[0],
+            "case_id": key[1],
+            "paired_n": len(values),
+            "mean_delta": statistics.mean(values),
+            "worst_paired_delta": min(values),
+        }
+        for key, values in sorted(completion_by_case.items())
+        if min(values) < -limit
+    ]
+    family_regressions = [
+        {
+            "scenario_family": key,
+            "paired_n": len(values),
+            "mean_delta": statistics.mean(values),
+        }
+        for key, values in sorted(completion_by_family.items())
+        if statistics.mean(values) < -limit
+    ]
+    for name, groups, regressions in (
+        ("no_paired_completion_case_regression", completion_by_case, case_regressions),
+        (
+            "no_paired_completion_family_regression",
+            completion_by_family,
+            family_regressions,
+        ),
+    ):
+        check(
+            name,
+            not regressions if completion_pairs else None,
+            {
+                "paired_n": len(completion_pairs),
+                "unknown_pair_n": len(review_ids) - len(completion_pairs),
+                "groups_n": len(groups),
+                "regressions": regressions,
+                "maximum_regression": limit,
+                "status": (
+                    "assessed_observed_pairs"
+                    if completion_pairs
+                    else "review_pending_not_assessed"
+                ),
+                "case_policy": (
+                    "each_exact_paired_trial_must_meet_limit; repeat_trials_do_not_cancel_losses"
+                    if name.endswith("case_regression")
+                    else "observed_family_completion_rate_must_meet_limit"
+                ),
+            },
+            required=semantic_required or bool(completion_pairs),
+        )
     return {
         "schema_version": "open_agronomy_agent.release_evaluation_comparison.v1",
         "status": (
@@ -1073,7 +1324,7 @@ def compare(
         ),
         "semantic_status": (
             "review_pending_not_assessed"
-            if not core_pairs
+            if not completion_pairs and not error_pairs
             else (
                 "partially_paired_review"
                 if paired_coverage < 1
@@ -1281,6 +1532,11 @@ def public_projection(report: Mapping[str, Any]) -> dict[str, Any]:
         "registry_sha256": _hash(report.get("registry_sha256")),
         "cohort_sha256": _hash(report.get("cohort_sha256")),
         "scorer_version": _identifier(report.get("scorer_version")),
+        "scorer_sha256": (
+            _hash(report.get("scorer_sha256"))
+            if re.fullmatch(r"[a-fA-F0-9]{64}", str(report.get("scorer_sha256") or ""))
+            else None
+        ),
         "model": {
             "id": model_id,
             "revision": _hash(model.get("revision")),
@@ -1297,6 +1553,9 @@ def public_projection(report: Mapping[str, Any]) -> dict[str, Any]:
             for name, value in (report.get("counts") or {}).items()
             if name in allowed_counts and _finite(value)
         },
+        "backend_performance_policy": _backend_policy(
+            report.get("backend_performance_policy")
+        ),
         "metrics": public_metrics,
         "lane_summaries": {
             name: _public_outcome(value)
@@ -1347,6 +1606,32 @@ def public_projection(report: Mapping[str, Any]) -> dict[str, Any]:
         for row in report.get("components") or []
         if row.get("component") in COMPONENTS
     ]
+    for row in result["components"]:
+        if row["component"] == "performance":
+            public_cells = {}
+            for name in sorted(BACKEND_WARM_CELLS | BACKEND_COLD_CELLS):
+                cell = _backend_cells(report).get(name)
+                if not isinstance(cell, Mapping):
+                    continue
+                timing = cell.get("timing")
+                timing = timing if isinstance(timing, Mapping) else {}
+                public_cells[name] = {
+                    "status": (
+                        cell.get("status")
+                        if cell.get("status") in {"completed", "failed"}
+                        else "unknown"
+                    ),
+                    "requested_samples": (
+                        cell.get("requested_samples")
+                        if _finite(cell.get("requested_samples"))
+                        else None
+                    ),
+                    "timing": {
+                        field: timing.get(field) if _finite(timing.get(field)) else None
+                        for field in BACKEND_TIMING_FIELDS
+                    },
+                }
+            row["metrics"]["cells"] = public_cells
     result["repeatability"] = {
         "eligible_n": sum(
             row.get("exact_final_repeatable") is not None
@@ -1384,6 +1669,7 @@ def public_projection(report: Mapping[str, Any]) -> dict[str, Any]:
             "compatible_registry_sha256",
             "compatible_cohort_sha256",
             "compatible_scorer_version",
+            "compatible_scorer_sha256",
             "compatible_model",
             "compatible_sampling",
             "complete_reference",
@@ -1408,7 +1694,17 @@ def public_projection(report: Mapping[str, Any]) -> dict[str, Any]:
             "paired_required_review_coverage",
             "introduced_material_errors",
             "required_completion",
+            "no_paired_completion_case_regression",
+            "no_paired_completion_family_regression",
         }
+        check_ids.update(
+            {
+                "compatible_backend_performance_policy",
+                "backend_performance_environment",
+                "backend_performance_required_cell_coverage",
+                *(f"backend_performance_{name}" for name in BACKEND_WARM_CELLS),
+            }
+        )
         check_ids.add("planned_production_completed")
         result["comparison"] = {
             "status": "pass" if comparison.get("status") == "pass" else "blocked",
