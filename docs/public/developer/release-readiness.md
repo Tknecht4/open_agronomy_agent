@@ -4,6 +4,11 @@ Run benchmark release candidates only from a clean committed checkout. The gate 
 
 ## Dependency boundary
 
+Dependency changes must pass the installed-environment advisory checks in
+backend and Mac candidate CI, plus the frontend npm audit. See the
+[maintainer workflow](maintaining.md) for their scope and the distinction
+between scanning, locked environments, and release qualification.
+
 `frontend/package-lock.json` supplies an exact npm resolution. Most Python
 requirement files declare compatible ranges rather than a complete, hash-locked
 transitive environment. `requirements-benchmark-analysis.txt` pins the two

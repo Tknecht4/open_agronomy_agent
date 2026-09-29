@@ -73,6 +73,9 @@ nav:
       - RC1 public evidence package: final-benchmark-20260812/README.md
   - Developer guide:
       - Code and contracts: developer/index.md
+      - Contributing and help: developer/contributing.md
+      - Maintainer workflow: developer/maintaining.md
+      - Source distribution: developer/source-distribution.md
       - Customize the harness: developer/customizing-the-harness.md
       - Repository map: developer/repository-map.md
       - Extending the system: developer/extending.md

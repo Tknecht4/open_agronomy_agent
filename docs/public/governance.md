@@ -23,6 +23,8 @@ Project-authored code/documentation is Apache-2.0 unless noted. Third-party sour
 
 Contributions that change knowledge, capabilities, graphs, routing, validation, benchmark design, or public claims must include provenance, typed contracts, negative/failure tests, and explicit limits. Keep external evaluation separate from tuning. Retain contradictions and failed results instead of rewriting history to pass a gate.
 
+Use the [contribution guide](developer/contributing.md) for intake, review, safe public examples, and verification. The repository also publishes [support](https://github.com/Tknecht4/open_agronomy_agent/blob/main/SUPPORT.md), [security](https://github.com/Tknecht4/open_agronomy_agent/blob/main/SECURITY.md), and [conduct](https://github.com/Tknecht4/open_agronomy_agent/blob/main/CODE_OF_CONDUCT.md) policies. Outside contributions receive maintainer review. The sole maintainer may merge their own PR after required CI and applicable domain gates; a required self-approval would block that workflow.
+
 ## Documentation publication
 
 The GitHub Pages workflow builds only `docs/public` with strict links and runs a publication-scope audit before upload. Pull requests build without deployment. Deployment occurs only after protected default-branch integration through the `github-pages` environment.

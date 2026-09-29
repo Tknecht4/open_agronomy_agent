@@ -1,4 +1,7 @@
-# Observed Python 3.12.13 arm64/macOS 26.6 environment for the 2026-09-27
+# Baseline Python 3.12.13 arm64/macOS 26.6 environment from 2026-09-27,
+# with cryptography/datasets security replacements on 2026-09-29.
+# The replacements require fresh clean-host qualification; this is not the
+# unchanged historical environment receipt. Baseline captured for the
 # native product-path smoke. These exact versions constrain the Mac candidate
 # builder; wheel hashes, clean-host installation, and full runtime parity remain
 # separate release evidence. The editable local project entry was omitted.
@@ -19,9 +22,9 @@ click==8.5.0
 cloudpickle==3.1.2
 colorama==0.4.6
 contourpy==1.4.0
-cryptography==46.0.7
+cryptography==50.0.1
 cycler==0.12.1
-datasets==4.8.5
+datasets==5.0.1
 dill==0.4.1
 docstring-parser==0.18.0
 et-xmlfile==2.0.0

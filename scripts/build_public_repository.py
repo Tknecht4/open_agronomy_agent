@@ -115,6 +115,9 @@ def _collect(manifest: dict[str, Any]) -> list[Path]:
 
 def _validate_scope(files: list[Path], manifest: dict[str, Any]) -> None:
     maximum = int(manifest.get("maximum_file_bytes") or 99_000_000)
+    total_budget = manifest.get("maximum_total_bytes")
+    if total_budget is not None and (type(total_budget) is not int or total_budget < 0):
+        raise ValueError("maximum_total_bytes must be a non-negative integer")
     forbidden = [str(value) for value in manifest.get("forbidden_release_prefixes") or []]
     exceptions = [str(value) for value in manifest.get("allowed_forbidden_prefix_exceptions") or []]
     prefix_budgets = manifest.get("maximum_prefix_bytes") or {}
@@ -133,6 +136,10 @@ def _validate_scope(files: list[Path], manifest: dict[str, Any]) -> None:
             raise ValueError(f"maximum_prefix_bytes value must be non-negative for {prefix_text}")
         normalized_prefix_budgets[prefix_text] = budget
     errors: list[str] = []
+    if total_budget is not None:
+        total_bytes = sum(path.stat().st_size for path in files)
+        if total_bytes > total_budget:
+            errors.append(f"total_oversized:{total_bytes}:{total_budget}")
     forbidden_literals = [
         str(value) for value in manifest.get("forbidden_content_literals") or []
     ]

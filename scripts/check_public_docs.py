@@ -27,6 +27,10 @@ GENERATED_CAPABILITY_END = "<!-- END GENERATED CAPABILITY REGISTRY -->"
 CAPABILITY_REGISTRY_SCHEMA = "open_agronomy_agent.capability_registry.v1"
 ACTIVE_RAG_CONFIG = ROOT / "configs/rag.yaml"
 PUBLIC_SUBSYSTEM_READMES = (
+    ROOT / "CONTRIBUTING.md",
+    ROOT / "SUPPORT.md",
+    ROOT / "SECURITY.md",
+    ROOT / "CODE_OF_CONDUCT.md",
     ROOT / "README.md",
     ROOT / "container/README.md",
     ROOT / "configs/README.md",
