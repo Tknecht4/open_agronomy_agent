@@ -48,8 +48,11 @@ file hashes, and the original public release receipt before placing the new
 tree at the destination. It rejects existing destinations, links, paths that
 escape the tree, duplicates, missing or extra members, and distributions over
 fixed file-count and uncompressed-size limits. It streams regular files into a
-temporary tree rather than using general tar extraction. An untrusted plan
-digest supplied from the same download has no independent authentication
+temporary tree rather than using general tar extraction. It also checks the
+complete gzip stream and tar end padding, including gzip integrity trailers,
+before publishing the tree with an atomic no-replace operation. If the
+platform cannot provide that operation, reconstruction fails closed. An
+untrusted plan digest supplied from the same download has no independent authentication
 value; obtain it through a separate trusted release record.
 
 To perform all those checks without writing a reconstructed tree, use

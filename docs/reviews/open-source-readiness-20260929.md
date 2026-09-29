@@ -72,6 +72,16 @@ reconstructs the real archives and audits the restored runtime corpus.
 
 Remaining acceptance: independent review, full PR backend/frontend/docs checks,
 fresh Mac qualification for dependency changes, and integration verification.
+The first independent review of `b8981bddd295193797f95899c6d8bd4f885d91d5`
+required two repairs: consuming the complete gzip stream after tar end markers,
+and atomically refusing a reconstruction destination created during verification.
+Both were reproduced before repair. The successor checks gzip trailers and
+bounded zero padding, and uses the platform's atomic no-replace rename.
+Regression coverage includes hidden compressed data, a second tar archive,
+corrupt trailers, long PAX paths, and a competing destination's preserved inode.
+These repairs require a new source-bound review and CI result; the earlier
+successful archive verification did not detect those adversarial cases.
+
 The source/evidence split does not make the NRCS pack optional at runtime,
 rewrite Git history, or reduce the installed Mac bundle. Those require a
 separate compatibility-preserving corpus migration and installer qualification.
@@ -79,4 +89,3 @@ Developer ID signing/notarization and an installed-app upgrade/rollback drill
 remain required before a downloadable desktop release. Bounded field-history
 APIs, broader typed operation/outcome schemas, and farmOS integration remain
 separately scoped follow-ups, not implied by this hardening package.
-

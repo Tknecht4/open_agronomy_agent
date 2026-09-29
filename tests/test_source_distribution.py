@@ -27,6 +27,7 @@ def _fixture(tmp_path: Path, monkeypatch) -> tuple[Path, str, dict]:
         "configs/public_repository_manifest.json": b"{}",
         "data/derived/rag/context.jsonl": b'{"evidence":"retained"}\n',
         "docs/reviews/artifacts/probe.json": b'{"status":"failed"}\n',
+        "data/derived/rag/" + "long-name-" * 19 + "receipt.json": b"long path\n",
     }
 
     def fake_public_build(destination: Path, _manifest: Path) -> dict:
@@ -79,6 +80,15 @@ def _rewrite_archive(distribution: Path, plan: dict, pack: str,
     return split._hash_file(plan_path)
 
 
+def _repin_archive(distribution: Path, plan: dict, pack: str) -> str:
+    archive = distribution / split.ARCHIVES[pack]
+    plan["archives"][pack]["bytes"] = archive.stat().st_size
+    plan["archives"][pack]["sha256"] = split._hash_file(archive)
+    plan_path = distribution / split.PLAN_NAME
+    plan_path.write_text(json.dumps(plan, sort_keys=True, indent=2) + "\n")
+    return split._hash_file(plan_path)
+
+
 def test_round_trip_is_deterministic_and_preserves_evidence(tmp_path, monkeypatch):
     first, digest, plan = _fixture(tmp_path, monkeypatch)
     second_root = tmp_path / "second"
@@ -91,10 +101,69 @@ def test_round_trip_is_deterministic_and_preserves_evidence(tmp_path, monkeypatc
         assert not any(member.name.startswith("data/") for member in archive)
     restored = tmp_path / "restored"
     result = split.reconstruct(first, restored, digest)
-    assert result["file_count"] == 6
+    assert result["file_count"] == 7
     assert (restored / "scripts/run.sh").stat().st_mode & 0o111
     assert (restored / "data/derived/rag/context.jsonl").read_bytes() == b'{"evidence":"retained"}\n'
     assert (restored / "docs/reviews/artifacts/probe.json").read_bytes() == b'{"status":"failed"}\n'
+    assert (restored / ("data/derived/rag/" + "long-name-" * 19 + "receipt.json")).read_bytes() == b"long path\n"
+
+
+def test_hidden_gzip_member_and_second_tar_are_rejected(tmp_path, monkeypatch):
+    distribution, _, plan = _fixture(tmp_path, monkeypatch)
+    source = distribution / "source.tar.gz"
+    source.write_bytes(source.read_bytes() + gzip.compress(b"x" * 2_000_000, mtime=0))
+    digest = _repin_archive(distribution, plan, "source")
+    with pytest.raises(ValueError, match="padding|bound"):
+        split.verify(distribution, digest)
+
+    other = tmp_path / "other"
+    other.mkdir()
+    distribution, _, plan = _fixture(other, monkeypatch)
+    source = distribution / "source.tar.gz"
+    with io.BytesIO() as buffer:
+        with tarfile.open(fileobj=buffer, mode="w") as archive:
+            data = b"duplicate after end marker\n"
+            info = tarfile.TarInfo("README.md")
+            info.size = len(data)
+            archive.addfile(info, io.BytesIO(data))
+        second_tar = buffer.getvalue()
+    source.write_bytes(gzip.compress(gzip.decompress(source.read_bytes()) + second_tar, mtime=0))
+    digest = _repin_archive(distribution, plan, "source")
+    with pytest.raises(ValueError, match="padding"):
+        split.verify(distribution, digest)
+
+
+def test_gzip_trailer_crc_and_size_are_checked(tmp_path, monkeypatch):
+    for offset in (8, 4):
+        root = tmp_path / str(offset)
+        root.mkdir()
+        distribution, _, plan = _fixture(root, monkeypatch)
+        source = distribution / "source.tar.gz"
+        data = bytearray(source.read_bytes())
+        data[-offset:-offset + 4 if offset != 4 else None] = b"\0" * 4
+        source.write_bytes(data)
+        digest = _repin_archive(distribution, plan, "source")
+        with pytest.raises((gzip.BadGzipFile, EOFError, OSError)):
+            split.verify(distribution, digest)
+
+
+def test_atomic_publication_refuses_directory_created_after_check(tmp_path, monkeypatch):
+    distribution, digest, _ = _fixture(tmp_path, monkeypatch)
+    destination = tmp_path / "race-target"
+    real_publish = split._publish_new_tree
+    raced_inode = None
+
+    def race(source: Path, target: Path) -> None:
+        nonlocal raced_inode
+        target.mkdir()
+        raced_inode = target.stat().st_ino
+        real_publish(source, target)
+
+    monkeypatch.setattr(split, "_publish_new_tree", race)
+    with pytest.raises(FileExistsError, match="already exists"):
+        split.reconstruct(distribution, destination, digest)
+    assert destination.is_dir() and destination.stat().st_ino == raced_inode
+    assert list(destination.iterdir()) == []
 
 
 def test_plan_digest_and_archive_inventory_are_independent_inputs(tmp_path, monkeypatch):

@@ -10,11 +10,14 @@ from __future__ import annotations
 
 import argparse
 from contextlib import ExitStack, nullcontext
+import ctypes
+import errno
 import gzip
 import hashlib
 import json
 import os
 import stat
+import sys
 import tarfile
 import tempfile
 from pathlib import Path, PurePosixPath
@@ -229,6 +232,33 @@ class _BoundedReader:
         return block
 
 
+def _publish_new_tree(source: Path, destination: Path) -> None:
+    """Atomically publish a verified tree only if its destination is absent."""
+    libc = ctypes.CDLL(None, use_errno=True)
+    if sys.platform == "darwin":
+        operation = getattr(libc, "renamex_np", None)
+        if operation is None:
+            raise RuntimeError("atomic no-replace rename is unavailable")
+        operation.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint]
+        operation.restype = ctypes.c_int
+        result = operation(os.fsencode(source), os.fsencode(destination), 0x4)  # RENAME_EXCL
+    elif sys.platform.startswith("linux"):
+        operation = getattr(libc, "renameat2", None)
+        if operation is None:
+            raise RuntimeError("atomic no-replace rename is unavailable")
+        operation.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int,
+                              ctypes.c_char_p, ctypes.c_uint]
+        operation.restype = ctypes.c_int
+        result = operation(-100, os.fsencode(source), -100, os.fsencode(destination), 1)
+    else:
+        raise RuntimeError("atomic no-replace rename is unavailable on this platform")
+    if result != 0:
+        code = ctypes.get_errno()
+        if code in (errno.EEXIST, errno.ENOTEMPTY):
+            raise FileExistsError(code, "reconstruction destination already exists", str(destination))
+        raise OSError(code, os.strerror(code), str(destination))
+
+
 def verify(distribution: Path, expected_plan_sha256: str,
            destination: Path | None = None) -> dict[str, Any]:
     distribution = distribution.resolve()
@@ -272,7 +302,9 @@ def verify(distribution: Path, expected_plan_sha256: str,
             max_expanded = sum(row["bytes"] for row in pack_rows) + 4096 * len(pack_rows) + 1_000_000
             with gzip.open(distribution / filename, "rb") as uncompressed:
                 bounded = _BoundedReader(uncompressed, max_expanded)
-                with tarfile.open(fileobj=bounded, mode="r|") as archive:
+                # A 512-byte stream buffer prevents read-ahead past the tar
+                # end marker, so the tail can be checked byte for byte.
+                with tarfile.open(fileobj=bounded, mode="r|", bufsize=512) as archive:
                     for member in archive:
                         name = _safe_path(member.name)
                         row = expected.get(name)
@@ -309,6 +341,22 @@ def verify(distribution: Path, expected_plan_sha256: str,
                             raise ValueError(f"member hash mismatch: {name}")
                         if target is not None:
                             target.chmod(row["mode"])
+                    # Tar iteration stops at its first zero header and does
+                    # not consume the gzip trailer. Require a second zero
+                    # header and only standard zero record padding, then
+                    # read gzip through EOF to validate CRC/ISIZE and reject
+                    # concatenated members or hidden tar entries.
+                    padding_bytes = 0
+                    while True:
+                        block = archive.fileobj.read(512)
+                        if not block:
+                            break
+                        padding_bytes += len(block)
+                        if padding_bytes > tarfile.RECORDSIZE or any(block):
+                            raise ValueError("archive has nonzero or excessive tar end padding")
+                    expanded_bytes = max_expanded - bounded.remaining
+                    if (padding_bytes < 512 or expanded_bytes % tarfile.RECORDSIZE != 0):
+                        raise ValueError("archive has invalid tar end framing")
         if observed != set(expected):
             raise ValueError(f"missing archive members: {sorted(set(expected) - observed)[:10]}")
         if receipt_bytes is None or _sha_bytes(receipt_bytes) != plan["public_receipt_sha256"]:
@@ -331,7 +379,7 @@ def verify(distribution: Path, expected_plan_sha256: str,
                for name, row in public_rows.items()):
             raise ValueError("public release hashes differ from distribution")
         if tree is not None:
-            tree.rename(destination)
+            _publish_new_tree(tree, destination)
     return {"destination": str(destination) if destination is not None else None,
             "verified_only": destination is None, "file_count": len(expected),
             "total_bytes": plan["total_bytes"], "plan_sha256": expected_plan_sha256}
