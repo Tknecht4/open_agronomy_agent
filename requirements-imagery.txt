@@ -1,6 +1,6 @@
 # Observed optional HLS worker environment (Python 3.12); separate from serving.
 # These direct pins reproduce the exercised raster/API stack, not a full wheel lock.
-numpy==2.4.6
+numpy==2.5.3
 rasterio==1.5.1
 pyproj==3.8.0
 shapely==2.1.2

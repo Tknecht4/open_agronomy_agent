@@ -25,7 +25,7 @@ The first end-user target is an Apple Silicon Mac. The [Mac app candidate](macos
 
 ## Run locally
 
-The exercised native target is an Apple Silicon Mac with 16 GB unified memory, Python 3.11 or 3.12, and Node 20 or newer. Install from the repository root:
+The exercised native target is an Apple Silicon Mac with 16 GB unified memory, Python 3.11 or 3.12, and Node 24 or newer. Install from the repository root:
 
 ```bash
 git clone https://github.com/Tknecht4/open_agronomy_agent.git

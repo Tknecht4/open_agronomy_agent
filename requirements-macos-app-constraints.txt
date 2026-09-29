@@ -1,5 +1,5 @@
 # Baseline Python 3.12.13 arm64/macOS 26.6 environment from 2026-09-27,
-# with cryptography/datasets security replacements on 2026-09-29.
+# with security replacements and coordinated dependency updates on 2026-09-29.
 # The replacements require fresh clean-host qualification; this is not the
 # unchanged historical environment receipt. Baseline captured for the
 # native product-path smoke. These exact versions constrain the Mac candidate
@@ -33,7 +33,7 @@ fastapi==0.141.1
 filelock==4.0.4
 fonttools==4.66.0
 frozenlist==1.8.0
-fsspec==2026.9.0
+fsspec==2026.2.0
 geopandas==1.1.4
 ghp-import==2.1.0
 gitdb==4.0.12
@@ -47,7 +47,7 @@ httpcore2==2.13.1
 httptools==0.8.0
 httpx==0.28.1
 httpx2==2.13.1
-huggingface-hub==2.0.0
+huggingface-hub==1.33.0
 hyperframe==6.1.0
 idna==3.20
 iniconfig==2.3.0
@@ -94,7 +94,7 @@ psycopg-binary==3.3.6
 pyarrow==25.0.1
 pycparser==3.0
 pydantic==2.13.5
-pydantic-core==2.49.0
+pydantic-core==2.46.5
 pydantic-settings==2.15.0
 pygments==2.21.0
 pymdown-extensions==12.1

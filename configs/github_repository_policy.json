@@ -42,7 +42,8 @@
       "secret_scanning_push_protection": {
         "status": "enabled"
       }
-    }
+    },
+    "delete_branch_on_merge": true
   },
   "private_vulnerability_reporting": true,
   "vulnerability_alerts": true,

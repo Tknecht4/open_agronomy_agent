@@ -143,13 +143,16 @@ def test_rendered_site_audit_rejects_rc3_reproducibility_sources(tmp_path: Path)
 def test_pages_workflow_audit_rejects_floating_action(tmp_path: Path) -> None:
     source = ROOT / ".github/workflows/docs.yml"
     workflow = tmp_path / "docs.yml"
-    workflow.write_text(
-        source.read_text(encoding="utf-8").replace(
-            "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
-            "actions/checkout@v6",
-        ),
-        encoding="utf-8",
+    import re
+
+    mutated, replacements = re.subn(
+        r"actions/checkout@[0-9a-f]{40}",
+        "actions/checkout@v6",
+        source.read_text(encoding="utf-8"),
+        count=1,
     )
+    assert replacements == 1, "Expected a commit-pinned checkout action to mutate"
+    workflow.write_text(mutated, encoding="utf-8")
 
     errors = check_public_docs.audit_pages_workflow(workflow)
 

@@ -73,6 +73,9 @@ separate gate.
 
 ## Validation
 
+Development and tests require Node 24 or newer. Product code retains its ES2020
+browser contract; Node-hosted tests have a separate ES2022 typecheck.
+
 ```bash
 cd frontend
 npm ci

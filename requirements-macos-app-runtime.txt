@@ -5,5 +5,5 @@
 mlx==0.32.2
 mlx-lm==0.31.3
 mlx-vlm==0.7.3
-huggingface_hub==2.0.0
+huggingface_hub==1.33.0
 transformers==5.17.0

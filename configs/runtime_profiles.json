@@ -9,7 +9,7 @@
   "active_rag_profiles": [
     {
       "path": "configs/rag.yaml",
-      "sha256": "8f45880dbadf368848d52251aaafb24e25b17d9baa7923aa7707f6880fc04b91",
+      "sha256": "31bf7dac5f6607fd8f7a981324167d1041e90ccf543afaa9a668df54e68caf28",
       "status": "active",
       "runtime_corpus_audit_required": true,
       "runtime_policy": {
