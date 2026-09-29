@@ -57,6 +57,8 @@ class TransferBudget:
         with self.lock:
             self.bytes += amount
             self.reserved -= released
+            if self.bytes > self.limit:
+                self.byte_refusals += 1
 
     def release(self, amount: int) -> None:
         with self.lock:
@@ -98,7 +100,7 @@ def bounded_cog_proxy(hrefs: dict[str, str]):
     All outward requests use httpx without redirects. This also prevents SAS
     query strings from entering GDAL paths, errors, and receipts.
     """
-    state = {"bytes": 0, "reserved": 0, "requests": 0, "rejected": 0, "budget_rejected": 0}
+    state = {"bytes": 0, "reserved": 0, "requests": 0, "rejected": 0, "budget_rejected": 0, "protocol_errors": 0}
     lock = threading.Lock()
     batch = _ACTIVE_BUDGET.get()
     transfer_limit = min(MAX_COG_TRANSFER_BYTES, batch.per_scene) if batch else MAX_COG_TRANSFER_BYTES
@@ -142,6 +144,14 @@ def bounded_cog_proxy(hrefs: dict[str, str]):
                             self._reject(502)
                             return
                         if upstream.headers.get("Content-Encoding", "identity").lower() != "identity":
+                            self._reject(502)
+                            return
+                        # This proxy requires fixed-length identity bodies. HTTPX
+                        # honors chunked framing over a simultaneous Content-Length;
+                        # accepting both would invalidate our reservation bound.
+                        if "Transfer-Encoding" in upstream.headers:
+                            with lock:
+                                state["protocol_errors"] += 1
                             self._reject(502)
                             return
                         length_text = upstream.headers.get("Content-Length")
@@ -203,6 +213,7 @@ def bounded_cog_proxy(hrefs: dict[str, str]):
                                         # already fetched, stop forwarding, and fail the chip.
                                         state["reserved"] -= min(len(chunk), reserved)
                                         reserved -= min(len(chunk), reserved)
+                                        state["protocol_errors"] += 1
                                         overrun = True
                                     else:
                                         state["reserved"] -= len(chunk)
@@ -227,6 +238,13 @@ def bounded_cog_proxy(hrefs: dict[str, str]):
                                     reserved -= released
                                     if batch is not None:
                                         batch.consume(unreported, released)
+                            with lock:
+                                if upstream.num_bytes_downloaded > length:
+                                    state["protocol_errors"] += 1
+                                if state["bytes"] > transfer_limit:
+                                    state["budget_rejected"] += 1
+                                    if batch is not None:
+                                        batch.reject_scene()
                             if reserved:
                                 with lock:
                                     state["reserved"] -= reserved
@@ -241,6 +259,8 @@ def bounded_cog_proxy(hrefs: dict[str, str]):
     try:
         local = {key: f"http://127.0.0.1:{server.server_port}/{key}.tif" for key in hrefs}
         yield local, state
+        if state["protocol_errors"]:
+            raise RuntimeError("COG response framing rejected")
         if batch is not None and state["budget_rejected"]:
             raise RuntimeError("COG transfer budget exceeded")
     finally:

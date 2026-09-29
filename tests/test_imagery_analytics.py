@@ -334,15 +334,16 @@ def test_cog_proxy_rejects_encoding_and_stops_declared_length_overrun(monkeypatc
         handler.send_error = lambda code: handler.statuses.append(code)
         handler._forward(head=False)
         return handler
-    with analytics._bounded_cog_proxy({"B02": "https://allowlisted.test/redacted"}) as (_, state):
-        rejected = request()
-        assert rejected.statuses == [502] and state["bytes"] == 0
-        mode["encoding"] = "identity"
-        overrun = request()
-        assert overrun.statuses == [206]
-        assert overrun.close_connection is True
-        assert overrun.wfile.getvalue() == b""
-        assert state["bytes"] == 4 and state["reserved"] == 0
+    with pytest.raises(RuntimeError, match="framing rejected"):
+        with analytics._bounded_cog_proxy({"B02": "https://allowlisted.test/redacted"}) as (_, state):
+            rejected = request()
+            assert rejected.statuses == [502] and state["bytes"] == 0
+            mode["encoding"] = "identity"
+            overrun = request()
+            assert overrun.statuses == [206]
+            assert overrun.close_connection is True
+            assert overrun.wfile.getvalue() == b""
+            assert state["bytes"] == 4 and state["reserved"] == 0
 
 
 def test_nodata_and_zero_index_denominator_are_explicit(tmp_path, monkeypatch):
