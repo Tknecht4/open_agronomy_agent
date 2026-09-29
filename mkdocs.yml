@@ -82,6 +82,7 @@ nav:
       - Testing and claims: developer/testing.md
       - Release-candidate gates: developer/release-readiness.md
   - Operations:
+      - Release evaluation: operations/release-evaluation.md
       - Use the workspace: operations/workspace.md
       - Native setup: operations/native-setup.md
       - Field uploads and imagery pilot: operations/field-data-pilot.md

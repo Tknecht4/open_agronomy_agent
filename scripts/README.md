@@ -13,6 +13,7 @@
 | Tools/data | `smoke_*`, `build_prairie_spatial_pack.py`, `verify_prairie_spatial_pack.py` | Fixture/provider and package contracts, not field truth |
 | Ingestion/build | `ingest_*`, `build_*corpus*`, geospatial builders | Require source, rights, hashes, deterministic outputs |
 | Evaluation | `run_open_agronomy_benchmark.py`, `run_open_agronomy_benchmark_v2.py`, `run_observed_system_rehearsal.py`, `run_benchmark_capability_conformance.py`, v2/v3 audits, model matrix, judges, analyzers | Preserve identities and separation; v2 dry execution, capability conformance, and observed-system rehearsal are harness QA, not performance evidence |
+| Release evaluation foundation | `run_release_evaluation.py`, `analyze_release_evaluation.py` | Registry-bound engineering checks, product observations, offline reanalysis and compatible reference gates; semantic review remains explicit and source-bound |
 | Workspace profiling | `profile_workspace_backend.py`, `profile_workspace_model.py`, `profile_frontend_build.mjs` | Synthetic local timing and build receipts; never agronomic quality, provider availability, or a release latency budget |
 | Optional field imagery | `inspect_field_imagery.py`, `analyze_field_imagery.py`, `collect_imagery_assessment.py` | Public HLS discovery/chips and bounded research acquisition; explicit online mode, saved polygon and outside-checkout private cache |
 | Geospatial foundation | `discover_field_sources.py`, `analyze_field_terrain.py` | Keyless-first source metadata discovery; offline local DTM processing with contextual extent, optional PyFlwDir environment, source-bound GeoTIFF/JSON and unknown edge/TWI support |
@@ -350,3 +351,12 @@ invalidates final product quality while retaining a successfully generated draft
 ### Bounded imagery selection
 
 `select_field_imagery.py plan` freezes up to eight candidates (default three) and an explicit `--index`, `--support`, `--min-valid-fraction` policy. `run --plan` uses the existing private cache and source processors, retaining every failure and refusing a complete winner while any candidate is unavailable. Both require a new `--output` path and explicit `--online` for egress. Run-level COG payload/request limits supplement storage and per-scene limits; they are not a whole-job deadline. See the [selection operator guide](../docs/public/operations/geospatial-foundation.md#select-imagery-by-valid-field-support) for commands, exit statuses and scientific limits.
+
+## Release evaluation foundation
+
+Use the [canonical operator guide](../docs/public/operations/release-evaluation.md)
+for `ci`, `smoke`, `baseline` and `release` profiles, exact-identity resume,
+retention and offline analysis. The registry controls required components,
+cohorts, trials and comparison limits. CI uses a mock backend and cannot
+establish Gemma behavior. Full model profiles retain answer-level evidence
+privately; publication uses the aggregate projection after inspection.

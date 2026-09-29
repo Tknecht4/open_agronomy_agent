@@ -15,6 +15,7 @@
 | Chat/answer path | `test_chat_service_field_context.py`, `test_agent_context_reservation.py` |
 | Execution parity | `test_execution_core.py`, `test_retrieval_component_arms.py`, `test_regional_context_admission.py`, `test_tool_planner_end_to_end.py` |
 | Models/evaluation | `test_model_profile_controls.py`, `test_evals.py`, `test_codex_app_server_egress.py`, `test_final_benchmark_readiness.py`, `test_eval_replication_contract.py`, `test_rc3_checkpoint_analysis.py`, `test_rc3_posthoc_semantic_review.py`, v2 audit/metrics/runner/runtime-contract tests, v3 readiness and capability-conformance tests |
+| Release evaluation foundation | `test_release_evaluation.py`, `test_release_eval_executor.py`, `test_release_eval_analysis.py`, `test_release_eval_runner.py`, `test_offline_retrieval_scoring.py`, `test_evaluation_suite_inventory.py` |
 | Geometry/offline | `test_geospatial_service.py`, `test_field_lan_launch.py` |
 | Security/release | `test_security_evidence.py`, `test_validate_conference_release_authority.py` |
 
@@ -65,3 +66,13 @@ npm run build
 ## Failure modes and claim boundary
 
 Test collection errors, leaked global state, hidden network use, nondeterministic timing, platform-only assumptions, and fixture/evaluation leakage are defects. Report exact counts and commands. “Focused tests passed” must never be rewritten as “the full system passed,” and neither automated tests nor an LLM judge support an agronomist-equivalence claim.
+
+## Release evaluation foundation
+
+The [operator guide](../docs/public/operations/release-evaluation.md) defines
+profile and evidence boundaries. Focused foundation tests exercise validated
+registries, scorer controls, product execution, gold isolation, ledger integrity,
+resume drift rejection, unknown-preserving analysis and reference gates. The
+separate release-evaluation CI job also runs the deterministic `ci` profile,
+including all six required components. Its mock responses protect engineering
+contracts; they do not validate Gemma generation or agronomic recommendations.

@@ -1,0 +1,9 @@
+# Linux/NVIDIA baseline runtime. Keep CUDA separate from native macOS setup.
+# The completed run also retains every resolved package version.
+-r requirements-phase4-ci.txt
+mlx[cuda12]==0.32.2
+mlx-lm==0.31.3
+transformers==5.17.0
+huggingface_hub==1.33.0
+numpy>=2.3,<3
+rdflib>=7,<8

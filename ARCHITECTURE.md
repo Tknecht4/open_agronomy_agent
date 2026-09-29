@@ -61,7 +61,7 @@ safety, and high-consequence paths handle the entire request.
 
 ## Harnesses and what they prove
 
-There are three evaluation surfaces and they must not be conflated.
+There are four evaluation surfaces and they must not be conflated.
 
 1. `run_open_agronomy_benchmark.py` and `evals.py` execute the historical
    four-arm development harness through `agent.generate_answer`. It retains
@@ -73,6 +73,19 @@ There are three evaluation surfaces and they must not be conflated.
 3. `run_v3_competence_candidate.py` freezes a larger candidate matrix and
    process/ledger contracts. A real production executor and current authority
    are still required; its dry run is orchestration QA, not model evidence.
+4. `run_release_evaluation.py` loads `configs/release_evaluation_v1.json` and
+   composes instrument, capability, retrieval, field-data, product-contract and
+   performance checks with scenario execution through `execute_agent_request`.
+   `release_evaluation.py` owns validated plans and identities,
+   `release_eval_executor.py` owns isolated persisted product cells,
+   `release_eval_runner.py` owns workers and immutable retention, and
+   `release_eval_analysis.py` owns lane-specific summaries and matched gates;
+   `release_eval_reanalysis.py` verifies and recomputes retained evidence offline.
+   Raw and kernel reference arms remain ablations with their own execution
+   boundaries; synthetic backend faults run only with declared mock cases.
+   Evaluation gold stays in the controller and never enters worker retrieval,
+   prompts or training. Engineering status cannot establish domain competence.
+   See the [canonical operator guide](docs/public/operations/release-evaluation.md).
 
 The September two-Gemma assessment used the first surface because it is the
 complete retained model-comparison harness. Its results therefore support the

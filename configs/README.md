@@ -13,6 +13,7 @@
 | Product-selection registry | `runtime_profiles.json` | Sole active/default model and RAG admission surface; file presence is not activation |
 | RC3 development checkpoint | `final_benchmark_round_rc3.json` | Completed and frozen exposed-and-tuned, three-trial `development_rerun_nonclaim` under runtime v2; not claim-eligible and not a Benchmark v3 result |
 | Successor corpus development | `open_agronomy_successor_development.json` | Exposed 256-case four-arm regression using active `rag.yaml`; covers U.S. analogue retrieval, Ontario-table handling, and authority boundaries. Any answer-affecting change requires a new run identity; it is not sealed or claim-eligible evaluation. |
+| Release evaluation foundation | `release_evaluation_v1.json` | Versioned required components and exposed cohorts; mock CI, MLX smoke/baseline/release profiles, explicit semantic-review policy and compatible-reference limits; never claim-eligible |
 | Benchmark lifecycle registry | `benchmark_round_lifecycle_v1.json` | Append-only completion status and checkpoint receipts; keeps frozen launch-plan bytes unchanged |
 | RC1 orchestration | `final_benchmark_round_rc1.json` | Frozen historical benchmark contract, not current-code validation |
 | RC2 development rerun | `final_benchmark_round_rc2.json` | Frozen historical planning/evidence identity; not the current default |
@@ -159,3 +160,18 @@ reserved. Unknown tokenizers use labelled estimates; provider enforcement can
 still reject input. No automatic KV quantization, rotating cache, or new model
 selection is enabled by these settings. Context policy changes require a new
 runtime identity and fresh evaluation; historical benchmark scores stay frozen.
+
+## Release evaluation registry
+
+`release_evaluation_v1.json` composes six required engineering components and
+separates scenario assertions from independent domain scoring. Its foundation
+cohorts are 36 exposed harness scenarios and the 256-case exposed successor
+development set. Trials, conversation turns and dependent field bundles do not
+increase the number of independent scenarios. The current required domain-review
+coverage is explicitly zero; missing semantic labels remain unknown and
+`review_pending`, even when engineering gates pass. Change the policy in a new
+version when review coverage becomes a required gate; do not infer a domain pass
+from this foundation default. All external claims remain ineligible.
+
+See the [canonical operator guide](../docs/public/operations/release-evaluation.md)
+for profile limits, review records, retention and reference compatibility.
