@@ -225,6 +225,7 @@ def test_cog_proxy_reserves_concurrent_ranges_before_streaming(monkeypatch):
             pass
 
     class FakeUpstream:
+        num_bytes_downloaded = 0
         status_code = 206
         headers = {"Content-Length": "3", "Content-Range": "bytes 0-2/3"}
         def __enter__(self):
@@ -234,6 +235,7 @@ def test_cog_proxy_reserves_concurrent_ranges_before_streaming(monkeypatch):
         def iter_raw(self, size):
             started.set()
             assert release.wait(5)
+            self.num_bytes_downloaded = 3
             yield b"abc"
 
     class FakeClient:
@@ -292,6 +294,7 @@ def test_cog_proxy_rejects_encoding_and_stops_declared_length_overrun(monkeypatc
         def server_close(self):
             pass
     class FakeResponse:
+        num_bytes_downloaded = 0
         status_code = 206
         @property
         def headers(self):
@@ -302,6 +305,7 @@ def test_cog_proxy_rejects_encoding_and_stops_declared_length_overrun(monkeypatc
         def __exit__(self, *args):
             pass
         def iter_raw(self, size):
+            self.num_bytes_downloaded = len(mode["payload"])
             yield mode["payload"]
     class FakeClient:
         def __init__(self, **kwargs):

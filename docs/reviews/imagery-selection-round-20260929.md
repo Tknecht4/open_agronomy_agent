@@ -22,6 +22,10 @@ The frozen example policy required 80% valid interior NDVI with 60 m cloud and 2
 
 The previous temporary imagery environment and chips were absent when this stage began; they were not claimed as available replay evidence. A new isolated environment and fresh bounded acquisitions supplied this round. Prior receipts and the initial missing-interpreter failure remain retained. Automatic network review initially rejected the public geometries as sensitive; exact public-source derivation evidence resolved the assumption before the successful retry. Precise geometries, raw metadata/pixels and local receipts remain outside the public package.
 
+## Independent-review repair
+
+Review reproduced an HTTPX failure-accounting gap: a connection could truncate before a complete 16 KiB iterator chunk, causing consumed bytes to disappear from the yielded-chunk counter. Five partial responses consumed 40,960 bytes while the initial invocation counter reported zero. The repaired transport reconciles HTTPX's actual downloaded-byte counter before releasing reservations, including buffered tails after exceptions or downstream interruption. Real default-chunk regressions cover a wholly buffered partial body and a complete chunk plus partial tail under both batch and per-scene caps; these supplement the original small-chunk concurrency controls. Test doubles now expose the same response counter as HTTPX. The failed probe remains preserved. This changes failure accounting, not source radiometry, masks, cache identity or selection policy.
+
 ## Remaining stages
 
 Coverage screening does not prove cloud-free observations, correct aerosol retrieval, crop-only support, geolocation accuracy, cross-sensor comparability or field response. The bounded latest page can miss a better older scene and introduces seasonal/cloud missingness bias. Water remains included by the existing clear-class policy. Registration on surveyed boundaries, common-support temporal comparisons, baseline/sensor effects and separately identified 10 m products remain later work. No imagery-derived field action is authorized by a selected receipt.

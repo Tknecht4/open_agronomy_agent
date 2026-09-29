@@ -176,6 +176,7 @@ def bounded_cog_proxy(hrefs: dict[str, str]):
                                         batch.reject_scene()
                                 self._reject(429)
                                 return
+                        accounted = 0
                         try:
                             self.send_response(200 if head else 206)
                             self.send_header("Content-Length", str(length))
@@ -194,6 +195,7 @@ def bounded_cog_proxy(hrefs: dict[str, str]):
                                     continue
                                 with lock:
                                     state["bytes"] += len(chunk)
+                                    accounted += len(chunk)
                                     if batch is not None:
                                         batch.consume(len(chunk), min(len(chunk), reserved))
                                     if len(chunk) > reserved or len(chunk) > remaining_declared:
@@ -212,6 +214,19 @@ def bounded_cog_proxy(hrefs: dict[str, str]):
                                     return
                                 self.wfile.write(chunk)
                         finally:
+                            # HTTPX may buffer a short raw chunk and then raise
+                            # before yielding it (or we may stop forwarding while
+                            # more data is already buffered). Those consumed bytes
+                            # still spend quota. Reconcile before releasing capacity.
+                            unreported = upstream.num_bytes_downloaded - accounted
+                            if unreported > 0:
+                                with lock:
+                                    state["bytes"] += unreported
+                                    released = min(unreported, reserved)
+                                    state["reserved"] -= released
+                                    reserved -= released
+                                    if batch is not None:
+                                        batch.consume(unreported, released)
                             if reserved:
                                 with lock:
                                     state["reserved"] -= reserved

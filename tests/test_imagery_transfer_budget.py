@@ -87,3 +87,47 @@ def test_invalid_and_nested_budgets_are_rejected_without_egress():
     with cog.transfer_budget(20,8):
         with pytest.raises(ValueError,match='nested'):
             with cog.transfer_budget(20,8): pass
+
+
+@pytest.mark.parametrize('declared,delivered', [(16384,8192),(32768,24576)])
+@pytest.mark.parametrize('limiter', ['batch','scene'])
+def test_truncated_buffered_body_spends_quota_before_reservation_released(monkeypatch,declared,delivered,limiter):
+    """Real HTTPX discards an unyielded partial chunk on RemoteProtocolError."""
+    from types import SimpleNamespace
+    responses=[]
+    def client(*a,**kw):
+        return httpx.Client(*a,event_hooks={'response':[responses.append]},**kw)
+    monkeypatch.setattr(cog,'httpx',SimpleNamespace(Client=client,HTTPError=httpx.HTTPError))
+    # Keep the production chunk size: the former one-byte test fixture hid this.
+    assert cog._PROXY_CHUNK_BYTES==16384
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self,*a):pass
+        def do_GET(self):
+            self.send_response(206)
+            self.send_header('Content-Length',str(declared))
+            self.send_header('Content-Range',f'bytes 0-{declared-1}/{declared*2}')
+            self.send_header('Connection','close');self.end_headers()
+            try:self.wfile.write(b'x'*delivered);self.wfile.flush()
+            except (OSError,BrokenPipeError):pass
+            self.close_connection=True
+    server=ThreadingHTTPServer(('127.0.0.1',0),Handler)
+    thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+    cap=declared+cog._PROXY_CHUNK_BYTES
+    batch_limit=cap if limiter=='batch' else cap*4
+    scene_limit=cap if limiter=='scene' else cap*4
+    try:
+        with cog.transfer_budget(batch_limit,scene_limit,max_requests=8) as budget:
+            with pytest.raises(RuntimeError,match='budget exceeded'):
+                with cog.bounded_cog_proxy({'red':f'http://127.0.0.1:{server.server_port}/red.tif'}) as (urls,state):
+                    with pytest.raises(httpx.RemoteProtocolError):
+                        httpx.get(urls['red'],headers={'Range':f'bytes=0-{declared-1}'},timeout=5)
+                    # The failed read spent bytes, so the next reservation fails.
+                    assert httpx.get(urls['red'],headers={'Range':f'bytes=0-{declared-1}'},timeout=5).status_code==429
+            snap=budget.snapshot()
+            assert snap['bytes']==state['bytes']==delivered
+            assert snap['bytes']==sum(r.num_bytes_downloaded for r in responses)
+            assert snap['reserved']==state['reserved']==0
+            assert snap['http_requests']==2
+            assert snap['byte_limit_refusals' if limiter=='batch' else 'scene_limit_refusals']==1
+    finally:
+        server.shutdown();server.server_close();thread.join(timeout=5)
