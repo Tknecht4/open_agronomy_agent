@@ -7,6 +7,7 @@ import shutil
 import sqlite3
 import time
 import uuid
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -55,6 +56,7 @@ def create_backup(
     try:
         db_snapshot = staged_dir / DB_SNAPSHOT_NAME
         _sqlite_backup(db_path, db_snapshot)
+        db_snapshot_sha256 = _sha256(db_snapshot)
         artifact_snapshot = staged_dir / ARTIFACTS_DIR_NAME
         _copy_artifacts(artifact_root, artifact_snapshot)
         knowledge_snapshot = staged_dir / KNOWLEDGE_UPDATES_DIR_NAME
@@ -65,6 +67,18 @@ def create_backup(
                     f"knowledge update root not found: {knowledge_update_root}"
                 )
             _copy_artifacts(knowledge_update_root, knowledge_snapshot)
+
+        # The SQLite snapshot and filesystem copy occur at different instants.
+        # Reject a copied tree that no longer satisfies the snapshot's live
+        # references. This does not make arbitrary concurrent file writes atomic.
+        validation = _rebase_staged_artifact_references(
+            db_snapshot,
+            source_root=artifact_root,
+            target_root=artifact_root,
+            staged_root=artifact_snapshot,
+        )
+        if validation["staged_database_sha256"] != db_snapshot_sha256:
+            raise RuntimeError("backup validation changed the SQLite snapshot")
 
         manifest = {
             "format": (
@@ -240,6 +254,12 @@ def restore_backup(
                 target.chmod(0o600)
                 _assert_file_entry(target, entry)
             _restore_knowledge_update_permissions(staged_knowledge)
+        transform = _rebase_staged_artifact_references(
+            staged_db,
+            source_root=Path(manifest["source"]["artifact_root"]),
+            target_root=target_artifact_root,
+            staged_root=staged_artifacts,
+        )
     except BaseException:
         for staged in staged_paths:
             _remove_path(staged)
@@ -266,7 +286,7 @@ def restore_backup(
         raise
     _restore_checkpoint("journal_prepared", journal_path)
     _commit_staged_restore(journal_path)
-    return manifest
+    return {**manifest, "restore_transform": transform}
 
 
 def restore_journal_path(target_db_path: Path) -> Path:
@@ -717,6 +737,130 @@ def _sqlite_backup(source: Path, target: Path) -> None:
     finally:
         source_conn.close()
     target.chmod(0o600)
+
+
+def _rebase_staged_artifact_references(
+    db_path: Path, *, source_root: Path, target_root: Path, staged_root: Path,
+) -> dict[str, Any]:
+    """Validate store-owned references and rebase legacy absolute URIs in a staged DB.
+
+    The source backup and its SQLite snapshot remain unchanged. The restored
+    database's transformed identity is subsequently bound by the restore journal.
+    """
+    if not source_root.is_absolute():
+        raise ValueError("backup artifact root must be absolute")
+    if ".." in source_root.parts:
+        raise ValueError("backup artifact root is unsafe")
+    counts = {"attachments": 0, "exports": 0, "export_files": 0}
+
+    def bound_path(uri: str, *, directory: bool = False, required: bool = True) -> tuple[str, Path]:
+        if not isinstance(uri, str) or not uri or ".." in Path(uri).parts:
+            raise ValueError("stored artifact reference is unsafe")
+        path = Path(uri)
+        try:
+            relative = path.relative_to(source_root) if path.is_absolute() else _safe_relative(uri)
+        except ValueError as exc:
+            raise ValueError("stored artifact reference is outside backup source root") from exc
+        if relative == Path("."):
+            raise ValueError("stored artifact reference names the storage root")
+        staged = staged_root / relative
+        if required and not (staged.is_dir() if directory else staged.is_file()):
+            raise ValueError(f"stored artifact reference is missing from backup: {relative}")
+        return str(target_root / relative) if path.is_absolute() else uri, staged
+
+    connection = sqlite3.connect(str(db_path))
+    connection.row_factory = sqlite3.Row
+
+    def rows_in_batches(table: str, columns: str) -> Iterator[sqlite3.Row]:
+        # A keyset scan bounds Python memory and avoids a live result cursor
+        # while updating the same table on this connection.
+        last_rowid = 0
+        while True:
+            rows = connection.execute(
+                f"SELECT rowid AS restore_rowid, {columns} FROM {table} "
+                "WHERE rowid > ? ORDER BY rowid LIMIT 128",
+                (last_rowid,),
+            ).fetchall()
+            if not rows:
+                return
+            for row in rows:
+                yield row
+            last_rowid = rows[-1]["restore_rowid"]
+
+    try:
+        tables = {
+            row[0] for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('phase4_attachments', 'phase4_exports')"
+            )
+        }
+        if "phase4_attachments" in tables:
+            for row in rows_in_batches(
+                "phase4_attachments", "id, storage_uri, size_bytes, sha256, deleted_at",
+            ):
+                rebased, staged = bound_path(row["storage_uri"], required=row["deleted_at"] is None)
+                if row["deleted_at"] is None and (
+                    staged.stat().st_size != row["size_bytes"] or _sha256(staged) != row["sha256"]
+                ):
+                    raise ValueError("stored attachment size or checksum differs from backup artifact")
+                if rebased != row["storage_uri"]:
+                    connection.execute(
+                        "UPDATE phase4_attachments SET storage_uri = ? WHERE id = ?", (rebased, row["id"])
+                    )
+                    counts["attachments"] += 1
+        if "phase4_exports" in tables:
+            for row in rows_in_batches("phase4_exports", "id, storage_uri, metadata"):
+                rebased, _ = bound_path(row["storage_uri"], directory=True)
+                metadata = json.loads(row["metadata"])
+                if not isinstance(metadata, dict):
+                    raise ValueError("stored export metadata is invalid")
+                files = metadata.get("files")
+                row_file_rewrites = 0
+                if files is not None:
+                    if not isinstance(files, dict):
+                        raise ValueError("stored export file references are invalid")
+                    records = metadata.get("file_manifest")
+                    if records is None and isinstance(metadata.get("manifest"), dict):
+                        records = metadata["manifest"].get("files")
+                    if records is not None and (
+                        not isinstance(records, dict) or set(records) != set(files)
+                    ):
+                        raise ValueError("stored export file manifest does not match references")
+                    for name, uri in files.items():
+                        if not isinstance(name, str):
+                            raise ValueError("stored export file name is invalid")
+                        updated, staged_file = bound_path(uri)
+                        if records is not None:
+                            record = records[name]
+                            if (
+                                not isinstance(record, dict)
+                                or staged_file.stat().st_size != record.get("size_bytes")
+                                or _sha256(staged_file) != record.get("sha256")
+                            ):
+                                raise ValueError("stored export file size or checksum differs from backup artifact")
+                        if updated != uri:
+                            files[name] = updated
+                            counts["export_files"] += 1
+                            row_file_rewrites += 1
+                if rebased != row["storage_uri"] or row_file_rewrites:
+                    connection.execute(
+                        "UPDATE phase4_exports SET storage_uri = ?, metadata = ? WHERE id = ?",
+                        (rebased, json.dumps(metadata, sort_keys=True), row["id"]),
+                    )
+                    if rebased != row["storage_uri"]:
+                        counts["exports"] += 1
+        connection.commit()
+    except BaseException:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
+    return {
+        "schema_version": "open_agronomy_agent.restore_artifact_rebase.v1",
+        "source_artifact_root": str(source_root),
+        "target_artifact_root": str(target_root),
+        "rewritten": counts,
+        "staged_database_sha256": _sha256(db_path),
+    }
 
 
 def _copy_artifacts(source: Path, target: Path) -> None:

@@ -179,3 +179,13 @@ code, authorized field context and feedback, not guaranteed original prompt byte
 `geospatial/cog.py` and `geospatial/products.py` own bounded range transfer and the existing imagery-cache admission/publication lifecycle for HLS and Sentinel-2. `geospatial/raster.py` owns fractional support, reductions and index preview rendering. `sentinel2_analytics.py` orchestrates the optional polygon operator; `geospatial/sentinel2.py` owns C1 metadata/header admission, source-anchored 20 m preparation, SCL masks and independent whole/interior support. `imagery_worker.py` dispatches source-specific operators without reusing HLS corrections for Sentinel-2. Native per-band inputs and processed products remain separately hashed; no runtime corpus or training authority follows from processing support. Sentinel-2 app controls and registration/temporal products remain follow-on integrations.
 
 `imagery_selection.py` and `imagery_selection_worker.py` add an optional two-step operator: freeze a bounded candidate list, then assess every candidate using existing provider processors and `geospatial/scene_quality.py`. Explicit per-index support policy, deterministic coverage ranking, unknown-preserving decisions and source-bound receipts are shared across HLS and Sentinel-2. `geospatial/cog.py` owns invocation-scoped transfer/request accounting; this workflow adds no cache or serving endpoint.
+
+
+`imagery_receipts.py` owns the shared current HLS point/polygon index-support
+contract. The app service applies it to cached analysis, worker readback and direct
+previews; the browser checks support before rendering. File hashes alone do not
+qualify a scientific observation. `server/storage/backup.py` separately validates
+snapshot-to-artifact references and transforms store-owned absolute paths only in
+a staged relocated restore, whose identity is bound by the restore journal. See
+`docs/reviews/system-reliability-audit-20260929.md` for reproduced gaps and remaining
+worker, multi-store recovery and scientific qualification limits.

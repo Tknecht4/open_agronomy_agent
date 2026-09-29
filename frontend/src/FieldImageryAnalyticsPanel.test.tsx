@@ -14,18 +14,23 @@ const point = { kind: 'point' as const, point: { lon: -113.6, lat: 53.3 } }
 const hash = 'a'.repeat(64)
 const previewPath = `/api/demo/fields/field-1/imagery/analyses/${hash}/preview.png`
 const receipt = {
-  status: 'available', chip_hash: hash, geometry_hash: 'b'.repeat(64), process_version: 'hls-chip-v2',
+  status: 'available', chip_hash: hash, geometry_hash: 'b'.repeat(64), process_version: 'hls-chip-v4-hls-radiometry-index-qa',
+  provider_id: 'hls-s30-planetary-computer', source_native_grid: true,
+  grid: { width: 4, height: 4, resolution_m: 30 },
   preview_url: previewPath, elapsed_seconds: 1.2, cog_transfer_bytes: null,
   source: { provider_id: 'hls-s30-planetary-computer', collection: 'hls2-s30', scene_id: 'hls2-s30:scene-1', acquired_at: '2025-06-10T00:00:00Z',
     availability_at: '2025-06-11T00:00:00Z', scene_cloud_percent: 25, asset_ids: { B04: 'hls2-s30:scene-1:B04' } },
   qa: { field_area_m2: 10000, valid_area_m2: 8000, valid_area_fraction: 0.8, nodata_area_m2: 0,
-    excluded_area_m2_by_reason: { cloud: 1500 }, overlap_note: 'QA reason areas may overlap; do not sum them' },
+    water_flag_area_m2: 0, index_undefined_area_m2_by_reason: {
+      ndvi_negative_reflectance: 0, ndvi_nonpositive_denominator: 0, ndmi_negative_reflectance: 0, ndmi_nonpositive_denominator: 8000 },
+    excluded_area_m2_by_reason: { cloud: 2000 }, overlap_note: 'QA reason areas may overlap; do not sum them' },
   zonal_stats: { NDVI: { mean: 0.53, min: 0.1, max: 0.8, area_m2: 8000 }, NDMI: { mean: null, min: null, max: null, area_m2: 0 } },
 }
 
 const pointAvailability = { status: 'ready', network_mode: 'online', sampling_modes: ['field_polygon', 'point_pixel', 'point_buffer'], sample_radius_bounds_m: { min: 15, max: 1500 } }
 const pointReceipt = {
   ...receipt,
+  process_version: 'hls-point-sample-v4-hls-radiometry-index-qa',
   grid: { crs: 'EPSG:32612', width: 1, height: 1, resolution_m: 30, resampling_method: 'nearest' },
   zonal_stats: { NDVI: { mean: 0.53, min: 0.53, max: 0.53, area_m2: 900 }, NDMI: { mean: null, min: null, max: null, area_m2: 0 } },
   sampling: {
@@ -38,6 +43,8 @@ const pointReceipt = {
     limitation: 'A sampled pixel may include neighboring land cover; it is not a field boundary.',
   },
   qa: { sample_area_m2: 900, valid_area_m2: 900, valid_area_fraction: 1, nodata_area_m2: 0,
+    water_flag_area_m2: 0, index_undefined_area_m2_by_reason: {
+      ndvi_negative_reflectance: 0, ndvi_nonpositive_denominator: 0, ndmi_negative_reflectance: 0, ndmi_nonpositive_denominator: 900 },
     excluded_area_m2_by_reason: {}, overlap_note: 'QA reasons may overlap.' },
 }
 const v4PointReceipt = {
@@ -56,7 +63,7 @@ const bufferReceipt = { ...pointReceipt,
   zonal_stats: { NDVI: { mean: 0.53, min: 0.1, max: 0.8, area_m2: 8000 }, NDMI: { mean: null, min: null, max: null, area_m2: 0 } },
   grid: { ...pointReceipt.grid, width: 4, height: 4 },
   sampling: { ...pointReceipt.sampling, mode: 'point_buffer', support_kind: 'point_buffer', sample_radius_m: 60, pixel_count: 16, valid_pixel_count: 12 },
-  qa: { ...pointReceipt.qa, sample_area_m2: bufferArea, valid_area_m2: 8000, valid_area_fraction: 8000 / bufferArea, excluded_area_m2_by_reason: { cloud: bufferArea - 8000 } },
+  qa: { ...pointReceipt.qa, index_undefined_area_m2_by_reason: { ...pointReceipt.qa.index_undefined_area_m2_by_reason, ndmi_nonpositive_denominator: 8000 }, sample_area_m2: bufferArea, valid_area_m2: 8000, valid_area_fraction: 8000 / bufferArea, excluded_area_m2_by_reason: { cloud: bufferArea - 8000 } },
 }
 
 const objectUrl = vi.fn(() => 'blob:field-preview')
@@ -212,7 +219,7 @@ describe('FieldImageryAnalyticsPanel', () => {
     apiGet.mockResolvedValue(pointAvailability)
     apiPost.mockResolvedValue({ ...pointReceipt,
       qa: { ...pointReceipt.qa, water_flag_area_m2: 900,
-        index_undefined_area_m2_by_reason: { ndvi_negative_reflectance: 900, ndvi_nonpositive_denominator: 0 } },
+        index_undefined_area_m2_by_reason: { ...pointReceipt.qa.index_undefined_area_m2_by_reason, ndvi_negative_reflectance: 900 } },
       zonal_stats: { ...pointReceipt.zonal_stats,
         NDVI: { mean: null, min: null, max: null, area_m2: 0 } },
     })
@@ -336,7 +343,7 @@ describe('FieldImageryAnalyticsPanel', () => {
   it('preserves zero valid pixels and undefined indices without claiming valid zeros', async () => {
     apiGet.mockResolvedValue(pointAvailability)
     apiPost.mockResolvedValue({ ...pointReceipt, status:'empty_valid_area', sampling:{...pointReceipt.sampling,valid_pixel_count:0},
-      qa:{...pointReceipt.qa,valid_area_m2:0,valid_area_fraction:0,nodata_area_m2:900},
+      qa:{...pointReceipt.qa,valid_area_m2:0,valid_area_fraction:0,nodata_area_m2:900, index_undefined_area_m2_by_reason: v4PointReceipt.qa.index_undefined_area_m2_by_reason},
       zonal_stats:{NDVI:{mean:null,min:null,max:null,area_m2:0},NDMI:{mean:null,min:null,max:null,area_m2:0}} })
     render(<FieldImageryAnalyticsPanel fieldContextId="field-1" geometryKey="point-1" geometry={point} imageryReady />)
     open(); setDates()
@@ -394,7 +401,7 @@ describe('FieldImageryAnalyticsPanel', () => {
 
   it('keeps QA-valid but mathematically undefined pixel indices unknown', async () => {
     apiGet.mockResolvedValue(pointAvailability)
-    apiPost.mockResolvedValue({...pointReceipt,zonal_stats:{NDVI:{mean:null,min:null,max:null,area_m2:0},NDMI:{mean:null,min:null,max:null,area_m2:0}}})
+    apiPost.mockResolvedValue({...pointReceipt,qa:{...pointReceipt.qa,index_undefined_area_m2_by_reason:{...pointReceipt.qa.index_undefined_area_m2_by_reason,ndvi_nonpositive_denominator:900}},zonal_stats:{NDVI:{mean:null,min:null,max:null,area_m2:0},NDMI:{mean:null,min:null,max:null,area_m2:0}}})
     render(<FieldImageryAnalyticsPanel fieldContextId="field-1" geometryKey="point-1" geometry={point} imageryReady />)
     open(); setDates()
     await waitFor(()=>expect(screen.getByRole('button',{name:'Analyze scene'})).toBeEnabled())
@@ -476,15 +483,16 @@ describe('FieldImageryAnalyticsPanel', () => {
       expect(fetch).not.toHaveBeenCalled()
     })
 
-    it('keeps finite ordered ratios outside minus-one to one without clamping', async () => {
+    it('rejects finite ordered ratios outside minus-one to one', async () => {
       apiGet.mockResolvedValue(pointAvailability)
       apiPost.mockResolvedValue({...pointReceipt,zonal_stats:{...pointReceipt.zonal_stats,[name]:{mean:2.4,min:2.4,max:2.4,area_m2:900}}})
       render(<FieldImageryAnalyticsPanel fieldContextId="field-1" geometryKey="point-1" geometry={point} imageryReady />)
       open(); setDates()
       await waitFor(()=>expect(screen.getByRole('button',{name:'Analyze scene'})).toBeEnabled())
       fireEvent.click(screen.getByRole('button',{name:'Analyze scene'}))
-      expect(await screen.findByText('2.400')).toBeInTheDocument()
-      expect(await screen.findByRole('img')).toHaveAttribute('src','blob:field-preview')
+      expect(await screen.findByText(/response did not confirm the requested sampling area/)).toBeInTheDocument()
+      expect(screen.queryByText('2.400')).not.toBeInTheDocument()
+      expect(fetch).not.toHaveBeenCalled()
     })
   })
 
@@ -507,7 +515,7 @@ describe('FieldImageryAnalyticsPanel', () => {
 
   it.each([0.714285671710968, 0.7142857909202576])('accepts observed float32 buffer mean %s without changing the receipt', async (mean) => {
     apiGet.mockResolvedValue(pointAvailability)
-    const observed = {...bufferReceipt, zonal_stats:{...bufferReceipt.zonal_stats,
+    const observed = {...bufferReceipt, qa:{...bufferReceipt.qa,index_undefined_area_m2_by_reason:v4PointReceipt.qa.index_undefined_area_m2_by_reason}, zonal_stats:{...bufferReceipt.zonal_stats,
       NDMI:{mean,min:0.7142857313156128,max:0.7142857313156128,area_m2:8000},
     }}
     apiPost.mockResolvedValue(observed)
@@ -520,6 +528,35 @@ describe('FieldImageryAnalyticsPanel', () => {
     expect(screen.getByText('0.714')).toBeInTheDocument()
     expect(await screen.findByRole('img')).toHaveAttribute('src','blob:field-preview')
     expect(observed.zonal_stats.NDMI).toEqual({mean,min:0.7142857313156128,max:0.7142857313156128,area_m2:8000})
+  })
+
+  it.each([
+    ['nodata overlaps clear support', { ...receipt, qa: { ...receipt.qa, nodata_area_m2: 10000 } }],
+    ['exclusion overlaps clear support', { ...receipt, qa: { ...receipt.qa, excluded_area_m2_by_reason: { cloud: 10000 } } }],
+    ['unexplained non-clear support', { ...receipt, qa: { ...receipt.qa, excluded_area_m2_by_reason: {} } }],
+    ['water includes nodata', { ...receipt, qa: { ...receipt.qa, nodata_area_m2: 1000, water_flag_area_m2: 10000 } }],
+    ['excess clear area', { ...receipt, qa: { ...receipt.qa, valid_area_m2: 15000, valid_area_fraction: 1.5 } }],
+    ['mismatched fraction', { ...receipt, qa: { ...receipt.qa, valid_area_fraction: 0.7 } }],
+    ['unknown version', { ...receipt, process_version: 'hls-chip-v2' }],
+    ['wrong provider', { ...receipt, provider_id: 'hls-l30-planetary-computer' }],
+    ['point area', { ...receipt, qa: { ...receipt.qa, sample_area_m2: 10000 } }],
+    ['oversized field', { ...receipt, grid: { width: 1, height: 1, resolution_m: 30 } }],
+    ['empty status with clear area', { ...receipt, status: 'empty_valid_area' }],
+    ['out-of-range index', { ...receipt, zonal_stats: { ...receipt.zonal_stats, NDVI: { mean: 1.2, min: 1.2, max: 1.2, area_m2: 8000 } } }],
+    ['unsupported numeric index', { ...receipt, zonal_stats: { ...receipt.zonal_stats, NDMI: { mean: 0, min: 0, max: 0, area_m2: 0 } } }],
+    ['missing reason map', { ...receipt, qa: { ...receipt.qa, index_undefined_area_m2_by_reason: undefined } }],
+    ['contradictory reason support', { ...receipt, qa: { ...receipt.qa, index_undefined_area_m2_by_reason: { ...receipt.qa.index_undefined_area_m2_by_reason, ndvi_negative_reflectance: 8000 } } }],
+    ['nonfinite excluded area', { ...receipt, qa: { ...receipt.qa, excluded_area_m2_by_reason: { cloud: NaN } } }],
+  ])('rejects polygon %s before rendering observations or requesting a preview', async (_label, invalid) => {
+    apiPost.mockResolvedValue(invalid)
+    render(<FieldImageryAnalyticsPanel fieldContextId="field-1" geometryKey="polygon-1" geometry={polygon} imageryReady />)
+    open(); setDates()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Analyze scene' })).toBeEnabled())
+    fireEvent.click(screen.getByRole('button', { name: 'Analyze scene' }))
+    expect(await screen.findByText(/response did not confirm the requested sampling area/)).toBeInTheDocument()
+    expect(screen.queryByText('0.530')).not.toBeInTheDocument()
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+    expect(fetch).not.toHaveBeenCalled()
   })
 
 })

@@ -36,7 +36,7 @@ type AnalyticsReceipt = {
   sampling?: PointSampling
   zonal_stats?: { NDVI?: IndexStats; NDMI?: IndexStats }
   grid?: { crs?: string; width?: number; height?: number; resolution_m?: number; resampling_method?: string }
-  chip_hash?: string; geometry_hash?: string; process_version?: string
+  chip_hash?: string; geometry_hash?: string; process_version?: string; source_native_grid?: boolean
   elapsed_seconds?: number | null; cog_transfer_bytes?: number | null; cache_hit?: boolean
   preview_url?: string | null; message?: string; reason?: string
 }
@@ -65,6 +65,7 @@ function errorText(cause: unknown): string {
 }
 
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
+const record = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value)
 const nonnegative = (value: unknown): value is number => finite(value) && value >= 0
 const coordinate = (value: unknown): value is [number, number] => Array.isArray(value) && value.length === 2
   && finite(value[0]) && finite(value[1]) && Math.abs(value[0]) <= 180 && Math.abs(value[1]) <= 90
@@ -100,10 +101,49 @@ function footprintCoversPoint(footprint: PointSampling['footprint'], point: [num
 function validIndexStats(stats: IndexStats | undefined, qaArea: number): boolean {
   if (!stats || !nonnegative(stats.area_m2) || stats.area_m2 > qaArea) return false
   if (stats.area_m2 === 0) return stats.mean === null && stats.min === null && stats.max === null
-  if (!finite(stats.mean) || !finite(stats.min) || !finite(stats.max)) return false
+  if (!finite(stats.mean) || !finite(stats.min) || !finite(stats.max)
+    || [stats.min, stats.mean, stats.max].some(value => Math.abs(value) > 1 + 1e-6)) return false
   // Native float32 weighted sums can drift just outside the observed extrema.
   const tolerance = 1e-6 * Math.max(1, Math.abs(stats.min), Math.abs(stats.mean), Math.abs(stats.max))
   return stats.min <= stats.mean + tolerance && stats.mean <= stats.max + tolerance
+}
+
+/** The current HLS contract is identical for field and point index support. */
+function validHlsSupport(receipt: AnalyticsReceipt, point: boolean): boolean {
+  const qa = receipt.qa, grid = receipt.grid
+  if (!record(qa) || !record(grid) || receipt.source_native_grid !== true
+    || receipt.process_version !== (point ? 'hls-point-sample-v4-hls-radiometry-index-qa' : 'hls-chip-v4-hls-radiometry-index-qa')
+    || (!point && receipt.sampling !== undefined)
+    || !Number.isSafeInteger(grid.width) || !Number.isSafeInteger(grid.height)
+    || !finite(grid.width) || !finite(grid.height) || grid.width < 1 || grid.height < 1 || grid.width > 256 || grid.height > 256
+    || grid.resolution_m !== 30) return false
+  const total = point ? qa.sample_area_m2 : qa.field_area_m2
+  const clear = qa.valid_area_m2, reasons = qa.index_undefined_area_m2_by_reason
+  if ((point ? 'field_area_m2' in qa : 'sample_area_m2' in qa)
+    || !nonnegative(total) || total <= 0 || total > grid.width * grid.height * 900 + 1e-3
+    || !nonnegative(clear) || clear > total + 1e-5
+    || !nonnegative(qa.valid_area_fraction) || qa.valid_area_fraction > 1
+    || Math.abs(qa.valid_area_fraction - clear / total) > 1e-6
+    || (receipt.status === 'empty_valid_area') !== (clear === 0)) return false
+  const tolerance = Math.max(1e-5, total * 1e-6)
+  const excludedArea = (value: unknown) => nonnegative(value) && value <= total - clear + tolerance
+  const expected = ['ndvi_negative_reflectance', 'ndvi_nonpositive_denominator',
+    'ndmi_negative_reflectance', 'ndmi_nonpositive_denominator']
+  if (!nonnegative(qa.nodata_area_m2) || !excludedArea(qa.nodata_area_m2)
+    || !nonnegative(qa.water_flag_area_m2) || qa.water_flag_area_m2 > total - qa.nodata_area_m2 + tolerance
+    || !record(qa.excluded_area_m2_by_reason) || !Object.values(qa.excluded_area_m2_by_reason).every(excludedArea)
+    || qa.nodata_area_m2 + Object.values(qa.excluded_area_m2_by_reason).reduce((sum, value) => sum + value, 0) < total - clear - tolerance
+    || typeof qa.overlap_note !== 'string' || !record(reasons)
+    || Object.keys(reasons).length !== expected.length
+    || !expected.every(key => Object.prototype.hasOwnProperty.call(reasons, key)
+      && nonnegative(reasons[key]) && reasons[key] <= clear + tolerance)) return false
+  for (const name of ['NDVI', 'NDMI'] as const) {
+    const stats = receipt.zonal_stats?.[name], prefix = name.toLowerCase()
+    if (!validIndexStats(stats, clear + tolerance) || !nonnegative(stats?.area_m2)
+      || Math.abs(stats.area_m2 + reasons[`${prefix}_negative_reflectance`]
+        + reasons[`${prefix}_nonpositive_denominator`] - clear) > tolerance) return false
+  }
+  return true
 }
 
 /** A point result cannot inherit the legacy polygon interpretation. */
@@ -148,25 +188,7 @@ function validPointReceipt(receipt: AnalyticsReceipt, geometry: FieldGeometry, m
     || (qa.index_undefined_area_m2_by_reason !== undefined &&
       (typeof qa.index_undefined_area_m2_by_reason !== 'object' || Array.isArray(qa.index_undefined_area_m2_by_reason)
         || !Object.values(qa.index_undefined_area_m2_by_reason).every(value => nonnegative(value) && value <= qa.valid_area_m2!)))) return false
-  if (!validIndexStats(receipt.zonal_stats?.NDVI, qa.valid_area_m2)
-    || !validIndexStats(receipt.zonal_stats?.NDMI, qa.valid_area_m2)) return false
-  if (receipt.process_version === 'hls-point-sample-v4-hls-radiometry-index-qa') {
-    const reasons = qa.index_undefined_area_m2_by_reason
-    const expected = ['ndvi_negative_reflectance', 'ndvi_nonpositive_denominator',
-      'ndmi_negative_reflectance', 'ndmi_nonpositive_denominator']
-    if (!reasons || Object.keys(reasons).length !== expected.length
-      || !expected.every(key => Object.prototype.hasOwnProperty.call(reasons, key)
-        && nonnegative(reasons[key]) && reasons[key] <= qa.valid_area_m2!)
-      || !nonnegative(qa.water_flag_area_m2) || qa.water_flag_area_m2 > qa.sample_area_m2) return false
-    const tolerance = Math.max(1e-5, qa.sample_area_m2 * 1e-6)
-    for (const name of ['NDVI', 'NDMI'] as const) {
-      const support = receipt.zonal_stats?.[name]?.area_m2
-      const prefix = name.toLowerCase()
-      if (!nonnegative(support) || Math.abs(support + reasons[`${prefix}_negative_reflectance`]
-        + reasons[`${prefix}_nonpositive_denominator`] - qa.valid_area_m2) > tolerance) return false
-    }
-  }
-  return true
+  return validHlsSupport(receipt, true)
 }
 
 function statusText(receipt: AnalyticsReceipt, mode: SamplingMode): string {
@@ -289,7 +311,8 @@ export function FieldImageryAnalyticsPanel({ fieldContextId, geometryKey, geomet
       })
       if (requestId !== requestRef.current) return
       if ((result.status === 'available' || result.status === 'empty_valid_area')
-        && (point ? !validPointReceipt(result, geometry, mode, Number(radius)) : result.sampling && (result.sampling as { mode: string }).mode !== 'field_polygon')) {
+        && (result.provider_id !== providerId || result.source?.provider_id !== providerId
+          || (point ? !validPointReceipt(result, geometry, mode, Number(radius)) : !validHlsSupport(result, false)))) {
         setReceipt({ status: 'unavailable', message: 'The response did not confirm the requested sampling area. No indices or preview are shown. Try again.' })
         return
       }

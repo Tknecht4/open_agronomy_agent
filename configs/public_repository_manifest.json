@@ -752,7 +752,8 @@
     "tests/test_imagery_transfer_budget.py",
     "tests/test_imagery_selection.py",
     "tests/test_imagery_selection_raster.py",
-    "docs/reviews/imagery-selection-round-20260929.md"
+    "docs/reviews/imagery-selection-round-20260929.md",
+    "docs/reviews/system-reliability-audit-20260929.md"
   ],
   "trees": [
     "src",
