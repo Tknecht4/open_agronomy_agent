@@ -207,6 +207,19 @@ class TraceStore:
             )
             cursor.execute(
                 """
+                CREATE TABLE IF NOT EXISTS turn_operations (
+                    session_id TEXT NOT NULL,
+                    client_operation_id TEXT NOT NULL,
+                    request_sha256 TEXT NOT NULL,
+                    turn_id TEXT NOT NULL,
+                    PRIMARY KEY (session_id, client_operation_id),
+                    FOREIGN KEY(session_id) REFERENCES sessions(id),
+                    FOREIGN KEY(turn_id) REFERENCES turns(id)
+                )
+                """
+            )
+            cursor.execute(
+                """
                 CREATE TRIGGER IF NOT EXISTS turns_core_content_no_update
                 BEFORE UPDATE OF
                     user_message, answer, created_at, system_state, trace,
@@ -1380,7 +1393,11 @@ class TraceStore:
         prompt_messages: list[dict[str, Any]] | None = None,
         metadata: dict[str, Any] | None = None,
         event_stream: bool = True,
+        client_operation_id: str | None = None,
+        operation_request_sha256: str | None = None,
     ) -> str:
+        if bool(client_operation_id) != bool(operation_request_sha256):
+            raise ValueError("client operation identity and request hash must be supplied together")
         now = _now()
         turn_id = self._new_id("turn")
         prompt_messages_payload = _as_json(prompt_messages or [])
@@ -1418,6 +1435,11 @@ class TraceStore:
                     metadata_payload,
                 ),
             )
+            if client_operation_id is not None and operation_request_sha256 is not None:
+                cursor.execute(
+                    "INSERT INTO turn_operations(session_id, client_operation_id, request_sha256, turn_id) VALUES (?, ?, ?, ?)",
+                    (session_id, client_operation_id, operation_request_sha256, turn_id),
+                )
             for route in [trace.get("route")] if isinstance(trace, dict) and trace.get("route") else []:
                 cursor.execute(
                     "INSERT INTO routes(turn_id, payload) VALUES (?, ?)",
@@ -1469,6 +1491,14 @@ class TraceStore:
                     (session_id, turn_id, "answer.completed", _as_json({"turn_id": turn_id, "mode": system_state.get("mode")}), now),
                 )
         return turn_id
+
+    def get_turn_operation(self, session_id: str, client_operation_id: str) -> dict[str, str] | None:
+        with self._cursor() as cursor:
+            row = cursor.execute(
+                "SELECT request_sha256, turn_id FROM turn_operations WHERE session_id = ? AND client_operation_id = ?",
+                (session_id, client_operation_id),
+            ).fetchone()
+        return {"request_sha256": str(row["request_sha256"]), "turn_id": str(row["turn_id"])} if row else None
 
     def get_turn(self, turn_id: str) -> dict[str, Any] | None:
         with self._cursor() as cursor:

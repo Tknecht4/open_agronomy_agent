@@ -256,7 +256,7 @@ def _unit_conversion(inputs: Mapping[str, Any]) -> AgronomicCalculation:
         CalculationOperation.UNIT_CONVERSION,
         answer,
         to_unit,
-        f"{_format_decimal(value)} {from_unit} × {_format_decimal(factor)} = {_format_decimal(answer)} {to_unit}",
+        f"{_format_operand(value)} {from_unit} × {_format_operand(from_factor)} ÷ {_format_operand(to_factor)} {_format_formula_result(answer)} {to_unit}",
         {"value": value, "from_unit": from_unit, "to_unit": to_unit, "conversion_factor": factor},
     )
 
@@ -274,9 +274,9 @@ def _seed_rate_mass(inputs: Mapping[str, Any]) -> AgronomicCalculation:
         answer,
         "kg/ha",
         (
-            f"({_format_decimal(target)} plants/m² × {_format_decimal(tkw)} g/1,000 seeds) ÷ "
-            f"({_format_decimal(germination)} × {_format_decimal(survival)} × 100) = "
-            f"{_format_decimal(answer)} kg/ha"
+            f"({_format_operand(target)} plants/m² × {_format_operand(tkw)} g/1,000 seeds) ÷ "
+            f"({_format_operand(germination)} × {_format_operand(survival)} × 100) "
+            f"{_format_formula_result(answer)} kg/ha"
         ),
         {
             "target_plants_per_m2": target,
@@ -309,17 +309,17 @@ def _seed_rate_mass_imperial(inputs: Mapping[str, Any]) -> AgronomicCalculation:
     if method == "published_factor_10":
         value = published
         formula = (
-            f"({_format_decimal(target)} plants/ft² × {_format_decimal(tkw)} g/1,000 seeds) ÷ "
-            f"({_format_decimal(established_fraction)} × 10) = {_format_decimal(published)} lb/ac"
+            f"({_format_operand(target)} plants/ft² × {_format_operand(tkw)} g/1,000 seeds) ÷ "
+            f"({_format_operand(established_fraction)} × 10) {_format_formula_result(published)} lb/ac"
         )
         alternative = f"exact dimensional conversion gives {_format_decimal(dimensional)} lb/ac"
     else:
         value = dimensional
         formula = (
-            f"({_format_decimal(target)} plants/ft² × 43,560 ft²/ac × "
-            f"{_format_decimal(tkw)} g/1,000 seeds) ÷ "
-            f"({_format_decimal(established_fraction)} × 453.59237 g/lb) = "
-            f"{_format_decimal(dimensional)} lb/ac"
+            f"({_format_operand(target)} plants/ft² × 43,560 ft²/ac × "
+            f"{_format_operand(tkw)} g/1,000 seeds) ÷ "
+            f"({_format_operand(established_fraction)} × 453.59237 g/lb) "
+            f"{_format_formula_result(dimensional)} lb/ac"
         )
         alternative = f"Manitoba's published approximate factor-10 rule gives {_format_decimal(published)} lb/ac"
     return _result(
@@ -335,7 +335,7 @@ def _seed_rate_mass_imperial(inputs: Mapping[str, Any]) -> AgronomicCalculation:
             "method": method,
         },
         assumptions=(
-            f"established fraction = germination × post-germination survival = {_format_decimal(established_fraction)}",
+            f"established fraction = germination × post-germination survival = {_format_operand(established_fraction)}",
             "published_factor_10 is an approximate provincial formula" if method == "published_factor_10" else "dimensional conversion is the primary result",
             alternative,
         ),
@@ -356,7 +356,7 @@ def _fertilizer_product_mass(inputs: Mapping[str, Any]) -> AgronomicCalculation:
         CalculationOperation.FERTILIZER_PRODUCT_MASS,
         answer,
         "kg product/ha",
-        f"{_format_decimal(target)} kg {nutrient}/ha ÷ {_format_decimal(percent / Decimal('100'))} = {_format_decimal(answer)} kg product/ha",
+        f"{_format_operand(target)} kg {nutrient}/ha ÷ {_format_operand(percent / Decimal('100'))} {_format_formula_result(answer)} kg product/ha",
         {"nutrient_target_kg_per_ha": target, "nutrient_percent": percent, "nutrient_label": nutrient},
     )
 
@@ -375,7 +375,7 @@ def _nutrient_delivery(inputs: Mapping[str, Any]) -> AgronomicCalculation:
         CalculationOperation.NUTRIENT_DELIVERY,
         answer,
         f"kg {nutrient}/ha",
-        f"{_format_decimal(rate)} kg product/ha × {_format_decimal(percent / Decimal('100'))} = {_format_decimal(answer)} kg {nutrient}/ha",
+        f"{_format_operand(rate)} kg product/ha × {_format_operand(percent / Decimal('100'))} {_format_formula_result(answer)} kg {nutrient}/ha",
         {"product_rate_kg_per_ha": rate, "nutrient_percent": percent, "nutrient_label": nutrient},
     )
 
@@ -394,7 +394,7 @@ def _sprayer_application_volume(inputs: Mapping[str, Any]) -> AgronomicCalculati
         CalculationOperation.SPRAYER_APPLICATION_VOLUME,
         answer,
         "L/ha",
-        f"({_format_decimal(nozzle_count)} × {_format_decimal(flow)} L/min × 600) ÷ ({_format_decimal(speed)} km/h × {_format_decimal(boom)} m) = {_format_decimal(answer)} L/ha",
+        f"({_format_operand(nozzle_count)} × {_format_operand(flow)} L/min × 600) ÷ ({_format_operand(speed)} km/h × {_format_operand(boom)} m) {_format_formula_result(answer)} L/ha",
         {
             "nozzle_count": nozzle_count,
             "flow_l_per_min_per_nozzle": flow,
@@ -422,7 +422,7 @@ def _tank_coverage(inputs: Mapping[str, Any]) -> AgronomicCalculation:
         CalculationOperation.TANK_COVERAGE,
         answer,
         "ha",
-        f"({_format_decimal(tank)} L − {_format_decimal(unusable)} L) ÷ {_format_decimal(rate)} L/ha = {_format_decimal(answer)} ha",
+        f"({_format_operand(tank)} L − {_format_operand(unusable)} L) ÷ {_format_operand(rate)} L/ha {_format_formula_result(answer)} ha",
         {"tank_volume_l": tank, "application_volume_l_per_ha": rate, "unusable_volume_l": unusable},
         assumptions=assumptions,
     )
@@ -455,7 +455,7 @@ def _daily_gdd(inputs: Mapping[str, Any]) -> AgronomicCalculation:
         CalculationOperation.DAILY_GDD,
         answer,
         "GDD",
-        f"max(0, (({_format_decimal(adjusted_max)} + {_format_decimal(adjusted_min)}) ÷ 2) − {_format_decimal(base)}) = {_format_decimal(answer)} GDD",
+        f"max(0, (({_format_operand(adjusted_max)} + {_format_operand(adjusted_min)}) ÷ 2) − {_format_operand(base)}) {_format_formula_result(answer)} GDD",
         {
             "max_temp_c": maximum,
             "min_temp_c": minimum,
@@ -476,12 +476,12 @@ def _accumulated_gdd(inputs: Mapping[str, Any]) -> AgronomicCalculation:
     if any(value < 0 for value in values):
         raise ValueError("daily_gdd_values cannot contain negative values")
     answer = sum(values, Decimal("0"))
-    expression = " + ".join(_format_decimal(value) for value in values)
+    expression = " + ".join(_format_operand(value) for value in values)
     return _result(
         CalculationOperation.ACCUMULATED_GDD,
         answer,
         "GDD",
-        f"{expression} = {_format_decimal(answer)} GDD",
+        f"{expression} {_format_formula_result(answer)} GDD",
         {"daily_gdd_values": values},
     )
 
@@ -495,7 +495,7 @@ def _row_population(inputs: Mapping[str, Any]) -> AgronomicCalculation:
         CalculationOperation.ROW_POPULATION,
         answer,
         "plants/m²",
-        f"{_format_decimal(plants)} plants/m ÷ {_format_decimal(spacing)} m = {_format_decimal(answer)} plants/m²",
+        f"{_format_operand(plants)} plants/m ÷ {_format_operand(spacing)} m {_format_formula_result(answer)} plants/m²",
         {"plants_per_row_m": plants, "row_spacing_m": spacing},
     )
 
@@ -509,7 +509,7 @@ def _field_product_total(inputs: Mapping[str, Any]) -> AgronomicCalculation:
         CalculationOperation.FIELD_PRODUCT_TOTAL,
         answer,
         "kg",
-        f"{_format_decimal(area)} ha × {_format_decimal(rate)} kg/ha = {_format_decimal(answer)} kg",
+        f"{_format_operand(area)} ha × {_format_operand(rate)} kg/ha {_format_formula_result(answer)} kg",
         {"area_ha": area, "product_rate_kg_per_ha": rate},
     )
 
@@ -538,18 +538,18 @@ def _area_weighted_average(inputs: Mapping[str, Any]) -> AgronomicCalculation:
     tolerance = _nonnegative(inputs, "area_tolerance_ha", default=max(Decimal("0.01"), total_area * Decimal("0.001")))
     if abs(described_area - total_area) > tolerance:
         raise ValueError(
-            f"zone areas total {_format_decimal(described_area)} ha but total_area_ha is "
-            f"{_format_decimal(total_area)} ha; supply the missing/extra area or increase an explicit tolerance"
+            f"zone areas total {_format_operand(described_area)} ha but total_area_ha is "
+            f"{_format_operand(total_area)} ha; supply the missing/extra area or increase an explicit tolerance"
         )
     answer = sum((zone["area_ha"] * zone["value"] for zone in zones), Decimal("0")) / described_area
     expression = " + ".join(
-        f"{_format_decimal(zone['area_ha'])}×{_format_decimal(zone['value'])}" for zone in zones
+        f"{_format_operand(zone['area_ha'])}×{_format_operand(zone['value'])}" for zone in zones
     )
     return _result(
         CalculationOperation.AREA_WEIGHTED_AVERAGE,
         answer,
         value_unit,
-        f"({expression}) ÷ {_format_decimal(described_area)} = {_format_decimal(answer)} {value_unit}",
+        f"({expression}) ÷ {_format_operand(described_area)} {_format_formula_result(answer)} {value_unit}",
         {
             "total_area_ha": total_area,
             "described_area_ha": described_area,
@@ -579,8 +579,8 @@ def _partial_budget(inputs: Mapping[str, Any]) -> AgronomicCalculation:
         answer,
         unit,
         (
-            f"{_format_decimal(added_returns)} + {_format_decimal(reduced_costs)} − "
-            f"{_format_decimal(added_costs)} − {_format_decimal(reduced_returns)} = {_format_decimal(answer)} {unit}"
+            f"{_format_operand(added_returns)} + {_format_operand(reduced_costs)} − "
+            f"{_format_operand(added_costs)} − {_format_operand(reduced_returns)} {_format_formula_result(answer)} {unit}"
         ),
         {
             "added_returns": added_returns,
@@ -610,8 +610,8 @@ def _break_even_price(inputs: Mapping[str, Any]) -> AgronomicCalculation:
         FoundationCalculationOperation.BREAK_EVEN_PRICE,
         answer,
         unit,
-        f"{_format_decimal(cost)} {currency}/{area_unit} {basis_label} ÷ "
-        f"{_format_decimal(harvested)} {yield_unit}/{area_unit} = {_format_decimal(answer)} {unit}",
+        f"{_format_operand(cost)} {currency}/{area_unit} {basis_label} ÷ "
+        f"{_format_operand(harvested)} {yield_unit}/{area_unit} {_format_formula_result(answer)} {unit}",
         dict(inputs),
         assumptions=(f"cost basis: {basis_label}", "yield is a supplied scenario assumption, not a guaranteed harvest"),
         boundary=_ARITHMETIC_BOUNDARY + " This is not a current cash bid or a sale recommendation.",
@@ -634,8 +634,8 @@ def _break_even_yield(inputs: Mapping[str, Any]) -> AgronomicCalculation:
         FoundationCalculationOperation.BREAK_EVEN_YIELD,
         answer,
         unit,
-        f"{_format_decimal(cost)} {currency}/{area_unit} {basis_label} ÷ "
-        f"{_format_decimal(price)} {currency}/{yield_unit} = {_format_decimal(answer)} {unit}",
+        f"{_format_operand(cost)} {currency}/{area_unit} {basis_label} ÷ "
+        f"{_format_operand(price)} {currency}/{yield_unit} {_format_formula_result(answer)} {unit}",
         dict(inputs),
         assumptions=(f"cost basis: {basis_label}", "selling price is a supplied scenario assumption, not a current market quote"),
         boundary=_ARITHMETIC_BOUNDARY + " This is not a current market quote or a crop-sale recommendation.",
@@ -651,7 +651,7 @@ def _current_ratio(inputs: Mapping[str, Any]) -> AgronomicCalculation:
         FoundationCalculationOperation.CURRENT_RATIO,
         answer,
         "ratio",
-        f"{_format_decimal(assets)} current assets ÷ {_format_decimal(liabilities)} current liabilities = {_format_decimal(answer)}",
+        f"{_format_operand(assets)} current assets ÷ {_format_operand(liabilities)} current liabilities {_format_formula_result(answer)}",
         {"current_assets": assets, "current_liabilities": liabilities},
         assumptions=("assets and liabilities have the same currency, farm boundary and statement date",),
         boundary=_ARITHMETIC_BOUNDARY + " A current ratio measures liquidity; it does not by itself establish profitability.",
@@ -667,7 +667,7 @@ def _debt_to_asset_percent(inputs: Mapping[str, Any]) -> AgronomicCalculation:
         FoundationCalculationOperation.DEBT_TO_ASSET_PERCENT,
         answer,
         "%",
-        f"({_format_decimal(debt)} total debt ÷ {_format_decimal(assets)} total assets) × 100 = {_format_decimal(answer)}%",
+        f"({_format_operand(debt)} total debt ÷ {_format_operand(assets)} total assets) × 100 {_format_formula_result(answer)}%",
         {"total_debt": debt, "total_assets": assets},
         assumptions=("debt and assets share the same currency, farm boundary, valuation basis and statement date",),
         boundary=_ARITHMETIC_BOUNDARY + " This balance-sheet snapshot alone does not establish repayment capacity.",
@@ -826,8 +826,22 @@ def _decimal_text(value: Decimal) -> str:
     return text.rstrip("0").rstrip(".") if "." in text else text
 
 
+def _format_operand(value: Decimal) -> str:
+    """Keep supplied quantities and formula factors visible at their precision."""
+    text = format(value, ",f")
+    return text.rstrip("0").rstrip(".") if "." in text else text
+
+
+def _format_formula_result(value: Decimal) -> str:
+    displayed = _format_decimal(value)
+    relation = "=" if Decimal(displayed.replace(",", "")) == value else "≈"
+    return f"{relation} {displayed}"
+
+
 def _format_decimal(value: Decimal) -> str:
     rounded = value.quantize(Decimal("0.001"))
+    if rounded == 0 and value != 0:
+        return f"{value:.3g}"
     if rounded == rounded.to_integral_value():
         return f"{int(rounded):,}"
     return f"{rounded:,.3f}".rstrip("0").rstrip(".")

@@ -6,15 +6,18 @@ import binascii
 import hashlib
 import hmac
 import json
+import logging
 import re
 import secrets
 import time
 import zlib
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from email.parser import BytesParser
 from email.policy import default as email_policy
 from pathlib import Path
+from threading import Lock
 from typing import Any
 from urllib.parse import urlencode, urlparse
 from urllib.request import Request as UrlRequest
@@ -96,7 +99,7 @@ from agronomy_agent.server.schemas import (
 from agronomy_agent.server.services.conversation_scope import (
     ConversationScopeError, bind_conversation_context, identity as conversation_identity,
 )
-from agronomy_agent.server.services.chat_service import run_turn
+from agronomy_agent.server.services.chat_service import ConversationOperationConflict, _session_turn_guard, run_turn
 from agronomy_agent.server.services.answer_renderer import render_structured_answer
 from agronomy_agent.server.services.attachment_scanner import (
     AttachmentRejected,
@@ -483,6 +486,59 @@ def _slugify(value: str) -> str:
 
 def _hash_payload(value: Any) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, default=str).encode("utf-8")).hexdigest()
+
+
+def _completed_hosted_reference_turn_ids(
+    messages: list[dict[str, Any]], legacy_recent: list[dict[str, Any]],
+) -> list[str]:
+    """Return only the receipt-linked completed suffix of visible user turns."""
+    ids: list[str] = []
+    position = len(messages) - 1
+    for turn in reversed(legacy_recent):
+        if position < 1:
+            break
+        assistant = messages[position]
+        user = messages[position - 1]
+        metadata = assistant.get("metadata") if isinstance(assistant.get("metadata"), dict) else {}
+        if (
+            assistant.get("actor") != "assistant"
+            or user.get("actor") != "user"
+            or metadata.get("legacy_turn_id") != turn.get("turn_id")
+            or user.get("content") != turn.get("user_message")
+        ):
+            break
+        ids.append(str(turn["turn_id"]))
+        position -= 2
+    ids.reverse()
+    return ids
+
+
+_HOSTED_TURN_LOCKS_GUARD = Lock()
+_HOSTED_TURN_LOCKS: dict[str, tuple[Lock, int]] = {}
+
+
+@asynccontextmanager
+async def _hosted_turn_guard(thread_id: str):
+    """Keep a hosted thread's visible user/core/assistant sequence adjacent."""
+    with _HOSTED_TURN_LOCKS_GUARD:
+        lock, users = _HOSTED_TURN_LOCKS.get(thread_id, (Lock(), 0))
+        _HOSTED_TURN_LOCKS[thread_id] = (lock, users + 1)
+    acquired = False
+    try:
+        while not acquired:
+            acquired = lock.acquire(blocking=False)
+            if not acquired:
+                await asyncio.sleep(0.01)
+        yield
+    finally:
+        if acquired:
+            lock.release()
+        with _HOSTED_TURN_LOCKS_GUARD:
+            _, users = _HOSTED_TURN_LOCKS[thread_id]
+            if users == 1:
+                del _HOSTED_TURN_LOCKS[thread_id]
+            else:
+                _HOSTED_TURN_LOCKS[thread_id] = (lock, users - 1)
 
 
 def _field_event_sync_http_error(exc: FieldEventSyncError) -> HTTPException:
@@ -2285,6 +2341,8 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
     )
     app = FastAPI(title="Agronomy Agent Cockpit")
     app.state.trace_store = store
+    hosted_turn_tasks: set[asyncio.Task[StreamingResponse]] = set()
+    app.state.hosted_turn_tasks = hosted_turn_tasks
     app.state.frontend_rum_records = []
     app.state.frontend_event_records = []
     app.state.local_pairing_consumed = False
@@ -2747,6 +2805,13 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         ]
         return response
 
+    def _require_local_conversation_runtime() -> None:
+        if not isinstance(store, TraceStore):
+            raise HTTPException(status_code=501, detail={
+                "code": "conversation_storage_unavailable",
+                "message": "Saved conversation routes require the supported local SQLite runtime.",
+            })
+
     def _require_owned_session(
         request: Request,
         session_id: str,
@@ -2755,6 +2820,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         include_turns: bool = True,
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         resolved_user = user or _demo_field_user(request)
+        _require_local_conversation_runtime()
         session = store.get_session(session_id, include_turns=include_turns)
         if not session or not _session_visible_to_user(session, request=request, user=resolved_user):
             raise HTTPException(status_code=404, detail="session not found")
@@ -5211,6 +5277,37 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
 
     @app.post("/chat/stream")
     async def phase4_chat_stream(payload: ChatRequest, user: dict[str, Any] = Depends(current_user)) -> StreamingResponse:
+        guard_key = str(payload.thread_id) if payload.thread_id else f"new:{uuid.uuid4()}"
+
+        async def complete_hosted_turn() -> StreamingResponse:
+            async with _hosted_turn_guard(guard_key):
+                return await _phase4_chat_stream_impl(payload, user)
+
+        task = asyncio.create_task(complete_hosted_turn())
+        # Keep a strong app-owned reference after a caller disconnects. The
+        # turn must retain its guard through the assistant/trace commit.
+        hosted_turn_tasks.add(task)
+        detached = False
+
+        def hosted_turn_done(finished: asyncio.Task[StreamingResponse]) -> None:
+            hosted_turn_tasks.discard(finished)
+            if finished.cancelled():
+                return
+            error = finished.exception()
+            if error is not None and detached:
+                logging.getLogger(__name__).error(
+                    "hosted turn failed after request cancellation",
+                    exc_info=(type(error), error, error.__traceback__),
+                )
+
+        task.add_done_callback(hosted_turn_done)
+        try:
+            return await asyncio.shield(task)
+        except asyncio.CancelledError:
+            detached = True
+            raise
+
+    async def _phase4_chat_stream_impl(payload: ChatRequest, user: dict[str, Any]) -> StreamingResponse:
         runtime_mode(payload.mode)
         profiler = TraceProfiler()
         with profiler.span("thread.load", input_size=len(payload.message)):
@@ -5257,27 +5354,17 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
 
         with profiler.span("thread.persist_trace", metadata={"phase": "user_message"}):
             metadata, legacy_session_id = ensure_legacy_session(thread)
-            # A failed streamed request can leave a visible user message without
-            # a legacy turn. References may use legacy turns only while the two
-            # user-message histories agree through the bounded active window.
-            visible_user_messages = [
-                item["content"] for item in thread.get("messages", [])
-                if item.get("actor") == "user"
-            ]
-            legacy_turn_count = store.count_session_turns(
-                legacy_session_id, exclude_replays=True,
-            )
-            compare_count = min(8, len(visible_user_messages))
+            # A failed streamed request leaves a visible user message without
+            # a legacy turn. Only completed adjacent pairs with exact turn IDs
+            # can anchor references; a later explicit turn restores a suffix.
             legacy_recent = store.get_recent_session_turns(
-                legacy_session_id, limit=max(1, compare_count), exclude_replays=True,
+                legacy_session_id, limit=8, exclude_replays=True,
+            )
+            reference_turn_ids = _completed_hosted_reference_turn_ids(
+                thread.get("messages", []), legacy_recent,
             )
             conversation_reference_history_verified = (
-                len(visible_user_messages) == legacy_turn_count
-                and (
-                    compare_count == 0
-                    or visible_user_messages[-compare_count:]
-                    == [item["user_message"] for item in legacy_recent[-compare_count:]]
-                )
+                bool(reference_turn_ids) or not thread.get("messages")
             )
             user_message = store.create_phase4_message(
                 thread=thread,
@@ -5379,7 +5466,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             ][:6]
             for rank, doc in enumerate(workspace_retrieved_docs, start=1):
                 doc["rank"] = rank
-            result = run_turn(
+            result = await asyncio.to_thread(run_turn,
                 store=store,
                 settings=settings,
                 session_id=legacy_session_id,
@@ -5401,6 +5488,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                     "field_context": active_field_context,
                     "workspace_retrieved_docs": workspace_retrieved_docs,
                     "conversation_reference_history_verified": conversation_reference_history_verified,
+                    "conversation_reference_turn_ids": reference_turn_ids,
                 },
                 profiler=profiler,
             )
@@ -6248,6 +6336,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         include_archived: bool = False,
         include_turns: bool = True,
     ) -> list[dict[str, Any]]:
+        _require_local_conversation_runtime()
         user = _demo_field_user(request)
         sessions = (
             store.list_sessions(include_archived=include_archived)
@@ -6797,6 +6886,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
 
     @app.post("/api/sessions")
     async def create_session(payload: CreateSessionRequest, request: Request) -> dict[str, Any]:
+        _require_local_conversation_runtime()
         user = _demo_field_user(request)
         context = payload.context.model_dump()
         try:
@@ -6824,28 +6914,67 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
 
     @app.patch("/api/sessions/{session_id}")
     async def patch_session(session_id: str, payload: SessionUpdateRequest, request: Request) -> dict[str, Any]:
-        session, user = _require_owned_session(request, session_id)
+        return await asyncio.to_thread(_patch_session_serialized, session_id, payload, request)
 
-        merged_context = None
-        if payload.context:
-            merged_context = _context_with_session_owner(
-                _persistable_demo_turn_context(_authorize_demo_turn_field_context(
-                    request, _bind_turn_context(session, payload.context.model_dump(exclude_unset=True)),
-                )) or {},
-                str(user["id"]),
+    def _patch_session_serialized(
+        session_id: str, payload: SessionUpdateRequest, request: Request,
+    ) -> dict[str, Any]:
+        with _session_turn_guard(store, session_id):
+            session, user = _require_owned_session(request, session_id)
+            merged_context = None
+            if payload.context:
+                merged_context = _context_with_session_owner(
+                    _persistable_demo_turn_context(_authorize_demo_turn_field_context(
+                        request, _bind_turn_context(session, payload.context.model_dump(exclude_unset=True)),
+                    )) or {},
+                    str(user["id"]),
+                )
+
+            updated = store.update_session(
+                session_id,
+                title=payload.title,
+                user_pseudonym=payload.user_pseudonym,
+                tags=payload.tags,
+                context=merged_context,
+                consent=payload.consent.model_dump() if payload.consent else None,
+                archived=payload.archived,
+                status=payload.status,
             )
+            return _session_response(updated or session)
 
-        updated = store.update_session(
-            session_id,
-            title=payload.title,
-            user_pseudonym=payload.user_pseudonym,
-            tags=payload.tags,
-            context=merged_context,
-            consent=payload.consent.model_dump() if payload.consent else None,
-            archived=payload.archived,
-            status=payload.status,
-        )
-        return _session_response(updated or session)
+    def _run_turn_with_persisted_context(
+        *, session_id: str, incoming_context: dict[str, Any],
+        owner_id: str, request: Request, **turn_kwargs: Any,
+    ) -> dict[str, Any]:
+        # Core execution checks operation identity under this same reentrant
+        # guard. Bind against the latest session after queued turns complete.
+        with _session_turn_guard(store, session_id):
+            operation_id = turn_kwargs.get("client_operation_id")
+            operation_hash = turn_kwargs.get("operation_request_sha256")
+            if operation_id and operation_hash and store.get_turn_operation(session_id, operation_id):
+                # Core owns exact replay/conflict semantics. An old, completed
+                # operation must not rebind against newer notes or field facts.
+                return run_turn(store=store, session_id=session_id, session_context=None, **turn_kwargs)
+            latest = store.get_session(session_id, include_turns=False)
+            if latest is None:
+                raise ValueError("session not found")
+            authorized_context = _authorize_demo_turn_field_context(
+                request, _bind_turn_context(latest, incoming_context),
+            )
+            context_update = _persistable_demo_turn_context(authorized_context)
+            result = run_turn(
+                store=store, session_id=session_id,
+                session_context=authorized_context, **turn_kwargs,
+            )
+            if context_update and not result.get("operation_replayed"):
+                store.update_session(
+                    session_id,
+                    include_turns=False,
+                    context=_context_with_session_owner(
+                        _merge_context(latest.get("context"), context_update), owner_id,
+                    ),
+                )
+            return result
 
     @app.post("/api/sessions/{session_id}/turns")
     async def create_turn(
@@ -6859,37 +6988,36 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         runtime_mode(payload.mode)
         selected_rag_config = runtime_rag_config(payload.rag_config)
         selected_model_id = runtime_model_id(payload.model_id, mode=payload.mode)
-
-        authorized_session_context = _authorize_demo_turn_field_context(
-            request,
-            _bind_turn_context(session, payload.session_context),
-        )
-        persistable_session_context = _persistable_demo_turn_context(authorized_session_context)
-        if persistable_session_context:
-            store.update_session(
-                session_id,
-                include_turns=False,
-                context=_context_with_session_owner(
-                    _merge_context(session.get("context"), persistable_session_context),
-                    str(user["id"]),
-                ),
+        operation_id = str(payload.client_operation_id) if payload.client_operation_id else None
+        operation_hash = _hash_payload(payload.model_dump(mode="json", exclude={"client_operation_id"})) if operation_id else None
+        existing_operation = store.get_turn_operation(session_id, operation_id) if operation_id else None
+        if existing_operation and existing_operation["request_sha256"] != operation_hash:
+            raise HTTPException(status_code=409, detail={"code": "operation_conflict", "message": "client operation ID was reused with different request data"})
+        if existing_operation is None:
+            _authorize_demo_turn_field_context(
+                request, _bind_turn_context(session, payload.session_context),
             )
 
         profiler = TraceProfiler()
         try:
-            result = run_turn(
-                store=store,
+            result = await asyncio.to_thread(_run_turn_with_persisted_context,
                 settings=settings,
                 session_id=session_id,
+                incoming_context=payload.session_context,
+                owner_id=str(user["id"]),
+                request=request,
                 message=payload.message,
                 mode=payload.mode,
                 model_id=selected_model_id,
                 rag_config=selected_rag_config,
                 max_tokens=payload.max_tokens,
                 trace_options=payload.trace_options.model_dump(),
-                session_context=authorized_session_context,
                 profiler=profiler,
+                client_operation_id=operation_id,
+                operation_request_sha256=operation_hash,
             )
+        except ConversationOperationConflict as exc:
+            raise HTTPException(status_code=409, detail={"code": "operation_conflict", "message": str(exc)}) from exc
         except LocalModelSnapshotUnavailable as exc:
             raise HTTPException(
                 status_code=503,
@@ -6903,6 +7031,9 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         turn = result.get("turn") if isinstance(result, dict) else None
         if not isinstance(turn, dict):
             raise HTTPException(status_code=500, detail="turn persistence failed")
+        if result.get("operation_replayed"):
+            turn["knowledge_coverage"] = _answer_time_knowledge_coverage(turn.get("trace"))
+            return {"turn_id": result["turn_id"], "turn": turn}
         profiler.add_observed(
             "http.request",
             start_ns=profiler.started_ns,
@@ -6941,21 +7072,17 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         runtime_mode(payload.mode)
         selected_rag_config = runtime_rag_config(payload.rag_config)
         selected_model_id = runtime_model_id(payload.model_id, mode=payload.mode)
-        authorized_session_context = _authorize_demo_turn_field_context(
-            request,
-            _bind_turn_context(session, payload.session_context),
-        )
-        persistable_session_context = _persistable_demo_turn_context(authorized_session_context)
-        if persistable_session_context:
-            store.update_session(
-                session_id,
-                include_turns=False,
-                context=_context_with_session_owner(
-                    _merge_context(session.get("context"), persistable_session_context),
-                    str(user["id"]),
-                ),
+        operation_id = str(payload.client_operation_id) if payload.client_operation_id else None
+        operation_hash = _hash_payload(payload.model_dump(mode="json", exclude={"client_operation_id"})) if operation_id else None
+        existing_operation = store.get_turn_operation(session_id, operation_id) if operation_id else None
+        if existing_operation and existing_operation["request_sha256"] != operation_hash:
+            raise HTTPException(status_code=409, detail={"code": "operation_conflict", "message": "client operation ID was reused with different request data"})
+        # Preserve an HTTP error for a known-invalid request before SSE opens.
+        # The worker repeats this check against fresh state after its queue wait.
+        if existing_operation is None:
+            _authorize_demo_turn_field_context(
+                request, _bind_turn_context(session, payload.session_context),
             )
-
         model_id = None if payload.mode == "mock" else selected_model_id
 
         async def event_stream() -> Any:
@@ -6989,18 +7116,21 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             stream_started_ns = time.monotonic_ns()
             task = asyncio.create_task(
                 asyncio.to_thread(
-                    run_turn,
-                    store=store,
+                    _run_turn_with_persisted_context,
                     settings=settings,
                     session_id=session_id,
+                    incoming_context=payload.session_context,
+                    owner_id=str(user["id"]),
+                    request=request,
                     message=payload.message,
                     mode=payload.mode,
                     model_id=model_id,
                     rag_config=selected_rag_config,
                     max_tokens=payload.max_tokens,
                     trace_options=payload.trace_options.model_dump(),
-                    session_context=authorized_session_context,
                     profiler=profiler,
+                    client_operation_id=operation_id,
+                    operation_request_sha256=operation_hash,
                 )
             )
             heartbeat_count = 0
@@ -7033,6 +7163,9 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
 
             try:
                 result = task.result()
+            except ConversationOperationConflict as exc:
+                yield sse("error", {"code": "operation_conflict", "message": str(exc), "label": "Request conflict", "elapsed_ms": int((time.perf_counter() - started) * 1000)})
+                return
             except LocalModelSnapshotUnavailable as exc:
                 yield sse(
                     "error",
@@ -7043,6 +7176,15 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                         "elapsed_ms": int((time.perf_counter() - started) * 1000),
                     },
                 )
+                return
+            except HTTPException as exc:
+                detail = exc.detail if isinstance(exc.detail, dict) else {"message": str(exc.detail)}
+                yield sse("error", {
+                    "code": detail.get("code") or "request_rejected",
+                    "message": detail.get("boundary") or detail.get("message") or str(exc.detail),
+                    "label": "Request rejected",
+                    "elapsed_ms": int((time.perf_counter() - started) * 1000),
+                })
                 return
             except Exception as exc:
                 yield sse(
@@ -7068,35 +7210,35 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 return
             turn = result["turn"] if isinstance(result.get("turn"), dict) else {}
             answer = str(turn.get("answer") or "")
-            profiler.add_observed(
-                "http.request",
-                start_ns=profiler.started_ns,
-                metadata={"path": f"/api/sessions/{session_id}/turns/stream", "mode": payload.mode},
-            )
-            profiler.add_observed(
-                "ui.stream_response",
-                start_ns=stream_started_ns,
-                metadata={"chunk_size": 48},
-            )
-            phase5_metrics = persist_phase5_turn_record(
-                profiler=profiler,
-                thread_id=session_id,
-                turn_id=str(turn_id),
-                user_id=None,
-                workspace_id=None,
-                answer_text=answer,
-                trace=turn.get("trace", {}) or {},
-                system_state=turn.get("system_state", {}) or {},
-                model_id=str(
-                    (turn.get("system_state") or {}).get("model_id")
-                    or selected_model_id
-                    or settings.default_model_id,
-                ),
-                rag_config_id=selected_rag_config,
-                max_tokens=payload.max_tokens,
-            )
-            turn.setdefault("metadata", {})["phase5_trace_id"] = phase5_metrics["trace_id"]
-            turn["knowledge_coverage"] = _answer_time_knowledge_coverage(turn.get("trace"))
+            if result.get("operation_replayed"):
+                turn["knowledge_coverage"] = _answer_time_knowledge_coverage(turn.get("trace"))
+                phase5_metrics = {"trace_id": None}
+            else:
+                profiler.add_observed(
+                    "http.request",
+                    start_ns=profiler.started_ns,
+                    metadata={"path": f"/api/sessions/{session_id}/turns/stream", "mode": payload.mode},
+                )
+                profiler.add_skipped("ui.stream_response", reason="bytes_sent_after_metric_flush")
+                phase5_metrics = persist_phase5_turn_record(
+                    profiler=profiler,
+                    thread_id=session_id,
+                    turn_id=str(turn_id),
+                    user_id=None,
+                    workspace_id=None,
+                    answer_text=answer,
+                    trace=turn.get("trace", {}) or {},
+                    system_state=turn.get("system_state", {}) or {},
+                    model_id=str(
+                        (turn.get("system_state") or {}).get("model_id")
+                        or selected_model_id
+                        or settings.default_model_id,
+                    ),
+                    rag_config_id=selected_rag_config,
+                    max_tokens=payload.max_tokens,
+                )
+                turn.setdefault("metadata", {})["phase5_trace_id"] = phase5_metrics["trace_id"]
+                turn["knowledge_coverage"] = _answer_time_knowledge_coverage(turn.get("trace"))
 
             while not progress_queue.empty():
                 progress_event = _stream_progress_event_from_span(
@@ -7366,7 +7508,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             else runtime_model_id(payload.model_id, mode=payload.mode)
         )
         try:
-            output = replay_turn(
+            output = await asyncio.to_thread(replay_turn,
                 store=store,
                 settings=settings,
                 base_turn_id=payload.base_turn_id,

@@ -254,3 +254,58 @@ def test_tool_schema_lists_every_operation() -> None:
         operation.value for operation in ALL_CALCULATION_OPERATIONS
     ]
     assert set(schema["operations"]) == {operation.value for operation in ALL_CALCULATION_OPERATIONS}
+
+
+@pytest.mark.parametrize(
+    ("value", "from_unit", "to_unit", "formula"),
+    [
+        (200, "lb/ac", "kg/ha", "200 lb/ac × 1.120851156 ÷ 1 ≈ 224.17 kg/ha"),
+        (100, "kg/ha", "lb/ac", "100 kg/ha × 1 ÷ 1.120851156 ≈ 89.218 lb/ac"),
+        (1, "ac", "ha", "1 ac × 0.40468564224 ÷ 1 ≈ 0.405 ha"),
+        (12.3456, "ha", "ha", "12.3456 ha × 1 ÷ 1 ≈ 12.346 ha"),
+        (50, "ha", "ha", "50 ha × 1 ÷ 1 = 50 ha"),
+    ],
+)
+def test_conversion_formula_preserves_factors_and_marks_rounded_result(
+    value: float, from_unit: str, to_unit: str, formula: str,
+) -> None:
+    result = calculate_agronomic("unit_conversion", {
+        "value": value, "from_unit": from_unit, "to_unit": to_unit,
+    })
+    assert result.formula == formula
+    assert result.as_record()["formula"] == formula
+    assert formula in result.answer()
+
+
+def test_small_positive_operand_is_not_printed_as_zero_denominator() -> None:
+    result = calculate_agronomic("row_population", {
+        "plants_per_row_m": 2, "row_spacing_m": "0.0004",
+    })
+    assert result.formula == "2 plants/m ÷ 0.0004 m = 5,000 plants/m²"
+
+
+def test_display_keeps_nonzero_results_and_exact_total_separate_from_rounding() -> None:
+    small = calculate_agronomic("field_product_total", {
+        "area_ha": 1, "product_rate_kg_per_ha": "0.00001",
+    })
+    assert small.value == Decimal("0.00001")
+    assert not small.answer().startswith("0 kg")
+    exact = calculate_agronomic("field_product_total", {
+        "area_ha": 50, "product_rate_kg_per_ha": 85,
+    })
+    assert exact.formula == "50 ha × 85 kg/ha = 4,250 kg"
+    rounded = calculate_agronomic("field_product_total", {
+        "area_ha": "0.12345", "product_rate_kg_per_ha": "0.23456",
+    })
+    assert rounded.formula == "0.12345 ha × 0.23456 kg/ha ≈ 0.029 kg"
+    assert rounded.as_record()["value_decimal"] == "0.028956432"
+
+
+@pytest.mark.parametrize("operation,inputs", [
+    ("seed_rate_mass", {"target_plants_per_m2": 250, "tkw_g": 40, "germination_pct": 92, "field_survival_pct": 88}),
+    ("seed_rate_mass_imperial", {"target_plants_per_ft2": 28, "tkw_g": 39, "germination_pct": 99, "field_survival_pct": 85, "method": "dimensional"}),
+])
+def test_seed_formula_marks_nonterminating_result_as_approximate(operation, inputs) -> None:
+    result = calculate_agronomic(operation, inputs)
+    assert " ≈ " in result.formula
+    assert " = " not in result.formula

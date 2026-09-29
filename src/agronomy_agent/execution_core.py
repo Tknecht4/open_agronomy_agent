@@ -710,6 +710,8 @@ class AgentExecutionRequest:
     trace_options: Mapping[str, Any] = field(default_factory=dict)
     session_context: Mapping[str, Any] | None = None
     parent_turn_id: str | None = None
+    client_operation_id: str | None = None
+    operation_request_sha256: str | None = None
     profiler: Any | None = None
     generation_backend: GenerationBackend | None = None
     execution_class: str = "product_turn"
@@ -755,6 +757,8 @@ class AgentExecutionRequest:
                 raise TypeError(f"{field_name} must be a bool")
         if not self.arm_id.strip():
             raise ValueError("arm_id is required")
+        if bool(self.client_operation_id) != bool(self.operation_request_sha256):
+            raise ValueError("client operation identity and request hash must be supplied together")
         if self.mode != "agronomic_rag" and (
             not self.document_retrieval_enabled or not self.graph_retrieval_enabled
         ):
@@ -1062,6 +1066,7 @@ class AgentExecutionResult:
     turn: Mapping[str, Any]
     fingerprints: Mapping[str, str]
     arm_id: str
+    operation_replayed: bool = False
     schema_version: str = EXECUTION_RESULT_SCHEMA_VERSION
 
     @classmethod
@@ -1163,18 +1168,22 @@ class AgentExecutionResult:
             turn=dict(turn),
             fingerprints={str(key): str(value) for key, value in fingerprints.items()},
             arm_id=request.arm_id,
+            operation_replayed=payload.get("operation_replayed") is True,
         )
 
     def to_run_turn_payload(self) -> dict[str, Any]:
         """Preserve the historical server response shape."""
 
-        return {
+        result = {
             "turn_id": self.turn_id,
             "parent_turn_id": self.parent_turn_id,
             "turn": dict(self.turn),
             "fingerprints": dict(self.fingerprints),
             "arm_id": self.arm_id,
         }
+        if self.operation_replayed:
+            result["operation_replayed"] = True
+        return result
 
     def to_record(self) -> dict[str, Any]:
         return {

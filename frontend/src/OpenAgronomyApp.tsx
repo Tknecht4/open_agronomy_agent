@@ -2062,6 +2062,10 @@ export function OpenAgronomyApp() {
   const [sessionId, setSessionId] = useState('')
   const activeSessionRef = useRef(sessionId)
   activeSessionRef.current = sessionId
+  const submissionEpochRef = useRef(0)
+  const inflightSessionIdRef = useRef('')
+  const inflightSubmissionRef = useRef<{ sessionId: string; payloadKey: string; operationId: string } | null>(null)
+  const uncertainSubmissionsRef = useRef<Array<{ sessionId: string; payloadKey: string; operationId: string }>>([])
   const conversationRequestRef = useRef(0)
   const [loadingConversation, setLoadingConversation] = useState(false)
   const [activeFieldContextId, setActiveFieldContextId] = useState('')
@@ -2071,6 +2075,8 @@ export function OpenAgronomyApp() {
   const activeConversationKeyRef = useRef(activeFieldConversationKey)
   activeConversationKeyRef.current = activeFieldConversationKey
   const [activeFieldRecordUpdatedAt, setActiveFieldRecordUpdatedAt] = useState('')
+  const activeFieldRecordUpdatedAtRef = useRef(activeFieldRecordUpdatedAt)
+  activeFieldRecordUpdatedAtRef.current = activeFieldRecordUpdatedAt
   const [field, setField] = useState<FieldProfile>({ ...emptyFieldProfile })
   const [fieldName, setFieldName] = useState('')
   const [scenarioId, setScenarioId] = useState('')
@@ -2163,6 +2169,27 @@ export function OpenAgronomyApp() {
     recoveryViewRef.current = { fieldId: activeFieldContextId, conversationKey: activeFieldConversationKey, sessionId, turns, isAnalyzing, savingField, revision: recoveryView.revision + 1 }
   }
   const followConversationRef = useRef(true)
+
+  const rememberUncertainSubmission = (submission: { sessionId: string; payloadKey: string; operationId: string }) => {
+    uncertainSubmissionsRef.current = [...uncertainSubmissionsRef.current.filter(item =>
+      item.sessionId !== submission.sessionId || item.payloadKey !== submission.payloadKey), submission].slice(-8)
+  }
+
+  const leaveSubmissionView = () => {
+    submissionEpochRef.current += 1
+    if (inflightSubmissionRef.current) rememberUncertainSubmission(inflightSubmissionRef.current)
+    inflightSubmissionRef.current = null
+    if (inflightSessionIdRef.current) {
+      const previousSessionId = inflightSessionIdRef.current
+      setSessions((current) => current.map((session) => session.session_id === previousSessionId
+        ? { ...session, turns_included: false } : session))
+      inflightSessionIdRef.current = ''
+    }
+    setIsAnalyzing(false)
+    setPendingQuestion('')
+    setStreamDraft('')
+    setStreamProgress([])
+  }
 
 
   const latestTurn = turns[turns.length - 1] || null
@@ -2490,7 +2517,8 @@ export function OpenAgronomyApp() {
   }, [page, workspaceView, turns.length, isAnalyzing, streamDraft, streamProgress.length])
 
   const applyScenario = (id: string) => {
-    if (isAnalyzing || savingField) return
+    if (savingField) return
+    leaveSubmissionView()
     setFieldTab('details')
     regionalLookupRequestRef.current += 1
     const scenario = sampleProfiles.find((sample) => sample.id === id) || sampleProfiles[0]
@@ -2521,7 +2549,8 @@ export function OpenAgronomyApp() {
   }
 
   const startNewField = () => {
-    if (isAnalyzing || savingField) return
+    if (savingField) return
+    leaveSubmissionView()
     setScenarioId('')
     regionalLookupRequestRef.current += 1
     setIsMapContextChecking(false)
@@ -2553,7 +2582,7 @@ export function OpenAgronomyApp() {
     setBoundaryStatus('No field selected. Add a location when your question needs one.')
   }
 
-  const ensureSession = async (): Promise<string> => {
+  const ensureSession = async (stillCurrent: () => boolean): Promise<string> => {
     const currentSession = sessions.find((session) => session.session_id === sessionId)
     if (
       currentSession &&
@@ -2589,6 +2618,7 @@ export function OpenAgronomyApp() {
         field_record_updated_at: activeFieldRecordUpdatedAt || undefined,
       },
     })
+    if (!stillCurrent()) return created.session_id
     setSessions((current) => [created, ...current])
     setSessionId(created.session_id)
     setTurns(created.turns || [])
@@ -2596,7 +2626,7 @@ export function OpenAgronomyApp() {
   }
 
   const resetChat = () => {
-    if (isAnalyzing) return
+    leaveSubmissionView()
     const baseConversationKey = activeFieldContextId
       ? storedFieldConversationKey(activeFieldContextId)
       : scenarioId ? sampleConversationKey(scenarioId) : 'general'
@@ -2618,13 +2648,13 @@ export function OpenAgronomyApp() {
   }
 
   const openSavedConversation = (id: string) => {
-    if (isAnalyzing) return
     const selected = sessions.find((session) => session.session_id === id)
     if (!selected) return
     const key = sessionContextValue(selected, 'field_conversation_key')
     const selectedBase = key === 'general' || key.startsWith('general:chat:') ? 'general' : conversationBaseKey
     if (selectedBase === 'general' && conversationBaseKey !== 'general') startNewField()
     if (selectedBase !== 'general' && !sessionForField([selected], key, activeFieldContextId)) return
+    leaveSubmissionView()
     rememberConversation(selectedBase, key)
     setActiveFieldConversationKey(key)
     setSessionId(id)
@@ -2641,7 +2671,7 @@ export function OpenAgronomyApp() {
 
   const sendQuestion = async (event: FormEvent) => {
     event.preventDefault()
-    if (isAnalyzing || loadingConversation || !fieldsHydrated || !message.trim()) {
+    if (isAnalyzing || savingField || loadingConversation || !fieldsHydrated || !message.trim()) {
       return
     }
     if (!answerCapability.canGenerateAnswer) {
@@ -2650,6 +2680,19 @@ export function OpenAgronomyApp() {
       setError('The local agronomy runtime is unavailable. Your question draft remains on this device; reconnect to the prepared runtime before asking.')
       return
     }
+    const submissionEpoch = ++submissionEpochRef.current
+    const submissionFieldId = activeFieldContextId
+    const submissionConversationKey = activeFieldConversationKey
+    const submissionFieldRecordUpdatedAt = activeFieldRecordUpdatedAt
+    const stillCurrent = () => submissionEpochRef.current === submissionEpoch
+      && activeFieldRef.current === submissionFieldId
+      && activeConversationKeyRef.current === submissionConversationKey
+      && activeFieldRecordUpdatedAtRef.current === submissionFieldRecordUpdatedAt
+    let submitted: { sessionId: string; payloadKey: string; operationId: string } | null = null
+    let completedTurn: Turn | null = null
+    let appliedCompleted = false
+    let dispatched = false
+    let rejectedByServer = false
     followConversationRef.current = true
     setError('')
     setStatus(activeFieldContextId || scenarioId ? 'Analyzing field context' : 'Analyzing question')
@@ -2671,7 +2714,9 @@ export function OpenAgronomyApp() {
       },
     ])
     try {
-      const id = await ensureSession()
+      const id = await ensureSession(stillCurrent)
+      if (!stillCurrent()) return
+      inflightSessionIdRef.current = id
       const payload = {
         message,
         mode,
@@ -2719,73 +2764,141 @@ export function OpenAgronomyApp() {
           redaction_mode: 'none',
         },
       }
-      const response = await fetch(`/api/sessions/${id}/turns/stream`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', ...csrfHeaders() },
-        body: JSON.stringify(payload),
-      })
-      if (!response.ok) {
-        throw new Error(`${response.status}: ${await response.text()}`)
-      }
-      let completedTurn: Turn | null = null
-      let streamError = ''
-      await readSseStream(response, (event) => {
-        if (event.event === 'progress.step' || event.event === 'progress.heartbeat') {
-          const nextStep = streamProgressFromPayload(
-            event.payload,
-            event.event === 'progress.heartbeat' ? 'heartbeat' : 'step',
-          )
-          setStreamProgress((current) => [...current, nextStep].slice(-12))
-          setStatus(nextStep.label)
+      const payloadKey = JSON.stringify(payload)
+      const previous = uncertainSubmissionsRef.current.find(item => item.sessionId === id && item.payloadKey === payloadKey)
+      if (!previous && uncertainSubmissionsRef.current.length >= 8) {
+        const pendingSessions = [...new Set(uncertainSubmissionsRef.current.map(item => item.sessionId))]
+        let refreshed: SessionRecord[]
+        try {
+          refreshed = await Promise.all(pendingSessions.map(pendingId =>
+            apiGet<SessionRecord>(`/api/sessions/${encodeURIComponent(pendingId)}`)))
+        } catch {
+          throw new Error('Could not verify earlier interrupted requests. Reconnect and refresh their saved conversations before sending another question.')
         }
-        if (event.event === 'generation.token') {
-          setStatus('Writing answer')
-          const token = typeof event.payload.token === 'string' ? event.payload.token : ''
-          if (token) {
-            setStreamDraft((current) => `${current}${token}`)
+        if (!stillCurrent()) return
+        const completedIds = new Set(refreshed.flatMap(session => (session.turns || [])
+          .map(turn => turn.metadata?.client_operation_id).filter((value): value is string => Boolean(value))))
+        uncertainSubmissionsRef.current = uncertainSubmissionsRef.current.filter(item => !completedIds.has(item.operationId))
+        if (uncertainSubmissionsRef.current.length >= 8) {
+          throw new Error('Eight earlier requests still have no saved answer receipt. Reopen and refresh those conversations before sending another question.')
+        }
+      }
+      const operationId = previous
+        ? previous.operationId
+        : globalThis.crypto.randomUUID()
+      submitted = { sessionId: id, payloadKey, operationId }
+      inflightSubmissionRef.current = submitted
+      let recoveredSession: SessionRecord | null = null
+      if (previous) {
+        recoveredSession = await apiGet<SessionRecord>(`/api/sessions/${encodeURIComponent(id)}`)
+        if (!stillCurrent()) return
+        completedTurn = recoveredSession.turns?.find(turn => turn.metadata?.client_operation_id === operationId) || null
+      }
+      if (!completedTurn) {
+        dispatched = true
+        const response = await fetch(`/api/sessions/${id}/turns/stream`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', ...csrfHeaders() },
+          body: JSON.stringify({ ...payload, client_operation_id: operationId }),
+        })
+        if (!stillCurrent()) {
+          await response.body?.cancel().catch(() => undefined)
+          return
+        }
+        if (!response.ok) {
+          rejectedByServer = response.status >= 400 && response.status < 500
+          throw new Error(`${response.status}: ${await response.text()}`)
+        }
+        let streamError = ''
+        await readSseStream(response, (streamEvent) => {
+          if (!stillCurrent()) return
+          if (streamEvent.event === 'progress.step' || streamEvent.event === 'progress.heartbeat') {
+            const nextStep = streamProgressFromPayload(
+              streamEvent.payload,
+              streamEvent.event === 'progress.heartbeat' ? 'heartbeat' : 'step',
+            )
+            setStreamProgress((current) => [...current, nextStep].slice(-12))
+            setStatus(nextStep.label)
           }
-        }
-        if (event.event === 'error') {
-          streamError = String(event.payload.message || 'generation failed')
-        }
-        if (event.event === 'answer.completed' && event.payload.turn && typeof event.payload.turn === 'object') {
-          completedTurn = event.payload.turn as Turn
-        }
-      })
-      if (streamError) {
-        throw new Error(streamError)
+          if (streamEvent.event === 'generation.token') {
+            setStatus('Writing answer')
+            const token = typeof streamEvent.payload.token === 'string' ? streamEvent.payload.token : ''
+            if (token) setStreamDraft((current) => `${current}${token}`)
+          }
+          if (streamEvent.event === 'error') {
+            streamError = String(streamEvent.payload.message || 'generation failed')
+          }
+          if (streamEvent.event === 'answer.completed' && streamEvent.payload.turn && typeof streamEvent.payload.turn === 'object') {
+            const receivedTurn = streamEvent.payload.turn as Turn
+            if (receivedTurn.session_id && receivedTurn.session_id !== id
+              || receivedTurn.metadata?.client_operation_id && receivedTurn.metadata.client_operation_id !== operationId
+              || streamEvent.payload.turn_id && streamEvent.payload.turn_id !== receivedTurn.turn_id) {
+              streamError = 'The answer receipt belongs to a different request. Refresh this conversation before trying again.'
+              completedTurn = null
+            } else {
+              completedTurn = receivedTurn
+            }
+          }
+        })
+        if (!stillCurrent()) return
+        if (streamError) throw new Error(streamError)
       }
+      if (!stillCurrent()) return
       if (completedTurn) {
-        setTurns((current) => [...current, completedTurn as Turn])
-        setEvidenceTurnId((completedTurn as Turn).turn_id)
-        setSessions((current) =>
-          current.map((session) =>
-            session.session_id === id
-              ? { ...session, turns: [...(session.turns || []), completedTurn as Turn] }
-              : session,
-          ),
-        )
+        const savedTurn = completedTurn as Turn
+        const recoveredTurns = recoveredSession?.turns?.some(turn => turn.turn_id === savedTurn.turn_id)
+          ? recoveredSession.turns : null
+        setTurns((current) => recoveredTurns || (current.some(turn => turn.turn_id === savedTurn.turn_id) ? current : [...current, savedTurn]))
+        setEvidenceTurnId(savedTurn.turn_id)
+        setSessions((current) => current.map((session) => session.session_id === id
+          ? recoveredSession && recoveredTurns ? { ...recoveredSession, turns_included: true } : { ...session, turns: (session.turns || []).some(turn => turn.turn_id === savedTurn.turn_id)
+            ? session.turns : [...(session.turns || []), savedTurn] }
+          : session))
+        appliedCompleted = true
+        uncertainSubmissionsRef.current = uncertainSubmissionsRef.current.filter(item => item.operationId !== operationId)
+        inflightSubmissionRef.current = null
         setStreamDraft('')
       } else {
         throw new Error('The connection ended before the answer receipt arrived. Your question is preserved. Refresh this conversation before trying again; the answer may already be saved.')
       }
-      if (activeFieldContextId && fieldStorageMode === 'account_workspace') {
-        await refreshFieldHistory(activeFieldContextId)
+      if (submissionFieldId && fieldStorageMode === 'account_workspace') {
+        await refreshFieldHistory(submissionFieldId)
+        if (!stillCurrent()) return
       }
       setRuntimeAccess('available')
-      clearPhase6ChatDraft(activeFieldConversationKey)
+      clearPhase6ChatDraft(submissionConversationKey)
       setMessage('')
       setStatus('Answer ready')
       navigateToPage('analyze')
     } catch (err) {
+      if (!stillCurrent()) return
+      if (submitted && dispatched && !appliedCompleted && !rejectedByServer) rememberUncertainSubmission(submitted)
+      inflightSubmissionRef.current = null
       if (isRuntimeTransportFailure(err)) {
         setRuntimeAccess('unavailable')
       }
       setStatus('Needs attention')
       setError(String((err as Error).message || err))
     } finally {
-      setIsAnalyzing(false)
-      setPendingQuestion('')
+      if (stillCurrent()) {
+        inflightSessionIdRef.current = ''
+        inflightSubmissionRef.current = null
+        setIsAnalyzing(false)
+        setPendingQuestion('')
+      } else if (submissionEpochRef.current === submissionEpoch) {
+        // A field record changed without a navigation event while the request ran.
+        leaveSubmissionView()
+      } else if (submitted) {
+        // The old request may have saved after its conversation was reopened.
+        const settledSessionId = submitted.sessionId
+        setSessions((current) => current.map((session) => session.session_id === settledSessionId
+          ? { ...session, turns_included: false } : session))
+        if (!recoveryViewRef.current.isAnalyzing && activeSessionRef.current === settledSessionId
+          && activeFieldRef.current === submissionFieldId
+          && activeConversationKeyRef.current === submissionConversationKey) {
+          void retrieveConversation(settledSessionId)
+        }
+      }
     }
   }
 
@@ -2962,6 +3075,7 @@ export function OpenAgronomyApp() {
         )
         setSessions((current) => [matchingSession as SessionRecord, ...current])
       }
+      leaveSubmissionView()
       setSessionId(matchingSession.session_id)
       setTurns(matchingSession.turns || [])
       setEvidenceTurnId(historyTurn.turn_id)
@@ -3176,7 +3290,8 @@ export function OpenAgronomyApp() {
   }
 
   const loadStoredField = (stored: StoredField) => {
-    if (isAnalyzing || savingField) return
+    if (savingField) return
+    leaveSubmissionView()
     activeFieldRef.current = stored.field_context_id || stored.id
     historyRequestRef.current += 1
     setScenarioId('')
@@ -3620,10 +3735,10 @@ export function OpenAgronomyApp() {
         <div><span className="eyebrow">{page === 'analyze' ? 'YOUR WORKSPACE' : page === 'fields' ? 'FIELD LIBRARY' : page === 'sources' ? 'KNOWLEDGE & DATA' : 'OPEN AGRONOMY'}</span>
           <h1>{page === 'analyze' ? (fieldName || 'A clearer view of your field.') : page === 'fields' ? 'My fields' : page === 'sources' ? 'Bring your evidence.' : page === 'evidence' ? 'Behind the answer' : page === 'benchmarks' ? 'Research & benchmarks' : page === 'privacy' ? 'Privacy & data' : 'About Open Agronomy'}</h1>
         </div>
-        {page === 'analyze' || page === 'fields' ? <button className="primary-button" type="button" onClick={() => setNewFieldOpen(true)} disabled={!fieldsHydrated || isAnalyzing || savingField}><Plus size={17} /> Add field</button> : null}
+        {page === 'analyze' || page === 'fields' ? <button className="primary-button" type="button" onClick={() => setNewFieldOpen(true)} disabled={!fieldsHydrated || savingField}><Plus size={17} /> Add field</button> : null}
       </header>
       {page === 'analyze' ? <div className="workspace-context-toolbar">
-        <label className="active-field-select"><MapPin size={16} /><span className="sr-only">Active field</span><select aria-label="Active field" value={activeFieldContextId || (scenarioId ? `sample:${scenarioId}` : '')} disabled={!fieldsHydrated || isAnalyzing || savingField} onChange={event => {
+        <label className="active-field-select"><MapPin size={16} /><span className="sr-only">Active field</span><select aria-label="Active field" value={activeFieldContextId || (scenarioId ? `sample:${scenarioId}` : '')} disabled={!fieldsHydrated || savingField} onChange={event => {
           if (event.target.value.startsWith('sample:')) { applyScenario(event.target.value.slice(7)); return }
           const selected = storedFields.find(item => (item.field_context_id || item.id) === event.target.value)
           if (selected) loadStoredField(selected)
@@ -3695,7 +3810,7 @@ export function OpenAgronomyApp() {
                             <button type="button" onClick={() => setRenamingFieldId('')}>Cancel</button>
                           </div>
                         ) : (
-                          <button type="button" className="field-library-load" disabled={!fieldsHydrated || isAnalyzing || savingField} onClick={() => loadStoredField(stored)}>
+                          <button type="button" className="field-library-load" disabled={!fieldsHydrated || savingField} onClick={() => loadStoredField(stored)}>
                             <strong>{stored.name}</strong>
                             <span>{[stored.crop, stored.region || stored.jurisdiction].filter(Boolean).join(' · ') || stored.regionalContext}</span>
                             <small>{active ? 'Active field' : `Updated ${new Date(stored.updatedAt || stored.createdAt).toLocaleDateString()}`}</small>
@@ -4497,7 +4612,6 @@ export function OpenAgronomyApp() {
                 type="button"
                 className="chat-reset-button"
                 onClick={resetChat}
-                disabled={isAnalyzing}
                 data-testid="reset-chat"
                 title={fieldName ? 'Start a fresh chat for this field' : 'Start a fresh general chat'}
               >
@@ -4510,7 +4624,6 @@ export function OpenAgronomyApp() {
                 id="saved-conversation"
                 aria-label="Saved conversations"
                 value={sessionId && [...generalConversations, ...fieldConversations].some(item => item.session_id === sessionId) ? sessionId : ''}
-                disabled={isAnalyzing}
                 onChange={(event) => openSavedConversation(event.target.value)}
               >
                 <option value="" disabled>{sessionId ? 'Select a saved chat' : 'New chat · unsaved until asked'}</option>
@@ -4603,7 +4716,7 @@ export function OpenAgronomyApp() {
                 aria-label="Ask about this field"
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
-                onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (!isAnalyzing && !loadingConversation && fieldsHydrated && message.trim() && answerCapability.canGenerateAnswer && selectedModelReady) event.currentTarget.form?.requestSubmit() } }}
+                onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (!isAnalyzing && !savingField && !loadingConversation && fieldsHydrated && message.trim() && answerCapability.canGenerateAnswer && selectedModelReady) event.currentTarget.form?.requestSubmit() } }}
                 disabled={isAnalyzing}
                 placeholder={fieldName
                   ? 'Ask a field question, compare observations, or request an evidence check…'
@@ -4628,7 +4741,7 @@ export function OpenAgronomyApp() {
                     </label>
                   ) : <span>Local model profile</span>}
                 </details>
-                <button type="submit" disabled={isAnalyzing || loadingConversation || !fieldsHydrated || !message.trim() || !answerCapability.canGenerateAnswer || !selectedModelReady}>
+                <button type="submit" disabled={isAnalyzing || savingField || loadingConversation || !fieldsHydrated || !message.trim() || !answerCapability.canGenerateAnswer || !selectedModelReady}>
                   <Send size={17} /> {isAnalyzing ? 'Working' : 'Ask'}
                 </button>
               </div>
