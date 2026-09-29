@@ -341,3 +341,8 @@ invalidates final product quality while retaining a successfully generated draft
 ## DEM preparation before terrain derivatives
 
 `analyze_field_terrain.py` defaults to `--preprocessing auto`: actual 1 m DTM inputs receive a configurable 5×5 focal mean followed by bilinear 5 m resampling before all derivatives. Other cell sizes stay native; `--preprocessing native` supplies a comparison, and explicit `focal_mean_5m` rejects non-1 m inputs. `--focal-window-cells` accepts odd widths 3–31. The native read budget includes a real-data halo; voids and insufficient source context are refused. Source pixels and processing-grid outputs are retained with separate grids/roles. See the [operator guide](../docs/public/operations/geospatial-foundation.md) for methods, parameters and scientific limits.
+
+
+## Sentinel-2 polygon preprocessing
+
+`analyze_field_imagery.py --provider sentinel2-c1-earth-search` uses the optional geospatial environment and the shared private imagery cache. It defaults offline; `--online` permits one bounded scene query and COG windows. `--cloud-buffer-m` defaults to 60 m and `--edge-buffer-m` to 20 m. The source-specific 20 m product retains native DN/per-band validity and explicitly uses B8A for NDVI/NDMI. Point/HLS context options are rejected. See the [operator guide](../docs/public/operations/geospatial-foundation.md#sentinel-2-collection-1-polygon-operator) for full usage and scientific limits.

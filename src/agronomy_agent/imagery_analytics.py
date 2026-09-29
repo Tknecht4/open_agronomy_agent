@@ -7,17 +7,12 @@ the serving environment need not install them to import this module.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from contextlib import contextmanager
 import hashlib
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import io
 import json
-import sqlite3
 import math
-import os
 from pathlib import Path
 import re
-import threading
 import time
 from typing import Any
 from urllib.parse import parse_qsl
@@ -28,7 +23,8 @@ from agronomy_agent.field_imagery import (
     _PC_TOKEN, _PLANETARY_COMPUTER, _clean_asset, _request_json, _valid_search_geometry,
 )
 from agronomy_agent.imagery_store import ImageryStore
-from agronomy_agent.geospatial.raster import fractional_weights, weighted_statistics
+from agronomy_agent.geospatial.cog import bounded_cog_proxy as _bounded_cog_proxy, MAX_COG_TRANSFER_BYTES
+from agronomy_agent.geospatial.raster import fractional_weights, weighted_statistics, ndvi_preview as _png
 from agronomy_agent.imagery_sampling import (
     MAX_SAMPLE_RADIUS_M, MIN_SAMPLE_RADIUS_M, POINT_PROCESS_VERSION,
     outside_source_mask, point_grid_and_weights,
@@ -39,9 +35,6 @@ PREVIEW_VERSION = "ndvi-preview-v2-finite-alpha"
 SCALE = 0.0001
 MAX_SIDE = 256
 MAX_BUFFER_M = 3000
-MAX_COG_TRANSFER_BYTES = 256 * 1024 * 1024
-MAX_SINGLE_RANGE_BYTES = 64 * 1024 * 1024
-_PROXY_CHUNK_BYTES = 16 * 1024
 BAND_NAMES = ("Blue", "Green", "Red", "NarrowNIR", "SWIR1", "SWIR2")
 BAND_KEYS = {
     "hls-s30-planetary-computer": ("hls2-s30", ("B02", "B03", "B04", "B8A", "B11", "B12")),
@@ -190,130 +183,6 @@ def _signed_hrefs(item: dict[str, Any]) -> dict[str, str]:
         raise RuntimeError("invalid public HLS SAS")
     return {key: f"{asset['href']}?{token}" for key, asset in item["assets"].items()}
 
-
-@contextmanager
-def _bounded_cog_proxy(hrefs: dict[str, str]):
-    """Serve fixed public COG assets to GDAL through a capped loopback proxy.
-
-    All outward requests use httpx without redirects. This also prevents SAS
-    query strings from entering GDAL paths, errors, and receipts.
-    """
-    state = {"bytes": 0, "reserved": 0, "requests": 0, "rejected": 0}
-    lock = threading.Lock()
-
-    class Handler(BaseHTTPRequestHandler):
-        def log_message(self, *args: Any) -> None:
-            pass
-
-        def do_HEAD(self) -> None:
-            self._forward(head=True)
-
-        def do_GET(self) -> None:
-            self._forward(head=False)
-
-        def _reject(self, status: int) -> None:
-            with lock:
-                state["rejected"] += 1
-            self.send_error(status)
-
-        def _forward(self, *, head: bool) -> None:
-            key = self.path.removeprefix("/").removesuffix(".tif")
-            if self.path != f"/{key}.tif" or key not in hrefs:
-                self._reject(404)
-                return
-            requested = self.headers.get("Range")
-            if not head:
-                match = re.fullmatch(r"bytes=(\d+)-(\d+)", requested or "")
-                if not match or int(match[2]) < int(match[1]) or int(match[2]) - int(match[1]) + 1 > MAX_SINGLE_RANGE_BYTES:
-                    self._reject(416)
-                    return
-            try:
-                with httpx.Client(timeout=30, follow_redirects=False) as client:
-                    with client.stream("HEAD" if head else "GET", hrefs[key],
-                                       headers={"Accept-Encoding": "identity", **({"Range": requested} if requested else {})}) as upstream:
-                        if upstream.status_code != (200 if head else 206):
-                            self._reject(502)
-                            return
-                        if upstream.headers.get("Content-Encoding", "identity").lower() != "identity":
-                            self._reject(502)
-                            return
-                        length_text = upstream.headers.get("Content-Length")
-                        if not length_text or not length_text.isdigit():
-                            self._reject(502)
-                            return
-                        length = int(length_text)
-                        if not head:
-                            content_range = upstream.headers.get("Content-Range", "")
-                            returned = re.fullmatch(r"bytes (\d+)-(\d+)/(\d+)", content_range)
-                            if (not returned or int(returned[1]) != int(match[1]) or
-                                    int(returned[2]) != int(match[2]) or
-                                    int(returned[2]) - int(returned[1]) + 1 != length or
-                                    length > MAX_SINGLE_RANGE_BYTES):
-                                self._reject(502)
-                                return
-                        reserved = 0
-                        if not head:
-                            with lock:
-                                # Reserve the advertised body plus one raw chunk.
-                                # A malformed Content-Length can overdeliver at
-                                # most that chunk before we stop forwarding.
-                                allowance = length + _PROXY_CHUNK_BYTES
-                                if state["bytes"] + state["reserved"] + allowance <= MAX_COG_TRANSFER_BYTES:
-                                    state["reserved"] += allowance
-                                    reserved = allowance
-                            if not reserved:
-                                self._reject(429)
-                                return
-                        try:
-                            self.send_response(200 if head else 206)
-                            self.send_header("Content-Length", str(length))
-                            self.send_header("Content-Type", "image/tiff")
-                            self.send_header("Accept-Ranges", "bytes")
-                            if not head:
-                                self.send_header("Content-Range", content_range)
-                            self.end_headers()
-                            if head:
-                                return
-                            with lock:
-                                state["requests"] += 1
-                            remaining_declared = length
-                            for chunk in upstream.iter_raw(_PROXY_CHUNK_BYTES):
-                                if not chunk:
-                                    continue
-                                with lock:
-                                    state["bytes"] += len(chunk)
-                                    if len(chunk) > reserved or len(chunk) > remaining_declared:
-                                        # A provider violated Content-Length. Count the bytes
-                                        # already fetched, stop forwarding, and fail the chip.
-                                        state["reserved"] -= min(len(chunk), reserved)
-                                        reserved -= min(len(chunk), reserved)
-                                        overrun = True
-                                    else:
-                                        state["reserved"] -= len(chunk)
-                                        reserved -= len(chunk)
-                                        overrun = False
-                                remaining_declared -= len(chunk)
-                                if overrun:
-                                    self.close_connection = True
-                                    return
-                                self.wfile.write(chunk)
-                        finally:
-                            if reserved:
-                                with lock:
-                                    state["reserved"] -= reserved
-            except (httpx.HTTPError, OSError, BrokenPipeError):
-                self.close_connection = True
-
-    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    try:
-        local = {key: f"http://127.0.0.1:{server.server_port}/{key}.tif" for key in hrefs}
-        yield local, state
-    finally:
-        server.shutdown()
-        server.server_close()
-        thread.join(timeout=5)
 
 
 def _source_grid(hrefs: dict[str, str], deps: tuple[Any, ...]) -> tuple[Any, Any, int, int]:
@@ -520,17 +389,6 @@ def _qa_indices(raw: Any, fmask: Any, invalid: Any, weights: Any, deps: tuple[An
     return bands, valid, ndvi, qa, {"NDVI": stat(ndvi), "NDMI": stat(ndmi)}
 
 
-def _png(ndvi: Any, valid: Any, weights: Any, Image: Any) -> bytes:
-    import numpy as np
-    tone = np.clip((np.nan_to_num(ndvi, nan=-1) + 1) / 2, 0, 1)
-    rgba = np.zeros((*ndvi.shape, 4), dtype=np.uint8)
-    rgba[..., 0] = (185 * (1 - tone)).astype(np.uint8)
-    rgba[..., 1] = (60 + 170 * tone).astype(np.uint8)
-    rgba[..., 2] = (95 * (1 - tone)).astype(np.uint8)
-    rgba[..., 3] = np.where(valid & np.isfinite(ndvi) & (weights > 0), 255, 0).astype(np.uint8)
-    output = io.BytesIO()
-    Image.fromarray(rgba, "RGBA").save(output, format="PNG")
-    return output.getvalue()
 
 
 def analyze_scene(
@@ -543,43 +401,19 @@ def analyze_scene(
     max_cache_bytes: int = 2 * 1024**3, min_free_bytes: int = 1024**3,
 ) -> dict[str, Any]:
     """Reuse verified chips or admit one bounded writer before public egress."""
-    from agronomy_agent.imagery_budget import reserve_cache, StorageRefusal, validate_policy
-    validate_policy(max_cache_bytes, min_free_bytes)
-    if network_mode not in ("offline", "online"):
-        raise ValueError("network_mode must be offline or online")
+    from agronomy_agent.geospatial.products import cached_product
     _, _, _, request_hash = _request_identity(
         geometry, provider_id, scene_id, start_date, end_date, buffer_m, context_pixels,
         sampling_mode=sampling_mode, sample_radius_m=sample_radius_m)
-    supplied = Path(cache_root).expanduser()
-    if supplied.is_symlink():
-        raise ValueError("imagery cache root cannot be a symlink")
-    root = supplied.resolve()
-    repository = Path(__file__).resolve().parents[2]
-    if root.is_relative_to(repository):
-        raise ValueError("imagery cache must be outside the repository")
-    budget = Path(budget_root).expanduser() if budget_root is not None else supplied
-    if budget.is_symlink() or budget.resolve().is_relative_to(repository) or not root.is_relative_to(budget.resolve()):
-        raise ValueError("imagery budget root must contain the cache outside the repository")
-    try:
-        if (root / "imagery-v1.sqlite3").exists():
-            cached = ImageryStore(root, read_only=True).get(request_hash, scene_id=scene_id)
-            if cached:
-                return {**cached, "cache_hit": True}
-        if network_mode == "offline":
-            return {"status": "blocked_offline", "provider_id": provider_id,
-                    "scene_id": scene_id, "request_hash": request_hash,
-                    "reason": "no matching local chip"}
-        with reserve_cache(budget, max_cache_bytes=max_cache_bytes, min_free_bytes=min_free_bytes) as admission:
-            return _analyze_scene_admitted(
-                geometry, provider_id, scene_id, cache_root=root, network_mode=network_mode,
-                start_date=start_date, end_date=end_date, buffer_m=buffer_m,
-                context_pixels=context_pixels, sampling_mode=sampling_mode,
-                sample_radius_m=sample_radius_m, admission=admission)
-    except StorageRefusal as exc:
-        return {"status": exc.status, "reason": exc.reason, "request_hash": request_hash}
-    except (OSError, RuntimeError, ValueError, sqlite3.Error) as exc:
-        return {"status": "storage_unavailable", "reason": "imagery_cache_unavailable",
-                "error_type": type(exc).__name__, "request_hash": request_hash}
+    return cached_product(
+        request_hash=request_hash, provider_id=provider_id, scene_id=scene_id,
+        cache_root=cache_root, network_mode=network_mode, budget_root=budget_root,
+        max_cache_bytes=max_cache_bytes, min_free_bytes=min_free_bytes,
+        process=lambda root, admission: _analyze_scene_admitted(
+            geometry, provider_id, scene_id, cache_root=root, network_mode=network_mode,
+            start_date=start_date, end_date=end_date, buffer_m=buffer_m,
+            context_pixels=context_pixels, sampling_mode=sampling_mode,
+            sample_radius_m=sample_radius_m, admission=admission))
 
 
 def _analyze_scene_admitted(
@@ -713,33 +547,21 @@ def _analyze_scene_admitted(
         if is_point:
             receipt["sampling"] = sampling
             receipt["request"] = point_request
-        temp_names = {ext: root / f".{chip_hash}.{os.getpid()}.{threading.get_ident()}{ext}"
-                      for ext in (".npz", ".png", ".json")}
-        try:
-            packed = io.BytesIO()
-            if is_point:
-                np.savez_compressed(packed, bands=bands, raw_dn=raw,
-                                    source_invalid_mask=source_invalid, valid_mask=valid,
-                                    sample_mask=weights > 0, sample_weights=weights,
-                                    fmask=fmask, ndvi=ndvi,
-                                    metadata_json=_canonical(metadata).decode())
-            else:
-                np.savez_compressed(packed, bands=bands, raw_dn=raw,
-                                    source_invalid_mask=source_invalid, valid_mask=valid, field_mask=weights > 0,
-                                    field_weights=weights, fmask=fmask, ndvi=ndvi,
-                                    metadata_json=_canonical(metadata).decode())
-            payloads = {".npz": packed.getvalue(), ".png": _png(ndvi, valid, weights, Image),
-                        ".json": _canonical(receipt)}
-            # Reserve enough for temporary files and index/journal overhead.
-            admission.ensure(sum(len(value) for value in payloads.values()) + 1024**2)
-            for ext, payload in payloads.items():
-                temp_names[ext].write_bytes(payload)
-            for ext, name in ((".npz", names["npz"]), (".png", names["png"]), (".json", names["receipt"])):
-                os.replace(temp_names[ext], root / name)
-        finally:
-            for path in temp_names.values():
-                path.unlink(missing_ok=True)
-        store.put(receipt, bounds)
+        packed = io.BytesIO()
+        if is_point:
+            np.savez_compressed(packed, bands=bands, raw_dn=raw,
+                                source_invalid_mask=source_invalid, valid_mask=valid,
+                                sample_mask=weights > 0, sample_weights=weights,
+                                fmask=fmask, ndvi=ndvi,
+                                metadata_json=_canonical(metadata).decode())
+        else:
+            np.savez_compressed(packed, bands=bands, raw_dn=raw,
+                                source_invalid_mask=source_invalid, valid_mask=valid, field_mask=weights > 0,
+                                field_weights=weights, fmask=fmask, ndvi=ndvi,
+                                metadata_json=_canonical(metadata).decode())
+        from agronomy_agent.geospatial.products import write_chip_bundle
+        write_chip_bundle(store, receipt, bounds, npz=packed.getvalue(),
+                          png=_png(ndvi, valid, weights, Image), admission=admission)
         return receipt
     except LookupError:
         return {"status": "no_scene", "provider_id": provider_id, "scene_id": scene_id,

@@ -21,8 +21,8 @@ _PROVIDERS: tuple[dict[str, Any], ...] = (
         "payment_required": False,
         "rights": "Copernicus Sentinel Data Terms and Conditions; attribution required. STAC collection declares license=proprietary; inspect source terms before redistribution.",
         "rights_url": "https://sentinels.copernicus.eu/web/sentinel/data-access-and-products/legal-notices",
-        "capabilities": ["scene_discovery", "anonymous_cog_range_read"],
-        "limitations": "Scene cloud cover is scene-wide, not clear field coverage; C1 historical gaps exist. No pixel analysis in this module.",
+        "capabilities": ["scene_discovery", "anonymous_cog_range_read", "sentinel2_polygon_operator"],
+        "limitations": "Scene cloud cover is scene-wide, not clear field coverage; C1 historical gaps exist. Bounded polygon processing is available in the optional operator environment; source-specific QA is not field validation.",
     },
     {
         "id": "hls-s30-planetary-computer",
@@ -139,7 +139,8 @@ def source_catalog() -> dict[str, Any]:
                   "asset_access": p["access"], "api_key_required": p["account_required"],
                   "discovery_protocol": "stac" if p["collection"] else None,
                   "discovery_endpoint": _EARTH if p["id"] == "sentinel2-c1-earth-search" else _PC if p["collection"] else None,
-                  "processing": "hls_spectral_indices" if p["id"].startswith(("hls-s30", "hls-l30")) else "discovery_only",
+                  "processing": ("hls_spectral_indices" if p["id"].startswith(("hls-s30", "hls-l30")) else
+                                 "sentinel2_l2a_polygon_operator" if p["id"] == "sentinel2-c1-earth-search" else "discovery_only"),
                   "documentation_url": p["catalog_url"], "surface_type": None})
         sources.append(p)
     sources.extend(copy.deepcopy(list(_EXTRA)))

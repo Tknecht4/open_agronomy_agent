@@ -38,7 +38,7 @@ Projection does not establish a vertical transformation. PROJ networking is disa
 |---|---|---|
 | NRCan HRDEM 1 m / 2 m mosaics and LiDAR projects | Keyless STAC metadata; anonymous DTM COG links. Metadata adapter implemented | Coverage/age vary; 2 m DSM coverage exceeds DTM coverage. Actual pixel support must be read |
 | USGS 3DEP project 1 m and seamless S1M | Separate keyless TNM definitions and bounded metadata adapter | S1M coverage incomplete. Live product queries failed during research; errors remain `provider_unavailable` |
-| Earth Search Sentinel-2 C1 | Existing keyless scene discovery; anonymous pixels | Additional optical processing needs source-specific scaling, resolutions and SCL/QA. HLS processing must not be reused unchanged |
+| Earth Search Sentinel-2 C1 | Keyless discovery and bounded polygon operator; anonymous pixels | Independent scale/offset, native 20 m grid and SCL/source QA; source-screened, not field-validated |
 | Earth Search Copernicus GLO-30 | Keyless metadata and anonymous assets | Coarse DSM, with vegetation/buildings; not a bare-earth field-drainage fallback |
 | Earth Search NAIP | Keyless metadata discovery only | Inspected analytical assets declare requester-pays; no account or automatic pixel acquisition |
 | RCM CEOS ARD | Research candidate, no adapter yet; anonymous AWS access documented | Separate public-user terms and SAR calibration/geometry requirements |
@@ -140,3 +140,24 @@ The next development gates are:
 3. Sentinel-2 processing as a separate radiometry/QA adapter using the common raster contract; explicit grid/resampling rules, scene choice, cloud-valid field coverage and temporal semantics. Use PySTAC Client for expanded STAC search, and rioxarray/stackstac only when a real cube workflow needs them.
 4. Terrain qualification: multiple extents/resolutions, alternate routing/conditioning/outlet assumptions, source accuracy, real field checks and observed wetness. Keep observation, model output and interpretation separate.
 5. Thin map/imagery/terrain UI and governed chat consumers of verified product manifests, with stale-geometry invalidation and authority limits. Raw files and discovery records do not enter retrieval/training automatically.
+
+## Sentinel-2 Collection-1 polygon operator
+
+The optional imagery operator also supports `sentinel2-c1-earth-search`. It shares bounded transport and the existing private chip store with HLS, while using independent Sentinel-2 radiometry, QA and processing identities. Install the optional geospatial requirements in the operator environment; no account or API key is needed for the admitted Earth Search assets.
+
+```bash
+PYTHONPATH=src python scripts/analyze_field_imagery.py \
+  --provider sentinel2-c1-earth-search \
+  --geometry /absolute/path/to/field.geojson \
+  --start-date 2024-05-01 --end-date 2024-06-15 \
+  --cloud-buffer-m 60 --edge-buffer-m 20 \
+  --cache-root /absolute/path/to/private-sentinel2-cache --online
+```
+
+Omit `--online` for exact verified cache reuse. Date discovery selects one latest scene; no-scene, unsupported source, missing dependencies, storage refusal and empty valid area remain explicit. An exact `--scene-id sentinel-2-c1-l2a:ITEM_ID` can replace the dates. This first adapter supports polygons only; HLS point/buffer/context options do not apply. Cloud buffering accepts 0–200 m in 20 m steps; the field-interior margin accepts integer 0–200 m. These parameters are included in request and processing identities.
+
+The analysis uses a source-anchored 20 m grid. Native 10 m blue/green/red are area-averaged only where all contributors are valid; native 20 m B8A/SWIR/SCL retain their support. It reports B8A-based NDVI and B8A/B11 NDMI, with separate QA-clear, index-eligible and interior support. Empty interior support is null. This is not a native 10 m product or a promise of HLS-equivalent time-series values. Source metadata, raw per-band DN/validity windows and processed arrays are stored in the NPZ; their separate grids and hashes are declared in the receipt and NPZ metadata.
+
+Radiometry is decoded once from the admitted source encoding, with actual header agreement, nodata checks, SCL exclusions, configurable cloud/shadow adjacency and source-edge screening. Negative reflectance is preserved in source windows, but does not contribute to normalized indices. Mean solar zenith above 70° is refused. Earlier processing baselines have documented swath-edge limitations; detector-footprint masks are not available in the inspected C1 assets, and the receipt retains this qualification. A clear index is not a crop diagnosis or a field observation of drainage. See the [source-linked development record](https://github.com/Tknecht4/open_agronomy_agent/blob/main/docs/reviews/sentinel2-preprocessing-round-20260929.md).
+
+The Sentinel-2 v2 recipe masks source nodata (DN 0) and saturation (DN 65535) before aggregation and decoding, retaining separate native saturation masks. Its fixed 20 m source-validity guard remains active when the optional field-interior margin is zero. This guard does not replace missing detector-footprint masks for pre-05.13 swath-edge artifacts.

@@ -20,6 +20,7 @@ pyproj = pytest.importorskip("pyproj")
 
 from rasterio.transform import from_origin
 from agronomy_agent import imagery_analytics as analytics
+from agronomy_agent.geospatial import cog
 from agronomy_agent.imagery_store import ImageryStore
 
 PROVIDER = "hls-s30-planetary-computer"
@@ -245,11 +246,11 @@ def test_cog_proxy_reserves_concurrent_ranges_before_streaming(monkeypatch):
         def stream(self, *args, **kwargs):
             return FakeUpstream()
 
-    monkeypatch.setattr(analytics, "ThreadingHTTPServer", FakeServer)
+    monkeypatch.setattr(cog, "ThreadingHTTPServer", FakeServer)
     monkeypatch.setattr(analytics.httpx, "Client", FakeClient)
-    monkeypatch.setattr(analytics, "MAX_COG_TRANSFER_BYTES", 4)
-    monkeypatch.setattr(analytics, "MAX_SINGLE_RANGE_BYTES", 4)
-    monkeypatch.setattr(analytics, "_PROXY_CHUNK_BYTES", 1)
+    monkeypatch.setattr(cog, "MAX_COG_TRANSFER_BYTES", 4)
+    monkeypatch.setattr(cog, "MAX_SINGLE_RANGE_BYTES", 4)
+    monkeypatch.setattr(cog, "_PROXY_CHUNK_BYTES", 1)
     with analytics._bounded_cog_proxy({"B02": "https://allowlisted.test/redacted"}) as (_, state):
         def request():
             handler = captured["handler"].__new__(captured["handler"])
@@ -312,10 +313,10 @@ def test_cog_proxy_rejects_encoding_and_stops_declared_length_overrun(monkeypatc
         def stream(self, *args, **kwargs):
             assert kwargs["headers"]["Accept-Encoding"] == "identity"
             return FakeResponse()
-    monkeypatch.setattr(analytics, "ThreadingHTTPServer", FakeServer)
+    monkeypatch.setattr(cog, "ThreadingHTTPServer", FakeServer)
     monkeypatch.setattr(analytics.httpx, "Client", FakeClient)
-    monkeypatch.setattr(analytics, "MAX_COG_TRANSFER_BYTES", 7)
-    monkeypatch.setattr(analytics, "_PROXY_CHUNK_BYTES", 4)
+    monkeypatch.setattr(cog, "MAX_COG_TRANSFER_BYTES", 7)
+    monkeypatch.setattr(cog, "_PROXY_CHUNK_BYTES", 4)
     def request():
         handler = captured["handler"].__new__(captured["handler"])
         handler.path = "/B02.tif"
