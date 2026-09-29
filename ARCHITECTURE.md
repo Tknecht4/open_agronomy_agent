@@ -172,3 +172,8 @@ overrides are ephemeral and reauthorize field access. Prompt history excludes
 replay outputs and stops before the original turn at the root of a replay chain;
 the immediate parent remains recorded separately for lineage. Replays use current
 code, authorized field context and feedback, not guaranteed original prompt bytes.
+
+
+### Shared optical processing
+
+`geospatial/cog.py` and `geospatial/products.py` own bounded range transfer and the existing imagery-cache admission/publication lifecycle for HLS and Sentinel-2. `geospatial/raster.py` owns fractional support, reductions and index preview rendering. `sentinel2_analytics.py` orchestrates the optional polygon operator; `geospatial/sentinel2.py` owns C1 metadata/header admission, source-anchored 20 m preparation, SCL masks and independent whole/interior support. `imagery_worker.py` dispatches source-specific operators without reusing HLS corrections for Sentinel-2. Native per-band inputs and processed products remain separately hashed; no runtime corpus or training authority follows from processing support. Sentinel-2 app controls and registration/temporal products remain follow-on integrations.

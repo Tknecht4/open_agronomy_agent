@@ -162,3 +162,17 @@ def write_geotiff(path: str | Path, array: Any, *, crs: Any, transform: Any,
         if metadata_json is not None:
             dst.update_tags(metadata_json=metadata_json)
     return destination
+
+
+def ndvi_preview(ndvi: Any, valid: Any, weights: Any, Image: Any) -> bytes:
+    import io
+    import numpy as np
+    tone = np.clip((np.nan_to_num(ndvi, nan=-1) + 1) / 2, 0, 1)
+    rgba = np.zeros((*ndvi.shape, 4), dtype=np.uint8)
+    rgba[..., 0] = (185 * (1 - tone)).astype(np.uint8)
+    rgba[..., 1] = (60 + 170 * tone).astype(np.uint8)
+    rgba[..., 2] = (95 * (1 - tone)).astype(np.uint8)
+    rgba[..., 3] = np.where(valid & np.isfinite(ndvi) & (weights > 0), 255, 0).astype(np.uint8)
+    output = io.BytesIO()
+    Image.fromarray(rgba, "RGBA").save(output, format="PNG")
+    return output.getvalue()

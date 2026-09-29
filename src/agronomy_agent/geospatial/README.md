@@ -9,6 +9,8 @@ This package owns reusable geometry, source metadata, raster support and terrain
 | `catalog` | Raster provider definitions, metadata versus pixel access, processing support and rights references | Existing imagery provider view, source API/CLI |
 | `discovery` | One bounded page from an allowlisted public endpoint; typed offline/error/empty states | Authorized saved-field API and operator CLI |
 | `raster` | Fractional native-grid support, coverage mask, float64 statistics, GeoTIFF output | HLS and terrain |
+| `cog` / `products` | Bounded COG ranges; shared private chip admission/publication | HLS and Sentinel-2 operators |
+| `sentinel2` | C1-specific radiometry, native multi-resolution alignment, SCL/support QA | Polygon imagery operator |
 | `terrain` | Context-preserving DTM processing; SciPy focal mean, Rasterio 5 m resampling, PyFlwDir derivatives | Offline operator CLI |
 
 Keep heavy raster/hydrology imports lazy. Those optional dependencies belong in an isolated operator/worker environment. GeoPandas/Pyogrio are serving dependencies because ZIP/GPKG upload is an existing supported product feature; native-app requirements inherit them from the container runtime list. The base service must still start and report missing raster/terrain dependencies honestly. Use Shapely/PyProj/GDAL/Rasterio/PyFlwDir for domain algorithms; app code owns limits, source roles, masks, manifests and failure states.
