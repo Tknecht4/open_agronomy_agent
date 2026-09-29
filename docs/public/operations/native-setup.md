@@ -4,7 +4,7 @@
 
 - Apple Silicon Mac; the exercised target has 16 GB unified memory.
 - Python 3.11 or 3.12.
-- Node 24 or newer.
+- Node 24 LTS.
 - At least several additional GiB of disk for the model, dependencies, local indexes, and runtime state.
 
 ## Install

@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-09-29T16:12:29+00:00",
+  "generated_at": "2026-09-29T16:13:14+00:00",
   "status": "pass",
-  "contract_sha256": "6a43bf4e34642a0f71239d1758d9dd9215b44968b7532b5913384d0c4c19b542",
+  "contract_sha256": "bb526ceb8f6e38c1a1b1d564f26801e3e3573a09e178f78505ab498e893b1954",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -456,8 +456,8 @@
     {
       "path": "docs/public",
       "file_count": 97,
-      "bytes": 9297307,
-      "sha256": "e75858479ced34baa1f42251205cf15053a68e600211e0a71cd17cbe35b47378"
+      "bytes": 9297302,
+      "sha256": "51550579440a8df16a2ce9ebd80c30d83357fe0a5e210f7cae911766d77c786b"
     }
   ],
   "geo_cache_seed": {
@@ -505,7 +505,7 @@
       "path": "Containerfile",
       "role": "runtime_control",
       "bytes": 3781,
-      "sha256": "05cb8c3fa49a376f370a8982645ab13e04f1a678b1699729b2abcab1fb634d21"
+      "sha256": "47a57c85f8313dff4261d8fdf32bc8fce366a8055abfeb6319b7d0e47d26082a"
     },
     {
       "path": "Containerfile.overlay",
@@ -540,14 +540,14 @@
     {
       "path": "frontend/package.json",
       "role": "runtime_control",
-      "bytes": 905,
-      "sha256": "92ba428b800eb99341062c533516b79a4d3790baa1083bf3b643aba8a3543a7e"
+      "bytes": 904,
+      "sha256": "882937e8c02382b31f8102a5a3386aee3f260f2418178ba5f5726d04a9ef6e1b"
     },
     {
       "path": "frontend/package-lock.json",
       "role": "runtime_control",
-      "bytes": 153083,
-      "sha256": "575bd1a733c9d880f37f3b9d7351f3d95ccecef4807d065ef63726b454a3630a"
+      "bytes": 153082,
+      "sha256": "4e6ce0661cbf2c7be6070c67f9c0990556cf52d1b83db3437bc11d07c63fc5d0"
     },
     {
       "path": "frontend/index.html",
