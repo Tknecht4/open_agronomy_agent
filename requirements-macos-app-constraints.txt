@@ -5,7 +5,7 @@
 # native product-path smoke. These exact versions constrain the Mac candidate
 # builder; wheel hashes, clean-host installation, and full runtime parity remain
 # separate release evidence. The editable local project entry was omitted.
-agno==2.6.22
+agno==3.0.11
 aiohappyeyeballs==2.7.1
 aiohttp==3.14.3
 aiosignal==1.4.0
