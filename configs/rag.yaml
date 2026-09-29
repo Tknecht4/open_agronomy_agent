@@ -45,7 +45,7 @@ agent_runtime:
   mode: agno
   agno_enabled: true
 agno:
-  version_pin: '>=2.6,<2.7'
+  version_pin: '>=2.6,<3.1'
   knowledge:
     default_base: agronomy_public
     contents_table: agno_knowledge_contents
