@@ -716,7 +716,16 @@
     "docs/reviews/artifacts/residual-polish-20260928/workspace-media.json",
     "docs/reviews/conversation-integrity-and-learning-loop-20260928.md",
     "docs/reviews/artifacts/benchmark-scrutiny-20260928.json",
-    "tests/test_conversation_integrity.py"
+    "tests/test_conversation_integrity.py",
+    "requirements-geospatial.txt",
+    "tests/test_geospatial_discovery.py",
+    "tests/test_geospatial_discovery_routes.py",
+    "tests/test_geospatial_geometry.py",
+    "tests/test_geospatial_raster.py",
+    "tests/test_geospatial_terrain.py",
+    "tests/test_geospatial_vector_io.py",
+    "scripts/analyze_field_terrain.py",
+    "scripts/discover_field_sources.py"
   ],
   "trees": [
     "src",

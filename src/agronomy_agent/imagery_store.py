@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import io
 import json
 import math
 import os
@@ -12,7 +11,6 @@ import re
 import sqlite3
 import stat
 from typing import Any
-import zipfile
 
 SCHEMA_VERSION = 2
 _HASH = re.compile(r"[0-9a-f]{64}\Z")
@@ -259,76 +257,10 @@ class ImageryStore:
         except (KeyError, ValueError, TypeError):
             return False
 
-    def _attest_legacy_v2(self, row: sqlite3.Row, receipt: dict[str, Any],
-                          payloads: dict[str, bytes]) -> bool:
-        """Migrate only full native-v2 rows whose pixels still bind their chip ID.
-
-        Older v1 and partial-v2 rows remain on disk but never become cache hits.
-        """
-        try:
-            import numpy as np
-            from PIL import Image
-            from agronomy_agent.imagery_analytics import BAND_KEYS, PROCESS_VERSION, _png
-            if (receipt.get("process_version") != PROCESS_VERSION or
-                    receipt.get("source_native_grid") is not True or
-                    receipt.get("grid", {}).get("resampling_method") != "nearest" or
-                    not isinstance(receipt["grid"].get("native_asset_grid"), dict)):
-                return False
-            with zipfile.ZipFile(io.BytesIO(payloads["npz"])) as archive:
-                if sum(info.file_size for info in archive.infolist()) > 16 * 1024 * 1024:
-                    return False
-            with np.load(io.BytesIO(payloads["npz"]), allow_pickle=False) as chip:
-                bands, fmask = chip["bands"], chip["fmask"]
-                weights, valid, ndvi = chip["field_weights"], chip["valid_mask"], chip["ndvi"]
-                field_mask = chip["field_mask"]
-                metadata = json.loads(str(chip["metadata_json"]))
-            if (bands.shape[0] != 6 or bands.shape[1:] != fmask.shape or
-                    weights.shape != fmask.shape or valid.shape != fmask.shape or
-                    field_mask.shape != fmask.shape or
-                    ndvi.shape != fmask.shape or bands.shape[1] > 256 or bands.shape[2] > 256 or
-                    metadata.get("process_version") != PROCESS_VERSION or
-                    metadata.get("source_native_grid") is not True or
-                    metadata.get("native_asset_grid") != receipt["grid"]["native_asset_grid"] or
-                    metadata.get("resampling_method") != "nearest" or
-                    metadata.get("source") != receipt["source"] or
-                    metadata.get("crs") != receipt["grid"]["crs"] or
-                    metadata.get("transform") != receipt["grid"]["transform"] or
-                    metadata.get("width") != receipt["grid"]["width"] or
-                    metadata.get("height") != receipt["grid"]["height"] or
-                    metadata.get("band_names") != ["Blue", "Green", "Red", "NarrowNIR", "SWIR1", "SWIR2"]):
-                return False
-            if (not np.array_equal(valid, np.all(np.isfinite(bands), axis=0)) or
-                    not np.array_equal(field_mask, weights > 0)):
-                return False
-            denominator = bands[3] + bands[2]
-            expected_ndvi = np.full(ndvi.shape, np.nan, dtype=np.float32)
-            np.divide(bands[3] - bands[2], denominator, out=expected_ndvi,
-                      where=valid & (np.abs(denominator) > 1e-6))
-            if not np.allclose(ndvi, expected_ndvi, rtol=1e-6, atol=1e-6, equal_nan=True):
-                return False
-            preview = np.asarray(Image.open(io.BytesIO(payloads["png"])).convert("RGBA"))
-            expected = np.asarray(Image.open(io.BytesIO(_png(ndvi, valid, weights, Image))).convert("RGBA"))
-            if not np.array_equal(preview, expected):
-                return False
-            qa = receipt["qa"]
-            field_area, valid_area = float(weights.sum() * 900), float(weights[valid].sum() * 900)
-            if (not math.isclose(qa["field_area_m2"], field_area, rel_tol=1e-5) or
-                    not math.isclose(qa["valid_area_m2"], valid_area, rel_tol=1e-5)):
-                return False
-            _, band_keys = BAND_KEYS[receipt["provider_id"]]
-            asset_ids = [receipt["source"]["asset_ids"][key] for key in (*band_keys, "Fmask")]
-            array_hash = _sha(bands.tobytes() + fmask.tobytes() + weights.tobytes())
-            chip_binding = {"request": receipt["request_hash"], "scene": receipt["scene_id"],
-                            "asset_ids": asset_ids, "process": receipt["process_hash"],
-                            "arrays": array_hash, "grid": receipt["grid"]}
-            return _sha(_canonical(chip_binding)) == row["chip_hash"]
-        except (KeyError, ValueError, TypeError, OSError, ImportError, EOFError,
-                IndexError, OverflowError, zipfile.BadZipFile):
-            return False
-
     def _verified_row(self, row: sqlite3.Row) -> dict[str, Any] | None:
         try:
-            if self.read_only and any(row[name] is None for name in
+            # Unattested historical bytes remain on disk, never promoted on read.
+            if any(row[name] is None for name in
                     ("npz_sha256", "png_sha256", "receipt_sha256", "receipt_file_sha256")):
                 return None
             names = {"npz": row["npz_name"], "png": row["png_name"],
@@ -341,18 +273,8 @@ class ImageryStore:
             receipt = json.loads(payloads["receipt"])
             if not isinstance(receipt, dict) or not self._row_matches_receipt(row, receipt):
                 return None
-            if any(row[name] is None for name in ("npz_sha256", "png_sha256", "receipt_sha256", "receipt_file_sha256")):
-                if not self._attest_legacy_v2(row, receipt, payloads):
-                    return None
-                hashes = (_sha(payloads["npz"]), _sha(payloads["png"]),
-                          _sha(_canonical(receipt)), _sha(payloads["receipt"]))
-                with self._connect() as db:
-                    db.execute("""UPDATE chips SET npz_sha256=?,png_sha256=?,receipt_sha256=?,
-                                  receipt_file_sha256=? WHERE chip_hash=? AND npz_sha256 IS NULL""",
-                               (*hashes, row["chip_hash"]))
-            else:
-                hashes = (row["npz_sha256"], row["png_sha256"],
-                          row["receipt_sha256"], row["receipt_file_sha256"])
+            hashes = (row["npz_sha256"], row["png_sha256"],
+                      row["receipt_sha256"], row["receipt_file_sha256"])
             if hashes != (_sha(payloads["npz"]), _sha(payloads["png"]),
                           _sha(_canonical(receipt)), _sha(payloads["receipt"])):
                 return None

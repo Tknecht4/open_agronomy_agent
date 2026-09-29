@@ -7,7 +7,6 @@ Spatial libraries are imported only when an analysis is requested.
 from __future__ import annotations
 
 import json
-import math
 import sqlite3
 import time
 from collections import defaultdict
@@ -15,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from agronomy_agent.server.services import geospatial_service as geo
+from agronomy_agent.geospatial.geometry import checked_positions as _checked_positions, geodesic_metrics
 
 
 SCHEMA_VERSION = "open_agronomy_agent.field_map_analysis.v1"
@@ -24,85 +24,6 @@ MAX_INPUT_VERTICES = 1024
 MAX_SOURCE_VERTICES = 20_000
 MAX_ZONES_SHOWN = 10
 ACRES_PER_HECTARE = 2.471053814671653
-
-
-def _checked_positions(geometry: Any, *, maximum: int, label: str) -> int:
-    """Check exact GeoJSON nesting and numeric types before legacy validation.
-
-    The old parser coerces strings/bools and can raise TypeError for nulls.
-    Explicit loops also keep nesting and vertex count bounded before its
-    quadratic ring self-intersection check.
-    """
-    if not isinstance(geometry, dict):
-        raise ValueError(f"{label} must be a GeoJSON geometry object")
-    geometry_type = geometry.get("type")
-    coordinates = geometry.get("coordinates")
-    count = 0
-
-    def position(value: Any) -> None:
-        nonlocal count
-        if not isinstance(value, list) or len(value) not in {2, 3}:
-            raise ValueError(f"{label} positions must contain two or three numeric coordinates")
-        for number in value:
-            if type(number) not in {int, float}:
-                raise ValueError(f"{label} coordinates must be finite JSON numbers")
-            try:
-                finite = math.isfinite(number)
-            except OverflowError:
-                finite = False
-            if not finite:
-                raise ValueError(f"{label} coordinates must be finite JSON numbers")
-        if not (-180 <= value[0] <= 180 and -90 <= value[1] <= 90):
-            raise ValueError(f"{label} coordinates must be WGS84 longitude/latitude")
-        count += 1
-        if count > maximum:
-            raise ValueError(f"{label} exceeds {maximum} coordinate positions")
-
-    def polygon(value: Any) -> None:
-        if not isinstance(value, list) or not value:
-            raise ValueError(f"{label} polygon rings are required")
-        for ring in value:
-            if not isinstance(ring, list) or len(ring) < 4:
-                raise ValueError(f"{label} polygon rings require at least four positions")
-            for value in ring:
-                position(value)
-
-    if geometry_type == "Point":
-        position(coordinates)
-    elif geometry_type == "Polygon":
-        polygon(coordinates)
-    elif geometry_type == "MultiPolygon":
-        if not isinstance(coordinates, list) or not coordinates:
-            raise ValueError(f"{label} multipolygon coordinates are required")
-        for member in coordinates:
-            polygon(member)
-    else:
-        raise ValueError(f"{label} type must be Point, Polygon, or MultiPolygon")
-    return count
-
-
-def _geodesic_measure(shape: Any, geod: Any) -> tuple[float, float]:
-    """Square metres and metres, accounting for every exterior and hole."""
-    if shape.is_empty:
-        return 0.0, 0.0
-    if shape.geom_type == "Polygon":
-        exterior = list(shape.exterior.coords)
-        area, outer_perimeter = geod.polygon_area_perimeter(
-            [p[0] for p in exterior], [p[1] for p in exterior]
-        )
-        total_area, total_perimeter = abs(area), outer_perimeter
-        for ring in shape.interiors:
-            points = list(ring.coords)
-            hole_area, hole_perimeter = geod.polygon_area_perimeter(
-                [p[0] for p in points], [p[1] for p in points]
-            )
-            total_area -= abs(hole_area)
-            total_perimeter += hole_perimeter
-        return max(0.0, total_area), total_perimeter
-    if shape.geom_type in {"MultiPolygon", "GeometryCollection"}:
-        measurements = [_geodesic_measure(part, geod) for part in shape.geoms]
-        return sum(item[0] for item in measurements), sum(item[1] for item in measurements)
-    return 0.0, 0.0
 
 
 def _empty_layer(layer: Any, status: str, reason: str | None = None) -> dict[str, Any]:
@@ -212,10 +133,6 @@ def _load_layer_features(
     if type(raw_count) is not int or type(invalid_count) is not int or raw_count < 0 or invalid_count < 0:
         return None, None, ["malformed_source_collection"], None
     reasons = []
-    if geometry["type"] == "MultiPolygon" or (
-        geometry["type"] == "Polygon" and len(geometry["coordinates"]) > 1
-    ):
-        reasons.append("legacy_remote_query_geometry_incomplete")
     if transfer is True:
         reasons.append("source_transfer_limit_reached")
     if invalid_count:
@@ -243,8 +160,8 @@ def analyze_field_map(
     if len(json.dumps(geometry, separators=(",", ":")).encode("utf-8")) > MAX_REQUEST_BYTES:
         raise ValueError("geometry exceeds 128 KiB limit")
     _checked_positions(geometry, maximum=MAX_INPUT_VERTICES, label="geometry")
-    parsed = geo.validate_geojson_geometry(geometry)
-    raw_bounds = geo.geometry_bbox(parsed)
+    parsed = geometry
+    raw_bounds = geo._geometry_bbox(parsed)
     # The official adapters use ordinary WGS84 envelopes and cannot represent a wrap.
     if raw_bounds[2] - raw_bounds[0] >= 180:
         raise ValueError("antimeridian-crossing geometry is unsupported")
@@ -283,7 +200,7 @@ def analyze_field_map(
         "warnings": ["Mapped context is not a field measurement, survey, or current management recommendation."],
     }
     try:
-        from pyproj import Geod
+        import pyproj  # noqa: F401 - explicit optional dependency readiness check
         from shapely.geometry import shape
         from shapely.ops import unary_union
     except ImportError:
@@ -292,20 +209,17 @@ def analyze_field_map(
         result["elapsed_ms"] = round((time.monotonic() - started) * 1000, 2)
         return result
 
+    parsed = geo.validate_geojson_geometry(parsed)
     field_shape = shape(parsed)
-    if field_shape.is_empty or not field_shape.is_valid:
-        raise ValueError("geometry is empty or invalid (including self-crossings or invalid holes)")
-    if parsed["type"] != "Point" and field_shape.area <= 0:
-        raise ValueError("polygon geometry must have positive area")
-    geod = Geod(ellps="WGS84")
-    area_m2, perimeter_m = _geodesic_measure(field_shape, geod)
-    location = field_shape if parsed["type"] == "Point" else field_shape.representative_point()
+    metrics = geodesic_metrics(field_shape)
+    area_m2, perimeter_m = metrics["area_m2"], metrics["perimeter_m"]
+    location = metrics["representative_point"]
     result["geometry"].update(
         status="complete",
         area_ha=round(area_m2 / 10_000, 6) if parsed["type"] != "Point" else None,
         area_ac=round(area_m2 / 10_000 * ACRES_PER_HECTARE, 6) if parsed["type"] != "Point" else None,
         perimeter_m=round(perimeter_m, 3) if parsed["type"] != "Point" else None,
-        location={"longitude": round(location.x, 7), "latitude": round(location.y, 7)},
+        location={"longitude": round(location["longitude"], 7), "latitude": round(location["latitude"], 7)},
     )
 
     # Query each requested layer independently so failures and feature caps remain
@@ -426,12 +340,12 @@ def analyze_field_map(
             # A capped or invalid source leaves unknown coverage; showing a
             # numeric fraction would misrepresent it as a complete layer.
             if item["status"] == "complete":
-                covered_m2, _ = _geodesic_measure(unary_union(all_clipped), geod) if all_clipped else (0.0, 0.0)
+                covered_m2 = geodesic_metrics(unary_union(all_clipped))["area_m2"] if all_clipped else 0.0
                 item["covered_area_ha"] = round(covered_m2 / 10_000, 6)
                 item["coverage_fraction"] = round(min(1.0, covered_m2 / area_m2), 6)
             zones = []
             for (code, name), pieces in clipped_by_zone.items():
-                zone_m2, _ = _geodesic_measure(unary_union(pieces), geod)
+                zone_m2 = geodesic_metrics(unary_union(pieces))["area_m2"]
                 zones.append({
                     "code": code,
                     "name": name,

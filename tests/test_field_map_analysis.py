@@ -209,20 +209,23 @@ def test_existing_remote_adapter_retains_raw_completeness(
         assert mapped["coverage_fraction"] is None
 
 
-def test_remote_legacy_complex_query_cannot_claim_complete_empty_coverage(monkeypatch) -> None:
+def test_remote_complete_multipart_query_preserves_all_rings(monkeypatch) -> None:
     layer = _layer(monkeypatch, backend="arcgis_feature_service")
-    monkeypatch.setattr(
-        geo, "_query_layer",
-        lambda *args, **kwargs: {"type": "FeatureCollection", "features": []},
-    )
+    def source(*args, **kwargs):
+        payload = json.loads(kwargs["geometry"])
+        assert len(payload["rings"]) == 2
+        from shapely.geometry import LinearRing
+        assert all(not LinearRing(ring).is_ccw for ring in payload["rings"])
+        return {"type": "FeatureCollection", "features": []}
+    monkeypatch.setattr(geo, "_query_layer", source)
     multi = {"type": "MultiPolygon", "coordinates": [
         FIELD["coordinates"], polygon(0.04, 0, 0.06, 0.02)["coordinates"],
     ]}
     result = analysis.analyze_field_map(geometry=multi, layer_ids=[layer.id], network_mode="online")
     mapped = result["layers"][0]
-    assert mapped["status"] == "partial"
-    assert mapped["reason"] == "legacy_remote_query_geometry_incomplete"
-    assert mapped["coverage_fraction"] is None
+    assert mapped["status"] == "complete"
+    assert mapped["reason"] is None
+    assert mapped["coverage_fraction"] == 0
 
 
 def test_feature_cap_never_reports_complete_coverage(monkeypatch) -> None:

@@ -14,6 +14,7 @@ from urllib.parse import urlsplit
 
 import httpx
 from shapely.geometry import shape
+from agronomy_agent.geospatial.geometry import canonical_geometry
 
 
 _EARTH_SEARCH = "https://earth-search.aws.element84.com/v1/search"
@@ -24,76 +25,14 @@ _PC_ASSET_HOST = "hls2euwest.blob.core.windows.net"
 _MAX_JSON_BYTES = 2 * 1024 * 1024
 _MAX_RANGE_BYTES = 16 * 1024
 
-_PROVIDERS: tuple[dict[str, Any], ...] = (
-    {
-        "id": "sentinel2-c1-earth-search",
-        "name": "Sentinel-2 Collection 1 L2A COGs (Earth Search)",
-        "source": "ESA/Copernicus Sentinel-2; Element 84 Earth Search COG hosting",
-        "collection": "sentinel-2-c1-l2a",
-        "catalog_url": "https://earth-search.aws.element84.com/v1/collections/sentinel-2-c1-l2a",
-        "access": "anonymous_metadata_and_cog",
-        "account_required": False,
-        "payment_required": False,
-        "rights": "Copernicus Sentinel Data Terms and Conditions; attribution required. STAC collection declares license=proprietary; inspect source terms before redistribution.",
-        "rights_url": "https://sentinels.copernicus.eu/web/sentinel/data-access-and-products/legal-notices",
-        "capabilities": ["scene_discovery", "anonymous_cog_range_read"],
-        "limitations": "Scene cloud cover is scene-wide, not clear field coverage; C1 historical gaps exist. No pixel analysis in this module.",
-    },
-    {
-        "id": "hls-s30-planetary-computer",
-        "name": "NASA HLS S30 v2 (Planetary Computer mirror)",
-        "source": "NASA LP DAAC HLS S30; Microsoft Planetary Computer mirror",
-        "collection": "hls2-s30",
-        "catalog_url": "https://planetarycomputer.microsoft.com/api/stac/v1/collections/hls2-s30",
-        "access": "anonymous_metadata_public_short_lived_sas_for_cog",
-        "account_required": False,
-        "payment_required": False,
-        "rights": "HLS source data CC BY 4.0 per NASA AWS Registry; Planetary Computer STAC collection declares license=proprietary and links LP DAAC policies. Preserve attribution and verify redistribution terms.",
-        "rights_url": "https://lpdaac.usgs.gov/data/data-citation-and-policies/",
-        "capabilities": ["scene_discovery", "public_sas_cog_range_read"],
-        "limitations": "Public SAS expires; scene metadata is not field coverage or validated reflectance.",
-    },
-    {
-        "id": "hls-l30-planetary-computer",
-        "name": "NASA HLS L30 v2 (Planetary Computer mirror)",
-        "source": "NASA LP DAAC HLS L30; Microsoft Planetary Computer mirror",
-        "collection": "hls2-l30",
-        "catalog_url": "https://planetarycomputer.microsoft.com/api/stac/v1/collections/hls2-l30",
-        "access": "anonymous_metadata_public_short_lived_sas_for_cog",
-        "account_required": False,
-        "payment_required": False,
-        "rights": "HLS source data CC BY 4.0 per NASA AWS Registry; Planetary Computer STAC collection declares license=proprietary and links LP DAAC policies. Preserve attribution and verify redistribution terms.",
-        "rights_url": "https://lpdaac.usgs.gov/data/data-citation-and-policies/",
-        "capabilities": ["scene_discovery", "public_sas_cog_range_read"],
-        "limitations": "Public SAS expires; scene metadata is not field coverage or validated reflectance.",
-    },
-    {
-        "id": "hls-earth-engine",
-        "name": "NASA HLS v2 (Google Earth Engine)",
-        "source": "NASA HLS via Google Earth Engine",
-        "collection": None,
-        "catalog_url": "https://developers.google.com/earth-engine/datasets/tags/hls",
-        "access": "account_and_project_required_not_configured",
-        "account_required": True,
-        "project_required": True,
-        "payment_required": "depends_on_Earth_Engine_eligibility_and_quota",
-        "rights": "NASA HLS source terms and Google Earth Engine platform terms apply separately.",
-        "rights_url": "https://developers.google.com/earth-engine/guides/access",
-        "capabilities": [],
-        "limitations": "Optional provider declaration only; no Earth Engine credentials are read or configured.",
-    },
-)
-
-
 def provider_catalog() -> list[dict[str, Any]]:
-    """Return a detached, credential-free provider inventory."""
-    import copy
-
-    return copy.deepcopy(list(_PROVIDERS))
+    """Credential-free legacy imagery view of the shared source catalog."""
+    from agronomy_agent.geospatial.catalog import imagery_provider_catalog
+    return imagery_provider_catalog()
 
 
 def _provider(provider_id: str) -> dict[str, Any]:
-    for provider in _PROVIDERS:
+    for provider in provider_catalog():
         if provider["id"] == provider_id:
             return provider
     raise ValueError("unknown imagery provider")
@@ -117,7 +56,7 @@ def _valid_geometry(geometry: dict[str, Any]) -> tuple[dict[str, Any], list[floa
                         not math.isfinite(value) for value in point)):
                 raise ValueError("finite two-dimensional coordinates required")
     try:
-        polygon = shape({"type": "Polygon", "coordinates": coordinates})
+        polygon = shape(canonical_geometry({"type": "Polygon", "coordinates": coordinates}, allowed_types=("Polygon",), max_vertices=500))
     except (TypeError, ValueError, IndexError) as exc:
         raise ValueError("invalid field polygon") from exc
     if polygon.is_empty or not polygon.is_valid or polygon.area <= 0:
@@ -145,8 +84,7 @@ def _valid_search_geometry(geometry: dict[str, Any]) -> tuple[dict[str, Any], li
                    or not math.isfinite(value) for value in coordinates)):
         raise ValueError("finite two-dimensional point coordinates required")
     lon, lat = map(float, coordinates)
-    if not (-180 <= lon <= 180 and -90 <= lat <= 90):
-        raise ValueError("point coordinates must be WGS84 longitude/latitude")
+    canonical_geometry({"type": "Point", "coordinates": [lon, lat]}, allowed_types=("Point",))
     return {"type": "Point", "coordinates": [lon, lat]}, [lon, lat, lon, lat]
 
 

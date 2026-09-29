@@ -1,5 +1,7 @@
 # Field uploads and public imagery
 
+The [geospatial foundation and terrain guide](geospatial-foundation.md) describes shared GIS/raster contracts, additional keyless source discovery, and the optional local DTM terrain processor. HLS polygon processing now uses v3 source-extent masking and float64 support; historical research v2 gates are unchanged.
+
 Reviewed tables now connect to persisted fields, deterministic queries,
 conversational answers and evidence traces. Supported files are CSV, TSV,
 delimited `.tab` files and one-sheet XLSX workbooks up to 8 MiB. Scanned

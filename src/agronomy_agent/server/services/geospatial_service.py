@@ -1,16 +1,12 @@
 from __future__ import annotations
 
 import hashlib
-import io
 import json
 import math
 import os
 import sqlite3
-import struct
-import tempfile
 import threading
 import time
-import zipfile
 import zlib
 from collections import OrderedDict
 from copy import deepcopy
@@ -21,6 +17,8 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from agronomy_agent.paths import repo_path
+from agronomy_agent.geospatial.geometry import canonical_geometry, geodesic_metrics
+from agronomy_agent.geospatial.vector_io import read_vector_upload
 
 
 GEO_SERVICE_SCHEMA_VERSION = "open_agronomy_agent.geo_service.v1"
@@ -29,19 +27,10 @@ CACHE_DIR = repo_path(os.getenv("AGRONOMY_AGENT_GEO_CACHE_DIR", "data/derived/ge
 HTTP_TIMEOUT_SECONDS = 25
 MAX_FEATURES_PER_LAYER = 80
 MAX_BBOX_SPAN_DEGREES = 12.0
-MAX_BOUNDARY_UPLOAD_BYTES = 25 * 1024 * 1024
-MAX_BOUNDARY_UPLOAD_FEATURES = 250
-MAX_ZIP_MEMBERS = 40
-MAX_ZIP_MEMBER_BYTES = 30 * 1024 * 1024
 OFFLINE_INTERSECTION_CACHE_TTL_SECONDS = 300
 OFFLINE_INTERSECTION_CACHE_MAX_ENTRIES = 8
 _OFFLINE_INTERSECTION_CACHE: OrderedDict[str, tuple[float, dict[str, Any]]] = OrderedDict()
 _OFFLINE_INTERSECTION_CACHE_LOCK = threading.Lock()
-WGS84_REPROJECT_UPLOAD_ERROR = (
-    "boundary coordinates must be WGS84 longitude/latitude (EPSG:4326); "
-    "found a coordinate outside lon/lat bounds. Reproject UTM, State Plane, "
-    "Web Mercator, or local grid boundaries to EPSG:4326 before upload."
-)
 UPLOAD_LABEL_FIELDS = (
     "name",
     "Name",
@@ -396,64 +385,46 @@ def layer_catalog(*, network_mode: str = "online") -> dict[str, Any]:
 
 
 def parse_boundary_upload(*, filename: str, content_type: str | None, raw: bytes) -> dict[str, Any]:
-    """Parse a public-demo field boundary upload into normalized WGS84 GeoJSON.
+    """Read bounded vector bytes with explicit CRS and no lost topology.
 
-    This intentionally handles the common farm-field exchange formats without
-    requiring GDAL in the local demo container. It supports GeoJSON, zipped
-    shapefile point/polygon layers, and GeoPackage geometry tables using a
-    small WKB reader. Coordinate reprojection is not attempted; uploads must
-    already be WGS84 lon/lat.
+    The current field editor supports points and single-ring polygons. Complex
+    topology remains available in vector_io and must be explicitly rejected here
+    until the editor can round-trip it without dropping holes or members.
     """
-
     safe_filename = Path(filename or "boundary").name
-    if not raw:
-        raise ValueError("boundary upload is empty")
-    if len(raw) > MAX_BOUNDARY_UPLOAD_BYTES:
-        raise ValueError("boundary upload exceeds 25 MB limit")
+    imported = read_vector_upload(filename=safe_filename, raw=raw, content_type=content_type)
+    source_format = imported["source_format"]
+    features = [
+        _upload_feature(feature["geometry"], {
+            **feature["properties"],
+            "upload_source_layer": feature["source_layer"],
+            "upload_source_feature_index": feature["source_feature_index"],
+        }, index=index, source_format=source_format)
+        for index, feature in enumerate(imported["features"])
+    ]
+    if any(feature["geometry"]["type"] == "MultiPolygon" or (
+        feature["geometry"]["type"] == "Polygon" and len(feature["geometry"]["coordinates"]) > 1
+    ) for feature in features):
+        raise ValueError("The field editor currently supports only points and single-ring polygons; "
+                         "this upload contains multipart geometry or holes. No components were dropped. "
+                         "Prepare an explicitly selected simple field boundary in a GIS tool before import.")
 
-    suffix = Path(safe_filename).suffix.lower()
-    if suffix in {".geojson", ".json"} or (content_type or "").lower() in {
-        "application/geo+json",
-        "application/json",
-        "geojson",
-    }:
-        features = _parse_geojson_upload(raw)
-        source_format = "geojson"
-    elif suffix == ".zip":
-        features = _parse_zipped_shapefile_upload(raw)
-        source_format = "zipped_shapefile"
-    elif suffix == ".shp":
-        features = _parse_shapefile_bytes(raw, properties_by_record=[])
-        source_format = "shapefile"
-    elif suffix == ".gpkg":
-        features = _parse_geopackage_upload(raw)
-        source_format = "geopackage"
-    else:
-        raise ValueError("boundary upload must be GeoJSON, zipped shapefile, .shp, or GeoPackage")
-
-    if not features:
-        raise ValueError("boundary upload did not contain supported Point, Polygon, or MultiPolygon geometry")
     parsed_feature_count = len(features)
-    truncated = parsed_feature_count > MAX_BOUNDARY_UPLOAD_FEATURES
-    if truncated:
-        features = features[:MAX_BOUNDARY_UPLOAD_FEATURES]
 
     primary_feature, primary_geometry = _primary_upload_feature(features)
     selected_feature_id = str(primary_feature.get("id") or "")
     bbox = _geometry_bbox(primary_geometry)
     acres = _geometry_area_acres(primary_geometry)
     warnings = _upload_warnings(
-        source_format=source_format,
         parsed_feature_count=parsed_feature_count,
-        retained_feature_count=len(features),
         primary_geometry=primary_geometry,
-        truncated=truncated,
     )
     return {
         "schema_version": BOUNDARY_UPLOAD_SCHEMA_VERSION,
         "filename": safe_filename,
         "content_type": content_type or "application/octet-stream",
         "source_format": source_format,
+        "import_receipt": {key: imported[key] for key in ("schema_version", "source_sha256", "source_bytes")},
         "feature_count": len(features),
         "parsed_feature_count": parsed_feature_count,
         "selected_feature_id": selected_feature_id,
@@ -464,11 +435,7 @@ def parse_boundary_upload(*, filename: str, content_type: str | None, raw: bytes
         "feature_collection": {"type": "FeatureCollection", "features": features},
         "feature_summaries": _upload_feature_summaries(features, selected_feature_id=selected_feature_id),
         "warnings": warnings,
-        "coordinate_reference": {
-            "assumed": "EPSG:4326",
-            "label": "WGS84 longitude/latitude",
-            "reprojected": False,
-        },
+        "coordinate_reference": imported["coordinate_reference"],
         "status_message": _upload_status_message(safe_filename, source_format, len(features), primary_geometry, acres),
         "boundary": (
             "Uploaded boundaries are treated as user-provided field context in WGS84 coordinates; "
@@ -542,7 +509,20 @@ def intersect_region_layers(
     source_collection_status: list[dict[str, Any]] = []
     for layer in layers:
         try:
-            collection = _query_layer(layer, geometry=_arcgis_geometry(parsed_geometry), geometry_type=_arcgis_geometry_type(parsed_geometry))
+            if layer.query_backend == "local_sqlite":
+                collection = _query_layer(layer, geometry=_arcgis_envelope(*bbox), geometry_type="esriGeometryEnvelope")
+                if isinstance(collection, dict) and isinstance(collection.get("features"), list):
+                    candidates = collection["features"]
+                    selected = []
+                    for feature in candidates:
+                        try:
+                            if _geometries_intersect(parsed_geometry, feature["geometry"]):
+                                selected.append(feature)
+                        except (ValueError, TypeError, KeyError):
+                            selected.append(feature)  # Preserve invalid-source accounting.
+                    collection = {**collection, "features": selected}
+            else:
+                collection = _query_layer(layer, geometry=_arcgis_geometry(parsed_geometry), geometry_type=_arcgis_geometry_type(parsed_geometry))
             source_collection_status.append(_source_collection_status(collection, layer_id=layer.id))
             normalized = _normalize_feature_collection(collection, layer)
             features.extend(normalized)
@@ -867,7 +847,10 @@ def _query_local_sqlite_layer(layer: RegionLayer, *, geometry: str, geometry_typ
         )
         if len(features) >= MAX_FEATURES_PER_LAYER:
             break
-    return {"type": "FeatureCollection", "features": features}
+    return {
+        "type": "FeatureCollection", "features": features,
+        "exceededTransferLimit": len(rows) >= MAX_FEATURES_PER_LAYER * 8 or len(features) >= MAX_FEATURES_PER_LAYER,
+    }
 
 
 def _local_query_geometry(*, geometry: str, geometry_type: str) -> tuple[dict[str, Any] | None, tuple[float, float, float, float]]:
@@ -946,6 +929,8 @@ def _intersection_record(*, feature: dict[str, Any], layer: RegionLayer, input_g
         "source_url": layer.source_url,
         "confidence": 0.94 if coverage >= 0.5 else 0.82,
         "coverage_estimate": coverage,
+        "coverage_method": "WGS84 geodesic intersection area / complete input area; point uses polygon covers",
+        "confidence_kind": "heuristic_not_calibrated",
         "match_reason": (
             layer.local_match_reason
             if layer.query_backend == "local_sqlite"
@@ -1054,12 +1039,12 @@ def _arcgis_geometry(geometry: dict[str, Any]) -> str:
     if geometry["type"] == "Point":
         lon, lat = geometry["coordinates"][:2]
         return json.dumps({"x": lon, "y": lat, "spatialReference": {"wkid": 4326}}, separators=(",", ":"))
-    if geometry["type"] == "Polygon":
-        return json.dumps({"rings": geometry["coordinates"], "spatialReference": {"wkid": 4326}}, separators=(",", ":"))
-    if geometry["type"] == "MultiPolygon":
-        rings: list[list[list[float]]] = []
-        for polygon in geometry["coordinates"]:
-            rings.extend(polygon)
+    if geometry["type"] in {"Polygon", "MultiPolygon"}:
+        from shapely.geometry import shape, mapping
+        from shapely.geometry.polygon import orient
+        parsed = shape(canonical_geometry(geometry))
+        polygons = [parsed] if parsed.geom_type == "Polygon" else parsed.geoms
+        rings = [ring for polygon in polygons for ring in mapping(orient(polygon, sign=-1.0))["coordinates"]]
         return json.dumps({"rings": rings, "spatialReference": {"wkid": 4326}}, separators=(",", ":"))
     raise ValueError(f"unsupported geometry type: {geometry['type']}")
 
@@ -1069,26 +1054,7 @@ def _arcgis_geometry_type(geometry: dict[str, Any]) -> str:
 
 
 def _validate_geojson_geometry(geometry: dict[str, Any]) -> dict[str, Any]:
-    if not isinstance(geometry, dict):
-        raise ValueError("geometry must be a GeoJSON geometry object")
-    geometry_type = geometry.get("type")
-    if geometry_type == "Feature":
-        inner = geometry.get("geometry")
-        if not isinstance(inner, dict):
-            raise ValueError("feature geometry is required")
-        return _validate_geojson_geometry(inner)
-    if geometry_type == "Point":
-        point = _validate_position(geometry.get("coordinates"))
-        return {"type": "Point", "coordinates": point}
-    if geometry_type == "Polygon":
-        rings = _validate_polygon_coordinates(geometry.get("coordinates"))
-        return {"type": "Polygon", "coordinates": rings}
-    if geometry_type == "MultiPolygon":
-        coordinates = geometry.get("coordinates")
-        if not isinstance(coordinates, list) or not coordinates:
-            raise ValueError("multipolygon coordinates are required")
-        return {"type": "MultiPolygon", "coordinates": [_validate_polygon_coordinates(polygon) for polygon in coordinates]}
-    raise ValueError("geometry type must be Point, Polygon, MultiPolygon, or Feature")
+    return canonical_geometry(geometry)
 
 
 def validate_geojson_geometry(geometry: dict[str, Any]) -> dict[str, Any]:
@@ -1115,78 +1081,6 @@ def geometries_intersect(
         _validate_geojson_geometry(left),
         _validate_geojson_geometry(right),
     )
-
-
-def _validate_polygon_coordinates(coordinates: Any) -> list[list[list[float]]]:
-    if not isinstance(coordinates, list) or not coordinates:
-        raise ValueError("polygon coordinates are required")
-    rings: list[list[list[float]]] = []
-    for ring in coordinates:
-        if not isinstance(ring, list) or len(ring) < 4:
-            raise ValueError("polygon rings must contain at least four positions")
-        positions = [_validate_position(position) for position in ring]
-        if positions[0] != positions[-1]:
-            positions.append(positions[0])
-        if _ring_self_intersects(positions):
-            raise ValueError("polygon rings must not self-intersect")
-        if abs(_signed_ring_area(positions)) <= 1e-12:
-            raise ValueError("polygon rings must enclose a non-zero area")
-        rings.append(positions)
-    return rings
-
-
-def _signed_ring_area(ring: list[list[float]]) -> float:
-    return sum(
-        ring[index][0] * ring[index + 1][1] - ring[index + 1][0] * ring[index][1]
-        for index in range(len(ring) - 1)
-    ) / 2
-
-
-def _ring_self_intersects(ring: list[list[float]]) -> bool:
-    segment_count = len(ring) - 1
-    for left in range(segment_count):
-        for right in range(left + 1, segment_count):
-            if abs(left - right) <= 1 or (left == 0 and right == segment_count - 1):
-                continue
-            if _segments_intersect(ring[left], ring[left + 1], ring[right], ring[right + 1]):
-                return True
-    return False
-
-
-def _segments_intersect(a: list[float], b: list[float], c: list[float], d: list[float]) -> bool:
-    epsilon = 1e-12
-
-    def orient(start: list[float], end: list[float], point: list[float]) -> float:
-        return (end[0] - start[0]) * (point[1] - start[1]) - (end[1] - start[1]) * (point[0] - start[0])
-
-    def on_segment(start: list[float], end: list[float], point: list[float]) -> bool:
-        return (
-            abs(orient(start, end, point)) <= epsilon
-            and min(start[0], end[0]) - epsilon <= point[0] <= max(start[0], end[0]) + epsilon
-            and min(start[1], end[1]) - epsilon <= point[1] <= max(start[1], end[1]) + epsilon
-        )
-
-    ab_c = orient(a, b, c)
-    ab_d = orient(a, b, d)
-    cd_a = orient(c, d, a)
-    cd_b = orient(c, d, b)
-    proper = (
-        ((ab_c > epsilon and ab_d < -epsilon) or (ab_c < -epsilon and ab_d > epsilon))
-        and ((cd_a > epsilon and cd_b < -epsilon) or (cd_a < -epsilon and cd_b > epsilon))
-    )
-    return proper or on_segment(a, b, c) or on_segment(a, b, d) or on_segment(c, d, a) or on_segment(c, d, b)
-
-
-def _validate_position(position: Any) -> list[float]:
-    if not isinstance(position, list) or len(position) < 2:
-        raise ValueError("position must be [longitude, latitude]")
-    lon = float(position[0])
-    lat = float(position[1])
-    if not math.isfinite(lon) or not math.isfinite(lat):
-        raise ValueError("position coordinates must be finite")
-    if not (-180 <= lon <= 180 and -90 <= lat <= 90):
-        raise ValueError(WGS84_REPROJECT_UPLOAD_ERROR)
-    return [lon, lat]
 
 
 def _geometry_bbox(geometry: dict[str, Any]) -> tuple[float, float, float, float]:
@@ -1217,470 +1111,20 @@ def _iter_positions(geometry: dict[str, Any]) -> Any:
 
 
 def _coverage_estimate(input_geometry: dict[str, Any], region_geometry: dict[str, Any]) -> float:
-    if input_geometry["type"] == "Point":
-        return 1.0 if _point_in_geometry(input_geometry["coordinates"], region_geometry) else 0.0
-    sample_points = _sample_points(input_geometry)
-    if not sample_points:
-        return 0.0
-    hits = sum(1 for point in sample_points if _point_in_geometry(point, region_geometry))
-    return round(hits / len(sample_points), 3)
-
-
-def _sample_points(geometry: dict[str, Any]) -> list[list[float]]:
-    rings: list[list[list[float]]] = []
-    if geometry["type"] == "Polygon":
-        rings = geometry["coordinates"]
-    elif geometry["type"] == "MultiPolygon":
-        rings = [ring for polygon in geometry["coordinates"] for ring in polygon]
-    points: list[list[float]] = []
-    for ring in rings[:2]:
-        open_ring = ring[:-1] if ring and ring[0] == ring[-1] else ring
-        points.extend(open_ring)
-        for index, point in enumerate(open_ring):
-            next_point = open_ring[(index + 1) % len(open_ring)]
-            points.append([(point[0] + next_point[0]) / 2, (point[1] + next_point[1]) / 2])
-        points.append(_ring_centroid(open_ring))
-    return points[:60]
-
-
-def _ring_centroid(ring: list[list[float]]) -> list[float]:
-    return [sum(point[0] for point in ring) / len(ring), sum(point[1] for point in ring) / len(ring)]
-
-
-def _point_in_geometry(point: list[float], geometry: dict[str, Any]) -> bool:
-    if geometry.get("type") == "Polygon":
-        return _point_in_polygon(point, geometry["coordinates"])
-    if geometry.get("type") == "MultiPolygon":
-        return any(_point_in_polygon(point, polygon) for polygon in geometry["coordinates"])
-    return False
+    from shapely.geometry import shape
+    field = shape(canonical_geometry(input_geometry))
+    region = shape(canonical_geometry(region_geometry, max_vertices=20_000))
+    if field.geom_type == "Point":
+        return 1.0 if region.covers(field) else 0.0
+    total = geodesic_metrics(field)["area_m2"]
+    covered = geodesic_metrics(field.intersection(region))["area_m2"]
+    return round(min(1.0, max(0.0, covered / total)), 6)
 
 
 def _geometries_intersect(left: dict[str, Any], right: dict[str, Any]) -> bool:
-    if left.get("type") == "Point":
-        return _point_in_geometry(left["coordinates"], right)
-    if right.get("type") == "Point":
-        return _point_in_geometry(right["coordinates"], left)
-    left_bbox = _geometry_bbox(left)
-    right_bbox = _geometry_bbox(right)
-    if (
-        left_bbox[2] < right_bbox[0]
-        or left_bbox[0] > right_bbox[2]
-        or left_bbox[3] < right_bbox[1]
-        or left_bbox[1] > right_bbox[3]
-    ):
-        return False
-    if any(_point_in_geometry(point, right) for point in _sample_points(left)):
-        return True
-    if any(_point_in_geometry(point, left) for point in _sample_points(right)):
-        return True
-    for left_ring in _outer_rings(left):
-        for right_ring in _outer_rings(right):
-            for left_start, left_end in _ring_segments(left_ring):
-                for right_start, right_end in _ring_segments(right_ring):
-                    if _segments_intersect(left_start, left_end, right_start, right_end):
-                        return True
-    return False
-
-
-def _outer_rings(geometry: dict[str, Any]) -> list[list[list[float]]]:
-    if geometry.get("type") == "Polygon":
-        coordinates = geometry.get("coordinates") or []
-        return [coordinates[0]] if coordinates else []
-    if geometry.get("type") == "MultiPolygon":
-        return [polygon[0] for polygon in geometry.get("coordinates") or [] if polygon]
-    return []
-
-
-def _ring_segments(ring: list[list[float]]) -> list[tuple[list[float], list[float]]]:
-    if len(ring) < 2:
-        return []
-    closed = ring if ring[0] == ring[-1] else [*ring, ring[0]]
-    return list(zip(closed, closed[1:]))
-
-
-def _point_in_polygon(point: list[float], rings: list[list[list[float]]]) -> bool:
-    if not rings or not _point_in_ring(point, rings[0]):
-        return False
-    return not any(_point_in_ring(point, hole) for hole in rings[1:])
-
-
-def _point_in_ring(point: list[float], ring: list[list[float]]) -> bool:
-    x, y = point
-    inside = False
-    j = len(ring) - 1
-    for i, current in enumerate(ring):
-        xi, yi = current
-        xj, yj = ring[j]
-        intersects = ((yi > y) != (yj > y)) and (x < (xj - xi) * (y - yi) / ((yj - yi) or 1e-12) + xi)
-        if intersects:
-            inside = not inside
-        j = i
-    return inside
-
-
-def _parse_geojson_upload(raw: bytes) -> list[dict[str, Any]]:
-    try:
-        parsed = json.loads(raw.decode("utf-8-sig"))
-    except UnicodeDecodeError as exc:
-        raise ValueError("GeoJSON upload must be UTF-8 text") from exc
-    except json.JSONDecodeError as exc:
-        raise ValueError("GeoJSON upload is not valid JSON") from exc
-    return _features_from_geojson_like(parsed, source_format="geojson")
-
-
-def _features_from_geojson_like(parsed: Any, *, source_format: str) -> list[dict[str, Any]]:
-    features: list[dict[str, Any]] = []
-    if not isinstance(parsed, dict):
-        raise ValueError("GeoJSON root must be an object")
-    root_type = parsed.get("type")
-    if root_type == "FeatureCollection":
-        for index, feature in enumerate(parsed.get("features") or []):
-            features.extend(_features_from_geojson_feature(feature, index=index, source_format=source_format))
-        return features
-    if root_type == "Feature":
-        return _features_from_geojson_feature(parsed, index=0, source_format=source_format)
-    geometry = _validate_geojson_geometry(parsed)
-    return [_upload_feature(geometry, {}, index=0, source_format=source_format)]
-
-
-def _features_from_geojson_feature(feature: Any, *, index: int, source_format: str) -> list[dict[str, Any]]:
-    if not isinstance(feature, dict):
-        return []
-    geometry = feature.get("geometry")
-    if not isinstance(geometry, dict):
-        return []
-    try:
-        normalized = _validate_geojson_geometry(geometry)
-    except ValueError as exc:
-        if _is_upload_coordinate_error(exc):
-            raise
-        return []
-    properties = feature.get("properties") if isinstance(feature.get("properties"), dict) else {}
-    return [_upload_feature(normalized, _json_safe_properties(properties), index=index, source_format=source_format)]
-
-
-def _parse_zipped_shapefile_upload(raw: bytes) -> list[dict[str, Any]]:
-    try:
-        archive = zipfile.ZipFile(io.BytesIO(raw))
-    except zipfile.BadZipFile as exc:
-        raise ValueError("zip upload is not a valid zip archive") from exc
-    infos = archive.infolist()
-    if len(infos) > MAX_ZIP_MEMBERS:
-        raise ValueError(f"zip upload must contain {MAX_ZIP_MEMBERS} files or fewer")
-    for info in infos:
-        if info.file_size > MAX_ZIP_MEMBER_BYTES:
-            raise ValueError("zip member exceeds boundary upload size limit")
-    shp_members = [info for info in infos if info.filename.lower().endswith(".shp") and not info.is_dir()]
-    if not shp_members:
-        raise ValueError("zipped shapefile upload must contain a .shp member")
-    shp_info = sorted(shp_members, key=lambda item: item.filename)[0]
-    base = shp_info.filename.rsplit(".", 1)[0].lower()
-    dbf_info = next((info for info in infos if info.filename.lower() == f"{base}.dbf"), None)
-    properties_by_record = _parse_dbf_bytes(archive.read(dbf_info)) if dbf_info else []
-    return _parse_shapefile_bytes(archive.read(shp_info), properties_by_record=properties_by_record)
-
-
-def _parse_shapefile_bytes(raw: bytes, *, properties_by_record: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    if len(raw) < 100:
-        raise ValueError("shapefile .shp content is too small")
-    try:
-        file_code = struct.unpack(">i", raw[0:4])[0]
-        version = struct.unpack("<i", raw[28:32])[0]
-    except struct.error as exc:
-        raise ValueError("shapefile header is malformed") from exc
-    if file_code != 9994 or version != 1000:
-        raise ValueError("shapefile header is not recognized")
-    features: list[dict[str, Any]] = []
-    offset = 100
-    record_index = 0
-    while offset + 8 <= len(raw) and len(features) < MAX_BOUNDARY_UPLOAD_FEATURES:
-        try:
-            _record_number, content_words = struct.unpack(">ii", raw[offset : offset + 8])
-        except struct.error as exc:
-            raise ValueError("shapefile record header is malformed") from exc
-        offset += 8
-        content_length = content_words * 2
-        content = raw[offset : offset + content_length]
-        offset += content_length
-        if len(content) < 4:
-            continue
-        geometry = _parse_shapefile_record_geometry(content)
-        if not geometry:
-            record_index += 1
-            continue
-        properties = properties_by_record[record_index] if record_index < len(properties_by_record) else {}
-        features.append(_upload_feature(geometry, properties, index=record_index, source_format="shapefile"))
-        record_index += 1
-    return features
-
-
-def _parse_shapefile_record_geometry(content: bytes) -> dict[str, Any] | None:
-    shape_type = struct.unpack("<i", content[0:4])[0]
-    if shape_type == 0:
-        return None
-    if shape_type in {1, 11, 21}:
-        if len(content) < 20:
-            return None
-        x, y = struct.unpack("<dd", content[4:20])
-        return _validate_geojson_geometry({"type": "Point", "coordinates": [x, y]})
-    if shape_type in {5, 15, 25}:
-        if len(content) < 44:
-            return None
-        num_parts, num_points = struct.unpack("<ii", content[36:44])
-        if num_parts <= 0 or num_points <= 0:
-            return None
-        parts_offset = 44
-        points_offset = parts_offset + num_parts * 4
-        if len(content) < points_offset + num_points * 16:
-            return None
-        parts = list(struct.unpack(f"<{num_parts}i", content[parts_offset:points_offset]))
-        points: list[list[float]] = []
-        for index in range(num_points):
-            start = points_offset + index * 16
-            x, y = struct.unpack("<dd", content[start : start + 16])
-            points.append([x, y])
-        rings: list[list[list[float]]] = []
-        for part_index, start_index in enumerate(parts):
-            end_index = parts[part_index + 1] if part_index + 1 < len(parts) else len(points)
-            ring = points[start_index:end_index]
-            if len(ring) >= 3:
-                if ring[0] != ring[-1]:
-                    ring = [*ring, ring[0]]
-                rings.append(ring)
-        if not rings:
-            return None
-        return _validate_geojson_geometry({"type": "Polygon", "coordinates": rings})
-    return None
-
-
-def _parse_dbf_bytes(raw: bytes) -> list[dict[str, Any]]:
-    if len(raw) < 33:
-        return []
-    record_count = struct.unpack("<I", raw[4:8])[0]
-    header_length = struct.unpack("<H", raw[8:10])[0]
-    record_length = struct.unpack("<H", raw[10:12])[0]
-    fields: list[dict[str, Any]] = []
-    offset = 32
-    while offset + 32 <= min(header_length, len(raw)) and raw[offset] != 0x0D:
-        descriptor = raw[offset : offset + 32]
-        name = descriptor[0:11].split(b"\x00", 1)[0].decode("latin-1", errors="ignore").strip()
-        field_type = chr(descriptor[11])
-        length = int(descriptor[16])
-        decimal_count = int(descriptor[17])
-        if name:
-            fields.append({"name": name, "type": field_type, "length": length, "decimal_count": decimal_count})
-        offset += 32
-    records: list[dict[str, Any]] = []
-    offset = header_length
-    for _ in range(min(record_count, MAX_BOUNDARY_UPLOAD_FEATURES)):
-        if offset + record_length > len(raw):
-            break
-        record = raw[offset : offset + record_length]
-        offset += record_length
-        if not record or record[0:1] == b"*":
-            records.append({})
-            continue
-        cursor = 1
-        properties: dict[str, Any] = {}
-        for field in fields:
-            length = int(field["length"])
-            raw_value = record[cursor : cursor + length]
-            cursor += length
-            text = raw_value.decode("latin-1", errors="ignore").strip()
-            if text == "":
-                properties[str(field["name"])] = None
-            elif field["type"] in {"N", "F"}:
-                properties[str(field["name"])] = _parse_dbf_number(text, int(field["decimal_count"]))
-            elif field["type"] == "L":
-                properties[str(field["name"])] = text.upper() in {"Y", "T"}
-            else:
-                properties[str(field["name"])] = text
-        records.append(properties)
-    return records
-
-
-def _parse_dbf_number(text: str, decimal_count: int) -> int | float | str:
-    try:
-        return float(text) if decimal_count else int(text)
-    except ValueError:
-        return text
-
-
-def _parse_geopackage_upload(raw: bytes) -> list[dict[str, Any]]:
-    with tempfile.NamedTemporaryFile(prefix="open-agronomy-boundary-", suffix=".gpkg") as handle:
-        handle.write(raw)
-        handle.flush()
-        connection = sqlite3.connect(handle.name)
-        connection.row_factory = sqlite3.Row
-        try:
-            geometry_columns = _geopackage_geometry_columns(connection)
-            if not geometry_columns:
-                raise ValueError("GeoPackage does not advertise geometry columns")
-            features: list[dict[str, Any]] = []
-            for table_name, geometry_column in geometry_columns:
-                features.extend(_read_geopackage_features(connection, table_name, geometry_column))
-                if len(features) >= MAX_BOUNDARY_UPLOAD_FEATURES:
-                    break
-            return features[:MAX_BOUNDARY_UPLOAD_FEATURES]
-        finally:
-            connection.close()
-
-
-def _geopackage_geometry_columns(connection: sqlite3.Connection) -> list[tuple[str, str]]:
-    rows = connection.execute(
-        "SELECT table_name, column_name FROM gpkg_geometry_columns ORDER BY table_name"
-    ).fetchall()
-    columns: list[tuple[str, str]] = []
-    for row in rows:
-        table = str(row["table_name"])
-        column = str(row["column_name"])
-        if _sqlite_identifier_exists(connection, table, column):
-            columns.append((table, column))
-    return columns
-
-
-def _sqlite_identifier_exists(connection: sqlite3.Connection, table_name: str, column_name: str) -> bool:
-    try:
-        columns = connection.execute(f"PRAGMA table_info({_quote_sql_identifier(table_name)})").fetchall()
-    except sqlite3.DatabaseError:
-        return False
-    return any(str(row["name"]) == column_name for row in columns)
-
-
-def _read_geopackage_features(
-    connection: sqlite3.Connection,
-    table_name: str,
-    geometry_column: str,
-) -> list[dict[str, Any]]:
-    table_sql = _quote_sql_identifier(table_name)
-    rows = connection.execute(f"SELECT * FROM {table_sql} LIMIT ?", (MAX_BOUNDARY_UPLOAD_FEATURES,)).fetchall()
-    features: list[dict[str, Any]] = []
-    for index, row in enumerate(rows):
-        geometry_blob = row[geometry_column]
-        if not isinstance(geometry_blob, (bytes, bytearray, memoryview)):
-            continue
-        try:
-            geometry = _parse_geopackage_geometry(bytes(geometry_blob))
-        except ValueError as exc:
-            if _is_upload_coordinate_error(exc):
-                raise
-            continue
-        properties = {
-            key: _json_safe_value(row[key])
-            for key in row.keys()
-            if key != geometry_column and _json_safe_value(row[key]) is not None
-        }
-        properties.setdefault("gpkg_table", table_name)
-        features.append(_upload_feature(geometry, properties, index=index, source_format="geopackage"))
-    return features
-
-
-def _quote_sql_identifier(identifier: str) -> str:
-    return '"' + identifier.replace('"', '""') + '"'
-
-
-def _parse_geopackage_geometry(blob: bytes) -> dict[str, Any]:
-    if blob.startswith(b"GP"):
-        if len(blob) < 8:
-            raise ValueError("GeoPackage geometry blob is too short")
-        flags = blob[3]
-        endian = "<" if flags & 0x01 else ">"
-        envelope_code = (flags >> 1) & 0x07
-        envelope_bytes = {0: 0, 1: 32, 2: 48, 3: 48, 4: 64}.get(envelope_code)
-        if envelope_bytes is None:
-            raise ValueError("GeoPackage envelope code is unsupported")
-        start = 8 + envelope_bytes
-        if start >= len(blob):
-            raise ValueError("GeoPackage geometry blob has no WKB payload")
-        return _validate_geojson_geometry(_parse_wkb_geometry(blob[start:], endian_hint=endian)[0])
-    return _validate_geojson_geometry(_parse_wkb_geometry(blob, endian_hint=None)[0])
-
-
-def _parse_wkb_geometry(blob: bytes, *, offset: int = 0, endian_hint: str | None = None) -> tuple[dict[str, Any], int]:
-    if offset + 5 > len(blob):
-        raise ValueError("WKB geometry is truncated")
-    byte_order = blob[offset]
-    endian = "<" if byte_order == 1 else ">" if byte_order == 0 else endian_hint
-    if endian is None:
-        raise ValueError("WKB byte order is invalid")
-    type_raw = struct.unpack(endian + "I", blob[offset + 1 : offset + 5])[0]
-    geometry_type, dimensions, has_srid = _normalize_wkb_type(type_raw)
-    cursor = offset + 5
-    if has_srid:
-        cursor += 4
-    if geometry_type == 1:
-        coordinates, cursor = _read_wkb_position(blob, cursor, endian=endian, dimensions=dimensions)
-        return {"type": "Point", "coordinates": coordinates}, cursor
-    if geometry_type == 2:
-        count = _read_wkb_count(blob, cursor, endian=endian)
-        cursor += 4
-        line: list[list[float]] = []
-        for _ in range(count):
-            position, cursor = _read_wkb_position(blob, cursor, endian=endian, dimensions=dimensions)
-            line.append(position)
-        if len(line) < 2:
-            raise ValueError("WKB linestring requires at least two positions")
-        return {"type": "LineString", "coordinates": line}, cursor
-    if geometry_type == 3:
-        ring_count = _read_wkb_count(blob, cursor, endian=endian)
-        cursor += 4
-        rings: list[list[list[float]]] = []
-        for _ in range(ring_count):
-            point_count = _read_wkb_count(blob, cursor, endian=endian)
-            cursor += 4
-            ring: list[list[float]] = []
-            for _ in range(point_count):
-                position, cursor = _read_wkb_position(blob, cursor, endian=endian, dimensions=dimensions)
-                ring.append(position)
-            rings.append(ring)
-        return {"type": "Polygon", "coordinates": rings}, cursor
-    if geometry_type in {4, 5, 6, 7}:
-        count = _read_wkb_count(blob, cursor, endian=endian)
-        cursor += 4
-        geometries: list[dict[str, Any]] = []
-        for _ in range(count):
-            geometry, cursor = _parse_wkb_geometry(blob, offset=cursor, endian_hint=endian)
-            geometries.append(geometry)
-        if geometry_type == 6:
-            polygons = [geometry["coordinates"] for geometry in geometries if geometry.get("type") == "Polygon"]
-            return {"type": "MultiPolygon", "coordinates": polygons}, cursor
-        if geometry_type == 4:
-            points = [geometry["coordinates"] for geometry in geometries if geometry.get("type") == "Point"]
-            return {"type": "MultiPoint", "coordinates": points}, cursor
-        if geometry_type == 5:
-            lines = [geometry["coordinates"] for geometry in geometries if geometry.get("type") == "LineString"]
-            return {"type": "MultiLineString", "coordinates": lines}, cursor
-        return {"type": "GeometryCollection", "geometries": geometries}, cursor
-    raise ValueError(f"unsupported WKB geometry type: {geometry_type}")
-
-
-def _normalize_wkb_type(type_raw: int) -> tuple[int, int, bool]:
-    has_z = bool(type_raw & 0x80000000)
-    has_m = bool(type_raw & 0x40000000)
-    has_srid = bool(type_raw & 0x20000000)
-    type_code = type_raw & 0x1FFFFFFF
-    dimensions = 2 + int(has_z) + int(has_m)
-    if 3000 <= type_code < 4000:
-        return type_code - 3000, 4, has_srid
-    if 2000 <= type_code < 3000:
-        return type_code - 2000, 3, has_srid
-    if 1000 <= type_code < 2000:
-        return type_code - 1000, 3, has_srid
-    return type_code, dimensions, has_srid
-
-
-def _read_wkb_count(blob: bytes, offset: int, *, endian: str) -> int:
-    if offset + 4 > len(blob):
-        raise ValueError("WKB count is truncated")
-    return struct.unpack(endian + "I", blob[offset : offset + 4])[0]
-
-
-def _read_wkb_position(blob: bytes, offset: int, *, endian: str, dimensions: int) -> tuple[list[float], int]:
-    byte_count = dimensions * 8
-    if offset + byte_count > len(blob):
-        raise ValueError("WKB coordinate is truncated")
-    values = struct.unpack(endian + ("d" * dimensions), blob[offset : offset + byte_count])
-    return [float(values[0]), float(values[1])], offset + byte_count
+    from shapely.geometry import shape
+    return bool(shape(canonical_geometry(left, max_vertices=20_000)).intersects(
+        shape(canonical_geometry(right, max_vertices=20_000))))
 
 
 def _upload_feature(
@@ -1690,7 +1134,7 @@ def _upload_feature(
     index: int,
     source_format: str,
 ) -> dict[str, Any]:
-    normalized = _normalize_upload_geometry(geometry)
+    normalized = canonical_geometry(geometry)
     return {
         "type": "Feature",
         "id": f"{source_format}:{index}",
@@ -1701,38 +1145,6 @@ def _upload_feature(
             "upload_feature_index": index,
         },
     }
-
-
-def _normalize_upload_geometry(geometry: dict[str, Any]) -> dict[str, Any]:
-    geometry_type = geometry.get("type")
-    if geometry_type in {"Point", "Polygon", "MultiPolygon"}:
-        return _validate_geojson_geometry(geometry)
-    if geometry_type == "MultiPoint":
-        coordinates = geometry.get("coordinates")
-        if isinstance(coordinates, list) and coordinates:
-            return _validate_geojson_geometry({"type": "Point", "coordinates": coordinates[0]})
-    if geometry_type == "GeometryCollection":
-        for candidate in geometry.get("geometries") or []:
-            try:
-                return _normalize_upload_geometry(candidate)
-            except ValueError as exc:
-                if _is_upload_coordinate_error(exc):
-                    raise
-                continue
-    raise ValueError("uploaded geometry must contain Point, Polygon, or MultiPolygon geometry")
-
-
-def _is_upload_coordinate_error(exc: ValueError) -> bool:
-    text = str(exc)
-    return (
-        "WGS84 longitude/latitude" in text
-        or "outside WGS84 bounds" in text
-        or "position coordinates must be finite" in text
-        or "position must be [longitude, latitude]" in text
-        or "polygon coordinates are required" in text
-        or "polygon rings must contain at least four positions" in text
-        or "multipolygon coordinates are required" in text
-    )
 
 
 def _primary_upload_feature(features: list[dict[str, Any]]) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -1759,15 +1171,7 @@ def _primary_upload_feature(features: list[dict[str, Any]]) -> tuple[dict[str, A
 
 
 def _polygon_upload_candidates(geometry: dict[str, Any]) -> list[dict[str, Any]]:
-    if geometry.get("type") == "Polygon":
-        return [geometry]
-    if geometry.get("type") == "MultiPolygon":
-        return [
-            {"type": "Polygon", "coordinates": polygon}
-            for polygon in geometry.get("coordinates", [])
-            if polygon
-        ]
-    return []
+    return [geometry] if geometry.get("type") in {"Polygon", "MultiPolygon"} else []
 
 
 def _upload_feature_summaries(features: list[dict[str, Any]], *, selected_feature_id: str) -> list[dict[str, Any]]:
@@ -1801,27 +1205,14 @@ def _upload_feature_label(properties: dict[str, Any], *, index: int) -> str:
 
 def _upload_warnings(
     *,
-    source_format: str,
     parsed_feature_count: int,
-    retained_feature_count: int,
     primary_geometry: dict[str, Any],
-    truncated: bool,
 ) -> list[str]:
-    warnings = [
-        (
-            "Coordinates were interpreted as WGS84 longitude/latitude (EPSG:4326); "
-            "reproject UTM, State Plane, or local grid boundaries before upload."
-        )
-    ]
-    if source_format in {"zipped_shapefile", "shapefile", "geopackage"}:
-        warnings.append("Projection metadata is not transformed in the local parser; coordinates must already be lon/lat.")
+    warnings = ["Coordinates are validated as WGS84 longitude/latitude (EPSG:4326); "
+                "the coordinate_reference receipt records original CRS and any reprojection."]
     if parsed_feature_count > 1:
         warnings.append(
             f"{parsed_feature_count} upload features were detected; the largest polygon or first point was selected by default."
-        )
-    if truncated:
-        warnings.append(
-            f"Only the first {retained_feature_count} features were retained from {parsed_feature_count} parsed features."
         )
     if primary_geometry["type"] == "Point":
         warnings.append("A point can seed regional priors, but field-specific acreage and edge effects need a drawn or uploaded polygon.")
@@ -1867,32 +1258,7 @@ def official_layer_status(intersections: dict[str, Any]) -> list[dict[str, Any]]
 
 
 def _geometry_area_acres(geometry: dict[str, Any]) -> float:
-    if geometry["type"] == "Point":
-        return 0.0
-    if geometry["type"] == "Polygon":
-        return max(0.0, _ring_area_acres(geometry["coordinates"][0]) - sum(_ring_area_acres(ring) for ring in geometry["coordinates"][1:]))
-    if geometry["type"] == "MultiPolygon":
-        return sum(_geometry_area_acres({"type": "Polygon", "coordinates": polygon}) for polygon in geometry["coordinates"])
-    return 0.0
-
-
-def _ring_area_acres(ring: list[list[float]]) -> float:
-    open_ring = ring[:-1] if ring and ring[0] == ring[-1] else ring
-    if len(open_ring) < 3:
-        return 0.0
-    mean_lat = sum(point[1] for point in open_ring) / len(open_ring)
-    meters_per_degree_lat = 111_320
-    meters_per_degree_lon = math.cos((mean_lat * math.pi) / 180) * 111_320
-    projected = [(point[0] * meters_per_degree_lon, point[1] * meters_per_degree_lat) for point in open_ring]
-    square_meters = abs(
-        sum(
-            point[0] * projected[(index + 1) % len(projected)][1]
-            - projected[(index + 1) % len(projected)][0] * point[1]
-            for index, point in enumerate(projected)
-        )
-        / 2
-    )
-    return square_meters / 4046.8564224
+    return geodesic_metrics(geometry)["area_m2"] / 4046.8564224
 
 
 def _upload_status_message(filename: str, source_format: str, feature_count: int, geometry: dict[str, Any], acres: float) -> str:

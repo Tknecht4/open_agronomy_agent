@@ -15,5 +15,7 @@ pgvector>=0.4
 cryptography>=45,<47
 
 # Geometry and mapped-zone analysis in the field workspace.
+geopandas>=1.0,<2
+pyogrio>=0.10,<1
 pyproj>=3.6,<4
 shapely>=2.0,<3

@@ -318,7 +318,7 @@ def test_date_discovered_point_keeps_nullable_requested_scene(tmp_path, monkeypa
     assert cached["request"] == result["request"]
 
 
-def test_polygon_request_process_and_npz_contract_remain_legacy(tmp_path, monkeypatch):
+def test_polygon_version_changes_while_receipt_and_npz_shape_remain_compatible(tmp_path, monkeypatch):
     _fixture(tmp_path, monkeypatch)
     polygon = _polygon()
     expected_request = analytics._hash({
@@ -341,3 +341,22 @@ def test_polygon_request_process_and_npz_contract_remain_legacy(tmp_path, monkey
         assert "field_weights" in chip and "sample_weights" not in chip
         assert list(chip.files) == ["bands", "valid_mask", "field_mask", "field_weights",
                                     "fmask", "ndvi", "metadata_json"]
+
+
+@pytest.mark.parametrize("radius", [15, 45, 204])
+def test_shared_weights_preserve_point_v3_storage_bytes(radius):
+    from shapely.geometry import box
+    point = _point(ORIGIN_X + 612.032118333, ORIGIN_Y - 619.100343629)
+    source_grid = (rasterio.crs.CRS.from_epsg(32613),
+                   from_origin(ORIGIN_X, ORIGIN_Y, 30, 30), 50, 50)
+    grid, weights, _, _ = point_grid_and_weights(
+        point, "point_buffer", radius, source_grid, analytics._dependencies())
+    _, transform, width, height, _, support = grid
+    # Retained v3 scalar Shapely calculation is an oracle for the published
+    # point artifact contract, independent of the shared vectorized path.
+    previous = np.zeros((height, width), dtype=np.float32)
+    for row in range(height):
+        for col in range(width):
+            left, top = transform.c + col * 30, transform.f - row * 30
+            previous[row, col] = support.intersection(box(left, top - 30, left + 30, top)).area / 900
+    assert weights.tobytes() == previous.tobytes()
