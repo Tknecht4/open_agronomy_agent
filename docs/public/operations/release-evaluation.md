@@ -75,20 +75,34 @@ Declared synthetic backend faults are restricted to mock scenarios. Actual
 model failures remain actual failed observations.
 
 Production-turn latency and model memory measurements are separate from mock
-backend/storage component profiling. Reports retain missing measurements and
-sample denominators. GPU results apply to their recorded runtime and cannot
-establish native Mac latency or memory budgets.
+backend/storage component profiling. The backend comparison has ten named warm
+latency gates: `health_warm`, `configs_warm`, `geo_layers_warm`,
+`fields_list_warm`, `sessions_list_warm`, `field_history_warm`,
+`sessions_list_seeded_warm`, `full_session_history_read_warm`,
+`bounded_session_history_read_warm` and `core_mock_warm`. Each needs at least 20
+eligible samples in both full-model runs, matching hardware/environment identity
+and no more than the registry's 1.25 p95 latency ratio. Missing cells or samples
+block this comparison; a pooled mean cannot replace a named gate. CI and smoke
+collect five repeats as diagnostics and cannot qualify these full comparison
+gates. These mock backend/storage timings do not measure model inference.
+
+Reports retain missing measurements and sample denominators. GPU results apply
+to their recorded runtime and cannot establish native Mac latency or memory
+budgets.
 
 ## Retention and resume
 
-A run binds source bytes and commit, registry/config/case hashes, scorer version,
+A run binds source bytes and commit, registry/config/case hashes, scorer version
+and the dynamic hash of its scorer implementation,
 model identity, sampling, runtime environment and supplied reference/review bytes
 in its plan. It retains observation rows, worker specifications and logs,
 component receipts, a private `report.json`, a minimized `public-summary.json`
 and a `retention.json` manifest. Private artifacts may include questions,
 answers, exact prompts, persisted transcripts and local paths. Keep the full
 run outside the public package and inspect the aggregate projection before
-sharing it.
+sharing it. Review-file bytes are read and frozen before execution; the report
+uses those retained bytes rather than a later reread of a mutable input file.
+Changing a supplied review during execution cannot silently change its grades.
 
 Resume only the same plan and artifacts:
 
@@ -131,13 +145,22 @@ review, editor-quality effects remain unknown. Stage labels neither introduce a
 hidden generation rubric nor invoke another model; they are offline review
 observations and remain distinct from final-answer release labels.
 
-Reference comparison requires matching suite, registry, cohort, scorer, model
-and sampling identities. Source changes are recorded independently. Performance
+Reference comparison requires matching suite, registry, cohort, scorer version
+and scorer implementation hash, model and sampling identities. A version string
+alone cannot establish scorer compatibility after its code changes. Source
+changes are recorded independently. Performance
 comparison also requires compatible recorded environments and sufficient
 eligible samples. Missing required numeric, retrieval or resource measurements
 block comparison. When semantic review is required by policy, missing paired
 labels block that gate. Under the zero-coverage foundation policy, unassessed
 semantic comparisons remain explicitly pending and cannot support domain claims.
+
+Paired required-task completion is gated at the case and scenario-family level
+as well as in aggregate. Each exact paired trial must meet the case regression
+limit: a gain on another case, or another trial of the same case, cannot cancel
+a loss. Each observed family's completion rate must also meet the policy limit.
+Unknown pairs remain unknown and count against required review coverage; an
+unchanged overall mean cannot conceal an observed local regression.
 
 Offline reanalysis through `scripts/analyze_release_evaluation.py` verifies the
 retained run and recomputes reports from observations without model execution.
@@ -152,8 +175,18 @@ PYTHONPATH=src .venv/bin/python scripts/analyze_release_evaluation.py \
 
 The optional review packet is private answer-level context. Add `--reviews` and
 `--reference` when supplied review records or a compatible comparison are needed.
-New analysis must preserve original observations, plan, reviewer bindings and negative
-results; changing the measurement contract requires a new evaluation identity.
+A retained reviewed analysis can itself serve as `--reference`, and its directory
+can be the `--run-dir` of a subsequent analysis. The loader verifies the chain's
+review bytes, reports, analysis-source hashes and original raw-run lineage. Keep
+the original raw directory at its bound location, along with every referenced
+parent analysis; moving only a derived report breaks those bindings. Derived
+outputs must remain outside the immutable raw and reference directories.
+
+Reanalysis preserves recorded numeric scores; it does not silently rescore raw
+answers with today's numeric implementation. Numeric rescoring with a changed
+instrument is a separate evaluation identity and requires a new compatible
+baseline before regression comparison. New analysis preserves original
+observations, plan, reviewer bindings and negative results.
 
 ## Expanding the suite
 

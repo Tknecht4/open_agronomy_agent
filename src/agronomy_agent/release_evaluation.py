@@ -461,6 +461,9 @@ def environment_identity() -> dict[str, Any]:
 def controlled_inputs(registry: Mapping[str, Any], root: Path = ROOT) -> dict[str, str]:
     """Bind actual runtime evidence and fixtures, including lazy corpus payloads."""
     names = {
+        # The answer path reads this registry for provincial coverage, even
+        # when public adapters are disabled and retrieval itself is governed.
+        "data/manifests/canada_agronomy_sources.json",
         "data/eval/offline_corpus_retrieval.jsonl",
         "data/manifests/offline_corpus_retrieval_suite.json",
         "data/eval/field_data_pilot_v1/manifest.json",

@@ -1,6 +1,6 @@
 # Release evaluation foundation
 
-Status: implementation frozen for final validation and GPU baseline. Base: `d9bb2547d5b3b2bcf246ebeae88eb6270b4c8bba`.
+Status: executable source frozen at `5cba71b`; local validation accepted, GPU pilot in progress; full baseline and integration pending. Base: `d9bb2547d5b3b2bcf246ebeae88eb6270b4c8bba`.
 
 ## Working state
 
@@ -56,8 +56,8 @@ nine socket-proxy checks were denied loopback binding by the filesystem/network
 sandbox; one public-package check found a forbidden literal in a new test;
 one offline-analysis fixture wrongly expected an all-mock baseline to pass.
 The literal and fixture were repaired. Final full validation runs with local
-socket access, preserving the original failures as evidence. No model run has
-started. Reviewer and final GPU baseline remain required.
+socket access, preserving the original failures as evidence. At that checkpoint no model run had
+started. Reviewer and final GPU baseline remained required.
 
 Optional arms now have explicit arm-specific mechanical assertions; production
 thresholds apply to production responses, while independently scored diagnostic
@@ -83,3 +83,59 @@ and final full validation is required on the repaired candidate. Colab allocated
 a task-owned L4 (23 GB, driver 580.82.07, CUDA 12.8). The first connection attempt
 failed before setup; reconnecting produced a retained successful hardware probe.
 No Gemma answers have been generated at this checkpoint.
+
+## Final executable freeze and baseline checkpoint
+
+Executable source is frozen at `5cba71b`. Final local validation recorded 2032
+Python tests passed and 33 skipped, plus frontend typecheck, 401 tests passed and
+production build. The immutable deterministic CI run completed all six required
+components and 36 scenario cells, including seven numeric observations at 100%
+accuracy: `engineering_pass`, with semantic `review_pending`. This is mock
+engineering evidence and does not establish Gemma or agronomic competence.
+
+The independent Astra xhigh acceptance recorded 253 focused tests passed and
+50 native cancellation checks passed, with disposition
+`accepted_code_ready_for_baseline`. It accepted the repaired case/family
+completion gates, dynamic scorer identity, frozen review bytes, chained retained
+analyses and ten independently gated warm backend/storage latency cells. The
+original raw directory remains a required location-bound source of any derived
+analysis; numeric rescoring belongs to a new instrument and compatible baseline.
+
+The task-owned L4 passed its actual MLX runtime probe. The pinned model snapshot
+was explicitly provisioned (3.583 GB), with SHA-bound weights. A 641-file source
+capsule was transferred and hash-verified after retaining a chunked-transfer
+server error; its SHA-256 is
+`8b0add0ed125af153017c31bcf67f470ade714cfdc50744ae086bcab156a476b`.
+The executable source core SHA-256 remains
+`3f127fcf645a0ba9498c3a9f9ef1297062bd02f8c05be42dbee41d57d374bdc1`,
+verified locally after these documentation-only edits. Four real product-path
+pilot cells are underway before the planned complete 584-cell baseline. The
+pilot is a throughput and execution check, not a completed baseline.
+
+Full GPU results and private raw retention verification, a public-safe baseline
+record, PR CI, merge and post-merge verification remain pending. No release-pass,
+domain competence, field efficacy or completed-integration claim is made at this
+checkpoint. These checkpoint counts and GPU status are the integration owner's
+reported observations; the operator guide documents the checked-in contracts.
+
+Memory delta: none.
+
+## Runtime input closure repair
+
+The first full GPU attempt passed all six components, then repeatedly failed
+Canadian case execution because its narrow transfer omitted the Canadian source
+registry consumed by provincial coverage checks. The owner interrupted this
+attempt, retaining failed and interrupted cells rather than retrying in place.
+This was a transfer/input-binding defect. The registry is now a required hashed
+controlled input, so a missing transferred copy blocks plan construction before
+model execution. A regression reproduces the missing-file boundary and verifies
+the isolated positive consumer after copying the bound bytes.
+
+A separate isolated audit added only that registry to the same source capsule:
+292 mock product-seam cases completed with zero failed mechanical checks in
+38.46 seconds, without importing MLX. The mock backend closure check completed
+all ten warm cells with one sample each; this is not performance qualification.
+Public adapters are disabled throughout the current cohort, and optional spatial
+databases and geographic caches are absent. Future enabled adapters or installed
+spatial cases require their own explicit input closure and measurement policy.
+A new frozen source and fresh Gemma baseline directory are required.

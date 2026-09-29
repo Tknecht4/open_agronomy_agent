@@ -25,6 +25,7 @@ def test_complete_profiles_share_cohort_and_cells():
     assert baseline["counts"]["observations"] == 2 * baseline["counts"]["cases"]
     assert baseline["counts"]["lanes"]["agronomy"] == 256
     assert len(baseline["auxiliary_inputs"]) > 100
+    assert "data/manifests/canada_agronomy_sources.json" in baseline["auxiliary_inputs"]
     admission_queue = (
         "data/manifests/provincial_applied_guidance_admission_queue_20260724.json"
     )
@@ -140,3 +141,24 @@ def test_exclusive_json_and_no_nonfinite_or_escaped_inputs(tmp_path):
         digest({"unknown": float("nan")})
     with pytest.raises(ValueError):
         checked_path(ROOT, str((tmp_path / "secret").resolve()))
+
+
+def test_isolated_canadian_boundary_requires_the_bound_runtime_registry(tmp_path):
+    from agronomy_agent.canada_sources import build_canadian_coverage_boundary
+    from agronomy_agent.release_evaluation import file_digest
+
+    name = "data/manifests/canada_agronomy_sources.json"
+    source = ROOT / name
+    plan = build_plan(load_registry(), profile="ci")
+    assert plan["auxiliary_inputs"][name] == file_digest(source)
+    isolated = tmp_path / name
+    with pytest.raises(FileNotFoundError):
+        build_canadian_coverage_boundary("Saskatchewan", [], manifest_path=isolated)
+    isolated.parent.mkdir(parents=True)
+    isolated.write_bytes(source.read_bytes())
+    boundary = build_canadian_coverage_boundary(
+        "Saskatchewan", [], manifest_path=isolated
+    )
+    assert boundary.jurisdiction == "Saskatchewan"
+    assert boundary.requires_prompt_boundary is True
+    assert boundary.registered_source_ids
