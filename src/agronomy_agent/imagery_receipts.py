@@ -120,6 +120,18 @@ def validate_point_receipt(
                    for key, value in exclusions.items())
             or not isinstance(qa.get("overlap_note"), str)):
         raise ValueError("invalid point QA area breakdown")
+    water = qa.get("water_flag_area_m2")
+    index_undefined = qa.get("index_undefined_area_m2_by_reason")
+    expected_index_reasons = {
+        "ndvi_negative_reflectance", "ndvi_nonpositive_denominator",
+        "ndmi_negative_reflectance", "ndmi_nonpositive_denominator",
+    }
+    if (not _finite(water) or water > area + tolerance
+            or not isinstance(index_undefined, dict)
+            or set(index_undefined) != expected_index_reasons
+            or any(not _finite(value) or value > valid_area + tolerance
+                   for value in index_undefined.values())):
+        raise ValueError("invalid point index QA area breakdown")
     indices = receipt.get("zonal_stats")
     if not isinstance(indices, dict):
         raise ValueError("point index statistics required")
@@ -131,6 +143,11 @@ def validate_point_receipt(
         values = [stats[key] for key in ("min", "mean", "max")]
         if not _finite(support) or support > valid_area + tolerance:
             raise ValueError("index support exceeds QA-valid sample area")
+        reason_prefix = name.lower()
+        undefined_area = (index_undefined[f"{reason_prefix}_negative_reflectance"]
+                          + index_undefined[f"{reason_prefix}_nonpositive_denominator"])
+        if not math.isclose(support + undefined_area, valid_area, rel_tol=0, abs_tol=tolerance):
+            raise ValueError("index support contradicts QA-clear area breakdown")
         if support == 0:
             if any(value is not None for value in values):
                 raise ValueError("unsupported index cannot have numeric values")

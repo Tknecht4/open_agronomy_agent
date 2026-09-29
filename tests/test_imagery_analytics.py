@@ -55,14 +55,15 @@ def _fixture(tmp_path, monkeypatch, *, all_cloud=False, source_crs="EPSG:32613",
                 data[1, 1] = 2
         path = tmp_path / f"{key}.tif"
         with rasterio.open(path, "w", driver="GTiff", width=side, height=side, count=1,
-                           dtype="int16", crs=source_crs, transform=source_transform,
-                           nodata=-9999 if nodata_metadata else None) as dst:
+                           dtype="uint8" if key == "Fmask" else "int16",
+                           crs=source_crs, transform=source_transform,
+                           nodata=(255 if key == "Fmask" else -9999) if nodata_metadata else None) as dst:
             dst.write(data, 1)
         urls[key] = str(path)
     item = {"id": SCENE, "collection": "hls2-s30", "acquired_at": "2025-07-01T00:00:00Z",
             "availability_at": None, "scene_cloud_percent": 10,
             "assets": {k: {"id": f"{SCENE}:{k}", "href": f"https://hls2euwest.blob.core.windows.net/hls2/{k}.tif",
-                            "raster_bands": [{"scale": .0001, "offset": 0}]} for k in keys}}
+                            "raster_bands": [{"scale": 1 if k == "Fmask" else .0001, "offset": 0}]} for k in keys}}
     monkeypatch.setattr(analytics, "_scene_item", lambda *args: item)
     monkeypatch.setattr(analytics, "_signed_hrefs", lambda item: urls)
     @contextmanager
@@ -91,6 +92,8 @@ def test_chip_weights_qa_scale_indices_and_offline_reuse(tmp_path, monkeypatch):
     with np.load(cache / receipt["cache_files"]["npz"]) as chip:
         assert chip["bands"].shape == (6, receipt["grid"]["height"], receipt["grid"]["width"])
         assert chip["bands"].dtype == np.float32
+        assert chip["raw_dn"].dtype == np.int16
+        assert chip["source_invalid_mask"].dtype == np.bool_
         assert np.count_nonzero(chip["field_mask"]) == 4
         assert np.isnan(chip["bands"][:, chip["fmask"] == 2]).all()
         metadata = json.loads(str(chip["metadata_json"]))
@@ -100,6 +103,10 @@ def test_chip_weights_qa_scale_indices_and_offline_reuse(tmp_path, monkeypatch):
         assert metadata["native_asset_grid"]["crs"] == "EPSG:32613"
         assert metadata["band_names"] == list(analytics.BAND_NAMES)
         assert metadata["source"]["band_metadata"]["B8A"]["scale"] == .0001
+        assert metadata["source"]["band_metadata"]["B8A"]["cog_scale"] == 1.0
+        assert metadata["source"]["band_metadata"]["B8A"]["cog_offset"] == 0.0
+        assert metadata["raw_dn_role"] == "pre_qa_encoded_int16_source_window"
+        assert metadata["source_invalid_mask_role"] == "source_mask_fill_or_outside_extent"
     monkeypatch.setattr(analytics, "_scene_item", lambda *args: pytest.fail("offline network"))
     cached = analytics.analyze_scene(_geometry(), PROVIDER, SCENE, cache_root=cache,
                                      network_mode="offline", buffer_m=30)
@@ -127,6 +134,7 @@ def test_native_context_keeps_field_stats_unbuffered(tmp_path, monkeypatch):
     assert receipt["qa"]["field_area_m2"] == pytest.approx(3600, abs=1)
     with np.load(tmp_path / "cache" / receipt["cache_files"]["npz"]) as chip:
         assert chip["bands"].shape == (6, 224, 224)
+        assert (tmp_path / "cache" / receipt["cache_files"]["npz"]).stat().st_size < 16 * 1024**2
         assert 0 < np.count_nonzero(chip["field_mask"]) < 20
 
 
@@ -354,6 +362,60 @@ def test_nodata_and_zero_index_denominator_are_explicit(tmp_path, monkeypatch):
     assert receipt["zonal_stats"]["NDVI"]["mean"] == pytest.approx(.5)
 
 
+@pytest.mark.parametrize("key,dtype,nodata", [
+    ("Fmask", "int16", -9999),
+    ("B04", "uint16", 65535),
+    ("B04", "int16", -9998),
+])
+def test_rejects_incompatible_cog_encoding_before_conversion(tmp_path, monkeypatch, key, dtype, nodata):
+    _fixture(tmp_path, monkeypatch)
+    path = tmp_path / f"{key}.tif"
+    with rasterio.open(path) as src:
+        data = src.read(1)
+        profile = src.profile
+    profile.update(dtype=dtype, nodata=nodata)
+    with rasterio.open(path, "w", **profile) as dst:
+        dst.write(data.astype(dtype), 1)
+    with rasterio.open(path) as src:
+        assert src.dtypes[0] == dtype and src.nodata == nodata
+        with pytest.raises(RuntimeError, match=f"unexpected HLS {key} COG"):
+            analytics._validate_cog_radiometry(src, key)
+    result = analytics.analyze_scene(_geometry(), PROVIDER, SCENE,
+                                     cache_root=tmp_path / "bad-cache", network_mode="online")
+    assert result["status"] == "unavailable" and result["error_type"] == "RuntimeError"
+
+
+@pytest.mark.parametrize("key,scale,offset", [
+    ("B04", 0.01, 0), ("Fmask", 0.01, 0), ("Fmask", 1, 1),
+])
+def test_rejects_conflicting_cog_scale_tag(tmp_path, monkeypatch, key, scale, offset):
+    _fixture(tmp_path, monkeypatch)
+    path = tmp_path / f"{key}.tif"
+    with rasterio.open(path, "r+") as dst:
+        dst.scales = (scale,)
+        dst.offsets = (offset,)
+    result = analytics.analyze_scene(_geometry(), PROVIDER, SCENE,
+                                     cache_root=tmp_path / "bad-scale-cache", network_mode="online")
+    assert result["status"] == "unavailable" and result["error_type"] == "RuntimeError"
+
+
+@pytest.mark.parametrize("key,property_name,value", [
+    ("B04", "nodata", -9998), ("Fmask", "scale", 0.01),
+    ("Fmask", "offset", 1),
+])
+def test_rejects_stac_radiometry_conflicting_with_hls_and_cog(tmp_path, monkeypatch, key, property_name, value):
+    _fixture(tmp_path, monkeypatch)
+    original_scene = analytics._scene_item
+    def contradictory_scene(*args):
+        item = original_scene(*args)
+        item["assets"][key]["raster_bands"][0][property_name] = value
+        return item
+    monkeypatch.setattr(analytics, "_scene_item", contradictory_scene)
+    result = analytics.analyze_scene(_geometry(), PROVIDER, SCENE,
+                                     cache_root=tmp_path / "bad-stac-cache", network_mode="online")
+    assert result["status"] == "unavailable" and result["error_type"] == "RuntimeError"
+
+
 def test_missing_hashes_are_not_attested_or_rewritten(tmp_path, monkeypatch):
     _fixture(tmp_path, monkeypatch)
     cache = tmp_path / "cache"
@@ -400,7 +462,7 @@ def test_polygon_no_nodata_tile_edge_and_historical_identity(tmp_path, monkeypat
 def test_polygon_partial_clear_coverage_and_context_outside_tile(tmp_path, monkeypatch):
     _fixture(tmp_path, monkeypatch, side=2, nodata_metadata=False)
     with rasterio.open(tmp_path / "Fmask.tif", "r+") as dst:
-        dst.write(np.zeros((2, 2), dtype=np.int16), 1)
+        dst.write(np.zeros((2, 2), dtype=np.uint8), 1)
     receipt = analytics.analyze_scene(_geometry(), PROVIDER, SCENE,
                                       cache_root=tmp_path / "cache", network_mode="online",
                                       context_pixels=224)

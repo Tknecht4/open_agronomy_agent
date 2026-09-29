@@ -274,3 +274,128 @@ def test_cli_writes_bundle_then_refuses_clobber(terrain_fixture):
     assert again.returncode == 2
     assert json.loads(again.stderr)["status"] == "rejected"
     assert hashlib.sha256((output / "terrain.json").read_bytes()).hexdigest() == manifest_hash
+
+
+@pytest.fixture
+def one_metre_fixture(tmp_path):
+    np = pytest.importorskip("numpy")
+    rio = pytest.importorskip("rasterio")
+    pytest.importorskip("pyflwdir")
+    pytest.importorskip("scipy")
+    from pyproj import Transformer
+    from rasterio.transform import from_origin
+    affine = from_origin(500000, 6000200, 1, 1)
+    project = Transformer.from_crs(32612, 4326, always_xy=True)
+    coords = [(500080, 6000080), (500120, 6000080), (500120, 6000120),
+              (500080, 6000120), (500080, 6000080)]
+    geometry = {"type": "Polygon", "coordinates": [[list(project.transform(*xy)) for xy in coords]]}
+    rows, cols = np.indices((201, 201))
+    plane = 100.0 + 0.04 * cols + 0.03 * rows
+
+    def make(array=None):
+        path = tmp_path / "one-metre.tif"
+        with rio.open(path, "w", driver="GTiff", count=1, width=201, height=201,
+                      dtype="float64", transform=affine, crs="EPSG:32612", nodata=float("nan")) as dst:
+            dst.write(plane if array is None else array, 1)
+        return path
+
+    def run(path, name="prepared", **kwargs):
+        return run_terrain_analysis(path, geometry, tmp_path / name, source_metadata=METADATA,
+                                    context_buffer_m=kwargs.pop("context_buffer_m", 20), **kwargs)
+    return np, rio, make, run, plane, tmp_path
+
+
+def test_one_metre_auto_prepares_before_derivatives_and_retains_native(one_metre_fixture):
+    np, rio, make, run, plane, tmp = one_metre_fixture
+    source = make()
+    before = hashlib.sha256(source.read_bytes()).hexdigest()
+    result = run(source, include_twi=True)
+    assert hashlib.sha256(source.read_bytes()).hexdigest() == before
+    prep = result["processing"]["preprocessing"]
+    assert prep["resolved"] == "focal_mean_5m"
+    assert prep["order"] == ["focal_mean", "bilinear_resample", "terrain_derivatives"]
+    assert prep["focal_footprint_m"] == 5
+    assert result["processing"]["grid"]["cell_area_m2"] == 25
+    assert result["field"]["support_area_m2"] == pytest.approx(1600, abs=1e-5)
+    assert result["field_summary"]["slope_m_per_m"]["mean"] == pytest.approx(0.05, rel=1e-6)
+    assert prep["sensitivity"]["max_abs_delta_m"] < 1e-10
+    with rio.open(tmp / "prepared/dem_unconditioned_m.tif") as dst:
+        assert dst.res == (5, 5)
+        assert json.loads(dst.tags()["metadata_json"])["evidence_kind"] == "model_output"
+        assert (dst.transform.c - 500000) % 5 == 0
+        assert (6000200 - dst.transform.f) % 5 == 0
+        rr, cc = np.indices(dst.shape)
+        # Independent analytic plane evaluated at output-cell centres.
+        x = dst.transform.c + (cc + 0.5) * 5
+        y = dst.transform.f - (rr + 0.5) * 5
+        expected = 100 + 0.04 * (x - 500000 - 0.5) + 0.03 * (6000200 - y - 0.5)
+        np.testing.assert_allclose(dst.read(1), expected, atol=1e-10)
+    window = result["processing"]["grid"]["source_window"]
+    c, r, w, h = window
+    with rio.open(tmp / "prepared/dem_native_m.tif") as dst:
+        assert dst.res == (1, 1)
+        assert json.loads(dst.tags()["metadata_json"])["evidence_kind"] == "source_raster_copy"
+        np.testing.assert_array_equal(dst.read(1), plane[r:r+h, c:c+w])
+    for artifact in result["artifacts"].values():
+        assert hashlib.sha256((tmp / "prepared" / artifact["path"]).read_bytes()).hexdigest() == artifact["sha256"]
+
+
+def test_noisy_plane_slope_variability_reduces_and_profile_is_configurable(one_metre_fixture):
+    np, rio, make, run, plane, tmp = one_metre_fixture
+    noisy = plane + np.random.default_rng(1978).normal(0, 0.4, plane.shape)
+    source = make(noisy)
+    native = run(source, "native", preprocessing="native")
+    prepared = run(source)
+    wider = run(source, "wider", focal_window_cells=9)
+    assert native["processing"]["resampling"] == "none"
+    with rio.open(tmp / "native/slope_m_per_m.tif") as dst:
+        native_slope = dst.read(1)
+    with rio.open(tmp / "prepared/slope_m_per_m.tif") as dst:
+        slope = dst.read(1)
+    assert np.nanstd(slope) < np.nanstd(native_slope) / 4
+    assert prepared["processing"]["preprocessing"]["sensitivity"]["rmse_delta_m"] > 0
+    assert wider["processing"]["preprocessing"]["focal_window_cells"] == 9
+    assert wider["artifacts"]["dem_unconditioned_m"]["sha256"] != prepared["artifacts"]["dem_unconditioned_m"]["sha256"]
+    # Every derivative uses the prepared input: compare slope to its analytical
+    # plane target above and the actual public dependency on this noisy surface.
+    import pyflwdir
+    with rio.open(tmp / "prepared/dem_unconditioned_m.tif") as src:
+        expected = pyflwdir.dem.slope(src.read(1), nodata=float("nan"), latlon=False,
+                                      transform=tuple(float(v) for v in src.transform))
+    np.testing.assert_allclose(slope[1:-1, 1:-1], expected[1:-1, 1:-1])
+
+
+def test_preprocessing_requires_real_halo_and_counts_it_in_budget(one_metre_fixture):
+    np, rio, make, run, plane, tmp = one_metre_fixture
+    source = make()
+    run(source, "native", preprocessing="native", context_buffer_m=70)
+    with pytest.raises(TerrainError, match="halo.*outside"):
+        run(source, "edge", context_buffer_m=70)
+    with pytest.raises(TerrainError, match="max_cells"):
+        run(source, "budget", max_cells=8000)
+    with pytest.raises(TerrainError, match="two processing cells"):
+        run(source, "small", context_buffer_m=5)
+    assert not any((tmp / name).exists() for name in ("edge", "budget", "small"))
+
+
+def test_void_in_smoothing_halo_is_not_filled(one_metre_fixture):
+    np, rio, make, run, plane, tmp = one_metre_fixture
+    plane[50, 50] = np.nan  # Outside reporting/context core, inside focal/warp halo.
+    source = make(plane)
+    run(source, "native", preprocessing="native")
+    with pytest.raises(TerrainError, match="nodata/voids"):
+        run(source)
+    assert not (tmp / "prepared").exists()
+
+
+@pytest.mark.parametrize("window", [True, 1, 4, 33, 5.0, "5"])
+def test_invalid_focal_window_rejected_before_optional_io(tmp_path, window):
+    with pytest.raises(TerrainError, match="focal_window_cells"):
+        run_terrain_analysis("missing.tif", {}, tmp_path / "out", source_metadata=METADATA,
+                             context_buffer_m=20, focal_window_cells=window)
+    assert not (tmp_path / "out").exists()
+
+
+def test_coarser_dem_is_never_implicitly_upsampled(terrain_fixture):
+    with pytest.raises(TerrainError, match="actual 1 m"):
+        _run(terrain_fixture, preprocessing="focal_mean_5m")

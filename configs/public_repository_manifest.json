@@ -741,7 +741,9 @@
     "tests/test_geospatial_vector_io.py",
     "scripts/analyze_field_terrain.py",
     "scripts/discover_field_sources.py",
-    "docs/reviews/geospatial-foundation-merge-20260929.md"
+    "docs/reviews/geospatial-foundation-merge-20260929.md",
+    "docs/reviews/geospatial-preprocessing-round-20260929.md",
+    "docs/reviews/satellite-preprocessing-audit-20260929.md"
   ],
   "trees": [
     "src",

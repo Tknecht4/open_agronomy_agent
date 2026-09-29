@@ -33,6 +33,7 @@ geospatial = [
     "numpy>=2,<3",
     "rasterio>=1.4,<2",
     "pyflwdir>=0.5.12,<0.6",
+    "scipy>=1.13,<2",
     "geopandas>=1.0,<2",
     "pyogrio>=0.10,<1",
     "httpx>=0.28,<1",

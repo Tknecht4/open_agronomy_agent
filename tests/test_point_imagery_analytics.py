@@ -60,15 +60,15 @@ def _fixture(tmp_path, monkeypatch, *, cloud=None, nodata=None, undefined=None,
             data[undefined] = 0
         path = tmp_path / f"{key}.tif"
         with rasterio.open(path, "w", driver="GTiff", width=side, height=side,
-                           count=1, dtype="int16", crs="EPSG:32613",
+                           count=1, dtype="uint8" if key == "Fmask" else "int16", crs="EPSG:32613",
                            transform=from_origin(ORIGIN_X, ORIGIN_Y, 30, 30),
-                           nodata=-9999 if nodata_metadata else None) as dst:
+                           nodata=(255 if key == "Fmask" else -9999) if nodata_metadata else None) as dst:
             dst.write(data, 1)
         hrefs[key] = str(path)
     item = {"id": SCENE, "collection": "hls2-s30", "acquired_at": "2025-07-01T00:00:00Z",
             "availability_at": None, "scene_cloud_percent": 10,
             "assets": {key: {"id": f"{SCENE}:{key}",
-                             "raster_bands": [{"scale": .0001, "offset": 0}]}
+                             "raster_bands": [{"scale": 1 if key == "Fmask" else .0001, "offset": 0}]}
                        for key in keys}}
     seen = []
     def scene(geometry, *args):
@@ -89,6 +89,82 @@ def _analyze(point, cache, **kwargs):
     # production defaults and admission implementation are unchanged.
     return analytics.analyze_scene(point, PROVIDER, SCENE, cache_root=cache,
                                    network_mode="online", min_free_bytes=0, **kwargs)
+
+
+def test_negative_reflectance_keeps_clear_area_but_not_ndvi_support(tmp_path, monkeypatch):
+    _fixture(tmp_path, monkeypatch)
+    with rasterio.open(tmp_path / "B04.tif", "r+") as dst:
+        red = dst.read(1)
+        red[0, 0] = -100
+        dst.write(red, 1)
+    receipt = _analyze(_point(ORIGIN_X + 15, ORIGIN_Y - 15), tmp_path / "negative-cache")
+    assert receipt["qa"]["valid_area_m2"] == 900
+    assert receipt["qa"]["index_undefined_area_m2_by_reason"]["ndvi_negative_reflectance"] == 900
+    assert receipt["zonal_stats"]["NDVI"]["area_m2"] == 0
+    assert receipt["zonal_stats"]["NDMI"]["area_m2"] == 900
+    from agronomy_agent.imagery_receipts import validate_point_receipt
+    altered = {**receipt, "qa": {**receipt["qa"], "index_undefined_area_m2_by_reason":
+                              {**receipt["qa"]["index_undefined_area_m2_by_reason"],
+                               "ndvi_negative_reflectance": 901}}}
+    with pytest.raises(ValueError, match="index QA"):
+        validate_point_receipt(altered)
+
+
+def test_new_point_process_identity_does_not_reuse_v3_cache(tmp_path, monkeypatch):
+    _fixture(tmp_path, monkeypatch)
+    point = _point(ORIGIN_X + 15, ORIGIN_Y - 15)
+    cache = tmp_path / "version-cache"
+    current = _analyze(point, cache)
+    assert current["status"] == "available"
+    current_hash = analytics._request_identity(point, PROVIDER, SCENE, None, None, 0, None)[3]
+    monkeypatch.setattr(analytics, "POINT_PROCESS_VERSION",
+                        "hls-point-sample-v3-native-grid-source-extent-float64-qa")
+    old_hash = analytics._request_identity(point, PROVIDER, SCENE, None, None, 0, None)[3]
+    assert current_hash != old_hash
+    old_request = analytics.analyze_scene(point, PROVIDER, SCENE, cache_root=cache,
+                                          network_mode="offline", min_free_bytes=0)
+    assert old_request["status"] == "blocked_offline"
+
+
+def test_hls_saturation_and_water_flags_have_distinct_qa_meaning(tmp_path, monkeypatch):
+    _fixture(tmp_path, monkeypatch)
+    with rasterio.open(tmp_path / "B8A.tif", "r+") as dst:
+        nir = dst.read(1)
+        nir[0, 0] = analytics.SATURATION_FLAG
+        dst.write(nir, 1)
+    with rasterio.open(tmp_path / "Fmask.tif", "r+") as dst:
+        qa = dst.read(1)
+        qa[0, 1] = 32
+        dst.write(qa, 1)
+    saturated = _analyze(_point(ORIGIN_X + 15, ORIGIN_Y - 15), tmp_path / "saturated-cache")
+    water = _analyze(_point(ORIGIN_X + 45, ORIGIN_Y - 15), tmp_path / "water-cache")
+    assert saturated["qa"]["valid_area_m2"] == 0
+    assert saturated["qa"]["excluded_area_m2_by_reason"]["saturation_flag"] == 900
+    assert water["qa"]["water_flag_area_m2"] == 900
+    assert water["qa"]["valid_area_m2"] == 900
+    assert water["zonal_stats"]["NDVI"]["area_m2"] == 900
+
+
+def test_encoded_value_above_documented_saturation_flag_is_excluded(tmp_path, monkeypatch):
+    _fixture(tmp_path, monkeypatch)
+    with rasterio.open(tmp_path / "B8A.tif", "r+") as dst:
+        nir = dst.read(1)
+        nir[0, 0] = 12001
+        dst.write(nir, 1)
+    receipt = _analyze(_point(ORIGIN_X + 15, ORIGIN_Y - 15), tmp_path / "high-dn-cache")
+    assert receipt["qa"]["valid_area_m2"] == 0
+    assert receipt["qa"]["excluded_area_m2_by_reason"]["above_saturation_flag"] == 900
+
+
+def test_reserved_fmask_bit_is_not_labeled_cirrus(tmp_path, monkeypatch):
+    _fixture(tmp_path, monkeypatch)
+    with rasterio.open(tmp_path / "Fmask.tif", "r+") as dst:
+        qa = dst.read(1)
+        qa[0, 0] = 1
+        dst.write(qa, 1)
+    receipt = _analyze(_point(ORIGIN_X + 15, ORIGIN_Y - 15), tmp_path / "reserved-cache")
+    assert receipt["qa"]["excluded_area_m2_by_reason"]["reserved_bit_0"] == 900
+    assert "cirrus" not in receipt["qa"]["excluded_area_m2_by_reason"]
 
 
 def test_containing_pixel_uses_native_grid_origin_and_edge_floor(tmp_path, monkeypatch):
@@ -151,6 +227,15 @@ def test_cloud_nodata_and_undefined_index_are_distinct(tmp_path, monkeypatch):
             else:
                 assert result["qa"]["nodata_area_m2"] == 900
         with np.load(tmp_path / f"cache-{col}" / result["cache_files"]["npz"]) as chip:
+            assert chip["raw_dn"].dtype == np.int16
+            assert chip["source_invalid_mask"].dtype == np.bool_
+            if reason == "cloud":
+                assert int(chip["raw_dn"][2, 0, 0]) == 2000
+                assert not bool(chip["source_invalid_mask"][0, 0])
+                assert np.isnan(chip["bands"][:, 0, 0]).all()
+            elif reason == "nodata":
+                assert int(chip["raw_dn"][2, 0, 0]) == -9999
+                assert bool(chip["source_invalid_mask"][0, 0])
             if reason == "undefined":
                 assert math.isnan(float(chip["ndvi"][0, 0]))
                 png = Image.open(io.BytesIO((tmp_path / f"cache-{col}" / result["cache_files"]["png"]).read_bytes()))
@@ -204,6 +289,8 @@ def test_missing_nodata_metadata_cannot_invent_valid_pixels_beyond_tile(tmp_path
     assert pixel["sampling"]["valid_pixel_count"] == 0
     assert pixel["qa"]["valid_area_m2"] == 0
     assert pixel["qa"]["nodata_area_m2"] == 900
+    with np.load(tmp_path / "missing-nodata-pixel" / pixel["cache_files"]["npz"]) as chip:
+        assert bool(chip["source_invalid_mask"][0, 0])
     assert pixel["zonal_stats"]["NDVI"]["mean"] is None
     preview = Image.open(io.BytesIO((tmp_path / "missing-nodata-pixel" /
                                       pixel["cache_files"]["png"]).read_bytes()))
@@ -334,12 +421,14 @@ def test_polygon_version_changes_while_receipt_and_npz_shape_remain_compatible(t
         "version": analytics.PROCESS_VERSION,
         "band_keys": analytics.BAND_KEYS[PROVIDER][1], "scale": analytics.SCALE,
         "excluded_bits": analytics.EXCLUDE_BITS, "aerosol_high": 3,
+        "saturation_flag": analytics.SATURATION_FLAG,
+        "index_policy": "nonnegative_pair_positive_sum-v1",
         "resampling_method": "nearest", "preview_version": analytics.PREVIEW_VERSION})
     assert "sampling" not in receipt
     assert "field_area_m2" in receipt["qa"] and "sample_area_m2" not in receipt["qa"]
     with np.load(tmp_path / "polygon-cache" / receipt["cache_files"]["npz"]) as chip:
         assert "field_weights" in chip and "sample_weights" not in chip
-        assert list(chip.files) == ["bands", "valid_mask", "field_mask", "field_weights",
+        assert list(chip.files) == ["bands", "raw_dn", "source_invalid_mask", "valid_mask", "field_mask", "field_weights",
                                     "fmask", "ndvi", "metadata_json"]
 
 
