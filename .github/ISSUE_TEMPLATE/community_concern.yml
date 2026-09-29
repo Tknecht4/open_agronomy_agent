@@ -1,0 +1,27 @@
+name: Community concern
+description: Raise a non-sensitive conduct concern publicly.
+title: "[Community]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is a public issue. Do not include private messages, identifying details, or sensitive evidence. The project has no confidential conduct-reporting channel. GitHub's report/block tools may help with abuse.
+  - type: textarea
+    id: concern
+    attributes:
+      label: Concern
+      description: Briefly describe the project interaction and requested moderation action without private details.
+    validations:
+      required: true
+  - type: input
+    id: public_location
+    attributes:
+      label: Public project link, if relevant
+      description: Link only to already-public project content.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: This public report contains no private messages or identifying details.
+          required: true

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions, ideas, and setup help
+    url: https://github.com/Tknecht4/open_agronomy_agent/discussions
+    about: Start a Discussion for exploratory requests or help using the project.
+  - name: Report a vulnerability privately
+    url: https://github.com/Tknecht4/open_agronomy_agent/security/advisories/new
+    about: Keep vulnerability details out of public issues.

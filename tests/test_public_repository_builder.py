@@ -18,6 +18,18 @@ from scripts.build_public_repository import _contains_literal, _copy_independent
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_public_package_total_budget_accounts_for_many_small_files(tmp_path, monkeypatch):
+    import pytest
+    from scripts import build_public_repository as builder
+
+    monkeypatch.setattr(builder, "ROOT", tmp_path)
+    files = [tmp_path / "first", tmp_path / "second"]
+    for path in files:
+        path.write_bytes(b"123456")
+    with pytest.raises(ValueError, match="total_oversized:12:10"):
+        builder._validate_scope(files, {"maximum_total_bytes": 10})
+
+
 def test_package_copy_has_independent_writes_on_clone_and_fallback(tmp_path, monkeypatch):
     from scripts import build_public_repository as builder
     source = tmp_path / "source"

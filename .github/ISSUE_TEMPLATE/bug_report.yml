@@ -1,0 +1,52 @@
+name: Bug report
+description: Report a reproducible software defect using synthetic or redacted data.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For a vulnerability, use the private report in SECURITY.md. For questions and ideas, use Discussions. Never publish credentials, farm records, private traces, or precise coordinates.
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Observed behavior
+      description: What happened? Include the exact error text if it is safe to share.
+      placeholder: A sanitized description of the result.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect, and why?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: Steps and synthetic inputs only; remove local paths, tokens, and location details.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Commit or version
+      description: Include the commit hash when running from source.
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      options:
+        - Apple Silicon Mac source checkout
+        - Apple Silicon Mac app candidate
+        - Other or unknown
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed credentials, farmer or field records, precise coordinates, and other identifying details from this public report and its attachments.
+          required: true

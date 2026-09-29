@@ -716,7 +716,22 @@
     "docs/reviews/artifacts/residual-polish-20260928/workspace-media.json",
     "docs/reviews/conversation-integrity-and-learning-loop-20260928.md",
     "docs/reviews/artifacts/benchmark-scrutiny-20260928.json",
-    "tests/test_conversation_integrity.py"
+    "tests/test_conversation_integrity.py",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "SUPPORT.md",
+    "CODE_OF_CONDUCT.md",
+    ".github/CODEOWNERS",
+    ".github/PULL_REQUEST_TEMPLATE.md",
+    ".github/ISSUE_TEMPLATE/bug_report.yml",
+    ".github/ISSUE_TEMPLATE/community_concern.yml",
+    ".github/ISSUE_TEMPLATE/config.yml",
+    ".github/dependabot.yml",
+    "requirements-security.txt",
+    "configs/github_repository_policy.json",
+    "docs/reviews/open-source-readiness-20260929.md",
+    "scripts/build_source_distribution.py",
+    "tests/test_source_distribution.py"
   ],
   "trees": [
     "src",
@@ -774,5 +789,6 @@
     "data/derived/rag/offline_agronomy/": 1073741824,
     "data/derived/rag/curated_canada/": 25165824,
     "data/derived/rag/curated_canada/releases/2026-08-14/": 25165824
-  }
+  },
+  "maximum_total_bytes": 1100000000
 }
