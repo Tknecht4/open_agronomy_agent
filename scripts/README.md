@@ -346,3 +346,7 @@ invalidates final product quality while retaining a successfully generated draft
 ## Sentinel-2 polygon preprocessing
 
 `analyze_field_imagery.py --provider sentinel2-c1-earth-search` uses the optional geospatial environment and the shared private imagery cache. It defaults offline; `--online` permits one bounded scene query and COG windows. `--cloud-buffer-m` defaults to 60 m and `--edge-buffer-m` to 20 m. The source-specific 20 m product retains native DN/per-band validity and explicitly uses B8A for NDVI/NDMI. Point/HLS context options are rejected. See the [operator guide](../docs/public/operations/geospatial-foundation.md#sentinel-2-collection-1-polygon-operator) for full usage and scientific limits.
+
+### Bounded imagery selection
+
+`select_field_imagery.py plan` freezes up to eight candidates (default three) and an explicit `--index`, `--support`, `--min-valid-fraction` policy. `run --plan` uses the existing private cache and source processors, retaining every failure and refusing a complete winner while any candidate is unavailable. Both require a new `--output` path and explicit `--online` for egress. Run-level COG payload/request limits supplement storage and per-scene limits; they are not a whole-job deadline. See the [selection operator guide](../docs/public/operations/geospatial-foundation.md#select-imagery-by-valid-field-support) for commands, exit statuses and scientific limits.
