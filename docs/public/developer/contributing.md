@@ -1,0 +1,9 @@
+# Contributing and getting help
+
+Contributions begin with a scoped problem and a safe public example. For a reproducible defect, use the repository's [bug-report form](https://github.com/Tknecht4/open_agronomy_agent/issues/new/choose). For setup questions, ideas, or open-ended requests, use [GitHub Discussions](https://github.com/Tknecht4/open_agronomy_agent/discussions). Potential vulnerabilities go through [private reporting](https://github.com/Tknecht4/open_agronomy_agent/security/advisories/new).
+
+Do not publish farmer records, credentials, private traces, or precise coordinates in issues, screenshots, logs, tests, or pull requests. Use synthetic or redacted examples. The project is maintained on a best-effort basis without a response SLA; its exercised source-checkout target is Apple Silicon, and the Mac app is still a candidate.
+
+Read the repository [contribution guide](https://github.com/Tknecht4/open_agronomy_agent/blob/main/CONTRIBUTING.md) before submitting a PR. State the before/after behavior, exact checks run, failures, unknowns, and provenance for any new data or knowledge. Run focused tests while iterating and the [repository-wide checks](testing.md) before a broad claim. Software tests do not establish agronomic validity, source authority, or release readiness. `@Tknecht4` reviews outside contributions; a solo maintainer is not required to approve their own PR.
+
+See the [support](https://github.com/Tknecht4/open_agronomy_agent/blob/main/SUPPORT.md), [security](https://github.com/Tknecht4/open_agronomy_agent/blob/main/SECURITY.md), and [conduct](https://github.com/Tknecht4/open_agronomy_agent/blob/main/CODE_OF_CONDUCT.md) policies. Project-authored content is [Apache-2.0](https://github.com/Tknecht4/open_agronomy_agent/blob/main/LICENSE); third-party material retains its own terms.

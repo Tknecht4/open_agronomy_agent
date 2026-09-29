@@ -1,0 +1,56 @@
+{
+  "schema_version": "open_agronomy_agent.github_repository_policy.v1",
+  "repository": "Tknecht4/open_agronomy_agent",
+  "branch": "main",
+  "branch_protection": {
+    "required_status_checks": {
+      "strict": true,
+      "checks": [
+        {
+          "context": "python",
+          "app_id": 15368
+        },
+        {
+          "context": "frontend",
+          "app_id": 15368
+        },
+        {
+          "context": "build",
+          "app_id": 15368
+        }
+      ]
+    },
+    "enforce_admins": true,
+    "required_pull_request_reviews": {
+      "dismiss_stale_reviews": true,
+      "require_code_owner_reviews": false,
+      "required_approving_review_count": 0,
+      "require_last_push_approval": false
+    },
+    "restrictions": null,
+    "required_linear_history": false,
+    "allow_force_pushes": false,
+    "allow_deletions": false,
+    "required_conversation_resolution": true
+  },
+  "repository_settings": {
+    "has_discussions": true,
+    "security_and_analysis": {
+      "secret_scanning": {
+        "status": "enabled"
+      },
+      "secret_scanning_push_protection": {
+        "status": "enabled"
+      }
+    }
+  },
+  "private_vulnerability_reporting": true,
+  "vulnerability_alerts": true,
+  "automated_security_fixes": true,
+  "workflow_permissions": {
+    "default_workflow_permissions": "read",
+    "can_approve_pull_request_reviews": false
+  },
+  "review_policy": "The sole maintainer reviews external contributions. Zero mandatory approval count avoids impossible self-approval; required PRs, status checks, and conversation resolution apply to administrators. Increase the count when another trusted maintainer can review.",
+  "activation_note": "The build check is required only after the documentation workflow runs on every PR. The Mac candidate is conditional and reviewed when triggered; it is not an always-required status."
+}

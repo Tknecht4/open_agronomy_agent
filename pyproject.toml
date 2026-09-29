@@ -13,7 +13,7 @@ classifiers = [
 ]
 dependencies = [
     "agno>=2.6,<2.7",
-    "cryptography>=45,<47",
+    "cryptography>=50.0.1,<51",
     "pyproj>=3.6,<4",
     "openpyxl>=3.1.5,<4",
     "shapely>=2.0,<3",
@@ -28,7 +28,7 @@ geospatial-prep = [
     "pyogrio>=0.10,<1",
 ]
 training = [
-    "datasets>=4.0,<5",
+    "datasets>=5.0.1,<6",
     "huggingface_hub>=1.12.0,<2",
     "transformers>=5.0,<6",
 ]

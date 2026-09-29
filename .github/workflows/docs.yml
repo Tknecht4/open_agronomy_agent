@@ -2,49 +2,9 @@ name: Documentation
 
 on:
   pull_request:
-    paths:
-      - ".github/workflows/docs.yml"
-      - "**/README.md"
-      - "configs/public_repository_manifest.json"
-      - "configs/open_agronomy_benchmark_v2*.json"
-      - "configs/schemas/benchmark_v2_case.schema.json"
-      - "data/eval/open_agronomy_benchmark_v2*"
-      - "docs/**"
-      - "mkdocs.yml"
-      - "requirements-docs.txt"
-      - "scripts/check_public_docs.py"
-      - "scripts/audit_open_agronomy_benchmark_v2.py"
-      - "src/agronomy_agent/benchmark_v2_metrics.py"
-      - "src/agronomy_agent/capability_registry.py"
-      - "src/agronomy_agent/agno_runtime/knowledge_graph.py"
-      - "src/agronomy_agent/local_tools.py"
-      - "src/agronomy_agent/skill_registry.py"
-      - "tests/test_public_docs.py"
-      - "tests/test_benchmark_v2*.py"
-      - "tests/test_open_agronomy_benchmark_v2*.py"
   push:
     branches:
       - main
-    paths:
-      - ".github/workflows/docs.yml"
-      - "**/README.md"
-      - "configs/public_repository_manifest.json"
-      - "configs/open_agronomy_benchmark_v2*.json"
-      - "configs/schemas/benchmark_v2_case.schema.json"
-      - "data/eval/open_agronomy_benchmark_v2*"
-      - "docs/**"
-      - "mkdocs.yml"
-      - "requirements-docs.txt"
-      - "scripts/check_public_docs.py"
-      - "scripts/audit_open_agronomy_benchmark_v2.py"
-      - "src/agronomy_agent/benchmark_v2_metrics.py"
-      - "src/agronomy_agent/capability_registry.py"
-      - "src/agronomy_agent/agno_runtime/knowledge_graph.py"
-      - "src/agronomy_agent/local_tools.py"
-      - "src/agronomy_agent/skill_registry.py"
-      - "tests/test_public_docs.py"
-      - "tests/test_benchmark_v2*.py"
-      - "tests/test_open_agronomy_benchmark_v2*.py"
   workflow_dispatch:
 
 concurrency:

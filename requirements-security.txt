@@ -1,0 +1,2 @@
+# Advisory scanner only; installed in an isolated CI environment.
+pip-audit==2.10.1

@@ -37,12 +37,33 @@ jobs:
           python -m pip install --requirement requirements-phase4-ci.txt
           python -m pip install --requirement requirements-benchmark-analysis.txt
           python -m pip install --editable ".[geospatial-prep,training]"
+      - name: Audit installed Python dependencies
+        run: |
+          python -m venv "$RUNNER_TEMP/dependency-audit"
+          "$RUNNER_TEMP/dependency-audit/bin/python" -m pip install --requirement requirements-security.txt
+          python -m pip list --format=freeze --exclude agronomy-agent > "$RUNNER_TEMP/installed-dependencies.txt"
+          test -s "$RUNNER_TEMP/installed-dependencies.txt"
+          "$RUNNER_TEMP/dependency-audit/bin/python" -m pip_audit \
+            --requirement "$RUNNER_TEMP/installed-dependencies.txt" \
+            --no-deps --disable-pip --strict --progress-spinner off
       - name: Compile Python sources
         run: python -m compileall -q src scripts
       - name: Run backend tests
         run: python -m pytest -q
       - name: Build curated public package
         run: python scripts/build_public_repository.py --destination "$RUNNER_TEMP/open-agronomy-public-package"
+      - name: Build and reconstruct split source distribution
+        run: |
+          PYTHONPATH=. python scripts/build_source_distribution.py build \
+            --destination "$RUNNER_TEMP/source-distribution" > "$RUNNER_TEMP/source-distribution-result.json"
+          cat "$RUNNER_TEMP/source-distribution-result.json"
+          plan_sha=$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["plan_sha256"])' "$RUNNER_TEMP/source-distribution-result.json")
+          PYTHONPATH=. python scripts/build_source_distribution.py reconstruct \
+            --distribution "$RUNNER_TEMP/source-distribution" \
+            --destination "$RUNNER_TEMP/reconstructed-public-tree" \
+            --expected-plan-sha256 "$plan_sha"
+          cd "$RUNNER_TEMP/reconstructed-public-tree"
+          PYTHONPATH=src python scripts/audit_runtime_corpus.py
 
   frontend:
     runs-on: ubuntu-24.04
