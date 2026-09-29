@@ -468,6 +468,13 @@ def controlled_inputs(registry: Mapping[str, Any], root: Path = ROOT) -> dict[st
         "configs/benchmark_capability_conformance_v2.json",
         *registry["product_contract_tests"],
     }
+    # An absent optional admission queue remains absent. Adding one changes
+    # this input map and is therefore detected by resume and source-drift gates.
+    admission_queue = (
+        "data/manifests/provincial_applied_guidance_admission_queue_20260724.json"
+    )
+    if (root / admission_queue).is_file():
+        names.add(admission_queue)
     names.update(suite["path"] for suite in registry["suites"])
     pilot = json.loads(
         checked_path(root, "data/eval/field_data_pilot_v1/manifest.json").read_text()

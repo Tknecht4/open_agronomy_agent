@@ -25,6 +25,12 @@ def test_complete_profiles_share_cohort_and_cells():
     assert baseline["counts"]["observations"] == 2 * baseline["counts"]["cases"]
     assert baseline["counts"]["lanes"]["agronomy"] == 256
     assert len(baseline["auxiliary_inputs"]) > 100
+    admission_queue = (
+        "data/manifests/provincial_applied_guidance_admission_queue_20260724.json"
+    )
+    assert (admission_queue in baseline["auxiliary_inputs"]) == (
+        ROOT / admission_queue
+    ).is_file()
     assert "data/seed/agronomy_knowledge_graph.json" in baseline["auxiliary_inputs"]
     assert any("us_nrcs/shards" in key for key in baseline["auxiliary_inputs"])
 
