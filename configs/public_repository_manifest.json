@@ -746,7 +746,13 @@
     "docs/reviews/satellite-preprocessing-audit-20260929.md",
     "tests/test_sentinel2_preprocessing.py",
     "tests/test_sentinel2_analytics.py",
-    "docs/reviews/sentinel2-preprocessing-round-20260929.md"
+    "docs/reviews/sentinel2-preprocessing-round-20260929.md",
+    "scripts/select_field_imagery.py",
+    "tests/test_scene_quality.py",
+    "tests/test_imagery_transfer_budget.py",
+    "tests/test_imagery_selection.py",
+    "tests/test_imagery_selection_raster.py",
+    "docs/reviews/imagery-selection-round-20260929.md"
   ],
   "trees": [
     "src",

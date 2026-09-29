@@ -161,3 +161,36 @@ The analysis uses a source-anchored 20 m grid. Native 10 m blue/green/red are ar
 Radiometry is decoded once from the admitted source encoding, with actual header agreement, nodata checks, SCL exclusions, configurable cloud/shadow adjacency and source-edge screening. Negative reflectance is preserved in source windows, but does not contribute to normalized indices. Mean solar zenith above 70° is refused. Earlier processing baselines have documented swath-edge limitations; detector-footprint masks are not available in the inspected C1 assets, and the receipt retains this qualification. A clear index is not a crop diagnosis or a field observation of drainage. See the [source-linked development record](https://github.com/Tknecht4/open_agronomy_agent/blob/main/docs/reviews/sentinel2-preprocessing-round-20260929.md).
 
 The Sentinel-2 v2 recipe masks source nodata (DN 0) and saturation (DN 65535) before aggregation and decoding, retaining separate native saturation masks. Its fixed 20 m source-validity guard remains active when the optional field-interior margin is zero. This guard does not replace missing detector-footprint masks for pre-05.13 swath-edge artifacts.
+
+## Select imagery by valid field support
+
+`select_field_imagery.py` adds a two-step operator workflow using the same HLS/Sentinel-2 processors and private chip store. It freezes one bounded STAC candidate page before processing, then measures valid **index** area within the requested support. The app's current single-scene UI/API is unchanged. No API key is required for the supported sources.
+
+Choose an index, support and minimum fraction explicitly; there is no universal agronomic threshold. The following **example policy** requires 80% valid interior NDVI support. It uses Sentinel-2's existing B8A NDVI recipe, 60 m cloud buffer and 20 m field-interior margin. HLS S30/L30 support whole field polygons only.
+
+```bash
+PYTHONPATH=src /absolute/path/to/geospatial-venv/bin/python scripts/select_field_imagery.py plan \
+  --geometry /absolute/private/field.geojson --provider sentinel2-c1-earth-search \
+  --start-date 2022-05-01 --end-date 2022-06-15 \
+  --index NDVI --support interior --min-valid-fraction 0.8 --candidate-limit 3 \
+  --online --output /absolute/private/new-selection-plan.json
+
+PYTHONPATH=src /absolute/path/to/geospatial-venv/bin/python scripts/select_field_imagery.py run \
+  --plan /absolute/private/new-selection-plan.json --cache-root /absolute/private/imagery-cache \
+  --max-cog-bytes 134217728 --per-scene-cog-bytes 33554432 --max-cog-requests 512 \
+  --online --output /absolute/private/new-selection-result.json
+```
+
+Both commands default offline. An offline plan returns `blocked_offline`; an offline run can evaluate only intact exact-request cached chips. Output parents must exist; output files are created with private permissions and never overwritten. Plans contain the field geometry, so keep them private. Repeat a run into a **new output path**; the plan itself is never revised. An interrupted process may leave an incomplete output file, which is not a completed receipt.
+
+Discovery requests one page ordered by newest acquisition, then scene ID, with a maximum of eight candidates (default three). It never follows a next-page link or filters candidates by scene-wide cloud metadata. An empty returned page is `no_scene`, not proof that the requested period has no imagery. Provider errors remain `unavailable`. Each plan binds the geometry, dates, provider, candidate identities/acquisition times, discovery metadata hashes, processor version and explicit policy. The plan freezes identities and a recipe, not a remote asset snapshot: existing processors obtain and validate their own source metadata, and selection binds their exact request/chip/process hashes. A later source revision may therefore produce a different decision hash. Plan hashes detect changes; they are not authenticated signatures.
+
+For each candidate, the denominator is the entire field or eroded interior support area; the numerator is the valid NDVI or NDMI area **after** source, QA and index-domain masks. QA-clear area alone does not establish index validity. Empty interiors and zero valid index area cannot qualify even at a zero threshold. Missing/nonfinite or contradictory support records remain unavailable. Eligible scenes rank by valid fraction descending, acquisition time descending, then scene ID ascending. Index magnitude does not affect ranking. Water pixels remain part of the existing clear-class policy; this is not crop-only coverage.
+
+Every frozen candidate is accounted for. A complete run returns `selected` or `no_eligible_scene`; any unavailable or unprocessed candidate makes it `incomplete` with no selected scene. Observed rankings remain visible for inspection, without replacing failed candidates. Completed, rejected, unavailable and no-scene results remain distinct. Exit code 0 indicates a completed discovery/decision (`ready`, `selected`, `no_scene`, `no_eligible_scene`); exit code 2 indicates an unavailable, incomplete or offline-blocked result. A zero exit code does not imply an eligible scene.
+
+The run shares a locked COG byte/request budget across candidates, in addition to the existing per-scene and disk-admission limits. It counts failed outbound attempts and application-consumed COG payload, reserving capacity across concurrent range reads. It does **not** meter total network wire traffic, headers, transport buffers or separately bounded STAC/token JSON. Cached reads consume no COG budget. A budget failure prevents publication of a partial chip; later candidates may still use intact caches. No whole-job deadline is built into this CLI; use an external supervisor when elapsed-time completion is required. There is no automatic eviction or replacement search.
+
+The result retains every assessment, rejection/unavailability reason, chip/process identity, transfer accounting, full plan and a stable scientific `decision_hash`. A full `receipt_hash` also binds attempt time and cache/transfer observations. Exact offline replay can retain the same decision hash even though those operational observations differ. The record introduces no second raster store.
+
+Selection means **coverage-screened within the frozen bounded list**, not a cloud-free guarantee, a representative crop sample or validation of a field intervention. Newest-page truncation, season/cloud-related missingness, residual SCL errors, mixed boundary pixels, unqualified registration and sensor/baseline effects remain relevant. An interior margin changes statistical support, not geolocation accuracy. Registration experiments on surveyed boundaries and common-support temporal products remain later stages.
