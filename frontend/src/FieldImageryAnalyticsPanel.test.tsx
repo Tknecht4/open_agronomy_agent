@@ -40,6 +40,17 @@ const pointReceipt = {
   qa: { sample_area_m2: 900, valid_area_m2: 900, valid_area_fraction: 1, nodata_area_m2: 0,
     excluded_area_m2_by_reason: {}, overlap_note: 'QA reasons may overlap.' },
 }
+const v4PointReceipt = {
+  ...pointReceipt,
+  process_version: 'hls-point-sample-v4-hls-radiometry-index-qa',
+  qa: { ...pointReceipt.qa, water_flag_area_m2: 0,
+    index_undefined_area_m2_by_reason: {
+      ndvi_negative_reflectance: 0, ndvi_nonpositive_denominator: 0,
+      ndmi_negative_reflectance: 0, ndmi_nonpositive_denominator: 0,
+    } },
+  zonal_stats: { NDVI: pointReceipt.zonal_stats.NDVI,
+    NDMI: { mean: 0.3, min: 0.3, max: 0.3, area_m2: 900 } },
+}
 const bufferArea = Math.PI * 60 ** 2 * Math.sin(2 * Math.PI / 256) / (2 * Math.PI / 256)
 const bufferReceipt = { ...pointReceipt,
   zonal_stats: { NDVI: { mean: 0.53, min: 0.1, max: 0.8, area_m2: 8000 }, NDMI: { mean: null, min: null, max: null, area_m2: 0 } },
@@ -87,7 +98,7 @@ describe('FieldImageryAnalyticsPanel', () => {
     const result = screen.getByRole('region', { name: 'Imagery analysis result' })
     expect(within(result).getByText('0.530')).toBeInTheDocument()
     expect(within(result).getByText('Unknown')).toBeInTheDocument()
-    expect(within(result).getByText(/Scene cloud 25.0% · field clear coverage 80.0%/)).toBeInTheDocument()
+    expect(within(result).getByText(/Scene cloud 25.0% · field QA clear coverage 80.0%/)).toBeInTheDocument()
     fireEvent.click(within(result).getByText('Source and processing details'))
     expect(within(result).getByText('B04: hls2-s30:scene-1:B04')).toBeInTheDocument()
     expect(await within(result).findByRole('img')).toHaveAttribute('src', 'blob:field-preview')
@@ -190,11 +201,65 @@ describe('FieldImageryAnalyticsPanel', () => {
     expect(within(result).getByText('Observed indices for the sampled pixel.')).toBeInTheDocument()
     expect(within(result).getByText('Sample area 900 m²')).toBeInTheDocument()
     expect(within(result).getByText(/1 of 1 sample pixels pass QA/)).toBeInTheDocument()
-    expect(within(result).getByText(/valid sample fraction 100.0%/)).toBeInTheDocument()
+    expect(within(result).getByText(/sample QA clear fraction 100.0%/)).toBeInTheDocument()
     expect(within(result).queryByText(/Field area|field clear coverage|whole.field/)).not.toBeInTheDocument()
     expect(await within(result).findByRole('img')).toHaveAttribute('alt', expect.stringContaining('sampled pixel'))
     expect(within(result).getByText(/sample may include neighboring land cover/)).toBeInTheDocument()
     expect(fetch).toHaveBeenCalledWith(previewPath, expect.objectContaining({ credentials: 'same-origin', headers: { 'X-CSRF-Token': 'token123' } }))
+  })
+
+  it('separates water flags and undefined index support from QA clear area', async () => {
+    apiGet.mockResolvedValue(pointAvailability)
+    apiPost.mockResolvedValue({ ...pointReceipt,
+      qa: { ...pointReceipt.qa, water_flag_area_m2: 900,
+        index_undefined_area_m2_by_reason: { ndvi_negative_reflectance: 900, ndvi_nonpositive_denominator: 0 } },
+      zonal_stats: { ...pointReceipt.zonal_stats,
+        NDVI: { mean: null, min: null, max: null, area_m2: 0 } },
+    })
+    render(<FieldImageryAnalyticsPanel fieldContextId="field-1" geometryKey="point-1" geometry={point} imageryReady />)
+    open(); setDates()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Analyze scene' })).toBeEnabled())
+    fireEvent.click(screen.getByRole('button', { name: 'Analyze scene' }))
+    const result = await screen.findByRole('region', { name: 'Imagery analysis result' })
+    expect(within(result).getByText('QA clear area 900 m²')).toBeInTheDocument()
+    expect(within(result).getByText(/Water flagged area 900 m² · retained in QA clear area/)).toBeInTheDocument()
+    fireEvent.click(within(result).getByText('Index support limits'))
+    expect(within(result).getByText('ndvi negative reflectance: 900 m²')).toBeInTheDocument()
+    expect(within(result).getByText(/Negative reflectance or a near-zero band sum/)).toBeInTheDocument()
+  })
+
+  it.each([
+    ['negative area overlaps NDVI support', { ...v4PointReceipt.qa,
+      index_undefined_area_m2_by_reason: { ...v4PointReceipt.qa.index_undefined_area_m2_by_reason, ndvi_negative_reflectance: 900 } }],
+    ['nonpositive area overlaps NDMI support', { ...v4PointReceipt.qa,
+      index_undefined_area_m2_by_reason: { ...v4PointReceipt.qa.index_undefined_area_m2_by_reason, ndmi_nonpositive_denominator: 900 } }],
+    ['missing reason', { ...v4PointReceipt.qa, index_undefined_area_m2_by_reason: {
+      ndvi_negative_reflectance: 0, ndvi_nonpositive_denominator: 0, ndmi_negative_reflectance: 0 } }],
+    ['extra reason', { ...v4PointReceipt.qa, index_undefined_area_m2_by_reason: {
+      ...v4PointReceipt.qa.index_undefined_area_m2_by_reason, unknown: 0 } }],
+    ['nonfinite reason', { ...v4PointReceipt.qa, index_undefined_area_m2_by_reason: {
+      ...v4PointReceipt.qa.index_undefined_area_m2_by_reason, ndvi_negative_reflectance: NaN } }],
+    ['missing reason map', { ...v4PointReceipt.qa, index_undefined_area_m2_by_reason: undefined }],
+  ])('rejects v4 point receipt when %s', async (_label, qa) => {
+    apiGet.mockResolvedValue(pointAvailability)
+    apiPost.mockResolvedValue({ ...v4PointReceipt, qa })
+    render(<FieldImageryAnalyticsPanel fieldContextId="field-1" geometryKey="point-1" geometry={point} imageryReady />)
+    open(); setDates()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Analyze scene' })).toBeEnabled())
+    fireEvent.click(screen.getByRole('button', { name: 'Analyze scene' }))
+    expect(await screen.findByText(/response did not confirm the requested sampling area/)).toBeInTheDocument()
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('renders a v4 point receipt with exact index support partition', async () => {
+    apiGet.mockResolvedValue(pointAvailability)
+    apiPost.mockResolvedValue(v4PointReceipt)
+    render(<FieldImageryAnalyticsPanel fieldContextId="field-1" geometryKey="point-1" geometry={point} imageryReady />)
+    open(); setDates()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Analyze scene' })).toBeEnabled())
+    fireEvent.click(screen.getByRole('button', { name: 'Analyze scene' }))
+    expect(await screen.findByText('Observed indices for the sampled pixel.')).toBeInTheDocument()
   })
 
   it('reveals a bounded explicit radius only for area sampling and invalidates results when it changes', async () => {

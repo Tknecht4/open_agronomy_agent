@@ -337,3 +337,7 @@ cases cannot establish held-out competence or promote a runtime profile.
 A completed executor is not proof of model availability. Draft generation and
 final product eligibility are recorded separately; an editor backend error
 invalidates final product quality while retaining a successfully generated draft.
+
+## DEM preparation before terrain derivatives
+
+`analyze_field_terrain.py` defaults to `--preprocessing auto`: actual 1 m DTM inputs receive a configurable 5×5 focal mean followed by bilinear 5 m resampling before all derivatives. Other cell sizes stay native; `--preprocessing native` supplies a comparison, and explicit `focal_mean_5m` rejects non-1 m inputs. `--focal-window-cells` accepts odd widths 3–31. The native read budget includes a real-data halo; voids and insufficient source context are refused. Source pixels and processing-grid outputs are retained with separate grids/roles. See the [operator guide](../docs/public/operations/geospatial-foundation.md) for methods, parameters and scientific limits.

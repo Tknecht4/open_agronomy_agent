@@ -32,11 +32,14 @@ jobs:
             pyproject.toml
             requirements-phase4-ci.txt
             requirements-benchmark-analysis.txt
+            requirements-imagery.txt
+            requirements-geospatial.txt
       - name: Install tested backend dependencies
         run: |
           python -m pip install --requirement requirements-phase4-ci.txt
           python -m pip install --requirement requirements-benchmark-analysis.txt
           python -m pip install --editable ".[geospatial-prep,training]"
+          python -m pip install --requirement requirements-geospatial.txt
       - name: Audit installed Python dependencies
         run: |
           python -m venv "$RUNNER_TEMP/dependency-audit"

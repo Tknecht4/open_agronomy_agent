@@ -18,8 +18,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--source-metadata", type=Path, help="JSON: source_id, source_url, source_date, license, terrain_type=DTM, bare_earth=true, vertical_units=m, vertical_datum")
     parser.add_argument("--output-dir", type=Path, help="New output directory; existing directories are refused")
     parser.add_argument("--context-buffer-m", type=float, help="Explicit context around the field bounding rectangle, at least two cells")
-    parser.add_argument("--max-cells", type=int, default=1_000_000, help="Context cell budget, 1 to 1000000")
+    parser.add_argument("--max-cells", type=int, default=1_000_000, help="Native read including preprocessing halo and output cell budget, 1 to 1000000")
     parser.add_argument("--include-twi", action="store_true", help="Optional D8 TWI; flat slopes/edge-influenced cells remain unknown")
+    parser.add_argument("--preprocessing", choices=("auto", "native", "focal_mean_5m"), default="auto",
+                        help="Auto: focal mean then bilinear 5 m for actual 1 m inputs; other grids native")
+    parser.add_argument("--focal-window-cells", type=int, default=5,
+                        help="Odd square focal mean width, 3..31 native pixels; default 5 (5 m on 1 m DEM)")
     args = parser.parse_args(argv)
     if args.readiness:
         print(json.dumps(terrain_readiness(), indent=2))
@@ -35,7 +39,8 @@ def main(argv: list[str] | None = None) -> int:
             args.dem, json.loads(args.geometry.read_text()), args.output_dir,
             source_metadata=json.loads(args.source_metadata.read_text()),
             context_buffer_m=args.context_buffer_m, include_twi=args.include_twi,
-            max_cells=args.max_cells,
+            max_cells=args.max_cells, preprocessing=args.preprocessing,
+            focal_window_cells=args.focal_window_cells,
         )
     except (TerrainError, OSError, ValueError) as exc:
         print(json.dumps({"status": "rejected", "error": str(exc)}), file=sys.stderr)

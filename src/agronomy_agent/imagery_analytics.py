@@ -34,7 +34,7 @@ from agronomy_agent.imagery_sampling import (
     outside_source_mask, point_grid_and_weights,
 )
 
-PROCESS_VERSION = "hls-chip-v3-native-grid-source-extent-float64-qa"
+PROCESS_VERSION = "hls-chip-v4-hls-radiometry-index-qa"
 PREVIEW_VERSION = "ndvi-preview-v2-finite-alpha"
 SCALE = 0.0001
 MAX_SIDE = 256
@@ -47,8 +47,9 @@ BAND_KEYS = {
     "hls-s30-planetary-computer": ("hls2-s30", ("B02", "B03", "B04", "B8A", "B11", "B12")),
     "hls-l30-planetary-computer": ("hls2-l30", ("B02", "B03", "B04", "B05", "B06", "B07")),
 }
-EXCLUDE_BITS = {"cirrus": 0, "cloud": 1, "adjacent_cloud_shadow": 2,
+EXCLUDE_BITS = {"reserved_bit_0": 0, "cloud": 1, "adjacent_cloud_shadow": 2,
                 "shadow": 3, "snow_ice": 4}
+SATURATION_FLAG = 12000
 
 
 def _canonical(value: Any) -> bytes:
@@ -372,16 +373,53 @@ def _field_weights(projected: Any, transform: Any, width: int, height: int, deps
 
 
 def _validate_scale(metadata: Any, key: str) -> None:
-    if key == "Fmask" or not metadata:
+    if not metadata:
         return
     if len(metadata) != 1 or not isinstance(metadata[0], dict):
         raise RuntimeError("unsupported HLS raster metadata")
+    expected_dtype = "uint8" if key == "Fmask" else "int16"
+    expected_fill = 255 if key == "Fmask" else -9999
+    dtype = metadata[0].get("data_type")
+    nodata = metadata[0].get("nodata")
+    if dtype is not None and dtype != expected_dtype:
+        raise RuntimeError("unexpected HLS raster metadata dtype")
+    if nodata is not None and nodata != expected_fill:
+        raise RuntimeError("unexpected HLS raster metadata nodata")
+    if key == "Fmask":
+        scale, offset = metadata[0].get("scale"), metadata[0].get("offset")
+        if scale is not None and not math.isclose(float(scale), 1, abs_tol=1e-9):
+            raise RuntimeError("unexpected HLS Fmask scale")
+        if offset is not None and not math.isclose(float(offset), 0, abs_tol=1e-9):
+            raise RuntimeError("unexpected HLS Fmask offset")
+        return
     scale = metadata[0].get("scale")
     offset = metadata[0].get("offset")
     if scale is not None and not math.isclose(float(scale), SCALE, rel_tol=1e-6):
         raise RuntimeError("unexpected HLS reflectance scale")
     if offset is not None and not math.isclose(float(offset), 0, abs_tol=1e-9):
         raise RuntimeError("unexpected HLS reflectance offset")
+
+
+def _validate_cog_radiometry(src: Any, key: str) -> None:
+    """Check the opened HLS v2 layer before any conversion or QA bit decoding."""
+    is_mask = key == "Fmask"
+    if src.dtypes[0] != ("uint8" if is_mask else "int16"):
+        raise RuntimeError(f"unexpected HLS {key} COG dtype")
+    expected_fill = 255 if is_mask else -9999
+    if src.nodata is not None and src.nodata != expected_fill:
+        raise RuntimeError(f"unexpected HLS {key} COG nodata")
+    # Some distribution COGs leave GDAL scale/offset unset (1/0) while STAC
+    # declares 0.0001/0. Explicit, non-default tags must agree with HLS.
+    scale, offset = src.scales[0], src.offsets[0]
+    if is_mask:
+        if not math.isclose(scale, 1, abs_tol=1e-9) or not math.isclose(offset, 0, abs_tol=1e-9):
+            raise RuntimeError("unexpected HLS Fmask COG scale or offset")
+    else:
+        if not (math.isclose(scale, 1.0, abs_tol=1e-9) or
+                math.isclose(scale, SCALE, rel_tol=1e-6)):
+            raise RuntimeError(f"unexpected HLS {key} COG scale")
+        if not math.isclose(offset, 0, abs_tol=1e-9):
+            raise RuntimeError(f"unexpected HLS {key} COG offset")
 
 
 def _read_assets(item: dict[str, Any], hrefs: dict[str, str], grid: tuple[Any, ...],
@@ -400,12 +438,15 @@ def _read_assets(item: dict[str, Any], hrefs: dict[str, str], grid: tuple[Any, .
             with rasterio.open(hrefs[key]) as src:
                 if src.count != 1 or src.crs is None or src.width < 1 or src.height < 1:
                     raise RuntimeError("invalid HLS COG band")
+                _validate_cog_radiometry(src, key)
                 if (src.crs != source_grid[0] or src.transform != source_grid[1] or
                         src.width != source_grid[2] or src.height != source_grid[3]):
                     raise RuntimeError("HLS band grids are inconsistent")
                 source_meta[key] = {"asset_id": item["assets"][key]["id"],
                                     "crs": src.crs.to_string(), "dtype": src.dtypes[0],
-                                    "nodata": src.nodata, "scale": None if key == "Fmask" else SCALE,
+                                    "nodata": src.nodata, "cog_scale": src.scales[0],
+                                    "cog_offset": src.offsets[0],
+                                    "scale": None if key == "Fmask" else SCALE,
                                     "offset": None if key == "Fmask" else 0,
                                     "raster_bands": item["assets"][key]["raster_bands"]}
                 with WarpedVRT(src, crs=crs, transform=transform, width=width, height=height,
@@ -413,12 +454,15 @@ def _read_assets(item: dict[str, Any], hrefs: dict[str, str], grid: tuple[Any, .
                     data = vrt.read(1, masked=True)
                     arrays.append(np.asarray(data.data))
                     masks.append(np.ma.getmaskarray(data).copy())
-    raw = np.stack(arrays[:6]).astype(np.float32)
+    # Retain the exact encoded source-window values before any QA masking or
+    # reflectance conversion. The separate invalid mask gives off-tile values
+    # no observational meaning even when a VRT supplied numeric zeros there.
+    raw = np.stack(arrays[:6]).astype(np.int16, copy=False)
     invalid = np.any(np.stack(masks[:6]), axis=0)
     invalid |= np.any(~np.isfinite(raw), axis=0)
     # HLS fill is -9999; metadata can be absent or inconsistent in old granules.
     invalid |= np.any(raw == -9999, axis=0)
-    fmask = np.asarray(arrays[6]).astype(np.uint8)
+    fmask = np.asarray(arrays[6], dtype=np.uint8)
     invalid |= masks[6] | (fmask == 255)
     # Absent nodata metadata must never turn off-tile VRT zeros into observations.
     invalid |= outside_source_mask(grid, source_grid)
@@ -429,18 +473,31 @@ def _qa_indices(raw: Any, fmask: Any, invalid: Any, weights: Any, deps: tuple[An
     np = deps[0]
     reasons = {name: (fmask & (1 << bit)) != 0 for name, bit in EXCLUDE_BITS.items()}
     reasons["high_aerosol"] = (fmask & 0xC0) == 0xC0
+    reasons["saturation_flag"] = np.any(raw == SATURATION_FLAG, axis=0)
+    # The provider names 12000 as saturation; larger encoded values have no
+    # documented reflectance meaning in this adapter and are excluded.
+    reasons["above_saturation_flag"] = np.any(raw > SATURATION_FLAG, axis=0)
     valid = ~invalid
     for mask in reasons.values():
         valid &= ~mask
-    bands = raw * SCALE
+    bands = raw.astype(np.float32) * SCALE
     bands[:, ~valid] = np.nan
-    def index(a: Any, b: Any) -> Any:
+    index_reasons: dict[str, Any] = {}
+    def index(name: str, a: Any, b: Any) -> Any:
         denominator = a + b
         result = np.full(a.shape, np.nan, dtype=np.float32)
-        np.divide(a - b, denominator, out=result, where=valid & (np.abs(denominator) > 1e-6))
+        # Atmospheric correction can yield negative reflectance. Preserve the
+        # clear observation, but do not report an out-of-range normalized index
+        # when either input is negative or its positive sum is near zero.
+        negative = valid & ((a < 0) | (b < 0))
+        small_sum = valid & (denominator <= 1e-6)
+        index_reasons[f"{name}_negative_reflectance"] = negative
+        index_reasons[f"{name}_nonpositive_denominator"] = small_sum & ~negative
+        eligible = valid & ~negative & ~small_sum
+        np.divide(a - b, denominator, out=result, where=eligible)
         return result
-    ndvi = index(bands[3], bands[2])
-    ndmi = index(bands[3], bands[4])
+    ndvi = index("ndvi", bands[3], bands[2])
+    ndmi = index("ndmi", bands[3], bands[4])
     # Use the same positive support sequence for every reduction, so an
     # excluded zero-weight bounding-box corner cannot change the denominator.
     weights = np.asarray(weights, dtype=np.float64)
@@ -451,11 +508,15 @@ def _qa_indices(raw: Any, fmask: Any, invalid: Any, weights: Any, deps: tuple[An
         return weighted_statistics(values, weights, valid=valid, cell_area=900)
     qa = {"field_area_m2": total * 900, "valid_area_m2": clear * 900,
           "valid_area_fraction": clear / total if total > 0 else None,
+          "water_flag_area_m2": float(weights[((fmask & (1 << 5)) != 0) & ~invalid & support].sum(dtype=np.float64)) * 900,
           "excluded_area_m2_by_reason": {
               name: float(weights[mask & support].sum(dtype=np.float64)) * 900
               for name, mask in reasons.items()},
+          "index_undefined_area_m2_by_reason": {
+              name: float(weights[mask & support].sum(dtype=np.float64)) * 900
+              for name, mask in index_reasons.items()},
           "nodata_area_m2": float(weights[invalid & support].sum(dtype=np.float64)) * 900,
-          "overlap_note": "QA reason areas may overlap; do not sum them"}
+          "overlap_note": "QA reason areas may overlap; do not sum them. Water remains QA-clear when otherwise valid; index support can be smaller than clear area."}
     return bands, valid, ndvi, qa, {"NDVI": stat(ndvi), "NDMI": stat(ndmi)}
 
 
@@ -590,6 +651,8 @@ def _analyze_scene_admitted(
             qa["sample_area_m2"] = qa.pop("field_area_m2")
         process_spec = {"version": process_version, "band_keys": BAND_KEYS[provider_id][1],
                         "scale": SCALE, "excluded_bits": EXCLUDE_BITS, "aerosol_high": 3,
+                        "saturation_flag": SATURATION_FLAG,
+                        "index_policy": "nonnegative_pair_positive_sum-v1",
                         "resampling_method": "nearest", "preview_version": PREVIEW_VERSION}
         if is_point:
             process_spec["sampling_schema_version"] = "imagery_sampling.v1"
@@ -602,7 +665,9 @@ def _analyze_scene_admitted(
         chip_grid = {"crs": crs.to_string(), "transform": list(transform)[:6],
                      "width": width, "height": height, "resolution_m": 30,
                      "resampling_method": "nearest", "native_asset_grid": native_grid}
-        array_hash = hashlib.sha256(bands.tobytes() + fmask.tobytes() + weights.tobytes()).hexdigest()
+        source_invalid = source["nodata_invalid"]
+        array_hash = hashlib.sha256(bands.tobytes() + fmask.tobytes() + weights.tobytes()
+                                    + raw.tobytes() + source_invalid.tobytes()).hexdigest()
         chip_binding = {"request": request_hash, "scene": item["id"], "asset_ids":
                         [v["id"] for v in item["assets"].values()], "process": process_hash,
                         "arrays": array_hash, "grid": chip_grid}
@@ -615,6 +680,9 @@ def _analyze_scene_admitted(
                     "source_native_grid": True,
                     "resampling_method": "nearest", "native_asset_grid": native_grid,
                     "band_names": list(BAND_NAMES), "band_keys": list(BAND_KEYS[provider_id][1]),
+                    "raw_dn_role": "pre_qa_encoded_int16_source_window",
+                    "source_invalid_mask_role": "source_mask_fill_or_outside_extent",
+                    "applied_reflectance_scale": SCALE,
                     "crs": crs.to_string(), "transform": list(transform)[:6],
                     "width": width, "height": height, "resolution_m": 30,
                     "source": {"provider_id": provider_id, "collection": item["collection"],
@@ -650,12 +718,14 @@ def _analyze_scene_admitted(
         try:
             packed = io.BytesIO()
             if is_point:
-                np.savez_compressed(packed, bands=bands, valid_mask=valid,
+                np.savez_compressed(packed, bands=bands, raw_dn=raw,
+                                    source_invalid_mask=source_invalid, valid_mask=valid,
                                     sample_mask=weights > 0, sample_weights=weights,
                                     fmask=fmask, ndvi=ndvi,
                                     metadata_json=_canonical(metadata).decode())
             else:
-                np.savez_compressed(packed, bands=bands, valid_mask=valid, field_mask=weights > 0,
+                np.savez_compressed(packed, bands=bands, raw_dn=raw,
+                                    source_invalid_mask=source_invalid, valid_mask=valid, field_mask=weights > 0,
                                     field_weights=weights, fmask=fmask, ndvi=ndvi,
                                     metadata_json=_canonical(metadata).decode())
             payloads = {".npz": packed.getvalue(), ".png": _png(ndvi, valid, weights, Image),

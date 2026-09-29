@@ -12,7 +12,7 @@ from typing import Any
 from agronomy_agent.geospatial.raster import fractional_weights, source_extent_mask
 
 
-POINT_PROCESS_VERSION = "hls-point-sample-v3-native-grid-source-extent-float64-qa"
+POINT_PROCESS_VERSION = "hls-point-sample-v4-hls-radiometry-index-qa"
 MIN_SAMPLE_RADIUS_M = 15
 MAX_SAMPLE_RADIUS_M = 1500
 

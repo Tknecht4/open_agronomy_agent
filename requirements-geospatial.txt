@@ -2,6 +2,7 @@
 # Direct raster/terrain pins exercised on Python 3.12, not a full transitive lock.
 -r requirements-imagery.txt
 pyflwdir==0.5.12
+scipy==1.18.1
 # Vector imports use GDAL through Pyogrio/GeoPandas; never custom binary parsers.
 geopandas>=1.0,<2
 pyogrio>=0.10,<1

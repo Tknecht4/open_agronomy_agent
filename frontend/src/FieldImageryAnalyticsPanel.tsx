@@ -31,6 +31,7 @@ type AnalyticsReceipt = {
   qa?: {
     field_area_m2?: number | null; sample_area_m2?: number | null; valid_area_m2?: number | null; valid_area_fraction?: number | null
     excluded_area_m2_by_reason?: Record<string, number>; nodata_area_m2?: number | null; overlap_note?: string
+    water_flag_area_m2?: number | null; index_undefined_area_m2_by_reason?: Record<string, number>
   }
   sampling?: PointSampling
   zonal_stats?: { NDVI?: IndexStats; NDMI?: IndexStats }
@@ -142,9 +143,30 @@ function validPointReceipt(receipt: AnalyticsReceipt, geometry: FieldGeometry, m
     || !nonnegative(qa.nodata_area_m2) || qa.nodata_area_m2 > qa.sample_area_m2
     || !(qa.valid_area_fraction === null || (nonnegative(qa.valid_area_fraction) && qa.valid_area_fraction <= 1))
     || !qa.excluded_area_m2_by_reason || typeof qa.excluded_area_m2_by_reason !== 'object' || Array.isArray(qa.excluded_area_m2_by_reason)
-    || !Object.values(qa.excluded_area_m2_by_reason).every(nonnegative) || typeof qa.overlap_note !== 'string') return false
-  return validIndexStats(receipt.zonal_stats?.NDVI, qa.valid_area_m2)
-    && validIndexStats(receipt.zonal_stats?.NDMI, qa.valid_area_m2)
+    || !Object.values(qa.excluded_area_m2_by_reason).every(nonnegative) || typeof qa.overlap_note !== 'string'
+    || (qa.water_flag_area_m2 !== undefined && (!nonnegative(qa.water_flag_area_m2) || qa.water_flag_area_m2 > qa.sample_area_m2))
+    || (qa.index_undefined_area_m2_by_reason !== undefined &&
+      (typeof qa.index_undefined_area_m2_by_reason !== 'object' || Array.isArray(qa.index_undefined_area_m2_by_reason)
+        || !Object.values(qa.index_undefined_area_m2_by_reason).every(value => nonnegative(value) && value <= qa.valid_area_m2!)))) return false
+  if (!validIndexStats(receipt.zonal_stats?.NDVI, qa.valid_area_m2)
+    || !validIndexStats(receipt.zonal_stats?.NDMI, qa.valid_area_m2)) return false
+  if (receipt.process_version === 'hls-point-sample-v4-hls-radiometry-index-qa') {
+    const reasons = qa.index_undefined_area_m2_by_reason
+    const expected = ['ndvi_negative_reflectance', 'ndvi_nonpositive_denominator',
+      'ndmi_negative_reflectance', 'ndmi_nonpositive_denominator']
+    if (!reasons || Object.keys(reasons).length !== expected.length
+      || !expected.every(key => Object.prototype.hasOwnProperty.call(reasons, key)
+        && nonnegative(reasons[key]) && reasons[key] <= qa.valid_area_m2!)
+      || !nonnegative(qa.water_flag_area_m2) || qa.water_flag_area_m2 > qa.sample_area_m2) return false
+    const tolerance = Math.max(1e-5, qa.sample_area_m2 * 1e-6)
+    for (const name of ['NDVI', 'NDMI'] as const) {
+      const support = receipt.zonal_stats?.[name]?.area_m2
+      const prefix = name.toLowerCase()
+      if (!nonnegative(support) || Math.abs(support + reasons[`${prefix}_negative_reflectance`]
+        + reasons[`${prefix}_nonpositive_denominator`] - qa.valid_area_m2) > tolerance) return false
+    }
+  }
+  return true
 }
 
 function statusText(receipt: AnalyticsReceipt, mode: SamplingMode): string {
@@ -315,13 +337,15 @@ export function FieldImageryAnalyticsPanel({ fieldContextId, geometryKey, geomet
       {receipt.source ? <div className="field-imagery-source">
         <strong>{receipt.source.collection || receipt.source.provider_id || 'HLS scene'}</strong>
         <span>Scene {receipt.source.scene_id || receipt.scene_id || 'unknown'} · acquired {receipt.source.acquired_at || 'unknown'}</span>
-        <span>Scene cloud {receipt.source.scene_cloud_percent == null ? 'unknown' : `${decimal(receipt.source.scene_cloud_percent, 1)}%`} · {resultPoint ? 'valid sample fraction' : 'field clear coverage'} {receipt.qa?.valid_area_fraction == null ? 'unknown' : `${(receipt.qa.valid_area_fraction * 100).toFixed(1)}%`}</span>
+        <span>Scene cloud {receipt.source.scene_cloud_percent == null ? 'unknown' : `${decimal(receipt.source.scene_cloud_percent, 1)}%`} · {resultPoint ? 'sample QA clear fraction' : 'field QA clear coverage'} {receipt.qa?.valid_area_fraction == null ? 'unknown' : `${(receipt.qa.valid_area_fraction * 100).toFixed(1)}%`}</span>
       </div> : null}
       {receipt.qa ? <div className="field-imagery-qa">
-        <span>{resultPoint ? `Sample area ${area(receipt.qa.sample_area_m2)}` : `Field area ${area(receipt.qa.field_area_m2)}`}</span><span>{resultPoint ? 'Clear sample area' : 'Valid observed area'} {area(receipt.qa.valid_area_m2)}</span>
+        <span>{resultPoint ? `Sample area ${area(receipt.qa.sample_area_m2)}` : `Field area ${area(receipt.qa.field_area_m2)}`}</span><span>QA clear area {area(receipt.qa.valid_area_m2)}</span>
         {pointSampling ? <span>{pointSampling.valid_pixel_count} of {pointSampling.pixel_count} sample pixels pass QA · {pointSampling.native_resolution_m} m source pixels</span> : null}
         <span>Nodata area {area(receipt.qa.nodata_area_m2)}</span>
+        {receipt.qa.water_flag_area_m2 !== undefined ? <span>Water flagged area {area(receipt.qa.water_flag_area_m2)} · retained in QA clear area when otherwise valid</span> : null}
         {receipt.qa.excluded_area_m2_by_reason ? <details><summary>QA exclusions</summary><ul>{Object.entries(receipt.qa.excluded_area_m2_by_reason).map(([reason, value]) => <li key={reason}>{reason.replace(/_/g, ' ')}: {area(value)}</li>)}</ul><small>{receipt.qa.overlap_note || 'QA reasons may overlap.'}</small></details> : null}
+        {receipt.qa.index_undefined_area_m2_by_reason && Object.values(receipt.qa.index_undefined_area_m2_by_reason).some(value => value > 0) ? <details><summary>Index support limits</summary><ul>{Object.entries(receipt.qa.index_undefined_area_m2_by_reason).filter(([, value]) => value > 0).map(([reason, value]) => <li key={reason}>{reason.replace(/_/g, ' ')}: {area(value)}</li>)}</ul><small>Negative reflectance or a near-zero band sum can make an index undefined even where scene QA is clear.</small></details> : null}
       </div> : null}
       {pointSampling ? <p className="field-imagery-sampling-note">{pointSampling.limitation}</p> : null}
       {receipt.zonal_stats ? <div className="field-imagery-indices"><IndexValue name="NDVI" stats={receipt.zonal_stats.NDVI} singlePixel={resultMode === 'point_pixel'} /><IndexValue name="NDMI" stats={receipt.zonal_stats.NDMI} singlePixel={resultMode === 'point_pixel'} /></div> : null}

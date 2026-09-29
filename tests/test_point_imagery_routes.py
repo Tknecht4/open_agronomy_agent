@@ -62,7 +62,11 @@ def receipt(geometry=INPUT, payload=None):
             "pixel_count": count, "valid_pixel_count": count, "positional_uncertainty_m": None, "point_role": "unspecified",
             "area_basis": "native_grid_projected_metres", "edge_policy": "containing_pixel_floor", "limitation": "Synthetic sample only; not a field boundary."},
         "qa": {"sample_area_m2": area, "valid_area_m2": area, "valid_area_fraction": 1.,
-            "excluded_area_m2_by_reason": {}, "nodata_area_m2": 0, "overlap_note": "May overlap"},
+            "excluded_area_m2_by_reason": {}, "nodata_area_m2": 0, "overlap_note": "May overlap",
+            "water_flag_area_m2": 0,
+            "index_undefined_area_m2_by_reason": {
+                "ndvi_negative_reflectance": 0, "ndvi_nonpositive_denominator": 0,
+                "ndmi_negative_reflectance": 0, "ndmi_nonpositive_denominator": 0}},
         "grid": {"width": side, "height": side, "resolution_m": 30},
         "zonal_stats": {name: {"mean": .5, "min": .5, "max": .5, "area_m2": area}
                         for name in ("NDVI", "NDMI")}, "model_refs": [],
@@ -143,7 +147,7 @@ def test_point_to_polygon_change_during_analysis_holds_result(runtime, monkeypat
     assert result.status_code == 409, result.text
 
 
-@pytest.mark.parametrize("change", ["missing", "field_area", "radius", "request_radius", "geometry", "role", "pixel_count", "hash", "footprint", "grid_type", "index_unsupported", "index_area", "index_order", "nodata_negative"])
+@pytest.mark.parametrize("change", ["missing", "field_area", "radius", "request_radius", "geometry", "role", "pixel_count", "hash", "footprint", "grid_type", "index_unsupported", "index_area", "index_order", "nodata_negative", "index_negative_overlap", "index_denominator_overlap", "missing_reason", "extra_reason", "nonfinite_reason"])
 def test_point_receipt_meaning_rejects_corruption(change):
     result = receipt()
     if change == "missing": result.pop("sampling")
@@ -159,9 +163,25 @@ def test_point_receipt_meaning_rejects_corruption(change):
     elif change == "index_unsupported": result["zonal_stats"]["NDVI"]["area_m2"] = 0
     elif change == "index_area": result["zonal_stats"]["NDVI"]["area_m2"] = 901
     elif change == "index_order": result["zonal_stats"]["NDVI"]["max"] = .1
+    elif change == "index_negative_overlap": result["qa"]["index_undefined_area_m2_by_reason"]["ndvi_negative_reflectance"] = 900
+    elif change == "index_denominator_overlap": result["qa"]["index_undefined_area_m2_by_reason"]["ndmi_nonpositive_denominator"] = 900
+    elif change == "missing_reason": result["qa"]["index_undefined_area_m2_by_reason"].pop("ndvi_negative_reflectance")
+    elif change == "extra_reason": result["qa"]["index_undefined_area_m2_by_reason"]["unknown"] = 0
+    elif change == "nonfinite_reason": result["qa"]["index_undefined_area_m2_by_reason"]["ndvi_negative_reflectance"] = math.nan
     else: result["qa"]["nodata_area_m2"] = -1
     with pytest.raises((ValueError, TypeError)):
         validate_point_receipt(result)
+
+
+@pytest.mark.parametrize("name,reason", [
+    ("NDVI", "ndvi_negative_reflectance"),
+    ("NDMI", "ndmi_nonpositive_denominator"),
+])
+def test_point_receipt_accepts_disjoint_index_area_partition(name, reason):
+    result = receipt()
+    result["qa"]["index_undefined_area_m2_by_reason"][reason] = 900
+    result["zonal_stats"][name] = {"mean": None, "min": None, "max": None, "area_m2": 0}
+    validate_point_receipt(result)
 
 
 def test_point_worker_arguments_keep_sampling_separate_from_polygon_buffer(tmp_path, monkeypatch):
