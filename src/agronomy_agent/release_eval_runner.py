@@ -94,21 +94,31 @@ def _stop_owned_processes(
     except ProcessLookupError:
         return
     deadline = time.monotonic() + grace
+    probe_error = None
     while time.monotonic() < deadline:
         child.poll()  # reap the leader, while continuing to observe its group
         try:
             if new_session:
                 os.killpg(child.pid, 0)
+                probe_error = None
             elif child.poll() is not None:
                 return
         except ProcessLookupError:
             return
+        except PermissionError as exc:
+            # macOS can transiently deny a group probe while SIGTERM is
+            # completing. Retry within the bound; denial never proves exit.
+            probe_error = exc
         time.sleep(min(0.02, max(0, deadline - time.monotonic())))
     try:
         os.killpg(child.pid, signal.SIGKILL) if new_session else child.kill()
     except ProcessLookupError:
         pass
     child.wait(timeout=5)
+    if probe_error is not None:
+        raise PermissionError(
+            "owned process group remained unobservable at cleanup deadline"
+        ) from probe_error
 
 
 def _command(

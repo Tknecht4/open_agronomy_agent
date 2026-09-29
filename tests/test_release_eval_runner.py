@@ -16,6 +16,7 @@ from agronomy_agent.release_eval_runner import (
     _ledger,
     _seal_record,
     _subprocess_cell,
+    _stop_owned_processes,
     load_retained_report,
     retention_manifest,
     verify_retention,
@@ -344,3 +345,35 @@ def test_completed_profiler_envelope_cannot_hide_missing_cell_work(
     )
     assert report["status"] == "blocked"
     assert report["checks"][0]["passed"] is False
+
+
+@pytest.mark.parametrize("persistent", [False, True])
+def test_group_probe_permission_race_retries_but_persistent_denial_fails(
+    monkeypatch, persistent
+):
+    class OwnedChild:
+        pid = 12345
+
+        def poll(self):
+            return -15
+
+        def wait(self, timeout):
+            return -15
+
+    probes = 0
+
+    def probe(pid, sig):
+        nonlocal probes
+        if sig == 0:
+            probes += 1
+            if persistent or probes == 1:
+                raise PermissionError("transient native exit race")
+            raise ProcessLookupError("owned group has exited")
+
+    monkeypatch.setattr(os, "killpg", probe)
+    if persistent:
+        with pytest.raises(PermissionError, match="unobservable"):
+            _stop_owned_processes(OwnedChild(), new_session=True, grace=0.04)
+    else:
+        _stop_owned_processes(OwnedChild(), new_session=True, grace=0.04)
+        assert probes == 2
