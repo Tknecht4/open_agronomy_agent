@@ -6,15 +6,18 @@ import binascii
 import hashlib
 import hmac
 import json
+import logging
 import re
 import secrets
 import time
 import zlib
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from email.parser import BytesParser
 from email.policy import default as email_policy
 from pathlib import Path
+from threading import Lock
 from typing import Any
 from urllib.parse import urlencode, urlparse
 from urllib.request import Request as UrlRequest
@@ -96,7 +99,7 @@ from agronomy_agent.server.schemas import (
 from agronomy_agent.server.services.conversation_scope import (
     ConversationScopeError, bind_conversation_context, identity as conversation_identity,
 )
-from agronomy_agent.server.services.chat_service import ConversationOperationConflict, run_turn
+from agronomy_agent.server.services.chat_service import ConversationOperationConflict, _session_turn_guard, run_turn
 from agronomy_agent.server.services.answer_renderer import render_structured_answer
 from agronomy_agent.server.services.attachment_scanner import (
     AttachmentRejected,
@@ -508,6 +511,34 @@ def _completed_hosted_reference_turn_ids(
         position -= 2
     ids.reverse()
     return ids
+
+
+_HOSTED_TURN_LOCKS_GUARD = Lock()
+_HOSTED_TURN_LOCKS: dict[str, tuple[Lock, int]] = {}
+
+
+@asynccontextmanager
+async def _hosted_turn_guard(thread_id: str):
+    """Keep a hosted thread's visible user/core/assistant sequence adjacent."""
+    with _HOSTED_TURN_LOCKS_GUARD:
+        lock, users = _HOSTED_TURN_LOCKS.get(thread_id, (Lock(), 0))
+        _HOSTED_TURN_LOCKS[thread_id] = (lock, users + 1)
+    acquired = False
+    try:
+        while not acquired:
+            acquired = lock.acquire(blocking=False)
+            if not acquired:
+                await asyncio.sleep(0.01)
+        yield
+    finally:
+        if acquired:
+            lock.release()
+        with _HOSTED_TURN_LOCKS_GUARD:
+            _, users = _HOSTED_TURN_LOCKS[thread_id]
+            if users == 1:
+                del _HOSTED_TURN_LOCKS[thread_id]
+            else:
+                _HOSTED_TURN_LOCKS[thread_id] = (lock, users - 1)
 
 
 def _field_event_sync_http_error(exc: FieldEventSyncError) -> HTTPException:
@@ -2310,6 +2341,8 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
     )
     app = FastAPI(title="Agronomy Agent Cockpit")
     app.state.trace_store = store
+    hosted_turn_tasks: set[asyncio.Task[StreamingResponse]] = set()
+    app.state.hosted_turn_tasks = hosted_turn_tasks
     app.state.frontend_rum_records = []
     app.state.frontend_event_records = []
     app.state.local_pairing_consumed = False
@@ -5244,6 +5277,37 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
 
     @app.post("/chat/stream")
     async def phase4_chat_stream(payload: ChatRequest, user: dict[str, Any] = Depends(current_user)) -> StreamingResponse:
+        guard_key = str(payload.thread_id) if payload.thread_id else f"new:{uuid.uuid4()}"
+
+        async def complete_hosted_turn() -> StreamingResponse:
+            async with _hosted_turn_guard(guard_key):
+                return await _phase4_chat_stream_impl(payload, user)
+
+        task = asyncio.create_task(complete_hosted_turn())
+        # Keep a strong app-owned reference after a caller disconnects. The
+        # turn must retain its guard through the assistant/trace commit.
+        hosted_turn_tasks.add(task)
+        detached = False
+
+        def hosted_turn_done(finished: asyncio.Task[StreamingResponse]) -> None:
+            hosted_turn_tasks.discard(finished)
+            if finished.cancelled():
+                return
+            error = finished.exception()
+            if error is not None and detached:
+                logging.getLogger(__name__).error(
+                    "hosted turn failed after request cancellation",
+                    exc_info=(type(error), error, error.__traceback__),
+                )
+
+        task.add_done_callback(hosted_turn_done)
+        try:
+            return await asyncio.shield(task)
+        except asyncio.CancelledError:
+            detached = True
+            raise
+
+    async def _phase4_chat_stream_impl(payload: ChatRequest, user: dict[str, Any]) -> StreamingResponse:
         runtime_mode(payload.mode)
         profiler = TraceProfiler()
         with profiler.span("thread.load", input_size=len(payload.message)):
@@ -5402,7 +5466,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             ][:6]
             for rank, doc in enumerate(workspace_retrieved_docs, start=1):
                 doc["rank"] = rank
-            result = run_turn(
+            result = await asyncio.to_thread(run_turn,
                 store=store,
                 settings=settings,
                 session_id=legacy_session_id,
@@ -6850,28 +6914,67 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
 
     @app.patch("/api/sessions/{session_id}")
     async def patch_session(session_id: str, payload: SessionUpdateRequest, request: Request) -> dict[str, Any]:
-        session, user = _require_owned_session(request, session_id)
+        return await asyncio.to_thread(_patch_session_serialized, session_id, payload, request)
 
-        merged_context = None
-        if payload.context:
-            merged_context = _context_with_session_owner(
-                _persistable_demo_turn_context(_authorize_demo_turn_field_context(
-                    request, _bind_turn_context(session, payload.context.model_dump(exclude_unset=True)),
-                )) or {},
-                str(user["id"]),
+    def _patch_session_serialized(
+        session_id: str, payload: SessionUpdateRequest, request: Request,
+    ) -> dict[str, Any]:
+        with _session_turn_guard(store, session_id):
+            session, user = _require_owned_session(request, session_id)
+            merged_context = None
+            if payload.context:
+                merged_context = _context_with_session_owner(
+                    _persistable_demo_turn_context(_authorize_demo_turn_field_context(
+                        request, _bind_turn_context(session, payload.context.model_dump(exclude_unset=True)),
+                    )) or {},
+                    str(user["id"]),
+                )
+
+            updated = store.update_session(
+                session_id,
+                title=payload.title,
+                user_pseudonym=payload.user_pseudonym,
+                tags=payload.tags,
+                context=merged_context,
+                consent=payload.consent.model_dump() if payload.consent else None,
+                archived=payload.archived,
+                status=payload.status,
             )
+            return _session_response(updated or session)
 
-        updated = store.update_session(
-            session_id,
-            title=payload.title,
-            user_pseudonym=payload.user_pseudonym,
-            tags=payload.tags,
-            context=merged_context,
-            consent=payload.consent.model_dump() if payload.consent else None,
-            archived=payload.archived,
-            status=payload.status,
-        )
-        return _session_response(updated or session)
+    def _run_turn_with_persisted_context(
+        *, session_id: str, incoming_context: dict[str, Any],
+        owner_id: str, request: Request, **turn_kwargs: Any,
+    ) -> dict[str, Any]:
+        # Core execution checks operation identity under this same reentrant
+        # guard. Bind against the latest session after queued turns complete.
+        with _session_turn_guard(store, session_id):
+            operation_id = turn_kwargs.get("client_operation_id")
+            operation_hash = turn_kwargs.get("operation_request_sha256")
+            if operation_id and operation_hash and store.get_turn_operation(session_id, operation_id):
+                # Core owns exact replay/conflict semantics. An old, completed
+                # operation must not rebind against newer notes or field facts.
+                return run_turn(store=store, session_id=session_id, session_context=None, **turn_kwargs)
+            latest = store.get_session(session_id, include_turns=False)
+            if latest is None:
+                raise ValueError("session not found")
+            authorized_context = _authorize_demo_turn_field_context(
+                request, _bind_turn_context(latest, incoming_context),
+            )
+            context_update = _persistable_demo_turn_context(authorized_context)
+            result = run_turn(
+                store=store, session_id=session_id,
+                session_context=authorized_context, **turn_kwargs,
+            )
+            if context_update and not result.get("operation_replayed"):
+                store.update_session(
+                    session_id,
+                    include_turns=False,
+                    context=_context_with_session_owner(
+                        _merge_context(latest.get("context"), context_update), owner_id,
+                    ),
+                )
+            return result
 
     @app.post("/api/sessions/{session_id}/turns")
     async def create_turn(
@@ -6885,37 +6988,30 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         runtime_mode(payload.mode)
         selected_rag_config = runtime_rag_config(payload.rag_config)
         selected_model_id = runtime_model_id(payload.model_id, mode=payload.mode)
-
-        authorized_session_context = _authorize_demo_turn_field_context(
-            request,
-            _bind_turn_context(session, payload.session_context),
-        )
-        persistable_session_context = _persistable_demo_turn_context(authorized_session_context)
-        if persistable_session_context:
-            store.update_session(
-                session_id,
-                include_turns=False,
-                context=_context_with_session_owner(
-                    _merge_context(session.get("context"), persistable_session_context),
-                    str(user["id"]),
-                ),
+        operation_id = str(payload.client_operation_id) if payload.client_operation_id else None
+        operation_hash = _hash_payload(payload.model_dump(mode="json", exclude={"client_operation_id"})) if operation_id else None
+        existing_operation = store.get_turn_operation(session_id, operation_id) if operation_id else None
+        if existing_operation and existing_operation["request_sha256"] != operation_hash:
+            raise HTTPException(status_code=409, detail={"code": "operation_conflict", "message": "client operation ID was reused with different request data"})
+        if existing_operation is None:
+            _authorize_demo_turn_field_context(
+                request, _bind_turn_context(session, payload.session_context),
             )
 
         profiler = TraceProfiler()
-        operation_id = str(payload.client_operation_id) if payload.client_operation_id else None
-        operation_hash = _hash_payload(payload.model_dump(mode="json", exclude={"client_operation_id"})) if operation_id else None
         try:
-            result = await asyncio.to_thread(run_turn,
-                store=store,
+            result = await asyncio.to_thread(_run_turn_with_persisted_context,
                 settings=settings,
                 session_id=session_id,
+                incoming_context=payload.session_context,
+                owner_id=str(user["id"]),
+                request=request,
                 message=payload.message,
                 mode=payload.mode,
                 model_id=selected_model_id,
                 rag_config=selected_rag_config,
                 max_tokens=payload.max_tokens,
                 trace_options=payload.trace_options.model_dump(),
-                session_context=authorized_session_context,
                 profiler=profiler,
                 client_operation_id=operation_id,
                 operation_request_sha256=operation_hash,
@@ -6976,28 +7072,18 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         runtime_mode(payload.mode)
         selected_rag_config = runtime_rag_config(payload.rag_config)
         selected_model_id = runtime_model_id(payload.model_id, mode=payload.mode)
-        authorized_session_context = _authorize_demo_turn_field_context(
-            request,
-            _bind_turn_context(session, payload.session_context),
-        )
-        persistable_session_context = _persistable_demo_turn_context(authorized_session_context)
-        if persistable_session_context:
-            store.update_session(
-                session_id,
-                include_turns=False,
-                context=_context_with_session_owner(
-                    _merge_context(session.get("context"), persistable_session_context),
-                    str(user["id"]),
-                ),
-            )
-
-        model_id = None if payload.mode == "mock" else selected_model_id
         operation_id = str(payload.client_operation_id) if payload.client_operation_id else None
         operation_hash = _hash_payload(payload.model_dump(mode="json", exclude={"client_operation_id"})) if operation_id else None
-        if operation_id and operation_hash:
-            existing_operation = store.get_turn_operation(session_id, operation_id)
-            if existing_operation and existing_operation["request_sha256"] != operation_hash:
-                raise HTTPException(status_code=409, detail={"code": "operation_conflict", "message": "client operation ID was reused with different request data"})
+        existing_operation = store.get_turn_operation(session_id, operation_id) if operation_id else None
+        if existing_operation and existing_operation["request_sha256"] != operation_hash:
+            raise HTTPException(status_code=409, detail={"code": "operation_conflict", "message": "client operation ID was reused with different request data"})
+        # Preserve an HTTP error for a known-invalid request before SSE opens.
+        # The worker repeats this check against fresh state after its queue wait.
+        if existing_operation is None:
+            _authorize_demo_turn_field_context(
+                request, _bind_turn_context(session, payload.session_context),
+            )
+        model_id = None if payload.mode == "mock" else selected_model_id
 
         async def event_stream() -> Any:
             def sse(event_name: str, data: dict[str, Any]) -> str:
@@ -7030,17 +7116,18 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             stream_started_ns = time.monotonic_ns()
             task = asyncio.create_task(
                 asyncio.to_thread(
-                    run_turn,
-                    store=store,
+                    _run_turn_with_persisted_context,
                     settings=settings,
                     session_id=session_id,
+                    incoming_context=payload.session_context,
+                    owner_id=str(user["id"]),
+                    request=request,
                     message=payload.message,
                     mode=payload.mode,
                     model_id=model_id,
                     rag_config=selected_rag_config,
                     max_tokens=payload.max_tokens,
                     trace_options=payload.trace_options.model_dump(),
-                    session_context=authorized_session_context,
                     profiler=profiler,
                     client_operation_id=operation_id,
                     operation_request_sha256=operation_hash,
@@ -7089,6 +7176,15 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                         "elapsed_ms": int((time.perf_counter() - started) * 1000),
                     },
                 )
+                return
+            except HTTPException as exc:
+                detail = exc.detail if isinstance(exc.detail, dict) else {"message": str(exc.detail)}
+                yield sse("error", {
+                    "code": detail.get("code") or "request_rejected",
+                    "message": detail.get("boundary") or detail.get("message") or str(exc.detail),
+                    "label": "Request rejected",
+                    "elapsed_ms": int((time.perf_counter() - started) * 1000),
+                })
                 return
             except Exception as exc:
                 yield sse(
@@ -7412,7 +7508,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             else runtime_model_id(payload.model_id, mode=payload.mode)
         )
         try:
-            output = replay_turn(
+            output = await asyncio.to_thread(replay_turn,
                 store=store,
                 settings=settings,
                 base_turn_id=payload.base_turn_id,

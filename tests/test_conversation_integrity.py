@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 
 from agronomy_agent.execution_core import AgentExecutionRequest
-from agronomy_agent.server.app import create_app, _completed_hosted_reference_turn_ids
+from agronomy_agent.server.app import create_app, _HOSTED_TURN_LOCKS, _completed_hosted_reference_turn_ids
 from agronomy_agent.server.services.chat_service import (
     ConversationOperationConflict, execute_agent_request, run_turn,
 )
@@ -173,6 +173,158 @@ def test_http_replay_keeps_completed_turn_shape_and_conflict_is_409(tmp_path: Pa
     assert len(client.get(f"/api/sessions/{session_id}", headers=OWNER).json()["turns"]) == 1
 
 
+def test_rejected_or_replayed_operation_does_not_change_saved_context(tmp_path: Path):
+    settings = build_settings(db_path=tmp_path / "context.sqlite3", artifact_root=tmp_path / "artifacts", network_mode="offline", allow_model_id_override=True)
+    client = TestClient(create_app(settings))
+    created = client.post("/api/sessions", headers=OWNER, json={"title": "Context", "consent": {}, "context": {"field_conversation_key": "sample:review"}})
+    assert created.status_code == 200
+    session_id = created.json()["session_id"]
+    endpoint = f"/api/sessions/{session_id}/turns"
+    first = {"message": "What is a cover crop?", "mode": "mock", "client_operation_id": str(uuid4()), "session_context": {"notes": "first accepted"}}
+    second = {**first, "message": "What is a green manure?", "client_operation_id": str(uuid4()), "session_context": {"notes": "second accepted"}}
+    assert client.post(endpoint, headers=OWNER, json=first).status_code == 200
+    assert client.post(endpoint, headers=OWNER, json=second).status_code == 200
+    before = client.get(f"/api/sessions/{session_id}", headers=OWNER).json()["context"]
+    assert before["notes"] == "second accepted"
+
+    assert client.post(endpoint, headers=OWNER, json=first).status_code == 200
+    conflict = {**first, "session_context": {"notes": "rejected"}}
+    assert client.post(endpoint, headers=OWNER, json=conflict).status_code == 409
+    assert client.post(endpoint + "/stream", headers=OWNER, json=conflict).status_code == 409
+    replay_stream = client.post(endpoint + "/stream", headers=OWNER, json=first)
+    assert replay_stream.status_code == 200
+    assert "event: answer.completed" in replay_stream.text
+    after = client.get(f"/api/sessions/{session_id}", headers=OWNER).json()["context"]
+    assert after == before
+
+
+def test_inflight_conflicting_operation_cannot_persist_context(tmp_path, monkeypatch):  # noqa: ANN001
+    settings = build_settings(
+        db_path=tmp_path / "inflight-context.sqlite3", artifact_root=tmp_path / "artifacts",
+        network_mode="offline", allow_model_id_override=True,
+    )
+    app = create_app(settings)
+    started, release = Event(), Event()
+    monkeypatch.setattr(
+        "agronomy_agent.server.services.chat_service._build_mlx_generator",
+        lambda *_args, **_kwargs: WaitingBackend(started, release),
+    )
+
+    async def exercise() -> None:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+            created = await client.post("/api/sessions", headers=OWNER, json={"title": "Inflight", "consent": {}, "context": {"field_conversation_key": "sample:review"}})
+            assert created.status_code == 200
+            sid = created.json()["session_id"]
+            endpoint = f"/api/sessions/{sid}/turns"
+            payload = {"message": "First question about crops?", "mode": "baseline", "client_operation_id": str(uuid4()), "session_context": {"notes": "accepted"}}
+            first = asyncio.create_task(client.post(endpoint, headers=OWNER, json=payload))
+            try:
+                assert await asyncio.to_thread(started.wait, 10)
+                conflict = asyncio.create_task(client.post(endpoint, headers=OWNER, json={**payload, "session_context": {"notes": "rejected"}}))
+                assert (await asyncio.wait_for(client.get("/api/health"), timeout=3)).status_code == 200
+                pending_context = (await client.get(f"/api/sessions/{sid}", headers=OWNER)).json()["context"]
+                assert pending_context.get("notes") is None
+                assert not conflict.done()
+            finally:
+                release.set()
+            assert (await asyncio.wait_for(first, timeout=15)).status_code == 200
+            assert (await asyncio.wait_for(conflict, timeout=15)).status_code == 409
+            saved = (await client.get(f"/api/sessions/{sid}", headers=OWNER)).json()
+            assert saved["context"]["notes"] == "accepted"
+            assert len(saved["turns"]) == 1
+
+    asyncio.run(exercise())
+
+
+@pytest.mark.parametrize("kind", ["omitted", "adoption"])
+def test_queued_turn_rebinds_latest_session_context(tmp_path, monkeypatch, kind):  # noqa: ANN001
+    settings = build_settings(
+        db_path=tmp_path / f"queued-{kind}.sqlite3", artifact_root=tmp_path / "artifacts",
+        network_mode="offline", allow_model_id_override=True,
+    )
+    app = create_app(settings)
+    started, release = Event(), Event()
+    monkeypatch.setattr(
+        "agronomy_agent.server.services.chat_service._build_mlx_generator",
+        lambda *_args, **_kwargs: WaitingBackend(started, release),
+    )
+
+    async def exercise() -> None:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+            initial = {"field_conversation_key": "sample:review", "notes": "old"} if kind == "omitted" else {}
+            created = await client.post("/api/sessions", headers=OWNER, json={"title": "Queued", "context": initial, "consent": {}})
+            assert created.status_code == 200
+            sid = created.json()["session_id"]
+            endpoint = f"/api/sessions/{sid}/turns"
+            first_context = {"notes": "fresh"} if kind == "omitted" else {"field_conversation_key": "sample:alpha"}
+            second_context = {} if kind == "omitted" else {"field_conversation_key": "sample:beta"}
+            first = asyncio.create_task(client.post(endpoint, headers=OWNER, json={"message": "First question about crops?", "mode": "baseline", "session_context": first_context}))
+            try:
+                assert await asyncio.to_thread(started.wait, 10)
+                second = asyncio.create_task(client.post(endpoint, headers=OWNER, json={"message": "Second question about crops?", "mode": "baseline", "session_context": second_context}))
+                await asyncio.sleep(0.1)
+                assert not second.done()
+            finally:
+                release.set()
+            first_result = await asyncio.wait_for(first, timeout=15)
+            second_result = await asyncio.wait_for(second, timeout=15)
+            saved = (await client.get(f"/api/sessions/{sid}", headers=OWNER)).json()
+            assert first_result.status_code == 200
+            if kind == "omitted":
+                assert second_result.status_code == 200
+                assert saved["context"]["notes"] == "fresh"
+                assert len(saved["turns"]) == 2
+            else:
+                assert second_result.status_code == 409
+                assert second_result.json()["detail"]["code"] == "conversation_scope_mismatch"
+                assert saved["context"]["field_conversation_key"] == "sample:alpha"
+                assert len(saved["turns"]) == 1
+
+    asyncio.run(exercise())
+
+
+def test_queued_patch_cannot_rebind_a_turns_accepted_scope(tmp_path, monkeypatch):  # noqa: ANN001
+    settings = build_settings(
+        db_path=tmp_path / "queued-patch.sqlite3", artifact_root=tmp_path / "artifacts",
+        network_mode="offline", allow_model_id_override=True,
+    )
+    app = create_app(settings)
+    started, release = Event(), Event()
+    monkeypatch.setattr(
+        "agronomy_agent.server.services.chat_service._build_mlx_generator",
+        lambda *_args, **_kwargs: WaitingBackend(started, release),
+    )
+
+    async def exercise() -> None:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+            created = await client.post("/api/sessions", headers=OWNER, json={"title": "Patch", "context": {}, "consent": {}})
+            assert created.status_code == 200
+            sid = created.json()["session_id"]
+            first = asyncio.create_task(client.post(f"/api/sessions/{sid}/turns", headers=OWNER, json={
+                "message": "First question about crops?", "mode": "baseline",
+                "session_context": {"field_conversation_key": "sample:alpha"},
+            }))
+            try:
+                assert await asyncio.to_thread(started.wait, 10)
+                patch = asyncio.create_task(client.patch(f"/api/sessions/{sid}", headers=OWNER, json={
+                    "context": {"field_conversation_key": "sample:beta"},
+                }))
+                assert (await asyncio.wait_for(client.get("/api/health"), timeout=3)).status_code == 200
+                await asyncio.sleep(0.1)
+                assert not patch.done()
+            finally:
+                release.set()
+            assert (await asyncio.wait_for(first, timeout=15)).status_code == 200
+            patched = await asyncio.wait_for(patch, timeout=15)
+            assert patched.status_code == 409
+            assert patched.json()["detail"]["code"] == "conversation_scope_mismatch"
+            saved = (await client.get(f"/api/sessions/{sid}", headers=OWNER)).json()
+            assert saved["context"]["field_conversation_key"] == "sample:alpha"
+            assert len(saved["turns"]) == 1
+
+    asyncio.run(exercise())
+
+
 def test_hosted_reference_suffix_uses_receipt_id_not_duplicate_text():
     turn = {"turn_id": "turn-new", "user_message": "Convert 100 lb/ac to kg/ha"}
     user = {"actor": "user", "content": turn["user_message"]}
@@ -229,3 +381,128 @@ def test_saved_conversation_routes_fail_explicitly_for_unported_store(tmp_path, 
     ):
         assert response.status_code == 501
         assert response.json()["detail"]["code"] == "conversation_storage_unavailable"
+
+
+def test_hosted_concurrent_turns_keep_visible_pairs_and_health_responsive(tmp_path, monkeypatch):  # noqa: ANN001
+    settings = build_settings(
+        db_path=tmp_path / "hosted.sqlite3", artifact_root=tmp_path / "artifacts",
+        network_mode="offline", allow_model_id_override=True,
+    )
+    app = create_app(settings)
+    started, release = Event(), Event()
+    backend = WaitingBackend(started, release)
+    monkeypatch.setattr(
+        "agronomy_agent.server.services.chat_service._build_mlx_generator",
+        lambda *_args, **_kwargs: backend,
+    )
+
+    async def exercise() -> None:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+            org = await client.post("/orgs", headers=OWNER, json={"name": "Host"})
+            workspace = await client.post("/workspaces", headers=OWNER, json={"organization_id": org.json()["id"], "name": "Host"})
+            wid = workspace.json()["id"]
+            thread = await client.post("/threads", headers=OWNER, json={"workspace_id": wid, "title": "Host", "mode": "baseline"})
+            tid = thread.json()["id"]
+
+            def payload(message):  # noqa: ANN001, ANN202
+                return {"workspace_id": wid, "thread_id": tid, "message": message, "mode": "baseline"}
+
+            first = asyncio.create_task(client.post("/chat/stream", headers=OWNER, json=payload("First question about crops?")))
+            try:
+                assert await asyncio.to_thread(started.wait, 10)
+                second = asyncio.create_task(client.post("/chat/stream", headers=OWNER, json=payload("Second question about crops?")))
+                health = await asyncio.wait_for(client.get("/api/health"), timeout=3)
+                assert health.status_code == 200
+                assert not second.done()
+            finally:
+                release.set()
+            assert (await asyncio.wait_for(first, timeout=15)).status_code == 200
+            assert (await asyncio.wait_for(second, timeout=15)).status_code == 200
+            saved = await client.get(f"/threads/{tid}", headers=OWNER)
+            assert saved.status_code == 200
+            assert [(item["actor"], item["content"]) for item in saved.json()["messages"] if item["actor"] == "user"] == [
+                ("user", "First question about crops?"), ("user", "Second question about crops?"),
+            ]
+            assert [item["actor"] for item in saved.json()["messages"]] == ["user", "assistant", "user", "assistant"]
+
+    asyncio.run(exercise())
+
+
+def test_cancelled_hosted_request_finishes_ordered_visible_pair(tmp_path, monkeypatch):  # noqa: ANN001
+    settings = build_settings(
+        db_path=tmp_path / "hosted-cancel.sqlite3", artifact_root=tmp_path / "artifacts",
+        network_mode="offline", allow_model_id_override=True,
+    )
+    app = create_app(settings)
+    started, release = Event(), Event()
+    backend = WaitingBackend(started, release)
+    monkeypatch.setattr(
+        "agronomy_agent.server.services.chat_service._build_mlx_generator",
+        lambda *_args, **_kwargs: backend,
+    )
+
+    async def exercise() -> None:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+            org = await client.post("/orgs", headers=OWNER, json={"name": "Host"})
+            workspace = await client.post("/workspaces", headers=OWNER, json={"organization_id": org.json()["id"], "name": "Host"})
+            wid = workspace.json()["id"]
+            thread = await client.post("/threads", headers=OWNER, json={"workspace_id": wid, "title": "Host", "mode": "baseline"})
+            tid = thread.json()["id"]
+
+            def payload(message):  # noqa: ANN001, ANN202
+                return {"workspace_id": wid, "thread_id": tid, "message": message, "mode": "baseline"}
+
+            first = asyncio.create_task(client.post("/chat/stream", headers=OWNER, json=payload("First question about crops?")))
+            try:
+                assert await asyncio.to_thread(started.wait, 10)
+                first.cancel()
+                with pytest.raises(asyncio.CancelledError):
+                    await first
+                second = asyncio.create_task(client.post("/chat/stream", headers=OWNER, json=payload("Second question about crops?")))
+                await asyncio.sleep(0.1)
+                mid = await client.get(f"/threads/{tid}", headers=OWNER)
+                assert [item["actor"] for item in mid.json()["messages"]] == ["user"]
+                assert not second.done()
+            finally:
+                release.set()
+            assert (await asyncio.wait_for(second, timeout=15)).status_code == 200
+            saved = await client.get(f"/threads/{tid}", headers=OWNER)
+            assert [item["actor"] for item in saved.json()["messages"]] == ["user", "assistant", "user", "assistant"]
+            assert not app.state.hosted_turn_tasks
+            assert tid not in _HOSTED_TURN_LOCKS
+
+    asyncio.run(exercise())
+
+
+def test_replay_generation_keeps_health_responsive(tmp_path, monkeypatch):  # noqa: ANN001
+    settings = build_settings(
+        db_path=tmp_path / "replay.sqlite3", artifact_root=tmp_path / "artifacts",
+        network_mode="offline", allow_model_id_override=True,
+    )
+    app = create_app(settings)
+    started, release = Event(), Event()
+    backend = WaitingBackend(started, release)
+    monkeypatch.setattr(
+        "agronomy_agent.server.services.chat_service._build_mlx_generator",
+        lambda *_args, **_kwargs: backend,
+    )
+
+    async def exercise() -> None:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+            created = await client.post("/api/sessions", headers=OWNER, json={"title": "Replay", "consent": {}, "context": {"field_conversation_key": "general"}})
+            sid = created.json()["session_id"]
+            original = await client.post(f"/api/sessions/{sid}/turns", headers=OWNER, json={"message": "First question about crops?", "mode": "mock"})
+            assert original.status_code == 200
+            replay = asyncio.create_task(client.post("/api/replay", headers=OWNER, json={
+                "base_turn_id": original.json()["turn_id"], "pipeline": "full", "mode": "baseline",
+                "model_id": settings.default_model_id,
+            }))
+            try:
+                assert await asyncio.to_thread(started.wait, 10)
+                health = await asyncio.wait_for(client.get("/api/health"), timeout=3)
+                assert health.status_code == 200
+            finally:
+                release.set()
+            assert (await asyncio.wait_for(replay, timeout=15)).status_code == 200
+
+    asyncio.run(exercise())

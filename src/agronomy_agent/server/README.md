@@ -120,7 +120,15 @@ returns the original completed turn, including its ID in turn metadata. A reused
 ID with different payload returns `operation_conflict` (HTTP 409 for a saved
 operation; an in-flight stream can emit the same error event). The operation
 mapping and turn are committed atomically. A dropped stream is not evidence
-that model work stopped; refresh the saved conversation before retrying. The
+that model work stopped; refresh the saved conversation before retrying. A
+turn submission changes durable session context only for a newly completed
+turn, so rejected or replayed operation IDs cannot overwrite context accepted
+by a later turn. Turn binding and explicit session-context PATCH updates share
+the same per-session guard and use the latest saved scope.
+Hosted `/chat/stream` requests keep each thread's visible user/core/assistant
+sequence ordered. If an ordinary request is cancelled while the process lives,
+the app retains the accepted turn task until its assistant/trace write finishes;
+process shutdown or crash does not guarantee that completion. The
 ordering lock is process-local, consistent with the supported single-process
 local runtime; cross-process deployment would need a database coordination
 contract before claiming the same ordering behavior. The retained Postgres
