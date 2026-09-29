@@ -144,3 +144,21 @@ namespace/byte limits. Caching remains disabled in the active profile pending
 matched real-model performance and quality measurements. Generation measurements
 separate queueing, loading, tokenization, cache preparation and decode; HTTP rates
 remain unavailable unless the backend supplies a meaningful measured boundary.
+
+
+## Backup artifact references
+
+`storage/backup.py` validates live attachment and export references against the
+copied artifact tree before publishing a backup. Relocated restore validates the
+original archive, rebases only store-owned absolute paths in its staged database,
+and returns an `restore_transform` receipt with the transformed hash.
+The restore journal binds that staged identity; source backup bytes are unchanged.
+Relative export references remain relative. Missing files, unsafe paths and
+recorded size/checksum mismatches stop publication. Deleted attachment tombstones
+may have no file; legacy exports without recorded checksums receive presence checks.
+
+Use an operator-controlled maintenance window with application writers stopped for
+restore and reproducible backup. SQLite backup is an online database snapshot,
+but it is not an atomic transaction with filesystem copies. These checks cover the
+specified artifact root and optional knowledge-update tree, not the separately
+configured imagery cache or arbitrary operator output directories.

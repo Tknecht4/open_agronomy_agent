@@ -32,7 +32,7 @@ def runtime(tmp_path):
 
 
 def _worker(settings, cache, geometry, payload):
-    from agronomy_agent.imagery_analytics import PREVIEW_VERSION
+    from agronomy_agent.imagery_analytics import PREVIEW_VERSION, PROCESS_VERSION
     _, bounds, geom, request = _request_identity(geometry, payload["provider_id"], payload.get("scene_id"),
         payload["start_date"], payload["end_date"], payload.get("buffer_m", 0), None)
     store = ImageryStore(cache)
@@ -41,7 +41,14 @@ def _worker(settings, cache, geometry, payload):
     result = {"status": "available", "chip_hash": chip, "request_hash": request, "preview_version": PREVIEW_VERSION,
         "geometry_hash": geom, "process_hash": "b" * 64, "provider_id": payload["provider_id"],
         "source": {"collection": "hls2-s30", "scene_id": "hls2-s30:fixture", "asset_ids": {}},
-        "qa": {"valid_area_fraction": .75}, "zonal_stats": {"NDVI": {"mean": .5}},
+        "scene_id": "hls2-s30:fixture", "process_version": PROCESS_VERSION, "source_native_grid": True,
+        "grid": {"width": 2, "height": 2, "resolution_m": 30},
+        "qa": {"field_area_m2": 3600, "valid_area_m2": 2700, "valid_area_fraction": .75,
+            "nodata_area_m2": 0, "water_flag_area_m2": 0,
+            "excluded_area_m2_by_reason": {"cloud": 900, "adjacent": 900}, "overlap_note": "May overlap",
+            "index_undefined_area_m2_by_reason": {"ndvi_negative_reflectance": 0, "ndvi_nonpositive_denominator": 0,
+                "ndmi_negative_reflectance": 0, "ndmi_nonpositive_denominator": 0}},
+        "zonal_stats": {name: {"mean": .5, "min": .5, "max": .5, "area_m2": 2700} for name in ("NDVI", "NDMI")},
         "cache_files": names, "created_at": "2021-06-10T00:00:00Z"}
     (cache / names["npz"]).write_bytes(b"fixture")
     (cache / names["png"]).write_bytes(b"fixture PNG")
@@ -138,3 +145,88 @@ def test_storage_policy_survives_app_settings_and_returns_typed_refusal(runtime,
     result = client.post(base + "/analyze", headers=OWNER, json=PAYLOAD)
     assert result.json()["status"] == "storage_limit"
     assert "preview_url" not in result.json()
+
+
+# Corrupt semantic claims, then deliberately reindex the bytes. Checksums alone
+# must not authorize an observation or a direct preview URL.
+@pytest.mark.parametrize("path,value", [
+    (("qa", "valid_area_m2"), 5400),
+    (("qa", "valid_area_fraction"), 1.5),
+    (("qa", "field_area_m2"), 4000),
+    (("qa", "sample_area_m2"), 3600),
+    (("qa", "nodata_area_m2"), -1),
+    (("qa", "nodata_area_m2"), 3600),
+    (("qa", "excluded_area_m2_by_reason", "cloud"), 3600),
+    (("qa", "excluded_area_m2_by_reason"), {}),
+    (("qa", "valid_area_m2"), 10**400),
+    (("qa", "water_flag_area_m2"), 4000),
+    (("qa", "excluded_area_m2_by_reason", "cloud"), 4000),
+    (("qa", "index_undefined_area_m2_by_reason", "ndvi_negative_reflectance"), 900),
+    (("zonal_stats", "NDVI", "mean"), 1.2),
+    (("zonal_stats", "NDVI", "min"), -1.2),
+    (("zonal_stats", "NDMI", "max"), None),
+    (("zonal_stats", "NDMI", "area_m2"), 3000),
+    (("status",), "empty_valid_area"),
+    (("process_version",), "hls-chip-v2"),
+    (("source_native_grid",), False),
+    (("grid", "width"), True),
+    (("source", "collection"), "hls2-l30"),
+])
+def test_contradictory_polygon_receipts_block_worker_cache_and_preview(runtime, monkeypatch, path, value):
+    client, field_id, settings = runtime
+    captured = {}
+    def bad_worker(settings, cache, geometry, payload):
+        result = _worker(settings, cache, geometry, payload)
+        target = result
+        for key in path[:-1]:
+            target = target[key]
+        target[path[-1]] = value
+        (cache / result["cache_files"]["receipt"]).write_text(json.dumps(result))
+        bounds = _request_identity(geometry, payload["provider_id"], None, payload["start_date"], payload["end_date"], 0, None)[1]
+        ImageryStore(cache).put(result, bounds)
+        captured.update(cache=cache, geometry=geometry)
+        return result
+    monkeypatch.setattr(service, "_run_worker", bad_worker)
+    base = f"/api/demo/fields/{field_id}/imagery"
+    assert client.post(base + "/analyze", headers=OWNER, json=PAYLOAD).json()["status"] == "unavailable"
+    # The store remains a byte/provenance reader; serving applies current QA.
+    assert ImageryStore(captured["cache"], read_only=True).get_by_chip_hash("a" * 64) is not None
+    assert client.get(base + "/analyses/" + "a" * 64 + "/preview.png", headers=OWNER).status_code == 404
+    monkeypatch.setattr(service, "_run_worker", lambda *a: pytest.fail("invalid cache launched worker"))
+    reply = client.post(base + "/analyze", headers=OWNER, json=PAYLOAD).json()
+    assert reply["status"] == "storage_unavailable"
+    assert "preview_url" not in reply and "zonal_stats" not in reply
+
+
+@pytest.mark.parametrize("empty", [False, True])
+def test_polygon_index_support_can_be_smaller_than_clear_support(runtime, monkeypatch, empty):
+    client, field_id, _ = runtime
+    def worker(settings, cache, geometry, payload):
+        result = _worker(settings, cache, geometry, payload)
+        qa = result["qa"]
+        if empty:
+            result["status"] = "empty_valid_area"
+            qa.update(valid_area_m2=0, valid_area_fraction=0, nodata_area_m2=3600)
+        # Every QA-clear pixel may have undefined NDMI; this is not missing QA.
+        qa["index_undefined_area_m2_by_reason"]["ndmi_nonpositive_denominator"] = qa["valid_area_m2"]
+        for name in (("NDVI", "NDMI") if empty else ("NDMI",)):
+            result["zonal_stats"][name] = {"mean": None, "min": None, "max": None, "area_m2": 0}
+        (cache / result["cache_files"]["receipt"]).write_text(json.dumps(result))
+        bounds = _request_identity(geometry, payload["provider_id"], None, payload["start_date"], payload["end_date"], 0, None)[1]
+        ImageryStore(cache).put(result, bounds)
+        return result
+    monkeypatch.setattr(service, "_run_worker", worker)
+    response = client.post(f"/api/demo/fields/{field_id}/imagery/analyze", headers=OWNER, json=PAYLOAD).json()
+    assert response["status"] == ("empty_valid_area" if empty else "available")
+    assert response["zonal_stats"]["NDMI"]["mean"] is None
+    assert client.get(response["preview_url"], headers=OWNER).status_code == 200
+
+
+def test_water_flag_does_not_include_nodata(tmp_path):
+    from agronomy_agent.imagery_receipts import validate_hls_receipt
+    from types import SimpleNamespace
+    geometry = {"type": "Polygon", "coordinates": [[[-103.15, 40.15], [-103.14, 40.15], [-103.14, 40.16], [-103.15, 40.15]]]}
+    receipt = _worker(SimpleNamespace(), tmp_path, geometry, PAYLOAD)
+    receipt["qa"].update(nodata_area_m2=900, water_flag_area_m2=3600)
+    with pytest.raises(ValueError, match="index QA area breakdown"):
+        validate_hls_receipt(receipt, geometry=geometry)

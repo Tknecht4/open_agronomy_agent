@@ -1,7 +1,7 @@
-"""Validate point sampling meaning at cache and serving boundaries.
+"""Validate current HLS support and index meaning at serving boundaries.
 
-Checksums bind stored bytes; these checks prevent a point receipt from being
-presented with a polygon's field-area meaning or a different requested radius.
+Checksums bind bytes, not scientific meaning. Historical cache records remain
+evidence; only qualified current receipts may become app observations.
 """
 from __future__ import annotations
 
@@ -15,8 +15,11 @@ from agronomy_agent.imagery_sampling import POINT_PROCESS_VERSION
 
 
 def _finite(value: Any, *, minimum: float = 0) -> bool:
-    return (not isinstance(value, bool) and isinstance(value, (int, float))
-            and math.isfinite(value) and value >= minimum)
+    try:
+        return (not isinstance(value, bool) and isinstance(value, (int, float))
+                and math.isfinite(value) and value >= minimum)
+    except OverflowError:
+        return False
 
 
 def validate_point_receipt(
@@ -109,40 +112,54 @@ def validate_point_receipt(
     if receipt.get("status") not in ("available", "empty_valid_area") or (
             receipt["status"] == "empty_valid_area") != (valid_count == 0):
         raise ValueError("sample status contradicts QA")
+    if valid_area > valid_count * 900 + max(1e-5, area * 1e-6):
+        raise ValueError("valid sample area exceeds valid pixel support")
+    _validate_index_qa(receipt, qa, area, valid_area)
+    return tuple(bounds)
+
+
+def _validate_index_qa(receipt: dict[str, Any], qa: dict[str, Any], area: float, valid_area: float) -> None:
+    """Shared current HLS radiometry contract for polygon and point support.
+
+    Fmask exclusions overlap and must not be summed. Index domain exclusions
+    are mutually exclusive within QA-clear support and must close its balance.
+    """
     nodata = qa.get("nodata_area_m2")
     exclusions = qa.get("excluded_area_m2_by_reason")
     tolerance = max(1e-5, area * 1e-6)
-    if valid_area > valid_count * 900 + tolerance:
-        raise ValueError("valid sample area exceeds valid pixel support")
-    if (not _finite(nodata) or nodata > area + tolerance
+    if (not _finite(nodata) or nodata > area - valid_area + tolerance
             or not isinstance(exclusions, dict)
-            or any(not isinstance(key, str) or not _finite(value) or value > area + tolerance
+            or any(not isinstance(key, str) or not _finite(value) or value > area - valid_area + tolerance
                    for key, value in exclusions.items())
             or not isinstance(qa.get("overlap_note"), str)):
-        raise ValueError("invalid point QA area breakdown")
+        raise ValueError("invalid HLS QA area breakdown")
+    # Exclusions may overlap each other, but their union must explain every
+    # non-clear pixel. Water excludes nodata, but may overlap cloud exclusions.
+    if nodata + sum(exclusions.values()) < area - valid_area - tolerance:
+        raise ValueError("QA exclusions do not account for non-clear support")
     water = qa.get("water_flag_area_m2")
     index_undefined = qa.get("index_undefined_area_m2_by_reason")
     expected_index_reasons = {
         "ndvi_negative_reflectance", "ndvi_nonpositive_denominator",
         "ndmi_negative_reflectance", "ndmi_nonpositive_denominator",
     }
-    if (not _finite(water) or water > area + tolerance
+    if (not _finite(water) or water > area - nodata + tolerance
             or not isinstance(index_undefined, dict)
             or set(index_undefined) != expected_index_reasons
             or any(not _finite(value) or value > valid_area + tolerance
                    for value in index_undefined.values())):
-        raise ValueError("invalid point index QA area breakdown")
+        raise ValueError("invalid HLS index QA area breakdown")
     indices = receipt.get("zonal_stats")
     if not isinstance(indices, dict):
-        raise ValueError("point index statistics required")
+        raise ValueError("HLS index statistics required")
     for name in ("NDVI", "NDMI"):
         stats = indices.get(name)
         if not isinstance(stats, dict) or not {"mean", "min", "max", "area_m2"}.issubset(stats):
-            raise ValueError("complete point index statistics required")
+            raise ValueError("complete HLS index statistics required")
         support = stats["area_m2"]
         values = [stats[key] for key in ("min", "mean", "max")]
         if not _finite(support) or support > valid_area + tolerance:
-            raise ValueError("index support exceeds QA-valid sample area")
+            raise ValueError("index support exceeds QA-clear area")
         reason_prefix = name.lower()
         undefined_area = (index_undefined[f"{reason_prefix}_negative_reflectance"]
                           + index_undefined[f"{reason_prefix}_nonpositive_denominator"])
@@ -155,6 +172,56 @@ def validate_point_receipt(
             if valid_area == 0 or not all(_finite(value, minimum=-math.inf) for value in values):
                 raise ValueError("index values contradict their support")
             order_tolerance = 1e-6 * max(1., *(abs(value) for value in values))
-            if values[0] > values[1] + order_tolerance or values[1] > values[2] + order_tolerance:
+            if (any(abs(value) > 1 + 1e-6 for value in values)
+                    or values[0] > values[1] + order_tolerance
+                    or values[1] > values[2] + order_tolerance):
                 raise ValueError("index values contradict their support")
-    return tuple(bounds)
+
+
+def validate_hls_receipt(
+    receipt: dict[str, Any], *, geometry: dict[str, Any],
+    sampling_mode: str | None = None, sample_radius_m: int | None = None,
+    provider_id: str | None = None,
+) -> None:
+    """Admit an app observation, raising for unknown or contradictory support.
+
+    Request hashes are checked by the service/store. Direct previews also bind
+    to the saved geometry here, independently of an analysis request.
+    """
+    from agronomy_agent.imagery_analytics import PROCESS_VERSION, MAX_SIDE
+    canonical, _ = _valid_search_geometry(geometry)
+    identity = hashlib.sha256(json.dumps(canonical, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
+    if receipt.get("geometry_hash") != identity:
+        raise ValueError("HLS geometry binding failed")
+    provider = receipt.get("provider_id")
+    collections = {"hls-s30-planetary-computer": "hls2-s30", "hls-l30-planetary-computer": "hls2-l30"}
+    source = receipt.get("source")
+    if (not isinstance(provider, str) or provider not in collections
+            or (provider_id is not None and provider != provider_id)
+            or not isinstance(source, dict) or source.get("collection") != collections[provider]
+            or source.get("scene_id") != receipt.get("scene_id")
+            or not isinstance(receipt.get("scene_id"), str)
+            or not receipt["scene_id"].startswith(collections[provider] + ":")
+            or ("provider_id" in source and source["provider_id"] != provider)):
+        raise ValueError("HLS source binding failed")
+    if canonical["type"] == "Point":
+        validate_point_receipt(receipt, geometry=canonical, sampling_mode=sampling_mode, sample_radius_m=sample_radius_m)
+        return
+    if (receipt.get("process_version") != PROCESS_VERSION or receipt.get("source_native_grid") is not True
+            or "sampling" in receipt or sampling_mode not in (None, "field_polygon") or sample_radius_m is not None):
+        raise ValueError("unsupported polygon processing meaning")
+    grid, qa = receipt.get("grid"), receipt.get("qa")
+    if (not isinstance(grid, dict) or grid.get("resolution_m") != 30
+            or any(type(grid.get(key)) is not int or not 1 <= grid[key] <= MAX_SIDE for key in ("width", "height"))
+            or not isinstance(qa, dict)):
+        raise ValueError("invalid field grid or QA")
+    area, valid_area, fraction = qa.get("field_area_m2"), qa.get("valid_area_m2"), qa.get("valid_area_fraction")
+    if ("sample_area_m2" in qa or not _finite(area, minimum=1e-9) or not _finite(valid_area)
+            or area > grid["width"] * grid["height"] * 900 + 1e-3
+            or valid_area > area + 1e-5 or not _finite(fraction) or fraction > 1
+            or not math.isclose(fraction, valid_area / area, abs_tol=1e-6)):
+        raise ValueError("invalid field QA areas")
+    if receipt.get("status") not in ("available", "empty_valid_area") or (
+            receipt["status"] == "empty_valid_area") != (valid_area == 0):
+        raise ValueError("field status contradicts QA")
+    _validate_index_qa(receipt, qa, area, valid_area)

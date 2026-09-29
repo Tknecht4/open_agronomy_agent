@@ -17,7 +17,7 @@ from typing import Any
 
 from agronomy_agent.field_imagery import _valid_search_geometry
 from agronomy_agent.imagery_analytics import _request_identity
-from agronomy_agent.imagery_receipts import validate_point_receipt
+from agronomy_agent.imagery_receipts import validate_hls_receipt
 from agronomy_agent.imagery_store import ImageryStore
 from agronomy_agent.paths import REPO_ROOT
 
@@ -113,13 +113,12 @@ def analyze(settings: Any, field: dict[str, Any], geometry: dict[str, Any], payl
     except (OSError, RuntimeError, sqlite3.Error, ValueError):
         return {"status": "storage_unavailable", "reason": "imagery_cache_unavailable"}
     if cached:
-        if geometry["type"] == "Point":
-            try:
-                validate_point_receipt(cached, geometry=geometry,
-                    sampling_mode=payload.get("sampling_mode") or "point_pixel",
-                    sample_radius_m=payload.get("sample_radius_m"))
-            except (ValueError, TypeError, KeyError):
-                return {"status": "storage_unavailable", "reason": "imagery_sample_binding_failed"}
+        try:
+            validate_hls_receipt(cached, geometry=geometry, provider_id=payload["provider_id"],
+                sampling_mode=payload.get("sampling_mode") or ("point_pixel" if geometry["type"] == "Point" else "field_polygon"),
+                sample_radius_m=payload.get("sample_radius_m"))
+        except (ValueError, TypeError, KeyError):
+            return {"status": "storage_unavailable", "reason": "imagery_sample_binding_failed"}
         return public_receipt({**cached, "cache_hit": True}, field["id"])
     if settings.network_mode == "offline":
         return {"status": "blocked_offline", "reason": "no matching local chip"}
@@ -132,13 +131,12 @@ def analyze(settings: Any, field: dict[str, Any], geometry: dict[str, Any], payl
             stored = ImageryStore(cache, read_only=True).get_by_chip_hash(result.get("chip_hash", ""))
             if not stored or stored.get("geometry_hash") != expected_geometry or stored.get("request_hash") != expected_request:
                 raise ValueError("imagery worker result binding failed")
-            if geometry["type"] == "Point":
-                validate_point_receipt(stored, geometry=geometry,
-                    sampling_mode=payload.get("sampling_mode") or "point_pixel",
-                    sample_radius_m=payload.get("sample_radius_m"))
+            validate_hls_receipt(stored, geometry=geometry, provider_id=payload["provider_id"],
+                sampling_mode=payload.get("sampling_mode") or ("point_pixel" if geometry["type"] == "Point" else "field_polygon"),
+                sample_radius_m=payload.get("sample_radius_m"))
             result = stored
         return public_receipt(result, field["id"])
-    except (OSError, ValueError, RuntimeError, sqlite3.Error, subprocess.TimeoutExpired):
+    except (OSError, ValueError, TypeError, KeyError, RuntimeError, sqlite3.Error, subprocess.TimeoutExpired):
         return {"status": "unavailable", "reason": "imagery worker failed or exceeded its time limit"}
     finally:
         _WORKER_SLOT.release()
@@ -157,9 +155,8 @@ def preview(settings: Any, field: dict[str, Any], geometry: dict[str, Any], chip
     if (result is None or result.get("geometry_hash") != geometry_hash(geometry)
             or result.get("preview_version") != PREVIEW_VERSION):
         return None
-    if geometry["type"] == "Point":
-        try:
-            validate_point_receipt(result, geometry=geometry)
-        except (ValueError, TypeError, KeyError):
-            return None
+    try:
+        validate_hls_receipt(result, geometry=geometry)
+    except (ValueError, TypeError, KeyError):
+        return None
     return store.preview_bytes(chip_hash)
