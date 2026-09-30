@@ -1,6 +1,6 @@
 # Release evaluation foundation
 
-Status: executable source frozen at `5cba71b`; local validation accepted, GPU pilot in progress; full baseline and integration pending. Base: `d9bb2547d5b3b2bcf246ebeae88eb6270b4c8bba`.
+Status: final executable source `afcc5af` completed a retained, verified Gemma GPU engineering baseline; semantic review pending; PR CI, merge and post-merge verification pending. Base: `d9bb2547d5b3b2bcf246ebeae88eb6270b4c8bba`.
 
 ## Working state
 
@@ -139,3 +139,33 @@ Public adapters are disabled throughout the current cohort, and optional spatial
 databases and geographic caches are absent. Future enabled adapters or installed
 spatial cases require their own explicit input closure and measurement policy.
 A new frozen source and fresh Gemma baseline directory are required.
+
+
+## Verified final-source native baseline
+
+The fresh final executable source is
+`afcc5af147618fb721b68317d9a2d4020a93c1a2`, core SHA-256
+`fab64688605f95371165f60ba31196be4fcdd020147d9a9cff07ade0e815b714`.
+Its retained Gemma run completed 584/584 observations across two 292-case
+trials, with zero failed observations, missing cells or failed checks. All six
+components passed. Actual native evidence comprises 366 verified generated MLX
+turns among 592 observed MLX turns, across 360 observations with generation.
+All 46 numeric observations passed; all ten warm backend/storage cells retained
+20 samples. Semantic status remains `review_pending` for 506 review-required
+observations, and external claims remain ineligible.
+
+Local harvest verified the 295,382,726-byte private archive and all 3,374 files,
+run retention, matrix and answer-stage hashes. The interrupted predecessor's
+38 observations, including 29 failures, remain separately retained and verified.
+Offline retained self-comparison passed without inference; it validates the
+comparison plumbing, not a candidate improvement. Colab session termination and
+no-active-session/assignment/usage state were observed. The task-window account
+balance delta was 6.45 compute units; it is account aggregate usage, not an
+independent task-cost meter.
+
+The [final baseline record](release-evaluation-gemma4-baseline-20260929.md) and
+[public aggregate receipt](artifacts/release-evaluation-gemma4-baseline-20260929.json)
+contain the identities, measurements, archive bindings and limitations. The
+historical checkpoint source identities above remain unchanged. PR CI, merge
+and post-merge verification are still pending; no domain or field-efficacy claim
+is established by this baseline.

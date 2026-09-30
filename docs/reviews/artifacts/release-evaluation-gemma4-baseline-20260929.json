@@ -1,5 +1,430 @@
 {
   "schema_version": "open_agronomy_agent.release_baseline_record.v1",
-  "status": "pending_final_source_gpu_execution",
-  "claim_eligible": false
+  "status": "complete_verified_engineering_baseline",
+  "claim_eligible": false,
+  "run_id": "gemma4-foundation-20260929-v2",
+  "source": {
+    "commit": "afcc5af147618fb721b68317d9a2d4020a93c1a2",
+    "source_sha256": "fab64688605f95371165f60ba31196be4fcdd020147d9a9cff07ade0e815b714"
+  },
+  "identity": {
+    "suite_id": "open_agronomy_release_foundation_v1",
+    "profile": "baseline",
+    "registry_sha256": "512d8d421906bc05d770325046bf569e43e736e735c766e9cfff1e09611c6f44",
+    "cohort_sha256": "e617d8e64416220f12b3641bc641f2f0ca474357d529120cbc852836fdc5813d",
+    "scorer_version": "open_agronomy_agent.release_evaluation_scoring.v1",
+    "scorer_sha256": "2bba3275442aae3640853862f21794901c13450da7d84c4530027be21ee02d60",
+    "model": {
+      "config_sha256": "02311ba0dca40e33abf0efa396c7f17593d87b42a4f01d8c2e0af786f1fa8946",
+      "id": "mlx-community/gemma-4-e2b-it-4bit",
+      "revision": "238767527555cb75a05732a84dff5d6ba0dd6809"
+    },
+    "sampling": {
+      "max_tokens": 640,
+      "seed": 42,
+      "trials": 2
+    },
+    "performance_environment_sha256": "cb3fcc1b49eef103e307b473e711584fd66c0e6deca2b656f91d6b4809044427"
+  },
+  "execution": {
+    "started_at": "2026-09-30T00:04:46.163317+00:00",
+    "finished_at": "2026-09-30T02:57:10.726553+00:00",
+    "elapsed_seconds": 10344.563384056091,
+    "exit_code": 0,
+    "hard_supervisor_limit_seconds": 11040,
+    "suite_deadline_seconds": 10800
+  },
+  "evaluation_status": "engineering_pass",
+  "domain_status": "review_pending",
+  "domain_review_coverage": 0.0,
+  "domain_review_required_coverage": 0.0,
+  "counts": {
+    "cases": 292,
+    "failed": 0,
+    "failed_checks": 0,
+    "families": 67,
+    "missing": 0,
+    "numeric_required": 46,
+    "numeric_scores_missing": 0,
+    "observations": 584,
+    "observed": 584,
+    "review_required": 506
+  },
+  "native_generation_observations": 360,
+  "model_execution": {
+    "observed_mlx_turns": 592,
+    "planned_mlx_cells": 578,
+    "verified_generated_turns": 366
+  },
+  "numeric_accuracy": {
+    "denominator_n": 46,
+    "eligible_n": 46,
+    "mean": 1.0,
+    "missing_n": 0
+  },
+  "repeatability": {
+    "eligible_n": 292,
+    "exact_repeatable_n": 284
+  },
+  "metrics": {
+    "domain": {
+      "material_error": {
+        "denominator_n": 506,
+        "eligible_n": 0,
+        "mean": null,
+        "missing_n": 506
+      },
+      "optional_usefulness": {
+        "denominator_n": 506,
+        "eligible_n": 0,
+        "mean": null,
+        "missing_n": 506
+      },
+      "required_complete": {
+        "denominator_n": 506,
+        "eligible_n": 0,
+        "mean": null,
+        "missing_n": 506
+      },
+      "source_supported": {
+        "denominator_n": 506,
+        "eligible_n": 0,
+        "mean": null,
+        "missing_n": 506
+      },
+      "unnecessary_abstention": {
+        "denominator_n": 506,
+        "eligible_n": 0,
+        "mean": null,
+        "missing_n": 506
+      }
+    },
+    "performance": {
+      "editor_generation_tokens": {
+        "denominator_n": 592,
+        "eligible_n": 190,
+        "mean": 133.96315789473684,
+        "missing_n": 402
+      },
+      "elapsed_ms": {
+        "denominator_n": 592,
+        "maximum": 59117.628,
+        "missing_n": 0,
+        "p50": 19224.4945,
+        "p95": 24092.849,
+        "samples": 592
+      },
+      "first_token_ms": {
+        "denominator_n": 592,
+        "maximum": 40515.19,
+        "missing_n": 226,
+        "p50": 1377.846,
+        "p95": 1448.294,
+        "samples": 366
+      },
+      "generation_tokens": {
+        "denominator_n": 592,
+        "eligible_n": 366,
+        "mean": 167.29234972677597,
+        "missing_n": 226
+      },
+      "peak_memory_bytes": {
+        "denominator_n": 592,
+        "maximum": 3749790488.0,
+        "missing_n": 226,
+        "p50": 3654135528.0,
+        "p95": 3713427464.0,
+        "samples": 366
+      }
+    },
+    "cost": {
+      "currency_cost": null,
+      "draft_tokens": {
+        "denominator_n": 600,
+        "eligible_n": 366,
+        "mean": 167.29234972677597,
+        "missing_n": 234
+      },
+      "editor_tokens": {
+        "denominator_n": 600,
+        "eligible_n": 190,
+        "mean": 133.96315789473684,
+        "missing_n": 410
+      },
+      "status": "not_measured"
+    }
+  },
+  "components": [
+    {
+      "component": "instrument",
+      "metrics": {
+        "controls": 7,
+        "failed": 0
+      },
+      "receipt_sha256": "2e9a62757bf6b8b9617aca6ccc5a35e5ee5ee1aff91a7d29e775c8c40130d56f",
+      "status": "pass"
+    },
+    {
+      "component": "capability",
+      "metrics": {
+        "capabilities": 1,
+        "failures": 0,
+        "operations": 17
+      },
+      "receipt_sha256": "7240cfc762c47ac6b3a00291b321280e54f0517e0434a37a30427c25c2e8aef3",
+      "status": "pass"
+    },
+    {
+      "component": "retrieval",
+      "metrics": {
+        "authority_compliance": 1.0,
+        "blocked_cases": 1,
+        "failed_cases": 0,
+        "negative_cases": 2,
+        "negative_control_compliance": 1.0,
+        "positive_cases": 19,
+        "positive_ndcg_at_7": 0.9700356083196523,
+        "positive_recall_at_7": 1.0,
+        "source_locator_validity": 1.0
+      },
+      "receipt_sha256": "bee06d84598e6c8e63bdc546120df0f9d8e736d5193b9eae04f9e2421c056676",
+      "status": "pass"
+    },
+    {
+      "component": "field_data",
+      "metrics": {
+        "cases": 96,
+        "failed": 0
+      },
+      "receipt_sha256": "8568ec9d8f737af932d321878621bcf6a23a743303da50269e74f45bb21a2027",
+      "status": "pass"
+    },
+    {
+      "component": "product_contracts",
+      "metrics": {
+        "exit_code": 0,
+        "test_files": 6
+      },
+      "receipt_sha256": "d5c902d1d88ec88a5e0b0d069775d9dd0811a4597cf470956db64213d5c1aa32",
+      "status": "pass"
+    },
+    {
+      "component": "performance",
+      "metrics": {
+        "exit_code": 0,
+        "repeats": 20
+      },
+      "receipt_sha256": "ace295594f4462cf51bef93f638061de80fccb59edbb784487b33445f66c88a3",
+      "status": "pass"
+    }
+  ],
+  "warm_backend_storage_cells": {
+    "bounded_session_history_read_warm": {
+      "requested_samples": 20,
+      "status": "completed",
+      "timing": {
+        "max_ms": 0.2,
+        "median_ms": 0.045,
+        "min_ms": 0.044,
+        "p95_ms": 0.079,
+        "samples": 20
+      }
+    },
+    "configs_warm": {
+      "requested_samples": 20,
+      "status": "completed",
+      "timing": {
+        "max_ms": 17.554,
+        "median_ms": 16.473,
+        "min_ms": 16.224,
+        "p95_ms": 16.739,
+        "samples": 20
+      }
+    },
+    "core_mock_warm": {
+      "requested_samples": 20,
+      "status": "completed",
+      "timing": {
+        "max_ms": 51.968,
+        "median_ms": 50.119,
+        "min_ms": 48.737,
+        "p95_ms": 51.696,
+        "samples": 20
+      }
+    },
+    "field_history_warm": {
+      "requested_samples": 20,
+      "status": "completed",
+      "timing": {
+        "max_ms": 48.376,
+        "median_ms": 46.71,
+        "min_ms": 45.992,
+        "p95_ms": 47.967,
+        "samples": 20
+      }
+    },
+    "fields_list_warm": {
+      "requested_samples": 20,
+      "status": "completed",
+      "timing": {
+        "max_ms": 11.672,
+        "median_ms": 10.493,
+        "min_ms": 10.171,
+        "p95_ms": 11.331,
+        "samples": 20
+      }
+    },
+    "full_session_history_read_warm": {
+      "requested_samples": 20,
+      "status": "completed",
+      "timing": {
+        "max_ms": 0.784,
+        "median_ms": 0.69,
+        "min_ms": 0.671,
+        "p95_ms": 0.71,
+        "samples": 20
+      }
+    },
+    "geo_layers_warm": {
+      "requested_samples": 20,
+      "status": "completed",
+      "timing": {
+        "max_ms": 6.314,
+        "median_ms": 5.85,
+        "min_ms": 5.603,
+        "p95_ms": 6.27,
+        "samples": 20
+      }
+    },
+    "health_warm": {
+      "requested_samples": 20,
+      "status": "completed",
+      "timing": {
+        "max_ms": 16.132,
+        "median_ms": 14.807,
+        "min_ms": 14.522,
+        "p95_ms": 15.687,
+        "samples": 20
+      }
+    },
+    "sessions_list_seeded_warm": {
+      "requested_samples": 20,
+      "status": "completed",
+      "timing": {
+        "max_ms": 48.911,
+        "median_ms": 47.037,
+        "min_ms": 45.846,
+        "p95_ms": 48.623,
+        "samples": 20
+      }
+    },
+    "sessions_list_warm": {
+      "requested_samples": 20,
+      "status": "completed",
+      "timing": {
+        "max_ms": 11.34,
+        "median_ms": 10.319,
+        "min_ms": 9.713,
+        "p95_ms": 10.581,
+        "samples": 20
+      }
+    }
+  },
+  "runtime": {
+    "hardware": {
+      "available_cpu_count": 12,
+      "cpu_brand": "Intel(R) Xeon(R) CPU @ 2.20GHz",
+      "gpu": "NVIDIA L4, 23034, 580.82.07",
+      "logical_cpu_count": 12,
+      "machine": "x86_64",
+      "memory_bytes": 56863334400,
+      "processor": "x86_64",
+      "system": "Linux"
+    },
+    "packages": {
+      "PyYAML": "6.0.3",
+      "agno": "3.0.11",
+      "cryptography": "50.0.1",
+      "fastapi": "0.141.1",
+      "geopandas": "1.1.4",
+      "httpx": "0.28.1",
+      "httpx2": "2.12.0",
+      "huggingface_hub": "1.33.0",
+      "mlx": "0.32.2",
+      "mlx-lm": "0.31.3",
+      "numpy": "2.5.3",
+      "pydantic": "2.13.5",
+      "pyogrio": "0.13.0",
+      "pyproj": "3.7.2",
+      "rdflib": "7.6.0",
+      "shapely": "2.1.2",
+      "transformers": "5.17.0"
+    },
+    "performance_environment_sha256": "cb3fcc1b49eef103e307b473e711584fd66c0e6deca2b656f91d6b4809044427",
+    "python": "3.13.15",
+    "sqlite_version": "3.45.1"
+  },
+  "private_retention": {
+    "archive_sha256": "4d04ecf3f1c85b1b19a88cc640152449ffb20679a748a9ff82b0e7e6028ffc5f",
+    "archive_bytes": 295382726,
+    "files_verified": 3374,
+    "run_retention_verified": true,
+    "matrix_and_answer_stage_hashes_verified": true,
+    "public_summary_sha256": "dd713d66240408ce75275aa401e8d3efa5149fdb72c866741885df135fc58ef3",
+    "private_report_canonical_json_sha256": "bb0a3bb31a24cc1c95126b51c123a658df08dcf0b579f44bb1505a407ab68e4c",
+    "private_report_file_sha256": "3e2a2ee25f45600967af5cbdbe614a1be5a5c3bfdee358a0e7f0b3c3982c4c35",
+    "retention_manifest_sha256": "7126bd4522542cb6896c4783768e16e4119ed8e3f65b4ce51b11aefea672e242"
+  },
+  "interrupted_predecessor": {
+    "status": "verified",
+    "archive_sha256": "d9d2b91d96d685dee2dea4d294daf162629a6bc6a8e408afcec6ebda1b1f71e2",
+    "archive_bytes": 8942519,
+    "files_verified": 281,
+    "observations": 38,
+    "failed_observations": 29,
+    "complete_baseline": false
+  },
+  "offline_self_comparison": {
+    "status": "engineering_pass",
+    "domain_status": "review_pending",
+    "comparison_status": "pass",
+    "semantic_status": "review_pending_not_assessed",
+    "inference_executed": false,
+    "public_summary_sha256": "6b77343f629ca067bd00ead9b99585da93d5b7c9f47a2bc845a4a3b9702956bf",
+    "retention_manifest_sha256": "c86d29bbb0fe65cb848745d78d3ca2ddb7a90f456111a76da08e9120c9a954fb",
+    "interpretation": "Same retained run compared with itself verifies comparison plumbing; no candidate efficacy gain."
+  },
+  "compute_cleanup": {
+    "session_stop_observed": true,
+    "active_sessions_observed": 0,
+    "active_assignments_observed": 0,
+    "final_account_balance_compute_units": 154.41,
+    "final_usage_rate_per_hour": 0.0,
+    "initial_account_balance_compute_units": 160.86,
+    "account_balance_delta_compute_units": 6.45,
+    "account_delta_scope": "Account aggregate over task window; not independently metered task cost.",
+    "task_owned_l4_rate_compute_units_per_hour": 1.54,
+    "currency_cost": null
+  },
+  "integration_status": {
+    "pull_request_ci": "pending",
+    "merge": "pending",
+    "post_merge_verification": "pending",
+    "recorded_at": "2026-09-30T03:14:02.118135+00:00",
+    "scope": "Status at baseline-record publication; subsequent PR, CI and merge receipts are separate integration evidence"
+  },
+  "limitations": [
+    "Exposed development suites; no independent target-user or field-outcome validation.",
+    "Trials and dependent field bundles are not independent scenarios.",
+    "Semantic judgments remain pending without source-bound human review.",
+    "GPU measurements do not establish Mac latency or memory budgets.",
+    "Cluster bootstrap intervals describe the observed family cohort, not a population validation claim."
+  ],
+  "timing_interpretation": {
+    "full_turn_elapsed": "Native preparation/load plus product/model/editor/persistence; excludes child-process startup.",
+    "model_load_or_reuse_span": "Lazy generator wrapper construction or reuse; not actual native load.",
+    "queue_template_prefill_spans": "Skipped placeholders; zero means skipped/unobserved, not measured zero cost. Raw states retained; public stage projection omits states.",
+    "first_token_metric": "Starts inside generation and may exclude earlier load during prompt counting; not cold-request TTFT.",
+    "native_model_load_ms": "Retained in private raw timing records."
+  }
 }

@@ -90,6 +90,16 @@ Reports retain missing measurements and sample denominators. GPU results apply
 to their recorded runtime and cannot establish native Mac latency or memory
 budgets.
 
+The full-turn timer includes native model preparation/loading, product execution,
+editing and persistence; it excludes worker-process startup. Native first-token
+timing starts inside generation and can exclude loading performed earlier during
+prompt counting. It is not cold-request time to first token. The existing
+`model.load_or_reuse` stage times lazy wrapper setup, while queue, template and
+prefill stage entries can be skipped placeholders with zero duration. Read their
+states in the private stage receipts; a public zero for these spans does not
+establish a measured zero cost. Native load and generation statistics are retained
+separately in each turn's model-execution receipt.
+
 ## Retention and resume
 
 A run binds source bytes and commit, registry/config/case hashes, scorer version
