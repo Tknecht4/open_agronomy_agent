@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 import hashlib
 from pathlib import Path
 
@@ -230,7 +231,7 @@ def test_cli_uses_retained_evidence_and_exports_private_packet(tmp_path):
     out = tmp_path / "cli-derived"
     completed = subprocess.run(
         [
-            str(Path(__file__).resolve().parents[1] / ".venv/bin/python"),
+            sys.executable,
             str(
                 Path(__file__).resolve().parents[1]
                 / "scripts/analyze_release_evaluation.py"
