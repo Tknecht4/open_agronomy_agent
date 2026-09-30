@@ -6,6 +6,7 @@ import fcntl
 import hashlib
 import ipaddress
 import json
+import math
 import os
 import platform
 import random
@@ -686,7 +687,10 @@ def score_item(output: str, item: dict[str, Any]) -> dict[str, Any]:
         "ask_hits": ask_hits,
         "missing_ask_for_patterns": [pattern for pattern in ask_for if pattern not in ask_hits],
         "ask_total": len(ask_for),
-        "score": round(composite, 2),
+        "score": round(composite, 2) if (required or forbidden or ask_for) else None,
+        "proxy_valid": bool(required or forbidden or ask_for),
+        "construct": "lexical_contract_coverage",
+        "promotion_eligible": False,
     }
 
 
@@ -860,25 +864,42 @@ def score_item_numeric(output: str, item: dict[str, Any]) -> dict[str, Any]:
 
     reference = float(item["reference_numeric"])
     tolerance = float(item.get("absolute_tolerance", 0.0))
+    if not math.isfinite(reference) or not math.isfinite(tolerance) or tolerance < 0:
+        raise ValueError("numeric scoring requires finite reference and non-negative finite tolerance")
     unit = str(item.get("reference_unit") or "").strip()
     aliases = _numeric_unit_aliases(item)
     candidates: list[float] = []
+    negated_values: list[float] = []
     if aliases:
-        unit_pattern = "|".join(re.escape(value) for value in sorted(aliases, key=len, reverse=True))
-        pattern = re.compile(rf"(?<![\w.])(-?\d+(?:,\d{{3}})*(?:\.\d+)?)\s*(?:{unit_pattern})(?!\w)", re.I)
-        candidates = [float(match.group(1).replace(",", "")) for match in pattern.finditer(output)]
-    if not candidates:
-        bare = re.findall(r"(?<![\w.])-?\d+(?:,\d{3})*(?:\.\d+)?(?![\w.])", output)
-        if len(bare) == 1:
-            candidates = [float(bare[0].replace(",", ""))]
+        # Whitespace and slash spacing are typography, not a unit conversion.
+        alias_patterns = [re.escape(value).replace(r"\ ", r"\s+") for value in sorted(aliases, key=len, reverse=True)]
+        unit_pattern = "|".join(value.replace("/", r"\s*/\s*") for value in alias_patterns)
+        pattern = re.compile(rf"(?<![\w.])(-?\d+(?:,\d{{3}})*(?:\.\d+)?)\s*(?:{unit_pattern})(?![\w/⁻^-])", re.I)
+        for match in pattern.finditer(output):
+            value = float(match.group(1).replace(",", ""))
+            # Restrict negation to this clause rather than an unrelated caveat.
+            prefix = re.split(r"[.;!?\n]|\bbut\b", output[:match.start()], flags=re.I)[-1]
+            suffix = re.split(r"[.;!?\n]|\bbut\b", output[match.end():], flags=re.I)[0]
+            # A closed parenthetical caveat about an input is its own scope.
+            # Keep open parentheses so "(not 120 L/ha)" still negates the value.
+            prefix = re.sub(r"\([^()]*\)", "", prefix)
+            is_negated = bool(re.search(r"\b(?:not|never|no|avoid|incorrect|wrong|isn't|is not|don't|do not)\b", prefix[-70:], re.I))
+            is_negated = is_negated or bool(re.match(r"\s*(?:is|would be|was)\s+(?:not|incorrect|wrong)\b", suffix, re.I))
+            (negated_values if is_negated else candidates).append(value)
+    # A unit-bearing contract can never fall back to a bare number. Multiple
+    # asserted values in the same unit are ambiguous unless all meet tolerance.
     parsed = candidates[-1] if candidates else None
     error = None if parsed is None else abs(parsed - reference)
-    correct = error is not None and error <= tolerance
+    contradictory = any(abs(value - reference) > tolerance for value in candidates)
+    correct = bool(candidates) and not contradictory and not negated_values
     return {
         "rubric": "numeric_tolerance",
         "score": 100.0 if correct else 0.0,
         "accuracy": 100.0 if correct else 0.0,
         "parsed_value": parsed,
+        "asserted_values": candidates,
+        "negated_values": negated_values,
+        "contradictory_values": contradictory,
         "reference_numeric": reference,
         "reference_unit": unit,
         "absolute_tolerance": tolerance,
@@ -1035,9 +1056,9 @@ def validate_eval_item(item: dict[str, Any], source: str) -> None:
     if "hardness_bucket" in item and item["hardness_bucket"] not in {"easy", "medium", "hard", "expert"}:
         raise ValueError(f"{source}:{eval_id}: invalid hardness_bucket")
     if item.get("scoring_method") == "numeric_tolerance":
-        if not isinstance(item.get("reference_numeric"), (int, float)):
+        if isinstance(item.get("reference_numeric"), bool) or not isinstance(item.get("reference_numeric"), (int, float)) or not math.isfinite(item["reference_numeric"]):
             raise ValueError(f"{source}:{eval_id}: numeric_tolerance requires reference_numeric")
-        if not isinstance(item.get("absolute_tolerance"), (int, float)) or item["absolute_tolerance"] < 0:
+        if isinstance(item.get("absolute_tolerance"), bool) or not isinstance(item.get("absolute_tolerance"), (int, float)) or not math.isfinite(item["absolute_tolerance"]) or item["absolute_tolerance"] < 0:
             raise ValueError(f"{source}:{eval_id}: numeric_tolerance requires non-negative absolute_tolerance")
         if not str(item.get("reference_unit") or "").strip():
             raise ValueError(f"{source}:{eval_id}: numeric_tolerance requires reference_unit")
@@ -2228,7 +2249,7 @@ def build_parser() -> argparse.ArgumentParser:
             "field context; agronomic_rag runs the full text-agent path."
         ),
     )
-    parser.add_argument("--suite", default="data/eval/agronomy_mvp_eval.jsonl")
+    parser.add_argument("--suite", default="data/eval/open_agronomy_successor_development.jsonl")
     parser.add_argument("--output-dir", default="outputs/evals")
     parser.add_argument("--model-config", default=DEFAULT_MODEL_CONFIG)
     parser.add_argument("--rag-config", default=DEFAULT_RAG_CONFIG)
@@ -2357,7 +2378,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--rubric",
         choices=["pattern", "agribench_proxy", "multiple_choice", "reference_answer", "mixed_capability", "mixed_external"],
-        default="pattern",
+        default="agribench_proxy",
     )
     parser.add_argument(
         "--answer-profile",

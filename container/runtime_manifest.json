@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-09-29T16:13:14+00:00",
+  "generated_at": "2026-09-30T03:11:28+00:00",
   "status": "pass",
-  "contract_sha256": "bb526ceb8f6e38c1a1b1d564f26801e3e3573a09e178f78505ab498e893b1954",
+  "contract_sha256": "9099d3318fd181d2b21cbdf1333c9cf6b34dff31bd160deef5e496db444cbe64",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -407,9 +407,9 @@
   "runtime_assets": [
     {
       "path": "src/agronomy_agent",
-      "file_count": 169,
-      "bytes": 5676524,
-      "sha256": "7d5bab6300199756c37debeb1d00015479f6c6524b9feab1e45864a0a0c3e616"
+      "file_count": 174,
+      "bytes": 5852268,
+      "sha256": "fc8a14148d336b5ac3701833a3f4b1004e5bd1f26848cff32c23da9a0f5f9270"
     },
     {
       "path": "frontend/src",
@@ -425,15 +425,15 @@
     },
     {
       "path": "scripts",
-      "file_count": 144,
-      "bytes": 1890048,
-      "sha256": "acdc2caba429b1084b42f734a5ab4d741176eb22a020f11ebd4c7ee0e78632b1"
+      "file_count": 146,
+      "bytes": 1905863,
+      "sha256": "4e54afd9187499e9ededb8e8e47f7c851491eee66093128eea00c54eb549c1ee"
     },
     {
       "path": "configs",
-      "file_count": 88,
-      "bytes": 281639,
-      "sha256": "d0662e3b6d48b2b9b9d738255a896369471066ab1f7b1a3adf39ac968292f38c"
+      "file_count": 89,
+      "bytes": 286568,
+      "sha256": "c5599f0daabaa6f4591d00885b0b626535eb772e80b5129a96c3bebeeeccd9fa"
     },
     {
       "path": "data/manifests",
@@ -443,9 +443,9 @@
     },
     {
       "path": "data/eval",
-      "file_count": 74,
-      "bytes": 3306656,
-      "sha256": "6f44b4231eb8abb24d12e73faec70fa4cc6d47f8ad536a5e0d0dbed56c5340de"
+      "file_count": 75,
+      "bytes": 3327440,
+      "sha256": "6e05efeddd64c87152c1ab21dff852dd18fdfbf55751f19069deb3c926507548"
     },
     {
       "path": "data/snapshots",
@@ -455,9 +455,9 @@
     },
     {
       "path": "docs/public",
-      "file_count": 97,
-      "bytes": 9297302,
-      "sha256": "51550579440a8df16a2ce9ebd80c30d83357fe0a5e210f7cae911766d77c786b"
+      "file_count": 98,
+      "bytes": 9310574,
+      "sha256": "74df524f0831358f50c72bb2a81bd0f7b0de5a9389c1ddf1eecf6af4f7b030aa"
     }
   ],
   "geo_cache_seed": {

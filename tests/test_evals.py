@@ -1467,3 +1467,63 @@ def test_public_output_contract_does_not_force_paragraph_shape(monkeypatch: pyte
     answer = "The first sentence gives the decision. The second explains why."
 
     assert format_answer_for_output_contract(answer) == answer
+
+
+@pytest.mark.parametrize("output", [
+    "120 lb/ac", "120", "The answer is not 120 L/ha.",
+    "120 L/ha is incorrect.", "Use 90 L/ha or 120 L/ha.",
+    "The rate is 120 L/ha, but use 90 L/ha.", "120 L/ha/day",
+])
+def test_numeric_scorer_rejects_unitless_negated_and_contradictory_answers(output: str) -> None:
+    score = score_item_numeric(output, {"reference_numeric": 120, "reference_unit": "L/ha", "absolute_tolerance": 1})
+    assert score["score"] == 0.0
+
+
+@pytest.mark.parametrize("output", ["120 L / ha.", "120 L/ha. Do not invent field observations.", "120 L/ha and 120.5 L/ha."])
+def test_numeric_scorer_accepts_unit_typography_and_consistent_rounding(output: str) -> None:
+    assert score_item_numeric(output, {"reference_numeric": 120, "reference_unit": "L/ha", "absolute_tolerance": 1})["score"] == 100.0
+
+
+def test_empty_pattern_contract_is_undefined_and_excluded_from_aggregate() -> None:
+    score = score_item("A plausible answer.", {"required_patterns": [], "forbidden_patterns": []})
+    assert score["score"] is None
+    assert score["proxy_valid"] is False
+    report = aggregate([{"task_family": "unknown", "score": score}], "mock", "mock")
+    assert report["mean_score"] is None
+    assert report["unscored_samples"] == 1
+
+
+def test_default_eval_suite_and_rubric_are_successor_development() -> None:
+    args = build_parser().parse_args(["--mode", "baseline"])
+    assert args.suite == "data/eval/open_agronomy_successor_development.jsonl"
+    assert args.rubric == "agribench_proxy"
+    assert build_parser().parse_args(["--mode", "baseline", "--rubric", "pattern", "--suite", "explicit.jsonl"]).rubric == "pattern"
+
+
+@pytest.mark.parametrize("reference,tolerance", [(float("nan"), 1), (120, float("inf")), (120, -1)])
+def test_numeric_scorer_rejects_invalid_numeric_contract(reference, tolerance) -> None:
+    with pytest.raises(ValueError, match="finite"):
+        score_item_numeric("120 L/ha", {"reference_numeric": reference, "reference_unit": "L/ha", "absolute_tolerance": tolerance})
+
+
+def test_reference_overlap_cannot_claim_semantic_correctness_for_negation() -> None:
+    result = score_item_reference_answer("Do not mulch soil to reduce erosion.", {"reference_answer": "Mulch soil to reduce erosion."})
+    # High lexical overlap survives a meaning reversal; preserve the limitation.
+    assert result["reference_token_f1"] > .8
+    assert result["metric_role"] == "deterministic_reference_overlap_diagnostic"
+    assert result["promotion_eligible"] is False
+
+
+def test_numeric_scorer_input_parenthetical_caveat_does_not_negate_calculated_output() -> None:
+    output = (
+        "50 bu/ac. Calculation: 500 CAD/ac user-supplied total cost "
+        "(components not independently verified) ÷ 10 CAD/bu = 50 bu/ac. "
+        "Assumptions: cost basis: user-supplied total cost (components not independently verified); "
+        "selling price is a supplied scenario assumption, not a current market quote."
+    )
+    item = {"reference_numeric": 50, "reference_unit": "bu/ac", "absolute_tolerance": .01}
+    score = score_item_numeric(output, item)
+    assert score["score"] == 100
+    assert score["asserted_values"] == [50, 50]
+    assert score["negated_values"] == []
+    assert score_item_numeric("The result is (not 50 bu/ac).", item)["score"] == 0

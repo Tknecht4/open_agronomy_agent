@@ -1,0 +1,115 @@
+{
+  "schema_version": "open_agronomy_agent.release_evaluation_registry.v1",
+  "suite_id": "open_agronomy_release_foundation_v1",
+  "claim_eligible": false,
+  "model_config": "configs/model.yaml",
+  "rag_config": "configs/rag.yaml",
+  "profiles": {
+    "ci": {
+      "backend": "mock",
+      "trials": 1,
+      "performance_repeats": 5
+    },
+    "smoke": {
+      "backend": "mlx",
+      "trials": 1,
+      "performance_repeats": 5
+    },
+    "baseline": {
+      "backend": "mlx",
+      "trials": 2,
+      "performance_repeats": 20
+    },
+    "release": {
+      "backend": "mlx",
+      "trials": 2,
+      "performance_repeats": 20
+    }
+  },
+  "suites": [
+    {
+      "id": "release_harness_v1",
+      "path": "data/eval/release_harness_v1.jsonl",
+      "format": "scenario",
+      "profiles": [
+        "ci",
+        "smoke",
+        "baseline",
+        "release"
+      ],
+      "exposure": "exposed_development",
+      "required": true
+    },
+    {
+      "id": "successor_development",
+      "path": "data/eval/open_agronomy_successor_development.jsonl",
+      "format": "legacy_domain",
+      "profiles": [
+        "smoke",
+        "baseline",
+        "release"
+      ],
+      "exposure": "exposed_development",
+      "required": true
+    }
+  ],
+  "required_components": [
+    "instrument",
+    "capability",
+    "retrieval",
+    "field_data",
+    "product_contracts",
+    "performance"
+  ],
+  "product_contract_tests": [
+    "tests/test_conversation_context.py",
+    "tests/test_conversation_scope.py",
+    "tests/test_conversation_integrity.py",
+    "tests/test_conversation_resolution_http.py",
+    "tests/test_execution_terminal_receipts.py",
+    "tests/test_retrieval_component_arms.py"
+  ],
+  "seed": 42,
+  "max_tokens": 640,
+  "cell_timeout_seconds": 600,
+  "whole_run_timeout_seconds": 10800,
+  "arms": [
+    "production_full"
+  ],
+  "domain_policy": {
+    "required_review_coverage": 0.0,
+    "semantic_judge_role": "unscored_until_independent_review_supplied",
+    "external_claim_eligible": false
+  },
+  "retrieval_policy": {
+    "minimum_source_locator_validity_rate": 1.0,
+    "minimum_jurisdiction_authority_compliance_rate": 1.0,
+    "minimum_negative_control_compliance_rate": 1.0
+  },
+  "comparison_policy": {
+    "maximum_new_failed_checks": 0,
+    "maximum_numeric_accuracy_regression": 0.0,
+    "maximum_positive_recall_at_7_regression": 0.0,
+    "maximum_introduced_material_errors": 0,
+    "maximum_required_completion_regression": 0.0,
+    "maximum_latency_p95_ratio": 1.25,
+    "maximum_peak_memory_ratio": 1.25,
+    "minimum_performance_samples": 20
+  },
+  "backend_performance_policy": {
+    "required_warm_cells": [
+      "health_warm",
+      "configs_warm",
+      "geo_layers_warm",
+      "fields_list_warm",
+      "sessions_list_warm",
+      "field_history_warm",
+      "sessions_list_seeded_warm",
+      "full_session_history_read_warm",
+      "bounded_session_history_read_warm",
+      "core_mock_warm"
+    ],
+    "minimum_samples": 20,
+    "maximum_p95_ratio": 1.25
+  }
+}

@@ -143,6 +143,12 @@ A second, still **non-active** [method-transfer candidate](docs/reviews/producti
 
 Project-authored content is [Apache-2.0](LICENSE). Third-party data, evaluation material, dependencies, and model weights keep their own terms; consult [third-party notices](THIRD_PARTY_NOTICES.md). The [documentation site](docs/public/index.md), [governance guide](docs/public/governance.md), and [evaluation contract](docs/public/evaluation.md) explain evidence, privacy, and claim limits.
 
+The [release-evaluation operator guide](docs/public/operations/release-evaluation.md)
+describes the versioned foundation runner, deterministic CI, retained local-model
+baselines, and matched regression gates. Engineering completion and pending
+semantic review are reported separately; exposed development cases and mock CI
+do not establish agronomic competence.
+
 Before a repository-wide claim, run the Python suite, public-doc checker, strict MkDocs build, and frontend typecheck/tests/build listed in [release readiness](docs/public/developer/release-readiness.md). Run corpus, retrieval, release, or model gates when their controlling inputs change.
 
 Maintainer references: [repository architecture](ARCHITECTURE.md), [coding-agent guidance](AGENTS.md), and [repository map](docs/public/developer/repository-map.md).
