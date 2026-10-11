@@ -107,9 +107,10 @@ def test_on_demand_release_rejects_a_tampered_shard_before_retrieval(tmp_path: P
 
 
 @pytest.mark.parametrize("code", ["1X", "01x", "001X", "1", "001"])
-def test_mlra_aliases_select_only_requested_records_with_provenance(tmp_path: Path, code: str) -> None:
+@pytest.mark.parametrize("separator", [" ", ""])
+def test_mlra_aliases_select_only_requested_records_with_provenance(tmp_path: Path, code: str, separator: str) -> None:
     release = _release(tmp_path)
-    docs = release.search(f"NRCS MLRA {code} ecological site climate", top_k=10)
+    docs = release.search(f"NRCS MLRA{separator}{code} ecological site climate", top_k=10)
 
     assert [doc.doc_id for doc in docs] == ["us-1"]
     doc = docs[0]

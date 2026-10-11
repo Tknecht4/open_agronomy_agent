@@ -32,7 +32,7 @@ _EXPLICIT_US_NRCS_RE = re.compile(
 # question must not become source selectors.
 _MLRA_RE = re.compile(r"\b(\d{1,3})([a-z])\b", re.IGNORECASE)
 _NAMED_MLRA_RE = re.compile(
-    r"\b(?:mlra|major land resource area)\s+(\d{1,3})([a-z])?\b",
+    r"\b(?:mlra|major land resource area)\s*(\d{1,3})([a-z])?\b",
     re.IGNORECASE,
 )
 _CANADIAN_DECISIVE_REQUEST_RE = re.compile(
