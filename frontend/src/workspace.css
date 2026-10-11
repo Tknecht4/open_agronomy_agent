@@ -48,7 +48,7 @@
 .workspace-shell .analyze-workspace { display: grid; grid-template-columns: minmax(400px, 1.55fr) minmax(280px, 1fr); }
 .workspace-shell .chat-panel { grid-column: 1; grid-row: 1; position: relative; display: flex; flex-direction: column; gap: 0; width: 100%; min-width: 0; height: max(610px, calc(100dvh - 192px)); max-height: 1100px; min-height: 0; padding: 0; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: 0 4px 15px #263d2c03; background: #fff; }
 .workspace-shell .chat-heading { display: flex; align-items: center; gap: 12px; padding: 19px 24px; border-bottom: 1px solid #eef1e9; flex: 0 0 auto; }
-.workspace-shell .chat-heading h2 { font-size: 14px; font-weight: 650; margin: 0; letter-spacing: -.2px; }
+.workspace-shell .chat-heading h2 { font-size: 16px; font-weight: 650; margin: 0; letter-spacing: -.2px; }
 .workspace-shell .chat-heading .panel-kicker, .workspace-shell .chat-heading .agent-state { display: none; }
 .workspace-shell .chat-reset-button { margin-left: auto; font-size: 11px; min-height: 34px; border: 0; color: #708272; background: #f4f7f1; }
 .workspace-shell .conversation-controls { display: flex; align-items: center; gap: 9px; padding: 8px 24px; border-bottom: 1px solid #eef1e9; color: #627567; font-size: 11px; }
@@ -63,16 +63,34 @@
 .workspace-shell .chat-panel:has(.conversation-runtime-details.expanded) { overflow: visible; }
 .workspace-shell .conversation-runtime-popover p { margin: 7px 0; }
 .workspace-shell .conversation-runtime-popover small { color: #697b6c; }
-.workspace-shell .network-answer-state { display: block; margin: 0; padding: 8px 24px; border: 0; border-radius: 0; color: #5f715f; background: #f9fbf6; font-size: 10px; line-height: 1.5; }
-.workspace-shell .network-answer-state strong { font-weight: 500; font-size: 10px; }
-.workspace-shell .network-answer-state details { margin-top: 5px; max-width: 100%; }
-.workspace-shell .network-answer-state details span { display: block; padding: 8px 0; }
+.workspace-shell .network-answer-state { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; margin: 0; padding: 9px 24px; border: 0; border-radius: 0; color: #5f715f; background: #f9fbf6; font-size: 12px; line-height: 1.5; }
+.workspace-shell .network-answer-state > strong { font-weight: 500; font-size: 12px; }
+.workspace-shell .answer-runtime-disclosure { max-width: 100%; }
+.workspace-shell .answer-runtime-disclosure > summary { cursor: pointer; color: #456552; }
+.workspace-shell .answer-runtime-disclosure[open] { flex-basis: 100%; }
+.workspace-shell .answer-runtime-disclosure > p { margin: 8px 0; }
+.workspace-shell .answer-runtime-disclosure .conversation-runtime { padding: 8px 0; border: 0; background: transparent; }
+.workspace-shell .model-setup-notice, .workspace-shell .network-answer-state > span { flex-basis: 100%; }
+.workspace-shell .model-setup-notice p { margin: 4px 0; }
+.question-context { flex: 0 0 auto; padding: 10px 24px; border-bottom: 1px solid #eef1e9; background: #fafcf8; color: #425c4b; font-size: 12px; }
+.question-context > summary { cursor: pointer; line-height: 1.6; }
+.question-context > summary > span { font-weight: 650; }
+.question-context > summary > .question-context-target { margin-right: 10px; font-size: 11px; font-weight: 400; color: #5f715f; }
+.question-context > summary > small { margin-left: 12px; font-size: 12px; color: #5f715f; }
+.question-context > summary > strong { display: inline-block; margin-left: 8px; padding: 1px 6px; border-radius: 4px; background: #fff1d4; color: #765521; font-size: 11px; }
+.question-context-body { padding-top: 10px; max-width: 70ch; line-height: 1.65; }
+.question-context-body dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 0; }
+.question-context-body dt { font-size: 11px; color: #5f715f; }
+.question-context-body dd { margin: 0; overflow-wrap: anywhere; }
+.question-context-body p { margin: 10px 0 0; }
+.question-context-body .text-button { min-height: 40px; }
+.question-context-save { display: flex; flex: 0 0 auto; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 24px; background: #fff7e8; color: #765521; font-size: 12px; }
 .workspace-shell .conversation-thread { flex: 1; display: block; min-height: 0; height: auto; max-height: none; overflow-y: auto; overflow-x: hidden; padding: 25px 28px; scroll-behavior: auto; }
 .workspace-shell .conversation-empty { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; text-align: left; min-height: 100%; padding: 22px 0; gap: 14px; background: none; border: 0; }
 .conversation-mark { display: grid; place-items: center; width: 60px; height: 60px; border: 1px solid #e2e9dc; border-radius: 50%; background: #f3f7ed; color: #59805c; margin-bottom: 12px; }
 .workspace-shell .conversation-empty > strong { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; font-size: clamp(24px, 2vw, 31px); line-height: 1.22; color: #344f42; max-width: 28ch; }
 .workspace-shell .conversation-empty > p { max-width: 365px; font-size: 13px; color: #637361; line-height: 1.7; margin: 0 0 9px; }
-.question-starters { display: grid; gap: 7px; width: 100%; }
+.question-starters { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 7px; width: 100%; }
 .question-starters button { display: flex; gap: 14px; align-items: center; justify-content: space-between; padding: 13px 15px; min-height: 44px; text-align: left; line-height: 1.45; color: #4b6553; background: #fbfcf8; border: 1px solid #e7ece3; border-radius: 8px; font-size: 12px; }
 .question-starters button:hover { background: #f0f5eb; border-color: #bdcebb; }
 .question-starters svg { flex-shrink: 0; color: #8da08b; }
@@ -80,13 +98,14 @@
 .workspace-shell .chat-message > span { display: block; font-size: 10px; color: #647260; margin: 0 0 7px; font-weight: 600; letter-spacing: .5px; }
 .workspace-shell .user-message { margin-left: auto; padding: 14px 17px; width: fit-content; max-width: 92%; background: #edf3e8; border-radius: 12px 12px 2px 12px; color: #405943; }
 .workspace-shell .user-message p { margin: 0; font-size: 13px; }
-.workspace-shell .formatted-answer { font-size: 14px; line-height: 1.85; color: #354d40; }
+.workspace-shell .formatted-answer { max-width: 76ch; font-size: 14px; line-height: 1.75; color: #354d40; }
 .workspace-shell .formatted-answer h2, .workspace-shell .formatted-answer h3 { font-size: 15px; margin: 20px 0 8px; }
 .workspace-shell .formatted-answer p { margin: 0 0 14px; }
 .workspace-shell .formatted-answer li { margin: 7px 0; }
 .workspace-shell .formatted-answer pre { overflow: auto; }
-.answer-source-button { display: inline-flex; align-items: center; gap: 7px; margin-top: 10px; padding: 6px 0; min-height: 34px; color: #56765a; background: none; border: 0; font-size: 11px; }
+.answer-source-button { display: inline-flex; align-items: center; gap: 7px; margin-top: 10px; padding: 6px 10px; min-height: 40px; color: #456552; background: #f8faf6; border: 1px solid #dfe7dd; border-radius: 6px; font-size: 12px; }
 .workspace-shell .chat-composer { flex: 0 0 auto; margin: 0; display: block; padding: 16px 20px; background: #fff; border: 0; border-top: 1px solid #ecf0e8; }
+.workspace-shell .composer-label { display: block; margin-bottom: 7px; font-size: 12px; font-weight: 650; color: #425c4b; }
 .workspace-shell .chat-composer textarea { width: 100%; min-height: 66px; max-height: 170px; resize: vertical; padding: 13px 14px; background: #f8faf6; border: 1px solid #e1e7dc; border-radius: 9px; line-height: 1.6; font-size: 13px; color: #344f40; }
 .workspace-shell .composer-actions { display: flex; justify-content: flex-end; align-items: center; gap: 9px; margin-top: 10px; }
 .workspace-shell .composer-actions > button[type=submit] { min-height: 38px; border-radius: 7px; background: #285546; color: white; border: 0; padding: 0 17px; font-size: 12px; }
@@ -242,6 +261,9 @@
  .workspace-shell .chat-panel { grid-column: 1; max-width: 100%; }
 }
 @media (max-width: 680px) {
+ .question-context { padding: 10px 16px; }
+ .question-context-save { padding: 10px 16px; }
+ .question-context > summary > small { display: block; margin-left: 0; }
  .workspace-shell .demo-header { padding: 14px 16px 10px; display: grid; grid-template-columns: 1fr; gap: 12px; }
  .workspace-shell .demo-nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
  .workspace-shell .demo-nav > button, .workspace-shell .demo-nav-more > summary { text-align: center; width: 100%; padding: 0 6px; min-height: 38px; }
