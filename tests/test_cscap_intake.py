@@ -4,6 +4,7 @@ import copy
 import hashlib
 import io
 import json
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -232,6 +233,62 @@ def test_cscap_native_provenance_guard_survives_removed_source_metadata(tmp_path
         with pytest.raises(ValueError, match="historical_research"):
             commit_import(store, field, preview["import_id"], mapping)
         assert store._conn.execute("SELECT COUNT(*) FROM field_data_rows").fetchone()[0] == 0
+    finally:
+        store._conn.close()
+
+
+@pytest.mark.parametrize("container", ["xlsx", "zip"])
+@pytest.mark.parametrize("map_provenance", [False, True])
+@pytest.mark.parametrize("legacy", [False, True])
+def test_decoded_native_provenance_refuses_compressed_farmer_imports(tmp_path, monkeypatch, container, map_provenance, legacy):
+    from agronomy_agent.server.storage import field_data_store
+    openpyxl = pytest.importorskip("openpyxl")
+    book = openpyxl.Workbook()
+    book.active.append(["study_site", "plot_id", "year", "yield", "source_row"])
+    locator = field_data_store.CSCAP_ROW_PREFIX.decode() + "Agronomic!row=4"
+    book.active.append(["ARL", "101", "2011", 0, locator])
+    buffer = io.BytesIO()
+    book.save(buffer)
+    content = buffer.getvalue()
+    filename = "renamed.xlsx"
+    if container == "zip":
+        archive = io.BytesIO()
+        with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as zipped:
+            zipped.writestr(filename, content)
+        content, filename = archive.getvalue(), "renamed.zip"
+    assert field_data_store.CSCAP_ROW_PREFIX not in content
+    assert parse_table(filename, content)["rows"][0]["values"]["source_row"] == locator
+    mapping = {"filters": {"study_site": "ARL", "plot_id": "101"}, "record_key": ["study_site", "plot_id", "year"],
+               "source": {"title": "Renamed table"}, "columns": [
+                   {"column": "yield", "label": "Yield", "unit": "kg/ha", "role": "measurement", "aggregation": "mean", "evidence_role": "observation"}]}
+    if map_provenance:
+        mapping["columns"].append({"column": "source_row", "label": "Locator", "unit": None, "role": "context", "aggregation": "none", "evidence_role": "observation"})
+    store = TraceStore(tmp_path / "compressed.sqlite3")
+    try:
+        field = store.create_phase4_field_context(workspace={"id": "workspace", "organization_id": "org"}, created_by_user_id="owner",
+                                                 payload={"display_name": "Current farmer field", "region_text": "Wisconsin"})
+        preview = preview_import(store, field, "owner", filename, content)
+        if legacy:
+            with monkeypatch.context() as old:
+                old.setattr(field_data_store, "_require_research_context", lambda *args: None)
+                manifest = commit_import(store, field, preview["import_id"], mapping)["import"]
+            with pytest.raises(ValueError, match="historical_research"):
+                query_import(store, field["id"], preview["import_id"], {"operation": "count"})
+            with pytest.raises(ValueError, match="historical_research"):
+                field_data_snapshot(store, field["id"])
+            assert field_data_store.list_imports(store, field["id"])["imports"] == [manifest]
+        else:
+            with pytest.raises(ValueError, match="historical_research"):
+                commit_import(store, field, preview["import_id"], mapping)
+            assert store._conn.execute("SELECT COUNT(*) FROM field_data_rows").fetchone()[0] == 0
+            assert store._conn.execute("SELECT status FROM field_data_imports WHERE id = ?", (preview["import_id"],)).fetchone()[0] == "preview"
+            context = {"kind": "historical_research", "source_id": field_data_store.CSCAP_SOURCE_ID, "study_site": "ARL", "plot_id": "101"}
+            store.update_phase4_field_context(field_context_id=field["id"], actor_user_id="owner", payload={"metadata": {"research_context": context}})
+            mapping["research_context"] = context
+            commit_import(store, field, preview["import_id"], mapping)
+            result = query_import(store, field["id"], preview["import_id"], {"operation": "mean", "column": "yield"})
+            assert result["value"] == 0 and result["research_context"] == context
+            assert result["source_evidence_role"] == "observation" and result["evidence_role"] == "interpretation"
     finally:
         store._conn.close()
 

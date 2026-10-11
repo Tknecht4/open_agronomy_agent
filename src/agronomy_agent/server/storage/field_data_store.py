@@ -73,13 +73,22 @@ def _validate_research_context(mapping: dict[str, Any]) -> dict[str, str]:
     return context
 
 
-def _require_research_context(bound: dict[str, Any], mapping: dict[str, Any], source: bytes) -> None:
+def _require_research_context(
+    bound: dict[str, Any], mapping: dict[str, Any], source: bytes,
+    parsed: dict[str, Any] | None = None, filename: str | None = None, encoding: str | None = None,
+) -> None:
     metadata = mapping["source"]
     identity = " ".join(metadata.values()).casefold()
     # Retain the guard for older prepared CSVs even if their source title or
     # citation is removed. Arbitrary relabelled data remains user-asserted.
     is_cscap = (CSCAP_DOI in identity or re.search(r"/24851877(?:[/?#]|$)", metadata.get("url", ""))
                 or CSCAP_ROW_PREFIX in source or "research_context" in mapping)
+    if not is_cscap:
+        # Compressed XLSX/ZIP bytes can conceal native provenance. Inspect the
+        # complete decoded source, including unmapped columns and filtered rows.
+        parsed = parsed if parsed is not None else parse_table(filename, source, encoding)
+        prefix = CSCAP_ROW_PREFIX.decode("ascii")
+        is_cscap = any(prefix in value for row in parsed["rows"] for value in row["values"].values())
     if not is_cscap:
         return
     context = _validate_research_context(mapping)
@@ -238,7 +247,7 @@ def commit_import(store: Any, field: dict[str, Any], import_id: str, mapping: di
             source = read_source(cursor, imported)
             parsed = parse_table(imported["filename"], source, json.loads(imported["profile_json"])["encoding"] if imported["filename"].lower().endswith(("csv", "tsv", "tab")) else None)
             normalized, rows = _validate_mapping(mapping, parsed)
-            _require_research_context(bound, normalized, source)
+            _require_research_context(bound, normalized, source, parsed)
             mapping_hash = _hash(normalized)
             if imported["status"] == "committed":
                 if imported["mapping_sha256"] != mapping_hash:
@@ -318,7 +327,8 @@ def query_import(store: Any, field_id: str, import_id: str, query: dict[str, Any
             mapping = json.loads(imported["mapping_json"])
             if _hash(mapping) != imported["mapping_sha256"]:
                 raise ValueError("stored mapping checksum mismatch")
-            _require_research_context(bound, mapping, source)
+            encoding = json.loads(imported["profile_json"])["encoding"] if imported["filename"].lower().endswith(("csv", "tsv", "tab")) else None
+            _require_research_context(bound, mapping, source, None, imported["filename"], encoding)
             columns = {col["column"]: col for col in mapping["columns"]}
             if any(name not in columns for name in filters):
                 raise ValueError("filter column was not mapped")
