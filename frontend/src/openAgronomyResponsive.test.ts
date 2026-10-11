@@ -16,7 +16,7 @@ describe('Open Agronomy responsive workspace', () => {
     const main = mainSource()
 
     expect(main.indexOf("import './styles.css'")).toBeLessThan(main.indexOf("import './workspace.css'"))
-    expect(app).toContain("useState<'chat' | 'split' | 'map'>('split')")
+    expect(app).toContain("useState<'chat' | 'split' | 'map'>('chat')")
     expect(app).toContain('role="group" aria-label="Workspace view"')
     expect(app).toContain("view === 'chat' ? 'Conversation' : view === 'map' ? 'Map' : 'Together'")
     expect(app).toContain("aria-pressed={(workspaceView === 'split' && !wideWorkspace ? 'chat' : workspaceView) === view}")
@@ -88,7 +88,7 @@ describe('Open Agronomy responsive workspace', () => {
     expect(app).toContain("['privacy', 'Privacy']")
     expect(app).toContain("['analyze', 'Workspace']")
     expect(app).toContain('aria-label="More pages"')
-    expect(app).toContain("fieldName ? 'Ask about this field' : 'Let’s work through it.'")
+    expect(app).toContain('<h2>Conversation</h2>')
     expect(app).not.toContain('<h2>Advice</h2>')
     expect(infoPages).toContain('function PrivacyPage()')
     expect(infoPages).toContain('Data use boundary for the public demo')

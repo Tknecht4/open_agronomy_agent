@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import { WorkspacePerformancePanel } from './workspacePerformance'
 import { ConversationRuntimeStatus } from './ConversationRuntimeStatus'
+import { QuestionContextSummary, type QuestionContextKind } from './QuestionContextSummary'
 import type { NewFieldDraft } from './FieldSetupDialog'
 import { selectedConversation, rememberConversation } from './conversationSelection'
 import { powerCoverage } from './weatherPresentation'
@@ -2157,7 +2158,7 @@ export function OpenAgronomyApp() {
     media.addEventListener?.('change', update)
     return () => media.removeEventListener?.('change', update)
   }, [])
-  const [workspaceView, setWorkspaceView] = useState<'chat' | 'split' | 'map'>('split')
+  const [workspaceView, setWorkspaceView] = useState<'chat' | 'split' | 'map'>('chat')
   useWorkspaceMenus(`${page}:${workspaceView}:${activeFieldContextId}`)
   const [fieldTab, setFieldTab] = useState<'details' | 'records' | 'context'>('details')
   const [visibleTurnCount, setVisibleTurnCount] = useState(20)
@@ -2198,6 +2199,7 @@ export function OpenAgronomyApp() {
   }
 
 
+  const questionInputRef = useRef<HTMLTextAreaElement>(null)
   const latestTurn = turns[turns.length - 1] || null
   const conversationBaseKey = activeFieldContextId
     ? storedFieldConversationKey(activeFieldContextId)
@@ -2228,6 +2230,23 @@ export function OpenAgronomyApp() {
   const savedImageryField = storedFields.find((stored) => (stored.field_context_id || stored.id) === activeFieldContextId)
   const imageryReady = fieldGeometry.kind !== 'none' && geometryReady && !isEditingGeometry
     && sameImageryCoordinates(savedImageryField?.geometry, fieldGeometry)
+  const questionContextKind: QuestionContextKind = activeFieldContextId
+    ? savedImageryField?.storageMode === 'device' ? 'device' : 'saved'
+    : scenarioId ? 'example'
+      : fieldName || fieldGeometry.kind !== 'none' || Object.values(field).some(Boolean) ? 'temporary' : 'general'
+  const questionGeometryMatches = Boolean(savedImageryField && (
+    fieldGeometry.kind === 'none' && savedImageryField.geometry.kind === 'none'
+    || sameImageryCoordinates(savedImageryField.geometry, fieldGeometry)
+  ))
+  const questionContextRequiresSave = Boolean(questionContextKind === 'saved' && savedImageryField && (
+    (['crop', 'region', 'jurisdiction', 'concern'] as const).some(key => field[key] !== savedImageryField[key])
+    || !questionGeometryMatches
+  ))
+  const questionContextEdited = Boolean(activeFieldContextId && savedImageryField && (
+    fieldName !== savedImageryField.name
+    || (Object.keys(emptyFieldProfile) as Array<keyof FieldProfile>).some(key => field[key] !== savedImageryField[key])
+    || !questionGeometryMatches
+  ))
   const fieldCanSave = !isEditingGeometry && (geometryReady || (fieldGeometry.kind === 'none' && Boolean(fieldName.trim())))
   const activeArea = fieldGeometry.kind === 'polygon' ? String(Math.round(fieldGeometry.acres)) : field.acres
   const selectedModelProfile = modelProfiles.find((profile) => profile.id === modelId)
@@ -2677,7 +2696,7 @@ export function OpenAgronomyApp() {
 
   const sendQuestion = async (event: FormEvent) => {
     event.preventDefault()
-    if (isAnalyzing || savingField || loadingConversation || !fieldsHydrated || !message.trim()) {
+    if (isAnalyzing || savingField || loadingConversation || !fieldsHydrated || questionContextRequiresSave || !message.trim()) {
       return
     }
     if (!answerCapability.canGenerateAnswer) {
@@ -3261,6 +3280,16 @@ export function OpenAgronomyApp() {
         persistActiveStoredFieldId(savedFieldId)
         setActiveFieldRecordUpdatedAt(saved.field.updatedAt || '')
         setFieldName(saved.field.name)
+        // Normalize acknowledged values without replacing edits made during the request.
+        setField(current => ({
+          crop: current.crop === field.crop ? saved.field.crop : current.crop,
+          region: current.region === field.region ? saved.field.region : current.region,
+          jurisdiction: current.jurisdiction === field.jurisdiction ? saved.field.jurisdiction : current.jurisdiction,
+          acres: current.acres === field.acres ? saved.field.acres : current.acres,
+          concern: current.concern === field.concern ? saved.field.concern : current.concern,
+          notes: current.notes === field.notes ? saved.field.notes : current.notes,
+        }))
+        setFieldGeometry(current => current === fieldGeometry ? saved.field.geometry : current)
         if (!updatingCurrentField) {
           setActiveFieldConversationKey(storedFieldConversationKey(savedFieldId))
           setSessionId('')
@@ -3639,7 +3668,7 @@ export function OpenAgronomyApp() {
     loadStoredField(saved)
     setNewFieldOpen(false)
     navigateToPage('analyze')
-    setWorkspaceView('split')
+    setWorkspaceView('chat')
     // Geometry priors remain separate from the supplied facts, and may be unavailable.
     if (isUsableFieldGeometry(draft.geometry)) void lookupRegionalContext(draft.geometry, { ...draft })
   }
@@ -3763,7 +3792,7 @@ export function OpenAgronomyApp() {
       <div className="workspace-content">
       <header className="workspace-topbar">
         <div><span className="eyebrow">{page === 'analyze' ? 'YOUR WORKSPACE' : page === 'fields' ? 'FIELD LIBRARY' : page === 'sources' ? 'KNOWLEDGE & DATA' : 'OPEN AGRONOMY'}</span>
-          <h1>{page === 'analyze' ? (fieldName || 'A clearer view of your field.') : page === 'fields' ? 'My fields' : page === 'sources' ? 'Bring your evidence.' : page === 'evidence' ? 'Behind the answer' : page === 'benchmarks' ? 'Research & benchmarks' : page === 'privacy' ? 'Privacy & data' : 'About Open Agronomy'}</h1>
+          <h1>{page === 'analyze' ? (fieldName || 'Ask a question') : page === 'fields' ? 'My fields' : page === 'sources' ? 'Bring your evidence.' : page === 'evidence' ? 'Behind the answer' : page === 'benchmarks' ? 'Research & benchmarks' : page === 'privacy' ? 'Privacy & data' : 'About Open Agronomy'}</h1>
         </div>
         {page === 'analyze' || page === 'fields' ? <button className="primary-button" type="button" onClick={() => setNewFieldOpen(true)} disabled={!fieldsHydrated || savingField}><Plus size={17} /> Add field</button> : null}
       </header>
@@ -4013,7 +4042,6 @@ export function OpenAgronomyApp() {
               <button
                 type="button"
                 className="map-primary-action field-save-action"
-                aria-label="Save field"
                 onClick={() => void storeCurrentField()}
                 disabled={!fieldCanSave}
               >
@@ -4639,7 +4667,7 @@ export function OpenAgronomyApp() {
             <div className="chat-heading">
               <div>
                 <span className="panel-kicker">Agent</span>
-                <h2>{fieldName ? 'Ask about this field' : 'Let’s work through it.'}</h2>
+                <h2>Conversation</h2>
               </div>
               <span className={`agent-state ${isAnalyzing ? 'working' : 'ready'}`}>
                 {isAnalyzing ? status : 'Ready'}
@@ -4654,6 +4682,10 @@ export function OpenAgronomyApp() {
                 <Plus size={15} /> New chat
               </button>
             </div>
+            <QuestionContextSummary key={activeFieldContextId || scenarioId || 'general'} kind={questionContextKind}
+              crop={field.crop} region={field.region || field.jurisdiction} geometry={fieldGeometry}
+              edited={questionContextEdited} requiresSave={questionContextRequiresSave} editingLocation={isEditingGeometry}
+              onOpenField={() => { setFieldTab('details'); navigateToPage('fields') }} />
             <div className="conversation-controls">
               <label htmlFor="saved-conversation">Saved conversations</label>
               <select
@@ -4671,27 +4703,21 @@ export function OpenAgronomyApp() {
                 </optgroup> : null}
               </select>
             </div>
-            {latestTurn ? <ConversationRuntimeStatus turn={latestTurn} /> : null}
             <div className={`network-answer-state ${answerCapability.state}`}>
-              <strong title={answerCapability.detail}>
-                {answerCapability.state === 'runtime_online'
-                  ? 'Answer engine ready · live checks on demand'
-                  : answerCapability.state === 'runtime_offline'
-                    ? 'Answer engine ready · offline sources only'
-                    : answerCapability.state === 'notes_only'
-                      ? 'Notes only · local runtime unavailable'
-                      : 'Checking answer engine'}
+              <strong>
+                {answerCapability.canGenerateAnswer && !selectedModelReady ? 'Local service connected'
+                  : answerCapability.state === 'runtime_online' ? 'Local answers available'
+                  : answerCapability.state === 'runtime_offline' ? networkMode === 'unknown' ? 'Local runtime · source mode unknown' : 'Offline answers available'
+                    : answerCapability.state === 'notes_only' ? 'Notes only · runtime unavailable' : 'Checking answer engine…'}
               </strong>
+              <details className="answer-runtime-disclosure">
+                <summary>Runtime & request details</summary>
+                {answerCapability.state !== 'notes_only' ? <p>{answerCapability.detail}</p> : null}
+                {latestTurn ? <ConversationRuntimeStatus turn={latestTurn} /> : <p>No answer request yet.</p>}
+              </details>
               {answerCapability.state === 'notes_only' ? <span>{answerCapability.detail}</span> : null}
-              {!selectedModelReady ? <details><summary>Model setup required</summary><span>{selectedModelProfile?.local_detail || 'Selected local model is not installed.'}</span></details> : null}
-              {runtimeAccess === 'unavailable' ? (
-                <button
-                  type="button"
-                  onClick={() => void recoverRuntime()}
-                >
-                  Retry local runtime
-                </button>
-              ) : null}
+              {!selectedModelReady ? <div className="model-setup-notice" role="status"><strong>Model setup required</strong><p>{selectedModelProfile?.local_detail || 'Selected local model is not installed.'}</p></div> : null}
+              {runtimeAccess === 'unavailable' ? <button type="button" onClick={() => void recoverRuntime()}>Retry local runtime</button> : null}
             </div>
 
             {loadingConversation ? <p role="status" className="conversation-loading">Loading saved conversation…</p> : null}
@@ -4699,12 +4725,14 @@ export function OpenAgronomyApp() {
               {turns.length > visibleTurnCount ? <button className="text-button" type="button" onClick={() => setVisibleTurnCount(count => count + 20)}>Show earlier messages</button> : null}
               {turns.length === 0 && !isAnalyzing && !loadingConversation ? (
                 <div className="conversation-empty">
-                  <span className="conversation-mark"><Sprout size={30} /></span>
-                  <span className="eyebrow">OBSERVE. QUESTION. UNDERSTAND.</span>
-                  <strong>{fieldName ? 'What are you seeing in the field?' : 'Good questions start here.'}</strong>
-                  <p>{fieldName ? 'Your saved field context travels with the conversation.' : 'Explore a question, bring a reference, or add a field. Start with what you know.'}</p>
+                  <strong>{fieldName ? 'What are you seeing in the field?' : 'Start with a question.'}</strong>
+                  <p>{fieldName ? 'Describe what you see, or choose a starting question.' : 'Ask directly, or select a field for context.'}</p>
                   <div className="question-starters">
-                    {['What should a useful soil sample record include?', 'Convert 100 lb/ac to kg/ha.', 'How do I compare a weak patch with a healthy area?'].map(question => <button type="button" key={question} onClick={() => setMessage(question)}>{question}<ArrowUpRight size={16} /></button>)}
+                    {[
+                      { label: 'Plan a soil sample', question: 'What should a useful soil sample record include?' },
+                      { label: 'Convert units', question: 'Convert 100 lb/ac to kg/ha.' },
+                      { label: 'Compare two areas', question: 'How do I compare a weak patch with a healthy area?' },
+                    ].map(({ label, question }) => <button type="button" key={label} onClick={() => { setMessage(question); questionInputRef.current?.focus() }}>{label}<ArrowUpRight size={16} /></button>)}
                   </div>
                   {!fieldName ? <button type="button" className="text-button" onClick={() => applyScenario(sampleProfiles[0].id)}>Explore an example field <ArrowUpRight size={14} /></button> : null}
                 </div>
@@ -4748,15 +4776,17 @@ export function OpenAgronomyApp() {
             </div>
 
             <form className="chat-composer" onSubmit={sendQuestion}>
+              <label className="composer-label" htmlFor="agronomy-question">Your question</label>
               <textarea
-                aria-label="Ask about this field"
+                id="agronomy-question"
+                ref={questionInputRef}
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
-                onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (!isAnalyzing && !savingField && !loadingConversation && fieldsHydrated && message.trim() && answerCapability.canGenerateAnswer && selectedModelReady) event.currentTarget.form?.requestSubmit() } }}
+                onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (!isAnalyzing && !savingField && !loadingConversation && fieldsHydrated && !questionContextRequiresSave && message.trim() && answerCapability.canGenerateAnswer && selectedModelReady) event.currentTarget.form?.requestSubmit() } }}
                 disabled={isAnalyzing}
                 placeholder={fieldName
-                  ? 'Ask a field question, compare observations, or request an evidence check…'
-                  : 'Ask a general agronomy question or request an evidence check…'}
+                  ? 'Describe an observation or ask about this field…'
+                  : 'What would you like to understand?'}
                 rows={2}
               />
               <div className="composer-actions">
@@ -4777,7 +4807,7 @@ export function OpenAgronomyApp() {
                     </label>
                   ) : <span>Local model profile</span>}
                 </details>
-                <button type="submit" disabled={isAnalyzing || savingField || loadingConversation || !fieldsHydrated || !message.trim() || !answerCapability.canGenerateAnswer || !selectedModelReady}>
+                <button type="submit" disabled={isAnalyzing || savingField || loadingConversation || !fieldsHydrated || questionContextRequiresSave || !message.trim() || !answerCapability.canGenerateAnswer || !selectedModelReady}>
                   <Send size={17} /> {isAnalyzing ? 'Working' : 'Ask'}
                 </button>
               </div>
