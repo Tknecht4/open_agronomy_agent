@@ -29,6 +29,10 @@ class FieldEventSyncError(ValueError):
         self.context = context
 
 
+class FieldEventOperationConflict(ValueError):
+    """An actor reused a field-event operation identity for a different request."""
+
+
 def timestamp_text(value: Any) -> str | None:
     if value is None:
         return None

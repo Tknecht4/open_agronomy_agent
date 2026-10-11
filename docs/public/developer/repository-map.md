@@ -29,6 +29,9 @@ live in `agronomic_calculations.py`, `local_tools.py`, and `tools/`.
 | Historical four-arm runner | Retained model/regression comparisons | Uses the legacy text-agent evaluator, not the complete persisted product topology |
 | Production execution rehearsal | Cockpit-core parity and 17-stage trace QA | Claim-ineligible and normally deterministic/mock |
 | V3 candidate matrix | Frozen cohort, arm, process, timeout, and ledger identity | Real executor/authority and independent review remain separate gates |
+| Release evaluation foundation | Versioned component checks and persisted product scenarios through `execute_agent_request` | Mock CI and exposed regression cases establish engineering contracts; native inference and independent semantic review require their own evidence |
+
+Use the [release evaluation operator guide](../operations/release-evaluation.md) for `run_release_evaluation.py`, validated plans, retention, and matched gates.
 
 The frozen September 26 two-Gemma assessment of commit `d43ade7` is exposed
 development evidence, not a measurement of the present checkout. Its strongest

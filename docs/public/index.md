@@ -47,7 +47,8 @@ The [workspace guide](operations/workspace.md) covers field setup, offline draft
 - [Capabilities](capabilities.md): status vocabulary and capability matrix.
 - [Knowledge and data](knowledge-and-data.md): source admission, retrieval, graphs, and geospatial priors.
 - [Tools and adapters](tools-and-adapters.md): calculator, public adapters, offline behavior, and extension rules.
-- [Evaluation](evaluation.md): the four benchmark arms, RC1 history, completed RC3 checkpoint, and claim limits.
+- [Evaluation](evaluation.md): development instruments, historical arms, and claim limits.
+- [Release evaluation operator guide](operations/release-evaluation.md): the versioned foundation runner, product scenarios, retained baselines, and matched regression gates.
 - [Frozen September 26 two-Gemma assessment](two-gemma-colab-assessment-20260926.md): A100 results at `d43ade7`, merge decision, residual fallback dependence, and reproducibility limits.
 - [RC3 development checkpoint](development-benchmark-rc3-20260815/README.md): paper, scientific figures, public-safe measurements, and reproducibility receipts.
 - [Developer guide](developer/index.md): code map and how to add a graph, tool, source, or service.

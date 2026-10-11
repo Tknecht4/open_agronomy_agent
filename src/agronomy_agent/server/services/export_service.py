@@ -92,9 +92,33 @@ def build_phase4_markdown_thread_export(thread: dict[str, Any], events: list[dic
     return "\n".join(lines)
 
 
+_CSV_NUMBER_RE = re.compile(r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?")
+
+
+def _spreadsheet_safe_cell(value: Any) -> Any:
+    """Keep numeric/ordinary values; quote formula-like untrusted string cells."""
+    if not isinstance(value, str):
+        return value
+    stripped = value.lstrip(" \t\r\n\v\f\ufeff")
+    if not stripped or stripped[0] not in "=+-@":
+        return value
+    if stripped[0] in "+-" and _CSV_NUMBER_RE.fullmatch(stripped):
+        return value
+    return "'" + value
+
+
+class _SpreadsheetSafeDictWriter(csv.DictWriter):
+    def writerow(self, rowdict: dict[str, Any]) -> Any:
+        return super().writerow({key: _spreadsheet_safe_cell(value) for key, value in rowdict.items()})
+
+    def writerows(self, rowdicts: Any) -> None:
+        for rowdict in rowdicts:
+            self.writerow(rowdict)
+
+
 def build_phase4_csv_thread_exports(thread: dict[str, Any], events: list[dict[str, Any]]) -> dict[str, str]:
     messages_buffer = io.StringIO()
-    message_writer = csv.DictWriter(
+    message_writer = _SpreadsheetSafeDictWriter(
         messages_buffer,
         fieldnames=["thread_id", "message_id", "sequence_no", "actor", "created_at", "content"],
         lineterminator="\n",
@@ -113,7 +137,7 @@ def build_phase4_csv_thread_exports(thread: dict[str, Any], events: list[dict[st
         )
 
     events_buffer = io.StringIO()
-    event_writer = csv.DictWriter(
+    event_writer = _SpreadsheetSafeDictWriter(
         events_buffer,
         fieldnames=["thread_id", "event_id", "event_type", "actor", "created_at", "payload_json"],
         lineterminator="\n",
@@ -1285,7 +1309,7 @@ def build_phase6_thread_report_markdown(report: dict[str, Any], manifest: dict[s
 
 def build_phase6_source_evidence_bundle_csv(report: dict[str, Any]) -> str:
     buffer = io.StringIO()
-    writer = csv.DictWriter(
+    writer = _SpreadsheetSafeDictWriter(
         buffer,
         fieldnames=["row_type", "rank", "id", "title", "source", "source_type", "license_status", "score", "note"],
         lineterminator="\n",
@@ -1357,7 +1381,7 @@ def build_phase6_source_evidence_bundle_markdown(report: dict[str, Any], manifes
 
 def build_phase6_diagnostic_checklist_csv(report: dict[str, Any]) -> str:
     buffer = io.StringIO()
-    writer = csv.DictWriter(
+    writer = _SpreadsheetSafeDictWriter(
         buffer,
         fieldnames=["section", "sequence", "item", "why", "evidence_ref"],
         lineterminator="\n",
@@ -1459,7 +1483,7 @@ def build_phase6_learning_trace_jsonl(report: dict[str, Any]) -> str:
 
 def build_phase6_data_source_audit_csv(report: dict[str, Any]) -> str:
     buffer = io.StringIO()
-    writer = csv.DictWriter(
+    writer = _SpreadsheetSafeDictWriter(
         buffer,
         fieldnames=[
             "source_id",

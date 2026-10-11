@@ -10,7 +10,7 @@
 - `src/OpenAgronomyApp.tsx` owns the primary cockpit workflow.
 - `src/FieldSetupDialog.tsx` owns the name/location/review field wizard; `src/WorkspaceDialog.tsx` supplies accessible modal behavior.
 - `src/MapPresentationControls.tsx` and `src/mapPresentation.ts` own map style/layer display preferences. `src/FieldMapInsights.tsx` renders lazy, on-demand analysis with independent geometry/source requests, compact coverage rows, and stale-request cancellation.
-- `src/FieldSyncPanel.tsx` owns field-event sync and typed soil-test entry; `src/FieldRecords.css` styles compact history and focused entry dialogs.
+- `src/FieldSyncPanel.tsx` owns field-event sync, typed soil-test entry, and recovery of unconfirmed record requests; `src/fieldEventSave.ts` persists retry identities before sending either record form; `src/FieldRecords.css` styles compact history and focused entry dialogs.
 - `src/FieldImageryAnalyticsPanel.tsx` owns on-demand saved-point/polygon imagery analysis; `src/FieldDataPanel.tsx` owns reviewed table intake and scene discovery. Point results require explicit sampling support in the server receipt.
 - `src/api.ts` is the API client boundary.
 - `src/LeafletFieldMap.tsx` and `src/fieldGeometry.ts` render and validate pin, boundary, and imported-geometry interaction.
@@ -24,6 +24,14 @@
 ## Inputs and outputs
 
 Inputs are API responses, user-entered questions/field records, map geometry, permitted attachments, and browser-local draft state. Outputs are API requests, progressive answer/trace UI, offline drafts, and explicit readiness/error states.
+
+Record and soil-test saves persist an operation UUID and exact request before
+sending. Recovery replays the captured identity; explicit new saves get new
+identities, even for identical content. A verified actor-bound receipt replaces
+the pending payload with bounded receipt metadata. Native Web Locks serialize
+storage updates across tabs; the server ledger arbitrates concurrent retries.
+Storage/coordination failure blocks dispatch. Corrupt and legacy unscoped bytes
+are preserved for review. See the scoped recovery contract below.
 
 General questions do not require a fabricated field. The field wizard requires a name and accepts either a reviewed pin/boundary/import or **No location yet · data only**; crop and region remain optional. Missing geometry stays unknown. Imported geometry is reviewed before persistence. Regional overlays and calculated polygon area are labelled context/estimates, never field measurements. **Sources & checks** opens answer evidence without hiding the question or saved answer.
 
@@ -89,3 +97,13 @@ Run the API and exercise a general question, field creation/edit/reload, source 
 ## Failure modes
 
 Expected states include API unavailable, model setup required, field context incomplete, adapter blocked/offline, stale local draft, invalid geometry, upload rejected, and stream interrupted. Preserve the user's input and actionable recovery information where safe.
+
+### Scoped record recovery (candidate protocol v2)
+
+The save client fetches the server-resolved actor/workspace/field scope before displaying pending requests or dispatching a save. The server checks those expected identities again after authorization, before append. It returns an operation-bound receipt; a server that ignores the retry protocol cannot produce a confirmed save.
+
+Each explicit new save gets a new UUID, including intentionally identical records. Recovery and unchanged form retries carry the captured UUID and immutable payload. Browser storage uses one entry per operation, partitioned by actor, workspace and field; one origin-wide native Web Lock serializes admission, enumeration and updates across tabs and fields. It is bounded to 16 uncertain/rejected entries and 64 receipt metadata entries per scope. A compacted captured request must pass the same admission bound before recreation. Web Locks and persistent storage are required; unsupported coordination or quota failures block dispatch. Browser-profile access and origin scripts can read localStorage: actor partitioning is not encryption.
+
+A definite first-attempt HTTP 422 may be marked rejected and explicitly resolved, removing its payload while retaining bounded resolution metadata. A transport failure, conflict, unverifiable receipt, or later 422 after uncertainty cannot be resolved this way. The first-attempt rule assumes the matched versioned server validation contract remains stable within protocol v2. The append ledger remains durable in SQLite and must accompany full backup/restore; record-only synchronization does not transfer retry receipts. Unscoped v1 bytes are preserved without automatic display or replay.
+
+Receipt listeners reconcile only a form's own unchanged draft. Edited drafts remain available for a new explicit save. Storage/focus notifications refresh cross-tab recovery; every retry still resolves scope and verifies its receipt, so notification timing is not the correctness boundary. Account changes must use existing authentication/session UI. Local development header-switch tests qualify the request guards, not real OIDC login/logout, CSRF/session expiry or installed Mac-app behavior.

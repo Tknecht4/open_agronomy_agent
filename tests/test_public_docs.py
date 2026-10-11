@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import check_public_docs
+import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -169,3 +170,39 @@ def test_pages_workflow_audit_requires_default_branch_configuration(tmp_path: Pa
     errors = check_public_docs.audit_pages_workflow(workflow)
 
     assert "pages_workflow:configuration_not_default_branch_push_only" in errors
+
+
+CANONICAL_OVERVIEWS = (
+    "ARCHITECTURE.md", "AGENTS.md", "macos_app/README.md",
+    "src/agronomy_agent/geospatial/README.md",
+)
+
+
+def test_public_docs_cover_canonical_overviews() -> None:
+    selected = set(check_public_docs._publication_markdown_files([]))
+    assert {ROOT / relative for relative in CANONICAL_OVERVIEWS} <= selected
+
+
+@pytest.mark.parametrize("relative", CANONICAL_OVERVIEWS)
+@pytest.mark.parametrize("contract", ["link", "script"])
+def test_canonical_overview_defects_are_audited(tmp_path, monkeypatch, relative, contract):
+    # Exercise discovery plus the same audit used by run(), without a full tree.
+    original = check_public_docs.ROOT
+    readmes = tuple(tmp_path / path.relative_to(original)
+                    for path in check_public_docs.PUBLIC_SUBSYSTEM_READMES)
+    monkeypatch.setattr(check_public_docs, "ROOT", tmp_path)
+    monkeypatch.setattr(check_public_docs, "PUBLIC_SUBSYSTEM_READMES", readmes)
+    for path in readmes:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("Overview.\n", encoding="utf-8")
+    page = tmp_path / relative
+    page.write_text("[missing](missing-target.md)\n" if contract == "link"
+                    else "Use `scripts/missing-overview-entry.py`.\n", encoding="utf-8")
+    selected = [path for path in check_public_docs._publication_markdown_files([])
+                if path.is_relative_to(tmp_path)]
+    if contract == "link":
+        assert check_public_docs.audit_links(selected) == [
+            f"broken_link:{relative}:missing-target.md"]
+    else:
+        assert check_public_docs.audit_script_references(selected) == [
+            f"missing_script_reference:{relative}:scripts/missing-overview-entry.py"]

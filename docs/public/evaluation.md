@@ -4,7 +4,12 @@ Open Agronomy Agent separates product checks from evaluation claims. A passing
 test, retrieval trace, or benchmark receipt does not establish agronomist
 equivalence, field-outcome validity, or a grower recommendation.
 
-The canonical internal benchmark is `open_agronomy_canadian_performance_v1`:
+The [release evaluation operator guide](operations/release-evaluation.md) is
+the canonical procedure for the versioned foundation runner, persisted
+product scenarios, native baselines, retained evidence, and matched gates.
+Engineering completion and semantic review are separate outcomes.
+
+The historical Canadian development benchmark is `open_agronomy_canadian_performance_v1`:
 241 project-authored Canadian field questions. It is a development instrument,
 not a certification exam or a representative sample of agronomy work.
 

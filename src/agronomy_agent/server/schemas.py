@@ -832,6 +832,10 @@ class FieldContextUpdate(BaseModel):
 
 
 class FieldEventCreate(BaseModel):
+    client_operation_id: UUID | None = None
+    expected_actor_user_id: UUID | None = None
+    expected_workspace_id: UUID | None = None
+    expected_operation_protocol: str | None = None
     event_type: Literal["observation", "sample", "operation", "decision", "outcome", "note", "correction"]
     occurred_at: datetime | None = None
     payload: dict[str, Any]

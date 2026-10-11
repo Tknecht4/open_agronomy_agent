@@ -1,15 +1,21 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { SoilTestEntryPanel } from './FieldSyncPanel'
+import { useState } from 'react'
+import { SoilTestEntryPanel, FieldEventRecoveryPanel } from './FieldSyncPanel'
+import { testReceipt, testScope } from './fieldEventTestSupport'
 
 const apiPostMock = vi.hoisted(() => vi.fn())
+const apiGetMock = vi.hoisted(() => vi.fn())
 
-vi.mock('./api', () => ({ apiPost: apiPostMock, apiGet: vi.fn() }))
+vi.mock('./api', async original => ({ ...await original<typeof import('./api')>(), apiPost: apiPostMock, apiGet: apiGetMock }))
 
 describe('SoilTestEntryPanel', () => {
   beforeEach(() => {
+    localStorage.clear()
     apiPostMock.mockReset()
-    apiPostMock.mockResolvedValue({ event: { id: 'event-1' } })
+    apiGetMock.mockReset()
+    apiGetMock.mockImplementation(async (path: string) => testScope(path.split('/')[4]))
+    apiPostMock.mockImplementation(async (path, body) => testReceipt(path, body))
   })
 
   it('sends the exact sample, unit, method, depth, scope, and capture quality', async () => {
@@ -31,6 +37,10 @@ describe('SoilTestEntryPanel', () => {
 
     await waitFor(() => expect(apiPostMock).toHaveBeenCalledOnce())
     expect(apiPostMock).toHaveBeenCalledWith('/api/demo/fields/field-1/events', {
+      client_operation_id: expect.any(String),
+      expected_actor_user_id: testScope().actor_user_id,
+      expected_workspace_id: testScope().workspace_id,
+      expected_operation_protocol: testScope().protocol,
       event_type: 'sample',
       payload: {
         summary: 'Nitrate-N: 12.5 ppm · sample NQ-2026-01',
@@ -57,7 +67,7 @@ describe('SoilTestEntryPanel', () => {
       },
     })
     expect(await screen.findByText('Saved. Keep the original report if available.')).toBeInTheDocument()
-    expect(onSaved).toHaveBeenCalledOnce()
+    await waitFor(() => expect(onSaved).toHaveBeenCalledOnce())
   })
 
   it('retains an explicitly supplied sampling date separately from entry time', async () => {
@@ -88,7 +98,7 @@ describe('SoilTestEntryPanel', () => {
     const form = screen.getByRole('form', { name: 'Add structured soil-test result' })
     fireEvent.submit(form)
     fireEvent.submit(form)
-    expect(apiPostMock).toHaveBeenCalledOnce()
+    await waitFor(() => expect(apiPostMock).toHaveBeenCalledOnce())
     expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled()
     fireEvent(screen.getByRole('dialog'), new Event('cancel', { bubbles: true, cancelable: true }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
@@ -97,14 +107,29 @@ describe('SoilTestEntryPanel', () => {
     expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled()
     expect(screen.getByLabelText('Sample ID')).toHaveValue('S-1')
     fireEvent.submit(screen.getByRole('form', { name: 'Add structured soil-test result' }))
-    expect(apiPostMock).toHaveBeenCalledOnce()
+    await waitFor(() => expect(apiPostMock).toHaveBeenCalledOnce())
     await act(async () => { rejectSave?.(new Error('offline')) })
     expect(screen.getByText(/Save not confirmed: offline/)).toBeInTheDocument()
     expect(screen.getByLabelText('Sample ID')).toHaveValue('S-1')
     expect(screen.getByLabelText('Value')).toHaveValue(7)
     fireEvent.submit(screen.getByRole('form', { name: 'Add structured soil-test result' }))
     await waitFor(() => expect(apiPostMock).toHaveBeenCalledTimes(2))
-    expect(onSaved).toHaveBeenCalledOnce()
+    expect(apiPostMock.mock.calls[1][1]).toEqual(apiPostMock.mock.calls[0][1])
+    await waitFor(() => expect(onSaved).toHaveBeenCalledOnce())
+  })
+
+  it('keeps acknowledgement distinct from a timeline refresh failure', async () => {
+    const onSaved = vi.fn().mockRejectedValue(new Error('History unavailable'))
+    render(<SoilTestEntryPanel fieldContextId="field-1" onSaved={onSaved} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add soil test' }))
+    for (const [label, value] of [['Sample ID', 'S-1'], ['Value', '7'], ['Unit on report', 'pH'], ['Lab method', 'water'], ['Depth bottom', '15']]) {
+      fireEvent.change(screen.getByLabelText(label), { target: { value } })
+    }
+    fireEvent.submit(screen.getByRole('form', { name: 'Add structured soil-test result' }))
+    expect(await screen.findByText(/Saved. Timeline refresh failed/)).toBeInTheDocument()
+    expect(screen.queryByText(/Save not confirmed/)).not.toBeInTheDocument()
+    await waitFor(() => expect(apiPostMock).toHaveBeenCalledOnce())
+    expect(screen.getByLabelText('Value')).toHaveValue(null)
   })
 
   it('does not apply a completed save to a newly selected field', async () => {
@@ -119,11 +144,38 @@ describe('SoilTestEntryPanel', () => {
     fireEvent.change(screen.getByLabelText('Lab method'), { target: { value: 'reported method' } })
     fireEvent.change(screen.getByLabelText('Depth bottom'), { target: { value: '15' } })
     fireEvent.submit(screen.getByRole('form', { name: 'Add structured soil-test result' }))
-    expect(apiPostMock).toHaveBeenCalledOnce()
+    await waitFor(() => expect(apiPostMock).toHaveBeenCalledOnce())
     rerender(<SoilTestEntryPanel key="field-2" fieldContextId="field-2" onSaved={onSaved} />)
-    await act(async () => { resolveSave?.({ event: { id: 'old-field-event' } }) })
+    await act(async () => { resolveSave?.(testReceipt(apiPostMock.mock.calls[0][0], apiPostMock.mock.calls[0][1], 'old-field-event')) })
     expect(onSaved).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Add soil test' }))
     expect(screen.getByLabelText('Sample ID')).toHaveValue('')
   })
+  it('reconciles the saved soil receipt when parent refresh replaces the callback during scope lookup', async () => {
+    apiGetMock.mockImplementation(async (path: string) => {
+      await new Promise(resolve => setTimeout(resolve, 10))
+      return testScope(path.split('/')[4])
+    })
+    apiPostMock.mockRejectedValueOnce(new Error('lost'))
+    const onSaved = vi.fn()
+    function Parent() {
+      const [revision, setRevision] = useState(0)
+      return <>
+        <SoilTestEntryPanel fieldContextId="field-1" onSaved={() => onSaved(revision)} />
+        <FieldEventRecoveryPanel fieldContextId="field-1" onRecovered={() => setRevision(n => n + 1)} />
+      </>
+    }
+    render(<Parent />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add soil test' }))
+    for (const [label, value] of [['Sample ID', 'recovered-soil'], ['Value', '7'], ['Unit on report', 'pH'], ['Lab method', 'water'], ['Depth bottom', '15']]) {
+      fireEvent.change(screen.getByLabelText(label), { target: { value } })
+    }
+    fireEvent.submit(screen.getByRole('form', { name: 'Add structured soil-test result' }))
+    await screen.findByText(/Save not confirmed: lost/)
+    fireEvent.click(await screen.findByRole('button', { name: 'Retry saved record' }))
+    await screen.findByText('Saved record confirmed.')
+    await waitFor(() => expect(screen.getByLabelText('Value')).toHaveValue(null))
+    expect(onSaved).toHaveBeenCalledOnce()
+  })
+
 })

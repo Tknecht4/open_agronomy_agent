@@ -17,6 +17,7 @@ from agronomy_agent.answer_receipts import (
 )
 from agronomy_agent.field_events import (
     FIELD_EVENT_TYPES,
+    FieldEventOperationConflict,
     field_event_integrity_sha256,
     field_event_sync_export,
     validate_field_event_fast_forward,
@@ -520,6 +521,20 @@ class TraceStore:
                 """
                 CREATE INDEX IF NOT EXISTS idx_phase4_field_events_field_time
                 ON phase4_field_events(field_context_id, recorded_at, id)
+                """
+            )
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS phase4_field_event_operations (
+                    recorded_by_user_id TEXT NOT NULL,
+                    client_operation_id TEXT NOT NULL,
+                    field_context_id TEXT NOT NULL,
+                    request_sha256 TEXT NOT NULL,
+                    event_id TEXT NOT NULL,
+                    PRIMARY KEY(recorded_by_user_id, client_operation_id),
+                    FOREIGN KEY(field_context_id) REFERENCES phase4_field_contexts(id),
+                    FOREIGN KEY(event_id) REFERENCES phase4_field_events(id)
+                )
                 """
             )
             cursor.execute(
@@ -2910,10 +2925,37 @@ class TraceStore:
             raise ValueError("correction events must identify exactly one corrected field event")
         validate_field_event_payload(payload.get("payload"))
 
+        operation_id = (
+            str(uuid.UUID(str(payload["client_operation_id"])))
+            if payload.get("client_operation_id") else None
+        )
+        request_sha256 = (
+            hashlib.sha256(_as_json({key: value for key, value in payload.items()
+                                    if key not in {"client_operation_id", "expected_actor_user_id", "expected_workspace_id", "expected_operation_protocol"}}).encode("utf-8")).hexdigest()
+            if operation_id else None
+        )
+
         event_id = self._new_uuid()
         with self._field_event_lock:
             with self._cursor() as cursor:
                 cursor.execute("BEGIN IMMEDIATE")
+                if operation_id:
+                    prior = cursor.execute(
+                        """SELECT field_context_id, request_sha256, event_id
+                        FROM phase4_field_event_operations
+                        WHERE recorded_by_user_id = ? AND client_operation_id = ?""",
+                        (recorded_by_user_id, operation_id),
+                    ).fetchone()
+                    if prior:
+                        if (prior["field_context_id"] != field_context["id"]
+                                or prior["request_sha256"] != request_sha256):
+                            raise FieldEventOperationConflict(
+                                "This field-record operation identifier was already used for a different request."
+                            )
+                        saved = self.get_phase4_field_event(prior["event_id"])
+                        if not saved:
+                            raise ValueError("field-record operation receipt has no saved event")
+                        return saved
                 recorded_at = _now()
                 occurred_at = str(payload.get("occurred_at") or recorded_at)
                 previous = cursor.execute(
@@ -2992,6 +3034,13 @@ class TraceStore:
                     },
                     created_at=recorded_at,
                 )
+                if operation_id:
+                    cursor.execute(
+                        """INSERT INTO phase4_field_event_operations
+                        (recorded_by_user_id, client_operation_id, field_context_id, request_sha256, event_id)
+                        VALUES (?, ?, ?, ?, ?)""",
+                        (recorded_by_user_id, operation_id, field_context["id"], request_sha256, event_id),
+                    )
         return self.get_phase4_field_event(event_id) or {}
 
     def get_phase4_field_event(self, event_id: str) -> dict[str, Any] | None:

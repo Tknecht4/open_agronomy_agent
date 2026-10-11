@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-09-30T03:11:28+00:00",
+  "generated_at": "2026-10-11T16:35:47+00:00",
   "status": "pass",
-  "contract_sha256": "9099d3318fd181d2b21cbdf1333c9cf6b34dff31bd160deef5e496db444cbe64",
+  "contract_sha256": "cc679213e354f5071311c76af3d47d018b3fa5b39caf0898ce6210640c98eb3f",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -408,14 +408,14 @@
     {
       "path": "src/agronomy_agent",
       "file_count": 174,
-      "bytes": 5852268,
-      "sha256": "fc8a14148d336b5ac3701833a3f4b1004e5bd1f26848cff32c23da9a0f5f9270"
+      "bytes": 5862147,
+      "sha256": "ae70784b3d8e9ab7f8e7bdd193c5a620013169a55511229b8bf3b7498399e88f"
     },
     {
       "path": "frontend/src",
-      "file_count": 100,
-      "bytes": 1587303,
-      "sha256": "a1187541e267d9aa4edb0a814a771d6505f351457b8498b265537185b386f670"
+      "file_count": 104,
+      "bytes": 1627879,
+      "sha256": "a05b08f87b17f98ca21cd1f513752a5f02d4f675b30b0594aff24276d6540556"
     },
     {
       "path": "frontend/public",
@@ -426,14 +426,14 @@
     {
       "path": "scripts",
       "file_count": 146,
-      "bytes": 1905863,
-      "sha256": "4e54afd9187499e9ededb8e8e47f7c851491eee66093128eea00c54eb549c1ee"
+      "bytes": 1906386,
+      "sha256": "164703fc46a768e86c12928ef5dd20ddf12ebd1129262f1347781023a88994cb"
     },
     {
       "path": "configs",
       "file_count": 89,
-      "bytes": 286568,
-      "sha256": "c5599f0daabaa6f4591d00885b0b626535eb772e80b5129a96c3bebeeeccd9fa"
+      "bytes": 286658,
+      "sha256": "47be1e3ddec2b228c1651fa8810483d1898c62c373702ecee43001a205e118b3"
     },
     {
       "path": "data/manifests",
@@ -456,8 +456,8 @@
     {
       "path": "docs/public",
       "file_count": 98,
-      "bytes": 9310574,
-      "sha256": "74df524f0831358f50c72bb2a81bd0f7b0de5a9389c1ddf1eecf6af4f7b030aa"
+      "bytes": 9313385,
+      "sha256": "523f65b919b2356d2cbb2c36c57081f3a8cc913051c7c2622506eaea619243c9"
     }
   ],
   "geo_cache_seed": {
@@ -547,7 +547,7 @@
       "path": "frontend/package-lock.json",
       "role": "runtime_control",
       "bytes": 153082,
-      "sha256": "4e6ce0661cbf2c7be6070c67f9c0990556cf52d1b83db3437bc11d07c63fc5d0"
+      "sha256": "7bf6bd60fce39b071177daa6fce522c1cd2b89ecbda0a52214f761727e3feec4"
     },
     {
       "path": "frontend/index.html",

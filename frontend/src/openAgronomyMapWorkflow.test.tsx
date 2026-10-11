@@ -1,3 +1,4 @@
+import { testScope, testReceipt } from './fieldEventTestSupport'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { StrictMode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -74,12 +75,13 @@ vi.mock('./FieldSyncPanel', async () => {
   return {
     FieldSyncPanel: () => React.createElement('div', { 'data-testid': 'mock-field-sync-panel' }, 'record transfer'),
     SoilTestEntryPanel: () => null,
+    FieldEventRecoveryPanel: () => null,
   }
 })
 
 const createTestStorage = (): Storage => {
   const values = new Map<string, string>()
-  return {
+  return new Proxy({
     get length() {
       return values.size
     },
@@ -88,7 +90,10 @@ const createTestStorage = (): Storage => {
     key: (index: number) => Array.from(values.keys())[index] ?? null,
     removeItem: (key: string) => values.delete(key),
     setItem: (key: string, value: string) => values.set(key, String(value)),
-  }
+  }, {
+    ownKeys: () => Array.from(values.keys()),
+    getOwnPropertyDescriptor: (_target, key) => typeof key === 'string' && values.has(key) ? { configurable: true, enumerable: true, value: values.get(key) } : undefined,
+  })
 }
 
 const jsonResponse = (payload: unknown): Response =>
@@ -741,6 +746,7 @@ const installFetchMock = (
 ) => {
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input)
+    if (url.endsWith('/events/operation-scope')) return jsonResponse(testScope(url.split('/')[4]))
     if (url === '/api/sessions?include_archived=true&include_turns=false') return jsonResponse(initialSessions)
     if (url === '/api/configs') return jsonResponse(bootConfig)
     if (url === '/api/tools/public-adapter-readiness') return jsonResponse(adapterReadiness)
@@ -847,6 +853,7 @@ const installFetchMock = (
 const installDegradedFetchMock = () => {
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input)
+    if (url.endsWith('/events/operation-scope')) return jsonResponse(testScope(url.split('/')[4]))
     if (url === '/api/sessions?include_archived=true&include_turns=false') return jsonResponse([])
     if (url === '/api/configs') return jsonResponse(bootConfig)
     if (url === '/api/tools/public-adapter-readiness') throw new Error('adapter readiness unavailable')
@@ -861,6 +868,7 @@ const installDegradedFetchMock = () => {
 const installConversationFetchMock = () => {
   const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input)
+    if (url.endsWith('/events/operation-scope')) return jsonResponse(testScope(url.split('/')[4]))
     if (url === '/api/sessions?include_archived=true&include_turns=false') {
       return jsonResponse([
         {
@@ -1232,6 +1240,7 @@ describe('Open Agronomy map upload workflow', () => {
     let lookupCount = 0
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
+    if (url.endsWith('/events/operation-scope')) return jsonResponse(testScope(url.split('/')[4]))
       if (url === '/api/sessions?include_archived=true&include_turns=false') return jsonResponse([])
       if (url === '/api/configs') return jsonResponse(bootConfig)
       if (url === '/api/tools/public-adapter-readiness') return jsonResponse(adapterReadiness)
@@ -1847,6 +1856,7 @@ describe('Open Agronomy map upload workflow', () => {
     let recordAttempts = 0
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
+    if (url.endsWith('/events/operation-scope')) return jsonResponse(testScope(url.split('/')[4]))
       if (url === '/api/sessions?include_archived=true&include_turns=false') return jsonResponse([])
       if (url === '/api/configs') return jsonResponse(bootConfig)
       if (url === '/api/tools/public-adapter-readiness') return jsonResponse(adapterReadiness)
@@ -1869,6 +1879,7 @@ describe('Open Agronomy map upload workflow', () => {
         })
         return jsonResponse({
           schema_version: 'open_agronomy_agent.demo_field_event_appended.v1',
+          operation: testReceipt(url, body).operation,
           event: records[0],
           chain: { valid: true, event_count: 1, head_sha256: 'a'.repeat(64), failure_count: 0 },
         })
@@ -1919,7 +1930,7 @@ describe('Open Agronomy map upload workflow', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Save record' }))
     fireEvent.submit(screen.getByRole('form', { name: 'Add field record' }))
-    expect(recordAttempts).toBe(1)
+    await waitFor(() => expect(recordAttempts).toBe(1))
     expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled()
     const draftDate = (screen.getByLabelText('When it happened') as HTMLInputElement).value
     fireEvent(screen.getByRole('dialog', { name: 'Add field record' }), new Event('cancel', { bubbles: true, cancelable: true }))
@@ -1932,17 +1943,20 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.getByLabelText('What happened')).toHaveValue('Standing water observed in the northwest corner.')
     fireEvent.click(screen.getByRole('button', { name: 'Save record' }))
 
-    expect(await screen.findByText('Standing water observed in the northwest corner.')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText('Standing water observed in the northwest corner.')).toBeInTheDocument())
     fireEvent.click(screen.getByText('Record details'))
     expect(screen.getByText(/Immutable record · aaaaaaaaaa/)).toBeInTheDocument()
     const request = fetchMock.mock.calls.find(
       ([url, init]) => String(url) === '/api/demo/fields/field-context-1/events' && init?.method === 'POST',
     )
     expect(JSON.parse(String(request?.[1]?.body))).toMatchObject({
+      client_operation_id: expect.any(String),
       event_type: 'observation',
       payload: { summary: 'Standing water observed in the northwest corner.' },
       provenance: { capture_method: 'user_entered', surface: 'fields_timeline' },
     })
+    const retryRequests = fetchMock.mock.calls.filter(([url, init]) => String(url) === '/api/demo/fields/field-context-1/events' && init?.method === 'POST')
+    expect(JSON.parse(String(retryRequests[1][1]?.body))).toEqual(JSON.parse(String(retryRequests[0][1]?.body)))
     fireEvent.click(screen.getByRole('button', { name: 'Correct' }))
     expect(screen.getByLabelText('Record to correct')).toHaveValue('event-1')
     fireEvent.change(screen.getByLabelText('What happened'), { target: { value: 'Corrected location: southwest corner.' } })
@@ -1954,6 +1968,7 @@ describe('Open Agronomy map upload workflow', () => {
       corrects_event_id: 'event-1',
       payload: { summary: 'Corrected location: southwest corner.', correction_kind: 'user_entered' },
     })
+    expect(JSON.parse(String(correctionRequest?.[1]?.body)).client_operation_id).not.toBe(JSON.parse(String(request?.[1]?.body)).client_operation_id)
     fireEvent(screen.getByRole('dialog', { name: 'Correct field record' }), new Event('cancel', { bubbles: true, cancelable: true }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Add record' })).toBeDisabled()
@@ -2059,6 +2074,7 @@ describe('Open Agronomy map upload workflow', () => {
     let answerAccepted: boolean | null = null
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
+    if (url.endsWith('/events/operation-scope')) return jsonResponse(testScope(url.split('/')[4]))
       if (url === '/api/sessions?include_archived=true&include_turns=false') {
         return jsonResponse([{
           session_id: 'session-field-1',
@@ -2351,6 +2367,7 @@ describe('Open Agronomy map upload workflow', () => {
     let serverAvailable = false
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
+    if (url.endsWith('/events/operation-scope')) return jsonResponse(testScope(url.split('/')[4]))
       if (!serverAvailable) throw new Error('Failed to fetch')
       if (url === '/api/health') return jsonResponse({ status: 'ok' })
       if (url === '/api/sessions?include_archived=true&include_turns=false') return jsonResponse([savedSession])
@@ -2388,6 +2405,7 @@ describe('Open Agronomy map upload workflow', () => {
     let serverAvailable = false
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
+    if (url.endsWith('/events/operation-scope')) return jsonResponse(testScope(url.split('/')[4]))
       if (!serverAvailable) throw new Error('Failed to fetch')
       if (url === '/api/health') return jsonResponse({ status: 'ok' })
       if (url === '/api/configs') throw new Error('Failed to fetch configs')
@@ -2421,6 +2439,7 @@ describe('Open Agronomy map upload workflow', () => {
     let fieldAReads = 0
     baseFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
+    if (url.endsWith('/events/operation-scope')) return jsonResponse(testScope(url.split('/')[4]))
       if (url === '/api/health') return jsonResponse({ status: 'ok' })
       const id = url.match(/^\/api\/sessions\/(chat-field-[ab])$/)?.[1]
       if (id) {
@@ -2478,6 +2497,7 @@ describe('Open Agronomy map upload workflow', () => {
     })
     baseFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
+    if (url.endsWith('/events/operation-scope')) return jsonResponse(testScope(url.split('/')[4]))
       if (url === '/api/health') return jsonResponse({ status: 'ok' })
       if (url === '/api/sessions/chat-old' && ++oldReads === 2) {
         return new Promise<Response>((resolve) => { resolveDelayedRecovery = resolve })
@@ -2543,6 +2563,7 @@ describe('Open Agronomy map upload workflow', () => {
   it('keeps conversation history isolated to the selected field', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
+    if (url.endsWith('/events/operation-scope')) return jsonResponse(testScope(url.split('/')[4]))
       if (url === '/api/sessions?include_archived=true&include_turns=false') {
         return jsonResponse([
           {
@@ -2665,6 +2686,7 @@ describe('Open Agronomy map upload workflow', () => {
     const slowResponse = new Promise<Response>(resolve => { releaseSlow = resolve })
     baseFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
+    if (url.endsWith('/events/operation-scope')) return jsonResponse(testScope(url.split('/')[4]))
       if (url === '/api/sessions/slow') return slowResponse
       if (url === '/api/sessions/fast') return jsonResponse({ ...listed[1], turns_included: true,
         turns: [{ turn_id: 'fast-turn', user_message: 'Fast question', answer: 'Fast answer', trace: {} }] })
@@ -2690,6 +2712,7 @@ describe('Open Agronomy map upload workflow', () => {
     })
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
+    if (url.endsWith('/events/operation-scope')) return jsonResponse(testScope(url.split('/')[4]))
       if (url === '/api/sessions?include_archived=true&include_turns=false') return sessionsResponse
       if (url === '/api/configs') return jsonResponse(bootConfig)
       if (url === '/api/tools/public-adapter-readiness') return jsonResponse(adapterReadiness)
@@ -2799,6 +2822,7 @@ describe('Open Agronomy map upload workflow', () => {
     const baseImplementation = baseFetch.getMockImplementation()!
     baseFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
+    if (url.endsWith('/events/operation-scope')) return jsonResponse(testScope(url.split('/')[4]))
       if (url === '/api/sessions' && init?.method === 'POST') {
         return jsonResponse({ session_id: 'session-interrupted', context: { field_conversation_key: 'general' }, turns: [] })
       }
@@ -2829,6 +2853,7 @@ describe('Open Agronomy map upload workflow', () => {
     let posts = 0
     baseFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
+    if (url.endsWith('/events/operation-scope')) return jsonResponse(testScope(url.split('/')[4]))
       if (url === '/api/sessions/session-retry') return jsonResponse(session)
       if (url === '/api/sessions/session-retry/turns/stream' && init?.method === 'POST') {
         posts += 1
@@ -2870,6 +2895,7 @@ describe('Open Agronomy map upload workflow', () => {
     let refreshes = 0
     baseFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
+    if (url.endsWith('/events/operation-scope')) return jsonResponse(testScope(url.split('/')[4]))
       if (url === '/api/sessions/session-unresolved') {
         refreshes += 1
         return jsonResponse(session)
@@ -2948,6 +2974,7 @@ describe('Open Agronomy map upload workflow', () => {
     let savedAlphaTurns: Array<Record<string, unknown>> = []
     baseFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
+    if (url.endsWith('/events/operation-scope')) return jsonResponse(testScope(url.split('/')[4]))
       if (url === '/api/sessions/session-alpha-stream/turns/stream' && init?.method === 'POST') {
         return { ok: true, status: 200, body: stream, text: async () => '' } as Response
       }
@@ -3003,6 +3030,7 @@ describe('Open Agronomy map upload workflow', () => {
     const encode = (event: string, payload: unknown) => new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`)
     baseFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
+    if (url.endsWith('/events/operation-scope')) return jsonResponse(testScope(url.split('/')[4]))
       if (url === '/api/sessions' && init?.method === 'POST') {
         const payload = JSON.parse(String(init.body || '{}'))
         return jsonResponse({ session_id: 'session-new-stream', context: payload.context, turns: [] })
