@@ -1,0 +1,57 @@
+{
+  "schema_version": "open_agronomy_agent.cscap_intake.v1",
+  "source_id": "cscap_midwest_arl_2011_2015",
+  "title": "Sustainable Corn CAP: Arlington historical plot-year grain yields",
+  "publisher": "National Agricultural Library - ARS - USDA",
+  "url": "https://agdatacommons.nal.usda.gov/articles/dataset/Sustainable_Corn_CAP_Research_Data_USDA-NIFA_Award_No_2011-68002-30190_/24851877",
+  "doi": "10.15482/USDA.ADC/1411953",
+  "article_id": 24851877,
+  "article_version": 1,
+  "capture_date": "2026-10-01",
+  "publisher_page_checked_on": "2026-10-11",
+  "source_files": {
+    "workbook": {"name": "cscap-workbook.xlsx", "bytes": 12129286, "sha256": "b9e40bf74554c32849dcb6e6a613d6b7a60b4b8a2f8cbed33073d7c7732f95b6", "publisher_file_id": 44334239, "publisher_md5": "34d284bb59f549e25ea9f77b33721003"},
+    "article": {"name": "figshare-24851877.json", "bytes": 48283, "sha256": "622256ac379d9e87f3cc6b1983f17e700e917e95d1895a7107d6745ec559bb81"}
+  },
+  "rights": {
+    "identifier": "CC0-1.0",
+    "source_specific_evidence": "https://agdatacommons.nal.usda.gov/articles/dataset/Sustainable_Corn_CAP_Research_Data_USDA-NIFA_Award_No_2011-68002-30190_/24851877",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "review_scope": "Exact CC0 article v1 workbook, native grain-yield cells, plot identifiers and their in-workbook descriptions only. No linked papers, weather services, logos, portal tools or third-party assets.",
+    "portal_terms_url": "https://datateam.agron.iastate.edu/cscap/usage.phtml",
+    "portal_terms_review": "Dataset citation is requested; contact/coauthorship is encouraged, not required. No ownership of publisher intellectual property is claimed. This intake uses the CC0 Ag Data Commons workbook, not portal exports.",
+    "attribution": "Abendroth, Lori J. et al. (2017). Sustainable Corn CAP Research Data (USDA-NIFA Award No. 2011-68002-30190). National Agricultural Library - ARS - USDA. DOI 10.15482/USDA.ADC/1411953."
+  },
+  "selection": {
+    "site": "ARL",
+    "site_name": "Arlington",
+    "jurisdiction": "Wisconsin, United States",
+    "years": [2011, 2012, 2013, 2014, 2015],
+    "expected_plot_count": 18,
+    "expected_record_count": 90,
+    "expected_records_per_year": 18,
+    "selection_basis": "One explicitly bounded research site with all source plot-year grain-yield rows, selected before constructing any evaluation question. Not a representative sample of the full dataset or independent farms."
+  },
+  "yield_columns": {
+    "AGR17": {"output_column": "corn_yield_kg_ha", "description": "Corn grain yield at 15.5% MB", "unit_native": "kg ha-1", "unit": "kg/ha", "crop": "Corn", "moisture_basis_percent": 15.5},
+    "AGR19": {"output_column": "soybean_yield_kg_ha", "description": "Soybean grain yield at 13.0% MB", "unit_native": "kg ha-1", "unit": "kg/ha", "crop": "Soybean", "moisture_basis_percent": 13.0},
+    "AGR21": {"output_column": "wheat_yield_kg_ha", "description": "Wheat grain yield at 13.5% MB", "unit_native": "kg ha-1", "unit": "kg/ha", "crop": "Wheat", "moisture_basis_percent": 13.5}
+  },
+  "admission": {
+    "status": "typed_import_candidate_only",
+    "runtime_rag": false,
+    "active_profile": false,
+    "training": false,
+    "evaluation_gold": false,
+    "required_before_product_admission": "Separate source-specific domain/mapping review and runtime policy decision. Native study observations cannot establish a current farmer-field outcome, treatment effect, recommendation or local calibration."
+  },
+  "limits": [
+    "Historical research data from 2011-2015; publisher posting/modification dates do not refresh the observations.",
+    "18 repeated experimental plots at one site, not 18 or 90 independent farms.",
+    "Source moisture-adjusted grain-yield measurements are retained without rescaling, imputation or causal interpretation. Blank cells remain missing; zero remains zero.",
+    "Plot treatment codes are native categories, not current management instructions; no fertilizer rates or field-operation joins are admitted.",
+    "No geometry, weather, soil, pesticide, economic or greenhouse-gas measurements are imported. ARL soil notes flag suspect 2015 values and different sampling depths.",
+    "Trend questions must compare the same crop and preserve sample counts, years and plot dependence. Descriptive row means are not causal effects or farmer-field predictions.",
+    "This exposed development source is unsuitable for a claim of untouched holdout evaluation without the evaluation owner's separate split and leakage review."
+  ]
+}

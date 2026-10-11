@@ -19,7 +19,7 @@
 | Geospatial foundation | `discover_field_sources.py`, `analyze_field_terrain.py` | Keyless-first source metadata discovery; offline local DTM processing with contextual extent, optional PyFlwDir environment, source-bound GeoTIFF/JSON and unknown edge/TWI support |
 | Imagery research | `assess_field_imagery.py`, `probe_imagery_model.py` | Source/split-bound labels and frozen encoder CPU/MPS diagnostics; no runtime activation or operational prediction |
 | Packaging/release | `audit_release_candidate_checkout.py`, `capture_release_environment.py`, `build_public_repository.py`, edge manifest/container/SBOM scripts | Curated scope only; no private/generated state; the Python environment receipt observes range resolution and is not a portable lock |
-| Field source preparation | `prepare_field_sources.py`, `rehearse_field_source_imports.py` | Hash-pinned source-only study groups and offline product-path rehearsal; no benchmark answers or automatic geometry |
+| Field source preparation | `prepare_field_sources.py`, `prepare_cscap_intake.py`, `rehearse_field_source_imports.py` | Hash-pinned source-only study groups and offline product-path rehearsal; no benchmark answers or automatic geometry |
 | Recovery/storage | `migrate_field_source_blobs.py`, backup primitives in `server/storage/backup.py` | Back up first; explicit reversible SQLite source deduplication, logical read-only dry run by default; no automatic deletion or vacuum |
 
 ## Inputs and outputs
@@ -147,6 +147,29 @@ completed `frontend/dist` JS/CSS files. Run it after `npm run build` with
 `node scripts/profile_frontend_build.mjs` from the repository root, or pass a
 different build directory as its positional argument. See the [workspace customization guide](../docs/public/developer/customizing-the-harness.md)
 and the [bounded backend findings](../docs/reviews/artifacts/ui-backend-findings-20260927.md).
+## CSCAP typed intake candidate
+
+`prepare_cscap_intake.py` prepares the captured CC0 Sustainable Corn CAP
+workbook into one small CSV and 18 exact plot mappings for Arlington, Wisconsin,
+2011–2015. Its source contract is
+`data/manifests/cscap_arl_intake_v1.json`. Supply the existing captured workbook
+and publisher metadata directory; the command never downloads them:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/prepare_cscap_intake.py \
+  --raw-root <existing-cscap-capture-directory> \
+  --output-dir outputs/<new-cscap-review-bundle>
+```
+
+The 90 source plot-year records retain crop-specific moisture bases, missing
+cells, native treatment codes, source-row/column locators and exact byte hashes.
+Each mapping selects one experimental plot through the existing table import
+contract. Do not associate these archival study records with a farmer's current
+field. The bundle remains a review candidate: it adds no RAG chunks, active
+profile, training material or evaluation gold. Scenario and trend evaluations
+need the evaluation owner's separate source/split review; repeated plots and
+seasons are dependent, and descriptive means do not establish treatment effects.
+
 ## Production foundations candidate
 
 `build_production_foundations_supplement.py` builds the nine-card, source-linked
