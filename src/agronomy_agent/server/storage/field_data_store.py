@@ -29,6 +29,9 @@ ROLES = {"measurement", "context", "identifier"}
 EVIDENCE_ROLES = {"observation", "model_output", "interpretation", "regional_prior"}
 AGGREGATIONS = {"none", "mean", "sum", "unique"}
 VALUE_SCOPES = {"record", "field_season", "unknown"}
+CSCAP_SOURCE_ID = "cscap_midwest_arl_2011_2015"
+CSCAP_DOI = "10.15482/usda.adc/1411953"
+CSCAP_ROW_PREFIX = b"sha256:b9e40bf74554c32849dcb6e6a613d6b7a60b4b8a2f8cbed33073d7c7732f95b6#"
 
 
 def _json(value: Any) -> str:
@@ -51,12 +54,38 @@ def _field_id(field: dict[str, Any]) -> str:
 
 
 def _assert_field(cursor: Any, field_id: str, field: dict[str, Any] | None = None) -> dict[str, Any]:
-    row = cursor.execute("SELECT id, workspace_id FROM phase4_field_contexts WHERE id = ? AND deleted_at IS NULL", (field_id,)).fetchone()
+    row = cursor.execute("SELECT id, workspace_id, metadata FROM phase4_field_contexts WHERE id = ? AND deleted_at IS NULL", (field_id,)).fetchone()
     if row is None:
         raise ValueError("unknown or deleted field")
     if field is not None and field.get("workspace_id") != row["workspace_id"]:
         raise ValueError("field workspace mismatch")
     return dict(row)
+
+
+def _validate_research_context(mapping: dict[str, Any]) -> dict[str, str]:
+    context = mapping.get("research_context")
+    expected = {"kind": "historical_research", "source_id": CSCAP_SOURCE_ID,
+                "study_site": "ARL", "plot_id": mapping["filters"].get("plot_id")}
+    if (not isinstance(context, dict) or context != expected or not expected["plot_id"]
+            or mapping["filters"].get("study_site") != "ARL"
+            or mapping["record_key"] != ["study_site", "plot_id", "year"]):
+        raise ValueError("CSCAP requires explicit historical_research context bound to its source, site and plot")
+    return context
+
+
+def _require_research_context(bound: dict[str, Any], mapping: dict[str, Any], source: bytes) -> None:
+    metadata = mapping["source"]
+    identity = " ".join(metadata.values()).casefold()
+    # Retain the guard for older prepared CSVs even if their source title or
+    # citation is removed. Arbitrary relabelled data remains user-asserted.
+    is_cscap = (CSCAP_DOI in identity or re.search(r"/24851877(?:[/?#]|$)", metadata.get("url", ""))
+                or CSCAP_ROW_PREFIX in source or "research_context" in mapping)
+    if not is_cscap:
+        return
+    context = _validate_research_context(mapping)
+    persisted = json.loads(bound["metadata"])
+    if not isinstance(persisted, dict) or persisted.get("research_context") != context:
+        raise ValueError("CSCAP requires a persisted matching historical_research field context")
 
 
 def _profile(parsed: dict[str, Any], content_sha256: str) -> dict[str, Any]:
@@ -173,11 +202,13 @@ def _validate_mapping(mapping: dict[str, Any], parsed: dict[str, Any]) -> tuple[
         if any(not all(key) for key in keys) or len(keys) != len(set(keys)):
             raise ValueError("record key is blank or duplicated")
     normalized = {"filters": filters, "record_key": record_key, "columns": normalized_columns, "source": source}
+    if "research_context" in mapping:
+        normalized["research_context"] = _validate_research_context(mapping)
     return normalized, selected_rows
 
 
 def _manifest(import_row: Any, mapping: dict[str, Any], row_count: int, committed_at: str) -> dict[str, Any]:
-    return {
+    manifest = {
         "import_id": import_row["id"], "status": "committed", "field_id": import_row["field_id"],
         "workspace_id": import_row["workspace_id"], "filename": import_row["filename"],
         "source_sha256": import_row["source_sha256"], "content_sha256": import_row["source_sha256"],
@@ -188,6 +219,9 @@ def _manifest(import_row: Any, mapping: dict[str, Any], row_count: int, committe
         "row_count": row_count, "committed_at": committed_at,
         "limitations": ["User-asserted source metadata; rights and field measurement meaning are not independently verified."],
     }
+    if "research_context" in mapping:
+        manifest["research_context"] = mapping["research_context"]
+    return manifest
 
 
 def commit_import(store: Any, field: dict[str, Any], import_id: str, mapping: dict[str, Any]) -> dict[str, Any]:
@@ -204,6 +238,7 @@ def commit_import(store: Any, field: dict[str, Any], import_id: str, mapping: di
             source = read_source(cursor, imported)
             parsed = parse_table(imported["filename"], source, json.loads(imported["profile_json"])["encoding"] if imported["filename"].lower().endswith(("csv", "tsv", "tab")) else None)
             normalized, rows = _validate_mapping(mapping, parsed)
+            _require_research_context(bound, normalized, source)
             mapping_hash = _hash(normalized)
             if imported["status"] == "committed":
                 if imported["mapping_sha256"] != mapping_hash:
@@ -279,10 +314,11 @@ def query_import(store: Any, field_id: str, import_id: str, query: dict[str, Any
                 raise ValueError("committed import not found for field")
             if imported["workspace_id"] != bound["workspace_id"]:
                 raise ValueError("field workspace mismatch")
-            read_source(cursor, imported)
+            source = read_source(cursor, imported)
             mapping = json.loads(imported["mapping_json"])
             if _hash(mapping) != imported["mapping_sha256"]:
                 raise ValueError("stored mapping checksum mismatch")
+            _require_research_context(bound, mapping, source)
             columns = {col["column"]: col for col in mapping["columns"]}
             if any(name not in columns for name in filters):
                 raise ValueError("filter column was not mapped")
@@ -305,6 +341,7 @@ def query_import(store: Any, field_id: str, import_id: str, query: dict[str, Any
                 if _hash({"locator": row["locator"], "values": row["values"]}) != row["row_sha256"]:
                     raise ValueError("stored row checksum mismatch")
     spec = columns.get(column) if column else None
+    source_role = spec["evidence_role"] if spec else None
     values = [row["values"][column] for row in rows] if spec else []
     missing = sum(not value.strip() for value in values)
     invalid = 0
@@ -343,7 +380,7 @@ def query_import(store: Any, field_id: str, import_id: str, query: dict[str, Any
             result["value"] = None
         result["numeric_count"] = len(clean)
     receipt = {
-        "schema_version": "field_data.query.v1", "field_id": field_id, "import_id": import_id,
+        "schema_version": "field_data.query.v2", "field_id": field_id, "import_id": import_id,
         "source_sha256": imported["source_sha256"], "mapping_sha256": imported["mapping_sha256"],
         "member_sha256": json.loads(imported["profile_json"])["member_sha256"],
         "source": mapping["source"], "operation": operation, "column": column,
@@ -355,12 +392,17 @@ def query_import(store: Any, field_id: str, import_id: str, query: dict[str, Any
         }[operation],
         "filters": filters, "selected_row_count": len(rows), "missing_count": missing,
         "invalid_count": invalid, "unit": spec["unit"] if spec else None,
-        "role": spec["role"] if spec else None, "evidence_role": spec["evidence_role"] if spec else None,
+        "label": spec["label"] if spec else None,
+        "role": spec["role"] if spec else None,
+        "source_evidence_role": source_role,
+        "evidence_role": source_role if operation == "rows" else "interpretation",
         "value_scope": spec.get("value_scope", "unknown") if spec else None,
         "locators": [row["locator"] for row in rows[:limit]],
         "locators_truncated": len(rows) > limit,
         "selected_rows_sha256": _hash([row["row_sha256"] for row in rows]), **result,
     }
+    if "research_context" in mapping:
+        receipt["research_context"] = mapping["research_context"]
     if operation == "mean" and spec and spec.get("value_scope", "unknown") == "unknown":
         receipt["limitations"] = ["Value scope is unknown; this unweighted row mean is not a field-season estimate."]
     receipt["receipt_sha256"] = _hash(receipt)
@@ -389,14 +431,14 @@ def field_data_snapshot(store: Any, field_id: str) -> dict[str, Any]:
             compacted = {key: receipt.get(key) for key in (
                 "operation", "column", "value", "selected_row_count", "record_key", "aggregation_basis",
                 "missing_count", "invalid_count", "numeric_count", "unit", "role",
-                "evidence_role", "value_scope", "selected_rows_sha256", "source_sha256", "member_sha256",
+                "label", "source_evidence_role", "evidence_role", "research_context", "value_scope", "selected_rows_sha256", "source_sha256", "member_sha256",
                 "mapping_sha256", "distinct_count", "truncated", "limitations",
             ) if key in receipt} | {
                 "locators": receipt["locators"][:2],
                 "locators_truncated": receipt["locators_truncated"] or len(receipt["locators"]) > 2,
                 "query_receipt_sha256": receipt["receipt_sha256"],
                 "field_id": receipt["field_id"], "import_id": receipt["import_id"],
-                "schema_version": "field_data.query_snapshot.v1",
+                "schema_version": "field_data.query_snapshot.v2",
                 "filters": receipt["filters"],
             }
             compacted["receipt_sha256"] = _hash(compacted)
@@ -424,6 +466,8 @@ def field_data_snapshot(store: Any, field_id: str) -> dict[str, Any]:
             "summary_count": 1 + len(aggregate_columns),
             "summaries_truncated": len(aggregate_columns) > MAX_SNAPSHOT_SUMMARIES,
         }
+        if "research_context" in manifest:
+            item["research_context"] = manifest["research_context"]
         proposed = {"field_id": field_id, "imports": [*imports, item], "import_count": len(all_manifests),
                     "imports_truncated": len(all_manifests) > len(imports) + 1}
         if len(_json(proposed).encode("utf-8")) + 256 > MAX_SNAPSHOT_BYTES:

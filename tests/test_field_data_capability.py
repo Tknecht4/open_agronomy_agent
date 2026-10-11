@@ -36,6 +36,9 @@ def test_registered_query_and_identity_replay(imported_context):
     result = results[0]
     assert result.tool_id == "field_table_query"
     assert result.payload["query_receipt"]["value"] == 3000
+    assert result.payload["query_receipt"]["source_evidence_role"] == "observation"
+    assert result.payload["query_receipt"]["evidence_role"] == "interpretation"
+    assert "Derived descriptive calculation" in result.answer
     assert "missing: 1; invalid: 1" in result.answer
     assert "unweighted row mean is not a field-season estimate" in result.answer
     assert result.payload["query_receipt"]["limitations"][0] in result.limitations
@@ -50,6 +53,19 @@ def test_registered_query_and_identity_replay(imported_context):
     spec = capability_registry().require(result.tool_id)
     assert spec.network.mode == "none" and spec.planner.natural_language_enabled
     assert execute_registered_capability(result.tool_id, {"operation": "mean", "inputs": dict(plan.invocations[0].inputs)})["status"] == "success"
+
+
+@pytest.mark.parametrize("key,value", [("source_evidence_role", "model_output"), ("source_evidence_role", None), ("evidence_role", "observation")])
+def test_signed_aggregate_must_preserve_observation_inputs_and_derived_result(imported_context, key, value):
+    from agronomy_agent.field_data_capability import _hash, execute_field_query
+    plan, _ = plan_and_execute_tools(QUESTION, field_context=imported_context)
+    inputs = copy.deepcopy(dict(plan.invocations[0].inputs))
+    receipt = inputs["receipt"]
+    receipt.pop("receipt_sha256")
+    receipt[key] = value
+    receipt["receipt_sha256"] = _hash(receipt)
+    with pytest.raises(ValueError, match="interpretation result"):
+        execute_field_query("mean", inputs)
 
 
 @pytest.mark.parametrize("question", [
