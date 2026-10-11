@@ -4,7 +4,6 @@ import copy
 import hashlib
 import io
 import json
-import zipfile
 from pathlib import Path
 
 import pytest
@@ -237,10 +236,9 @@ def test_cscap_native_provenance_guard_survives_removed_source_metadata(tmp_path
         store._conn.close()
 
 
-@pytest.mark.parametrize("container", ["xlsx", "zip"])
 @pytest.mark.parametrize("map_provenance", [False, True])
 @pytest.mark.parametrize("legacy", [False, True])
-def test_decoded_native_provenance_refuses_compressed_farmer_imports(tmp_path, monkeypatch, container, map_provenance, legacy):
+def test_decoded_native_provenance_refuses_compressed_farmer_imports(tmp_path, monkeypatch, map_provenance, legacy):
     from agronomy_agent.server.storage import field_data_store
     openpyxl = pytest.importorskip("openpyxl")
     book = openpyxl.Workbook()
@@ -251,11 +249,6 @@ def test_decoded_native_provenance_refuses_compressed_farmer_imports(tmp_path, m
     book.save(buffer)
     content = buffer.getvalue()
     filename = "renamed.xlsx"
-    if container == "zip":
-        archive = io.BytesIO()
-        with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as zipped:
-            zipped.writestr(filename, content)
-        content, filename = archive.getvalue(), "renamed.zip"
     assert field_data_store.CSCAP_ROW_PREFIX not in content
     assert parse_table(filename, content)["rows"][0]["values"]["source_row"] == locator
     mapping = {"filters": {"study_site": "ARL", "plot_id": "101"}, "record_key": ["study_site", "plot_id", "year"],

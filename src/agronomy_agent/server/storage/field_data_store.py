@@ -84,7 +84,7 @@ def _require_research_context(
     is_cscap = (CSCAP_DOI in identity or re.search(r"/24851877(?:[/?#]|$)", metadata.get("url", ""))
                 or CSCAP_ROW_PREFIX in source or "research_context" in mapping)
     if not is_cscap:
-        # Compressed XLSX/ZIP bytes can conceal native provenance. Inspect the
+        # Compressed XLSX bytes can conceal native provenance. Inspect the
         # complete decoded source, including unmapped columns and filtered rows.
         parsed = parsed if parsed is not None else parse_table(filename, source, encoding)
         prefix = CSCAP_ROW_PREFIX.decode("ascii")
