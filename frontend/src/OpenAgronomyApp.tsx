@@ -33,6 +33,7 @@ import { useWorkspaceMenus } from './useWorkspaceMenus'
 import { WorkspaceDialog } from './WorkspaceDialog'
 import './FieldRecords.css'
 import { apiDelete, apiGet, apiPatch, apiPost, apiUpload, csrfHeaders } from './api'
+import { submitFieldEvent, FIELD_EVENT_OPERATION_CHANGED, canonicalFieldEvent, watchFieldEventConfirmation, type PendingFieldEvent } from './fieldEventSave'
 import { clearPhase6ChatDraft, loadPhase6ChatDraft, savePhase6ChatDraft } from './offlineDrafts'
 import { clearPhase6Scratchpad, loadPhase6Scratchpad, savePhase6Scratchpad } from './offlineScratchpad'
 import {
@@ -165,6 +166,7 @@ const BenchmarksRoute = lazy(() => import('./BenchmarksRoute').then((module) => 
 const LeafletFieldMap = lazy(() => import('./LeafletFieldMap').then((module) => ({ default: module.LeafletFieldMap })))
 const FieldSyncPanel = lazy(() => import('./FieldSyncPanel').then(module => ({ default: module.FieldSyncPanel })))
 const SoilTestEntryPanel = lazy(() => import('./FieldSyncPanel').then(module => ({ default: module.SoilTestEntryPanel })))
+const FieldEventRecoveryPanel = lazy(() => import('./FieldSyncPanel').then(module => ({ default: module.FieldEventRecoveryPanel })))
 const FieldDataPanel = lazy(() => import('./FieldDataPanel'))
 const FieldImageryAnalyticsPanel = lazy(() => import('./FieldImageryAnalyticsPanel'))
 const PrivateKnowledgePanel = lazy(() => import('./PrivateKnowledgePanel'))
@@ -2109,6 +2111,10 @@ export function OpenAgronomyApp() {
   const [recordSavePending, setRecordSavePending] = useState(false)
   const [recordSaveError, setRecordSaveError] = useState('')
   const recordSaveBusyRef = useRef(false)
+  const recordOperationRef = useRef<PendingFieldEvent>()
+  const recordOperationDraftRef = useRef('')
+  const recordDraftRef = useRef('')
+  recordDraftRef.current = canonicalFieldEvent([fieldEventType, fieldEventSummary, fieldEventOccurredAt, fieldCorrectionTarget])
   const [visibleRecordCount, setVisibleRecordCount] = useState(12)
   const [visibleAnswerCount, setVisibleAnswerCount] = useState(12)
   const [geoPriors, setGeoPriors] = useState<GeoPriors | null>(null)
@@ -3103,6 +3109,27 @@ export function OpenAgronomyApp() {
     }
   }
 
+  useEffect(() => {
+    if (recordOperationRef.current?.scope.field_context_id !== activeFieldContextId) recordOperationRef.current = undefined
+    return watchFieldEventConfirmation(() => recordOperationRef.current, operation => {
+      if (recordSaveBusyRef.current) return
+      recordOperationRef.current = undefined
+      if (activeFieldRef.current !== operation.scope.field_context_id) return
+      if (recordDraftRef.current === recordOperationDraftRef.current) {
+        setRecordSaveError(''); setRecordDialogFieldId(''); setFieldEventSummary('')
+        setFieldEventOccurredAt(''); setFieldCorrectionTarget(''); setFieldEventType('observation')
+      } else {
+        setRecordSaveError('The previous record was confirmed. Review this edited draft before saving it as a new record.')
+      }
+      void refreshFieldHistory(operation.scope.field_context_id)
+    }, operation => {
+      recordOperationRef.current = undefined
+      if (activeFieldRef.current === operation.scope.field_context_id) {
+        setRecordSaveError('Rejected request resolved. Review and correct this draft before saving again.')
+      }
+    })
+  }, [activeFieldContextId])
+
   const appendFieldEvent = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const targetFieldId = recordDialogFieldId
@@ -3136,10 +3163,12 @@ export function OpenAgronomyApp() {
       if (fieldEventType === 'correction') {
         payload.corrects_event_id = fieldCorrectionTarget
       }
-      await apiPost<DemoFieldEventResponse>(
-        `/api/demo/fields/${encodeURIComponent(targetFieldId)}/events`,
-        payload,
-      )
+      const previous = recordOperationRef.current
+      await submitFieldEvent<DemoFieldEventResponse>(targetFieldId, payload, {
+        ...(previous?.payloadKey === canonicalFieldEvent(payload) ? { operation: previous } : {}),
+        onPrepared: operation => { if (activeFieldRef.current === targetFieldId) { recordOperationRef.current = operation; recordOperationDraftRef.current = recordDraftRef.current } },
+      })
+      recordOperationRef.current = undefined
       if (activeFieldRef.current === targetFieldId) {
         setRecordSaveError('')
         setRecordDialogFieldId('')
@@ -3157,6 +3186,7 @@ export function OpenAgronomyApp() {
       }
     } finally {
       recordSaveBusyRef.current = false
+      window.dispatchEvent(new Event(FIELD_EVENT_OPERATION_CHANGED))
       setRecordSavePending(false)
     }
   }
@@ -4144,6 +4174,12 @@ export function OpenAgronomyApp() {
                 ) : null}
               </div>
               <p className="field-history-status">{fieldHistoryStatus}</p>
+              {activeFieldContextId && fieldStorageMode === 'account_workspace' ? (
+                <Suspense fallback={null}><FieldEventRecoveryPanel key={activeFieldContextId}
+                  fieldContextId={activeFieldContextId}
+                  onRecovered={() => activeFieldRef.current === activeFieldContextId ? refreshFieldHistory(activeFieldContextId) : undefined}
+                /></Suspense>
+              ) : null}
               <div className="field-record-toolbar">
                 <button type="button" className="map-primary-action" disabled={!activeFieldContextId || fieldStorageMode !== 'account_workspace' || recordSavePending} onClick={() => openRecordDialog()}><Plus size={16} /> {recordSaveError && fieldEventSummary.trim() ? 'Resume unsaved record' : 'Add record'}</button>
                 {activeFieldContextId && fieldStorageMode === 'account_workspace' ? (

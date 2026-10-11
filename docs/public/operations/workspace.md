@@ -137,6 +137,17 @@ check the timeline before retrying. **Resume unsaved record** reopens a failed
 record form that was closed. A pending save can be dismissed without cancelling
 the request or enabling another submission.
 
+An unconfirmed save also retains its exact request on this device. After
+reopening the page, **Retry saved record** in Records & soil tests resends that
+request with the same retry identity; the local SQLite server returns the
+original record if it already saved it. Review the timeline first if you are
+unsure. A confirmed save clears its recovery entry, so a later intentional save
+creates a separate record even when its contents match. A conflict keeps the
+original request for investigation. If browser storage is unavailable or
+corrupt, saving is blocked instead of discarding the recovery information.
+Keep this device's unconfirmed requests private. Moving record files to a
+different server does not transfer those server-side retry receipts.
+
 The timeline shows concise summaries. Open **Record details** for capture and
 measurement metadata, or expand an answer for its full text and provenance.
 **Show more** reveals older loaded records without replacing the current view.
@@ -162,3 +173,11 @@ Use **Sources & checks** to inspect or download a reviewer report for a saved an
 ![Creating a synthetic field with only a name and optional crop](../assets/field-setup.jpg)
 
 This is an actual local browser capture using synthetic demonstration entries. No personal field record is shown.
+
+### Recover an interrupted record save
+
+Reopen the field in the original signed-in account and use **Retry saved record**. It retries the saved request identity and confirms the original event, including after another tab has already confirmed it. Starting a new record is a distinct save, even when its text matches an earlier record.
+
+A first attempt rejected by validation offers **Resolve rejected request**. Resolution releases that request's local slot; correct and review the form before starting a new save. A request whose receipt was lost remains uncertain and must be recovered or reviewed against the timeline. Changing accounts will not replay another account's pending request. Older unscoped requests remain preserved for manual review in their original account.
+
+Use a supported secure browser with persistent storage and Web Locks. If safe storage is unavailable, saves are blocked before dispatch. Retain a full workspace backup: moving only field records between devices does not move retry receipts. Browser-local data is readable to someone with access to the browser profile.

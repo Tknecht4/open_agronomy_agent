@@ -1,9 +1,13 @@
 export const API_ROOT = ''
 
+export class ApiError extends Error {
+  constructor(public readonly status: number, text: string) { super(`${status}: ${text}`) }
+}
+
 const decode = async <T,>(response: Response): Promise<T> => {
   if (!response.ok) {
     const text = await response.text()
-    throw new Error(`${response.status}: ${text}`)
+    throw new ApiError(response.status, text)
   }
   return response.json() as Promise<T>
 }

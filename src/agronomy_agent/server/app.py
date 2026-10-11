@@ -31,7 +31,7 @@ from starlette.staticfiles import StaticFiles
 
 from agronomy_agent.agent import LocalModelSnapshotUnavailable, load_model_config, local_model_snapshot_status, phase5_cache_stats
 from agronomy_agent.corpus_governance import audit_runtime_corpora
-from agronomy_agent.field_events import FieldEventSyncError
+from agronomy_agent.field_events import FieldEventSyncError, FieldEventOperationConflict
 from agronomy_agent.knowledge_updates import read_activation, validate_activation_freshness
 from agronomy_agent.paths import repo_path
 from agronomy_agent.runtime_profiles import load_runtime_profile_registry
@@ -5139,6 +5139,33 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             ),
         }
 
+    FIELD_EVENT_OPERATION_PROTOCOL = "open_agronomy_agent.field_event_operation.v2"
+
+    def field_event_operation_scope(user: dict[str, Any], record: dict[str, Any]) -> dict[str, Any]:
+        return {"protocol": FIELD_EVENT_OPERATION_PROTOCOL, "actor_user_id": user["id"],
+                "workspace_id": record["workspace_id"], "field_context_id": record["id"]}
+
+    def check_field_event_operation_scope(payload: FieldEventCreate, user: dict[str, Any], record: dict[str, Any]) -> None:
+        if payload.client_operation_id and getattr(store, "backend", "sqlite") != "sqlite":
+            raise HTTPException(status_code=501, detail={"code": "field_event_idempotency_unavailable"})
+        expected = (payload.expected_actor_user_id, payload.expected_workspace_id, payload.expected_operation_protocol)
+        if not any(value is not None for value in expected):
+            return  # Legacy clients retain existing authorization and append behavior.
+        if not payload.client_operation_id or not all(value is not None for value in expected):
+            raise HTTPException(status_code=409, detail={"code": "field_event_scope_required"})
+        if str(payload.expected_actor_user_id) != user["id"]:
+            raise HTTPException(status_code=409, detail={"code": "field_event_actor_changed"})
+        if str(payload.expected_workspace_id) != record["workspace_id"]:
+            raise HTTPException(status_code=409, detail={"code": "field_event_workspace_changed"})
+        if payload.expected_operation_protocol != FIELD_EVENT_OPERATION_PROTOCOL:
+            raise HTTPException(status_code=409, detail={"code": "field_event_protocol_changed"})
+
+    def field_event_operation_receipt(payload: FieldEventCreate, user: dict[str, Any], record: dict[str, Any], event: dict[str, Any]) -> dict[str, Any]:
+        if not payload.client_operation_id:
+            return {}
+        return {"operation": {**field_event_operation_scope(user, record),
+                              "operation_id": str(payload.client_operation_id), "event_id": event["id"]}}
+
     @app.post("/field-contexts/{field_context_id}/events", status_code=201)
     async def append_field_context_event(
         field_context_id: str,
@@ -5149,16 +5176,20 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         if not field_context:
             raise HTTPException(status_code=404, detail="field context not found")
         require_workspace_role(user, field_context["workspace_id"], WORKSPACE_WRITE_ROLES)
+        check_field_event_operation_scope(payload, user, field_context)
         try:
             event = store.append_phase4_field_event(
                 field_context=field_context,
                 recorded_by_user_id=user["id"],
                 payload=payload.model_dump(mode="json", exclude_none=True),
             )
+        except FieldEventOperationConflict as exc:
+            raise HTTPException(status_code=409, detail={"code": "field_event_operation_conflict", "message": str(exc)}) from exc
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return {
             "schema_version": "open_agronomy_agent.field_event_appended.v1",
+            **field_event_operation_receipt(payload, user, field_context, event),
             "event": event,
             "chain": store.verify_phase4_field_event_chain(field_context_id),
         }
@@ -6562,6 +6593,17 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             ),
         }
 
+    @app.get("/api/demo/fields/{field_context_id}/events/operation-scope")
+    async def public_demo_field_event_operation_scope(field_context_id: str, request: Request) -> dict[str, Any]:
+        user = _demo_field_user(request)
+        record = store.get_phase4_field_context(field_context_id)
+        if not record or _demo_field_metadata(record).get("kind") != "map_field":
+            raise HTTPException(status_code=404, detail="demo field not found")
+        require_workspace_role(user, record["workspace_id"], WORKSPACE_WRITE_ROLES)
+        if getattr(store, "backend", "sqlite") != "sqlite":
+            raise HTTPException(status_code=501, detail={"code": "field_event_idempotency_unavailable"})
+        return field_event_operation_scope(user, record)
+
     @app.post("/api/demo/fields/{field_context_id}/events", status_code=201)
     async def append_public_demo_field_event(
         field_context_id: str,
@@ -6573,16 +6615,20 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         if not record or _demo_field_metadata(record).get("kind") != "map_field":
             raise HTTPException(status_code=404, detail="demo field not found")
         require_workspace_role(user, record["workspace_id"], WORKSPACE_WRITE_ROLES)
+        check_field_event_operation_scope(payload, user, record)
         try:
             event = store.append_phase4_field_event(
                 field_context=record,
                 recorded_by_user_id=user["id"],
                 payload=payload.model_dump(mode="json", exclude_none=True),
             )
+        except FieldEventOperationConflict as exc:
+            raise HTTPException(status_code=409, detail={"code": "field_event_operation_conflict", "message": str(exc)}) from exc
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return {
             "schema_version": "open_agronomy_agent.demo_field_event_appended.v1",
+            **field_event_operation_receipt(payload, user, record, event),
             "event": event,
             "chain": store.verify_phase4_field_event_chain(field_context_id),
         }
@@ -7187,10 +7233,17 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 })
                 return
             except Exception as exc:
+                failure_id = uuid.uuid4().hex
+                logging.getLogger(__name__).error(
+                    "saved_turn_generation_failed failure_id=%s exception_type=%s",
+                    failure_id, type(exc).__name__,
+                )
                 yield sse(
                     "error",
                     {
-                        "message": str(exc),
+                        "code": "generation_failed",
+                        "failure_id": failure_id,
+                        "message": "Unable to complete this request. Refresh the conversation before retrying.",
                         "label": "Generation failed",
                         "elapsed_ms": int((time.perf_counter() - started) * 1000),
                     },
@@ -7430,10 +7483,11 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         export_root = export_dir.resolve()
         if not export_dir.exists():
             raise HTTPException(status_code=404, detail="export not found")
-        target = (export_dir / filename).resolve()
+        safe_name = _safe_export_filename(filename)
+        target = (export_dir / safe_name).resolve()
         if not target.is_relative_to(export_root):
             raise HTTPException(status_code=400, detail="invalid filename")
-        if not target.exists():
+        if not target.is_file():
             raise HTTPException(status_code=404, detail="file not found")
         return FileResponse(target, filename=target.name)
 

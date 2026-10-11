@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+import pytest
+
+import scripts.capture_release_environment as capture
 
 from scripts.audit_release_candidate_checkout import _environment_errors
 from scripts.capture_release_environment import build_environment_receipt
@@ -81,3 +84,24 @@ def test_environment_receipt_binds_benchmark_analysis_dependencies(tmp_path) -> 
     dependency_paths = {str(item["path"]) for item in receipt["dependency_inputs"]}
     assert "requirements-benchmark-analysis.txt" in dependency_paths
     assert receipt["missing_dependency_inputs"] == []
+
+
+@pytest.mark.parametrize("exact_checkout", [True, False])
+def test_environment_git_identity_requires_the_requested_checkout_root(tmp_path, monkeypatch, exact_checkout):
+    calls = []
+    def command(root, *args):
+        calls.append(args)
+        if args == ("git", "rev-parse", "--show-toplevel"):
+            return 0, str(root if exact_checkout else root.parent)
+        if args == ("git", "rev-parse", "HEAD"):
+            return 0, "a" * 40
+        if args[0] == "git":
+            return 0, ""
+        return 0, "test-version"
+    monkeypatch.setattr(capture, "_command", command)
+    receipt = capture.build_environment_receipt(tmp_path)
+    assert receipt["source"]["git_available"] is exact_checkout
+    assert receipt["source"]["worktree_clean"] is exact_checkout
+    assert receipt["source"]["commit"] == ("a" * 40 if exact_checkout else None)
+    if not exact_checkout:
+        assert ("git", "rev-parse", "HEAD") not in calls

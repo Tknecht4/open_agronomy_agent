@@ -5,7 +5,7 @@ Open Agronomy Agent is a local-first evidence system. The language model is one 
 ## Request path
 
 1. The question frame binds the request to available field identity, crop, jurisdiction, time, management history, geometry, and observations.
-2. The router selects retrieval and tool capabilities. Missing context remains explicit rather than being converted to a default value.
+2. The router classifies intent, risk, and query shape. Registry-driven planners select retrieval and tool capabilities. Missing context remains explicit rather than being converted to a default value.
 3. Corpus policy removes quarantined files before indexing. Retrieval then produces evidence capsules with source, role, scope, currency, applicability, and limitations.
 4. Structured tools add deterministic facts. Network adapters declare online/offline status and cache provenance. The calculator executor accepts typed inputs; a bounded planner may extract only explicit supported arithmetic requests and must not infer an agronomic target.
 5. The context packer gives the selected model a bounded evidence packet and the stable Open Agronomy kernel.

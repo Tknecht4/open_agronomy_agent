@@ -81,14 +81,16 @@ def build_environment_receipt(
     captured_at: str | None = None,
 ) -> dict[str, Any]:
     root = root.resolve()
-    commit_status, commit = _command(root, "git", "rev-parse", "HEAD")
-    status_code, status_text = _command(
-        root,
-        "git",
-        "status",
-        "--porcelain=v1",
-        "--untracked-files=all",
-    )
+    checkout_status, checkout_root = _command(root, "git", "rev-parse", "--show-toplevel")
+    if checkout_status == 0 and Path(checkout_root).resolve() == root:
+        commit_status, commit = _command(root, "git", "rev-parse", "HEAD")
+        status_code, status_text = _command(
+            root, "git", "status", "--porcelain=v1", "--untracked-files=all",
+        )
+    else:
+        # Git searches parent directories. A copied package or temporary tree
+        # nested in a repository must not inherit that ancestor's identity.
+        commit_status, commit, status_code, status_text = 1, "", 1, ""
     node_status, node_version = _command(root, "node", "--version")
     npm_status, npm_version = _command(root, "npm", "--version")
     dependency_inputs = dependency_input_receipts(root)

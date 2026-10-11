@@ -353,6 +353,8 @@
     "tests/test_judge_authorization.py",
     "tests/test_export_redaction.py",
     "tests/test_field_events.py",
+    "tests/test_field_event_idempotency.py",
+    "tests/test_safe_delivery_contracts.py",
     "tests/test_field_context_compiler.py",
     "tests/test_field_lan_launch.py",
     "tests/test_desktop_local_auth.py",

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-import { apiGet, apiPost } from './api'
+import { apiGet } from './api'
+import { FIELD_EVENT_OPERATION_CHANGED, pendingFieldEvents, submitFieldEvent, resolveRejectedFieldEvent, legacyFieldEventWarning, canonicalFieldEvent, watchFieldEventConfirmation, type PendingFieldEvent } from './fieldEventSave'
 import { WorkspaceDialog } from './WorkspaceDialog'
 
 type SyncExport = {
@@ -199,6 +200,90 @@ const soilMetrics = [
   ['salinity_ec', 'Salinity / EC'],
 ] as const
 
+export function FieldEventRecoveryPanel({ fieldContextId, onRecovered }: {
+  fieldContextId: string; onRecovered: () => void | Promise<void>
+}) {
+  const [requests, setRequests] = useState<PendingFieldEvent[]>([])
+  const [status, setStatus] = useState('')
+  const [busy, setBusy] = useState(false)
+  const active = useRef(false)
+  const fieldIdRef = useRef(fieldContextId)
+  fieldIdRef.current = fieldContextId
+  useEffect(() => {
+    active.current = true
+    setStatus('')
+    setBusy(false)
+    setRequests([])
+    let generation = 0
+    const refresh = () => {
+      const current = ++generation
+      setRequests([]) // Do not leave another account's requests visible during scope resolution.
+      void pendingFieldEvents(fieldContextId).then(rows => {
+        if (!active.current || current !== generation) return
+        setRequests(rows)
+        if (legacyFieldEventWarning(fieldContextId)) setStatus('Older unscoped requests are preserved. Review them manually in the original account; they cannot be replayed safely.')
+      }).catch(error => {
+        if (active.current && current === generation) setStatus(String((error as Error).message || error))
+      })
+    }
+    refresh()
+    window.addEventListener(FIELD_EVENT_OPERATION_CHANGED, refresh)
+    window.addEventListener('storage', refresh)
+    window.addEventListener('focus', refresh)
+    return () => {
+      active.current = false; generation++
+      window.removeEventListener(FIELD_EVENT_OPERATION_CHANGED, refresh)
+      window.removeEventListener('storage', refresh)
+      window.removeEventListener('focus', refresh)
+    }
+  }, [fieldContextId])
+  const retry = async (request: PendingFieldEvent) => {
+    const targetFieldId = fieldContextId
+    setBusy(true)
+    setRequests([])
+    setStatus('Checking the saved record request.')
+    try {
+      await submitFieldEvent(fieldContextId, request.payload, { operation: request })
+      if (!active.current || fieldIdRef.current !== targetFieldId) return
+      setStatus('Saved record confirmed.')
+      try { await onRecovered() } catch {
+        if (active.current && fieldIdRef.current === targetFieldId) setStatus('Saved record confirmed; refresh the timeline to view it.')
+      }
+    } catch (error) {
+      if (active.current && fieldIdRef.current === targetFieldId) {
+        setStatus(`Save not confirmed: ${String((error as Error).message || error)}`)
+        try { const rows = await pendingFieldEvents(targetFieldId); if (active.current && fieldIdRef.current === targetFieldId) setRequests(rows) } catch { /* Keep scope errors visible without showing another account's queue. */ }
+      }
+    } finally { if (active.current && fieldIdRef.current === targetFieldId) setBusy(false) }
+  }
+  const resolve = async (request: PendingFieldEvent) => {
+    const targetFieldId = fieldContextId
+    setBusy(true); setRequests([])
+    try {
+      await resolveRejectedFieldEvent(request)
+      if (active.current && fieldIdRef.current === targetFieldId) setStatus('Rejected request resolved. Review and correct the entry before starting a new save.')
+    } catch (error) {
+      if (active.current && fieldIdRef.current === targetFieldId) {
+        setStatus(String((error as Error).message || error))
+        try { const rows = await pendingFieldEvents(targetFieldId); if (active.current && fieldIdRef.current === targetFieldId) setRequests(rows) } catch { /* Preserve scope errors without exposing another account's queue. */ }
+      }
+    } finally { if (active.current && fieldIdRef.current === targetFieldId) setBusy(false) }
+  }
+
+  if (!requests.length && !status) return null
+  return <section aria-label="Unconfirmed field records">
+    {requests.length ? <><p>These record requests have no confirmed receipt on this device. Check the timeline, or retry the exact saved request.</p>
+      <ul>{requests.map(request => <li key={request.operationId}>
+        <span>{String((request.payload.payload as Record<string, unknown> | undefined)?.summary || 'Field record')}</span>
+        {request.state === 'rejected' ? <>
+          <span> Validation rejected this first attempt; no record was accepted.</span>
+          <button type="button" disabled={busy} onClick={() => void resolve(request)}>Resolve rejected request</button>
+        </> : <button type="button" disabled={busy} onClick={() => void retry(request)}>Retry saved record</button>}
+      </li>)}</ul></> : null}
+    {status ? <p role="status">{status}</p> : null}
+  </section>
+}
+
 export function SoilTestEntryPanel({
   fieldContextId,
   onSaved,
@@ -231,6 +316,20 @@ export function SoilTestEntryPanel({
     return () => { mountedRef.current = false }
   }, [])
 
+  const operationRef = useRef<PendingFieldEvent>()
+  const operationDraftRef = useRef('')
+  const draftRef = useRef('')
+  draftRef.current = canonicalFieldEvent([sampleId, metric, value, unit, method, depthTop, depthBottom, depthUnit, spatialScope, sourceQuality, labName, occurredAt, originalReportRetained])
+  useEffect(() => watchFieldEventConfirmation(() => operationRef.current, operation => {
+    if (pendingRef.current) return
+    operationRef.current = undefined
+    if (fieldIdRef.current !== operation.scope.field_context_id) return
+    const unchanged = draftRef.current === operationDraftRef.current
+    if (unchanged) setValue('')
+    setSaveStatus(unchanged ? 'Saved. Keep the original report if available.' : 'The previous soil result was confirmed. Review this edited entry before saving it as a new result.')
+    void Promise.resolve(onSaved()).catch(() => setSaveStatus(unchanged ? 'Saved. Refresh the timeline to view it.' : 'The previous result was confirmed. Refresh the timeline; this edited entry remains unsaved.'))
+  }, () => { operationRef.current = undefined; setSaveStatus('Rejected request resolved. Correct the entry before saving again.') }), [fieldContextId, onSaved])
+
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (pendingRef.current || !fieldContextId) return
@@ -240,7 +339,7 @@ export function SoilTestEntryPanel({
     const selectedMetric = soilMetrics.find(([id]) => id === metric)
     setSaveStatus('Saving soil test. Closing this window leaves the request running; check the timeline before trying again.')
     try {
-      await apiPost(`/api/demo/fields/${encodeURIComponent(targetFieldId)}/events`, {
+      const payload: Record<string, unknown> = {
         event_type: 'sample',
         ...(occurredAt ? { occurred_at: new Date(occurredAt).toISOString() } : {}),
         payload: {
@@ -271,17 +370,26 @@ export function SoilTestEntryPanel({
           ...(occurredAt ? { sampled_at: new Date(occurredAt).toISOString() } : {}),
           original_report_retained: originalReportRetained,
         },
+      }
+      const previous = operationRef.current
+      await submitFieldEvent(targetFieldId, payload, {
+        ...(previous?.payloadKey === canonicalFieldEvent(payload) ? { operation: previous } : {}),
+        onPrepared: operation => { operationRef.current = operation; operationDraftRef.current = draftRef.current },
       })
       if (!mountedRef.current || fieldIdRef.current !== targetFieldId) return
+      operationRef.current = undefined
       setValue('')
       setSaveStatus('Saved. Keep the original report if available.')
-      await onSaved()
+      try { await onSaved() } catch {
+        setSaveStatus('Saved. Timeline refresh failed; refresh the field records before adding another result.')
+      }
     } catch (error) {
       if (mountedRef.current && fieldIdRef.current === targetFieldId) {
         setSaveStatus(`Save not confirmed: ${String((error as Error).message || error)}. The server may have saved it; check the timeline before trying again.`)
       }
     } finally {
       pendingRef.current = false
+      window.dispatchEvent(new Event(FIELD_EVENT_OPERATION_CHANGED))
       if (mountedRef.current && fieldIdRef.current === targetFieldId) setPending(false)
     }
   }
