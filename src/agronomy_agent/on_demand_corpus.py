@@ -27,12 +27,19 @@ _EXPLICIT_US_NRCS_RE = re.compile(
     r"ecological-site)\b",
     re.IGNORECASE,
 )
-# MLRA identifiers are zero-padded three-digit codes followed by a letter.
-# Capture the entire identifier: dropping a leading zero turns ``001X`` into
-# ``01X`` and silently expands an explicit request to the whole release.
-_MLRA_RE = re.compile(r"\b(?:mlra\s*)?(\d{3}[a-z])\b", re.IGNORECASE)
+# Publisher prose uses ``63B`` and ``1`` while the archive uses ``063B``
+# and ``001X``. Only a named MLRA may omit its suffix; ordinary numbers in a
+# question must not become source selectors.
+_MLRA_RE = re.compile(r"\b(\d{1,3})([a-z])\b", re.IGNORECASE)
+_NAMED_MLRA_RE = re.compile(
+    r"\b(?:mlra|major land resource area)\s*(\d{1,3})([a-z])?\b",
+    re.IGNORECASE,
+)
 _CANADIAN_DECISIVE_REQUEST_RE = re.compile(
-    r"\b(?:canada|canadian|alberta|saskatchewan|manitoba|ontario|quebec|british columbia)\b.*\b(?:legal|label|rate|threshold|prescription|calibration)\b|\b(?:legal|label|rate|threshold|prescription|calibration)\b.*\b(?:canada|canadian|alberta|saskatchewan|manitoba|ontario|quebec|british columbia)\b",
+    r"\b(?:canada|canadian|alberta|saskatchewan|manitoba|ontario|quebec|british columbia)\b"
+    r"[\s\S]*\b(?:legal|labels?|rates?|thresholds?|prescriptions?|calibrations?)\b|"
+    r"\b(?:legal|labels?|rates?|thresholds?|prescriptions?|calibrations?)\b[\s\S]*"
+    r"\b(?:canada|canadian|alberta|saskatchewan|manitoba|ontario|quebec|british columbia)\b",
     re.IGNORECASE,
 )
 
@@ -43,6 +50,14 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _requested_mlras(question: str) -> set[str]:
+    return {
+        f"{int(match.group(1)):03d}{(match.group(2) or 'X').upper()}"
+        for pattern in (_MLRA_RE, _NAMED_MLRA_RE)
+        for match in pattern.finditer(question)
+    }
 
 
 @dataclass
@@ -132,18 +147,17 @@ class OnDemandCorpusRelease:
         # question also mentions USDA or an ecological-site description.
         return (
             bool(_EXPLICIT_US_NRCS_RE.search(question))
-            and bool(_MLRA_RE.search(question))
+            and bool(_requested_mlras(question))
             and not bool(_CANADIAN_DECISIVE_REQUEST_RE.search(question))
         )
 
     def _selected_relative_shards(self, question: str) -> tuple[str, ...]:
         by_mlra = self._manifest.get("mlra_shards") or {}
         selected: set[str] = set()
-        for match in _MLRA_RE.finditer(question):
-            selected.update(str(value) for value in by_mlra.get(match.group(1).upper(), []) if value)
-        if selected:
-            return tuple(sorted(selected))
-        return tuple(str(item["path"]) for item in self._manifest.get("shards") or [])
+        for mlra in _requested_mlras(question):
+            selected.update(str(value) for value in by_mlra.get(mlra, []) if value)
+        # Missing archive coverage is not permission to search every region.
+        return tuple(sorted(selected))
 
     def _documents_for(self, relative_shards: tuple[str, ...]) -> list[dict[str, Any]]:
         cached = self._documents.get(relative_shards)
@@ -201,11 +215,14 @@ class OnDemandCorpusRelease:
     def search(self, question: str, **kwargs: Any) -> list[RetrievedDoc]:
         if not self.activates_for(question):
             return []
+        relative_shards = self._selected_relative_shards(question)
+        if not relative_shards:
+            return []
         top_k = int(kwargs.get("top_k", 5))
         permitted_policies = {str(value) for value in kwargs.get("retrieval_policies") or ()}
-        documents = self._documents_for(self._selected_relative_shards(question))
-        statistics = self._statistics_for(self._selected_relative_shards(question))
-        requested_mlras = {match.group(1).upper() for match in _MLRA_RE.finditer(question)}
+        documents = self._documents_for(relative_shards)
+        statistics = self._statistics_for(relative_shards)
+        requested_mlras = _requested_mlras(question)
         query_tokens = tokenize(" ".join([question, *[str(value) for value in kwargs.get("query_expansion") or ()]]))
         if not query_tokens:
             return []
@@ -213,7 +230,11 @@ class OnDemandCorpusRelease:
         eligible = [
             record
             for record in documents
-            if not permitted_policies or str(record.get("retrieval_policy") or "context_only") in permitted_policies
+            if str(record.get("mlra") or "").upper() in requested_mlras
+            and (
+                not permitted_policies
+                or str(record.get("retrieval_policy") or "context_only") in permitted_policies
+            )
         ]
         if not eligible:
             return []
@@ -253,10 +274,8 @@ class OnDemandCorpusRelease:
                     continue
                 idf = math.log(1 + (total - doc_freq[token] + 0.5) / (doc_freq[token] + 0.5))
                 score += query_count * idf * (frequency * 2.2 / (frequency + norm))
-            # An explicit MLRA identifier is a source selector, not merely a
-            # lexical hint.  The selected shard can contain several MLRAs, so
-            # prefer records whose immutable metadata exactly matches the
-            # requested identifier before general BM25 ordering.
+            # Keep the existing source-selector score for eligible records;
+            # other regions in a shared shard were excluded before scoring.
             if requested_mlras and str(eligible[index].get("mlra") or "").upper() in requested_mlras:
                 score += 100.0
             if score > 0:

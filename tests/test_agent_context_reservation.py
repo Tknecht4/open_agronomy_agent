@@ -141,3 +141,29 @@ def test_explicit_nrcs_analogue_keeps_its_boundary_in_packed_context() -> None:
     assert context.packed_context is not None
     assert "US CROSS-BORDER ANALOGUE" in context.packed_context.text
     assert "never treat as Canadian field truth" in context.packed_context.text
+
+
+def test_unpadded_mlra_reaches_the_same_source_bound_product_context() -> None:
+    contexts = [
+        build_context(
+            f"Summarize NRCS MLRA {code} ecological site climate as historical regional context.",
+            rag_config=DEFAULT_RAG_CONFIG,
+            use_context_cache=False,
+            use_search_cache=False,
+        )
+        for code in ("63B", "063B")
+    ]
+    source_docs = [
+        [doc for doc in context.retrieved_docs if doc.source_id == "nrcs_edit_ecological_site_description_json"]
+        for context in contexts
+    ]
+    assert source_docs[0]
+    assert {doc.doc_id for doc in source_docs[0]} == {doc.doc_id for doc in source_docs[1]}
+    for docs in source_docs:
+        for doc in docs:
+            assert "/063B/" in doc.source
+            assert doc.source_locator is not None
+            assert doc.source_locator["raw_sha256"] == doc.raw_sha256
+            assert doc.source_locator["chunk_text_sha256"] == doc.chunk_sha256
+            assert doc.retrieval_policy == "context_only"
+            assert "cannot establish Canadian" in doc.applicability_boundary

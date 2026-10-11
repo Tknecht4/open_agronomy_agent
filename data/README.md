@@ -44,6 +44,12 @@ only for an explicit MLRA-scoped U.S. analogue request and cannot establish
 Canadian decisive authority. Community and spatial archive candidates remain
 outside runtime until source-specific review.
 
+Explicit requests accept publisher-style identifiers such as `MLRA 63B` or
+`MLRA 1`, normalized to archive keys `063B` and `001X`. Selection filters
+records inside each shared shard by the requested MLRA. Unknown identifiers
+return no NRCS documents without loading the full archive. These records keep
+their historical snapshot, source hashes and context-only authority.
+
 The separately built `offline_agronomy/production_foundations/v1/` candidate adds
 nine project-authored, source-linked cards on crop-establishment arithmetic,
 thermal time, nutrient planning, enterprise budgets, and farm finance. Its
