@@ -771,7 +771,10 @@
     "tests/test_release_eval_reanalysis.py",
     "docs/reviews/release-evaluation-gemma4-baseline-20260929.md",
     "docs/reviews/artifacts/release-evaluation-gemma4-baseline-20260929.json",
-    "requirements-release-evaluation-colab.txt"
+    "requirements-release-evaluation-colab.txt",
+    "data/manifests/cscap_arl_intake_v1.json",
+    "scripts/prepare_cscap_intake.py",
+    "tests/test_cscap_intake.py"
   ],
   "trees": [
     "src",
