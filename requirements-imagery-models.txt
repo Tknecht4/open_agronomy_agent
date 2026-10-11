@@ -18,7 +18,7 @@ huggingface_hub==2.0.0
 safetensors==0.8.0
 PyYAML==6.0.3
 filelock==4.0.4
-fsspec==2026.9.0
+fsspec==2026.6.0
 Jinja2==3.1.6
 networkx==3.7
 sympy==1.14.0
