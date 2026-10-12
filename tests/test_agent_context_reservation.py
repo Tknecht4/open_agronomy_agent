@@ -1,10 +1,18 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
+import pytest
+
 from agronomy_agent.agent import (
+    _format_no_primary_context,
+    _non_decisive_evidence_hold,
     _reserve_named_crop_health_specification,
     build_context,
 )
 from agronomy_agent.agno_runtime.local_index import RetrievedDoc
+from agronomy_agent.canada_sources import apply_soileri_coverage_disclosure, build_soileri_source_coverage
+from agronomy_agent.query_context import SOILERI_SOURCE_ID, analyze_query_context, filter_docs_for_query
 from agronomy_agent.runtime_profiles import DEFAULT_RAG_CONFIG
 
 
@@ -22,6 +30,100 @@ def _doc(doc_id: str, *, source_id: str = "other") -> RetrievedDoc:
         source_id=source_id,
         retrieval_policy="context_only",
     )
+
+
+SOILERI_QUESTION = "Does the AAFC Soil Erosion Risk 2021 map class establish the erosion happening in my field?"
+
+
+def _regional_fixture(source_id: str, text: str) -> RetrievedDoc:
+    return replace(_doc(source_id, source_id=source_id), text=text, jurisdictions=("Canada",), crops=("all",))
+
+
+@pytest.mark.parametrize("source_id", ["ca_aafc_crop_health_indices_specification", "ca_aafc_crop_health_indices_specification_fr"])
+def test_soileri_does_not_substitute_crop_health_specification(source_id):
+    product = _regional_fixture(source_id, "Crop Health Indices are national regional soil moisture and climate context.")
+    result = filter_docs_for_query([product], analyze_query_context(SOILERI_QUESTION, {"country": "Canada"}))
+    assert not result.docs
+    assert result.dropped == ({"doc_id": source_id, "reason": "named_regional_product_mismatch"},)
+    coverage = build_soileri_source_coverage(SOILERI_QUESTION, result.docs, source_indexed=False)
+    assert coverage["status"] == "not_indexed" and not coverage["retrieved_doc_ids"]
+
+
+@pytest.mark.parametrize("text", ["Erosion can leave rills and displaced sediment; inspect field evidence.",
+                                 "Wind-erodible sandy soils require field assessment; keep general screening separate from field observations."])
+def test_soileri_keeps_general_erosion_context_and_reserves_matching_source(text):
+    general = _regional_fixture("general-erosion-context", text)
+    product = _regional_fixture(SOILERI_SOURCE_ID, "Synthetic named-source fixture: documented regional model, not a field observation.")
+    result = filter_docs_for_query([general, product], analyze_query_context(SOILERI_QUESTION, {"country": "Canada"}))
+    assert list(result.docs) == [general, product]
+    reserved = _reserve_named_crop_health_specification(SOILERI_QUESTION, list(result.docs), [general], limit=2)
+    assert reserved == [product, general]
+    coverage = build_soileri_source_coverage(SOILERI_QUESTION, reserved, source_indexed=True)
+    assert coverage["status"] == "retrieved"
+    assert coverage["retrieved_doc_ids"] == [product.doc_id]
+    assert coverage["general_context_doc_ids"] == [general.doc_id]
+    assert not coverage["prompt_block"]
+    assert apply_soileri_coverage_disclosure("Qualified explanation.", question=SOILERI_QUESTION, coverage=coverage) == "Qualified explanation."
+
+
+@pytest.mark.parametrize("indexed,status", [(False, "not_indexed"), (True, "not_retrieved")])
+def test_missing_soileri_coverage_preserves_general_answer_and_is_idempotent(indexed, status):
+    general = _regional_fixture("general-erosion-context", "General erosion context: inspect rills and sediment.")
+    coverage = build_soileri_source_coverage(SOILERI_QUESTION, [general], source_indexed=indexed)
+    assert coverage["status"] == status and coverage["general_context_doc_ids"] == [general.doc_id]
+    text = "Inspect rills and sediment as field observations; a regional map alone is not a field measurement."
+    disclosed = apply_soileri_coverage_disclosure(text, question=SOILERI_QUESTION, coverage=coverage)
+    assert disclosed.startswith(text)
+    assert "cannot verify its class thresholds or trend definitions" in disclosed
+    assert "General erosion context is separate" in disclosed
+    assert apply_soileri_coverage_disclosure(disclosed, question=SOILERI_QUESTION, coverage=coverage) == disclosed
+
+
+def test_current_product_soileri_gap_excludes_wrong_source_without_refusal():
+    from agronomy_agent.server.services.answer_renderer import render_structured_answer
+    context = build_context(SOILERI_QUESTION, rag_config=DEFAULT_RAG_CONFIG, field_context={"country": "Canada", "region_text": "Canada"},
+                            use_context_cache=False, use_search_cache=False)
+    coverage = context.runtime_metadata["named_regional_product_coverage"]
+    assert coverage["status"] == "not_indexed" and coverage["source_id"] == SOILERI_SOURCE_ID
+    assert context.retrieved_docs and coverage["general_context_doc_ids"]
+    assert all("crop_health_indices_specification" not in doc.source_id for doc in context.retrieved_docs)
+    assert any(row["reason"] == "named_regional_product_mismatch" and "crop_health_indices_specification" in row["doc_id"]
+               for row in context.runtime_metadata["evidence_selection_trace"]["candidate_dispositions"])
+    assert coverage["prompt_block"] in context.packed_context.text
+    assert "general erosion context" in context.packed_context.text
+    assert coverage["prompt_block"] in _format_no_primary_context(context)
+    assert _non_decisive_evidence_hold(context, question=SOILERI_QUESTION) is None
+    answer = "Inspect rills and sediment as field observations; the regional map alone cannot establish current field erosion."
+    rendered = render_structured_answer(answer, question=SOILERI_QUESTION,
+        trace={"metadata": {"answer_policy_profile": "general_agronomy", "agno_runtime": context.runtime_metadata}})
+    assert "Inspect rills and sediment" in rendered.answer
+    assert "reviewed SoilERI specification is unavailable" in rendered.answer
+    assert "cannot verify its class thresholds or trend definitions" in rendered.answer
+
+
+def test_ordinary_crop_health_query_retrieval_and_answer_are_unchanged():
+    question = "Are AAFC crop health grids station-driven regional estimates or field measurements?"
+    context = build_context(question, rag_config=DEFAULT_RAG_CONFIG, use_context_cache=False, use_search_cache=False)
+    assert context.retrieved_docs[0].source_id == "ca_aafc_crop_health_indices_specification"
+    assert context.runtime_metadata["named_regional_product_doc_ids"]
+    assert "named_regional_product_coverage" not in context.runtime_metadata
+    assert build_soileri_source_coverage(question, context.retrieved_docs, source_indexed=True) is None
+    assert apply_soileri_coverage_disclosure("Qualified crop-health explanation.", question=question, coverage=None) == "Qualified crop-health explanation."
+
+
+def test_combined_manitoba_and_soileri_coverage_preserves_both_complete_boundaries():
+    context = build_context(SOILERI_QUESTION, rag_config=DEFAULT_RAG_CONFIG,
+                            field_context={"country": "Canada", "province_state": "Manitoba", "region_text": "Manitoba"},
+                            use_context_cache=False, use_search_cache=False)
+    sections = [s for s in context.packed_context.sections if s.slot == "canadian_jurisdiction_evidence_boundary"]
+    assert len(sections) == 1 and sections[0].token_estimate <= 190
+    text = sections[0].text
+    for essential in ("Manitoba", "current province-specific guidance", "other provinces", "current calibration",
+                      "legal requirements", "provincial authority", "PMRA labels", "SoilERI specification is unavailable",
+                      "class thresholds", "trend definitions", "user-reported", "qualified explanations", "do not infer field truth."):
+        assert essential in text
+    assert context.runtime_metadata["canadian_coverage_boundaries"][0]["prompt_block"]
+    assert context.runtime_metadata["named_regional_product_coverage"]["prompt_block"] in text
 
 
 def test_named_crop_health_specification_survives_final_context_cutoff() -> None:

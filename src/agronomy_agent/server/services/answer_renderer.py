@@ -6,7 +6,7 @@ from html import escape
 from typing import Any
 
 from agronomy_agent.answer_safety import normalize_general_answer, normalize_public_answer
-from agronomy_agent.canada_sources import apply_canadian_coverage_disclosure
+from agronomy_agent.canada_sources import apply_canadian_coverage_disclosure, apply_soileri_coverage_disclosure
 from agronomy_agent.map_component_interpretation import is_map_component_explanation_question
 from agronomy_agent.server.services.leak_guard import detect_prompt_leaks
 
@@ -87,6 +87,10 @@ def render_structured_answer(
         clean_answer,
         question=question,
         boundaries=coverage_boundaries,
+    )
+    clean_answer = apply_soileri_coverage_disclosure(
+        clean_answer, question=question,
+        coverage=metadata.get("named_regional_product_coverage") or agno_runtime.get("named_regional_product_coverage"),
     )
     clean_answer = _apply_evidence_conflict_disclosure(
         clean_answer,
