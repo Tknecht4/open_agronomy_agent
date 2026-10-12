@@ -153,6 +153,8 @@ def select_query(question: str, field_context: Mapping[str, Any] | None):
     inputs = {"receipt": dict(receipt), "filename": imported["filename"],
               "column": column.get("column") if column else None,
               "snapshot_sha256": snapshot.get("snapshot_sha256")}
+    if operation == "rows":
+        inputs["columns"] = columns or imported.get("columns", [])
     return operation, inputs, (), None
 
 
@@ -164,8 +166,9 @@ def execute_field_query(operation: str, inputs: Mapping[str, Any]) -> dict[str, 
         raise ValueError("invalid field query receipt identity")
     receipt["receipt_sha256"] = claimed
     column = inputs.get("column")
-    if operation in {"mean", "sum", "unique"} and receipt.get("evidence_role") != "observation":
-        raise ValueError("non-observation query cannot supply observed evidence")
+    if operation in {"mean", "sum", "unique"} and (
+            receipt.get("source_evidence_role") != "observation" or receipt.get("evidence_role") != "interpretation"):
+        raise ValueError("derived query requires observation inputs and an interpretation result")
     if operation in {"mean", "sum"} and not _known_unit(receipt.get("unit")):
         raise ValueError("unknown measurement unit")
     if operation == "sum" and (receipt.get("value_scope") != "record" or not receipt.get("record_key")):
@@ -183,15 +186,24 @@ def execute_field_query(operation: str, inputs: Mapping[str, Any]) -> dict[str, 
                     f"invalid: {receipt['invalid_count']}.")
         if "numeric_count" in receipt:
             summary += f" Numeric records used: {receipt['numeric_count']}."
+        if receipt.get("label"):
+            summary += f" Source column: {_json(receipt['label'])}."
     elif operation == "rows":
         rows = [{"locator": r["locator"], "values": ({column: r["values"].get(column)} if column else r["values"])} for r in receipt["rows"]]
         summary = f"Imported records {('(partial preview)' if receipt.get('truncated') else '(complete selection)')}: {_json(rows)}."
         summary += f" Showing {len(rows)} of {receipt['selected_row_count']} records."
+        summary += " Column definitions: " + _json([
+            {key: spec.get(key) for key in ("column", "label", "unit", "evidence_role")}
+            for spec in inputs.get("columns", [])]) + "."
     else:
         raise ValueError("unsupported field query operation")
     limitations = tuple(str(item) for item in receipt.get("limitations", ()))
     if operation in {"mean", "sum"}:
         summary += f" Value scope: {receipt.get('value_scope', 'unknown')}; basis: {receipt.get('aggregation_basis', 'unavailable')}."
+    if operation != "rows":
+        summary += " Derived descriptive calculation; the result is an interpretation of the selected records."
+    if receipt.get("research_context"):
+        summary += f" Historical research context: {_json(receipt['research_context'])}; no current farmer-field measurement or prediction."
     if limitations:
         summary += " " + " ".join(limitations)
     locator_text = _json(receipt.get("locators", []))

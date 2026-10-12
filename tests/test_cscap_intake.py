@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import hashlib
 import io
 import json
@@ -11,7 +12,7 @@ from agronomy_agent.cscap_intake import DEFAULT_CONTRACT, prepare_cscap_intake
 from agronomy_agent.field_data import parse_table
 from agronomy_agent.paths import repo_path
 from agronomy_agent.server.storage.db import TraceStore
-from agronomy_agent.server.storage.field_data_store import commit_import, preview_import, query_import
+from agronomy_agent.server.storage.field_data_store import commit_import, field_data_snapshot, preview_import, query_import
 
 
 def _sha(content: bytes) -> str:
@@ -139,16 +140,21 @@ def test_source_native_rows_are_queryable_through_existing_product_import(source
     store = TraceStore(tmp_path / "source-study.sqlite3")
     try:
         field = store.create_phase4_field_context(workspace={"id": "workspace", "organization_id": "org"}, created_by_user_id="owner",
-                                                payload={"display_name": "CSCAP ARL archival research study", "region_text": "Wisconsin research site; no farmer-field identity or geometry"})
+                                                payload={"display_name": "CSCAP ARL archival research study", "region_text": "Wisconsin research site; no farmer-field identity or geometry",
+                                                         "metadata": {"research_context": mapping["research_context"]}})
         preview = preview_import(store, field, "owner", "cscap-arl.csv", (output / "cscap-arl.csv").read_bytes())
         committed = commit_import(store, field, preview["import_id"], mapping)
         assert committed["import"]["row_count"] == 2
         mean = query_import(store, field["id"], preview["import_id"], {"operation": "mean", "column": "corn_yield_kg_ha", "filters": {"year": "2011"}})
         assert mean["value"] == 0 and mean["numeric_count"] == 1
-        assert mean["unit"] == "kg/ha" and mean["evidence_role"] == "observation"
+        assert mean["unit"] == "kg/ha" and mean["evidence_role"] == "interpretation"
+        assert mean["source_evidence_role"] == "observation"
+        assert mean["label"] == "Corn grain yield at 15.5% MB"
+        assert mean["research_context"] == mapping["research_context"]
         assert mean["aggregation_basis"] == "unweighted_selected_record_mean"
         missing = query_import(store, field["id"], preview["import_id"], {"operation": "mean", "column": "soybean_yield_kg_ha", "filters": {"year": "2012"}})
         assert missing["value"] == 300 and missing["numeric_count"] == 1 and missing["missing_count"] == 0
+        assert missing["label"] == "Soybean grain yield at 13.0% MB"
         assert receipt["raw_sha256"] in mean["source"]["citation"]
         assert mean["source"]["license"] == "CC0-1.0"
         rows = query_import(store, field["id"], preview["import_id"], {"operation": "rows", "filters": {"plot_id": "101"}, "limit": 10})
@@ -157,11 +163,148 @@ def test_source_native_rows_are_queryable_through_existing_product_import(source
         other_plot = query_import(store, field["id"], preview["import_id"], {"operation": "rows", "filters": {"plot_id": "104"}, "limit": 10})
         assert other_plot["rows"] == []
         second_field = store.create_phase4_field_context(workspace={"id": "workspace", "organization_id": "org"}, created_by_user_id="owner",
-                                                       payload={"display_name": "CSCAP ARL source plot 104", "region_text": "Historical study only"})
+                                                       payload={"display_name": "CSCAP ARL source plot 104", "region_text": "Historical study only",
+                                                                "metadata": {"research_context": {**mapping["research_context"], "plot_id": "104"}}})
         second_preview = preview_import(store, second_field, "owner", "cscap-arl.csv", (output / "cscap-arl.csv").read_bytes())
         second_mapping = json.loads((output / "cscap-arl-104.mapping.json").read_text())
         commit_import(store, second_field, second_preview["import_id"], second_mapping)
         unknown = query_import(store, second_field["id"], second_preview["import_id"], {"operation": "mean", "column": "soybean_yield_kg_ha", "filters": {"year": "2012"}})
         assert unknown["value"] is None and unknown["numeric_count"] == 0 and unknown["missing_count"] == 1
+        assert unknown["source_evidence_role"] == "observation" and unknown["evidence_role"] == "interpretation"
+        from agronomy_agent.tool_planner import plan_and_execute_tools
+        context = {"field_data": field_data_snapshot(store, field["id"])}
+        for column, basis in (("corn_yield_kg_ha", "15.5% MB"), ("soybean_yield_kg_ha", "13.0% MB")):
+            plan, results = plan_and_execute_tools(f"What is the mean {column} in my uploaded data?", field_context=context)
+            assert plan.status == "ready"
+            assert basis in results[0].answer and "kg/ha" in results[0].answer
+            assert "Derived descriptive calculation" in results[0].answer
+            assert "Historical research context" in results[0].answer
+            assert "no current farmer-field measurement or prediction" in results[0].answer
+        _, rows_results = plan_and_execute_tools("Show rows from my uploaded data", field_context=context)
+        assert all(basis in rows_results[0].answer for basis in ("15.5% MB", "13.0% MB", "13.5% MB"))
+        store.update_phase4_field_context(field_context_id=field["id"], actor_user_id="owner", payload={"metadata": {}})
+        with pytest.raises(ValueError, match="persisted matching historical_research"):
+            query_import(store, field["id"], preview["import_id"], {"operation": "count"})
+    finally:
+        store._conn.close()
+
+
+@pytest.mark.parametrize("failure", ["absent", "name_only", "wrong_kind", "wrong_source", "wrong_site", "wrong_plot", "forged_caller", "missing_mapping"])
+def test_cscap_wrong_context_refuses_atomically(source, tmp_path, failure):
+    raw, contract_path, _, _, _, _ = source
+    output = tmp_path / "candidate"
+    prepare_cscap_intake(raw, output, contract_path=contract_path)
+    mapping = json.loads((output / "cscap-arl-101.mapping.json").read_text())
+    research = copy.deepcopy(mapping["research_context"])
+    metadata = {"research_context": research}
+    if failure in {"absent", "name_only", "forged_caller"}:
+        metadata = {}
+    elif failure.startswith("wrong_"):
+        research[{"wrong_kind": "kind", "wrong_source": "source_id", "wrong_site": "study_site", "wrong_plot": "plot_id"}[failure]] = "wrong"
+    elif failure == "missing_mapping":
+        mapping.pop("research_context")
+    store = TraceStore(tmp_path / "wrong-context.sqlite3")
+    try:
+        field = store.create_phase4_field_context(workspace={"id": "workspace", "organization_id": "org"}, created_by_user_id="owner",
+            payload={"display_name": "CSCAP historical research" if failure == "name_only" else "Current farmer field",
+                     "region_text": "Wisconsin", "metadata": metadata})
+        if failure == "forged_caller":
+            field["metadata"] = {"research_context": mapping["research_context"]}
+        preview = preview_import(store, field, "owner", "cscap-arl.csv", (output / "cscap-arl.csv").read_bytes())
+        with pytest.raises(ValueError, match="historical_research"):
+            commit_import(store, field, preview["import_id"], mapping)
+        assert store._conn.execute("SELECT COUNT(*) FROM field_data_rows").fetchone()[0] == 0
+        assert store._conn.execute("SELECT status FROM field_data_imports WHERE id = ?", (preview["import_id"],)).fetchone()[0] == "preview"
+    finally:
+        store._conn.close()
+
+
+def test_cscap_native_provenance_guard_survives_removed_source_metadata(tmp_path):
+    from agronomy_agent.server.storage.field_data_store import CSCAP_ROW_PREFIX
+    store = TraceStore(tmp_path / "native-provenance.sqlite3")
+    try:
+        field = store.create_phase4_field_context(workspace={"id": "workspace", "organization_id": "org"}, created_by_user_id="owner",
+                                                 payload={"display_name": "Current field", "region_text": "Wisconsin"})
+        content = b"sample,source_row\na," + CSCAP_ROW_PREFIX + b"Agronomic!row=4\n"
+        preview = preview_import(store, field, "owner", "renamed.csv", content)
+        mapping = {"filters": {}, "record_key": ["sample"], "source": {"title": "Renamed"}, "columns": [
+            {"column": "sample", "label": "Sample", "unit": None, "role": "identifier", "aggregation": "none", "evidence_role": "observation"}]}
+        with pytest.raises(ValueError, match="historical_research"):
+            commit_import(store, field, preview["import_id"], mapping)
+        assert store._conn.execute("SELECT COUNT(*) FROM field_data_rows").fetchone()[0] == 0
+    finally:
+        store._conn.close()
+
+
+@pytest.mark.parametrize("map_provenance", [False, True])
+@pytest.mark.parametrize("legacy", [False, True])
+def test_decoded_native_provenance_refuses_compressed_farmer_imports(tmp_path, monkeypatch, map_provenance, legacy):
+    from agronomy_agent.server.storage import field_data_store
+    openpyxl = pytest.importorskip("openpyxl")
+    book = openpyxl.Workbook()
+    book.active.append(["study_site", "plot_id", "year", "yield", "source_row"])
+    locator = field_data_store.CSCAP_ROW_PREFIX.decode() + "Agronomic!row=4"
+    book.active.append(["ARL", "101", "2011", 0, locator])
+    buffer = io.BytesIO()
+    book.save(buffer)
+    content = buffer.getvalue()
+    filename = "renamed.xlsx"
+    assert field_data_store.CSCAP_ROW_PREFIX not in content
+    assert parse_table(filename, content)["rows"][0]["values"]["source_row"] == locator
+    mapping = {"filters": {"study_site": "ARL", "plot_id": "101"}, "record_key": ["study_site", "plot_id", "year"],
+               "source": {"title": "Renamed table"}, "columns": [
+                   {"column": "yield", "label": "Yield", "unit": "kg/ha", "role": "measurement", "aggregation": "mean", "evidence_role": "observation"}]}
+    if map_provenance:
+        mapping["columns"].append({"column": "source_row", "label": "Locator", "unit": None, "role": "context", "aggregation": "none", "evidence_role": "observation"})
+    store = TraceStore(tmp_path / "compressed.sqlite3")
+    try:
+        field = store.create_phase4_field_context(workspace={"id": "workspace", "organization_id": "org"}, created_by_user_id="owner",
+                                                 payload={"display_name": "Current farmer field", "region_text": "Wisconsin"})
+        preview = preview_import(store, field, "owner", filename, content)
+        if legacy:
+            with monkeypatch.context() as old:
+                old.setattr(field_data_store, "_require_research_context", lambda *args: None)
+                manifest = commit_import(store, field, preview["import_id"], mapping)["import"]
+            with pytest.raises(ValueError, match="historical_research"):
+                query_import(store, field["id"], preview["import_id"], {"operation": "count"})
+            with pytest.raises(ValueError, match="historical_research"):
+                field_data_snapshot(store, field["id"])
+            assert field_data_store.list_imports(store, field["id"])["imports"] == [manifest]
+        else:
+            with pytest.raises(ValueError, match="historical_research"):
+                commit_import(store, field, preview["import_id"], mapping)
+            assert store._conn.execute("SELECT COUNT(*) FROM field_data_rows").fetchone()[0] == 0
+            assert store._conn.execute("SELECT status FROM field_data_imports WHERE id = ?", (preview["import_id"],)).fetchone()[0] == "preview"
+            context = {"kind": "historical_research", "source_id": field_data_store.CSCAP_SOURCE_ID, "study_site": "ARL", "plot_id": "101"}
+            store.update_phase4_field_context(field_context_id=field["id"], actor_user_id="owner", payload={"metadata": {"research_context": context}})
+            mapping["research_context"] = context
+            commit_import(store, field, preview["import_id"], mapping)
+            result = query_import(store, field["id"], preview["import_id"], {"operation": "mean", "column": "yield"})
+            assert result["value"] == 0 and result["research_context"] == context
+            assert result["source_evidence_role"] == "observation" and result["evidence_role"] == "interpretation"
+    finally:
+        store._conn.close()
+
+
+def test_legacy_committed_cscap_is_not_readable_without_research_context(source, tmp_path, monkeypatch):
+    from agronomy_agent.server.storage import field_data_store
+    raw, contract_path, _, _, _, _ = source
+    output = tmp_path / "candidate"
+    prepare_cscap_intake(raw, output, contract_path=contract_path)
+    mapping = json.loads((output / "cscap-arl-101.mapping.json").read_text())
+    mapping.pop("research_context")
+    store = TraceStore(tmp_path / "legacy.sqlite3")
+    try:
+        field = store.create_phase4_field_context(workspace={"id": "workspace", "organization_id": "org"}, created_by_user_id="owner",
+                                                 payload={"display_name": "Existing field", "region_text": "Wisconsin"})
+        preview = preview_import(store, field, "owner", "cscap-arl.csv", (output / "cscap-arl.csv").read_bytes())
+        # Emulate the previously accepted storage state, retaining its original
+        # source/mapping identities. The current query path must refuse it.
+        with monkeypatch.context() as legacy:
+            legacy.setattr(field_data_store, "_require_research_context", lambda *args: None)
+            manifest = commit_import(store, field, preview["import_id"], mapping)["import"]
+        with pytest.raises(ValueError, match="historical_research"):
+            query_import(store, field["id"], preview["import_id"], {"operation": "mean", "column": "corn_yield_kg_ha"})
+        assert field_data_store.list_imports(store, field["id"])["imports"] == [manifest]
     finally:
         store._conn.close()

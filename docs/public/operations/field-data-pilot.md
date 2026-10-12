@@ -29,6 +29,14 @@ values when the mapping permits them. Results preserve missing/invalid counts
 and source coordinates. Means are unweighted record means, not automatically
 area-weighted field yields. Formula cells and malformed tables fail validation.
 
+Query and compact snapshot receipts use v2: `evidence_role` describes the result,
+while `source_evidence_role` preserves the mapped column's original role.
+Counts, means, sums and distinct-value sets are descriptive interpretations;
+source rows retain their original roles. Column labels and units accompany
+results, including any source-declared crop moisture basis. Existing source and
+mapping identities remain unchanged for ordinary field imports; newly computed
+query receipts have new hashes. Retained v1 receipts remain historical evidence.
+
 Conversation supports narrow unfiltered requests with exact column names:
 
 ```text

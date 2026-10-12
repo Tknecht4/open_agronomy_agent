@@ -165,7 +165,13 @@ The 90 source plot-year records retain crop-specific moisture bases, missing
 cells, native treatment codes, source-row/column locators and exact byte hashes.
 Each mapping selects one experimental plot through the existing table import
 contract. Do not associate these archival study records with a farmer's current
-field. The bundle remains a review candidate: it adds no RAG chunks, active
+field. Commit and query require a dedicated field context whose persisted
+`metadata.research_context` exactly matches the prepared mapping's
+`research_context` (`kind: historical_research`, source ID, study site and plot
+ID). A research-sounding display name or request-only metadata is insufficient.
+Older prepared mappings require regeneration into a new review directory;
+preserve their original receipts. This guard does not authorize activation.
+The bundle remains a review candidate: it adds no RAG chunks, active
 profile, training material or evaluation gold. Scenario and trend evaluations
 need the evaluation owner's separate source/split review; repeated plots and
 seasons are dependent, and descriptive means do not establish treatment effects.
