@@ -1,0 +1,23 @@
+{
+  "schema_version": "open_agronomy_agent.offline_corpus_release.v1",
+  "store_id": "ask-science-context-v1",
+  "profile": "source-linked-context-only",
+  "shards": [
+    {
+      "path": "shards/foundations-0001.jsonl",
+      "rows": 2,
+      "bytes": 8288,
+      "sha256": "87fc517bbc441a867dda362bc204712033313b80055eb3b8801b7c6ec4a6c984",
+      "retrieval_policies": [
+        "context_only"
+      ]
+    }
+  ],
+  "row_count": 2,
+  "quality_ledger_path": "quality_ledger.json",
+  "quality_ledger_sha256": "eddfda3236a1d12c50a6f310a99fa408244810719e41538934b284aea0dfaa01",
+  "source_receipt_path": "source_receipt.json",
+  "source_receipt_sha256": "b8f6fbd2c00d6b94b487ab7c94f9feedccb961ae02bfbf58e5c058ed277f468b",
+  "authority_boundary": "Project-authored context only. No current price, field rate, legal authority, or local calibration.",
+  "store_sha256": "f9a651c4d6b1eb35af965d0a6c9f2da2d12adc034c009e0eebfcfdc8e1d3d5a7"
+}

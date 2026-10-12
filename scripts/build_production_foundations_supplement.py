@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -30,23 +31,58 @@ from agronomy_agent.corpus_release import (  # noqa: E402
 DEFAULT_SEED = ROOT / "data/seed/production_foundations_v1.jsonl"
 DEFAULT_SOURCES = ROOT / "data/manifests/production_foundations_sources_v1.json"
 DEFAULT_OUTPUT = ROOT / "data/derived/rag/offline_agronomy/production_foundations/v1"
+SUPPORTED_STORES = {"production-foundations-v1", "production-foundations-method-v2", "ask-science-context-v1"}
 
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _validate_ask_science_registry(registry: dict) -> None:
+    """Require article-level rights and sealed text lineage for this candidate."""
+    def digest(value: object) -> bool:
+        return bool(re.fullmatch(r"[0-9a-f]{64}", str(value or "")))
+
+    if (registry.get("activation") != "none"
+        or registry.get("base_registry_path")
+        or not digest(registry.get("delivery_manifest_sha256"))):
+        raise ValueError("Ask Science requires non-active sealed delivery lineage")
+    for source in registry.get("sources") or []:
+        rights = source.get("license_evidence") or {}
+        locators = source.get("locators") or []
+        if (source.get("rights") != "CC-BY-4.0_article_only"
+            or rights.get("basis") != "native_article_permissions"
+            or rights.get("snapshot_sha256") != source.get("snapshot_sha256")
+            or rights.get("license_url") != "https://creativecommons.org/licenses/by/4.0/"
+            or not rights.get("xml_locator")
+            or not source.get("attribution")
+            or not source.get("authors")
+            or not source.get("changes")
+            or not source.get("doi")
+            or not digest(source.get("snapshot_sha256"))
+            or not digest(source.get("text_sha256"))
+            or not locators):
+            raise ValueError(f"Ask Science article rights or lineage incomplete: {source.get('source_id')}")
+        for locator in locators:
+            lines = locator.get("extracted_text_lines") or []
+            if (len(lines) != 2 or any(type(value) is not int for value in lines)
+                or not 0 < lines[0] <= lines[1] or not digest(locator.get("span_sha256"))):
+                raise ValueError("Ask Science source span locator incomplete")
+
+
 def build(seed_path: Path, sources_path: Path, output: Path, *, store_id: str = "production-foundations-v1", support_receipt_path: Path | None = None) -> dict:
     seed_path = seed_path.resolve()
     sources_path = sources_path.resolve()
     output = output.resolve()
-    if store_id not in {"production-foundations-v1", "production-foundations-method-v2"}:
+    if store_id not in SUPPORTED_STORES:
         raise ValueError("unsupported foundations store ID")
     if not seed_path.is_relative_to(ROOT) or not sources_path.is_relative_to(ROOT) or not output.is_relative_to(ROOT):
         raise ValueError("seed, source registry and output must be inside this repository")
     if output.exists() and any(output.iterdir()):
         raise FileExistsError(f"refusing to overwrite nonempty output: {output}")
     registry = json.loads(sources_path.read_text(encoding="utf-8"))
+    if store_id == "ask-science-context-v1":
+        _validate_ask_science_registry(registry)
     base_registry_value = registry.get("base_registry_path")
     if base_registry_value:
         base_registry_path = (ROOT / str(base_registry_value)).resolve()
@@ -88,6 +124,15 @@ def build(seed_path: Path, sources_path: Path, output: Path, *, store_id: str = 
             raise ValueError(f"invalid or duplicate seed record at line {index + 1}")
         if len(content) > 1800:
             raise ValueError(f"overlong summary card: {doc_id}")
+        if store_id == "ask-science-context-v1" and (
+            item.get("answer_role") != "research_context"
+            or item.get("admission_status") != "non_active_candidate"
+            or not item.get("application_boundary")
+            or not item.get("applicability_boundary")
+            or not item.get("required_context")
+            or item.get("evidence_roles") != ["source_observation", "study_model", "project_interpretation"]
+        ):
+            raise ValueError(f"Ask Science context boundary incomplete: {doc_id}")
         if support_hash is not None:
             scope = item.get("method_scope") or {}
             source_jurisdictions = [str(sources[source_id].get("jurisdiction") or "") for source_id in support if source_id in sources]

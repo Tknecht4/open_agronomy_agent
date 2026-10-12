@@ -1,0 +1,63 @@
+{
+  "schema_version": "open_agronomy_agent.corpus_quality_ledger.v1",
+  "rows": [
+    {
+      "doc_id": "ask_science_w2948372212",
+      "source_id": "W2948372212",
+      "corpus_path": "shards/foundations-0001.jsonl",
+      "text_sha256": "f68c43c5f4aba9ddeb357bb8ca1218994c1207548acccb3372bfc28b0a85ddf6",
+      "normalized_text_sha256": "91db574fd1688a5e58d8db8bc25808259288605b8cff708b68449cfb0f2a1cf8",
+      "source_locator_complete": true,
+      "source_locator_status": "complete",
+      "quality_ledger_complete": true,
+      "quality_ledger_status": "complete",
+      "source_locator_precision": "json_document_chunk",
+      "extraction_method": "checked_in_project_summary_record_v1",
+      "answer_evidence_disposition": "answer_evidence_candidate",
+      "duplicate_cluster": "91db574fd1688a5e58d8db8bc25808259288605b8cff708b68449cfb0f2a1cf8",
+      "duplicate_disposition": "unique_normalized_text",
+      "near_duplicate_cluster_id": "none",
+      "near_duplicate_disposition": "reviewed_small_card_set_not_clustered",
+      "jurisdiction": [
+        "Ontario"
+      ],
+      "authority_tier": "internal_synthesis",
+      "rights_status": "project_authored",
+      "language": "unknown",
+      "extraction_fidelity": "checked_in_project_summary_exact_hash_not_verbatim_external_source",
+      "temporal_scope": "",
+      "risk_class": "",
+      "retrieval_eligibility": "context_only"
+    },
+    {
+      "doc_id": "ask_science_w3184228112",
+      "source_id": "W3184228112",
+      "corpus_path": "shards/foundations-0001.jsonl",
+      "text_sha256": "6292ab22787d35c658a55b1da4812690e1928cb4ff62355b64baf25c7c272d44",
+      "normalized_text_sha256": "500613214bac732344766e9d16b708228a1f8db5c1121345bb8a05fc88d27ae5",
+      "source_locator_complete": true,
+      "source_locator_status": "complete",
+      "quality_ledger_complete": true,
+      "quality_ledger_status": "complete",
+      "source_locator_precision": "json_document_chunk",
+      "extraction_method": "checked_in_project_summary_record_v1",
+      "answer_evidence_disposition": "answer_evidence_candidate",
+      "duplicate_cluster": "500613214bac732344766e9d16b708228a1f8db5c1121345bb8a05fc88d27ae5",
+      "duplicate_disposition": "unique_normalized_text",
+      "near_duplicate_cluster_id": "none",
+      "near_duplicate_disposition": "reviewed_small_card_set_not_clustered",
+      "jurisdiction": [
+        "Canada",
+        "United States",
+        "Mexico"
+      ],
+      "authority_tier": "internal_synthesis",
+      "rights_status": "project_authored",
+      "language": "unknown",
+      "extraction_fidelity": "checked_in_project_summary_exact_hash_not_verbatim_external_source",
+      "temporal_scope": "",
+      "risk_class": "",
+      "retrieval_eligibility": "context_only"
+    }
+  ]
+}

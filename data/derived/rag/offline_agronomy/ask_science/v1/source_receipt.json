@@ -1,0 +1,13 @@
+{
+  "schema_version": "open_agronomy_agent.production_foundations_source_receipt.v1",
+  "seed_path": "data/seed/ask_science_context_v1.jsonl",
+  "seed_sha256": "42a309e9432e69d57631eb039974c7048e05b1bec238ad12538cea82ae3f423b",
+  "external_source_registry_path": "data/manifests/ask_science_sources_v1.json",
+  "external_source_registry_sha256": "602aede4dbeddd7bf81403097a78e02a74c051c273b8ee4af9d4ec08f95e9804",
+  "external_snapshots_in_public_package": false,
+  "source_ids": [
+    "W2948372212",
+    "W3184228112"
+  ],
+  "rights_boundary": "Only project-authored summaries are distributed; source-specific terms remain with the publishers."
+}
