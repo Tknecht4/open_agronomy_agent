@@ -58,8 +58,48 @@ def test_upload_review_commit_query_and_reload(runtime):
     result = client.post(f"{path}/{import_id}/query", headers=OWNER, json={"operation": "mean", "column": "yield_kg_ha"})
     assert result.status_code == 200, result.text
     assert result.json()["value"] == 3000
+    assert result.json()["source_evidence_role"] == "observation"
+    assert result.json()["evidence_role"] == "interpretation"
     assert [x["record"] for x in result.json()["locators"]] == [2, 4]
     assert "source_bytes" not in committed.text
+
+
+def test_http_cscap_requires_persisted_context_and_preserves_measurement_metadata(runtime):
+    client, field_id, settings = runtime
+    content = b"study_site,plot_id,year,corn_yield_kg_ha\nARL,101,2011,0\nARL,101,2012,\n"
+    research = {"kind": "historical_research", "source_id": "cscap_midwest_arl_2011_2015", "study_site": "ARL", "plot_id": "101"}
+    reviewed = {"filters": {"study_site": "ARL", "plot_id": "101"}, "record_key": ["study_site", "plot_id", "year"],
+                "research_context": research,
+                "source": {"title": "Synthetic CSCAP contract fixture", "citation": "DOI 10.15482/USDA.ADC/1411953"},
+                "columns": [
+                    {"column": name, "label": name, "unit": None, "role": "context", "aggregation": "none", "evidence_role": "observation"}
+                    for name in ("study_site", "plot_id", "year")] + [
+                    {"column": "corn_yield_kg_ha", "label": "Corn grain yield at 15.5% MB", "unit": "kg/ha", "role": "measurement",
+                     "aggregation": "mean", "evidence_role": "observation", "value_scope": "record"}]}
+    path = f"/api/demo/fields/{field_id}/data"
+    response = client.post(path + "/preview", headers=OWNER,
+        json={"filename": "synthetic-cscap.csv", "base64_content": base64.b64encode(content).decode()})
+    assert response.status_code == 201, response.text
+    import_id = response.json()["import_id"]
+    refused = client.post(f"{path}/{import_id}/commit", headers=OWNER, json={"mapping": reviewed})
+    assert refused.status_code == 422 and "historical_research" in refused.text
+    assert client.get(path, headers=OWNER).json() == {"imports": []}
+    store = TraceStore(settings.db_path)
+    try:
+        field = store.get_phase4_field_context(field_id)
+        store.update_phase4_field_context(field_context_id=field_id, actor_user_id=field["created_by_user_id"],
+            payload={"metadata": {**field["metadata"], "research_context": research}})
+    finally:
+        store._conn.close()
+    committed = client.post(f"{path}/{import_id}/commit", headers=OWNER, json={"mapping": reviewed})
+    assert committed.status_code == 200, committed.text
+    result = client.post(f"{path}/{import_id}/query", headers=OWNER, json={"operation": "mean", "column": "corn_yield_kg_ha"})
+    assert result.status_code == 200, result.text
+    receipt = result.json()
+    assert receipt["value"] == 0 and receipt["numeric_count"] == 1 and receipt["missing_count"] == 1
+    assert receipt["label"] == "Corn grain yield at 15.5% MB" and receipt["unit"] == "kg/ha"
+    assert receipt["source_evidence_role"] == "observation" and receipt["evidence_role"] == "interpretation"
+    assert receipt["research_context"] == research
 
 
 def test_every_field_route_checks_workspace_and_deleted_field(runtime):

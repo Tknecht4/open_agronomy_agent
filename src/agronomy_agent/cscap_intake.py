@@ -193,6 +193,7 @@ def prepare_cscap_intake(raw_root: Path, output_dir: Path, *, contract_path: Pat
         if Path(name).name != name:
             raise ValueError("unsafe source plot identifier")
         mapping = {"filters": {"study_site": site, "plot_id": plot_id}, "record_key": ["study_site", "plot_id", "year"], "columns": columns,
+                   "research_context": {"kind": "historical_research", "source_id": contract["source_id"], "study_site": site, "plot_id": plot_id},
                    "source": {"title": f"{contract['title']} :: source plot {plot_id}", "url": contract["url"], "license": contract["rights"]["identifier"],
                               "citation": f"{contract['rights']['attribution']} Raw SHA256={raw_sha}; source contract SHA256={_sha(contract_content)}. Historical repeated study plots; unweighted row means are not treatment effects or current farmer-field estimates. No geometry or field-operation joins."}}
         _, selected = _validate_mapping(mapping, parsed)

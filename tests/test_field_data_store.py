@@ -74,6 +74,11 @@ def test_preview_commit_query_reload_and_field_binding(tmp_path: Path) -> None:
     assert receipt["value"] == 3
     assert receipt["selected_row_count"] == 2
     assert receipt["unit"] == "kg/ha"
+    assert receipt["schema_version"] == "field_data.query.v2"
+    assert receipt["label"] == "Value"
+    assert receipt["source_evidence_role"] == "observation"
+    assert receipt["evidence_role"] == "interpretation"
+    assert manifest["columns"][1]["evidence_role"] == "observation"
     assert receipt["value_scope"] == "unknown"
     assert receipt["aggregation_basis"] == "unweighted_selected_record_mean"
     assert "not a field-season estimate" in receipt["limitations"][0]
@@ -86,6 +91,9 @@ def test_preview_commit_query_reload_and_field_binding(tmp_path: Path) -> None:
     assert snapshot["imports"][0]["summaries"][0]["value"] == 2
     assert snapshot["imports"][0]["summaries"][1]["value"] == 3
     compact = snapshot["imports"][0]["summaries"][1]
+    assert compact["source_evidence_role"] == "observation"
+    assert compact["evidence_role"] == "interpretation"
+    assert compact["label"] == "Value"
     assert compact["receipt_sha256"] == hashlib.sha256(
         json.dumps({key: value for key, value in compact.items() if key != "receipt_sha256"},
                    ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
@@ -274,3 +282,30 @@ def test_field_word_inside_measurement_name_is_not_identity_scope(tmp_path: Path
     mapping = _mapping()
     mapping["filters"] = {}
     assert commit_import(store, field, import_id, mapping)["import"]["row_count"] == 1
+
+
+@pytest.mark.parametrize("operation", ["mean", "sum", "unique", "count", "rows"])
+@pytest.mark.parametrize("source_role", ["observation", "model_output", "regional_prior", "interpretation"])
+def test_result_roles_preserve_source_roles_and_zero_missing(tmp_path, operation, source_role):
+    store = TraceStore(tmp_path / "roles.sqlite3")
+    try:
+        field = _field(store, "farmer-workspace")
+        content = b"Field,Sample,Value\nA,zero,0\nA,missing,\nA,positive,4\n"
+        imported = preview_import(store, field, "owner", "farmer-owned.csv", content)
+        mapping = _mapping(aggregation=operation if operation in {"mean", "sum", "unique"} else "mean", value_scope="record")
+        mapping["columns"][1]["evidence_role"] = source_role
+        manifest = commit_import(store, field, imported["import_id"], mapping)["import"]
+        result = query_import(store, field["id"], imported["import_id"], {"operation": operation, "column": "Value"})
+        assert result["source_evidence_role"] == source_role
+        assert result["evidence_role"] == (source_role if operation == "rows" else "interpretation")
+        assert manifest["columns"][1]["evidence_role"] == source_role
+        assert result["label"] == "Value" and result["unit"] == "kg/ha"
+        assert result["selected_row_count"] == 3 and result["missing_count"] == 1
+        if operation in {"mean", "sum"}:
+            assert result["numeric_count"] == 2
+            assert result["value"] == (2 if operation == "mean" else 4)
+        elif operation == "rows":
+            assert [r["values"]["Value"] for r in result["rows"]] == ["0", "", "4"]
+        assert "research_context" not in manifest
+    finally:
+        store._conn.close()
