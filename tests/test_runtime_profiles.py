@@ -26,6 +26,7 @@ ACTIVE_CORPORA = {
     "data/derived/rag/offline_agronomy/active/shards/project_context-0001.jsonl",
     "data/derived/rag/offline_agronomy/active/shards/project_decisive-0001.jsonl",
     "data/derived/rag/offline_agronomy/active/shards/soilwise_context-0001.jsonl",
+    "data/derived/rag/offline_agronomy/ask_science/v1/shards/foundations-0001.jsonl",
 }
 ACTIVE_GRAPHS = {
     "data/seed/agronomy_knowledge_graph.json",
@@ -70,15 +71,19 @@ def test_composite_policy_covers_active_and_on_demand_corpora() -> None:
         rag_config_path=ROOT / DEFAULT_RAG_CONFIG,
     )
     assert report["status"] == "pass", report["errors"]
-    assert report["configured_corpus_count"] == 56
+    assert report["configured_corpus_count"] == 57
 
 
 def test_portable_bundle_carries_the_active_store_proof_set() -> None:
-    release_root = ROOT / "data/derived/rag/offline_agronomy/active"
+    release_roots = (
+        ROOT / "data/derived/rag/offline_agronomy/active",
+        ROOT / "data/derived/rag/offline_agronomy/ask_science/v1",
+    )
     selected = select_curated_store_artifacts(ROOT, ROOT / DEFAULT_RAG_CONFIG)
 
     assert {path.relative_to(ROOT).as_posix() for path in selected} == {
         path.relative_to(ROOT).as_posix()
+        for release_root in release_roots
         for path in release_root.rglob("*")
         if path.is_file()
     }
@@ -91,7 +96,8 @@ def test_active_runtime_loads_source_exact_corpus_and_both_governed_graphs() -> 
         source_id = str(row.get("source_id") or row.get("source") or "")
         source_counts[source_id] = source_counts.get(source_id, 0) + 1
 
-    assert len(resources.retriever.docs) == 3086
+    assert len(resources.retriever.docs) == 3088
+    assert source_counts["W2948372212"] == source_counts["W3184228112"] == 1
     assert len(resources.graph.nodes) == 1794
     assert len(resources.graph.edges) == 1458
     assert source_counts["ab_nutrient_management_planning_guide_2008"] > 0

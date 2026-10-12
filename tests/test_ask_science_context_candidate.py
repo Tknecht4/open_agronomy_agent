@@ -1,4 +1,4 @@
-"""Deterministic contracts for two non-active, source-bound research cards."""
+"""Contracts for two source-bound cards with context-only admission."""
 
 from __future__ import annotations
 
@@ -120,12 +120,38 @@ def test_release_preserves_seed_and_external_article_provenance():
         assert quality_ledger_status(row)[0]
 
 
-def test_candidate_is_not_an_active_or_selectable_runtime_profile():
+def test_candidate_profile_remains_nonselectable_with_approved_context_admission():
     active = yaml.safe_load((ROOT / "configs/rag.yaml").read_text())
     controls = _json(ROOT / "configs/runtime_profiles.json")
     assert CONFIG not in json.dumps(controls)
-    assert STORE.as_posix() not in json.dumps(active)
-    assert not IDS.intersection({row.get("source_id") for row in load_agent_resources("configs/rag.yaml").retriever.docs})
+    assert (STORE / "shards/foundations-0001.jsonl").as_posix() in active["retrieval"]["corpus_paths"]
+    assert IDS.intersection({row.get("source_id") for row in load_agent_resources("configs/rag.yaml").retriever.docs}) == IDS
+    receipt_path = ROOT / "data/manifests/ask_science_context_admission_v1.json"
+    admission = _json(receipt_path)
+    assert admission["decision_state"] == "approved_context_only"
+    assert admission["activation_applied"] is True
+    assert admission["effective_eligibility"] == "context_only"
+    assert admission["external_publication_authorized"] is False
+    assert admission["raw_text_or_evaluation_admission"] is False
+    effective = _json(ROOT / "data/manifests/runtime_corpus_policy.json")
+    rule = next(row for row in effective["corpora"] if row.get("store_profile_id") == "ask-science-context-v1")
+    assert rule["runtime_eligibility"] == "context_only"
+    assert rule["source_ids"] == sorted(IDS)
+    assert rule["context_admission_receipt"]["sha256"] == hashlib.sha256(receipt_path.read_bytes()).hexdigest()
+    assert admission["candidate_store_file_sha256"] == hashlib.sha256((ROOT / STORE / "store_manifest.json").read_bytes()).hexdigest()
+    assert admission["candidate_store_content_sha256"] == _json(ROOT / STORE / "store_manifest.json")["store_sha256"]
+    assert admission["shard_sha256"] == rule["sha256"] == hashlib.sha256((ROOT / admission["shard"]).read_bytes()).hexdigest()
+    assert admission["source_registry_sha256"] == hashlib.sha256((ROOT / REGISTRY).read_bytes()).hexdigest()
+    registry = _json(ROOT / REGISTRY)
+    assert admission["source_summary_review_sha256"] == registry["independent_review"]["receipt_sha256"]
+    assert registry["activation"] == "none"
+    admitted = {row["source_id"]: row for row in admission["sources"]}
+    assert set(admitted) == IDS
+    for row in _rows(ROOT / SEED):
+        decision = admitted[row["source_id"]]
+        assert decision["summary_text_sha256"] == hashlib.sha256(row["text"].encode()).hexdigest()
+        assert decision["jurisdiction"] == row["jurisdiction"]
+        assert decision["applicability_boundary"] == row["applicability_boundary"]
     config = yaml.safe_load((ROOT / CONFIG).read_text())
     assert config["retrieval"]["corpus_policy_manifest"] == POLICY
     assert all(not path.startswith(("data/eval/", "docs/reviews/", "outputs/")) for path in config["retrieval"]["corpus_paths"])
@@ -141,17 +167,18 @@ def test_candidate_is_not_an_active_or_selectable_runtime_profile():
     ("For Canadian Daymet V4 gridded weather, what do station-year cross-validation errors tell us?", "ask_science_w3184228112"),
     ("How did the 2021 Daymet V4 study assess errors in Canadian daily precipitation estimates?", "ask_science_w3184228112"),
 ])
-def test_explicit_candidate_reaches_product_context_without_generation(question, doc_id):
-    context = build_context(question, rag_config=CONFIG, use_context_cache=False, use_search_cache=False)
+@pytest.mark.parametrize("rag_config", [CONFIG, "configs/rag.yaml"])
+def test_explicit_candidate_and_admitted_default_reach_context_without_generation(question, doc_id, rag_config):
+    context = build_context(question, rag_config=rag_config, use_context_cache=False, use_search_cache=False)
     doc = next(doc for doc in context.retrieved_docs if doc.doc_id == doc_id)
     assert doc.retrieval_policy == "context_only"
     assert doc.source_locator and doc.supporting_source_ids
     assert doc.applicability_boundary
 
 
-@pytest.fixture(scope="module")
-def candidate_docs():
-    resources = load_agent_resources(CONFIG)
+@pytest.fixture(scope="module", params=[CONFIG, "configs/rag.yaml"])
+def candidate_docs(request):
+    resources = load_agent_resources(request.param)
     return {doc.doc_id: doc for doc in resources.retriever.search("corn fungicide profitability Daymet V4 cross-validation", top_k=100) if doc.doc_id.startswith("ask_science_")}
 
 
@@ -174,8 +201,9 @@ def test_candidate_scope_is_narrower_than_preserved_trial_geography(candidate_do
     assert "Ontario-scoped candidate context only" in doc.applicability_boundary
 
 
-def test_context_cannot_authorize_a_pesticide_application(candidate_docs):
-    policy = load_corpus_policy(ROOT, POLICY)
+@pytest.mark.parametrize("policy_path", [POLICY, "data/manifests/runtime_corpus_policy.json"])
+def test_context_cannot_authorize_a_pesticide_application(candidate_docs, policy_path):
+    policy = load_corpus_policy(ROOT, policy_path)
     allowed, blocked = filter_docs_by_corpus_governance("What exact fungicide rate should I apply to Ontario corn tomorrow?", [candidate_docs["ask_science_w2948372212"]], policy)
     assert not allowed
     assert blocked[0]["reason"] == "not_decisive_for_high_consequence"

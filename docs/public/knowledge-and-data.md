@@ -34,7 +34,7 @@ from a current public checkout.
 
 ## Active governed runtime composition
 
-`configs/rag.yaml` composes five direct, explicitly hash-admitted corpus shards
+`configs/rag.yaml` composes six direct, explicitly hash-admitted corpus shards
 and two governed graphs totaling 1,794 nodes and 1,458 edges.
 `configs/runtime_profiles.json` is the product-selection registry; adding a
 YAML file does not activate it.
@@ -45,7 +45,17 @@ YAML file does not activate it.
 | SoilWise + KG | 1,783 RAG rows; 1,784 graph nodes | Context only | Soil-health concepts and relations, not a soil test |
 | U.S. NRCS ESD full pack | 218,258 | Explicit U.S./NRCS/MLRA requests only | Source-exact U.S. analogue context; never Canadian decisive authority |
 | Project policy | 42 | 36 context-only; 6 decisive project safety rows | Project-authored synthesis/policy, not independent agronomic evidence |
+| Ask Science summaries | 2 | Context only | Ontario hybrid-corn historical economics and historical Daymet V4 estimates; no current rate, label, forecast or field-measurement authority |
 | Project and SoilWise graphs | 1,794 nodes; 1,458 edges | Relationship context | A graph route is not a measurement, diagnosis, or source-authority promotion |
+
+The two Ask Science summaries are admitted by
+`data/manifests/ask_science_context_admission_v1.json`, which binds the source
+review, attribution, text and release hashes, and applicability limits.
+The original candidate registry, seed and nonselectable test profile retain
+their provenance. The other 18 knowledge cards and all 30 exposed scenario
+candidates remain outside this admission; raw papers and scenarios do not enter
+runtime retrieval or training. Retrieval checks do not establish answer-quality
+improvement or independent holdout performance.
 
 The master source-coverage receipt records source-declared crop, topic, and
 jurisdiction applicability. This is routing metadata, not proof of a field

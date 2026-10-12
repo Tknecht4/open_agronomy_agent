@@ -195,9 +195,12 @@ raw papers, datasets, figures and evaluation scenarios stay outside retrieval.
 The registry records the remaining 18 knowledge cards as deferred and the
 quality/access holds separately. Its 30 exposed scenarios remain development
 candidates: direct DOI separation does not establish trial independence or a
-holdout. Admission into active profiles and evaluation suites requires the
-respective owners' review; deterministic retrieval tests establish neither
-model performance nor agronomic validity.
+holdout. The versioned decision in
+`data/manifests/ask_science_context_admission_v1.json` admits only these two
+summaries as context in the default profile; the candidate registry, seed and
+test profile preserve their original provenance. Evaluation-suite admission
+still requires the evaluation owner's review. Deterministic retrieval tests
+establish neither model performance nor agronomic validity.
 
 `build_production_foundations_supplement.py` builds the nine-card, source-linked
 context release from `data/seed/production_foundations_v1.jsonl` and its

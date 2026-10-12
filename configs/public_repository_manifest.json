@@ -783,7 +783,8 @@
     "requirements-release-evaluation-colab.txt",
     "data/manifests/cscap_arl_intake_v1.json",
     "scripts/prepare_cscap_intake.py",
-    "tests/test_cscap_intake.py"
+    "tests/test_cscap_intake.py",
+    "data/manifests/ask_science_context_admission_v1.json"
   ],
   "trees": [
     "src",

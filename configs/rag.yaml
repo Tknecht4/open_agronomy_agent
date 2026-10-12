@@ -8,6 +8,7 @@ retrieval:
   - data/derived/rag/offline_agronomy/active/shards/project_context-0001.jsonl
   - data/derived/rag/offline_agronomy/active/shards/project_decisive-0001.jsonl
   - data/derived/rag/offline_agronomy/active/shards/soilwise_context-0001.jsonl
+  - data/derived/rag/offline_agronomy/ask_science/v1/shards/foundations-0001.jsonl
   graph_paths:
   - data/seed/agronomy_knowledge_graph.json
   - data/derived/rag/soilwise_knowledge_graph.json
@@ -66,3 +67,4 @@ release_profile:
   active_store: data/derived/rag/offline_agronomy/active/store_manifest.json
   us_reference_store: data/derived/rag/offline_agronomy/us_nrcs/store_manifest.json
   community_status: no_archive_community_source_has_a_public_runtime_rights_admission
+  production_foundations_store: data/derived/rag/offline_agronomy/ask_science/v1/store_manifest.json
