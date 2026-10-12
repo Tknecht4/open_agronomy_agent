@@ -6,8 +6,8 @@
     {
       "path": "shards/foundations-0001.jsonl",
       "rows": 2,
-      "bytes": 8288,
-      "sha256": "87fc517bbc441a867dda362bc204712033313b80055eb3b8801b7c6ec4a6c984",
+      "bytes": 8298,
+      "sha256": "b0e205b3491a5d79a1db5bebc26fec6b80bdc89cac0189c53f5690399fba99d2",
       "retrieval_policies": [
         "context_only"
       ]
@@ -17,7 +17,7 @@
   "quality_ledger_path": "quality_ledger.json",
   "quality_ledger_sha256": "eddfda3236a1d12c50a6f310a99fa408244810719e41538934b284aea0dfaa01",
   "source_receipt_path": "source_receipt.json",
-  "source_receipt_sha256": "b8f6fbd2c00d6b94b487ab7c94f9feedccb961ae02bfbf58e5c058ed277f468b",
+  "source_receipt_sha256": "e78c22dae6acaa8dcd05593905d45edddc4153e5ba885704c8b0a4bb5e655bdf",
   "authority_boundary": "Project-authored context only. No current price, field rate, legal authority, or local calibration.",
-  "store_sha256": "f9a651c4d6b1eb35af965d0a6c9f2da2d12adc034c009e0eebfcfdc8e1d3d5a7"
+  "store_sha256": "aabbf786f4d8b52d86dacd699e90477cca6078d9a8f14eb09871f0651624801e"
 }

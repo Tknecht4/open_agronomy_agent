@@ -139,6 +139,7 @@ def test_candidate_is_not_an_active_or_selectable_runtime_profile():
 @pytest.mark.parametrize("question,doc_id", [
     ("For Ontario hybrid corn, why does a positive fungicide yield response not guarantee profitability?", "ask_science_w2948372212"),
     ("For Canadian Daymet V4 gridded weather, what do station-year cross-validation errors tell us?", "ask_science_w3184228112"),
+    ("How did the 2021 Daymet V4 study assess errors in Canadian daily precipitation estimates?", "ask_science_w3184228112"),
 ])
 def test_explicit_candidate_reaches_product_context_without_generation(question, doc_id):
     context = build_context(question, rag_config=CONFIG, use_context_cache=False, use_search_cache=False)

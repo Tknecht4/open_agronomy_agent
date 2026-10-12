@@ -76,7 +76,7 @@
       "reason": "Source-linked, project-authored Ask Science research context; non-active candidate; no raw papers, data, scenarios or current authority.",
       "rights_status": "project_authored",
       "runtime_eligibility": "context_only",
-      "sha256": "87fc517bbc441a867dda362bc204712033313b80055eb3b8801b7c6ec4a6c984",
+      "sha256": "b0e205b3491a5d79a1db5bebc26fec6b80bdc89cac0189c53f5690399fba99d2",
       "shard_policy_role": [
         "context_only"
       ],
@@ -813,6 +813,6 @@
     "canadian_authority_priority": true,
     "community_sources_loaded": false,
     "production_foundations_store": "data/derived/rag/offline_agronomy/ask_science/v1/store_manifest.json",
-    "production_foundations_store_sha256": "f9a651c4d6b1eb35af965d0a6c9f2da2d12adc034c009e0eebfcfdc8e1d3d5a7"
+    "production_foundations_store_sha256": "aabbf786f4d8b52d86dacd699e90477cca6078d9a8f14eb09871f0651624801e"
   }
 }
