@@ -137,6 +137,23 @@ class ContextPacker:
             for item in coverage_boundaries
             if item.get("requires_prompt_boundary") and str(item.get("prompt_block") or "").strip()
         ]
+        named_coverage = (getattr(context, "runtime_metadata", {}) or {}).get("named_regional_product_coverage") or {}
+        if named_coverage.get("prompt_block"):
+            if coverage_blocks:
+                # Keep both complete boundaries in the existing 190-token slot;
+                # the original detailed provincial records remain in the trace.
+                jurisdictions = [str(item.get("jurisdiction") or "") for item in coverage_boundaries
+                                 if item.get("requires_prompt_boundary")]
+                names = ", ".join(jurisdictions[:3])
+                if len(jurisdictions) > 3:
+                    names += "; other requested provinces"
+                coverage_blocks = [
+                    f"Canadian provincial boundary: {names}. No current province-specific guidance was retrieved. "
+                    "Do not substitute other provinces for current calibration, rates, thresholds, timing, product choices "
+                    "or legal requirements. Qualified general help is allowed; verify current provincial authority "
+                    "and applicable PMRA labels."
+                ]
+            coverage_blocks.append(named_coverage["prompt_block"])
         if coverage_blocks:
             self._append(
                 sections,

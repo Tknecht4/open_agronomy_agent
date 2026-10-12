@@ -51,6 +51,12 @@ The supported cockpit composes the system through `server/app.py`. A normal answ
 - High-consequence outputs require current applicable authority; validation cannot promote weak evidence.
 - New versions append or supersede records; they do not rewrite historical traces.
 
+Explicit SoilERI interpretation keeps general erosion context separate from the
+named specification. `named_regional_product_coverage` records whether that
+source is indexed and retrieved; missing coverage is disclosed in the prompt
+and answer without blocking qualified general explanations. This record does
+not authorize source admission or promote general context into product facts.
+
 ## Extension procedure
 
 - Add a capability through the canonical capability contract, executor, evidence contribution, and parity tests; see [`tools/README.md`](tools/README.md).

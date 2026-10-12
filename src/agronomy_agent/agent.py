@@ -44,7 +44,10 @@ from agronomy_agent.answerability import (
     validated_deterministic_tool_execution,
 )
 from agronomy_agent.answer_verifier import context_evidence_text, verify_answer
-from agronomy_agent.canada_sources import apply_canadian_coverage_disclosure, build_canadian_coverage_boundary
+from agronomy_agent.canada_sources import (
+    apply_canadian_coverage_disclosure, apply_soileri_coverage_disclosure,
+    build_canadian_coverage_boundary, build_soileri_source_coverage,
+)
 from agronomy_agent.capability_registry import CAPABILITY_REGISTRY_SCHEMA_VERSION, capability_catalog, capability_registry
 from agronomy_agent.capability_planner import build_planner_input, plan_capabilities
 from agronomy_agent.codex_app_server import (
@@ -85,11 +88,13 @@ from agronomy_agent.private_knowledge import (
     merge_private_overlay_policy,
 )
 from agronomy_agent.query_context import (
+    SOILERI_SOURCE_ID,
     analyze_query_context,
     extract_field_graph_terms,
     filter_docs_for_query,
     filter_graph_hits_for_query,
     is_source_grounded_question,
+    is_soileri_product_question,
 )
 from agronomy_agent.agno_runtime.knowledge_graph import (
     KnowledgeGraph,
@@ -1388,8 +1393,8 @@ def _requested_named_regional_product_source_id(question: str) -> str | None:
         return "ca_aafc_sk_detailed_soil_survey_specification"
     if re.search(r"\bAnnual Crop Inventory(?:\s+\d{4})?\b", question, re.IGNORECASE):
         return "ca_aafc_annual_crop_inventory_specification"
-    if re.search(r"\bSoilERI\b|\bAAFC\b.{0,80}\bsoil erosion risk\b", question, re.IGNORECASE):
-        return "ca_aafc_soil_erosion_risk_technical_chapter_2021"
+    if is_soileri_product_question(question):
+        return SOILERI_SOURCE_ID
     if re.search(
         r"\b(?:AAFC\s+)?historical crop[- ]yield\b|\bhistorical crop[- ]yield SLC\b|"
         r"\bhistorical[- ]yield[- ]by[- ]SLC\b",
@@ -2281,6 +2286,11 @@ def build_context(
         ],
     }
     runtime_metadata.update(agno_metadata)
+    if document_retrieval_enabled and is_soileri_product_question(question):
+        runtime_metadata["named_regional_product_coverage"] = build_soileri_source_coverage(
+            question, docs,
+            source_indexed=any(row.get("source_id") == SOILERI_SOURCE_ID for row in loaded.retriever.docs),
+        )
     cache_status["agno"] = agno_cache_status
     runtime_metadata["retrieval_component_receipts"] = {
         "document_retrieval": _retrieval_component_receipt(
@@ -2776,6 +2786,9 @@ def _format_no_primary_context(
         "Do not use or infer facts from rejected retrieval candidates. Give bounded process help when useful, "
         "but do not make an unsupported rate, diagnosis, product permission, threshold, or field-specific conclusion.",
     ]
+    named_coverage = (context.runtime_metadata or {}).get("named_regional_product_coverage") or {}
+    if named_coverage.get("prompt_block"):
+        parts.append(named_coverage["prompt_block"])
     if active_field_context:
         rendered = "; ".join(
             f"{key}: {value}"
@@ -4989,6 +5002,10 @@ def generate_answer(
             output,
             question=question,
             boundaries=coverage_records,
+        )
+        output = apply_soileri_coverage_disclosure(
+            output, question=question,
+            coverage=(context.runtime_metadata or {}).get("named_regional_product_coverage") if context else None,
         )
         output = format_answer_for_output_contract(output)
     metadata: dict[str, Any] = {

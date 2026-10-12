@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from agronomy_agent.paths import repo_path
-from agronomy_agent.query_context import extract_crop_entities
+from agronomy_agent.query_context import SOILERI_SOURCE_ID, extract_crop_entities, is_soileri_product_question
 
 
 SCHEMA_VERSION = "open_agronomy_agent.canada_agronomy_sources.v1"
@@ -147,6 +147,42 @@ class CanadianCoverageBoundary:
             "live_references": [dict(item) for item in self.live_references],
             "prompt_block": self.prompt_block(),
         }
+
+
+def build_soileri_source_coverage(
+    question: str, retrieved_docs: Iterable[Any], *, source_indexed: bool,
+) -> dict[str, Any] | None:
+    """Describe this turn's named-source coverage without granting admission."""
+    if not is_soileri_product_question(question):
+        return None
+    docs = list(retrieved_docs)
+    named_ids = [doc.doc_id for doc in docs if doc.source_id == SOILERI_SOURCE_ID]
+    status = "retrieved" if named_ids else "not_retrieved" if source_indexed else "not_indexed"
+    prompt = ""
+    if not named_ids:
+        prompt = (
+            "The reviewed SoilERI specification is unavailable for this answer. Other sources are general erosion context only; "
+            "they cannot establish SoilERI class thresholds or trend definitions. Treat supplied map values as user-reported. "
+            "Give useful qualified explanations and field-check guidance; do not infer field truth."
+        )
+    return {"source_id": SOILERI_SOURCE_ID, "status": status, "retrieved_doc_ids": named_ids,
+            "general_context_doc_ids": [doc.doc_id for doc in docs if doc.source_id != SOILERI_SOURCE_ID],
+            "prompt_block": prompt}
+
+
+def apply_soileri_coverage_disclosure(answer: str, *, question: str | None, coverage: dict[str, Any] | None) -> str:
+    """Preserve the answer while disclosing a missing named specification."""
+    if (not answer.strip() or not question or not is_soileri_product_question(question)
+            or not isinstance(coverage, dict) or coverage.get("source_id") != SOILERI_SOURCE_ID
+            or coverage.get("status") not in {"not_indexed", "not_retrieved"}):
+        return answer
+    disclosure = (
+        "The reviewed SoilERI specification is unavailable for this answer, so I cannot verify its class thresholds "
+        "or trend definitions. General erosion context is separate from that product specification."
+    )
+    if disclosure in answer:
+        return answer
+    return f"{answer.rstrip()}\n\n{disclosure}"
 
 
 def canonical_canadian_province(value: str | None) -> str | None:

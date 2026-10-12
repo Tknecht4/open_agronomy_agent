@@ -8,6 +8,14 @@ from agronomy_agent.decision_capsule import build_decision_capsule, merge_topics
 from agronomy_agent.method_context import method_fit_reason
 
 
+SOILERI_SOURCE_ID = "ca_aafc_soil_erosion_risk_technical_chapter_2021"
+_SOILERI_PRODUCT_PATTERN = r"\bSoilERI\b|\bAAFC\b.{0,80}\bsoil erosion risk\b"
+
+
+def is_soileri_product_question(question: str) -> bool:
+    return bool(re.search(_SOILERI_PRODUCT_PATTERN, question, re.IGNORECASE))
+
+
 _AAFC_CROP_HEALTH_PRODUCT_PATTERN = (
     r"(?:\baafc\b.{0,80}\b(?:crop[- ]health (?:index|indices|grids?|layers?|products?)|crop stress index|crop development stage|growth[- ]stage raster)\b|"
     r"\b(?:crop[- ]health (?:index|indices|grids?|layers?|products?)|crop stress index|water deficit index)\b|"
@@ -557,6 +565,17 @@ def _doc_rejection_reason(doc: Any, signals: QueryContextSignals, *, primary_int
         return method_disposition
     source_type = str(getattr(doc, "source_type", "")).lower()
     source_id = str(getattr(doc, "source_id", "")).lower()
+    if (
+        is_soileri_product_question(signals.query_text)
+        and not re.search(_AAFC_CROP_HEALTH_PRODUCT_PATTERN, signals.query_text, re.IGNORECASE)
+        and source_type in {"regional_environment_profile", "regional_environment"}
+        and source_id != SOILERI_SOURCE_ID
+        and (
+            source_id in {"ca_aafc_crop_health_indices_specification", "ca_aafc_crop_health_indices_specification_fr"}
+            or not re.search(r"\berosion\b|\berod(?:ing|ibility|ible)\b", str(getattr(doc, "text", "")), re.IGNORECASE)
+        )
+    ):
+        return "named_regional_product_mismatch"
     haystack = _doc_text(doc)
     title_tags = " ".join(
         [str(getattr(doc, "title", "")), " ".join(str(item) for item in getattr(doc, "tags", ()) or ())]
