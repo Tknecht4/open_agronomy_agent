@@ -73,7 +73,7 @@ mlx-audio==0.5.6
 mlx-lm==0.31.3
 mlx-metal==0.32.2
 mlx-vlm==0.7.3
-multidict==6.9.1
+multidict==7.0.0
 multiprocess==0.70.19
 narwhals==2.26.0
 numpy==2.4.6
