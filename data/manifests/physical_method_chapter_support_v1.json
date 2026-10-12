@@ -1,0 +1,55 @@
+{
+  "schema_version": "open_agronomy_agent.chapter_method_source_support.v1",
+  "source_registry_path": "data/manifests/physical_method_chapter_sources_v1.json",
+  "source_registry_sha256": "8cceb38e0ab8979771c8a355d0b3d84903b36bac662870aa37fce527b0d87365",
+  "independent_review_sha256": "cf8918be141f9ff32e0d9eef286252dbce2847abb6beb8a2f981b33ae7b728c3",
+  "activation": "none",
+  "methods": {
+    "PROPOSED-KSTATE-MEASUREMENT-BASIS": {
+      "method_id": "soil_measurement_basis",
+      "source_ids": [
+        "ks-v2-1-soil-density-dom-20261012",
+        "ks-v2-1-soil-and-water-relationships-dom-20261012"
+      ],
+      "supporting_span_ids": {
+        "ks-v2-1-soil-and-water-relationships-dom-20261012": [
+          "W-moisture-basis",
+          "W-gravimetric",
+          "W-dry-denominator",
+          "W-volumetric",
+          "W-conversion-definition",
+          "W-teaching-water-density",
+          "W-conversion-product"
+        ],
+        "ks-v2-1-soil-density-dom-20261012": [
+          "D-bulk-volume-basis",
+          "D-particle-volume-basis",
+          "D-bulk-density",
+          "D-particle-density",
+          "D-density-porosity",
+          "D-sample-integrity",
+          "D-water-mass-tare",
+          "D-dry-mass-tare"
+        ]
+      },
+      "approved_text_sha256": "8660cd2db2e2d5d4ab29a2c87e7021ad6be78123682c9b250c205d9acd7807de"
+    },
+    "PROPOSED-KSTATE-WATER-ACCOUNTING": {
+      "method_id": "layer_water_accounting",
+      "source_ids": [
+        "ks-v2-1-soil-and-water-relationships-dom-20261012"
+      ],
+      "supporting_span_ids": {
+        "ks-v2-1-soil-and-water-relationships-dom-20261012": [
+          "W-layer-storage",
+          "W-soil-specific-calibration",
+          "W-availability-reference",
+          "W-moisture-basis",
+          "W-conversion-definition",
+          "W-teaching-water-density"
+        ]
+      },
+      "approved_text_sha256": "850005f549967243f34070b26e8202c4870819352bbc305737cba432b9e000f7"
+    }
+  }
+}

@@ -517,6 +517,11 @@ def span_and_capsule_from_retrieved_doc(
         scope = getattr(doc, "method_scope", None)
         if isinstance(scope, Mapping):
             locator["source_support_receipt_sha256"] = scope.get("source_support_receipt_sha256")
+            from agronomy_agent.method_context import PHYSICAL_METHOD_SCHEMA, reviewed_method_ids
+
+            if scope.get("schema_version") == PHYSICAL_METHOD_SCHEMA and reviewed_method_ids(doc):
+                locator["method_source_capture_kind"] = scope["capture_kind"]
+                locator["method_source_review_sha256"] = scope["source_review_sha256"]
     if page_match:
         locator["page"] = int(page_match.group(1))
     transformation_sha = _valid_sha(getattr(doc, "chunk_sha256", None))

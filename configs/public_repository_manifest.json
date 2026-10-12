@@ -774,7 +774,17 @@
     "requirements-release-evaluation-colab.txt",
     "data/manifests/cscap_arl_intake_v1.json",
     "scripts/prepare_cscap_intake.py",
-    "tests/test_cscap_intake.py"
+    "tests/test_cscap_intake.py",
+    "configs/rag_physical_method_candidate.yaml",
+    "data/manifests/physical_method_chapter_sources_v1.json",
+    "data/manifests/physical_method_chapter_support_v1.json",
+    "data/manifests/runtime_corpus_policy_physical_method_candidate.json",
+    "data/seed/physical_method_context_v1.jsonl",
+    "tests/test_physical_method_candidate.py",
+    "data/derived/rag/offline_agronomy/physical_methods/v1/shards/foundations-0001.jsonl",
+    "data/derived/rag/offline_agronomy/physical_methods/v1/quality_ledger.json",
+    "data/derived/rag/offline_agronomy/physical_methods/v1/source_receipt.json",
+    "data/derived/rag/offline_agronomy/physical_methods/v1/store_manifest.json"
   ],
   "trees": [
     "src",

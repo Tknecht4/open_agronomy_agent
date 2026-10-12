@@ -48,6 +48,14 @@ unchanged.
 
 ## RC3 egress and completed execution boundary
 
+`rag_physical_method_candidate.yaml` is a separate nonselectable profile for
+two chapter-supported physical-method paraphrases. Its policy and release bind
+the reviewed selected-DOM capture kind, source/support hashes and task-specific
+input boundaries. U.S. source provenance remains distinct from conditional
+Canada/U.S. method applicability. It supplies no field observation, compaction
+threshold or irrigation authority. The active profiles and prior candidates
+are unchanged; private raw DOM and controller questions are excluded.
+
 The completed RC3 run was governed by `final_benchmark_round_rc3.json`, which requires
 `open_agronomy_agent.benchmark_egress_authorization.v4`. The checked-in
 `benchmark_egress_authorization.template.json` is deliberately unauthorized and

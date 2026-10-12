@@ -1,0 +1,467 @@
+{
+  "schema_version": "open_agronomy_agent.chapter_DOM_sources.v1",
+  "activation": "none",
+  "independent_review_sha256": "cf8918be141f9ff32e0d9eef286252dbce2847abb6beb8a2f981b33ae7b728c3",
+  "capture_manifest_sha256": "7098f6be2aee2d46420b33252611939fd86569ca637808adb44bda0706517629",
+  "proposed_wording_sha256": "c553c5bf1e964aaeafb400eec11abed1df7061aadf7027dec86bdbac67060171",
+  "sources": [
+    {
+      "source_id": "ks-v2-1-soil-density-dom-20261012",
+      "source_type": "textbook_chapter",
+      "title": "Soil Density",
+      "chapter_number": 8,
+      "chapter_slug": "soil-density",
+      "parent_book_title": "Soils Laboratory Manual",
+      "parent_edition": "K-State Edition, Version 2.1",
+      "parent_book_doi": "10.4148/npp.35321",
+      "chapter_doi": null,
+      "authors": [
+        "Colby J. Moorberg",
+        "David A. Crouse"
+      ],
+      "publisher": "New Prairie Press / Kansas State University Libraries",
+      "url": "https://kstatelibraries.pressbooks.pub/soilslabmanual/chapter/soil-density/",
+      "captured_at_utc": "2026-10-12T21:05:03.267Z",
+      "jurisdiction": "United States",
+      "rights": "CC-BY-4.0_selected_chapter_text_except_otherwise_noted",
+      "snapshot_path": "soil-density.dom-fragments.json",
+      "snapshot_sha256": "af17ae1fca1eb4abf3a79cccc4133de91ac6ce283ba0bfb4660c0d9fed9d5c86",
+      "snapshot_kind": "selected_browser_DOM_fragments_not_HTTP_response",
+      "text_path": "soil-density.selected-methods.txt",
+      "text_sha256": "7f8e9f95f104033788d1371dfab25d1be17d871717c1dc570dfd893546f2d749",
+      "original_http_response_acquired": false,
+      "original_http_response_sha256": null,
+      "attribution": "Colby J. Moorberg and David A. Crouse. Chapter 8, \u201cSoil Density\u201d, in Soils Laboratory Manual: K-State Edition, Version 2.1. Copyright 2017, 2019, 2021. New Prairie Press / Kansas State University Libraries. https://kstatelibraries.pressbooks.pub/soilslabmanual/chapter/soil-density/ CC BY 4.0 except otherwise noted. Project-selected method spans and project-authored paraphrase; formula typesetting normalized; excluded figures/tables/exercises.",
+      "changes": "Selected short method spans; preserved creator/edition/source/licence identity; normalized formula representation; project interpretation separately marked.",
+      "locators": [
+        {
+          "span_id": "D-bulk-volume-basis",
+          "extracted_text_lines": [
+            1,
+            1
+          ],
+          "selected_text_utf8_byte_range_half_open": [
+            0,
+            109
+          ],
+          "span_sha256": "45af2aed2aa12928f2ebae9b4734f30906fdb5a7b9cebee87fcfacf78dfa4484",
+          "source_fragment_index": 0,
+          "source_dom_locator": "html:nth-of-type(1) > body:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(4)",
+          "source_fragment_html_sha256": "0cf0b432aef7592d95cc1afa902ef58a928467f10299999c2edf663f7be98bdd",
+          "normalized_fragment_character_range_half_open": [
+            42,
+            151
+          ],
+          "representation": "normalized exact short prose"
+        },
+        {
+          "span_id": "D-particle-volume-basis",
+          "extracted_text_lines": [
+            2,
+            2
+          ],
+          "selected_text_utf8_byte_range_half_open": [
+            110,
+            187
+          ],
+          "span_sha256": "6650f716f763558e850f31dcb0a3fdf949c75b35cfdfbee92408c5621e8486be",
+          "source_fragment_index": 0,
+          "source_dom_locator": "html:nth-of-type(1) > body:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(4)",
+          "source_fragment_html_sha256": "0cf0b432aef7592d95cc1afa902ef58a928467f10299999c2edf663f7be98bdd",
+          "normalized_fragment_character_range_half_open": [
+            152,
+            229
+          ],
+          "representation": "normalized exact short prose"
+        },
+        {
+          "span_id": "D-bulk-density",
+          "extracted_text_lines": [
+            3,
+            3
+          ],
+          "selected_text_utf8_byte_range_half_open": [
+            188,
+            250
+          ],
+          "span_sha256": "da9360e16d2c5dd51ec514feb0acfc2fb6172ef6140a00ddeb86a92038b2848d",
+          "source_fragment_index": 1,
+          "source_dom_locator": "html:nth-of-type(1) > body:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(5) > mjx-container:nth-of-type(1) > mjx-assistive-mml:nth-of-type(1) > math:nth-of-type(1)",
+          "source_fragment_html_sha256": "de69eadc956af2d6ff479b239867f7b20460258faf3214fb8a0340b245285a0f",
+          "normalized_fragment_character_range_half_open": [
+            0,
+            61
+          ],
+          "representation": "deterministic normalized MathML"
+        },
+        {
+          "span_id": "D-particle-density",
+          "extracted_text_lines": [
+            4,
+            4
+          ],
+          "selected_text_utf8_byte_range_half_open": [
+            251,
+            321
+          ],
+          "span_sha256": "ebabba162b67927f8c78cf05b34cb3a658ffc1bcb7305d780fb95bfed9b2aacd",
+          "source_fragment_index": 2,
+          "source_dom_locator": "html:nth-of-type(1) > body:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(6) > span:nth-of-type(1) > mjx-container:nth-of-type(1) > mjx-assistive-mml:nth-of-type(1) > math:nth-of-type(1)",
+          "source_fragment_html_sha256": "4986985d38c80c90a3da70c49a716aa09e5f4bfa739f2e01b7d60e1b11df49fa",
+          "normalized_fragment_character_range_half_open": [
+            0,
+            69
+          ],
+          "representation": "deterministic normalized MathML"
+        },
+        {
+          "span_id": "D-pore-volume",
+          "extracted_text_lines": [
+            5,
+            5
+          ],
+          "selected_text_utf8_byte_range_half_open": [
+            322,
+            372
+          ],
+          "span_sha256": "5c9b4505233a9b5821167ef80e2aa7214e989fac0ef4300954020205920ddfd6",
+          "source_fragment_index": 3,
+          "source_dom_locator": "html:nth-of-type(1) > body:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(10) > span:nth-of-type(1) > mjx-container:nth-of-type(1) > mjx-assistive-mml:nth-of-type(1) > math:nth-of-type(1)",
+          "source_fragment_html_sha256": "a387e734dd86b6cf1f035bb42734dc17ed3fd46239efb80cf2053874e51bc007",
+          "normalized_fragment_character_range_half_open": [
+            0,
+            49
+          ],
+          "representation": "deterministic normalized MathML"
+        },
+        {
+          "span_id": "D-density-porosity",
+          "extracted_text_lines": [
+            6,
+            6
+          ],
+          "selected_text_utf8_byte_range_half_open": [
+            373,
+            403
+          ],
+          "span_sha256": "7db551a1109ff571c05dad8bed4c43ee3ce2141c25168ffb5431473cf4dbad34",
+          "source_fragment_index": 4,
+          "source_dom_locator": "html:nth-of-type(1) > body:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(12) > span:nth-of-type(1) > mjx-container:nth-of-type(1) > mjx-assistive-mml:nth-of-type(1) > math:nth-of-type(1)",
+          "source_fragment_html_sha256": "bcba7141ec64d3ba95f226ecfa912e085a42873fac8495d60c7f4efa873f0c9e",
+          "normalized_fragment_character_range_half_open": [
+            0,
+            25
+          ],
+          "representation": "deterministic normalized MathML"
+        },
+        {
+          "span_id": "D-sample-integrity",
+          "extracted_text_lines": [
+            7,
+            7
+          ],
+          "selected_text_utf8_byte_range_half_open": [
+            404,
+            455
+          ],
+          "span_sha256": "3fbbf92d09ec99d040f85783ed6d252906f8f654d451b76a34ae215eca657f6a",
+          "source_fragment_index": 5,
+          "source_dom_locator": "html:nth-of-type(1) > body:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(14)",
+          "source_fragment_html_sha256": "80c8745157267fae5ddaf1f8336435299adf668a285759552b6707d5ce85ec4e",
+          "normalized_fragment_character_range_half_open": [
+            136,
+            187
+          ],
+          "representation": "normalized exact short prose"
+        },
+        {
+          "span_id": "D-water-mass-tare",
+          "extracted_text_lines": [
+            8,
+            8
+          ],
+          "selected_text_utf8_byte_range_half_open": [
+            456,
+            525
+          ],
+          "span_sha256": "8973d190a6195c2d08ad436cc492df7f3cc44269ca8d72587e346abd95373344",
+          "source_fragment_index": 6,
+          "source_dom_locator": "html:nth-of-type(1) > body:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(17) > mjx-container:nth-of-type(1) > mjx-assistive-mml:nth-of-type(1) > math:nth-of-type(1)",
+          "source_fragment_html_sha256": "b7ab088d9a52b79f34083ea944808cd530835837fcc1e29c8667f09135621e97",
+          "normalized_fragment_character_range_half_open": [
+            0,
+            67
+          ],
+          "representation": "deterministic normalized MathML"
+        },
+        {
+          "span_id": "D-dry-mass-tare",
+          "extracted_text_lines": [
+            9,
+            9
+          ],
+          "selected_text_utf8_byte_range_half_open": [
+            526,
+            585
+          ],
+          "span_sha256": "5b200a88f5e93e89de09e4df5f83e10aa038441986db5a57c090710c3d719fc9",
+          "source_fragment_index": 7,
+          "source_dom_locator": "html:nth-of-type(1) > body:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(18) > span:nth-of-type(1) > mjx-container:nth-of-type(1) > mjx-assistive-mml:nth-of-type(1) > math:nth-of-type(1)",
+          "source_fragment_html_sha256": "14eb35fa3b1413278816686b427f803398b8ebac80edc4c47c21f71d23626401",
+          "normalized_fragment_character_range_half_open": [
+            0,
+            57
+          ],
+          "representation": "deterministic normalized MathML"
+        }
+      ],
+      "license_evidence": {
+        "basis": "native_chapter_license_selected_browser_DOM",
+        "license_url": "https://creativecommons.org/licenses/by/4.0/",
+        "native_footer_html_sha256": "4d3537ae293083618e437a722ee7c2e756ac53f6b557cdc1e4db2e3fa1ae5f8a",
+        "native_footer_text_sha256": "1336dafda92cb83ca8ae80f6986c3196dfdea4a6ad414b489e50ba4a77d20e16",
+        "exception_decision": "selected_method_spans_only; credited_figures_all_tables_exercises_and_unreviewed_quotes_excluded",
+        "attribution_changes": "Project-authored method wording; short definition spans selected, formula typesetting normalized from rendered assistive MathML; examples, tables, assignments and third-party figures omitted. Source simplifying assumptions distinguished from project dimensional generalization."
+      }
+    },
+    {
+      "source_id": "ks-v2-1-soil-and-water-relationships-dom-20261012",
+      "source_type": "textbook_chapter",
+      "title": "Soil and Water Relationships",
+      "chapter_number": 9,
+      "chapter_slug": "soil-and-water-relationships",
+      "parent_book_title": "Soils Laboratory Manual",
+      "parent_edition": "K-State Edition, Version 2.1",
+      "parent_book_doi": "10.4148/npp.35321",
+      "chapter_doi": null,
+      "authors": [
+        "Colby J. Moorberg",
+        "David A. Crouse"
+      ],
+      "publisher": "New Prairie Press / Kansas State University Libraries",
+      "url": "https://kstatelibraries.pressbooks.pub/soilslabmanual/chapter/soil-and-water-relationships/",
+      "captured_at_utc": "2026-10-12T21:06:03.079Z",
+      "jurisdiction": "United States",
+      "rights": "CC-BY-4.0_selected_chapter_text_except_otherwise_noted",
+      "snapshot_path": "soil-and-water-relationships.dom-fragments.json",
+      "snapshot_sha256": "a6758694b231e7edd21a17464375652ce3f975bbf8f6974f1d0adc515dbb652b",
+      "snapshot_kind": "selected_browser_DOM_fragments_not_HTTP_response",
+      "text_path": "soil-and-water-relationships.selected-methods.txt",
+      "text_sha256": "299245f7e181eeed456a4f38d9cc95a30a97137f472c09768e226e3804a3a8e1",
+      "original_http_response_acquired": false,
+      "original_http_response_sha256": null,
+      "attribution": "Colby J. Moorberg and David A. Crouse. Chapter 9, \u201cSoil and Water Relationships\u201d, in Soils Laboratory Manual: K-State Edition, Version 2.1. Copyright 2017, 2019, 2021. New Prairie Press / Kansas State University Libraries. https://kstatelibraries.pressbooks.pub/soilslabmanual/chapter/soil-and-water-relationships/ CC BY 4.0 except otherwise noted. Project-selected method spans and project-authored paraphrase; formula typesetting normalized; excluded figures/tables/exercises.",
+      "changes": "Selected short method spans; preserved creator/edition/source/licence identity; normalized formula representation; project interpretation separately marked.",
+      "locators": [
+        {
+          "span_id": "W-soil-specific-calibration",
+          "extracted_text_lines": [
+            1,
+            1
+          ],
+          "selected_text_utf8_byte_range_half_open": [
+            0,
+            66
+          ],
+          "span_sha256": "92e53971573942658c7d63eff69015236b93a92343ad974e913cfa9ba58f19da",
+          "source_fragment_index": 0,
+          "source_dom_locator": "html:nth-of-type(1) > body:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(1)",
+          "source_fragment_html_sha256": "82d267797efb91d3e5bd8091354f07df63bc71e45f1a1ed36f5ef6f7b9a3ed8c",
+          "normalized_fragment_character_range_half_open": [
+            596,
+            662
+          ],
+          "representation": "normalized exact short prose"
+        },
+        {
+          "span_id": "W-availability-reference",
+          "extracted_text_lines": [
+            2,
+            2
+          ],
+          "selected_text_utf8_byte_range_half_open": [
+            67,
+            178
+          ],
+          "span_sha256": "0bb8cb232a86fe1bdda269948c7901b22bc3a3b677ec2083425e7f7c5aa39769",
+          "source_fragment_index": 1,
+          "source_dom_locator": "html:nth-of-type(1) > body:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(5)",
+          "source_fragment_html_sha256": "527d7bc5b6f685580e814d24a3f43d8a356c16e9dd8878da345fdfcc55dd9d7f",
+          "normalized_fragment_character_range_half_open": [
+            413,
+            524
+          ],
+          "representation": "normalized exact short prose"
+        },
+        {
+          "span_id": "W-moisture-basis",
+          "extracted_text_lines": [
+            3,
+            3
+          ],
+          "selected_text_utf8_byte_range_half_open": [
+            179,
+            257
+          ],
+          "span_sha256": "a386cd8fdd51fc85654063397828b921caf36832db114ec5675f6c5b8aa961c7",
+          "source_fragment_index": 2,
+          "source_dom_locator": "html:nth-of-type(1) > body:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(8)",
+          "source_fragment_html_sha256": "bbd0f2ef7ae10b6bb61f53a33e194156d54c23b90f8606559b67ad526939909b",
+          "normalized_fragment_character_range_half_open": [
+            0,
+            78
+          ],
+          "representation": "normalized exact short prose"
+        },
+        {
+          "span_id": "W-gravimetric",
+          "extracted_text_lines": [
+            4,
+            4
+          ],
+          "selected_text_utf8_byte_range_half_open": [
+            258,
+            331
+          ],
+          "span_sha256": "4f9de0b1d4204f33536175e78ff7b3b850864b2915864292836b4588be37bd5e",
+          "source_fragment_index": 3,
+          "source_dom_locator": "html:nth-of-type(1) > body:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(9) > span:nth-of-type(1) > mjx-container:nth-of-type(1) > mjx-assistive-mml:nth-of-type(1) > math:nth-of-type(1)",
+          "source_fragment_html_sha256": "4b9ea7eec64b1e620ff89565cdeb8c7481b95a5e78d12881854bd257aabf18a4",
+          "normalized_fragment_character_range_half_open": [
+            0,
+            72
+          ],
+          "representation": "deterministic normalized MathML"
+        },
+        {
+          "span_id": "W-dry-denominator",
+          "extracted_text_lines": [
+            5,
+            5
+          ],
+          "selected_text_utf8_byte_range_half_open": [
+            332,
+            394
+          ],
+          "span_sha256": "6abdd2748d3780d73df229205fd2c281518124bbd8a581fad3eb5100ecc6060b",
+          "source_fragment_index": 4,
+          "source_dom_locator": "html:nth-of-type(1) > body:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(10)",
+          "source_fragment_html_sha256": "e1f3a3f29690b1a2736e23f27ed3dd7ecb0f9e60e0f75f21446f59fe7e75fbe7",
+          "normalized_fragment_character_range_half_open": [
+            0,
+            62
+          ],
+          "representation": "normalized exact short prose"
+        },
+        {
+          "span_id": "W-volumetric",
+          "extracted_text_lines": [
+            6,
+            6
+          ],
+          "selected_text_utf8_byte_range_half_open": [
+            395,
+            458
+          ],
+          "span_sha256": "7d6d5c8dcb26837a4da638e62d9e2f75e285d1c088e941a1010a531d66f27454",
+          "source_fragment_index": 5,
+          "source_dom_locator": "html:nth-of-type(1) > body:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(13) > span:nth-of-type(1) > mjx-container:nth-of-type(1) > mjx-assistive-mml:nth-of-type(1) > math:nth-of-type(1)",
+          "source_fragment_html_sha256": "3232d96f443cdeda66d072257455186d6bf6434dac0ba818b94842f9ce48031f",
+          "normalized_fragment_character_range_half_open": [
+            0,
+            62
+          ],
+          "representation": "deterministic normalized MathML"
+        },
+        {
+          "span_id": "W-conversion-definition",
+          "extracted_text_lines": [
+            7,
+            7
+          ],
+          "selected_text_utf8_byte_range_half_open": [
+            459,
+            540
+          ],
+          "span_sha256": "61e3c1144cbcf4ad19f3f5bdcc7674ae90ace93a07cd4a639bd6fa430536c14d",
+          "source_fragment_index": 6,
+          "source_dom_locator": "html:nth-of-type(1) > body:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(14)",
+          "source_fragment_html_sha256": "473522d247956b96db4960013665adb2ae0c352f8e31f67135c856abc1cc6c5e",
+          "normalized_fragment_character_range_half_open": [
+            71,
+            152
+          ],
+          "representation": "normalized exact short prose"
+        },
+        {
+          "span_id": "W-teaching-water-density",
+          "extracted_text_lines": [
+            8,
+            8
+          ],
+          "selected_text_utf8_byte_range_half_open": [
+            541,
+            592
+          ],
+          "span_sha256": "d9ff9cba8620194fdf4ffefdf6ee9b272290e339c15bf44c840d89d0911669e1",
+          "source_fragment_index": 7,
+          "source_dom_locator": "html:nth-of-type(1) > body:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(17)",
+          "source_fragment_html_sha256": "7975df24dd08b04ae8d11dcbc4471c579a7ab4914fa58be7564bfa9cd5b08056",
+          "normalized_fragment_character_range_half_open": [
+            0,
+            51
+          ],
+          "representation": "normalized exact short prose"
+        },
+        {
+          "span_id": "W-conversion-product",
+          "extracted_text_lines": [
+            9,
+            9
+          ],
+          "selected_text_utf8_byte_range_half_open": [
+            593,
+            674
+          ],
+          "span_sha256": "bc48c4188c8fe6aa58b4a04b41e50bde90c23ca773611e7b18ab6530c856c3d0",
+          "source_fragment_index": 8,
+          "source_dom_locator": "html:nth-of-type(1) > body:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(19) > span:nth-of-type(1) > mjx-container:nth-of-type(1) > mjx-assistive-mml:nth-of-type(1) > math:nth-of-type(1)",
+          "source_fragment_html_sha256": "1820d7806a04c95f7efac154baa8c276568bd9bc1e719600d4153faf1cfeb36e",
+          "normalized_fragment_character_range_half_open": [
+            0,
+            80
+          ],
+          "representation": "deterministic normalized MathML"
+        },
+        {
+          "span_id": "W-layer-storage",
+          "extracted_text_lines": [
+            10,
+            10
+          ],
+          "selected_text_utf8_byte_range_half_open": [
+            675,
+            729
+          ],
+          "span_sha256": "623c0b4aa5243871d6af719d93055fbfda089a12430ed207a0a835a09e3c02c5",
+          "source_fragment_index": 9,
+          "source_dom_locator": "html:nth-of-type(1) > body:nth-of-type(1) > div:nth-of-type(1) > main:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(22) > span:nth-of-type(1) > mjx-container:nth-of-type(1) > mjx-assistive-mml:nth-of-type(1) > math:nth-of-type(1)",
+          "source_fragment_html_sha256": "61766957958e003d9d2b341a3a3282ff10bf2366a745a9298bd211ce1093ab28",
+          "normalized_fragment_character_range_half_open": [
+            0,
+            53
+          ],
+          "representation": "deterministic normalized MathML"
+        }
+      ],
+      "license_evidence": {
+        "basis": "native_chapter_license_selected_browser_DOM",
+        "license_url": "https://creativecommons.org/licenses/by/4.0/",
+        "native_footer_html_sha256": "4d3537ae293083618e437a722ee7c2e756ac53f6b557cdc1e4db2e3fa1ae5f8a",
+        "native_footer_text_sha256": "1336dafda92cb83ca8ae80f6986c3196dfdea4a6ad414b489e50ba4a77d20e16",
+        "exception_decision": "selected_method_spans_only; credited_figures_all_tables_exercises_and_unreviewed_quotes_excluded",
+        "attribution_changes": "Project-authored method wording; short definition spans selected, formula typesetting normalized from rendered assistive MathML; examples, tables, assignments and third-party figures omitted. Source simplifying assumptions distinguished from project dimensional generalization."
+      }
+    }
+  ]
+}

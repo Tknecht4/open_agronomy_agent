@@ -40,7 +40,7 @@ def compose(*, output_config: Path, output_policy: Path, supplement_store: Path 
     manifest = json.loads(supplement_store.read_text(encoding="utf-8"))
     shards = manifest.get("shards") or []
     store_id = manifest.get("store_id")
-    if store_id not in {"production-foundations-v1", "production-foundations-method-v2"} or len(shards) != 1:
+    if store_id not in {"production-foundations-v1", "production-foundations-method-v2", "physical-method-context-v1"} or len(shards) != 1:
         raise ValueError("unexpected foundations release contract")
     shard = shards[0]
     shard_path = supplement_store.parent / str(shard["path"])
@@ -54,10 +54,10 @@ def compose(*, output_config: Path, output_policy: Path, supplement_store: Path 
     config["retrieval"]["corpus_paths"].append(relative)
     config["retrieval"]["corpus_policy_manifest"] = output_policy.relative_to(ROOT).as_posix()
     config["release_profile"]["production_foundations_store"] = supplement_store.relative_to(ROOT).as_posix()
-    if store_id == "production-foundations-method-v2":
+    if store_id in {"production-foundations-method-v2", "physical-method-context-v1"}:
         config["release_profile"]["method_transfer_store"] = supplement_store.relative_to(ROOT).as_posix()
     receipt = json.loads((supplement_store.parent / str(manifest["source_receipt_path"])).read_text(encoding="utf-8"))
-    if store_id == "production-foundations-method-v2":
+    if store_id in {"production-foundations-method-v2", "physical-method-context-v1"}:
         config["release_profile"]["method_support_receipt_sha256"] = receipt["source_support_receipt_sha256"]
     policy["corpora"].append({
         "evidence_tier": "internal_synthesis",
@@ -71,6 +71,12 @@ def compose(*, output_config: Path, output_policy: Path, supplement_store: Path 
         "store_profile_id": store_id,
         "activation": "startup",
     })
+    if store_id == "physical-method-context-v1":
+        config["release_profile"]["method_context_schema"] = "open_agronomy_agent.physical_method_scope.v1"
+        policy["corpora"][-1].update({
+            "rights_status": "CC-BY-4.0_attributed_paraphrase",
+            "reason": "Reviewed physical identities from selected chapter DOM; attributed paraphrases, context only, candidate profile only. U.S. provenance is distinct from conditional Canada/U.S. method applicability.",
+        })
     policy["corpora"].sort(key=lambda row: str(row["path"]))
     policy["composite_release"]["production_foundations_store"] = supplement_store.relative_to(ROOT).as_posix()
     policy["composite_release"]["production_foundations_store_sha256"] = manifest["store_sha256"]

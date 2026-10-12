@@ -26,6 +26,33 @@
 
 Scripts should accept explicit paths/identities, resolve repository-relative defaults through `_path_bootstrap.py`/package helpers, and write receipts next to outputs. Never rely on an ambiguous current directory for destructive or release work.
 
+## Non-active physical-method candidate
+
+`build_production_foundations_supplement.py --store-id physical-method-context-v1`
+builds exactly two reviewed physical-method paraphrases. It requires the
+chapter registry, seed and support receipt plus explicit read-only
+`--chapter-evidence-root` and `--chapter-review-receipt` paths. The ignored
+custody packet contains selected rendered DOM, not original HTTP bytes or
+article XML. Missing custody, changed review/source/span pins, unknown rights
+or expanded scope fail before output creation. No network or generation runs.
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/build_production_foundations_supplement.py \
+  --store-id physical-method-context-v1 \
+  --seed data/seed/physical_method_context_v1.jsonl \
+  --sources data/manifests/physical_method_chapter_sources_v1.json \
+  --support-receipt data/manifests/physical_method_chapter_support_v1.json \
+  --chapter-evidence-root "$AGRONOMY_CHAPTER_PACKET" \
+  --chapter-review-receipt "$AGRONOMY_CHAPTER_REVIEW" \
+  --output outputs/physical-method-rebuild/v1
+```
+
+The nonselectable `rag_physical_method_candidate.yaml` loads attributed
+paraphrases as method context. U.S. provenance remains distinct from reviewed
+Canada/U.S. physical applicability. One source suffices only for the reviewed
+water method under its distinct schema. Legacy source rules are unchanged.
+No default profile, field authority, training or evaluation admission follows.
+
 ## Invariants
 
 - Builders are deterministic where source bytes/config are fixed.
