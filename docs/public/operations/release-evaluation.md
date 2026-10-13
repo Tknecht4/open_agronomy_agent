@@ -326,6 +326,12 @@ gate. Read actual execution status and source-bound reports separately.
 | RC1–RC3, frozen model runs and earlier four-arm records | Historical evidence under their original source/prompt/arm identities |
 | v2/v3 production adapters, remaining complete-calculator readiness, alternate frontend shell retirement | Deferred; fixture coverage and import reachability alone do not qualify adapters or justify deleting a shell |
 
+The v3 candidate CLI accepts an explicitly supplied executor only with current,
+matrix-bound authorization. Its process runner checks observation identity; it
+does not independently qualify that executor as a production-core adapter.
+An importable callable, a completed ledger or a dry run therefore cannot
+establish production parity or a model-performance claim.
+
 Unknown review, authority, source coverage or comparability remains unknown.
 
 ## Expanding the suite

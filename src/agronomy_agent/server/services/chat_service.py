@@ -32,7 +32,7 @@ from agronomy_agent.agent import (
 from agronomy_agent.query_context import is_source_grounded_question
 from agronomy_agent.capability_planner import build_planner_input, plan_capabilities, select_public_capability_plan
 from agronomy_agent.capability_registry import capability_registry
-from agronomy_agent.agronomic_calculations import _decimal_value, _format_decimal, calculation_tool_schema
+from agronomy_agent.agronomic_calculations import _decimal_value, _format_decimal, calculation_tool_schema, validate_tank_coverage_inputs
 from agronomy_agent.decision_contract import build_decision_contract
 from agronomy_agent.evidence_contracts import question_frame_from_runtime
 from agronomy_agent.tool_planner import plan_tools
@@ -446,22 +446,30 @@ def preview_turn_readiness(
         # The legacy ready plan is not a complete numerical validation contract.
         # Keep other complete operations unknown until their canonical validators
         # can be called separately from execution; never run a tool in preview.
-        validated_conversion = calculator.operation == "unit_conversion"
-        if validated_conversion:
+        validated_inputs = False
+        if calculator.operation == "unit_conversion":
             try:
                 value = _decimal_value(calculator.inputs.get("value"), "value")
                 # The canonical formatter also has a finite precision limit.
                 # Reserve one decimal order for the supported kg/ha <-> lb/ac
                 # factors without computing a conversion or executing a tool.
                 _format_decimal(value.scaleb(1))
-                validated_conversion = all(str(calculator.inputs.get(key)).casefold() in {"kg/ha", "lb/ac"}
+                validated_inputs = all(str(calculator.inputs.get(key)).casefold() in {"kg/ha", "lb/ac"}
                                            for key in ("from_unit", "to_unit"))
             except (ValueError, DecimalException):
-                validated_conversion = False
-        if not validated_conversion:
+                validated_inputs = False
+        elif calculator.operation == "tank_coverage":
+            try:
+                validate_tank_coverage_inputs(calculator.inputs)
+                validated_inputs = True
+            except (ValueError, DecimalException):
+                validated_inputs = False
+                reason = "invalid_calculator_inputs"
+        if not validated_inputs:
             independent = False
             unverified = True
-            reason = "operation_validation_unavailable"
+            if reason != "invalid_calculator_inputs":
+                reason = "operation_validation_unavailable"
     history = prepared["recent_turns"]
     context = session_context or {}
     binding = {

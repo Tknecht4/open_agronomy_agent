@@ -425,15 +425,44 @@ def _parse_sprayer_volume(text: str, lower: str):  # noqa: ANN202
 
 
 def _parse_tank_coverage(text: str, lower: str):  # noqa: ANN202
+    from decimal import Decimal
+
     if "sprayer tank" not in lower or "tank cover" not in lower:
         return None
-    tank = re.search(rf"{_NUMBER}\s*L sprayer tank", text, re.IGNORECASE)
-    rate = re.search(rf"applying\s*{_NUMBER}\s*L/ha", text, re.IGNORECASE)
+    # This operation must bind signs rather than find a positive substring.
+    # _parse_calculation already normalizes Unicode minus and whitespace.
+    number = r"(?<![\w.,+-])([+-]?\s*[0-9][0-9,]*(?:\.[0-9]+)?)"
+    tank = re.search(rf"{number}\s*L sprayer tank", text, re.IGNORECASE)
+    rate = re.search(rf"applying\s*{number}\s*L/ha", text, re.IGNORECASE)
     values = {"tank_volume_l": tank, "application_volume_l_per_ha": rate}
-    inputs = {key: _number(value.group(1)) for key, value in values.items() if value}
-    if "ignoring unusable tank volume" in lower:
+    def operand(match):  # noqa: ANN001, ANN202
+        literal = "".join(match.group(1).split()).replace(",", "")
+        exact = Decimal(literal)
+        numeric = _number(literal)
+        # Ordinary numeric inputs retain numeric-follow-up compatibility. Keep
+        # the literal if a float would erase precision or a tiny negative value.
+        return literal if len(exact.as_tuple().digits) > 28 or Decimal(str(numeric)) != exact else numeric
+
+    inputs = {key: operand(value) for key, value in values.items() if value}
+    missing = tuple(key for key, value in values.items() if not value)
+    unusable_values = [
+        operand(match)
+        for pattern in (rf"unusable(?: tank)? volume(?: is| of)?\s*{number}\s*L",
+                        rf"{number}\s*L(?: of)?\s+unusable(?: tank)? volume")
+        for match in re.finditer(pattern, text, re.IGNORECASE)
+    ]
+    ignoring_unusable = bool(re.search(r"\bignoring unusable(?: tank)? volume\b", lower))
+    if unusable_values:
+        numeric_unusable = {Decimal(str(value)) for value in unusable_values}
+        if len(numeric_unusable) != 1 or (ignoring_unusable and Decimal(str(unusable_values[0])) != 0):
+            missing += ("unusable_volume_l",)
+        else:
+            inputs["unusable_volume_l"] = unusable_values[0]
+    elif ignoring_unusable:
         inputs["unusable_volume_l"] = 0
-    return "tank_coverage", inputs, tuple(key for key, value in values.items() if not value)
+    elif "unusable" in lower:
+        missing += ("unusable_volume_l",)
+    return "tank_coverage", inputs, missing
 
 
 def _parse_daily_gdd(text: str, lower: str):  # noqa: ANN202

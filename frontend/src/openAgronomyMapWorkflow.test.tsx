@@ -3720,3 +3720,46 @@ it('server calculator readiness cannot enable Ask for newly edited unsaved geome
   expect(screen.getByLabelText('Your question')).toHaveValue('Exact conversion for saved field')
   expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/turns/stream'))).toBe(false)
 })
+
+
+it.each(['ready', 'unknown'] as const)('uses the server tank-coverage disposition %s without a client operand heuristic', async status => {
+  const questionText = 'Calculate how much area will a 1000 L sprayer tank cover applying 100 L/ha, ignoring unusable tank volume?'
+  const fetchMock = installFetchMock()
+  const base = fetchMock.getMockImplementation()!
+  fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input)
+    if (url === '/api/configs') return jsonResponse(missingModelConfig)
+    if (url === '/api/turn-readiness') {
+      const body = JSON.parse(String(init?.body))
+      const response = readinessResponse(body)
+      response.status = status
+      response.requires_model = status === 'ready' ? false : null
+      response.calculator = { operation: 'tank_coverage', missing_inputs: [], requirements: { required: ['tank_volume_l', 'application_volume_l_per_ha'] } }
+      return jsonResponse(response)
+    }
+    if (url === '/api/sessions' && init?.method === 'POST') return jsonResponse({ session_id: 'session-tank', context: JSON.parse(String(init.body)).context, turns: [] })
+    if (url === '/api/sessions/session-tank/turns/stream') return {
+      ok: true, status: 200, body: null,
+      text: async () => `event: answer.completed\ndata: ${JSON.stringify({ turn_id: 'tank-turn', turn: { turn_id: 'tank-turn', user_message: questionText, answer: '10 ha. Calculation from supplied tank inputs.', trace: { retrieved_docs: [], graph_hits: [], tool_invocations: [] } } })}\n\n`,
+    } as Response
+    return base(input, init)
+  })
+  render(<OpenAgronomyApp />)
+  await screen.findByText('Model weights are not installed.')
+  fireEvent.change(screen.getByLabelText('Your question'), { target: { value: questionText } })
+  await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url) === '/api/turn-readiness')).toBe(true))
+  const ask = screen.getByRole('button', { name: 'Ask' })
+  if (status === 'unknown') {
+    expect(await screen.findByText(/complete-input readiness has not been verified/)).toBeInTheDocument()
+    expect(ask).toBeDisabled()
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/turns/stream'))).toBe(false)
+  } else {
+    await waitFor(() => expect(ask).toBeEnabled())
+    fireEvent.click(ask)
+    expect(await screen.findByText('10 ha. Calculation from supplied tank inputs.')).toBeInTheDocument()
+    const submitted = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/turns/stream'))
+    const payload = JSON.parse(String(submitted?.[1]?.body))
+    expect(payload.message).toBe(questionText)
+    expect(payload.readiness_binding).toBe('a'.repeat(64))
+  }
+})

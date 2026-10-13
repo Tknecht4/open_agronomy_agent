@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from copy import deepcopy
 
 import pytest
 
@@ -9,7 +10,46 @@ from agronomy_agent.agronomic_calculations import (
     agronomic_calculator,
     calculate_agronomic,
     calculation_tool_schema,
+    validate_tank_coverage_inputs,
 )
+
+
+def test_tank_validation_is_nonmutating_and_shared_by_execution(monkeypatch):
+    import agronomy_agent.agronomic_calculations as calculations
+    supplied = {"tank_volume_l": 1000, "application_volume_l_per_ha": 100}
+    original = deepcopy(supplied)
+    normalized = validate_tank_coverage_inputs(supplied)
+    assert normalized == {"tank_volume_l": Decimal(1000), "application_volume_l_per_ha": Decimal(100), "unusable_volume_l": Decimal(0)}
+    assert supplied == original
+    calls = []
+    original_validator = calculations.validate_tank_coverage_inputs
+    def validate(inputs):
+        calls.append(deepcopy(inputs))
+        return original_validator(inputs)
+    monkeypatch.setattr(calculations, "validate_tank_coverage_inputs", validate)
+    result = calculations.agronomic_calculator("tank_coverage", supplied)
+    assert calls == [supplied]
+    assert result["value"] == 10 and result["unit"] == "ha"
+    assert result["answer"].startswith("10 ha")
+    assert supplied == original
+
+
+@pytest.mark.parametrize("changes", [
+    {"tank_volume_l": 0}, {"tank_volume_l": -1000}, {"application_volume_l_per_ha": 0},
+    {"application_volume_l_per_ha": -100}, {"tank_volume_l": float("inf")},
+    {"application_volume_l_per_ha": float("nan")}, {"unusable_volume_l": -1},
+    {"unusable_volume_l": 1000}, {"unusable_volume_l": 1001}, {"unusable_volume_l": "Infinity"},
+    {"unexpected": 42}, {"tank_volume_l": True}, {"tank_volume_l": "1e25"},
+    {"application_volume_l_per_ha": "1e-301"}, {"tank_volume_l": "1000.0000000000000000000000000001"},
+    {"unusable_volume_l": "1e-26"}, {"tank_volume_l": "1e23", "application_volume_l_per_ha": "0.01"},
+])
+def test_tank_readiness_and_execution_reject_the_same_invalid_operands(changes):
+    inputs = {"tank_volume_l": 1000, "application_volume_l_per_ha": 100, **changes}
+    with pytest.raises(ValueError) as validation:
+        validate_tank_coverage_inputs(inputs)
+    with pytest.raises(ValueError) as execution:
+        calculate_agronomic("tank_coverage", inputs)
+    assert str(execution.value) == str(validation.value)
 
 
 @pytest.mark.parametrize(

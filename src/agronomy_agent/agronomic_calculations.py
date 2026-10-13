@@ -404,7 +404,16 @@ def _sprayer_application_volume(inputs: Mapping[str, Any]) -> AgronomicCalculati
     )
 
 
-def _tank_coverage(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+def validate_tank_coverage_inputs(inputs: Mapping[str, Any]) -> dict[str, Decimal]:
+    """Validate tank operands without computing coverage or creating a result.
+
+    The precision envelope bounds the existing 28-digit Decimal arithmetic,
+    three-decimal formatter and JSON numeric representation. It reserves one
+    decimal order for rounding, and rejects ratios outside that envelope by
+    operand exponents rather than executing the coverage division.
+    """
+    if not isinstance(inputs, Mapping):
+        raise ValueError("calculation inputs must be an object")
     _require_only(
         inputs,
         required={"tank_volume_l", "application_volume_l_per_ha"},
@@ -415,6 +424,25 @@ def _tank_coverage(inputs: Mapping[str, Any]) -> AgronomicCalculation:
     unusable = _nonnegative(inputs, "unusable_volume_l", default=Decimal("0"))
     if unusable >= tank:
         raise ValueError("unusable_volume_l must be smaller than tank_volume_l")
+    normalized = {"tank_volume_l": tank, "application_volume_l_per_ha": rate, "unusable_volume_l": unusable}
+    for key, value in normalized.items():
+        if len(value.as_tuple().digits) > 28 or (value and not -300 <= value.adjusted() <= 23):
+            raise ValueError(f"{key} exceeds supported tank-coverage precision")
+    subtraction_exponent = min(tank.as_tuple().exponent, unusable.as_tuple().exponent) if unusable else tank.as_tuple().exponent
+    if tank.adjusted() - subtraction_exponent + 1 > 28:
+        raise ValueError("usable tank volume exceeds supported tank-coverage precision")
+    usable = tank - unusable
+    ratio_exponent = usable.adjusted() - rate.adjusted()
+    if not -300 <= ratio_exponent <= 23:
+        raise ValueError("tank coverage exceeds supported tank-coverage precision")
+    return normalized
+
+
+def _tank_coverage(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    normalized = validate_tank_coverage_inputs(inputs)
+    tank = normalized["tank_volume_l"]
+    rate = normalized["application_volume_l_per_ha"]
+    unusable = normalized["unusable_volume_l"]
     usable = tank - unusable
     answer = usable / rate
     assumptions = () if unusable else ("unusable tank volume supplied as zero",)
