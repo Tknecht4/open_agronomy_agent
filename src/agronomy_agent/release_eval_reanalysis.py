@@ -230,6 +230,8 @@ def _lineage(run: Mapping[str, Any]) -> dict[str, Any]:
                 "report.json",
                 "observations.jsonl",
                 "components.jsonl",
+                *([name for name in ("closeout.json", "closeout-failure.json") if (directory / name).is_file()]
+                  if "bounded_stop_policy" in run["plan"] else []),
             )
         },
         "execution_source": run["plan"]["source"],
@@ -258,6 +260,12 @@ def _report(run: Mapping[str, Any], reviews: list[dict[str, Any]]) -> dict[str, 
     report["plan_sha256"] = plan_identity(run["plan"])
     # An offline label pass cannot qualify a run that executed across source drift.
     report["source_stable"] = run["frozen_report"].get("source_stable")
+    bounded = run["frozen_report"].get("bounded_execution")
+    if bounded is not None:
+        report["bounded_execution"] = bounded
+        if bounded.get("status") == "terminal_stopped":
+            report["status"] = "blocked"
+            report["failures"]["bounded_execution_stop"] = bounded.get("stop")
     if report["source_stable"] is not True:
         report["status"] = "blocked"
         report["failures"]["source_drift_or_unknown"] = True

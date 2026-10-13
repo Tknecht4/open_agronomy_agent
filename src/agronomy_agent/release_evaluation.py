@@ -863,6 +863,42 @@ def plan_identity(plan: Mapping[str, Any]) -> str:
     return digest(plan)
 
 
+def read_stop_policy(path: Path | None) -> dict[str, Any] | None:
+    """An opt-in collection contract, never model or domain qualification."""
+    if path is None:
+        return None
+    item = read_controller_inputs(policy_path=path)["policy"]
+    policy = item["value"]
+    keys = {"schema_version", "finalization_reserve_seconds", "retention_budget_bytes",
+            "finalization_reserve_bytes", "minimum_free_bytes", "file_hardcap_bytes",
+            "require_model_identity", "require_termination"}
+    if set(policy) != keys or policy["schema_version"] != "open_agronomy_agent.bounded_stop_policy.v1":
+        raise ValueError("unsupported bounded stop policy")
+    reserve = policy["finalization_reserve_seconds"]
+    if type(reserve) not in (int, float) or not math.isfinite(reserve) or reserve <= 10:
+        raise ValueError("finalization reserve must exceed ten-second process cleanup bound")
+    for key in ("retention_budget_bytes", "finalization_reserve_bytes", "minimum_free_bytes", "file_hardcap_bytes"):
+        if type(policy[key]) is not int or policy[key] <= 0:
+            raise ValueError("stop policy byte amounts must be positive integers")
+    if policy["finalization_reserve_bytes"] + policy["file_hardcap_bytes"] >= policy["retention_budget_bytes"]:
+        raise ValueError("retention budget must leave dispatch and finalization headroom")
+    if any(type(policy[key]) is not bool for key in ("require_model_identity", "require_termination")):
+        raise ValueError("stop policy requirements must be explicit booleans")
+    return {"path": str(item["path"]), "bytes": item["bytes"], "policy": policy,
+            "sha256": item["sha256"]}
+
+
+def bind_stop_policy(plan: dict[str, Any], item: Mapping[str, Any] | None,
+                     whole_run_seconds: float) -> dict[str, Any]:
+    if item is None:
+        return plan
+    if item["policy"]["finalization_reserve_seconds"] >= whole_run_seconds:
+        raise ValueError("finalization reserve consumes whole run budget")
+    return {**plan, "bounded_stop_policy": {"schema_version": "open_agronomy_agent.stop_policy_binding.v1",
+            "sha256": item["sha256"], "bytes": len(item["bytes"]),
+            "source_path": item["path"], "policy": item["policy"]}}
+
+
 def write_new_json(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("x", encoding="utf-8") as handle:
@@ -870,6 +906,8 @@ def write_new_json(path: Path, value: Any) -> None:
             value, handle, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False
         )
         handle.write("\n")
+        handle.flush()
+        os.fsync(handle.fileno())
 
 
 def evaluation_entrypoints(*, root: Path = ROOT) -> dict[str, Any]:

@@ -17,7 +17,37 @@ from agronomy_agent.release_evaluation import (
     read_controller_inputs,
     task_input_contract,
     validate_task_exposure,
+    read_stop_policy,
+    bind_stop_policy,
 )
+
+
+@pytest.mark.parametrize("override", [{"extra": True}, {"finalization_reserve_seconds": 10},
+    {"finalization_reserve_seconds": True}, {"file_hardcap_bytes": False},
+    {"minimum_free_bytes": 0}, {"require_termination": "yes"},
+    {"retention_budget_bytes": 1024}])
+def test_order3_stop_policy_refuses_invalid_contract_before_binding(tmp_path, override):
+    value = {"schema_version": "open_agronomy_agent.bounded_stop_policy.v1",
+             "finalization_reserve_seconds": 15, "retention_budget_bytes": 4096,
+             "finalization_reserve_bytes": 1024, "minimum_free_bytes": 1,
+             "file_hardcap_bytes": 1024, "require_model_identity": True,
+             "require_termination": True, **override}
+    path = tmp_path / "stop.json"; path.write_text(json.dumps(value))
+    with pytest.raises(ValueError): read_stop_policy(path)
+
+
+def test_order3_stop_policy_has_exact_bytes_and_finite_reserve(tmp_path):
+    value = {"schema_version": "open_agronomy_agent.bounded_stop_policy.v1",
+             "finalization_reserve_seconds": 15, "retention_budget_bytes": 4096,
+             "finalization_reserve_bytes": 1024, "minimum_free_bytes": 1,
+             "file_hardcap_bytes": 1024, "require_model_identity": True,
+             "require_termination": True}
+    path = tmp_path / "stop.json"; path.write_text(json.dumps(value))
+    item = read_stop_policy(path)
+    bound = bind_stop_policy({}, item, 30)
+    assert bound["bounded_stop_policy"]["sha256"] == __import__('hashlib').sha256(path.read_bytes()).hexdigest()
+    assert bound["bounded_stop_policy"]["bytes"] == len(path.read_bytes())
+    with pytest.raises(ValueError, match="whole run budget"): bind_stop_policy({}, item, 15)
 
 
 def _controller_packet(tmp_path):

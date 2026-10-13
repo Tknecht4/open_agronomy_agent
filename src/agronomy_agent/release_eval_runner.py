@@ -8,10 +8,13 @@ import json
 import math
 import os
 import random
+import resource
 import signal
 import subprocess
 import sys
 import time
+import threading
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -30,6 +33,8 @@ from agronomy_agent.release_evaluation import (
     plan_identity,
     source_identity,
     read_controller_inputs,
+    read_stop_policy,
+    bind_stop_policy,
     validate_task_exposure,
     validate_worker_runtime,
     planned_analysis_condition,
@@ -37,6 +42,126 @@ from agronomy_agent.release_evaluation import (
     write_new_json,
 )
 from agronomy_agent.release_eval_analysis import compare, public_projection, summarize
+
+
+class _PolicyStop(ValueError):
+    def __init__(self, reason: str, detail: Any = None):
+        super().__init__(reason)
+        self.reason, self.detail = reason, detail
+
+
+def _capacity(directory: Path, policy: Mapping[str, Any], *, dispatch: bool = True) -> dict[str, Any]:
+    allocated = 0
+    for path in directory.rglob("*"):
+        if path.is_symlink() or not (path.is_file() or path.is_dir()):
+            raise _PolicyStop("invalid_retained_path")
+        if path.is_file():
+            info = path.stat()
+            allocated += info.st_blocks * 512
+            if info.st_size > policy["file_hardcap_bytes"]:
+                raise _PolicyStop("file_hardcap", {"path": str(path), "bytes": info.st_size})
+    free = os.statvfs(directory).f_bavail * os.statvfs(directory).f_frsize
+    reserve = policy["finalization_reserve_bytes"] if dispatch else 0
+    # Leave one maximum file of monitored overshoot headroom before dispatch.
+    headroom = policy["file_hardcap_bytes"] if dispatch else 0
+    snapshot = {"allocated_entry_bytes": allocated, "free_bytes": free}
+    if allocated + reserve + headroom >= policy["retention_budget_bytes"]:
+        raise _PolicyStop("retention_capacity", snapshot)
+    if free < policy["minimum_free_bytes"] + reserve + headroom:
+        raise _PolicyStop("free_capacity", snapshot)
+    return snapshot
+
+
+@contextmanager
+def _owned_cancellation(enabled: bool):
+    previous = {}
+    requested = False
+    def cancel(_signum, _frame):
+        nonlocal requested
+        if not requested:
+            requested = True
+            raise KeyboardInterrupt
+    if enabled and threading.current_thread() is threading.main_thread():
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            previous[sig] = signal.signal(sig, cancel)
+    try:
+        yield
+    finally:
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
+
+
+@contextmanager
+def _cleanup_shield():
+    """Repeated cancellation never interrupts containment of our owned group."""
+    previous, pending = {}, []
+    if threading.current_thread() is threading.main_thread():
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            previous[sig] = signal.signal(sig, lambda number, _frame: pending.append(number))
+    try:
+        yield
+    finally:
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
+        if pending:
+            handler = previous[pending[0]]
+            if callable(handler):
+                handler(pending[0], None)
+            elif handler != signal.SIG_IGN:
+                raise KeyboardInterrupt
+
+
+def _parent_write_guard(directory: Path, policy: Mapping[str, Any], *, extra: bytes,
+                        path: Path, append: bool = False) -> None:
+    if path.is_symlink():
+        raise _PolicyStop("invalid_retained_path")
+    size = (path.stat().st_size if append and path.exists() else 0) + len(extra)
+    if size > policy["file_hardcap_bytes"]:
+        raise _PolicyStop("parent_file_hardcap", str(path))
+    current = _capacity(directory, policy, dispatch=False)
+    charge = ((len(extra) + 4095) // 4096) * 4096
+    if (current["allocated_entry_bytes"] + charge + policy["finalization_reserve_bytes"] > policy["retention_budget_bytes"]
+            or current["free_bytes"] - charge < policy["minimum_free_bytes"] + policy["finalization_reserve_bytes"]):
+        raise _PolicyStop("parent_write_capacity")
+
+
+def _attempt_stop(row: Mapping[str, Any], plan: Mapping[str, Any], *, product: bool) -> None:
+    if row.get("status") not in ({"completed"} if product else {"pass"}):
+        raise _PolicyStop("attempt_status", row.get("status"))
+    if any(check.get("passed") is not True for check in row.get("checks") or []):
+        raise _PolicyStop("failed_check")
+    if not product:
+        return
+    from agronomy_agent.release_eval_executor import observation_termination
+    from agronomy_agent.release_eval_model_metrics import termination_evidence
+    from agronomy_agent.release_eval_reanalysis import _merge_termination
+    policy = plan["bounded_stop_policy"]["policy"]
+    turns = row.get("turns") or []
+    recorded = termination_evidence(row)
+    derived = observation_termination(turns) if turns else None
+    actual = termination_evidence({"termination": derived})
+    if recorded["truncated"] is not None and actual["truncated"] is not None and recorded["truncated"] != actual["truncated"]:
+        raise _PolicyStop("contradictory_termination")
+    merged = _merge_termination(row.get("termination"), derived)
+    terminal = termination_evidence({**row, "termination": merged})
+    if terminal["truncated"] is True:
+        raise _PolicyStop("generation_truncated")
+    if policy["require_termination"] and terminal["status"] == "unknown":
+        raise _PolicyStop("required_termination_unknown")
+    if policy["require_model_identity"]:
+        from agronomy_agent.release_eval_analysis import _verified_generation
+        revision = plan["model"].get("revision")
+        if not turns:
+            raise _PolicyStop("required_model_identity_unknown")
+        for turn in turns:
+            execution = turn.get("model_execution") or {}
+            if execution.get("generator_called") is False and execution.get("disposition") in {"tool_only", "fast_exit", "clarification_only"}:
+                continue
+            observed = turn.get("model_revision_observation") or {}
+            if any(observed.get(key) not in (None, revision) for key in ("configured", "resolved")):
+                raise _PolicyStop("model_identity_drift")
+            if not _verified_generation(turn, revision):
+                raise _PolicyStop("required_model_identity_unknown")
 
 
 def _instrument_controls() -> dict[str, Any]:
@@ -134,6 +259,7 @@ def _command(
     output: Path,
     timeout: float,
     new_session: bool = True,
+    execution_guard: Mapping[str, Any] | None = None,
 ) -> tuple[int, str]:
     """Kill the complete owned process group on timeout, preserving its log."""
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -150,24 +276,56 @@ def _command(
     environment.pop("AGRONOMY_AGENT_PRIVATE_KNOWLEDGE_MANIFEST", None)
     environment["PYTHONPATH"] = str(cwd / "src") + os.pathsep + str(cwd)
     environment["PYTHONDONTWRITEBYTECODE"] = "1"
+    end = time.monotonic() + timeout
+    if execution_guard:
+        end = min(end, execution_guard["deadline_monotonic"])
+        _capacity(Path(execution_guard["directory"]), execution_guard["policy"])
+        if time.monotonic() >= end:
+            raise _PolicyStop("dispatch_deadline")
     with output.open("x", encoding="utf-8") as handle:
-        child = subprocess.Popen(
-            argv,
-            cwd=cwd,
-            env=environment,
-            stdout=handle,
-            stderr=subprocess.STDOUT,
-            start_new_session=new_session,
-        )
+        if execution_guard:
+            _capacity(Path(execution_guard["directory"]), execution_guard["policy"])
+            if time.monotonic() >= end:
+                raise _PolicyStop("dispatch_deadline")
+        def file_limit():
+            cap = execution_guard["policy"]["file_hardcap_bytes"]
+            _, inherited = resource.getrlimit(resource.RLIMIT_FSIZE)
+            cap = cap if inherited == resource.RLIM_INFINITY else min(cap, inherited)
+            resource.setrlimit(resource.RLIMIT_FSIZE, (cap, cap))
+        child = None
         try:
-            return child.wait(timeout=timeout), "completed"
+            # Defer cancellation until creation/assignment is inside containment.
+            with _cleanup_shield():
+                child = subprocess.Popen(
+                    argv, cwd=cwd, env=environment, stdout=handle,
+                    stderr=subprocess.STDOUT, start_new_session=new_session,
+                    **({"preexec_fn": file_limit} if execution_guard else {}),
+                )
+            if execution_guard:
+                write_new_json(output.parent / "child-dispatch.json", {"pid": child.pid,
+                    "started_monotonic_seconds": time.monotonic(), "deadline_monotonic_seconds": end})
+            if execution_guard is None:
+                return child.wait(timeout=timeout), "completed"
+            while True:
+                try:
+                    _capacity(Path(execution_guard["directory"]), execution_guard["policy"])
+                except _PolicyStop as stop:
+                    return 125, stop.reason
+                if time.monotonic() >= end:
+                    return 124, "timeout"
+                status = child.poll()
+                if status is not None:
+                    return status, "completed"
+                time.sleep(min(0.02, max(0, end - time.monotonic())))
         except subprocess.TimeoutExpired:
             return 124, "timeout"
         finally:
             # Success, timeout and owner cancellation all close the owned group.
             # Nested commands share that group; only their direct child is owned
             # here, and the outer worker owner contains any remaining descendants.
-            _stop_owned_processes(child, new_session=new_session)
+            if child is not None:
+                with _cleanup_shield():
+                    _stop_owned_processes(child, new_session=new_session)
 
 
 def execute_worker(spec: Mapping[str, Any]) -> dict[str, Any]:
@@ -400,9 +558,14 @@ def _subprocess_cell(spec: dict[str, Any], *, timeout: float) -> dict[str, Any]:
             ],
         }
     directory.mkdir(parents=True)
+    if spec.get("execution_guard"):
+        guard = spec["execution_guard"]
+        _parent_write_guard(Path(guard["directory"]), guard["policy"], path=directory / "spec.json",
+            extra=(json.dumps(spec, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n").encode())
     write_new_json(directory / "spec.json", spec)
     result_path = directory / "worker-result.json"
-    status, disposition = _command(
+    try:
+        status, disposition = _command(
         [
             sys.executable,
             str(ROOT / "scripts/run_release_evaluation.py"),
@@ -414,7 +577,12 @@ def _subprocess_cell(spec: dict[str, Any], *, timeout: float) -> dict[str, Any]:
         cwd=ROOT,
         output=directory / "execution.log",
         timeout=timeout,
-    )
+        execution_guard=spec.get("execution_guard"),
+        )
+    except KeyboardInterrupt:
+        if not spec.get("execution_guard"):
+            raise
+        status, disposition = 130, "owner_cancelled"
     result = (
         json.loads(result_path.read_text())
         if result_path.is_file()
@@ -430,15 +598,17 @@ def _subprocess_cell(spec: dict[str, Any], *, timeout: float) -> dict[str, Any]:
             }
         )
     result["worker_exit_code"] = status
+    if status != 0:
+        result["worker_disposition"] = disposition
     return result
 
 
-def _append(path: Path, record: Mapping[str, Any]) -> None:
+def _append(path: Path, record: Mapping[str, Any], *, guard: Mapping[str, Any] | None = None) -> None:
+    raw = json.dumps(record, ensure_ascii=False, sort_keys=True, allow_nan=False) + "\n"
+    if guard:
+        _parent_write_guard(Path(guard["directory"]), guard["policy"], path=path, extra=raw.encode(), append=True)
     with path.open("a", encoding="utf-8") as handle:
-        handle.write(
-            json.dumps(record, ensure_ascii=False, sort_keys=True, allow_nan=False)
-            + "\n"
-        )
+        handle.write(raw)
         handle.flush()
         os.fsync(handle.fileno())
 
@@ -479,13 +649,16 @@ def _seal_record(record: dict[str, Any], plan_sha256: str) -> dict[str, Any]:
 
 def retention_manifest(directory: Path) -> dict[str, Any]:
     files = {}
+    excluded = {".run.lock", "retention.json"}
+    if ((directory / "plan.json").is_file() and
+            "bounded_stop_policy" in json.loads((directory / "plan.json").read_text())):
+        # These closeout records bind the finalized retention seal and report,
+        # and are independently validated by the retained-report reader.
+        excluded.update({"closeout.json", "closeout-failure.json"})
     for path in sorted(directory.rglob("*")):
         if path.is_symlink():
             raise ValueError("retained evaluation outputs must not contain symlinks")
-        if path.is_file() and path.relative_to(directory).as_posix() not in {
-            ".run.lock",
-            "retention.json",
-        }:
+        if path.is_file() and path.relative_to(directory).as_posix() not in excluded:
             files[path.relative_to(directory).as_posix()] = {
                 "sha256": file_digest(path),
                 "bytes": path.stat().st_size,
@@ -524,6 +697,42 @@ def load_retained_report(path: Path) -> dict[str, Any]:
         raise ValueError("reference plan/report binding differs")
     _ledger(directory / "observations.jsonl", plan_sha256=plan_identity(plan))
     _ledger(directory / "components.jsonl", plan_sha256=plan_identity(plan))
+    if "bounded_stop_policy" in plan:
+        closed = directory / "closeout.json"
+        if not closed.is_file() or closed.is_symlink():
+            raise ValueError("bounded terminal report has no verified closeout receipt")
+        binding = {"plan_sha256": plan_identity(plan), "policy_sha256": plan["bounded_stop_policy"]["sha256"],
+                   "report_sha256": file_digest(report_path), "retention_sha256": file_digest(directory / "retention.json"),
+                   "clock_sha256": file_digest(directory / "run-clock.json")}
+        receipt = json.loads(closed.read_text())
+        if (receipt.get("record_sha256") != digest({k: v for k, v in receipt.items() if k != "record_sha256"})
+                or any(receipt.get(k) != v for k, v in binding.items())
+                or receipt.get("schema_version") != "open_agronomy_agent.bounded_closeout.v1"
+                or type(receipt.get("observed_remaining_seconds")) not in (int, float)
+                or not math.isfinite(receipt["observed_remaining_seconds"])
+                or receipt.get("status") != ("complete_within_deadline" if receipt["observed_remaining_seconds"] >= 0 else "late_blocked")
+                or file_digest(directory / "stop-policy.private.json") != binding["policy_sha256"]):
+            raise ValueError("bounded closeout binding differs")
+        late = receipt["status"] == "late_blocked"
+        failure = directory / "closeout-failure.json"
+        if failure.exists():
+            failed = json.loads(failure.read_text())
+            if failure.is_symlink() or failed.get("record_sha256") != digest({k: v for k, v in failed.items() if k != "record_sha256"}) or failed.get("closeout_sha256") != file_digest(closed):
+                raise ValueError("bounded closeout failure binding differs")
+            late = True
+        execution = report["bounded_execution"]
+        execution["closeout"] = receipt
+        execution["closeout_receipt_sha256"] = file_digest(closed)
+        execution["closeout_status"] = "late_blocked" if late else "complete_within_deadline"
+        if late:
+            execution["status"] = "terminal_stopped"
+            execution["stop"] = execution.get("stop") or {"reason": "finalization_deadline", "detail": None}
+            report["status"] = "blocked"
+            report["failures"]["bounded_execution_stop"] = execution["stop"]
+        elif execution["status"] == "awaiting_closeout":
+            execution["status"] = "dispatch_complete"
+    elif (directory / "closeout.json").exists() or (directory / "closeout-failure.json").exists():
+        raise ValueError("legacy run has unexpected bounded closeout files")
     return report
 
 
@@ -546,6 +755,31 @@ def _effective_yaml(path: Path, value: Mapping[str, Any]) -> None:
             handle.write(expected)
 
 
+def _bounded_clock(path: Path, *, plan_sha256: str, policy_sha256: str,
+                   budget: float, entry_unix: float, resume: bool) -> dict[str, Any]:
+    if not path.exists():
+        if resume:
+            raise ValueError("bounded resume requires the original durable run clock")
+        clock = {"schema_version": "open_agronomy_agent.bounded_run_clock.v1",
+                 "started_unix_seconds": entry_unix, "deadline_unix_seconds": entry_unix + budget,
+                 "budget_seconds": budget, "plan_sha256": plan_sha256, "policy_sha256": policy_sha256}
+        clock["record_sha256"] = digest(clock)
+        write_new_json(path, clock)
+    clock = json.loads(path.read_text())
+    if path.is_symlink() or clock.get("record_sha256") != digest({k: v for k, v in clock.items() if k != "record_sha256"}):
+        raise ValueError("bounded run clock integrity differs")
+    if (clock.get("schema_version") != "open_agronomy_agent.bounded_run_clock.v1"
+            or clock.get("plan_sha256") != plan_sha256 or clock.get("policy_sha256") != policy_sha256
+            or clock.get("budget_seconds") != budget):
+        raise ValueError("bounded run clock identity differs")
+    for key in ("started_unix_seconds", "deadline_unix_seconds"):
+        if type(clock.get(key)) not in (int, float) or not math.isfinite(clock[key]):
+            raise ValueError("bounded run clock time is invalid")
+    if clock["deadline_unix_seconds"] != clock["started_unix_seconds"] + budget or entry_unix < clock["started_unix_seconds"]:
+        raise ValueError("bounded run clock deadline or wall-clock rollback")
+    return clock
+
+
 def run_suite(
     *,
     registry_path: Path,
@@ -559,7 +793,11 @@ def run_suite(
     model_rubrics_path: Path | None = None,
     model_policy_path: Path | None = None,
     comparison_cohort: str | None = None,
+    stop_policy_path: Path | None = None,
 ) -> dict[str, Any]:
+    entry_unix, entry_monotonic = time.time(), time.monotonic()
+    stop_input = read_stop_policy(stop_policy_path)
+    stop_policy = stop_input["policy"] if stop_input else None
     registry = load_registry(registry_path)
     if profile == "release" and reference_path is None:
         raise ValueError("release profile requires a retained full reference report")
@@ -588,7 +826,7 @@ def run_suite(
     if hashlib.sha256(rag_bytes).hexdigest() != plan["rag_config_sha256"]:
         raise ValueError("RAG config changed during planning")
     rag_snapshot = yaml.safe_load(rag_bytes)
-    if "controller_inputs" in plan:
+    if "controller_inputs" in plan or stop_input:
         runtime_rag = {**rag_snapshot, "private_knowledge": {"enabled": False, "required": False}}
         plan["effective_runtime_inputs"] = {
             "rag_sha256": hashlib.sha256(yaml.safe_dump(runtime_rag, sort_keys=True).encode()).hexdigest(),
@@ -603,284 +841,414 @@ def run_suite(
     plan["reviews_sha256"] = (
         hashlib.sha256(reviews_bytes).hexdigest() if reviews_bytes is not None else None
     )
+    plan = bind_stop_policy(plan, stop_input, registry["whole_run_timeout_seconds"])
     plan_sha256 = plan_identity(plan)
     output_dir = output_dir.resolve()
+    if stop_policy and not (resume and (output_dir / "report.json").is_file()):
+        payloads = [(json.dumps(plan, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n").encode(),
+                    stop_input["bytes"], *[item["bytes"] for item in controller.values()]]
+        payloads += [yaml.safe_dump({**rag_snapshot, "private_knowledge": {"enabled": False, "required": False}}, sort_keys=True).encode()]
+        payloads += [yaml.safe_dump({**model_snapshot, "seed": registry["seed"] + trial - 1,
+                         "prompt_cache_enabled": False}, sort_keys=True).encode()
+                     for trial in range(1, registry["profiles"][profile]["trials"] + 1)]
+        if reviews_bytes is not None:
+            payloads.append(reviews_bytes)
+        if reference is not None:
+            payloads.append((json.dumps(reference, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n").encode())
+        charge = sum(((len(raw) + 4095) // 4096) * 4096 for raw in payloads) + 8192
+        probe = output_dir if output_dir.exists() else next(parent for parent in output_dir.parents if parent.exists())
+        free = os.statvfs(probe).f_bavail * os.statvfs(probe).f_frsize
+        if (max(len(raw) for raw in payloads) > stop_policy["file_hardcap_bytes"]
+                or charge + stop_policy["finalization_reserve_bytes"] >= stop_policy["retention_budget_bytes"]
+                or free - charge < stop_policy["minimum_free_bytes"] + stop_policy["finalization_reserve_bytes"]):
+            raise ValueError("bounded preparation preflight capacity refused before output")
+        if not resume and time.monotonic() - entry_monotonic >= registry["whole_run_timeout_seconds"] - stop_policy["finalization_reserve_seconds"]:
+            raise ValueError("bounded preparation deadline expired before output")
     if output_dir.exists() and any(output_dir.iterdir()) and not resume:
         raise ValueError(
             "output directory must be new; use exact-identity resume or a successor run"
         )
     output_dir.mkdir(parents=True, exist_ok=True)
-    with (output_dir / ".run.lock").open("a") as lock:
+    with (output_dir / ".run.lock").open("a") as lock, _owned_cancellation(stop_policy is not None):
         try:
             fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
             raise ValueError("another owner holds this evaluation run") from exc
-        saved_plan = output_dir / "plan.json"
-        if saved_plan.is_file():
-            if not resume or json.loads(saved_plan.read_text()) != plan:
-                raise ValueError("resume identity differs from frozen plan")
-        else:
-            if resume and any(
-                path.name != ".run.lock" for path in output_dir.iterdir()
-            ):
-                raise ValueError(
-                    "cannot resume a directory without a valid frozen plan"
-                )
-            write_new_json(saved_plan, plan)
-        if (output_dir / "report.json").is_file():
-            verify_retention(output_dir)
-            return json.loads((output_dir / "report.json").read_text())
-        for name, item in controller.items():
-            suffix = "jsonl" if name == "rubrics" else "json"
-            path = output_dir / f"model-{name}.private.{suffix}"
-            if path.exists():
-                if path.is_symlink() or path.read_bytes() != item["bytes"]:
-                    raise ValueError("frozen controller bytes changed")
-            else:
-                with path.open("xb") as handle:
-                    handle.write(item["bytes"])
+        if (output_dir / "startup-stop.json").exists():
+            raise ValueError("terminal startup stop requires a successor run")
 
-        def verify_prospective_inputs():
-            if "controller_inputs" not in plan:
-                return
-            if source_identity()["source_sha256"] != plan["source"]["source_sha256"] or controlled_inputs(registry) != plan["auxiliary_inputs"] or digest(load_registry(registry_path)) != plan["registry_sha256"]:
-                raise ValueError("prospective source or controlled inputs changed")
-            if file_digest(checked_path(ROOT, registry["model_config"])) != plan["model"]["config_sha256"] or file_digest(checked_path(ROOT, registry["rag_config"])) != plan["rag_config_sha256"]:
-                raise ValueError("prospective runtime inputs changed")
-            current = read_controller_inputs(rubrics_path=model_rubrics_path, policy_path=model_policy_path)
+        def preparation_guard(path, raw):
+            if stop_policy:
+                _parent_write_guard(output_dir, stop_policy, path=path, extra=raw)
+                if time.monotonic() - entry_monotonic >= registry["whole_run_timeout_seconds"] - stop_policy["finalization_reserve_seconds"]:
+                    raise _PolicyStop("preparation_deadline")
+        try:
+            saved_plan = output_dir / "plan.json"
+            if saved_plan.is_file():
+                if not resume or json.loads(saved_plan.read_text()) != plan:
+                    raise ValueError("resume identity differs from frozen plan")
+            else:
+                if resume and any(
+                    path.name != ".run.lock" for path in output_dir.iterdir()
+                ):
+                    raise ValueError(
+                        "cannot resume a directory without a valid frozen plan"
+                    )
+                preparation_guard(saved_plan, (json.dumps(plan, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n").encode())
+                write_new_json(saved_plan, plan)
+            if (output_dir / "report.json").is_file():
+                return load_retained_report(output_dir)
+            bounded_clock = None
+            if stop_input:
+                frozen_stop = output_dir / "stop-policy.private.json"
+                if frozen_stop.exists():
+                    if frozen_stop.is_symlink() or frozen_stop.read_bytes() != stop_input["bytes"]:
+                        raise ValueError("frozen stop policy bytes changed")
+                else:
+                    preparation_guard(frozen_stop, stop_input["bytes"])
+                    with frozen_stop.open("xb") as handle:
+                        handle.write(stop_input["bytes"])
+                        handle.flush()
+                        os.fsync(handle.fileno())
+                bounded_clock = _bounded_clock(output_dir / "run-clock.json", plan_sha256=plan_sha256,
+                    policy_sha256=stop_input["sha256"], budget=registry["whole_run_timeout_seconds"],
+                    entry_unix=entry_unix, resume=resume)
             for name, item in controller.items():
                 suffix = "jsonl" if name == "rubrics" else "json"
                 path = output_dir / f"model-{name}.private.{suffix}"
-                if current[name]["bytes"] != item["bytes"] or path.is_symlink() or file_digest(path) != item["sha256"]:
-                    raise ValueError("prospective controller bytes changed")
-            if runtime_ready:
-                if file_digest(public_rag) != plan["effective_runtime_inputs"]["rag_sha256"] or any(
+                if path.exists():
+                    if path.is_symlink() or path.read_bytes() != item["bytes"]:
+                        raise ValueError("frozen controller bytes changed")
+                else:
+                    preparation_guard(path, item["bytes"])
+                    with path.open("xb") as handle:
+                        handle.write(item["bytes"])
+
+            def verify_prospective_inputs():
+                if stop_input:
+                    current_stop = read_stop_policy(stop_policy_path)
+                    if current_stop["bytes"] != stop_input["bytes"] or (output_dir / "stop-policy.private.json").read_bytes() != stop_input["bytes"]:
+                        raise ValueError("bounded stop policy bytes changed")
+                if "controller_inputs" not in plan:
+                    if not stop_input:
+                        return
+                if source_identity()["source_sha256"] != plan["source"]["source_sha256"] or controlled_inputs(registry) != plan["auxiliary_inputs"] or digest(load_registry(registry_path)) != plan["registry_sha256"]:
+                    raise ValueError("prospective source or controlled inputs changed")
+                if file_digest(checked_path(ROOT, registry["model_config"])) != plan["model"]["config_sha256"] or file_digest(checked_path(ROOT, registry["rag_config"])) != plan["rag_config_sha256"]:
+                    raise ValueError("prospective runtime inputs changed")
+                current = read_controller_inputs(rubrics_path=model_rubrics_path, policy_path=model_policy_path)
+                for name, item in controller.items():
+                    suffix = "jsonl" if name == "rubrics" else "json"
+                    path = output_dir / f"model-{name}.private.{suffix}"
+                    if current[name]["bytes"] != item["bytes"] or path.is_symlink() or file_digest(path) != item["sha256"]:
+                        raise ValueError("prospective controller bytes changed")
+                if runtime_ready and "effective_runtime_inputs" in plan:
+                    if file_digest(public_rag) != plan["effective_runtime_inputs"]["rag_sha256"] or any(
+                        file_digest(effective / f"model-{trial_id}.yaml") != expected
+                        for trial_id, expected in plan["effective_runtime_inputs"]["model_trial_sha256"].items()
+                    ):
+                        raise ValueError("prospective effective runtime bytes changed")
+            runtime_ready = False
+            verify_prospective_inputs()
+            if reviews_bytes is not None:
+                frozen_reviews = output_dir / "reviews.private.jsonl"
+                if frozen_reviews.exists():
+                    if (
+                        frozen_reviews.is_symlink()
+                        or frozen_reviews.read_bytes() != reviews_bytes
+                    ):
+                        raise ValueError("frozen review input differs from planned bytes")
+                else:
+                    preparation_guard(frozen_reviews, reviews_bytes)
+                    with frozen_reviews.open("xb") as handle:
+                        handle.write(reviews_bytes)
+            if reference is not None:
+                frozen_reference = output_dir / "reference-report.json"
+                if frozen_reference.exists():
+                    if (
+                        digest(json.loads(frozen_reference.read_text()))
+                        != plan["reference_sha256"]
+                    ):
+                        raise ValueError("frozen reference differs from planned bytes")
+                else:
+                    preparation_guard(frozen_reference, (json.dumps(reference, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n").encode())
+                    write_new_json(frozen_reference, reference)
+            effective = output_dir / "effective"
+            effective.mkdir(exist_ok=True)
+            rag = dict(rag_snapshot)
+            rag["private_knowledge"] = {"enabled": False, "required": False}
+            public_rag = effective / "public-rag.yaml"
+            if not public_rag.exists():
+                preparation_guard(public_rag, yaml.safe_dump(rag, sort_keys=True).encode())
+            _effective_yaml(public_rag, rag)
+            for trial in range(1, registry["profiles"][profile]["trials"] + 1):
+                path = effective / f"model-trial-{trial:03d}.yaml"
+                model = dict(model_snapshot)
+                model["seed"] = registry["seed"] + trial - 1
+                model["prompt_cache_enabled"] = False
+                if not path.exists():
+                    preparation_guard(path, yaml.safe_dump(model, sort_keys=True).encode())
+                _effective_yaml(path, model)
+            if "controller_inputs" in plan or stop_input:
+                expected_runtime = plan["effective_runtime_inputs"]
+                if file_digest(public_rag) != expected_runtime["rag_sha256"] or any(
                     file_digest(effective / f"model-{trial_id}.yaml") != expected
-                    for trial_id, expected in plan["effective_runtime_inputs"]["model_trial_sha256"].items()
+                    for trial_id, expected in expected_runtime["model_trial_sha256"].items()
                 ):
-                    raise ValueError("prospective effective runtime bytes changed")
-        runtime_ready = False
-        verify_prospective_inputs()
-        if reviews_bytes is not None:
-            frozen_reviews = output_dir / "reviews.private.jsonl"
-            if frozen_reviews.exists():
-                if (
-                    frozen_reviews.is_symlink()
-                    or frozen_reviews.read_bytes() != reviews_bytes
-                ):
-                    raise ValueError("frozen review input differs from planned bytes")
+                    raise ValueError("effective runtime bytes differ from frozen inputs")
+            runtime_ready = True
+            clock_path = output_dir / "run-clock.json"
+            if not clock_path.exists():
+                write_new_json(
+                    clock_path,
+                    {"started_unix_seconds": time.time(), "plan_sha256": plan_sha256},
+                )
+            clock = json.loads(clock_path.read_text())
+            if clock.get("plan_sha256") != plan_sha256:
+                raise ValueError("run deadline source binding differs")
+            if bounded_clock:
+                deadline = entry_monotonic + bounded_clock["deadline_unix_seconds"] - entry_unix
             else:
-                with frozen_reviews.open("xb") as handle:
-                    handle.write(reviews_bytes)
-        if reference is not None:
-            frozen_reference = output_dir / "reference-report.json"
-            if frozen_reference.exists():
-                if (
-                    digest(json.loads(frozen_reference.read_text()))
-                    != plan["reference_sha256"]
-                ):
-                    raise ValueError("frozen reference differs from planned bytes")
-            else:
-                write_new_json(frozen_reference, reference)
-        effective = output_dir / "effective"
-        effective.mkdir(exist_ok=True)
-        rag = dict(rag_snapshot)
-        rag["private_knowledge"] = {"enabled": False, "required": False}
-        public_rag = effective / "public-rag.yaml"
-        _effective_yaml(public_rag, rag)
-        for trial in range(1, registry["profiles"][profile]["trials"] + 1):
-            path = effective / f"model-trial-{trial:03d}.yaml"
-            model = dict(model_snapshot)
-            model["seed"] = registry["seed"] + trial - 1
-            model["prompt_cache_enabled"] = False
-            _effective_yaml(path, model)
-        if "controller_inputs" in plan:
-            expected_runtime = plan["effective_runtime_inputs"]
-            if file_digest(public_rag) != expected_runtime["rag_sha256"] or any(
-                file_digest(effective / f"model-{trial_id}.yaml") != expected
-                for trial_id, expected in expected_runtime["model_trial_sha256"].items()
-            ):
-                raise ValueError("effective runtime bytes differ from frozen inputs")
-        runtime_ready = True
-        clock_path = output_dir / "run-clock.json"
-        if not clock_path.exists():
-            write_new_json(
-                clock_path,
-                {"started_unix_seconds": time.time(), "plan_sha256": plan_sha256},
-            )
-        clock = json.loads(clock_path.read_text())
-        if clock.get("plan_sha256") != plan_sha256:
-            raise ValueError("run deadline source binding differs")
-        remaining_budget = registry["whole_run_timeout_seconds"] - max(
-            0, time.time() - clock["started_unix_seconds"]
-        )
-        deadline = time.monotonic() + max(0, remaining_budget)
+                remaining_budget = registry["whole_run_timeout_seconds"] - max(
+                    0, time.time() - clock["started_unix_seconds"]
+                )
+                deadline = time.monotonic() + max(0, remaining_budget)
+        except (ValueError, OSError, KeyboardInterrupt) as exc:
+            if stop_policy:
+                record = {"schema_version": "open_agronomy_agent.startup_stop.v1",
+                          "plan_sha256": plan_sha256, "policy_sha256": stop_input["sha256"],
+                          "reason": str(exc) or "owner_cancelled", "disposition": "terminal_startup_stop",
+                          "new_dispatch_occurred": False, "qualification_granted": False}
+                record["record_sha256"] = digest(record)
+                raw = (json.dumps(record, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode()
+                try:
+                    _parent_write_guard(output_dir, {**stop_policy, "finalization_reserve_bytes": 1},
+                                        path=output_dir / "startup-stop.json", extra=raw)
+                    write_new_json(output_dir / "startup-stop.json", record)
+                except (OSError, ValueError):
+                    pass  # Missing/partial seal is refused; never invent startup authority.
+            raise
         components_path, observations_path = (
             output_dir / "components.jsonl",
             output_dir / "observations.jsonl",
         )
         components = _ledger(components_path, plan_sha256=plan_sha256)
-        completed_components = {row["component"] for row in components}
-        for kind in registry["required_components"]:
-            if kind in completed_components:
-                continue
-            verify_prospective_inputs()
-            remaining = deadline - time.monotonic()
-            timeout = min(registry["cell_timeout_seconds"], max(0.01, remaining))
-            spec = {
-                "kind": kind,
-                "directory": str(output_dir / "components" / kind),
-                "registry": registry,
-                "profile": profile,
-                "rag_config": str(public_rag),
-                "timeout": timeout,
-            }
-            result = (
-                _subprocess_cell(spec, timeout=timeout)
-                if remaining > 0
-                else {"status": "failed", "error_type": "WholeRunDeadline"}
-            )
-            result["component"] = kind
-            if result.get("status") == "failed":
-                result["status"] = "blocked"
-            _bind_artifacts(result, Path(spec["directory"]), output_dir)
-            result["receipt_sha256"] = digest(result)
-            record = _seal_record(result, plan_sha256)
-            _append(components_path, record)
-            components.append(record)
-            print(
-                json.dumps({"component": kind, "status": result["status"]}), flush=True
-            )
         rows = _ledger(observations_path, plan_sha256=plan_sha256)
-        done = {row["observation_id"] for row in rows}
-        cases = {(case["suite_id"], case["case_id"]): case for case in plan["cases"]}
-        matrix = list(plan["matrix"])
-        for trial_id in sorted({cell["trial_id"] for cell in matrix}):
-            ordered = [cell for cell in matrix if cell["trial_id"] == trial_id]
-            random.Random(
-                registry["seed"] + int(trial_id.removeprefix("trial-"))
-            ).shuffle(ordered)
-            for cell in ordered:
-                if cell["observation_id"] in done:
+        stopped = None
+
+        def dispatch_remaining():
+            if stop_policy:
+                _capacity(output_dir, stop_policy)
+                remaining = deadline - time.monotonic() - stop_policy["finalization_reserve_seconds"]
+                if remaining <= 0:
+                    raise _PolicyStop("dispatch_deadline")
+                return remaining
+            return deadline - time.monotonic()
+
+        def dispatch(spec, *, timeout):
+            if stop_policy:
+                spec["execution_guard"] = {"directory": str(output_dir), "policy": stop_policy,
+                    "deadline_monotonic": deadline - stop_policy["finalization_reserve_seconds"]}
+            try:
+                return _subprocess_cell(spec, timeout=timeout)
+            except _PolicyStop:
+                raise
+            except KeyboardInterrupt:
+                if not stop_policy:
+                    raise
+                return {"status": "interrupted", "error_type": "OwnerCancelled",
+                        "checks": [{"id": "owner_cancellation", "passed": False}]}
+            except Exception as exc:
+                if not stop_policy:
+                    raise
+                return {"status": "failed", "error_type": type(exc).__name__,
+                        "error": str(exc), "checks": [{"id": "worker_exception", "passed": False}]}
+
+        try:
+            if stop_policy:
+                for previous in components:
+                    _attempt_stop(previous, plan, product=False)
+                for previous in rows:
+                    _attempt_stop(previous, plan, product=True)
+            completed_components = {row["component"] for row in components}
+            for kind in registry["required_components"]:
+                if kind in completed_components:
                     continue
-                case = cases[(cell["suite_id"], cell["case_id"])]
                 verify_prospective_inputs()
-                remaining = deadline - time.monotonic()
+                remaining = dispatch_remaining()
+                timeout = min(registry["cell_timeout_seconds"], max(0.01, remaining))
                 spec = {
-                    "kind": "product",
-                    "directory": str(output_dir / "cells" / cell["observation_id"]),
-                    "cell": {key: value for key, value in cell.items() if key not in {"comparison_cohort", "task_input_sha256", "task_input_status"}},
-                    "case": worker_case(case),
-                    "model_config": str(effective / f"model-{trial_id}.yaml"),
+                    "kind": kind,
+                    "directory": str(output_dir / "components" / kind),
+                    "registry": registry,
+                    "profile": profile,
                     "rag_config": str(public_rag),
-                    "max_tokens": registry["max_tokens"],
+                    "timeout": timeout,
                 }
                 result = (
-                    _subprocess_cell(
-                        spec,
-                        timeout=min(
-                            registry["cell_timeout_seconds"], max(0.01, remaining)
-                        ),
-                    )
+                    dispatch(spec, timeout=timeout)
                     if remaining > 0
-                    else {
-                        "status": "failed",
-                        "error_type": "WholeRunDeadline",
-                        "checks": [
-                            {"id": "within_whole_run_deadline", "passed": False}
-                        ],
-                    }
+                    else {"status": "failed", "error_type": "WholeRunDeadline"}
                 )
-                binding_error = None
-                exposure_binding = None
-                if "controller_inputs" in plan:
-                    result["planned_input_binding"] = {key: cell.get(key) for key in ("comparison_cohort", "task_input_sha256", "task_input_status")}
-                    result["worker_input_binding"] = {key: result.get(key) for key in ("observation_id", "case_id", "case_sha256", "suite_id", "arm_id", "trial_id", "backend", "model_id", "model_revision", "analysis_condition", "comparison_cohort", "task_input_sha256", "status")}
-                    result["planned_input_binding"]["source_case_sha256"] = cell["case_sha256"]
-                    result["planned_input_binding"]["worker_case_sha256"] = digest(worker_case(case))
-                    try:
-                        for key in ("observation_id", "case_id", "case_sha256", "suite_id", "arm_id", "trial_id", "backend"):
-                            expected_identity = digest(worker_case(case)) if key == "case_sha256" and result.get("schema_version") == "open_agronomy_agent.release_product_cell.v1" else cell[key]
-                            if result.get(key) is not None and result[key] != expected_identity:
-                                raise ValueError("observed worker cell identity differs: " + key)
-                        exposure_binding = validate_task_exposure(case, cell["arm_id"], result.get("task_exposure"))
-                        runtime_status = validate_worker_runtime(plan, cell, result)
-                        result["runtime_input_binding_status"] = runtime_status
-                        expected_condition = planned_analysis_condition(plan, cell)
-                        for key in ("model_id", "model_revision"):
-                            expected_value = plan["model"]["id" if key == "model_id" else "revision"]
-                            if result.get(key) is not None and result[key] != expected_value:
-                                raise ValueError("observed worker model identity differs: " + key)
-                        if result.get("analysis_condition") is not None:
-                            if result["analysis_condition"] != expected_condition:
-                                raise ValueError("observed worker analysis condition differs")
-                        elif runtime_status == "verified_worker_config_bytes":
-                            result["analysis_condition"] = expected_condition
-                            result["analysis_condition_scope"] = "source verified before dispatch; worker config bytes observed; actual model/runtime qualification remains separate"
-                        if exposure_binding["task_input_sha256"] is not None and exposure_binding["task_input_sha256"] != cell["task_input_sha256"]:
-                            raise ValueError("planned and exposed task input mismatch")
-                    except ValueError as exc:
-                        binding_error = str(exc)
-                        exposure_binding = {"task_input_sha256": None, "status": "failed_input_binding"}
-                        result["status"] = "failed"
-                        result.setdefault("checks", []).append({"id": "shared_task_exposure", "passed": False, "detail": binding_error})
-                result.update({key: value for key, value in cell.items() if key not in {"comparison_cohort", "task_input_sha256", "task_input_status"}})
-                if exposure_binding is not None:
-                    result.update(task_input_sha256=exposure_binding["task_input_sha256"],
-                                  comparison_cohort=comparison_cohort if exposure_binding["task_input_sha256"] is not None else None,
-                                  task_input_status=exposure_binding["status"])
-                result["review_required"] = case["review_required"]
-                turns = result.get("turns") or []
-                answer = str(turns[-1].get("answer") or "") if turns else ""
-                result["answer_sha256"] = digest(answer) if turns else None
-                if (
-                    case.get("scoring_method") == "numeric_tolerance"
-                    or (case.get("scoring") or {}).get("method") == "numeric_tolerance"
-                ):
-                    from agronomy_agent.evals import score_item_numeric
-
-                    result["independent_score"] = score_item_numeric(
-                        answer, case if case.get("scoring_method") else case["scoring"]
-                    )
-                    # A numeric task scores a failed completion as an observed
-                    # zero rather than disappearing from the denominator.
-                    if cell["arm_id"] == "production_full":
-                        result.setdefault("checks", []).append(
-                            {
-                                "id": "independent_numeric_contract",
-                                "passed": result["independent_score"]["score"] == 100.0,
-                                "detail": result["independent_score"],
-                            }
-                        )
-                elif (
-                    case.get("required_patterns")
-                    or case.get("forbidden_patterns")
-                    or case.get("ask_for_patterns")
-                ):
-                    from agronomy_agent.evals import score_item_agribench_proxy
-
-                    result["lexical_diagnostic"] = score_item_agribench_proxy(
-                        answer, case
-                    )
+                result["component"] = kind
+                if result.get("status") == "failed":
+                    result["status"] = "blocked"
                 _bind_artifacts(result, Path(spec["directory"]), output_dir)
+                result["receipt_sha256"] = digest(result)
                 record = _seal_record(result, plan_sha256)
-                _append(observations_path, record)
-                rows.append(record)
-                if binding_error is not None:
-                    raise ValueError("retained attempted worker input binding failed: " + binding_error)
+                _append(components_path, record, guard={"directory": str(output_dir), "policy": stop_policy} if stop_policy else None)
+                components.append(record)
+                if stop_policy:
+                    _attempt_stop(record, plan, product=False)
                 print(
-                    json.dumps(
-                        {
-                            "observed": len(rows),
-                            "planned": len(matrix),
-                            "case_id": cell["case_id"],
-                            "trial_id": trial_id,
-                            "status": result["status"],
-                        }
-                    ),
-                    flush=True,
+                    json.dumps({"component": kind, "status": result["status"]}), flush=True
                 )
-        verify_prospective_inputs()
+            done = {row["observation_id"] for row in rows}
+            cases = {(case["suite_id"], case["case_id"]): case for case in plan["cases"]}
+            matrix = list(plan["matrix"])
+            for trial_id in sorted({cell["trial_id"] for cell in matrix}):
+                ordered = [cell for cell in matrix if cell["trial_id"] == trial_id]
+                random.Random(
+                    registry["seed"] + int(trial_id.removeprefix("trial-"))
+                ).shuffle(ordered)
+                for cell in ordered:
+                    if cell["observation_id"] in done:
+                        continue
+                    case = cases[(cell["suite_id"], cell["case_id"])]
+                    verify_prospective_inputs()
+                    remaining = dispatch_remaining()
+                    spec = {
+                        "kind": "product",
+                        "directory": str(output_dir / "cells" / cell["observation_id"]),
+                        "cell": {key: value for key, value in cell.items() if key not in {"comparison_cohort", "task_input_sha256", "task_input_status"}},
+                        "case": worker_case(case),
+                        "model_config": str(effective / f"model-{trial_id}.yaml"),
+                        "rag_config": str(public_rag),
+                        "max_tokens": registry["max_tokens"],
+                    }
+                    result = (
+                        dispatch(
+                            spec,
+                            timeout=min(
+                                registry["cell_timeout_seconds"], max(0.01, remaining)
+                            ),
+                        )
+                        if remaining > 0
+                        else {
+                            "status": "failed",
+                            "error_type": "WholeRunDeadline",
+                            "checks": [
+                                {"id": "within_whole_run_deadline", "passed": False}
+                            ],
+                        }
+                    )
+                    binding_error = None
+                    exposure_binding = None
+                    if "controller_inputs" in plan or stop_input:
+                        result["planned_input_binding"] = {key: cell.get(key) for key in ("comparison_cohort", "task_input_sha256", "task_input_status")}
+                        result["worker_input_binding"] = {key: result.get(key) for key in ("observation_id", "case_id", "case_sha256", "suite_id", "arm_id", "trial_id", "backend", "model_id", "model_revision", "analysis_condition", "comparison_cohort", "task_input_sha256", "status")}
+                        result["planned_input_binding"]["source_case_sha256"] = cell["case_sha256"]
+                        result["planned_input_binding"]["worker_case_sha256"] = digest(worker_case(case))
+                        try:
+                            for key in ("observation_id", "case_id", "case_sha256", "suite_id", "arm_id", "trial_id", "backend"):
+                                expected_identity = digest(worker_case(case)) if key == "case_sha256" and result.get("schema_version") == "open_agronomy_agent.release_product_cell.v1" else cell[key]
+                                if result.get(key) is not None and result[key] != expected_identity:
+                                    raise ValueError("observed worker cell identity differs: " + key)
+                            if "controller_inputs" in plan:
+                                exposure_binding = validate_task_exposure(case, cell["arm_id"], result.get("task_exposure"))
+                            runtime_status = validate_worker_runtime(plan, cell, result)
+                            result["runtime_input_binding_status"] = runtime_status
+                            expected_condition = planned_analysis_condition(plan, cell)
+                            for key in ("model_id", "model_revision"):
+                                expected_value = plan["model"]["id" if key == "model_id" else "revision"]
+                                if result.get(key) is not None and result[key] != expected_value:
+                                    raise ValueError("observed worker model identity differs: " + key)
+                            if result.get("analysis_condition") is not None:
+                                if result["analysis_condition"] != expected_condition:
+                                    raise ValueError("observed worker analysis condition differs")
+                            elif runtime_status == "verified_worker_config_bytes":
+                                result["analysis_condition"] = expected_condition
+                                result["analysis_condition_scope"] = "source verified before dispatch; worker config bytes observed; actual model/runtime qualification remains separate"
+                            if exposure_binding is not None and exposure_binding["task_input_sha256"] is not None and exposure_binding["task_input_sha256"] != cell["task_input_sha256"]:
+                                raise ValueError("planned and exposed task input mismatch")
+                        except ValueError as exc:
+                            binding_error = str(exc)
+                            exposure_binding = {"task_input_sha256": None, "status": "failed_input_binding"}
+                            result["status"] = "failed"
+                            result.setdefault("checks", []).append({"id": "shared_task_exposure", "passed": False, "detail": binding_error})
+                    result.update({key: value for key, value in cell.items() if key not in {"comparison_cohort", "task_input_sha256", "task_input_status"}})
+                    if exposure_binding is not None:
+                        result.update(task_input_sha256=exposure_binding["task_input_sha256"],
+                                      comparison_cohort=comparison_cohort if exposure_binding["task_input_sha256"] is not None else None,
+                                      task_input_status=exposure_binding["status"])
+                    result["review_required"] = case["review_required"]
+                    turns = result.get("turns") or []
+                    answer = str(turns[-1].get("answer") or "") if turns else ""
+                    result["answer_sha256"] = digest(answer) if turns else None
+                    if (
+                        case.get("scoring_method") == "numeric_tolerance"
+                        or (case.get("scoring") or {}).get("method") == "numeric_tolerance"
+                    ):
+                        from agronomy_agent.evals import score_item_numeric
+
+                        result["independent_score"] = score_item_numeric(
+                            answer, case if case.get("scoring_method") else case["scoring"]
+                        )
+                        # A numeric task scores a failed completion as an observed
+                        # zero rather than disappearing from the denominator.
+                        if cell["arm_id"] == "production_full":
+                            result.setdefault("checks", []).append(
+                                {
+                                    "id": "independent_numeric_contract",
+                                    "passed": result["independent_score"]["score"] == 100.0,
+                                    "detail": result["independent_score"],
+                                }
+                            )
+                    elif (
+                        case.get("required_patterns")
+                        or case.get("forbidden_patterns")
+                        or case.get("ask_for_patterns")
+                    ):
+                        from agronomy_agent.evals import score_item_agribench_proxy
+
+                        result["lexical_diagnostic"] = score_item_agribench_proxy(
+                            answer, case
+                        )
+                    _bind_artifacts(result, Path(spec["directory"]), output_dir)
+                    record = _seal_record(result, plan_sha256)
+                    _append(observations_path, record, guard={"directory": str(output_dir), "policy": stop_policy} if stop_policy else None)
+                    rows.append(record)
+                    if stop_policy:
+                        _attempt_stop(record, plan, product=True)
+                    if binding_error is not None:
+                        raise ValueError("retained attempted worker input binding failed: " + binding_error)
+                    print(
+                        json.dumps(
+                            {
+                                "observed": len(rows),
+                                "planned": len(matrix),
+                                "case_id": cell["case_id"],
+                                "trial_id": trial_id,
+                                "status": result["status"],
+                            }
+                        ),
+                        flush=True,
+                    )
+            verify_prospective_inputs()
+        except _PolicyStop as exc:
+            stopped = {"reason": exc.reason, "detail": exc.detail}
+        except (KeyboardInterrupt, ValueError) as exc:
+            if not stop_policy:
+                raise
+            stopped = {"reason": "owner_cancelled" if isinstance(exc, KeyboardInterrupt) else "input_binding_drift",
+                       "detail": str(exc)}
+        if stop_policy:
+            # Empty ledgers are evidence of zero attempts, not fabricated failures.
+            for path in (components_path, observations_path):
+                if not path.exists():
+                    with path.open("xb") as handle:
+                        handle.flush()
+                        os.fsync(handle.fileno())
         report = summarize(
             plan, rows, components, environment=plan["environment"], reviews=reviews
         )
@@ -905,8 +1273,102 @@ def run_suite(
             )
             if report["comparison"]["status"] != "pass":
                 report["status"] = "blocked"
+        if stop_policy:
+            if deadline - time.monotonic() <= 0:
+                stopped = stopped or {"reason": "finalization_deadline", "detail": None}
+            try:
+                capacity = _capacity(output_dir, stop_policy, dispatch=False)
+            except _PolicyStop as exc:
+                stopped = stopped or {"reason": exc.reason, "detail": exc.detail}
+                capacity = None
+            report["bounded_execution"] = {
+                "schema_version": "open_agronomy_agent.bounded_execution.v1",
+                "status": "terminal_stopped" if stopped else "awaiting_closeout",
+                "closeout_status": "unknown_until_bound_receipt",
+                "disposition": "terminal_immutable",
+                "stop": stopped, "policy_sha256": stop_input["sha256"], "clock": clock,
+                "attempted_components": len(components), "attempted_observations": len(rows),
+                "remaining_components": [kind for kind in plan["required_components"] if kind not in {r["component"] for r in components}],
+                "remaining_observation_ids": [cell["observation_id"] for cell in plan["matrix"] if cell["observation_id"] not in {r["observation_id"] for r in rows}],
+                "capacity_before_closeout": capacity,
+                "finalization_reserve_seconds": stop_policy["finalization_reserve_seconds"],
+                "clock_scope": "entry preparation, validation, dispatch, process cleanup and finalization reserve",
+                "capacity_scope": "OS per-file child cap; allocated-entry/free-space polling, not an atomic aggregate filesystem quota",
+                "cloud_lease_provisioning_cleanup_bounded": False,
+                "model_domain_qualification_granted": False,
+            }
+            observed_ids = {row["observation_id"] for row in rows}
+            remaining_matrix = []
+            dispatched_ids = set(observed_ids)
+            for cell in plan["matrix"]:
+                if cell["observation_id"] in observed_ids:
+                    continue
+                directory = output_dir / "cells" / cell["observation_id"]
+                marker = directory / "child-dispatch.json"
+                disposition = "attempted_unledgered" if marker.is_file() else "prepared_dispatch_unknown" if directory.exists() else "unstarted"
+                if marker.is_file():
+                    dispatched_ids.add(cell["observation_id"])
+                remaining_matrix.append({"observation_id": cell["observation_id"], "disposition": disposition})
+            report["bounded_execution"]["remaining_matrix"] = remaining_matrix
+            report["bounded_execution"]["ledgered_observations"] = len(rows)
+            report["bounded_execution"]["attempted_observations"] = len(dispatched_ids)
+            if stopped:
+                report["status"] = "blocked"
+                report["failures"]["bounded_execution_stop"] = stopped
+            # Validate all final payloads and their retained manifest before any
+            # terminal report is published. Interrupted publication stays refused.
+            payloads = {"report.json": report, "public-summary.json": public_projection(report)}
+            encoded = {name: (json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n").encode()
+                       for name, value in payloads.items()}
+            retained = retention_manifest(output_dir)
+            future_files = {**retained["files"], **{name: {"sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw)} for name, raw in encoded.items()}}
+            future_manifest = {**retained, "files": future_files, "files_sha256": digest(future_files),
+                               "total_bytes": sum(value["bytes"] for value in future_files.values())}
+            manifest_raw = (json.dumps(future_manifest, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n").encode()
+            payload_bytes = [len(raw) for raw in encoded.values()] + [len(manifest_raw)]
+            # Charge rounded allocated entries, not only serialized bytes.
+            closeout_charge = sum(((size + 4095) // 4096) * 4096 for size in payload_bytes) + 8192
+            current_allocated = sum(path.stat().st_blocks * 512 for path in output_dir.rglob("*") if path.is_file() and not path.is_symlink())
+            free = os.statvfs(output_dir).f_bavail * os.statvfs(output_dir).f_frsize
+            if (closeout_charge > stop_policy["finalization_reserve_bytes"]
+                    or max(payload_bytes) > stop_policy["file_hardcap_bytes"]
+                    or current_allocated + closeout_charge > stop_policy["retention_budget_bytes"]
+                    or free - closeout_charge < stop_policy["minimum_free_bytes"]):
+                raise ValueError("insufficient assigned finalization capacity; retained attempt is incomplete")
+        else:
+            report["bounded_execution"] = {"status": "legacy_unqualified", "bounded_qualification": False}
         write_new_json(output_dir / "report.json", report)
         write_new_json(output_dir / "public-summary.json", public_projection(report))
         write_new_json(output_dir / "retention.json", retention_manifest(output_dir))
         verify_retention(output_dir)
+        if stop_policy:
+            observed_remaining = deadline - time.monotonic()
+            closeout = {"schema_version": "open_agronomy_agent.bounded_closeout.v1",
+                "plan_sha256": plan_sha256, "policy_sha256": stop_input["sha256"],
+                "report_sha256": file_digest(output_dir / "report.json"),
+                "retention_sha256": file_digest(output_dir / "retention.json"),
+                "clock_sha256": file_digest(clock_path),
+                "status": "complete_within_deadline" if observed_remaining >= 0 else "late_blocked",
+                "observed_remaining_seconds": observed_remaining,
+                "scope": "all preparation, artifact writes/fsync, retained hashing and verification before this receipt; receipt persistence checked afterward"}
+            closeout["record_sha256"] = digest(closeout)
+            write_new_json(output_dir / "closeout.json", closeout)
+            if time.monotonic() > deadline and closeout["status"] == "complete_within_deadline":
+                failed = {"schema_version": "open_agronomy_agent.closeout_failure.v1",
+                          "closeout_sha256": file_digest(output_dir / "closeout.json"),
+                          "reason": "deadline_during_closeout_persistence"}
+                failed["record_sha256"] = digest(failed)
+                write_new_json(output_dir / "closeout-failure.json", failed)
+            final_report = load_retained_report(output_dir)
+            if time.monotonic() > deadline and closeout["status"] == "complete_within_deadline" and not (output_dir / "closeout-failure.json").exists():
+                failed = {"schema_version": "open_agronomy_agent.closeout_failure.v1",
+                          "closeout_sha256": file_digest(output_dir / "closeout.json"),
+                          "reason": "deadline_during_final_report_verification"}
+                failed["record_sha256"] = digest(failed)
+                write_new_json(output_dir / "closeout-failure.json", failed)
+                final_report["status"] = "blocked"
+                final_report["bounded_execution"].update(status="terminal_stopped", closeout_status="late_blocked",
+                    stop=final_report["bounded_execution"].get("stop") or {"reason": "finalization_deadline", "detail": None})
+                final_report["failures"]["bounded_execution_stop"] = final_report["bounded_execution"]["stop"]
+            return final_report
         return report
