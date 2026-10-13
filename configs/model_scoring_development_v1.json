@@ -1,0 +1,80 @@
+{
+  "schema_version": "open_agronomy_agent.model_scoring_policy.v1",
+  "policy_id": "agronomic_development_balanced_v1",
+  "status": "provisional_exposed_development",
+  "weight_authority": "project_choice",
+  "domain_weights": {
+    "crop_establishment": 1,
+    "soil_physics_water": 1,
+    "nutrient_reporting": 1,
+    "field_history": 1,
+    "crop_quality": 1,
+    "water_quality": 1,
+    "enterprise_rotation": 1,
+    "weed_ecology": 1,
+    "crop_protection_economics": 1,
+    "phenology_weather": 1
+  },
+  "dimension_weights": {
+    "usefulness": 1,
+    "restraint": 1,
+    "numeric_unit_accuracy": 1,
+    "evidence_support": 1,
+    "applicability": 1
+  },
+  "missingness": "unknown_fixed_denominator",
+  "failed_outcome": "zero",
+  "truncated_outcome": "zero",
+  "sensitivity_profiles": [
+    {
+      "profile_id": "numeric_usefulness_emphasis",
+      "domain_weights": {
+        "crop_establishment": 1,
+        "soil_physics_water": 1,
+        "nutrient_reporting": 1,
+        "field_history": 1,
+        "crop_quality": 1,
+        "water_quality": 1,
+        "enterprise_rotation": 1,
+        "weed_ecology": 1,
+        "crop_protection_economics": 1,
+        "phenology_weather": 1
+      },
+      "dimension_weights": {
+        "usefulness": 2,
+        "restraint": 1,
+        "numeric_unit_accuracy": 2,
+        "evidence_support": 1,
+        "applicability": 1
+      }
+    },
+    {
+      "profile_id": "restraint_applicability_emphasis",
+      "domain_weights": {
+        "crop_establishment": 1,
+        "soil_physics_water": 1,
+        "nutrient_reporting": 1,
+        "field_history": 1,
+        "crop_quality": 1,
+        "water_quality": 1,
+        "enterprise_rotation": 1,
+        "weed_ecology": 1,
+        "crop_protection_economics": 1,
+        "phenology_weather": 1
+      },
+      "dimension_weights": {
+        "usefulness": 1,
+        "restraint": 2,
+        "numeric_unit_accuracy": 1,
+        "evidence_support": 1,
+        "applicability": 2
+      }
+    }
+  ],
+  "scope": "Ten exposed development domains; freeze this exact policy before any future authorized execution. Existing synthetic/retained artifacts are retrospective, not prospectively preregistered.",
+  "aggregation": "Equal domain weight; equal cluster weight within domain; equal observations within cluster. Common outcomes weighted equally; rubric-declared positive criterion weights within a dimension. Unknown criterion labels prevent that dimension and complete composite; bounds retain the planned denominator.",
+  "applicability": "Use the reviewed rubric and explicit arm mask. Requested outcomes apply in every compared arm. Tool correctness stays outside the composite and is conditional on an explicitly assessable attempt: no attempt N/A, unassessable/unknown attempt unknown. Never infer N/A from missing traces.",
+  "safety": "Report fatal failures and unknown safety separately from the descriptive average. No average clears a fatal failure or missing safety review; promotion and rankings remain unauthorized.",
+  "coverage": "Complete descriptive score requires all planned domains/clusters/weighted labels, or an explicit failed/truncated zero penalty. A failure penalty does not supply missing semantic or safety labels. Unequal facts, masks, cohorts or unknown condition identities block contrasts.",
+  "labels": "Only supplied case/answer/rubric-bound labels are accepted; synthetic_fixture, deterministic_oracle and automated_triage are not expert certification. Expert review/independence and prospective evaluation admission are separate gates."
+}

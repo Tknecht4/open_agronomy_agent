@@ -6,6 +6,13 @@
 
 ## Active native profiles
 
+`model_scoring_development_v1.json` is an explicit provisional offline analysis
+policy for ten exposed development domains, not an active runtime profile or
+release gate. The [evaluation operator guide](../docs/public/operations/release-evaluation.md)
+documents equal domain/common-outcome weights, sensitivity, unknown/failure/safety
+rules and a public synthetic CLI example. Policy file presence neither grades
+actual answers nor authorizes model execution or source/case admission.
+
 | Purpose | Default or documented profile | Notes |
 |---|---|---|
 | Native quick-start model | `model.yaml` | Exact model/revision; local weights separately provisioned |

@@ -20,6 +20,13 @@ manual arithmetic and a required tool failure are different observations.
 Weights are explicit project choices. Compare only recorded matching facts,
 criterion masks and cohorts; report missing identities instead of inferring them.
 
+For the ten exposed development domains, the operator guide supplies provisional
+`configs/model_scoring_development_v1.json` and a synthetic worked CLI example.
+Freeze policy/rubric bytes before a future authorized run; retrospective hash
+binding is not preregistration. Read per-domain/criterion results, unknown bounds,
+execution penalties and safety counts before a composite. A complete synthetic
+score grants no ranking or promotion authority.
+
 Keep references, oracles, rubrics and expected decisions in the controller.
 Verify the actual `release_evaluation.worker_case` projection before admitting
 new cases. Synthetic fixture labels check the instrument; they are not expert

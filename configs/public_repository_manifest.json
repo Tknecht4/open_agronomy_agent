@@ -790,7 +790,17 @@
     "tests/test_release_eval_model_metrics.py",
     "tests/test_release_eval_diagnostic_inputs.py",
     "tests/test_checkpoint_truthfulness.py",
-    "tests/test_turn_readiness.py"
+    "tests/test_turn_readiness.py",
+    ".agents/skills/workspace-contracts/SKILL.md",
+    "configs/model_scoring_development_v1.json",
+    "tests/test_development_scoring_policy.py",
+    "tests/fixtures/development_scoring_v1/cases.jsonl",
+    "tests/fixtures/development_scoring_v1/deterministic-fixtures.jsonl",
+    "tests/fixtures/development_scoring_v1/handoff.json",
+    "tests/fixtures/development_scoring_v1/numeric-oracles.jsonl",
+    "tests/fixtures/development_scoring_v1/rubrics.jsonl",
+    "tests/fixtures/development_scoring_v1/source-support.json",
+    "tests/fixtures/development_scoring_v1/verify-panel.py"
   ],
   "trees": [
     "src",

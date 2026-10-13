@@ -83,8 +83,11 @@ def test_actual_missing_model_calculation_and_clarification_persist_without_cons
 def test_preview_is_read_only_and_does_not_create_a_session(runtime, monkeypatch):
     client, store = runtime
     monkeypatch.setattr(chat_service, "_build_mlx_generator", no_generator)
-    # Establish identity before counting ordinary authentication bookkeeping.
-    client.get("/auth/me", headers=OWNER)
+    # Initialize the workspace principal through the same bootstrap as the UI.
+    # /auth/me creates only the user; relying on an earlier test to create its
+    # workspace makes this all-table assertion depend on xdist scheduling.
+    bootstrap = client.get("/api/demo/fields", headers=OWNER)
+    assert bootstrap.status_code == 200, bootstrap.text
     tables = [row[0] for row in store._conn.execute("SELECT name FROM sqlite_master WHERE type='table'")]
     counts = lambda: {name: store._conn.execute(f'SELECT COUNT(*) FROM "{name}"').fetchone()[0] for name in tables}
     before = counts()

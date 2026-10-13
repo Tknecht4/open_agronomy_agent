@@ -232,6 +232,57 @@ authority. Contrasts require recorded matching facts, criterion masks and cohort
 with configuration/source/runtime and each arm's recipe identities retained.
 Hardware and timing comparability need their own evidence.
 
+`configs/model_scoring_development_v1.json` supplies a provisional policy for
+the ten exposed agronomic development domains. Each domain has weight 0.1;
+each of the five common outcome dimensions has weight 0.2. Clusters receive
+equal weight within a domain, observations equal weight within a cluster,
+and criterion weights come from the reviewed rubric. Tool correctness remains
+separate. Two supplied sensitivity profiles emphasize numeric/useful completion
+or restraint/applicability without changing domain coverage. These are project
+choices, not expert consensus. Freeze the exact policy and rubric bytes before
+future authorized execution; applying them to retained evidence is retrospective.
+
+Missing criterion labels retain unknowns and fixed-denominator bounds. Failed
+and truncated observations receive a descriptive outcome penalty of zero,
+while their semantic and safety labels can remain unknown. Report fatal failures
+and missing safety review separately; neither a high average nor complete
+synthetic labels authorize a ranking, rollout or promotion. Complete scores
+require every planned weighted domain/cluster/label or the declared execution
+penalty. Contrasts additionally require matching facts, criterion masks and
+recorded compatible conditions. This policy does not admit cases, run a model,
+or replace the release gate.
+
+Exercise the same CLI with the public, project-authored instrument example:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/analyze_release_evaluation.py \
+  --development-panel tests/fixtures/development_scoring_v1 \
+  --model-policy configs/model_scoring_development_v1.json \
+  --output-dir /tmp/open-agronomy-scoring-example-v1
+```
+
+Use a new output path. This example deliberately exits 1 with `partial_unknown`:
+its 40 imposed fixture observations include failure and unknown-label controls.
+No model, tool or evaluation worker executes. Every question uses the same
+supplied 2 kg + 3 kg arithmetic; the ten domain IDs test weighting coverage,
+not ten agronomic skills. Its symbolic arm names describe fixtures only.
+
+| Instrument output | Expected result |
+|---|---|
+| `raw_model` descriptive composite | 0.5; all ten domain means 0.5; ten explicit failures penalized zero |
+| `production_full` composite | Unknown; fixed-denominator bounds [0.375, 0.875]; ten completed fixtures lack labels |
+| Safety | One imposed fatal failure; ten unknown safety reviews in each group |
+| Tool correctness | Explicit no-attempt N/A, outside the composite |
+| Ranking and promotion | Unauthorized, including when synthetic labels are completed |
+
+`model-metrics.json` contains group composites, per-domain means, cell dimensions,
+unknown statuses, failed/missing/truncated counts, safety counts and blocked
+contrasts. `fixture-reviews.private.json` retains individual USE, CAL, NUM, ENT
+and APP criterion scores and their bindings. For the first synthetic fixture
+all five imposed scores are 1; the unknown control stores null. These outputs
+remain controller-only even though this example's inputs are public-safe.
+They are instrument checks, never actual model grades or independent labels.
+
 A sealed six-cell closeout can use `--diagnostic-closeout` instead of `--run-dir`:
 
 ```bash
@@ -264,6 +315,18 @@ reanalysis does not silently inherit these optional criterion labels.
 Workspace feedback aggregation is a review summary, not executed regression
 evidence. An ideal answer or approved feedback cannot qualify a rollout-review
 gate. Read actual execution status and source-bound reports separately.
+
+## Current execution surfaces
+
+| Surface | Current status |
+|---|---|
+| `frontend/src/main.tsx` → `OpenAgronomyApp`, `server/app.py` → `execute_agent_request` | Wired production workspace and answer path; source tests do not qualify an installed native package |
+| `run_release_evaluation.py`, `analyze_release_evaluation.py` | Maintained engineering runner and one offline analyzer; exposed development evidence, with model execution requiring separate authorization/provisioning |
+| Public instrument fixture and privately sealed agronomic panel | Synthetic scoring/worker-isolation QA; scientific review, labels and prospective admission remain separate |
+| RC1–RC3, frozen model runs and earlier four-arm records | Historical evidence under their original source/prompt/arm identities |
+| v2/v3 production adapters, remaining complete-calculator readiness, alternate frontend shell retirement | Deferred; fixture coverage and import reachability alone do not qualify adapters or justify deleting a shell |
+
+Unknown review, authority, source coverage or comparability remains unknown.
 
 ## Expanding the suite
 
