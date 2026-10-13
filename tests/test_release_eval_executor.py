@@ -6,6 +6,133 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+
+
+class _ReferenceStoreFixture:
+    """Tiny store seam for telemetry units; persistence has separate controls."""
+    def __init__(self, *_args):
+        self.rows = {}
+        self._conn = SimpleNamespace(close=lambda: None)
+
+    def create_session(self, *_args):
+        return {"session_id": "synthetic-session"}
+
+    def create_turn(self, session_id, question, answer, **kwargs):
+        key = str(len(self.rows) + 1)
+        self.rows[key] = {"answer": answer, "question": question, **kwargs}
+        return key
+
+    def get_turn(self, key):
+        return self.rows[key]
+
+
+def test_distinct_draft_editor_and_unknown_termination():
+    from agronomy_agent.release_eval_executor import observation_termination
+    turn = {"generation_stats": {"finish_reason": "stop", "generation_tokens": 100},
+            "editor_generation_stats": {"finish_reason": "length"},
+            "metadata": {"answer_verification": {"rewrite_accepted": True}}}
+    result = observation_termination([turn])
+    assert [stage["finish_reason"] for stage in result["stages"]] == ["stop", "length"]
+    assert result["truncated"] is True
+    del turn["editor_generation_stats"]["finish_reason"]
+    result = observation_termination([turn])
+    assert result["truncated"] is None and result["status"] == "unknown"
+    bypass = observation_termination([{"metadata": {"generation_bypass": {"reason": "calculator"}}}])
+    assert bypass["status"] == "not_applicable"
+
+
+def test_reference_does_not_reuse_unchanged_provider_stats(tmp_path):
+    from agronomy_agent.release_eval_executor import _reference_turn
+    store = _ReferenceStoreFixture()
+    session = store.create_session("Synthetic", {}, {})
+    class Backend:
+        last_generation_stats = {"finish_reason": "length"}
+        def generate(self, messages):
+            return "Synthetic answer"
+    turn = _reference_turn("Synthetic question", arm_id="raw_model", generator=Backend(),
+                           store=store, session_id=session["session_id"], history=[])
+    assert turn["generation_stats"] is None
+    store._conn.close()
+
+
+@pytest.mark.parametrize("output", ["Rejected synthetic rewrite", "", "Same synthetic draft"])
+def test_rejected_or_unchanged_editor_output_requires_terminal(output):
+    from agronomy_agent.release_eval_executor import observation_termination
+    turn = {"generation_stats": {"finish_reason": "stop"},
+            "editor": {"triggered": True, "rewrite_accepted": False, "editor_output": output}}
+    result = observation_termination([turn])
+    assert result["stages"][1]["required"] is True
+    assert result["stages"][1]["status"] == "unknown"
+    assert result["status"] == "unknown" and result["truncated"] is None
+    turn["editor"]["editor_output"] = None
+    assert observation_termination([turn])["stages"][1]["status"] == "not_applicable"
+
+
+@pytest.mark.parametrize("marker", [None, True, "1", 0, -1])
+def test_reference_copied_stale_receipt_is_unknown(tmp_path, marker):
+    from agronomy_agent.release_eval_executor import _reference_turn
+    store = _ReferenceStoreFixture()
+    session = store.create_session("Synthetic", {}, {})
+    class Backend:
+        generation_stats_call_id = marker
+        cached = {"finish_reason": "length", "generation_tokens": 2}
+        last_generation_stats = cached.copy()
+        def generate(self, messages):
+            self.last_generation_stats = self.cached.copy()
+            return "Synthetic answer"
+    backend = Backend()
+    turn = _reference_turn("Synthetic request", arm_id="raw_model", generator=backend,
+                           store=store, session_id=session["session_id"], history=[])
+    assert turn["generation_stats"] is None
+    assert turn["reference_receipt"]["generation_stats_freshness"] == "unknown"
+    store._conn.close()
+
+
+def test_reference_fresh_equal_values_supported_and_marked(tmp_path, monkeypatch):
+    import agronomy_agent.release_eval_executor as executor
+    store = _ReferenceStoreFixture()
+    session = store.create_session("Synthetic", {}, {})
+    monkeypatch.setattr(executor.time, "monotonic", lambda: 0.0)
+    backend = executor._RecordedMock()
+    def call(generator):
+        return executor._reference_turn("Synthetic request", arm_id="raw_model", generator=generator,
+                                        store=store, session_id=session["session_id"], history=[])
+    first, second = call(backend), call(backend)
+    assert first["generation_stats"] == second["generation_stats"]
+    assert first["generation_stats"] is not second["generation_stats"]
+    assert second["reference_receipt"]["generation_stats_freshness"] == "supported_call_scoped_provider"
+    class Marked:
+        generation_stats_call_id = 0
+        last_generation_stats = None
+        def generate(self, messages):
+            assert self.last_generation_stats is None
+            self.generation_stats_call_id += 1
+            self.last_generation_stats = {"finish_reason": "stop", "generation_tokens": 2,
+                                          "generation_stats_call_id": self.generation_stats_call_id}
+            return "Synthetic answer"
+    marked = Marked()
+    one, two = call(marked), call(marked)
+    assert one["generation_stats"]["finish_reason"] == two["generation_stats"]["finish_reason"] == "stop"
+    assert one["generation_stats"]["generation_stats_call_id"] == 1
+    assert two["generation_stats"]["generation_stats_call_id"] == 2
+    assert two["reference_receipt"]["generation_stats_freshness"] == "advanced_call_marker"
+    store._conn.close()
+
+
+def test_reference_failure_keeps_cleared_stats_unknown(tmp_path):
+    import agronomy_agent.release_eval_executor as executor
+    store = _ReferenceStoreFixture()
+    session = store.create_session("Synthetic", {}, {})
+    class Backend:
+        last_generation_stats = {"finish_reason": "length"}
+        def generate(self, messages):
+            raise RuntimeError("Synthetic failure")
+    backend = Backend()
+    with pytest.raises(RuntimeError, match="Synthetic failure"):
+        executor._reference_turn("Synthetic request", arm_id="raw_model", generator=backend,
+                                  store=store, session_id=session["session_id"], history=[])
+    assert backend.last_generation_stats is None
+    store._conn.close()
 import yaml
 
 from agronomy_agent.execution_core import EXECUTION_STAGE_IDS, stable_sha256

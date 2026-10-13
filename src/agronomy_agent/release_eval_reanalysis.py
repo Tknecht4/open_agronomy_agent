@@ -530,8 +530,34 @@ def reanalyze(
     return report
 
 
+def _merge_termination(recorded: Mapping[str, Any] | None, derived: Mapping[str, Any] | None) -> Mapping[str, Any] | None:
+    """Known per-stage evidence survives missing duplicates; attempts beat N/A."""
+    from agronomy_agent.release_eval_executor import generation_termination
+    if recorded is None or derived is None:
+        return derived if recorded is None else recorded
+    grouped = {}
+    for evidence in (recorded, derived):
+        for stage in evidence["stages"]:
+            grouped.setdefault((stage["turn_index"], stage["stage"]), []).append(stage)
+    stages = []
+    for (index, name), values in sorted(grouped.items(), key=lambda item: (item[0][0], item[0][1] == "editor", item[0][1])):
+        reasons = {value["finish_reason"] for value in values if value["required"] and value["status"] == "observed"}
+        if len(reasons) > 1:
+            raise ValueError("contradictory recorded and derived terminal stage")
+        stages.append({"turn_index": index, "stage": name,
+                       **generation_termination({"finish_reason": next(iter(reasons), None)},
+                                                required=any(value["required"] for value in values))})
+    required = [stage for stage in stages if stage["required"]]
+    status = "not_applicable" if stages and not required else "unknown" if not required or any(stage["status"] == "unknown" for stage in required) else "observed"
+    flag = True if any(stage["truncated"] is True for stage in required) else None if status in {"unknown", "not_applicable"} else False
+    return {"schema_version": "open_agronomy_agent.generation_termination.v1", "stages": stages,
+            "status": status, "truncated": flag, "finish_reason": "length" if flag is True else "stop" if flag is False else None}
+
+
 def _model_matrix(run: Mapping[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Project recorded identities only; do not infer a matched comparison cohort."""
+    from agronomy_agent.release_eval_executor import observation_termination
+    from agronomy_agent.release_eval_model_metrics import termination_evidence
     plan = run["plan"]
     model = plan["model"]
     source = plan.get("source", {})
@@ -559,6 +585,21 @@ def _model_matrix(run: Mapping[str, Any]) -> tuple[dict[str, Any], list[dict[str
     observations = []
     for row in run["observations"]:
         turns = row.get("turns") or []
+        derived_termination = observation_termination(turns) if turns else None
+        recorded_terminal = termination_evidence(row)
+        derived_terminal = termination_evidence({"termination": derived_termination})
+        if (recorded_terminal["truncated"] is not None and derived_terminal["truncated"] is not None
+                and recorded_terminal["truncated"] != derived_terminal["truncated"]):
+            raise ValueError("contradictory recorded and derived terminal evidence")
+        termination = _merge_termination(row.get("termination"), derived_termination)
+        # Recorded terminal fields survive missing legacy turn telemetry. Known
+        # contradictions refuse analysis; unknown derivation cannot erase data.
+        terminal_fields = {
+            key: next((value for value in (row.get(key), (termination or {}).get(key),
+                                          (derived_termination or {}).get(key)) if value is not None), None)
+            for key in ("finish_reason", "truncated")
+        }
+        termination_evidence({**row, **terminal_fields, "termination": termination})
         stats = (turns[-1].get("generation_stats") or {}) if turns else {}
         performance = {"elapsed_seconds": row.get("elapsed_seconds")}
         for field, key in (("load_seconds", "model_load_ms"),
@@ -575,6 +616,9 @@ def _model_matrix(run: Mapping[str, Any]) -> tuple[dict[str, Any], list[dict[str
                 performance[field] = stats[key]
         observations.append({
             **row, **cells[row["observation_id"]], "performance": performance,
+            **terminal_fields, "termination": termination,
+            "recorded_termination": row.get("termination"),
+            "derived_termination": derived_termination,
             "performance_scope": {
                 "elapsed_seconds": "recorded whole scenario; worker startup excluded",
                 "generation_fields": "last turn draft generation_stats only; excludes editor; prior prompt-count loading may be outside TTFT",

@@ -67,6 +67,57 @@ def _condition(value: Any) -> dict[str, str | None]:
     return {key: _sha(value[key]) if value.get(key) is not None else None for key in CONDITION_FIELDS}
 
 
+def termination_evidence(row: Mapping[str, Any]) -> dict[str, Any]:
+    """Validate recorded flags and scoped stages without inventing a terminal."""
+    def fields(value: Mapping[str, Any]) -> bool | None:
+        reason, flag = value.get("finish_reason"), value.get("truncated")
+        if reason is not None and not isinstance(reason, str):
+            raise ValueError("finish reason must be provider text or null")
+        if flag is not None and not isinstance(flag, bool):
+            raise ValueError("truncated must be boolean or null")
+        known = reason == "length" if reason in ("stop", "length") else None
+        if known is not None and flag is not None and known != flag:
+            raise ValueError("contradictory terminal evidence")
+        return known if known is not None else flag
+
+    recorded = fields(row)
+    termination = row.get("termination")
+    if termination is None:
+        return {"truncated": recorded, "status": "unknown" if recorded is None else "observed"}
+    if not isinstance(termination, Mapping) or termination.get("schema_version") != "open_agronomy_agent.generation_termination.v1":
+        raise ValueError("unsupported termination evidence")
+    stages = termination.get("stages")
+    if not isinstance(stages, list):
+        raise ValueError("termination stages must be a list")
+    seen = set()
+    required = []
+    for stage in stages:
+        if not isinstance(stage, Mapping) or type(stage.get("required")) is not bool or type(stage.get("turn_index")) is not int or stage["turn_index"] < 0 or stage.get("stage") not in {"draft", "reference", "editor"}:
+            raise ValueError("invalid termination stage")
+        key = (stage["turn_index"], stage["stage"])
+        if key in seen:
+            raise ValueError("duplicate termination stage")
+        seen.add(key)
+        fields(stage)
+        reason = stage.get("finish_reason")
+        known = reason in ("stop", "length")
+        expected_status = "not_applicable" if not stage["required"] else "observed" if known else "unknown"
+        expected_flag = reason == "length" if known and stage["required"] else None
+        if stage.get("status") != expected_status or stage.get("truncated") != expected_flag:
+            raise ValueError("contradictory terminal stage")
+        if stage["required"]:
+            required.append(stage)
+    expected_status = "not_applicable" if stages and not required else "unknown" if not required or any(s["status"] == "unknown" for s in required) else "observed"
+    expected_flag = True if any(s["truncated"] is True for s in required) else None if expected_status in {"unknown", "not_applicable"} else False
+    expected_reason = "length" if expected_flag is True else "stop" if expected_flag is False else None
+    if (termination.get("status"), termination.get("truncated"), termination.get("finish_reason")) != (expected_status, expected_flag, expected_reason):
+        raise ValueError("contradictory terminal aggregate")
+    if recorded is not None and expected_flag is not None and recorded != expected_flag:
+        raise ValueError("contradictory recorded and derived terminal evidence")
+    return {"truncated": recorded if recorded is not None else expected_flag,
+            "status": "observed" if expected_status == "not_applicable" and recorded is not None else expected_status}
+
+
 def _weights(value: Any, allowed: set[str]) -> dict[str, float]:
     if not isinstance(value, dict) or not value or set(value) - allowed:
         raise ValueError("unknown or empty weight dimensions/domains")
@@ -257,6 +308,8 @@ def _performance(row: Mapping[str, Any]) -> dict[str, Any]:
 def _cell_value(cell: Mapping[str, Any], policy: Mapping[str, Any]) -> float | None:
     if cell["penalty_zero"]:
         return 0.0
+    if policy["truncated_outcome"] == "zero" and cell["termination_status"] == "unknown":
+        return None
     dimensions = cell["dimensions"]
     if all(dimensions.get(dim) is not None for dim in policy["dimension_weights"]):
         return sum(dimensions[dim] * weight for dim, weight in policy["dimension_weights"].items())
@@ -332,6 +385,7 @@ def score_model_matrix(plan: Mapping[str, Any], observations: Sequence[Mapping[s
         raise ValueError("nonempty planned matrix and known rubrics required")
     for row in observations:
         canonical_bytes(row)
+        termination_evidence(row)
         if row.get("status") not in FAILED | {"completed", "blocked", "skipped", "cancelled", "not_started"}:
             raise ValueError("unknown observation status")
         oid = row.get("observation_id"); item = matrix.get(oid)
@@ -417,13 +471,14 @@ def score_model_matrix(plan: Mapping[str, Any], observations: Sequence[Mapping[s
             dimensions[dim] = (sum(scores[cid] * spec["weight"] for cid, spec in applicable.items()) /
                                sum(spec["weight"] for spec in applicable.values())) if applicable and all(scores.get(cid) is not None for cid in applicable) else None
         status = row.get("status", "missing")
-        truncated = row.get("finish_reason") == "length" or row.get("truncated") is True
+        terminal = termination_evidence(row)
+        truncated = terminal["truncated"]
         condition = _condition(item.get("analysis_condition"))
         cell = {**{key: item.get(key) for key in ("observation_id", "case_id", "suite_id", "trial_id", "arm_id", "model_id", "model_revision", "backend_id")},
                 "analysis_condition": condition, "analysis_condition_sha256": canonical_digest(condition),
                 "unknown_condition_fields": [key for key, value in condition.items() if value is None],
                 "domain_id": rubric["domain_id"] if rubric else "unknown", "cluster_id": rubric["cluster_id"] if rubric else item["case_id"],
-                "status": status, "truncated": truncated, "dimensions": dimensions, "criterion_mask": mask,
+                "status": status, "truncated": truncated, "termination_status": terminal["status"], "termination": row.get("termination"), "dimensions": dimensions, "criterion_mask": mask,
                 "criterion_applicability": review.get("criterion_applicability", {}),
                 "dimension_status": {dim: "unknown_rubric" if rubric is None else "not_applicable" if not mask[dim]
                                      else "unknown_labels" if dimensions[dim] is None else "observed" for dim in DIMENSIONS},
@@ -431,7 +486,7 @@ def score_model_matrix(plan: Mapping[str, Any], observations: Sequence[Mapping[s
                 "safety_unknown": rubric is None or bool(rubric["fatal_conditions"]) and review.get("fatal_review_complete") is not True,
                 "review_type": review.get("reviewer_type"), "task_input_sha256": row.get("task_input_sha256"),
                 "comparison_cohort": row.get("comparison_cohort"),
-                "penalty_zero": normalized is not None and (status in FAILED or truncated and normalized["truncated_outcome"] == "zero"),
+                "penalty_zero": normalized is not None and (status in FAILED or truncated is True and normalized["truncated_outcome"] == "zero"),
                 "source_observed_metrics": _performance(row), "metrics_scope": row.get("performance_scope", "source_observed_row_only; phase scopes unknown"),
                 "tokens_scope": row.get("tokens_scope", "unknown"), "identity_status": row.get("identity_status", "unknown"),
                 "model_execution_eligible": row.get("model_execution_eligible"), "original_unknowns": row.get("unknown", []),
@@ -448,7 +503,7 @@ def score_model_matrix(plan: Mapping[str, Any], observations: Sequence[Mapping[s
                               "unknown_condition_fields": values[0]["unknown_condition_fields"],
                               "planned": len(values), "observed": sum(v["status"] != "missing" for v in values),
                               "failed": sum(v["status"] in FAILED for v in values), "missing": sum(v["status"] == "missing" for v in values),
-                              "completed": sum(v["status"] == "completed" for v in values), "truncated": sum(v["truncated"] for v in values),
+                              "completed": sum(v["status"] == "completed" for v in values), "truncated": sum(v["truncated"] is True for v in values), "termination_unknown": sum(v["termination_status"] == "unknown" for v in values), "termination_not_applicable": sum(v["termination_status"] == "not_applicable" for v in values),
                               "fatal_failures_n": sum(len(v["fatal_failures"]) for v in values), "safety_unknown_n": sum(v["safety_unknown"] for v in values),
                               "primary": primary, "sensitivity": [{"profile_id": p["profile_id"], **_aggregate(values, {**normalized, **p})}
                                                                       for p in normalized["sensitivity_profiles"]] if eligible else []})

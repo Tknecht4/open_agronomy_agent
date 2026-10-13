@@ -135,6 +135,37 @@ def test_http_backend_reports_unknown_tokenization_and_context() -> None:
     generator.set_cache_scope("session-a:draft")
 
 
+@pytest.mark.parametrize("reason", ["stop", "length", None])
+def test_native_terminal_response_not_token_count(monkeypatch, reason):
+    core = types.ModuleType("mlx.core")
+    core.random = types.SimpleNamespace(seed=lambda _: None)
+    mlx = types.ModuleType("mlx")
+    mlx.core = core
+    provider = types.ModuleType("mlx_lm")
+    provider.generate = lambda *a, **k: "unused"
+    provider.stream_generate = lambda *a, **k: iter([
+        types.SimpleNamespace(text="a", generation_tokens=1, finish_reason=None),
+        types.SimpleNamespace(text="b", generation_tokens=2, finish_reason=reason),
+    ])
+    sampler = types.ModuleType("mlx_lm.sample_utils")
+    sampler.make_sampler = lambda **k: None
+    for name, module in (("mlx", mlx), ("mlx.core", core), ("mlx_lm", provider), ("mlx_lm.sample_utils", sampler)):
+        monkeypatch.setitem(sys.modules, name, module)
+    generator = agent.MLXGenerator("fixture/model", max_tokens=2)
+    generator._model, generator._tokenizer = object(), _Tokenizer()
+    assert generator._generate_on_mlx_thread([{"role": "user", "content": "fixture"}]) == "ab"
+    assert generator.last_generation_stats["finish_reason"] == reason
+    previous = dict(generator.last_generation_stats)
+    def interrupted(*a, **k):
+        yield types.SimpleNamespace(text="partial", generation_tokens=1, finish_reason=None)
+        raise RuntimeError("synthetic stream interruption")
+    provider.stream_generate = interrupted
+    with pytest.raises(RuntimeError, match="stream interruption"):
+        generator._generate_on_mlx_thread([{"role": "user", "content": "fixture"}])
+    assert generator.last_generation_stats == {"finish_reason": None}
+    assert previous["finish_reason"] == reason
+
+
 def test_stream_receipt_preserves_exact_prompt_accounting_and_unknown_rates(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
