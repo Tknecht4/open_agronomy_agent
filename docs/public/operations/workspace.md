@@ -19,6 +19,13 @@ saved fields, conversations, and model settings before enabling questions, while
 preserving the unsent draft. A delayed recovery does not replace a newer field or
 chat selection. Device-only field notes remain on the device.
 
+With a working API, supported kg/ha ↔ lb/ac conversions and calculator requests
+that need a missing input can proceed without a ready model. The app checks the
+current question, saved field and conversation before sending. Ordinary answers
+need the selected model. Other complete calculations still require model
+readiness until their input-validation path is qualified; a detected calculator
+intent alone does not establish readiness. Save field edits before asking.
+
 Select a field when its known details matter to the question. Field observations and soil tests are user records; map intersections and provider data are separate contextual inputs. If a field is incomplete, leave unknowns blank and ask a bounded question. A model answer should not turn an unknown into a zero, a pass, or a prescription.
 
 ## Continue a saved conversation

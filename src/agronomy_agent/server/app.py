@@ -12,7 +12,7 @@ import secrets
 import time
 import zlib
 import uuid
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from email.parser import BytesParser
@@ -54,6 +54,8 @@ from agronomy_agent.server.schemas import (
     ChatRequest,
     CreateSessionRequest,
     CreateTurnRequest,
+    TurnReadinessRequest,
+    TurnReadinessResponse,
     DataSourceRequest,
     EmailVerificationRequest,
     EvalCandidateReviewRequest,
@@ -100,7 +102,7 @@ from agronomy_agent.server.schemas import (
 from agronomy_agent.server.services.conversation_scope import (
     ConversationScopeError, bind_conversation_context, identity as conversation_identity,
 )
-from agronomy_agent.server.services.chat_service import ConversationOperationConflict, _session_turn_guard, run_turn
+from agronomy_agent.server.services.chat_service import ConversationOperationConflict, _session_turn_guard, preview_turn_readiness, run_turn
 from agronomy_agent.server.services.answer_renderer import render_structured_answer
 from agronomy_agent.server.services.attachment_scanner import (
     AttachmentRejected,
@@ -6918,9 +6920,51 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             )
             return _session_response(updated or session)
 
+    def _turn_readiness_for_context(
+        session_id: str | None, context: dict[str, Any] | None,
+        expected_binding: str | None = None, **kwargs: Any,
+    ) -> dict[str, Any]:
+        result = preview_turn_readiness(
+            store=store, settings=settings, session_id=session_id, session_context=context,
+            **{key: kwargs[key] for key in ("message", "mode", "model_id", "rag_config", "max_tokens", "trace_options")},
+        )
+        if expected_binding is not None and result["readiness_binding"] != expected_binding:
+            raise HTTPException(status_code=409, detail={
+                "code": "turn_readiness_stale",
+                "boundary": "Question, field or conversation context changed after planning. Check readiness again before asking.",
+            })
+        return result
+
+    @app.post("/api/turn-readiness", response_model=TurnReadinessResponse)
+    def turn_readiness(payload: TurnReadinessRequest, request: Request) -> dict[str, Any]:
+        # FastAPI offloads this synchronous route. A preview waiting for an
+        # in-flight session turn must not hold the API/SSE event loop.
+        user = _demo_field_user(request)
+        _require_local_conversation_runtime()
+        turn = payload.turn
+        runtime_mode(turn.mode)
+        selected_model_id = runtime_model_id(turn.model_id, mode=turn.mode)
+        selected_rag_config = runtime_rag_config(turn.rag_config)
+        with _session_turn_guard(store, payload.session_id) if payload.session_id else nullcontext():
+            if payload.session_id:
+                session, _ = _require_owned_session(request, payload.session_id, user=user, include_turns=False)
+                context = _bind_turn_context(session, turn.session_context)
+            else:
+                try:
+                    context = bind_conversation_context({}, turn.session_context, has_turns=False)
+                except ConversationScopeError as exc:
+                    raise HTTPException(status_code=409, detail={"code": "conversation_scope_mismatch", "boundary": str(exc)}) from exc
+            context = _authorize_demo_turn_field_context(request, context)
+            result = _turn_readiness_for_context(
+                payload.session_id, context, message=turn.message, mode=turn.mode,
+                model_id=selected_model_id, rag_config=selected_rag_config,
+                max_tokens=turn.max_tokens, trace_options=turn.trace_options.model_dump(),
+            )
+        return {**result, "request_id": str(payload.request_id)}
+
     def _run_turn_with_persisted_context(
         *, session_id: str, incoming_context: dict[str, Any],
-        owner_id: str, request: Request, **turn_kwargs: Any,
+        owner_id: str, request: Request, readiness_binding: str | None = None, **turn_kwargs: Any,
     ) -> dict[str, Any]:
         # Core execution checks operation identity under this same reentrant
         # guard. Bind against the latest session after queued turns complete.
@@ -6937,6 +6981,8 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             authorized_context = _authorize_demo_turn_field_context(
                 request, _bind_turn_context(latest, incoming_context),
             )
+            if readiness_binding is not None:
+                _turn_readiness_for_context(session_id, authorized_context, expected_binding=readiness_binding, **turn_kwargs)
             context_update = _persistable_demo_turn_context(authorized_context)
             result = run_turn(
                 store=store, session_id=session_id,
@@ -6965,14 +7011,21 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         selected_rag_config = runtime_rag_config(payload.rag_config)
         selected_model_id = runtime_model_id(payload.model_id, mode=payload.mode)
         operation_id = str(payload.client_operation_id) if payload.client_operation_id else None
-        operation_hash = _hash_payload(payload.model_dump(mode="json", exclude={"client_operation_id"})) if operation_id else None
+        operation_hash = _hash_payload(payload.model_dump(mode="json", exclude={"client_operation_id", "readiness_binding"})) if operation_id else None
         existing_operation = store.get_turn_operation(session_id, operation_id) if operation_id else None
         if existing_operation and existing_operation["request_sha256"] != operation_hash:
             raise HTTPException(status_code=409, detail={"code": "operation_conflict", "message": "client operation ID was reused with different request data"})
         if existing_operation is None:
-            _authorize_demo_turn_field_context(
+            authorized_context = _authorize_demo_turn_field_context(
                 request, _bind_turn_context(session, payload.session_context),
             )
+            if payload.readiness_binding is not None:
+                _turn_readiness_for_context(
+                    session_id, authorized_context, expected_binding=payload.readiness_binding,
+                    message=payload.message, mode=payload.mode,
+                    model_id=selected_model_id, rag_config=selected_rag_config,
+                    max_tokens=payload.max_tokens, trace_options=payload.trace_options.model_dump(),
+                )
 
         profiler = TraceProfiler()
         try:
@@ -6982,6 +7035,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 incoming_context=payload.session_context,
                 owner_id=str(user["id"]),
                 request=request,
+                readiness_binding=payload.readiness_binding,
                 message=payload.message,
                 mode=payload.mode,
                 model_id=selected_model_id,
@@ -7049,16 +7103,23 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         selected_rag_config = runtime_rag_config(payload.rag_config)
         selected_model_id = runtime_model_id(payload.model_id, mode=payload.mode)
         operation_id = str(payload.client_operation_id) if payload.client_operation_id else None
-        operation_hash = _hash_payload(payload.model_dump(mode="json", exclude={"client_operation_id"})) if operation_id else None
+        operation_hash = _hash_payload(payload.model_dump(mode="json", exclude={"client_operation_id", "readiness_binding"})) if operation_id else None
         existing_operation = store.get_turn_operation(session_id, operation_id) if operation_id else None
         if existing_operation and existing_operation["request_sha256"] != operation_hash:
             raise HTTPException(status_code=409, detail={"code": "operation_conflict", "message": "client operation ID was reused with different request data"})
         # Preserve an HTTP error for a known-invalid request before SSE opens.
         # The worker repeats this check against fresh state after its queue wait.
         if existing_operation is None:
-            _authorize_demo_turn_field_context(
+            authorized_context = _authorize_demo_turn_field_context(
                 request, _bind_turn_context(session, payload.session_context),
             )
+            if payload.readiness_binding is not None:
+                _turn_readiness_for_context(
+                    session_id, authorized_context, expected_binding=payload.readiness_binding,
+                    message=payload.message, mode=payload.mode,
+                    model_id=selected_model_id, rag_config=selected_rag_config,
+                    max_tokens=payload.max_tokens, trace_options=payload.trace_options.model_dump(),
+                )
         model_id = None if payload.mode == "mock" else selected_model_id
 
         async def event_stream() -> Any:
@@ -7098,6 +7159,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                     incoming_context=payload.session_context,
                     owner_id=str(user["id"]),
                     request=request,
+                    readiness_binding=payload.readiness_binding,
                     message=payload.message,
                     mode=payload.mode,
                     model_id=model_id,

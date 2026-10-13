@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { OpenAgronomyApp } from './OpenAgronomyApp'
 import { PHASE6_SCRATCHPAD_STORAGE_KEY } from './offlineScratchpad'
 import { PHASE6_OFFLINE_STORAGE_QUARANTINE_KEY } from './offlineStorageRepair'
+import type { TurnReadiness } from './turnReadiness'
 
 vi.mock('./fieldGeometry', async () => {
   const actual = await vi.importActual<typeof import('./fieldGeometry')>('./fieldGeometry')
@@ -3540,4 +3541,182 @@ it.each([
   openPrimaryPage('Fields')
   expect(screen.getByLabelText('Crop')).toHaveValue('soybean')
   expect(screen.getByLabelText('Acres')).toHaveValue(acres)
+})
+
+
+// Typed transport fixtures exercise the production UI; actual planning/execution
+// parity is covered by tests/test_turn_readiness.py, not inferred by this mock.
+const missingModelConfig = {
+  ...bootConfig, models: ['missing-model'],
+  model_profiles: [{ id: 'missing-model', label: 'Missing model', role: 'answer', max_tokens: 240, local_ready: false, local_detail: 'Model weights are not installed.' }],
+}
+const readinessResponse = (body: { request_id: string; session_id?: string | null; turn: { message: string; mode: string; session_context?: { field_context_id?: string } } }, status: TurnReadiness['status'] = 'ready'): TurnReadiness => ({
+  schema_version: 'open_agronomy_agent.turn_readiness.v1', request_id: body.request_id,
+  requires_model: status === 'model_required', status, readiness_binding: 'a'.repeat(64),
+  binding: { message: body.turn.message, mode: body.turn.mode, session_id: body.session_id || null, field_context_id: body.turn.session_context?.field_context_id || null },
+  calculator: status === 'model_required' ? null : { operation: 'unit_conversion', missing_inputs: status === 'clarification_required' ? ['tkw_g'] : [], requirements: {}, clarification: status === 'clarification_required' ? 'To calculate this, provide tkw_g.' : null },
+  boundary: 'Supplied-input arithmetic or clarification; no recommendation authority.',
+})
+
+describe('production request-bound calculator Ask gate', () => {
+  it.each(['ready', 'clarification_required'] as const)('submits %s without an installed model using the current server binding', async status => {
+    const fetchMock = installFetchMock()
+    const base = fetchMock.getMockImplementation()!
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url === '/api/configs') return jsonResponse(missingModelConfig)
+      if (url === '/api/turn-readiness') return jsonResponse(readinessResponse(JSON.parse(String(init?.body)), status))
+      if (url === '/api/sessions' && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body))
+        return jsonResponse({ session_id: 'session-calculator', context: body.context, turns: [] })
+      }
+      if (url === '/api/sessions/session-calculator/turns/stream') return {
+        ok: true, status: 200, body: null,
+        text: async () => `event: answer.completed\ndata: ${JSON.stringify({ turn_id: 'calculator-turn', turn: { turn_id: 'calculator-turn', user_message: 'Exact calculator request', answer: 'Canonical calculator response', trace: { retrieved_docs: [], graph_hits: [], tool_invocations: [] } } })}\n\n`,
+      } as Response
+      return base(input, init)
+    })
+    render(<OpenAgronomyApp />)
+    await screen.findByText('Model weights are not installed.')
+    fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'Exact calculator request' } })
+    const ask = screen.getByRole('button', { name: 'Ask' })
+    await waitFor(() => expect(ask).toBeEnabled())
+    expect(fetchMock.mock.calls.filter(([url]) => String(url) === '/api/sessions')).toHaveLength(0)
+    fireEvent.click(ask)
+    expect(await screen.findByText('Canonical calculator response')).toBeInTheDocument()
+    const submission = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/turns/stream'))
+    const payload = JSON.parse(String(submission?.[1]?.body))
+    expect(payload.readiness_binding).toBe('a'.repeat(64))
+    expect(payload.message).toBe('Exact calculator request')
+    expect(payload.model_id).toBe('missing-model')
+    expect(fetchMock.mock.calls.filter(([url]) => String(url) === '/api/turn-readiness').length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('ignores a delayed old-question preview and leaves ordinary generation gated', async () => {
+    const fetchMock = installFetchMock()
+    const base = fetchMock.getMockImplementation()!
+    let resolveOld: ((value: Response) => void) | undefined
+    let oldBody: Parameters<typeof readinessResponse>[0] | undefined
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === '/api/configs') return jsonResponse(missingModelConfig)
+      if (String(input) === '/api/turn-readiness') {
+        const body = JSON.parse(String(init?.body))
+        if (body.turn.message === 'Old exact question') {
+          oldBody = body
+          return new Promise<Response>(resolve => { resolveOld = resolve })
+        }
+        return jsonResponse(readinessResponse(body, 'model_required'))
+      }
+      return base(input, init)
+    })
+    render(<OpenAgronomyApp />)
+    await screen.findByText('Model weights are not installed.')
+    const question = screen.getByLabelText('Your question')
+    fireEvent.change(question, { target: { value: 'Old exact question' } })
+    await waitFor(() => expect(resolveOld).toBeDefined())
+    fireEvent.change(question, { target: { value: 'Why are wheat leaves yellow?' } })
+    await act(async () => resolveOld!(jsonResponse(readinessResponse(oldBody!))))
+    expect(screen.getByRole('button', { name: 'Ask' })).toBeDisabled()
+    expect(question).toHaveValue('Why are wheat leaves yellow?')
+    await waitFor(() => expect(fetchMock.mock.calls.filter(([url]) => String(url) === '/api/turn-readiness')).toHaveLength(2))
+    expect(screen.getByRole('button', { name: 'Ask' })).toBeDisabled()
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/turns/stream'))).toBe(false)
+  })
+
+  it('retains the draft when final server readiness fails and never dispatches the turn', async () => {
+    const fetchMock = installFetchMock()
+    const base = fetchMock.getMockImplementation()!
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url === '/api/configs') return jsonResponse(missingModelConfig)
+      if (url === '/api/turn-readiness') {
+        const body = JSON.parse(String(init?.body))
+        if (body.session_id) throw new Error('Controlled readiness transport failure')
+        return jsonResponse(readinessResponse(body))
+      }
+      if (url === '/api/sessions' && init?.method === 'POST') return jsonResponse({ session_id: 'session-preflight-failure', context: JSON.parse(String(init.body)).context, turns: [] })
+      return base(input, init)
+    })
+    render(<OpenAgronomyApp />)
+    await screen.findByText('Model weights are not installed.')
+    fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'Retained exact draft' } })
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Ask' })).toBeEnabled())
+    fireEvent.click(screen.getByRole('button', { name: 'Ask' }))
+    expect(await screen.findByText(/Controlled readiness transport failure/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Your question')).toHaveValue('Retained exact draft')
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/turns/stream'))).toBe(false)
+  })
+})
+
+
+it('eight canceled final preflights do not consume operation recovery slots or block the next real dispatch', async () => {
+  const fetchMock = installFetchMock()
+  const base = fetchMock.getMockImplementation()!
+  let cancelFinal = true
+  let sessionNumber = 0
+  const pending: Array<{ body: Parameters<typeof readinessResponse>[0]; resolve: (value: Response) => void }> = []
+  fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input)
+    if (url === '/api/configs') return jsonResponse(missingModelConfig)
+    if (url === '/api/turn-readiness') {
+      const body = JSON.parse(String(init?.body))
+      if (body.session_id && cancelFinal) return new Promise<Response>(resolve => pending.push({ body, resolve }))
+      return jsonResponse(readinessResponse(body))
+    }
+    if (url === '/api/sessions' && init?.method === 'POST') {
+      const body = JSON.parse(String(init.body))
+      return jsonResponse({ session_id: `session-cancel-${++sessionNumber}`, context: body.context, turns: [] })
+    }
+    if (url.endsWith('/turns/stream')) return {
+      ok: true, status: 200, body: null,
+      text: async () => `event: answer.completed\ndata: ${JSON.stringify({ turn_id: 'actually-dispatched', turn: { turn_id: 'actually-dispatched', answer: 'Ninth request completed', trace: { retrieved_docs: [], graph_hits: [], tool_invocations: [] } } })}\n\n`,
+    } as Response
+    return base(input, init)
+  })
+  render(<OpenAgronomyApp />)
+  await screen.findByText('Model weights are not installed.')
+  for (let index = 0; index < 8; index += 1) {
+    fireEvent.change(screen.getByLabelText('Your question'), { target: { value: `Canceled exact request ${index}` } })
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Ask' })).toBeEnabled())
+    const before = pending.length
+    fireEvent.click(screen.getByRole('button', { name: 'Ask' }))
+    await waitFor(() => expect(pending.length).toBeGreaterThan(before))
+    fireEvent.click(screen.getByTestId('reset-chat'))
+    await act(async () => { for (const item of pending.splice(0)) item.resolve(jsonResponse(readinessResponse(item.body))) })
+  }
+  expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/turns/stream'))).toBe(false)
+  cancelFinal = false
+  fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'Ninth real request' } })
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Ask' })).toBeEnabled())
+  fireEvent.click(screen.getByRole('button', { name: 'Ask' }))
+  expect(await screen.findByText('Ninth request completed')).toBeInTheDocument()
+  expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/turns/stream'))).toHaveLength(1)
+  expect(screen.queryByText(/Eight earlier requests/)).not.toBeInTheDocument()
+})
+
+
+it('server calculator readiness cannot enable Ask for newly edited unsaved geometry', async () => {
+  const field = { id: 'field-ready-map', field_context_id: 'field-ready-map', name: 'Readiness map field', crop: '', region: '', jurisdiction: '', acres: '', concern: '', notes: '', geometry: { kind: 'point', point: { lat: 42.1, lon: -93.8 } }, regionalContext: '', geoPriors: null, createdAt: '2026-10-13T00:00:00Z', updatedAt: '2026-10-13T00:00:00Z', storageMode: 'account_workspace' }
+  window.localStorage.setItem('open-agronomy-agent.active-field.v1', field.id)
+  const fetchMock = installFetchMock({ ...emptyDemoFields, fields: [field] })
+  const base = fetchMock.getMockImplementation()!
+  fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input) === '/api/configs') return jsonResponse(missingModelConfig)
+    if (String(input) === '/api/turn-readiness') return jsonResponse(readinessResponse(JSON.parse(String(init?.body))))
+    return base(input, init)
+  })
+  render(<OpenAgronomyApp />)
+  await screen.findByRole('heading', { name: field.name })
+  await screen.findByText('Model weights are not installed.')
+  fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'Exact conversion for saved field' } })
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Ask' })).toBeEnabled())
+  openPrimaryPage('Map')
+  fireEvent.click(screen.getByRole('button', { name: 'Select point' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Mock drop point' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Save edits' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Conversation' }))
+  expect(screen.getByRole('button', { name: 'Ask' })).toBeDisabled()
+  expect(screen.getByText('Save field changes before asking.')).toBeInTheDocument()
+  expect(screen.getByLabelText('Your question')).toHaveValue('Exact conversion for saved field')
+  expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/turns/stream'))).toBe(false)
 })

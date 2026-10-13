@@ -789,7 +789,8 @@
     "data/derived/rag/offline_agronomy/physical_methods/v1/store_manifest.json",
     "tests/test_release_eval_model_metrics.py",
     "tests/test_release_eval_diagnostic_inputs.py",
-    "tests/test_checkpoint_truthfulness.py"
+    "tests/test_checkpoint_truthfulness.py",
+    "tests/test_turn_readiness.py"
   ],
   "trees": [
     "src",
