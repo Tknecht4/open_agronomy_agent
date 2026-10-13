@@ -776,7 +776,14 @@ def analyze_development_panel(
                "truncated": fixture.get("truncated", False),
                "finish_reason": fixture.get("finish_reason"),
                "model_execution_eligible": False}
-        reviews.append(bind_fixture_review(row, by_rubric[case["case_id"]], fixture))
+        review = bind_fixture_review(row, by_rubric[case["case_id"]], fixture)
+        if row["status"] == "completed":
+            reviews.append(review)
+        elif (any(value is not None for value in review["criterion_scores"].values())
+              or review["fatal_failures"] or review["fatal_review_complete"]):
+            raise ValueError("noncompleted fixtures cannot supply semantic or safety labels")
+        # Failed fixture rows remain planned/observed execution failures. They
+        # receive the declared outcome penalty without inventing review labels.
         matrix.append(cell); observations.append(row)
     plan = {"cases": cases, "matrix": matrix, "execution_contract": "synthetic_fixture_only"}
     bundle = _model_metrics_bundle(plan, observations, rubrics_path=directory / "rubrics.jsonl",

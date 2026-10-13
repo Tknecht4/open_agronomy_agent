@@ -6,6 +6,11 @@
 
 ## Contract map
 
+`test_development_scoring_policy.py` exercises the documented analyzer with
+`tests/fixtures/development_scoring_v1` and the provisional ten-domain policy.
+Its imposed grades, failures and unknowns test the instrument, worker stripping
+and source bindings; they are not actual model observations or agronomic labels.
+
 | Concern | Representative tests |
 |---|---|
 | Retrieval/corpus | `test_retrieval.py`, `test_corpus_governance.py`, `test_nrcs_compact.py` |

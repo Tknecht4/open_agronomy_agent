@@ -49,6 +49,7 @@ jobs:
             tests/test_release_eval_reanalysis.py \
             tests/test_release_eval_model_metrics.py \
             tests/test_release_eval_diagnostic_inputs.py \
+            tests/test_development_scoring_policy.py \
             tests/test_checkpoint_truthfulness.py \
             tests/test_turn_readiness.py \
             tests/test_turn_generation_telemetry.py \

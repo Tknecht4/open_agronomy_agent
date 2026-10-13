@@ -1,0 +1,7 @@
+{
+  "kind": "project_authored_synthetic_instrument_QA",
+  "source_admission": false,
+  "scientific_grade": false,
+  "runtime_retrieval_training": false,
+  "note": "Ten domain IDs exercise weighting coverage only. Every task is the same supplied 2 kg + 3 kg arithmetic; labels are imposed controls, not observed model grades or agronomic evidence."
+}
