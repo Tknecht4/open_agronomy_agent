@@ -13,7 +13,7 @@
 | Tools/data | `smoke_*`, `build_prairie_spatial_pack.py`, `verify_prairie_spatial_pack.py` | Fixture/provider and package contracts, not field truth |
 | Ingestion/build | `ingest_*`, `build_*corpus*`, geospatial builders | Require source, rights, hashes, deterministic outputs |
 | Evaluation | `run_open_agronomy_benchmark.py`, `run_open_agronomy_benchmark_v2.py`, `run_observed_system_rehearsal.py`, `run_benchmark_capability_conformance.py`, v2/v3 audits, model matrix, judges, analyzers | Preserve identities and separation; v2 dry execution, capability conformance, and observed-system rehearsal are harness QA, not performance evidence |
-| Release evaluation foundation | `run_release_evaluation.py`, `analyze_release_evaluation.py` | Registry-bound engineering checks, product observations, offline reanalysis and compatible reference gates; semantic review remains explicit and source-bound |
+| Release evaluation foundation | `run_release_evaluation.py`, `analyze_release_evaluation.py` | Registry-bound product checks; one analyzer for retained reports, source inventory, optional private criterion metrics, sealed diagnostics and synthetic panel fixtures; semantic review remains explicit |
 | Workspace profiling | `profile_workspace_backend.py`, `profile_workspace_model.py`, `profile_frontend_build.mjs` | Synthetic local timing and build receipts; never agronomic quality, provider availability, or a release latency budget |
 | Optional field imagery | `inspect_field_imagery.py`, `analyze_field_imagery.py`, `collect_imagery_assessment.py` | Public HLS discovery/chips and bounded research acquisition; explicit online mode, saved polygon and outside-checkout private cache |
 | Geospatial foundation | `discover_field_sources.py`, `analyze_field_terrain.py` | Keyless-first source metadata discovery; offline local DTM processing with contextual extent, optional PyFlwDir environment, source-bound GeoTIFF/JSON and unknown edge/TWI support |
@@ -130,6 +130,14 @@ On supported macOS filesystems it uses APFS copy-on-write clones to avoid
 duplicating the large corpus during local builds, falling back to ordinary
 copies elsewhere. Destination files have independent inodes; writing either
 copy cannot change the other. The builder still computes every output hash.
+Use `--check` for routine scope/hash validation without a staging tree. When
+materialization itself needs checking, use `--verify --receipt <new-json-path>`:
+the builder compares copied bytes with the source pins, verifies derived
+inventory/receipt hashes, retires only its fresh successful stage and retains a
+failed stage under `outputs/public-repository-verification`. Reserve package
+bytes plus the builder's 1 GiB floor and other outstanding work before that mode.
+Use `--destination` when a downstream consumer needs a retained tree. Existing
+receipt paths are never overwritten.
 
 `build_edge_runtime_manifest.py` regenerates the container runtime inventory
 for the selected active RAG profile. Because its contract hashes governed

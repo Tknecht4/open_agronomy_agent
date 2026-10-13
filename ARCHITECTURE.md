@@ -61,7 +61,9 @@ safety, and high-consequence paths handle the entire request.
 
 ## Harnesses and what they prove
 
-There are four evaluation surfaces and they must not be conflated.
+Evaluation surfaces retain distinct execution and evidence contracts. The
+source-bound catalog is `scripts/analyze_release_evaluation.py --inventory`;
+inventory does not execute tests or inference.
 
 1. `run_open_agronomy_benchmark.py` and `evals.py` execute the historical
    four-arm development harness through `agent.generate_answer`. It retains
@@ -86,6 +88,15 @@ There are four evaluation surfaces and they must not be conflated.
    Evaluation gold stays in the controller and never enters worker retrieval,
    prompts or training. Engineering status cannot establish domain competence.
    See the [canonical operator guide](docs/public/operations/release-evaluation.md).
+
+The existing analyzer also binds optional private criterion reviews and project
+scoring policies, sealed six-cell diagnostic readouts and synthetic development
+panel fixtures. `release_eval_model_metrics.py` owns descriptive fixed-denominator
+aggregation; `release_eval_diagnostic_inputs.py` owns the bounded closeout
+projection. Sidecars preserve original release gates and historical numeric
+scores. The v2 deterministic executor and v3 explicit-executor planner have no
+qualified canonical production causal-arm adapter. Question inventories and
+feedback review summaries are separate from executed evaluation evidence.
 
 The September two-Gemma assessment used the first surface because it is the
 complete retained model-comparison harness. Its results therefore support the

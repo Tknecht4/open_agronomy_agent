@@ -662,6 +662,68 @@ def write_new_json(path: Path, value: Any) -> None:
         handle.write("\n")
 
 
+def evaluation_entrypoints(*, root: Path = ROOT) -> dict[str, Any]:
+    """Describe executable seams without treating artifact presence as proof.
+
+    This is an explicit maintained catalog, not a dead-code detector. Contract
+    tests are named as consumers; this read-only inventory never runs them or
+    loads an inference backend. Historical/protocol surfaces keep their own
+    constructs rather than being renamed as product competence measurements.
+    """
+    specs = (
+        ("release_suite", "implemented_wired", "product_and_reference_arms",
+         "scripts/run_release_evaluation.py", "src/agronomy_agent/release_eval_runner.py",
+         "tests/test_release_eval_runner.py",
+         "Model execution needs an authorized profile and provisioned backend; CI is synthetic engineering evidence."),
+        ("release_analysis", "implemented_wired", "offline_retained_release",
+         "scripts/analyze_release_evaluation.py", "src/agronomy_agent/release_eval_reanalysis.py",
+         "tests/test_release_eval_reanalysis.py",
+         "Verifies retained identity and recomputes analysis without inference; unknown review labels stay unknown."),
+        ("historical_four_arm", "preserved_historical_only", "agent_generate_answer",
+         "scripts/run_open_agronomy_benchmark.py", "src/agronomy_agent/benchmark_report.py",
+         "tests/test_benchmark_report.py",
+         "Opt-in exposed historical regression construct; not the persisted product topology or independent agronomic validation."),
+        ("benchmark_v2", "implemented_contract_qa_only", "deterministic_contract_qa",
+         "scripts/run_open_agronomy_benchmark_v2.py", "src/agronomy_agent/benchmark_v2_runner.py",
+         "tests/test_open_agronomy_benchmark_v2_runner.py",
+         "Only the deterministic executor is configured; a production adapter for the declared causal arms is not wired."),
+        ("competence_v3", "implemented_orchestration_proposal_execution", "explicit_executor_binding_required",
+         "scripts/run_v3_competence_candidate.py", "src/agronomy_agent/v3_candidate_runner.py",
+         "tests/test_v3_candidate_runner.py",
+         "Matrix/ledger orchestration is implemented; no canonical real product adapter or sealed holdout is implied."),
+        ("question_inventory", "implemented_metadata_inventory", "question_provenance_only",
+         "scripts/inventory_agronomy_evaluation_suites.py", "src/agronomy_agent/evaluation_validity.py",
+         "tests/test_evaluation_suite_inventory.py",
+         "Question counts and origins do not establish executor wiring, expert gold, independent holdouts or grower usefulness."),
+    )
+    surfaces = []
+    for identifier, classification, execution, entrypoint, module, test, boundary in specs:
+        paths = (entrypoint, module, test)
+        missing = [path for path in paths if not (root / path).is_file()]
+        surfaces.append({
+            "id": identifier,
+            "classification": "blocked_missing_declared_input" if missing else classification,
+            "execution_contract": execution,
+            "entrypoint": entrypoint,
+            "owning_module": module,
+            "declared_contract_test": test,
+            "source_files": {path: file_digest(root / path) for path in paths if path not in missing},
+            "missing_paths": missing,
+            "tests_executed_by_inventory": False,
+            "model_evidence_established": False,
+            "boundary": boundary,
+        })
+    return {
+        "schema_version": "open_agronomy_agent.evaluation_entrypoints.v1",
+        "canonical_run": "scripts/run_release_evaluation.py",
+        "canonical_analysis": "scripts/analyze_release_evaluation.py",
+        "catalog_implementation_sha256": file_digest(Path(__file__)),
+        "inference_executed": False,
+        "classification_basis": "Declared code/CLI/test consumers and source hashes; no automatic dead-code or scientific-validation inference.",
+        "surfaces": surfaces,
+    }
+
+
 __all__ = [
     "ROOT",
     "DEFAULT_REGISTRY",
@@ -676,4 +738,5 @@ __all__ = [
     "build_plan",
     "plan_identity",
     "write_new_json",
+    "evaluation_entrypoints",
 ]

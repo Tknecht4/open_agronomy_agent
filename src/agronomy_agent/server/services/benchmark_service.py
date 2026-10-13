@@ -42,7 +42,7 @@ DEFAULT_AIAGRIBENCH_PROXY_ROOTS = (
 
 
 def open_agronomy_benchmark_summary() -> dict[str, Any]:
-    """Return the stable canonical benchmark contract, never a legacy proxy score."""
+    """Expose historical suite metadata alongside the current execution seam."""
 
     if not OPEN_AGRONOMY_BENCHMARK_MANIFEST.is_file() or not OPEN_AGRONOMY_BENCHMARK_CONTRACT.is_file():
         return {
@@ -78,7 +78,10 @@ def open_agronomy_benchmark_summary() -> dict[str, Any]:
         "evaluation_policy": manifest["evaluation_policy"],
         "database_available": OPEN_AGRONOMY_BENCHMARK_DATABASE.is_file(),
         "database_path": str(OPEN_AGRONOMY_BENCHMARK_DATABASE.relative_to(REPO_ROOT)),
-        "canonical_command": ".venv/bin/python scripts/run_open_agronomy_benchmark.py --model-config MODEL_CONFIG --model-key MODEL_KEY",
+        "execution_contract": "historical_legacy_agent_path",
+        "canonical_command": "PYTHONPATH=src .venv/bin/python scripts/run_release_evaluation.py --profile ci --dry-run",
+        "canonical_analysis_command": "PYTHONPATH=src .venv/bin/python scripts/analyze_release_evaluation.py --inventory",
+        "historical_command": ".venv/bin/python scripts/run_open_agronomy_benchmark.py --model-config MODEL_CONFIG --model-key MODEL_KEY",
         "external_diagnostic": {
             "available": external_manifest is not None,
             "benchmark_id": external_manifest.get("benchmark_id") if external_manifest else None,
@@ -89,8 +92,9 @@ def open_agronomy_benchmark_summary() -> dict[str, Any]:
             "exact_overlap": separation.get("question_overlap", {}).get("exact_match_count") if separation else None,
             "near_overlap": separation.get("question_overlap", {}).get("near_duplicate_count") if separation else None,
             "claim_eligible": False,
+            "execution_contract": "historical_legacy_agent_path",
             "geographic_scope": "Ugandan farmer questions; external transfer diagnostic only",
-            "canonical_command": ".venv/bin/python scripts/run_open_agronomy_benchmark.py --evaluation-set external --model-config MODEL_CONFIG --model-key MODEL_KEY",
+            "historical_command": ".venv/bin/python scripts/run_open_agronomy_benchmark.py --evaluation-set external --model-config MODEL_CONFIG --model-key MODEL_KEY",
             "use_policy": (
                 "Finalist-only external transfer diagnostic. Published answers are not independently revalidated; "
                 "never tune and retest on the same frozen version."

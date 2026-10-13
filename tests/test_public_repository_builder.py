@@ -18,6 +18,87 @@ from scripts.build_public_repository import _contains_literal, _copy_independent
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _tiny_manifest(tmp_path):
+    (tmp_path / "source.txt").write_text("synthetic public content\n")
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(json.dumps({
+        "schema_version": "open_agronomy_agent.public_repository_manifest.v1",
+        "release_id": "synthetic", "paths": ["source.txt"],
+    }))
+    return manifest
+
+
+def test_scope_check_creates_no_package_or_source_changes(tmp_path, monkeypatch):
+    from scripts import build_public_repository as builder
+
+    monkeypatch.setattr(builder, "ROOT", tmp_path)
+    manifest = _tiny_manifest(tmp_path)
+    before = {p.name: p.read_bytes() for p in tmp_path.iterdir()}
+    report = builder.check_scope(manifest)
+    assert report["status"] == "pass" and report["materialized"] is False
+    assert report["file_count"] == 1
+    assert before == {p.name: p.read_bytes() for p in tmp_path.iterdir()}
+
+
+def test_materialization_verification_retires_only_owned_success(tmp_path, monkeypatch):
+    from scripts import build_public_repository as builder
+
+    monkeypatch.setattr(builder, "ROOT", tmp_path)
+    manifest = _tiny_manifest(tmp_path)
+    unrelated = tmp_path / "outputs/keep-history"
+    unrelated.mkdir(parents=True)
+    (unrelated / "receipt").write_text("historical")
+    path = tmp_path / "receipt.json"
+    report = builder.verify(manifest, path)
+    assert report["status"] == "pass" and report["stage_state"] == "retired"
+    assert not Path(report["stage_path"]).exists()
+    assert (unrelated / "receipt").read_text() == "historical"
+    assert json.loads(path.read_text()) == report
+
+
+def test_failed_verification_retains_owned_stage_and_new_receipt(tmp_path, monkeypatch):
+    import pytest
+    from scripts import build_public_repository as builder
+
+    monkeypatch.setattr(builder, "ROOT", tmp_path)
+    manifest = _tiny_manifest(tmp_path)
+    original = builder._copy_independent
+    def fail_after_copy(source, target):
+        original(source, target)
+        raise RuntimeError("synthetic interrupted copy")
+    monkeypatch.setattr(builder, "_copy_independent", fail_after_copy)
+    receipt = tmp_path / "failed.json"
+    with pytest.raises(RuntimeError, match="interrupted"):
+        builder.verify(manifest, receipt)
+    report = json.loads(receipt.read_text())
+    assert report["status"] == "failed" and report["stage_state"] == "retained"
+    stage = Path(report["stage_path"])
+    assert stage.is_relative_to(tmp_path / "outputs/public-repository-verification")
+    assert (stage / "source.txt").read_bytes() == (tmp_path / "source.txt").read_bytes()
+    with pytest.raises(FileExistsError):
+        builder.verify(manifest, receipt)
+
+
+def test_verification_rejects_corrupted_copy_even_with_self_consistent_receipt(tmp_path, monkeypatch):
+    import pytest
+    from scripts import build_public_repository as builder
+
+    monkeypatch.setattr(builder, "ROOT", tmp_path)
+    manifest = _tiny_manifest(tmp_path)
+    original = builder._copy_independent
+    def corrupt(source, target):
+        original(source, target)
+        target.write_bytes(b"altered copied bytes")
+    monkeypatch.setattr(builder, "_copy_independent", corrupt)
+    receipt = tmp_path / "corrupt.json"
+    with pytest.raises(ValueError, match="differs from pinned"):
+        builder.verify(manifest, receipt)
+    report = json.loads(receipt.read_text())
+    assert report["status"] == "failed"
+    assert Path(report["stage_path"]).is_dir()
+    assert (tmp_path / "source.txt").read_text() == "synthetic public content\n"
+
+
 def test_public_package_total_budget_accounts_for_many_small_files(tmp_path, monkeypatch):
     import pytest
     from scripts import build_public_repository as builder

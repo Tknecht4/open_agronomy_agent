@@ -18,6 +18,7 @@ import json
 import os
 import shutil
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -266,13 +267,84 @@ def build(destination: Path, manifest_path: Path = DEFAULT_MANIFEST) -> dict[str
     return receipt
 
 
+def check_scope(manifest_path: Path = DEFAULT_MANIFEST) -> dict[str, Any]:
+    """Validate and hash the source selection without creating a package tree."""
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("schema_version") != "open_agronomy_agent.public_repository_manifest.v1":
+        raise ValueError("unsupported public repository manifest schema")
+    files = _collect(manifest)
+    _validate_scope(files, manifest)
+    records = [{"path": _relative(path), "bytes": path.stat().st_size,
+                "sha256": _sha256(path)} for path in files]
+    return {"schema_version": "open_agronomy_agent.public_repository_scope_check.v1",
+            "release_id": manifest["release_id"], "status": "pass",
+            "materialized": False, "manifest_sha256": _sha256(manifest_path),
+            "file_count": len(records), "total_bytes": sum(row["bytes"] for row in records),
+            "files": records}
+
+
+def verify(manifest_path: Path, receipt_path: Path) -> dict[str, Any]:
+    """Retire a successful owned stage; retain failures for bounded inspection."""
+    if receipt_path.exists():
+        raise FileExistsError("verification receipt must be new")
+    scope = check_scope(manifest_path)
+    # This is a builder floor; callers also account for other outstanding work.
+    stage_root = ROOT / "outputs/public-repository-verification"
+    if shutil.disk_usage(ROOT).free < scope["total_bytes"] + 1024 ** 3:
+        raise ValueError("verification requires package bytes plus a 1 GiB free floor")
+    stage_root.mkdir(parents=True, exist_ok=True)
+    stage = Path(tempfile.mkdtemp(prefix="stage-", dir=stage_root))
+    receipt = {"schema_version": "open_agronomy_agent.public_repository_verification.v1",
+               "stage_path": str(stage), "manifest_sha256": scope["manifest_sha256"]}
+    try:
+        built = build(stage, manifest_path)
+        if built["manifest_sha256"] != scope["manifest_sha256"] or any(
+            _sha256(ROOT / row["path"]) != row["sha256"] for row in scope["files"]
+        ):
+            raise ValueError("public source changed during materialization")
+        selected = {row["path"] for row in scope["files"]}
+        derived = {"container/runtime_manifest.json"} if "scripts/build_edge_runtime_manifest.py" in selected else set()
+        _validate_destination_inventory(stage, selected | {"PUBLIC_RELEASE_RECEIPT.json"})
+        for row in scope["files"]:
+            if row["path"] not in derived and _sha256(stage / row["path"]) != row["sha256"]:
+                raise ValueError("materialized file differs from pinned public source")
+        for row in built["files"]:
+            if _sha256(stage / row["path"]) != row["sha256"]:
+                raise ValueError("materialized package changed during verification")
+        if _sha256(stage / "PUBLIC_RELEASE_RECEIPT.json") != built["receipt_sha256"]:
+            raise ValueError("materialized package receipt changed during verification")
+        receipt.update(status="pass", stage_state="retired", package=built,
+                       derived_paths=sorted(derived & selected))
+        shutil.rmtree(stage)  # Only the fresh stage owned by this invocation.
+    except Exception as error:
+        receipt.update(status="failed", stage_state="retained", error_type=type(error).__name__)
+        receipt_path.parent.mkdir(parents=True, exist_ok=True)
+        with receipt_path.open("x", encoding="utf-8") as handle:
+            json.dump(receipt, handle, indent=2); handle.write("\n")
+        raise
+    receipt_path.parent.mkdir(parents=True, exist_ok=True)
+    with receipt_path.open("x", encoding="utf-8") as handle:
+        json.dump(receipt, handle, indent=2); handle.write("\n")
+    return receipt
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--destination", type=Path, required=True)
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--destination", type=Path)
+    mode.add_argument("--check", action="store_true", help="Validate/hash public source selection without materialization.")
+    mode.add_argument("--verify", action="store_true", help="Verify an owned temporary stage, retiring success and retaining failure.")
+    parser.add_argument("--receipt", type=Path, help="New receipt path, required for --verify.")
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--print-files", action="store_true")
     args = parser.parse_args()
-    receipt = build(args.destination, args.manifest.resolve())
+    if args.verify and args.receipt is None:
+        parser.error("--verify requires --receipt")
+    if args.receipt and not args.verify:
+        parser.error("--receipt is supported only with --verify")
+    receipt = (verify(args.manifest.resolve(), args.receipt.resolve()) if args.verify else
+               check_scope(args.manifest.resolve()) if args.check else
+               build(args.destination, args.manifest.resolve()))
     output = receipt if args.print_files else {
         key: value for key, value in receipt.items() if key != "files"
     }

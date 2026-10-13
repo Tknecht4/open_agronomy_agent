@@ -8,6 +8,20 @@ checks with persisted scenarios through the application's
 Neither engineering completion, automated grading, nor supplied human review
 establishes field efficacy or agronomist equivalence.
 
+Inspect execution surfaces through the same analysis entry point:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/analyze_release_evaluation.py --inventory
+```
+
+This hashes declared runner/module/test consumers and distinguishes the current
+release path, historical four-arm runner, v2 deterministic contract QA, v3
+explicit-executor orchestration and question metadata inventory. It executes no
+tests or inference. The v2 production causal-arm adapter and a canonical v3
+real-product adapter remain unqualified; their planners and fixture tests cannot
+substitute for those integrations. Historical runners retain their original
+constructs and are not renamed as production competence instruments.
+
 ## Profiles and execution
 
 | Profile | Backend | Trials per case | Component performance repeats | Purpose |
@@ -197,6 +211,59 @@ answers with today's numeric implementation. Numeric rescoring with a changed
 instrument is a separate evaluation identity and requires a new compatible
 baseline before regression comparison. New analysis preserves original
 observations, plan, reviewer bindings and negative results.
+
+## Descriptive model metrics and private fixture panels
+
+The same analyzer accepts optional `--model-rubrics`, `--criterion-reviews` and
+`--model-policy` with a retained `--run-dir`. These add private model-metric
+sidecars; they preserve the recorded release report, gates and numeric scores.
+Rubrics bind the original case hash; reviews also bind the answer and rubric.
+Useful completion, restraint, numeric/unit accuracy, evidence support and
+applicability remain separate dimensions. Tool correctness is reported
+separately; an explicitly inapplicable manual/no-attempt observation differs
+from an unassessable attempt or missing evidence.
+
+Supply an explicit versioned project policy for domain/dimension weights,
+failure, truncation, missingness and sensitivity profiles. Hash equality binds
+the policy to a plan but does not prove prospective preregistration. Unknown
+labels preserve fixed denominators and bounds. Fatal conditions and unknown
+safety remain visible; descriptive aggregates grant no promotion or ranking
+authority. Contrasts require recorded matching facts, criterion masks and cohort,
+with configuration/source/runtime and each arm's recipe identities retained.
+Hardware and timing comparability need their own evidence.
+
+A sealed six-cell closeout can use `--diagnostic-closeout` instead of `--run-dir`:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/analyze_release_evaluation.py \
+  --diagnostic-closeout /absolute/path/to/private-closeout \
+  --output-dir /absolute/path/to/new-private-analysis
+```
+
+This reads only the pinned closeout children, preserving six observed answers,
+original helper failures, model-identity limits and zero expert labels. It does
+not follow external archives, rerun a model or establish full-suite/JLens
+completion. Missing policy or review produces blocked/partial metrics and a
+nonzero exit, while retaining reviewable evidence.
+
+`--development-panel /absolute/path/to/private-panel` binds a sealed panel's
+synthetic QA fixtures through `normalize_case`, the actual worker allowlist and
+the same rubric/review scorer. It accepts an optional explicit `--model-policy`.
+Its output is labelled synthetic fixture analysis, with no model or worker
+execution. Questions, rubrics, Decimal oracles and source support stay private;
+no packet code is executed, no vector extractor or expert gold is implied, and
+the default runtime or release registry is unchanged. Scientific review and
+prospective execution admission remain separate steps. Do not interpret a
+hand-authored fixture's grade as an observed model answer.
+
+Model-metric files, retained private labels/policy, source bindings and fixture
+plans remain controller-only. They have no automatic public projection. Use a
+new output directory outside every immutable input directory. A later ordinary
+reanalysis does not silently inherit these optional criterion labels.
+
+Workspace feedback aggregation is a review summary, not executed regression
+evidence. An ideal answer or approved feedback cannot qualify a rollout-review
+gate. Read actual execution status and source-bound reports separately.
 
 ## Expanding the suite
 
