@@ -5,9 +5,13 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 from collections import Counter
 from pathlib import Path
 from typing import Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from agronomy_agent.release_evaluation import evaluation_entrypoints  # noqa: E402
 
 
 def _jsonl(path: Path) -> list[dict[str, Any]]:
@@ -130,11 +134,17 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", action="append", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--execution-root", type=Path, help="Also classify declared executable seams for this repository root.")
     args = parser.parse_args()
+    if args.output.exists() or args.output.with_suffix(".md").exists():
+        parser.error("inventory outputs must be new; preserve previous inventories")
     paths = [path for root in args.root for path in root.rglob("*.jsonl")]
     report = build_inventory(paths)
+    if args.execution_root:
+        report["execution_entrypoints"] = evaluation_entrypoints(root=args.execution_root)
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    with args.output.open("x", encoding="utf-8") as handle:
+        handle.write(json.dumps(report, indent=2) + "\n")
     markdown = [
         "# Evaluation suite inventory",
         "",
@@ -155,7 +165,8 @@ def main() -> int:
             f"{suite['lexical_contract_rows']} | {suite['semantic_reference_rows']} | "
             f"{suite['multi_turn_rows']} | {suite['metric_role']} |"
         )
-    args.output.with_suffix(".md").write_text("\n".join(markdown) + "\n", encoding="utf-8")
+    with args.output.with_suffix(".md").open("x", encoding="utf-8") as handle:
+        handle.write("\n".join(markdown) + "\n")
     print(json.dumps({key: report[key] for key in ("suite_files", "question_rows_including_cross_suite_duplicates", "unique_question_fingerprints", "traceable_real_user_rows")}))
     return 0
 

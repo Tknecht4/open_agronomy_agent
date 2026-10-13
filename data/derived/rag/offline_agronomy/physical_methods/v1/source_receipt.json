@@ -1,0 +1,17 @@
+{
+  "schema_version": "open_agronomy_agent.production_foundations_source_receipt.v2",
+  "seed_path": "data/seed/physical_method_context_v1.jsonl",
+  "seed_sha256": "acf7278486d0f74992b5b496fcb287c6380183fc74e5e29b93146b1eba38de44",
+  "external_source_registry_path": "data/manifests/physical_method_chapter_sources_v1.json",
+  "external_source_registry_sha256": "8cceb38e0ab8979771c8a355d0b3d84903b36bac662870aa37fce527b0d87365",
+  "external_snapshots_in_public_package": false,
+  "source_ids": [
+    "ks-v2-1-soil-and-water-relationships-dom-20261012",
+    "ks-v2-1-soil-density-dom-20261012"
+  ],
+  "source_support_receipt_path": "data/manifests/physical_method_chapter_support_v1.json",
+  "source_support_receipt_sha256": "3c513cc918a6a615dedaa7a00e381c176f4004e9383950a711c2fdc8613fb06c",
+  "chapter_capture_kind": "selected_browser_DOM_fragments_not_HTTP_response",
+  "chapter_review_sha256": "cf8918be141f9ff32e0d9eef286252dbce2847abb6beb8a2f981b33ae7b728c3",
+  "rights_boundary": "Only project-authored summaries are distributed; source-specific terms remain with the publishers."
+}

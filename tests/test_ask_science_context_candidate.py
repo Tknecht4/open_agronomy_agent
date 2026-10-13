@@ -126,17 +126,22 @@ def test_candidate_profile_remains_nonselectable_with_approved_context_admission
     assert CONFIG not in json.dumps(controls)
     assert (STORE / "shards/foundations-0001.jsonl").as_posix() in active["retrieval"]["corpus_paths"]
     assert IDS.intersection({row.get("source_id") for row in load_agent_resources("configs/rag.yaml").retriever.docs}) == IDS
-    receipt_path = ROOT / "data/manifests/ask_science_context_admission_v1.json"
+    receipt_path = ROOT / "data/manifests/ask_science_context_admission_v2.json"
     admission = _json(receipt_path)
     assert admission["decision_state"] == "approved_context_only"
     assert admission["activation_applied"] is True
     assert admission["effective_eligibility"] == "context_only"
-    assert admission["external_publication_authorized"] is False
+    assert admission["external_publication_authorized"] is True
     assert admission["raw_text_or_evaluation_admission"] is False
+    previous_path = ROOT / admission["previous_decision"]["path"]
+    assert admission["previous_decision"]["preserved_unchanged"] is True
+    assert admission["previous_decision"]["sha256"] == hashlib.sha256(previous_path.read_bytes()).hexdigest() == "9416cdeddcfe41130f7ec849cb344a8f72cf5ac0afd54b05a36d654e7309d966"
+    assert _json(previous_path)["external_publication_authorized"] is False
     effective = _json(ROOT / "data/manifests/runtime_corpus_policy.json")
     rule = next(row for row in effective["corpora"] if row.get("store_profile_id") == "ask-science-context-v1")
     assert rule["runtime_eligibility"] == "context_only"
     assert rule["source_ids"] == sorted(IDS)
+    assert rule["context_admission_receipt"]["path"] == receipt_path.relative_to(ROOT).as_posix()
     assert rule["context_admission_receipt"]["sha256"] == hashlib.sha256(receipt_path.read_bytes()).hexdigest()
     assert admission["candidate_store_file_sha256"] == hashlib.sha256((ROOT / STORE / "store_manifest.json").read_bytes()).hexdigest()
     assert admission["candidate_store_content_sha256"] == _json(ROOT / STORE / "store_manifest.json")["store_sha256"]

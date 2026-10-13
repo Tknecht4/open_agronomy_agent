@@ -277,6 +277,7 @@ class CreateTurnRequest(BaseModel):
     max_tokens: int = 360
     session_context: dict[str, Any] = Field(default_factory=dict)
     trace_options: TraceOptions = Field(default_factory=TraceOptions)
+    readiness_binding: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
 
     @field_validator("message")
     def _validate_message(cls, value: str) -> str:
@@ -289,6 +290,24 @@ class CreateTurnRequest(BaseModel):
         if value <= 0:
             raise ValueError("max_tokens must be greater than 0")
         return value
+
+
+class TurnReadinessRequest(BaseModel):
+    request_id: UUID
+    session_id: str | None = None
+    turn: CreateTurnRequest
+
+
+class TurnReadinessResponse(BaseModel):
+    schema_version: Literal["open_agronomy_agent.turn_readiness.v1"]
+    request_id: UUID
+    requires_model: bool | None
+    status: Literal["ready", "clarification_required", "model_required", "unknown"]
+    reason: str
+    binding: dict[str, Any]
+    readiness_binding: str
+    calculator: dict[str, Any] | None = None
+    boundary: str
 
 
 class FeedbackRequest(BaseModel):

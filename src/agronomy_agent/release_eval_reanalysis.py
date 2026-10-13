@@ -392,6 +392,9 @@ def reanalyze(
     reviews_path: Path | None = None,
     reference_path: Path | None = None,
     export_review_packet: bool = False,
+    model_rubrics_path: Path | None = None,
+    criterion_reviews_path: Path | None = None,
+    model_policy_path: Path | None = None,
 ) -> dict[str, Any]:
     run = read_completed_run(run_dir)
     if reference_path is None and run.get("derived_lineage", {}).get("reference_run"):
@@ -490,6 +493,14 @@ def reanalyze(
         "raw_report_sha256": lineage["raw_run"]["files"]["report.json"],
     }
     packet = review_packet(run) if export_review_packet else None
+    model_metrics = None
+    if any((model_rubrics_path, criterion_reviews_path, model_policy_path)):
+        model_metrics = _model_metrics_bundle(
+            *_model_matrix(run),
+            rubrics_path=model_rubrics_path,
+            reviews_path=criterion_reviews_path,
+            policy_path=model_policy_path,
+        )
     # Verify the inputs again after reading before publishing derived evidence.
     verify_retention(run["directory"])
     verify_retention(run["input_directory"])
@@ -512,6 +523,285 @@ def reanalyze(
             handle.write(review_bytes)
     if packet is not None:
         write_new_json(output_dir / "review-packet.private.json", packet)
+    if model_metrics is not None:
+        _write_model_metrics(output_dir, model_metrics, raw_binding=_lineage(run))
     write_new_json(output_dir / "retention.json", retention_manifest(output_dir))
     verify_retention(output_dir)
     return report
+
+
+def _model_matrix(run: Mapping[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Project recorded identities only; do not infer a matched comparison cohort."""
+    plan = run["plan"]
+    model = plan["model"]
+    source = plan.get("source", {})
+    source_files = source.get("files", {})
+    recipe_files = {
+        name: source_files.get(name)
+        for name in ("src/agronomy_agent/release_eval_executor.py",
+                     "src/agronomy_agent/benchmark_arms.py")
+    }
+    matrix = [
+        {**cell, "model_id": model["id"], "model_revision": model["revision"],
+         "backend_id": cell["backend"],
+         "analysis_condition": {
+             "model_config_sha256": model.get("config_sha256"),
+             "source_sha256": source.get("source_sha256"),
+             "runtime_config_sha256": digest({"sampling": plan["sampling"],
+                                              "environment": plan["environment"]})
+                 if "sampling" in plan and "environment" in plan else None,
+             "arm_recipe_sha256": digest({"arm_id": cell["arm_id"], "files": recipe_files})
+                 if all(recipe_files.values()) else None,
+         }}
+        for cell in plan["matrix"]
+    ]
+    cells = {cell["observation_id"]: cell for cell in matrix}
+    observations = []
+    for row in run["observations"]:
+        turns = row.get("turns") or []
+        stats = (turns[-1].get("generation_stats") or {}) if turns else {}
+        performance = {"elapsed_seconds": row.get("elapsed_seconds")}
+        for field, key in (("load_seconds", "model_load_ms"),
+                           ("ttft_seconds", "time_to_first_token_ms"),
+                           ("first_response_seconds", "stream_time_to_first_token_ms"),
+                           ("post_first_decode_seconds", "decode_ms")):
+            value = stats.get(key)
+            if value is not None:
+                performance[field] = value / 1000
+        for field, key in (("input_tokens", "prompt_tokens"),
+                           ("output_tokens", "generation_tokens"),
+                           ("decode_tokens_per_second", "generation_tps")):
+            if stats.get(key) is not None:
+                performance[field] = stats[key]
+        observations.append({
+            **row, **cells[row["observation_id"]], "performance": performance,
+            "performance_scope": {
+                "elapsed_seconds": "recorded whole scenario; worker startup excluded",
+                "generation_fields": "last turn draft generation_stats only; excludes editor; prior prompt-count loading may be outside TTFT",
+                "prefill_harness_retrieval_transport_compile": "unmeasured; skipped zero spans not promoted",
+                "recorded_generation_qualifiers": {
+                    key: stats.get(key) for key in ("model_load_status", "cached_prompt_tokens",
+                        "prompt_cache_status", "prompt_tps_basis", "generation_tps_basis")
+                },
+            },
+            "tokens_scope": "last turn draft generation_stats only; not whole multi-turn or edited answer tokens",
+            "identity_status": "configured_plan_identity; inspect original model_execution_eligible and turn runtime receipts",
+        })
+    return {**plan, "matrix": matrix}, observations
+
+
+def _model_metrics_bundle(
+    plan: Mapping[str, Any], observations: list[dict[str, Any]], *,
+    rubrics_path: Path | None, reviews_path: Path | None, policy_path: Path | None,
+    reviews_override: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    from agronomy_agent.release_eval_model_metrics import score_model_matrix
+
+    def unique_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        value = {}
+        for key, item in pairs:
+            if key in value:
+                raise ValueError("duplicate model metric input key")
+            value[key] = item
+        return value
+
+    def nonfinite(value: str) -> None:
+        raise ValueError(f"nonfinite model metric input: {value}")
+
+    def parse(raw: bytes) -> Any:
+        return json.loads(raw, object_pairs_hook=unique_keys, parse_constant=nonfinite)
+
+    inputs = {}
+    for name, path in (("rubrics", rubrics_path), ("reviews", reviews_path), ("policy", policy_path)):
+        if path is None:
+            continue
+        if path.stat().st_size > 2 * 1024 * 1024:
+            raise ValueError(f"model metrics {name} input exceeds 2 MiB")
+        raw = path.read_bytes()
+        if len(raw) > 2 * 1024 * 1024:
+            raise ValueError(f"model metrics {name} input exceeds 2 MiB")
+        value = parse(raw) if name == "policy" else [
+            parse(line) for line in raw.splitlines() if line.strip()
+        ]
+        if (name == "policy" and not isinstance(value, dict)) or (
+            name != "policy" and any(not isinstance(row, dict) for row in value)
+        ):
+            raise ValueError(f"model metrics {name} requires object records")
+        inputs[name] = {"path": path, "bytes": raw, "value": value,
+                        "sha256": hashlib.sha256(raw).hexdigest()}
+    metrics = score_model_matrix(
+        plan, observations,
+        rubrics=inputs.get("rubrics", {}).get("value", []),
+        reviews=reviews_override if reviews_override is not None else inputs.get("reviews", {}).get("value", []),
+        policy=inputs.get("policy", {}).get("value"),
+    )
+    metrics["visibility"] = "private_controller_only"
+    sources = {
+        name: file_digest(Path(__file__).with_name(name))
+        for name in ("release_eval_reanalysis.py", "release_eval_model_metrics.py",
+                     "release_eval_analysis.py", "release_evaluation.py",
+                     "release_eval_runner.py", "benchmark_arms.py", "evals.py")
+    }
+    sources["scripts/analyze_release_evaluation.py"] = file_digest(
+        Path(__file__).resolve().parents[2] / "scripts/analyze_release_evaluation.py"
+    )
+    return {"report": metrics, "inputs": inputs, "analysis_source": sources}
+
+
+def _write_model_metrics(
+    output_dir: Path, bundle: Mapping[str, Any], *, raw_binding: Mapping[str, Any]
+) -> None:
+    # Retain the exact private labels/policy so an output remains reviewable.
+    pins = {}
+    for name, item in bundle["inputs"].items():
+        if file_digest(item["path"]) != item["sha256"]:
+            raise ValueError("model metrics input changed during analysis")
+        suffix = "json" if name == "policy" else "jsonl"
+        filename = f"model-{name}.private.{suffix}"
+        with (output_dir / filename).open("xb") as handle:
+            handle.write(item["bytes"])
+        pins[filename] = item["sha256"]
+    write_new_json(output_dir / "model-metrics.json", bundle["report"])
+    write_new_json(output_dir / "model-metrics-lineage.private.json", {
+        "schema_version": "open_agronomy_agent.model_metrics_lineage.v1",
+        "raw_binding": raw_binding, "input_sha256": pins,
+        "analysis_source": bundle["analysis_source"],
+        "metrics_sha256": digest(bundle["report"]), "inference_executed": False,
+        "boundary": "Descriptive controller scoring; does not change recorded release gates or historical scores.",
+    })
+
+
+def analyze_diagnostic_closeout(
+    *, directory: Path, output_dir: Path, rubrics_path: Path | None = None,
+    reviews_path: Path | None = None, policy_path: Path | None = None,
+) -> dict[str, Any]:
+    """Analyze the sealed six-cell readout through the same optional metric path."""
+    from agronomy_agent.release_eval_diagnostic_inputs import read_six_cell_closeout
+
+    run = read_six_cell_closeout(directory)
+    output_dir = output_dir.resolve()
+    if output_dir.is_relative_to(directory.resolve()):
+        raise ValueError("diagnostic output must be outside immutable source evidence")
+    bundle = _model_metrics_bundle(
+        run["plan"], run["observations"], rubrics_path=rubrics_path,
+        reviews_path=reviews_path, policy_path=policy_path,
+    )
+    bundle["analysis_source"]["release_eval_diagnostic_inputs.py"] = file_digest(
+        Path(__file__).with_name("release_eval_diagnostic_inputs.py")
+    )
+    bundle["report"]["evidence_limitations"] = run["evidence_limitations"]
+    bundle["report"]["full_suite_executed"] = False
+    bundle["report"]["current_JLens_executed"] = False
+    # Confirm source pins again before creating immutable derived outputs.
+    if read_six_cell_closeout(directory) != run:
+        raise ValueError("diagnostic evidence changed during analysis")
+    output_dir.mkdir(parents=True, exist_ok=False)
+    _write_model_metrics(output_dir, bundle, raw_binding=run["plan"])
+    write_new_json(output_dir / "retention.json", retention_manifest(output_dir))
+    verify_retention(output_dir)
+    return bundle["report"]
+
+
+def analyze_development_panel(
+    *, directory: Path, output_dir: Path, policy_path: Path | None = None,
+) -> dict[str, Any]:
+    """Bind a sealed private panel's synthetic QA fixtures; execute no workers."""
+    from agronomy_agent.release_evaluation import normalize_case, worker_case
+    from agronomy_agent.release_eval_model_metrics import bind_fixture_review
+    from agronomy_agent.benchmark_arms import ALL_ARM_IDS
+
+    directory = directory.resolve()
+    output_dir = output_dir.resolve()
+    if output_dir.is_relative_to(directory):
+        raise ValueError("panel output must be outside immutable source evidence")
+    names = {"cases.jsonl", "rubrics.jsonl", "numeric-oracles.jsonl",
+             "source-support.json", "deterministic-fixtures.jsonl", "verify-panel.py"}
+    handoff_path = directory / "handoff.json"
+    if handoff_path.is_symlink() or handoff_path.stat().st_size > 2 * 1024 * 1024:
+        raise ValueError("panel handoff must be a bounded regular file")
+    handoff_bytes = handoff_path.read_bytes()
+    handoff = json.loads(handoff_bytes)
+    if handoff.get("schema_version") != "open_agronomy_agent.agronomic_skill_panel_handoff.development.v1":
+        raise ValueError("unsupported development panel handoff")
+    pins = handoff.get("files", {})
+    if set(pins) != names:
+        raise ValueError("development panel requires its complete six-file seal")
+    arms = handoff.get("primary_arms")
+    if not isinstance(arms, list) or not arms or len(set(arms)) != len(arms) or not set(arms).issubset(ALL_ARM_IDS):
+        raise ValueError("panel must declare supported unique arms")
+    contents = {}; total = len(handoff_bytes)
+    for name in sorted(names):
+        path = directory / name
+        if path.is_symlink() or not path.is_file() or path.stat().st_size > 2 * 1024 * 1024:
+            raise ValueError("panel input must be a bounded regular file")
+        raw = path.read_bytes(); total += len(raw)
+        if len(raw) != pins[name].get("size_bytes") or hashlib.sha256(raw).hexdigest() != pins[name].get("sha256"):
+            raise ValueError("development panel source pin mismatch")
+        contents[name] = raw
+    if total > 2 * 1024 * 1024:
+        raise ValueError("development panel exceeds 2 MiB")
+    rows = lambda name: [json.loads(line) for line in contents[name].splitlines() if line.strip()]
+    suite = {"id": handoff["panel_id"], "format": "scenario", "exposure": "exposed_development"}
+    cases = [normalize_case(row, suite) for row in rows("cases.jsonl")]
+    by_case = {case["case_id"]: case for case in cases}
+    if not cases or len(by_case) != len(cases) or any(
+        case.get("lane") != "agronomy" or case.get("review_required") is not True
+        or case.get("assertions") != {} for case in cases
+    ):
+        raise ValueError("development cases require unique review-required agronomy identities and empty assertions")
+    rubrics = rows("rubrics.jsonl"); by_rubric = {row["case_id"]: row for row in rubrics}
+    if set(by_rubric) != set(by_case) or len(by_rubric) != len(rubrics):
+        raise ValueError("panel requires exactly one rubric per case")
+    matrix = []; observations = []; reviews = []; fixture_ids = set()
+    for fixture in rows("deterministic-fixtures.jsonl"):
+        if fixture.get("synthetic_fixture") is not True or fixture.get("fixture_id") in fixture_ids:
+            raise ValueError("panel requires unique explicitly synthetic fixtures")
+        fixture_ids.add(fixture["fixture_id"])
+        case = by_case[fixture["case_id"]]
+        if (fixture.get("case_sha256") != case["case_sha256"]
+                or fixture.get("rubric_sha256") != by_rubric[case["case_id"]].get("rubric_sha256")):
+            raise ValueError("fixture original case/rubric hash mismatch")
+        if fixture["arm_id"] not in handoff["primary_arms"]:
+            raise ValueError("fixture arm is outside the sealed panel contract")
+        cell = {
+            "observation_id": fixture["fixture_id"], "case_id": case["case_id"],
+            "case_sha256": case["case_sha256"], "suite_id": suite["id"],
+            "arm_id": fixture["arm_id"], "trial_id": fixture["fixture_id"],
+            "model_id": "synthetic_QA_not_a_model", "model_revision": None,
+            "backend_id": "synthetic_no_execution",
+        }
+        row = {**cell, "status": fixture["status"], "answer": fixture["answer"],
+               "answer_sha256": fixture["answer_sha256"],
+               "task_input_sha256": digest(worker_case(case)), "comparison_cohort": None,
+               "truncated": fixture.get("truncated", False),
+               "finish_reason": fixture.get("finish_reason"),
+               "model_execution_eligible": False}
+        review = bind_fixture_review(row, by_rubric[case["case_id"]], fixture)
+        if row["status"] == "completed":
+            reviews.append(review)
+        elif (any(value is not None for value in review["criterion_scores"].values())
+              or review["fatal_failures"] or review["fatal_review_complete"]):
+            raise ValueError("noncompleted fixtures cannot supply semantic or safety labels")
+        # Failed fixture rows remain planned/observed execution failures. They
+        # receive the declared outcome penalty without inventing review labels.
+        matrix.append(cell); observations.append(row)
+    plan = {"cases": cases, "matrix": matrix, "execution_contract": "synthetic_fixture_only"}
+    bundle = _model_metrics_bundle(plan, observations, rubrics_path=directory / "rubrics.jsonl",
+                                   reviews_path=None, policy_path=policy_path,
+                                   reviews_override=reviews)
+    bundle["report"].update(visibility="private_controller_only", synthetic_fixture_only=True,
+                             inference_executed=False, case_count=len(cases),
+                             family_count=len({case["scenario_family"] for case in cases}),
+                             numeric_oracles="controller_only; no autonomous vector extraction")
+    binding = {"handoff_sha256": hashlib.sha256(handoff_bytes).hexdigest(), "files": pins}
+    if file_digest(directory / "handoff.json") != binding["handoff_sha256"] or any(
+        file_digest(directory / name) != pin["sha256"] for name, pin in pins.items()
+    ):
+        raise ValueError("panel changed during fixture analysis")
+    output_dir.mkdir(parents=True, exist_ok=False)
+    _write_model_metrics(output_dir, bundle, raw_binding=binding)
+    write_new_json(output_dir / "fixture-plan.private.json", plan)
+    write_new_json(output_dir / "fixture-reviews.private.json", reviews)
+    write_new_json(output_dir / "retention.json", retention_manifest(output_dir))
+    verify_retention(output_dir)
+    return bundle["report"]

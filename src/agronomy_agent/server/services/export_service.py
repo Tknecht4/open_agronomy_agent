@@ -907,66 +907,56 @@ def build_phase6_demo_eval_snapshot(
     eval_candidates: list[dict[str, Any]],
 ) -> dict[str, Any]:
     completed_runs = [run for run in eval_runs if run.get("status") == "completed"]
-    latest_run = completed_runs[0] if completed_runs else None
-    latest_metrics = latest_run.get("metrics", {}) if latest_run else {}
-    latest_gates = latest_run.get("gates", {}) if latest_run else {}
+    records = [_demo_eval_run_record(run) for run in eval_runs]
+    completed_records = [_demo_eval_run_record(run) for run in completed_runs]
+    latest = completed_records[0] if completed_records else {}
     candidate_status_counts = _counts_by_key(eval_candidates, "review_status")
-    promotion_ready_runs = sum(1 for run in completed_runs if (run.get("gates") or {}).get("promotion_allowed"))
-    regression_failure_count = sum(int((run.get("metrics") or {}).get("failure_case_count") or 0) for run in completed_runs)
-    limitations = _demo_eval_limitations(completed_runs=completed_runs, latest_gates=latest_gates)
+    failure_counts = [run["failure_case_count"] for run in completed_records]
+    reported_failure_count = sum(failure_counts) if failure_counts and all(value is not None for value in failure_counts) else None
     model_context = _model_context(thread, events, {})
-    corpus_audit_id = (
-        (latest_run.get("metadata") or {}).get("corpus_audit_id")
-        if latest_run
-        else None
-    )
     return {
         "schema_version": "phase6.demo_eval_snapshot.v1",
-        "title": f"Demo Eval Snapshot - {thread['workspace_id']}",
+        "title": f"Feedback Summary Snapshot - {thread['workspace_id']}",
         "thread_id": thread["id"],
         "workspace_id": thread["workspace_id"],
         "created_at": _now(),
-        "disclaimer": (
-            "This public-demo snapshot is a redacted readiness summary. It is not an independent benchmark, "
-            "not a product claim, and not a substitute for local agronomy review."
-        ),
+        "disclaimer": "This is a redacted stored-feedback summary, not an executed regression, benchmark result, or promotion authority.",
         "model_context": model_context,
         "eval_summary": {
+            "evidence_kind": "review_feedback_summary",
+            "execution_status": "not_run",
             "eval_run_count": len(eval_runs),
-            "completed_eval_run_count": len(completed_runs),
-            "promotion_ready_run_count": promotion_ready_runs,
-            "reviewed_candidate_count": sum(
-                int(candidate_status_counts.get(status, 0))
-                for status in ("approved_for_suite", "promoted")
-            ),
+            "completed_feedback_summary_count": len(completed_runs),
+            "promotion_ready_run_count": 0,
+            "reviewed_candidate_count": sum(int(candidate_status_counts.get(status, 0)) for status in ("approved_for_suite", "promoted")),
             "candidate_status_counts": candidate_status_counts,
-            "latest_candidate_count": int(latest_metrics.get("candidate_count") or 0),
-            "latest_pass_rate": float(latest_metrics.get("pass_rate") or 0.0),
-            "latest_failure_case_count": int(latest_metrics.get("failure_case_count") or 0),
-            "regression_failure_count": regression_failure_count,
-            "public_claim": (
-                "No public quality claim is supported yet."
-                if not completed_runs or not promotion_ready_runs
-                else "At least one local trace-feedback regression run met the current promotion gate."
-            ),
+            "latest_candidate_count": latest.get("candidate_count"),
+            "latest_pass_rate": None,
+            "latest_no_reported_failure_count": latest.get("no_reported_failure_count"),
+            "latest_no_reported_failure_rate": latest.get("no_reported_failure_rate"),
+            "latest_failure_case_count": latest.get("failure_case_count"),
+            "reported_failure_count": reported_failure_count,
+            "public_claim": "Stored feedback does not establish executed regression, measured answer quality, or promotion readiness.",
         },
         "model_and_corpus_versions": {
             "model_id": model_context.get("model_id") or "unknown",
             "prompt_version": model_context.get("prompt_version") or "unknown",
             "context_policy_version": model_context.get("context_policy_version") or "unknown",
-            "corpus_version": corpus_audit_id or model_context.get("corpus_version") or "unknown",
-            "eval_suite": latest_gates.get("regression_suite") or "local_trace_feedback_regression_v1",
+            "corpus_version": latest.get("corpus_audit_id") or model_context.get("corpus_version") or "unknown",
+            "eval_suite": None,
         },
         "gate_status": {
-            "latest_eval_run_status": latest_run.get("status") if latest_run else "missing",
-            "promotion_allowed": bool(latest_gates.get("promotion_allowed")) if latest_run else False,
-            "reasons": list(latest_gates.get("reasons") or ["no_completed_eval_runs"]),
-            "requires_reviewed_candidates": bool(latest_gates.get("requires_reviewed_candidates", True)),
-            "requires_passing_regression": bool(latest_gates.get("requires_passing_regression", True)),
-            "requires_ideal_answers": bool(latest_gates.get("requires_ideal_answers", True)),
+            "latest_eval_run_status": latest.get("status") if latest else "missing",
+            "evidence_kind": "review_feedback_summary",
+            "execution_status": "not_run",
+            "promotion_allowed": False,
+            "reasons": ["regression_not_executed"] if latest else ["no_completed_feedback_summaries", "regression_not_executed"],
+            "requires_reviewed_candidates": True,
+            "requires_passing_regression": True,
+            "requires_ideal_answers": True,
         },
-        "included_eval_runs": [_demo_eval_run_record(run) for run in eval_runs[:10]],
-        "limitations": limitations,
+        "included_eval_runs": records[:10],
+        "limitations": _demo_eval_limitations(completed_runs=completed_runs, latest_gates={}),
         "generated_from": {
             "workspace_eval_runs": True,
             "candidate_text_redacted": True,
@@ -1581,30 +1571,30 @@ def build_phase6_data_source_audit_text(report: dict[str, Any], manifest: dict[s
 
 def build_phase6_demo_eval_snapshot_markdown(report: dict[str, Any], manifest: dict[str, Any]) -> str:
     lines = [
-        f"# {report['title']}",
-        "",
-        f"Report ID: `{manifest['report_id']}`",
-        f"Workspace ID: `{report['workspace_id']}`",
-        f"Created: {report['created_at']}",
-        "",
-        f"> {report['disclaimer']}",
-        "",
-        "## Eval Summary",
+        f"# {report['title']}", "", f"Report ID: `{manifest['report_id']}`",
+        f"Workspace ID: `{report['workspace_id']}`", f"Created: {report['created_at']}",
+        "", f"> {report['disclaimer']}", "", "## Stored Feedback Summary",
     ]
-    _append_key_values(lines, report["eval_summary"])
+    # No executed-rate display can be inferred from a recorded feedback row.
+    summary = {key: value for key, value in report["eval_summary"].items() if key != "latest_pass_rate"}
+    _append_key_values(lines, summary)
     lines.extend(["", "## Model and Corpus Versions"])
     _append_key_values(lines, report["model_and_corpus_versions"])
-    lines.extend(["", "## Gate Status"])
+    lines.extend(["", "## Current Gate Assessment"])
     _append_key_values(lines, report["gate_status"])
-    lines.extend(["", "## Included Eval Runs"])
+    lines.extend(["", "## Included Feedback Summaries"])
     for run in report["included_eval_runs"]:
-        reasons = ", ".join(run.get("gate_reasons") or []) or "none"
+        reasons = ", ".join(run.get("gate_reasons") or []) or "unknown"
+        count = run.get("candidate_count")
+        failures = run.get("failure_case_count")
         lines.append(
-            f"- {run.get('name')} ({run.get('status')}): {run.get('candidate_count')} candidates, "
-            f"pass rate {run.get('pass_rate')}, promotion allowed {run.get('promotion_allowed')}, reasons {reasons}"
+            f"- {run.get('name')} (recorded summary status {run.get('status')}): "
+            f"{count if count is not None else 'unknown'} candidates, "
+            f"{failures if failures is not None else 'unknown'} reported failure cases; "
+            f"execution {run.get('execution_status') or 'not_run'}, current promotion allowed False, reasons {reasons}"
         )
     if not report["included_eval_runs"]:
-        lines.append("- No reviewed eval runs are available.")
+        lines.append("- No feedback summaries are available.")
     lines.extend(["", "## Limitations"])
     _append_list(lines, report["limitations"])
     lines.extend(["", "## Generated From"])
@@ -2316,33 +2306,39 @@ def _counts_by_key(items: list[dict[str, Any]], key: str) -> dict[str, int]:
 
 def _demo_eval_limitations(*, completed_runs: list[dict[str, Any]], latest_gates: dict[str, Any]) -> list[str]:
     limitations = [
-        "This snapshot summarizes local trace-feedback regression only; it is not an independent agronomic benchmark.",
+        "Stored review feedback has not executed a regression and cannot authorize promotion.",
+        "This snapshot summarizes reported failures and review counts, not measured answer quality.",
         "Candidate question and answer text is redacted from this public artifact.",
-        "Coverage is limited to reviewed examples, registered workspace sources, and the configured local corpus.",
         "It does not validate product labels, legal requirements, rates, or field-specific diagnoses.",
+        "Historical rows and recorded gates are preserved; their declarations are not current execution evidence.",
     ]
     if not completed_runs:
-        limitations.insert(0, "No reviewed eval runs are available; do not make public quality claims from this snapshot.")
-    elif not latest_gates.get("promotion_allowed"):
-        reasons = ", ".join(str(reason) for reason in latest_gates.get("reasons") or []) or "gate_not_met"
-        limitations.insert(0, f"The latest completed eval run is not promotion-ready: {reasons}.")
+        limitations.insert(0, "No completed feedback summaries are available; execution and quality remain unknown.")
     return limitations
 
 
 def _demo_eval_run_record(run: dict[str, Any]) -> dict[str, Any]:
     metrics = run.get("metrics") if isinstance(run.get("metrics"), dict) else {}
-    gates = run.get("gates") if isinstance(run.get("gates"), dict) else {}
     metadata = run.get("metadata") if isinstance(run.get("metadata"), dict) else {}
+    count = metrics.get("candidate_count")
+    failures = metrics.get("failure_case_count")
+    count = count if isinstance(count, int) and not isinstance(count, bool) and count >= 0 else None
+    failures = failures if isinstance(failures, int) and not isinstance(failures, bool) and failures >= 0 else None
+    unflagged = count - failures if count is not None and failures is not None and failures <= count else None
     return {
         "run_id_sha256": _hash_text(str(run.get("id") or "")) if run.get("id") else None,
-        "name": run.get("name") or "Unnamed eval run",
+        "name": run.get("name") or "Unnamed feedback summary",
         "status": run.get("status"),
-        "candidate_count": int(metrics.get("candidate_count") or len(run.get("candidate_ids") or [])),
-        "pass_rate": float(metrics.get("pass_rate") or 0.0),
-        "failure_case_count": int(metrics.get("failure_case_count") or 0),
-        "promotion_allowed": bool(gates.get("promotion_allowed")),
-        "gate_reasons": list(gates.get("reasons") or []),
-        "regression_suite": gates.get("regression_suite") or "local_trace_feedback_regression_v1",
+        "evidence_kind": "review_feedback_summary",
+        "execution_status": "not_run",
+        "candidate_count": count,
+        "pass_rate": None,
+        "no_reported_failure_count": unflagged,
+        "no_reported_failure_rate": round(unflagged / count, 4) if unflagged is not None and count else None,
+        "failure_case_count": failures,
+        "promotion_allowed": False,
+        "gate_reasons": ["regression_not_executed"],
+        "regression_suite": None,
         "corpus_audit_id": metadata.get("corpus_audit_id"),
         "created_at": run.get("created_at"),
         "finished_at": run.get("finished_at"),

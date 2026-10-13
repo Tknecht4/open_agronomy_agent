@@ -1,0 +1,23 @@
+{
+  "schema_version": "open_agronomy_agent.offline_corpus_release.v1",
+  "store_id": "physical-method-context-v1",
+  "profile": "source-linked-context-only",
+  "shards": [
+    {
+      "path": "shards/foundations-0001.jsonl",
+      "rows": 2,
+      "bytes": 14055,
+      "sha256": "73d9b2f557d5c3ea787ab3705952e5d262cf72c2ac4100ff586156314dd0fc83",
+      "retrieval_policies": [
+        "context_only"
+      ]
+    }
+  ],
+  "row_count": 2,
+  "quality_ledger_path": "quality_ledger.json",
+  "quality_ledger_sha256": "0a00adfd104c6dd80b6ac56ae352280042df7dd590e70270c6f446a1b50e4b61",
+  "source_receipt_path": "source_receipt.json",
+  "source_receipt_sha256": "828e93a719886986aa753d86406d3304c6570a5ede211db782e28605e2bb7030",
+  "authority_boundary": "Project-authored context only. No current price, field rate, legal authority, or local calibration.",
+  "store_sha256": "4616be91a20d56ce0b4dd303065e319a435233a31317474c208af88d79b13184"
+}

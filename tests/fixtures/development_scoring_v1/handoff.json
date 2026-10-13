@@ -1,0 +1,37 @@
+{
+  "schema_version": "open_agronomy_agent.agronomic_skill_panel_handoff.development.v1",
+  "panel_id": "public_synthetic_scoring_instrument_v1",
+  "primary_arms": [
+    "raw_model",
+    "production_full"
+  ],
+  "synthetic_fixture_only": true,
+  "inference_executed": false,
+  "scientific_evaluation_admitted": false,
+  "files": {
+    "cases.jsonl": {
+      "sha256": "7900dc3a0de9b1da0ec8e1e899dde82e33d6ec5b62bd78b91080030ded9c7aeb",
+      "size_bytes": 4085
+    },
+    "deterministic-fixtures.jsonl": {
+      "sha256": "f3dae0bf057397a1193ac78c6fdbf77ea1f9d590c98b7eecfa96e7270db4784c",
+      "size_bytes": 26002
+    },
+    "numeric-oracles.jsonl": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "rubrics.jsonl": {
+      "sha256": "221ec2b3382eca2dc3505b5e0a0185341bbd46f3d5660d86a0e7fa60bed3a69e",
+      "size_bytes": 21040
+    },
+    "source-support.json": {
+      "sha256": "c0cea900073c9dae87d936dbd75db20a8b4a167b23ed7935a5b34b459daa887a",
+      "size_bytes": 350
+    },
+    "verify-panel.py": {
+      "sha256": "249e82382dcfd7bb71611481d44140e61e6a2b224e7bfbb0a2813bee7de15214",
+      "size_bytes": 148
+    }
+  }
+}

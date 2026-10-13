@@ -801,8 +801,8 @@
       "store_profile_id": "ask-science-context-v1",
       "activation": "startup",
       "context_admission_receipt": {
-        "path": "data/manifests/ask_science_context_admission_v1.json",
-        "sha256": "9416cdeddcfe41130f7ec849cb344a8f72cf5ac0afd54b05a36d654e7309d966"
+        "path": "data/manifests/ask_science_context_admission_v2.json",
+        "sha256": "27daf9550a057f6cda66d888aae4559e123f35d67e4d97fd50ea42b361bf8c25"
       }
     }
   ],

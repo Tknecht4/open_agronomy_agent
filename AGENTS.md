@@ -29,6 +29,9 @@
   for undocumented pre-1.0 internals.
 - Do not delete runtime data or historical receipts solely to reduce size;
   provide a content-addressed replacement and migration first.
+- For routine public scope checks use `build_public_repository.py --check`.
+  For materialization checks use `--verify --receipt <new-json-path>`; reserve
+  `--destination` for a consumer needing a retained distributable tree.
 - Preserve observations, model output, and interpretation as distinct records.
 - Unknown capability, authority, jurisdiction, or evidence is not a pass.
 
@@ -54,3 +57,9 @@ change. A passing test suite is not agronomic validation.
 - Operator procedures: `scripts/README.md` and `docs/public/operations/`.
 - Update the public manifest when adding an explicit file outside an included
   tree, and run the public-package builder before committing.
+
+Task-specific repo skills live under `.agents/skills/`: `evaluation-evidence`
+for retained scoring/harness work and `release-integration` for composing fixes
+and preparing exact release evidence; `workspace-contracts` covers the active
+request/save/recovery flow. Read the applicable `SKILL.md` when using
+that workflow; the source of current operator details remains the linked guide.

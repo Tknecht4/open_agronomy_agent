@@ -13,7 +13,10 @@ import re
 from typing import Any, Iterable, Mapping, Sequence
 
 from agronomy_agent.query_context import QueryContextSignals, analyze_query_context
-from agronomy_agent.method_context import METHODS, requested_methods, reviewed_method_ids
+from agronomy_agent.method_context import (
+    METHODS, METHOD_SCHEMA, LEGACY_METHOD_IDS, PHYSICAL_METHOD_SCHEMA,
+    PHYSICAL_METHOD_SOURCE_IDS, requested_methods, reviewed_method_ids,
+)
 
 
 POLICY_ID = "open_agronomy_agent.decision_contract.v1"
@@ -416,6 +419,7 @@ def build_decision_contract(
     *,
     field_context: dict[str, Any] | None = None,
     method_context_enabled: bool = False,
+    method_context_schema: str = METHOD_SCHEMA,
 ) -> AgronomyDecisionContract:
     """Build a deterministic, monotonic decision contract.
 
@@ -467,7 +471,10 @@ def build_decision_contract(
         missing.update(missing_inputs)
 
     if method_context_enabled:
-        for method_id in requested_methods(question):
+        if method_context_schema not in {METHOD_SCHEMA, PHYSICAL_METHOD_SCHEMA}:
+            raise ValueError("unknown method context schema")
+        permitted = PHYSICAL_METHOD_SOURCE_IDS if method_context_schema == PHYSICAL_METHOD_SCHEMA else LEGACY_METHOD_IDS
+        for method_id in requested_methods(question, permitted_methods=permitted):
             obligations.append(EvidenceObligation(
                 key=f"method:{method_id}",
                 description=METHODS[method_id][1],

@@ -65,6 +65,7 @@ from agronomy_agent.decision_contract import (
     obligation_coverage,
     select_evidence_for_contract_with_trace,
 )
+from agronomy_agent.method_context import METHOD_SCHEMA
 from agronomy_agent.evidence_handshake import (
     EvidenceHandshake,
     build_evidence_handshake,
@@ -1570,6 +1571,7 @@ def build_context(
             route,
             field_context=field_context,
             method_context_enabled=bool((cfg.get("release_profile") or {}).get("method_transfer_store")),
+            method_context_schema=(cfg.get("release_profile") or {}).get("method_context_schema", METHOD_SCHEMA),
         )
     )
     contract_elapsed_ms = (perf_counter() - contract_started) * 1000.0

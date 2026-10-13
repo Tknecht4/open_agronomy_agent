@@ -6,6 +6,13 @@
 
 ## Active native profiles
 
+`model_scoring_development_v1.json` is an explicit provisional offline analysis
+policy for ten exposed development domains, not an active runtime profile or
+release gate. The [evaluation operator guide](../docs/public/operations/release-evaluation.md)
+documents equal domain/common-outcome weights, sensitivity, unknown/failure/safety
+rules and a public synthetic CLI example. Policy file presence neither grades
+actual answers nor authorizes model execution or source/case admission.
+
 | Purpose | Default or documented profile | Notes |
 |---|---|---|
 | Native quick-start model | `model.yaml` | Exact model/revision; local weights separately provisioned |
@@ -47,6 +54,14 @@ The active `rag.yaml`, active policy, and selectable profile registry remain
 unchanged.
 
 ## RC3 egress and completed execution boundary
+
+`rag_physical_method_candidate.yaml` is a separate nonselectable profile for
+two chapter-supported physical-method paraphrases. Its policy and release bind
+the reviewed selected-DOM capture kind, source/support hashes and task-specific
+input boundaries. U.S. source provenance remains distinct from conditional
+Canada/U.S. method applicability. It supplies no field observation, compaction
+threshold or irrigation authority. The active profiles and prior candidates
+are unchanged; private raw DOM and controller questions are excluded.
 
 The completed RC3 run was governed by `final_benchmark_round_rc3.json`, which requires
 `open_agronomy_agent.benchmark_egress_authorization.v4`. The checked-in

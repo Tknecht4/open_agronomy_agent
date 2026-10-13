@@ -7,6 +7,8 @@ from pathlib import Path
 
 import pytest
 
+from test_release_eval_diagnostic_inputs import closeout  # Shared synthetic sealed fixture.
+
 from agronomy_agent.release_eval_analysis import summarize
 from agronomy_agent.release_eval_reanalysis import reanalyze
 from agronomy_agent.release_eval_runner import retention_manifest, verify_retention
@@ -399,3 +401,147 @@ def test_derived_reference_rejects_resealed_raw_and_resealed_report_changes(tmp_
     write_new_json(derived2 / "retention.json", retention_manifest(derived2))
     with pytest.raises(ValueError, match="controlled retained-evidence"):
         load_reference_report(derived2)
+
+
+def test_diagnostic_analysis_preserves_unknowns_and_immutable_source(closeout, tmp_path):
+    from agronomy_agent.release_eval_reanalysis import analyze_diagnostic_closeout
+
+    pins = {path.name: file_digest(path) for path in closeout.iterdir()}
+    output = tmp_path / "diagnostic-analysis"
+    report = analyze_diagnostic_closeout(directory=closeout, output_dir=output)
+    assert report["planned_n"] == report["observed_n"] == 6
+    assert report["reviewed_n"] == 0
+    assert report["status"] == "blocked_missing_policy"
+    assert report["full_suite_executed"] is False
+    assert report["current_JLens_executed"] is False
+    assert report["promotion_allowed"] is False
+    assert all(group["primary"] is None for group in report["groups"])
+    assert all(pair["paired_scored_n"] == 0 for pair in report["contrasts"])
+    assert "synthetic answer" not in json.dumps(report)
+    assert pins == {path.name: file_digest(path) for path in closeout.iterdir()}
+    verify_retention(output)
+    with pytest.raises(FileExistsError):
+        analyze_diagnostic_closeout(directory=closeout, output_dir=output)
+    with pytest.raises(ValueError, match="outside immutable"):
+        analyze_diagnostic_closeout(directory=closeout, output_dir=closeout / "analysis")
+
+
+def test_optional_model_metrics_do_not_replace_release_scores(tmp_path):
+    from agronomy_agent.release_eval_model_metrics import rubric_digest
+    from agronomy_agent.release_eval_reanalysis import load_reference_report
+
+    raw = retained_run(tmp_path)
+    pins = {path.name: file_digest(path) for path in raw.iterdir()}
+    original = reanalyze(run_dir=raw, output_dir=tmp_path / "ordinary")
+    case = json.loads((raw / "plan.json").read_text())["cases"][0]
+    rubric = {
+        "case_id": case["case_id"], "case_sha256": case["case_sha256"],
+        "domain_id": "synthetic", "cluster_id": "one", "answerability": "answerable",
+        "review_status": "synthetic_qa", "fatal_conditions": [],
+        "criteria": [{"criterion_id": "USE", "dimension": "usefulness",
+                      "description": "Synthetic QA only", "weight": 1,
+                      "applicable_arms": ["production_full"]}],
+    }
+    rubric["rubric_sha256"] = rubric_digest(rubric)
+    labels = tmp_path / "rubric.jsonl"
+    labels.write_text(json.dumps(rubric) + "\n")
+    derived = tmp_path / "with-metrics"
+    report = reanalyze(run_dir=raw, output_dir=derived, model_rubrics_path=labels)
+    assert {k: v for k, v in report.items() if k != "reanalysis"} == {
+        k: v for k, v in original.items() if k != "reanalysis"
+    }
+    metrics = json.loads((derived / "model-metrics.json").read_text())
+    assert metrics["status"] == "blocked_missing_policy"
+    assert metrics["reviewed_n"] == 0
+    assert "PRIVATE_FINAL_ANSWER" not in json.dumps(metrics)
+    assert (derived / "model-rubrics.private.jsonl").read_bytes() == labels.read_bytes()
+    assert load_reference_report(derived) == report
+    assert pins == {path.name: file_digest(path) for path in raw.iterdir()}
+
+
+def test_duplicate_metric_input_refused_before_publishing(closeout, tmp_path):
+    from agronomy_agent.release_eval_reanalysis import analyze_diagnostic_closeout
+
+    labels = tmp_path / "ambiguous.jsonl"
+    labels.write_text('{"case_id":"one","case_id":"two"}\n')
+    output = tmp_path / "refused"
+    with pytest.raises(ValueError, match="duplicate model metric"):
+        analyze_diagnostic_closeout(directory=closeout, output_dir=output, rubrics_path=labels)
+    assert not output.exists()
+
+
+def test_model_projection_binds_frozen_config_and_preserves_timing_scope(tmp_path):
+    from agronomy_agent.release_eval_reanalysis import _model_matrix, read_completed_run
+
+    raw = retained_run(tmp_path)
+    run = read_completed_run(raw)
+    run["observations"][0]["turns"][-1]["generation_stats"] = {
+        "model_load_ms": 1200, "time_to_first_token_ms": 200,
+        "stream_time_to_first_token_ms": 150, "decode_ms": 300,
+        "prompt_tokens": 10, "generation_tokens": 4, "generation_tps": 10,
+    }
+    original = json.loads(json.dumps(run["observations"]))
+    plan, rows = _model_matrix(run)
+    condition = plan["matrix"][0]["analysis_condition"]
+    assert condition["model_config_sha256"] == run["plan"]["model"]["config_sha256"]
+    assert condition["source_sha256"] == run["plan"]["source"]["source_sha256"]
+    assert condition["arm_recipe_sha256"]
+    assert rows[0]["observation_id"] == original[0]["observation_id"]
+    assert rows[0]["case_sha256"] == original[0]["case_sha256"]
+    assert rows[0]["answer_sha256"] == original[0]["answer_sha256"]
+    assert rows[0]["performance"]["load_seconds"] == 1.2
+    assert rows[0]["performance"]["ttft_seconds"] == 0.2
+    assert rows[0]["performance"]["output_tokens"] == 4
+    assert "prefill_seconds" not in rows[0]["performance"]
+    assert rows[0].get("comparison_cohort") is None
+    assert run["observations"] == original
+
+
+def test_private_panel_fixture_binding_is_not_model_execution(tmp_path):
+    from agronomy_agent.release_eval_model_metrics import OUTCOME_DIMENSIONS, rubric_digest
+    from agronomy_agent.release_eval_reanalysis import analyze_development_panel
+    from agronomy_agent.release_evaluation import worker_case
+
+    panel = tmp_path / "panel"
+    panel.mkdir()
+    case = {"case_id": "QA-one", "scenario_family": "quantity-basis", "lane": "agronomy",
+            "question": "What is 2 kg plus 3 kg?", "field_context": {}, "assertions": {},
+            "review_required": True, "reference_answer": "PRIVATE_CONTROLLER_REFERENCE"}
+    rubric = {"case_id": case["case_id"], "case_sha256": digest(case),
+              "domain_id": "quantity", "cluster_id": "one", "answerability": "answerable",
+              "review_status": "synthetic_qa", "fatal_conditions": [],
+              "criteria": [{"criterion_id": dim, "dimension": dim, "description": "QA " + dim,
+                            "weight": 1, "applicable_arms": ["production_full"]}
+                           for dim in OUTCOME_DIMENSIONS]}
+    rubric["rubric_sha256"] = rubric_digest(rubric)
+    fixture = {"case_id": case["case_id"], "case_sha256": digest(case),
+               "rubric_sha256": rubric["rubric_sha256"], "arm_id": "production_full",
+               "fixture_id": "qa-fixture", "synthetic_fixture": True, "status": "completed",
+               "answer": "5 kg", "answer_sha256": digest("5 kg"),
+               "criterion_scores": {dim: 1 for dim in OUTCOME_DIMENSIONS},
+               "fatal_failures": [], "fatal_review_complete": True}
+    for name, value in (("cases", case), ("rubrics", rubric), ("deterministic-fixtures", fixture)):
+        (panel / f"{name}.jsonl").write_text(json.dumps(value) + "\n")
+    (panel / "numeric-oracles.jsonl").write_text("")
+    (panel / "source-support.json").write_text("{}")
+    (panel / "verify-panel.py").write_text("raise AssertionError('must never execute packet code')\n")
+    handoff = {
+        "schema_version": "open_agronomy_agent.agronomic_skill_panel_handoff.development.v1",
+        "panel_id": "synthetic-qa", "primary_arms": ["production_full"],
+        "files": {path.name: {"sha256": file_digest(path), "size_bytes": path.stat().st_size}
+                  for path in panel.iterdir()},
+    }
+    write_new_json(panel / "handoff.json", handoff)
+    report = analyze_development_panel(directory=panel, output_dir=tmp_path / "qa-analysis")
+    assert report["synthetic_fixture_only"] is True
+    assert report["inference_executed"] is False
+    assert report["promotion_allowed"] is False
+    assert report["planned_n"] == report["reviewed_n"] == 1
+    assert report["status"] == "blocked_missing_policy"
+    plan = json.loads((tmp_path / "qa-analysis/fixture-plan.private.json").read_text())
+    assert "PRIVATE_CONTROLLER_REFERENCE" not in json.dumps(worker_case(plan["cases"][0]))
+    assert "PRIVATE_CONTROLLER_REFERENCE" not in json.dumps(report)
+    (panel / "cases.jsonl").write_text("{}\n")
+    with pytest.raises(ValueError, match="source pin mismatch"):
+        analyze_development_panel(directory=panel, output_dir=tmp_path / "refused")
+    assert not (tmp_path / "refused").exists()

@@ -12,7 +12,8 @@ import secrets
 import time
 import zlib
 import uuid
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from email.parser import BytesParser
 from email.policy import default as email_policy
@@ -53,6 +54,8 @@ from agronomy_agent.server.schemas import (
     ChatRequest,
     CreateSessionRequest,
     CreateTurnRequest,
+    TurnReadinessRequest,
+    TurnReadinessResponse,
     DataSourceRequest,
     EmailVerificationRequest,
     EvalCandidateReviewRequest,
@@ -99,7 +102,7 @@ from agronomy_agent.server.schemas import (
 from agronomy_agent.server.services.conversation_scope import (
     ConversationScopeError, bind_conversation_context, identity as conversation_identity,
 )
-from agronomy_agent.server.services.chat_service import ConversationOperationConflict, _session_turn_guard, run_turn
+from agronomy_agent.server.services.chat_service import ConversationOperationConflict, _session_turn_guard, preview_turn_readiness, run_turn
 from agronomy_agent.server.services.answer_renderer import render_structured_answer
 from agronomy_agent.server.services.attachment_scanner import (
     AttachmentRejected,
@@ -1717,30 +1720,27 @@ def _eval_run_gates(metrics: dict[str, Any]) -> dict[str, Any]:
 
 
 def _change_proposal_gates(eval_run: dict[str, Any] | None) -> dict[str, Any]:
-    gates: dict[str, Any] = {
+    # This API aggregates stored review feedback; it does not execute regression.
+    # Historical positive flags are observations, never current rollout authority.
+    metrics = (eval_run or {}).get("metrics") or {}
+    try:
+        candidate_count = _coerce_int(metrics.get("candidate_count"), default=0)
+        if candidate_count < 0:
+            raise ValueError("candidate count is negative")
+    except (AttributeError, TypeError, ValueError, OverflowError):
+        candidate_count = None
+    return {
+        "evidence_kind": "review_feedback_summary",
+        "execution_status": "not_run",
         "requires_reviewed_eval_run": True,
         "requires_passing_regression": True,
-        "reviewed_eval_run": False,
+        "reviewed_eval_run": bool(eval_run and eval_run.get("status") == "completed"),
         "regression_suite": None,
-        "candidate_count": 0,
+        "regression_execution_status": "not_run",
+        "candidate_count": candidate_count,
         "promotion_allowed": False,
-        "reason": "candidate proposals require reviewed eval evidence",
+        "reason": "Stored review feedback does not establish an executed regression or permit rollout.",
     }
-    if not eval_run:
-        return gates
-    run_gates = eval_run.get("gates") or {}
-    run_metrics = eval_run.get("metrics") or {}
-    promotion_allowed = bool(run_gates.get("promotion_allowed"))
-    gates.update(
-        {
-            "reviewed_eval_run": eval_run.get("status") == "completed",
-            "regression_suite": run_gates.get("regression_suite"),
-            "candidate_count": int(run_metrics.get("candidate_count") or 0),
-            "promotion_allowed": promotion_allowed,
-            "reason": "linked eval run permits rollout" if promotion_allowed else "linked eval run has not passed promotion gates",
-        },
-    )
-    return gates
 
 
 def _workspace_quotas(workspace: dict[str, Any]) -> dict[str, int]:
@@ -2083,137 +2083,63 @@ def _image_embedding_search(
     )
 
 
+def _present_geo_priors(value: Any) -> dict[str, Any] | None:
+    """Project current mapped context without rewriting the stored snapshot."""
+    if not isinstance(value, dict):
+        return None
+    result = deepcopy(value)
+    legacy_codes = {"CA_PRAIRIES_STUB", "GL_ON_STUB", "CORN_BELT_STUB"}
+    candidates = result.get("candidate_regions")
+    candidates = candidates if isinstance(candidates, list) else []
+    kept = [candidate for candidate in candidates if not (
+        isinstance(candidate, dict) and (
+            candidate.get("source") == "local_rule_stub"
+            or str(candidate.get("code") or "").upper() in legacy_codes
+        )
+    )]
+    previous = result.get("presentation") or {}
+    excluded = len(kept) != len(candidates) or (
+        isinstance(previous, dict)
+        and previous.get("schema_version") == "open_agronomy_agent.geo_prior_presentation.v1"
+        and previous.get("legacy_text_candidates_excluded") is True
+    )
+    result["candidate_regions"] = kept
+    if excluded:
+        legacy_evidence = {
+            "string_match:iowa", "string_match:des_moines_lobe", "string_match:ia",
+            "string_match:canadian_prairies", "string_match:great_lakes", "string_match:central_corn_belt",
+        }
+        if isinstance(result.get("evidence"), list):
+            result["evidence"] = [item for item in result["evidence"] if not (isinstance(item, str) and item in legacy_evidence)]
+        if not kept and not result.get("regional_intersections"):
+            result["uncertainty"] = "unknown"
+            result["disclaimer"] = "No verified mapped regional context is available. Location text remains declared context."
+            result["ui_notice"] = result["disclaimer"]
+    result["presentation"] = {
+        "schema_version": "open_agronomy_agent.geo_prior_presentation.v1",
+        "legacy_text_candidates_excluded": excluded,
+        "boundary": "Stored source snapshots are preserved; legacy text proxies do not establish mapped coverage.",
+    }
+    return result
+
+
 def _geo_priors_for_location(location_text: str) -> dict[str, Any]:
-    text = location_text.strip()
-    q = text.lower()
-    candidates: list[dict[str, Any]] = []
-    boosted_namespaces = {"regional_environment"}
-    evidence_labels: list[str] = []
-    missing_context = ["province/state", "county/RM", "soil series or texture", "drainage class"]
-
-    def has_token(*terms: str) -> bool:
-        return any(re.search(rf"(?<![a-z0-9]){re.escape(term)}(?![a-z0-9])", q) for term in terms)
-
-    def add_candidate(
-        *,
-        label: str,
-        layer: str,
-        system: str,
-        code: str,
-        confidence: float,
-        match_reason: str,
-        priors: list[str],
-        evidence_terms: list[str],
-    ) -> None:
-        candidates.append(
-            {
-                "label": label,
-                "name": label,
-                "layer": layer,
-                "system": system,
-                "code": code,
-                "match_reason": match_reason,
-                "confidence": confidence,
-                "priors": priors,
-                "evidence_terms": evidence_terms,
-                "source": "local_rule_stub",
-            },
-        )
-
-    if has_token("iowa", "des moines lobe", "ia"):
-        add_candidate(
-            label="Central Iowa and Minnesota Till Prairies",
-            layer="mlra_candidate",
-            system="NRCS MLRA",
-            code="MLRA_103",
-            confidence=0.74 if "des moines lobe" in q else 0.58,
-            match_reason="Iowa or Des Moines Lobe text match",
-            priors=["glacial till soils", "tile drainage common", "corn-soy systems", "runoff and drainage pathways matter"],
-            evidence_terms=[term for term in ["iowa", "des moines lobe", "ia"] if has_token(term)],
-        )
-        add_candidate(
-            label="Western Corn Belt Plains",
-            layer="ecoregion_candidate",
-            system="EPA Level III Ecoregion",
-            code="47",
-            confidence=0.55,
-            match_reason="Iowa administrative-region text match",
-            priors=["row-crop dominated landscape", "erosion and runoff context can be important"],
-            evidence_terms=[term for term in ["iowa", "ia"] if has_token(term)],
-        )
-        boosted_namespaces.update({"soil_water", "fertility"})
-        evidence_labels.extend(["string_match:iowa", "string_match:des_moines_lobe" if "des moines lobe" in q else "string_match:ia"])
-        missing_context = ["county", "soil series or texture", "drainage class"]
-    if has_token("manitoba", "prairie", "prairies", "red river"):
-        add_candidate(
-            label="Canadian Prairies / Manitoba candidate",
-            layer="ecodistrict/soil_landscape_candidate",
-            system="AAFC/Statistics Canada regional proxy",
-            code="CA_PRAIRIES_STUB",
-            confidence=0.68 if "manitoba" in q else 0.52,
-            match_reason="Manitoba, Prairie, or Red River text match",
-            priors=["cold-season constraints", "salinity and drainage can matter", "short-season crop timing", "prairie soil-zone context"],
-            evidence_terms=[term for term in ["manitoba", "prairie", "prairies", "red river"] if has_token(term)],
-        )
-        boosted_namespaces.update({"regional_environment", "soil_water", "fertility"})
-        evidence_labels.append("string_match:canadian_prairies")
-        missing_context = ["RM/county", "soil zone", "drainage class"]
-    if has_token("ontario", "great lakes", "on"):
-        add_candidate(
-            label="Great Lakes / Ontario candidate",
-            layer="ecoregion_candidate",
-            system="Great Lakes regional proxy",
-            code="GL_ON_STUB",
-            confidence=0.6,
-            match_reason="Ontario or Great Lakes text match",
-            priors=["humid temperate risk context", "lake-effect weather can matter", "mixed field crop systems"],
-            evidence_terms=[term for term in ["ontario", "great lakes", "on"] if has_token(term)],
-        )
-        boosted_namespaces.update({"regional_environment", "crop_management"})
-        evidence_labels.append("string_match:great_lakes")
-        missing_context = ["county", "soil series or texture", "drainage class"]
-    if has_token("illinois", "corn belt", "mollisol"):
-        add_candidate(
-            label="Central Corn Belt candidate",
-            layer="mlra_candidate",
-            system="NRCS MLRA proxy",
-            code="CORN_BELT_STUB",
-            confidence=0.62,
-            match_reason="Illinois, Corn Belt, or Mollisol text match",
-            priors=["mollisol-dominant cropping context", "corn-soy rotation common", "nutrient loss pathways vary by drainage"],
-            evidence_terms=[term for term in ["illinois", "corn belt", "mollisol"] if has_token(term)],
-        )
-        boosted_namespaces.update({"fertility", "soil_water"})
-        evidence_labels.append("string_match:central_corn_belt")
-    if not candidates:
-        add_candidate(
-            label="Unresolved generalized region",
-            layer="unknown",
-            system="unknown",
-            code="UNKNOWN",
-            confidence=0.2,
-            match_reason="No supported region text matched",
-            priors=["ask for province/state, county/RM, soil texture, drainage class, and crop zone before using regional assumptions"],
-            evidence_terms=[],
-        )
-
-    confidence = max(candidate["confidence"] for candidate in candidates)
-    disclaimer = "Regional context used as prior, not field-specific fact."
-    uncertainty = "medium" if confidence >= 0.55 else "high"
+    # Declared text is retained, but text matching cannot supply mapped evidence.
+    disclaimer = "No verified mapped regional context is available from location text alone."
     return {
-        "location_text": text,
-        "candidate_regions": candidates,
-        "boosted_namespaces": sorted(boosted_namespaces),
-        "evidence": evidence_labels,
-        "missing_context": missing_context,
-        "uncertainty": uncertainty,
+        "location_text": location_text.strip(),
+        "candidate_regions": [],
+        "boosted_namespaces": ["regional_environment"],
+        "evidence": [],
+        "missing_context": ["province/state", "county/RM", "soil series or texture", "drainage class"],
+        "uncertainty": "unknown",
         "used_as_prior_only": True,
         "not_field_specific_fact": True,
         "disclaimer": disclaimer,
         "ui_notice": disclaimer,
         "recommended_followups": [
             "Confirm administrative region and nearest extension jurisdiction.",
-            "Confirm soil texture, drainage class, and field-specific management before recommendations.",
+            "Use verified mapped layers before interpreting regional coverage.",
         ],
     }
 
@@ -3043,7 +2969,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             "notes": field_text("notes", record.get("management_notes")),
             "geometry": open_metadata.get("geometry") or {"kind": "none"},
             "regionalContext": open_metadata.get("regional_context_label") or record.get("region_text") or "",
-            "geoPriors": open_metadata.get("geo_priors"),
+            "geoPriors": _present_geo_priors(open_metadata.get("geo_priors")),
             "geoContextLineage": open_metadata.get("geo_context_lineage"),
             "fieldRevision": open_metadata.get("field_revision"),
             "sourceBoundary": open_metadata.get("source_boundary"),
@@ -5891,7 +5817,8 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             gates=gates,
             metadata={
                 "include_statuses": payload.include_statuses,
-                "queue_backend": "in_process",
+                "evidence_kind": "review_feedback_summary",
+                "execution_status": "not_run",
                 "corpus_audit_id": eval_corpus_audit_id,
             },
         )
@@ -5938,8 +5865,13 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         if not proposal:
             raise HTTPException(status_code=404, detail="change proposal not found")
         require_workspace_role(user, proposal["workspace_id"], RESEARCH_REVIEW_ROLES)
-        if payload.review_status == "approved_for_rollout" and not proposal.get("gates", {}).get("promotion_allowed"):
-            raise HTTPException(status_code=400, detail="rollout approval requires a linked eval run with passing promotion gates")
+        if payload.review_status == "approved_for_rollout":
+            # Reassess current authority; a stored legacy true flag is not proof.
+            eval_run = store.get_phase4_eval_run(proposal["linked_eval_run_id"]) if proposal.get("linked_eval_run_id") else None
+            if eval_run and eval_run["workspace_id"] != proposal["workspace_id"]:
+                eval_run = None
+            if not _change_proposal_gates(eval_run)["promotion_allowed"]:
+                raise HTTPException(status_code=400, detail="Stored review feedback is not executed regression evidence; rollout approval is unavailable.")
         updated = store.update_phase4_change_proposal_status(
             proposal_id=proposal_id,
             reviewed_by_user_id=user["id"],
@@ -6928,7 +6860,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             priors["regional_feature_collection"] = intersections["feature_collection"]
             priors["geo_errors"] = intersections["errors"]
             priors["official_layer_status"] = official_layer_status(intersections)
-        return priors
+        return _present_geo_priors(priors)
 
     @app.post("/api/sessions")
     async def create_session(payload: CreateSessionRequest, request: Request) -> dict[str, Any]:
@@ -6988,9 +6920,51 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             )
             return _session_response(updated or session)
 
+    def _turn_readiness_for_context(
+        session_id: str | None, context: dict[str, Any] | None,
+        expected_binding: str | None = None, **kwargs: Any,
+    ) -> dict[str, Any]:
+        result = preview_turn_readiness(
+            store=store, settings=settings, session_id=session_id, session_context=context,
+            **{key: kwargs[key] for key in ("message", "mode", "model_id", "rag_config", "max_tokens", "trace_options")},
+        )
+        if expected_binding is not None and result["readiness_binding"] != expected_binding:
+            raise HTTPException(status_code=409, detail={
+                "code": "turn_readiness_stale",
+                "boundary": "Question, field or conversation context changed after planning. Check readiness again before asking.",
+            })
+        return result
+
+    @app.post("/api/turn-readiness", response_model=TurnReadinessResponse)
+    def turn_readiness(payload: TurnReadinessRequest, request: Request) -> dict[str, Any]:
+        # FastAPI offloads this synchronous route. A preview waiting for an
+        # in-flight session turn must not hold the API/SSE event loop.
+        user = _demo_field_user(request)
+        _require_local_conversation_runtime()
+        turn = payload.turn
+        runtime_mode(turn.mode)
+        selected_model_id = runtime_model_id(turn.model_id, mode=turn.mode)
+        selected_rag_config = runtime_rag_config(turn.rag_config)
+        with _session_turn_guard(store, payload.session_id) if payload.session_id else nullcontext():
+            if payload.session_id:
+                session, _ = _require_owned_session(request, payload.session_id, user=user, include_turns=False)
+                context = _bind_turn_context(session, turn.session_context)
+            else:
+                try:
+                    context = bind_conversation_context({}, turn.session_context, has_turns=False)
+                except ConversationScopeError as exc:
+                    raise HTTPException(status_code=409, detail={"code": "conversation_scope_mismatch", "boundary": str(exc)}) from exc
+            context = _authorize_demo_turn_field_context(request, context)
+            result = _turn_readiness_for_context(
+                payload.session_id, context, message=turn.message, mode=turn.mode,
+                model_id=selected_model_id, rag_config=selected_rag_config,
+                max_tokens=turn.max_tokens, trace_options=turn.trace_options.model_dump(),
+            )
+        return {**result, "request_id": str(payload.request_id)}
+
     def _run_turn_with_persisted_context(
         *, session_id: str, incoming_context: dict[str, Any],
-        owner_id: str, request: Request, **turn_kwargs: Any,
+        owner_id: str, request: Request, readiness_binding: str | None = None, **turn_kwargs: Any,
     ) -> dict[str, Any]:
         # Core execution checks operation identity under this same reentrant
         # guard. Bind against the latest session after queued turns complete.
@@ -7007,6 +6981,8 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             authorized_context = _authorize_demo_turn_field_context(
                 request, _bind_turn_context(latest, incoming_context),
             )
+            if readiness_binding is not None:
+                _turn_readiness_for_context(session_id, authorized_context, expected_binding=readiness_binding, **turn_kwargs)
             context_update = _persistable_demo_turn_context(authorized_context)
             result = run_turn(
                 store=store, session_id=session_id,
@@ -7035,14 +7011,21 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         selected_rag_config = runtime_rag_config(payload.rag_config)
         selected_model_id = runtime_model_id(payload.model_id, mode=payload.mode)
         operation_id = str(payload.client_operation_id) if payload.client_operation_id else None
-        operation_hash = _hash_payload(payload.model_dump(mode="json", exclude={"client_operation_id"})) if operation_id else None
+        operation_hash = _hash_payload(payload.model_dump(mode="json", exclude={"client_operation_id", "readiness_binding"})) if operation_id else None
         existing_operation = store.get_turn_operation(session_id, operation_id) if operation_id else None
         if existing_operation and existing_operation["request_sha256"] != operation_hash:
             raise HTTPException(status_code=409, detail={"code": "operation_conflict", "message": "client operation ID was reused with different request data"})
         if existing_operation is None:
-            _authorize_demo_turn_field_context(
+            authorized_context = _authorize_demo_turn_field_context(
                 request, _bind_turn_context(session, payload.session_context),
             )
+            if payload.readiness_binding is not None:
+                _turn_readiness_for_context(
+                    session_id, authorized_context, expected_binding=payload.readiness_binding,
+                    message=payload.message, mode=payload.mode,
+                    model_id=selected_model_id, rag_config=selected_rag_config,
+                    max_tokens=payload.max_tokens, trace_options=payload.trace_options.model_dump(),
+                )
 
         profiler = TraceProfiler()
         try:
@@ -7052,6 +7035,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 incoming_context=payload.session_context,
                 owner_id=str(user["id"]),
                 request=request,
+                readiness_binding=payload.readiness_binding,
                 message=payload.message,
                 mode=payload.mode,
                 model_id=selected_model_id,
@@ -7119,16 +7103,23 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         selected_rag_config = runtime_rag_config(payload.rag_config)
         selected_model_id = runtime_model_id(payload.model_id, mode=payload.mode)
         operation_id = str(payload.client_operation_id) if payload.client_operation_id else None
-        operation_hash = _hash_payload(payload.model_dump(mode="json", exclude={"client_operation_id"})) if operation_id else None
+        operation_hash = _hash_payload(payload.model_dump(mode="json", exclude={"client_operation_id", "readiness_binding"})) if operation_id else None
         existing_operation = store.get_turn_operation(session_id, operation_id) if operation_id else None
         if existing_operation and existing_operation["request_sha256"] != operation_hash:
             raise HTTPException(status_code=409, detail={"code": "operation_conflict", "message": "client operation ID was reused with different request data"})
         # Preserve an HTTP error for a known-invalid request before SSE opens.
         # The worker repeats this check against fresh state after its queue wait.
         if existing_operation is None:
-            _authorize_demo_turn_field_context(
+            authorized_context = _authorize_demo_turn_field_context(
                 request, _bind_turn_context(session, payload.session_context),
             )
+            if payload.readiness_binding is not None:
+                _turn_readiness_for_context(
+                    session_id, authorized_context, expected_binding=payload.readiness_binding,
+                    message=payload.message, mode=payload.mode,
+                    model_id=selected_model_id, rag_config=selected_rag_config,
+                    max_tokens=payload.max_tokens, trace_options=payload.trace_options.model_dump(),
+                )
         model_id = None if payload.mode == "mock" else selected_model_id
 
         async def event_stream() -> Any:
@@ -7168,6 +7159,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                     incoming_context=payload.session_context,
                     owner_id=str(user["id"]),
                     request=request,
+                    readiness_binding=payload.readiness_binding,
                     message=payload.message,
                     mode=payload.mode,
                     model_id=model_id,

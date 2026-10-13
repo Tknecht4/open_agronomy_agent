@@ -1,0 +1,63 @@
+{
+  "schema_version": "open_agronomy_agent.corpus_quality_ledger.v1",
+  "rows": [
+    {
+      "doc_id": "PROPOSED-KSTATE-MEASUREMENT-BASIS",
+      "source_id": "",
+      "corpus_path": "shards/foundations-0001.jsonl",
+      "text_sha256": "8660cd2db2e2d5d4ab29a2c87e7021ad6be78123682c9b250c205d9acd7807de",
+      "normalized_text_sha256": "3b59dc8f8a115494e7d47aa80f57e259de5d43f559e9c629d0dfa0de51782213",
+      "source_locator_complete": true,
+      "source_locator_status": "complete",
+      "quality_ledger_complete": true,
+      "quality_ledger_status": "complete",
+      "source_locator_precision": "json_document_chunk",
+      "extraction_method": "checked_in_project_method_record_v2",
+      "answer_evidence_disposition": "answer_evidence_candidate",
+      "duplicate_cluster": "3b59dc8f8a115494e7d47aa80f57e259de5d43f559e9c629d0dfa0de51782213",
+      "duplicate_disposition": "unique_normalized_text",
+      "near_duplicate_cluster_id": "none",
+      "near_duplicate_disposition": "reviewed_small_card_set_not_clustered",
+      "jurisdiction": [
+        "Canada",
+        "United States"
+      ],
+      "authority_tier": "internal_synthesis",
+      "rights_status": "CC-BY-4.0_attributed_paraphrase",
+      "language": "unknown",
+      "extraction_fidelity": "checked_in_project_summary_exact_hash_not_verbatim_external_source",
+      "temporal_scope": "",
+      "risk_class": "",
+      "retrieval_eligibility": "context_only"
+    },
+    {
+      "doc_id": "PROPOSED-KSTATE-WATER-ACCOUNTING",
+      "source_id": "",
+      "corpus_path": "shards/foundations-0001.jsonl",
+      "text_sha256": "850005f549967243f34070b26e8202c4870819352bbc305737cba432b9e000f7",
+      "normalized_text_sha256": "87760886355b4b16c7122787e5c8bb963f109fc98452d7d9fd6f1839cd42deda",
+      "source_locator_complete": true,
+      "source_locator_status": "complete",
+      "quality_ledger_complete": true,
+      "quality_ledger_status": "complete",
+      "source_locator_precision": "json_document_chunk",
+      "extraction_method": "checked_in_project_method_record_v2",
+      "answer_evidence_disposition": "answer_evidence_candidate",
+      "duplicate_cluster": "87760886355b4b16c7122787e5c8bb963f109fc98452d7d9fd6f1839cd42deda",
+      "duplicate_disposition": "unique_normalized_text",
+      "near_duplicate_cluster_id": "none",
+      "near_duplicate_disposition": "reviewed_small_card_set_not_clustered",
+      "jurisdiction": [
+        "Canada",
+        "United States"
+      ],
+      "authority_tier": "internal_synthesis",
+      "rights_status": "CC-BY-4.0_attributed_paraphrase",
+      "language": "unknown",
+      "extraction_fidelity": "checked_in_project_summary_exact_hash_not_verbatim_external_source",
+      "temporal_scope": "",
+      "risk_class": "",
+      "retrieval_eligibility": "context_only"
+    }
+  ]
+}

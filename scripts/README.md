@@ -13,7 +13,7 @@
 | Tools/data | `smoke_*`, `build_prairie_spatial_pack.py`, `verify_prairie_spatial_pack.py` | Fixture/provider and package contracts, not field truth |
 | Ingestion/build | `ingest_*`, `build_*corpus*`, geospatial builders | Require source, rights, hashes, deterministic outputs |
 | Evaluation | `run_open_agronomy_benchmark.py`, `run_open_agronomy_benchmark_v2.py`, `run_observed_system_rehearsal.py`, `run_benchmark_capability_conformance.py`, v2/v3 audits, model matrix, judges, analyzers | Preserve identities and separation; v2 dry execution, capability conformance, and observed-system rehearsal are harness QA, not performance evidence |
-| Release evaluation foundation | `run_release_evaluation.py`, `analyze_release_evaluation.py` | Registry-bound engineering checks, product observations, offline reanalysis and compatible reference gates; semantic review remains explicit and source-bound |
+| Release evaluation foundation | `run_release_evaluation.py`, `analyze_release_evaluation.py` | Registry-bound product checks; one analyzer for retained reports, source inventory, optional private criterion metrics, sealed diagnostics and synthetic panel fixtures; semantic review remains explicit |
 | Workspace profiling | `profile_workspace_backend.py`, `profile_workspace_model.py`, `profile_frontend_build.mjs` | Synthetic local timing and build receipts; never agronomic quality, provider availability, or a release latency budget |
 | Optional field imagery | `inspect_field_imagery.py`, `analyze_field_imagery.py`, `collect_imagery_assessment.py` | Public HLS discovery/chips and bounded research acquisition; explicit online mode, saved polygon and outside-checkout private cache |
 | Geospatial foundation | `discover_field_sources.py`, `analyze_field_terrain.py` | Keyless-first source metadata discovery; offline local DTM processing with contextual extent, optional PyFlwDir environment, source-bound GeoTIFF/JSON and unknown edge/TWI support |
@@ -25,6 +25,33 @@
 ## Inputs and outputs
 
 Scripts should accept explicit paths/identities, resolve repository-relative defaults through `_path_bootstrap.py`/package helpers, and write receipts next to outputs. Never rely on an ambiguous current directory for destructive or release work.
+
+## Non-active physical-method candidate
+
+`build_production_foundations_supplement.py --store-id physical-method-context-v1`
+builds exactly two reviewed physical-method paraphrases. It requires the
+chapter registry, seed and support receipt plus explicit read-only
+`--chapter-evidence-root` and `--chapter-review-receipt` paths. The ignored
+custody packet contains selected rendered DOM, not original HTTP bytes or
+article XML. Missing custody, changed review/source/span pins, unknown rights
+or expanded scope fail before output creation. No network or generation runs.
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/build_production_foundations_supplement.py \
+  --store-id physical-method-context-v1 \
+  --seed data/seed/physical_method_context_v1.jsonl \
+  --sources data/manifests/physical_method_chapter_sources_v1.json \
+  --support-receipt data/manifests/physical_method_chapter_support_v1.json \
+  --chapter-evidence-root "$AGRONOMY_CHAPTER_PACKET" \
+  --chapter-review-receipt "$AGRONOMY_CHAPTER_REVIEW" \
+  --output outputs/physical-method-rebuild/v1
+```
+
+The nonselectable `rag_physical_method_candidate.yaml` loads attributed
+paraphrases as method context. U.S. provenance remains distinct from reviewed
+Canada/U.S. physical applicability. One source suffices only for the reviewed
+water method under its distinct schema. Legacy source rules are unchanged.
+No default profile, field authority, training or evaluation admission follows.
 
 ## Invariants
 
@@ -103,6 +130,14 @@ On supported macOS filesystems it uses APFS copy-on-write clones to avoid
 duplicating the large corpus during local builds, falling back to ordinary
 copies elsewhere. Destination files have independent inodes; writing either
 copy cannot change the other. The builder still computes every output hash.
+Use `--check` for routine scope/hash validation without a staging tree. When
+materialization itself needs checking, use `--verify --receipt <new-json-path>`:
+the builder compares copied bytes with the source pins, verifies derived
+inventory/receipt hashes, retires only its fresh successful stage and retains a
+failed stage under `outputs/public-repository-verification`. Reserve package
+bytes plus the builder's 1 GiB floor and other outstanding work before that mode.
+Use `--destination` when a downstream consumer needs a retained tree. Existing
+receipt paths are never overwritten.
 
 `build_edge_runtime_manifest.py` regenerates the container runtime inventory
 for the selected active RAG profile. Because its contract hashes governed
@@ -196,7 +231,7 @@ The registry records the remaining 18 knowledge cards as deferred and the
 quality/access holds separately. Its 30 exposed scenarios remain development
 candidates: direct DOI separation does not establish trial independence or a
 holdout. The versioned decision in
-`data/manifests/ask_science_context_admission_v1.json` admits only these two
+`data/manifests/ask_science_context_admission_v2.json` admits only these two
 summaries as context in the default profile; the candidate registry, seed and
 test profile preserve their original provenance. Evaluation-suite admission
 still requires the evaluation owner's review. Deterministic retrieval tests

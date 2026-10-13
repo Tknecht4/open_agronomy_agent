@@ -49,8 +49,10 @@ YAML file does not activate it.
 | Project and SoilWise graphs | 1,794 nodes; 1,458 edges | Relationship context | A graph route is not a measurement, diagnosis, or source-authority promotion |
 
 The two Ask Science summaries are admitted by
-`data/manifests/ask_science_context_admission_v1.json`, which binds the source
-review, attribution, text and release hashes, and applicability limits.
+`data/manifests/ask_science_context_admission_v2.json`, which binds the source
+review, attribution, text and release hashes, and applicability limits. It
+retains the original v1 decision by hash and records the separately approved
+PR60 publication; it does not admit the inactive chapter candidate.
 The original candidate registry, seed and nonselectable test profile retain
 their provenance. The other 18 knowledge cards and all 30 exposed scenario
 candidates remain outside this admission; raw papers and scenarios do not enter

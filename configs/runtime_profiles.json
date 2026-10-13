@@ -14,7 +14,7 @@
       "runtime_corpus_audit_required": true,
       "runtime_policy": {
         "path": "data/manifests/runtime_corpus_policy.json",
-        "sha256": "5d1d7bbd3cb3831a77d9fef2783575188fa3ee6247e3ed584daaec4cba32e435"
+        "sha256": "4ec7f8a9ef941c759167ee471e35283fd969a9a48806fd1986672a31515c904a"
       },
       "knowledge_release": {
         "store_id": "offline-agronomy",
