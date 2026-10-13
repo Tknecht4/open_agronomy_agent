@@ -230,7 +230,7 @@ def _lineage(run: Mapping[str, Any]) -> dict[str, Any]:
                 "report.json",
                 "observations.jsonl",
                 "components.jsonl",
-                *([name for name in ("closeout.json", "closeout-failure.json") if (directory / name).is_file()]
+                *([name for name in ("closeout.json", "closeout-failure.json", "terminal-closeout.json") if (directory / name).is_file()]
                   if "bounded_stop_policy" in run["plan"] else []),
             )
         },

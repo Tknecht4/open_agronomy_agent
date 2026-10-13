@@ -408,10 +408,10 @@ def test_order3_late_closeout_remains_blocked_on_resume_and_reanalysis(tmp_path,
             if path.name == "closeout.json": value["now"] = 1000 + budget + 1
         monkeypatch.setattr(runner, "write_new_json", late)
     else:
-        original = runner.load_retained_report
-        def late(path):
-            result = original(path); value["now"] = 1000 + budget + 1; return result
-        monkeypatch.setattr(runner, "load_retained_report", late)
+        original = runner._load_retained_report
+        def late(path, **kwargs):
+            result = original(path, **kwargs); value["now"] = 1000 + budget + 1; return result
+        monkeypatch.setattr(runner, "_load_retained_report", late)
     report = runner.run_suite(**args)
     assert report["status"] == "blocked" and report["bounded_execution"]["closeout_status"] == "late_blocked"
     assert report["bounded_execution"]["stop"]["reason"] == "finalization_deadline"
@@ -424,6 +424,41 @@ def test_order3_late_closeout_remains_blocked_on_resume_and_reanalysis(tmp_path,
            "frozen_report": report}
     assert _report(run, [])["bounded_execution"] == report["bounded_execution"]
     assert _report(run, [])["status"] == "blocked"
+
+
+@pytest.mark.parametrize("late_stage", ["receipt", "final_read"])
+def test_order3_required_terminal_seal_refuses_deleted_late_failure(tmp_path, monkeypatch, late_stage):
+    runner, args, _, _ = _order3_runner(tmp_path, monkeypatch)
+    value = _fake_clock(monkeypatch, runner)
+    budget = runner.load_registry(args["registry_path"])["whole_run_timeout_seconds"]
+    if late_stage == "receipt":
+        original = runner.write_new_json
+        def late(path, data):
+            original(path, data)
+            if path.name == "closeout.json": value["now"] = 1000 + budget + 1
+        monkeypatch.setattr(runner, "write_new_json", late)
+    else:
+        original = runner._load_retained_report
+        def late(path, **kwargs):
+            result = original(path, **kwargs); value["now"] = 1000 + budget + 1; return result
+        monkeypatch.setattr(runner, "_load_retained_report", late)
+    report = runner.run_suite(**args)
+    assert report["status"] == "blocked"
+    directory = args["output_dir"]
+    seal = json.loads((directory / "terminal-closeout.json").read_text())
+    assert seal["status"] == "late_blocked" and seal["failure_sha256"]
+    # Preserve exact bytes while simulating deletion; no retained hash is rewritten.
+    (directory / "closeout-failure.json").rename(tmp_path / "preserved-late-failure.json")
+    monkeypatch.setattr(runner, "_subprocess_cell", lambda *_a, **_k: pytest.fail("integrity failure dispatched"))
+    with pytest.raises(ValueError, match="failure presence differs"):
+        runner.run_suite(**args, resume=True)
+    from agronomy_agent.release_eval_reanalysis import read_completed_run
+    with pytest.raises(ValueError, match="failure presence differs"):
+        read_completed_run(directory)
+    (tmp_path / "preserved-late-failure.json").rename(directory / "closeout-failure.json")
+    (directory / "terminal-closeout.json").rename(tmp_path / "preserved-terminal-seal.json")
+    with pytest.raises(ValueError, match="terminal disposition seal is missing"):
+        runner.load_retained_report(directory)
 
 
 def test_order3_cancellation_and_incomplete_closeout_do_not_rerun(tmp_path, monkeypatch):

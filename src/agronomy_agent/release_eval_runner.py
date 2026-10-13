@@ -654,7 +654,7 @@ def retention_manifest(directory: Path) -> dict[str, Any]:
             "bounded_stop_policy" in json.loads((directory / "plan.json").read_text())):
         # These closeout records bind the finalized retention seal and report,
         # and are independently validated by the retained-report reader.
-        excluded.update({"closeout.json", "closeout-failure.json"})
+        excluded.update({"closeout.json", "closeout-failure.json", "terminal-closeout.json"})
     for path in sorted(directory.rglob("*")):
         if path.is_symlink():
             raise ValueError("retained evaluation outputs must not contain symlinks")
@@ -681,6 +681,11 @@ def verify_retention(directory: Path) -> None:
 
 def load_retained_report(path: Path) -> dict[str, Any]:
     """References are complete retained runs, not unattested aggregate JSON."""
+    return _load_retained_report(path, terminal_seal_required=True)
+
+
+def _load_retained_report(path: Path, *, terminal_seal_required: bool) -> dict[str, Any]:
+    """The runner may inspect a provisional closeout under its held run lock."""
     path = path.resolve()
     directory = path if path.is_dir() else path.parent
     report_path = directory / "report.json"
@@ -720,10 +725,30 @@ def load_retained_report(path: Path) -> dict[str, Any]:
             if failure.is_symlink() or failed.get("record_sha256") != digest({k: v for k, v in failed.items() if k != "record_sha256"}) or failed.get("closeout_sha256") != file_digest(closed):
                 raise ValueError("bounded closeout failure binding differs")
             late = True
+        terminal = None
+        if terminal_seal_required:
+            seal = directory / "terminal-closeout.json"
+            if not seal.is_file() or seal.is_symlink():
+                raise ValueError("bounded terminal disposition seal is missing")
+            terminal = json.loads(seal.read_text())
+            failure_sha256 = file_digest(failure) if failure.is_file() else None
+            remaining = terminal.get("observed_remaining_seconds")
+            if (terminal.get("schema_version") != "open_agronomy_agent.terminal_closeout.v1"
+                    or terminal.get("record_sha256") != digest({k: v for k, v in terminal.items() if k != "record_sha256"})
+                    or any(terminal.get(k) != v for k, v in binding.items())
+                    or terminal.get("closeout_sha256") != file_digest(closed)
+                    or terminal.get("failure_sha256") != failure_sha256
+                    or type(remaining) not in (int, float) or not math.isfinite(remaining)
+                    or terminal.get("status") != ("late_blocked" if late or remaining < 0 else "complete_within_deadline")):
+                raise ValueError("required terminal disposition or failure presence differs")
+            late = terminal["status"] == "late_blocked"
         execution = report["bounded_execution"]
         execution["closeout"] = receipt
         execution["closeout_receipt_sha256"] = file_digest(closed)
         execution["closeout_status"] = "late_blocked" if late else "complete_within_deadline"
+        if terminal is not None:
+            execution["terminal_seal"] = terminal
+            execution["terminal_seal_sha256"] = file_digest(directory / "terminal-closeout.json")
         if late:
             execution["status"] = "terminal_stopped"
             execution["stop"] = execution.get("stop") or {"reason": "finalization_deadline", "detail": None}
@@ -731,7 +756,7 @@ def load_retained_report(path: Path) -> dict[str, Any]:
             report["failures"]["bounded_execution_stop"] = execution["stop"]
         elif execution["status"] == "awaiting_closeout":
             execution["status"] = "dispatch_complete"
-    elif (directory / "closeout.json").exists() or (directory / "closeout-failure.json").exists():
+    elif any((directory / name).exists() for name in ("closeout.json", "closeout-failure.json", "terminal-closeout.json")):
         raise ValueError("legacy run has unexpected bounded closeout files")
     return report
 
@@ -1014,7 +1039,7 @@ def run_suite(
                 )
                 deadline = time.monotonic() + max(0, remaining_budget)
         except (ValueError, OSError, KeyboardInterrupt) as exc:
-            if stop_policy:
+            if stop_policy and not (output_dir / "report.json").exists():
                 record = {"schema_version": "open_agronomy_agent.startup_stop.v1",
                           "plan_sha256": plan_sha256, "policy_sha256": stop_input["sha256"],
                           "reason": str(exc) or "owner_cancelled", "disposition": "terminal_startup_stop",
@@ -1327,7 +1352,7 @@ def run_suite(
             manifest_raw = (json.dumps(future_manifest, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n").encode()
             payload_bytes = [len(raw) for raw in encoded.values()] + [len(manifest_raw)]
             # Charge rounded allocated entries, not only serialized bytes.
-            closeout_charge = sum(((size + 4095) // 4096) * 4096 for size in payload_bytes) + 8192
+            closeout_charge = sum(((size + 4095) // 4096) * 4096 for size in payload_bytes) + 12288
             current_allocated = sum(path.stat().st_blocks * 512 for path in output_dir.rglob("*") if path.is_file() and not path.is_symlink())
             free = os.statvfs(output_dir).f_bavail * os.statvfs(output_dir).f_frsize
             if (closeout_charge > stop_policy["finalization_reserve_bytes"]
@@ -1359,7 +1384,7 @@ def run_suite(
                           "reason": "deadline_during_closeout_persistence"}
                 failed["record_sha256"] = digest(failed)
                 write_new_json(output_dir / "closeout-failure.json", failed)
-            final_report = load_retained_report(output_dir)
+            final_report = _load_retained_report(output_dir, terminal_seal_required=False)
             if time.monotonic() > deadline and closeout["status"] == "complete_within_deadline" and not (output_dir / "closeout-failure.json").exists():
                 failed = {"schema_version": "open_agronomy_agent.closeout_failure.v1",
                           "closeout_sha256": file_digest(output_dir / "closeout.json"),
@@ -1370,5 +1395,22 @@ def run_suite(
                 final_report["bounded_execution"].update(status="terminal_stopped", closeout_status="late_blocked",
                     stop=final_report["bounded_execution"].get("stop") or {"reason": "finalization_deadline", "detail": None})
                 final_report["failures"]["bounded_execution_stop"] = final_report["bounded_execution"]["stop"]
+            remaining = deadline - time.monotonic()
+            terminal = {"schema_version": "open_agronomy_agent.terminal_closeout.v1",
+                        **{key: closeout[key] for key in ("plan_sha256", "policy_sha256", "report_sha256", "retention_sha256", "clock_sha256")},
+                        "closeout_sha256": file_digest(output_dir / "closeout.json"),
+                        "failure_sha256": file_digest(output_dir / "closeout-failure.json") if (output_dir / "closeout-failure.json").is_file() else None,
+                        "observed_remaining_seconds": remaining,
+                        "status": "late_blocked" if remaining < 0 or final_report["bounded_execution"]["closeout_status"] == "late_blocked" else "complete_within_deadline",
+                        "scope": "final disposition after artifact, closeout persistence and final read verification; terminal seal persistence is the final durability marker"}
+            terminal["record_sha256"] = digest(terminal)
+            write_new_json(output_dir / "terminal-closeout.json", terminal)
+            if terminal["status"] == "late_blocked":
+                final_report["status"] = "blocked"
+                final_report["bounded_execution"].update(status="terminal_stopped", closeout_status="late_blocked",
+                    stop=final_report["bounded_execution"].get("stop") or {"reason": "finalization_deadline", "detail": None})
+                final_report["failures"]["bounded_execution_stop"] = final_report["bounded_execution"]["stop"]
+            final_report["bounded_execution"]["terminal_seal"] = terminal
+            final_report["bounded_execution"]["terminal_seal_sha256"] = file_digest(output_dir / "terminal-closeout.json")
             return final_report
         return report
