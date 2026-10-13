@@ -69,6 +69,7 @@ import {
 } from './sourceCards'
 import { buildReviewerExportMarkdown, reviewerExportFilename } from './reviewerExport'
 import { CapabilityReadinessStatus } from './CapabilityReadinessStatus'
+import { canAskWithReadiness, isBoundTurnReadiness, matchingTurnReadiness, turnReadinessKey, type TurnReadinessState } from './turnReadiness'
 import {
   RetrievedDoc,
   SessionRecord,
@@ -2164,6 +2165,7 @@ export function OpenAgronomyApp() {
   const [visibleTurnCount, setVisibleTurnCount] = useState(20)
   const [savingField, setSavingField] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<StoredField | null>(null)
+  const [readinessContextRevision, setReadinessContextRevision] = useState(0)
   const historyRequestRef = useRef(0)
   const runtimeRecoveryRequestRef = useRef(0)
   const activeFieldRef = useRef(activeFieldContextId)
@@ -2607,6 +2609,87 @@ export function OpenAgronomyApp() {
     setBoundaryStatus('No field selected. Add a location when your question needs one.')
   }
 
+  const questionPayload = {
+    message,
+    mode,
+    model_id: mode === 'mock' || modelId === 'mock' ? undefined : modelId,
+    rag_config: mode === 'baseline' ? undefined : ragConfig,
+    max_tokens: selectedModelProfile?.max_tokens || 240,
+    session_context: {
+      crop: field.crop,
+      region: field.region,
+      jurisdiction: field.jurisdiction,
+      concern: field.concern,
+      field_context_id: activeFieldContextId || undefined,
+      field_conversation_key: activeFieldConversationKey,
+      field_record_updated_at: activeFieldRecordUpdatedAt || undefined,
+      field_context: {
+        enable_public_adapters: fieldGeometry.kind !== 'none',
+        crop: field.crop,
+        region: field.region,
+        jurisdiction: field.jurisdiction,
+        concern: field.concern,
+        field_context_id: activeFieldContextId || undefined,
+        field_conversation_key: activeFieldConversationKey,
+        field_record_updated_at: activeFieldRecordUpdatedAt || undefined,
+        geometry: fieldGeometryToGeoJson(fieldGeometry),
+        representative_point: representativePointForGeometry(fieldGeometry),
+        geometry_summary: geometrySummary(fieldGeometry),
+        regional_context: primaryGeoCandidate
+          ? `${primaryGeoCandidate.system} ${primaryGeoCandidate.code} ${primaryGeoCandidate.name}`
+          : fieldGeometry.kind === 'none' ? '' : activeScenario.mlra,
+        regional_intersections: fieldContextIntersections(officialIntersections),
+        official_layer_status: fieldContextLayerStatus(officialLayerStatus),
+        upload_warnings: uploadContext?.warnings || [],
+        selected_upload_feature: fieldContextSelectedUploadFeature(selectedUploadFeature),
+      },
+      workspace_retrieved_docs: privateKnowledgeForQuestion(privateKnowledge, message),
+      ephemeral_private_source_summary: privateKnowledge.map((item) => ({
+        filename: item.filename,
+        raw_sha256: item.raw_sha256,
+        chunk_count: item.chunks.length,
+      })),
+    },
+    trace_options: {
+      store_prompt_messages: privateKnowledge.length === 0,
+      store_retrieved_text: privateKnowledge.length === 0,
+      redaction_mode: 'none',
+    },
+  }
+
+  const currentPreviewSession = sessions.find(session => session.session_id === sessionId)
+  const previewSessionId = currentPreviewSession && sessionForField([currentPreviewSession], activeFieldConversationKey, activeFieldContextId)
+    ? sessionId : sessionForField(sessions, activeFieldConversationKey, activeFieldContextId)?.session_id
+  const readinessKey = turnReadinessKey(previewSessionId, questionPayload, { revision: readinessContextRevision, turns: turns.map(turn => turn.turn_id) })
+  const questionPayloadKey = JSON.stringify(questionPayload)
+  const currentQuestionPayloadKeyRef = useRef(questionPayloadKey)
+  currentQuestionPayloadKeyRef.current = questionPayloadKey
+  const [turnReadiness, setTurnReadiness] = useState<TurnReadinessState | null>(null)
+  const currentReadiness = matchingTurnReadiness(turnReadiness, readinessKey)
+  const questionModelReady = canAskWithReadiness(selectedModelReady, turnReadiness, readinessKey)
+
+  useEffect(() => {
+    if (!message.trim() || !answerCapability.canGenerateAnswer || !fieldsHydrated || questionContextRequiresSave || savingField || loadingConversation) {
+      setTurnReadiness(null)
+      return
+    }
+    let cancelled = false
+    const requestId = globalThis.crypto.randomUUID()
+    setTurnReadiness({ key: readinessKey, status: 'checking' })
+    const timer = window.setTimeout(() => {
+      void apiPost<unknown>('/api/turn-readiness', { request_id: requestId, session_id: previewSessionId || null, turn: questionPayload })
+        .then(result => {
+          if (cancelled) return
+          setTurnReadiness(isBoundTurnReadiness(result, requestId, previewSessionId, questionPayload)
+            ? { key: readinessKey, status: 'received', result }
+            : { key: readinessKey, status: 'failed' })
+        }).catch(() => {
+          if (!cancelled) setTurnReadiness({ key: readinessKey, status: 'failed' })
+        })
+    }, 150)
+    return () => { cancelled = true; window.clearTimeout(timer) }
+  }, [readinessKey, answerCapability.canGenerateAnswer, fieldsHydrated, questionContextRequiresSave, savingField, loadingConversation])
+
   const ensureSession = async (stillCurrent: () => boolean): Promise<string> => {
     const currentSession = sessions.find((session) => session.session_id === sessionId)
     if (
@@ -2705,11 +2788,19 @@ export function OpenAgronomyApp() {
       setError('The local agronomy runtime is unavailable. Your question draft remains on this device; reconnect to the prepared runtime before asking.')
       return
     }
+    if (!questionModelReady) {
+      savePhase6ChatDraft(activeFieldConversationKey, message)
+      setStatus('Model setup required')
+      setError('This question needs the selected model, or a current server calculation-readiness check. Your draft remains on this device.')
+      return
+    }
+    const submissionPayloadKey = questionPayloadKey
     const submissionEpoch = ++submissionEpochRef.current
     const submissionFieldId = activeFieldContextId
     const submissionConversationKey = activeFieldConversationKey
     const submissionFieldRecordUpdatedAt = activeFieldRecordUpdatedAt
-    const stillCurrent = () => submissionEpochRef.current === submissionEpoch
+    const stillCurrent = () => currentQuestionPayloadKeyRef.current === submissionPayloadKey
+      && submissionEpochRef.current === submissionEpoch
       && activeFieldRef.current === submissionFieldId
       && activeConversationKeyRef.current === submissionConversationKey
       && activeFieldRecordUpdatedAtRef.current === submissionFieldRecordUpdatedAt
@@ -2741,54 +2832,7 @@ export function OpenAgronomyApp() {
     try {
       const id = await ensureSession(stillCurrent)
       if (!stillCurrent()) return
-      inflightSessionIdRef.current = id
-      const payload = {
-        message,
-        mode,
-        model_id: mode === 'mock' || modelId === 'mock' ? undefined : modelId,
-        rag_config: mode === 'baseline' ? undefined : ragConfig,
-        max_tokens: selectedModelProfile?.max_tokens || 240,
-        session_context: {
-          crop: field.crop,
-          region: field.region,
-          jurisdiction: field.jurisdiction,
-          concern: field.concern,
-          field_context_id: activeFieldContextId || undefined,
-          field_conversation_key: activeFieldConversationKey,
-          field_record_updated_at: activeFieldRecordUpdatedAt || undefined,
-          field_context: {
-            enable_public_adapters: fieldGeometry.kind !== 'none',
-            crop: field.crop,
-            region: field.region,
-            jurisdiction: field.jurisdiction,
-            concern: field.concern,
-            field_context_id: activeFieldContextId || undefined,
-            field_conversation_key: activeFieldConversationKey,
-            field_record_updated_at: activeFieldRecordUpdatedAt || undefined,
-            geometry: fieldGeometryToGeoJson(fieldGeometry),
-            representative_point: representativePointForGeometry(fieldGeometry),
-            geometry_summary: geometrySummary(fieldGeometry),
-            regional_context: primaryGeoCandidate
-              ? `${primaryGeoCandidate.system} ${primaryGeoCandidate.code} ${primaryGeoCandidate.name}`
-              : fieldGeometry.kind === 'none' ? '' : activeScenario.mlra,
-            regional_intersections: fieldContextIntersections(officialIntersections),
-            official_layer_status: fieldContextLayerStatus(officialLayerStatus),
-            upload_warnings: uploadContext?.warnings || [],
-            selected_upload_feature: fieldContextSelectedUploadFeature(selectedUploadFeature),
-          },
-          workspace_retrieved_docs: privateKnowledgeForQuestion(privateKnowledge, message),
-          ephemeral_private_source_summary: privateKnowledge.map((item) => ({
-            filename: item.filename,
-            raw_sha256: item.raw_sha256,
-            chunk_count: item.chunks.length,
-          })),
-        },
-        trace_options: {
-          store_prompt_messages: privateKnowledge.length === 0,
-          store_retrieved_text: privateKnowledge.length === 0,
-          redaction_mode: 'none',
-        },
-      }
+      const payload = questionPayload
       const payloadKey = JSON.stringify(payload)
       const previous = uncertainSubmissionsRef.current.find(item => item.sessionId === id && item.payloadKey === payloadKey)
       if (!previous && uncertainSubmissionsRef.current.length >= 8) {
@@ -2812,7 +2856,6 @@ export function OpenAgronomyApp() {
         ? previous.operationId
         : globalThis.crypto.randomUUID()
       submitted = { sessionId: id, payloadKey, operationId }
-      inflightSubmissionRef.current = submitted
       let recoveredSession: SessionRecord | null = null
       if (previous) {
         recoveredSession = await apiGet<SessionRecord>(`/api/sessions/${encodeURIComponent(id)}`)
@@ -2820,11 +2863,26 @@ export function OpenAgronomyApp() {
         completedTurn = recoveredSession.turns?.find(turn => turn.metadata?.client_operation_id === operationId) || null
       }
       if (!completedTurn) {
+        let readinessBinding: string | undefined
+        if (!selectedModelReady || currentReadiness?.requires_model === false) {
+          const requestId = globalThis.crypto.randomUUID()
+          const finalReadiness = await apiPost<unknown>('/api/turn-readiness', { request_id: requestId, session_id: id, turn: payload })
+          if (!stillCurrent()) return
+          if (!isBoundTurnReadiness(finalReadiness, requestId, id, payload)) {
+            throw new Error('Could not verify current calculation readiness. Your question draft remains on this device.')
+          }
+          if (!selectedModelReady && finalReadiness.requires_model !== false) {
+            throw new Error('This question now needs the selected model. Complete model setup or provide a complete calculation request.')
+          }
+          readinessBinding = finalReadiness.readiness_binding
+        }
         dispatched = true
+        inflightSubmissionRef.current = submitted
+        inflightSessionIdRef.current = id
         const response = await fetch(`/api/sessions/${id}/turns/stream`, {
           method: 'POST',
           headers: { 'content-type': 'application/json', ...csrfHeaders() },
-          body: JSON.stringify({ ...payload, client_operation_id: operationId }),
+          body: JSON.stringify({ ...payload, readiness_binding: readinessBinding, client_operation_id: operationId }),
         })
         if (!stillCurrent()) {
           await response.body?.cancel().catch(() => undefined)
@@ -2913,7 +2971,7 @@ export function OpenAgronomyApp() {
       } else if (submissionEpochRef.current === submissionEpoch) {
         // A field record changed without a navigation event while the request ran.
         leaveSubmissionView()
-      } else if (submitted) {
+      } else if (submitted && dispatched) {
         // The old request may have saved after its conversation was reopened.
         const settledSessionId = submitted.sessionId
         setSessions((current) => current.map((session) => session.session_id === settledSessionId
@@ -3065,6 +3123,7 @@ export function OpenAgronomyApp() {
   }
 
   const refreshFieldHistory = async (fieldContextId: string) => {
+    setReadinessContextRevision(revision => revision + 1)
     if (!fieldContextId || fieldStorageMode !== 'account_workspace') {
       setFieldHistory(null)
       setFieldHistoryStatus('Device-only field: timeline is not saved.')
@@ -4716,7 +4775,7 @@ export function OpenAgronomyApp() {
                 {latestTurn ? <ConversationRuntimeStatus turn={latestTurn} /> : <p>No answer request yet.</p>}
               </details>
               {answerCapability.state === 'notes_only' ? <span>{answerCapability.detail}</span> : null}
-              {!selectedModelReady ? <div className="model-setup-notice" role="status"><strong>Model setup required</strong><p>{selectedModelProfile?.local_detail || 'Selected local model is not installed.'}</p></div> : null}
+              {!selectedModelReady ? <div className="model-setup-notice" role="status"><strong>{currentReadiness?.requires_model === false ? currentReadiness.status === 'clarification_required' ? 'Calculation input needed' : 'Calculation ready' : 'Model setup required'}</strong><p>{currentReadiness?.requires_model === false ? currentReadiness.calculator?.clarification || 'This supplied-input calculation can run locally without the model.' : currentReadiness?.status === 'unknown' ? 'This calculation is planned, but its complete-input readiness has not been verified. Model setup is still required before submitting it.' : turnReadiness?.key === readinessKey && turnReadiness.status === 'checking' ? 'Checking whether this question can use a local calculation.' : selectedModelProfile?.local_detail || 'Selected local model is not installed.'}</p></div> : null}
               {runtimeAccess === 'unavailable' ? <button type="button" onClick={() => void recoverRuntime()}>Retry local runtime</button> : null}
             </div>
 
@@ -4782,7 +4841,7 @@ export function OpenAgronomyApp() {
                 ref={questionInputRef}
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
-                onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (!isAnalyzing && !savingField && !loadingConversation && fieldsHydrated && !questionContextRequiresSave && message.trim() && answerCapability.canGenerateAnswer && selectedModelReady) event.currentTarget.form?.requestSubmit() } }}
+                onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (!isAnalyzing && !savingField && !loadingConversation && fieldsHydrated && !questionContextRequiresSave && message.trim() && answerCapability.canGenerateAnswer && questionModelReady) event.currentTarget.form?.requestSubmit() } }}
                 disabled={isAnalyzing}
                 placeholder={fieldName
                   ? 'Describe an observation or ask about this field…'
@@ -4807,7 +4866,7 @@ export function OpenAgronomyApp() {
                     </label>
                   ) : <span>Local model profile</span>}
                 </details>
-                <button type="submit" disabled={isAnalyzing || savingField || loadingConversation || !fieldsHydrated || questionContextRequiresSave || !message.trim() || !answerCapability.canGenerateAnswer || !selectedModelReady}>
+                <button type="submit" disabled={isAnalyzing || savingField || loadingConversation || !fieldsHydrated || questionContextRequiresSave || !message.trim() || !answerCapability.canGenerateAnswer || !questionModelReady}>
                   <Send size={17} /> {isAnalyzing ? 'Working' : 'Ask'}
                 </button>
               </div>

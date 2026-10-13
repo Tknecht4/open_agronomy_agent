@@ -6,6 +6,7 @@ import json
 import os
 import re
 from copy import deepcopy
+from decimal import DecimalException
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager, nullcontext
 from threading import Lock, RLock
@@ -29,7 +30,12 @@ from agronomy_agent.agent import (
     system_prompt,
 )
 from agronomy_agent.query_context import is_source_grounded_question
-from agronomy_agent.capability_planner import select_public_capability_plan
+from agronomy_agent.capability_planner import build_planner_input, plan_capabilities, select_public_capability_plan
+from agronomy_agent.capability_registry import capability_registry
+from agronomy_agent.agronomic_calculations import _decimal_value, _format_decimal, calculation_tool_schema
+from agronomy_agent.decision_contract import build_decision_contract
+from agronomy_agent.evidence_contracts import question_frame_from_runtime
+from agronomy_agent.tool_planner import plan_tools
 from agronomy_agent.router import classify_query, refine_query_route
 from agronomy_agent.answer_verifier import context_evidence_text, verify_answer
 from agronomy_agent.answer_safety import enforce_answer_safety_postconditions
@@ -344,6 +350,159 @@ def _build_mlx_generator(
     return generator
 
 
+def prepare_turn_question(
+    *, store: TraceStore, settings: ServerSettings, session_id: str | None,
+    message: str, mode: str, session_context: dict[str, Any] | None,
+    parent_turn_id: str | None = None, typed_tools_enabled: bool = True,
+) -> dict[str, Any]:
+    """Read the same bounded, verified question history for preview and execution."""
+    model_config = load_model_config(settings.model_config_path)
+    conversation_config = model_config.get("context_management")
+    try:
+        max_history_turns = (
+            int(conversation_config.get("max_history_turns", 8))
+            if isinstance(conversation_config, dict)
+            else 8
+        )
+    except (TypeError, ValueError):
+        max_history_turns = 8
+    if max_history_turns <= 0:
+        max_history_turns = 8
+    history_cutoff = (
+        store.resolve_replay_history_cutoff(session_id, parent_turn_id)
+        if session_id is not None and parent_turn_id is not None else None
+    )
+    recent_turns = store.get_recent_session_turns(
+        session_id, limit=max(1, min(max_history_turns, 32)),
+        before_turn_id=history_cutoff, exclude_replays=True,
+    ) if session_id is not None else []
+    total_history_turns = store.count_session_turns(
+        session_id, before_turn_id=history_cutoff, exclude_replays=True,
+    ) if session_id is not None else 0
+    reference_history_verified = (
+        not isinstance(session_context, dict)
+        or session_context.get("conversation_reference_history_verified") is not False
+    )
+    resolution_turns = recent_turns
+    if isinstance(session_context, dict) and "conversation_reference_turn_ids" in session_context:
+        allowed = session_context["conversation_reference_turn_ids"]
+        if not isinstance(allowed, list) or any(not isinstance(item, str) for item in allowed):
+            reference_history_verified = False
+        elif allowed:
+            suffix = recent_turns[-len(allowed):]
+            if [str(item.get("turn_id")) for item in suffix] != allowed:
+                reference_history_verified = False
+            else:
+                resolution_turns = suffix
+        else:
+            resolution_turns = []
+    if not typed_tools_enabled or mode in {"baseline", "mock"}:
+        conversation_resolution = ConversationResolution(message, "typed_resolution_disabled")
+    elif not reference_history_verified:
+        conversation_resolution = ConversationResolution(message, "conversation_reference_gap")
+    else:
+        conversation_resolution = resolve_numeric_follow_up(message, resolution_turns)
+    return {
+        "model_config": model_config, "conversation_config": conversation_config,
+        "history_cutoff": history_cutoff, "recent_turns": recent_turns,
+        "total_history_turns": total_history_turns, "resolution": conversation_resolution,
+    }
+
+
+def preview_turn_readiness(
+    *, store: TraceStore, settings: ServerSettings, session_id: str | None,
+    message: str, mode: str, model_id: str | None, rag_config: str,
+    max_tokens: int, trace_options: dict[str, Any], session_context: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Plan arithmetic from authorized context; never execute tools or construct a model."""
+    prepared = prepare_turn_question(
+        store=store, settings=settings, session_id=session_id, message=message,
+        mode=mode, session_context=session_context,
+    )
+    question = prepared["resolution"].effective_question
+    field_context = (session_context or {}).get("field_context")
+    field_context = _with_stored_field_data(store, session_context=session_context, field_context=field_context)
+    field_context = _with_stored_field_history(store, session_context=session_context, field_context=field_context)
+    tool_plan = plan_tools(question, field_context=field_context)
+    route = refine_query_route(question, classify_query(question))
+    contract = build_decision_contract(question, route, field_context=field_context)
+    frame = question_frame_from_runtime(question=question, route=route, query_context={},
+                                        decision_contract=contract.to_dict(), field_context=field_context)
+    registry = capability_registry()
+    planner_input = build_planner_input(
+        question, question_frame=frame.to_dict(), decision_contract=contract.to_dict(),
+        capability_registry_sha256=execution_stable_sha256([spec.as_record() for spec in registry.specs]),
+        arm_id="production_full", phase="tool_planning", field_context=field_context,
+    )
+    capability_plan = plan_capabilities(planner_input)
+    calculator = next((item for item in tool_plan.invocations if item.tool_id == "agronomic_calculator"), None)
+    selected = next((item for item in capability_plan.invocations if item.capability_id == "agronomic_calculator"), None)
+    independent = bool(mode == "agronomic_rag" and model_id != "mock" and calculator and selected
+                       and tool_plan.status in {"ready", "clarification_required"}
+                       and calculator.operation == selected.operation and dict(calculator.inputs) == dict(selected.inputs))
+    reason = "calculator_planned" if independent else "generation_required"
+    unverified = False
+    if independent and tool_plan.status == "ready":
+        # The legacy ready plan is not a complete numerical validation contract.
+        # Keep other complete operations unknown until their canonical validators
+        # can be called separately from execution; never run a tool in preview.
+        validated_conversion = calculator.operation == "unit_conversion"
+        if validated_conversion:
+            try:
+                value = _decimal_value(calculator.inputs.get("value"), "value")
+                # The canonical formatter also has a finite precision limit.
+                # Reserve one decimal order for the supported kg/ha <-> lb/ac
+                # factors without computing a conversion or executing a tool.
+                _format_decimal(value.scaleb(1))
+                validated_conversion = all(str(calculator.inputs.get(key)).casefold() in {"kg/ha", "lb/ac"}
+                                           for key in ("from_unit", "to_unit"))
+            except (ValueError, DecimalException):
+                validated_conversion = False
+        if not validated_conversion:
+            independent = False
+            unverified = True
+            reason = "operation_validation_unavailable"
+    history = prepared["recent_turns"]
+    context = session_context or {}
+    binding = {
+        "session_id": session_id, "message": message, "mode": mode,
+        "model_id": model_id or settings.default_model_id, "rag_config": rag_config,
+        "question_sha256": sha256_text(message), "effective_question_sha256": sha256_text(question),
+        "field_context_id": context.get("field_context_id"),
+        "field_record_updated_at": context.get("field_record_updated_at"),
+        "field_snapshot_sha256": execution_stable_sha256(field_context) if field_context else None,
+        "history_head": [str(turn.get("turn_id") or "") for turn in history],
+        "history_sha256": execution_stable_sha256(history),
+        "planner_version": tool_plan.planner_version,
+        "capability_planner_version": capability_plan.planner_version,
+        "registry_sha256": planner_input.capability_registry_sha256,
+    }
+    fingerprint = execution_stable_sha256({
+        "binding": binding, "context": context, "max_tokens": max_tokens, "trace_options": trace_options,
+    })
+    schema = calculation_tool_schema()
+    calculator_record = calculator.to_dict() if calculator and (independent or unverified) else None
+    if calculator_record:
+        try:
+            json.dumps(calculator_record["inputs"], allow_nan=False)
+        except ValueError:
+            calculator_record["inputs"] = None
+            calculator_record["input_status"] = "invalid_nonfinite"
+    return {
+        "schema_version": "open_agronomy_agent.turn_readiness.v1",
+        "requires_model": None if unverified else not independent,
+        "status": tool_plan.status if independent else "unknown" if unverified else "model_required",
+        "reason": reason,
+        "binding": binding, "readiness_binding": fingerprint,
+        "calculator": {
+            **calculator_record, "clarification": tool_plan.clarification,
+            "requirements": schema["operations"].get(calculator.operation, {}),
+            "schema_version": schema["schema_version"],
+        } if independent or unverified else None,
+        "boundary": "Readiness plans supplied-input arithmetic or clarification; it is not an executed result, evidence of field sufficiency, or permission for a consequential recommendation.",
+    }
+
+
 def _run_turn_impl(
     *,
     store: TraceStore,
@@ -386,67 +545,34 @@ def _run_turn_impl(
         profiler.add_skipped("model.queue_wait", reason="actual_worker_wait_recorded_in_generation_stats")
     generator: Any | None = None
     use_mock_generator = mode == "mock" or model_to_use == "mock"
-    model_config = load_model_config(settings.model_config_path)
-    conversation_config = model_config.get("context_management")
-    try:
-        max_history_turns = (
-            int(conversation_config.get("max_history_turns", 8))
-            if isinstance(conversation_config, dict)
-            else 8
-        )
-    except (TypeError, ValueError):
-        max_history_turns = 8
-    if max_history_turns <= 0:
-        max_history_turns = 8
-    history_cutoff = (
-        store.resolve_replay_history_cutoff(session_id, parent_turn_id)
-        if parent_turn_id is not None else None
+    prepared = prepare_turn_question(
+        store=store, settings=settings, session_id=session_id, message=message,
+        mode=mode, session_context=session_context, parent_turn_id=parent_turn_id,
+        typed_tools_enabled=typed_tools_enabled,
     )
-    recent_turns = store.get_recent_session_turns(
-        session_id, limit=max(1, min(max_history_turns, 32)),
-        before_turn_id=history_cutoff, exclude_replays=True,
-    )
-    total_history_turns = store.count_session_turns(
-        session_id, before_turn_id=history_cutoff, exclude_replays=True,
-    )
+    model_config = prepared["model_config"]
+    conversation_config = prepared["conversation_config"]
+    history_cutoff = prepared["history_cutoff"]
+    recent_turns = prepared["recent_turns"]
+    total_history_turns = prepared["total_history_turns"]
+    conversation_resolution = prepared["resolution"]
     original_message = message
-    reference_history_verified = (
-        not isinstance(session_context, dict)
-        or session_context.get("conversation_reference_history_verified") is not False
-    )
-    resolution_turns = recent_turns
-    if isinstance(session_context, dict) and "conversation_reference_turn_ids" in session_context:
-        allowed = session_context["conversation_reference_turn_ids"]
-        if not isinstance(allowed, list) or any(not isinstance(item, str) for item in allowed):
-            reference_history_verified = False
-        elif allowed:
-            suffix = recent_turns[-len(allowed):]
-            if [str(item.get("turn_id")) for item in suffix] != allowed:
-                reference_history_verified = False
-            else:
-                resolution_turns = suffix
-        else:
-            resolution_turns = []
-    if not typed_tools_enabled or mode in {"baseline", "mock"}:
-        conversation_resolution = ConversationResolution(message, "typed_resolution_disabled")
-    elif not reference_history_verified:
-        conversation_resolution = ConversationResolution(message, "conversation_reference_gap")
-    else:
-        conversation_resolution = resolve_numeric_follow_up(message, resolution_turns)
     message = conversation_resolution.effective_question
-    if queue_circuit and queue_circuit.get("tripped"):
-        if profiler:
-            profiler.add_skipped("model.load_or_reuse", reason="model_queue_circuit_breaker")
-    else:
+    def ensure_generator() -> None:
+        nonlocal generator
+        if generator is not None:
+            return
         load_span = profiler.span("model.load_or_reuse", metadata={"model_id": model_to_use, "mode": mode}) if profiler else nullcontext()
         with load_span:
             generator = generation_backend or (
-                MockGenerator()
-                if use_mock_generator
+                MockGenerator() if use_mock_generator
                 else _build_mlx_generator(model_to_use, model_config, settings.model_config_path)
             )
             if hasattr(generator, "max_tokens"):
                 generator.max_tokens = max_tokens
+
+    if queue_circuit and queue_circuit.get("tripped") and profiler:
+        profiler.add_skipped("model.load_or_reuse", reason="model_queue_circuit_breaker")
 
     route_span = profiler.span("agent.route.classify", input_size=len(message)) if profiler else nullcontext()
     with route_span:
@@ -570,6 +696,7 @@ def _run_turn_impl(
             answer = ANALYSIS_UNAVAILABLE_ANSWER
             generation_metadata = _generation_unavailable_metadata(queue_circuit, model_to_use)
         else:
+            ensure_generator()
             over_limit = compile_prompt(will_generate=True)
             if over_limit:
                 answer = OVER_LIMIT_ANSWER
@@ -775,6 +902,7 @@ def _run_turn_impl(
             answer = ANALYSIS_UNAVAILABLE_ANSWER
             generation_metadata = _generation_unavailable_metadata(queue_circuit, model_to_use)
         else:
+            ensure_generator()
             intervention = (
                 decide_evidence_intervention(
                     context,

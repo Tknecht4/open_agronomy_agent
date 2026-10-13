@@ -68,7 +68,8 @@
     "tests/test_conversation_resolution_http.py",
     "tests/test_execution_terminal_receipts.py",
     "tests/test_retrieval_component_arms.py",
-    "tests/test_checkpoint_truthfulness.py"
+    "tests/test_checkpoint_truthfulness.py",
+    "tests/test_turn_readiness.py"
   ],
   "seed": 42,
   "max_tokens": 640,
