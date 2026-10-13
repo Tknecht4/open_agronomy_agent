@@ -1198,7 +1198,11 @@ def _run_turn_impl(
         trace_store_payload["metadata"]["answer_verification"] = verification_metadata
     if draft_generation_stats is not None:
         trace_store_payload["metadata"]["generation_stats"] = draft_generation_stats
-    identity = draft_model_identity if draft_completed else getattr(generator, "model_identity", None)
+    # Preserve an already supplied backend's configured identity on a bypass,
+    # without constructing a generator or reusing its response identity/stats.
+    identity = draft_model_identity if draft_completed else getattr(
+        generator if generator is not None else generation_backend, "model_identity", None,
+    )
     if isinstance(identity, dict) and identity:
         trace_store_payload["metadata"]["model_identity"] = bind_response_identity(
             deepcopy(identity), model_to_use if draft_completed else None,
