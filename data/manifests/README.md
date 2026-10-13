@@ -21,6 +21,15 @@
 
 ## Required source fields
 
+`physical_method_chapter_sources_v1.json` contains metadata and hashes for the
+two reviewed K-State chapters. Capture hashes identify selected rendered DOM,
+not whole pages, HTTP responses or articles. Private raw fragments and selected
+method text are excluded from distribution. The companion
+`physical_method_chapter_support_v1.json` binds exact paraphrases to the source
+review and span sets; the candidate policy is separate from the active policy.
+CC BY attribution and change notices remain with the paraphrases. Figures,
+tables, exercises, field targets and evaluation content are outside admission.
+
 Use the schema appropriate to the manifest, but preserve at least stable source/item ID, publisher, canonical URL, retrieval date, jurisdiction, language, rights/licence status, byte/content hash, derivation lineage, currency/review date, runtime/evidence role, limitations, and status. Unknown values must be represented as unknown/pending—not omitted as if satisfied.
 
 ## Invariants

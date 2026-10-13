@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Iterable
 
 
 METHOD_SCHEMA = "open_agronomy_agent.method_scope.v1"
@@ -55,6 +55,29 @@ METHODS: dict[str, tuple[str, str]] = {
     ),
 }
 
+# Freeze legacy admission before adding the separately reviewed physical scope.
+LEGACY_METHOD_IDS = frozenset(METHODS)
+PHYSICAL_METHOD_SCHEMA = "open_agronomy_agent.physical_method_scope.v1"
+PHYSICAL_CAPTURE_KIND = "selected_browser_DOM_fragments_not_HTTP_response"
+PHYSICAL_REVIEW_SHA256 = "cf8918be141f9ff32e0d9eef286252dbce2847abb6beb8a2f981b33ae7b728c3"
+PHYSICAL_METHOD_SOURCE_IDS = {
+    "soil_measurement_basis": (
+        "ks-v2-1-soil-density-dom-20261012",
+        "ks-v2-1-soil-and-water-relationships-dom-20261012",
+    ),
+    "layer_water_accounting": ("ks-v2-1-soil-and-water-relationships-dom-20261012",),
+}
+METHODS.update({
+    "soil_measurement_basis": (
+        r"\b(?:bulk density|particle density|gravimetric|volumetric|soil porosity|container tare)\b",
+        "Explain dry mass, bulk versus solids volume, moisture basis and units; compute only outputs supported by supplied inputs, without a compaction diagnosis.",
+    ),
+    "layer_water_accounting": (
+        r"\b(?:soil water storage|layer water storage|stored water|water storage|water accounting)\b",
+        "Explain supplied moisture fraction and layer thickness as stored water; keep calibration, availability and irrigation decisions separate.",
+    ),
+})
+
 
 @dataclass(frozen=True)
 class MethodTask:
@@ -79,6 +102,52 @@ _CUES = {
     "cash_flow": re.compile(r"\b(?:cash[- ]flow|cash (?:plan|schedule|forecast|budget|gap|shortage|pinch|timing)|monthly cash|dated cash|schedule (?:receipts|payments|inflows|outflows)|(?:receipts|inflows) against (?:bills|payments|outflows))\b", re.I),
     "nutrient_plan_inputs": re.compile(r"\b(?:nutrient[- ]plan\w*|manure (?:nutrient )?plan\w*|manure analys\w*|nutrient advis(?:er|or)|soil and manure analys\w*)\b", re.I),
 }
+_CUES.update({
+    "soil_measurement_basis": re.compile(METHODS["soil_measurement_basis"][0], re.I),
+    "layer_water_accounting": re.compile(METHODS["layer_water_accounting"][0], re.I),
+})
+_SOIL_SUBJECT = re.compile(r"\b(?:soil|topsoil|subsoil|root[- ]zone|undisturbed core)\b", re.I)
+_OTHER_PHYSICAL_SUBJECT = re.compile(
+    r"\b(?:milk|dairy|grain|harvested|seed[- ]meter|seed[- ]hopper|seed[- ]bin|"
+    r"rainwater|tank|reservoir|fuel|chemical|concrete)\b", re.I,
+)
+_FARM_SUBJECT = re.compile(r"\b(?:farms?|fields?|cropland|paddocks?|plots?)\b", re.I)
+_PHYSICAL_REFERENCE = re.compile(r"\b(?:manual|guide|book|chapter|article|paper|handbook|textbook)\b", re.I)
+_SOIL_LAYER_SUBJECT = re.compile(r"\b(?:soil (?:layers?|cores?|samples?|profiles?)|topsoil|subsoil|root[- ]zone|undisturbed core)\b", re.I)
+_NON_SOIL_OBJECT = re.compile(
+    r"^\s*(?:(?:of|in|inside|within|for|from)\s+)?(?:(?:a|an|the|my|our)\s+)?"
+    r"(?:milk|glassware|(?:drinking[- ]water\s+)?cistern|rainwater|tank|reservoir|"
+    r"fuel|chemical|concrete|harvested|seed[- ]meter|grain(?!\s+crops\b))\b", re.I,
+)
+
+
+def _physical_soil_subject(clause: str, question: str, cue: re.Match) -> bool:
+    """Bind the requested material, rather than a mentioned source title."""
+    before, after = clause[:cue.start()], clause[cue.end():]
+    if _NON_SOIL_OBJECT.search(after):
+        return False
+    if _SOIL_SUBJECT.search(cue.group(0)):
+        return True
+    # Nearby material qualifiers bind this operation. A soil manual before
+    # the request, or a source title after it, does not establish the material.
+    prefix = " ".join(before.split()[-5:])
+    suffix = " ".join(after.split()[:5])
+    if (_SOIL_SUBJECT.search(prefix) and not _PHYSICAL_REFERENCE.search(prefix)
+        or re.match(r"\s*(?:(?:of|in|for|from)\s+)?(?:(?:the|my|our)\s+)?(?:soil|topsoil|subsoil)\b", after, re.I)
+        and not _PHYSICAL_REFERENCE.search(suffix)):
+        return True
+    if _OTHER_PHYSICAL_SUBJECT.search(clause):
+        return False
+    if (_SOIL_LAYER_SUBJECT.search(question)
+        and not _PHYSICAL_REFERENCE.search(question)
+        and not _OTHER_PHYSICAL_SUBJECT.search(question)):
+        return True
+    return bool(_FARM_SUBJECT.search(question) and not _OTHER_PHYSICAL_SUBJECT.search(question) and (
+        (re.search(r"\bbulk density\b", clause, re.I) and re.search(r"\bparticle density\b", clause, re.I))
+        or (re.search(r"\bgravimetric\b", clause, re.I)
+            and re.search(r"\bvolumetric\b", clause, re.I)
+            and re.search(r"\bmoisture\b", clause, re.I))
+    ))
 _REQUEST = re.compile(
     r"\b(?:how|what|which|why|whether|can|could|should|would|explain|describe|show|compare|calculate|compute|convert|lay out|make|build|list|identify|organize|schedule|assess|draft|prepare|help|tell|use|gather)\b",
     re.I,
@@ -136,7 +205,7 @@ def _operation(clause: str) -> str:
     return match.group(0).lower() if match else "unspecified"
 
 
-def method_task_frame(question: str) -> tuple[MethodTask, ...]:
+def method_task_frame(question: str, *, permitted_methods: Iterable[str] = LEGACY_METHOD_IDS) -> tuple[MethodTask, ...]:
     """Parse bounded, explicit method tasks from the user's question alone.
 
     Unrecognized paraphrases stay unresolved by omission; this frame does not
@@ -144,6 +213,9 @@ def method_task_frame(question: str) -> tuple[MethodTask, ...]:
     as background unless the method is also named outside the quotation.
     """
 
+    permitted = frozenset(permitted_methods)
+    if not permitted <= set(METHODS):
+        raise ValueError("unknown permitted method")
     source = str(question or "")
     quoted = list(_QUOTED.finditer(source))
     masked = _QUOTED.sub(lambda m: " " * (m.end() - m.start()), source)
@@ -151,6 +223,8 @@ def method_task_frame(question: str) -> tuple[MethodTask, ...]:
     tasks: list[MethodTask] = []
     for quote in quoted:
         for method_id, cue in _CUES.items():
+            if method_id not in permitted:
+                continue
             for match in cue.finditer(quote.group(0)):
                 span = (quote.start() + match.start(), quote.start() + match.end())
                 tasks.append(MethodTask(method_id, "unspecified", "background", span, source[span[0]:span[1]]))
@@ -172,7 +246,11 @@ def method_task_frame(question: str) -> tuple[MethodTask, ...]:
                       bool(_METADATA_REQUEST.search(clause)) or
                       (bool(_BACKGROUND.search(clause)) and not has_request))
         for method_id, cue in _CUES.items():
+            if method_id not in permitted:
+                continue
             for match in cue.finditer(clause):
+                if method_id in PHYSICAL_METHOD_SOURCE_IDS and not _physical_soil_subject(clause, masked, match):
+                    continue
                 directive = _cue_directive(clause, match.start())
                 disposition = (
                     "negated" if directive == "negative" else
@@ -199,6 +277,8 @@ def method_task_frame(question: str) -> tuple[MethodTask, ...]:
                 ("cash_flow", r"\b(?:schedule|lay out|plan)\b.*\b(?:receipts?|inflows?|bills?|payments?)\b.*\b(?:bills?|payments?|cash gap|loan)\b"),
             )
             for method_id, pattern in composed:
+                if method_id not in permitted:
+                    continue
                 match = re.search(pattern, clause, re.I)
                 if match and not any(task.method_id == method_id and start <= task.span[0] < end for task in tasks):
                     tasks.append(MethodTask(method_id, operation, "requested",
@@ -211,6 +291,8 @@ def method_task_frame(question: str) -> tuple[MethodTask, ...]:
             explicit_requested = any(task.disposition == "requested" and start <= task.span[0] < end
                                      for task in tasks)
             for method_id, reference in _FOLLOW_ON.items():
+                if method_id not in permitted:
+                    continue
                 if explicit_requested:
                     break
                 if not reference.search(clause):
@@ -235,10 +317,10 @@ def method_task_frame(question: str) -> tuple[MethodTask, ...]:
     return tuple(sorted(tasks, key=lambda task: task.span))
 
 
-def requested_methods(question: str) -> tuple[str, ...]:
+def requested_methods(question: str, *, permitted_methods: Iterable[str] = LEGACY_METHOD_IDS) -> tuple[str, ...]:
     """Project only requested tasks for both obligations and method-card fit."""
 
-    return tuple(dict.fromkeys(task.method_id for task in method_task_frame(question)
+    return tuple(dict.fromkeys(task.method_id for task in method_task_frame(question, permitted_methods=permitted_methods)
                                if task.disposition == "requested"))
 
 
@@ -254,7 +336,7 @@ def reviewed_method_ids(doc: Any) -> tuple[str, ...]:
     if str(getattr(doc, "authority_tier", "")) != "internal_synthesis":
         return ()
     scope = getattr(doc, "method_scope", None)
-    if not isinstance(scope, dict) or scope.get("schema_version") != METHOD_SCHEMA:
+    if not isinstance(scope, dict) or scope.get("schema_version") not in {METHOD_SCHEMA, PHYSICAL_METHOD_SCHEMA}:
         return ()
     if scope.get("review_status") != "source_supported_method_scope_reviewed":
         return ()
@@ -262,7 +344,9 @@ def reviewed_method_ids(doc: Any) -> tuple[str, ...]:
     if not isinstance(support_hash, str) or re.fullmatch(r"[0-9a-f]{64}", support_hash) is None:
         return ()
     methods = scope.get("method_ids")
-    if not isinstance(methods, list) or not methods or any(method not in METHODS for method in methods):
+    physical = scope["schema_version"] == PHYSICAL_METHOD_SCHEMA
+    permitted = PHYSICAL_METHOD_SOURCE_IDS if physical else LEGACY_METHOD_IDS
+    if not isinstance(methods, list) or not methods or any(method not in permitted for method in methods):
         return ()
     countries = scope.get("applicability_countries")
     if countries != ["Canada", "United States"]:
@@ -270,7 +354,15 @@ def reviewed_method_ids(doc: Any) -> tuple[str, ...]:
     if set(getattr(doc, "jurisdictions", ()) or ()) != set(countries):
         return ()
     support = getattr(doc, "supporting_source_ids", ()) or ()
-    if len(set(support)) < 2:
+    if physical:
+        if (len(methods) != 1
+            or tuple(support) != PHYSICAL_METHOD_SOURCE_IDS[methods[0]]
+            or scope.get("source_review_sha256") != PHYSICAL_REVIEW_SHA256
+            or scope.get("capture_kind") != PHYSICAL_CAPTURE_KIND
+            or scope.get("basis") != "reviewed_physical_identity"
+            or tuple(getattr(doc, "source_jurisdictions", ()) or ()) != ("United States",) * len(support)):
+            return ()
+    elif len(set(support)) < 2:
         return ()
     if not all(isinstance(value, str) and value for value in support):
         return ()
@@ -291,6 +383,6 @@ def method_fit_reason(doc: Any, question: str, country: str | None) -> str | Non
 
     if _unrecognized_operation_site(question):
         return "method_target_scope_unresolved"
-    if not set(method_ids).intersection(requested_methods(question)):
+    if not set(method_ids).intersection(requested_methods(question, permitted_methods=method_ids)):
         return "method_mismatch"
     return "method_context_match"
