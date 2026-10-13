@@ -451,7 +451,7 @@ def _parse_tank_coverage(text: str, lower: str):  # noqa: ANN202
                         rf"{number}\s*L(?: of)?\s+unusable(?: tank)? volume")
         for match in re.finditer(pattern, text, re.IGNORECASE)
     ]
-    ignoring_unusable = "ignoring unusable tank volume" in lower
+    ignoring_unusable = bool(re.search(r"\bignoring unusable(?: tank)? volume\b", lower))
     if unusable_values:
         numeric_unusable = {Decimal(str(value)) for value in unusable_values}
         if len(numeric_unusable) != 1 or (ignoring_unusable and Decimal(str(unusable_values[0])) != 0):

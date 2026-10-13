@@ -242,6 +242,50 @@ def test_valid_signed_positive_and_unusable_operands_persist_the_same_planned_ar
     assert saved["trace"]["metadata"]["generation_path"] == "deterministic_tool_result"
 
 
+@pytest.mark.parametrize("tank_word", ["", "tank "])
+@pytest.mark.parametrize("application", ["", " applying 100 L/ha"])
+def test_ignoring_unusable_volume_keeps_only_required_missing_inputs(runtime, monkeypatch, tank_word, application):
+    client, store = runtime
+    monkeypatch.setattr(chat_service, "_build_mlx_generator", no_generator)
+    question = f"Ignoring unusable {tank_word}volume, how much area will a 1000 L sprayer tank cover{application}?"
+    plan = plan_tools(question)
+    missing = [] if application else ["application_volume_l_per_ha"]
+    assert plan.invocations[0].inputs["unusable_volume_l"] == 0
+    assert list(plan.invocations[0].missing_inputs) == missing
+    sid = session(client)
+    payload = turn(question)
+    view = preview(client, payload, sid)
+    assert view["requires_model"] is False
+    assert view["status"] == ("ready" if application else "clarification_required")
+    assert view["calculator"]["missing_inputs"] == missing
+    result = client.post(f"/api/sessions/{sid}/turns", headers=OWNER,
+                         json={**payload, "readiness_binding": view["readiness_binding"]})
+    assert result.status_code == 200, result.text
+    saved = store.get_turn(result.json()["turn_id"])
+    path = "deterministic_tool_result" if application else "deterministic_tool_clarification"
+    assert saved["trace"]["metadata"]["generation_path"] == path
+    assert saved["answer"].startswith("10 ha") if application else "application_volume_l_per_ha" in saved["answer"]
+
+
+@pytest.mark.parametrize("tank_word", ["", "tank "])
+def test_ignoring_unusable_volume_cannot_hide_a_conflicting_supplied_value(runtime, monkeypatch, tank_word):
+    client, store = runtime
+    monkeypatch.setattr(chat_service, "_build_mlx_generator", no_generator)
+    question = ("How much area will a 1000 L sprayer tank cover applying 100 L/ha "
+                f"with 100 L unusable volume, ignoring unusable {tank_word}volume?")
+    sid = session(client)
+    payload = turn(question)
+    view = preview(client, payload, sid)
+    assert view["requires_model"] is False and view["status"] == "clarification_required"
+    assert view["calculator"]["missing_inputs"] == ["unusable_volume_l"]
+    result = client.post(f"/api/sessions/{sid}/turns", headers=OWNER,
+                         json={**payload, "readiness_binding": view["readiness_binding"]})
+    assert result.status_code == 200, result.text
+    saved = store.get_turn(result.json()["turn_id"])
+    assert saved["trace"]["metadata"]["generation_path"] == "deterministic_tool_clarification"
+    assert "unusable_volume_l" in saved["answer"]
+
+
 @pytest.mark.parametrize("suffix", [" with unusable tank volume unknown", " with 100 L unusable tank volume and 200 L unusable tank volume",
                                   " with 100 L unusable tank volume, ignoring unusable tank volume"])
 def test_ambiguous_or_conflicting_unusable_volume_uses_the_canonical_clarification(runtime, suffix):
