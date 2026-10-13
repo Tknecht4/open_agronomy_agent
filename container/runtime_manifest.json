@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-10-13T17:01:03+00:00",
+  "generated_at": "2026-10-13T18:08:17+00:00",
   "status": "pass",
-  "contract_sha256": "d4c39be0a5bb3047ae564e96306dd4302ea510d21ed8209ae30a13a5edd0e3f1",
+  "contract_sha256": "e897712c7460fbd61c43623758e701d80115d2b9e3a9f216412199865af3b29b",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -23,8 +23,8 @@
   },
   "rag_config": "configs/rag.yaml",
   "corpus_policy_manifest": "data/manifests/runtime_corpus_policy.json",
-  "configured_corpus_count": 5,
-  "included_corpus_count": 5,
+  "configured_corpus_count": 6,
+  "included_corpus_count": 6,
   "on_demand_release_count": 1,
   "excluded_corpus_count": 0,
   "excluded_corpora": [],
@@ -58,6 +58,12 @@
       "role": "runtime_knowledge",
       "bytes": 2725686,
       "sha256": "7d1a9a56c868e8aae544b210925a5e40c0bd98c3e453181cc5aa2685b3584645"
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/ask_science/v1/shards/foundations-0001.jsonl",
+      "role": "runtime_knowledge",
+      "bytes": 8298,
+      "sha256": "b0e205b3491a5d79a1db5bebc26fec6b80bdc89cac0189c53f5690399fba99d2"
     },
     {
       "path": "data/seed/agronomy_knowledge_graph.json",
@@ -402,7 +408,7 @@
       "sha256": "715d556f867415445d0b83e6ddea6bbe3b3f3e61587aae96dd504f66d90d5984"
     }
   ],
-  "runtime_knowledge_bytes": 872423068,
+  "runtime_knowledge_bytes": 872431366,
   "runtime_policies": [],
   "runtime_assets": [
     {
@@ -426,20 +432,20 @@
     {
       "path": "scripts",
       "file_count": 147,
-      "bytes": 1932827,
-      "sha256": "d14c8e652f4e651df31ce019291992a63b1d6c2210963993da23b700a91ae84c"
+      "bytes": 1937051,
+      "sha256": "3d2a6d1516231436e12202213fc949615526cb7c8193f7340179234e9940ade3"
     },
     {
       "path": "configs",
-      "file_count": 91,
-      "bytes": 296062,
-      "sha256": "a3f7fb48f071877b9a020abc2ce359505df129e3239a7fb16c5bd14e4d367464"
+      "file_count": 92,
+      "bytes": 299725,
+      "sha256": "f48e1a85bd5f8af4a813bd0170d325fe7c9a8d0e93140a2ebca627822f5b3ad8"
     },
     {
       "path": "data/manifests",
-      "file_count": 36,
-      "bytes": 19612278,
-      "sha256": "36e613e319232a4a8aa4458bd43ffb8ef6a9f3a42ed6cdd4bd52ba5e53f0c94f"
+      "file_count": 40,
+      "bytes": 19673826,
+      "sha256": "09f87f6d54701c1c09a1ac324378751d7cf6d0ccdcd4b99419538dfa804f5cb4"
     },
     {
       "path": "data/eval",
@@ -456,8 +462,8 @@
     {
       "path": "docs/public",
       "file_count": 98,
-      "bytes": 9323088,
-      "sha256": "37f0a3dae8c38bb272af34b6de13326fdcfab11e324ac712db5314cb1c999e67"
+      "bytes": 9323980,
+      "sha256": "e0ad08d031860a29e25c6fb60690a4874ef4aa5ccb0fa7532a5045b7485ac9f5"
     }
   ],
   "geo_cache_seed": {
@@ -480,8 +486,8 @@
     {
       "path": "configs/rag.yaml",
       "role": "runtime_control",
-      "bytes": 2575,
-      "sha256": "31bf7dac5f6607fd8f7a981324167d1041e90ccf543afaa9a668df54e68caf28"
+      "bytes": 2759,
+      "sha256": "9b16e2659ecf95774a2f05ed85a425930d00a16d6a5aad3b32b29d3627fcfe53"
     },
     {
       "path": "configs/model.yaml",
@@ -678,8 +684,8 @@
     {
       "path": "data/manifests/runtime_corpus_policy.json",
       "role": "runtime_control",
-      "bytes": 44170,
-      "sha256": "a322ee54efaf01496c48e346df472f273c348a33f31431022a56b05892d8dcfb"
+      "bytes": 45296,
+      "sha256": "4ec7f8a9ef941c759167ee471e35283fd969a9a48806fd1986672a31515c904a"
     }
   ]
 }

@@ -1,0 +1,47 @@
+{
+  "schema_version": "open_agronomy_agent.context_admission.v1",
+  "decision_state": "approved_context_only",
+  "activation_applied": true,
+  "candidate_store": "data/derived/rag/offline_agronomy/ask_science/v1/store_manifest.json",
+  "candidate_store_file_sha256": "0fa9e37904cf7ef3420d229f477914c349b9a54307cfa8f0cfd10f12942cfc4f",
+  "candidate_store_content_sha256": "aabbf786f4d8b52d86dacd699e90477cca6078d9a8f14eb09871f0651624801e",
+  "shard": "data/derived/rag/offline_agronomy/ask_science/v1/shards/foundations-0001.jsonl",
+  "shard_sha256": "b0e205b3491a5d79a1db5bebc26fec6b80bdc89cac0189c53f5690399fba99d2",
+  "source_registry_sha256": "602aede4dbeddd7bf81403097a78e02a74c051c273b8ee4af9d4ec08f95e9804",
+  "source_summary_review_sha256": "00501f38a4b9420c05c0f18849d1525dcc8b1543cf1c22065d82766b06d2ece9",
+  "historical_candidate_provenance": {
+    "registry_activation": "none",
+    "seed_admission_status": "non_active_candidate",
+    "immutable_release_preserved": true
+  },
+  "sources": [
+    {
+      "source_id": "W2948372212",
+      "summary_text_sha256": "f68c43c5f4aba9ddeb357bb8ca1218994c1207548acccb3372bfc28b0a85ddf6",
+      "jurisdiction": [
+        "Ontario"
+      ],
+      "applicability_boundary": "Ontario-scoped candidate context only. The study does not authorize a product or a preventive application in another crop. Obtain current local label, scouting, cultivar susceptibility and crop-stage evidence; keep historical prices dated."
+    },
+    {
+      "source_id": "W3184228112",
+      "summary_text_sha256": "6292ab22787d35c658a55b1da4812690e1928cb4ff62355b64baf25c7c272d44",
+      "jurisdiction": [
+        "Canada",
+        "United States",
+        "Mexico"
+      ],
+      "applicability_boundary": "A grid cell is not a field rain gauge or a seasonal forecast. Retain dataset version, dates, calendar convention, variable and units; assess local error before a water-balance decision."
+    }
+  ],
+  "scope": "Two qualitative summaries only: Ontario hybrid-corn historical economics; historical 2021 Daymet V4 primary-variable estimation/validation. No current authority, label, rate, forecast or field-measurement claim.",
+  "raw_text_or_evaluation_admission": false,
+  "trial_independence": "unresolved",
+  "model_pretraining_exposure": "unknown",
+  "approval_boundary": "Project admission approved for these two context-only summaries. Controls are applied on the isolated integration branch. Merge and Pages publication require separate applicable user approval. Current loaders enforce corpus governance and hashes; this decision is checked by source-admission tests and independent review.",
+  "effective_eligibility": "context_only",
+  "decision_recorded_at_utc": "2026-10-12T06:28:25.821355+00:00",
+  "decision_authority": "project_integration_coordinator",
+  "reviewed_candidate_head": "46aa3f57b7ccada3612bb1a36283e4baf5b86026",
+  "external_publication_authorized": false
+}

@@ -25,6 +25,8 @@ from build_offline_agronomy_composite_profile import (  # noqa: E402
     build_profile,
 )
 
+from build_production_foundations_supplement import SUPPORTED_STORES  # noqa: E402
+
 SUPPLEMENT_STORE = ROOT / "data/derived/rag/offline_agronomy/production_foundations/v1/store_manifest.json"
 
 
@@ -40,7 +42,7 @@ def compose(*, output_config: Path, output_policy: Path, supplement_store: Path 
     manifest = json.loads(supplement_store.read_text(encoding="utf-8"))
     shards = manifest.get("shards") or []
     store_id = manifest.get("store_id")
-    if store_id not in {"production-foundations-v1", "production-foundations-method-v2", "physical-method-context-v1"} or len(shards) != 1:
+    if store_id not in SUPPORTED_STORES or len(shards) != 1:
         raise ValueError("unexpected foundations release contract")
     shard = shards[0]
     shard_path = supplement_store.parent / str(shard["path"])
@@ -62,7 +64,7 @@ def compose(*, output_config: Path, output_policy: Path, supplement_store: Path 
     policy["corpora"].append({
         "evidence_tier": "internal_synthesis",
         "path": relative,
-        "reason": "Source-linked, project-authored production and farm-business foundations; context only; external source snapshots are identified by hash but not redistributed.",
+        "reason": ("Source-linked, project-authored Ask Science research context; non-active candidate; no raw papers, data, scenarios or current authority." if store_id == "ask-science-context-v1" else "Source-linked, project-authored production and farm-business foundations; context only; external source snapshots are identified by hash but not redistributed."),
         "rights_status": "project_authored",
         "runtime_eligibility": "context_only",
         "sha256": str(shard["sha256"]),

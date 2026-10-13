@@ -1,0 +1,190 @@
+{
+  "schema_version": "open_agronomy_agent.production_foundations_source_registry.v1",
+  "status": "source_owner_and_independent_reviewed_non_active_candidate",
+  "activation": "none",
+  "delivery_manifest_sha256": "a3841d94eb4c4ff43aa64848b8a6fcb82a72c8095ea6b829df3c906f9c5c5223",
+  "knowledge_cards_sha256": "3ad6663d11aa49f4f1bc4e27e7990abd3f556f7a0a83e9c7c7ec2cc2d9600cc8",
+  "source_review_sha256": "810b6691f27a3b530f4624da7974ef5205903a49173a04febbcd52f2e368ebd0",
+  "reviewed_at_utc": "2026-10-12",
+  "distribution": "Project-authored paraphrases and attribution only; no article text, figures, datasets or evaluation cases.",
+  "batch_coverage": {
+    "knowledge_cards": 20,
+    "candidate_context_rows": 2,
+    "deferred_knowledge_source_ids": [
+      "W7161835511",
+      "W2105563290",
+      "W2997139125",
+      "W2973635979",
+      "W3213349365",
+      "W4292608202",
+      "W2810473995",
+      "W3138135861",
+      "W4403399125",
+      "W4392516617",
+      "NASA-20190028663",
+      "W2108484081",
+      "W2170062386",
+      "W2560136348",
+      "W4399836817",
+      "W2008084148",
+      "W4387497521",
+      "W4409420808"
+    ],
+    "exposed_scenario_candidates": 30,
+    "scenario_source_families": 15,
+    "scenario_admission": "none; development-only; no gold, holdout, training or independence claim",
+    "held_quality_source_ids": [
+      "W4381251789"
+    ],
+    "held_full_text_source_ids": [
+      "W4224987228",
+      "W4409481664"
+    ],
+    "underlying_trial_overlap": "not_fully_reconciled",
+    "pretraining_exposure": "unknown"
+  },
+  "sources": [
+    {
+      "source_id": "W2948372212",
+      "title": "Meta-analysis of yield response of foliar fungicide-treated hybrid corn in the United States and Ontario, Canada",
+      "doi": "10.1371/journal.pone.0217510",
+      "authors": [
+        "Wise, Kiersten A",
+        "Smith, Damon",
+        "Freije, Anna",
+        "Mueller, Daren S",
+        "Kandel, Yuba",
+        "Allen, Tom",
+        "Bradley, Carl A",
+        "Byamukama, Emmanuel",
+        "Chilvers, Martin",
+        "Faske, Travis",
+        "Friskop, Andrew",
+        "Hollier, Clayton",
+        "Jackson-Ziems, Tamra A",
+        "Kelly, Heather",
+        "Kemerait, Bob",
+        "Price, Paul",
+        "Robertson, Alison",
+        "Tenuta, Albert"
+      ],
+      "publication_year": 2019,
+      "publisher": "PLOS ONE",
+      "jurisdiction": "United States; Ontario, Canada",
+      "url": "https://doi.org/10.1371/journal.pone.0217510",
+      "snapshot_url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC6550426/fullTextXML",
+      "retrieved_at_utc": "2026-10-12T03:55:30.153315+00:00",
+      "snapshot_sha256": "f3eb7416bb401d072b12c2ae893f0402074bde56dd92a5b87c46188e40a7b8ac",
+      "snapshot_bytes": 134918,
+      "text_sha256": "5e10d899b194c733f5668ade602d4929610b1179a64b4ab6078c31984fc0a428",
+      "locators": [
+        {
+          "extracted_text_lines": [
+            38,
+            46
+          ],
+          "span_sha256": "2b2840beb4db1a07d5f1d91bddefb686acb82cee233f3a99fbfc2e53f3b3f8b8"
+        },
+        {
+          "extracted_text_lines": [
+            71,
+            73
+          ],
+          "span_sha256": "083f336d990b47391a4d5f967dcb44d48cf96232152851420e529bba82adbf83"
+        }
+      ],
+      "rights": "CC-BY-4.0_article_only",
+      "license_evidence": {
+        "basis": "native_article_permissions",
+        "snapshot_sha256": "f3eb7416bb401d072b12c2ae893f0402074bde56dd92a5b87c46188e40a7b8ac",
+        "xml_locator": "/article/front/article-meta/permissions/license",
+        "license_url": "https://creativecommons.org/licenses/by/4.0/",
+        "third_party_boundary": "No images, third-party material or separate datasets reused."
+      },
+      "rights_url": "https://creativecommons.org/licenses/by/4.0/",
+      "attribution": "Wise, Kiersten A; Smith, Damon; Freije, Anna; Mueller, Daren S; Kandel, Yuba; Allen, Tom; Bradley, Carl A; Byamukama, Emmanuel; Chilvers, Martin; Faske, Travis; Friskop, Andrew; Hollier, Clayton; Jackson-Ziems, Tamra A; Kelly, Heather; Kemerait, Bob; Price, Paul; Robertson, Alison; Tenuta, Albert (2019). Meta-analysis of yield response of foliar fungicide-treated hybrid corn in the United States and Ontario, Canada. PLOS ONE. https://doi.org/10.1371/journal.pone.0217510",
+      "changes": "Short project-authored paraphrase; article prose, tables, figures, numerical results and datasets omitted.",
+      "temporal_scope": "US and Ontario hybrid corn experiments; price/cost scenarios are historical, and disease severity in untreated controls is a study moderator, not a prospective universal action threshold.",
+      "reuse": "project_authored_paraphrase_only",
+      "independent_review": "approved_narrow_source_summary_non_active_candidate",
+      "underlying_trial_overlap": "not_fully_reconciled",
+      "pretraining_exposure": "unknown",
+      "candidate_applicability": "Ontario context only; US study provenance retained, but US candidate applicability deferred because mixed country/subdivision scope is not represented by this slice."
+    },
+    {
+      "source_id": "W3184228112",
+      "title": "Gridded daily weather data for North America with comprehensive uncertainty quantification",
+      "doi": "10.1038/s41597-021-00973-0",
+      "authors": [
+        "Thornton, Peter E",
+        "Shrestha, Rupesh",
+        "Thornton, Michele",
+        "Kao, Shih-Chieh",
+        "Wei, Yaxing",
+        "Wilson, Bruce E"
+      ],
+      "publication_year": 2021,
+      "publisher": "Scientific Data",
+      "jurisdiction": "North America",
+      "url": "https://doi.org/10.1038/s41597-021-00973-0",
+      "snapshot_url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC8302764/fullTextXML",
+      "retrieved_at_utc": "2026-10-12T04:03:45.976533+00:00",
+      "snapshot_sha256": "2bbcad423e23a9269e4008a1efd81fda7adb486ba1ebba3724f8b7fcdd309781",
+      "snapshot_bytes": 144526,
+      "text_sha256": "ae9a4f9c41e6bb2c0c5a3837218602c868e576bc62661b9beba81b4726d913a0",
+      "locators": [
+        {
+          "extracted_text_lines": [
+            25,
+            26
+          ],
+          "span_sha256": "c3ae504f641699930b54c041ec53fb6cc2dbe7193b1284ad3b379f33c19782dc"
+        },
+        {
+          "extracted_text_lines": [
+            47,
+            47
+          ],
+          "span_sha256": "e71ac86eacf849d9689b43ea7812335ffca744aaca4438424d610f815603aa9d"
+        },
+        {
+          "extracted_text_lines": [
+            90,
+            98
+          ],
+          "span_sha256": "a30200e6bf4396c0ae40f4c5eeae64138fa7de7a90c4d29897dc130576948e21"
+        },
+        {
+          "extracted_text_lines": [
+            128,
+            133
+          ],
+          "span_sha256": "0872bf72a83522b060de49be69fdb09dcd769a97cceb96a46f4175cd8d750ff9"
+        }
+      ],
+      "rights": "CC-BY-4.0_article_only",
+      "license_evidence": {
+        "basis": "native_article_permissions",
+        "snapshot_sha256": "2bbcad423e23a9269e4008a1efd81fda7adb486ba1ebba3724f8b7fcdd309781",
+        "xml_locator": "/article/front/article-meta/permissions/license",
+        "license_url": "https://creativecommons.org/licenses/by/4.0/",
+        "third_party_boundary": "No images, third-party material or separate datasets reused."
+      },
+      "rights_url": "https://creativecommons.org/licenses/by/4.0/",
+      "attribution": "Thornton, Peter E; Shrestha, Rupesh; Thornton, Michele; Kao, Shih-Chieh; Wei, Yaxing; Wilson, Bruce E (2021). Gridded daily weather data for North America with comprehensive uncertainty quantification. Scientific Data. https://doi.org/10.1038/s41597-021-00973-0",
+      "changes": "Short project-authored paraphrase; article prose, tables, figures, numerical results and datasets omitted.",
+      "temporal_scope": "Daymet V4 methods and the release described in 2021. Cross-validation errors vary by variable, station density, terrain and period; current dataset versions need separate verification.",
+      "reuse": "project_authored_paraphrase_only",
+      "independent_review": "approved_narrow_source_summary_non_active_candidate",
+      "underlying_trial_overlap": "not_fully_reconciled",
+      "pretraining_exposure": "unknown"
+    }
+  ],
+  "independent_review": {
+    "status": "approved_narrow_source_summaries_non_active_candidate",
+    "reviewer_thread_id": "01a12bc2-1c88-76be-9b91-96e4a2d85000",
+    "receipt_sha256": "00501f38a4b9420c05c0f18849d1525dcc8b1543cf1c22065d82766b06d2ece9",
+    "scope": "native source identity, article rights, author attribution, qualitative methods/results and applicability boundaries; no code approval, statistical reanalysis or active/evaluation admission",
+    "post_review_changes": "Readable author-name separators and review-state metadata only; source custody and summary text unchanged."
+  }
+}
