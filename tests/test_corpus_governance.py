@@ -37,7 +37,9 @@ def test_runtime_corpus_manifest_hashes_and_rows_are_valid() -> None:
         rag_config_path=ROOT / "configs/rag.yaml",
     )
     assert report["status"] == "pass", report["errors"]
-    assert report["configured_corpus_count"] == report["audited_corpus_count"] == 56
+    assert report["configured_corpus_count"] == report["audited_corpus_count"] == 57
+    assert report["direct_startup_corpus_count"] == 6
+    assert report["on_demand_corpus_count"] == 51
     validate_implementation_binding(
         report["implementation_binding"],
         expected_paths=CORPUS_AUDIT_IMPLEMENTATION_PATHS,

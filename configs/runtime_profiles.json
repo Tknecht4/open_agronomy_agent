@@ -9,12 +9,12 @@
   "active_rag_profiles": [
     {
       "path": "configs/rag.yaml",
-      "sha256": "31bf7dac5f6607fd8f7a981324167d1041e90ccf543afaa9a668df54e68caf28",
+      "sha256": "9b16e2659ecf95774a2f05ed85a425930d00a16d6a5aad3b32b29d3627fcfe53",
       "status": "active",
       "runtime_corpus_audit_required": true,
       "runtime_policy": {
         "path": "data/manifests/runtime_corpus_policy.json",
-        "sha256": "a322ee54efaf01496c48e346df472f273c348a33f31431022a56b05892d8dcfb"
+        "sha256": "4ec7f8a9ef941c759167ee471e35283fd969a9a48806fd1986672a31515c904a"
       },
       "knowledge_release": {
         "store_id": "offline-agronomy",

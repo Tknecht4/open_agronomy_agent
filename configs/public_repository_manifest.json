@@ -800,7 +800,18 @@
     "tests/fixtures/development_scoring_v1/numeric-oracles.jsonl",
     "tests/fixtures/development_scoring_v1/rubrics.jsonl",
     "tests/fixtures/development_scoring_v1/source-support.json",
-    "tests/fixtures/development_scoring_v1/verify-panel.py"
+    "tests/fixtures/development_scoring_v1/verify-panel.py",
+    "data/seed/ask_science_context_v1.jsonl",
+    "data/manifests/ask_science_sources_v1.json",
+    "configs/rag_ask_science_candidate.yaml",
+    "data/manifests/runtime_corpus_policy_ask_science_candidate.json",
+    "tests/test_ask_science_context_candidate.py",
+    "data/derived/rag/offline_agronomy/ask_science/v1/shards/foundations-0001.jsonl",
+    "data/derived/rag/offline_agronomy/ask_science/v1/quality_ledger.json",
+    "data/derived/rag/offline_agronomy/ask_science/v1/source_receipt.json",
+    "data/derived/rag/offline_agronomy/ask_science/v1/store_manifest.json",
+    "data/manifests/ask_science_context_admission_v1.json",
+    "data/manifests/ask_science_context_admission_v2.json"
   ],
   "trees": [
     "src",

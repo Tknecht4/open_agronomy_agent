@@ -213,6 +213,30 @@ seasons are dependent, and descriptive means do not establish treatment effects.
 
 ## Production foundations candidate
 
+The separate Ask Science candidate uses the same bounded builder with
+`--store-id ask-science-context-v1`,
+`--seed data/seed/ask_science_context_v1.jsonl`, and
+`--sources data/manifests/ask_science_sources_v1.json`, writing to a new output
+directory. Its checked-in two-row release is at
+`data/derived/rag/offline_agronomy/ask_science/v1/store_manifest.json`;
+`configs/rag_ask_science_candidate.yaml` is an explicit, nonselectable test
+profile. The corn economics card is scoped to Ontario; its US/Ontario study
+provenance and historical-price boundary remain explicit. US applicability is
+deferred because this slice does not represent mixed country/subdivision scope.
+Weather uncertainty retains the Daymet V4 release
+described in 2021. Article-level CC BY attribution and sealed source/text/span
+hashes are retained in the registry. Only project-authored context is included;
+raw papers, datasets, figures and evaluation scenarios stay outside retrieval.
+The registry records the remaining 18 knowledge cards as deferred and the
+quality/access holds separately. Its 30 exposed scenarios remain development
+candidates: direct DOI separation does not establish trial independence or a
+holdout. The versioned decision in
+`data/manifests/ask_science_context_admission_v2.json` admits only these two
+summaries as context in the default profile; the candidate registry, seed and
+test profile preserve their original provenance. Evaluation-suite admission
+still requires the evaluation owner's review. Deterministic retrieval tests
+establish neither model performance nor agronomic validity.
+
 `build_production_foundations_supplement.py` builds the nine-card, source-linked
 context release from `data/seed/production_foundations_v1.jsonl` and its
 external-source registry. The external snapshots are inspected and hash
