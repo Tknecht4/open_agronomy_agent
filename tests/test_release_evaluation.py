@@ -13,7 +13,166 @@ from agronomy_agent.release_evaluation import (
     normalize_case,
     worker_case,
     write_new_json,
+    bind_controller_inputs,
+    read_controller_inputs,
+    task_input_contract,
+    validate_task_exposure,
 )
+
+
+def _controller_packet(tmp_path):
+    from test_release_eval_model_metrics import packet
+    from agronomy_agent.release_eval_model_metrics import rubric_digest
+    plan, rows, rubrics, reviews, policy = packet()
+    for index, case in enumerate(plan["cases"]):
+        raw = {"case_id": case["case_id"], "scenario_family": "synthetic_arithmetic", "lane": "harness",
+               "question": 'Add the supplied toy counts.\nSupplied facts: {"a":2,"b":3}',
+               "field_context": {"a": 2, "b": 3}, "assertions": {}, "review_required": True}
+        case.update(raw, case_sha256=digest(raw), suite_id="qa")
+        rubric = rubrics[index]
+        rubric["case_sha256"] = case["case_sha256"]
+        rubric["criteria"][0]["description"] = "CONTROLLER_ONLY synthetic rubric"
+        rubric["rubric_sha256"] = rubric_digest(rubric)
+        for cell, row, review in zip(plan["matrix"][index * 2:index * 2 + 2], rows[index * 2:index * 2 + 2], reviews[index * 2:index * 2 + 2]):
+            cell.update(case_sha256=case["case_sha256"], backend="mock")
+            row.update(case_sha256=case["case_sha256"])
+            review.update(case_sha256=case["case_sha256"], rubric_sha256=rubric["rubric_sha256"])
+    plan["model"] = {"id": "fixture_model", "revision": "fixture_revision"}
+    rubric_path, policy_path = tmp_path / "rubrics.jsonl", tmp_path / "policy.json"
+    rubric_path.write_text("".join(json.dumps(r) + "\n" for r in rubrics))
+    policy_path.write_text(json.dumps(policy))
+    inputs = read_controller_inputs(rubrics_path=rubric_path, policy_path=policy_path)
+    plan = bind_controller_inputs(plan, inputs, "synthetic-explicit-cohort-v1")
+    for row in rows:
+        case = next(case for case in plan["cases"] if case["case_id"] == row["case_id"])
+        row.update(task_exposure=_task_exposure(case, row["arm_id"]),
+                   task_input_sha256=task_input_contract(case)["task_input_sha256"],
+                   comparison_cohort="synthetic-explicit-cohort-v1")
+    return plan, rows, rubrics, reviews, policy, inputs
+
+
+def _task_exposure(case, arm):
+    from agronomy_agent.release_eval_executor import compile_case_field_context
+    contract = task_input_contract(case)
+    compiled, aliases = compile_case_field_context(contract["field_context"])
+    requests = []
+    for question in contract["requests"]:
+        item = {"message": question, "field_context_delivered": compiled}
+        if arm in {"raw_model", "kernel_only"}:
+            item.update(field_context_delivered=None,
+                        prompt_messages=([{"role": "system", "content": "Synthetic kernel recipe"}] if arm == "kernel_only" else []) + [{"role": "user", "content": question}])
+        requests.append(item)
+    receipt = {"schema_version": "open_agronomy_agent.task_exposure.v1", "arm_id": arm,
+               "worker_case_sha256": digest(worker_case(case)), "requests": requests,
+               "compiled_field_context_sha256": digest(compiled), "field_alias_receipt": aliases}
+    receipt["receipt_sha256"] = digest(receipt)
+    return receipt
+
+
+def test_controller_freeze_raw_and_canonical_identity_and_gold_isolation(tmp_path):
+    plan, rows, rubrics, reviews, policy, inputs = _controller_packet(tmp_path)
+    assert plan["controller_inputs"]["files"]["policy"]["canonical_sha256"] == digest(policy)
+    assert plan["model_scoring_policy_sha256"] == digest(policy)
+    assert plan["controller_inputs"]["files"]["policy"]["sha256"] != digest(policy)
+    assert all("CONTROLLER_ONLY" not in json.dumps(worker_case(case)) for case in plan["cases"])
+    for row in rows:
+        case = next(case for case in plan["cases"] if case["case_id"] == row["case_id"])
+        assert validate_task_exposure(case, row["arm_id"], row["task_exposure"])["task_input_sha256"] == row["task_input_sha256"]
+
+
+@pytest.mark.parametrize("question,context,matched", [
+    ('Toy task', {}, True), ('Toy task.\nSupplied facts: {"a":1}', {"a": 1}, True),
+    ('Toy task', {"a": 1}, False), ('Toy task.\nSupplied facts: {"a":true}', {"a": 1}, False),
+    ('Toy task.\nSupplied facts: {"a":1}', {"a": 1, "b": 2}, False),
+    ('Toy task. Example: "{\\"a\\":1}"', {"a": 1}, False),
+    ('Toy task.\nSupplied facts: {"a":1,"a":1}', {"a": 1}, False),
+    ('Toy task.\nSupplied facts: {"a":NaN}', {"a": 1}, False),
+])
+def test_shared_task_requires_exact_typed_whole_inline_facts(question, context, matched):
+    result = task_input_contract({"question": question, "field_context": context})
+    assert (result["task_input_sha256"] is not None) is matched
+
+
+def test_multiturn_and_conflicting_aliases_are_unmatched():
+    assert task_input_contract({"turns": ["Toy first", "Toy next"]})["task_input_sha256"] is None
+    context = {"province": True, "jurisdiction": 1}
+    question = "Toy question.\nSupplied facts: " + json.dumps(context)
+    assert task_input_contract({"question": question, "field_context": context})["status"] == "unknown_alias_conflict"
+    with pytest.raises(ValueError, match="user turns"):
+        task_input_contract({"turns": [{"role": "assistant", "content": "Toy"}]})
+
+
+def test_trailing_example_is_not_declared_supplied_facts():
+    case = {"question": 'Do NOT use this example: {"area_ha":2}', "field_context": {"area_ha": 2}}
+    assert task_input_contract(case)["task_input_sha256"] is None
+
+
+@pytest.mark.parametrize("target", ["compiled", "alias_input", "alias_mapping"])
+def test_false_compiler_or_alias_receipt_pins_refuse(tmp_path, target):
+    plan, rows, *_ = _controller_packet(tmp_path)
+    receipt = deepcopy(rows[0]["task_exposure"])
+    if target == "compiled": receipt["compiled_field_context_sha256"] = "f" * 64
+    if target == "alias_input": receipt["field_alias_receipt"]["input_sha256"] = "f" * 64
+    if target == "alias_mapping": receipt["field_alias_receipt"]["aliases_applied"] = {"fake": "alias"}
+    receipt["receipt_sha256"] = digest({k: v for k, v in receipt.items() if k != "receipt_sha256"})
+    with pytest.raises(ValueError, match="compiler/alias"):
+        validate_task_exposure(plan["cases"][0], "raw_model", receipt)
+
+
+@pytest.mark.parametrize("case", [
+    {"question": "Toy", "field_context": {"nested": {"reference_answer": "CONTROLLER_ONLY"}}},
+    {"question": 'Toy {"nested":{"semantic_rubric":"CONTROLLER_ONLY"}}'},
+])
+def test_nested_controller_gold_refuses_worker_projection(case):
+    with pytest.raises(ValueError, match="controller gold"):
+        worker_case(case)
+
+
+@pytest.mark.parametrize("raw", ['{"x":1,"x":2}', '{"x":NaN}', '[]'])
+def test_controller_reader_refuses_invalid_json(tmp_path, raw):
+    path = tmp_path / "policy.json"; path.write_text(raw)
+    with pytest.raises(ValueError):
+        read_controller_inputs(policy_path=path)
+
+
+def test_controller_reader_refuses_symlink_and_oversize(tmp_path, monkeypatch):
+    import agronomy_agent.release_evaluation as protocol
+    path = tmp_path / "policy.json"; path.write_text('{"toy":true}')
+    link = tmp_path / "link.json"; link.symlink_to(path)
+    with pytest.raises(ValueError, match="regular file"):
+        read_controller_inputs(policy_path=link)
+    monkeypatch.setattr(protocol, "CONTROLLER_INPUT_LIMIT", 2)
+    with pytest.raises(ValueError, match="bounded"):
+        read_controller_inputs(policy_path=path)
+
+
+@pytest.mark.parametrize("mutation", ["question", "context", "arm", "worker_hash"])
+def test_actual_exposure_changes_refuse_even_same_outer_case(tmp_path, mutation):
+    plan, rows, *_ = _controller_packet(tmp_path)
+    row = rows[1]; case = plan["cases"][0]; receipt = deepcopy(row["task_exposure"])
+    if mutation == "question": receipt["requests"][0]["message"] = "Changed toy input"
+    if mutation == "context": receipt["requests"][0]["field_context_delivered"]["a"] = 99
+    if mutation == "arm": receipt["arm_id"] = "raw_model"
+    if mutation == "worker_hash": receipt["worker_case_sha256"] = "a" * 64
+    receipt["receipt_sha256"] = digest({k: v for k, v in receipt.items() if k != "receipt_sha256"})
+    with pytest.raises(ValueError):
+        validate_task_exposure(case, "production_full", receipt)
+    assert validate_task_exposure(case, "production_full", None)["task_input_sha256"] is None
+
+
+def test_mock_reference_records_actual_task_delivery_without_controller_gold(tmp_path):
+    from agronomy_agent.release_eval_executor import execute_product_case
+    raw = {"case_id": "toy-actual-request", "scenario_family": "synthetic_arithmetic", "lane": "harness",
+           "question": 'Explain toy counts.\nSupplied facts: {"a":2,"b":3}', "field_context": {"a": 2, "b": 3},
+           "assertions": {}, "review_required": True}
+    result = execute_product_case(raw, model_config=ROOT / "configs/model.yaml", rag_config=ROOT / "configs/rag.yaml",
+                                  arm_id="raw_model", backend="mock", output_dir=tmp_path / "actual-reference")
+    assert result["status"] == "completed", result.get("error")
+    delivered = result["task_exposure"]["requests"][0]
+    assert delivered["message"] == raw["question"]
+    assert delivered["prompt_messages"] == [{"role": "user", "content": raw["question"]}]
+    assert delivered["field_context_delivered"] is None
+    assert validate_task_exposure(raw, "raw_model", result["task_exposure"])["task_input_sha256"] == task_input_contract(raw)["task_input_sha256"]
 
 
 def test_complete_profiles_share_cohort_and_cells():

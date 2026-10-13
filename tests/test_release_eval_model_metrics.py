@@ -203,6 +203,34 @@ def test_nested_stop_cannot_override_length_or_contradict_stage():
         run(data)
 
 
+def test_prospective_controller_and_actual_exposure_binding(tmp_path):
+    from test_release_evaluation import _controller_packet
+    plan, rows, rubrics, reviews, policy, _ = _controller_packet(tmp_path)
+    report = score_model_matrix(plan, rows, rubrics=rubrics, reviews=reviews, policy=policy)
+    assert report["controller_binding_status"] == "prospective_canonical_inputs_bound"
+    assert report["policy_preregistration_verified"] is False and report["promotion_allowed"] is False
+    assert report["contrasts"][0]["paired_scored_n"] == 2
+    rows[0].pop("comparison_cohort")
+    report = score_model_matrix(plan, rows, rubrics=rubrics, reviews=reviews, policy=policy)
+    assert report["contrasts"][0]["incomparable_n"] == 1
+    rows[0]["task_input_sha256"] = "f" * 64
+    with pytest.raises(ValueError, match="actual exposure"):
+        score_model_matrix(plan, rows, rubrics=rubrics, reviews=reviews, policy=policy)
+
+
+@pytest.mark.parametrize("target", ["policy", "rubric", "answer"])
+def test_prospective_scoring_refuses_changed_inputs(tmp_path, target):
+    from test_release_evaluation import _controller_packet
+    plan, rows, rubrics, reviews, policy, _ = _controller_packet(tmp_path)
+    if target == "policy": policy["domain_weights"]["seed"] = 9
+    if target == "rubric":
+        rubrics[0]["criteria"][0]["description"] = "Changed synthetic rubric"
+        rubrics[0]["rubric_sha256"] = rubric_digest(rubrics[0])
+    if target == "answer": rows[0]["answer"] = "Changed synthetic answer"
+    with pytest.raises(ValueError):
+        score_model_matrix(plan, rows, rubrics=rubrics, reviews=reviews, policy=policy)
+
+
 def test_missing_single_criterion_cannot_hide_in_mean():
     data = packet(); data[3][0]["criterion_scores"]["restraint"] = None
     report = run(data)

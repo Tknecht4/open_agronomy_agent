@@ -26,6 +26,7 @@ from agronomy_agent.agent import (
     system_prompt,
 )
 from agronomy_agent.benchmark_arms import ALL_ARM_IDS, execution_arm
+from agronomy_agent.release_evaluation import TASK_FIELD_ALIASES, digest, worker_case
 from agronomy_agent.execution_core import (
     AgentExecutionRequest,
     EXECUTION_STAGE_IDS,
@@ -38,12 +39,7 @@ from agronomy_agent.server.trace_timer import TraceProfiler
 
 
 EXECUTOR_SCHEMA_VERSION = "open_agronomy_agent.release_product_cell.v1"
-FIELD_ALIASES = {
-    "crop_name": "crop",
-    "region_text": "region",
-    "province": "jurisdiction",
-    "field_name": "display_name",
-}
+FIELD_ALIASES = TASK_FIELD_ALIASES
 
 
 class SyntheticBackendUnavailable(RuntimeError):
@@ -96,7 +92,7 @@ def compile_case_field_context(
     for alias, canonical in FIELD_ALIASES.items():
         if alias not in compiled:
             continue
-        if canonical in compiled and compiled[canonical] != compiled[alias]:
+        if canonical in compiled and digest(compiled[canonical]) != digest(compiled[alias]):
             conflicts.append(
                 {
                     "alias": alias,
@@ -247,6 +243,7 @@ def _reference_turn(
         "reference_receipt": receipt,
         "stage_receipts": [],
         "prompt_messages": messages,
+        "task_request": {"message": question, "prompt_messages": deepcopy(messages), "field_context_delivered": None},
         "persisted_turn": store.get_turn(turn_id),
         "generation_stats": stats,
         "model_identity": deepcopy(getattr(generator, "model_identity", None)),
@@ -276,6 +273,8 @@ def _production_turn(question: str, request: AgentExecutionRequest) -> dict[str,
         ),
         metadata=metadata,
         elapsed_seconds=time.monotonic() - started,
+        task_request={"message": request.message,
+                      "field_context_delivered": deepcopy((request.session_context or {}).get("field_context") or {})},
     )
     record["draft"] = record["answer_stages"]["draft"]["text"]
     record["editor"] = deepcopy(metadata.get("answer_verification"))
@@ -835,6 +834,13 @@ def execute_product_case(
             deepcopy(generator.calls) if isinstance(generator, _RecordedMock) else []
         )
         result["backend_calls"] = calls
+        exposure = {"schema_version": "open_agronomy_agent.task_exposure.v1", "arm_id": arm_id,
+                    "scope": "inputs delivered to reference generator or execute_agent_request; field consumption and final prompt are separate stage/recipe observations",
+                    "worker_case_sha256": digest(worker_case(case)),
+                    "requests": [deepcopy(turn["task_request"]) for turn in result["turns"] if "task_request" in turn],
+                    "compiled_field_context_sha256": digest(compiled), "field_alias_receipt": aliases}
+        exposure["receipt_sha256"] = digest(exposure)
+        result["task_exposure"] = exposure
         result["checks"], result["unknown"] = _checks(
             {
                 **case,

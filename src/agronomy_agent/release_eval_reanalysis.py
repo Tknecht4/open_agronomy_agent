@@ -77,7 +77,7 @@ def read_completed_run(
     planned = {row["observation_id"]: row for row in plan["matrix"]}
     for row in ledgers["observations"]:
         cell = planned.get(row["observation_id"])
-        if cell is None or any(row.get(key) != value for key, value in cell.items()):
+        if cell is None or any(row.get(key) != value for key, value in cell.items() if key not in {"comparison_cohort", "task_input_sha256", "task_input_status"}):
             raise ValueError("observation differs from frozen matrix identity")
         turns = row.get("turns") or []
         if turns and row.get("answer_sha256") != digest(
@@ -397,6 +397,11 @@ def reanalyze(
     model_policy_path: Path | None = None,
 ) -> dict[str, Any]:
     run = read_completed_run(run_dir)
+    prospective = run["plan"].get("controller_inputs", {}).get("files", {})
+    if model_rubrics_path is None and "rubrics" in prospective:
+        model_rubrics_path = run["directory"] / "model-rubrics.private.jsonl"
+    if model_policy_path is None and "policy" in prospective:
+        model_policy_path = run["directory"] / "model-policy.private.json"
     if reference_path is None and run.get("derived_lineage", {}).get("reference_run"):
         reference_binding = (
             run["derived_lineage"].get("reference_analysis")
@@ -558,32 +563,49 @@ def _model_matrix(run: Mapping[str, Any]) -> tuple[dict[str, Any], list[dict[str
     """Project recorded identities only; do not infer a matched comparison cohort."""
     from agronomy_agent.release_eval_executor import observation_termination
     from agronomy_agent.release_eval_model_metrics import termination_evidence
+    from agronomy_agent.release_evaluation import validate_task_exposure, validate_worker_runtime, planned_analysis_condition
     plan = run["plan"]
     model = plan["model"]
-    source = plan.get("source", {})
-    source_files = source.get("files", {})
-    recipe_files = {
-        name: source_files.get(name)
-        for name in ("src/agronomy_agent/release_eval_executor.py",
-                     "src/agronomy_agent/benchmark_arms.py")
-    }
-    matrix = [
-        {**cell, "model_id": model["id"], "model_revision": model["revision"],
-         "backend_id": cell["backend"],
-         "analysis_condition": {
-             "model_config_sha256": model.get("config_sha256"),
-             "source_sha256": source.get("source_sha256"),
-             "runtime_config_sha256": digest({"sampling": plan["sampling"],
-                                              "environment": plan["environment"]})
-                 if "sampling" in plan and "environment" in plan else None,
-             "arm_recipe_sha256": digest({"arm_id": cell["arm_id"], "files": recipe_files})
-                 if all(recipe_files.values()) else None,
-         }}
-        for cell in plan["matrix"]
-    ]
+    matrix = []
+    recorded_rows = {row["observation_id"]: row for row in run["observations"]}
+    for cell in plan["matrix"]:
+        expected = planned_analysis_condition(plan, cell)
+        row = recorded_rows.get(cell["observation_id"], {})
+        observed = row.get("analysis_condition")
+        if observed is not None:
+            if not isinstance(observed, dict) or set(observed) - set(expected):
+                raise ValueError("invalid observed analysis condition")
+            source_bound = "controller_inputs" in plan or expected["source_sha256"] is not None and expected["model_config_sha256"] is not None
+            if source_bound and any(value is not None and expected[key] is not None and value != expected[key] for key, value in observed.items()):
+                raise ValueError("observed analysis condition differs from frozen plan")
+        for key, value in (("model_id", model["id"]), ("model_revision", model["revision"]), ("backend_id", cell["backend"])):
+            if row.get(key) is not None and row[key] != value:
+                raise ValueError("observed model identity differs: " + key)
+        condition = observed if observed is not None else None if "controller_inputs" in plan else expected
+        matrix.append({**cell, "model_id": model["id"], "model_revision": model["revision"], "backend_id": cell["backend"],
+                       "analysis_condition": condition,
+                       **({"planned_analysis_condition": expected} if "controller_inputs" in plan else {})})
     cells = {cell["observation_id"]: cell for cell in matrix}
     observations = []
     for row in run["observations"]:
+        cell = cells[row["observation_id"]]
+        for key in ("case_id", "case_sha256", "suite_id", "arm_id", "trial_id", "backend"):
+            if key in row and row[key] != cell.get(key):
+                raise ValueError("retained observation plan identity mismatch: " + key)
+        task_fields = {key: row.get(key) for key in ("comparison_cohort", "task_input_sha256", "task_input_status")}
+        if "controller_inputs" in plan:
+            runtime_status = validate_worker_runtime(plan, cell, row)
+            if runtime_status != "verified_worker_config_bytes" and row.get("analysis_condition") is not None:
+                # Keep the original claim visible, but missing actual config
+                # evidence cannot be promoted to a complete observed condition.
+                cell["analysis_condition"] = None
+            case = next(case for case in plan["cases"] if case["case_id"] == cell["case_id"] and case["suite_id"] == cell["suite_id"])
+            binding = validate_task_exposure(case, cell["arm_id"], row.get("task_exposure"))
+            if row.get("task_input_sha256") is not None and (row["task_input_sha256"] != binding["task_input_sha256"] or row["task_input_sha256"] != cell.get("task_input_sha256")):
+                raise ValueError("recorded task binding contradicts exposure/plan")
+            if row.get("comparison_cohort") is not None and (binding["task_input_sha256"] is None or row["comparison_cohort"] != plan.get("comparison_cohort")):
+                raise ValueError("recorded comparison cohort contradicts frozen inputs")
+            task_fields["task_input_status"] = binding["status"] if row.get("task_input_sha256") is not None else "unknown_recorded_binding"
         turns = row.get("turns") or []
         derived_termination = observation_termination(turns) if turns else None
         recorded_terminal = termination_evidence(row)
@@ -616,6 +638,10 @@ def _model_matrix(run: Mapping[str, Any]) -> tuple[dict[str, Any], list[dict[str
                 performance[field] = stats[key]
         observations.append({
             **row, **cells[row["observation_id"]], "performance": performance,
+            "recorded_analysis_condition": row.get("analysis_condition"),
+            "observed_model_identity": {key: row.get(key) for key in ("model_id", "model_revision", "backend_id")},
+            "runtime_input_binding_status": runtime_status if "controller_inputs" in plan else "legacy_unknown",
+            **task_fields,
             **terminal_fields, "termination": termination,
             "recorded_termination": row.get("termination"),
             "derived_termination": derived_termination,
@@ -673,6 +699,10 @@ def _model_metrics_bundle(
             raise ValueError(f"model metrics {name} requires object records")
         inputs[name] = {"path": path, "bytes": raw, "value": value,
                         "sha256": hashlib.sha256(raw).hexdigest()}
+    if "controller_inputs" in plan:
+        for name, expected in plan["controller_inputs"]["files"].items():
+            if name in inputs and (inputs[name]["sha256"] != expected["sha256"] or len(inputs[name]["bytes"]) != expected["bytes"]):
+                raise ValueError("analysis controller bytes differ from prospective freeze")
     metrics = score_model_matrix(
         plan, observations,
         rubrics=inputs.get("rubrics", {}).get("value", []),
@@ -680,6 +710,7 @@ def _model_metrics_bundle(
         policy=inputs.get("policy", {}).get("value"),
     )
     metrics["visibility"] = "private_controller_only"
+    metrics["controller_byte_binding_status"] = "legacy_posthoc_unfrozen" if "controller_inputs" not in plan else "verified" if set(plan["controller_inputs"]["files"]).issubset(inputs) else "partial_unknown"
     sources = {
         name: file_digest(Path(__file__).with_name(name))
         for name in ("release_eval_reanalysis.py", "release_eval_model_metrics.py",

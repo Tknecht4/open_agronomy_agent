@@ -20,6 +20,8 @@ import yaml
 from agronomy_agent.release_evaluation import (
     ROOT,
     build_plan,
+    bind_controller_inputs,
+    checked_path,
     controlled_inputs,
     digest,
     environment_identity,
@@ -27,6 +29,10 @@ from agronomy_agent.release_evaluation import (
     load_registry,
     plan_identity,
     source_identity,
+    read_controller_inputs,
+    validate_task_exposure,
+    validate_worker_runtime,
+    planned_analysis_condition,
     worker_case,
     write_new_json,
 )
@@ -550,6 +556,9 @@ def run_suite(
     limit: int | None = None,
     reference_path: Path | None = None,
     reviews_path: Path | None = None,
+    model_rubrics_path: Path | None = None,
+    model_policy_path: Path | None = None,
+    comparison_cohort: str | None = None,
 ) -> dict[str, Any]:
     registry = load_registry(registry_path)
     if profile == "release" and reference_path is None:
@@ -569,7 +578,26 @@ def run_suite(
     )
     if any(not isinstance(row, dict) for row in reviews):
         raise ValueError("review input must contain JSON objects")
-    plan = build_plan(registry, profile=profile, run_id=run_id, limit=limit)
+    controller = read_controller_inputs(rubrics_path=model_rubrics_path, policy_path=model_policy_path)
+    plan = bind_controller_inputs(build_plan(registry, profile=profile, run_id=run_id, limit=limit), controller, comparison_cohort)
+    model_bytes = checked_path(ROOT, registry["model_config"]).read_bytes()
+    if hashlib.sha256(model_bytes).hexdigest() != plan["model"]["config_sha256"]:
+        raise ValueError("model config changed during planning")
+    model_snapshot = yaml.safe_load(model_bytes)
+    rag_bytes = checked_path(ROOT, registry["rag_config"]).read_bytes()
+    if hashlib.sha256(rag_bytes).hexdigest() != plan["rag_config_sha256"]:
+        raise ValueError("RAG config changed during planning")
+    rag_snapshot = yaml.safe_load(rag_bytes)
+    if "controller_inputs" in plan:
+        runtime_rag = {**rag_snapshot, "private_knowledge": {"enabled": False, "required": False}}
+        plan["effective_runtime_inputs"] = {
+            "rag_sha256": hashlib.sha256(yaml.safe_dump(runtime_rag, sort_keys=True).encode()).hexdigest(),
+            "model_trial_sha256": {
+                f"trial-{trial:03d}": hashlib.sha256(yaml.safe_dump(
+                    {**model_snapshot, "seed": registry["seed"] + trial - 1, "prompt_cache_enabled": False}, sort_keys=True).encode()).hexdigest()
+                for trial in range(1, registry["profiles"][profile]["trials"] + 1)
+            },
+        }
     plan["environment"] = environment_identity()
     plan["reference_sha256"] = digest(reference) if reference else None
     plan["reviews_sha256"] = (
@@ -602,6 +630,37 @@ def run_suite(
         if (output_dir / "report.json").is_file():
             verify_retention(output_dir)
             return json.loads((output_dir / "report.json").read_text())
+        for name, item in controller.items():
+            suffix = "jsonl" if name == "rubrics" else "json"
+            path = output_dir / f"model-{name}.private.{suffix}"
+            if path.exists():
+                if path.is_symlink() or path.read_bytes() != item["bytes"]:
+                    raise ValueError("frozen controller bytes changed")
+            else:
+                with path.open("xb") as handle:
+                    handle.write(item["bytes"])
+
+        def verify_prospective_inputs():
+            if "controller_inputs" not in plan:
+                return
+            if source_identity()["source_sha256"] != plan["source"]["source_sha256"] or controlled_inputs(registry) != plan["auxiliary_inputs"] or digest(load_registry(registry_path)) != plan["registry_sha256"]:
+                raise ValueError("prospective source or controlled inputs changed")
+            if file_digest(checked_path(ROOT, registry["model_config"])) != plan["model"]["config_sha256"] or file_digest(checked_path(ROOT, registry["rag_config"])) != plan["rag_config_sha256"]:
+                raise ValueError("prospective runtime inputs changed")
+            current = read_controller_inputs(rubrics_path=model_rubrics_path, policy_path=model_policy_path)
+            for name, item in controller.items():
+                suffix = "jsonl" if name == "rubrics" else "json"
+                path = output_dir / f"model-{name}.private.{suffix}"
+                if current[name]["bytes"] != item["bytes"] or path.is_symlink() or file_digest(path) != item["sha256"]:
+                    raise ValueError("prospective controller bytes changed")
+            if runtime_ready:
+                if file_digest(public_rag) != plan["effective_runtime_inputs"]["rag_sha256"] or any(
+                    file_digest(effective / f"model-{trial_id}.yaml") != expected
+                    for trial_id, expected in plan["effective_runtime_inputs"]["model_trial_sha256"].items()
+                ):
+                    raise ValueError("prospective effective runtime bytes changed")
+        runtime_ready = False
+        verify_prospective_inputs()
         if reviews_bytes is not None:
             frozen_reviews = output_dir / "reviews.private.jsonl"
             if frozen_reviews.exists():
@@ -625,16 +684,24 @@ def run_suite(
                 write_new_json(frozen_reference, reference)
         effective = output_dir / "effective"
         effective.mkdir(exist_ok=True)
-        rag = yaml.safe_load((ROOT / registry["rag_config"]).read_text())
+        rag = dict(rag_snapshot)
         rag["private_knowledge"] = {"enabled": False, "required": False}
         public_rag = effective / "public-rag.yaml"
         _effective_yaml(public_rag, rag)
         for trial in range(1, registry["profiles"][profile]["trials"] + 1):
             path = effective / f"model-trial-{trial:03d}.yaml"
-            model = yaml.safe_load((ROOT / registry["model_config"]).read_text())
+            model = dict(model_snapshot)
             model["seed"] = registry["seed"] + trial - 1
             model["prompt_cache_enabled"] = False
             _effective_yaml(path, model)
+        if "controller_inputs" in plan:
+            expected_runtime = plan["effective_runtime_inputs"]
+            if file_digest(public_rag) != expected_runtime["rag_sha256"] or any(
+                file_digest(effective / f"model-{trial_id}.yaml") != expected
+                for trial_id, expected in expected_runtime["model_trial_sha256"].items()
+            ):
+                raise ValueError("effective runtime bytes differ from frozen inputs")
+        runtime_ready = True
         clock_path = output_dir / "run-clock.json"
         if not clock_path.exists():
             write_new_json(
@@ -657,6 +724,7 @@ def run_suite(
         for kind in registry["required_components"]:
             if kind in completed_components:
                 continue
+            verify_prospective_inputs()
             remaining = deadline - time.monotonic()
             timeout = min(registry["cell_timeout_seconds"], max(0.01, remaining))
             spec = {
@@ -696,11 +764,12 @@ def run_suite(
                 if cell["observation_id"] in done:
                     continue
                 case = cases[(cell["suite_id"], cell["case_id"])]
+                verify_prospective_inputs()
                 remaining = deadline - time.monotonic()
                 spec = {
                     "kind": "product",
                     "directory": str(output_dir / "cells" / cell["observation_id"]),
-                    "cell": cell,
+                    "cell": {key: value for key, value in cell.items() if key not in {"comparison_cohort", "task_input_sha256", "task_input_status"}},
                     "case": worker_case(case),
                     "model_config": str(effective / f"model-{trial_id}.yaml"),
                     "rag_config": str(public_rag),
@@ -722,7 +791,44 @@ def run_suite(
                         ],
                     }
                 )
-                result.update(cell)
+                binding_error = None
+                exposure_binding = None
+                if "controller_inputs" in plan:
+                    result["planned_input_binding"] = {key: cell.get(key) for key in ("comparison_cohort", "task_input_sha256", "task_input_status")}
+                    result["worker_input_binding"] = {key: result.get(key) for key in ("observation_id", "case_id", "case_sha256", "suite_id", "arm_id", "trial_id", "backend", "model_id", "model_revision", "analysis_condition", "comparison_cohort", "task_input_sha256", "status")}
+                    result["planned_input_binding"]["source_case_sha256"] = cell["case_sha256"]
+                    result["planned_input_binding"]["worker_case_sha256"] = digest(worker_case(case))
+                    try:
+                        for key in ("observation_id", "case_id", "case_sha256", "suite_id", "arm_id", "trial_id", "backend"):
+                            expected_identity = digest(worker_case(case)) if key == "case_sha256" and result.get("schema_version") == "open_agronomy_agent.release_product_cell.v1" else cell[key]
+                            if result.get(key) is not None and result[key] != expected_identity:
+                                raise ValueError("observed worker cell identity differs: " + key)
+                        exposure_binding = validate_task_exposure(case, cell["arm_id"], result.get("task_exposure"))
+                        runtime_status = validate_worker_runtime(plan, cell, result)
+                        result["runtime_input_binding_status"] = runtime_status
+                        expected_condition = planned_analysis_condition(plan, cell)
+                        for key in ("model_id", "model_revision"):
+                            expected_value = plan["model"]["id" if key == "model_id" else "revision"]
+                            if result.get(key) is not None and result[key] != expected_value:
+                                raise ValueError("observed worker model identity differs: " + key)
+                        if result.get("analysis_condition") is not None:
+                            if result["analysis_condition"] != expected_condition:
+                                raise ValueError("observed worker analysis condition differs")
+                        elif runtime_status == "verified_worker_config_bytes":
+                            result["analysis_condition"] = expected_condition
+                            result["analysis_condition_scope"] = "source verified before dispatch; worker config bytes observed; actual model/runtime qualification remains separate"
+                        if exposure_binding["task_input_sha256"] is not None and exposure_binding["task_input_sha256"] != cell["task_input_sha256"]:
+                            raise ValueError("planned and exposed task input mismatch")
+                    except ValueError as exc:
+                        binding_error = str(exc)
+                        exposure_binding = {"task_input_sha256": None, "status": "failed_input_binding"}
+                        result["status"] = "failed"
+                        result.setdefault("checks", []).append({"id": "shared_task_exposure", "passed": False, "detail": binding_error})
+                result.update({key: value for key, value in cell.items() if key not in {"comparison_cohort", "task_input_sha256", "task_input_status"}})
+                if exposure_binding is not None:
+                    result.update(task_input_sha256=exposure_binding["task_input_sha256"],
+                                  comparison_cohort=comparison_cohort if exposure_binding["task_input_sha256"] is not None else None,
+                                  task_input_status=exposure_binding["status"])
                 result["review_required"] = case["review_required"]
                 turns = result.get("turns") or []
                 answer = str(turns[-1].get("answer") or "") if turns else ""
@@ -760,6 +866,8 @@ def run_suite(
                 record = _seal_record(result, plan_sha256)
                 _append(observations_path, record)
                 rows.append(record)
+                if binding_error is not None:
+                    raise ValueError("retained attempted worker input binding failed: " + binding_error)
                 print(
                     json.dumps(
                         {
@@ -772,6 +880,7 @@ def run_suite(
                     ),
                     flush=True,
                 )
+        verify_prospective_inputs()
         report = summarize(
             plan, rows, components, environment=plan["environment"], reviews=reviews
         )

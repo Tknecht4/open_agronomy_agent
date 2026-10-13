@@ -135,6 +135,55 @@ def test_projection_actual_editor_attempt_cannot_remain_recorded_na(editor_outpu
     report = score_model_matrix(projected_plan, projected_rows, rubrics=rubrics, reviews=reviews, policy=policy)
     assert report["cells"][0]["termination_status"] == "unknown"
     assert report["groups"][0]["primary"]["score"] is None
+
+
+def _order2_analysis_packet(tmp_path):
+    from test_release_evaluation import _controller_packet
+    from agronomy_agent.release_evaluation import planned_analysis_condition
+    plan, rows, rubrics, reviews, policy, inputs = _controller_packet(tmp_path)
+    plan["source"] = {"source_sha256": digest("synthetic-source"), "files": {
+        key: digest(key) for key in ("src/agronomy_agent/release_eval_executor.py", "src/agronomy_agent/benchmark_arms.py", "src/agronomy_agent/release_evaluation.py")}}
+    plan["model"]["config_sha256"] = digest("synthetic-config")
+    plan.update(sampling={"seed": 1}, environment={"scope": "synthetic"},
+                effective_runtime_inputs={"model_trial_sha256": {"trial-001": digest("synthetic-trial")}, "rag_sha256": digest("synthetic-rag")})
+    for row, cell in zip(rows, plan["matrix"]):
+        row.update(backend_id="mock", analysis_condition=planned_analysis_condition(plan, cell),
+                   config_identity={"model": {"sha256": digest("synthetic-trial")}, "rag": {"sha256": digest("synthetic-rag")}})
+    return plan, rows, rubrics, reviews, policy, inputs
+
+
+@pytest.mark.parametrize("target", ["condition", "model", "config"])
+def test_order2_projection_refuses_observed_condition_model_config_changes(tmp_path, target):
+    from agronomy_agent.release_eval_reanalysis import _model_matrix
+    plan, rows, *_ = _order2_analysis_packet(tmp_path)
+    if target == "condition": rows[0]["analysis_condition"]["source_sha256"] = "f" * 64
+    if target == "model": rows[0]["model_id"] = "other-observed-model"
+    if target == "config": rows[0]["config_identity"]["model"]["sha256"] = "f" * 64
+    with pytest.raises(ValueError):
+        _model_matrix({"plan": plan, "observations": rows})
+
+
+def test_order2_missing_observed_config_identity_stays_unknown(tmp_path):
+    from agronomy_agent.release_eval_reanalysis import _model_matrix
+    from agronomy_agent.release_eval_model_metrics import score_model_matrix
+    plan, rows, rubrics, reviews, policy, _ = _order2_analysis_packet(tmp_path)
+    rows[0].pop("config_identity"); rows[0].pop("model_id")
+    p, projected = _model_matrix({"plan": plan, "observations": rows})
+    assert projected[0]["analysis_condition"] is None
+    assert projected[0]["recorded_analysis_condition"] is not None
+    assert projected[0]["observed_model_identity"]["model_id"] is None
+    assert projected[0]["runtime_input_binding_status"] == "unknown_missing_worker_config"
+    report = score_model_matrix(p, projected, rubrics=rubrics, reviews=reviews, policy=policy)
+    assert all(c["ranking_authorized"] is False for c in report["contrasts"])
+    assert report["cells"][0]["unknown_condition_fields"]
+
+
+def test_order2_bound_analyzer_refuses_equivalent_reformatted_policy_bytes(tmp_path):
+    from agronomy_agent.release_eval_reanalysis import _model_metrics_bundle
+    plan, rows, _, _, _, inputs = _order2_analysis_packet(tmp_path)
+    path = inputs["policy"]["path"]; path.write_text(path.read_text() + "\n")
+    with pytest.raises(ValueError, match="controller bytes"):
+        _model_metrics_bundle(plan, rows, rubrics_path=inputs["rubrics"]["path"], reviews_path=None, policy_path=path)
 from agronomy_agent.release_eval_runner import retention_manifest, verify_retention
 from agronomy_agent.release_evaluation import (
     build_plan,
