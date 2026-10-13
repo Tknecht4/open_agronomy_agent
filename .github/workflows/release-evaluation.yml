@@ -47,6 +47,9 @@ jobs:
             tests/test_release_eval_analysis.py \
             tests/test_release_eval_runner.py \
             tests/test_release_eval_reanalysis.py \
+            tests/test_release_eval_model_metrics.py \
+            tests/test_release_eval_diagnostic_inputs.py \
+            tests/test_checkpoint_truthfulness.py \
             tests/test_offline_retrieval_scoring.py \
             tests/test_evaluation_suite_inventory.py
       - name: Run all required deterministic foundation components

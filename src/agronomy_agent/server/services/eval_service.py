@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
+FEEDBACK_EVIDENCE_KIND = "review_feedback_summary"
+
 
 def eval_run_metrics(candidates: list[dict[str, Any]]) -> dict[str, Any]:
     failure_tag_counts: dict[str, int] = {}
     target_component_counts: dict[str, int] = {}
-    regression_failures: list[dict[str, Any]] = []
+    reported_failures: list[dict[str, Any]] = []
     ideal_answer_count = 0
     human_correction_count = 0
     training_consent_count = 0
@@ -26,7 +28,7 @@ def eval_run_metrics(candidates: list[dict[str, Any]]) -> dict[str, Any]:
         if feedback.get("training_consent"):
             training_consent_count += 1
         if failure_tags:
-            regression_failures.append(
+            reported_failures.append(
                 {
                     "candidate_id": candidate["id"],
                     "target_component": target,
@@ -36,9 +38,11 @@ def eval_run_metrics(candidates: list[dict[str, Any]]) -> dict[str, Any]:
                 },
             )
     candidate_count = len(candidates)
-    failure_case_count = len(regression_failures)
-    pass_count = candidate_count - failure_case_count
+    failure_case_count = len(reported_failures)
+    unflagged_count = candidate_count - failure_case_count
     return {
+        "evidence_kind": FEEDBACK_EVIDENCE_KIND,
+        "execution_status": "not_run",
         "candidate_count": candidate_count,
         "target_component_counts": target_component_counts,
         "failure_tag_counts": failure_tag_counts,
@@ -48,9 +52,9 @@ def eval_run_metrics(candidates: list[dict[str, Any]]) -> dict[str, Any]:
         "human_correction_count": human_correction_count,
         "training_consent_count": training_consent_count,
         "failure_case_count": failure_case_count,
-        "pass_count": pass_count,
-        "pass_rate": round(pass_count / candidate_count, 4) if candidate_count else 0.0,
-        "regression_failures": regression_failures,
+        "no_reported_failure_count": unflagged_count,
+        "no_reported_failure_rate": round(unflagged_count / candidate_count, 4) if candidate_count else None,
+        "reported_failures": reported_failures,
     }
 
 
@@ -65,18 +69,23 @@ def eval_run_gates(metrics: dict[str, Any]) -> dict[str, Any]:
     if reviewed_count != candidate_count:
         reasons.append("not_all_candidates_reviewed")
     if failure_case_count > 0:
-        reasons.append("regression_failures_present")
+        reasons.append("reported_failures_present")
     if ideal_answer_count != candidate_count:
         reasons.append("missing_ideal_answers")
-    promotion_allowed = candidate_count > 0 and not reasons
+    feedback_clear = candidate_count > 0 and not reasons
+    reasons.append("regression_not_executed")
     return {
+        "evidence_kind": FEEDBACK_EVIDENCE_KIND,
+        "execution_status": "not_run",
         "requires_reviewed_candidates": True,
         "requires_passing_regression": True,
         "requires_ideal_answers": True,
         "candidate_count_positive": candidate_count > 0,
         "all_candidates_reviewed": reviewed_count == candidate_count and candidate_count > 0,
-        "regression_suite": "local_trace_feedback_regression_v1",
-        "regression_failures_present": failure_case_count > 0,
-        "promotion_allowed": promotion_allowed,
+        "regression_suite": None,
+        "regression_execution_status": "not_run",
+        "reported_failures_present": failure_case_count > 0,
+        "feedback_clear": feedback_clear,
+        "promotion_allowed": False,
         "reasons": reasons,
     }
