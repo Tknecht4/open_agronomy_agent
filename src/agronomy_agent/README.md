@@ -110,6 +110,18 @@ Verifier replacement audit and claim edit ledger version 2 distinguish answer
 review triggers from localized lexical triggers; neither asserts semantic proof
 against every changed sentence.
 
+For an explicit request to preserve an eligible supplied record, the verifier
+checks requested quantities, basis, depth, attribution and date/calibration
+unknowns before accepting an editor rewrite. A safe-looking rewrite can still
+lose required facts. Rejected or failed editors can recover a bounded record
+from complete positive assertions in allowed evidence, with one eligible
+quantitative anchor and the existing answer-level checks. Wrapped claims and
+records outside the requested field do not establish eligibility. Named-field
+recovery supports provable one-token ASCII IDs; ambiguous, multiword or
+non-ASCII names disable this recovery. These lexical checks can leave valid
+unrecognized records unresolved and do not establish field truth or general
+semantic completeness.
+
 The active verifier retains its risk-conditioned review thresholds. A proposed
 advisory-only bypass was withdrawn after a paired development run exposed an
 unsupported field-action recommendation. An unknown map type is not renamed as

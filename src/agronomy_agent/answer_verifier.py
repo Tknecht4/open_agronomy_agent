@@ -1263,6 +1263,15 @@ def assess_claim_risk(
     )
 
 
+def validate_editor_max_words(value: Any) -> int | None:
+    """Validate an optional prompt instruction, independently of token/context caps."""
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= 4096:
+        raise ValueError("answer_verification.max_words must be an integer from 1 to 4096 or None")
+    return value
+
+
 def _verify_answer_impl(
     draft: str,
     *,
@@ -1280,7 +1289,9 @@ def _verify_answer_impl(
     egress_envelope_factory: Any | None = None,
     editor_context_management: dict[str, Any] | None = None,
     editor_max_tokens: int | None = None,
+    editor_max_words: int | None = None,
 ) -> AnswerVerificationResult:
+    editor_max_words = validate_editor_max_words(editor_max_words)
     docs = tuple(evidence_docs)
     entities = tuple(preserve_entities)
     required = tuple(required_entities)
@@ -1305,7 +1316,7 @@ def _verify_answer_impl(
             required_entities=required,
         )
 
-    def fallback_answer() -> str:
+    def fallback_without_retained_record() -> str:
         weather_boundary = _localized_weather_event_answer(question)
         if weather_boundary:
             return weather_boundary
@@ -1331,6 +1342,157 @@ def _verify_answer_impl(
             required_entities=required,
         )
         return grounded or _conservative_failure_answer(question_type, question=question)
+
+    def record_fields(text: str, *, source_assertions: bool = False) -> set[str] | None:
+        # This bounded contract supports an entire single-token field ID with
+        # an explicit record/clause boundary. Multiword, Unicode or otherwise
+        # unrecognized names stay unbound; never treat their first token as ID.
+        names: set[str] = set()
+        for start in re.finditer(r"\bfield\b", text, re.IGNORECASE):
+            match = re.match(r"field\s+([a-z][a-z0-9_-]*)\b", text[start.start():], re.IGNORECASE)
+            # Unicode IGNORECASE also matches characters such as Kelvin sign;
+            # validate the original ID before lower() could alias it to ASCII.
+            if match is None or not match.group(1).isascii():
+                return None
+            tail = text[start.start() + match.end():]
+            boundary = (
+                r"\s+soil\s+nitrate\s+record\s+(?:reports?|records?)\s+[+-]?(?:\d|\.\d)"
+                if source_assertions else
+                r"(?:\s+soil\s+nitrate\s+record(?=\s+(?:reports?|records?|and\s+(?:preserve|explain))\b|\s*[.,;:!?]|$)"
+                r"|\s+and\s+do\s+not\b|\s*(?:$|[.,;:!?](?:\s|$)))"
+            )
+            if not re.match(boundary, tail, re.IGNORECASE):
+                return None
+            names.add(match.group(1).lower())
+        return names
+
+    def retained_record_sentences() -> tuple[str, ...]:
+        # Only a complete plain assertion can support literal recovery. Refuse
+        # ambiguous quotation, polarity and hypothetical wrappers throughout the
+        # supplied block; extracting an inner substring would erase its status.
+        if re.search(
+            r'["“”]|\b(?:false|incorrect|rejected|refuted|disputed|hypothetical|'
+            r'fictional|example|quotation|quoted|suppose|assume|unverified|if|not|never)\b|n[\x27\u2019]t\b',
+            evidence_text, re.IGNORECASE,
+        ):
+            return ()
+        focus_terms = {
+            term for term in re.findall(r"[a-z][a-z0-9-]{2,}", request_focus(question).lower())
+            if term not in _RECOVERY_STOPWORDS
+        }
+        evidence_sentences = {
+            _normalize_for_matching(sentence)
+            for sentence in re.split(r"(?<=[.!?])\s+", evidence_text.strip())
+            if sentence.endswith(".")
+        }
+
+        source_fields = record_fields(evidence_text, source_assertions=True)
+        question_fields = record_fields(question)
+        if source_fields is None or question_fields is None:
+            return ()
+        positive_requests = [
+            clause for clause in re.split(r"[.!?;\n]", request_focus(question))
+            if not re.search(r"\b(?:not|never|exclude|excluding|avoid|without)\b", clause, re.IGNORECASE)
+        ]
+        selectors = {
+            match.lower()
+            for clause in positive_requests
+            for match in re.findall(
+                r"\b(?:read|summari[sz]e|interpret|describe|report)\s+(?:only\s+)?field\s+([a-z][a-z0-9_-]*)\b",
+                clause, re.IGNORECASE,
+            )
+        }
+        positive_fields = record_fields(". ".join(positive_requests))
+        if positive_fields is None:
+            return ()
+        selected_field = next(iter(selectors)) if len(selectors) == 1 else None
+        if len(selectors) > 1:
+            return ()
+        if selected_field is None and (source_fields or question_fields):
+            if len(source_fields) != 1 or positive_fields != source_fields:
+                return ()
+            selected_field = next(iter(source_fields))
+        if selected_field is None and re.search(
+            r"\b(?:do not|don't|exclude|excluding|omit)\s+(?:include\s+|mention\s+|copy\s+)?(?:field|record|sample)\b",
+            question, re.IGNORECASE,
+        ):
+            return ()
+        retained: list[str] = []
+        for sentence in re.split(r"(?<=[.!?])\s+", draft.strip()):
+            normalized = _normalize_for_matching(sentence)
+            terms = set(re.findall(r"[a-z][a-z0-9-]{2,}", sentence.lower()))
+            sentence_fields = record_fields(sentence, source_assertions=True)
+            if (
+                not normalized or len(sentence) > 512
+                or sentence_fields is None
+                or normalized not in evidence_sentences
+                or len(focus_terms & terms) < 2
+                or (sentence_fields and sentence_fields != {selected_field})
+                or (selected_field is not None and re.search(r"(?<!\w)\d", sentence)
+                    and sentence_fields != {selected_field})
+                or (selected_field is not None and len(source_fields) > 1 and not sentence_fields)
+                or _blocking_claim_reasons(assess(sentence))
+            ):
+                continue
+            retained.append(sentence)
+        anchors = [sentence for sentence in retained if re.search(r"(?<!\w)\d", sentence)]
+        # Multiple quantitative assertions without a unique selected statement
+        # are ambiguous, even when they share a topic or record name.
+        if len(set(anchors)) != 1:
+            return ()
+        anchor = anchors[0]
+        return (anchor, *(sentence for sentence in retained if sentence != anchor))[:4]
+
+    def fallback_answer() -> str:
+        fallback = fallback_without_retained_record()
+        retained = tuple(sentence for sentence in retained_record_sentences()
+                         if _normalize_for_matching(sentence) not in _normalize_for_matching(fallback))
+        if not retained:
+            return fallback
+        candidate = " ".join((*retained, fallback))
+        # Recheck the composed answer; sentence-level support cannot override a
+        # route, authority, quantity, or other existing answer-level rejection.
+        return candidate if not _blocking_claim_reasons(assess(candidate)) else fallback
+
+    def requested_record_losses(rewrite: str) -> tuple[str, ...]:
+        # This optional contract applies only to explicitly requested record
+        # preservation, with an eligible selected assertion. It is not a general
+        # semantic grader, and does not require the entire draft verbatim.
+        focus = request_focus(question).lower()
+        record = retained_record_sentences()
+        if not record or not re.search(r"\bpreserve\b", focus):
+            return ()
+        anchor = record[0]
+        losses: list[str] = []
+        if re.search(r"\b(?:value|unit|units|depth)\b", focus) and unsupported_quantities(
+            anchor, question="", evidence=rewrite,
+        ):
+            losses.append("value_unit_or_depth")
+        basis = re.search(r"\bon\s+(?:a\s+|the\s+)?([^.;]{1,60}?\bbasis)\b", anchor, re.IGNORECASE)
+        if "basis" in focus and basis and _normalize_for_matching(basis.group(1)).replace("-", " ") not in _normalize_for_matching(rewrite).replace("-", " "):
+            losses.append("basis")
+        attribution = re.match(r"(.{1,120}?)\s+(?:reports?|records?|shows?|measures?)\b", anchor, re.IGNORECASE)
+        if re.search(r"\b(?:attribution|lab|laboratory)\b", focus) and attribution and _normalize_for_matching(attribution.group(1)) not in _normalize_for_matching(rewrite):
+            losses.append("attribution")
+        anchor_fields = record_fields(anchor)
+        rewrite_fields = record_fields(rewrite)
+        if anchor_fields:
+            if rewrite_fields is None:
+                losses.append("ambiguous_record_identity")
+            else:
+                if not anchor_fields <= rewrite_fields:
+                    losses.append("selected_record")
+                if rewrite_fields - anchor_fields:
+                    losses.append("unrequested_record")
+        for label in ("date", "calibration"):
+            if label in focus and any(re.search(rf"\b{label}\b", sentence, re.IGNORECASE)
+                                      and re.search(r"\b(?:unknown|missing)\b", sentence, re.IGNORECASE)
+                                      for sentence in record[1:]):
+                if not any(re.search(rf"\b{label}\b", sentence, re.IGNORECASE)
+                           and re.search(r"\b(?:unknown|missing|not (?:known|provided))\b", sentence, re.IGNORECASE)
+                           for sentence in re.split(r"(?<=[.!?])\s+", rewrite)):
+                    losses.append(f"{label}_uncertainty")
+        return tuple(f"requested_record_not_preserved:{loss}" for loss in losses)
 
     def fast_fallback_answer() -> str | None:
         weather_boundary = _localized_weather_event_answer(question)
@@ -1780,7 +1942,8 @@ def _verify_answer_impl(
         forbidden_terms=_forbidden_terms(draft, draft_assessment, question=question, evidence_text=evidence_text),
         missing_intent_facets=draft_assessment.missing_intent_facets,
         missing_evidence_terms=draft_assessment.missing_evidence_terms,
-        max_words=max(60, min(160, len(draft.split()) + 40)),
+        max_words=(editor_max_words if editor_max_words is not None
+                   else max(60, min(160, len(draft.split()) + 40))),
         evidence_handshake=evidence_handshake,
         decision_state=decision_state,
         preserve_supported_draft=(
@@ -1805,6 +1968,9 @@ def _verify_answer_impl(
     editor_budget["evidence_chars_available"] = len(editor_evidence_text)
     editor_budget["evidence_chars_included"] = len(bounded_editor_evidence)
     editor_budget["evidence_truncated"] = len(bounded_editor_evidence) < len(editor_evidence_text)
+    editor_budget["editor_max_words"] = (editor_max_words if editor_max_words is not None
+                                         else max(60, min(160, len(draft.split()) + 40)))
+    editor_budget["word_limit_scope"] = "prompt_instruction_not_provider_token_limit_or_output_clipping"
     if editor_budget["status"] == "over_limit":
         fallback = fallback_answer()
         final_assessment = assess(fallback)
@@ -1868,6 +2034,8 @@ def _verify_answer_impl(
         evidence_handshake=evidence_handshake,
         require_complete_decision_content=model_agnostic_selective,
     )
+    record_losses = requested_record_losses(editor_output)
+    rejection_reasons = (*rejection_reasons, *record_losses)
     accepted = not rejection_reasons
     if accepted:
         final_answer = editor_output
@@ -1878,7 +2046,7 @@ def _verify_answer_impl(
             question=question,
             candidates=(
                 (draft, draft_assessment),
-                (editor_output, rewrite_assessment),
+                *(((editor_output, rewrite_assessment),) if not record_losses else ()),
                 (fallback, assess(fallback)),
             ),
         )
@@ -1922,9 +2090,11 @@ def verify_answer(
     egress_envelope_factory: Any | None = None,
     editor_context_management: dict[str, Any] | None = None,
     editor_max_tokens: int | None = None,
+    editor_max_words: int | None = None,
 ) -> AnswerVerificationResult:
     """Apply model-independent consequence thresholds before editing."""
 
+    editor_max_words = validate_editor_max_words(editor_max_words)
     docs = tuple(evidence_docs)
     entities = tuple(preserve_entities)
     required = tuple(required_entities)
@@ -1987,6 +2157,7 @@ def verify_answer(
             egress_envelope_factory=egress_envelope_factory,
             editor_context_management=editor_context_management,
             editor_max_tokens=editor_max_tokens,
+            editor_max_words=editor_max_words,
         )
         return AnswerVerificationResult(
             **{
@@ -2011,6 +2182,7 @@ def verify_answer(
         egress_envelope_factory=egress_envelope_factory,
         editor_context_management=editor_context_management,
         editor_max_tokens=editor_max_tokens,
+        editor_max_words=editor_max_words,
     )
 
 
