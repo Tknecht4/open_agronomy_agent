@@ -11,6 +11,179 @@ from test_release_eval_diagnostic_inputs import closeout  # Shared synthetic sea
 
 from agronomy_agent.release_eval_analysis import summarize
 from agronomy_agent.release_eval_reanalysis import reanalyze
+
+
+@pytest.mark.parametrize("flag", [True, None])
+def test_projection_preserves_recorded_length_with_legacy_missing_stats(flag):
+    from agronomy_agent.release_eval_reanalysis import _model_matrix
+    from agronomy_agent.release_eval_model_metrics import termination_evidence
+    cell = {"observation_id": "synthetic", "arm_id": "raw_model", "backend": "fixture"}
+    plan = {"model": {"id": "fixture", "revision": "fixture-revision"}, "matrix": [cell]}
+    original = {**cell, "finish_reason": "length", "truncated": flag, "turns": [{"answer": "Synthetic answer"}]}
+    _, rows = _model_matrix({"plan": plan, "observations": [original]})
+    assert rows[0]["finish_reason"] == "length"
+    assert rows[0]["truncated"] is flag
+    assert rows[0]["termination"]["status"] == "unknown"
+    assert termination_evidence(rows[0])["truncated"] is True
+    assert original["turns"] == [{"answer": "Synthetic answer"}]
+
+
+@pytest.mark.parametrize("recorded,derived", [("stop", "length"), ("length", "stop")])
+def test_projection_rejects_conflicting_known_terminals(recorded, derived):
+    from agronomy_agent.release_eval_reanalysis import _model_matrix
+    cell = {"observation_id": "synthetic", "arm_id": "raw_model", "backend": "fixture"}
+    plan = {"model": {"id": "fixture", "revision": "fixture-revision"}, "matrix": [cell]}
+    row = {**cell, "finish_reason": recorded, "turns": [{"generation_stats": {"finish_reason": derived}}]}
+    with pytest.raises(ValueError, match="contradictory recorded and derived"):
+        _model_matrix({"plan": plan, "observations": [row]})
+
+
+def test_projection_preserves_nested_only_length_and_actual_zero():
+    from agronomy_agent.release_eval_reanalysis import _model_matrix
+    from agronomy_agent.release_eval_executor import observation_termination
+    from agronomy_agent.release_eval_model_metrics import score_model_matrix
+    from test_release_eval_model_metrics import packet
+    plan, rows, rubrics, reviews, policy = packet()
+    plan.update(model={"id": "fixture_model", "revision": "fixture_revision"})
+    for cell in plan["matrix"]:
+        cell["backend"] = "synthetic"
+    for row in rows:
+        row["termination"] = observation_termination([{"generation_stats": {"finish_reason": "stop"}}])
+        row["turns"] = [{"answer": row["answer"]}]
+    rows[0]["termination"] = observation_termination([{"generation_stats": {"finish_reason": "length"}}])
+    frozen = json.loads(json.dumps(rows[0]))
+    projected_plan, projected_rows = _model_matrix({"plan": plan, "observations": rows})
+    assert projected_rows[0]["finish_reason"] == "length"
+    assert projected_rows[0]["truncated"] is True
+    assert projected_rows[0]["termination"] == frozen["termination"]
+    assert projected_rows[0]["derived_termination"]["status"] == "unknown"
+    policy["truncated_outcome"] = "zero"
+    report = score_model_matrix(projected_plan, projected_rows, rubrics=rubrics, reviews=reviews, policy=policy)
+    assert report["cells"][0]["penalty_zero"] is True
+    assert report["groups"][0]["primary"]["score"] == pytest.approx(0.3)
+    assert rows[0] == frozen
+
+
+@pytest.mark.parametrize("recorded,derived", [("length", "stop"), ("stop", "length")])
+def test_projection_rejects_nested_only_conflicting_known_terminal(recorded, derived):
+    from agronomy_agent.release_eval_reanalysis import _model_matrix
+    from agronomy_agent.release_eval_executor import observation_termination
+    cell = {"observation_id": "synthetic", "arm_id": "raw_model", "backend": "fixture"}
+    plan = {"model": {"id": "fixture", "revision": "fixture-revision"}, "matrix": [cell]}
+    row = {**cell, "termination": observation_termination([{"generation_stats": {"finish_reason": recorded}}]),
+           "turns": [{"generation_stats": {"finish_reason": derived}}]}
+    with pytest.raises(ValueError, match="contradictory recorded and derived"):
+        _model_matrix({"plan": plan, "observations": [row]})
+
+
+def test_projection_rejects_stage_conflict_even_when_both_aggregates_length():
+    from agronomy_agent.release_eval_reanalysis import _model_matrix
+    from agronomy_agent.release_eval_executor import observation_termination
+    cell = {"observation_id": "synthetic", "arm_id": "production_full", "backend": "fixture"}
+    plan = {"model": {"id": "fixture", "revision": "fixture-revision"}, "matrix": [cell]}
+    row = {**cell, "termination": observation_termination([{
+        "generation_stats": {"finish_reason": "length"}, "editor_generation_stats": {"finish_reason": "stop"}}]),
+        "turns": [{"generation_stats": {"finish_reason": "stop"}, "editor_generation_stats": {"finish_reason": "length"}}]}
+    with pytest.raises(ValueError, match="terminal stage"):
+        _model_matrix({"plan": plan, "observations": [row]})
+
+
+def test_projection_keeps_derived_length_when_recorded_terminal_unknown():
+    from agronomy_agent.release_eval_reanalysis import _model_matrix
+    from agronomy_agent.release_eval_executor import observation_termination
+    from agronomy_agent.release_eval_model_metrics import score_model_matrix
+    from test_release_eval_model_metrics import packet
+    plan, rows, rubrics, reviews, policy = packet()
+    plan.update(model={"id": "fixture_model", "revision": "fixture_revision"})
+    for cell in plan["matrix"]:
+        cell["backend"] = "synthetic"
+    for row in rows:
+        row["turns"] = [{"generation_stats": {"finish_reason": "stop"}}]
+    unknown = observation_termination([{"generation_stats": {"generation_tokens": 2}}])
+    rows[0]["termination"] = unknown
+    rows[0]["turns"][0]["generation_stats"]["finish_reason"] = "length"
+    projected_plan, projected_rows = _model_matrix({"plan": plan, "observations": rows})
+    assert projected_rows[0]["finish_reason"] == "length" and projected_rows[0]["truncated"] is True
+    assert projected_rows[0]["recorded_termination"] == unknown
+    assert projected_rows[0]["derived_termination"]["status"] == "observed"
+    policy["truncated_outcome"] = "zero"
+    report = score_model_matrix(projected_plan, projected_rows, rubrics=rubrics, reviews=reviews, policy=policy)
+    assert report["cells"][0]["penalty_zero"] is True
+    assert report["groups"][0]["primary"]["score"] == pytest.approx(0.3)
+
+
+@pytest.mark.parametrize("editor_output", ["Rejected synthetic output", ""])
+def test_projection_actual_editor_attempt_cannot_remain_recorded_na(editor_output):
+    from agronomy_agent.release_eval_reanalysis import _model_matrix
+    from agronomy_agent.release_eval_executor import observation_termination
+    from agronomy_agent.release_eval_model_metrics import score_model_matrix
+    from test_release_eval_model_metrics import packet
+    plan, rows, rubrics, reviews, policy = packet()
+    plan.update(model={"id": "fixture_model", "revision": "fixture_revision"})
+    for cell in plan["matrix"]:
+        cell["backend"] = "synthetic"
+    for row in rows:
+        row["turns"] = [{"generation_stats": {"finish_reason": "stop"}}]
+    rows[0]["termination"] = observation_termination(rows[0]["turns"])
+    assert rows[0]["termination"]["stages"][1]["status"] == "not_applicable"
+    rows[0]["turns"][0]["editor"] = {"editor_output": editor_output, "rewrite_accepted": False}
+    projected_plan, projected_rows = _model_matrix({"plan": plan, "observations": rows})
+    assert projected_rows[0]["recorded_termination"]["stages"][1]["status"] == "not_applicable"
+    assert projected_rows[0]["termination"]["stages"][1]["required"] is True
+    assert projected_rows[0]["termination"]["status"] == "unknown"
+    policy["truncated_outcome"] = "zero"
+    report = score_model_matrix(projected_plan, projected_rows, rubrics=rubrics, reviews=reviews, policy=policy)
+    assert report["cells"][0]["termination_status"] == "unknown"
+    assert report["groups"][0]["primary"]["score"] is None
+
+
+def _order2_analysis_packet(tmp_path):
+    from test_release_evaluation import _controller_packet
+    from agronomy_agent.release_evaluation import planned_analysis_condition
+    plan, rows, rubrics, reviews, policy, inputs = _controller_packet(tmp_path)
+    plan["source"] = {"source_sha256": digest("synthetic-source"), "files": {
+        key: digest(key) for key in ("src/agronomy_agent/release_eval_executor.py", "src/agronomy_agent/benchmark_arms.py", "src/agronomy_agent/release_evaluation.py")}}
+    plan["model"]["config_sha256"] = digest("synthetic-config")
+    plan.update(sampling={"seed": 1}, environment={"scope": "synthetic"},
+                effective_runtime_inputs={"model_trial_sha256": {"trial-001": digest("synthetic-trial")}, "rag_sha256": digest("synthetic-rag")})
+    for row, cell in zip(rows, plan["matrix"]):
+        row.update(backend_id="mock", analysis_condition=planned_analysis_condition(plan, cell),
+                   config_identity={"model": {"sha256": digest("synthetic-trial")}, "rag": {"sha256": digest("synthetic-rag")}})
+    return plan, rows, rubrics, reviews, policy, inputs
+
+
+@pytest.mark.parametrize("target", ["condition", "model", "config"])
+def test_order2_projection_refuses_observed_condition_model_config_changes(tmp_path, target):
+    from agronomy_agent.release_eval_reanalysis import _model_matrix
+    plan, rows, *_ = _order2_analysis_packet(tmp_path)
+    if target == "condition": rows[0]["analysis_condition"]["source_sha256"] = "f" * 64
+    if target == "model": rows[0]["model_id"] = "other-observed-model"
+    if target == "config": rows[0]["config_identity"]["model"]["sha256"] = "f" * 64
+    with pytest.raises(ValueError):
+        _model_matrix({"plan": plan, "observations": rows})
+
+
+def test_order2_missing_observed_config_identity_stays_unknown(tmp_path):
+    from agronomy_agent.release_eval_reanalysis import _model_matrix
+    from agronomy_agent.release_eval_model_metrics import score_model_matrix
+    plan, rows, rubrics, reviews, policy, _ = _order2_analysis_packet(tmp_path)
+    rows[0].pop("config_identity"); rows[0].pop("model_id")
+    p, projected = _model_matrix({"plan": plan, "observations": rows})
+    assert projected[0]["analysis_condition"] is None
+    assert projected[0]["recorded_analysis_condition"] is not None
+    assert projected[0]["observed_model_identity"]["model_id"] is None
+    assert projected[0]["runtime_input_binding_status"] == "unknown_missing_worker_config"
+    report = score_model_matrix(p, projected, rubrics=rubrics, reviews=reviews, policy=policy)
+    assert all(c["ranking_authorized"] is False for c in report["contrasts"])
+    assert report["cells"][0]["unknown_condition_fields"]
+
+
+def test_order2_bound_analyzer_refuses_equivalent_reformatted_policy_bytes(tmp_path):
+    from agronomy_agent.release_eval_reanalysis import _model_metrics_bundle
+    plan, rows, _, _, _, inputs = _order2_analysis_packet(tmp_path)
+    path = inputs["policy"]["path"]; path.write_text(path.read_text() + "\n")
+    with pytest.raises(ValueError, match="controller bytes"):
+        _model_metrics_bundle(plan, rows, rubrics_path=inputs["rubrics"]["path"], reviews_path=None, policy_path=path)
 from agronomy_agent.release_eval_runner import retention_manifest, verify_retention
 from agronomy_agent.release_evaluation import (
     build_plan,

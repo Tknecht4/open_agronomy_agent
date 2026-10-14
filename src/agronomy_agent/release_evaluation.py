@@ -16,6 +16,7 @@ import platform
 import re
 import subprocess
 import sqlite3
+import stat
 import sys
 from collections import Counter
 from pathlib import Path
@@ -45,6 +46,208 @@ COMPONENTS = {
     "product_contracts",
     "performance",
 }
+CONTROLLER_INPUT_LIMIT = 2 * 1024 * 1024
+TASK_FIELD_ALIASES = {"crop_name": "crop", "region_text": "region", "province": "jurisdiction", "field_name": "display_name"}
+CONTROLLER_GOLD_KEYS = {"reference_answer", "reference_numeric", "reference_unit", "semantic_rubric", "rubric", "rubrics", "numeric_oracle", "criterion_scores", "model_scoring_policy", "expected_answer"}
+
+
+def strict_json(raw: bytes | str) -> Any:
+    def unique(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("duplicate JSON key")
+            result[key] = value
+        return result
+    def nonfinite(value):
+        raise ValueError("nonfinite JSON input: " + value)
+    return json.loads(raw, object_pairs_hook=unique, parse_constant=nonfinite)
+
+
+def read_controller_inputs(*, rubrics_path: Path | None = None, policy_path: Path | None = None) -> dict[str, Any]:
+    """Capture bounded exact controller bytes once; never pass them to workers."""
+    result = {}
+    for name, path in (("rubrics", rubrics_path), ("policy", policy_path)):
+        if path is None:
+            continue
+        info = Path(path).lstat()
+        if not stat.S_ISREG(info.st_mode) or info.st_size > CONTROLLER_INPUT_LIMIT:
+            raise ValueError("controller input must be a bounded regular file")
+        with os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK), "rb") as handle:
+            info = os.fstat(handle.fileno())
+            if not stat.S_ISREG(info.st_mode) or info.st_size > CONTROLLER_INPUT_LIMIT:
+                raise ValueError("controller input must be a bounded regular file")
+            raw = handle.read(CONTROLLER_INPUT_LIMIT + 1)
+        if len(raw) > CONTROLLER_INPUT_LIMIT:
+            raise ValueError("controller input exceeds 2 MiB")
+        value = strict_json(raw) if name == "policy" else [strict_json(line) for line in raw.splitlines() if line.strip()]
+        if (name == "policy" and not isinstance(value, dict)) or (name == "rubrics" and any(not isinstance(row, dict) for row in value)):
+            raise ValueError("controller inputs require object records")
+        result[name] = {"path": Path(path), "bytes": raw, "value": value,
+                        "sha256": hashlib.sha256(raw).hexdigest()}
+    return result
+
+
+def _no_controller_gold(value: Any) -> None:
+    if isinstance(value, Mapping):
+        if set(value) & CONTROLLER_GOLD_KEYS:
+            raise ValueError("controller gold is forbidden in supplied task facts")
+        for item in value.values():
+            _no_controller_gold(item)
+    elif isinstance(value, list):
+        for item in value:
+            _no_controller_gold(item)
+
+
+def task_input_contract(case: Mapping[str, Any]) -> dict[str, Any]:
+    """Match exact user input, never a case hash or arm-dependent history."""
+    if ("question" in case) == ("turns" in case):
+        raise ValueError("task requires exactly one question or turns")
+    turns = [case["question"]] if "question" in case else case["turns"]
+    if not isinstance(turns, list) or not turns:
+        raise ValueError("task turns must be nonempty")
+    requests = []
+    for turn in turns:
+        if isinstance(turn, Mapping):
+            if turn.get("role", "user") != "user":
+                raise ValueError("shared tasks require user turns")
+            turn = turn.get("content")
+        if not isinstance(turn, str) or not turn.strip():
+            raise ValueError("task requests must be nonempty text")
+        requests.append(turn)
+    context = case.get("field_context", {})
+    if not isinstance(context, dict):
+        raise ValueError("task field context must be an object")
+    _no_controller_gold(context)
+    inline = not context
+    decoder = json.JSONDecoder()
+    # Scan complete suffix objects through strict_json as well: duplicate keys,
+    # typed differences and quoted/stringified examples cannot qualify facts.
+    for request in requests:
+        for index, char in enumerate(request):
+            if char != "{":
+                continue
+            try:
+                permissive, end = decoder.raw_decode(request[index:])
+            except (ValueError, json.JSONDecodeError):
+                continue
+            _no_controller_gold(permissive)
+            try:
+                parsed = strict_json(request[index:index + end])
+            except (ValueError, json.JSONDecodeError):
+                continue
+            _no_controller_gold(parsed)
+            label = request[:index].rsplit("\n", 1)[-1].strip()
+            declared = label in {"Supplied facts:", "Supplied facts (canonical JSON):", "Supplied synthetic facts (project-authored, not study observations):"}
+            if declared and not request[index + end:].strip() and digest(parsed) == digest(context):
+                inline = True
+    conflicts = [alias for alias, canonical in TASK_FIELD_ALIASES.items()
+                 if alias in context and canonical in context and digest(context[alias]) != digest(context[canonical])]
+    matched = len(requests) == 1 and inline and not conflicts
+    return {"schema_version": "open_agronomy_agent.shared_task_input.v1", "requests": requests,
+            "field_context": context, "request_sha256": digest(requests), "supplied_facts_sha256": digest(context),
+            "task_input_sha256": digest({"requests": requests, "field_context": context}) if matched else None,
+            "status": "matched_single_request_inline_facts" if matched else "unknown_multiturn_history" if len(requests) != 1 else "unknown_alias_conflict" if conflicts else "unknown_field_only_facts"}
+
+
+def validate_task_exposure(case: Mapping[str, Any], arm_id: str, exposure: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Check recorded source fields, not a worker-supplied matching digest."""
+    expected = task_input_contract(case)
+    unknown = {"status": "unknown_missing_exposure", "task_input_sha256": None}
+    if exposure is None:
+        return unknown
+    if not isinstance(exposure, Mapping) or exposure.get("schema_version") != "open_agronomy_agent.task_exposure.v1" or exposure.get("arm_id") != arm_id:
+        raise ValueError("task exposure arm/schema mismatch")
+    if exposure.get("receipt_sha256") != digest({k: v for k, v in exposure.items() if k != "receipt_sha256"}):
+        raise ValueError("task exposure receipt hash mismatch")
+    if exposure.get("worker_case_sha256") != digest(worker_case(case)):
+        raise ValueError("task exposure worker case mismatch")
+    inputs = exposure.get("requests")
+    if not isinstance(inputs, list) or not inputs:
+        return unknown
+    if any(not isinstance(item, Mapping) for item in inputs) or len(inputs) > len(expected["requests"]) or [item.get("message") for item in inputs] != expected["requests"][:len(inputs)]:
+        raise ValueError("task exposure request mismatch")
+    compiled = dict(expected["field_context"])
+    applied = {}
+    conflicts = []
+    for alias, canonical in TASK_FIELD_ALIASES.items():
+        if alias not in compiled:
+            continue
+        if canonical in compiled and digest(compiled[canonical]) != digest(compiled[alias]):
+            conflicts.append({"alias": alias, "canonical": canonical, "alias_value": compiled[alias], "canonical_value": compiled[canonical]})
+        elif canonical not in compiled:
+            compiled[canonical] = compiled[alias]; applied[alias] = canonical
+    aliases = {"schema_version": "open_agronomy_agent.release_field_aliases.v1", "aliases_applied": applied,
+               "conflicts": conflicts, "input_sha256": digest(expected["field_context"]), "compiled_sha256": digest(compiled)}
+    if exposure.get("compiled_field_context_sha256") != digest(compiled) or digest(exposure.get("field_alias_receipt")) != digest(aliases):
+        raise ValueError("task exposure compiler/alias pins mismatch")
+    for item in inputs:
+        if arm_id in {"raw_model", "kernel_only"}:
+            prompt = item.get("prompt_messages")
+            if not isinstance(prompt, list) or not prompt or prompt[-1] != {"role": "user", "content": item["message"]} or item.get("field_context_delivered") is not None:
+                raise ValueError("reference task exposure differs from actual user prompt")
+            if len(expected["requests"]) == 1 and len(prompt) != (2 if arm_id == "kernel_only" else 1):
+                raise ValueError("reference task has unplanned history")
+        elif digest(item.get("field_context_delivered", {})) != digest(compiled):
+            raise ValueError("product task exposure context mismatch")
+    return ({"status": "unknown_incomplete_exposure", "task_input_sha256": None} if len(inputs) != len(expected["requests"])
+            else {"status": expected["status"], "task_input_sha256": expected["task_input_sha256"]})
+
+
+def bind_controller_inputs(plan: dict[str, Any], inputs: Mapping[str, Any], comparison_cohort: str | None = None) -> dict[str, Any]:
+    if not inputs and comparison_cohort is None:
+        return plan
+    if comparison_cohort is not None and (not isinstance(comparison_cohort, str) or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,100}", comparison_cohort)):
+        raise ValueError("explicit comparison cohort must be a stable identifier")
+    from agronomy_agent.release_eval_model_metrics import score_model_matrix
+    rubrics = inputs.get("rubrics", {}).get("value", [])
+    policy = inputs.get("policy", {}).get("value")
+    projected = {**plan, "matrix": [{**cell, "model_id": plan["model"]["id"], "model_revision": plan["model"]["revision"], "backend_id": cell["backend"]} for cell in plan["matrix"]]}
+    score_model_matrix(projected, [], rubrics=rubrics, policy=policy)
+    bound = {**plan, "controller_inputs": {"schema_version": "open_agronomy_agent.controller_inputs.v1",
+             "files": {name: {"sha256": item["sha256"], "bytes": len(item["bytes"]), "canonical_sha256": digest(item["value"]), "source_path": str(item["path"].resolve())} for name, item in inputs.items()},
+             "rubric_sha256_by_case": {r["case_id"]: r["rubric_sha256"] for r in rubrics}},
+             "comparison_cohort": comparison_cohort,
+             "shared_task_rule": "single_user_request_exact_suffix_inline_original_facts_v1",
+             "model_scoring_policy_sha256": digest(policy) if policy is not None else None}
+    bound["matrix"] = []
+    for cell in plan["matrix"]:
+        case = next(case for case in plan["cases"] if case["case_id"] == cell["case_id"] and case["suite_id"] == cell["suite_id"])
+        contract = task_input_contract(case)
+        bound["matrix"].append({**cell, "comparison_cohort": comparison_cohort,
+                                "task_input_sha256": contract["task_input_sha256"], "task_input_status": contract["status"]})
+    return bound
+
+
+def planned_analysis_condition(plan: Mapping[str, Any], cell: Mapping[str, Any]) -> dict[str, Any]:
+    files = plan.get("source", {}).get("files", {})
+    names = ("src/agronomy_agent/release_eval_executor.py", "src/agronomy_agent/benchmark_arms.py") + (("src/agronomy_agent/release_evaluation.py",) if "controller_inputs" in plan else ())
+    recipe = {name: files.get(name) for name in names}
+    runtime = plan.get("effective_runtime_inputs")
+    return {"model_config_sha256": plan["model"].get("config_sha256"),
+            "source_sha256": plan.get("source", {}).get("source_sha256"),
+            "runtime_config_sha256": digest({"sampling": plan["sampling"], "environment": plan["environment"],
+                **({"effective_model_sha256": runtime["model_trial_sha256"].get(cell["trial_id"]), "effective_rag_sha256": runtime["rag_sha256"]} if runtime else {})}) if "sampling" in plan and "environment" in plan else None,
+            "arm_recipe_sha256": digest({"arm_id": cell["arm_id"], "files": recipe}) if all(recipe.values()) else None}
+
+
+def validate_worker_runtime(plan: Mapping[str, Any], cell: Mapping[str, Any], row: Mapping[str, Any]) -> str:
+    expected = plan.get("effective_runtime_inputs")
+    if expected is None:
+        return "unknown_unbound_runtime"
+    observed = row.get("config_identity") or {}
+    if row.get("config_identity") is not None and not isinstance(row["config_identity"], Mapping):
+        raise ValueError("worker config identity must be a mapping")
+    complete = True
+    for role, bound in (("model", expected["model_trial_sha256"][cell["trial_id"]]), ("rag", expected["rag_sha256"])):
+        if role in observed and not isinstance(observed[role], Mapping):
+            raise ValueError("worker config role must be a mapping")
+        value = observed.get(role, {}).get("sha256")
+        if value is None:
+            complete = False
+        elif value != bound:
+            raise ValueError("observed worker runtime config differs: " + role)
+    return "verified_worker_config_bytes" if complete else "unknown_missing_worker_config"
 
 
 def digest(value: Any) -> str:
@@ -319,7 +522,10 @@ def worker_case(case: Mapping[str, Any]) -> dict[str, Any]:
         "synthetic_fault",
         "review_required",
     }
-    return {key: value for key, value in case.items() if key in keys}
+    projected = {key: value for key, value in case.items() if key in keys}
+    if "question" in projected or "turns" in projected:
+        task_input_contract(projected)
+    return projected
 
 
 def source_identity(root: Path = ROOT) -> dict[str, Any]:
@@ -524,6 +730,8 @@ def build_plan(
     root: Path = ROOT,
     limit: int | None = None,
     run_id: str = "evaluation",
+    controller_inputs: Mapping[str, Any] | None = None,
+    comparison_cohort: str | None = None,
 ) -> dict[str, Any]:
     if profile not in registry["profiles"] or not re.fullmatch(
         r"[A-Za-z0-9_.-]{1,100}", run_id
@@ -556,7 +764,8 @@ def build_plan(
                 "selected_cases": len(selected),
             }
         )
-    model = yaml.safe_load(checked_path(root, registry["model_config"]).read_text())
+    model_bytes = checked_path(root, registry["model_config"]).read_bytes()
+    model = yaml.safe_load(model_bytes)
     if not str(model.get("model_revision") or "").strip():
         raise ValueError("revision-pinned model required")
     profile_config = registry["profiles"][profile]
@@ -602,7 +811,7 @@ def build_plan(
         "trials": profile_config["trials"],
     }
     auxiliary_inputs = controlled_inputs(registry, root)
-    return {
+    plan = {
         "schema_version": PLAN_SCHEMA,
         "suite_id": registry["suite_id"],
         "run_id": run_id,
@@ -618,7 +827,7 @@ def build_plan(
         "model": {
             "id": model.get("model_id"),
             "revision": model["model_revision"],
-            "config_sha256": file_digest(checked_path(root, registry["model_config"])),
+            "config_sha256": hashlib.sha256(model_bytes).hexdigest(),
         },
         "rag_config_sha256": file_digest(checked_path(root, registry["rag_config"])),
         "auxiliary_inputs": auxiliary_inputs,
@@ -647,10 +856,47 @@ def build_plan(
         "backend_performance_policy": registry["backend_performance_policy"],
         "domain_policy": registry["domain_policy"],
     }
+    return bind_controller_inputs(plan, controller_inputs or {}, comparison_cohort)
 
 
 def plan_identity(plan: Mapping[str, Any]) -> str:
     return digest(plan)
+
+
+def read_stop_policy(path: Path | None) -> dict[str, Any] | None:
+    """An opt-in collection contract, never model or domain qualification."""
+    if path is None:
+        return None
+    item = read_controller_inputs(policy_path=path)["policy"]
+    policy = item["value"]
+    keys = {"schema_version", "finalization_reserve_seconds", "retention_budget_bytes",
+            "finalization_reserve_bytes", "minimum_free_bytes", "file_hardcap_bytes",
+            "require_model_identity", "require_termination"}
+    if set(policy) != keys or policy["schema_version"] != "open_agronomy_agent.bounded_stop_policy.v1":
+        raise ValueError("unsupported bounded stop policy")
+    reserve = policy["finalization_reserve_seconds"]
+    if type(reserve) not in (int, float) or not math.isfinite(reserve) or reserve <= 10:
+        raise ValueError("finalization reserve must exceed ten-second process cleanup bound")
+    for key in ("retention_budget_bytes", "finalization_reserve_bytes", "minimum_free_bytes", "file_hardcap_bytes"):
+        if type(policy[key]) is not int or policy[key] <= 0:
+            raise ValueError("stop policy byte amounts must be positive integers")
+    if policy["finalization_reserve_bytes"] + policy["file_hardcap_bytes"] >= policy["retention_budget_bytes"]:
+        raise ValueError("retention budget must leave dispatch and finalization headroom")
+    if any(type(policy[key]) is not bool for key in ("require_model_identity", "require_termination")):
+        raise ValueError("stop policy requirements must be explicit booleans")
+    return {"path": str(item["path"]), "bytes": item["bytes"], "policy": policy,
+            "sha256": item["sha256"]}
+
+
+def bind_stop_policy(plan: dict[str, Any], item: Mapping[str, Any] | None,
+                     whole_run_seconds: float) -> dict[str, Any]:
+    if item is None:
+        return plan
+    if item["policy"]["finalization_reserve_seconds"] >= whole_run_seconds:
+        raise ValueError("finalization reserve consumes whole run budget")
+    return {**plan, "bounded_stop_policy": {"schema_version": "open_agronomy_agent.stop_policy_binding.v1",
+            "sha256": item["sha256"], "bytes": len(item["bytes"]),
+            "source_path": item["path"], "policy": item["policy"]}}
 
 
 def write_new_json(path: Path, value: Any) -> None:
@@ -660,6 +906,8 @@ def write_new_json(path: Path, value: Any) -> None:
             value, handle, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False
         )
         handle.write("\n")
+        handle.flush()
+        os.fsync(handle.fileno())
 
 
 def evaluation_entrypoints(*, root: Path = ROOT) -> dict[str, Any]:

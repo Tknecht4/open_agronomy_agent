@@ -89,6 +89,17 @@ inventory does not execute tests or inference.
    prompts or training. Engineering status cannot establish domain competence.
    See the [canonical operator guide](docs/public/operations/release-evaluation.md).
 
+The release runner freezes optional controller rubric/policy bytes before
+dispatch and validates actual task exposure and observed identities separately
+from the planned cell. A matching entry-point request does not prove final prompt
+consumption or equal raw/full recipes. Call-scoped draft/editor termination
+receipts preserve length failures and required unknowns through offline analysis.
+Its opt-in stop policy retains the original clock, contains owned worker groups
+and requires a terminal disposition seal. Closeout timing ends at sampled final
+read verification before terminal durability publication; disk polling is not an
+atomic quota, and external lease cleanup is outside this contract. No model or
+domain qualification follows from these offline controls.
+
 The existing analyzer also binds optional private criterion reviews and project
 scoring policies, sealed six-cell diagnostic readouts and synthetic development
 panel fixtures. `release_eval_model_metrics.py` owns descriptive fixed-denominator

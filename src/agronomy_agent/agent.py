@@ -3158,6 +3158,8 @@ class MLXGenerator:
         request_started_at: float | None = None,
     ) -> str:
         request_started_at = request_started_at or perf_counter()
+        # A failed/reused call must not expose the preceding call's terminal data.
+        self.last_generation_stats = {"finish_reason": None}
         load_started = perf_counter()
         try:
             loaded_now = self._load()
@@ -3252,6 +3254,7 @@ class MLXGenerator:
             ).strip()
             self.last_generation_stats = {
                 "streamed": False,
+                "finish_reason": None,
                 "draft_model_id": None,
                 "prompt_cache_enabled": False,
                 "prompt_cache_hit": False,
@@ -3348,6 +3351,7 @@ class MLXGenerator:
         stream_ended = perf_counter()
         self.last_generation_stats = {
             "streamed": True,
+            "finish_reason": getattr(final_response, "finish_reason", None),
             "draft_model_id": self.draft_model_id,
             "num_draft_tokens": self.num_draft_tokens if self._draft_model is not None else None,
             "generation_tokens": total_tokens,

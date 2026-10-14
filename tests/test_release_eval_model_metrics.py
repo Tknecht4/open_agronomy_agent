@@ -108,12 +108,127 @@ def test_failed_worker_zero_outcome_preserves_semantic_unknown():
 
 @pytest.mark.parametrize("mode,expected", [("retain_labels", 0.6), ("zero", 0.3)])
 def test_truncation_explicit_policy(mode, expected):
-    data = packet(); data[1][0]["finish_reason"] = "length"; data[4]["truncated_outcome"] = mode
+    data = packet()
+    for row in data[1]:
+        row["finish_reason"] = "stop"
+    data[1][0]["finish_reason"] = "length"; data[4]["truncated_outcome"] = mode
     report = run(data)
     assert report["groups"][0]["truncated"] == 1
     assert report["groups"][0]["primary"]["score"] == pytest.approx(expected)
     assert report["policy_bound_to_plan"] is (mode == "retain_labels")
     assert report["contrasts"][0]["interval"]["mean_delta"] == pytest.approx(0.2 if mode == "retain_labels" else 0.5)
+
+
+def test_terminal_unknown_and_contradiction_are_explicit():
+    data = packet()
+    report = run(data)
+    assert report["cells"][0]["truncated"] is None
+    assert report["groups"][0]["termination_unknown"] == 2
+    data[1][0].update(finish_reason="length", truncated=False)
+    with pytest.raises(ValueError, match="contradictory terminal"):
+        run(data)
+
+
+def test_projected_editor_length_reaches_actual_scorer():
+    from agronomy_agent.release_eval_reanalysis import _model_matrix
+    data = packet()
+    plan, rows = data[:2]
+    plan = {**plan, "model": {"id": "fixture_model", "revision": "fixture_revision"},
+            "source": {}, "sampling": {}, "environment": {}}
+    for cell in plan["matrix"]:
+        cell["backend"] = "synthetic"
+    for row in rows:
+        row["turns"] = [{"generation_stats": {"finish_reason": "stop"},
+                         "editor_generation_stats": {"finish_reason": "length"}}]
+    projected_plan, projected_rows = _model_matrix({"plan": plan, "observations": rows})
+    data[4]["truncated_outcome"] = "zero"
+    report = score_model_matrix(projected_plan, projected_rows, rubrics=data[2], reviews=data[3], policy=data[4])
+    assert report["groups"][0]["primary"]["score"] == 0
+    assert report["cells"][0]["termination"]["stages"][0]["finish_reason"] == "stop"
+    assert report["cells"][0]["termination"]["stages"][1]["finish_reason"] == "length"
+
+
+def test_unknown_terminal_zero_policy_uses_unknown_bounds_and_preserves_na():
+    from agronomy_agent.release_eval_executor import observation_termination
+    data = packet()
+    data[4]["truncated_outcome"] = "zero"
+    report = run(data)
+    assert report["status"] == "partial_unknown"
+    assert report["groups"][0]["primary"]["score"] is None
+    assert report["groups"][0]["primary"]["fixed_denominator_bounds"] == [0, 1]
+    assert report["contrasts"][0]["paired_scored_n"] == 0
+    for row in data[1]:
+        row["termination"] = observation_termination([{"metadata": {"generation_bypass": {"reason": "synthetic calculator"}}}])
+    report = run(data)
+    assert report["cells"][0]["termination_status"] == "not_applicable"
+    assert report["groups"][0]["primary"]["score"] == pytest.approx(0.6)
+    data[1][0]["status"] = "failed"
+    data[1][0].pop("termination")
+    data[3].pop(0)
+    report = run(data)
+    assert report["cells"][0]["penalty_zero"] is True
+    assert report["groups"][0]["primary"]["score"] == pytest.approx(0.3)
+
+
+def test_nested_unknown_with_known_length_penalty_and_bad_aggregate_refusal():
+    from agronomy_agent.release_eval_executor import observation_termination
+    data = packet()
+    data[4]["truncated_outcome"] = "zero"
+    for row in data[1]:
+        row["finish_reason"] = "stop"
+    data[1][0].pop("finish_reason")
+    data[1][0]["termination"] = observation_termination([
+        {"generation_stats": {"finish_reason": "length"},
+         "editor": {"editor_output": "Rejected synthetic output", "rewrite_accepted": False}}])
+    report = run(data)
+    assert report["cells"][0]["truncated"] is True
+    assert report["cells"][0]["termination_status"] == "unknown"
+    assert report["cells"][0]["penalty_zero"] is True
+    assert report["groups"][0]["primary"]["score"] == pytest.approx(0.3)
+    data[1][0]["termination"]["status"] = "observed"
+    with pytest.raises(ValueError, match="terminal aggregate"):
+        run(data)
+
+
+def test_nested_stop_cannot_override_length_or_contradict_stage():
+    from agronomy_agent.release_eval_executor import observation_termination
+    data = packet()
+    data[1][0].update(finish_reason="length", truncated=True,
+                       termination=observation_termination([{"generation_stats": {"finish_reason": "stop"}}]))
+    with pytest.raises(ValueError, match="recorded and derived"):
+        run(data)
+    data[1][0].update(finish_reason="stop", truncated=False)
+    data[1][0]["termination"]["stages"][0]["truncated"] = True
+    with pytest.raises(ValueError, match="contradictory terminal"):
+        run(data)
+
+
+def test_prospective_controller_and_actual_exposure_binding(tmp_path):
+    from test_release_evaluation import _controller_packet
+    plan, rows, rubrics, reviews, policy, _ = _controller_packet(tmp_path)
+    report = score_model_matrix(plan, rows, rubrics=rubrics, reviews=reviews, policy=policy)
+    assert report["controller_binding_status"] == "prospective_canonical_inputs_bound"
+    assert report["policy_preregistration_verified"] is False and report["promotion_allowed"] is False
+    assert report["contrasts"][0]["paired_scored_n"] == 2
+    rows[0].pop("comparison_cohort")
+    report = score_model_matrix(plan, rows, rubrics=rubrics, reviews=reviews, policy=policy)
+    assert report["contrasts"][0]["incomparable_n"] == 1
+    rows[0]["task_input_sha256"] = "f" * 64
+    with pytest.raises(ValueError, match="actual exposure"):
+        score_model_matrix(plan, rows, rubrics=rubrics, reviews=reviews, policy=policy)
+
+
+@pytest.mark.parametrize("target", ["policy", "rubric", "answer"])
+def test_prospective_scoring_refuses_changed_inputs(tmp_path, target):
+    from test_release_evaluation import _controller_packet
+    plan, rows, rubrics, reviews, policy, _ = _controller_packet(tmp_path)
+    if target == "policy": policy["domain_weights"]["seed"] = 9
+    if target == "rubric":
+        rubrics[0]["criteria"][0]["description"] = "Changed synthetic rubric"
+        rubrics[0]["rubric_sha256"] = rubric_digest(rubrics[0])
+    if target == "answer": rows[0]["answer"] = "Changed synthetic answer"
+    with pytest.raises(ValueError):
+        score_model_matrix(plan, rows, rubrics=rubrics, reviews=reviews, policy=policy)
 
 
 def test_missing_single_criterion_cannot_hide_in_mean():

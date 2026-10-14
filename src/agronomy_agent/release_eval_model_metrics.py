@@ -67,6 +67,57 @@ def _condition(value: Any) -> dict[str, str | None]:
     return {key: _sha(value[key]) if value.get(key) is not None else None for key in CONDITION_FIELDS}
 
 
+def termination_evidence(row: Mapping[str, Any]) -> dict[str, Any]:
+    """Validate recorded flags and scoped stages without inventing a terminal."""
+    def fields(value: Mapping[str, Any]) -> bool | None:
+        reason, flag = value.get("finish_reason"), value.get("truncated")
+        if reason is not None and not isinstance(reason, str):
+            raise ValueError("finish reason must be provider text or null")
+        if flag is not None and not isinstance(flag, bool):
+            raise ValueError("truncated must be boolean or null")
+        known = reason == "length" if reason in ("stop", "length") else None
+        if known is not None and flag is not None and known != flag:
+            raise ValueError("contradictory terminal evidence")
+        return known if known is not None else flag
+
+    recorded = fields(row)
+    termination = row.get("termination")
+    if termination is None:
+        return {"truncated": recorded, "status": "unknown" if recorded is None else "observed"}
+    if not isinstance(termination, Mapping) or termination.get("schema_version") != "open_agronomy_agent.generation_termination.v1":
+        raise ValueError("unsupported termination evidence")
+    stages = termination.get("stages")
+    if not isinstance(stages, list):
+        raise ValueError("termination stages must be a list")
+    seen = set()
+    required = []
+    for stage in stages:
+        if not isinstance(stage, Mapping) or type(stage.get("required")) is not bool or type(stage.get("turn_index")) is not int or stage["turn_index"] < 0 or stage.get("stage") not in {"draft", "reference", "editor"}:
+            raise ValueError("invalid termination stage")
+        key = (stage["turn_index"], stage["stage"])
+        if key in seen:
+            raise ValueError("duplicate termination stage")
+        seen.add(key)
+        fields(stage)
+        reason = stage.get("finish_reason")
+        known = reason in ("stop", "length")
+        expected_status = "not_applicable" if not stage["required"] else "observed" if known else "unknown"
+        expected_flag = reason == "length" if known and stage["required"] else None
+        if stage.get("status") != expected_status or stage.get("truncated") != expected_flag:
+            raise ValueError("contradictory terminal stage")
+        if stage["required"]:
+            required.append(stage)
+    expected_status = "not_applicable" if stages and not required else "unknown" if not required or any(s["status"] == "unknown" for s in required) else "observed"
+    expected_flag = True if any(s["truncated"] is True for s in required) else None if expected_status in {"unknown", "not_applicable"} else False
+    expected_reason = "length" if expected_flag is True else "stop" if expected_flag is False else None
+    if (termination.get("status"), termination.get("truncated"), termination.get("finish_reason")) != (expected_status, expected_flag, expected_reason):
+        raise ValueError("contradictory terminal aggregate")
+    if recorded is not None and expected_flag is not None and recorded != expected_flag:
+        raise ValueError("contradictory recorded and derived terminal evidence")
+    return {"truncated": recorded if recorded is not None else expected_flag,
+            "status": "observed" if expected_status == "not_applicable" and recorded is not None else expected_status}
+
+
 def _weights(value: Any, allowed: set[str]) -> dict[str, float]:
     if not isinstance(value, dict) or not value or set(value) - allowed:
         raise ValueError("unknown or empty weight dimensions/domains")
@@ -257,6 +308,8 @@ def _performance(row: Mapping[str, Any]) -> dict[str, Any]:
 def _cell_value(cell: Mapping[str, Any], policy: Mapping[str, Any]) -> float | None:
     if cell["penalty_zero"]:
         return 0.0
+    if policy["truncated_outcome"] == "zero" and cell["termination_status"] == "unknown":
+        return None
     dimensions = cell["dimensions"]
     if all(dimensions.get(dim) is not None for dim in policy["dimension_weights"]):
         return sum(dimensions[dim] * weight for dim, weight in policy["dimension_weights"].items())
@@ -304,6 +357,18 @@ def score_model_matrix(plan: Mapping[str, Any], observations: Sequence[Mapping[s
     A comparison_cohort and task_input_sha256 must be explicitly recorded on
     observations for contrasts; missing cohort disables comparisons.
     """
+    frozen = plan.get("controller_inputs")
+    binding_status = "legacy_posthoc_unfrozen"
+    if frozen is not None:
+        if not isinstance(frozen, Mapping) or frozen.get("schema_version") != "open_agronomy_agent.controller_inputs.v1" or not isinstance(frozen.get("files"), dict):
+            raise ValueError("unsupported controller input freeze")
+        for name, value in (("rubrics", list(rubrics)), ("policy", policy)):
+            expected = frozen["files"].get(name)
+            if expected is not None:
+                _sha(expected.get("sha256")); _sha(expected.get("canonical_sha256"))
+                if value is not None and (name != "rubrics" or value) and canonical_digest(value) != expected["canonical_sha256"]:
+                    raise ValueError("scoring controller canonical input changed")
+        binding_status = "prospective_canonical_inputs_bound" if policy is not None and rubrics and all(name in frozen["files"] for name in ("rubrics", "policy")) else "partial_unknown"
     cases = {}; matrix = {}; observed = {}; review_map = {}; logical_cells = set()
     rubric_map = _rubrics(rubrics)
     for case in plan.get("cases", []):
@@ -323,7 +388,8 @@ def score_model_matrix(plan: Mapping[str, Any], observations: Sequence[Mapping[s
         if item.get("model_revision") is not None:
             _text(item["model_revision"])
         condition = _condition(item.get("analysis_condition"))
-        logical = tuple(item.get(key) for key in ("model_id", "model_revision", "backend_id", "arm_id", "suite_id", "case_id", "trial_id")) + (canonical_digest(condition),)
+        planned_condition = _condition(item.get("planned_analysis_condition"))
+        logical = tuple(item.get(key) for key in ("model_id", "model_revision", "backend_id", "arm_id", "suite_id", "case_id", "trial_id")) + (canonical_digest(condition), canonical_digest(planned_condition))
         if logical in logical_cells:
             raise ValueError("duplicate logical model/arm/case/trial cell")
         logical_cells.add(logical)
@@ -332,6 +398,7 @@ def score_model_matrix(plan: Mapping[str, Any], observations: Sequence[Mapping[s
         raise ValueError("nonempty planned matrix and known rubrics required")
     for row in observations:
         canonical_bytes(row)
+        termination_evidence(row)
         if row.get("status") not in FAILED | {"completed", "blocked", "skipped", "cancelled", "not_started"}:
             raise ValueError("unknown observation status")
         oid = row.get("observation_id"); item = matrix.get(oid)
@@ -350,6 +417,13 @@ def score_model_matrix(plan: Mapping[str, Any], observations: Sequence[Mapping[s
             _sha(row["task_input_sha256"])
         if row.get("comparison_cohort") is not None:
             _text(row["comparison_cohort"])
+        if frozen is not None:
+            from agronomy_agent.release_evaluation import validate_task_exposure
+            binding = validate_task_exposure(cases[item["case_id"]], item["arm_id"], row.get("task_exposure"))
+            if row.get("task_input_sha256") is not None and (row["task_input_sha256"] != binding["task_input_sha256"] or row["task_input_sha256"] != item.get("task_input_sha256")):
+                raise ValueError("scoring task input differs from actual exposure")
+            if row.get("comparison_cohort") is not None and (binding["task_input_sha256"] is None or row["comparison_cohort"] != plan.get("comparison_cohort")):
+                raise ValueError("scoring cohort differs from prospective declaration")
         if _condition(row.get("analysis_condition")) != _condition(item.get("analysis_condition")):
             raise ValueError("observation planned analysis condition mismatch")
         observed[oid] = row
@@ -417,13 +491,17 @@ def score_model_matrix(plan: Mapping[str, Any], observations: Sequence[Mapping[s
             dimensions[dim] = (sum(scores[cid] * spec["weight"] for cid, spec in applicable.items()) /
                                sum(spec["weight"] for spec in applicable.values())) if applicable and all(scores.get(cid) is not None for cid in applicable) else None
         status = row.get("status", "missing")
-        truncated = row.get("finish_reason") == "length" or row.get("truncated") is True
+        terminal = termination_evidence(row)
+        truncated = terminal["truncated"]
         condition = _condition(item.get("analysis_condition"))
         cell = {**{key: item.get(key) for key in ("observation_id", "case_id", "suite_id", "trial_id", "arm_id", "model_id", "model_revision", "backend_id")},
                 "analysis_condition": condition, "analysis_condition_sha256": canonical_digest(condition),
+                "planned_analysis_condition": item.get("planned_analysis_condition"),
+                "observed_model_identity": row.get("observed_model_identity"),
+                "runtime_input_binding_status": row.get("runtime_input_binding_status", "unknown"),
                 "unknown_condition_fields": [key for key, value in condition.items() if value is None],
                 "domain_id": rubric["domain_id"] if rubric else "unknown", "cluster_id": rubric["cluster_id"] if rubric else item["case_id"],
-                "status": status, "truncated": truncated, "dimensions": dimensions, "criterion_mask": mask,
+                "status": status, "truncated": truncated, "termination_status": terminal["status"], "termination": row.get("termination"), "dimensions": dimensions, "criterion_mask": mask,
                 "criterion_applicability": review.get("criterion_applicability", {}),
                 "dimension_status": {dim: "unknown_rubric" if rubric is None else "not_applicable" if not mask[dim]
                                      else "unknown_labels" if dimensions[dim] is None else "observed" for dim in DIMENSIONS},
@@ -431,24 +509,28 @@ def score_model_matrix(plan: Mapping[str, Any], observations: Sequence[Mapping[s
                 "safety_unknown": rubric is None or bool(rubric["fatal_conditions"]) and review.get("fatal_review_complete") is not True,
                 "review_type": review.get("reviewer_type"), "task_input_sha256": row.get("task_input_sha256"),
                 "comparison_cohort": row.get("comparison_cohort"),
-                "penalty_zero": normalized is not None and (status in FAILED or truncated and normalized["truncated_outcome"] == "zero"),
+                "penalty_zero": normalized is not None and (status in FAILED or truncated is True and normalized["truncated_outcome"] == "zero"),
                 "source_observed_metrics": _performance(row), "metrics_scope": row.get("performance_scope", "source_observed_row_only; phase scopes unknown"),
                 "tokens_scope": row.get("tokens_scope", "unknown"), "identity_status": row.get("identity_status", "unknown"),
                 "model_execution_eligible": row.get("model_execution_eligible"), "original_unknowns": row.get("unknown", []),
                 "original_helper_receipt_status": row.get("original_helper_receipt_status"),
                 "original_claim_eligible": row.get("claim_eligible"), "original_domain_eligible": row.get("domain_eligible")}
         cells.append(cell)
-        groups[(item["model_id"], item.get("model_revision"), item["backend_id"], item["arm_id"], cell["analysis_condition_sha256"])].append(cell)
+        group_key = (item["model_id"], item.get("model_revision"), item["backend_id"], item["arm_id"], cell["analysis_condition_sha256"])
+        if "planned_analysis_condition" in item:
+            group_key += (canonical_digest(item["planned_analysis_condition"]),)
+        groups[group_key].append(cell)
     group_reports = []
     for key, values in groups.items():
         eligible = normalized is not None and not missing_rubrics
         primary = _aggregate(values, normalized) if eligible else None
         group_reports.append({"model_id": key[0], "model_revision": key[1], "backend_id": key[2], "arm_id": key[3],
                               "analysis_condition": values[0]["analysis_condition"], "analysis_condition_sha256": key[4],
+                              "planned_analysis_condition": values[0]["planned_analysis_condition"],
                               "unknown_condition_fields": values[0]["unknown_condition_fields"],
                               "planned": len(values), "observed": sum(v["status"] != "missing" for v in values),
                               "failed": sum(v["status"] in FAILED for v in values), "missing": sum(v["status"] == "missing" for v in values),
-                              "completed": sum(v["status"] == "completed" for v in values), "truncated": sum(v["truncated"] for v in values),
+                              "completed": sum(v["status"] == "completed" for v in values), "truncated": sum(v["truncated"] is True for v in values), "termination_unknown": sum(v["termination_status"] == "unknown" for v in values), "termination_not_applicable": sum(v["termination_status"] == "not_applicable" for v in values),
                               "fatal_failures_n": sum(len(v["fatal_failures"]) for v in values), "safety_unknown_n": sum(v["safety_unknown"] for v in values),
                               "primary": primary, "sensitivity": [{"profile_id": p["profile_id"], **_aggregate(values, {**normalized, **p})}
                                                                       for p in normalized["sensitivity_profiles"]] if eligible else []})
@@ -468,7 +550,7 @@ def score_model_matrix(plan: Mapping[str, Any], observations: Sequence[Mapping[s
                 identity_incomplete += 1
             elif not source_compatible:
                 source_mismatch += 1
-            same = (complete_identity and source_compatible
+            same = (complete_identity and source_compatible and (frozen is None or binding_status == "prospective_canonical_inputs_bound")
                     and a["comparison_cohort"] is not None and a["comparison_cohort"] == b["comparison_cohort"]
                     and a["task_input_sha256"] is not None and a["task_input_sha256"] == b["task_input_sha256"]
                     and all(a["criterion_mask"][dim] == b["criterion_mask"][dim] for dim in dims))
@@ -490,9 +572,10 @@ def score_model_matrix(plan: Mapping[str, Any], observations: Sequence[Mapping[s
                       "unmatched_right_n": len(set(lookup) - left_keys), "unscored_compatible_n": unscored,
                       "interval": _interval(deltas),
                       "ranking_authorized": False})
-    return {"schema_version": SCHEMA, "status": "blocked_missing_policy" if normalized is None else "partial_unknown" if missing_rubrics or any(g["primary"]["score"] is None for g in group_reports) else "descriptive_complete",
+    return {"schema_version": SCHEMA, "status": "blocked_missing_policy" if normalized is None else "partial_unknown" if missing_rubrics or any(g["primary"]["score"] is None for g in group_reports) or frozen is not None and binding_status != "prospective_canonical_inputs_bound" else "descriptive_complete",
             "policy_sha256": canonical_digest(policy) if policy else None, "policy_bound_to_plan": policy_bound,
             "policy_preregistration_verified": False,
+            "controller_binding_status": binding_status,
             "weight_authority": "project_choice" if policy else None, "missing_rubric_case_ids": sorted(missing_rubrics),
             "planned_n": len(matrix), "observed_n": len(observed), "reviewed_n": len(review_map),
             "groups": group_reports, "cells": cells, "contrasts": pairs, "promotion_allowed": False,

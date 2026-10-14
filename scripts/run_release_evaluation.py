@@ -15,6 +15,10 @@ sys.path.insert(0, str(ROOT))
 from agronomy_agent.release_evaluation import (
     DEFAULT_REGISTRY,
     build_plan,
+    bind_controller_inputs,
+    read_controller_inputs,
+    read_stop_policy,
+    bind_stop_policy,
     load_registry,
     write_new_json,
 )  # noqa: E402
@@ -33,6 +37,10 @@ def main() -> int:
     parser.add_argument("--limit", type=int)
     parser.add_argument("--reference", type=Path)
     parser.add_argument("--reviews", type=Path)
+    parser.add_argument("--model-rubrics", type=Path)
+    parser.add_argument("--model-policy", type=Path)
+    parser.add_argument("--comparison-cohort")
+    parser.add_argument("--stop-policy", type=Path)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--worker-spec", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--worker-output", type=Path, help=argparse.SUPPRESS)
@@ -56,12 +64,15 @@ def main() -> int:
             write_new_json(args.worker_output, result)
             return 1 if result.get("status") in {"failed", "blocked"} else 0
         if args.dry_run:
+            registry = load_registry(args.registry)
             plan = build_plan(
-                load_registry(args.registry),
+                registry,
                 profile=args.profile,
                 limit=args.limit,
                 run_id=args.run_id,
             )
+            plan = bind_controller_inputs(plan, read_controller_inputs(rubrics_path=args.model_rubrics, policy_path=args.model_policy), args.comparison_cohort)
+            plan = bind_stop_policy(plan, read_stop_policy(args.stop_policy), registry["whole_run_timeout_seconds"])
             print(
                 json.dumps(
                     {
@@ -74,6 +85,7 @@ def main() -> int:
                             "sampling",
                             "source",
                             "model",
+                            *(["bounded_stop_policy"] if "bounded_stop_policy" in plan else []),
                         )
                     },
                     indent=2,
@@ -91,6 +103,10 @@ def main() -> int:
             limit=args.limit,
             reference_path=args.reference,
             reviews_path=args.reviews,
+            model_rubrics_path=args.model_rubrics,
+            model_policy_path=args.model_policy,
+            comparison_cohort=args.comparison_cohort,
+            stop_policy_path=args.stop_policy,
         )
         print(
             json.dumps(

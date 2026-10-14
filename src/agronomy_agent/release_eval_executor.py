@@ -18,12 +18,15 @@ import time
 from typing import Any, Mapping, Sequence
 
 from agronomy_agent.agent import (
+    MLXGenerator,
     MockGenerator,
+    OpenAICompatibleGenerator,
     load_model_config,
     resolve_local_model_snapshot,
     system_prompt,
 )
 from agronomy_agent.benchmark_arms import ALL_ARM_IDS, execution_arm
+from agronomy_agent.release_evaluation import TASK_FIELD_ALIASES, digest, worker_case
 from agronomy_agent.execution_core import (
     AgentExecutionRequest,
     EXECUTION_STAGE_IDS,
@@ -36,12 +39,7 @@ from agronomy_agent.server.trace_timer import TraceProfiler
 
 
 EXECUTOR_SCHEMA_VERSION = "open_agronomy_agent.release_product_cell.v1"
-FIELD_ALIASES = {
-    "crop_name": "crop",
-    "region_text": "region",
-    "province": "jurisdiction",
-    "field_name": "display_name",
-}
+FIELD_ALIASES = TASK_FIELD_ALIASES
 
 
 class SyntheticBackendUnavailable(RuntimeError):
@@ -94,7 +92,7 @@ def compile_case_field_context(
     for alias, canonical in FIELD_ALIASES.items():
         if alias not in compiled:
             continue
-        if canonical in compiled and compiled[canonical] != compiled[alias]:
+        if canonical in compiled and digest(compiled[canonical]) != digest(compiled[alias]):
             conflicts.append(
                 {
                     "alias": alias,
@@ -182,13 +180,35 @@ def _reference_turn(
         + [{"role": "user", "content": question}]
     )
     started = time.monotonic()
+    previous_marker = getattr(generator, "generation_stats_call_id", None)
+    cleared = False
+    try:
+        generator.last_generation_stats = None
+        cleared = getattr(generator, "last_generation_stats", None) is None
+    except (AttributeError, TypeError):
+        pass
     answer = str(generator.generate(messages))
+    current_stats = getattr(generator, "last_generation_stats", None)
+    marker = getattr(generator, "generation_stats_call_id", None)
+    marked = (type(previous_marker) is int and previous_marker >= 0 and type(marker) is int
+              and marker > previous_marker and isinstance(current_stats, Mapping)
+              and type(current_stats.get("generation_stats_call_id")) is int
+              and current_stats["generation_stats_call_id"] == marker)
+    # These supported implementations publish call-scoped receipts after a
+    # successful return. Object identity/value changes alone prove no freshness.
+    supported = type(generator) in {MLXGenerator, OpenAICompatibleGenerator, _RecordedMock}
+    fresh = marked or cleared and supported
+    stats = deepcopy(current_stats) if fresh and isinstance(current_stats, Mapping) else None
     receipt = {
         "schema_version": "open_agronomy_agent.ungoverned_reference_receipt.v1",
         "arm_id": arm_id,
         "backend_id": str(getattr(generator, "backend_id", type(generator).__name__)),
         "prompt_sha256": stable_sha256(messages),
         "answer_sha256": stable_sha256(answer),
+        "generation_stats_freshness": "advanced_call_marker" if marked else "supported_call_scoped_provider" if fresh else "unknown",
+        "generation_stats_sha256": stable_sha256(stats) if stats is not None else None,
+        "generation_stats_call_id": marker if marked else None,
+        "requested_max_tokens": getattr(generator, "max_tokens", None) if supported else None,
         "topology_receipts_present": False,
         "elapsed_seconds": time.monotonic() - started,
     }
@@ -223,8 +243,9 @@ def _reference_turn(
         "reference_receipt": receipt,
         "stage_receipts": [],
         "prompt_messages": messages,
+        "task_request": {"message": question, "prompt_messages": deepcopy(messages), "field_context_delivered": None},
         "persisted_turn": store.get_turn(turn_id),
-        "generation_stats": deepcopy(getattr(generator, "last_generation_stats", None)),
+        "generation_stats": stats,
         "model_identity": deepcopy(getattr(generator, "model_identity", None)),
         "elapsed_seconds": receipt["elapsed_seconds"],
     }
@@ -252,11 +273,43 @@ def _production_turn(question: str, request: AgentExecutionRequest) -> dict[str,
         ),
         metadata=metadata,
         elapsed_seconds=time.monotonic() - started,
+        task_request={"message": request.message,
+                      "field_context_delivered": deepcopy((request.session_context or {}).get("field_context") or {})},
     )
     record["draft"] = record["answer_stages"]["draft"]["text"]
     record["editor"] = deepcopy(metadata.get("answer_verification"))
     record["final"] = record["answer_stages"]["final"]["text"]
     return record
+
+
+def generation_termination(stats: Any, *, required: bool = True) -> dict[str, Any]:
+    """Observe provider terminal data; token counts never establish termination."""
+    reason = stats.get("finish_reason") if isinstance(stats, Mapping) else None
+    known = reason in {"stop", "length"} if isinstance(reason, str) else False
+    return {"required": required, "finish_reason": reason,
+            "status": "not_applicable" if not required else "observed" if known else "unknown",
+            "truncated": reason == "length" if known and required else None}
+
+
+def observation_termination(turns: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Keep draft/editor evidence distinct, including multi-turn unknowns."""
+    stages = []
+    for index, turn in enumerate(turns):
+        metadata = turn.get("metadata") or {}
+        editor = metadata.get("answer_verification") or turn.get("editor") or {}
+        draft_required = not bool(metadata.get("generation_bypass"))
+        stages.append({"turn_index": index, "stage": "reference" if turn.get("execution_kind") == "ungoverned_reference" else "draft",
+                       **generation_termination(turn.get("generation_stats"), required=draft_required)})
+        editor_stats = turn.get("editor_generation_stats") or editor.get("generation_stats")
+        # Triggering a review is not proof that an editor model ran.
+        editor_required = editor_stats is not None or editor.get("editor_output") is not None or editor.get("rewrite_accepted") is True or "editor_error" in (editor.get("rejection_reasons") or [])
+        stages.append({"turn_index": index, "stage": "editor",
+                       **generation_termination(editor_stats, required=editor_required)})
+    required = [stage for stage in stages if stage["required"]]
+    truncated = True if any(stage["truncated"] is True for stage in required) else None if not required or any(stage["status"] == "unknown" for stage in required) else False
+    return {"schema_version": "open_agronomy_agent.generation_termination.v1",
+            "stages": stages, "status": "not_applicable" if stages and not required else "unknown" if not required or any(stage["status"] == "unknown" for stage in required) else "observed",
+            "truncated": truncated, "finish_reason": "length" if truncated is True else "stop" if truncated is False else None}
 
 
 def _checks(
@@ -761,6 +814,7 @@ def execute_product_case(
                 "generation_stats_present": bool(turn.get("generation_stats")),
                 "identity": deepcopy(turn.get("model_identity")),
             }
+            turn["termination"] = observation_termination([turn])
             turn["time_to_first_token_ms"] = (turn.get("generation_stats") or {}).get(
                 "time_to_first_token_ms"
             )
@@ -780,6 +834,13 @@ def execute_product_case(
             deepcopy(generator.calls) if isinstance(generator, _RecordedMock) else []
         )
         result["backend_calls"] = calls
+        exposure = {"schema_version": "open_agronomy_agent.task_exposure.v1", "arm_id": arm_id,
+                    "scope": "inputs delivered to reference generator or execute_agent_request; field consumption and final prompt are separate stage/recipe observations",
+                    "worker_case_sha256": digest(worker_case(case)),
+                    "requests": [deepcopy(turn["task_request"]) for turn in result["turns"] if "task_request" in turn],
+                    "compiled_field_context_sha256": digest(compiled), "field_alias_receipt": aliases}
+        exposure["receipt_sha256"] = digest(exposure)
+        result["task_exposure"] = exposure
         result["checks"], result["unknown"] = _checks(
             {
                 **case,
@@ -799,6 +860,9 @@ def execute_product_case(
         result["model_execution_eligible"] = any(
             turn["model_execution_eligible"] for turn in result["turns"]
         )
+        result["termination"] = observation_termination(result["turns"])
+        result["finish_reason"] = result["termination"]["finish_reason"]
+        result["truncated"] = result["termination"]["truncated"]
     except Exception as exc:
         result["error"] = {"type": type(exc).__name__, "message": str(exc)}
         result["checks"].append(

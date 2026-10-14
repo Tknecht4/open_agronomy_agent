@@ -114,6 +114,21 @@ states in the private stage receipts; a public zero for these spans does not
 establish a measured zero cost. Native load and generation statistics are retained
 separately in each turn's model-execution receipt.
 
+Generation termination is recorded for each call. Draft and attempted editor
+calls retain separate provider finish reasons, token counts and caps. An
+unchanged or rejected editor output still represents an attempted generation;
+missing terminal evidence remains unknown. A genuinely skipped generation can
+be not applicable. Token count, an outer run cap or a copied provider receipt
+cannot establish a stop reason. Reanalysis preserves recorded length failures
+and refuses contradictory known terminal evidence.
+
+Larger finite output ceilings require a new frozen execution configuration and
+budget. They do not establish information retention or answer quality. Review
+accepted rewrites, rejected attempts, fallback and formatting separately for
+preserved values, units, applicability, uncertainty, attribution and useful
+completion. Account for the draft and every attempted editor generation when
+comparing output budgets; equal draft ceilings do not imply equal total compute.
+
 ## Retention and resume
 
 A run binds source bytes and commit, registry/config/case hashes, scorer version
@@ -140,6 +155,61 @@ Changed source, configs, cases, model/runtime identity, reference or review
 inputs require a successor run. Resume rejects identity drift and retained
 artifact tampering. Failed or interrupted cells remain evidence; do not edit
 rows to turn them into passes or overwrite a failed cell with a retry.
+
+For prospective descriptive scoring, the runner accepts `--model-rubrics`,
+`--model-policy` and `--comparison-cohort`. It freezes exact controller bytes
+and canonical identities before dispatch. Workers receive no rubric, policy,
+gold or controller paths. Dispatch, resume and the analyzer refuse changed
+bindings; supplying these inputs only after execution remains retrospective.
+
+The shared-task contract covers a single request with explicitly declared inline
+typed facts. The retained exposure receipt binds the request actually delivered
+at the product or reference entry point. It does not prove the final model
+prompt or consumption of every supplied field after product controls. Conflicting
+aliases, field-only premises and unsupported conversation shapes remain
+unmatched. Raw and full arms retain different prompt and execution recipes;
+matching supplied facts does not make those treatments identical. Observed
+model/config/runtime identities remain separate from planned identities.
+
+## Opt-in bounded execution
+
+`--stop-policy /absolute/path/to/private-policy.json` enables the existing
+runner's bounded dispatch and closeout controls. It does not extend the
+registry's original whole-run budget. The versioned JSON requires exactly:
+
+| Field | Requirement |
+|---|---|
+| `schema_version` | `open_agronomy_agent.bounded_stop_policy.v1` |
+| `finalization_reserve_seconds` | Finite, greater than 10 and smaller than the whole-run budget |
+| `retention_budget_bytes` | Positive integer for retained allocation |
+| `finalization_reserve_bytes` | Positive integer reserved for closeout |
+| `minimum_free_bytes` | Positive integer protected free-space floor |
+| `file_hardcap_bytes` | Positive integer file limit |
+| `require_model_identity`, `require_termination` | Booleans declaring required evidence |
+
+The byte reserve plus file cap must fit below the retention budget. Policy bytes
+and the original run clock are frozen; resume cannot reset that clock. Preparation
+and dispatch consume the same budget. The runner rechecks bindings and remaining
+time before launching a worker, stops new dispatch after a required failure,
+known length failure or required unknown evidence, and contains its owned process
+groups on cancellation. Attempted, unledgered and unstarted cells remain distinct;
+unstarted cells are not fabricated failed observations.
+
+Retain `run-clock.json`, `closeout.json`, `terminal-closeout.json` and any expected
+`closeout-failure.json` with the ordinary run artifacts. The terminal seal binds
+the report, retention, clock, closeout and expected failure presence/hash. Deleting
+a late-failure marker or the seal refuses canonical loading and reanalysis rather
+than promoting a blocked run. Original reports remain immutable; the canonical
+loader applies verified terminal disposition. A run without this opt-in contract
+remains legacy and unqualified for bounded execution.
+
+Timing is sampled through retained-report final-read verification, before later
+binding reads, terminal construction, write/fsync/hash, return and CLI printing.
+This is not a hard deadline through the last seal write or end-to-end lease
+cleanup. Allocated-entry/free-space polling and OS per-file child limits are not
+an atomic aggregate filesystem quota. External writers, model provisioning and
+remote lease management need separate controls. Offline process fixtures qualify
+these engineering contracts only; they grant no model or agronomic qualification.
 
 ## Semantic review and reference compatibility
 
