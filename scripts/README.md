@@ -90,7 +90,7 @@ observed NDVI/NDMI and an authenticated preview in a private cache. A point
 defaults to its containing native pixel; `--sampling-mode point_buffer
 --sample-radius-m 60` selects a 60 m sampling radius with fractional pixel
 weights. Point support stays separate from saved geometry and is not field area.
-It needs `requirements-imagery.txt` in an isolated worker environment. Set
+It needs `requirements/requirements-imagery.txt` in an isolated worker environment. Set
 `AGRONOMY_AGENT_IMAGERY_CACHE_ROOT` to a private directory outside the checkout
 and `AGRONOMY_AGENT_IMAGERY_PYTHON` to that environment's absolute executable
 Python path before launching the app. Both are required for the UI analysis
@@ -116,7 +116,7 @@ assessment answers isolated from runtime retrieval. `assess_field_imagery.py`
 requires an explicit source and frozen protocol, never overwrites an output,
 and scores only that research task/split. `probe_imagery_model.py` requires a
 pinned local snapshot and an isolated environment with
-`requirements-imagery-models.txt`. It supervises batch-one CPU/MPS probes with
+`requirements/requirements-imagery-models.txt`. It supervises batch-one CPU/MPS probes with
 120-second stage deadlines, an 8 GiB RSS limit, and a 64 MiB observed
 system-swap-growth stop. A successful CPU cell does not erase an MPS failure.
 Feature generation and fixed-readout scores are experimental receipts, not

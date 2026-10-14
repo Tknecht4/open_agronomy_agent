@@ -98,7 +98,7 @@ checkout; the normal serving environment does not need raster/model packages:
 
 ```bash
 python3.12 -m venv /absolute/path/to/imagery-venv
-/absolute/path/to/imagery-venv/bin/python -m pip install -r requirements-imagery.txt
+/absolute/path/to/imagery-venv/bin/python -m pip install -r requirements/requirements-imagery.txt
 export AGRONOMY_AGENT_IMAGERY_CACHE_ROOT=/absolute/path/to/private-imagery-cache
 export AGRONOMY_AGENT_IMAGERY_PYTHON=/absolute/path/to/imagery-venv/bin/python
 ```
@@ -179,7 +179,7 @@ requires separately admitted fields and rights.
 
 ## Research-only imagery assessment
 
-`requirements-imagery-models.txt` describes the separately exercised EO/model
+`requirements/requirements-imagery-models.txt` describes the separately exercised EO/model
 environment. It adds frozen Prithvi encoder and fixed-readout dependencies to
 the HLS worker stack; installing it does not activate a serving model or field
 prediction. `scripts/assess_field_imagery.py` freezes or applies a source-bound

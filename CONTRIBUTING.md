@@ -1,6 +1,6 @@
 # Contributing to Open Agronomy Agent
 
-Thanks for helping improve the local field workspace and research foundation. Start with the [README](README.md), [architecture](ARCHITECTURE.md), and [developer guide](docs/public/developer/index.md). The exercised source-checkout target is an Apple Silicon Mac; other environments are welcome for investigation but are not qualified by that setup. Maintainer response times are best effort, with no support or review SLA.
+Thanks for helping improve the local field workspace and research foundation. Start with the [README](README.md), [architecture](docs/public/developer/maintainer-architecture.md), and [developer guide](docs/public/developer/index.md). The exercised source-checkout target is an Apple Silicon Mac; other environments are welcome for investigation but are not qualified by that setup. Maintainer response times are best effort, with no support or review SLA.
 
 ## Choose a route
 

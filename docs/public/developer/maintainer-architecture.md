@@ -87,7 +87,7 @@ inventory does not execute tests or inference.
    boundaries; synthetic backend faults run only with declared mock cases.
    Evaluation gold stays in the controller and never enters worker retrieval,
    prompts or training. Engineering status cannot establish domain competence.
-   See the [canonical operator guide](docs/public/operations/release-evaluation.md).
+   See the [canonical operator guide](../operations/release-evaluation.md).
 
 The release runner freezes optional controller rubric/policy bytes before
 dispatch and validates actual task exposure and observed identities separately

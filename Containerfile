@@ -36,9 +36,10 @@ RUN apt-get update \
     && groupadd --gid 10001 agronomy \
     && useradd --uid 10001 --gid agronomy --home-dir /app --shell /usr/sbin/nologin agronomy
 
-COPY requirements-container.txt pyproject.toml LICENSE THIRD_PARTY_NOTICES.md ./
+COPY pyproject.toml LICENSE THIRD_PARTY_NOTICES.md ./
+COPY requirements/requirements-container.txt ./requirements/requirements-container.txt
 COPY src ./src
-RUN pip install --no-cache-dir -r requirements-container.txt \
+RUN pip install --no-cache-dir -r requirements/requirements-container.txt \
     && pip install --no-cache-dir --no-deps .
 
 COPY configs ./configs

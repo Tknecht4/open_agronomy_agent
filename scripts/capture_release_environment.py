@@ -24,10 +24,10 @@ from typing import Any
 DEPENDENCY_INPUTS = (
     "pyproject.toml",
     "requirements.txt",
-    "requirements-phase4-ci.txt",
-    "requirements-benchmark-analysis.txt",
-    "requirements-container.txt",
-    "requirements-docs.txt",
+    "requirements/requirements-phase4-ci.txt",
+    "requirements/requirements-benchmark-analysis.txt",
+    "requirements/requirements-container.txt",
+    "requirements/requirements-docs.txt",
     "frontend/package.json",
     "frontend/package-lock.json",
 )

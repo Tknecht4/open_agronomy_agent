@@ -3,7 +3,7 @@
 ## Read first
 
 1. `README.md` for supported setup and claim limits.
-2. `ARCHITECTURE.md` for code ownership and execution paths.
+2. `docs/public/developer/maintainer-architecture.md` for code ownership and execution paths.
 3. The nearest subsystem README (`src/agronomy_agent/`, `server/`, `tools/`,
    `scripts/`, `configs/`, `data/`, or `tests/`).
 4. The active config and tests that control the requested behavior.
@@ -52,7 +52,7 @@ change. A passing test suite is not agronomic validation.
 ## Documentation
 
 - Human overview: `README.md` and `docs/public/`.
-- Maintainer architecture: `ARCHITECTURE.md`.
+- Maintainer architecture: `docs/public/developer/maintainer-architecture.md`.
 - Historical reviews and evidence: `docs/reviews/`.
 - Operator procedures: `scripts/README.md` and `docs/public/operations/`.
 - Update the public manifest when adding an explicit file outside an included

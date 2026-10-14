@@ -23,7 +23,7 @@ npm test
 npm run build
 ```
 
-Build the documentation site with `mkdocs build --strict` after installing `requirements-docs.txt`.
+Build the documentation site with `mkdocs build --strict` after installing `requirements/requirements-docs.txt`.
 
 ## Reporting
 

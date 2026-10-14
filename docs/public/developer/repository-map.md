@@ -72,4 +72,4 @@ retrieval or redistribution permission must never be treated as training
 authorization.
 
 For a more detailed maintainer map, see
-[`ARCHITECTURE.md`](https://github.com/Tknecht4/open_agronomy_agent/blob/main/ARCHITECTURE.md).
+[maintainer architecture](https://github.com/Tknecht4/open_agronomy_agent/blob/main/docs/public/developer/maintainer-architecture.md).

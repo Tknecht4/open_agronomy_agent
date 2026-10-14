@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-10-14T00:52:33+00:00",
+  "generated_at": "2026-10-14T03:02:50+00:00",
   "status": "pass",
-  "contract_sha256": "a6a68da642ac462ac15fecad181cc0f2a81a6931638c7b350df4734f18bbfa8f",
+  "contract_sha256": "186660fb8b724fa981cd9aeabd10b8fd9ce8a1b4ffe975917ab74ee4af349f29",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -414,8 +414,8 @@
     {
       "path": "src/agronomy_agent",
       "file_count": 177,
-      "bytes": 6063226,
-      "sha256": "3747100b42111805f8f808ec43fe570b41b9d4c187dba6deddff2516e4a58f03"
+      "bytes": 6063265,
+      "sha256": "5284b88a43c5fb2c8bd3431bf83e7d58c82476427928d1ef3ea423906372c4e5"
     },
     {
       "path": "frontend/src",
@@ -432,14 +432,14 @@
     {
       "path": "scripts",
       "file_count": 147,
-      "bytes": 1937964,
-      "sha256": "270a59454c61dae27c60c228ff2e4d72152a7c59a42015d329bc21da2810dd74"
+      "bytes": 1938205,
+      "sha256": "d42f576cadf693202eed0a400dd183b84a307332e16935bc5fe41bd11d238c23"
     },
     {
       "path": "configs",
       "file_count": 92,
-      "bytes": 299725,
-      "sha256": "f48e1a85bd5f8af4a813bd0170d325fe7c9a8d0e93140a2ebca627822f5b3ad8"
+      "bytes": 299858,
+      "sha256": "0cec1f002d01745ab4665ea7b2c5ad731cefa21e84bc9a2f538bf3acbd893390"
     },
     {
       "path": "data/manifests",
@@ -461,9 +461,9 @@
     },
     {
       "path": "docs/public",
-      "file_count": 98,
-      "bytes": 9330504,
-      "sha256": "4061fdbfb9353208f574b0af32f2a2df41b9306220c3b191023850a7e53d935b"
+      "file_count": 99,
+      "bytes": 9347511,
+      "sha256": "af0833bad7290417503b25fa2b84e4bc48d693079b3739119ac95a1a1e80e4d5"
     }
   ],
   "geo_cache_seed": {
@@ -510,8 +510,8 @@
     {
       "path": "Containerfile",
       "role": "runtime_control",
-      "bytes": 3781,
-      "sha256": "47a57c85f8313dff4261d8fdf32bc8fce366a8055abfeb6319b7d0e47d26082a"
+      "bytes": 3854,
+      "sha256": "52e8a07e855237e32492c44d84bcaf1ca42a823e1201a607b827d778944b146c"
     },
     {
       "path": "Containerfile.overlay",
@@ -526,7 +526,7 @@
       "sha256": "2c9438c21234b3214bb8f01b62e8500f598d14108d251095fffeffe482ceb384"
     },
     {
-      "path": "requirements-container.txt",
+      "path": "requirements/requirements-container.txt",
       "role": "runtime_control",
       "bytes": 393,
       "sha256": "bc78e538345c5ac926c10bf59da258a5982c6437f05bcdb2f530494f327b8c6b"

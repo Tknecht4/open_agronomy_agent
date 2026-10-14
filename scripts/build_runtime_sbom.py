@@ -84,7 +84,7 @@ def _frontend_packages(path: Path) -> list[dict[str, Any]]:
 
 
 def build_sbom(root: Path) -> dict[str, Any]:
-    requirements = root / "requirements-container.txt"
+    requirements = root / "requirements/requirements-container.txt"
     package_lock = root / "frontend/package-lock.json"
     root_package = {
         "SPDXID": "SPDXRef-OpenAgronomyAgent",

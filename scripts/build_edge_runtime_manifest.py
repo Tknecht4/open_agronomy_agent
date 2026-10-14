@@ -34,7 +34,7 @@ CONTROL_PATHS = (
     "Containerfile",
     "Containerfile.overlay",
     ".dockerignore",
-    "requirements-container.txt",
+    "requirements/requirements-container.txt",
     "pyproject.toml",
     "docker-compose.edge.yml",
     "frontend/package.json",

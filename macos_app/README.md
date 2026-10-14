@@ -16,16 +16,16 @@ minimum memory requirement.
 ## Build on a clean Apple Silicon builder
 
 Create an isolated Python 3.12 build environment, install
-`requirements-macos-app-runtime.txt`, the local package, and
-`requirements-macos-app-build.txt`. Install frontend dependencies with
+`requirements/requirements-macos-app-runtime.txt`, the local package, and
+`requirements/requirements-macos-app-build.txt`. Install frontend dependencies with
 `npm ci`. The builder regenerates `frontend/dist` from the current source.
 
 ```bash
 python3.12 -m venv .venv
-.venv/bin/python -m pip install -c requirements-macos-app-constraints.txt \
-  -r requirements-macos-app-runtime.txt
+.venv/bin/python -m pip install -c requirements/requirements-macos-app-constraints.txt \
+  -r requirements/requirements-macos-app-runtime.txt
 .venv/bin/python -m pip install -e .
-.venv/bin/python -m pip install -r requirements-macos-app-build.txt
+.venv/bin/python -m pip install -r requirements/requirements-macos-app-build.txt
 cd frontend && npm ci && cd ..
 mkdir -p outputs/macos
 

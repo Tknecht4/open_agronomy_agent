@@ -435,7 +435,7 @@ invariants still run. Numeric diagnostic scores are retained without imposing
 the production answer threshold on the raw model. All planned cells must complete.
 
 For a Linux NVIDIA Colab runtime, install
-`requirements-release-evaluation-colab.txt` and the editable project. The runner
+`requirements/requirements-release-evaluation-colab.txt` and the editable project. The runner
 discards inherited agronomy environment overrides, selects the native MLX
 transport, and uses offline model loading after explicit snapshot provisioning.
 The recorded GPU environment is its performance reference; it does not measure
