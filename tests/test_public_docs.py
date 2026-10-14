@@ -173,7 +173,7 @@ def test_pages_workflow_audit_requires_default_branch_configuration(tmp_path: Pa
 
 
 CANONICAL_OVERVIEWS = (
-    "ARCHITECTURE.md", "AGENTS.md", "macos_app/README.md",
+    "docs/public/developer/maintainer-architecture.md", "AGENTS.md", "macos_app/README.md",
     "src/agronomy_agent/geospatial/README.md",
 )
 

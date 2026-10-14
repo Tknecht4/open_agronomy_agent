@@ -70,11 +70,11 @@ The latter uses only saved field geometry, respects service offline mode, and re
 
 ## Run terrain on a prepared local DTM
 
-Use an isolated environment with `requirements-geospatial.txt`. Direct raster/terrain versions are pinned there; vector imports use bounded package versions. GeoPandas/Pyogrio are also required by the normal serving/package installation so existing SHP/GPKG uploads retain their supported path. The serving environment is not modified automatically. `--readiness` reports installed packages, not scientific qualification.
+Use an isolated environment with `requirements/requirements-geospatial.txt`. Direct raster/terrain versions are pinned there; vector imports use bounded package versions. GeoPandas/Pyogrio are also required by the normal serving/package installation so existing SHP/GPKG uploads retain their supported path. The serving environment is not modified automatically. `--readiness` reports installed packages, not scientific qualification.
 
 ```bash
 python3.12 -m venv /absolute/path/to/geospatial-venv
-/absolute/path/to/geospatial-venv/bin/python -m pip install -r requirements-geospatial.txt
+/absolute/path/to/geospatial-venv/bin/python -m pip install -r requirements/requirements-geospatial.txt
 PYTHONPATH=src /absolute/path/to/geospatial-venv/bin/python scripts/analyze_field_terrain.py --readiness
 ```
 

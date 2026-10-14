@@ -351,3 +351,34 @@ def test_isolated_canadian_boundary_requires_the_bound_runtime_registry(tmp_path
     assert boundary.jurisdiction == "Saskatchewan"
     assert boundary.requires_prompt_boundary is True
     assert boundary.registered_source_ids
+
+
+@pytest.mark.parametrize("filename", [
+    "requirements-release-evaluation-colab.txt", "requirements-phase4-ci.txt",
+])
+def test_source_identity_binds_relocated_dependencies_and_rejects_stale_capsule(
+    tmp_path, monkeypatch, filename,
+):
+    from types import SimpleNamespace
+    from agronomy_agent import release_evaluation as evaluation
+
+    monkeypatch.setattr(evaluation.subprocess, "run", lambda *args, **kwargs:
+                        SimpleNamespace(returncode=1, stdout=""))
+    for name in ("requirements-release-evaluation-colab.txt", "requirements-phase4-ci.txt"):
+        path = tmp_path / "requirements" / name
+        path.parent.mkdir(exist_ok=True)
+        path.write_text("pytest==1.0\n")
+    original = evaluation.source_identity(tmp_path)
+    assert set(original["files"]) == {
+        "requirements/requirements-release-evaluation-colab.txt",
+        "requirements/requirements-phase4-ci.txt",
+    }
+    # Old receipts stay immutable; the source capsule must reject new input bytes.
+    capsule = tmp_path / "EVALUATION_SOURCE.json"
+    capsule.write_text(json.dumps({"commit": "historical", "source_sha256": original["source_sha256"]}))
+    before = capsule.read_bytes()
+    assert evaluation.source_identity(tmp_path)["commit"] == "historical"
+    (tmp_path / "requirements" / filename).write_text("pytest==2.0\n")
+    with pytest.raises(ValueError, match="capsule does not match source bytes"):
+        evaluation.source_identity(tmp_path)
+    assert capsule.read_bytes() == before

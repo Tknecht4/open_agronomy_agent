@@ -41,7 +41,7 @@ bounded open-PR counts. Security updates are also enabled. These proposals
 receive the normal review and CI gates; there is no automatic merge.
 
 Backend and desktop CI audit the installed third-party dependency inventory
-using the pinned scanner in `requirements-security.txt`. The scanner runs in
+using the pinned scanner in `requirements/requirements-security.txt`. The scanner runs in
 its own environment. Only the editable project itself is excluded: local code
 is assessed by source review/tests, not by a package advisory lookup. A missing
 or empty inventory, collection error, or reported advisory fails the job. The

@@ -151,4 +151,4 @@ do not establish agronomic competence.
 
 Before a repository-wide claim, run the Python suite, public-doc checker, strict MkDocs build, and frontend typecheck/tests/build listed in [release readiness](docs/public/developer/release-readiness.md). Run corpus, retrieval, release, or model gates when their controlling inputs change.
 
-Maintainer references: [repository architecture](ARCHITECTURE.md), [coding-agent guidance](AGENTS.md), and [repository map](docs/public/developer/repository-map.md).
+Maintainer references: [repository architecture](docs/public/developer/maintainer-architecture.md), [coding-agent guidance](AGENTS.md), and [repository map](docs/public/developer/repository-map.md).

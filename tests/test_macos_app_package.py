@@ -27,6 +27,35 @@ def test_runtime_asset_selection_uses_tracked_files_only(tmp_path: Path) -> None
     assert _tracked_asset_files(tmp_path) == [Path("data/seed/admitted.json")]
 
 
+
+def test_runtime_assets_copy_only_the_nested_container_requirements(tmp_path: Path) -> None:
+    from scripts.build_macos_app import _copy_asset
+
+    source = tmp_path / "source"
+    source.mkdir()
+    subprocess.run(["git", "init", "-q", str(source)], check=True)
+    payload = b"fastapi==0.1\n"
+    files = {
+        "requirements.txt": b"base dependencies\n",
+        "requirements/requirements-container.txt": payload,
+        "requirements/requirements-macos-app-build.txt": b"build-only dependency\n",
+    }
+    for relative, data in files.items():
+        path = source / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+    subprocess.run(["git", "-C", str(source), "add", "."], check=True)
+    selected = _tracked_asset_files(source)
+    assert selected == [Path("requirements.txt"), Path("requirements/requirements-container.txt")]
+    runtime = tmp_path / "runtime"
+    for relative in selected:
+        _copy_asset(source / relative, runtime / relative)
+    manifest = _asset_manifest(runtime)
+    assert {row["path"] for row in manifest["files"]} == {str(path) for path in selected}
+    assert (runtime / "requirements/requirements-container.txt").read_bytes() == payload
+    assert not (runtime / "requirements-container.txt").exists()
+    assert not (runtime / "requirements/requirements-macos-app-build.txt").exists()
+
 def test_runtime_manifest_hashes_bytes_and_rejects_symlinks(tmp_path: Path) -> None:
     runtime = tmp_path / "runtime"
     asset = runtime / "configs/model.yaml"

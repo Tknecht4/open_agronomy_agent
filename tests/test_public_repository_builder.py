@@ -205,7 +205,7 @@ def test_public_repository_build_has_no_unreceipted_generated_files(
     assert public_tests <= actual
     assert "configs/runtime_profiles.json" in actual
     assert "configs/rag_governed_runtime_v2.yaml" in actual
-    assert "requirements-benchmark-analysis.txt" in actual
+    assert "requirements/requirements-benchmark-analysis.txt" in actual
     assert "tests/test_rc3_checkpoint_analysis.py" in actual
     checkpoint_prefix = "docs/public/development-benchmark-rc3-20260815/"
     assert {
@@ -339,3 +339,63 @@ def test_curated_profile_and_spatial_contract_are_explicit_portable_inputs() -> 
     assert {
         path.relative_to(ROOT).as_posix() for path in curated_artifacts
     } <= {path.relative_to(ROOT).as_posix() for path in bundle_files}
+
+
+def test_nested_requirement_and_architecture_scope_has_no_root_stubs(tmp_path, monkeypatch):
+    from scripts import build_public_repository as builder
+
+    monkeypatch.setattr(builder, "ROOT", tmp_path)
+    requirements = "requirements/requirements-container.txt"
+    architecture = "docs/public/developer/maintainer-architecture.md"
+    files = {"requirements.txt": b"base\n", requirements: b"fastapi==0.1\n",
+             architecture: b"# Maintainer architecture\n"}
+    for name, data in files.items():
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(json.dumps({
+        "schema_version": "open_agronomy_agent.public_repository_manifest.v1",
+        "release_id": "synthetic", "paths": ["requirements.txt", requirements],
+        "trees": ["docs/public"],
+    }))
+    report = builder.check_scope(manifest)
+    assert report["status"] == "pass" and report["file_count"] == 3
+    assert report["materialized"] is False
+    receipt = builder.build(tmp_path / "package", manifest)
+    assert {row["path"] for row in receipt["files"]} == set(files)
+    for name, data in files.items():
+        assert (tmp_path / "package" / name).read_bytes() == data
+    assert not (tmp_path / "package/ARCHITECTURE.md").exists()
+    assert not (tmp_path / "package/requirements-container.txt").exists()
+
+
+def test_edge_staging_and_sbom_use_the_nested_requirement_input(tmp_path):
+    from scripts.stage_edge_build_context import stage
+    from scripts.build_runtime_sbom import build_sbom
+
+    containerfile = (ROOT / "Containerfile").read_text()
+    relative = "requirements/requirements-container.txt"
+    instruction = next(line for line in containerfile.splitlines()
+                       if line.startswith("COPY " + relative + " "))
+    assert instruction.split()[-1] == "./" + relative
+    source = tmp_path / "source"
+    path = source / relative
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b"fastapi==0.1\n")
+    (source / "requirements-container.txt").write_bytes(b"wrong-package==0.1\n")
+    (source / "Containerfile").write_text(instruction + "\n")
+    (source / "container").mkdir()
+    (source / "container/runtime_manifest.json").write_text('{}')
+    (source / "frontend").mkdir()
+    (source / "frontend/package-lock.json").write_text('{"packages":{}}')
+    context = tmp_path / "context"
+    context.mkdir()
+    result = stage(source, context)
+    assert result["source_count"] == 1
+    assert (context / relative).read_bytes() == path.read_bytes()
+    assert not (context / "requirements-container.txt").exists()
+    sbom = build_sbom(source)
+    assert {item["name"] for item in sbom["packages"][1:]} == {"fastapi"}
+    annotation = json.loads(sbom["annotations"][0]["comment"])
+    assert relative in {item["path"] for item in annotation["dependency_inputs"]}

@@ -277,9 +277,9 @@ def validate(root: Path, runtime_manifest_path: Path | None = None) -> dict[str,
         errors.append("Docker translation must report the runtime engine and profile")
     if "AGRONOMY_AGENT_RUNTIME_ENGINE=apple-container" not in apple:
         errors.append("Apple runtime must report its engine inside the application container")
-    if "mlx-lm" in (root / "requirements-container.txt").read_text(encoding="utf-8").lower():
+    if "mlx-lm" in (root / "requirements/requirements-container.txt").read_text(encoding="utf-8").lower():
         errors.append("Linux image must not install MLX")
-    if "requirements-container.txt" not in containerfile:
+    if "requirements/requirements-container.txt" not in containerfile:
         errors.append("Containerfile must use the container-specific dependencies")
     for path in GEOSPATIAL_LINEAGE_MANIFESTS:
         if not _containerfile_copies_path(root, containerfile, path):

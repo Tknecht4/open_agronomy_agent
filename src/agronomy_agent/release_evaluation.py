@@ -536,8 +536,8 @@ def source_identity(root: Path = ROOT) -> dict[str, Any]:
         root / name
         for name in (
             "pyproject.toml",
-            "requirements-release-evaluation-colab.txt",
-            "requirements-phase4-ci.txt",
+            "requirements/requirements-release-evaluation-colab.txt",
+            "requirements/requirements-phase4-ci.txt",
             "configs/model.yaml",
             "configs/rag.yaml",
             "configs/runtime_profiles.json",

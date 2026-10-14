@@ -30,10 +30,10 @@ def test_environment_audit_rejects_dirty_or_stale_dependency_receipt(tmp_path) -
     for relative in (
         "pyproject.toml",
         "requirements.txt",
-        "requirements-phase4-ci.txt",
-        "requirements-benchmark-analysis.txt",
-        "requirements-container.txt",
-        "requirements-docs.txt",
+        "requirements/requirements-phase4-ci.txt",
+        "requirements/requirements-benchmark-analysis.txt",
+        "requirements/requirements-container.txt",
+        "requirements/requirements-docs.txt",
         "frontend/package.json",
         "frontend/package-lock.json",
     ):
@@ -65,10 +65,10 @@ def test_environment_receipt_binds_benchmark_analysis_dependencies(tmp_path) -> 
     for relative in (
         "pyproject.toml",
         "requirements.txt",
-        "requirements-phase4-ci.txt",
-        "requirements-benchmark-analysis.txt",
-        "requirements-container.txt",
-        "requirements-docs.txt",
+        "requirements/requirements-phase4-ci.txt",
+        "requirements/requirements-benchmark-analysis.txt",
+        "requirements/requirements-container.txt",
+        "requirements/requirements-docs.txt",
         "frontend/package.json",
         "frontend/package-lock.json",
     ):
@@ -82,7 +82,7 @@ def test_environment_receipt_binds_benchmark_analysis_dependencies(tmp_path) -> 
     )
 
     dependency_paths = {str(item["path"]) for item in receipt["dependency_inputs"]}
-    assert "requirements-benchmark-analysis.txt" in dependency_paths
+    assert "requirements/requirements-benchmark-analysis.txt" in dependency_paths
     assert receipt["missing_dependency_inputs"] == []
 
 

@@ -29,7 +29,7 @@ ASSET_PATHS = (
     "THIRD_PARTY_NOTICES.md",
     "pyproject.toml",
     "requirements.txt",
-    "requirements-container.txt",
+    "requirements/requirements-container.txt",
     "configs",
     "src",
     "scripts",

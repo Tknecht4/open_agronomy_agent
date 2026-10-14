@@ -49,7 +49,7 @@ def _dependencies():
         return tuple(importlib.import_module(name) for name in names)
     except ImportError as exc:
         raise TerrainError(
-            "Terrain dependencies unavailable; install requirements-geospatial.txt "
+            "Terrain dependencies unavailable; install requirements/requirements-geospatial.txt "
             "in an isolated operator environment."
         ) from exc
 

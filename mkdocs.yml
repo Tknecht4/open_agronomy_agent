@@ -75,6 +75,7 @@ nav:
       - Code and contracts: developer/index.md
       - Contributing and help: developer/contributing.md
       - Maintainer workflow: developer/maintaining.md
+      - Maintainer architecture: developer/maintainer-architecture.md
       - Source distribution: developer/source-distribution.md
       - Customize the harness: developer/customizing-the-harness.md
       - Repository map: developer/repository-map.md

@@ -240,7 +240,7 @@ def test_optional_dependency_error_is_actionable(terrain_fixture, monkeypatch):
         return original_import(name)
 
     monkeypatch.setattr(terrain.importlib, "import_module", unavailable)
-    with pytest.raises(TerrainError, match="requirements-geospatial.txt"):
+    with pytest.raises(TerrainError, match="requirements/requirements-geospatial.txt"):
         _run(terrain_fixture)
     assert not terrain_fixture[-1].exists()
 

@@ -11,7 +11,7 @@ between scanning, locked environments, and release qualification.
 
 `frontend/package-lock.json` supplies an exact npm resolution. Most Python
 requirement files declare compatible ranges rather than a complete, hash-locked
-transitive environment. `requirements-benchmark-analysis.txt` pins the two
+transitive environment. `requirements/requirements-benchmark-analysis.txt` pins the two
 direct libraries used to regenerate the RC3 figures, but it is not a complete
 transitive application lock. Replacing the broader declarations with a lock
 generated from one Apple Silicon machine would overstate portability, so this
@@ -32,9 +32,9 @@ python3.12 -m venv .venv
 .venv/bin/python -m pip install --upgrade pip
 .venv/bin/python -m pip install \
   --requirement requirements.txt \
-  --requirement requirements-phase4-ci.txt \
-  --requirement requirements-benchmark-analysis.txt \
-  --requirement requirements-docs.txt
+  --requirement requirements/requirements-phase4-ci.txt \
+  --requirement requirements/requirements-benchmark-analysis.txt \
+  --requirement requirements/requirements-docs.txt
 .venv/bin/python -m pip install --editable .
 ```
 
