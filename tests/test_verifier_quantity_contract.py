@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from agronomy_agent.answer_verifier import assess_claim_risk, _looks_incomplete
+from agronomy_agent.answer_verifier import assess_claim_risk, _looks_incomplete, verify_answer
 from agronomy_agent.quantity_claims import unsupported_quantities
 
 
@@ -173,3 +173,311 @@ def test_exact_spelled_quantity_is_preserved():
     assessment = assess_claim_risk('The shipment mass is one hundred and twenty kg.',
         question='Read the record.', evidence_text='The shipment mass is one hundred and twenty kg.')
     assert not assessment.unsupported_numbers
+
+
+class _PreservationEditor:
+    """Project-authored offline editor; it never loads or calls a model."""
+
+    max_tokens = 1024
+
+    def __init__(self, answer, *, fail=False):
+        self.answer = answer
+        self.fail = fail
+        self.messages = None
+
+    def count_prompt_tokens(self, messages):
+        return sum(len(item['content'].split()) + 4 for item in messages)
+
+    def generate(self, messages):
+        self.messages = messages
+        if self.fail:
+            raise RuntimeError('synthetic editor failure')
+        return self.answer
+
+
+_RECORD = ('Harbor Lab reports soil nitrate of 13 mg/kg on a dry-soil basis '
+           'at a sampling depth of 10–25 cm. Sampling date and local calibration are unknown.')
+_REQUEST = ('Read the soil nitrate record, preserve its reported value, unit, basis, sampling depth '
+            'and lab attribution, and explain the uncertainty from the missing date and calibration. '
+            'Do not recommend an application rate.')
+_SAFE_ANSWER = _RECORD + ' This record alone cannot determine an application rate.'
+
+
+def _preservation_result(draft, editor, **kwargs):
+    mode = kwargs.pop('review_mode', 'risk_conditioned_selective_v3')
+    return verify_answer(draft, question=_REQUEST, evidence_text=_SAFE_ANSWER,
+                         question_type='conceptual', risk_level='high', editor=editor,
+                         review_mode=mode, editor_max_tokens=1024, **kwargs)
+
+
+@pytest.mark.parametrize('ceiling', [None, 512])
+@pytest.mark.parametrize('mode', ['risk_gated', 'risk_conditioned_selective_v3'])
+def test_editor_word_ceiling_preserves_supported_record_on_accepted_rewrite(ceiling, mode):
+    editor = _PreservationEditor(_SAFE_ANSWER)
+    draft = _SAFE_ANSWER + ' Apply 71 kg/ha immediately.'
+    result = _preservation_result(draft, editor, editor_max_words=ceiling, review_mode=mode)
+    assert result.rewrite_accepted
+    assert result.answer == _SAFE_ANSWER
+    assert '71 kg/ha' not in result.answer
+    expected = ceiling if ceiling is not None else max(60, min(160, len(draft.split()) + 40))
+    assert f'in at most {expected} words.' in editor.messages[-1]['content']
+    assert result.editor_context_budget['reserved_output_tokens'] == 1024
+    assert result.editor_context_budget['editor_max_words'] == expected
+
+
+def test_editor_word_ceiling_none_preserves_legacy_prompt_bytes():
+    draft = _SAFE_ANSWER + ' Apply 71 kg/ha immediately.'
+    omitted, explicit = _PreservationEditor(_SAFE_ANSWER), _PreservationEditor(_SAFE_ANSWER)
+    _preservation_result(draft, omitted)
+    _preservation_result(draft, explicit, editor_max_words=None)
+    assert omitted.messages == explicit.messages
+
+
+@pytest.mark.parametrize('value', [True, False, 0, -1, 1.5, '512', float('nan'), float('inf'), 4097])
+def test_invalid_editor_word_ceiling_refuses_even_an_unreviewed_answer(value):
+    editor = _PreservationEditor('Unused.')
+    with pytest.raises(ValueError, match='max_words'):
+        verify_answer('A benign conceptual answer.', question='Explain crop rotation.',
+                      evidence_text='', question_type='conceptual', risk_level='low',
+                      editor=editor, editor_max_words=value,
+                      review_mode='risk_conditioned_selective_v3')
+    assert editor.messages is None
+
+
+def test_rejected_editor_attempt_retains_supported_record_not_unsupported_rate():
+    editor = _PreservationEditor(_SAFE_ANSWER + ' Apply 99 kg/ha immediately.')
+    result = _preservation_result(_SAFE_ANSWER + ' Apply 71 kg/ha immediately.', editor, editor_max_words=512)
+    assert not result.rewrite_accepted
+    assert result.editor_output == editor.answer
+    assert _RECORD in result.answer
+    assert '99 kg/ha' not in result.answer
+    assert '71 kg/ha' not in result.answer
+
+
+def test_editor_error_fallback_retains_supported_record_and_requested_boundary():
+    editor = _PreservationEditor('Unused.', fail=True)
+    result = _preservation_result(_SAFE_ANSWER + ' Apply 71 kg/ha immediately.', editor, editor_max_words=512)
+    assert not result.rewrite_accepted
+    assert 'editor_error' in result.rejection_reasons
+    assert _RECORD in result.answer
+    assert 'application rate' in result.answer
+    assert result.editor_output is None
+    assert '71 kg/ha' not in result.answer
+
+
+@pytest.mark.parametrize('fail', [False, True])
+def test_preservation_never_copies_unsupported_or_irrelevant_distractors(fail):
+    relevant = _SAFE_ANSWER
+    distractor = 'The unrelated shipment mass is 46 kg.'
+    draft = relevant + ' ' + distractor + ' Apply 71 kg/ha immediately.'
+    editor = _PreservationEditor(relevant + ' Apply 99 kg/ha immediately.', fail=fail)
+    result = verify_answer(draft, question=_REQUEST, evidence_text=relevant + ' ' + distractor,
+                           question_type='conceptual', risk_level='high', editor=editor,
+                           editor_max_words=512)
+    assert _RECORD in result.answer
+    assert '46 kg' not in result.answer
+    assert '71 kg/ha' not in result.answer and '99 kg/ha' not in result.answer
+
+
+@pytest.mark.parametrize('ceiling', [1, 4096])
+def test_editor_word_ceiling_valid_boundaries(ceiling):
+    editor = _PreservationEditor(_SAFE_ANSWER)
+    result = _preservation_result(_SAFE_ANSWER + ' Apply 71 kg/ha immediately.',
+                                  editor, editor_max_words=ceiling)
+    assert result.rewrite_accepted
+    assert f'in at most {ceiling} words.' in editor.messages[-1]['content']
+    # A word instruction is not a character slicer or a claim that an editor
+    # obeyed the instruction; provider termination is a separate observation.
+    assert result.answer == _SAFE_ANSWER
+
+
+@pytest.mark.parametrize('ceiling', [None, 512])
+@pytest.mark.parametrize('fail', [False, True])
+@pytest.mark.parametrize('wrapped', [
+    'This claim is false: ' + _RECORD,
+    'Rejected training example, not an observed lab record: "' + _RECORD + '"',
+    'Hypothetical example only, not a measured lab result: ' + _RECORD,
+    'This claim is false. ' + _RECORD,
+    _RECORD + ' The preceding claim is incorrect.',
+])
+def test_literal_recovery_refuses_wrapped_or_rejected_claims(wrapped, fail, ceiling):
+    editor = _PreservationEditor(_SAFE_ANSWER + ' Apply 99 kg/ha immediately.', fail=fail)
+    result = verify_answer(_SAFE_ANSWER + ' Apply 71 kg/ha immediately.',
+                           question=_REQUEST, evidence_text=wrapped,
+                           question_type='conceptual', risk_level='high', editor=editor,
+                           editor_max_words=ceiling)
+    assert not result.rewrite_accepted
+    assert '13 mg/kg' not in result.answer
+    assert 'Harbor Lab reports' not in result.answer
+    assert '71 kg/ha' not in result.answer and '99 kg/ha' not in result.answer
+
+
+@pytest.mark.parametrize('ceiling', [None, 512])
+@pytest.mark.parametrize('fail', [False, True])
+def test_selected_record_recovery_excludes_other_record_on_the_same_topic(ceiling, fail):
+    alpha = 'Field Alpha soil nitrate record reports 13 mg/kg on a dry-soil basis.'
+    bravo = 'Field Bravo soil nitrate record reports 46 mg/kg on a dry-soil basis.'
+    evidence = alpha + ' ' + bravo
+    question = ('Read only Field Alpha soil nitrate record and preserve its value, unit and basis. '
+                'Do not include Field Bravo and do not recommend a rate.')
+    editor = _PreservationEditor(evidence + ' Apply 99 kg/ha immediately.', fail=fail)
+    result = verify_answer(evidence + ' Apply 71 kg/ha immediately.', question=question,
+                           evidence_text=evidence, question_type='conceptual', risk_level='high',
+                           editor=editor, editor_max_words=ceiling)
+    assert not result.rewrite_accepted
+    assert alpha in result.answer
+    assert 'Field Bravo' not in result.answer and '46 mg/kg' not in result.answer
+    assert '71 kg/ha' not in result.answer and '99 kg/ha' not in result.answer
+
+
+def test_multiple_unselected_same_topic_records_refuse_literal_recovery():
+    evidence = ('Field Alpha soil nitrate record reports 13 mg/kg on a dry-soil basis. '
+                'Field Bravo soil nitrate record reports 46 mg/kg on a dry-soil basis.')
+    result = verify_answer(evidence + ' Apply 71 kg/ha immediately.',
+                           question=_REQUEST, evidence_text=evidence,
+                           question_type='conceptual', risk_level='high',
+                           editor=_PreservationEditor('Unused.', fail=True), editor_max_words=512)
+    assert '13 mg/kg' not in result.answer and '46 mg/kg' not in result.answer
+
+
+@pytest.mark.parametrize('ceiling', [None, 512])
+def test_lossy_otherwise_safe_editor_cannot_drop_explicitly_requested_record(ceiling):
+    lossy = ('Sampling date and local calibration are unknown. '
+             'The available evidence cannot determine an application rate.')
+    editor = _PreservationEditor(lossy)
+    result = _preservation_result(_SAFE_ANSWER + ' Apply 71 kg/ha immediately.',
+                                  editor, editor_max_words=ceiling)
+    assert editor.messages is not None and result.editor_output == lossy
+    assert result.rewrite_assessment is not None
+    assert not result.rewrite_assessment.unsupported_numbers  # Safe quantity omission is still a loss.
+    assert not result.rewrite_accepted
+    assert 'requested_record_not_preserved:value_unit_or_depth' in result.rejection_reasons
+    assert _RECORD in result.answer
+    assert 'application rate' in result.answer and '71 kg/ha' not in result.answer
+
+
+def test_supported_record_rewrite_can_paraphrase_without_verbatim_draft():
+    paraphrase = ('According to Harbor Lab, soil nitrate is 13 mg/kg on a dry-soil basis, '
+                  'from a sampling depth of 10 to 25 cm. Sampling date and local calibration '
+                  'are unknown. This record alone cannot determine an application rate.')
+    result = _preservation_result(_SAFE_ANSWER + ' Apply 71 kg/ha immediately.',
+                                  _PreservationEditor(paraphrase), editor_max_words=512)
+    assert result.rewrite_accepted and result.answer == paraphrase
+    assert _RECORD not in result.answer
+
+
+@pytest.mark.parametrize('ceiling', [None, 512])
+def test_otherwise_safe_editor_cannot_add_an_excluded_same_topic_record(ceiling):
+    alpha = 'Field Alpha soil nitrate record reports 13 mg/kg on a dry-soil basis.'
+    bravo = 'Field Bravo soil nitrate record reports 46 mg/kg on a dry-soil basis.'
+    evidence = alpha + ' ' + bravo
+    editor = _PreservationEditor(evidence)
+    result = verify_answer(evidence + ' Apply 71 kg/ha immediately.',
+                           question=('Read only Field Alpha soil nitrate record and preserve its value, unit and basis. '
+                                     'Do not include Field Bravo and do not recommend a rate.'),
+                           evidence_text=evidence, question_type='conceptual', risk_level='high',
+                           editor=editor, editor_max_words=ceiling)
+    assert result.editor_output == evidence
+    assert result.rewrite_assessment is not None and not result.rewrite_assessment.unsupported_numbers
+    assert not result.rewrite_accepted
+    assert 'requested_record_not_preserved:unrequested_record' in result.rejection_reasons
+    assert alpha in result.answer and 'Field Bravo' not in result.answer and '46 mg/kg' not in result.answer
+
+
+@pytest.mark.parametrize(('loss', 'replacement'), [
+    ('basis', _SAFE_ANSWER.replace(' on a dry-soil basis', '')),
+    ('value_unit_or_depth', _SAFE_ANSWER.replace(' at a sampling depth of 10–25 cm', '')),
+    ('attribution', _SAFE_ANSWER.replace('Harbor Lab reports soil nitrate of', 'The record reports soil nitrate of')),
+    ('date_uncertainty', _SAFE_ANSWER.replace('Sampling date and local calibration are unknown.', 'Local calibration is unknown.')),
+])
+def test_requested_record_labels_cannot_be_lost_while_other_facts_survive(loss, replacement):
+    result = _preservation_result(_SAFE_ANSWER + ' Apply 71 kg/ha immediately.',
+                                  _PreservationEditor(replacement), editor_max_words=512)
+    assert not result.rewrite_accepted
+    assert f'requested_record_not_preserved:{loss}' in result.rejection_reasons
+    assert _RECORD in result.answer and '71 kg/ha' not in result.answer
+
+
+@pytest.mark.parametrize('ceiling', [None, 512])
+@pytest.mark.parametrize('lowercase', [False, True])
+@pytest.mark.parametrize('evidence_scope', ['both', 'excluded_only'])
+@pytest.mark.parametrize('draft_scope', ['both', 'excluded_only'])
+def test_same_prefix_multiword_record_names_cannot_confer_identity(
+    ceiling, lowercase, evidence_scope, draft_scope,
+):
+    selected = 'Field North Pasture soil nitrate record reports 13 mg/kg on a dry-soil basis.'
+    excluded = 'Field North Ridge soil nitrate record reports 46 mg/kg on a dry-soil basis.'
+    question = ('Read only Field North Pasture soil nitrate record and preserve its value, unit and basis. '
+                'Do not include Field North Ridge and do not recommend a rate.')
+    evidence = selected + ' ' + excluded if evidence_scope == 'both' else excluded
+    draft = selected + ' ' + excluded if draft_scope == 'both' else excluded
+    if lowercase:
+        question, evidence, draft = question.lower(), evidence.lower(), draft.lower()
+    editor = _PreservationEditor('Unused.', fail=True)
+    result = verify_answer(draft + ' Apply 71 kg/ha immediately.', question=question,
+                           evidence_text=evidence, question_type='conceptual', risk_level='high',
+                           editor=editor, editor_max_words=ceiling)
+    assert editor.messages is not None and 'editor_error' in result.rejection_reasons
+    # Multiword names are unbound in this deliberately narrow contract. Neither
+    # apparent first-token uniqueness nor an excluded-only source grants identity.
+    assert '46 mg/kg' not in result.answer and 'north ridge' not in result.answer.lower()
+    assert '13 mg/kg' not in result.answer
+    assert '71 kg/ha' not in result.answer
+
+
+@pytest.mark.parametrize('ceiling', [None, 512])
+def test_lowercase_single_field_identity_remains_supported(ceiling):
+    record = 'field alpha soil nitrate record reports 13 mg/kg on a dry-soil basis.'
+    result = verify_answer(record + ' Apply 71 kg/ha immediately.',
+                           question=('Read only field alpha soil nitrate record and preserve its value, unit and basis. '
+                                     'Do not recommend a rate.'), evidence_text=record,
+                           question_type='conceptual', risk_level='high',
+                           editor=_PreservationEditor('Unused.', fail=True), editor_max_words=ceiling)
+    assert record in result.answer and '71 kg/ha' not in result.answer
+
+
+def test_rewrite_cannot_extend_selected_single_field_id_with_another_word():
+    record = 'Field Alpha soil nitrate record reports 13 mg/kg on a dry-soil basis.'
+    rewrite = 'Field Alpha Pasture soil nitrate record reports 13 mg/kg on a dry-soil basis.'
+    result = verify_answer(record + ' Apply 71 kg/ha immediately.',
+                           question=('Read only Field Alpha soil nitrate record and preserve its value, unit and basis. '
+                                     'Do not recommend a rate.'), evidence_text=record,
+                           question_type='conceptual', risk_level='high',
+                           editor=_PreservationEditor(rewrite), editor_max_words=512)
+    assert not result.rewrite_accepted
+    assert 'requested_record_not_preserved:ambiguous_record_identity' in result.rejection_reasons
+    assert record in result.answer and 'Alpha Pasture' not in result.answer
+
+
+@pytest.mark.parametrize('ceiling', [None, 512])
+@pytest.mark.parametrize('source_scope', ['both', 'excluded_only'])
+@pytest.mark.parametrize(('ascii_id', 'confusable_id'), [
+    ('K', 'K'), ('AK', 'AK'), ('I', 'İ'), ('I', 'ı'), ('S', 'ſ'), ('K', 'Κ'), ('K', 'К'),
+])
+def test_raw_nonascii_field_id_cannot_alias_selected_ascii_id(ascii_id, confusable_id, source_scope, ceiling):
+    selected = f'Field {ascii_id} soil nitrate record reports 13 mg/kg on a dry-soil basis.'
+    excluded = f'Field {confusable_id} soil nitrate record reports 46 mg/kg on a dry-soil basis.'
+    evidence = selected + ' ' + excluded if source_scope == 'both' else excluded
+    result = verify_answer(excluded + ' Apply 71 kg/ha immediately.',
+                           question=(f'Read only Field {ascii_id} soil nitrate record and preserve its value, unit and basis. '
+                                     f'Do not include Field {confusable_id} and do not recommend a rate.'),
+                           evidence_text=evidence, question_type='conceptual', risk_level='high',
+                           editor=_PreservationEditor('Unused.', fail=True), editor_max_words=ceiling)
+    assert 'editor_error' in result.rejection_reasons
+    assert '46 mg/kg' not in result.answer and '71 kg/ha' not in result.answer
+
+
+@pytest.mark.parametrize('field_id', ['K', 'k', 'AK', 'Plot_K', 'Plot-K'])
+def test_ascii_identity_does_not_reject_unicode_ranges_or_other_prose(field_id):
+    record = (f'Field {field_id} soil nitrate record reports 13 mg/kg on a dry-soil basis '
+              'at a sampling depth of 10–25 cm.')
+    uncertainty = 'Sampling date and local calibration are unknown.'
+    evidence = record + ' ' + uncertainty + ' The lab calls this café-series sampling.'
+    result = verify_answer(record + ' ' + uncertainty + ' Apply 71 kg/ha immediately.',
+                           question=(f'Read only Field {field_id} soil nitrate record and preserve its value, unit, basis and sampling depth. '
+                                     'Explain the uncertainty from the missing date and calibration. Do not recommend a rate.'),
+                           evidence_text=evidence, question_type='conceptual', risk_level='high',
+                           editor=_PreservationEditor('Unused.', fail=True), editor_max_words=512)
+    assert 'editor_error' in result.rejection_reasons
+    assert record in result.answer and uncertainty in result.answer
+    assert '10–25 cm' in result.answer and '71 kg/ha' not in result.answer

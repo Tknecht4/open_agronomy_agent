@@ -37,7 +37,7 @@ from agronomy_agent.decision_contract import build_decision_contract
 from agronomy_agent.evidence_contracts import question_frame_from_runtime
 from agronomy_agent.tool_planner import plan_tools
 from agronomy_agent.router import classify_query, refine_query_route
-from agronomy_agent.answer_verifier import context_evidence_text, verify_answer
+from agronomy_agent.answer_verifier import context_evidence_text, validate_editor_max_words, verify_answer
 from agronomy_agent.answer_safety import enforce_answer_safety_postconditions
 from agronomy_agent.evidence_contracts import (
     capability_evidence_from_records,
@@ -559,6 +559,8 @@ def _run_turn_impl(
         typed_tools_enabled=typed_tools_enabled,
     )
     model_config = prepared["model_config"]
+    verification_config = model_config.get("answer_verification") if isinstance(model_config.get("answer_verification"), dict) else {}
+    editor_max_words = validate_editor_max_words(verification_config.get("max_words"))
     conversation_config = prepared["conversation_config"]
     history_cutoff = prepared["history_cutoff"]
     recent_turns = prepared["recent_turns"]
@@ -1112,7 +1114,6 @@ def _run_turn_impl(
             "final_assessment": {"requires_review": False, "reasons": []},
         }
 
-    verification_config = model_config.get("answer_verification") if isinstance(model_config.get("answer_verification"), dict) else {}
     verification_enabled = bool(verification_config.get("enabled", False)) and verifier_enabled
     if (
         mode not in {"baseline", "mock"}
@@ -1155,6 +1156,7 @@ def _run_turn_impl(
                 editor=editor,
                 editor_context_management=conversation_config,
                 editor_max_tokens=editor_max_tokens,
+                editor_max_words=editor_max_words,
                 max_evidence_chars=int(verification_config.get("max_evidence_chars", 9000)),
                 evidence_docs=() if context is None else context.retrieved_docs,
                 preserve_entities=()
