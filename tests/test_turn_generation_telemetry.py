@@ -5,6 +5,8 @@ from __future__ import annotations
 from copy import deepcopy
 from types import SimpleNamespace
 
+import pytest
+
 from agronomy_agent.execution_core import AgentExecutionRequest
 from agronomy_agent.server.services import chat_service
 from agronomy_agent.server.settings import build_settings
@@ -197,3 +199,104 @@ def test_draft_snapshot_survives_editor_and_triggered_preflight_does_not_reuse_e
     assert "generation_stats" not in second_metadata["answer_verification"]
     assert first_metadata["answer_verification"]["generation_stats"]["nested"]["call_id"] == 2
     assert backend.calls == 3
+
+
+def test_editor_word_config_forwarded_without_changing_draft_or_token_caps(tmp_path, monkeypatch):
+    store, settings = _runtime(tmp_path)
+    draft, editor = ReusedBackend(), ReusedBackend()
+    draft.max_tokens = editor.max_tokens = 640
+    original_load = chat_service.load_model_config
+    observed = []
+    config_values = iter([512, None, 'absent'])
+
+    def load(path):
+        config = deepcopy(original_load(path))
+        value = next(config_values)
+        if value != 'absent':
+            config['answer_verification']['max_words'] = value
+        return config
+
+    def verify(answer, *, editor_max_words, editor_max_tokens, **kwargs):
+        observed.append((editor_max_words, editor_max_tokens))
+        assert kwargs['editor'].max_tokens == 220
+        return _VerificationOutcome(answer, None)
+
+    monkeypatch.setattr(chat_service, 'load_model_config', load)
+    monkeypatch.setattr(chat_service, '_build_mlx_generator', lambda *a, **kw: editor)
+    monkeypatch.setattr(chat_service, 'verify_answer', verify)
+    controls = dict(mode='agronomic_rag', typed_tools_enabled=False,
+                    document_retrieval_enabled=False, graph_retrieval_enabled=False,
+                    risk_intervention_enabled=False)
+    for _ in range(3):
+        _turn(tmp_path, store, settings, draft, 'Explain soil structure and erosion.', **controls)
+        assert draft.max_tokens == 100
+    assert observed == [(512, 220), (None, 220), (None, 220)]
+    assert draft.calls == 3 and editor.calls == 0
+
+
+@pytest.mark.parametrize('value', [True, 0, -1, '512', 512.0, 4097])
+def test_invalid_editor_word_config_refused_before_any_generator(value, monkeypatch):
+    backend = ReusedBackend()
+    monkeypatch.setattr(chat_service, 'prepare_turn_question', lambda **kw: {
+        'model_config': {'answer_verification': {'max_words': value}},
+    })
+    monkeypatch.setattr(chat_service, '_build_mlx_generator', lambda *a, **kw: pytest.fail('editor constructed'))
+    with pytest.raises(ValueError, match='max_words'):
+        chat_service._run_turn_impl(
+            store=SimpleNamespace(session_exists=lambda sid: True),
+            settings=SimpleNamespace(default_model_id='synthetic-local-model'),
+            session_id='synthetic', message='Explain soil structure.', mode='agronomic_rag',
+            model_id='synthetic-local-model', rag_config='configs/rag.yaml', max_tokens=100,
+            trace_options={}, generation_backend=backend,
+        )
+    assert backend.calls == 0
+
+
+def test_all_editor_attempts_remain_observed_when_rejected_unchanged_or_accepted(tmp_path, monkeypatch):
+    store, settings = _runtime(tmp_path)
+    draft = ReusedBackend()
+
+    class Editor(ReusedBackend):
+        max_tokens = 1024
+        output = ''
+
+        def generate(self, messages):
+            super().generate(messages)
+            return self.output
+
+    editor = Editor()
+    original_load = chat_service.load_model_config
+
+    def load(path):
+        config = deepcopy(original_load(path))
+        config['answer_verification'].update(max_tokens=1024, max_words=512)
+        return config
+
+    def verify(answer, *, editor_max_words, editor_max_tokens, **kwargs):
+        assert (editor_max_words, editor_max_tokens) == (512, 1024)
+        editor.output = answer if editor.calls == 1 else 'Synthetic editor output.'
+        output = editor.generate([{'role': 'user', 'content': 'Synthetic editor request.'}])
+        accepted = editor.calls == 3
+        result = _VerificationOutcome(output if accepted else answer, output)
+        result.rewrite_accepted = accepted
+        result.fallback_applied = False
+        return result
+
+    monkeypatch.setattr(chat_service, 'load_model_config', load)
+    monkeypatch.setattr(chat_service, '_build_mlx_generator', lambda *a, **kw: editor)
+    monkeypatch.setattr(chat_service, 'verify_answer', verify)
+    attempts = []
+    for index in range(3):
+        turn = _turn(tmp_path, store, settings, draft, 'Explain soil structure and erosion.',
+                     mode='agronomic_rag', typed_tools_enabled=False,
+                     document_retrieval_enabled=False, graph_retrieval_enabled=False,
+                     risk_intervention_enabled=False)
+        metadata = turn['trace']['metadata']
+        assert metadata['generation_stats']['call_id'] == index + 1
+        assert metadata['answer_verification']['generation_stats']['call_id'] == index + 1
+        assert metadata['answer_verification']['rewrite_accepted'] is (index == 2)
+        attempts.append(metadata['generation_stats']['generation_tokens']
+                        + metadata['answer_verification']['generation_stats']['generation_tokens'])
+    assert attempts == [2, 4, 6]  # All synthetic attempted stage counts, including the two unaccepted edits.
+    assert sum(attempts) == 12
+    assert draft.calls == editor.calls == 3

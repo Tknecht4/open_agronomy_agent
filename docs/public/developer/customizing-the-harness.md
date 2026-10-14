@@ -16,6 +16,25 @@ This repository can be forked as a field workspace or as a governed agent resear
 
 The active model, RAG, and runtime-profile registry are `configs/model.yaml`, `configs/rag.yaml`, and `configs/runtime_profiles.json`. A newer-looking candidate file is not active by filename. Frozen benchmark configurations and artifacts are evidence; a fork should give new experiments new identities rather than editing them.
 
+An explicitly selected model configuration can set `answer_verification.max_words`
+to an integer from 1 through 4096. The service forwards it to
+`verify_answer(editor_max_words=...)`; booleans, strings, fractions and values
+outside that range are refused. When omitted or `null`, the existing editor
+instruction remains `max(60, min(160, draft_word_count + 40))`. This is a word
+instruction in the editor prompt, separate from the provider token cap; it does
+not clip output or guarantee a length or completion. Changing it does not change
+the active model, token limits, context window or evaluation time budget.
+Account for every attempted draft/editor generation, including rejected and
+unchanged edits, and retain unknown or length-limited outcomes as incomplete.
+
+The verifier also checks explicitly requested facts from an eligible supplied
+record before accepting a rewrite and can restore that record after a rejected
+or failed editor. Recovery uses bounded lexical evidence and field-identity
+checks, not a general semantic grader. Ambiguous or unsupported field-name
+syntax can leave a record unresolved; passing these checks does not establish
+source authority, field applicability or agronomic correctness. Keep model
+quality and budget-fit evaluation separate from fake-editor regression tests.
+
 ## Bring in data without crossing authority boundaries
 
 | Input path | How to use it | What it does not do |
@@ -70,7 +89,12 @@ Keep evaluation arms separate. `scripts/run_observed_system_rehearsal.py` exerci
 PYTHONPATH=src .venv/bin/python scripts/check_public_docs.py
 PYTHONPATH=src .venv/bin/mkdocs build --strict
 PYTHONPATH=src .venv/bin/python scripts/build_public_repository.py \
-  --destination /tmp/open-agronomy-public-package-new
+  --check
 ```
 
-Inspect the builder's output and receipt before treating the package as publishable. A clean package and passing software tests still do not establish field or model competence.
+Inspect the scope result before publishing a fork. When copied bytes need
+verification, use `--verify --receipt <new-json-path>` with a fresh receipt path
+and sufficient reserved space; successful temporary staging is retired after
+verification. Use `--destination` for a downstream consumer that needs a
+retained tree. Passing scope and software checks still does not establish field
+or model competence.
