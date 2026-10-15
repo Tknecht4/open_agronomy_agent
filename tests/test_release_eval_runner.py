@@ -25,6 +25,284 @@ from agronomy_agent.release_eval_runner import (
 from agronomy_agent.release_evaluation import digest, write_new_json
 
 
+def _strict_identity_fixture(*, bypass=True, verifier_state="not_applicable"):
+    """Synthetic content-addressed topology; no product/backend execution."""
+    from agronomy_agent.execution_core import (
+        EXECUTION_STAGE_IDS, EXECUTION_STAGE_REQUIRED_EVIDENCE_KEYS,
+        EXECUTION_STAGE_EVIDENCE_DIGEST_KEYS, build_execution_stage_receipts,
+    )
+    from copy import deepcopy
+
+    value = "a" * 64
+    observations = {}
+    for name in EXECUTION_STAGE_IDS:
+        evidence = {key: "synthetic" for key in EXECUTION_STAGE_REQUIRED_EVIDENCE_KEYS[name]}
+        evidence.update({key: value for key in EXECUTION_STAGE_EVIDENCE_DIGEST_KEYS[name]})
+        evidence["reason"] = "synthetic_identity_fixture"
+        observations[name] = {"state": "executed", "evidence": evidence}
+    evidence = lambda name: observations[name]["evidence"]
+    evidence("routing").update(question_type="synthetic", risk_level="low")
+    evidence("document_retrieval").update(document_count=0, document_ids=[])
+    evidence("graph_retrieval").update(graph_hit_count=0, graph_node_ids=[])
+    evidence("tool_execution").update(result_count=0, result_ids=[])
+    evidence("prompt_construction")["message_count"] = 1
+    observations["deterministic_bypass"]["state"] = "executed" if bypass else "not_applicable"
+    evidence("deterministic_bypass")["bypass_selected"] = bypass
+    observations["draft_generation"]["state"] = "bypassed" if bypass else "executed"
+    evidence("draft_generation").update(model_call_executed=not bypass, fallback_used=False)
+    observations["verification"]["state"] = verifier_state
+    evidence("verification").update(configured=True, executed=False)
+    origin = {"origin_class": "deterministic_bypass" if bypass else "configured_model",
+              "fallback_used": False, "verification_action": "not_run",
+              "verification_triggered": False, "verification_fallback_applied": False,
+              "rewrite_accepted": False, "replacement_used": False,
+              "verification_receipt_sha256": value}
+    evidence("fallback_origin").update(origin, origin_record=origin, origin_sha256=digest(origin))
+    identity = {"schema_version": "open_agronomy_agent.model_identity_contract.v1",
+                "status": "verified_direct_loader", "backend": "mlx_local",
+                "configured_model_id": "synthetic-model", "configured_model_revision": "b" * 40,
+                "model_config_sha256": "c" * 64}
+    turn = {"status": "completed", "execution_kind": "production",
+            "stage_receipts": list(build_execution_stage_receipts(observations)),
+            "metadata": {"generation_bypass": {"reason": "synthetic_result"}} if bypass else {},
+            "generation_stats": None if bypass else {"finish_reason": "stop", "generation_tokens": 7},
+            "model_identity": None if bypass else identity,
+            "model_revision_observation": {"configured": "b" * 40, "resolved": "b" * 40, "verified": not bypass},
+            "model_execution_eligible": not bypass,
+            "draft_checkpoint": {"status": "not_observed" if bypass else "retained"},
+            "model_execution": {"disposition": "deterministic_bypass" if bypass else "model_generated",
+                                "synthetic": False, "backend_available": True,
+                                "model_generation_eligible": not bypass, "model_execution_eligible": not bypass,
+                                "generation_stats_present": not bypass, "identity": None if bypass else deepcopy(identity)}}
+    case = {"case_id": "identity-case", "suite_id": "synthetic", "question": "Calculate 2 plus 3.", "field_context": {}, "assertions": {}}
+    cell = {"observation_id": "identity-observation", "case_id": case["case_id"], "suite_id": case["suite_id"],
+            "case_sha256": digest(case), "arm_id": "production_full", "trial_id": "trial-001", "backend": "mlx_local"}
+    from agronomy_agent.release_evaluation import worker_case
+    row = {**cell, "schema_version": "open_agronomy_agent.release_product_cell.v1",
+           "status": "completed", "checks": [{"passed": True}], "turns": [turn],
+           "worker_input_binding": {**cell, "observation_id": None, "suite_id": None,
+                                    "case_sha256": digest(worker_case(case))},
+           "runtime_input_binding_status": "verified_worker_config_bytes",
+           "config_identity": {"model": {"sha256": "c" * 64}, "rag": {"sha256": "d" * 64}}}
+    plan = {"model": {"id": "synthetic-model", "revision": "b" * 40, "config_sha256": "e" * 64},
+            "effective_runtime_inputs": {"model_trial_sha256": {"trial-001": "c" * 64}, "rag_sha256": "d" * 64},
+            "matrix": [cell], "cases": [case],
+            "bounded_stop_policy": {"policy": {"require_model_identity": True, "require_termination": True}}}
+    return row, plan
+
+
+def test_strict_identity_accepts_corroborated_current_bypass():
+    from agronomy_agent.release_eval_runner import _attempt_stop
+    row, plan = _strict_identity_fixture()
+    _attempt_stop(row, plan, product=True)
+    assert row["turns"][0]["model_execution"]["model_generation_eligible"] is False
+
+
+@pytest.mark.parametrize("state", ["not_applicable", "disabled_by_arm"])
+def test_strict_identity_no_model_is_not_verified_generation(state):
+    from agronomy_agent.release_eval_runner import _attempt_stop
+    from agronomy_agent.release_eval_analysis import _verified_generation
+    row, plan = _strict_identity_fixture(verifier_state=state)
+    _attempt_stop(row, plan, product=True)
+    assert not _verified_generation(row["turns"][0], plan["model"]["revision"])
+
+
+@pytest.mark.parametrize("change", ["missing_stages", "tampered_stage", "generated_stages", "stats", "empty_stats",
+                                   "eligible", "called", "synthetic", "checkpoint", "missing_bypass", "legacy"])
+def test_strict_identity_bypass_requires_full_corroboration(change):
+    from agronomy_agent.release_eval_runner import _attempt_stop, _PolicyStop
+    row, plan = _strict_identity_fixture()
+    turn = row["turns"][0]
+    if change == "missing_stages": turn.pop("stage_receipts")
+    elif change == "tampered_stage": turn["stage_receipts"][0]["evidence"]["reason"] = "altered"
+    elif change == "generated_stages": turn["stage_receipts"] = _strict_identity_fixture(bypass=False)[0]["turns"][0]["stage_receipts"]
+    elif change in {"stats", "empty_stats"}: turn["generation_stats"] = {"finish_reason": "stop", "generation_tokens": 7} if change == "stats" else {}
+    elif change == "eligible": turn["model_execution"]["model_generation_eligible"] = True
+    elif change == "called": turn["model_execution"]["generator_called"] = True
+    elif change == "synthetic": turn["model_execution"]["synthetic"] = True
+    elif change == "checkpoint": turn["draft_checkpoint"]["status"] = "retained"
+    elif change == "missing_bypass": turn["metadata"].pop("generation_bypass")
+    elif change == "legacy": turn["model_execution"].update(disposition="tool_only", generator_called=False)
+    with pytest.raises(_PolicyStop):
+        _attempt_stop(row, plan, product=True)
+
+
+@pytest.mark.parametrize("bypass", [True, False])
+@pytest.mark.parametrize("change", ["missing_config", "missing_rag", "wrong_config", "wrong_rag", "unknown_runtime", "missing_binding", "missing_case", "missing_case_id", "wrong_case", "wrong_observation"])
+def test_strict_identity_preserves_actual_worker_bindings(bypass, change):
+    from agronomy_agent.release_eval_runner import _attempt_stop, _PolicyStop
+    row, plan = _strict_identity_fixture(bypass=bypass)
+    if change == "missing_config": row.pop("config_identity")
+    elif change == "missing_rag": row["config_identity"].pop("rag")
+    elif change == "wrong_config": row["config_identity"]["model"]["sha256"] = "f" * 64
+    elif change == "wrong_rag": row["config_identity"]["rag"]["sha256"] = "f" * 64
+    elif change == "unknown_runtime": row["runtime_input_binding_status"] = "unknown_missing_worker_config"
+    elif change == "missing_binding": row.pop("worker_input_binding")
+    elif change == "missing_case": row["worker_input_binding"]["case_sha256"] = None
+    elif change == "missing_case_id": row["worker_input_binding"]["case_id"] = None
+    elif change == "wrong_case": row["worker_input_binding"]["case_sha256"] = "f" * 64
+    elif change == "wrong_observation": row["worker_input_binding"]["observation_id"] = "other"
+    with pytest.raises(_PolicyStop):
+        _attempt_stop(row, plan, product=True)
+
+
+def test_strict_identity_accepts_generated_and_mixed_turns_with_effective_config():
+    from agronomy_agent.release_eval_runner import _attempt_stop
+    row, plan = _strict_identity_fixture(bypass=False)
+    assert plan["model"]["config_sha256"] != row["config_identity"]["model"]["sha256"]
+    _attempt_stop(row, plan, product=True)
+    row["turns"].append(_strict_identity_fixture()[0]["turns"][0])
+    _attempt_stop(row, plan, product=True)
+    row["turns"][0]["model_identity"]["configured_model_id"] = "wrong"
+    with pytest.raises(ValueError, match="model_identity_drift"):
+        _attempt_stop(row, plan, product=True)
+
+
+@pytest.mark.parametrize("change", ["missing_id", "wrong_id", "missing_hash", "original_hash", "mirror_conflict", "schema", "observed_revision", "runtime_missing", "runtime_wrong"])
+def test_strict_identity_generated_actual_identity_is_required(change):
+    from agronomy_agent.release_eval_runner import _attempt_stop, _PolicyStop
+    from copy import deepcopy
+    row, plan = _strict_identity_fixture(bypass=False)
+    turn = row["turns"][0]
+    identity = turn["model_identity"]
+    if change == "missing_id": identity.pop("configured_model_id")
+    elif change == "wrong_id": identity["configured_model_id"] = "wrong"
+    elif change == "missing_hash": identity.pop("model_config_sha256")
+    elif change == "original_hash": identity["model_config_sha256"] = plan["model"]["config_sha256"]
+    elif change == "schema": identity["schema_version"] = "unknown"
+    elif change == "observed_revision": turn["model_revision_observation"]["resolved"] = "f" * 40
+    elif change.startswith("runtime"):
+        identity["status"] = "verified_runtime_receipt"
+        if change == "runtime_wrong": identity["runtime"] = {"model_id": "wrong", "model_revision": "b" * 40}
+    turn["model_execution"]["identity"] = deepcopy(identity)
+    if change == "mirror_conflict": turn["model_execution"]["identity"]["model_config_sha256"] = "f" * 64
+    with pytest.raises(_PolicyStop):
+        _attempt_stop(row, plan, product=True)
+
+
+@pytest.mark.parametrize("change", [None, "missing", "unbound_hash", "mirror", "unknown_triggered"])
+def test_strict_identity_runtime_receipt_and_assessment_only_are_distinct_from_editor(change):
+    from agronomy_agent.release_eval_runner import _attempt_stop
+    from copy import deepcopy
+    row, plan = _strict_identity_fixture(bypass=False)
+    turn = row["turns"][0]
+    turn["model_identity"].update(status="verified_runtime_receipt", runtime={"model_id": "synthetic-model", "model_revision": "b" * 40})
+    turn["model_execution"]["identity"] = deepcopy(turn["model_identity"])
+    turn["metadata"]["answer_verification"] = {"triggered": False, "editor_output": None, "rewrite_accepted": False}
+    turn["editor"] = deepcopy(turn["metadata"]["answer_verification"])
+    from agronomy_agent.execution_core import build_execution_stage_receipts
+    observations = {item["stage_id"]: {"state": item["state"], "evidence": item["evidence"]} for item in turn["stage_receipts"]}
+    observations["verification"]["state"] = "executed"
+    observations["verification"]["evidence"]["executed"] = True
+    adjudication = digest(turn["editor"])
+    observations["verification"]["evidence"]["adjudication_sha256"] = adjudication
+    origin = observations["fallback_origin"]["evidence"]
+    origin["origin_record"]["verification_receipt_sha256"] = adjudication
+    origin.update(verification_receipt_sha256=adjudication, origin_sha256=digest(origin["origin_record"]))
+    turn["stage_receipts"] = list(build_execution_stage_receipts(observations))
+    if change == "missing": turn["metadata"].pop("answer_verification"); turn.pop("editor")
+    elif change == "unbound_hash": turn["metadata"]["answer_verification"]["extra"] = "changed"
+    elif change == "mirror": turn["editor"]["triggered"] = True
+    elif change == "unknown_triggered": turn["metadata"]["answer_verification"].pop("triggered")
+    if change is None: _attempt_stop(row, plan, product=True)
+    else:
+        with pytest.raises(ValueError): _attempt_stop(row, plan, product=True)
+
+
+@pytest.mark.parametrize("key", ["metadata", "model_execution", "model_revision_observation", "verification_observation", "draft_checkpoint", "editor"])
+def test_strict_identity_malformed_optional_records_stop_before_termination(key):
+    from agronomy_agent.release_eval_runner import _attempt_stop, _PolicyStop
+    row, plan = _strict_identity_fixture()
+    row["turns"][0][key] = "unknown"
+    with pytest.raises(_PolicyStop, match="required_identity_evidence_unknown"):
+        _attempt_stop(row, plan, product=True)
+
+
+@pytest.mark.parametrize("bypass", [True, False])
+@pytest.mark.parametrize("change", ["stats_mirror", "metadata_identity", "execution_identity", "partial_identity", "called_zero", "stage_call_false", "top_eligible", "execution_eligible", "stats_flag"])
+def test_strict_identity_conflicting_mirrors_never_qualify(bypass, change):
+    from agronomy_agent.release_eval_runner import _attempt_stop, _PolicyStop
+    from copy import deepcopy
+    row, plan = _strict_identity_fixture(bypass=bypass)
+    turn = row["turns"][0]
+    if change == "stats_mirror": turn["metadata"]["generation_stats"] = {"finish_reason": "stop", "generation_tokens": 999}
+    elif change in {"metadata_identity", "execution_identity", "partial_identity"}:
+        identity = deepcopy(_strict_identity_fixture(bypass=False)[0]["turns"][0]["model_identity"])
+        identity["configured_model_id"] = "different-model"
+        if change == "metadata_identity": turn["metadata"]["model_identity"] = identity
+        elif change == "execution_identity": turn["model_execution"]["identity"] = identity
+        else: turn["model_identity"] = {"configured_model_id": "different-model"}
+    elif change == "called_zero": turn["model_execution"]["generator_called"] = 0
+    elif change == "stage_call_false":
+        # Valid hashes and topology from the opposite execution path still conflict.
+        turn["stage_receipts"] = _strict_identity_fixture(bypass=not bypass)[0]["turns"][0]["stage_receipts"]
+    elif change == "top_eligible": turn["model_execution_eligible"] = bypass
+    elif change == "execution_eligible": turn["model_execution"]["model_execution_eligible"] = bypass
+    elif change == "stats_flag": turn["model_execution"]["generation_stats_present"] = bypass
+    with pytest.raises(_PolicyStop):
+        _attempt_stop(row, plan, product=True)
+
+
+@pytest.mark.parametrize("marker", ["generation_fallback", "generation_unavailable"])
+def test_strict_identity_generated_fallback_markers_conflict(marker):
+    from agronomy_agent.release_eval_runner import _attempt_stop, _PolicyStop
+    row, plan = _strict_identity_fixture(bypass=False)
+    row["turns"][0]["metadata"][marker] = {"reason": "synthetic_backend_boundary"}
+    with pytest.raises(_PolicyStop, match="contradictory_model_execution"):
+        _attempt_stop(row, plan, product=True)
+
+
+def test_strict_identity_raw_has_no_product_topology_but_requires_actual_identity():
+    from agronomy_agent.release_eval_runner import _attempt_stop
+    row, plan = _strict_identity_fixture(bypass=False)
+    row["turns"][0].update(execution_kind="ungoverned_reference", stage_receipts=[])
+    _attempt_stop(row, plan, product=True)
+
+
+@pytest.mark.parametrize("change", [None, "missing", "question", "context", "unknown_status"])
+def test_strict_identity_task_exposure_is_observed_not_planned(change):
+    from agronomy_agent.release_eval_runner import _attempt_stop, _PolicyStop
+    from agronomy_agent.release_evaluation import validate_task_exposure, task_input_contract, worker_case
+    row, plan = _strict_identity_fixture()
+    plan["controller_inputs"] = {}
+    case = plan["cases"][0]
+    aliases = {"schema_version": "open_agronomy_agent.release_field_aliases.v1", "aliases_applied": {}, "conflicts": [], "input_sha256": digest({}), "compiled_sha256": digest({})}
+    exposure = {"schema_version": "open_agronomy_agent.task_exposure.v1", "arm_id": "production_full",
+                "worker_case_sha256": digest(worker_case(case)), "compiled_field_context_sha256": digest({}),
+                "field_alias_receipt": aliases, "requests": [{"message": case["question"], "field_context_delivered": {}}]}
+    exposure["receipt_sha256"] = digest(exposure)
+    binding = validate_task_exposure(case, "production_full", exposure)
+    row.update(task_exposure=exposure, task_input_status=binding["status"], task_input_sha256=binding["task_input_sha256"])
+    if change == "missing": row.pop("task_exposure")
+    elif change == "unknown_status": row["task_input_status"] = "unknown_missing_exposure"
+    elif change in {"question", "context"}:
+        exposure["requests"][0]["message" if change == "question" else "field_context_delivered"] = "altered" if change == "question" else {"invented": 99}
+        exposure["receipt_sha256"] = digest({key: value for key, value in exposure.items() if key != "receipt_sha256"})
+    if change is None: _attempt_stop(row, plan, product=True)
+    else:
+        with pytest.raises(_PolicyStop): _attempt_stop(row, plan, product=True)
+
+
+@pytest.mark.parametrize("bypass", [True, False])
+@pytest.mark.parametrize("change", ["output", "rejected_empty_output", "stats", "stats_mirror", "error", "rewrite", "triggered", "unknown_return"])
+def test_strict_identity_editor_attempt_cannot_borrow_draft_identity(bypass, change):
+    from agronomy_agent.release_eval_runner import _attempt_stop, _PolicyStop
+    row, plan = _strict_identity_fixture(bypass=bypass)
+    turn = row["turns"][0]
+    editor = {"generation_stats": {"finish_reason": "stop", "generation_tokens": 2}}
+    if change == "output": editor["editor_output"] = "Synthetic edit"
+    elif change == "rejected_empty_output": editor.update(editor_output="", rewrite_accepted=False)
+    elif change == "stats": turn["editor_generation_stats"] = editor["generation_stats"]
+    elif change == "stats_mirror": turn["verification_generation_stats"] = editor["generation_stats"]
+    elif change == "error": editor = {"rejection_reasons": ["editor_error"]}
+    elif change == "rewrite": editor["rewrite_accepted"] = True
+    elif change == "triggered": editor = {"triggered": True}
+    elif change == "unknown_return": turn["verification_observation"] = {"status": "unknown_after_draft_return"}
+    turn["metadata"]["answer_verification"] = editor
+    with pytest.raises(_PolicyStop):
+        _attempt_stop(row, plan, product=True)
+
+
 def test_instrument_proves_unit_negation_and_empty_rubric_controls():
     result = _instrument_controls()
     assert result["status"] == "pass"
@@ -281,6 +559,66 @@ def _order3_runner(tmp_path, monkeypatch, **overrides):
     path.write_text(json.dumps(policy))
     args["stop_policy_path"] = path
     return runner, args, calls, fake
+
+
+def test_identity_bypass_tiny_terminal_retention_for_coordinator(tmp_path, monkeypatch):
+    """Three planned fake cells: bypass accepted, contradiction retained, one unstarted.
+
+    Deliberately tiny source map and one fake component; no product/backend work.
+    """
+    from agronomy_agent import release_evaluation as evaluation
+    tiny_files = {"src/agronomy_agent/release_eval_runner.py": evaluation.file_digest(Path(__import__("agronomy_agent.release_eval_runner", fromlist=["__file__"]).__file__))}
+    monkeypatch.setattr(evaluation, "source_identity", lambda *_a: {"commit": "synthetic-source-map", "files": tiny_files, "source_sha256": digest(tiny_files)})
+    runner, registry = _tiny_runner(monkeypatch)
+    plan = runner.build_plan()
+    tiny_registry = runner.load_registry(registry)
+    tiny_registry["required_components"] = ["instrument"]
+    plan["registry_sha256"] = digest(tiny_registry)
+    monkeypatch.setattr(runner, "load_registry", lambda *_a, **_k: tiny_registry)
+    case = {**_strict_identity_fixture()[1]["cases"][0], "scenario_family": "synthetic_identity", "lane": "harness", "review_required": False, "turn_count": 1}
+    plan.update(cases=[case], required_components=["instrument"],
+                matrix=[{**plan["matrix"][0], "observation_id": f"tiny-{n}", "suite_id": case["suite_id"], "case_id": case["case_id"],
+                         "case_sha256": digest(case), "scenario_family": case["scenario_family"], "lane": "harness", "backend": "mlx"} for n in range(3)],
+                counts={"cases": 1, "observations": 3, "families": 1, "lanes": {"harness": 1}})
+    files = {"src/agronomy_agent/release_eval_runner.py": runner.file_digest(Path(runner.__file__))}
+    plan["source"] = {"commit": "synthetic-source-map", "files": files, "source_sha256": digest(files)}
+    from copy import deepcopy
+    monkeypatch.setattr(runner, "build_plan", lambda *_a, **_k: deepcopy(plan))
+    monkeypatch.setattr(runner, "source_identity", lambda *_a: plan["source"])
+    monkeypatch.setattr(runner, "controlled_inputs", lambda *_a, **_k: plan["auxiliary_inputs"])
+    dispatched = []
+    def fake(spec, *, timeout):
+        result = _fake_worker(spec, timeout=timeout)
+        if spec["kind"] != "product": return result
+        dispatched.append(spec["cell"]["observation_id"])
+        from agronomy_agent.release_evaluation import worker_case
+        row, _ = _strict_identity_fixture()
+        # Match only fields the canonical executor actually emits.
+        result = {key: row[key] for key in ("schema_version", "status", "checks", "turns")}
+        result.update({key: spec["cell"][key] for key in ("case_id", "arm_id", "trial_id", "backend")})
+        result["case_sha256"] = digest(worker_case(case))
+        result["turns"][0]["answer"] = "Synthetic deterministic observation."
+        result["turns"][0]["model_revision_observation"] = {"configured": plan["model"]["revision"], "resolved": plan["model"]["revision"], "verified": False}
+        result["config_identity"] = {role: {"sha256": runner.file_digest(Path(spec[path]))} for role, path in (("model", "model_config"), ("rag", "rag_config"))}
+        if len(dispatched) == 2: result["turns"][0]["model_execution"]["synthetic"] = True
+        return result
+    monkeypatch.setattr(runner, "_subprocess_cell", fake)
+    policy = {"schema_version": "open_agronomy_agent.bounded_stop_policy.v1", "finalization_reserve_seconds": 15,
+              "retention_budget_bytes": 4 * 1024 * 1024, "finalization_reserve_bytes": 512 * 1024,
+              "minimum_free_bytes": 1024, "file_hardcap_bytes": 512 * 1024, "require_model_identity": True, "require_termination": True}
+    path = tmp_path / "stop.json"; path.write_text(json.dumps(policy))
+    args = dict(registry_path=registry, profile="ci", output_dir=tmp_path / "run", run_id="resume-test", stop_policy_path=path)
+    report = runner.run_suite(**args)
+    assert len(dispatched) == 2 and len(set(dispatched)) == 2
+    assert report["bounded_execution"]["stop"]["reason"] == "contradictory_no_model_evidence"
+    assert report["counts"]["observed"] == 2 and report["counts"]["missing"] == 1
+    assert report["bounded_execution"]["remaining_observation_ids"] == [cell["observation_id"] for cell in plan["matrix"] if cell["observation_id"] not in dispatched]
+    rows = [json.loads(line) for line in (args["output_dir"] / "observations.jsonl").read_text().splitlines()]
+    assert len(rows) == 2 and rows[0]["turns"][0]["model_execution"]["disposition"] == "deterministic_bypass"
+    before = {p.relative_to(args["output_dir"]): runner.file_digest(p) for p in args["output_dir"].rglob("*") if p.is_file()}
+    monkeypatch.setattr(runner, "_subprocess_cell", lambda *_a, **_k: pytest.fail("terminal resume dispatched"))
+    assert runner.run_suite(**args, resume=True) == report
+    assert before == {p.relative_to(args["output_dir"]): runner.file_digest(p) for p in args["output_dir"].rglob("*") if p.is_file()}
 
 
 @pytest.mark.parametrize("failure", ["blocked_component", "failed_check", "failed", "timeout", "interrupted", "truncated", "termination_unknown", "model_unknown", "model_drift"])
