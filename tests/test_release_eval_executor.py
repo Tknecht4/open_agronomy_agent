@@ -25,6 +25,359 @@ class _ReferenceStoreFixture:
     def get_turn(self, key):
         return self.rows[key]
 
+    def count_session_turns(self, _session_id):
+        return len(self.rows)
+
+
+def test_development_nested_cell_failure_retains_actual_leaf(tmp_path, monkeypatch):
+    import agronomy_agent.release_eval_executor as executor
+    monkeypatch.setattr(executor, "TraceStore", _ReferenceStoreFixture)
+
+    def fail(*_args, **_kwargs):
+        raise ExceptionGroup("Synthetic outer failure", [ValueError("Synthetic inner fault")])
+
+    monkeypatch.setattr(executor, "_production_turn", fail)
+    result = run(tmp_path, case(question="Explain a synthetic soil observation."))
+    assert result["status"] == "failed"
+    evidence = result["turns"][0]["error"]["exception_evidence"]
+    assert any(node["type"] == "ValueError" and node["message"] == "Synthetic inner fault"
+               for node in evidence["nodes"])
+
+
+def test_development_exception_evidence_is_bounded_under_actual_result_encoding():
+    from agronomy_agent.release_eval_executor import exception_evidence
+    error = ExceptionGroup("Synthetic root", [ValueError("水" * 10000) for _ in range(40)])
+    evidence = exception_evidence(error)
+    encoded = json.dumps({"turns": [{"error": {"exception_evidence": evidence}}]},
+                         indent=2, ensure_ascii=False).encode("utf-8")
+    assert len(encoded) <= 4096
+    assert len(evidence["nodes"]) <= 12
+    assert evidence["truncated"] is True
+
+
+def test_development_hostile_exception_message_and_cause_cycle_are_safe():
+    from agronomy_agent.release_eval_executor import exception_evidence
+    class BadMessage(Exception):
+        def __str__(self):
+            raise RuntimeError("Synthetic message failure")
+    error = BadMessage()
+    error.__cause__ = error
+    evidence = exception_evidence(error)
+    assert evidence["nodes"][0]["type"] == "BadMessage"
+    assert evidence["message_errors"] is True
+    assert evidence["truncated"] is True
+
+
+def test_development_cancel_group_is_retained_then_propagated(tmp_path, monkeypatch):
+    import agronomy_agent.release_eval_executor as executor
+    monkeypatch.setattr(executor, "TraceStore", _ReferenceStoreFixture)
+    original = BaseExceptionGroup("Synthetic cancelled group", [KeyboardInterrupt("Synthetic cancellation")])
+    def fail(*_args, **_kwargs):
+        raise original
+    monkeypatch.setattr(executor, "_production_turn", fail)
+    with pytest.raises(BaseExceptionGroup) as caught:
+        run(tmp_path, case(question="Explain a synthetic soil observation."))
+    assert caught.value is original
+    saved = json.loads(next(tmp_path.glob("*/result.json")).read_text())
+    assert saved["status"] == "interrupted"
+    assert saved["turns"][0]["status"] == "interrupted"
+    assert any(row["type"] == "KeyboardInterrupt" for row in saved["turns"][0]["error"]["exception_evidence"]["nodes"])
+
+
+def _completed_draft_fixture():
+    return {"schema_version": "open_agronomy_agent.completed_draft_observation.v1",
+            "draft": "Synthetic completed draft.",
+            "prompt_messages": [{"role": "user", "content": "Synthetic supplied task."}],
+            "generation_stats": {"finish_reason": "stop", "generation_tokens": 7},
+            "model_identity": {"status": "synthetic_fixture"}, "context_budget": None}
+
+
+def test_development_completed_draft_checkpoint_is_exclusive_detached_and_verified(tmp_path):
+    from agronomy_agent.release_eval_executor import _DraftCheckpoint
+    bindings = {"case_sha256": "a" * 64, "turn_index": 1}
+    sink = _DraftCheckpoint(tmp_path / "draft.json", bindings)
+    observed = _completed_draft_fixture()
+    sink(observed)
+    observed["generation_stats"]["finish_reason"] = "length"
+    bindings["turn_index"] = 99
+    assert sink.read()["observation"]["generation_stats"]["finish_reason"] == "stop"
+    assert sink.read()["bindings"]["turn_index"] == 1
+    assert sink.receipt()["status"] == "retained"
+    with pytest.raises(ValueError, match="reused"):
+        sink(_completed_draft_fixture())
+    sink.path.write_text("{}")
+    with pytest.raises(ValueError, match="changed"):
+        sink.read()
+
+
+def test_development_checkpoint_unknown_terminal_stays_unknown_and_is_not_final(tmp_path):
+    from agronomy_agent.release_eval_executor import _DraftCheckpoint, generation_termination
+    sink = _DraftCheckpoint(tmp_path / "draft.json", {})
+    observed = _completed_draft_fixture()
+    observed["generation_stats"] = None
+    sink(observed)
+    assert generation_termination(sink.read()["observation"]["generation_stats"])["status"] == "unknown"
+    assert "final" not in sink.read()
+
+
+def test_development_checkpoint_file_failure_preserves_existing_bytes(tmp_path):
+    from agronomy_agent.release_eval_executor import _DraftCheckpoint
+    path = tmp_path / "draft.json"
+    path.write_bytes(b"original synthetic evidence")
+    sink = _DraftCheckpoint(path, {})
+    with pytest.raises(FileExistsError):
+        sink(_completed_draft_fixture())
+    assert path.read_bytes() == b"original synthetic evidence"
+    assert sink.receipt()["status"] == "unavailable"
+
+
+def test_development_checkpoint_refuses_oversized_observation_before_output(tmp_path):
+    from agronomy_agent.release_eval_executor import _DraftCheckpoint
+    sink = _DraftCheckpoint(tmp_path / "draft.json", {})
+    observed = _completed_draft_fixture()
+    observed["draft"] = "x" * 262144
+    with pytest.raises(ValueError, match="256 KiB"):
+        sink(observed)
+    assert not sink.path.exists()
+
+
+class _HookBackendFixture:
+    backend_id = "synthetic_completed_draft_fixture"
+
+    def __init__(self):
+        self.calls = 0
+        self.attempts = 0
+        self.last_generation_stats = None
+        self.generation_stats_call_id = 0
+        self.model_identity = {"configured_model_id": "synthetic-evaluation-model",
+                               "configured_model_revision": "synthetic-revision",
+                               "status": "synthetic_fixture"}
+
+    def count_prompt_tokens(self, messages):
+        return sum(len(item["content"].split()) + 4 for item in messages)
+
+    def generate(self, _messages):
+        self.attempts += 1
+        if getattr(self, "fail", False):
+            raise RuntimeError("Synthetic unavailable backend")
+        self.calls += 1
+        self.generation_stats_call_id += 1
+        self.last_generation_stats = {"finish_reason": "stop", "generation_tokens": 7,
+                                      "generation_stats_call_id": self.generation_stats_call_id,
+                                      "synthetic": True}
+        return "Synthetic supplied observation remains uncertain."
+
+
+def _hook_runtime(tmp_path, *, question="Explain the supplied soil observation.", mode="baseline", verification=False):
+    from agronomy_agent.execution_core import AgentExecutionRequest
+    from agronomy_agent.server.settings import build_settings
+    from agronomy_agent.server.storage.db import TraceStore
+    model = tmp_path / "model.yaml"
+    model.write_text(yaml.safe_dump({
+        "model_id": "synthetic-evaluation-model", "model_revision": "synthetic-revision",
+        "max_tokens": 100, "context_management": {"context_limit_tokens": 8192},
+        "answer_verification": {"enabled": verification, "max_tokens": 60},
+    }))
+    corpus = tmp_path / "synthetic-corpus.jsonl"
+    corpus.write_text("")
+    rag = tmp_path / "rag.yaml"
+    rag.write_text(yaml.safe_dump({"retrieval": {"corpus_paths": [str(corpus)], "graph_paths": []},
+                                  "private_knowledge": {"enabled": False}}))
+    db = tmp_path / "synthetic.sqlite3"
+    store = TraceStore(db)
+    settings = build_settings(db_path=db, artifact_root=tmp_path / "artifacts",
+                              model_config_path=str(model), default_rag_config=str(rag),
+                              network_mode="offline")
+    session = store.create_session("Synthetic hook control", {}, {})
+    backend = _HookBackendFixture()
+    request = AgentExecutionRequest(store=store, settings=settings, session_id=session["session_id"],
+                                    message=question, mode=mode, model_id="synthetic-evaluation-model",
+                                    rag_config=str(rag), max_tokens=100,
+                                    generation_backend=backend, trace_options={"store_prompt_messages": True},
+                                    risk_intervention_enabled=False,
+                                    execution_class="observed_system_execution_nonclaim")
+    return store, request, backend, model, rag
+
+
+def test_development_service_hook_default_and_detached_capture_preserve_success(tmp_path):
+    from dataclasses import replace
+    from agronomy_agent.server.services import chat_service
+    store, request, backend, _, _ = _hook_runtime(tmp_path)
+    captured = []
+    try:
+        first = chat_service.execute_agent_request(request)
+        next_session = store.create_session("Synthetic second control", {}, {})
+        second_request = replace(request, session_id=next_session["session_id"])
+        def capture(observation):
+            captured.append(deepcopy(observation))
+            observation["generation_stats"]["finish_reason"] = "length"
+            observation["prompt_messages"].clear()
+        second = chat_service.execute_agent_request(second_request, evaluation_draft_hook=capture)
+        assert first.answer == second.answer
+        assert len(captured) == 1 and backend.calls == 2
+        assert captured[0]["draft"] == second.turn["trace"]["metadata"]["answer_stages"]["draft"]["text"]
+        assert second.turn["trace"]["metadata"]["generation_stats"]["finish_reason"] == "stop"
+        assert second.turn["trace"]["prompt_messages"]
+    finally:
+        store._conn.close()
+
+
+def test_development_service_hook_invalid_refused_before_store_or_generation():
+    from agronomy_agent.server.services import chat_service
+    with pytest.raises(TypeError, match="callable or None"):
+        chat_service.execute_agent_request(None, evaluation_draft_hook=1)
+
+
+def test_development_service_hook_failure_precedes_verification_without_retry(tmp_path, monkeypatch):
+    from agronomy_agent.server.services import chat_service
+    store, request, backend, _, _ = _hook_runtime(tmp_path, mode="agronomic_rag", verification=True)
+    monkeypatch.setattr(chat_service, "verify_answer", lambda *_a, **_k: pytest.fail("verification must not start"))
+    def fail(_observation):
+        raise OSError("Synthetic checkpoint failure")
+    try:
+        with pytest.raises(OSError, match="Synthetic checkpoint"):
+            chat_service.execute_agent_request(request, evaluation_draft_hook=fail)
+        assert backend.calls == 1
+        assert store.count_session_turns(request.session_id) == 0
+    finally:
+        store._conn.close()
+
+
+@pytest.mark.parametrize("question", [
+    "Calculate daily GDD from Tmax 26 C, Tmin 16 C and base 10 C. Do not infer crop stage.",
+    "Calculate daily GDD from Tmax 26 C, Tmin 16 C.",
+])
+def test_development_deterministic_service_never_generates_or_calls_hook(tmp_path, question):
+    from agronomy_agent.server.services import chat_service
+    store, request, backend, _, _ = _hook_runtime(tmp_path, question=question, mode="agronomic_rag")
+    try:
+        result = chat_service.execute_agent_request(request, evaluation_draft_hook=lambda _: pytest.fail("bypass observed as generation"))
+        assert backend.calls == 0
+        assert result.turn["trace"]["metadata"]["generation_bypass"]
+    finally:
+        store._conn.close()
+
+
+@pytest.mark.parametrize("fault", ["verification", "persistence"])
+def test_development_full_cell_retains_draft_and_nested_downstream_failure(tmp_path, monkeypatch, fault):
+    import agronomy_agent.release_eval_executor as executor
+    store, request, backend, model, rag = _hook_runtime(tmp_path, mode="agronomic_rag", verification=fault == "verification")
+    store._conn.close()
+    monkeypatch.setenv("AGRONOMY_AGENT_MODEL_BACKEND", "http")
+    monkeypatch.setattr(executor.chat_service, "_build_mlx_generator", lambda *_a, **_k: backend)
+    if fault == "verification":
+        def fail_verification(*_a, **_k):
+            assert list(tmp_path.glob("cells/*/turn-1-completed-draft.json"))
+            raise ExceptionGroup("Synthetic verification wrapper", [ValueError("Synthetic verification leaf")])
+        monkeypatch.setattr(executor.chat_service, "verify_answer", fail_verification)
+    else:
+        def fail_persistence(*_a, **_k):
+            raise ExceptionGroup("Synthetic persistence wrapper", [OSError("Synthetic persistence leaf")])
+        monkeypatch.setattr(executor.TraceStore, "create_turn", fail_persistence)
+    result = executor.execute_product_case(case(question=request.message), model_config=model, rag_config=rag,
+                                           backend="mlx", output_dir=tmp_path / "cells")
+    assert result["status"] == "failed"
+    turn = result["turns"][0]
+    assert turn["draft"] == "Synthetic supplied observation remains uncertain."
+    assert turn["answer"] is None and turn["final"] is None
+    assert turn["draft_checkpoint"]["status"] == "retained"
+    assert turn["generation_stats"]["finish_reason"] == "stop"
+    assert any(node["message"] == f"Synthetic {fault} leaf" for node in turn["error"]["exception_evidence"]["nodes"])
+    if fault == "verification":
+        assert turn["termination"]["status"] == "unknown"
+        assert turn["termination"]["stages"][1]["attempt_observation"] == "unknown"
+    assert backend.calls == 1
+
+
+def test_development_raw_cell_retains_completed_draft_when_persistence_fails(tmp_path, monkeypatch):
+    import agronomy_agent.release_eval_executor as executor
+    store, request, backend, model, rag = _hook_runtime(tmp_path)
+    store._conn.close()
+    monkeypatch.setenv("AGRONOMY_AGENT_MODEL_BACKEND", "http")
+    monkeypatch.setattr(executor.chat_service, "_build_mlx_generator", lambda *_a, **_k: backend)
+    def fail(*_a, **_k):
+        raise OSError("Synthetic raw persistence failure")
+    monkeypatch.setattr(executor.TraceStore, "create_turn", fail)
+    result = executor.execute_product_case(case(question=request.message), model_config=model, rag_config=rag,
+                                           backend="mlx", arm_id="raw_model", output_dir=tmp_path / "cells")
+    turn = result["turns"][0]
+    assert result["status"] == "failed" and backend.calls == 1
+    assert turn["draft"] == "Synthetic supplied observation remains uncertain."
+    assert turn["final"] is None and turn["answer"] is None
+    assert turn["generation_stats"]["finish_reason"] == "stop"
+    assert turn["draft_checkpoint"]["status"] == "retained"
+    assert turn["stage_receipts"] == []
+    assert turn["termination"]["stages"][0]["stage"] == "reference"
+    assert turn["generation_origin"] == "execution_failed"
+
+
+def test_development_raw_checkpoint_fsync_failure_stops_before_another_turn(tmp_path, monkeypatch):
+    import agronomy_agent.release_eval_executor as executor
+    backend = _HookBackendFixture()
+    monkeypatch.setenv("AGRONOMY_AGENT_MODEL_BACKEND", "http")
+    monkeypatch.setattr(executor, "TraceStore", _ReferenceStoreFixture)
+    monkeypatch.setattr(executor.chat_service, "_build_mlx_generator", lambda *_a, **_k: backend)
+    def fail_sync(_fd):
+        raise OSError("Synthetic checkpoint flush failure")
+    monkeypatch.setattr(executor.os, "fsync", fail_sync)
+    row = case()
+    row.pop("question")
+    row["turns"] = ["Explain synthetic observation one.", "Explain synthetic observation two."]
+    result = run(tmp_path, row, backend="mlx", arm_id="raw_model")
+    assert result["status"] == "failed"
+    assert backend.calls == 1 and len(result["turns"]) == 1
+    assert result["turns"][0]["draft_checkpoint"]["status"] == "unavailable"
+    assert "Synthetic checkpoint flush failure" in result["turns"][0]["error"]["message"]
+
+
+@pytest.mark.parametrize("original", [KeyboardInterrupt("Synthetic interrupt"), SystemExit(7)])
+def test_development_closeout_write_failure_cannot_replace_pending_control_flow(tmp_path, monkeypatch, original):
+    import agronomy_agent.release_eval_executor as executor
+    monkeypatch.setattr(executor, "TraceStore", _ReferenceStoreFixture)
+    def fail(*_a, **_k):
+        raise original
+    monkeypatch.setattr(executor, "_production_turn", fail)
+    old_write = Path.write_text
+    def reject_result(path, *args, **kwargs):
+        if path.name == "result.json":
+            raise OSError("Synthetic unwritable closeout")
+        return old_write(path, *args, **kwargs)
+    monkeypatch.setattr(Path, "write_text", reject_result)
+    with pytest.raises(type(original)) as caught:
+        run(tmp_path, case(question="Explain a synthetic soil observation."))
+    assert caught.value is original
+    assert original.evaluation_closeout_error["type"] == "OSError"
+    assert "Synthetic unwritable closeout" in original.__notes__[-1]
+    assert len(original.__notes__[-1].encode("utf-8")) <= 4096
+
+
+def test_development_fallback_does_not_publish_a_completed_draft_observation(tmp_path):
+    from agronomy_agent.server.services import chat_service
+    store, request, backend, _, _ = _hook_runtime(tmp_path)
+    backend.fail = True
+    try:
+        result = chat_service.execute_agent_request(request, evaluation_draft_hook=lambda _: pytest.fail("fallback observed as generation"))
+        assert backend.attempts == 1 and backend.calls == 0
+        assert result.turn["trace"]["metadata"]["generation_fallback"]
+    finally:
+        store._conn.close()
+
+
+def test_development_operation_replay_does_not_call_completed_draft_hook_again(tmp_path):
+    from dataclasses import replace
+    from uuid import uuid4
+    from agronomy_agent.server.services import chat_service
+    store, request, backend, _, _ = _hook_runtime(tmp_path)
+    request = replace(request, client_operation_id=str(uuid4()), operation_request_sha256="d" * 64)
+    observations = []
+    try:
+        first = chat_service.execute_agent_request(request, evaluation_draft_hook=observations.append)
+        second = chat_service.execute_agent_request(request, evaluation_draft_hook=observations.append)
+        assert first.answer == second.answer
+        assert backend.calls == 1 and len(observations) == 1
+    finally:
+        store._conn.close()
+
 
 def test_distinct_draft_editor_and_unknown_termination():
     from agronomy_agent.release_eval_executor import observation_termination

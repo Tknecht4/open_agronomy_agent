@@ -122,6 +122,15 @@ be not applicable. Token count, an outer run cap or a copied provider receipt
 cannot establish a stop reason. Reanalysis preserves recorded length failures
 and refuses contradictory known terminal evidence.
 
+The cell executor retains an exclusive completed-draft sidecar before verification
+or turn persistence. Its Python-only observation hook is absent from HTTP inputs
+and defaults to no observation in ordinary product calls. The bounded sidecar
+binds the case, arm, trial, configuration and source bytes; it preserves available
+draft text and call receipts after a downstream failure. It does not establish a
+final answer, complete product topology or successful termination. Failed writes
+stop that cell without retry, and missing evidence remains unknown. These private
+artifacts contain prompts and drafts and stay outside the public package.
+
 Larger finite output ceilings require a new frozen execution configuration and
 budget. They do not establish information retention or answer quality. Review
 accepted rewrites, rejected attempts, fallback and formatting separately for

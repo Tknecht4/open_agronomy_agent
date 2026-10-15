@@ -15,7 +15,7 @@ from pathlib import Path
 import re
 import sys
 import time
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 from agronomy_agent.agent import (
     MLXGenerator,
@@ -40,6 +40,130 @@ from agronomy_agent.server.trace_timer import TraceProfiler
 
 EXECUTOR_SCHEMA_VERSION = "open_agronomy_agent.release_product_cell.v1"
 FIELD_ALIASES = TASK_FIELD_ALIASES
+
+
+def exception_evidence(exc: BaseException) -> dict[str, Any]:
+    """Bound actual exception leaves, including hostile messages and cycles.
+
+    The four-KiB charge includes the persisted indent-two encoding plus sixteen
+    extra spaces per line, covering its nesting in an executor turn result.
+    """
+    evidence: dict[str, Any] = {
+        "schema_version": "open_agronomy_agent.exception_evidence.v1",
+        "nodes": [], "truncated": False, "message_errors": False,
+        "max_nodes": 12, "max_depth": 6, "max_encoded_bytes": 4096,
+    }
+    seen: set[int] = set()
+
+    def message(value: BaseException) -> str:
+        try:
+            text = str(value)
+        except BaseException:
+            evidence["message_errors"] = True
+            return "<exception message unavailable>"
+        raw = text[:193].encode("utf-8", errors="replace")
+        if len(text) > 192 or len(raw) > 192:
+            evidence["truncated"] = True
+            raw = raw[:192]
+        return raw.decode("utf-8", errors="ignore")
+
+    def visit(value: BaseException, path: str, depth: int) -> None:
+        if id(value) in seen or depth > 6 or len(evidence["nodes"]) >= 12:
+            evidence["truncated"] = True
+            return
+        seen.add(id(value))
+        name = type(value).__name__
+        if len(name) > 96:
+            evidence["truncated"] = True
+        evidence["nodes"].append({"path": path, "type": name[:96], "message": message(value)})
+        if isinstance(value, BaseExceptionGroup):
+            for index, child in enumerate(value.exceptions):
+                if len(evidence["nodes"]) >= 12:
+                    evidence["truncated"] = True
+                    break
+                visit(child, path + "." + str(index), depth + 1)
+        related = value.__cause__ or (None if value.__suppress_context__ else value.__context__)
+        if related is not None:
+            visit(related, path + ".cause", depth + 1)
+
+    visit(exc, "root", 0)
+    def charge() -> int:
+        data = json.dumps(evidence, indent=2, ensure_ascii=False, sort_keys=True).encode("utf-8")
+        return len(data) + 16 * (data.count(b"\n") + 1)
+    while charge() > 4096:
+        evidence["truncated"] = True
+        node = max(evidence["nodes"], key=lambda item: len(item["message"].encode("utf-8")))
+        if node["message"]:
+            node["message"] = node["message"][:len(node["message"]) // 2]
+        elif len(evidence["nodes"]) > 1:
+            evidence["nodes"].pop()
+        else:
+            break
+    return evidence
+
+
+def _observed_error(exc: BaseException) -> dict[str, Any]:
+    evidence = exception_evidence(exc)
+    return {"type": evidence["nodes"][0]["type"], "message": evidence["nodes"][0]["message"],
+            "exception_evidence": evidence}
+
+
+class _DraftCheckpoint:
+    """One exclusive evaluation sidecar, never a product turn or final answer."""
+
+    def __init__(self, path: Path, bindings: Mapping[str, Any]) -> None:
+        self.path = path
+        self.bindings = deepcopy(dict(bindings))
+        self.file_sha256: str | None = None
+        self.attempted = False
+
+    def __call__(self, observation: Mapping[str, Any]) -> None:
+        if self.attempted:
+            raise ValueError("completed draft checkpoint cannot be reused")
+        self.attempted = True
+        keys = {"schema_version", "draft", "prompt_messages", "generation_stats", "model_identity", "context_budget"}
+        if (
+            not isinstance(observation, Mapping) or set(observation) != keys
+            or observation.get("schema_version") != "open_agronomy_agent.completed_draft_observation.v1"
+            or not isinstance(observation.get("draft"), str)
+            or not isinstance(observation.get("prompt_messages"), list)
+            or any(not isinstance(item, dict) or not isinstance(item.get("role"), str)
+                   or not isinstance(item.get("content"), str) for item in observation["prompt_messages"])
+            or any(observation[key] is not None and not isinstance(observation[key], Mapping)
+                   for key in ("generation_stats", "model_identity", "context_budget"))
+        ):
+            raise ValueError("invalid completed draft observation")
+        record = {"schema_version": "open_agronomy_agent.completed_draft_checkpoint.v1",
+                  "scope": "provider_returned_before_verification; terminal status is separate",
+                  "bindings": self.bindings, "observation": deepcopy(dict(observation)),
+                  "draft_sha256": stable_sha256(observation["draft"])}
+        data = (json.dumps(record, indent=2, ensure_ascii=False, sort_keys=True, allow_nan=False) + "\n").encode("utf-8")
+        if len(data) > 262144:
+            raise ValueError("completed draft checkpoint exceeds 256 KiB")
+        with self.path.open("xb") as handle:
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        self.file_sha256 = hashlib.sha256(data).hexdigest()
+        self.read()
+
+    def read(self) -> dict[str, Any] | None:
+        if self.file_sha256 is None:
+            return None
+        data = self.path.read_bytes()
+        if hashlib.sha256(data).hexdigest() != self.file_sha256:
+            raise ValueError("completed draft checkpoint changed after capture")
+        record = json.loads(data)
+        if record["bindings"] != self.bindings:
+            raise ValueError("completed draft checkpoint bindings changed")
+        return record
+
+    def receipt(self) -> dict[str, Any]:
+        record = self.read()
+        return {"status": "retained" if record is not None else "unavailable" if self.attempted else "not_observed",
+                "path": str(self.path), "file_sha256": self.file_sha256,
+                "draft_sha256": record["draft_sha256"] if record is not None else None,
+                "scope": "partial observation; no final answer or product completion asserted"}
 
 
 class SyntheticBackendUnavailable(RuntimeError):
@@ -169,6 +293,7 @@ def _reference_turn(
     store: TraceStore,
     session_id: str,
     history: list[dict[str, str]],
+    evaluation_draft_hook: Callable[[Mapping[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     messages = (
         (
@@ -213,6 +338,14 @@ def _reference_turn(
         "elapsed_seconds": time.monotonic() - started,
     }
     receipt["receipt_sha256"] = stable_sha256(receipt)
+    if evaluation_draft_hook is not None:
+        evaluation_draft_hook({
+            "schema_version": "open_agronomy_agent.completed_draft_observation.v1",
+            "draft": answer, "prompt_messages": deepcopy(messages),
+            "generation_stats": deepcopy(stats),
+            "model_identity": deepcopy(getattr(generator, "model_identity", None)),
+            "context_budget": None,
+        })
     turn_id = store.create_turn(
         session_id,
         question,
@@ -251,9 +384,12 @@ def _reference_turn(
     }
 
 
-def _production_turn(question: str, request: AgentExecutionRequest) -> dict[str, Any]:
+def _production_turn(
+    question: str, request: AgentExecutionRequest, *,
+    evaluation_draft_hook: Callable[[Mapping[str, Any]], None] | None = None,
+) -> dict[str, Any]:
     started = time.monotonic()
-    execution = chat_service.execute_agent_request(request)
+    execution = chat_service.execute_agent_request(request, evaluation_draft_hook=evaluation_draft_hook)
     record = execution.to_record()
     trace = dict(execution.turn["trace"])
     metadata = dict(trace["metadata"])
@@ -302,9 +438,11 @@ def observation_termination(turns: Sequence[Mapping[str, Any]]) -> dict[str, Any
                        **generation_termination(turn.get("generation_stats"), required=draft_required)})
         editor_stats = turn.get("editor_generation_stats") or editor.get("generation_stats")
         # Triggering a review is not proof that an editor model ran.
-        editor_required = editor_stats is not None or editor.get("editor_output") is not None or editor.get("rewrite_accepted") is True or "editor_error" in (editor.get("rejection_reasons") or [])
+        verification_unknown = (turn.get("verification_observation") or {}).get("status") == "unknown_after_draft_return"
+        editor_required = verification_unknown or editor_stats is not None or editor.get("editor_output") is not None or editor.get("rewrite_accepted") is True or "editor_error" in (editor.get("rejection_reasons") or [])
         stages.append({"turn_index": index, "stage": "editor",
-                       **generation_termination(editor_stats, required=editor_required)})
+                       **generation_termination(editor_stats, required=editor_required),
+                       **({"attempt_observation": "unknown"} if verification_unknown else {})})
     required = [stage for stage in stages if stage["required"]]
     truncated = True if any(stage["truncated"] is True for stage in required) else None if not required or any(stage["status"] == "unknown" for stage in required) else False
     return {"schema_version": "open_agronomy_agent.generation_termination.v1",
@@ -578,6 +716,7 @@ def execute_product_case(
     }
     store = None
     cell_dir = None
+    pending_control_flow: BaseException | None = None
     try:
         arm = execution_arm(arm_id)
         if backend not in {"mock", "mlx"}:
@@ -630,6 +769,10 @@ def execute_product_case(
             }
             for name, path in (("model", Path(model_config)), ("rag", Path(rag_config)))
         }
+        result["draft_checkpoint_sources"] = {
+            name: hashlib.sha256(Path(path).read_bytes()).hexdigest()
+            for name, path in (("executor", __file__), ("service", chat_service.__file__))
+        }
         result["field_alias_receipt"] = aliases
         result["arm_configuration"] = arm.to_dict()
         result["execution_kind"] = (
@@ -674,10 +817,16 @@ def execute_product_case(
         )
         generator = _RecordedMock(fault) if backend == "mock" else None
         history: list[dict[str, str]] = []
-        for question in questions:
+        for turn_index, question in enumerate(questions, 1):
             turn_started = time.monotonic()
             profiler = TraceProfiler()
             profiler.set_thread_id(session_id)
+            checkpoint = _DraftCheckpoint(cell_dir / f"turn-{turn_index}-completed-draft.json", {
+                "case_id": result["case_id"], "case_sha256": result["case_sha256"],
+                "arm_id": arm_id, "trial_id": trial_id, "turn_index": turn_index,
+                "config_identity": result["config_identity"],
+                "source_files": result["draft_checkpoint_sources"],
+            })
             try:
                 if result["execution_kind"] == "ungoverned_reference":
                     if generator is None:
@@ -692,6 +841,7 @@ def execute_product_case(
                         store=store,
                         session_id=session_id,
                         history=history,
+                        evaluation_draft_hook=checkpoint,
                     )
                 else:
                     request = AgentExecutionRequest(
@@ -715,7 +865,19 @@ def execute_product_case(
                         execution_class="product_turn",
                         **arm.request_controls(),
                     )
-                    turn = _production_turn(question, request)
+                    turn = _production_turn(question, request, evaluation_draft_hook=checkpoint)
+                retained_draft = checkpoint.read()
+                metadata = turn.get("metadata") or {}
+                bypassed = any(metadata.get(name) for name in (
+                    "generation_bypass", "generation_fallback", "generation_unavailable"
+                ))
+                if not bypassed and retained_draft is None:
+                    raise ValueError("completed provider return lacks its draft checkpoint")
+                if retained_draft is not None and retained_draft["draft_sha256"] != stable_sha256(
+                    turn["answer"] if result["execution_kind"] == "ungoverned_reference" else turn["draft"]
+                ):
+                    raise ValueError("completed draft checkpoint disagrees with returned draft")
+                turn["draft_checkpoint"] = checkpoint.receipt()
                 profiler.set_turn_id(turn["turn_id"])
                 identity = turn.get("model_identity") or {}
                 resolved_revision = (identity.get("runtime") or {}).get(
@@ -739,20 +901,40 @@ def execute_product_case(
                     and not (turn.get("metadata") or {}).get("generation_bypass")
                     and not (turn.get("metadata") or {}).get("generation_fallback")
                 )
-            except Exception as exc:
+            except BaseException as exc:
+                if not isinstance(exc, Exception):
+                    pending_control_flow = exc
+                try:
+                    persistence = {"session_turn_count": store.count_session_turns(session_id)}
+                except Exception as count_error:
+                    persistence = {"session_turn_count": None, "status": "unknown",
+                                   "error": _observed_error(count_error)}
                 turn = {
-                    "status": "failed",
+                    "status": "interrupted" if pending_control_flow is not None else "failed",
+                    "execution_kind": result["execution_kind"],
                     "question": question,
-                    "error": {"type": type(exc).__name__, "message": str(exc)},
+                    "error": _observed_error(exc),
                     "stage_receipts": [],
                     "answer": None,
                     "model_execution_eligible": False,
                     "elapsed_seconds": time.monotonic() - turn_started,
-                    "persistence_observation": {
-                        "session_turn_count": store.count_session_turns(session_id)
-                    },
+                    "persistence_observation": persistence,
                     "receipt_boundary": "exception interrupted execution; no complete production topology is asserted",
                 }
+                try:
+                    retained_draft = checkpoint.read()
+                    turn["draft_checkpoint"] = checkpoint.receipt()
+                    if retained_draft is not None:
+                        observation = retained_draft["observation"]
+                        turn.update(draft=observation["draft"], final=None,
+                                    prompt_messages=deepcopy(observation["prompt_messages"]),
+                                    generation_stats=deepcopy(observation["generation_stats"]),
+                                    model_identity=deepcopy(observation["model_identity"]))
+                        if result["execution_kind"] == "production" and arm.verifier_enabled and (config.get("answer_verification") or {}).get("enabled"):
+                            turn["verification_observation"] = {"status": "unknown_after_draft_return", "attempted": None}
+                except Exception as checkpoint_error:
+                    turn["draft_checkpoint"] = {"status": "unverified", "path": str(checkpoint.path),
+                                                "error": _observed_error(checkpoint_error)}
             turn["profiler_spans"] = profiler.span_records()
             turn["editor_generation_stats"] = deepcopy(
                 ((turn.get("metadata") or {}).get("answer_verification") or {}).get(
@@ -775,7 +957,7 @@ def execute_product_case(
                 "origin_class"
             ) or (
                 "ungoverned_reference"
-                if turn.get("execution_kind") == "ungoverned_reference"
+                if turn["status"] == "completed" and turn.get("execution_kind") == "ungoverned_reference"
                 else "execution_failed"
             )
             metadata = turn.get("metadata") or {}
@@ -830,6 +1012,10 @@ def execute_product_case(
                 except (AttributeError, RuntimeError):
                     pass
             result["turns"].append(turn)
+            if pending_control_flow is not None or (
+                checkpoint.attempted and turn.get("draft_checkpoint", {}).get("status") != "retained"
+            ):
+                break
         calls = (
             deepcopy(generator.calls) if isinstance(generator, _RecordedMock) else []
         )
@@ -853,9 +1039,10 @@ def execute_product_case(
             aliases,
         )
         result["status"] = (
-            "completed"
-            if all(turn["status"] == "completed" for turn in result["turns"])
-            else "failed"
+            "interrupted" if pending_control_flow is not None else (
+                "completed" if all(turn["status"] == "completed" for turn in result["turns"])
+                else "failed"
+            )
         )
         result["model_execution_eligible"] = any(
             turn["model_execution_eligible"] for turn in result["turns"]
@@ -863,23 +1050,49 @@ def execute_product_case(
         result["termination"] = observation_termination(result["turns"])
         result["finish_reason"] = result["termination"]["finish_reason"]
         result["truncated"] = result["termination"]["truncated"]
-    except Exception as exc:
-        result["error"] = {"type": type(exc).__name__, "message": str(exc)}
+    except BaseException as exc:
+        if not isinstance(exc, Exception):
+            pending_control_flow = exc
+        result["status"] = "interrupted" if pending_control_flow is not None else "failed"
+        result["error"] = _observed_error(exc)
         result["checks"].append(
             {"id": "cell_execution", "passed": False, "detail": result["error"]}
         )
     finally:
         if store is not None:
-            store._conn.close()
+            try:
+                store._conn.close()
+            except BaseException as exc:
+                result["close_error"] = _observed_error(exc)
+                result["status"] = "interrupted" if pending_control_flow is not None else "failed"
+                result["checks"].append({"id": "cell_store_close", "passed": False})
+                if not isinstance(exc, Exception) and pending_control_flow is None:
+                    pending_control_flow = exc
+                    result["status"] = "interrupted"
     result["failed_checks"] = [
         row for row in result["checks"] if row["passed"] is False
     ]
     result["elapsed_seconds"] = time.monotonic() - started
     result["result_sha256"] = stable_sha256(result)
     if cell_dir is not None and cell_dir.is_dir() and "artifact_dir" in result:
-        (cell_dir / "result.json").write_text(
-            json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-        )
+        try:
+            (cell_dir / "result.json").write_text(
+                json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+            )
+        except BaseException as closeout_error:
+            if pending_control_flow is None:
+                raise
+            # Disk failure cannot replace an already pending cancellation/exit.
+            # Retain bounded evidence on that original exception when its own
+            # result file is unwritable; never fall back to a foreign path.
+            bounded = _observed_error(closeout_error)
+            try:
+                pending_control_flow.evaluation_closeout_error = bounded
+                pending_control_flow.add_note("evaluation_closeout_error=" + json.dumps(bounded, ensure_ascii=False, separators=(",", ":")))
+            except BaseException:
+                pass
+    if pending_control_flow is not None:
+        raise pending_control_flow
     return result
 
 

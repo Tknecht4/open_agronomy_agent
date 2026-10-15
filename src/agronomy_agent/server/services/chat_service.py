@@ -11,7 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager, nullcontext
 from threading import Lock, RLock
 from time import perf_counter
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
 
 from agronomy_agent import local_tools
 from agronomy_agent.calculator_contracts import TOOL_PLANNER_VERSION
@@ -537,6 +537,7 @@ def _run_turn_impl(
     verifier_enabled: bool = True,
     fallback_enabled: bool = True,
     arm_id: str = "production_full",
+    evaluation_draft_hook: Callable[[Mapping[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     if not store.session_exists(session_id):
         raise ValueError("session not found")
@@ -672,6 +673,15 @@ def _run_turn_impl(
         identity = getattr(generator, "model_identity", None)
         if isinstance(identity, dict) and identity:
             draft_model_identity = deepcopy(identity)
+        if evaluation_draft_hook is not None:
+            evaluation_draft_hook({
+                "schema_version": "open_agronomy_agent.completed_draft_observation.v1",
+                "draft": answer,
+                "prompt_messages": deepcopy(messages),
+                "generation_stats": deepcopy(draft_generation_stats),
+                "model_identity": deepcopy(draft_model_identity),
+                "context_budget": deepcopy(context_budget_receipt),
+            })
 
     context: Any | None = None
     source_grounded = False
@@ -1453,8 +1463,13 @@ def _run_turn_impl(
     }
 
 
-def execute_agent_request(request: AgentExecutionRequest) -> AgentExecutionResult:
-    """Execute and validate one request through the production cockpit core."""
+def execute_agent_request(
+    request: AgentExecutionRequest, *,
+    evaluation_draft_hook: Callable[[Mapping[str, Any]], None] | None = None,
+) -> AgentExecutionResult:
+    """Execute the product core; an optional local evaluation sink observes drafts."""
+    if evaluation_draft_hook is not None and not callable(evaluation_draft_hook):
+        raise TypeError("evaluation_draft_hook must be callable or None")
     with _session_turn_guard(request.store, request.session_id):
         if request.client_operation_id and request.operation_request_sha256:
             existing = request.store.get_turn_operation(request.session_id, request.client_operation_id)
@@ -1492,6 +1507,7 @@ def execute_agent_request(request: AgentExecutionRequest) -> AgentExecutionResul
             operation_request_sha256=request.operation_request_sha256,
             profiler=request.profiler,
             generation_backend=request.generation_backend,
+            evaluation_draft_hook=evaluation_draft_hook,
             execution_class=request.execution_class,
             document_retrieval_enabled=request.document_retrieval_enabled,
             graph_retrieval_enabled=request.graph_retrieval_enabled,

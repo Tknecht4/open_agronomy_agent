@@ -6,6 +6,8 @@ targets, market prices, or label authority. Ambiguity becomes a clarification.
 
 from __future__ import annotations
 
+import json
+import math
 import re
 from typing import Any
 
@@ -167,16 +169,81 @@ def _seed_rate(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, .
     return "seed_rate_mass", inputs, missing
 
 
+def _gdd_json_inputs(text: str) -> tuple[dict[str, float], tuple[str, ...], str | None, str]:
+    """Read one bounded supplied object; unit-bearing keys are never guesses."""
+    if not re.search(r'"(?:max_temp_[Cc]|min_temp_[Cc]|base_temp_[Cc]|upper_cap_[Cc]|lower_cap_[Cc]|method)"\s*:', text):
+        return {}, (), None, text
+    invalid = ("invalid structured GDD inputs: supply one unambiguous Celsius JSON object",)
+    if len(text.encode("utf-8", errors="replace")) > 65536:
+        return {}, invalid, None, text
+
+    def unique_pairs(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result or len(result) >= 64:
+                raise ValueError("duplicate or oversized object")
+            result[key] = value
+        return result
+
+    def no_constant(_value):
+        raise ValueError("nonfinite JSON constant")
+
+    try:
+        start = text.index("{")
+        supplied, end = json.JSONDecoder(object_pairs_hook=unique_pairs, parse_constant=no_constant).raw_decode(text[start:])
+        if not isinstance(supplied, dict) or "{" in text[:start] + text[start + end:]:
+            return {}, invalid, None, text
+    except (ValueError, RecursionError):
+        return {}, invalid, None, text
+    # Prose operands cannot come from arbitrary metadata string values.
+    prose = text[:start] + " " + text[start + end:]
+    method = supplied.get("method")
+    if "method" in supplied and (not isinstance(method, str) or method not in {"daily_mean", "daily_mean_no_temperature_caps"}):
+        return {}, ("invalid structured GDD method: use a supported daily mean method",), None, prose
+    if "temperature_unit" in supplied and supplied["temperature_unit"] != "C":
+        return {}, ("invalid structured GDD units: temperatures must be Celsius",), method, prose
+    inputs = {}
+    errors = []
+    for name in ("max_temp", "min_temp", "base_temp", "upper_cap", "lower_cap"):
+        values = []
+        for key in (name + "_C", name + "_c"):
+            if key not in supplied or supplied[key] is None:
+                continue
+            value = supplied[key]
+            if isinstance(value, bool) or not isinstance(value, (str, int, float)):
+                errors.append("invalid structured GDD quantity: " + name + "_c")
+                continue
+            if isinstance(value, str) and (len(value) > 64 or not re.fullmatch(r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?", value.strip())):
+                errors.append("invalid structured GDD quantity: " + name + "_c")
+                continue
+            try:
+                numeric = float(value)
+            except (ValueError, OverflowError):
+                numeric = float("nan")
+            if not math.isfinite(numeric):
+                errors.append("invalid structured GDD quantity: " + name + "_c")
+            else:
+                values.append(numeric)
+        if len(set(values)) > 1:
+            errors.append("invalid structured GDD aliases: " + name + "_c")
+        elif values:
+            inputs[name + "_c"] = values[0]
+    if method == "daily_mean_no_temperature_caps" and any(key in inputs for key in ("upper_cap_c", "lower_cap_c")):
+        errors.append("invalid structured GDD method: no caps conflicts with supplied caps")
+    return inputs, tuple(errors), method, prose
+
+
 def _gdd(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, ...]] | None:
     if not re.search(r"\b(?:gdd|growing degree[- ]days?|heat units?)\b", lower):
         return None
-    high = _find_number(text, rf"\b(?:tmax|max(?:imum)?(?: temp(?:erature)?)?|high)\s*(?:was|is|of|:)?\s*{SIGNED_NUMBER}\s*°?\s*C\b")
-    low = _find_number(text, rf"\b(?:tmin|min(?:imum)?(?: temp(?:erature)?)?|low)\s*(?:was|is|of|:)?\s*{SIGNED_NUMBER}\s*°?\s*C\b")
-    base = _find_number(
-        text,
-        rf"\bbase(?: temperature)?\s*(?:was|is|of|:)?\s*{SIGNED_NUMBER}\s*°?\s*C\b",
-        rf"{SIGNED_NUMBER}\s*°?\s*C\s+base\b",
-    )
+    structured, structured_errors, structured_method, text = _gdd_json_inputs(text)
+    lower = text.casefold()
+    patterns = {
+        "max_temp_c": (rf"\b(?:tmax|max(?:imum)?(?: temp(?:erature)?)?|high)\s*(?:was|is|of|:)?\s*{SIGNED_NUMBER}\s*°?\s*C\b",),
+        "min_temp_c": (rf"\b(?:tmin|min(?:imum)?(?: temp(?:erature)?)?|low)\s*(?:was|is|of|:)?\s*{SIGNED_NUMBER}\s*°?\s*C\b",),
+        "base_temp_c": (rf"\bbase(?: temperature)?\s*(?:was|is|of|:)?\s*{SIGNED_NUMBER}\s*°?\s*C\b", rf"{SIGNED_NUMBER}\s*°?\s*C\s+base\b"),
+    }
+    high, low, base = (_find_number(text, *patterns[key]) for key in ("max_temp_c", "min_temp_c", "base_temp_c"))
     upper_patterns = (
         rf"\b(?:upper|maximum|high)\s+(?:temperature\s+)?cap\s*(?:at|of|is|:)?\s*{SIGNED_NUMBER}\s*°?\s*C\b",
         rf"\bcap\s+(?:the\s+)?(?:maximum|high|tmax)\s*(?:at|to)?\s*{SIGNED_NUMBER}\s*°?\s*C\b",
@@ -193,17 +260,34 @@ def _gdd(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, ...]] |
     lower_cap = next(iter(lower_values)) if len(lower_values) == 1 else None
     values = {"max_temp_c": high, "min_temp_c": low, "base_temp_c": base,
               "upper_cap_c": upper_cap, "lower_cap_c": lower_cap}
+    for key, value in structured.items():
+        prose_values = {
+            _number(match.group(1))
+            for pattern in patterns.get(key, ())
+            for match in re.finditer(pattern, text, re.IGNORECASE)
+        }
+        if len(prose_values) > 1 or values[key] is not None and values[key] != value:
+            structured_errors += ("invalid conflicting prose and structured GDD input: " + key,)
+        else:
+            values[key] = value
+    high, low, base = (values[key] for key in ("max_temp_c", "min_temp_c", "base_temp_c"))
+    upper_cap, lower_cap = values["upper_cap_c"], values["lower_cap_c"]
     inputs = {key: value for key, value in values.items() if value is not None}
     missing = tuple(key for key in ("max_temp_c", "min_temp_c", "base_temp_c") if values[key] is None)
+    missing += structured_errors
     if high is not None and low is not None and high < low:
         missing += ("invalid temperatures: maximum must be at least minimum",)
     if lower_cap is not None and upper_cap is not None and lower_cap > upper_cap:
         missing += ("invalid caps: lower cap must not exceed upper cap",)
     says_no_cap = bool(re.search(r"\b(?:no|without)\s+(?:temperature\s+)?caps?\b", lower))
+    if says_no_cap and any(key in structured for key in ("upper_cap_c", "lower_cap_c")):
+        missing += ("invalid conflicting prose no-cap method and structured cap",)
     if len(upper_values) > 1 or len(lower_values) > 1:
         missing += ("invalid caps: conflicting values were supplied",)
     cap_mentions = list(re.finditer(r"\bcap(?:s|ped|ping)?\b", text, re.IGNORECASE))
     parsed_cap_matches = upper_matches + lower_matches
+    if structured_method == "daily_mean_no_temperature_caps" and parsed_cap_matches:
+        missing += ("invalid conflicting prose cap and structured no-cap method",)
     unbound_cap = any(
         not any(parsed.start() <= mention.start() < parsed.end() for parsed in parsed_cap_matches)
         for mention in cap_mentions
