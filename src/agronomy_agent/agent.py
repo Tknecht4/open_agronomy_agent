@@ -4153,6 +4153,31 @@ def deterministic_tool_response(
         answer = str((payload or {}).get("answer") or "").strip() if isinstance(payload, Mapping) else ""
         if answer:
             invocation = tuple((plan or {}).get("invocations") or ())
+            request_text = question
+            object_start = question.find("{")
+            if object_start >= 0:
+                try:
+                    _, object_end = json.JSONDecoder().raw_decode(question[object_start:])
+                    request_text = question[:object_start] + " " + question[object_start + object_end:]
+                except (ValueError, RecursionError):
+                    pass
+            # A calculator proves arithmetic, not weather provenance or crop
+            # development. Keep its evidence in context while the ordinary
+            # answer path addresses those separately requested claims.
+            if invocation and isinstance(invocation[0], Mapping) and invocation[0].get("operation") == "daily_gdd":
+                for clause in re.split(r"[.!?;]\s*|\bbut\b|\bhowever\b", request_text, flags=re.IGNORECASE):
+                    for match in re.finditer(
+                        r"\b(?:explain|interpret|assess|infer|determine|establish|identify|state|describe|whether|what|which)\b"
+                        r"[^{}]{0,200}?\b(?:provenance|weather source|crop stage|growth stage|phenology)\b",
+                        clause, re.IGNORECASE,
+                    ):
+                        negated = re.search(
+                            r"\b(?:(?:do|does|did|must|should|can|will|would|could)\s+not\s+|"
+                            r"(?:don['’]t|doesn['’]t|shouldn['’]t|mustn['’]t|never|without|avoid)\s+|no need to\s+)$",
+                            clause[:match.start()], re.IGNORECASE,
+                        )
+                        if not negated:
+                            return None, None
             named_product_conversion = bool(
                 invocation
                 and isinstance(invocation[0], Mapping)
