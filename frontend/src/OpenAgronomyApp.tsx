@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import { WorkspacePerformancePanel } from './workspacePerformance'
 import { ConversationRuntimeStatus } from './ConversationRuntimeStatus'
+import { answerExecutionOrigin } from './answerExecutionOrigin'
 import { QuestionContextSummary, type QuestionContextKind } from './QuestionContextSummary'
 import type { NewFieldDraft } from './FieldSetupDialog'
 import { selectedConversation, rememberConversation } from './conversationSelection'
@@ -77,7 +78,6 @@ import {
   ToolInvocation,
   Turn,
   TurnRoute,
-  TurnSystemState,
 } from './types'
 import type { PrivateKnowledgeDoc, PrivateKnowledgeInspection } from './PrivateKnowledgePanel'
 
@@ -1232,19 +1232,27 @@ const fallbackAdapterReadiness: PublicAdapterReadiness = {
 const readableLabel = (value: string | undefined): string => value?.replace(/_/g, ' ') || 'n/a'
 
 export const answerModelLineageView = (
-  identity: TurnSystemState['model_identity'] | undefined,
+  turn: Turn | null | undefined,
 ): { label: string; status: string } => {
+  const identity = turn?.system_state?.model_identity
+  const origin = answerExecutionOrigin(turn)
   if (!identity) {
-    return { label: 'Runtime model availability', status: 'Unavailable' }
+    return { label: 'Response model identity', status: 'Not recorded' }
   }
-  if (identity.response_model_id) {
+  if (origin.modelResponseBound) {
     return { label: 'Answer generation model', status: 'Response identity bound' }
   }
-  const receiptStatus = identity.status ? readableLabel(identity.status) : 'Runtime receipt unavailable'
   return {
-    label: 'Runtime model availability',
-    status: `${receiptStatus} · this answer is not model-bound`,
+    label: 'Response model identity',
+    status: identity.response_model_id
+      ? `Recorded identity · ${origin.finalOrigin.toLowerCase()}`
+      : 'Not recorded · configured model does not establish answer generation',
   }
+}
+
+function AnswerOriginLabel({ turn }: { turn: Turn }) {
+  const origin = answerExecutionOrigin(turn)
+  return <p aria-label="Answer execution and origin" title={origin.detail}>{origin.finalOrigin} · {origin.execution}</p>
 }
 
 const copyTextToClipboard = async (text: string): Promise<void> => {
@@ -4763,6 +4771,7 @@ export function OpenAgronomyApp() {
               </select>
             </div>
             <div className={`network-answer-state ${answerCapability.state}`}>
+              <span>Next question readiness</span>
               <strong>
                 {answerCapability.canGenerateAnswer && !selectedModelReady ? 'Local service connected'
                   : answerCapability.state === 'runtime_online' ? 'Local answers available'
@@ -4807,6 +4816,7 @@ export function OpenAgronomyApp() {
                     className="chat-message assistant-message"
                   >
                     <span>Open Agronomy Agent</span>
+                    <AnswerOriginLabel turn={turn} />
                     <FormattedAnswer text={turn.answer} />
                     <AnswerContextDisclosure
                       receipt={turn.trace?.metadata?.field_context_compiler as Record<string, unknown> | undefined}
@@ -4827,6 +4837,7 @@ export function OpenAgronomyApp() {
                   </article>
                   <article className="chat-message assistant-message working-message">
                     <span>Open Agronomy Agent</span>
+                    <p aria-label="Answer execution and origin">Preparing answer · Execution origin not yet recorded</p>
                     <StreamProgressPanel steps={streamProgress} draft={streamDraft} />
                     {streamDraft ? <FormattedAnswer text={streamDraft} /> : null}
                   </article>
@@ -5037,7 +5048,7 @@ function EvidenceMetrics({ route, docCount, graphCount, mapCount, checkCount }: 
   const items: Array<[string, string, string?]> = [
     ['Decision', decisionLabel(route?.question_type), route?.question_type],
     ['Sensitivity', sensitivityLabel(route?.risk_level), route?.risk_level],
-    ['Docs', `${docCount} used`],
+    ['Retrieved context', `${docCount} retrieved`],
     ['Graph', `${graphCount} linked`],
     ['Checks', `${checkCount} active`],
     ['Map', `${mapCount} matched`],
@@ -5115,7 +5126,7 @@ function knowledgeCoverageView(coverage?: AnswerTimeKnowledgeCoverage): [string,
     ]
   }
   if (statuses.every((status) => status === 'province_specific_guidance_retrieved')) {
-    return ['Applied guidance used', true]
+    return ['Provincial guidance retrieved', true]
   }
   if (statuses.every((status) => (
     status === 'province_specific_guidance_retrieved'
@@ -5160,7 +5171,8 @@ function EvidencePage({
   ]) || []
   const knowledgeJurisdictions = knowledgeCoverage?.boundaries.map((boundary) => boundary.jurisdiction) || []
   const answerModelIdentity = latestTurn?.system_state?.model_identity
-  const answerModelLineage = answerModelLineageView(answerModelIdentity)
+  const answerModelLineage = answerModelLineageView(latestTurn)
+  const answerOrigin = answerExecutionOrigin(latestTurn)
   const answerReceipt = latestTurn?.answer_integrity_receipt
   const fieldLineage = latestTurn?.trace?.metadata?.field_lineage as
     | {
@@ -5180,7 +5192,7 @@ function EvidencePage({
     <div className="evidence-page">
       <section className="evidence-summary">
         <div className="panel-kicker">Evidence audit</div>
-        <h2>What the agent used</h2>
+        <h2>Context & evidence for this answer</h2>
         <p>{latestTurn ? latestTurn.user_message : 'Run a question from the map page to populate this view.'}</p>
         {latestTurn ? (
           <details className="answer-lineage-receipt" aria-label="Answer lineage"><summary>Technical receipt & export</summary>
@@ -5196,16 +5208,19 @@ function EvidencePage({
                 <dd><code>{latestTurn.turn_id}</code></dd>
               </div>
               <div>
+                <dt>Execution and final origin</dt>
+                <dd>{answerOrigin.finalOrigin} · {answerOrigin.execution}. {answerOrigin.detail}</dd>
+              </div>
+              <div>
                 <dt>{answerModelLineage.label}</dt>
                 <dd>
                   <span>{answerModelLineage.status}</span>
-                  {answerModelIdentity?.configured_model_id
-                    ? ` · ${answerModelIdentity.configured_model_id.split('/').pop()}`
-                    : ''}
-                  {answerModelIdentity?.configured_model_revision
-                    ? ` · ${answerModelIdentity.configured_model_revision.slice(0, 12)}`
-                    : ''}
+                  {answerModelIdentity?.response_model_id ? ` · ${answerModelIdentity.response_model_id}` : ''}
                 </dd>
+              </div>
+              <div>
+                <dt>Configured model</dt>
+                <dd>{answerModelIdentity?.configured_model_id || latestTurn.system_state?.model_id || 'Not recorded'}{answerModelIdentity?.configured_model_revision ? ` @ ${answerModelIdentity.configured_model_revision.slice(0, 12)}` : ''} · configuration does not establish execution</dd>
               </div>
               {fieldLineage?.field_snapshot_sha256 ? (
                 <div>
@@ -5255,10 +5270,10 @@ function EvidencePage({
                 </div>
               ) : null}
               <div>
-                <dt>Source IDs</dt>
+                <dt>Coverage source IDs</dt>
                 <dd>
                   {knowledgeJurisdictions.length ? `${knowledgeJurisdictions.join(', ')} · ` : ''}
-                  {knowledgeSourceIds.length ? `Retrieved: ${knowledgeSourceIds.join(', ')}` : 'No local source retrieved'}
+                  {knowledgeSourceIds.length ? `Recorded in coverage: ${knowledgeSourceIds.join(', ')}` : 'No source IDs recorded in this answer’s coverage receipt.'}
                 </dd>
               </div>
             </dl>
@@ -5305,7 +5320,7 @@ function EvidencePage({
         />
       </EvidenceDisclosure>
       <EvidenceDisclosure
-        heading={['Retrieved evidence', `${retrievedDocCount} used`]}
+        heading={['Retrieved context', `${retrievedDocCount} retrieved`]}
       >
         {retrievedDocCount > docs.length ? <p>Showing {docs.length} of {retrievedDocCount} documents.</p> : null}
         {docs.length === 0 ? <p>None yet.</p> : docs.map((doc) => (

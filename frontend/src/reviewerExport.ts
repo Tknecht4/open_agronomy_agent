@@ -1,4 +1,5 @@
 import { buildPublicToolCard, buildStructuredEvidenceCard } from './sourceCards'
+import { answerExecutionOrigin } from './answerExecutionOrigin'
 import { GraphHit, RetrievedDoc, StructuredEvidenceCard, ToolInvocation, Turn } from './types'
 
 export type ReviewerFieldContext = {
@@ -72,6 +73,7 @@ export const buildReviewerExportMarkdown = ({
   const structured = turn.trace?.structured_answer
   const route = turn.trace?.route
   const system = turn.system_state
+  const origin = answerExecutionOrigin(turn)
   const publicCards = publicTools.map(buildPublicToolCard)
   const mapCards = mapEvidenceCards.map(buildStructuredEvidenceCard)
   const missingData = [...(structured?.missing_data || []), ...(structured?.missing_data_prompts || [])]
@@ -107,9 +109,9 @@ export const buildReviewerExportMarkdown = ({
       publicCards.length ? publicCards.flatMap(sourceCardLines) : ['- No public source checks were visible for this turn.'],
     ),
     section(
-      'Retrieved Evidence',
+      'Retrieved Context',
       docs.length
-        ? docs.slice(0, 8).map((doc) => `- ${doc.title} (${doc.source_type}; score ${doc.score.toFixed(2)})${doc.source ? ` - ${doc.source}` : ''}`)
+        ? ['Retrieval does not establish consumption, source support or current authority.', ...docs.slice(0, 8).map((doc) => `- ${doc.title} (${doc.source_type}; score ${doc.score.toFixed(2)})${doc.source ? ` - ${doc.source}` : ''}`)]
         : ['- No retrieved documents were visible for this turn.'],
     ),
     section(
@@ -118,16 +120,23 @@ export const buildReviewerExportMarkdown = ({
         ? graphHits.slice(0, 6).map((hit) => `- ${hit.name} (${hit.kind}) - ${hit.evidence}`)
         : ['- No graph hints were visible for this turn.'],
     ),
+    section('Answer Execution And Origin', [
+      line('Execution', origin.execution),
+      line('Final response origin', origin.finalOrigin),
+      line('Origin record status', origin.status),
+      line('Origin limitation', origin.detail),
+    ]),
     section('Route And Runtime', [
       line('Question type', route?.question_type),
       line('Risk level', route?.risk_level),
       line('Namespaces', route?.namespaces?.join(', ')),
       line('Mode', system?.mode),
-      line('Model', [
+      line('Configured model (configuration does not establish execution)', [
         system?.model_identity?.status,
         system?.model_identity?.configured_model_id || system?.model_id,
         system?.model_identity?.configured_model_revision?.slice(0, 12),
       ].filter(Boolean).join(' · ')),
+      line('Recorded response model identity', system?.model_identity?.response_model_id || 'Not recorded'),
       line('RAG config', system?.rag_config),
       line('Latency ms', system?.latency_ms),
     ]),
@@ -150,6 +159,7 @@ export const buildReviewerExportMarkdown = ({
       compactJson({
         turn_id: turn.turn_id,
         answer_status: turn.answer_status,
+        answer_execution_origin: origin,
         route: route
           ? {
               question_type: route.question_type,

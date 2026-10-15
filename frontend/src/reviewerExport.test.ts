@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { buildReviewerExportMarkdown, reviewerExportFilename } from './reviewerExport'
 import { Turn } from './types'
+import { answerExecutionOrigin } from './answerExecutionOrigin'
 
 const sampleTurn: Turn = {
   turn_id: 'turn_demo_1',
@@ -186,5 +187,58 @@ describe('reviewer export', () => {
     expect(reviewerExportFilename(sampleTurn, '2026-07-10T02:40:00.000Z')).toBe(
       'open-agronomy-agent-review-2026-07-10-turn-demo-1.md',
     )
+  })
+
+  it.each(['model', 'tool', 'rewrite', 'fallback', 'legacy', 'unverified', 'conflicting'])('preserves %s execution/final origin and raw receipts', kind => {
+    const turn = structuredClone(sampleTurn)
+    delete turn.answer_integrity_receipt
+    const tool = kind === 'tool', rewrite = kind === 'rewrite', fallback = kind === 'fallback'
+    const path = tool ? 'deterministic_tool_result' : 'model_generation'
+    turn.system_state!.generation_path = path
+    turn.system_state!.model_identity = { status: kind === 'unverified' ? 'unverified_optional' : 'verified_runtime_receipt', configured_model_id: 'configured-model', response_model_id: 'recorded-response' }
+    const origin = {
+      origin_class: tool ? 'deterministic_bypass' : rewrite ? 'verifier_editor_rewrite' : fallback ? 'verifier_conservative_fallback' : 'configured_model',
+      generation_path: path, draft_sha256: 'c'.repeat(64), post_verification_sha256: (rewrite || fallback ? 'd' : 'c').repeat(64), final_sha256: 'e'.repeat(64),
+      fallback_used: fallback, fallback_kind: fallback ? 'verification_conservative' : null, rewrite_accepted: rewrite,
+      verification_fallback_applied: fallback, replacement_used: rewrite || fallback,
+      verification_action: rewrite ? 'accepted_editor_rewrite' : fallback ? 'conservative_fallback' : tool ? 'typed_capability_validation' : 'not_triggered',
+      verification_receipt_sha256: 'f'.repeat(64),
+    }
+    const stage = (stage_id: string, position: number, state: string, evidence: Record<string, unknown>) => ({
+      schema_version: 'open_agronomy_agent.execution_stage_receipt.v2', topology_version: 'open_agronomy_agent.production_stage_topology.v3',
+      stage_id, position, state, evidence, evidence_sha256: 'a'.repeat(64), receipt_sha256: 'b'.repeat(64),
+    })
+    turn.trace!.metadata = { generation_path: path, execution_stage_receipts: [
+      stage('deterministic_bypass', 10, tool ? 'executed' : 'not_applicable', { bypass_selected: tool, generation_path: path }),
+      stage('draft_generation', 11, tool ? 'bypassed' : 'executed', { generation_path: path, model_call_executed: !tool, draft_sha256: origin.draft_sha256, prompt_messages: 'private unused receipt extension' }),
+      stage('verification', 12, rewrite || fallback ? 'executed' : 'not_applicable', {
+        executed: rewrite || fallback, adjudication_sha256: origin.verification_receipt_sha256,
+        draft_sha256: origin.draft_sha256, post_verification_sha256: origin.post_verification_sha256,
+      }),
+      stage('fallback_origin', 16, 'executed', { ...origin, origin_record: origin }),
+    ] }
+    if (kind === 'legacy') delete turn.trace!.metadata.execution_stage_receipts
+    if (kind === 'conflicting') turn.system_state!.generation_path = 'contradiction'
+    const before = JSON.stringify(turn), view = answerExecutionOrigin(turn)
+    const markdown = buildReviewerExportMarkdown({ generatedAt: '2026-10-14T00:00:00Z', field: {}, turn })
+    expect(markdown).toContain(`Execution: ${view.execution}`)
+    expect(markdown).toContain(`Final response origin: ${view.finalOrigin}`)
+    expect(markdown).toContain(`Origin record status: ${view.status}`)
+    expect(markdown).toContain('Configured model (configuration does not establish execution)')
+    expect(markdown).toContain('Recorded response model identity: recorded-response')
+    expect(markdown).not.toContain('private unused receipt extension')
+    expect(markdown).not.toContain('hidden system prompt should stay out')
+    if (kind !== 'model') expect(markdown).not.toContain('Final response origin: Configured model response')
+    expect(JSON.stringify(turn)).toBe(before)
+    if (rewrite || fallback) for (const state of ['missing', 'failed', 'disabled_by_arm']) {
+      const invalid = structuredClone(turn), receipts = invalid.trace!.metadata!.execution_stage_receipts!
+      if (state === 'missing') invalid.trace!.metadata!.execution_stage_receipts = receipts.filter(stage => stage.stage_id !== 'verification')
+      else receipts.find(stage => stage.stage_id === 'verification')!.state = state
+      const invalidView = answerExecutionOrigin(invalid)
+      const exported = buildReviewerExportMarkdown({ generatedAt: '2026-10-14T00:00:00Z', field: {}, turn: invalid })
+      expect(exported).toContain('Final response origin: Final origin unavailable')
+      expect(exported).toContain(`Execution: ${invalidView.execution}`)
+      expect(exported).not.toContain(`Final response origin: ${rewrite ? 'Verifier rewrite' : 'Verifier conservative fallback'}`)
+    }
   })
 })

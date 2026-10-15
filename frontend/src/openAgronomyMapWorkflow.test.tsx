@@ -6,6 +6,7 @@ import { OpenAgronomyApp } from './OpenAgronomyApp'
 import { PHASE6_SCRATCHPAD_STORAGE_KEY } from './offlineScratchpad'
 import { PHASE6_OFFLINE_STORAGE_QUARANTINE_KEY } from './offlineStorageRepair'
 import type { TurnReadiness } from './turnReadiness'
+import type { Turn, TurnExecutionStageReceipt } from './types'
 
 vi.mock('./fieldGeometry', async () => {
   const actual = await vi.importActual<typeof import('./fieldGeometry')>('./fieldGeometry')
@@ -2226,20 +2227,19 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.getByText('b'.repeat(64))).toBeInTheDocument()
     expect(screen.getByText(completedTurn.user_message)).toBeInTheDocument()
     expect(screen.getByText('Evidence at answer time')).toBeInTheDocument()
-    expect(screen.getByText('Answer generation model')).toBeInTheDocument()
+    expect(screen.getByText('Response model identity')).toBeInTheDocument()
     expect(screen.getByText('Answer integrity receipt')).toBeInTheDocument()
     expect(screen.getByText('Prior answer context')).toBeInTheDocument()
     expect(screen.getByText(/2 reviewed\/history turns consulted · prior model outputs are not evidence/i)).toBeInTheDocument()
     expect(screen.getByText(/Content hashes verified/)).toBeInTheDocument()
     expect(screen.getByText((_, element) => (
       element?.tagName === 'DD'
-      && element.textContent?.includes('Response identity bound') === true
-      && element.textContent.includes('gemma-4-e2b-it-4bit')
-      && element.textContent.includes('238767527555')
+       && element.textContent?.includes('Recorded identity · final origin not recorded') === true
+       && element.textContent.includes('default_model')
     ))).toBeInTheDocument()
     expect(screen.getByText('Local guidance missing')).toBeInTheDocument()
-    expect(screen.getByText('Source IDs')).toBeInTheDocument()
-    expect(screen.getByText('Saskatchewan · Retrieved: ca-regional-context-sk')).toBeInTheDocument()
+    expect(screen.getByText('Coverage source IDs')).toBeInTheDocument()
+    expect(screen.getByText('Saskatchewan · Recorded in coverage: ca-regional-context-sk')).toBeInTheDocument()
     expect(historyRequestCount).toBe(3)
   })
 
@@ -2316,14 +2316,14 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.getByRole('dialog', { name: 'Sources & checks' })).toBeInTheDocument()
     expect(screen.getByText('Crop stress')).toHaveAttribute('title', 'fertility_diagnostic')
     expect(screen.getByText('Moderate')).toHaveAttribute('title', 'medium')
-    expect(screen.getAllByText('6 used').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('6 retrieved').length).toBeGreaterThanOrEqual(1)
     expect(screen.getAllByText('1 linked').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('0 matched')).toBeInTheDocument()
     const checksDisclosure = screen.getAllByText('Evidence checks')
       .map((node) => node.closest('details'))
       .find((node): node is HTMLDetailsElement => node instanceof HTMLDetailsElement)
     const liveSourcesDisclosure = screen.getByText('Live public sources').closest('details')
-    const retrievedEvidenceDisclosure = screen.getByText('Retrieved evidence').closest('details')
+    const retrievedEvidenceDisclosure = screen.getAllByText('Retrieved context').map(node => node.closest('details')).find(Boolean)
     expect(checksDisclosure).toBeDefined()
     expect(checksDisclosure).not.toHaveAttribute('open')
     expect(liveSourcesDisclosure).not.toHaveAttribute('open')
@@ -3572,7 +3572,7 @@ describe('production request-bound calculator Ask gate', () => {
       }
       if (url === '/api/sessions/session-calculator/turns/stream') return {
         ok: true, status: 200, body: null,
-        text: async () => `event: answer.completed\ndata: ${JSON.stringify({ turn_id: 'calculator-turn', turn: { turn_id: 'calculator-turn', user_message: 'Exact calculator request', answer: 'Canonical calculator response', trace: { retrieved_docs: [], graph_hits: [], tool_invocations: [] } } })}\n\n`,
+        text: async () => `event: answer.completed\ndata: ${JSON.stringify({ turn_id: 'calculator-turn', turn: { ...publicityTurn(status === 'ready' ? 'tool' : 'clarification'), turn_id: 'calculator-turn', user_message: 'Exact calculator request', answer: 'Canonical calculator response' } })}\n\n`,
       } as Response
       return base(input, init)
     })
@@ -3584,6 +3584,10 @@ describe('production request-bound calculator Ask gate', () => {
     expect(fetchMock.mock.calls.filter(([url]) => String(url) === '/api/sessions')).toHaveLength(0)
     fireEvent.click(ask)
     expect(await screen.findByText('Canonical calculator response')).toBeInTheDocument()
+    expect(screen.getByLabelText('Answer execution and origin')).toHaveTextContent(`${status === 'ready' ? 'Local tool result' : 'Local tool clarification'} · Model not used`)
+    expect(screen.getByLabelText('Your question')).toHaveValue('')
+    expect(screen.getByText('Next question readiness')).toBeInTheDocument()
+    expect(screen.getByText('Model setup required')).toBeInTheDocument()
     const submission = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/turns/stream'))
     const payload = JSON.parse(String(submission?.[1]?.body))
     expect(payload.readiness_binding).toBe('a'.repeat(64))
@@ -3762,4 +3766,162 @@ it.each(['ready', 'unknown'] as const)('uses the server tank-coverage dispositio
     expect(payload.message).toBe(questionText)
     expect(payload.readiness_binding).toBe('a'.repeat(64))
   }
+})
+
+type PublicityOriginKind = 'model' | 'tool' | 'clarification' | 'rewrite' | 'conservative' | 'legacy' | 'conflicting' | 'failed' | 'skipped' | 'unverified'
+const publicityTurn = (kind: PublicityOriginKind): Turn => {
+  const tool = kind === 'tool' || kind === 'clarification'
+  const path = tool ? kind === 'tool' ? 'deterministic_tool_result' : 'deterministic_tool_clarification' : 'model_generation'
+  const rewrite = kind === 'rewrite', conservative = kind === 'conservative', failed = kind === 'failed'
+  const origin = {
+    origin_class: tool ? 'deterministic_bypass' : rewrite ? 'verifier_editor_rewrite' : conservative ? 'verifier_conservative_fallback' : failed ? 'analysis_unavailable_fallback' : 'configured_model',
+    generation_path: path, draft_sha256: 'c'.repeat(64), post_verification_sha256: (rewrite || conservative ? 'd' : 'c').repeat(64), final_sha256: 'e'.repeat(64),
+    fallback_used: conservative || failed, fallback_kind: conservative ? 'verification_conservative' : failed ? 'generation_unavailable' : null,
+    rewrite_accepted: rewrite, verification_fallback_applied: conservative, replacement_used: rewrite || conservative,
+    verification_action: rewrite ? 'accepted_editor_rewrite' : conservative ? 'conservative_fallback' : tool ? 'typed_capability_validation' : 'not_triggered',
+    verification_receipt_sha256: 'f'.repeat(64),
+  }
+  const stage = (stage_id: string, position: number, state: string, evidence: Record<string, unknown>): TurnExecutionStageReceipt => ({
+    schema_version: 'open_agronomy_agent.execution_stage_receipt.v2', topology_version: 'open_agronomy_agent.production_stage_topology.v3',
+    stage_id, position, state, evidence, evidence_sha256: 'a'.repeat(64), receipt_sha256: 'b'.repeat(64),
+  })
+  const turn: Turn = {
+    turn_id: `publicity-${kind}`, user_message: `Publicity ${kind} question`, answer: `Publicity ${kind} answer`, answer_status: 'draft',
+    system_state: { mode: 'agronomic_rag', model_id: 'retained-configured-model', rag_config: null, prompt_version: 'fixture', generation_path: path,
+      model_identity: { status: kind === 'unverified' ? 'unverified_optional' : 'verified_runtime_receipt', configured_model_id: 'retained-configured-model', response_model_id: 'retained-response-model' } },
+    trace: { retrieved_docs: [], graph_hits: [], tool_invocations: [], metadata: { generation_path: path, execution_stage_receipts: [
+      stage('deterministic_bypass', 10, tool ? 'executed' : 'not_applicable', { bypass_selected: tool, generation_path: path }),
+      stage('draft_generation', 11, tool ? 'bypassed' : failed ? 'failed' : kind === 'skipped' ? 'disabled_by_arm' : 'executed', { generation_path: path, model_call_executed: !tool && !failed && kind !== 'skipped', draft_sha256: origin.draft_sha256 }),
+      stage('verification', 12, rewrite || conservative ? 'executed' : 'not_applicable', {
+        executed: rewrite || conservative, adjudication_sha256: origin.verification_receipt_sha256,
+        draft_sha256: origin.draft_sha256, post_verification_sha256: origin.post_verification_sha256,
+      }),
+      stage('fallback_origin', 16, 'executed', { ...origin, origin_record: origin }),
+    ] } },
+  }
+  if (kind === 'legacy') delete turn.trace!.metadata!.execution_stage_receipts
+  if (kind === 'conflicting') turn.system_state!.generation_path = 'contradictory-path'
+  return turn
+}
+const installPublicitySavedTurn = (turn: Turn) => {
+  const fetchMock = installFetchMock(emptyDemoFields, uploadPayload, [{ session_id: 'publicity-session', turns_included: true, context: { field_conversation_key: 'general' }, turns: [turn] }])
+  const base = fetchMock.getMockImplementation()!
+  fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => String(input) === '/api/configs' ? jsonResponse(missingModelConfig) : base(input, init))
+  return fetchMock
+}
+
+describe('production answer origin and publicity wording', () => {
+  it.each([
+    ['model', 'Configured model response · Model call recorded'],
+    ['tool', 'Local tool result · Model not used'],
+    ['rewrite', 'Verifier rewrite · Model call recorded'],
+    ['conservative', 'Verifier conservative fallback · Model call recorded'],
+    ['legacy', 'Final origin not recorded · Execution not recorded'],
+    ['conflicting', 'Final origin unavailable · Execution evidence conflicts'],
+    ['failed', 'Analysis unavailable fallback · Model call not executed · generation unavailable'],
+    ['skipped', 'Final origin unavailable · Model call not executed · generation skipped'],
+    ['unverified', 'Final origin unavailable · Model call recorded'],
+  ] as Array<[PublicityOriginKind, string]>)('reopens %s with its own origin while the selected model is unavailable', async (kind, label) => {
+    const turn = publicityTurn(kind), before = JSON.stringify(turn)
+    installPublicitySavedTurn(turn)
+    render(<OpenAgronomyApp />)
+    await screen.findByText(turn.answer)
+    expect(screen.getByLabelText('Answer execution and origin')).toHaveTextContent(label)
+    expect(screen.getByText('Model setup required')).toBeInTheDocument()
+    expect(screen.getByText('Next question readiness')).toBeInTheDocument()
+    expect(JSON.stringify(turn)).toBe(before)
+  })
+
+  it('never assigns an origin to pending stream text before the completed receipt arrives', async () => {
+    const fetchMock = installFetchMock(), base = fetchMock.getMockImplementation()!
+    let release!: (value: Response) => void
+    const pending = new Promise<Response>(resolve => { release = resolve })
+    const completed = publicityTurn('tool')
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url === '/api/configs') return jsonResponse(missingModelConfig)
+      if (url === '/api/turn-readiness') return jsonResponse(readinessResponse(JSON.parse(String(init?.body))))
+      if (url === '/api/sessions' && init?.method === 'POST') return jsonResponse({ session_id: 'pending-origin', context: JSON.parse(String(init.body)).context, turns: [] })
+      if (url === '/api/sessions/pending-origin/turns/stream') return pending
+      return base(input, init)
+    })
+    render(<OpenAgronomyApp />)
+    await screen.findByText('Model weights are not installed.')
+    fireEvent.change(screen.getByLabelText('Your question'), { target: { value: completed.user_message } })
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Ask' })).toBeEnabled())
+    fireEvent.click(screen.getByRole('button', { name: 'Ask' }))
+    expect(await screen.findByLabelText('Answer execution and origin')).toHaveTextContent('Preparing answer · Execution origin not yet recorded')
+    await act(async () => { release({ ok: true, status: 200, body: null, text: async () => `event: answer.completed\ndata: ${JSON.stringify({ turn: completed })}\n\n` } as Response) })
+    await screen.findByText(completed.answer)
+    expect(screen.getByLabelText('Answer execution and origin')).toHaveTextContent('Local tool result · Model not used')
+  })
+
+  it.each(['missing', 'failed', 'disabled_by_arm'])('does not expose verifier final labels with %s verification', async state => {
+    for (const kind of ['rewrite', 'conservative'] as const) {
+      const turn = publicityTurn(kind)
+      const receipts = turn.trace!.metadata!.execution_stage_receipts!
+      if (state === 'missing') turn.trace!.metadata!.execution_stage_receipts = receipts.filter(stage => stage.stage_id !== 'verification')
+      else receipts.find(stage => stage.stage_id === 'verification')!.state = state
+      installPublicitySavedTurn(turn)
+      const rendered = render(<OpenAgronomyApp />)
+      await screen.findByText(turn.answer)
+      const origin = screen.getByLabelText('Answer execution and origin')
+      expect(origin).toHaveTextContent('Final origin unavailable')
+      expect(origin).not.toHaveTextContent(/Verifier rewrite|Verifier conservative fallback/)
+      rendered.unmount()
+    }
+  })
+
+  it('keeps retrieval separate from coverage IDs, consumption and current authority', async () => {
+    const turn = publicityTurn('tool')
+    turn.trace!.retrieved_docs = [{ rank: 1, doc_id: 'retrieved-context', title: 'Dated regional context', source_type: 'context', score: 1 }]
+    turn.knowledge_coverage = { capture_status: 'captured', boundaries: [{ jurisdiction: 'Alberta', status: 'province_specific_guidance_retrieved', retrieved_source_ids: [], retrieved_context_source_ids: [] }] }
+    installPublicitySavedTurn(turn)
+    render(<OpenAgronomyApp />)
+    await screen.findByText(turn.answer)
+    fireEvent.click(screen.getByRole('button', { name: /Sources & checks/ }))
+    expect(screen.getAllByText('1 retrieved').length).toBeGreaterThan(0)
+    expect(screen.getByText('Provincial guidance retrieved')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Technical receipt & export', { selector: 'summary' }))
+    expect(screen.getByText(/No source IDs recorded in this answer’s coverage receipt/)).toBeInTheDocument()
+    expect(screen.queryByText('No local source retrieved')).not.toBeInTheDocument()
+    expect(screen.queryByText('Applied guidance used')).not.toBeInTheDocument()
+    expect(screen.queryByText('1 used')).not.toBeInTheDocument()
+  })
+
+  it('copies and downloads the same final fallback distinction through the actual consumer', async () => {
+    const turn = publicityTurn('conservative'), before = JSON.stringify(turn)
+    installPublicitySavedTurn(turn)
+    const clipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
+    const create = Object.getOwnPropertyDescriptor(URL, 'createObjectURL'), revoke = Object.getOwnPropertyDescriptor(URL, 'revokeObjectURL')
+    const writeText = vi.fn(async (_text: string) => {}), createObjectURL = vi.fn((_blob: Blob) => 'blob:owned-test')
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectURL })
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() })
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    try {
+      render(<OpenAgronomyApp />)
+      await screen.findByText(turn.answer)
+      fireEvent.click(screen.getByRole('button', { name: /Sources & checks/ }))
+      fireEvent.click(screen.getByText('Technical receipt & export', { selector: 'summary' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Copy review report' }))
+      await waitFor(() => expect(writeText).toHaveBeenCalledOnce())
+      expect(writeText.mock.calls[0][0]).toContain('Final response origin: Verifier conservative fallback')
+      fireEvent.click(screen.getByRole('button', { name: 'Download .md' }))
+      expect(createObjectURL).toHaveBeenCalledOnce()
+      const markdown = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject
+        reader.readAsText(createObjectURL.mock.calls[0][0] as Blob)
+      })
+      expect(markdown).toContain('Final response origin: Verifier conservative fallback')
+      expect(markdown).toContain('Execution: Model call recorded')
+      expect(markdown).not.toContain('Final response origin: Configured model response')
+      expect(JSON.stringify(turn)).toBe(before)
+    } finally {
+      click.mockRestore()
+      if (clipboard) Object.defineProperty(navigator, 'clipboard', clipboard); else Reflect.deleteProperty(navigator, 'clipboard')
+      if (create) Object.defineProperty(URL, 'createObjectURL', create); else Reflect.deleteProperty(URL, 'createObjectURL')
+      if (revoke) Object.defineProperty(URL, 'revokeObjectURL', revoke); else Reflect.deleteProperty(URL, 'revokeObjectURL')
+    }
+  })
 })
