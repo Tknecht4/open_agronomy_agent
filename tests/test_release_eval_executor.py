@@ -966,8 +966,8 @@ def test_disabled_field_receipt_contradiction_fails_automatic_diagnostic_check(
 
     original = executor._production_turn
 
-    def contradictory_observation(question, request):
-        turn = original(question, request)
+    def contradictory_observation(question, request, *, evaluation_draft_hook=None):
+        turn = original(question, request, evaluation_draft_hook=evaluation_draft_hook)
         field = next(
             row
             for row in turn["stage_receipts"]
