@@ -125,6 +125,295 @@ def _parent_write_guard(directory: Path, policy: Mapping[str, Any], *, extra: by
         raise _PolicyStop("parent_write_capacity")
 
 
+def _required_worker_identity(row: Mapping[str, Any], plan: Mapping[str, Any]) -> str:
+    """Use original worker fields, never the planned outer-cell overlay, as proof."""
+    try:
+        if validate_worker_runtime(plan, row, row) != "verified_worker_config_bytes":
+            raise _PolicyStop("required_worker_config_unknown")
+        if row.get("runtime_input_binding_status", "verified_worker_config_bytes") != "verified_worker_config_bytes":
+            raise _PolicyStop("required_worker_config_unknown")
+        cell = next((item for item in plan["matrix"] if item["observation_id"] == row.get("observation_id")), None)
+        observed = row.get("worker_input_binding")
+        if cell is None or not isinstance(observed, Mapping):
+            raise _PolicyStop("required_worker_identity_unknown")
+        for key in ("observation_id", "case_id", "suite_id", "arm_id", "trial_id", "backend"):
+            # The canonical executor does not emit the controller's observation/suite IDs.
+            # Its case/arm/trial/backend and projected-case hash are mandatory evidence.
+            if key in {"observation_id", "suite_id"} and observed.get(key) is None:
+                continue
+            if observed.get(key) is None:
+                raise _PolicyStop("required_worker_identity_unknown", key)
+            if observed[key] != cell[key] or row.get(key) != cell[key]:
+                raise _PolicyStop("worker_identity_drift", key)
+        case = next(case for case in plan["cases"] if case["case_id"] == cell["case_id"] and case["suite_id"] == cell["suite_id"])
+        expected_case = digest(worker_case(case)) if row.get("schema_version") == "open_agronomy_agent.release_product_cell.v1" else cell["case_sha256"]
+        if observed.get("case_sha256") is None:
+            raise _PolicyStop("required_worker_identity_unknown", "case_sha256")
+        if observed["case_sha256"] != expected_case or row.get("case_sha256") != cell["case_sha256"]:
+            raise _PolicyStop("worker_identity_drift", "case_sha256")
+        for key, expected in (("model_id", plan["model"]["id"]), ("model_revision", plan["model"]["revision"])):
+            if observed.get(key) is not None and observed[key] != expected:
+                raise _PolicyStop("model_identity_drift", key)
+        if "controller_inputs" in plan:
+            exposure = validate_task_exposure(case, cell["arm_id"], row.get("task_exposure"))
+            if exposure["status"].startswith("unknown_missing") or exposure["status"] == "unknown_incomplete_exposure":
+                raise _PolicyStop("required_task_exposure_unknown")
+            if row.get("task_input_status") != exposure["status"] or row.get("task_input_sha256") != exposure["task_input_sha256"]:
+                raise _PolicyStop("task_exposure_drift")
+        return row["config_identity"]["model"]["sha256"]
+    except _PolicyStop:
+        raise
+    except (ValueError, KeyError, TypeError, StopIteration) as exc:
+        raise _PolicyStop("worker_identity_binding_invalid", str(exc)) from exc
+
+
+def _editor_identity_unobserved(turn: Mapping[str, Any]) -> bool:
+    """Current producer does not bind an independent identity to editor attempts."""
+    metadata = turn.get("metadata") or {}
+    if not isinstance(metadata, Mapping):
+        return True
+    if (turn.get("verification_observation") or {}).get("status") == "unknown_after_draft_return":
+        return True
+    if any(turn.get(key) is not None for key in ("editor_generation_stats", "verification_generation_stats")):
+        return True
+    for editor in (turn.get("editor"), metadata.get("answer_verification")):
+        if editor is None:
+            continue
+        if not isinstance(editor, Mapping) or any(editor.get(key) is not None for key in ("generation_stats", "editor_output")):
+            return True
+        if editor.get("rewrite_accepted") is True or editor.get("triggered") is True or "editor_error" in (editor.get("rejection_reasons") or []):
+            return True
+    return False
+
+
+def _identity_shapes(turn: Any) -> None:
+    """Malformed optional mirrors are unknown, never erased by ``or {}``."""
+    if not isinstance(turn, Mapping):
+        raise _PolicyStop("required_identity_evidence_unknown")
+    for record, keys in ((turn, ("metadata", "model_execution", "model_revision_observation", "verification_observation", "draft_checkpoint", "editor", "generation_stats", "model_identity", "editor_generation_stats", "verification_generation_stats", "editor_observation", "editor_model_identity", "editor_checkpoint")),
+                         (turn.get("metadata") or {}, ("generation_bypass", "generation_stats", "model_identity", "answer_verification"))):
+        if not isinstance(record, Mapping) or any(record.get(key) is not None and not isinstance(record[key], Mapping) for key in keys):
+            raise _PolicyStop("required_identity_evidence_unknown")
+    for editor in (turn.get("editor"), (turn.get("metadata") or {}).get("answer_verification")):
+        if editor is not None and (not isinstance(editor.get("rejection_reasons", []), list)
+                                   or editor.get("generation_stats") is not None and not isinstance(editor["generation_stats"], Mapping)
+                                   or editor.get("editor_observation") is not None and not isinstance(editor["editor_observation"], Mapping)):
+            raise _PolicyStop("required_identity_evidence_unknown")
+
+
+def _verification_no_editor_evidence(turn: Mapping[str, Any], stage: Mapping[str, Any]) -> None:
+    record = (turn.get("metadata") or {}).get("answer_verification")
+    records = [item for item in (record, turn.get("editor")) if item is not None]
+    if stage["state"] == "executed" or stage["evidence"]["executed"] is True:
+        if (stage["state"] != "executed" or stage["evidence"]["executed"] is not True
+                or not isinstance(record, Mapping)
+                or record.get("triggered") is not False and (record.get("editor_observation") or {}).get("state") not in {"no_call", "returned"}):
+            raise _PolicyStop("required_editor_identity_unknown")
+    if any(digest(item) != stage["evidence"]["adjudication_sha256"] for item in records):
+        raise _PolicyStop("contradictory_verification_evidence")
+
+
+def _corroborated_no_model(turn: Mapping[str, Any]) -> bool:
+    execution = turn.get("model_execution") or {}
+    metadata = turn.get("metadata") or {}
+    if execution.get("disposition") != "deterministic_bypass":
+        return False
+    from agronomy_agent.execution_core import validate_execution_stage_receipts
+    try:
+        stages = {item["stage_id"]: item for item in validate_execution_stage_receipts(turn.get("stage_receipts"))}
+    except (ValueError, TypeError) as exc:
+        raise _PolicyStop("required_no_model_evidence_unknown", str(exc)) from exc
+    bypass, draft, verify, origin = (stages[key] for key in ("deterministic_bypass", "draft_generation", "verification", "fallback_origin"))
+    _verification_no_editor_evidence(turn, verify)
+    if not (turn.get("status") == "completed" and turn.get("execution_kind") == "production"
+            and isinstance(metadata.get("generation_bypass"), Mapping) and bool(metadata["generation_bypass"])
+            and not metadata.get("generation_fallback") and not metadata.get("generation_unavailable")
+            and execution.get("synthetic") is False and execution.get("backend_available") is True
+            and all(execution.get(key) is False for key in ("model_generation_eligible", "model_execution_eligible", "generation_stats_present"))
+            and turn.get("model_execution_eligible") is False
+            and (execution.get("generator_called") is None or execution["generator_called"] is False)
+            and turn.get("generation_stats") is None and metadata.get("generation_stats") is None
+            and not _editor_identity_unobserved(turn)
+            and (turn.get("draft_checkpoint") or {}).get("status") == "not_observed"
+            and bypass["state"] == "executed" and bypass["evidence"]["bypass_selected"] is True
+            and draft["state"] == "bypassed" and draft["evidence"]["model_call_executed"] is False
+            and draft["evidence"]["fallback_used"] is False
+            and verify["state"] in {"not_applicable", "disabled_by_arm"} and verify["evidence"]["executed"] is False
+            and origin["evidence"]["origin_class"] == "deterministic_bypass" and origin["evidence"]["fallback_used"] is False):
+        raise _PolicyStop("contradictory_no_model_evidence")
+    return True
+
+
+def _bound_turn_identity(turn: Mapping[str, Any], plan: Mapping[str, Any], config_sha256: str, *, required: bool) -> None:
+    execution = turn.get("model_execution") or {}
+    identities = [value for value in (turn.get("model_identity"), (turn.get("metadata") or {}).get("model_identity"), execution.get("identity")) if value is not None]
+    if not identities and not required:
+        return
+    if not identities or any(not isinstance(value, Mapping) for value in identities):
+        raise _PolicyStop("required_model_identity_unknown")
+    if any(digest(value) != digest(identities[0]) for value in identities[1:]):
+        raise _PolicyStop("model_identity_drift", "conflicting identity mirrors")
+    identity = identities[0]
+    if identity.get("schema_version") != "open_agronomy_agent.model_identity_contract.v1":
+        raise _PolicyStop("required_model_identity_unknown")
+    for key, expected in (("configured_model_id", plan["model"]["id"]), ("configured_model_revision", plan["model"]["revision"]), ("model_config_sha256", config_sha256)):
+        if identity.get(key) is None or expected is None:
+            raise _PolicyStop("required_model_identity_unknown", key)
+        if identity[key] != expected:
+            raise _PolicyStop("model_identity_drift", key)
+    runtime = identity.get("runtime")
+    if runtime is not None or identity.get("status") == "verified_runtime_receipt":
+        if not isinstance(runtime, Mapping) or any(runtime.get(key) is None for key in ("model_id", "model_revision")):
+            raise _PolicyStop("required_model_identity_unknown", "runtime")
+        if runtime["model_id"] != plan["model"]["id"] or runtime["model_revision"] != plan["model"]["revision"]:
+            raise _PolicyStop("model_identity_drift", "runtime")
+
+
+def _required_generation_identity(turn: Mapping[str, Any], plan: Mapping[str, Any], config_sha256: str) -> None:
+    from agronomy_agent.release_eval_analysis import _verified_generation
+    execution = turn.get("model_execution") or {}
+    if (turn.get("execution_kind") not in {"production", "ungoverned_reference"}
+            or execution.get("disposition") != "model_generated" or execution.get("backend_available") is not True
+            or execution.get("generation_stats_present") is not True or turn.get("model_execution_eligible") is not True
+            or execution.get("model_execution_eligible") is not True
+            or "generator_called" in execution and execution["generator_called"] is not True):
+        raise _PolicyStop("contradictory_model_execution")
+    metadata = turn.get("metadata") or {}
+    if metadata.get("generation_fallback") or metadata.get("generation_unavailable"):
+        raise _PolicyStop("contradictory_model_execution", "backend fallback/unavailable")
+    if metadata.get("generation_stats") is not None and digest(metadata["generation_stats"]) != digest(turn.get("generation_stats")):
+        raise _PolicyStop("contradictory_model_execution", "generation stats mirrors")
+    if turn.get("execution_kind") == "production":
+        from agronomy_agent.execution_core import validate_execution_stage_receipts
+        try:
+            stages = {item["stage_id"]: item for item in validate_execution_stage_receipts(turn.get("stage_receipts"))}
+            if (stages["draft_generation"]["state"] != "executed"
+                    or stages["draft_generation"]["evidence"]["model_call_executed"] is not True
+                    or stages["draft_generation"]["evidence"]["fallback_used"] is not False):
+                raise ValueError("generated draft stage contradicts model execution")
+        except (ValueError, TypeError) as exc:
+            raise _PolicyStop("contradictory_model_execution", str(exc)) from exc
+        _verification_no_editor_evidence(turn, stages["verification"])
+        adjudication = metadata.get("answer_verification") or {}
+        if adjudication.get("editor_observation") is not None:
+            from agronomy_agent.execution_core import classify_verification_origin
+            verification = stages["verification"]["evidence"]
+            expected_origin = classify_verification_origin(adjudication,
+                draft_sha256=verification["draft_sha256"], post_verification_sha256=verification["post_verification_sha256"])
+            if any(stages["fallback_origin"]["evidence"].get(key) != value for key, value in expected_origin.items()):
+                raise _PolicyStop("conflicting_verification_origin")
+    _bound_turn_identity(turn, plan, config_sha256, required=True)
+    if not _verified_generation(turn, plan["model"]["revision"]):
+        raise _PolicyStop("required_model_identity_unknown")
+    if _editor_identity_unobserved(turn) and not turn.get("editor_observation"):
+        raise _PolicyStop("required_editor_identity_unknown")
+
+
+def _required_editor_identity(turn: Mapping[str, Any], plan: Mapping[str, Any], row: Mapping[str, Any],
+                              config_sha256: str, turn_index: int) -> None:
+    """An editor owns its call evidence; it cannot borrow the draft identity."""
+    from agronomy_agent.answer_verifier import validate_editor_observation
+    observed = turn.get("editor_observation")
+    records = [record for record in (turn.get("editor"), (turn.get("metadata") or {}).get("answer_verification")) if isinstance(record, Mapping)]
+    if observed is None:
+        if any(record.get("editor_observation") is not None for record in records):
+            raise _PolicyStop("required_editor_identity_unknown")
+        return
+    try:
+        observed = validate_editor_observation(observed)
+    except (TypeError, ValueError) as exc:
+        raise _PolicyStop("editor_observation_invalid", str(exc)) from exc
+    checkpoint = turn.get("editor_checkpoint") or {}
+    bindings = checkpoint.get("bindings") or {}
+    if (not isinstance(bindings, Mapping) or not isinstance(bindings.get("source_files"), Mapping)
+            or not isinstance(checkpoint.get("events"), list)
+            or any(not isinstance(event, Mapping) or not isinstance(event.get("path"), str)
+                   or not isinstance(event.get("sha256"), str) or len(event["sha256"]) != 64
+                   for event in checkpoint["events"])):
+        raise _PolicyStop("editor_checkpoint_binding_unknown")
+    if (checkpoint.get("status") != "retained" or not checkpoint.get("events")
+            or checkpoint.get("observation_receipt_sha256") != observed["receipt_sha256"]
+            or any(bindings.get(key) != value for key, value in (
+                ("case_id", row["case_id"]), ("case_sha256", row["worker_input_binding"]["case_sha256"]),
+                ("arm_id", row["arm_id"]), ("trial_id", row["trial_id"]), ("turn_index", turn_index)))
+            or bindings.get("config_identity") != row.get("config_identity")):
+        raise _PolicyStop("editor_checkpoint_binding_unknown")
+    sources = {"executor": "src/agronomy_agent/release_eval_executor.py",
+               "service": "src/agronomy_agent/server/services/chat_service.py",
+               "verifier": "src/agronomy_agent/answer_verifier.py"}
+    if any(not plan.get("source", {}).get("files", {}).get(path)
+           or (bindings.get("source_files") or {}).get(label) != plan["source"]["files"][path]
+           for label, path in sources.items()):
+        raise _PolicyStop("editor_checkpoint_source_unknown")
+    for record in records:
+        if record.get("editor_observation") is not None and record["editor_observation"] != observed:
+            raise _PolicyStop("conflicting_editor_observation")
+    if observed["state"] == "no_call":
+        if any(turn.get(key) is not None for key in ("editor_generation_stats", "verification_generation_stats", "editor_model_identity")):
+            raise _PolicyStop("contradictory_editor_no_call")
+        if any(record.get("editor_output") is not None or record.get("generation_stats") is not None
+               or record.get("rewrite_accepted") is True for record in records):
+            raise _PolicyStop("contradictory_editor_no_call")
+        return
+    if observed["state"] != "returned" or observed.get("identity_status") != "observed_native_call":
+        raise _PolicyStop("required_editor_identity_unknown")
+    contract = (plan.get("editor_runtime_contracts") or {}).get(row["trial_id"])
+    if (not isinstance(contract, Mapping) or contract.get("model_config_sha256") != config_sha256
+            or any(type(contract.get(key)) is not int or contract[key] <= 0 for key in ("max_tokens", "context_limit_tokens"))
+            or any(not isinstance(contract.get(key), str) or not contract[key] for key in ("model_id", "model_revision"))):
+        raise _PolicyStop("required_editor_config_unknown")
+    if (observed.get("stats_freshness") not in {"native_call_reset", "advanced_call_marker"}
+            or any(not isinstance(observed.get(key), str) or len(observed[key]) != 64 for key in ("prompt_sha256", "raw_output_sha256", "normalized_output_sha256"))
+            or type(observed.get("requested_max_tokens")) is not int or observed["requested_max_tokens"] <= 0):
+        raise _PolicyStop("required_editor_identity_unknown")
+    stats, identity, native = (observed.get(key) for key in ("generation_stats", "model_identity", "native_observation"))
+    if not all(isinstance(value, Mapping) for value in (stats, identity, native)):
+        raise _PolicyStop("required_editor_identity_unknown")
+    expected = {"model_id": contract["model_id"], "model_revision": contract["model_revision"], "snapshot_revision": contract["model_revision"]}
+    if (any(native.get(key) != value for key, value in expected.items()) or stats.get("generation_lock_model_id") != expected["model_id"]
+            or stats.get("generation_lock_model_revision") != expected["model_revision"]
+            or identity.get("backend") != "mlx_local" or identity.get("status") != "verified_direct_loader"):
+        raise _PolicyStop("editor_model_identity_drift")
+    if not isinstance(native.get("snapshot_path_sha256"), str) or len(native["snapshot_path_sha256"]) != 64:
+        raise _PolicyStop("required_editor_identity_unknown")
+    budget = observed.get("editor_context_budget") or {}
+    native_limit = native.get("context_window_tokens")
+    if type(native_limit) is not int or native_limit <= 0:
+        raise _PolicyStop("required_editor_context_unknown")
+    expected_limit = min(contract["context_limit_tokens"], native_limit) if type(native_limit) is int and native_limit > 0 else contract["context_limit_tokens"]
+    tokens = stats.get("generation_tokens")
+    if (observed["requested_max_tokens"] != contract["max_tokens"] or budget.get("reserved_output_tokens") != contract["max_tokens"]
+            or budget.get("context_limit_tokens") != expected_limit or budget.get("status") != "within_budget"
+            or budget.get("token_count_basis") != "tokenizer" or stats.get("prompt_cache_enabled") is not False
+            or isinstance(tokens, bool) or not isinstance(tokens, (int, float)) or not math.isfinite(tokens)
+            or not 0 <= tokens <= contract["max_tokens"]):
+        raise _PolicyStop("editor_runtime_contract_drift")
+    _bound_turn_identity({"model_identity": identity}, plan, config_sha256, required=True)
+    if (turn.get("editor_model_identity") != identity or turn.get("editor_generation_stats") != stats
+            or turn.get("verification_generation_stats") != stats or not records):
+        raise _PolicyStop("conflicting_editor_observation")
+    for record in records:
+        if (record.get("editor_observation") != observed or record.get("model_identity") != identity
+                or record.get("generation_stats") != stats or record.get("triggered") is not True
+                or not isinstance(record.get("editor_output"), str)
+                or digest(record["editor_output"]) != observed["normalized_output_sha256"]):
+            raise _PolicyStop("conflicting_editor_observation")
+
+
+def _editor_runtime_contract(config: Mapping[str, Any], config_sha256: str) -> dict[str, Any]:
+    """Prospective contract derived from the same hash-bound effective worker YAML."""
+    verification = config.get("answer_verification") or {}
+    context = config.get("context_management") or {}
+    model_id = verification.get("model_id") or config.get("serving_model_id") or config["model_id"]
+    contract = {"model_config_sha256": config_sha256, "model_id": model_id,
+                "model_revision": verification.get("model_revision") or config.get("model_revision"),
+                "max_tokens": verification.get("max_tokens", 180),
+                "context_limit_tokens": context.get("context_limit_tokens", 8192)}
+    if any(type(contract[key]) is not int or contract[key] <= 0 for key in ("max_tokens", "context_limit_tokens")):
+        raise ValueError("invalid frozen editor runtime contract")
+    return contract
+
+
 def _attempt_stop(row: Mapping[str, Any], plan: Mapping[str, Any], *, product: bool) -> None:
     if row.get("status") not in ({"completed"} if product else {"pass"}):
         raise _PolicyStop("attempt_status", row.get("status"))
@@ -137,6 +426,11 @@ def _attempt_stop(row: Mapping[str, Any], plan: Mapping[str, Any], *, product: b
     from agronomy_agent.release_eval_reanalysis import _merge_termination
     policy = plan["bounded_stop_policy"]["policy"]
     turns = row.get("turns") or []
+    if policy["require_model_identity"]:
+        if not isinstance(turns, list):
+            raise _PolicyStop("required_identity_evidence_unknown")
+        for turn in turns:
+            _identity_shapes(turn)
     recorded = termination_evidence(row)
     derived = observation_termination(turns) if turns else None
     actual = termination_evidence({"termination": derived})
@@ -149,19 +443,22 @@ def _attempt_stop(row: Mapping[str, Any], plan: Mapping[str, Any], *, product: b
     if policy["require_termination"] and terminal["status"] == "unknown":
         raise _PolicyStop("required_termination_unknown")
     if policy["require_model_identity"]:
-        from agronomy_agent.release_eval_analysis import _verified_generation
+        config_sha256 = _required_worker_identity(row, plan)
         revision = plan["model"].get("revision")
         if not turns:
             raise _PolicyStop("required_model_identity_unknown")
-        for turn in turns:
+        for turn_index, turn in enumerate(turns, 1):
             execution = turn.get("model_execution") or {}
-            if execution.get("generator_called") is False and execution.get("disposition") in {"tool_only", "fast_exit", "clarification_only"}:
-                continue
             observed = turn.get("model_revision_observation") or {}
             if any(observed.get(key) not in (None, revision) for key in ("configured", "resolved")):
                 raise _PolicyStop("model_identity_drift")
-            if not _verified_generation(turn, revision):
-                raise _PolicyStop("required_model_identity_unknown")
+            _required_editor_identity(turn, plan, row, config_sha256, turn_index)
+            if _corroborated_no_model(turn):
+                _bound_turn_identity(turn, plan, config_sha256, required=False)
+                continue
+            if (turn.get("metadata") or {}).get("generation_bypass") or execution.get("generator_called") is False:
+                raise _PolicyStop("required_no_model_evidence_unknown")
+            _required_generation_identity(turn, plan, config_sha256)
 
 
 def _instrument_controls() -> dict[str, Any]:
@@ -861,6 +1158,9 @@ def run_suite(
                 for trial in range(1, registry["profiles"][profile]["trials"] + 1)
             },
         }
+        plan["editor_runtime_contracts"] = {trial: _editor_runtime_contract(
+            {**model_snapshot, "seed": registry["seed"] + index, "prompt_cache_enabled": False}, config_sha)
+            for index, (trial, config_sha) in enumerate(plan["effective_runtime_inputs"]["model_trial_sha256"].items())}
     plan["environment"] = environment_identity()
     plan["reference_sha256"] = digest(reference) if reference else None
     plan["reviews_sha256"] = (

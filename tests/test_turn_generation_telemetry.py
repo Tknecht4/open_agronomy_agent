@@ -300,3 +300,102 @@ def test_all_editor_attempts_remain_observed_when_rejected_unchanged_or_accepted
     assert attempts == [2, 4, 6]  # All synthetic attempted stage counts, including the two unaccepted edits.
     assert sum(attempts) == 12
     assert draft.calls == editor.calls == 3
+
+
+def test_editor_observation_actual_service_captures_own_native_shaped_call_before_persistence(tmp_path, monkeypatch):
+    """Native-shaped synthetic method stub; no MLX constructor/SDK/load occurs."""
+    from dataclasses import replace
+    from pathlib import Path
+    import hashlib
+    import yaml
+    from agronomy_agent.agent import MLXGenerator
+    from agronomy_agent.execution_core import stable_sha256, validate_execution_stage_receipts
+    from agronomy_agent.release_eval_executor import _EditorCheckpoint
+    root = Path(__file__).resolve().parents[1]
+    config = yaml.safe_load((root / "configs/model.yaml").read_text())
+    config.update(model_id="synthetic-editor-model", serving_model_id="synthetic-editor-model", model_revision="b" * 40)
+    config["answer_verification"].update(model_id="synthetic-editor-model", model_revision="b" * 40)
+    model = tmp_path / "model.yaml"
+    model.write_text(yaml.safe_dump(config))
+    corpus = tmp_path / "synthetic-corpus.jsonl"
+    corpus.write_text("")
+    rag = tmp_path / "rag.yaml"
+    rag.write_text(yaml.safe_dump({"retrieval": {"corpus_paths": [str(corpus)], "graph_paths": []},
+                                  "private_knowledge": {"enabled": False}}))
+    db = tmp_path / "synthetic.sqlite3"
+    store = TraceStore(db)
+    settings = build_settings(db_path=db, artifact_root=tmp_path / "artifacts", model_config_path=str(model),
+                              default_rag_config=str(rag), network_mode="offline")
+    safe = "Field Alpha soil nitrate record reports 13 mg/kg on a dry-soil basis. This record alone cannot determine an application rate."
+    unsafe = safe + " Apply 71 kg/ha immediately."
+    class Draft(ReusedBackend):
+        def generate(self, messages):
+            super().generate(messages)
+            return unsafe
+    draft = Draft()
+    editor = MLXGenerator.__new__(MLXGenerator)
+    editor.max_tokens = 640
+    editor._context_window_tokens = 32768
+    editor._resolved_model_snapshot = tmp_path / "synthetic-snapshot" / ("b" * 40)
+    editor.model_identity = {"schema_version": "open_agronomy_agent.model_identity_contract.v1",
+        "status": "verified_direct_loader", "backend": "mlx_local", "configured_model_id": "synthetic-editor-model",
+        "configured_model_revision": "b" * 40, "model_config_sha256": hashlib.sha256(model.read_bytes()).hexdigest()}
+    editor.last_generation_stats = {"finish_reason": "length", "generation_tokens": 220}
+    calls = []
+    def generate(messages):
+        assert editor.last_generation_stats is None
+        calls.append(deepcopy(messages))
+        editor.last_generation_stats = {"finish_reason": "stop", "generation_tokens": 7,
+            "generation_lock_model_id": "synthetic-editor-model", "generation_lock_model_revision": "b" * 40,
+            "prompt_cache_enabled": False}
+        return " \n" + safe + "\n "
+    editor.generate = generate
+    editor.count_prompt_tokens = lambda messages: sum(len(item["content"].split()) + 4 for item in messages)
+    monkeypatch.setattr(chat_service, "_build_mlx_generator", lambda *args, **kwargs: editor)
+    question = ("Read only Field Alpha soil nitrate record and preserve its value, unit and basis. Do not recommend a rate. " + safe)
+    session = store.create_session("Synthetic editor lifecycle", {}, {})["session_id"]
+    request = AgentExecutionRequest(store=store, settings=settings, session_id=session, message=question,
+        mode="agronomic_rag", model_id="synthetic-editor-model", rag_config=str(rag), max_tokens=640,
+        trace_options={"store_prompt_messages": True}, generation_backend=draft,
+        typed_tools_enabled=False, document_retrieval_enabled=False, graph_retrieval_enabled=False,
+        risk_intervention_enabled=False, execution_class="observed_system_execution_nonclaim")
+    sink = _EditorCheckpoint(tmp_path / "completed-editor.json", {"scope": "synthetic service QA"})
+    try:
+        result = chat_service.execute_agent_request(request, evaluation_editor_hook=sink)
+        observed = sink.read()["observation"]
+        metadata = result.turn["trace"]["metadata"]
+        assert [event.read()["observation"]["state"] for event in sink.events] == ["dispatch_intent", "returned"]
+        assert len(calls) == draft.calls == 1 and editor.max_tokens == 220
+        assert observed["identity_status"] == "observed_native_call"  # Stub contract QA only.
+        assert observed["raw_output"] == " \n" + safe + "\n "
+        assert observed["normalized_output_sha256"] == stable_sha256(safe)
+        assert observed["model_identity"]["model_config_sha256"] == hashlib.sha256(model.read_bytes()).hexdigest()
+        assert observed["editor_context_budget"]["reserved_output_tokens"] == 220
+        assert observed["editor_context_budget"]["context_limit_tokens"] == 8192
+        assert observed["native_observation"]["context_window_tokens"] == 32768
+        summary = metadata["answer_verification"]["editor_observation"]
+        assert summary["receipt_sha256"] == observed["receipt_sha256"]
+        assert not {"raw_output", "prompt_messages", "resolved_snapshot"} & set(summary)
+        assert metadata["answer_verification"]["model_identity"] == observed["model_identity"]
+        stages = {x["stage_id"]: x for x in validate_execution_stage_receipts(list(result.stage_receipts))}
+        assert stages["verification"]["evidence"]["adjudication_sha256"] == stable_sha256(metadata["answer_verification"])
+        assert store.count_session_turns(session) == 1
+        saved = result.turn["turn_id"]
+        failing = store.create_session("Synthetic failed persistence", {}, {})["session_id"]
+        late = _EditorCheckpoint(tmp_path / "failed-final-editor.json", {"scope": "synthetic final failure"})
+        with monkeypatch.context() as patch:
+            patch.setattr(store, "create_turn", lambda *args, **kwargs: (_ for _ in ()).throw(OSError("Synthetic final persistence failure")))
+            with pytest.raises(OSError, match="Synthetic final persistence failure"):
+                chat_service.execute_agent_request(replace(request, session_id=failing), evaluation_editor_hook=late)
+        assert late.read()["observation"]["state"] == "returned"
+        assert late.read()["observation"]["raw_output"] == observed["raw_output"]
+        assert store.count_session_turns(failing) == 0 and store.get_turn(saved)["answer"] == result.answer
+        assert observed["generation_stats"] == sink.read()["observation"]["generation_stats"]
+        no_call = []
+        baseline = store.create_session("Synthetic no editor", {}, {})["session_id"]
+        chat_service.execute_agent_request(replace(request, session_id=baseline, mode="baseline",
+            document_retrieval_enabled=True, graph_retrieval_enabled=True), evaluation_editor_hook=no_call.append)
+        assert len(calls) == 2 and len(no_call) == 1
+        assert no_call[0]["state"] == "no_call" and no_call[0]["model_identity"] is None and no_call[0]["generation_stats"] is None
+    finally:
+        store._conn.close()

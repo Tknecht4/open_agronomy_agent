@@ -37,7 +37,7 @@ from agronomy_agent.decision_contract import build_decision_contract
 from agronomy_agent.evidence_contracts import question_frame_from_runtime
 from agronomy_agent.tool_planner import plan_tools
 from agronomy_agent.router import classify_query, refine_query_route
-from agronomy_agent.answer_verifier import context_evidence_text, validate_editor_max_words, verify_answer
+from agronomy_agent.answer_verifier import _EditorObservation, context_evidence_text, validate_editor_max_words, verify_answer
 from agronomy_agent.answer_safety import enforce_answer_safety_postconditions
 from agronomy_agent.evidence_contracts import (
     capability_evidence_from_records,
@@ -538,6 +538,7 @@ def _run_turn_impl(
     fallback_enabled: bool = True,
     arm_id: str = "production_full",
     evaluation_draft_hook: Callable[[Mapping[str, Any]], None] | None = None,
+    evaluation_editor_hook: Callable[[Mapping[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     if not store.session_exists(session_id):
         raise ValueError("session not found")
@@ -1181,10 +1182,18 @@ def _run_turn_impl(
                     if isinstance(field_context, dict)
                     else None
                 ),
+                **({"editor_observation_hook": evaluation_editor_hook} if evaluation_editor_hook is not None else {}),
             )
         answer = verification.answer
         verification_metadata = verification.as_record()
-        if getattr(verification, "editor_output", None) is not None and getattr(editor, "last_generation_stats", None):
+        if evaluation_editor_hook is not None:
+            observed_editor = verification_metadata.get("editor_observation")
+            if not isinstance(observed_editor, dict):
+                raise ValueError("executed verifier omitted editor observation")
+            if observed_editor["state"] == "returned":
+                verification_metadata["generation_stats"] = deepcopy(observed_editor["generation_stats"])
+                verification_metadata["model_identity"] = deepcopy(observed_editor["model_identity"])
+        elif getattr(verification, "editor_output", None) is not None and getattr(editor, "last_generation_stats", None):
             verification_metadata["generation_stats"] = deepcopy(editor.last_generation_stats)
         store.append_event(
             session_id,
@@ -1196,6 +1205,8 @@ def _run_turn_impl(
             },
         )
 
+    if evaluation_editor_hook is not None and verification is None:
+        _EditorObservation(None, evaluation_editor_hook)._publish("no_call", reason="verification_not_invoked")
     post_verification_answer = answer
     trace_store_payload["prompt_messages"] = prompt_messages or []
     trace_store_payload["metadata"]["context_budget"] = context_budget_receipt
@@ -1466,10 +1477,13 @@ def _run_turn_impl(
 def execute_agent_request(
     request: AgentExecutionRequest, *,
     evaluation_draft_hook: Callable[[Mapping[str, Any]], None] | None = None,
+    evaluation_editor_hook: Callable[[Mapping[str, Any]], None] | None = None,
 ) -> AgentExecutionResult:
     """Execute the product core; an optional local evaluation sink observes drafts."""
     if evaluation_draft_hook is not None and not callable(evaluation_draft_hook):
         raise TypeError("evaluation_draft_hook must be callable or None")
+    if evaluation_editor_hook is not None and not callable(evaluation_editor_hook):
+        raise TypeError("evaluation_editor_hook must be callable or None")
     with _session_turn_guard(request.store, request.session_id):
         if request.client_operation_id and request.operation_request_sha256:
             existing = request.store.get_turn_operation(request.session_id, request.client_operation_id)
@@ -1508,6 +1522,7 @@ def execute_agent_request(
             profiler=request.profiler,
             generation_backend=request.generation_backend,
             evaluation_draft_hook=evaluation_draft_hook,
+            **({"evaluation_editor_hook": evaluation_editor_hook} if evaluation_editor_hook is not None else {}),
             execution_class=request.execution_class,
             document_retrieval_enabled=request.document_retrieval_enabled,
             graph_retrieval_enabled=request.graph_retrieval_enabled,
