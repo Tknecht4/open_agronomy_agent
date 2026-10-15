@@ -228,6 +228,19 @@ def test_development_service_hook_invalid_refused_before_store_or_generation():
         chat_service.execute_agent_request(None, evaluation_draft_hook=1)
 
 
+def test_editor_observation_service_accepts_internal_no_call_hook(tmp_path):
+    from agronomy_agent.server.services import chat_service
+    store, request, backend, _, _ = _hook_runtime(tmp_path)
+    events = []
+    try:
+        result = chat_service.execute_agent_request(request, evaluation_editor_hook=events.append)
+        assert result.answer and backend.calls == 1
+        assert len(events) == 1 and events[0]['state'] == 'no_call'
+        assert events[0]['call_invoked'] is False
+    finally:
+        store._conn.close()
+
+
 def test_development_service_hook_failure_precedes_verification_without_retry(tmp_path, monkeypatch):
     from agronomy_agent.server.services import chat_service
     store, request, backend, _, _ = _hook_runtime(tmp_path, mode="agronomic_rag", verification=True)
@@ -966,8 +979,9 @@ def test_disabled_field_receipt_contradiction_fails_automatic_diagnostic_check(
 
     original = executor._production_turn
 
-    def contradictory_observation(question, request, *, evaluation_draft_hook=None):
-        turn = original(question, request, evaluation_draft_hook=evaluation_draft_hook)
+    def contradictory_observation(question, request, *, evaluation_draft_hook=None, evaluation_editor_hook=None):
+        turn = original(question, request, evaluation_draft_hook=evaluation_draft_hook,
+                        evaluation_editor_hook=evaluation_editor_hook)
         field = next(
             row
             for row in turn["stage_receipts"]
@@ -990,3 +1004,57 @@ def test_disabled_field_receipt_contradiction_fails_automatic_diagnostic_check(
         row["id"] for row in result["failed_checks"]
     }
     assert "field_values" not in {row["id"] for row in result["checks"]}
+
+
+@pytest.mark.parametrize("terminal", ["returned", "failed_unknown", "no_call"])
+def test_editor_observation_checkpoint_preserves_lifecycle_private_hashes_and_failed_final(tmp_path, terminal):
+    from agronomy_agent.answer_verifier import _EditorObservation
+    from agronomy_agent.release_eval_executor import _EditorCheckpoint
+    sink = _EditorCheckpoint(tmp_path / "editor.json", {"case_sha256": "a" * 64})
+    observer = _EditorObservation(_HookBackendFixture(), sink)
+    if terminal == "no_call":
+        observer._publish("no_call", reason="Synthetic source-proven refusal")
+    else:
+        observer.enter([{"role": "user", "content": "Synthetic private editor input."}], {})
+        if terminal == "returned": observer.returned("  Synthetic private editor output. ")
+        else: observer.failed(RuntimeError("Synthetic provider fault"))
+    record = sink.read()
+    assert record["observation"]["state"] == terminal
+    failed = {"status": "failed", "answer": None, "final": None}
+    sink.attach(failed)
+    assert failed["status"] == "failed" and failed["final"] is None
+    assert failed["editor_checkpoint"]["status"] == "retained"
+    assert "raw_output" not in failed["editor_observation"]
+    if terminal == "returned":
+        assert record["observation"]["raw_output"] == "  Synthetic private editor output. "
+        assert record["observation"]["raw_output_sha256"] == stable_sha256(record["observation"]["raw_output"])
+        assert failed["verification_observation"]["attempted"] is True
+    with pytest.raises(ValueError, match="retried"):
+        _EditorObservation(None, sink)._publish("no_call", reason="Forbidden second lifecycle")
+    assert sink.read() == record
+    sink.events[0].path.write_text("{}")
+    with pytest.raises(ValueError, match="changed"):
+        sink.read()
+
+
+def test_editor_observation_executor_preserves_return_on_downstream_failure(tmp_path, monkeypatch):
+    import agronomy_agent.release_eval_executor as executor
+    from agronomy_agent.answer_verifier import _EditorObservation
+    monkeypatch.setattr(executor, "TraceStore", _ReferenceStoreFixture)
+    def fail(_question, _request, *, evaluation_draft_hook, evaluation_editor_hook):
+        evaluation_draft_hook(_completed_draft_fixture())
+        observer = _EditorObservation(_HookBackendFixture(), evaluation_editor_hook)
+        observer.enter([{"role": "user", "content": "Synthetic editor request."}], {})
+        observer.returned("Synthetic editor return before final persistence.")
+        raise OSError("Synthetic downstream persistence failure")
+    monkeypatch.setattr(executor, "_production_turn", fail)
+    result = run(tmp_path, case(question="Explain a synthetic soil record."))
+    turn = result["turns"][0]
+    assert result["status"] == turn["status"] == "failed"
+    assert turn["answer"] is None and turn["final"] is None
+    assert turn["draft"] == _completed_draft_fixture()["draft"]
+    assert turn["editor_observation"]["state"] == "returned"
+    assert turn["editor_checkpoint"]["status"] == "retained"
+    returned = json.loads(Path(turn["editor_checkpoint"]["events"][-1]["path"]).read_text())
+    assert returned["observation"]["raw_output"] == "Synthetic editor return before final persistence."
+    assert turn["error"]["type"] == "OSError"

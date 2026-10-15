@@ -131,6 +131,18 @@ final answer, complete product topology or successful termination. Failed writes
 stop that cell without retry, and missing evidence remains unknown. These private
 artifacts contain prompts and drafts and stay outside the public package.
 
+The same optional evaluation boundary records the editor separately: explicit
+no-call, dispatch intent, returned output, or failed/unknown. Dispatch intent
+does not prove invocation, and a missing checkpoint does not prove no call.
+Returned editor text is retained before rewrite assessment or selection, so a
+rejected, unchanged or empty rewrite and a later persistence failure cannot
+erase an observed return. Native editor attribution requires its own model and
+revision, effective configuration, resolved snapshot and fresh call statistics;
+draft identity or configuration alone is insufficient. Private checkpoint
+payloads retain prompts and raw output; product metadata carries their
+content-addressed summary only. Checkpoint or observation failures stop the cell
+without retry and cannot turn unknown execution into a successful observation.
+
 Larger finite output ceilings require a new frozen execution configuration and
 budget. They do not establish information retention or answer quality. Review
 accepted rewrites, rejected attempts, fallback and formatting separately for

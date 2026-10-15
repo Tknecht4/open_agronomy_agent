@@ -1265,3 +1265,146 @@ def test_group_probe_permission_race_retries_but_persistent_denial_fails(
     else:
         _stop_owned_processes(OwnedChild(), new_session=True, grace=0.04)
         assert probes == 2
+
+
+# These receipts are project-authored instrument QA, not observed model evidence.
+def _editor_identity_fixture(*, state="returned"):
+    from copy import deepcopy
+    from agronomy_agent.agent import MLXGenerator
+    from agronomy_agent.answer_verifier import _EditorObservation, editor_observation_record
+    row, plan = _strict_identity_fixture(bypass=False)
+    model = plan["model"]
+    effective = row["config_identity"]["model"]["sha256"]
+    plan["source"] = {"files": {path: digest(path) for path in (
+        "src/agronomy_agent/release_eval_executor.py", "src/agronomy_agent/server/services/chat_service.py",
+        "src/agronomy_agent/answer_verifier.py")}}
+    plan["editor_runtime_contracts"] = {row["trial_id"]: {
+        "model_config_sha256": effective, "model_id": model["id"], "model_revision": model["revision"],
+        "max_tokens": 220, "context_limit_tokens": 8192}}
+    editor = MLXGenerator.__new__(MLXGenerator)  # No constructor, SDK, loader or native call.
+    editor.max_tokens, editor._context_window_tokens = 220, 32768
+    editor._resolved_model_snapshot = Path("/synthetic/snapshots") / model["revision"]
+    editor.model_identity = deepcopy(row["turns"][0]["model_identity"])
+    editor.last_generation_stats = {"finish_reason": "length", "generation_tokens": 220}
+    events = []
+    observer = _EditorObservation(editor, events.append)
+    if state == "no_call":
+        observer._publish("no_call", reason="synthetic source-proven verifier refusal")
+    else:
+        observer.enter([{"role": "user", "content": "Synthetic private editor request."}], {
+            "status": "within_budget", "token_count_basis": "tokenizer",
+            "context_limit_tokens": 8192, "reserved_output_tokens": 220})
+        if state == "returned":
+            # Synthetic stub of the native method's post-call stats contract.
+            assert editor.last_generation_stats is None
+            editor.last_generation_stats = {"finish_reason": "stop", "generation_tokens": 7,
+                "generation_lock_model_id": model["id"], "generation_lock_model_revision": model["revision"],
+                "prompt_cache_enabled": False}
+            observer.returned("  Synthetic editor output. ")
+        elif state == "failed_unknown":
+            observer.failed(RuntimeError("Synthetic failure"))
+    turn = row["turns"][0]
+    turn["editor_observation"] = editor_observation_record(events[-1])
+    turn["editor_checkpoint"] = {"status": "retained", "events": [{"path": "private/synthetic.json", "sha256": "a" * 64}],
+        "bindings": {"case_id": row["case_id"], "case_sha256": row["worker_input_binding"]["case_sha256"],
+            "arm_id": row["arm_id"], "trial_id": row["trial_id"], "turn_index": 1,
+            "config_identity": deepcopy(row["config_identity"]),
+            "source_files": {name: plan["source"]["files"][path] for name, path in (
+                ("executor", "src/agronomy_agent/release_eval_executor.py"),
+                ("service", "src/agronomy_agent/server/services/chat_service.py"),
+                ("verifier", "src/agronomy_agent/answer_verifier.py"))}}}
+    _resign_editor_fixture(row)
+    return row, plan
+
+
+def _resign_editor_fixture(row):
+    from copy import deepcopy
+    from agronomy_agent.execution_core import build_execution_stage_receipts, classify_verification_origin
+    turn = row["turns"][0]
+    observed = turn["editor_observation"]
+    for key in ("generation_stats", "model_identity"):
+        observed[key + "_sha256"] = digest(observed[key]) if observed[key] is not None else None
+    observed["receipt_sha256"] = digest({k: v for k, v in observed.items() if k != "receipt_sha256"})
+    turn["editor_checkpoint"]["observation_receipt_sha256"] = observed["receipt_sha256"]
+    returned = observed["state"] == "returned"
+    record = {"triggered": returned, "rewrite_accepted": False, "fallback_applied": False,
+              "editor_output": "Synthetic editor output." if returned else None,
+              "editor_observation": deepcopy(observed)}
+    if returned:
+        record.update(generation_stats=deepcopy(observed["generation_stats"]), model_identity=deepcopy(observed["model_identity"]))
+    turn["editor"] = deepcopy(record)
+    turn["metadata"]["answer_verification"] = deepcopy(record)
+    turn["editor_generation_stats"] = deepcopy(observed["generation_stats"]) if returned else None
+    turn["verification_generation_stats"] = deepcopy(turn["editor_generation_stats"])
+    turn["editor_model_identity"] = deepcopy(observed["model_identity"]) if returned else None
+    observations = {item["stage_id"]: {"state": item["state"], "evidence": deepcopy(item["evidence"])} for item in turn["stage_receipts"]}
+    verification = observations["verification"]
+    verification["state"] = "executed"
+    verification["evidence"].update(executed=True, adjudication_sha256=digest(record))
+    origin = observations["fallback_origin"]["evidence"]
+    origin.update(classify_verification_origin(record, draft_sha256=verification["evidence"]["draft_sha256"],
+                                               post_verification_sha256=verification["evidence"]["post_verification_sha256"]))
+    origin["verification_receipt_sha256"] = digest(record)
+    origin["origin_record"] = {k: v for k, v in origin.items() if k not in {"origin_record", "origin_sha256", "reason"}}
+    origin["origin_sha256"] = digest(origin["origin_record"])
+    turn["stage_receipts"] = list(build_execution_stage_receipts(observations))
+
+
+@pytest.mark.parametrize("state", ["returned", "no_call"])
+def test_editor_observation_strict_runner_accepts_own_source_bound_lifecycle(state):
+    from agronomy_agent.release_eval_runner import _attempt_stop
+    row, plan = _editor_identity_fixture(state=state)
+    assert plan["model"]["config_sha256"] != row["config_identity"]["model"]["sha256"]
+    _attempt_stop(row, plan, product=True)
+    assert row["turns"][0]["editor_observation"]["state"] == state
+
+
+@pytest.mark.parametrize("change", ["cap", "context", "cache", "target", "revision", "snapshot", "config",
+    "stats_unknown", "stats_stale", "termination_unknown", "length", "identity_unknown", "contract_missing",
+    "source", "binding", "mirror", "adjudication", "origin", "receipt", "failed", "intent",
+    "malformed_bindings", "malformed_sources", "malformed_events", "partial_contract"])
+def test_editor_observation_strict_runner_rejects_drift_unknown_and_conflicts(change):
+    from agronomy_agent.release_eval_runner import _attempt_stop, _PolicyStop
+    row, plan = _editor_identity_fixture(state={"failed": "failed_unknown", "intent": "dispatch_intent"}.get(change, "returned"))
+    turn = row["turns"][0]
+    observed = turn["editor_observation"]
+    if change == "cap":
+        observed["requested_max_tokens"] = 221
+        observed["editor_context_budget"]["reserved_output_tokens"] = 221
+    elif change == "context": observed["editor_context_budget"]["context_limit_tokens"] = 8193
+    elif change == "cache": observed["generation_stats"]["prompt_cache_enabled"] = True
+    elif change == "target": observed["native_observation"]["model_id"] = "other"
+    elif change == "revision": observed["generation_stats"]["generation_lock_model_revision"] = "f" * 40
+    elif change == "snapshot": observed["native_observation"]["snapshot_revision"] = "f" * 40
+    elif change == "config": observed["model_identity"]["model_config_sha256"] = plan["model"]["config_sha256"]
+    elif change == "stats_unknown": observed["generation_stats"] = None
+    elif change == "stats_stale": observed["stats_freshness"] = "unknown"
+    elif change == "termination_unknown": observed["generation_stats"].pop("finish_reason")
+    elif change == "length": observed["generation_stats"]["finish_reason"] = "length"
+    elif change == "identity_unknown": observed["identity_status"] = "unknown"
+    elif change == "contract_missing": plan.pop("editor_runtime_contracts")
+    elif change == "source": turn["editor_checkpoint"]["bindings"]["source_files"]["verifier"] = "f" * 64
+    elif change == "binding": turn["editor_checkpoint"]["bindings"]["config_identity"]["model"]["sha256"] = "f" * 64
+    elif change == "malformed_bindings": turn["editor_checkpoint"]["bindings"] = "unknown"
+    elif change == "malformed_sources": turn["editor_checkpoint"]["bindings"]["source_files"] = "unknown"
+    elif change == "malformed_events": turn["editor_checkpoint"]["events"] = ["unknown"]
+    elif change == "partial_contract": plan["editor_runtime_contracts"][row["trial_id"]].pop("max_tokens")
+    _resign_editor_fixture(row)  # Self-consistent altered evidence still cannot override the frozen contract.
+    if change == "mirror": turn["editor_model_identity"]["configured_model_id"] = "other"
+    elif change == "adjudication": turn["metadata"]["answer_verification"]["triggered"] = False
+    elif change == "origin": turn["stage_receipts"][-1]["evidence"]["reason"] = "tampered"
+    elif change == "receipt": observed["receipt_sha256"] = "f" * 64
+    with pytest.raises(_PolicyStop):
+        _attempt_stop(row, plan, product=True)
+
+
+def test_editor_observation_frozen_contract_matches_current_producer_config():
+    import yaml
+    from agronomy_agent.release_eval_runner import _editor_runtime_contract
+    config = yaml.safe_load((Path(__file__).resolve().parents[1] / "configs/model.yaml").read_text())
+    observed = _editor_runtime_contract(config, "c" * 64)
+    assert observed == {"model_config_sha256": "c" * 64,
+        "model_id": config["answer_verification"]["model_id"],
+        "model_revision": config["answer_verification"]["model_revision"],
+        "max_tokens": 220, "context_limit_tokens": 8192}
+    assert config["max_tokens"] == 640 and config["prompt_cache_enabled"] is False

@@ -85,6 +85,9 @@ def exception_evidence(exc: BaseException) -> dict[str, Any]:
         related = value.__cause__ or (None if value.__suppress_context__ else value.__context__)
         if related is not None:
             visit(related, path + ".cause", depth + 1)
+        observer_failure = getattr(value, "_editor_observation_failure", None)
+        if isinstance(observer_failure, BaseException):
+            visit(observer_failure, path + ".editor_observer", depth + 1)
 
     visit(exc, "root", 0)
     def charge() -> int:
@@ -137,6 +140,11 @@ class _DraftCheckpoint:
                   "scope": "provider_returned_before_verification; terminal status is separate",
                   "bindings": self.bindings, "observation": deepcopy(dict(observation)),
                   "draft_sha256": stable_sha256(observation["draft"])}
+        self._commit(record)
+
+    def _commit(self, record: Mapping[str, Any]) -> None:
+        """Shared bounded exclusive writer for draft and editor evidence."""
+        self.attempted = True
         data = (json.dumps(record, indent=2, ensure_ascii=False, sort_keys=True, allow_nan=False) + "\n").encode("utf-8")
         if len(data) > 262144:
             raise ValueError("completed draft checkpoint exceeds 256 KiB")
@@ -164,6 +172,76 @@ class _DraftCheckpoint:
                 "path": str(self.path), "file_sha256": self.file_sha256,
                 "draft_sha256": record["draft_sha256"] if record is not None else None,
                 "scope": "partial observation; no final answer or product completion asserted"}
+
+
+class _EditorCheckpoint:
+    """Append-only editor lifecycle using the completed-draft durability boundary."""
+
+    def __init__(self, path: Path, bindings: Mapping[str, Any]) -> None:
+        self.path, self.bindings = path, deepcopy(dict(bindings))
+        self.events: list[_DraftCheckpoint] = []
+        self.pending = False
+
+    def __call__(self, observation: Mapping[str, Any]) -> None:
+        from agronomy_agent.answer_verifier import validate_editor_observation
+        if self.pending:
+            raise ValueError("failed editor checkpoint cannot be retried")
+        self.pending = True
+        summary = validate_editor_observation(observation)
+        previous = self.events[-1].read()["observation"]["state"] if self.events else None
+        state = summary.get("state")
+        if (previous is None and state not in {"no_call", "dispatch_intent"}
+                or previous == "dispatch_intent" and state not in {"returned", "failed_unknown"}
+                or previous not in {None, "dispatch_intent"}):
+            raise ValueError("editor checkpoint lifecycle cannot be retried")
+        messages, raw = observation.get("prompt_messages"), observation.get("raw_output")
+        if not isinstance(messages, list) or (stable_sha256(messages) if messages else None) != summary["prompt_sha256"]:
+            raise ValueError("editor checkpoint prompt differs")
+        if (stable_sha256(raw) if isinstance(raw, str) else None) != summary["raw_output_sha256"]:
+            raise ValueError("editor checkpoint output differs")
+        if (stable_sha256(raw.strip()) if isinstance(raw, str) else None) != summary["normalized_output_sha256"]:
+            raise ValueError("editor checkpoint normalized output differs")
+        native = summary.get("native_observation") or {}
+        snapshot = observation.get("resolved_snapshot")
+        if native and native.get("snapshot_path_sha256") != (stable_sha256(snapshot) if isinstance(snapshot, str) else None):
+            raise ValueError("editor checkpoint loaded snapshot differs")
+        sink = _DraftCheckpoint(self.path.with_name(f"{self.path.stem}-{len(self.events) + 1}-{state}.json"), self.bindings)
+        sink._commit({"schema_version": "open_agronomy_agent.editor_checkpoint.v1",
+                      "bindings": self.bindings, "observation": deepcopy(dict(observation)),
+                      "previous_file_sha256": self.events[-1].file_sha256 if self.events else None})
+        self.events.append(sink)
+        self.pending = False
+
+    def read(self) -> dict[str, Any] | None:
+        previous = None
+        for sink in self.events:
+            record = sink.read()
+            if record["previous_file_sha256"] != previous:
+                raise ValueError("editor checkpoint chain differs")
+            previous = sink.file_sha256
+        return self.events[-1].read() if self.events else None
+
+    def attach(self, turn: dict[str, Any]) -> None:
+        from agronomy_agent.answer_verifier import editor_observation_record
+        record = self.read()
+        turn["editor_checkpoint"] = {"status": "unavailable" if self.pending else "retained" if record else "not_observed",
+            "events": [{"path": str(sink.path), "sha256": sink.file_sha256} for sink in self.events]}
+        if turn["status"] == "completed" and (self.pending or record is None):
+            raise ValueError("completed turn lacks its editor boundary checkpoint")
+        if record is not None:
+            summary = editor_observation_record(record["observation"])
+            turn["editor_observation"] = summary
+            turn["editor_checkpoint"].update(bindings=deepcopy(self.bindings),
+                observation_receipt_sha256=summary["receipt_sha256"])
+            metadata = turn.get("metadata") or {}
+            adjudication = metadata.get("answer_verification") or {}
+            if turn["status"] == "completed" and summary["state"] != "no_call" and adjudication.get("editor_observation") != summary:
+                raise ValueError("returned editor differs from its durable observation")
+            if summary["state"] == "returned":
+                turn["editor_generation_stats"] = deepcopy(summary["generation_stats"])
+                turn["editor_model_identity"] = deepcopy(summary["model_identity"])
+            if not self.pending and summary["state"] in {"returned", "no_call"}:
+                turn["verification_observation"] = {"status": "observed_editor_boundary", "attempted": summary["state"] == "returned"}
 
 
 class SyntheticBackendUnavailable(RuntimeError):
@@ -387,9 +465,11 @@ def _reference_turn(
 def _production_turn(
     question: str, request: AgentExecutionRequest, *,
     evaluation_draft_hook: Callable[[Mapping[str, Any]], None] | None = None,
+    evaluation_editor_hook: Callable[[Mapping[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     started = time.monotonic()
-    execution = chat_service.execute_agent_request(request, evaluation_draft_hook=evaluation_draft_hook)
+    execution = chat_service.execute_agent_request(request, evaluation_draft_hook=evaluation_draft_hook,
+        **({"evaluation_editor_hook": evaluation_editor_hook} if evaluation_editor_hook is not None else {}))
     record = execution.to_record()
     trace = dict(execution.turn["trace"])
     metadata = dict(trace["metadata"])
@@ -440,6 +520,10 @@ def observation_termination(turns: Sequence[Mapping[str, Any]]) -> dict[str, Any
         # Triggering a review is not proof that an editor model ran.
         verification_unknown = (turn.get("verification_observation") or {}).get("status") == "unknown_after_draft_return"
         editor_required = verification_unknown or editor_stats is not None or editor.get("editor_output") is not None or editor.get("rewrite_accepted") is True or "editor_error" in (editor.get("rejection_reasons") or [])
+        observed_editor = turn.get("editor_observation") or editor.get("editor_observation") or {}
+        if observed_editor.get("state") in {"dispatch_intent", "returned", "failed_unknown"}:
+            editor_required = True
+            editor_stats = observed_editor.get("generation_stats")
         stages.append({"turn_index": index, "stage": "editor",
                        **generation_termination(editor_stats, required=editor_required),
                        **({"attempt_observation": "unknown"} if verification_unknown else {})})
@@ -771,7 +855,8 @@ def execute_product_case(
         }
         result["draft_checkpoint_sources"] = {
             name: hashlib.sha256(Path(path).read_bytes()).hexdigest()
-            for name, path in (("executor", __file__), ("service", chat_service.__file__))
+            for name, path in (("executor", __file__), ("service", chat_service.__file__),
+                               ("verifier", sys.modules["agronomy_agent.answer_verifier"].__file__))
         }
         result["field_alias_receipt"] = aliases
         result["arm_configuration"] = arm.to_dict()
@@ -827,8 +912,11 @@ def execute_product_case(
                 "config_identity": result["config_identity"],
                 "source_files": result["draft_checkpoint_sources"],
             })
+            editor_checkpoint = _EditorCheckpoint(cell_dir / f"turn-{turn_index}-editor.json", checkpoint.bindings)
             try:
                 if result["execution_kind"] == "ungoverned_reference":
+                    from agronomy_agent.answer_verifier import _EditorObservation
+                    _EditorObservation(None, editor_checkpoint)._publish("no_call", reason="reference_arm_has_no_editor")
                     if generator is None:
                         generator = chat_service._build_mlx_generator(
                             model_id, config, str(model_config)
@@ -865,7 +953,8 @@ def execute_product_case(
                         execution_class="product_turn",
                         **arm.request_controls(),
                     )
-                    turn = _production_turn(question, request, evaluation_draft_hook=checkpoint)
+                    turn = _production_turn(question, request, evaluation_draft_hook=checkpoint,
+                                            evaluation_editor_hook=editor_checkpoint)
                 retained_draft = checkpoint.read()
                 metadata = turn.get("metadata") or {}
                 bypassed = any(metadata.get(name) for name in (
@@ -878,6 +967,7 @@ def execute_product_case(
                 ):
                     raise ValueError("completed draft checkpoint disagrees with returned draft")
                 turn["draft_checkpoint"] = checkpoint.receipt()
+                editor_checkpoint.attach(turn)
                 profiler.set_turn_id(turn["turn_id"])
                 identity = turn.get("model_identity") or {}
                 resolved_revision = (identity.get("runtime") or {}).get(
@@ -935,12 +1025,16 @@ def execute_product_case(
                 except Exception as checkpoint_error:
                     turn["draft_checkpoint"] = {"status": "unverified", "path": str(checkpoint.path),
                                                 "error": _observed_error(checkpoint_error)}
+                try:
+                    editor_checkpoint.attach(turn)
+                except Exception as editor_checkpoint_error:
+                    turn["editor_checkpoint"] = {"status": "unverified", "error": _observed_error(editor_checkpoint_error)}
             turn["profiler_spans"] = profiler.span_records()
-            turn["editor_generation_stats"] = deepcopy(
+            turn.setdefault("editor_generation_stats", deepcopy(
                 ((turn.get("metadata") or {}).get("answer_verification") or {}).get(
                     "generation_stats"
                 )
-            )
+            ))
             turn["verification_generation_stats"] = deepcopy(
                 turn["editor_generation_stats"]
             )
