@@ -330,8 +330,16 @@ def test_development_raw_checkpoint_fsync_failure_stops_before_another_turn(tmp_
     monkeypatch.setenv("AGRONOMY_AGENT_MODEL_BACKEND", "http")
     monkeypatch.setattr(executor, "TraceStore", _ReferenceStoreFixture)
     monkeypatch.setattr(executor.chat_service, "_build_mlx_generator", lambda *_a, **_k: backend)
-    def fail_sync(_fd):
-        raise OSError("Synthetic checkpoint flush failure")
+    original_sync = executor.os.fsync
+    failed_paths = []
+    def fail_sync(fd):
+        opened = executor.os.fstat(fd)
+        for path in tmp_path.rglob("turn-1-completed-draft.json"):
+            target = path.stat()
+            if (opened.st_dev, opened.st_ino) == (target.st_dev, target.st_ino):
+                failed_paths.append(path)
+                raise OSError("Synthetic checkpoint flush failure")
+        return original_sync(fd)
     monkeypatch.setattr(executor.os, "fsync", fail_sync)
     row = case()
     row.pop("question")
@@ -339,6 +347,9 @@ def test_development_raw_checkpoint_fsync_failure_stops_before_another_turn(tmp_
     result = run(tmp_path, row, backend="mlx", arm_id="raw_model")
     assert result["status"] == "failed"
     assert backend.calls == 1 and len(result["turns"]) == 1
+    assert len(failed_paths) == 1
+    assert result["turns"][0]["editor_observation"]["state"] == "no_call"
+    assert result["turns"][0]["editor_checkpoint"]["status"] == "retained"
     assert result["turns"][0]["draft_checkpoint"]["status"] == "unavailable"
     assert "Synthetic checkpoint flush failure" in result["turns"][0]["error"]["message"]
 
@@ -830,6 +841,13 @@ def test_real_unavailable_draft_or_editor_blocks_quality_gate(
     config = yaml.safe_load((ROOT / "configs/model.yaml").read_text())
     config_path = tmp_path / "effective-model.yaml"
     config_path.write_text(yaml.safe_dump(config))
+    corpus_path = tmp_path / "synthetic-corpus.jsonl"
+    corpus_path.write_text("")
+    rag_path = tmp_path / "synthetic-rag.yaml"
+    rag_path.write_text(yaml.safe_dump({
+        "retrieval": {"corpus_paths": [str(corpus_path)], "graph_paths": []},
+        "private_knowledge": {"enabled": False},
+    }))
 
     class FixtureGenerator:
         model_id = config["model_id"]
@@ -840,37 +858,33 @@ def test_real_unavailable_draft_or_editor_blocks_quality_gate(
             "runtime": {"model_revision": config["model_revision"]},
         }
 
-        def generate(self, messages):
-            if fault_location == "draft":
-                raise RuntimeError("fixture real draft backend unavailable")
-            self.last_generation_stats = {"generation_tokens": 12, "prompt_tokens": 50}
-            return "Soil texture describes sand, silt, and clay proportions."
+        def __init__(self, *, is_editor):
+            self.is_editor = is_editor
+            self.attempts = 0
 
-    def editor_outcome(*args, **kwargs):
-        return SimpleNamespace(
-            answer="Fixture conservative fallback.",
-            triggered=True,
-            rewrite_accepted=False,
-            draft_assessment=SimpleNamespace(reasons=("fixture_review",)),
-            as_record=lambda: {
-                "triggered": True,
-                "rewrite_accepted": False,
-                "fallback_applied": True,
-                "rejection_reasons": ["editor_error", "RuntimeError"],
-            },
-        )
+        def generate(self, messages):
+            self.attempts += 1
+            if fault_location == "draft" or self.is_editor:
+                raise RuntimeError(f"fixture real {fault_location} backend unavailable")
+            self.last_generation_stats = {"generation_tokens": 12, "prompt_tokens": 50}
+            return "Soil texture describes sand, silt, and clay proportions. Apply 71 kg/ha immediately."
+
+    generators = []
+    def build_generator(*args, **kwargs):
+        generator = FixtureGenerator(is_editor=bool(generators))
+        generators.append(generator)
+        return generator
 
     monkeypatch.setenv("AGRONOMY_AGENT_MODEL_BACKEND", "http")
     monkeypatch.setattr(
         executor.chat_service,
         "_build_mlx_generator",
-        lambda *args, **kwargs: FixtureGenerator(),
+        build_generator,
     )
-    monkeypatch.setattr(executor.chat_service, "verify_answer", editor_outcome)
     result = executor.execute_product_case(
         case(question="What does soil texture mean?"),
         model_config=config_path,
-        rag_config=ROOT / "configs/rag.yaml",
+        rag_config=rag_path,
         output_dir=tmp_path / "cells",
         backend="mlx",
     )
@@ -881,6 +895,15 @@ def test_real_unavailable_draft_or_editor_blocks_quality_gate(
     assert "turn_1.real_backend_and_editor_available" in {
         row["id"] for row in result["failed_checks"]
     }
+    assert all(generator.attempts == 1 for generator in generators)
+    if fault_location == "editor":
+        assert len(generators) == 2
+        assert turn["editor_observation"]["state"] == "failed_unknown"
+        assert turn["editor_observation"]["model_identity"] is None
+        assert turn["editor_observation"]["generation_stats"] is None
+    else:
+        assert len(generators) == 1
+        assert turn["editor_observation"]["state"] == "no_call"
 
 
 @pytest.mark.parametrize("arm", ["raw_model", "kernel_only"])
