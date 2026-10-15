@@ -489,18 +489,29 @@ def audit_pages_workflow(path: Path) -> list[str]:
         errors.append("pages_workflow:build_must_inherit_read_only_permissions")
     if deploy.get("permissions") != {"pages": "write", "id-token": "write"}:
         errors.append("pages_workflow:deploy_permissions_not_least_privilege")
-    expected_gate = "github.event_name == 'push' && github.ref == 'refs/heads/main'"
+    events = payload.get("on", payload.get(True)) or {}
+    dispatch = events.get("workflow_dispatch") if isinstance(events, dict) else None
+    inputs = dispatch.get("inputs") if isinstance(dispatch, dict) else None
+    publication = inputs.get("publish_docs") if isinstance(inputs, dict) else None
+    if not isinstance(publication, dict) or publication.get("type") != "boolean" or publication.get("default") is not False:
+        errors.append("pages_workflow:manual_publication_must_default_off")
+    expected_gate = (
+        "github.event_name == 'workflow_dispatch' && inputs.publish_docs == true"
+        " && github.ref == 'refs/heads/main'"
+    )
     if deploy.get("if") != expected_gate:
-        errors.append("pages_workflow:deploy_not_default_branch_push_only")
+        errors.append("pages_workflow:deploy_not_explicit_main_dispatch_only")
+    if deploy.get("needs") != "build":
+        errors.append("pages_workflow:deploy_must_require_audited_build")
     if (deploy.get("environment") or {}).get("name") != "github-pages":
         errors.append("pages_workflow:missing_github_pages_environment")
     build_steps = build.get("steps") or []
     configure_steps = [step for step in build_steps if "actions/configure-pages@" in str(step.get("uses") or "")]
     if len(configure_steps) != 1 or configure_steps[0].get("if") != expected_gate:
-        errors.append("pages_workflow:configuration_not_default_branch_push_only")
+        errors.append("pages_workflow:configuration_not_explicit_main_dispatch_only")
     upload_steps = [step for step in build_steps if "actions/upload-pages-artifact@" in str(step.get("uses") or "")]
     if len(upload_steps) != 1 or upload_steps[0].get("if") != expected_gate:
-        errors.append("pages_workflow:artifact_upload_not_default_branch_push_only")
+        errors.append("pages_workflow:artifact_upload_not_explicit_main_dispatch_only")
     action_refs = re.findall(r"\buses:\s*[^@\s]+@([^\s#]+)", text)
     for ref in action_refs:
         if not re.fullmatch(r"[0-9a-f]{40}", ref):

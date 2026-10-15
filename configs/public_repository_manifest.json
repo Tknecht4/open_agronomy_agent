@@ -790,6 +790,7 @@
     "tests/test_release_eval_diagnostic_inputs.py",
     "tests/test_checkpoint_truthfulness.py",
     "tests/test_turn_readiness.py",
+    "tests/test_workflow_execution_boundaries.py",
     ".agents/skills/workspace-contracts/SKILL.md",
     "configs/model_scoring_development_v1.json",
     "tests/test_development_scoring_policy.py",

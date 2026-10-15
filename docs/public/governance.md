@@ -27,7 +27,9 @@ Use the [contribution guide](developer/contributing.md) for intake, review, safe
 
 ## Documentation publication
 
-The GitHub Pages workflow builds only `docs/public` with strict links and runs a publication-scope audit before upload. Pull requests build without deployment. Deployment occurs only after protected default-branch integration through the `github-pages` environment.
+The GitHub Pages workflow builds only `docs/public` with strict links and runs a publication-scope audit. Pull requests and main pushes validate documentation without publishing it. Publication requires a separate manual Documentation workflow run on `main` with `publish_docs` selected; it uses that run's audited artifact through the `github-pages` environment. A manual run with the default unchecked input only validates documentation.
+
+The Mac workflow retains dependency audits and desktop source-contract checks on matching pull requests. Building the app, installing the pinned model, executing model smoke checks and archiving the candidate require a separate manual run on `main` with `run_native_candidate` selected. The input defaults to false; a source-only check is not native or model qualification.
 
 The public repository manifest explicitly includes the site/workflow/checker and forbids `outputs/`, models, adapters, private knowledge, and raw data except narrow lineage records. Review the rendered artifact before enabling Pages.
 

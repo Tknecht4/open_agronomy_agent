@@ -21,16 +21,22 @@ on:
       - "requirements/requirements-container.txt"
       - "requirements/requirements-security.txt"
   workflow_dispatch:
+    inputs:
+      run_native_candidate:
+        description: "Build the main Mac candidate and run real model smoke checks"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: macos-app-${{ github.workflow }}-${{ github.ref }}
+  group: macos-app-${{ github.workflow }}-${{ github.ref }}-${{ inputs.run_native_candidate == true }}
   cancel-in-progress: true
 
 jobs:
   build-and-smoke:
+    name: ${{ github.event_name == 'workflow_dispatch' && inputs.run_native_candidate == true && github.ref == 'refs/heads/main' && 'Mac native candidate (manual)' || 'Mac source contracts' }}
     runs-on: macos-26
     timeout-minutes: 90
     env:
@@ -40,6 +46,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Reject native qualification outside main
+        if: github.event_name == 'workflow_dispatch' && inputs.run_native_candidate == true && github.ref != 'refs/heads/main'
+        run: |
+          echo "Native qualification requires an explicitly requested main run." >&2
+          exit 1
       - name: Set up Python 3.12
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
@@ -84,6 +95,7 @@ jobs:
           npm run typecheck
           npm test
       - name: Build ad hoc Mac candidate
+        if: github.event_name == 'workflow_dispatch' && inputs.run_native_candidate == true && github.ref == 'refs/heads/main'
         run: |
           mkdir -p outputs/macos
           python scripts/build_macos_app.py --preflight \
@@ -91,12 +103,14 @@ jobs:
           python scripts/build_macos_app.py \
             --output "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app"
       - name: Smoke native first-run model installation
+        if: github.event_name == 'workflow_dispatch' && inputs.run_native_candidate == true && github.ref == 'refs/heads/main'
         run: |
           python -m scripts.smoke_macos_first_run \
             --app "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app" \
             --state-root "$HOME/Library/Application Support/OpenAgronomyAgent/desktop" \
             --report "$GITHUB_WORKSPACE/outputs/macos/first-run-smoke.json"
       - name: Smoke installed backend and pinned local model
+        if: github.event_name == 'workflow_dispatch' && inputs.run_native_candidate == true && github.ref == 'refs/heads/main'
         run: |
           python scripts/smoke_macos_app.py \
             --app "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app" \
@@ -104,6 +118,7 @@ jobs:
             --preprovisioned \
             --report "$GITHUB_WORKSPACE/outputs/macos/smoke.json"
       - name: Smoke native launcher, browser pairing, Quit, and reopen
+        if: github.event_name == 'workflow_dispatch' && inputs.run_native_candidate == true && github.ref == 'refs/heads/main'
         run: |
           python scripts/smoke_macos_launcher.py \
             --app "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app" \
@@ -111,12 +126,14 @@ jobs:
             --backend-report "$GITHUB_WORKSPACE/outputs/macos/smoke.json" \
             --report "$GITHUB_WORKSPACE/outputs/macos/launcher-smoke.json"
       - name: Smoke local answer with public egress denied
+        if: github.event_name == 'workflow_dispatch' && inputs.run_native_candidate == true && github.ref == 'refs/heads/main'
         run: |
           python -m scripts.smoke_macos_offline \
             --app "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app" \
             --state-root "$HOME/Library/Application Support/OpenAgronomyAgent/desktop" \
             --report "$GITHUB_WORKSPACE/outputs/macos/offline-smoke.json"
       - name: Verify signature and archive candidate in runner
+        if: github.event_name == 'workflow_dispatch' && inputs.run_native_candidate == true && github.ref == 'refs/heads/main'
         run: |
           codesign --verify --deep --strict "outputs/macos/Open Agronomy.app"
           ditto -c -k --sequesterRsrc --keepParent \
