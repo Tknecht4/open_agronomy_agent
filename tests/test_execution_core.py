@@ -784,3 +784,25 @@ def test_execution_request_rejects_unknown_modes_before_side_effects(tmp_path) -
             max_tokens=100,
             execution_class="observed_system_execution_nonclaim",
         )
+
+
+@pytest.mark.parametrize("change",["missing_editor","product_class","missing_case","borrowed_draft"])
+def test_canonical_internal_factories_refuse_ambiguous_scope_before_effects(change):
+    from types import SimpleNamespace
+    values=dict(store=None,settings=None,session_id="synthetic",message="question",mode="agronomic_rag",model_id="fixture",
+        rag_config="fixture.yaml",max_tokens=640,execution_class="observed_system_execution_nonclaim",
+        generation_backend_factory=lambda:None,verification_backend_factory=lambda:None,benchmark_eval_id="fixture")
+    if change=="missing_editor":values["verification_backend_factory"]=None
+    if change=="product_class":values["execution_class"]="product_turn"
+    if change=="missing_case":values["benchmark_eval_id"]=None
+    if change=="borrowed_draft":values["generation_backend"]=SimpleNamespace()
+    with pytest.raises(ValueError):AgentExecutionRequest(**values)
+
+
+@pytest.mark.parametrize("control",["risk_intervention_enabled","typed_tools_enabled","document_retrieval_enabled","graph_retrieval_enabled","field_context_enabled","verifier_enabled","fallback_enabled","mode"])
+def test_canonical_full_cannot_be_a_hidden_ablation(control):
+    values=dict(store=None,settings=None,session_id="synthetic",message="question",mode="agronomic_rag",model_id="fixture",
+        rag_config="fixture.yaml",max_tokens=640,execution_class="observed_system_execution_nonclaim",
+        generation_backend_factory=lambda:None,verification_backend_factory=lambda:None,benchmark_eval_id="fixture")
+    values[control]="baseline" if control=="mode" else False
+    with pytest.raises(ValueError):AgentExecutionRequest(**values)

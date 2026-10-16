@@ -1408,3 +1408,10 @@ def test_editor_observation_frozen_contract_matches_current_producer_config():
         "model_revision": config["answer_verification"]["model_revision"],
         "max_tokens": 220, "context_limit_tokens": 8192}
     assert config["max_tokens"] == 640 and config["prompt_cache_enabled"] is False
+
+
+def test_canonical_provider_editor_never_qualifies_as_native():
+    from agronomy_agent.release_eval_runner import _attempt_stop, _PolicyStop
+    row,plan=_editor_identity_fixture()
+    row["turns"][0]["editor_observation"]["identity_status"]="unknown"
+    with pytest.raises(_PolicyStop):_attempt_stop(row,plan,product=True)

@@ -611,3 +611,18 @@ def test_editor_observation_closeout_failure_preserves_original_cause_and_contro
     retained = exception_evidence(original)
     assert any(node["message"] == "Synthetic original leaf" and node["path"].endswith(".cause") for node in retained["nodes"])
     assert any(node["type"] == "OSError" and node["path"].endswith(".editor_observer") for node in retained["nodes"])
+
+
+def test_canonical_provider_observation_does_not_become_native_identity():
+    from agronomy_agent.answer_verifier import _EditorObservation
+    import hashlib
+    class Editor:
+        generation_stats_call_id=0;last_generation_stats=None;model_id="synthetic-luna";max_tokens=220
+    editor=Editor();events=[];observer=_EditorObservation(editor,events.append)
+    observer.enter([{"role":"user","content":"synthetic"}],{})
+    editor.generation_stats_call_id=1
+    editor.last_generation_stats={"generation_stats_call_id":1,"backend":"codex_app_server_chatgpt_auth",
+        "app_server_receipt":{"selected_model":"synthetic-luna","output_sha256":hashlib.sha256(b"safe").hexdigest()}}
+    observer.returned("safe")
+    assert events[-1]["identity_status"]=="unknown" and events[-1]["model_identity"] is None
+    assert events[-1]["provider_observation"]["scope"]=="explicit_thread_selection_not_weights_identity"

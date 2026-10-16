@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import hashlib
 from copy import deepcopy
 from collections import Counter
 from dataclasses import dataclass
@@ -128,7 +129,14 @@ class _EditorObservation:
                     and bool(actual["model_revision"])
                     and actual["model_id"] == identity.get("configured_model_id")
                     and actual["model_revision"] == identity.get("configured_model_revision") == actual["snapshot_revision"])
-        self._publish("returned", raw_output_sha256=stable_sha256(raw) if isinstance(raw, str) else None,
+        provider = None
+        if isinstance(raw,str) and marked and not native and isinstance(stats,Mapping) and stats.get("backend")=="codex_app_server_chatgpt_auth":
+            receipt=stats.get("app_server_receipt") or {}
+            if (isinstance(receipt,Mapping) and receipt.get("output_sha256")==hashlib.sha256(raw.encode()).hexdigest()
+                    and receipt.get("selected_model")==getattr(self.editor,"model_id",None)):
+                provider={"scope":"explicit_thread_selection_not_weights_identity","receipt":deepcopy(dict(receipt)),
+                          "model_revision":None,"effective_reasoning_effort":None,"finish_reason":None,"hard_output_cap_supported":False}
+        self._publish("returned", **({"provider_observation":provider} if provider is not None else {}), raw_output_sha256=stable_sha256(raw) if isinstance(raw, str) else None,
                       raw_output=raw if isinstance(raw, str) else None,
                       resolved_snapshot=str(snapshot) if isinstance(snapshot, (str, Path)) else None,
                       normalized_output_sha256=stable_sha256(raw.strip()) if isinstance(raw, str) else None,
@@ -144,7 +152,8 @@ class _EditorObservation:
             message = str(error).encode("utf-8")[:512].decode("utf-8", errors="ignore")
         except BaseException:
             message = "<message unavailable>"
-        self._publish("failed_unknown", error={"type": type(error).__name__, "message": message})
+        self._publish("failed_unknown", error={"type": type(error).__name__, "message": message},
+            **({"provider_attempt":deepcopy(error.provider_attempt)} if hasattr(error,"provider_attempt") else {}))
 
     def finish(self, result: "AnswerVerificationResult") -> "AnswerVerificationResult":
         if self.record is None:
