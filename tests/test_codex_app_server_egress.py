@@ -196,6 +196,8 @@ class _FakeClient:
             text=str(getattr(self, "response_text", "bounded answer")),
             receipt={
                 "selected_model": "gpt-5.6-luna",
+                "thread_id":"synthetic-thread","turn_id":"synthetic-turn",
+                "output_sha256":_digest(str(getattr(self,"response_text","bounded answer"))),
                 "input_sha256": _digest(user_text),
                 "base_instructions_sha256": _digest(controlled),
                 "token_usage": {"last": {"inputTokens": 10, "outputTokens": 4}},
@@ -1256,3 +1258,338 @@ def test_agent_candidate_and_verifier_pass_the_real_transport_boundary(
     assert verifier_receipt["candidate_draft_sha256"] == _digest("Apply 2 L/ha now.")
     assert verifier_receipt["verifier_evidence_sha256"]
     assert "candidate_drafts_for_verification" in verifier_receipt["payload_classes"]
+
+
+def test_canonical_suite_accepts_exact_case_fact_hash_without_legacy_extension():
+    from agronomy_agent.codex_app_server import _validated_suite_case_contract
+    payload = {"schema_version": "open_agronomy_agent.canonical_suite_case_contract.v1",
+               "benchmark_suite_sha256": _digest("canonical-suite"), "source_sha256": _digest("source"),
+               "cases": {_EVAL_ID: {"question_sha256": _digest("question"),
+                   "field_context_sha256": _digest(_canonical({"core_volume_cm3": 91})),
+                   "candidate_application_messages_sha256_by_arm": {"raw_model": _digest("raw"), "production_full": _digest("full")},
+                   "verification_evidence_sha256": _digest("evidence")}}}
+    payload["sha256"] = _digest(_canonical(payload))
+    assert _validated_suite_case_contract(payload, benchmark_suite_sha256=payload["benchmark_suite_sha256"]) == payload
+
+
+def test_canonical_missing_thread_selection_is_not_requested_model():
+    client = object.__new__(CodexAppServerClient)
+    client.expected_model="gpt-6-luna"; client.expected_reasoning_effort="medium"
+    client.cwd="/owned/empty"; client.allowed_instruction_sources=(); client._pending_notifications=[]
+    client.fail_on_reroute=True; client.catalog_model={};client.protocol_identity={}
+    def request(method,params):
+        assert method == "thread/start", "missing selection must stop before turn/start"
+        return {"thread":{"id":"thread-1","ephemeral":True},"cwd":client.cwd,
+                "approvalPolicy":"never","sandbox":{"type":"readOnly","networkAccess":False},
+                "runtimeWorkspaceRoots":[],"instructionSources":[]}
+    client._request=request
+    with pytest.raises(CodexAppServerError,match="selection|model"):
+        client.generate(user_text="question",base_instructions="")
+
+
+def _canonical_generator(tmp_path, *, question="What should I check?", messages=None, facts=None,
+                         phase="candidate_generation", arm="production_full", config_sha=None,
+                         evidence=None, max_tokens=640, model_id="gpt-6-luna", config_path=None):
+    import agronomy_agent.codex_app_server as module
+    tmp_path.mkdir(parents=True,exist_ok=True)
+    if config_path is None:
+        config_path=tmp_path/"effective-model.yaml"
+        config_path.write_text(json.dumps({"model_id":model_id,"model_revision":None,"reasoning_effort":"medium","max_tokens":640,
+            "answer_verification":{"enabled":True,"model_id":model_id,"reasoning_effort":"medium","max_tokens":220}}))
+    config_sha=config_sha or hashlib.sha256(config_path.read_bytes()).hexdigest()
+    messages=messages or [{"role":"system","content":"Synthetic system"},{"role":"user","content":question}]
+    suite={"schema_version":module.CANONICAL_SUITE_SCHEMA,"benchmark_suite_sha256":_digest("canonical suite"),
+           "source_sha256":_digest("synthetic source"),"cases":{_EVAL_ID:{
+           "question_sha256":_digest(question),"field_context_sha256":_digest(_canonical(facts or {})),
+           "candidate_application_messages_sha256_by_arm":{"raw_model":_digest(_canonical([{"role":"user","content":question}])),
+                                                            "production_full":_digest(_canonical(messages))},
+           "verification_evidence_sha256":_digest(question if evidence is None else evidence)}}}
+    suite["sha256"]=_digest(_canonical(suite));artifact=_artifact_contract();static=build_benchmark_static_prompt_contract()
+    grant,bid,_=_write_authorization(tmp_path,suite_case_contract_sha256=suite["sha256"],
+        egress_artifact_contract_sha256=artifact["sha256"],static_prompt_contract_sha256=static["sha256"])
+    authority=json.loads(grant.read_text());authority.update(schema_version=module.CANONICAL_EGRESS_AUTHORIZATION_SCHEMA,benchmark_suite_sha256=suite["benchmark_suite_sha256"],
+        model_id=model_id,reasoning_effort="medium",model_config_sha256=config_sha,authorized_payload_classes=list(module.CANONICAL_PAYLOAD_CLASSES),
+        payload_classes_by_phase_and_arm=module.CANONICAL_PAYLOAD_MAP)
+    grant.write_text(json.dumps(authority))
+    return CodexAppServerGenerator(model_id=model_id,reasoning_effort="medium",benchmark_id=bid,benchmark_suite_sha256=suite["benchmark_suite_sha256"],
+        model_config_sha256=config_sha,model_config_path=config_path,egress_authorization=grant,egress_phase=phase,benchmark_arm=arm,
+        suite_case_contract=suite,egress_artifact_contract=artifact,static_prompt_contract=static,max_tokens=max_tokens)
+
+
+@pytest.mark.parametrize("change",["field","question","messages","unknown","artifact","overlay","legacy","typed"])
+def test_canonical_egress_rejects_changed_or_unclassified_payload_before_client(tmp_path,change):
+    from agronomy_agent.agent import _build_benchmark_egress_envelope
+    generator=_canonical_generator(tmp_path)
+    messages=[{"role":"system","content":"Synthetic system"},{"role":"user","content":"What should I check?"}]
+    envelope=_build_benchmark_egress_envelope(generator=generator,messages=messages,eval_id=_EVAL_ID,
+        question="What should I check?",field_context={},context=None,resources=None)
+    if change=="field":envelope["field_context"]={"unreviewed":91}
+    if change=="question":envelope["question_fragment"]="Altered question"
+    if change=="messages":messages[1]["content"]+=" changed"
+    if change=="unknown":envelope["unclassified"]="private"
+    if change=="artifact":envelope["egress_artifact_contract_sha256"]="0"*64
+    if change=="overlay":envelope["private_knowledge_overlay_loaded"]=True
+    if change=="legacy":generator.egress_authorization["schema_version"]=BENCHMARK_EGRESS_AUTHORIZATION_SCHEMA
+    if change=="typed":envelope["payload_classes"].append("typed_tool_results")
+    with pytest.raises((ValueError,CodexAppServerError)):
+        generator.generate_with_egress(messages,envelope)
+    assert generator._client is None
+
+
+@pytest.mark.parametrize("change",["arm","phase","model","config","cap","facts","effort"])
+def test_canonical_factory_product_is_case_config_arm_and_phase_bound(tmp_path,change):
+    from agronomy_agent.codex_app_server import validate_canonical_backend
+    generator=_canonical_generator(tmp_path)
+    expected=dict(eval_id=_EVAL_ID,question="What should I check?",field_context={},arm="production_full",
+        phase="candidate_generation",model_id="gpt-6-luna",model_config_sha256=generator.egress_authorization["model_config_sha256"],max_tokens=640,reasoning_effort="medium")
+    validate_canonical_backend(generator,**expected)
+    key={"arm":"arm","phase":"phase","model":"model_id","config":"model_config_sha256","cap":"max_tokens","facts":"field_context","effort":"reasoning_effort"}[change]
+    expected[key]=641 if change=="cap" else {"different":True} if change=="facts" else "different"
+    with pytest.raises(ValueError,match="mismatch"):validate_canonical_backend(generator,**expected)
+    assert generator._client is None
+
+
+@pytest.mark.parametrize("editor_override",[None,"medium"])
+def test_canonical_editor_requested_effort_matches_phase_config_before_client(tmp_path,editor_override):
+    from agronomy_agent.codex_app_server import validate_canonical_backend
+    config=tmp_path/"phase.yaml"
+    stage={"model_id":"gpt-6-luna","max_tokens":220}
+    if editor_override is not None:stage["reasoning_effort"]=editor_override
+    config.write_text(json.dumps({"model_id":"gpt-6-luna","reasoning_effort":"medium","max_tokens":640,"answer_verification":stage}))
+    generator=_canonical_generator(tmp_path,phase="verification",max_tokens=220,config_path=config)
+    expected=dict(eval_id=_EVAL_ID,question="What should I check?",field_context={},arm="production_full",phase="verification",
+        model_id="gpt-6-luna",model_config_sha256=hashlib.sha256(config.read_bytes()).hexdigest(),max_tokens=220,
+        reasoning_effort=stage.get("reasoning_effort") or "medium")
+    validate_canonical_backend(generator,**expected)
+    generator.reasoning_effort="high";generator.egress_authorization["reasoning_effort"]="high"
+    with pytest.raises(ValueError,match="mismatch"):validate_canonical_backend(generator,**expected)
+    assert generator._client is None
+
+
+def test_canonical_shared_provenance_checks_even_with_unchanged_message_hash(tmp_path):
+    from agronomy_agent.codex_app_server import _validate_egress_records
+    envelope={"selected_document_excerpts":[_document("- [soil_fertility_n_rate] Synthetic source")],"graph_evidence":[],"governed_guard_notes":[]}
+    for key,value in (("policy_rights_status","private"),("runtime_eligibility","excluded"),("document_row_sha256","0"*64)):
+        altered=copy.deepcopy(envelope);altered["selected_document_excerpts"][0][key]=value
+        with pytest.raises(CodexAppServerError):_validate_egress_records(altered,_artifact_contract(),"question")
+
+
+def _protocol_client(events, *, selected="gpt-6-luna", check=None):
+    client=object.__new__(CodexAppServerClient);client.expected_model="gpt-6-luna";client.expected_reasoning_effort="medium"
+    client.cwd="/owned/empty";client.allowed_instruction_sources=();client._pending_notifications=[]
+    client.fail_on_reroute=True;client.catalog_model={};client.protocol_identity={};client.before_dispatch=check
+    client._event_bytes=0;client._reader_error=None
+    def request(method,params):
+        if method=="thread/start":return {"thread":{"id":"thread-1","ephemeral":True},"model":selected,"cwd":client.cwd,
+            "approvalPolicy":"never","sandbox":{"type":"readOnly","networkAccess":False},"runtimeWorkspaceRoots":[],"instructionSources":[]}
+        return {"threadId":"thread-1","turn":{"id":"turn-1"}}
+    client._request=request;iterator=iter(events);client._read_message=lambda:next(iterator)
+    return client
+
+
+def _terminal_events():
+    return [{"method":"item/completed","params":{"threadId":"thread-1","turnId":"turn-1","item":{"id":"item-1","type":"agentMessage","text":"synthetic answer"}}},
+            {"method":"thread/tokenUsage/updated","params":{"threadId":"thread-1","turnId":"turn-1","tokenUsage":{"last":{"inputTokens":10,"outputTokens":4}}}},
+            {"method":"turn/completed","params":{"threadId":"thread-1","turn":{"id":"turn-1","status":"completed"}}}]
+
+
+@pytest.mark.parametrize("change",["item","usage","terminal","missing_selection","reroute","request","duplicate"])
+def test_canonical_protocol_rejects_foreign_or_missing_attribution(change):
+    events=_terminal_events();client=_protocol_client(events)
+    if change in {"item","usage"}:events[{"item":0,"usage":1}[change]]["params"]["turnId"]="foreign"
+    if change=="terminal":events[2]["params"]["threadId"]="foreign"
+    if change=="missing_selection":client=_protocol_client(events,selected=None)
+    if change=="reroute":events.insert(0,{"method":"model/rerouted","params":{"threadId":"thread-1","turnId":"turn-1"}})
+    if change=="request":events.insert(0,{"id":77,"method":"tool/request","params":{}})
+    if change=="duplicate":events.insert(1,copy.deepcopy(events[0]))
+    with pytest.raises(CodexAppServerError):client.generate(user_text="question",base_instructions="")
+
+
+def test_canonical_protocol_completion_keeps_cap_effort_revision_and_eos_unknown():
+    client=_protocol_client(_terminal_events())
+    result=client.generate(user_text="question",base_instructions="")
+    assert result.receipt["selected_model"]=="gpt-6-luna"
+    assert result.receipt["finish_reason"] is None and result.receipt["hard_output_cap_supported"] is False
+    assert result.receipt["effective_turn_reasoning_effort_observed"] is False
+    with pytest.raises(CodexAppServerError,match="single-turn"):client.generate(user_text="again",base_instructions="")
+
+
+@pytest.mark.parametrize("stage",["thread/start","turn/start"])
+def test_canonical_fresh_authority_check_occurs_at_both_egress_boundaries(stage):
+    calls=[]
+    def check(method):
+        calls.append(method)
+        if method==stage:raise CodexAppServerError("expired")
+    client=_protocol_client(_terminal_events(),check=check)
+    with pytest.raises(CodexAppServerError,match="expired"):client.generate(user_text="question",base_instructions="")
+    assert calls==(["thread/start"] if stage=="thread/start" else ["thread/start","turn/start"])
+
+
+def test_canonical_bounded_reader_refuses_oversized_frame_before_queue_allocation():
+    import io,queue,threading
+    client=object.__new__(CodexAppServerClient)
+    class Pipe:
+        def __init__(self):self.sizes=[]
+        def readline(self,size):self.sizes.append(size);return b"x"*size
+    pipe=Pipe();client._process=SimpleNamespace(stdout=pipe);client._reader_error=None
+    client._stdout_queue=queue.Queue(maxsize=1);client._queued_bytes=0;client._buffer_lock=threading.Lock()
+    client._read_stdout()
+    assert pipe.sizes==[client.MAX_FRAME_BYTES+1] and client._reader_error
+    assert client._queued_bytes==0
+
+
+def test_canonical_absolute_deadline_and_event_aggregate_are_finite(monkeypatch):
+    import agronomy_agent.codex_app_server as module
+    client=object.__new__(CodexAppServerClient);client._deadline=10
+    monkeypatch.setattr(module,"perf_counter",lambda:11)
+    with pytest.raises(CodexAppServerError,match="deadline"):client._remaining()
+    client._event_bytes=client.MAX_EVENT_BYTES
+    with pytest.raises(CodexAppServerError,match="bound"):client._retain_event([],{"method":"x"})
+
+
+def test_canonical_owned_process_close_kills_waits_and_never_claims_remote_cancel(monkeypatch):
+    import agronomy_agent.codex_app_server as module
+    calls=[]
+    class Process:
+        pid=123;stdin=None;returncode=None
+        def poll(self):return self.returncode
+        def terminate(self):calls.append("term")
+        def kill(self):calls.append("kill")
+        def wait(self,timeout):
+            calls.append("wait")
+            if len(calls)==2:raise module.subprocess.TimeoutExpired("fake",timeout)
+            self.returncode=-9
+    client=object.__new__(CodexAppServerClient);client._closed=False;client._process=Process();client._temporary_cwd=None
+    def kill(pid,sig):
+        assert pid==123
+        if sig==0:raise ProcessLookupError
+        calls.append("term" if sig==module.signal.SIGTERM else "kill")
+    monkeypatch.setattr(module.os,"killpg",kill)
+    receipt=client.close()
+    assert calls==["term","wait","kill","wait"]
+    assert receipt["local_returncode"]==-9 and receipt["owned_group_absent"] is None and receipt["remote_cancellation_confirmed"] is None
+
+
+@pytest.mark.parametrize("after_ack",[False,True])
+def test_canonical_failed_attempt_keeps_known_acknowledgements_not_stale_stats(tmp_path,monkeypatch,after_ack):
+    import agronomy_agent.codex_app_server as module
+    from agronomy_agent.agent import _build_benchmark_egress_envelope
+    class FailedClient(_FakeClient):
+        def generate(self,**kwargs):
+            error=CodexAppServerError("synthetic failure")
+            error.provider_attempt={"state":"turn_acknowledged" if after_ack else "pre_dispatch",
+                "thread_id":"thread" if after_ack else None,"turn_id":"turn" if after_ack else None,
+                "turn_acknowledged":after_ack,"submitted":after_ack}
+            raise error
+    monkeypatch.setattr(module,"CodexAppServerClient",FailedClient)
+    generator=_canonical_generator(tmp_path)
+    generator.last_generation_stats={"generation_tokens":999,"stale":True}
+    messages=[{"role":"system","content":"Synthetic system"},{"role":"user","content":"What should I check?"}]
+    envelope=_build_benchmark_egress_envelope(generator=generator,messages=messages,eval_id=_EVAL_ID,
+        question="What should I check?",field_context={},context=None,resources=None)
+    with pytest.raises(CodexAppServerError) as caught:generator.generate_with_egress(messages,envelope)
+    attempt=caught.value.provider_attempt
+    assert attempt["phase"]=="candidate_generation" and attempt["eval_id"]==_EVAL_ID and attempt["attempt_id"]==1
+    assert attempt["turn_acknowledged"] is after_ack and attempt["turn_id"]==("turn" if after_ack else None)
+    assert generator.last_generation_stats is None
+
+
+@pytest.mark.parametrize("change",["doc","graph","guard","missing","rights","eligibility"])
+def test_canonical_direct_egress_shares_membership_and_completeness_validation(tmp_path,change):
+    from agronomy_agent.agent import _build_benchmark_egress_envelope
+    question="What should I check?"
+    doc="- "+_DOC_SOURCE_TEXT;graph="- "+_GRAPH_SOURCE_TEXT
+    messages=[{"role":"system","content":"Synthetic system"},
+              {"role":"user","content":question+"\nRetrieved agronomy context:\n"+doc+"\n\nKnowledge graph hits:\n"+graph}]
+    generator=_canonical_generator(tmp_path,messages=messages)
+    envelope=_build_benchmark_egress_envelope(generator=generator,messages=messages,eval_id=_EVAL_ID,
+        question=question,field_context={},context=None,resources=None)
+    envelope.update(selected_document_excerpts=[_document(doc)],graph_evidence=[_graph(graph)],
+        payload_classes=["project_owned_frozen_benchmark_questions","benchmark_system_and_answer_contract_prompts",
+                         "selected_public_release_runtime_document_source_excerpts","public_release_runtime_graph_evidence"])
+    if change=="doc":envelope["selected_document_excerpts"][0]["document_row_sha256"]="0"*64
+    if change=="graph":envelope["graph_evidence"][0]["node_row_sha256"]="0"*64
+    if change=="guard":envelope["governed_guard_notes"]=[{"name":"forged_guard"}]
+    if change=="missing":envelope["selected_document_excerpts"]=[]
+    if change=="rights":envelope["selected_document_excerpts"][0]["policy_rights_status"]="private"
+    if change=="eligibility":envelope["selected_document_excerpts"][0]["runtime_eligibility"]="excluded"
+    with pytest.raises(CodexAppServerError):generator.generate_with_egress(messages,envelope)
+    assert generator._client is None
+
+
+@pytest.mark.parametrize("change",["doc","graph","guard","missing_doc","missing_graph","missing_guard","rights","eligibility"])
+def test_canonical_entry_accepts_admitted_records_sanitizes_and_rejects_mutation_before_call(tmp_path,monkeypatch,change):
+    from agronomy_agent.agent import _build_benchmark_egress_envelope,_benchmark_guard_note_egress_records
+    from agronomy_agent.tools.registry import run_tools
+    class CurrentClient(_FakeClient):
+        def generate(self,**kwargs):
+            result=super().generate(**kwargs);result.receipt["selected_model"]="gpt-6-luna";return result
+    monkeypatch.setattr("agronomy_agent.codex_app_server.CodexAppServerClient",CurrentClient)
+    question="What soil structure should I check?"
+    note=run_tools(question,("soil_structure_guard",))[0]
+    doc="- "+_DOC_SOURCE_TEXT;graph="- "+_GRAPH_SOURCE_TEXT;guard="- "+note.name+": "+note.text
+    messages=[{"role":"system","content":"Synthetic system"},{"role":"user","content":
+        question+"\nRetrieved agronomy context:\n"+doc+"\n\nKnowledge graph hits:\n"+graph+"\n\n"+guard}]
+    generator=_canonical_generator(tmp_path,question=question,messages=messages)
+    envelope=_build_benchmark_egress_envelope(generator=generator,messages=messages,eval_id=_EVAL_ID,
+        question=question,field_context={},context=None,resources=None)
+    envelope.update(selected_document_excerpts=[_document(doc)],graph_evidence=[_graph(graph)],
+        governed_guard_notes=_benchmark_guard_note_egress_records(context=SimpleNamespace(tool_notes=[note]),outbound_text=messages[1]["content"]),
+        payload_classes=["project_owned_frozen_benchmark_questions","benchmark_system_and_answer_contract_prompts",
+                         "selected_public_release_runtime_document_source_excerpts","public_release_runtime_graph_evidence"])
+    assert generator.generate_with_egress(messages,envelope)=="bounded answer"
+    receipt=generator.last_generation_stats["benchmark_egress_receipt"]
+    assert all(receipt[key] for key in ("selected_document_excerpts","graph_evidence","governed_guard_notes"))
+    assert all(text not in _canonical(receipt) for text in (question,_DOC_SOURCE_TEXT,_GRAPH_SOURCE_TEXT,note.text))
+    assert len(generator._client.calls)==1
+    altered=copy.deepcopy(envelope)
+    if change=="doc":altered["selected_document_excerpts"][0]["document_row_sha256"]="0"*64
+    if change=="graph":altered["graph_evidence"][0]["node_row_sha256"]="0"*64
+    if change=="guard":altered["governed_guard_notes"][0]["text"]="forged"
+    if change.startswith("missing_"):altered[{"missing_doc":"selected_document_excerpts","missing_graph":"graph_evidence","missing_guard":"governed_guard_notes"}[change]]=[]
+    if change=="rights":altered["selected_document_excerpts"][0]["policy_rights_status"]="private"
+    if change=="eligibility":altered["selected_document_excerpts"][0]["runtime_eligibility"]="excluded"
+    with pytest.raises(CodexAppServerError):generator.generate_with_egress(messages,altered)
+    assert len(generator._client.calls)==1
+
+
+def test_canonical_effective_config_drift_rechecked_before_lazy_client(tmp_path):
+    generator=_canonical_generator(tmp_path)
+    generator._model_config_path.write_text("changed")
+    with pytest.raises(CodexAppServerError,match="config"):
+        generator._ensure_client()
+    assert generator._client is None
+
+
+@pytest.mark.parametrize("bad_id",[True,1.0,False,"1"])
+def test_canonical_response_id_requires_exact_integer_type(bad_id):
+    client=object.__new__(CodexAppServerClient);client._next_id=0;client._pending_notifications=[]
+    client._send=lambda payload:None
+    client._read_message=lambda:{"id":bad_id,"result":{}}
+    with pytest.raises(CodexAppServerError,match="binding"):client._request("initialize",{})
+
+
+@pytest.mark.parametrize("bad_id",[True,77,1.0])
+@pytest.mark.parametrize("phase",["thread","turn"])
+def test_canonical_thread_and_turn_ids_must_be_returned_strings(bad_id,phase):
+    client=_protocol_client(_terminal_events());original=client._request
+    def request(method,params):
+        result=original(method,params)
+        if method==phase+"/start":result[phase]["id"]=bad_id
+        return result
+    client._request=request
+    with pytest.raises(CodexAppServerError,match="id"):client.generate(user_text="question",base_instructions="")
+
+
+@pytest.mark.parametrize("text",[None,True,7,{"text":"coerced"}])
+def test_canonical_nonstring_output_is_not_coerced(text):
+    events=_terminal_events();events[0]["params"]["item"]["text"]=text
+    with pytest.raises(CodexAppServerError,match="string"):_protocol_client(events).generate(user_text="question",base_instructions="")
+
+
+@pytest.mark.parametrize("text",["  exact raw output\n",""])
+def test_canonical_raw_output_whitespace_and_empty_return_are_preserved(text):
+    events=_terminal_events();events[0]["params"]["item"]["text"]=text
+    result=_protocol_client(events).generate(user_text="question",base_instructions="")
+    assert result.text==text and result.receipt["output_sha256"]==_digest(text)
+    assert result.receipt["output_composition"]=="one_exact_raw_agent_message"

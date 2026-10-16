@@ -399,3 +399,98 @@ def test_editor_observation_actual_service_captures_own_native_shaped_call_befor
         assert no_call[0]["state"] == "no_call" and no_call[0]["model_identity"] is None and no_call[0]["generation_stats"] is None
     finally:
         store._conn.close()
+
+
+def test_canonical_actual_service_owns_lazy_editor_and_retains_provider_return(tmp_path,monkeypatch):
+    import hashlib,json,yaml
+    from dataclasses import replace
+    import test_codex_app_server_egress as fixtures
+    import agronomy_agent.codex_app_server as transport
+    from agronomy_agent.agent import SOURCE_GROUNDED_SYSTEM_PROMPT
+    from agronomy_agent.release_eval_executor import _EditorCheckpoint
+    question="A synthetic record describes a shallow layer and another describes a deeper layer. Explain why this distinction matters when comparing the records."
+    model=tmp_path/"model.yaml";model.write_text(yaml.safe_dump({"model_id":"gpt-6-luna","model_revision":None,
+        "max_tokens":640,"reasoning_effort":"medium","context_management":{"context_limit_tokens":8192},
+        "answer_verification":{"enabled":True,"model_id":"gpt-6-luna","max_tokens":220,"mode":"risk_conditioned_selective_v3"}}))
+    corpus=tmp_path/"corpus.jsonl";corpus.write_text("")
+    rag=tmp_path/"rag.yaml";rag.write_text(yaml.safe_dump({"retrieval":{"corpus_paths":[str(corpus)],"graph_paths":[]},"private_knowledge":{"enabled":False}}))
+    store=TraceStore(tmp_path/"synthetic.sqlite3")
+    settings=build_settings(db_path=tmp_path/"synthetic.sqlite3",artifact_root=tmp_path/"artifacts",model_config_path=str(model),default_rag_config=str(rag),network_mode="offline")
+    instances=[];closed=[]
+    class Client:
+        def __init__(self,**kwargs):self.role=len(instances);instances.append(self)
+        def generate(self,**kwargs):
+            self.role=0 if kwargs["metadata"]["role"]=="candidate_generation" else 1
+            text="Apply 71 kg/ha immediately." if self.role==0 else "Different sample depths can limit comparison; those records alone cannot justify an application rate."
+            return fixtures.AppServerResult(text=text,receipt={"selected_model":"gpt-6-luna","output_sha256":hashlib.sha256(text.encode()).hexdigest(),
+                "input_sha256":hashlib.sha256(kwargs["user_text"].encode()).hexdigest(),
+                "base_instructions_sha256":hashlib.sha256((fixtures.TEXT_ONLY_BENCHMARK_CONTROL+"\n\n"+kwargs["base_instructions"].strip()).encode()).hexdigest(),
+                "token_usage":{"last":{"inputTokens":10,"outputTokens":9}},"thread_id":f"thread-{self.role}","turn_id":f"turn-{self.role}",
+                "finish_reason":None,"hard_output_cap_supported":False,"effective_turn_reasoning_effort_observed":False})
+        def close(self):closed.append(self.role);return {"status":"synthetic_closed","remote_cancellation_confirmed":None}
+    monkeypatch.setattr(transport,"CodexAppServerClient",Client)
+    monkeypatch.setattr(chat_service,"_build_mlx_generator",lambda *a,**k:pytest.fail("no native construction"))
+    # Freeze actual compiled messages before granting fake transport access.
+    # The borrowed capture backend stops before producing a draft/editor call.
+    class Captured(BaseException):pass
+    captured={};contexts=[]
+    real_context=chat_service.build_context
+    def observe_context(*args,**kwargs):
+        value=real_context(*args,**kwargs);contexts.append(value);return value
+    monkeypatch.setattr(chat_service,"build_context",observe_context)
+    class Capture:
+        model_id="gpt-6-luna"
+        def generate(self,messages):captured["messages"]=deepcopy(messages);raise Captured()
+    preview=AgentExecutionRequest(store=store,settings=settings,
+        session_id=store.create_session("synthetic prospective compile",{}, {})["session_id"],
+        message=question,mode="agronomic_rag",model_id="gpt-6-luna",rag_config=str(rag),max_tokens=640,
+        generation_backend=Capture(),execution_class="observed_system_execution_nonclaim")
+    with pytest.raises(Captured):chat_service.execute_agent_request(preview)
+    messages=captured["messages"]
+    expected_evidence=chat_service._combined_verification_evidence(contexts[-1],None)[:9000]
+    made=[]
+    def factory(phase):
+        def create():
+            made.append(phase)
+            return fixtures._canonical_generator(tmp_path/phase,question=question,messages=messages,phase=phase,
+                evidence=expected_evidence,config_sha=hashlib.sha256(model.read_bytes()).hexdigest(),config_path=model,max_tokens=640 if phase=="candidate_generation" else 220)
+        return create
+    request=AgentExecutionRequest(store=store,settings=settings,session_id=store.create_session("synthetic",{}, {})["session_id"],message=question,
+        mode="agronomic_rag",model_id="gpt-6-luna",rag_config=str(rag),max_tokens=640,execution_class="observed_system_execution_nonclaim",
+        generation_backend_factory=factory("candidate_generation"),verification_backend_factory=factory("verification"),benchmark_eval_id=fixtures._EVAL_ID,
+        trace_options={"store_prompt_messages":True})
+    sink=_EditorCheckpoint(tmp_path/"editor.json",{"scope":"synthetic canonical service"})
+    try:
+        result=chat_service.execute_agent_request(request,evaluation_editor_hook=sink)
+        assert result.execution_class=="observed_system_execution_nonclaim" and result.owned_backend_closeout
+        assert all(request.arm_configuration.to_dict()[key] is True for key in request.arm_configuration.to_dict() if key.endswith("_enabled"))
+        observation=sink.read()["observation"]
+        assert observation["state"]=="returned" and observation["identity_status"]=="unknown"
+        assert observation["native_observation"] is None and observation["provider_observation"]["model_revision"] is None
+        assert observation["provider_observation"]["finish_reason"] is None
+        assert sink.read()["observation"]["generation_stats"]["request_model_id"]=="gpt-6-luna"
+        assert closed==[1,0] and made==["candidate_generation","verification"]
+        saved=result.turn_id
+        failed_session=store.create_session("synthetic failed persistence",{}, {})["session_id"]
+        late=_EditorCheckpoint(tmp_path/"late-editor.json",{"scope":"synthetic failed persistence"})
+        monkeypatch.setattr(store,"create_turn",lambda *a,**k:(_ for _ in ()).throw(OSError("synthetic persistence")))
+        with pytest.raises(OSError,match="persistence") as caught:
+            chat_service.execute_agent_request(replace(request,session_id=failed_session),evaluation_editor_hook=late)
+        assert late.read()["observation"]["state"]=="returned"
+        assert store.get_turn(saved)["answer"]==result.answer and closed==[1,0,1,0]
+        assert caught.value.evaluation_backend_closeout
+    finally:store._conn.close()
+
+
+def test_canonical_deterministic_bypass_constructs_and_closes_no_backend(tmp_path,monkeypatch):
+    from dataclasses import replace
+    from test_release_eval_executor import _hook_runtime
+    store,request,_,_,_=_hook_runtime(tmp_path,question="Calculate daily GDD from Tmax 26 C, Tmin 16 C and base 10 C. Do not infer crop stage.",mode="agronomic_rag",verification=True)
+    def fail():pytest.fail("deterministic bypass must not construct backend")
+    request=replace(request,generation_backend=None,generation_backend_factory=fail,verification_backend_factory=fail,benchmark_eval_id="synthetic",
+        document_retrieval_enabled=True,graph_retrieval_enabled=True,field_context_enabled=True,typed_tools_enabled=True,
+        risk_intervention_enabled=True,verifier_enabled=True,fallback_enabled=True)
+    try:
+        result=chat_service.execute_agent_request(request)
+        assert result.answer and not result.owned_backend_closeout
+    finally:store._conn.close()

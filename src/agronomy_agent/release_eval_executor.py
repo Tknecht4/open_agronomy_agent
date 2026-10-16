@@ -108,7 +108,9 @@ def exception_evidence(exc: BaseException) -> dict[str, Any]:
 def _observed_error(exc: BaseException) -> dict[str, Any]:
     evidence = exception_evidence(exc)
     return {"type": evidence["nodes"][0]["type"], "message": evidence["nodes"][0]["message"],
-            "exception_evidence": evidence}
+            "exception_evidence": evidence,
+            **({"provider_attempt":exc.provider_attempt} if hasattr(exc,"provider_attempt") else {}),
+            **({"owned_backend_closeout":exc.evaluation_backend_closeout} if hasattr(exc,"evaluation_backend_closeout") else {})}
 
 
 class _DraftCheckpoint:
@@ -372,6 +374,8 @@ def _reference_turn(
     session_id: str,
     history: list[dict[str, str]],
     evaluation_draft_hook: Callable[[Mapping[str, Any]], None] | None = None,
+    benchmark_eval_id: str | None = None,
+    field_context: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     messages = (
         (
@@ -390,7 +394,12 @@ def _reference_turn(
         cleared = getattr(generator, "last_generation_stats", None) is None
     except (AttributeError, TypeError):
         pass
-    answer = str(generator.generate(messages))
+    if benchmark_eval_id is not None:
+        from agronomy_agent.agent import _generate_with_benchmark_egress
+        answer = _generate_with_benchmark_egress(generator, messages, eval_id=benchmark_eval_id,
+            question=question, field_context=dict(field_context or {}), context=None, resources=None)
+    else:
+        answer = str(generator.generate(messages))
     current_stats = getattr(generator, "last_generation_stats", None)
     marker = getattr(generator, "generation_stats_call_id", None)
     marked = (type(previous_marker) is int and previous_marker >= 0 and type(marker) is int
@@ -774,6 +783,8 @@ def execute_product_case(
     max_tokens: int = 640,
     output_dir: Path,
     trial_id: str = "trial-001",
+    generation_backend_factory: Callable[[], Any] | None = None,
+    verification_backend_factory: Callable[[], Any] | None = None,
 ) -> dict[str, Any]:
     """Execute one isolated case/trial, retaining completed and failed turns.
 
@@ -799,12 +810,21 @@ def execute_product_case(
         "model_execution_eligible": False,
     }
     store = None
+    owned_reference = None
     cell_dir = None
     pending_control_flow: BaseException | None = None
     try:
         arm = execution_arm(arm_id)
-        if backend not in {"mock", "mlx"}:
-            raise ValueError("backend must be mock or mlx")
+        external = backend == "codex_app_server"
+        if backend not in {"mock", "mlx", "codex_app_server"}:
+            raise ValueError("backend must be mock, mlx or codex_app_server")
+        if external:
+            if (arm_id not in {"raw_model", "production_full"} or not callable(generation_backend_factory)
+                    or arm_id == "production_full" and not callable(verification_backend_factory)):
+                raise ValueError("nonclaim AppServer execution requires lazy phase factories and supported arms")
+            result["result_class"] = "observed_system_execution_nonclaim"
+        elif generation_backend_factory is not None or verification_backend_factory is not None:
+            raise ValueError("external factories cannot alter native execution")
         if (
             not result["case_id"]
             or not result["scenario_family"]
@@ -879,7 +899,7 @@ def execute_product_case(
         transport = (
             "mock"
             if backend == "mock"
-            else os.getenv("AGRONOMY_AGENT_MODEL_BACKEND", "mlx").strip().lower()
+            else "codex_app_server" if external else os.getenv("AGRONOMY_AGENT_MODEL_BACKEND", "mlx").strip().lower()
         )
         snapshot = None
         if backend == "mlx" and transport in {"mlx", "native", "local"}:
@@ -918,9 +938,16 @@ def execute_product_case(
                     from agronomy_agent.answer_verifier import _EditorObservation
                     _EditorObservation(None, editor_checkpoint)._publish("no_call", reason="reference_arm_has_no_editor")
                     if generator is None:
-                        generator = chat_service._build_mlx_generator(
+                        generator = generation_backend_factory() if external else chat_service._build_mlx_generator(
                             model_id, config, str(model_config)
                         )
+                        if external:
+                            owned_reference=generator
+                            from agronomy_agent.codex_app_server import validate_canonical_backend
+                            validate_canonical_backend(generator,eval_id=result["case_id"],question=question,
+                                field_context=compiled,arm=arm_id,phase="candidate_generation",model_id=model_id,
+                                model_config_sha256=result["config_identity"]["model"]["sha256"],max_tokens=max_tokens,
+                                reasoning_effort=config.get("reasoning_effort"))
                         generator.max_tokens = max_tokens
                     turn = _reference_turn(
                         question,
@@ -930,6 +957,7 @@ def execute_product_case(
                         session_id=session_id,
                         history=history,
                         evaluation_draft_hook=checkpoint,
+                        **({"benchmark_eval_id": result["case_id"], "field_context": compiled} if external else {}),
                     )
                 else:
                     request = AgentExecutionRequest(
@@ -950,7 +978,10 @@ def execute_product_case(
                         ),
                         generation_backend=generator,
                         profiler=profiler,
-                        execution_class="product_turn",
+                        execution_class="observed_system_execution_nonclaim" if external else "product_turn",
+                        **({"generation_backend_factory": generation_backend_factory,
+                            "verification_backend_factory": verification_backend_factory,
+                            "benchmark_eval_id": result["case_id"]} if external else {}),
                         **arm.request_controls(),
                     )
                     turn = _production_turn(question, request, evaluation_draft_hook=checkpoint,
@@ -974,7 +1005,7 @@ def execute_product_case(
                     "model_revision"
                 ) or (snapshot.name if snapshot else None)
                 identity_verified = (
-                    backend != "mock"
+                    backend == "mlx"
                     and identity.get("status")
                     in {"verified_runtime_receipt", "verified_direct_loader"}
                     and revision is not None
@@ -1153,6 +1184,12 @@ def execute_product_case(
             {"id": "cell_execution", "passed": False, "detail": result["error"]}
         )
     finally:
+        if owned_reference is not None:
+            try:result["owned_backend_closeout"]=[{"phase":"draft","evidence":owned_reference.close()}]
+            except BaseException as close_error:
+                result["backend_close_error"]=_observed_error(close_error)
+                result["status"]="failed"
+                if not isinstance(close_error,Exception) and pending_control_flow is None:pending_control_flow=close_error
         if store is not None:
             try:
                 store._conn.close()

@@ -1081,3 +1081,31 @@ def test_editor_observation_executor_preserves_return_on_downstream_failure(tmp_
     returned = json.loads(Path(turn["editor_checkpoint"]["events"][-1]["path"]).read_text())
     assert returned["observation"]["raw_output"] == "Synthetic editor return before final persistence."
     assert turn["error"]["type"] == "OSError"
+
+
+def test_canonical_raw_executor_retains_nonqualifying_return_and_owned_close(tmp_path,monkeypatch):
+    import hashlib
+    import test_codex_app_server_egress as fixtures
+    import agronomy_agent.codex_app_server as transport
+    import agronomy_agent.release_eval_executor as executor
+    monkeypatch.setattr(executor,"TraceStore",_ReferenceStoreFixture)
+    class Client(fixtures._FakeClient):
+        def generate(self,**kwargs):
+            result=super().generate(**kwargs);result.receipt["selected_model"]="gpt-6-luna";return result
+        def close(self):self.closed=True;return {"status":"synthetic_closed"}
+    monkeypatch.setattr(transport,"CodexAppServerClient",Client)
+    model=tmp_path/"model.yaml";model.write_text(yaml.safe_dump({"model_id":"gpt-6-luna","model_revision":None,"max_tokens":640,"reasoning_effort":"medium"}))
+    rag=tmp_path/"rag.yaml";rag.write_text("{}")
+    question="Explain a synthetic supplied observation."
+    row=case(case_id=fixtures._EVAL_ID,question=question)
+    made=[]
+    def factory():
+        generator=fixtures._canonical_generator(tmp_path/"contract",question=question,arm="raw_model",
+            config_sha=hashlib.sha256(model.read_bytes()).hexdigest(),config_path=model)
+        made.append(generator);return generator
+    result=executor.execute_product_case(row,model_config=model,rag_config=rag,arm_id="raw_model",backend="codex_app_server",
+        output_dir=tmp_path/"run",generation_backend_factory=factory)
+    assert result["status"]=="completed",result.get("error")
+    assert result["claim_eligible"] is False and result["model_execution_eligible"] is False
+    assert result["turns"][0]["draft_checkpoint"]["status"]=="retained"
+    assert made[0]._client.closed and result["owned_backend_closeout"]

@@ -11,6 +11,10 @@ import atexit
 import datetime as dt
 import hashlib
 import json
+import math
+import os
+import select
+import signal
 import queue
 import re
 import subprocess
@@ -20,7 +24,7 @@ from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from time import perf_counter
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any, Callable, Iterable, Mapping, Sequence
 
 
 DEFAULT_CODEX_MODEL = "gpt-5.6-luna"
@@ -114,6 +118,17 @@ BENCHMARK_EGRESS_AUTHORIZED_PAYLOAD_CLASSES = (
     "candidate_drafts_for_verification",
     "verifier_evidence",
 )
+# Canonical grants are a distinct authority version; legacy v4 maps stay frozen.
+CANONICAL_EGRESS_AUTHORIZATION_SCHEMA = "open_agronomy_agent.canonical_egress_authorization.v1"
+CANONICAL_SUITE_SCHEMA = "open_agronomy_agent.canonical_suite_case_contract.v1"
+CANONICAL_ENVELOPE_SCHEMA = "open_agronomy_agent.canonical_egress_envelope.v1"
+CANONICAL_PAYLOAD_CLASSES = (*BENCHMARK_EGRESS_AUTHORIZED_PAYLOAD_CLASSES, "case_bound_synthetic_facts")
+CANONICAL_PAYLOAD_MAP = {
+    "candidate_generation": {"raw_model": ["project_owned_frozen_benchmark_questions"],
+        "production_full": list(CANONICAL_PAYLOAD_CLASSES[:5]) + ["case_bound_synthetic_facts"]},
+    "verification": {"production_full": list(CANONICAL_PAYLOAD_CLASSES)},
+}
+
 BENCHMARK_EGRESS_FORBIDDEN_PAYLOAD_CLASSES = (
     "farmer_records",
     "private_field_history",
@@ -307,6 +322,7 @@ def load_benchmark_egress_authorization(
     egress_artifact_contract_sha256: str | None = None,
     static_prompt_contract_sha256: str | None = None,
     checked_at: dt.datetime | None = None,
+    canonical: bool = False,
 ) -> dict[str, Any]:
     """Load one human authorization and freeze its exact outbound contract."""
 
@@ -343,7 +359,8 @@ def load_benchmark_egress_authorization(
         raise ValueError(f"benchmark egress authorization has unknown fields: {resolved}")
     if "boundary" in payload and not str(payload.get("boundary") or "").strip():
         raise ValueError(f"benchmark egress authorization boundary is empty: {resolved}")
-    if payload.get("schema_version") != BENCHMARK_EGRESS_AUTHORIZATION_SCHEMA:
+    schema = CANONICAL_EGRESS_AUTHORIZATION_SCHEMA if canonical else BENCHMARK_EGRESS_AUTHORIZATION_SCHEMA
+    if payload.get("schema_version") != schema:
         raise ValueError(f"invalid benchmark egress authorization schema: {resolved}")
     if payload.get("authorization_decision") != "authorized":
         raise ValueError(f"benchmark egress authorization is not authorized: {resolved}")
@@ -405,15 +422,15 @@ def load_benchmark_egress_authorization(
         raise ValueError(f"egress authorization is expired or has an invalid interval: {resolved}")
     authorized = payload.get("authorized_payload_classes")
     excluded = payload.get("excluded_payload_classes")
-    if authorized != list(BENCHMARK_EGRESS_AUTHORIZED_PAYLOAD_CLASSES):
+    if authorized != list(CANONICAL_PAYLOAD_CLASSES if canonical else BENCHMARK_EGRESS_AUTHORIZED_PAYLOAD_CLASSES):
         raise ValueError(f"egress authorization payload classes do not match the runtime contract: {resolved}")
     if excluded != list(BENCHMARK_EGRESS_FORBIDDEN_PAYLOAD_CLASSES):
         raise ValueError(f"egress authorization excluded classes do not match the runtime contract: {resolved}")
-    expected_map = _expected_payload_map()
+    expected_map = CANONICAL_PAYLOAD_MAP if canonical else _expected_payload_map()
     if payload.get("payload_classes_by_phase_and_arm") != expected_map:
         raise ValueError(f"egress authorization phase/arm payload map does not match runtime: {resolved}")
     return {
-        "schema_version": BENCHMARK_EGRESS_AUTHORIZATION_SCHEMA,
+        "schema_version": schema,
         "sha256": _sha256_path(resolved),
         "authorization_decision": "authorized",
         "benchmark_id": benchmark_id,
@@ -441,6 +458,36 @@ class AppServerResult:
     receipt: dict[str, Any]
 
 
+def bounded_provider_attempt(value):
+    """No prompts, credentials, raw provider errors or unbounded objects."""
+    fields={"attempt_id","phase","arm","eval_id","envelope_sha256","state","request_id",
+            "thread_id","turn_id","selected_model","thread_acknowledged","turn_acknowledged","submitted","error_type"}
+    if not isinstance(value,Mapping):return {}
+    return {k:(v[:160] if isinstance(v,str) else v) for k,v in value.items()
+            if k in fields and (v is None or type(v) in {str,int,bool})}
+
+
+def _bounded_protocol_json(value, limit):
+    pending=[value];nodes=0;estimate=0
+    while pending:
+        item=pending.pop();nodes+=1
+        if nodes>8192:raise CodexAppServerError("protocol JSON node bound")
+        if isinstance(item,str):
+            if len(item)>limit:raise CodexAppServerError("protocol JSON text bound")
+            estimate+=len(item.encode("utf-8"))+2
+        elif isinstance(item,dict):
+            if len(item)*2>8192-nodes:raise CodexAppServerError("protocol JSON collection bound")
+            pending.extend(item.keys());pending.extend(item.values());estimate+=2
+        elif isinstance(item,(list,tuple)):
+            if len(item)>8192-nodes:raise CodexAppServerError("protocol JSON collection bound")
+            pending.extend(item);estimate+=2
+        else:estimate+=32
+        if estimate>limit:raise CodexAppServerError("protocol JSON byte bound")
+    encoded=_canonical_json(value).encode("utf-8")
+    if len(encoded)>limit:raise CodexAppServerError("protocol encoded JSON byte bound")
+    return encoded
+
+
 class CodexAppServerClient:
     """Small synchronous JSONL client for one local ``codex app-server`` process."""
 
@@ -456,9 +503,19 @@ class CodexAppServerClient:
         fail_on_reroute: bool = True,
         collect_protocol_identity: bool = True,
         allowed_instruction_sources: Sequence[str] = (),
+        before_dispatch: Callable[[str], None] | None = None,
     ) -> None:
-        if timeout_seconds <= 0:
+        if not math.isfinite(timeout_seconds) or timeout_seconds <= 0:
             raise ValueError("timeout_seconds must be greater than zero")
+        self.before_dispatch=before_dispatch
+        self._deadline = perf_counter() + float(timeout_seconds)
+        self.last_attempt_evidence={"state":"initializing","submitted":False}
+        self._reader_error = None
+        self._buffer_lock = threading.Lock()
+        self._queued_bytes = 0
+        self._event_bytes = 0
+        self._stderr_bytes = 0
+        self.local_closeout = None
         self.command = tuple(str(value) for value in command)
         self._temporary_cwd: tempfile.TemporaryDirectory[str] | None = None
         if cwd is None:
@@ -481,7 +538,7 @@ class CodexAppServerClient:
         self.collect_protocol_identity = bool(collect_protocol_identity)
         self.allowed_instruction_sources = tuple(str(value) for value in allowed_instruction_sources)
         self._next_id = 0
-        self._stdout_queue: queue.Queue[str | None] = queue.Queue()
+        self._stdout_queue: queue.Queue[bytes | None] = queue.Queue(maxsize=32)
         self._stderr_lines: list[str] = []
         self._pending_notifications: list[dict[str, Any]] = []
         self._closed = False
@@ -491,8 +548,9 @@ class CodexAppServerClient:
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True,
-            bufsize=1,
+            text=False,
+            bufsize=0,
+            start_new_session=False,
         )
         if self._process.stdin is None or self._process.stdout is None or self._process.stderr is None:
             self.close()
@@ -519,57 +577,105 @@ class CodexAppServerClient:
             self.catalog_model: dict[str, Any] | None = None
             if self.verify_catalog:
                 self.catalog_model = self._verify_model_catalog()
-        except Exception:
-            self.close()
+        except BaseException as exc:
+            exc.provider_attempt=bounded_provider_attempt({**self.last_attempt_evidence,"error_type":type(exc).__name__})
+            try:self.close()
+            except BaseException as close_error:exc.local_closeout_error=type(close_error).__name__
             raise
+
+    MAX_FRAME_BYTES = 262144
+    MAX_BUFFER_BYTES = 1048576
+    MAX_EVENT_BYTES = 1048576
+    MAX_TEXT_BYTES = 65536
+
+    def _remaining(self) -> float:
+        remaining = self._deadline - perf_counter()
+        if not math.isfinite(remaining) or remaining <= 0:
+            raise CodexAppServerError("App Server absolute deadline expired")
+        return remaining
 
     def _read_stdout(self) -> None:
         assert self._process.stdout is not None
         try:
-            for line in self._process.stdout:
-                self._stdout_queue.put(line)
+            while True:
+                # Bound allocation before framing; no unbounded iteration/readline.
+                line=self._process.stdout.readline(self.MAX_FRAME_BYTES+1)
+                if not line:break
+                if len(line)>self.MAX_FRAME_BYTES or not line.endswith(b"\n"):
+                    raise CodexAppServerError("App Server frame byte bound")
+                with self._buffer_lock:
+                    if self._queued_bytes+len(line)>self.MAX_BUFFER_BYTES:
+                        raise CodexAppServerError("App Server queue byte bound")
+                    self._queued_bytes+=len(line)
+                try:self._stdout_queue.put_nowait(line)
+                except queue.Full:
+                    raise CodexAppServerError("App Server queue frame bound")
+        except BaseException as exc:
+            self._reader_error=type(exc).__name__+": bounded stdout reader failed"
         finally:
-            self._stdout_queue.put(None)
+            try:self._stdout_queue.put_nowait(None)
+            except queue.Full:pass
 
     def _read_stderr(self) -> None:
         assert self._process.stderr is not None
-        for line in self._process.stderr:
-            self._stderr_lines.append(line.rstrip("\n"))
-            if len(self._stderr_lines) > 2000:
-                del self._stderr_lines[:1000]
+        try:
+            while True:
+                chunk=self._process.stderr.read(4096)
+                if not chunk:break
+                self._stderr_bytes+=len(chunk)
+                if self._stderr_bytes>self.MAX_TEXT_BYTES:
+                    self._reader_error="App Server stderr byte bound";break
+                self._stderr_lines.append(chunk.decode("utf-8",errors="replace"))
+        except BaseException:
+            self._reader_error="App Server stderr read failed"
 
     def _send(self, payload: dict[str, Any]) -> None:
         if self._closed or self._process.poll() is not None:
-            raise CodexAppServerError(self._failure_message("App Server is not running"))
+            raise CodexAppServerError("App Server is not running")
+        encoded=_bounded_protocol_json(payload,self.MAX_BUFFER_BYTES)+b"\n"
+        if len(encoded)>self.MAX_BUFFER_BYTES:
+            raise CodexAppServerError("App Server input byte bound")
         assert self._process.stdin is not None
-        self._process.stdin.write(_canonical_json(payload) + "\n")
-        self._process.stdin.flush()
+        fd=self._process.stdin.fileno();os.set_blocking(fd,False)
+        offset=0
+        while offset<len(encoded):
+            if not select.select([], [fd], [], min(self._remaining(),0.1))[1]:continue
+            if payload.get("method") in {"thread/start","turn/start"} and self.before_dispatch is not None:
+                self.before_dispatch(payload["method"])
+            try:offset+=os.write(fd,encoded[offset:offset+4096])
+            except BlockingIOError:continue
 
     def _notify(self, method: str, params: dict[str, Any]) -> None:
-        self._send({"method": method, "params": params})
+        self._send({"method":method,"params":params})
 
     def _read_message(self) -> dict[str, Any]:
-        try:
-            line = self._stdout_queue.get(timeout=self.timeout_seconds)
-        except queue.Empty as exc:
-            raise CodexAppServerError(self._failure_message("timed out waiting for App Server")) from exc
-        if line is None:
-            raise CodexAppServerError(self._failure_message("App Server closed stdout"))
-        try:
-            payload = json.loads(line)
-        except json.JSONDecodeError as exc:
-            raise CodexAppServerError(f"App Server emitted invalid JSONL: {line[:500]!r}") from exc
-        if not isinstance(payload, dict):
-            raise CodexAppServerError("App Server JSONL message is not an object")
-        return payload
+        while True:
+            if self._reader_error:raise CodexAppServerError(self._reader_error)
+            try:line=self._stdout_queue.get(timeout=min(self._remaining(),0.1))
+            except queue.Empty:continue
+            if line is None:raise CodexAppServerError("App Server closed stdout")
+            with self._buffer_lock:self._queued_bytes-=len(line)
+            try:payload=json.loads(line)
+            except (ValueError,UnicodeError) as exc:raise CodexAppServerError("App Server invalid JSONL") from exc
+            if not isinstance(payload,dict):raise CodexAppServerError("App Server JSONL is not an object")
+            return payload
+
+    def _retain_event(self, collection, payload):
+        self._event_bytes+=len(_bounded_protocol_json(payload,self.MAX_EVENT_BYTES))
+        if self._event_bytes>self.MAX_EVENT_BYTES or len(collection)>=2048:
+            raise CodexAppServerError("App Server event byte/count bound")
+        collection.append(payload)
 
     def _request(self, method: str, params: dict[str, Any]) -> dict[str, Any]:
         self._next_id += 1
         request_id = self._next_id
+        if method in {"thread/start","turn/start"}:
+            self.last_attempt_evidence.update(request_id=request_id,state="dispatch_intent",submitted=False)
         self._send({"id": request_id, "method": method, "params": params})
+        if method in {"thread/start","turn/start"}:self.last_attempt_evidence.update(submitted=True,state="submitted_unknown")
         while True:
             payload = self._read_message()
-            if payload.get("id") == request_id:
+            if type(payload.get("id")) is int and payload["id"] == request_id:
                 if payload.get("error") is not None:
                     raise CodexAppServerError(f"App Server {method} error: {payload['error']}")
                 result = payload.get("result")
@@ -577,7 +683,7 @@ class CodexAppServerClient:
                     raise CodexAppServerError(f"App Server {method} returned no object result")
                 return result
             if "method" in payload and "id" not in payload:
-                self._pending_notifications.append(payload)
+                self._retain_event(self._pending_notifications,payload)
                 continue
             if "method" in payload and "id" in payload:
                 raise CodexAppServerError(
@@ -585,53 +691,17 @@ class CodexAppServerClient:
                     "benchmark turns must not request tools or approvals"
                 )
 
+            raise CodexAppServerError("App Server unexpected response/request binding")
+
     def _build_protocol_identity(self) -> dict[str, Any]:
         identity: dict[str, Any] = {
             "schema_version": "open_agronomy_agent.codex_app_server_protocol_identity.v1",
             "command": list(self.command),
             "initialize_result": self.initialize_result,
         }
-        try:
-            completed = subprocess.run(
-                [self.command[0], "--version"],
-                cwd=self.cwd,
-                text=True,
-                capture_output=True,
-                check=False,
-                timeout=20,
-            )
-            identity["codex_cli_version"] = completed.stdout.strip() or None
-        except (OSError, subprocess.SubprocessError):
-            identity["codex_cli_version"] = None
-        if not self.collect_protocol_identity:
-            identity["protocol_schema_sha256"] = None
-            return identity
-        try:
-            with tempfile.TemporaryDirectory(prefix="open-agronomy-app-server-") as temporary:
-                schema_dir = Path(temporary)
-                completed = subprocess.run(
-                    [
-                        self.command[0],
-                        "app-server",
-                        "generate-json-schema",
-                        "--experimental",
-                        "--out",
-                        str(schema_dir),
-                    ],
-                    cwd=self.cwd,
-                    text=True,
-                    capture_output=True,
-                    check=False,
-                    timeout=60,
-                )
-                schema = schema_dir / "codex_app_server_protocol.v2.schemas.json"
-                identity["protocol_schema_sha256"] = (
-                    hashlib.sha256(schema.read_bytes()).hexdigest()
-                    if completed.returncode == 0 and schema.is_file()
-                    else None
-                )
-        except (OSError, subprocess.SubprocessError):
-            identity["protocol_schema_sha256"] = None
+        identity["codex_cli_version"] = None
+        identity["protocol_schema_sha256"] = None
+        identity["qualification"] = "initialize_response_only_external_protocol_admission_required"
         return identity
 
     def _verify_model_catalog(self) -> dict[str, Any]:
@@ -659,7 +729,7 @@ class CodexAppServerClient:
             for item in model.get("supportedReasoningEfforts") or []
             if isinstance(item, dict)
         }
-        if efforts and self.expected_reasoning_effort not in efforts:
+        if self.expected_reasoning_effort not in efforts:
             raise CodexAppServerError(
                 f"model {self.expected_model!r} does not advertise reasoning effort "
                 f"{self.expected_reasoning_effort!r}; supported={sorted(efforts)}"
@@ -674,13 +744,20 @@ class CodexAppServerClient:
         output_schema: dict[str, Any] | None = None,
         metadata: dict[str, str] | None = None,
     ) -> AppServerResult:
+        if len(user_text)>self.MAX_FRAME_BYTES or len(base_instructions)>self.MAX_FRAME_BYTES:
+            raise CodexAppServerError("App Server input text bound")
+        self.last_attempt_evidence={"state":"pre_dispatch","submitted":False,"thread_acknowledged":False,"turn_acknowledged":False}
+        if getattr(self,"_completed_once",False):raise CodexAppServerError("App Server client is single-turn; no implicit retry")
         started = perf_counter()
         self._pending_notifications.clear()
+        self._event_bytes = 0
         controlled_instructions = (
             f"{TEXT_ONLY_BENCHMARK_CONTROL}\n\n{base_instructions.strip()}"
             if base_instructions.strip()
             else TEXT_ONLY_BENCHMARK_CONTROL
         )
+        check=getattr(self,"before_dispatch",None)
+        if check is not None:check("thread/start")
         thread_result = self._request(
             "thread/start",
             {
@@ -699,15 +776,20 @@ class CodexAppServerClient:
             },
         )
         thread = thread_result.get("thread") or {}
-        thread_id = str(thread.get("id") or "")
-        if not thread_id:
+        if not isinstance(thread,dict):raise CodexAppServerError("thread/start thread is malformed")
+        thread_id = thread.get("id")
+        if not isinstance(thread_id,str) or not thread_id:
             raise CodexAppServerError("thread/start did not return a thread id")
-        selected_model = str(thread_result.get("model") or self.expected_model)
+        self.last_attempt_evidence.update(thread_id=thread_id,thread_acknowledged=True,state="thread_acknowledged")
+        selected_model = thread_result.get("model")
+        if not isinstance(selected_model,str) or not selected_model:
+            raise CodexAppServerError("thread/start model selection is unobserved")
         thread_default_effort = str(thread_result.get("reasoningEffort") or "") or None
         if selected_model != self.expected_model:
             raise CodexAppServerError(
                 f"thread/start selected model {selected_model!r}, expected {self.expected_model!r}"
             )
+        self.last_attempt_evidence["selected_model"]=selected_model
         expected_sandbox = {"type": "readOnly", "networkAccess": False}
         observed_cwd = str(thread_result.get("cwd") or "")
         if thread.get("ephemeral") is not True:
@@ -727,6 +809,7 @@ class CodexAppServerClient:
                 "thread/start loaded unexpected instruction sources: "
                 f"{thread_result.get('instructionSources')!r}"
             )
+        if check is not None:check("turn/start")
         turn_result = self._request(
             "turn/start",
             {
@@ -741,26 +824,54 @@ class CodexAppServerClient:
                 "responsesapiClientMetadata": metadata or {},
             },
         )
+        if turn_result.get("threadId", thread_id) != thread_id:
+            raise CodexAppServerError("turn/start thread binding mismatch")
         turn = turn_result.get("turn") or {}
-        turn_id = str(turn.get("id") or "")
-        if not turn_id:
+        if not isinstance(turn,dict):raise CodexAppServerError("turn/start turn is malformed")
+        turn_id = turn.get("id")
+        if not isinstance(turn_id,str) or not turn_id:
             raise CodexAppServerError("turn/start did not return a turn id")
+        self.last_attempt_evidence.update(turn_id=turn_id,turn_acknowledged=True,state="turn_acknowledged")
+        if turn_result.get("threadId") is None:
+            # Missing explicit binding is unknown, not the requested thread.
+            raise CodexAppServerError("turn/start thread binding is missing")
         events = list(self._pending_notifications)
         self._pending_notifications.clear()
         completed_turn: dict[str, Any] | None = None
+        pending=list(events);events=[]
         while completed_turn is None:
-            payload = self._read_message()
+            payload = pending.pop(0) if pending else self._read_message()
             if "method" in payload and "id" in payload:
                 raise CodexAppServerError(
                     f"App Server requested unsupported client action {payload.get('method')!r}"
                 )
             if "method" not in payload:
                 continue
-            events.append(payload)
+            params=payload.get("params") or {}
+            method=payload.get("method")
+            if not isinstance(params,dict):raise CodexAppServerError("App Server event params malformed")
+            if method in {"item/completed","thread/tokenUsage/updated","turn/completed","model/rerouted","model/verification"}:
+                event_turn=(params.get("turn") or {}).get("id") if method=="turn/completed" else params.get("turnId")
+                if params.get("threadId")!=thread_id or event_turn!=turn_id:
+                    raise CodexAppServerError("App Server event thread/turn binding mismatch")
+            progress={"item/started","item/agentMessage/delta","item/reasoning/textDelta","item/reasoning/summaryTextDelta","item/reasoning/summaryPartAdded","turn/started"}
+            if method in progress:
+                event_turn=(params.get("turn") or {}).get("id") if method=="turn/started" else params.get("turnId")
+                if params.get("threadId")!=thread_id or event_turn!=turn_id:
+                    raise CodexAppServerError("progress event binding mismatch")
+            elif method in {"thread/started","thread/status/changed"}:
+                event_thread=(params.get("thread") or {}).get("id") if method=="thread/started" else params.get("threadId")
+                if event_thread!=thread_id:raise CodexAppServerError("thread metadata binding mismatch")
+            elif method not in {"item/completed","thread/tokenUsage/updated","turn/completed","model/rerouted","model/verification"}:
+                raise CodexAppServerError("unclassified App Server event")
+            self._retain_event(events,payload)
             if payload.get("method") == "turn/completed":
                 params = payload.get("params") or {}
                 if params.get("threadId") == thread_id and (params.get("turn") or {}).get("id") == turn_id:
                     completed_turn = params.get("turn")
+        if pending:
+            raise CodexAppServerError("events/duplicate terminals after completed turn")
+        # Do not assign delayed notifications from this request to a later turn.
         if completed_turn.get("status") != "completed":
             raise CodexAppServerError(
                 f"App Server turn failed: status={completed_turn.get('status')!r}, "
@@ -792,6 +903,7 @@ class CodexAppServerClient:
                 "benchmark App Server turn used forbidden tools or item types: "
                 f"{forbidden_item_types}; items={_canonical_json(forbidden_items)[:2000]}"
             )
+        self._completed_once=True
         agent_messages = [
             (event.get("params") or {}).get("item") or {}
             for event in events
@@ -804,9 +916,17 @@ class CodexAppServerClient:
                 for item in completed_turn.get("items") or []
                 if isinstance(item, dict) and item.get("type") == "agentMessage"
             ]
-        text = "\n".join(str(item.get("text") or "").strip() for item in agent_messages).strip()
-        if not text:
-            raise CodexAppServerError("App Server completed without an agent message")
+        if len(agent_messages)!=1:
+            raise CodexAppServerError("ambiguous multiplicity of completed agent messages")
+        item=agent_messages[0]
+        if not isinstance(item.get("id"),str) or not item["id"]:
+            raise CodexAppServerError("App Server output item identity missing")
+        text=item.get("text")
+        if not isinstance(text,str):raise CodexAppServerError("App Server output text is not a string")
+        if len(text)>self.MAX_TEXT_BYTES or len(text.encode("utf-8"))>self.MAX_TEXT_BYTES:
+            raise CodexAppServerError("App Server output text byte bound")
+        if item.get("phase") not in (None,"final_answer"):
+            raise CodexAppServerError("App Server output phase is not final_answer")
         usage_events = [event.get("params") or {} for event in events if event.get("method") == "thread/tokenUsage/updated"]
         token_usage = (usage_events[-1].get("tokenUsage") if usage_events else None) or {}
         event_records = [
@@ -823,6 +943,14 @@ class CodexAppServerClient:
             "requested_reasoning_effort": self.expected_reasoning_effort,
             "catalog_model": self.catalog_model,
             "selected_model": selected_model,
+            "selection_scope": "explicit_thread_selection_not_weights_identity",
+            "provider_status": "completed",
+            "output_phase_observed":item.get("phase"),
+            "output_composition":"one_exact_raw_agent_message",
+            "terminal_observation_scope":"single-use stream through observed terminal; later events unverified",
+            "finish_reason": None,
+            "hard_output_cap_supported": False,
+            "remote_cancellation_confirmed": None,
             "requested_turn_reasoning_effort": self.expected_reasoning_effort,
             "thread_default_reasoning_effort": thread_default_effort,
             "effective_turn_reasoning_effort_observed": False,
@@ -852,35 +980,35 @@ class CodexAppServerClient:
             "output_schema_sha256": _sha256(_canonical_json(output_schema)) if output_schema is not None else None,
             "output_sha256": _sha256(text),
         }
+        self.last_attempt_evidence["state"]="protocol_completed"
         return AppServerResult(text=text, receipt=receipt)
 
     def _failure_message(self, message: str) -> str:
-        stderr = "\n".join(self._stderr_lines[-20:])
-        return f"{message}: {stderr}" if stderr else message
+        return message
 
-    def close(self) -> None:
-        if self._closed:
-            return
-        self._closed = True
-        process = getattr(self, "_process", None)
-        if process is not None:
-            if process.stdin is not None:
-                try:
-                    process.stdin.close()
-                except OSError:
-                    pass
-            try:
-                process.wait(timeout=2)
-            except subprocess.TimeoutExpired:
-                process.terminate()
-                try:
-                    process.wait(timeout=2)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-        temporary_cwd = getattr(self, "_temporary_cwd", None)
-        if temporary_cwd is not None:
-            temporary_cwd.cleanup()
-            self._temporary_cwd = None
+    def close(self) -> dict[str, Any]:
+        if self._closed:return self.local_closeout or {"status":"unknown"}
+        self._closed=True
+        process=getattr(self,"_process",None)
+        if process is None:return {"status":"not_started","remote_cancellation_confirmed":None}
+        pipe_error=None
+        if process.stdin is not None:
+            try:process.stdin.close()
+            except OSError as exc:pipe_error=type(exc).__name__
+        if process.poll() is None:
+            try:process.terminate()
+            except ProcessLookupError:pass
+        try:process.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            try:process.kill()
+            except ProcessLookupError:pass
+            process.wait(timeout=2)
+        self.local_closeout={"status":"reaped","local_returncode":process.returncode,
+            "scope":"direct_owned_process_only; descendants_unverified",
+            "owned_group_absent":None,"remote_cancellation_confirmed":None,"pipe_close_error":pipe_error}
+        temporary_cwd=getattr(self,"_temporary_cwd",None)
+        if temporary_cwd is not None:temporary_cwd.cleanup();self._temporary_cwd=None
+        return self.local_closeout
 
     def __enter__(self) -> "CodexAppServerClient":
         return self
@@ -994,6 +1122,437 @@ def _validate_evidence_section_completeness(
             )
 
 
+def _validated_canonical_suite(contract: Mapping[str, Any], suite_sha: str) -> dict[str, Any]:
+    if set(contract) != {"schema_version", "benchmark_suite_sha256", "source_sha256", "cases", "sha256"}:
+        raise ValueError("invalid canonical suite fields")
+    if (contract.get("benchmark_suite_sha256") != suite_sha
+            or not _SHA256_RE.fullmatch(str(contract.get("source_sha256", "")))
+            or contract.get("sha256") != _sha256(_canonical_json({k:v for k,v in contract.items() if k!="sha256"}))):
+        raise ValueError("canonical suite identity mismatch")
+    cases = contract.get("cases")
+    if not isinstance(cases, Mapping) or not cases:
+        raise ValueError("canonical suite cases missing")
+    fields = {"question_sha256", "field_context_sha256", "candidate_application_messages_sha256_by_arm", "verification_evidence_sha256"}
+    for key, row in cases.items():
+        if not isinstance(key,str) or not key or not isinstance(row,Mapping) or set(row)!=fields:
+            raise ValueError("invalid canonical case")
+        if any(not _SHA256_RE.fullmatch(str(row[name])) for name in fields-{"candidate_application_messages_sha256_by_arm"}):
+            raise ValueError("invalid canonical case hash")
+        arms=row["candidate_application_messages_sha256_by_arm"]
+        if not isinstance(arms,Mapping) or set(arms)!={"raw_model","production_full"} or any(not _SHA256_RE.fullmatch(str(v)) for v in arms.values()):
+            raise ValueError("invalid canonical arm hashes")
+    return json.loads(_canonical_json(contract))
+
+
+def validate_canonical_backend(generator: Any, *, eval_id: str, question: str,
+        field_context: Mapping[str, Any] | None, arm: str, phase: str,
+        model_id: str, model_config_sha256: str, max_tokens: int, reasoning_effort: str) -> None:
+    """Validate a lazy, controlled product before any provider client is constructed."""
+    if not isinstance(generator, CodexAppServerGenerator):
+        raise ValueError("canonical backend must be the controlled AppServer adapter")
+    suite=generator.expected_suite_case_contract
+    row=suite.get("cases",{}).get(eval_id)
+    authority=generator.egress_authorization
+    if (suite.get("schema_version")!=CANONICAL_SUITE_SCHEMA or not isinstance(row,Mapping)
+            or authority.get("schema_version")!=CANONICAL_EGRESS_AUTHORIZATION_SCHEMA
+            or generator.benchmark_arm!=arm or generator.egress_phase!=phase
+            or generator.model_id!=model_id or authority.get("model_config_sha256")!=model_config_sha256
+            or not isinstance(reasoning_effort,str) or not reasoning_effort
+            or generator.reasoning_effort!=reasoning_effort or authority.get("reasoning_effort")!=reasoning_effort
+            or type(generator.max_tokens) is not int or generator.max_tokens!=max_tokens
+            or row["question_sha256"]!=_sha256(question)
+            or row["field_context_sha256"]!=_sha256(_canonical_json(dict(field_context or {})))):
+        raise ValueError("canonical backend case/arm/phase/model/config/cap mismatch")
+
+
+def _validate_egress_records(envelope, artifact_contract, question_fragment):
+    """One shared membership/rights validator for legacy and canonical envelopes."""
+    guard_rows = envelope.get("governed_guard_notes") or []
+    if not isinstance(guard_rows, list):
+        raise CodexAppServerError("benchmark egress governed guard notes must be an array")
+    seen_guards: set[str] = set()
+    guard_chars = 0
+    for record in guard_rows:
+        if not isinstance(record, Mapping) or set(record) != {
+            "name",
+            "skill_contract_sha256",
+            "skill_id",
+            "provenance",
+            "boundary",
+            "risk_class",
+            "eval_tags",
+            "text",
+            "text_sha256",
+            "outbound_fragment",
+            "outbound_fragment_sha256",
+        }:
+            raise CodexAppServerError("benchmark egress governed guard note has invalid fields")
+        name = str(record.get("name") or "")
+        if not name.endswith("_guard") or name in seen_guards:
+            raise CodexAppServerError("benchmark egress governed guard identity is invalid")
+        seen_guards.add(name)
+        from agronomy_agent.tools.registry import run_tools
+
+        expected_notes = run_tools(question_fragment, (name,))
+        if len(expected_notes) != 1:
+            raise CodexAppServerError("benchmark egress governed guard is not canonical")
+        expected_note = expected_notes[0]
+        expected_metadata = {
+            "skill_id": expected_note.skill_id,
+            "provenance": list(expected_note.provenance),
+            "boundary": expected_note.boundary,
+            "risk_class": expected_note.risk_class,
+            "eval_tags": list(expected_note.eval_tags),
+        }
+        if any(record.get(field) != value for field, value in expected_metadata.items()):
+            raise CodexAppServerError("benchmark egress governed guard skill contract mismatch")
+        skill_contract_sha256 = _require_sha256(
+            record.get("skill_contract_sha256"), field="governed_guard_notes.skill_contract_sha256"
+        )
+        if skill_contract_sha256 != _sha256(_canonical_json(expected_metadata)):
+            raise CodexAppServerError("benchmark egress governed guard contract hash mismatch")
+        text = str(record.get("text") or "")
+        fragment = str(record.get("outbound_fragment") or "")
+        if (
+            text != expected_note.text
+            or _sha256(text) != record.get("text_sha256")
+            or not fragment
+            or _sha256(fragment) != record.get("outbound_fragment_sha256")
+            or text not in fragment
+        ):
+            raise CodexAppServerError("benchmark egress governed guard text is not canonical")
+        guard_chars += len(fragment)
+    if guard_chars > _MAX_GUARD_NOTE_CHARS:
+        raise CodexAppServerError("benchmark egress governed guard notes exceed their character bound")
+
+    documents = envelope.get("selected_document_excerpts") or []
+    if not isinstance(documents, list) or len(documents) > _MAX_SELECTED_DOCUMENT_EXCERPTS:
+        raise CodexAppServerError("benchmark egress selected-document bound exceeded")
+    document_chars = 0
+    seen_doc_ids: set[str] = set()
+    for record in documents:
+        if not isinstance(record, Mapping):
+            raise CodexAppServerError("benchmark egress document provenance must be an object")
+        if set(record) != {
+            "doc_id",
+            "source_id",
+            "title",
+            "source",
+            "document_identity_sha256",
+            "document_row_sha256",
+            "source_text",
+            "source_text_sha256",
+            "source_text_fragment",
+            "source_text_fragment_sha256",
+            "content_fragment",
+            "content_sha256",
+            "source_document_sha256",
+            "corpus_artifact_sha256",
+            "corpus_path_sha256",
+            "policy_entry_sha256",
+            "public_manifest_match_sha256",
+            "policy_rights_status",
+            "runtime_eligibility",
+            "excerpt_chars",
+        }:
+            raise CodexAppServerError("benchmark egress document provenance has invalid fields")
+        doc_id = str(record.get("doc_id") or "").strip()
+        source_id = str(record.get("source_id") or "").strip()
+        title = str(record.get("title") or "").strip()
+        source = str(record.get("source") or "").strip()
+        if not doc_id or not source_id or not title or not source or doc_id in seen_doc_ids:
+            raise CodexAppServerError("benchmark egress document IDs must be non-empty and unique")
+        seen_doc_ids.add(doc_id)
+        for field in (
+            "content_sha256",
+            "source_document_sha256",
+            "corpus_artifact_sha256",
+            "corpus_path_sha256",
+            "policy_entry_sha256",
+        ):
+            _require_sha256(record.get(field), field=f"selected_document_excerpts.{field}")
+        content_fragment = str(record.get("content_fragment") or "")
+        if not content_fragment or _sha256(content_fragment) != record.get("content_sha256"):
+            raise CodexAppServerError(f"benchmark egress document fragment hash mismatch: {doc_id}")
+        source_text = str(record.get("source_text") or "")
+        source_text_fragment = str(record.get("source_text_fragment") or "")
+        if (
+            not source_text
+            or _sha256(source_text) != record.get("source_text_sha256")
+            or not source_text_fragment
+            or _sha256(source_text_fragment) != record.get("source_text_fragment_sha256")
+            or source_text_fragment not in source_text
+            or source_text_fragment not in content_fragment
+        ):
+            raise CodexAppServerError(
+                f"benchmark egress document fragment lacks source membership: {doc_id}"
+            )
+        expected_document_identity = _sha256(
+            _canonical_json(
+                {
+                    "doc_id": doc_id,
+                    "source_id": source_id,
+                    "source_document_sha256": record.get("source_document_sha256"),
+                    "source_text_sha256": record.get("source_text_sha256"),
+                }
+            )
+        )
+        if record.get("document_identity_sha256") != expected_document_identity:
+            raise CodexAppServerError(
+                f"benchmark egress document membership identity is forged: {doc_id}"
+            )
+        # The active runtime policy and public package manifest are the
+        # admission authority. Row-level license labels are intentionally not
+        # accepted from the transient envelope because older seed rows lack a
+        # uniform, membership-bound vocabulary.
+        policy_rights_status = str(record.get("policy_rights_status") or "").strip()
+        if policy_rights_status not in _PUBLIC_CORPUS_RIGHTS_STATUSES:
+            raise CodexAppServerError(f"benchmark egress document is not public-release eligible: {doc_id}")
+        _require_sha256(
+            record.get("public_manifest_match_sha256"),
+            field="selected_document_excerpts.public_manifest_match_sha256",
+        )
+        if record.get("runtime_eligibility") not in {"decisive", "context_only"}:
+            raise CodexAppServerError(f"benchmark egress document is not runtime-loadable: {doc_id}")
+        expected_document = (artifact_contract.get("allowed_corpora") or {}).get(
+            record.get("corpus_path_sha256")
+        )
+        if not isinstance(expected_document, Mapping):
+            raise CodexAppServerError(f"benchmark egress document path is outside expected artifacts: {doc_id}")
+        expected_member = (expected_document.get("allowed_documents") or {}).get(
+            record.get("document_identity_sha256")
+        )
+        if not isinstance(expected_member, Mapping):
+            raise CodexAppServerError(
+                f"benchmark egress document is not a member of its allowed corpus: {doc_id}"
+            )
+        member_field_map = {
+            "doc_id": "doc_id",
+            "source_id": "source_id",
+            "title": "title",
+            "source": "source",
+            "source_document_sha256": "source_document_sha256",
+            "source_text_sha256": "source_text_sha256",
+            "document_row_sha256": "row_sha256",
+        }
+        for field, expected_field in member_field_map.items():
+            if record.get(field) != expected_member.get(expected_field):
+                raise CodexAppServerError(
+                    f"benchmark egress document {field} lacks exact corpus membership: {doc_id}"
+                )
+        document_field_map = {
+            "corpus_artifact_sha256": "artifact_sha256",
+            "policy_entry_sha256": "policy_entry_sha256",
+            "public_manifest_match_sha256": "public_manifest_match_sha256",
+            "policy_rights_status": "policy_rights_status",
+            "runtime_eligibility": "runtime_eligibility",
+        }
+        for field, expected_field in document_field_map.items():
+            if record.get(field) != expected_document.get(expected_field):
+                raise CodexAppServerError(
+                    f"benchmark egress document {field} does not match expected artifacts: {doc_id}"
+                )
+        excerpt_chars = record.get("excerpt_chars")
+        if isinstance(excerpt_chars, bool) or not isinstance(excerpt_chars, int) or excerpt_chars < 1:
+            raise CodexAppServerError("benchmark egress document excerpt length is invalid")
+        if excerpt_chars != len(content_fragment):
+            raise CodexAppServerError(
+                f"benchmark egress document excerpt length does not match its fragment: {doc_id}"
+            )
+        document_chars += excerpt_chars
+    if document_chars > _MAX_SELECTED_DOCUMENT_CHARS:
+        raise CodexAppServerError("benchmark egress selected excerpts exceed the whole-corpus guard")
+
+    graph_rows = envelope.get("graph_evidence") or []
+    if not isinstance(graph_rows, list) or len(graph_rows) > _MAX_GRAPH_EVIDENCE_ROWS:
+        raise CodexAppServerError("benchmark egress graph-evidence bound exceeded")
+    graph_chars = 0
+    for record in graph_rows:
+        if not isinstance(record, Mapping) or not str(record.get("graph_id") or "").strip():
+            raise CodexAppServerError("benchmark egress graph evidence lacks manifest identity")
+        if set(record) != {
+            "graph_id",
+            "graph_version",
+            "graph_sha256",
+            "source_sha256",
+            "license",
+            "public_manifest_match_sha256",
+            "node_id",
+            "node_name",
+            "node_kind",
+            "node_identity_sha256",
+            "node_row_sha256",
+            "node_evidence_text",
+            "node_evidence_text_sha256",
+            "node_evidence_fragment",
+            "node_evidence_fragment_sha256",
+            "evidence_fragment",
+            "evidence_sha256",
+        }:
+            raise CodexAppServerError("benchmark egress graph evidence has invalid fields")
+        if not str(record.get("graph_version") or "").strip():
+            raise CodexAppServerError("benchmark egress graph evidence lacks a manifest version")
+        for field in (
+            "graph_sha256",
+            "source_sha256",
+            "evidence_sha256",
+            "node_identity_sha256",
+            "node_row_sha256",
+            "node_evidence_text_sha256",
+            "node_evidence_fragment_sha256",
+        ):
+            _require_sha256(record.get(field), field=f"graph_evidence.{field}")
+        evidence_fragment = str(record.get("evidence_fragment") or "")
+        if not evidence_fragment or _sha256(evidence_fragment) != record.get("evidence_sha256"):
+            raise CodexAppServerError("benchmark egress graph fragment hash mismatch")
+        node_id = str(record.get("node_id") or "")
+        node_name = str(record.get("node_name") or "")
+        node_kind = str(record.get("node_kind") or "")
+        node_evidence_text = str(record.get("node_evidence_text") or "")
+        node_evidence_fragment = str(record.get("node_evidence_fragment") or "")
+        if (
+            not node_id
+            or not node_name
+            or not node_kind
+            or not node_evidence_text
+            or _sha256(node_evidence_text) != record.get("node_evidence_text_sha256")
+            or not node_evidence_fragment
+            or _sha256(node_evidence_fragment)
+            != record.get("node_evidence_fragment_sha256")
+            or node_evidence_fragment not in node_evidence_text
+            or node_evidence_fragment not in evidence_fragment
+        ):
+            raise CodexAppServerError("benchmark egress graph fragment lacks node membership")
+        expected_node_identity = _sha256(
+            _canonical_json(
+                {
+                    "node_id": node_id,
+                    "name": node_name,
+                    "kind": node_kind,
+                    "evidence_sha256": record.get("node_evidence_text_sha256"),
+                }
+            )
+        )
+        if record.get("node_identity_sha256") != expected_node_identity:
+            raise CodexAppServerError("benchmark egress graph-node membership identity is forged")
+        graph_chars += len(evidence_fragment)
+        _require_sha256(
+            record.get("public_manifest_match_sha256"),
+            field="graph_evidence.public_manifest_match_sha256",
+        )
+        license_id = str(record.get("license") or "").strip()
+        if license_id not in _PUBLIC_GRAPH_LICENSES:
+            raise CodexAppServerError("benchmark egress graph evidence lacks public license identity")
+        expected_graph = (artifact_contract.get("allowed_graphs") or {}).get(record.get("graph_sha256"))
+        if not isinstance(expected_graph, Mapping):
+            raise CodexAppServerError("benchmark egress graph is outside expected artifacts")
+        expected_node = (expected_graph.get("allowed_nodes") or {}).get(
+            record.get("node_identity_sha256")
+        )
+        if not isinstance(expected_node, Mapping):
+            raise CodexAppServerError("benchmark egress graph node is outside expected artifacts")
+        node_field_map = {
+            "node_id": "node_id",
+            "node_name": "name",
+            "node_kind": "kind",
+            "node_evidence_text_sha256": "evidence_sha256",
+            "node_row_sha256": "node_row_sha256",
+        }
+        for field, expected_field in node_field_map.items():
+            if record.get(field) != expected_node.get(expected_field):
+                raise CodexAppServerError(
+                    f"benchmark egress graph node {field} lacks exact membership"
+                )
+        graph_field_map = {
+            "graph_id": "graph_id",
+            "graph_version": "version",
+            "source_sha256": "source_sha256",
+            "license": "license",
+            "public_manifest_match_sha256": "public_manifest_match_sha256",
+        }
+        for field, expected_field in graph_field_map.items():
+            if record.get(field) != expected_graph.get(expected_field):
+                raise CodexAppServerError(
+                    f"benchmark egress graph {field} does not match expected artifacts"
+                )
+    if graph_chars > _MAX_GRAPH_EVIDENCE_CHARS:
+        raise CodexAppServerError("benchmark egress graph evidence exceeds its character bound")
+
+    return documents, graph_rows, guard_rows
+
+
+def _validate_canonical_outbound(envelope, *, authorization, artifact_contract,
+        suite_case_contract, static_prompt_contract, expected_candidate_output_sha256,
+        expected_phase, expected_arm, messages):
+    fields={"schema_version","eval_id","phase","arm","question_fragment","field_context",
+        "source_sha256","suite_case_contract_sha256","egress_artifact_contract_sha256","static_prompt_contract_sha256",
+        "private_knowledge_policy","private_knowledge_overlay_loaded","whole_corpus_included",
+        "outbound_messages_sha256","selected_document_excerpts","graph_evidence","governed_guard_notes","payload_classes"}
+    if expected_phase=="verification":fields|={"candidate_draft_text","verifier_evidence_text","candidate_generation_output_sha256"}
+    if set(envelope)!=fields:raise CodexAppServerError("unclassified canonical envelope fields")
+    if authorization.get("schema_version")!=CANONICAL_EGRESS_AUTHORIZATION_SCHEMA:
+        raise CodexAppServerError("legacy grant cannot authorize canonical egress")
+    expiry=dt.datetime.fromisoformat(authorization["expires_at"].replace("Z","+00:00"))
+    if expiry<=dt.datetime.now(dt.UTC):
+        raise CodexAppServerError("canonical egress authorization expired")
+    phase,arm=envelope.get("phase"),envelope.get("arm")
+    if phase!=expected_phase or arm!=expected_arm or arm not in CANONICAL_PAYLOAD_MAP.get(phase,{}):
+        raise CodexAppServerError("canonical phase/arm mismatch")
+    if (envelope.get("private_knowledge_overlay_loaded") is not False
+            or envelope.get("private_knowledge_policy")!="disabled" or envelope.get("whole_corpus_included") is not False):
+        raise CodexAppServerError("canonical private/corpus boundary unknown")
+    for name,expected in (("suite_case_contract_sha256",suite_case_contract["sha256"]),
+            ("source_sha256",suite_case_contract["source_sha256"]),
+            ("egress_artifact_contract_sha256",artifact_contract["sha256"]),
+            ("static_prompt_contract_sha256",static_prompt_contract["sha256"])):
+        if envelope.get(name)!=expected: raise CodexAppServerError("canonical contract mismatch: "+name)
+    row=suite_case_contract["cases"].get(envelope.get("eval_id"))
+    if not isinstance(row,Mapping):raise CodexAppServerError("unknown canonical case")
+    question=envelope.get("question_fragment")
+    if not isinstance(question,str) or _sha256(question)!=row["question_sha256"]:
+        raise CodexAppServerError("canonical question mismatch")
+    facts=envelope.get("field_context")
+    if not isinstance(facts,Mapping) or _sha256(_canonical_json(facts))!=row["field_context_sha256"]:
+        raise CodexAppServerError("canonical supplied facts mismatch")
+    message_sha=_validate_exact_application_message_shape(messages,phase=phase,arm=arm)
+    if envelope.get("outbound_messages_sha256")!=message_sha:
+        raise CodexAppServerError("canonical outbound message mismatch")
+    if phase=="candidate_generation" and message_sha!=row["candidate_application_messages_sha256_by_arm"][arm]:
+        raise CodexAppServerError("canonical compiled messages differ from reviewed exact projection")
+    if phase=="verification":
+        draft=envelope.get("candidate_draft_text");evidence=envelope.get("verifier_evidence_text")
+        if (not isinstance(draft,str) or not draft or _sha256(draft)!=expected_candidate_output_sha256
+                or envelope.get("candidate_generation_output_sha256")!=expected_candidate_output_sha256
+                or not isinstance(evidence,str) or _sha256(evidence)!=row["verification_evidence_sha256"]):
+            raise CodexAppServerError("canonical editor draft/evidence mismatch")
+        _validate_verifier_application_message_contract(messages,envelope=envelope,static_prompt_contract=static_prompt_contract)
+    documents,graphs,guards=_validate_egress_records(envelope,artifact_contract,question)
+    instructions,user=split_chat_messages(messages)
+    outbound=instructions+"\n\n"+user
+    for rows,key in ((documents,"content_fragment"),(graphs,"evidence_fragment"),(guards,"outbound_fragment")):
+        if any(record[key] not in outbound for record in rows):raise CodexAppServerError("canonical evidence fragment absent")
+    _validate_evidence_section_completeness(outbound,documents=documents,graph_rows=graphs,guard_rows=guards)
+    actual=["project_owned_frozen_benchmark_questions"]
+    if any(m["role"]=="system" for m in messages):actual.append("benchmark_system_and_answer_contract_prompts")
+    if arm=="production_full" and facts:actual.append("case_bound_synthetic_facts")
+    if documents:actual.append("selected_public_release_runtime_document_source_excerpts")
+    if graphs:actual.append("public_release_runtime_graph_evidence")
+    if phase=="verification":actual += ["candidate_drafts_for_verification","verifier_evidence"]
+    actual=[item for item in CANONICAL_PAYLOAD_CLASSES if item in actual]
+    if envelope["payload_classes"]!=actual or not set(actual)<=set(CANONICAL_PAYLOAD_MAP[phase][arm]):
+        raise CodexAppServerError("canonical payload classification mismatch")
+    if sum(len(m["content"].encode("utf-8")) for m in messages)>_MAX_OUTBOUND_MESSAGES_CHARS:
+        raise CodexAppServerError("canonical outbound byte bound")
+    for text in (instructions,user,_canonical_json(facts)):_validate_secret_free_text(text)
+    sanitized={k:v for k,v in envelope.items() if k not in {"question_fragment","field_context","candidate_draft_text","verifier_evidence_text"}}
+    for key,private in (("selected_document_excerpts",{"content_fragment","source_text","source_text_fragment"}),
+            ("graph_evidence",{"evidence_fragment","node_evidence_text","node_evidence_fragment"}),
+            ("governed_guard_notes",{"text","outbound_fragment"})):
+        sanitized[key]=[{k:v for k,v in record.items() if k not in private} for record in sanitized[key]]
+    return {"instructions":instructions,"user_text":user,"sanitized_envelope":sanitized,
+            "payload_classes":actual}
+
+
 def _validated_suite_case_contract(
     contract: Mapping[str, Any] | None,
     *,
@@ -1003,6 +1562,8 @@ def _validated_suite_case_contract(
 
     if not isinstance(contract, Mapping):
         raise ValueError("Codex App Server benchmark generation requires a suite-case contract")
+    if contract.get("schema_version") == CANONICAL_SUITE_SCHEMA:
+        return _validated_canonical_suite(contract, benchmark_suite_sha256)
     if set(contract) != {"schema_version", "benchmark_suite_sha256", "cases", "sha256"}:
         raise ValueError("benchmark suite-case contract has unexpected or missing fields")
     if contract.get("schema_version") != BENCHMARK_EGRESS_SUITE_CASE_CONTRACT_SCHEMA:
@@ -1369,6 +1930,14 @@ def _validate_outbound_envelope(
     expected_arm: str,
     messages: Sequence[Mapping[str, str]],
 ) -> dict[str, Any]:
+    canonical=suite_case_contract.get("schema_version")==CANONICAL_SUITE_SCHEMA
+    if canonical != (envelope.get("schema_version")==CANONICAL_ENVELOPE_SCHEMA):
+        raise CodexAppServerError("envelope and suite authority versions differ")
+    if envelope.get("schema_version") == CANONICAL_ENVELOPE_SCHEMA:
+        return _validate_canonical_outbound(envelope, authorization=authorization,
+            artifact_contract=artifact_contract, suite_case_contract=suite_case_contract,
+            static_prompt_contract=static_prompt_contract, expected_candidate_output_sha256=expected_candidate_output_sha256,
+            expected_phase=expected_phase, expected_arm=expected_arm, messages=messages)
     common_envelope_fields = {
         "schema_version",
         "eval_id",
@@ -1549,316 +2118,7 @@ def _validate_outbound_envelope(
         if field_present and rendered_sha256 != expected_rendered_sha256:
             raise CodexAppServerError("benchmark egress rendered field context differs from its suite case")
 
-    guard_rows = envelope.get("governed_guard_notes") or []
-    if not isinstance(guard_rows, list):
-        raise CodexAppServerError("benchmark egress governed guard notes must be an array")
-    seen_guards: set[str] = set()
-    guard_chars = 0
-    for record in guard_rows:
-        if not isinstance(record, Mapping) or set(record) != {
-            "name",
-            "skill_contract_sha256",
-            "skill_id",
-            "provenance",
-            "boundary",
-            "risk_class",
-            "eval_tags",
-            "text",
-            "text_sha256",
-            "outbound_fragment",
-            "outbound_fragment_sha256",
-        }:
-            raise CodexAppServerError("benchmark egress governed guard note has invalid fields")
-        name = str(record.get("name") or "")
-        if not name.endswith("_guard") or name in seen_guards:
-            raise CodexAppServerError("benchmark egress governed guard identity is invalid")
-        seen_guards.add(name)
-        from agronomy_agent.tools.registry import run_tools
-
-        expected_notes = run_tools(question_fragment, (name,))
-        if len(expected_notes) != 1:
-            raise CodexAppServerError("benchmark egress governed guard is not canonical")
-        expected_note = expected_notes[0]
-        expected_metadata = {
-            "skill_id": expected_note.skill_id,
-            "provenance": list(expected_note.provenance),
-            "boundary": expected_note.boundary,
-            "risk_class": expected_note.risk_class,
-            "eval_tags": list(expected_note.eval_tags),
-        }
-        if any(record.get(field) != value for field, value in expected_metadata.items()):
-            raise CodexAppServerError("benchmark egress governed guard skill contract mismatch")
-        skill_contract_sha256 = _require_sha256(
-            record.get("skill_contract_sha256"), field="governed_guard_notes.skill_contract_sha256"
-        )
-        if skill_contract_sha256 != _sha256(_canonical_json(expected_metadata)):
-            raise CodexAppServerError("benchmark egress governed guard contract hash mismatch")
-        text = str(record.get("text") or "")
-        fragment = str(record.get("outbound_fragment") or "")
-        if (
-            text != expected_note.text
-            or _sha256(text) != record.get("text_sha256")
-            or not fragment
-            or _sha256(fragment) != record.get("outbound_fragment_sha256")
-            or text not in fragment
-        ):
-            raise CodexAppServerError("benchmark egress governed guard text is not canonical")
-        guard_chars += len(fragment)
-    if guard_chars > _MAX_GUARD_NOTE_CHARS:
-        raise CodexAppServerError("benchmark egress governed guard notes exceed their character bound")
-
-    documents = envelope.get("selected_document_excerpts") or []
-    if not isinstance(documents, list) or len(documents) > _MAX_SELECTED_DOCUMENT_EXCERPTS:
-        raise CodexAppServerError("benchmark egress selected-document bound exceeded")
-    document_chars = 0
-    seen_doc_ids: set[str] = set()
-    for record in documents:
-        if not isinstance(record, Mapping):
-            raise CodexAppServerError("benchmark egress document provenance must be an object")
-        if set(record) != {
-            "doc_id",
-            "source_id",
-            "title",
-            "source",
-            "document_identity_sha256",
-            "document_row_sha256",
-            "source_text",
-            "source_text_sha256",
-            "source_text_fragment",
-            "source_text_fragment_sha256",
-            "content_fragment",
-            "content_sha256",
-            "source_document_sha256",
-            "corpus_artifact_sha256",
-            "corpus_path_sha256",
-            "policy_entry_sha256",
-            "public_manifest_match_sha256",
-            "policy_rights_status",
-            "runtime_eligibility",
-            "excerpt_chars",
-        }:
-            raise CodexAppServerError("benchmark egress document provenance has invalid fields")
-        doc_id = str(record.get("doc_id") or "").strip()
-        source_id = str(record.get("source_id") or "").strip()
-        title = str(record.get("title") or "").strip()
-        source = str(record.get("source") or "").strip()
-        if not doc_id or not source_id or not title or not source or doc_id in seen_doc_ids:
-            raise CodexAppServerError("benchmark egress document IDs must be non-empty and unique")
-        seen_doc_ids.add(doc_id)
-        for field in (
-            "content_sha256",
-            "source_document_sha256",
-            "corpus_artifact_sha256",
-            "corpus_path_sha256",
-            "policy_entry_sha256",
-        ):
-            _require_sha256(record.get(field), field=f"selected_document_excerpts.{field}")
-        content_fragment = str(record.get("content_fragment") or "")
-        if not content_fragment or _sha256(content_fragment) != record.get("content_sha256"):
-            raise CodexAppServerError(f"benchmark egress document fragment hash mismatch: {doc_id}")
-        source_text = str(record.get("source_text") or "")
-        source_text_fragment = str(record.get("source_text_fragment") or "")
-        if (
-            not source_text
-            or _sha256(source_text) != record.get("source_text_sha256")
-            or not source_text_fragment
-            or _sha256(source_text_fragment) != record.get("source_text_fragment_sha256")
-            or source_text_fragment not in source_text
-            or source_text_fragment not in content_fragment
-        ):
-            raise CodexAppServerError(
-                f"benchmark egress document fragment lacks source membership: {doc_id}"
-            )
-        expected_document_identity = _sha256(
-            _canonical_json(
-                {
-                    "doc_id": doc_id,
-                    "source_id": source_id,
-                    "source_document_sha256": record.get("source_document_sha256"),
-                    "source_text_sha256": record.get("source_text_sha256"),
-                }
-            )
-        )
-        if record.get("document_identity_sha256") != expected_document_identity:
-            raise CodexAppServerError(
-                f"benchmark egress document membership identity is forged: {doc_id}"
-            )
-        # The active runtime policy and public package manifest are the
-        # admission authority. Row-level license labels are intentionally not
-        # accepted from the transient envelope because older seed rows lack a
-        # uniform, membership-bound vocabulary.
-        policy_rights_status = str(record.get("policy_rights_status") or "").strip()
-        if policy_rights_status not in _PUBLIC_CORPUS_RIGHTS_STATUSES:
-            raise CodexAppServerError(f"benchmark egress document is not public-release eligible: {doc_id}")
-        _require_sha256(
-            record.get("public_manifest_match_sha256"),
-            field="selected_document_excerpts.public_manifest_match_sha256",
-        )
-        if record.get("runtime_eligibility") not in {"decisive", "context_only"}:
-            raise CodexAppServerError(f"benchmark egress document is not runtime-loadable: {doc_id}")
-        expected_document = (artifact_contract.get("allowed_corpora") or {}).get(
-            record.get("corpus_path_sha256")
-        )
-        if not isinstance(expected_document, Mapping):
-            raise CodexAppServerError(f"benchmark egress document path is outside expected artifacts: {doc_id}")
-        expected_member = (expected_document.get("allowed_documents") or {}).get(
-            record.get("document_identity_sha256")
-        )
-        if not isinstance(expected_member, Mapping):
-            raise CodexAppServerError(
-                f"benchmark egress document is not a member of its allowed corpus: {doc_id}"
-            )
-        member_field_map = {
-            "doc_id": "doc_id",
-            "source_id": "source_id",
-            "title": "title",
-            "source": "source",
-            "source_document_sha256": "source_document_sha256",
-            "source_text_sha256": "source_text_sha256",
-            "document_row_sha256": "row_sha256",
-        }
-        for field, expected_field in member_field_map.items():
-            if record.get(field) != expected_member.get(expected_field):
-                raise CodexAppServerError(
-                    f"benchmark egress document {field} lacks exact corpus membership: {doc_id}"
-                )
-        document_field_map = {
-            "corpus_artifact_sha256": "artifact_sha256",
-            "policy_entry_sha256": "policy_entry_sha256",
-            "public_manifest_match_sha256": "public_manifest_match_sha256",
-            "policy_rights_status": "policy_rights_status",
-            "runtime_eligibility": "runtime_eligibility",
-        }
-        for field, expected_field in document_field_map.items():
-            if record.get(field) != expected_document.get(expected_field):
-                raise CodexAppServerError(
-                    f"benchmark egress document {field} does not match expected artifacts: {doc_id}"
-                )
-        excerpt_chars = record.get("excerpt_chars")
-        if isinstance(excerpt_chars, bool) or not isinstance(excerpt_chars, int) or excerpt_chars < 1:
-            raise CodexAppServerError("benchmark egress document excerpt length is invalid")
-        if excerpt_chars != len(content_fragment):
-            raise CodexAppServerError(
-                f"benchmark egress document excerpt length does not match its fragment: {doc_id}"
-            )
-        document_chars += excerpt_chars
-    if document_chars > _MAX_SELECTED_DOCUMENT_CHARS:
-        raise CodexAppServerError("benchmark egress selected excerpts exceed the whole-corpus guard")
-
-    graph_rows = envelope.get("graph_evidence") or []
-    if not isinstance(graph_rows, list) or len(graph_rows) > _MAX_GRAPH_EVIDENCE_ROWS:
-        raise CodexAppServerError("benchmark egress graph-evidence bound exceeded")
-    graph_chars = 0
-    for record in graph_rows:
-        if not isinstance(record, Mapping) or not str(record.get("graph_id") or "").strip():
-            raise CodexAppServerError("benchmark egress graph evidence lacks manifest identity")
-        if set(record) != {
-            "graph_id",
-            "graph_version",
-            "graph_sha256",
-            "source_sha256",
-            "license",
-            "public_manifest_match_sha256",
-            "node_id",
-            "node_name",
-            "node_kind",
-            "node_identity_sha256",
-            "node_row_sha256",
-            "node_evidence_text",
-            "node_evidence_text_sha256",
-            "node_evidence_fragment",
-            "node_evidence_fragment_sha256",
-            "evidence_fragment",
-            "evidence_sha256",
-        }:
-            raise CodexAppServerError("benchmark egress graph evidence has invalid fields")
-        if not str(record.get("graph_version") or "").strip():
-            raise CodexAppServerError("benchmark egress graph evidence lacks a manifest version")
-        for field in (
-            "graph_sha256",
-            "source_sha256",
-            "evidence_sha256",
-            "node_identity_sha256",
-            "node_row_sha256",
-            "node_evidence_text_sha256",
-            "node_evidence_fragment_sha256",
-        ):
-            _require_sha256(record.get(field), field=f"graph_evidence.{field}")
-        evidence_fragment = str(record.get("evidence_fragment") or "")
-        if not evidence_fragment or _sha256(evidence_fragment) != record.get("evidence_sha256"):
-            raise CodexAppServerError("benchmark egress graph fragment hash mismatch")
-        node_id = str(record.get("node_id") or "")
-        node_name = str(record.get("node_name") or "")
-        node_kind = str(record.get("node_kind") or "")
-        node_evidence_text = str(record.get("node_evidence_text") or "")
-        node_evidence_fragment = str(record.get("node_evidence_fragment") or "")
-        if (
-            not node_id
-            or not node_name
-            or not node_kind
-            or not node_evidence_text
-            or _sha256(node_evidence_text) != record.get("node_evidence_text_sha256")
-            or not node_evidence_fragment
-            or _sha256(node_evidence_fragment)
-            != record.get("node_evidence_fragment_sha256")
-            or node_evidence_fragment not in node_evidence_text
-            or node_evidence_fragment not in evidence_fragment
-        ):
-            raise CodexAppServerError("benchmark egress graph fragment lacks node membership")
-        expected_node_identity = _sha256(
-            _canonical_json(
-                {
-                    "node_id": node_id,
-                    "name": node_name,
-                    "kind": node_kind,
-                    "evidence_sha256": record.get("node_evidence_text_sha256"),
-                }
-            )
-        )
-        if record.get("node_identity_sha256") != expected_node_identity:
-            raise CodexAppServerError("benchmark egress graph-node membership identity is forged")
-        graph_chars += len(evidence_fragment)
-        _require_sha256(
-            record.get("public_manifest_match_sha256"),
-            field="graph_evidence.public_manifest_match_sha256",
-        )
-        license_id = str(record.get("license") or "").strip()
-        if license_id not in _PUBLIC_GRAPH_LICENSES:
-            raise CodexAppServerError("benchmark egress graph evidence lacks public license identity")
-        expected_graph = (artifact_contract.get("allowed_graphs") or {}).get(record.get("graph_sha256"))
-        if not isinstance(expected_graph, Mapping):
-            raise CodexAppServerError("benchmark egress graph is outside expected artifacts")
-        expected_node = (expected_graph.get("allowed_nodes") or {}).get(
-            record.get("node_identity_sha256")
-        )
-        if not isinstance(expected_node, Mapping):
-            raise CodexAppServerError("benchmark egress graph node is outside expected artifacts")
-        node_field_map = {
-            "node_id": "node_id",
-            "node_name": "name",
-            "node_kind": "kind",
-            "node_evidence_text_sha256": "evidence_sha256",
-            "node_row_sha256": "node_row_sha256",
-        }
-        for field, expected_field in node_field_map.items():
-            if record.get(field) != expected_node.get(expected_field):
-                raise CodexAppServerError(
-                    f"benchmark egress graph node {field} lacks exact membership"
-                )
-        graph_field_map = {
-            "graph_id": "graph_id",
-            "graph_version": "version",
-            "source_sha256": "source_sha256",
-            "license": "license",
-            "public_manifest_match_sha256": "public_manifest_match_sha256",
-        }
-        for field, expected_field in graph_field_map.items():
-            if record.get(field) != expected_graph.get(expected_field):
-                raise CodexAppServerError(
-                    f"benchmark egress graph {field} does not match expected artifacts"
-                )
-    if graph_chars > _MAX_GRAPH_EVIDENCE_CHARS:
-        raise CodexAppServerError("benchmark egress graph evidence exceeds its character bound")
+    documents, graph_rows, guard_rows = _validate_egress_records(envelope, artifact_contract, question_fragment)
 
     actual_classes = ["project_owned_frozen_benchmark_questions"]
     if not (phase == "candidate_generation" and arm == "raw_model"):
@@ -2051,6 +2311,8 @@ class CodexAppServerGenerator:
         egress_artifact_contract: Mapping[str, Any] | None = None,
         suite_case_contract: Mapping[str, Any] | None = None,
         static_prompt_contract: Mapping[str, Any] | None = None,
+        max_tokens: int = 640,
+        model_config_path: str | Path | None = None,
     ) -> None:
         self.model_id = model_id
         self.reasoning_effort = reasoning_effort
@@ -2059,6 +2321,10 @@ class CodexAppServerGenerator:
                 "Codex App Server benchmark generation requires benchmark ID, suite hash, and arm"
             )
         self.egress_phase = egress_phase
+        self.max_tokens = max_tokens
+        self.generation_stats_call_id = 0
+        self._client = None
+        self._model_config_path=Path(model_config_path).resolve() if model_config_path is not None else None
         self.benchmark_arm = benchmark_arm
         self.expected_artifact_contract = _validated_artifact_contract(
             egress_artifact_contract
@@ -2075,6 +2341,7 @@ class CodexAppServerGenerator:
         self.expected_static_prompt_contract_sha256 = self.expected_static_prompt_contract[
             "sha256"
         ]
+        self._authorization_path=Path(egress_authorization).resolve() if egress_authorization is not None else None
         self.egress_authorization = load_benchmark_egress_authorization(
             egress_authorization,
             benchmark_id=benchmark_id,
@@ -2086,8 +2353,10 @@ class CodexAppServerGenerator:
             suite_case_contract_sha256=self.expected_suite_case_contract_sha256,
             egress_artifact_contract_sha256=self.expected_artifact_contract_sha256,
             static_prompt_contract_sha256=self.expected_static_prompt_contract_sha256,
+            canonical=self.expected_suite_case_contract["schema_version"] == CANONICAL_SUITE_SCHEMA,
         )
-        self.client = CodexAppServerClient(
+        self._client_arguments = dict(
+            before_dispatch=self._check_dispatch_authority,
             command=command,
             timeout_seconds=timeout_seconds,
             expected_model=model_id,
@@ -2100,8 +2369,8 @@ class CodexAppServerGenerator:
             "model_revision": None,
             "backend": "codex_app_server_chatgpt_auth",
             "request_model_id": model_id,
-            "status": "catalog_verified" if self.client.catalog_model else "unverified_catalog",
-            "protocol_identity": self.client.protocol_identity,
+            "status": "configured_unobserved",
+            "protocol_identity": None,
             "egress_authorization_sha256": self.egress_authorization["sha256"],
             "egress_artifact_contract_sha256": self.expected_artifact_contract_sha256,
             "egress_suite_case_contract_sha256": self.expected_suite_case_contract_sha256,
@@ -2110,6 +2379,39 @@ class CodexAppServerGenerator:
         }
         self.last_generation_stats: dict[str, Any] = {}
         self._candidate_output_bindings: dict[str, str] = {}
+        if self.expected_suite_case_contract["schema_version"] != CANONICAL_SUITE_SCHEMA:
+            self._ensure_client()
+
+    def _check_dispatch_authority(self, method):
+        if self.expected_suite_case_contract["schema_version"]==CANONICAL_SUITE_SCHEMA:
+            if (self._model_config_path is None or not self._model_config_path.is_file()
+                    or hashlib.sha256(self._model_config_path.read_bytes()).hexdigest()!=self.egress_authorization["model_config_sha256"]):
+                raise CodexAppServerError("canonical effective config changed/unknown before "+method)
+            import yaml
+            config=yaml.safe_load(self._model_config_path.read_bytes())
+            if not isinstance(config,Mapping):raise CodexAppServerError("canonical effective config is not a mapping")
+            stage=config.get("answer_verification") or {} if self.egress_phase=="verification" else config
+            if not isinstance(stage,Mapping):raise CodexAppServerError("canonical stage config unknown")
+            target=stage.get("model_id") or config.get("serving_model_id") or config.get("model_id")
+            effort=stage.get("reasoning_effort") or config.get("reasoning_effort")
+            cap=stage.get("max_tokens",180 if self.egress_phase=="verification" else 640)
+            if target!=self.model_id or effort!=self.reasoning_effort or type(cap) is not int or cap!=self.max_tokens:
+                raise CodexAppServerError("canonical effective target/effort/cap drift")
+            if self._authorization_path is None or hashlib.sha256(self._authorization_path.read_bytes()).hexdigest()!=self.egress_authorization["sha256"]:
+                raise CodexAppServerError("canonical authorization bytes changed")
+        expiry=dt.datetime.fromisoformat(self.egress_authorization["expires_at"].replace("Z","+00:00"))
+        if expiry<=dt.datetime.now(dt.UTC):
+            raise CodexAppServerError("egress authorization expired before "+method)
+
+    def _ensure_client(self):
+        self._check_dispatch_authority("client_initialization")
+        if self._client is None:
+            self._client = CodexAppServerClient(**self._client_arguments)
+        return self._client
+
+    @property
+    def client(self):
+        return self._ensure_client()
 
     def warmup(self) -> None:
         """Initialization and catalog verification happen in the constructor."""
@@ -2130,7 +2432,23 @@ class CodexAppServerGenerator:
             raise CodexAppServerError("candidate output binding is invalid")
         self._candidate_output_bindings[normalized_eval_id] = normalized_sha256
 
-    def generate_with_egress(
+    def generate_with_egress(self, messages, envelope):
+        self.last_generation_stats=None
+        self._attempt_id=getattr(self,"_attempt_id",0)+1
+        evidence={"attempt_id":self._attempt_id,"phase":self.egress_phase,"arm":self.benchmark_arm,
+            "eval_id":envelope.get("eval_id") if isinstance(envelope,Mapping) else None,
+            "state":"pre_dispatch","submitted":False}
+        try:
+            evidence["envelope_sha256"]=_sha256(_bounded_protocol_json(envelope,1048576).decode("utf-8"))
+            return self._generate_with_egress_impl(messages,envelope)
+        except BaseException as exc:
+            observed=getattr(exc,"provider_attempt",None) or getattr(self._client,"last_attempt_evidence",{})
+            evidence.update(bounded_provider_attempt(observed))
+            evidence["error_type"]=type(exc).__name__
+            exc.provider_attempt=bounded_provider_attempt(evidence)
+            raise
+
+    def _generate_with_egress_impl(
         self,
         messages: list[dict[str, str]],
         envelope: Mapping[str, Any],
@@ -2156,6 +2474,7 @@ class CodexAppServerGenerator:
         user_text = validated["user_text"]
         sanitized_envelope = validated["sanitized_envelope"]
         envelope_sha256 = _sha256(_canonical_json(sanitized_envelope))
+        self.last_generation_stats = None
         result = self.client.generate(
             user_text=user_text,
             base_instructions=instructions,
@@ -2171,12 +2490,22 @@ class CodexAppServerGenerator:
                 "eval_id": str(envelope.get("eval_id") or ""),
             },
         )
+        if self.expected_suite_case_contract["schema_version"]==CANONICAL_SUITE_SCHEMA:
+            controlled=f"{TEXT_ONLY_BENCHMARK_CONTROL}\n\n{instructions.strip()}" if instructions.strip() else TEXT_ONLY_BENCHMARK_CONTROL
+            if (result.receipt.get("selected_model")!=self.model_id
+                    or result.receipt.get("output_sha256")!=_sha256(result.text)
+                    or result.receipt.get("input_sha256")!=_sha256(user_text)
+                    or result.receipt.get("base_instructions_sha256")!=_sha256(controlled)
+                    or any(not isinstance(result.receipt.get(k),str) or not result.receipt[k] for k in ("thread_id","turn_id"))):
+                raise CodexAppServerError("canonical response/request/thread/turn binding unknown")
         usage = result.receipt.get("token_usage") or {}
         if self.egress_phase == "verification":
             self._candidate_output_bindings.pop(eval_id, None)
         last = usage.get("last") if isinstance(usage, dict) else {}
         last = last if isinstance(last, dict) else {}
+        self.generation_stats_call_id += 1
         self.last_generation_stats = {
+            "generation_stats_call_id": self.generation_stats_call_id,
             "backend": "codex_app_server_chatgpt_auth",
             "request_model_id": self.model_id,
             "response_model_id": result.receipt.get("selected_model"),
@@ -2192,7 +2521,7 @@ class CodexAppServerGenerator:
             "transport_control": "text_only_benchmark_control",
             "benchmark_egress_receipt": {
                 "schema_version": BENCHMARK_EGRESS_RECEIPT_SCHEMA,
-                "authorization_schema_version": BENCHMARK_EGRESS_AUTHORIZATION_SCHEMA,
+                "authorization_schema_version": self.egress_authorization["schema_version"],
                 "authorization_sha256": self.egress_authorization["sha256"],
                 "artifact_contract_sha256": self.expected_artifact_contract_sha256,
                 "suite_case_contract_sha256": self.expected_suite_case_contract_sha256,
@@ -2238,5 +2567,7 @@ class CodexAppServerGenerator:
         }
         return result.text
 
-    def close(self) -> None:
-        self.client.close()
+    def close(self) -> dict[str, Any]:
+        if self._client is not None:
+            return self._client.close()
+        return {"status":"not_started","remote_cancellation_confirmed":None}

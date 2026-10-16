@@ -12,7 +12,7 @@ import hashlib
 import json
 import time
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Mapping, Protocol, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Mapping, Protocol, Sequence
 
 if TYPE_CHECKING:
     from agronomy_agent.server.settings import ServerSettings
@@ -714,6 +714,9 @@ class AgentExecutionRequest:
     operation_request_sha256: str | None = None
     profiler: Any | None = None
     generation_backend: GenerationBackend | None = None
+    generation_backend_factory: Callable[[], GenerationBackend] | None = None
+    verification_backend_factory: Callable[[], GenerationBackend] | None = None
+    benchmark_eval_id: str | None = None
     execution_class: str = "product_turn"
     document_retrieval_enabled: bool = True
     graph_retrieval_enabled: bool = True
@@ -732,6 +735,19 @@ class AgentExecutionRequest:
             )
         if self.execution_class not in SUPPORTED_EXECUTION_CLASSES:
             raise ValueError(f"unsupported execution class: {self.execution_class}")
+        factories = (self.generation_backend_factory, self.verification_backend_factory)
+        if any(value is not None and not callable(value) for value in factories):
+            raise TypeError("benchmark backend factories must be callable or None")
+        if any(value is not None for value in factories) or self.benchmark_eval_id is not None:
+            if (self.execution_class != "observed_system_execution_nonclaim"
+                    or not isinstance(self.benchmark_eval_id, str) or not self.benchmark_eval_id.strip()
+                    or self.generation_backend is not None or self.generation_backend_factory is None
+                    or self.verifier_enabled and self.verification_backend_factory is None):
+                raise ValueError("benchmark factories require an explicit nonclaim case and lazy draft factory")
+        if self.benchmark_eval_id is not None and (self.arm_id!="production_full" or self.mode!="agronomic_rag"
+                or not all(getattr(self,key) is True for key in ("document_retrieval_enabled","graph_retrieval_enabled",
+                    "field_context_enabled","typed_tools_enabled","risk_intervention_enabled","verifier_enabled","fallback_enabled"))):
+            raise ValueError("controlled production_full must preserve every canonical arm control")
         if self.mode not in SUPPORTED_MODES:
             raise ValueError(f"unsupported production execution mode: {self.mode}")
         if not self.session_id.strip():
@@ -1066,6 +1082,7 @@ class AgentExecutionResult:
     turn: Mapping[str, Any]
     fingerprints: Mapping[str, str]
     arm_id: str
+    owned_backend_closeout: tuple[Mapping[str, Any], ...] = ()
     operation_replayed: bool = False
     schema_version: str = EXECUTION_RESULT_SCHEMA_VERSION
 
@@ -1168,6 +1185,7 @@ class AgentExecutionResult:
             turn=dict(turn),
             fingerprints={str(key): str(value) for key, value in fingerprints.items()},
             arm_id=request.arm_id,
+            owned_backend_closeout=tuple(payload.get("owned_backend_closeout") or ()),
             operation_replayed=payload.get("operation_replayed") is True,
         )
 
@@ -1188,6 +1206,7 @@ class AgentExecutionResult:
     def to_record(self) -> dict[str, Any]:
         return {
             "schema_version": self.schema_version,
+            **({"owned_backend_closeout":[dict(row) for row in self.owned_backend_closeout]} if self.owned_backend_closeout else {}),
             "execution_class": self.execution_class,
             "turn_id": self.turn_id,
             "parent_turn_id": self.parent_turn_id,
