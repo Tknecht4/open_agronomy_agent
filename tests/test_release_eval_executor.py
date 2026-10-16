@@ -1084,6 +1084,7 @@ def test_editor_observation_executor_preserves_return_on_downstream_failure(tmp_
 
 
 def test_canonical_raw_executor_retains_nonqualifying_return_and_owned_close(tmp_path,monkeypatch):
+    monkeypatch.setenv("AGRONOMY_AGENT_PRIVATE_KNOWLEDGE", "0")
     import hashlib
     import test_codex_app_server_egress as fixtures
     import agronomy_agent.codex_app_server as transport

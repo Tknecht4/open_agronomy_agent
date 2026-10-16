@@ -211,6 +211,7 @@ class _FakeClient:
 
 @pytest.fixture(autouse=True)
 def _fake_client(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGRONOMY_AGENT_PRIVATE_KNOWLEDGE", "0")
     _FakeClient.instances.clear()
     monkeypatch.setattr("agronomy_agent.codex_app_server.CodexAppServerClient", _FakeClient)
 

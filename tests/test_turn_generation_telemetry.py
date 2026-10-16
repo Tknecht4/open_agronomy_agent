@@ -402,6 +402,7 @@ def test_editor_observation_actual_service_captures_own_native_shaped_call_befor
 
 
 def test_canonical_actual_service_owns_lazy_editor_and_retains_provider_return(tmp_path,monkeypatch):
+    monkeypatch.setenv("AGRONOMY_AGENT_PRIVATE_KNOWLEDGE", "0")
     import hashlib,json,yaml
     from dataclasses import replace
     import test_codex_app_server_egress as fixtures
