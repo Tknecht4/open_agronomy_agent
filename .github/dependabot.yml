@@ -2,18 +2,27 @@ version: 2
 updates:
   - package-ecosystem: pip
     directories: ["/", "/requirements"]
+    # Historical checkpoint analysis is reproducible evidence, not a runtime lock.
+    exclude-paths: ["**/requirements-benchmark-analysis.txt"]
     schedule:
       interval: weekly
     open-pull-requests-limit: 3
     groups:
       python-compatible:
         update-types: [minor, patch]
+      python-major:
+        update-types: [major]
+        group-by: dependency-name
   - package-ecosystem: npm
     directory: /frontend
     schedule:
       interval: weekly
     open-pull-requests-limit: 3
     groups:
+      react:
+        patterns: ["react", "react-dom", "@types/react", "@types/react-dom"]
+      vite:
+        patterns: ["vite", "@vitejs/plugin-react"]
       frontend-compatible:
         update-types: [minor, patch]
   - package-ecosystem: github-actions

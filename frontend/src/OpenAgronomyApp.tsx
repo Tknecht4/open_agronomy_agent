@@ -2113,7 +2113,7 @@ export function OpenAgronomyApp() {
   const [recordSavePending, setRecordSavePending] = useState(false)
   const [recordSaveError, setRecordSaveError] = useState('')
   const recordSaveBusyRef = useRef(false)
-  const recordOperationRef = useRef<PendingFieldEvent>()
+  const recordOperationRef = useRef<PendingFieldEvent | undefined>(undefined)
   const recordOperationDraftRef = useRef('')
   const recordDraftRef = useRef('')
   recordDraftRef.current = canonicalFieldEvent([fieldEventType, fieldEventSummary, fieldEventOccurredAt, fieldCorrectionTarget])

@@ -1,8 +1,10 @@
 # Observed optional HLS worker environment (Python 3.12); separate from serving.
-# These direct pins reproduce the exercised raster/API stack, not a full wheel lock.
+# Rasterio/Shapely updates on 2026-10-19 require fresh worker qualification.
+# These direct pins are a candidate stack, not the unchanged historical receipt
+# or a complete wheel lock.
 numpy==2.5.3
-rasterio==1.5.1
+rasterio==1.5.2
 pyproj==3.8.0
-shapely==2.1.2
+shapely==2.2.0
 Pillow==12.3.0
 httpx==0.28.1
