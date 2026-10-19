@@ -42,6 +42,7 @@ CONTROL_PATHS = (
     "frontend/index.html",
     "frontend/tsconfig.json",
     "frontend/vite.config.ts",
+    "frontend/workspaceServiceWorker.ts",
     "container/.env.example",
     "container/runtime-defaults.env",
     "container/README.md",

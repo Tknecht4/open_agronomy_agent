@@ -947,6 +947,20 @@ const openFieldTab = (name: 'Overview' | 'Records & soil tests' | 'Map context')
 }
 
 describe('Open Agronomy map upload workflow', () => {
+  it('opens conversation and the real map together on a fresh desktop session', async () => {
+    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })))
+    installFetchMock()
+    render(<OpenAgronomyApp />)
+    await screen.findByText('Local runtime · connected mode')
+    expect(screen.getByRole('button', { name: 'Together' })).toHaveAttribute('aria-pressed', 'true')
+    expect(await screen.findByTestId('mock-leaflet-map')).toHaveAttribute('data-geometry-kind', 'none')
+    expect(screen.getByLabelText('Your question')).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Conversation' }))
+    expect(screen.queryByTestId('mock-leaflet-map')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Together' }))
+    expect(await screen.findByTestId('mock-leaflet-map')).toBeVisible()
+  })
+
   it('starts with conversation and lets users inspect runtime or map without losing a drafted question', async () => {
     installFetchMock()
     render(<OpenAgronomyApp />)

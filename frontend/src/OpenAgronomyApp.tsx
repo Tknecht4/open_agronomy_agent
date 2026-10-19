@@ -2160,7 +2160,7 @@ export function OpenAgronomyApp() {
     media.addEventListener?.('change', update)
     return () => media.removeEventListener?.('change', update)
   }, [])
-  const [workspaceView, setWorkspaceView] = useState<'chat' | 'split' | 'map'>('chat')
+  const [workspaceView, setWorkspaceView] = useState<'chat' | 'split' | 'map'>('split')
   useWorkspaceMenus(`${page}:${workspaceView}:${activeFieldContextId}`)
   const [fieldTab, setFieldTab] = useState<'details' | 'records' | 'context'>('details')
   const [visibleTurnCount, setVisibleTurnCount] = useState(20)

@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-10-19T20:19:42+00:00",
+  "generated_at": "2026-10-19T20:23:58+00:00",
   "status": "pass",
-  "contract_sha256": "df08ccba0860b03acbe43e4ab3446ec3d0f06b888419ba1e3219bf663aac815e",
+  "contract_sha256": "4bd5d7ac738c14c141e402a3c23353404d175304a859443314cd3b87bc3e1c32",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -420,8 +420,8 @@
     {
       "path": "frontend/src",
       "file_count": 119,
-      "bytes": 1756833,
-      "sha256": "1303e650bb8c41885ae02712deea4caea10a03bd93edf0ae144b02d6f961939d"
+      "bytes": 1757739,
+      "sha256": "6727749b88a751a1d8fa8c8da4d811a7af06da5d3ade391674dc347fda702cc5"
     },
     {
       "path": "frontend/public",
@@ -432,8 +432,8 @@
     {
       "path": "scripts",
       "file_count": 147,
-      "bytes": 1938899,
-      "sha256": "b3e26bd953be56e83ccaa1ae36c864670ded10e61f20c2d19ab79e4965e32452"
+      "bytes": 1938941,
+      "sha256": "9915b498e69ad10142f1b98c5c4e98cb43cc14fb2a9505a3f6a2b4a4d4962d79"
     },
     {
       "path": "configs",
@@ -510,8 +510,8 @@
     {
       "path": "Containerfile",
       "role": "runtime_control",
-      "bytes": 3854,
-      "sha256": "52e8a07e855237e32492c44d84bcaf1ca42a823e1201a607b827d778944b146c"
+      "bytes": 3889,
+      "sha256": "2237672aee6683a0fc2e397c077aecd5f5a67739ec88fef2dea3e0767fdd5eb4"
     },
     {
       "path": "Containerfile.overlay",
@@ -572,6 +572,12 @@
       "role": "runtime_control",
       "bytes": 1523,
       "sha256": "4096b70938bcea2665b34b9d17aab26fc7ec38a232bbd6ba3437cba978df8037"
+    },
+    {
+      "path": "frontend/workspaceServiceWorker.ts",
+      "role": "runtime_control",
+      "bytes": 2013,
+      "sha256": "ea486b631c8512e84d6d4f7050aba22bf95ea293b714dce30663453afaf0c2be"
     },
     {
       "path": "container/.env.example",

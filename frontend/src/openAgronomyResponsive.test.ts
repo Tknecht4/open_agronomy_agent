@@ -17,7 +17,7 @@ describe('Open Agronomy responsive workspace', () => {
     const main = mainSource()
 
     expect(main.indexOf("import './styles.css'")).toBeLessThan(main.indexOf("import './workspace.css'"))
-    expect(app).toContain("useState<'chat' | 'split' | 'map'>('chat')")
+    expect(app).toContain("useState<'chat' | 'split' | 'map'>('split')")
     expect(app).toContain('role="group" aria-label="Workspace view"')
     expect(app).toContain("view === 'chat' ? 'Conversation' : view === 'map' ? 'Map' : 'Together'")
     expect(app).toContain("aria-pressed={(workspaceView === 'split' && !wideWorkspace ? 'chat' : workspaceView) === view}")
