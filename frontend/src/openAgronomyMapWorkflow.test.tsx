@@ -1979,8 +1979,10 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.getByLabelText('What happened')).toHaveValue('Standing water observed in the northwest corner.')
     fireEvent.click(screen.getByRole('button', { name: 'Save record' }))
 
-    await waitFor(() => expect(screen.getByText('Standing water observed in the northwest corner.')).toBeInTheDocument())
-    fireEvent.click(screen.getByText('Record details'))
+    // The draft textarea can contain this text before the save has completed.
+    // Wait for the confirmed timeline record before inspecting its receipt.
+    fireEvent.click(await screen.findByText('Record details'))
+    expect(screen.getByText('Standing water observed in the northwest corner.')).toBeInTheDocument()
     expect(screen.getByText(/Immutable record · aaaaaaaaaa/)).toBeInTheDocument()
     const request = fetchMock.mock.calls.find(
       ([url, init]) => String(url) === '/api/demo/fields/field-context-1/events' && init?.method === 'POST',
