@@ -53,7 +53,7 @@ def test_frontend_cleanup_escalates_boundedly() -> None:
 
 def test_custom_frontend_port_and_ipv6_proxy_use_the_validated_loopback_profile(tmp_path, monkeypatch):
     import sys
-    import uvicorn
+    from types import SimpleNamespace
     import scripts.run_cockpit as launcher
     observed = {}
     monkeypatch.setattr(sys,'argv',['run_cockpit.py','--host','::1','--port','8123','--frontend',
@@ -71,8 +71,8 @@ def test_custom_frontend_port_and_ipv6_proxy_use_the_validated_loopback_profile(
     class Server:
         def __init__(self,config):pass
         def run(self):return 0
-    monkeypatch.setattr(uvicorn,'Config',Config)
-    monkeypatch.setattr(uvicorn,'Server',Server)
+    # Exercise launcher wiring without requiring the optional server runtime.
+    monkeypatch.setitem(sys.modules, 'uvicorn', SimpleNamespace(Config=Config, Server=Server))
     assert launcher.main()==0
     assert observed['env']['VITE_API_TARGET']=='http://[::1]:8123'
     assert 'http://[::1]:6199' in observed['settings'].local_dev_origins
