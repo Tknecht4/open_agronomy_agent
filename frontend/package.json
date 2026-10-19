@@ -14,7 +14,7 @@
   "dependencies": {
     "@types/leaflet": "^1.9.22",
     "leaflet": "^1.9.4",
-    "lucide-react": "^1.48.0",
+    "lucide-react": "^1.58.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-markdown": "^10.1.0"
@@ -29,7 +29,7 @@
     "jsdom": "^25.0.1",
     "typescript": "^7.0.2",
     "vite": "^8.3.4",
-    "vitest": "^5.0.2"
+    "vitest": "^5.0.5"
   },
   "engines": {
     "node": "^24.0.0"
