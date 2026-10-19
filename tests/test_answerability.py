@@ -23,6 +23,82 @@ from agronomy_agent.evidence_handshake import EvidenceHandshake
 from agronomy_agent.tool_planner import plan_and_execute_tools
 
 
+def test_development_gdd_result_does_not_discard_provenance_and_stage_request():
+    question = (
+        "Calculate daily GDD from Tmax 24 C, Tmin 8 C and base 6 C. "
+        "Explain the weather provenance and whether this establishes crop stage."
+    )
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == "ready"
+    context = SimpleNamespace(runtime_metadata={
+        "tool_plan": plan.to_dict(), "tool_results": [row.to_dict() for row in results],
+    })
+    assert deterministic_tool_response(context, question=question) == (None, None)
+
+
+@pytest.mark.parametrize("additional", [
+    "State the weather provenance.", "What is needed to infer crop stage?",
+    "Describe whether this establishes growth stage.",
+])
+def test_development_compound_gdd_keeps_calculation_evidence_for_unhandled_claims(additional):
+    question = "Calculate daily GDD from Tmax 24 C, Tmin 8 C and base 6 C. " + additional
+    plan, results = plan_and_execute_tools(question)
+    context = SimpleNamespace(runtime_metadata={"tool_plan": plan.to_dict(),
+                              "tool_results": [row.to_dict() for row in results]})
+    assert results[0].payload["value"] == 10
+    assert deterministic_tool_response(context, question=question) == (None, None)
+    assert context.runtime_metadata["tool_results"][0]["payload"]["value"] == 10
+
+
+def test_development_arithmetic_only_gdd_and_genuine_missing_input_stay_deterministic():
+    for question, expected in (
+        ("Calculate daily GDD from Tmax 24 C, Tmin 8 C and base 6 C.", "deterministic_tool_result"),
+        ("Calculate daily GDD from Tmax 24 C, Tmin 8 C.", "deterministic_tool_clarification"),
+    ):
+        plan, results = plan_and_execute_tools(question)
+        context = SimpleNamespace(runtime_metadata={"tool_plan": plan.to_dict(),
+                                  "tool_results": [row.to_dict() for row in results]})
+        assert deterministic_tool_response(context, question=question)[1] == expected
+
+
+def test_development_gdd_metadata_text_is_not_an_additional_requested_action():
+    question = 'Calculate daily GDD. {"max_temp_C":24,"min_temp_C":8,"base_temp_C":6,"note":"State the weather provenance"}'
+    plan, results = plan_and_execute_tools(question)
+    context = SimpleNamespace(runtime_metadata={"tool_plan": plan.to_dict(),
+                              "tool_results": [row.to_dict() for row in results]})
+    assert deterministic_tool_response(context, question=question)[1] == "deterministic_tool_result"
+
+
+@pytest.mark.parametrize("constraint", [
+    "Do not infer crop stage.", "Don't infer crop stage.", "Never infer crop stage.",
+    "Do not state the weather provenance.",
+])
+def test_development_negative_gdd_constraint_preserves_deterministic_route(constraint):
+    question = "Calculate daily GDD from Tmax 26 C, Tmin 16 C and base 10 C. " + constraint
+    plan, results = plan_and_execute_tools(question)
+    context = SimpleNamespace(runtime_metadata={"tool_plan": plan.to_dict(),
+                              "tool_results": [row.to_dict() for row in results]})
+    answer, path = deterministic_tool_response(context, question=question)
+    assert path == "deterministic_tool_result"
+    assert answer.startswith("11 GDD")
+
+
+def test_development_negated_stage_constraint_does_not_erase_positive_provenance_request():
+    question = "Calculate daily GDD from Tmax 26 C, Tmin 16 C and base 10 C. Do not infer crop stage; state the weather provenance."
+    plan, results = plan_and_execute_tools(question)
+    context = SimpleNamespace(runtime_metadata={"tool_plan": plan.to_dict(),
+                              "tool_results": [row.to_dict() for row in results]})
+    assert deterministic_tool_response(context, question=question) == (None, None)
+
+
+def test_development_comma_mixed_negation_does_not_hide_later_positive_request():
+    question = "Calculate daily GDD from Tmax 26 C, Tmin 16 C and base 10 C. Do not infer crop stage, instead explain weather provenance."
+    plan, results = plan_and_execute_tools(question)
+    context = SimpleNamespace(runtime_metadata={"tool_plan": plan.to_dict(),
+                              "tool_results": [row.to_dict() for row in results]})
+    assert deterministic_tool_response(context, question=question) == (None, None)
+
+
 def _canonical(value: object) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
 

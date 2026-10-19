@@ -4153,6 +4153,31 @@ def deterministic_tool_response(
         answer = str((payload or {}).get("answer") or "").strip() if isinstance(payload, Mapping) else ""
         if answer:
             invocation = tuple((plan or {}).get("invocations") or ())
+            request_text = question
+            object_start = question.find("{")
+            if object_start >= 0:
+                try:
+                    _, object_end = json.JSONDecoder().raw_decode(question[object_start:])
+                    request_text = question[:object_start] + " " + question[object_start + object_end:]
+                except (ValueError, RecursionError):
+                    pass
+            # A calculator proves arithmetic, not weather provenance or crop
+            # development. Keep its evidence in context while the ordinary
+            # answer path addresses those separately requested claims.
+            if invocation and isinstance(invocation[0], Mapping) and invocation[0].get("operation") == "daily_gdd":
+                for clause in re.split(r"[.!?;]\s*|\bbut\b|\bhowever\b", request_text, flags=re.IGNORECASE):
+                    for match in re.finditer(
+                        r"\b(?:explain|interpret|assess|infer|determine|establish|identify|state|describe|whether|what|which)\b"
+                        r"[^{}]{0,200}?\b(?:provenance|weather source|crop stage|growth stage|phenology)\b",
+                        clause, re.IGNORECASE,
+                    ):
+                        negated = re.search(
+                            r"\b(?:(?:do|does|did|must|should|can|will|would|could)\s+not\s+|"
+                            r"(?:don['’]t|doesn['’]t|shouldn['’]t|mustn['’]t|never|without|avoid)\s+|no need to\s+)$",
+                            clause[:match.start()], re.IGNORECASE,
+                        )
+                        if not negated:
+                            return None, None
             named_product_conversion = bool(
                 invocation
                 and isinstance(invocation[0], Mapping)
@@ -4444,6 +4469,43 @@ def _build_benchmark_egress_envelope(
     verifier_evidence_text: str | None = None,
     candidate_generation_output_sha256: str | None = None,
 ) -> dict[str, Any]:
+    from agronomy_agent.codex_app_server import CANONICAL_SUITE_SCHEMA, CANONICAL_ENVELOPE_SCHEMA, CANONICAL_PAYLOAD_CLASSES
+    suite = getattr(generator, "expected_suite_case_contract", {})
+    if suite.get("schema_version") == CANONICAL_SUITE_SCHEMA:
+        if os.environ.get("AGRONOMY_AGENT_PRIVATE_KNOWLEDGE") != "0":
+            raise ValueError("canonical external execution requires private knowledge disabled")
+        if context is not None and resources is None:
+            raise ValueError("canonical context has no observed resources")
+        if resources is not None and resources.private_knowledge_overlay is not None:
+            raise ValueError("canonical private overlay loaded")
+        outbound = _benchmark_outbound_text(messages)
+        results = [] if context is None else (context.runtime_metadata or {}).get("tool_results", [])
+        if "Typed capability evidence:" in outbound or any(
+                str(row.get("claim_text") or (row.get("payload") or {}).get("answer") or "").strip() in outbound
+                for row in results if isinstance(row,Mapping) and (row.get("claim_text") or (row.get("payload") or {}).get("answer"))):
+            raise ValueError("typed-tool model egress requires a separately reviewed payload class")
+        docs=_benchmark_document_egress_records(context=context,outbound_text=outbound,artifact_contract=generator.expected_artifact_contract)
+        graphs=_benchmark_graph_egress_records(context=context,outbound_text=outbound,artifact_contract=generator.expected_artifact_contract)
+        guards=_benchmark_guard_note_egress_records(context=context,outbound_text=outbound)
+        classes=["project_owned_frozen_benchmark_questions"]
+        if any(m["role"]=="system" for m in messages):classes.append("benchmark_system_and_answer_contract_prompts")
+        if generator.benchmark_arm=="production_full" and field_context:classes.append("case_bound_synthetic_facts")
+        if docs:classes.append("selected_public_release_runtime_document_source_excerpts")
+        if graphs:classes.append("public_release_runtime_graph_evidence")
+        if generator.egress_phase=="verification":classes += ["candidate_drafts_for_verification","verifier_evidence"]
+        return {"schema_version":CANONICAL_ENVELOPE_SCHEMA,"eval_id":eval_id,
+            "selected_document_excerpts":docs,"graph_evidence":graphs,"governed_guard_notes":guards,
+            "payload_classes":[c for c in CANONICAL_PAYLOAD_CLASSES if c in classes],
+            "phase":generator.egress_phase,"arm":generator.benchmark_arm,
+            "question_fragment":question,"field_context":dict(field_context or {}),
+            "source_sha256":suite["source_sha256"],"suite_case_contract_sha256":suite["sha256"],
+            "egress_artifact_contract_sha256":generator.expected_artifact_contract_sha256,
+            "static_prompt_contract_sha256":generator.expected_static_prompt_contract_sha256,
+            "private_knowledge_policy":"disabled","private_knowledge_overlay_loaded":False,
+            "whole_corpus_included":False,"outbound_messages_sha256":sha256_text(canonical_json(messages)),
+            **({"candidate_draft_text":candidate_draft,"verifier_evidence_text":verifier_evidence_text,
+                "candidate_generation_output_sha256":candidate_generation_output_sha256}
+               if generator.egress_phase=="verification" else {})}
     artifact_contract = getattr(generator, "expected_artifact_contract", None)
     if not isinstance(artifact_contract, Mapping):
         raise ValueError("App Server generator is missing its validated artifact contract")

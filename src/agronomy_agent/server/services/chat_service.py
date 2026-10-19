@@ -11,7 +11,9 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager, nullcontext
 from threading import Lock, RLock
 from time import perf_counter
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
+from pathlib import Path
+from agronomy_agent.codex_app_server import validate_canonical_backend
 
 from agronomy_agent import local_tools
 from agronomy_agent.calculator_contracts import TOOL_PLANNER_VERSION
@@ -20,6 +22,8 @@ from agronomy_agent.agent import (
     MLXGenerator,
     OpenAICompatibleGenerator,
     SOURCE_GROUNDED_SYSTEM_PROMPT,
+    _build_benchmark_egress_envelope,
+    _generate_with_benchmark_egress,
     build_answer_prompt,
     build_context,
     decide_evidence_intervention,
@@ -37,7 +41,7 @@ from agronomy_agent.decision_contract import build_decision_contract
 from agronomy_agent.evidence_contracts import question_frame_from_runtime
 from agronomy_agent.tool_planner import plan_tools
 from agronomy_agent.router import classify_query, refine_query_route
-from agronomy_agent.answer_verifier import context_evidence_text, validate_editor_max_words, verify_answer
+from agronomy_agent.answer_verifier import _EditorObservation, context_evidence_text, validate_editor_max_words, verify_answer
 from agronomy_agent.answer_safety import enforce_answer_safety_postconditions
 from agronomy_agent.evidence_contracts import (
     capability_evidence_from_records,
@@ -248,13 +252,16 @@ def _generate_with_backend_fallback(
     mode: str,
     *,
     fallback_enabled: bool = True,
+    egress_context: Mapping[str, Any] | None = None,
 ) -> tuple[str, dict[str, Any]]:
     try:
+        if egress_context is not None:
+            return _generate_with_benchmark_egress(generator, messages, **egress_context), {}
         return str(generator.generate(messages)), {}
     except LocalModelSnapshotUnavailable:
         raise
     except RuntimeError as exc:
-        if mode == "mock" or isinstance(generator, MockGenerator) or not fallback_enabled:
+        if bool(getattr(generator, "transport_control_active", False)) or mode == "mock" or isinstance(generator, MockGenerator) or not fallback_enabled:
             raise
         return ANALYSIS_UNAVAILABLE_ANSWER, {
             "generation_fallback": {
@@ -511,7 +518,53 @@ def preview_turn_readiness(
     }
 
 
-def _run_turn_impl(
+def _run_turn_impl(*args, **kwargs):
+    """Factory results are owned; preexisting injected/native cached objects are borrowed."""
+    if not any(kwargs.get(key) is not None for key in ("generation_backend_factory","verification_backend_factory")):
+        return _run_turn_impl_inner(*args, **kwargs)
+    if kwargs.get("benchmark_eval_id") is None or (kwargs.get("verifier_enabled",True) and kwargs.get("verification_backend_factory") is None):
+        raise ValueError("controlled execution requires case and editor factory before effects")
+    if kwargs.get("arm_id","production_full")!="production_full" or kwargs.get("mode")!="agronomic_rag" or any(
+            kwargs.get(key,True) is not True for key in ("document_retrieval_enabled","graph_retrieval_enabled",
+                "field_context_enabled","typed_tools_enabled","risk_intervention_enabled","verifier_enabled","fallback_enabled")):
+        raise ValueError("controlled production_full cannot hide a component ablation")
+    owned=[];failure=None;payload=None;closeout=[]
+    def tracked(factory,phase):
+        def create():
+            value=factory()
+            if not callable(getattr(value,"close",None)):
+                raise ValueError("owned backend lacks close")
+            if any(value is previous for _,previous in owned):
+                raise ValueError("draft and editor factories must own separate backends")
+            owned.append((phase,value));return value
+        return create
+    for key,phase in (("generation_backend_factory","draft"),("verification_backend_factory","editor")):
+        if kwargs.get(key) is not None:kwargs[key]=tracked(kwargs[key],phase)
+    try:
+        payload=_run_turn_impl_inner(*args, **kwargs)
+    except BaseException as exc:
+        failure=exc
+        raise
+    finally:
+        close_error=None
+        for phase,value in reversed(owned):
+            try:
+                evidence=value.close()
+                closeout.append({"phase":phase,"status":"closed","evidence":evidence})
+            except BaseException as exc:
+                closeout.append({"phase":phase,"status":"unknown","error_type":type(exc).__name__})
+                if close_error is None:close_error=exc
+        if failure is not None:
+            try:failure.evaluation_backend_closeout=closeout
+            except BaseException:pass
+        elif close_error is not None:
+            close_error.evaluation_backend_closeout=closeout
+            raise close_error
+        elif payload is not None:payload["owned_backend_closeout"]=closeout
+    return payload
+
+
+def _run_turn_impl_inner(
     *,
     store: TraceStore,
     settings: ServerSettings,
@@ -528,6 +581,9 @@ def _run_turn_impl(
     operation_request_sha256: str | None = None,
     profiler: Any | None = None,
     generation_backend: Any | None = None,
+    generation_backend_factory: Callable[[], Any] | None = None,
+    verification_backend_factory: Callable[[], Any] | None = None,
+    benchmark_eval_id: str | None = None,
     execution_class: str = "product_turn",
     document_retrieval_enabled: bool = True,
     graph_retrieval_enabled: bool = True,
@@ -537,6 +593,8 @@ def _run_turn_impl(
     verifier_enabled: bool = True,
     fallback_enabled: bool = True,
     arm_id: str = "production_full",
+    evaluation_draft_hook: Callable[[Mapping[str, Any]], None] | None = None,
+    evaluation_editor_hook: Callable[[Mapping[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     if not store.session_exists(session_id):
         raise ValueError("session not found")
@@ -546,7 +604,7 @@ def _run_turn_impl(
     model_to_use = model_id or settings.default_model_id
     queue_circuit = (
         None
-        if generation_backend is not None
+        if generation_backend is not None or generation_backend_factory is not None
         else _model_queue_circuit_breaker(settings, mode=mode, model_id=model_to_use)
     )
     if profiler:
@@ -574,10 +632,15 @@ def _run_turn_impl(
             return
         load_span = profiler.span("model.load_or_reuse", metadata={"model_id": model_to_use, "mode": mode}) if profiler else nullcontext()
         with load_span:
-            generator = generation_backend or (
+            generator = generation_backend_factory() if generation_backend_factory is not None else generation_backend or (
                 MockGenerator() if use_mock_generator
                 else _build_mlx_generator(model_to_use, model_config, settings.model_config_path)
             )
+            if benchmark_eval_id is not None:
+                validate_canonical_backend(generator, eval_id=benchmark_eval_id, question=message,
+                    field_context=field_context, arm=arm_id, phase="candidate_generation", model_id=model_to_use,
+                    model_config_sha256=hashlib.sha256(Path(settings.model_config_path).read_bytes()).hexdigest(), max_tokens=max_tokens,
+                    reasoning_effort=model_config.get("reasoning_effort"))
             if hasattr(generator, "max_tokens"):
                 generator.max_tokens = max_tokens
 
@@ -672,8 +735,22 @@ def _run_turn_impl(
         identity = getattr(generator, "model_identity", None)
         if isinstance(identity, dict) and identity:
             draft_model_identity = deepcopy(identity)
+        if evaluation_draft_hook is not None:
+            evaluation_draft_hook({
+                "schema_version": "open_agronomy_agent.completed_draft_observation.v1",
+                "draft": answer,
+                "prompt_messages": deepcopy(messages),
+                "generation_stats": deepcopy(draft_generation_stats),
+                "model_identity": deepcopy(draft_model_identity),
+                "context_budget": deepcopy(context_budget_receipt),
+            })
 
     context: Any | None = None
+    resources: Any | None = None
+    def egress_context() -> dict[str, Any] | None:
+        return ({"eval_id": benchmark_eval_id, "question": message,
+                 "field_context": field_context, "context": context, "resources": resources}
+                if benchmark_eval_id is not None else None)
     source_grounded = False
     evidence_conflicts = _detect_evidence_conflicts(field_context, [])
     compiled_field_context = compile_field_context(
@@ -719,6 +796,7 @@ def _run_turn_impl(
                 with decode_span:
                     answer, generation_metadata = _generate_with_backend_fallback(
                         generator, messages, mode, fallback_enabled=fallback_enabled,
+                        egress_context=egress_context(),
                     )
                     capture_completed_draft_receipts()
         if context_budget_receipt is None:
@@ -790,10 +868,11 @@ def _run_turn_impl(
                 ):
                     profiler.add_skipped(stage, reason=f"tool_grounded_{tool_grounded_renderer}")
         else:
+            resources = load_agent_resources(rag_config)
             context = build_context(
                 message,
                 rag_config=rag_config,
-                resources=load_agent_resources(rag_config),
+                resources=resources,
                 profiler=profiler,
                 agent_runtime=settings.agent_runtime,
                 field_context=field_context,
@@ -953,7 +1032,7 @@ def _run_turn_impl(
                             messages,
                             mode,
                             fallback_enabled=fallback_enabled,
-                        )
+                            egress_context=egress_context(),                        )
                         capture_completed_draft_receipts()
                 if intervention is not None:
                     generation_metadata["evidence_intervention"] = intervention.as_record()
@@ -1125,8 +1204,13 @@ def _run_turn_impl(
         and not generation_metadata.get("generation_bypass")
     ):
         verifier_model_id = str(verification_config.get("model_id") or model_to_use)
-        editor = _build_mlx_generator(verifier_model_id, model_config, settings.model_config_path)
+        editor = verification_backend_factory() if verification_backend_factory is not None else _build_mlx_generator(verifier_model_id, model_config, settings.model_config_path)
         editor_max_tokens = int(verification_config.get("max_tokens", 180))
+        if benchmark_eval_id is not None:
+            validate_canonical_backend(editor, eval_id=benchmark_eval_id, question=message,
+                field_context=field_context, arm=arm_id, phase="verification", model_id=verifier_model_id,
+                model_config_sha256=hashlib.sha256(Path(settings.model_config_path).read_bytes()).hexdigest(), max_tokens=editor_max_tokens,
+                reasoning_effort=verification_config.get("reasoning_effort") or model_config.get("reasoning_effort"))
         if hasattr(editor, "max_tokens"):
             editor.max_tokens = editor_max_tokens
         editor_scope = getattr(editor, "set_cache_scope", None)
@@ -1146,6 +1230,23 @@ def _run_turn_impl(
                 workspace_docs,
             )
         )
+        verification_egress = {}
+        if benchmark_eval_id is not None:
+            prior = (getattr(generator, "last_generation_stats", None) or {}).get("benchmark_egress_receipt") or {}
+            if prior.get("model_output_sha256") != hashlib.sha256(draft_answer.encode()).hexdigest():
+                raise ValueError("canonical editor lacks its completed candidate egress receipt")
+            binder = getattr(editor, "bind_candidate_generation_output", None)
+            if not callable(binder):
+                raise ValueError("canonical editor lacks candidate binding")
+            candidate_sha = hashlib.sha256(draft_answer.encode()).hexdigest()
+            binder(eval_id=benchmark_eval_id, output_sha256=candidate_sha)
+            def envelope_factory(*, messages, candidate_draft, verifier_evidence_text):
+                return _build_benchmark_egress_envelope(
+                    generator=editor, messages=messages, eval_id=benchmark_eval_id,
+                    question=message, field_context=field_context, context=context, resources=resources,
+                    candidate_draft=candidate_draft, verifier_evidence_text=verifier_evidence_text,
+                    candidate_generation_output_sha256=candidate_sha)
+            verification_egress["egress_envelope_factory"] = envelope_factory
         with verify_span:
             verification = verify_answer(
                 answer,
@@ -1154,6 +1255,7 @@ def _run_turn_impl(
                 question_type="source_grounded" if source_grounded or context is None else context.route.question_type,
                 risk_level="low" if context is None else context.route.risk_level,
                 editor=editor,
+                **verification_egress,
                 editor_context_management=conversation_config,
                 editor_max_tokens=editor_max_tokens,
                 editor_max_words=editor_max_words,
@@ -1171,10 +1273,18 @@ def _run_turn_impl(
                     if isinstance(field_context, dict)
                     else None
                 ),
+                **({"editor_observation_hook": evaluation_editor_hook} if evaluation_editor_hook is not None else {}),
             )
         answer = verification.answer
         verification_metadata = verification.as_record()
-        if getattr(verification, "editor_output", None) is not None and getattr(editor, "last_generation_stats", None):
+        if evaluation_editor_hook is not None:
+            observed_editor = verification_metadata.get("editor_observation")
+            if not isinstance(observed_editor, dict):
+                raise ValueError("executed verifier omitted editor observation")
+            if observed_editor["state"] == "returned":
+                verification_metadata["generation_stats"] = deepcopy(observed_editor["generation_stats"])
+                verification_metadata["model_identity"] = deepcopy(observed_editor["model_identity"])
+        elif getattr(verification, "editor_output", None) is not None and getattr(editor, "last_generation_stats", None):
             verification_metadata["generation_stats"] = deepcopy(editor.last_generation_stats)
         store.append_event(
             session_id,
@@ -1186,6 +1296,8 @@ def _run_turn_impl(
             },
         )
 
+    if evaluation_editor_hook is not None and verification is None:
+        _EditorObservation(None, evaluation_editor_hook)._publish("no_call", reason="verification_not_invoked")
     post_verification_answer = answer
     trace_store_payload["prompt_messages"] = prompt_messages or []
     trace_store_payload["metadata"]["context_budget"] = context_budget_receipt
@@ -1453,8 +1565,16 @@ def _run_turn_impl(
     }
 
 
-def execute_agent_request(request: AgentExecutionRequest) -> AgentExecutionResult:
-    """Execute and validate one request through the production cockpit core."""
+def execute_agent_request(
+    request: AgentExecutionRequest, *,
+    evaluation_draft_hook: Callable[[Mapping[str, Any]], None] | None = None,
+    evaluation_editor_hook: Callable[[Mapping[str, Any]], None] | None = None,
+) -> AgentExecutionResult:
+    """Execute the product core; an optional local evaluation sink observes drafts."""
+    if evaluation_draft_hook is not None and not callable(evaluation_draft_hook):
+        raise TypeError("evaluation_draft_hook must be callable or None")
+    if evaluation_editor_hook is not None and not callable(evaluation_editor_hook):
+        raise TypeError("evaluation_editor_hook must be callable or None")
     with _session_turn_guard(request.store, request.session_id):
         if request.client_operation_id and request.operation_request_sha256:
             existing = request.store.get_turn_operation(request.session_id, request.client_operation_id)
@@ -1492,6 +1612,12 @@ def execute_agent_request(request: AgentExecutionRequest) -> AgentExecutionResul
             operation_request_sha256=request.operation_request_sha256,
             profiler=request.profiler,
             generation_backend=request.generation_backend,
+            **({"generation_backend_factory": request.generation_backend_factory,
+                "verification_backend_factory": request.verification_backend_factory,
+                "benchmark_eval_id": request.benchmark_eval_id}
+               if request.benchmark_eval_id is not None else {}),
+            evaluation_draft_hook=evaluation_draft_hook,
+            **({"evaluation_editor_hook": evaluation_editor_hook} if evaluation_editor_hook is not None else {}),
             execution_class=request.execution_class,
             document_retrieval_enabled=request.document_retrieval_enabled,
             graph_retrieval_enabled=request.graph_retrieval_enabled,

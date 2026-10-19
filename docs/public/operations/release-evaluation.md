@@ -122,6 +122,54 @@ be not applicable. Token count, an outer run cap or a copied provider receipt
 cannot establish a stop reason. Reanalysis preserves recorded length failures
 and refuses contradictory known terminal evidence.
 
+The cell executor retains an exclusive completed-draft sidecar before verification
+or turn persistence. Its Python-only observation hook is absent from HTTP inputs
+and defaults to no observation in ordinary product calls. The bounded sidecar
+binds the case, arm, trial, configuration and source bytes; it preserves available
+draft text and call receipts after a downstream failure. It does not establish a
+final answer, complete product topology or successful termination. Failed writes
+stop that cell without retry, and missing evidence remains unknown. These private
+artifacts contain prompts and drafts and stay outside the public package.
+
+The same optional evaluation boundary records the editor separately: explicit
+no-call, dispatch intent, returned output, or failed/unknown. Dispatch intent
+does not prove invocation, and a missing checkpoint does not prove no call.
+Returned editor text is retained before rewrite assessment or selection, so a
+rejected, unchanged or empty rewrite and a later persistence failure cannot
+erase an observed return. Native editor attribution requires its own model and
+revision, effective configuration, resolved snapshot and fresh call statistics;
+draft identity or configuration alone is insufficient. Private checkpoint
+payloads retain prompts and raw output; product metadata carries their
+content-addressed summary only. Checkpoint or observation failures stop the cell
+without retry and cannot turn unknown execution into a successful observation.
+
+### Provider diagnostics
+
+The optional Python-only App Server integration is a nonqualifying diagnostic
+boundary, exercised with fake providers. It does not activate an HTTP route,
+change the active model, or add a supported release-runner profile. Native
+revision, editor and termination requirements remain unchanged.
+Retain application-message and transport-instruction hashes separately: the
+App Server text-only control also changes its raw-reference prompt recipe.
+
+A live diagnostic needs fresh source-bound authorization for the exact cases,
+compiled prompts, synthetic facts, selected licensed evidence and verification
+payloads. Legacy authorizations do not grant the current production recipe or
+additional payload classes. Private records, controller references and whole
+corpora are excluded. Deterministic bypasses remain local and do not require
+provider construction. A rejected egress contract is a failed observation.
+Model-bound typed-tool results remain unsupported and are rejected; admitting
+them requires a separately reviewed payload contract and authorization.
+
+Keep provider-requested settings separate from returned evidence. A returned
+thread model selection does not identify immutable weights; a completed turn
+does not prove EOS, absence of truncation or enforcement of an output-token
+ceiling. Effective reasoning effort and unavailable termination evidence stay
+unknown. Local process closeout does not establish remote cancellation. Record
+every draft and editor attempt, including failed and unknown outcomes, without
+automatic retries. Such diagnostics cannot satisfy native qualification or
+support a matched three-model performance claim.
+
 Larger finite output ceilings require a new frozen execution configuration and
 budget. They do not establish information retention or answer quality. Review
 accepted rewrites, rejected attempts, fallback and formatting separately for

@@ -9,6 +9,75 @@ from agronomy_agent.tool_planner import CALCULATOR_VERSION
 from agronomy_agent.capability_registry import capability_registry
 
 
+def test_development_gdd_supplied_json_binds_explicit_celsius_inputs():
+    question = "Calculate daily GDD manually. Supplied facts: " + json.dumps({
+        "max_temp_C": "24", "min_temp_C": "8", "base_temp_C": "6",
+        "method": "daily_mean_no_temperature_caps",
+    })
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == "ready", plan.to_dict()
+    assert results[0].payload["value"] == pytest.approx(10)
+
+
+@pytest.mark.parametrize("update", [
+    {"base_temp_C": None}, {"max_temp_C": True}, {"min_temp_C": "NaN"},
+    {"max_temp_C": "Infinity"}, {"max_temp_C": "1e999"},
+    {"max_temp_c": "25"}, {"method": "unreviewed_stage_model"},
+    {"method": []}, {"temperature_unit": "F"}, {"upper_cap_C": "20"},
+])
+def test_development_gdd_json_invalid_or_missing_remains_clarification(update):
+    supplied = {"max_temp_C": "24", "min_temp_C": "8", "base_temp_C": "6",
+                "method": "daily_mean_no_temperature_caps", **update}
+    plan, results = plan_and_execute_tools("Calculate daily GDD. Supplied facts: " + json.dumps(supplied))
+    assert plan.status == "clarification_required"
+    assert results == ()
+
+
+@pytest.mark.parametrize("suffix", [
+    '{"max_temp_C":24,"max_temp_C":25,"min_temp_C":8,"base_temp_C":6}',
+    '{"max_temp_C":NaN,"min_temp_C":8,"base_temp_C":6}',
+    '{"max_temp_C":24,"min_temp_C":8,"base_temp_C":6} {"max_temp_C":26}',
+    '{"max_temp_C":24,"min_temp_C":8,"base_temp_C":6',
+])
+def test_development_gdd_json_ambiguous_or_malformed_is_not_executed(suffix):
+    plan, results = plan_and_execute_tools("Calculate daily GDD. Supplied facts: " + suffix)
+    assert plan.status == "clarification_required"
+    assert not results
+
+
+@pytest.mark.parametrize("prefix", [
+    "Calculate daily GDD from Tmax 25 C.",
+    "Calculate daily GDD from Tmax 24 C and Tmax 25 C.",
+    "Calculate daily GDD with an upper cap of 20 C.",
+])
+def test_development_gdd_json_conflicting_prose_is_not_silently_overridden(prefix):
+    supplied = {"max_temp_C": "24", "min_temp_C": "8", "base_temp_C": "6",
+                "method": "daily_mean_no_temperature_caps"}
+    plan, results = plan_and_execute_tools(prefix + " Supplied facts: " + json.dumps(supplied))
+    assert plan.status == "clarification_required"
+    assert not results
+
+
+def test_development_gdd_json_does_not_select_unknown_units_or_other_operations():
+    plan, results = plan_and_execute_tools('Calculate daily GDD. {"max_temp_F":75,"min_temp_F":50,"base_temp_F":40}')
+    assert plan.status == "clarification_required" and not results
+    unrelated = plan_tools('Explain the weather record. {"max_temp_C":24,"min_temp_C":8,"base_temp_C":6}')
+    assert unrelated.status == "not_applicable"
+
+
+def test_development_gdd_json_metadata_cannot_supply_missing_operands():
+    question = 'Calculate daily GDD. {"max_temp_C":24,"min_temp_C":null,"base_temp_C":6,"note":"Tmin 8 C"}'
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == "clarification_required" and not results
+    assert "min_temp_c" in plan.invocations[0].missing_inputs
+
+
+def test_development_gdd_json_cap_and_matching_prose_preserve_supported_method():
+    plan, results = plan_and_execute_tools('Calculate daily GDD from Tmax 24 C, Tmin 8 C and base 6 C. {"upper_cap_C":20,"method":"daily_mean"}')
+    assert plan.status == "ready"
+    assert results[0].payload["value"] == 8
+
+
 def test_planner_calculator_version_matches_canonical_registry() -> None:
     assert CALCULATOR_VERSION == capability_registry().require("agronomic_calculator").version
 

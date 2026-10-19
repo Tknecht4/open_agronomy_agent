@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import re
+import hashlib
+from copy import deepcopy
 from collections import Counter
 from dataclasses import dataclass
-from typing import Any, Iterable, Mapping
+from typing import Any, Callable, Iterable, Mapping
+from pathlib import Path
 
 from agronomy_agent.agno_runtime.local_index import RetrievedDoc
 from agronomy_agent.decision_route import build_decision_route_state
@@ -21,6 +24,141 @@ from agronomy_agent.router import request_focus
 from agronomy_agent.model_prompt_budget import positive_int, prompt_budget_receipt
 from agronomy_agent.model_errors import LocalModelSnapshotUnavailable
 from agronomy_agent.quantity_claims import unsupported_quantities
+from agronomy_agent.execution_core import stable_sha256
+
+
+def editor_observation_record(observation: Mapping[str, Any]) -> dict[str, Any]:
+    """The content-addressed summary omits private prompt/output payloads."""
+    return deepcopy({key: value for key, value in observation.items()
+                     if key not in {"prompt_messages", "raw_output", "resolved_snapshot"}})
+
+
+def validate_editor_observation(observation: Any) -> dict[str, Any]:
+    """Validate a detached observation; this alone does not qualify model identity."""
+    if not isinstance(observation, Mapping):
+        raise ValueError("editor observation must be a mapping")
+    record = editor_observation_record(observation)
+    if (record.get("schema_version") != "open_agronomy_agent.editor_call_observation.v1"
+            or record.get("state") not in {"no_call", "dispatch_intent", "returned", "failed_unknown"}
+            or record.get("receipt_sha256") != stable_sha256({k: v for k, v in record.items() if k != "receipt_sha256"})):
+        raise ValueError("editor observation hash/schema mismatch")
+    expected = False if record["state"] == "no_call" else True if record["state"] == "returned" else None
+    if record.get("call_invoked") is not expected:
+        raise ValueError("editor observation invocation contradiction")
+    for key in ("generation_stats", "model_identity"):
+        value = record.get(key)
+        if value is not None and not isinstance(value, Mapping):
+            raise ValueError("editor observation payload must be mapping or unknown")
+        if record.get(key + "_sha256") != (stable_sha256(value) if value is not None else None):
+            raise ValueError("editor observation payload hash differs")
+    if any(record.get(key) is not None and not isinstance(record[key], Mapping)
+           for key in ("native_observation", "editor_context_budget")):
+        raise ValueError("editor observation context/native payload must be mapping or unknown")
+    if record["state"] == "no_call" and any(record.get(key) is not None for key in ("prompt_sha256", "raw_output_sha256", "normalized_output_sha256", "generation_stats", "model_identity")):
+        raise ValueError("no-call editor observation carries call evidence")
+    if record["state"] == "no_call" and (record.get("identity_status") != "not_applicable" or record.get("native_observation") is not None):
+        raise ValueError("no-call editor observation claims native identity")
+    return record
+
+
+class _EditorObservation:
+    """One optional local sink, with intent explicitly weaker than invocation."""
+
+    def __init__(self, editor: Any, sink: Callable[[Mapping[str, Any]], None]) -> None:
+        self.editor, self.sink = editor, sink
+        self.record: dict[str, Any] | None = None
+        self.messages: list[dict[str, str]] = []
+        self.cleared = False
+        self.previous_marker: Any = None
+        self.context_budget: dict[str, Any] | None = None
+
+    def _publish(self, state: str, *, raw_output: str | None = None,
+                 resolved_snapshot: str | None = None, **values: Any) -> None:
+        record = {"schema_version": "open_agronomy_agent.editor_call_observation.v1",
+                  "state": state, "call_invoked": False if state == "no_call" else True if state == "returned" else None,
+                  "prompt_sha256": stable_sha256(self.messages) if self.messages else None,
+                  "requested_max_tokens": getattr(self.editor, "max_tokens", None),
+                  "raw_output_sha256": None, "normalized_output_sha256": None,
+                  "generation_stats": None, "model_identity": None,
+                  "identity_status": "not_applicable" if state == "no_call" else "unknown",
+                  "stats_freshness": "unknown", "native_observation": None,
+                  "editor_context_budget": deepcopy(self.context_budget),
+                  **values}
+        record["generation_stats_sha256"] = stable_sha256(record["generation_stats"]) if record["generation_stats"] is not None else None
+        record["model_identity_sha256"] = stable_sha256(record["model_identity"]) if record["model_identity"] is not None else None
+        record["receipt_sha256"] = stable_sha256(record)
+        self.record = record
+        payload = {**deepcopy(record), "prompt_messages": deepcopy(self.messages),
+                   "raw_output": raw_output, "resolved_snapshot": resolved_snapshot}
+        # Private data participates through its hashes, never by leaking into metadata.
+        self.sink(payload)
+
+    def enter(self, messages: list[dict[str, str]], context_budget: Mapping[str, Any]) -> None:
+        self.messages = deepcopy(messages)
+        self.context_budget = deepcopy(dict(context_budget))
+        self.previous_marker = getattr(self.editor, "generation_stats_call_id", None)
+        try:
+            self.editor.last_generation_stats = None
+            self.cleared = getattr(self.editor, "last_generation_stats", None) is None
+        except (AttributeError, TypeError):
+            pass
+        self._publish("dispatch_intent")
+
+    def returned(self, raw: Any) -> None:
+        from agronomy_agent.agent import MLXGenerator
+        stats = getattr(self.editor, "last_generation_stats", None)
+        marker = getattr(self.editor, "generation_stats_call_id", None)
+        marked = (type(self.previous_marker) is int and self.previous_marker >= 0
+                  and type(marker) is int and marker > self.previous_marker
+                  and isinstance(stats, Mapping) and type(stats.get("generation_stats_call_id")) is int
+                  and stats["generation_stats_call_id"] == marker)
+        native = type(self.editor) is MLXGenerator
+        fresh = marked or native and self.cleared
+        stats = deepcopy(dict(stats)) if fresh and isinstance(stats, Mapping) else None
+        identity = getattr(self.editor, "model_identity", None)
+        snapshot = getattr(self.editor, "_resolved_model_snapshot", None)
+        actual = {"model_id": (stats or {}).get("generation_lock_model_id"),
+                  "model_revision": (stats or {}).get("generation_lock_model_revision"),
+                  "snapshot_revision": Path(snapshot).name if isinstance(snapshot, (str, Path)) else None,
+                  "snapshot_path_sha256": stable_sha256(str(snapshot)) if isinstance(snapshot, (str, Path)) else None,
+                  "context_window_tokens": getattr(self.editor, "context_window_tokens", None)}
+        verified = (native and fresh and isinstance(identity, Mapping)
+                    and identity.get("schema_version") == "open_agronomy_agent.model_identity_contract.v1"
+                    and identity.get("status") == "verified_direct_loader" and identity.get("backend") == "mlx_local"
+                    and bool(identity.get("model_config_sha256"))
+                    and bool(actual["model_revision"])
+                    and actual["model_id"] == identity.get("configured_model_id")
+                    and actual["model_revision"] == identity.get("configured_model_revision") == actual["snapshot_revision"])
+        provider = None
+        if isinstance(raw,str) and marked and not native and isinstance(stats,Mapping) and stats.get("backend")=="codex_app_server_chatgpt_auth":
+            receipt=stats.get("app_server_receipt") or {}
+            if (isinstance(receipt,Mapping) and receipt.get("output_sha256")==hashlib.sha256(raw.encode()).hexdigest()
+                    and receipt.get("selected_model")==getattr(self.editor,"model_id",None)):
+                provider={"scope":"explicit_thread_selection_not_weights_identity","receipt":deepcopy(dict(receipt)),
+                          "model_revision":None,"effective_reasoning_effort":None,"finish_reason":None,"hard_output_cap_supported":False}
+        self._publish("returned", **({"provider_observation":provider} if provider is not None else {}), raw_output_sha256=stable_sha256(raw) if isinstance(raw, str) else None,
+                      raw_output=raw if isinstance(raw, str) else None,
+                      resolved_snapshot=str(snapshot) if isinstance(snapshot, (str, Path)) else None,
+                      normalized_output_sha256=stable_sha256(raw.strip()) if isinstance(raw, str) else None,
+                      generation_stats=stats, model_identity=deepcopy(dict(identity)) if verified else None,
+                      identity_status="observed_native_call" if verified else "unknown",
+                      stats_freshness="advanced_call_marker" if marked else "native_call_reset" if native and self.cleared else "unknown",
+                      native_observation=actual if native else None)
+        # _publish sends private values separately; retain the raw return before strip/assessment.
+        # The sink sees a detached copy, and the summary remains prompt/output free.
+
+    def failed(self, error: BaseException) -> None:
+        try:
+            message = str(error).encode("utf-8")[:512].decode("utf-8", errors="ignore")
+        except BaseException:
+            message = "<message unavailable>"
+        self._publish("failed_unknown", error={"type": type(error).__name__, "message": message},
+            **({"provider_attempt":deepcopy(error.provider_attempt)} if hasattr(error,"provider_attempt") else {}))
+
+    def finish(self, result: "AnswerVerificationResult") -> "AnswerVerificationResult":
+        if self.record is None:
+            self._publish("no_call", reason="normal_verifier_return_before_editor_dispatch")
+        return AnswerVerificationResult(**{**result.__dict__, "editor_observation": deepcopy(self.record)})
 
 
 EVIDENCE_EDITOR_SYSTEM_PROMPT = """You are a conservative evidence editor for an agronomy assistant. The user's question and allowed evidence are the only factual record. Preserve useful supported content from a usable draft; change only unsupported claims and decision-critical omissions. When the draft is corrupt, repetitive, incomplete, or exposes internal controls, answer afresh instead. Never add a fact, number, rate, threshold, crop stage, named soil, pathogen, pest, product, law, diagnosis, or management permission. Every item under MISSING DECISION CONTENT is mandatory. When the question names multiple public data products, give each product its own sentence. For a named public data product, preserve equations, model names, units, complete enumerated values, resolution, lineage, and regional-versus-field limitations exactly from the allowed evidence. Answer only what was asked. Weather or regional context may indicate risk; it does not prove a field condition or diagnosis. If the record cannot support a diagnosis or recommendation, state the boundary and identify only the observation or test needed to resolve it. Return the user-facing answer only, no audit commentary."""
@@ -234,6 +372,7 @@ class AnswerVerificationResult:
     selection_policy: str = "hard_safety_then_specificity_v2"
     risk_threshold_receipt: Mapping[str, Any] | None = None
     editor_context_budget: Mapping[str, Any] | None = None
+    editor_observation: Mapping[str, Any] | None = None
 
     def as_record(self) -> dict[str, Any]:
         failed_claims = _risk_excerpts(self.draft_output or "", self.draft_assessment)
@@ -272,6 +411,7 @@ class AnswerVerificationResult:
             "fallback_applied": self.fallback_applied,
             "draft_output": self.draft_output,
             "editor_output": self.editor_output,
+            **({"editor_observation": deepcopy(self.editor_observation)} if self.editor_observation is not None else {}),
             "replacement_audit": {
                 "schema_version": "open_agronomy_agent.verifier_replacement_audit.v2",
                 "failed_claims": list(failed_claims),
@@ -1290,6 +1430,7 @@ def _verify_answer_impl(
     editor_context_management: dict[str, Any] | None = None,
     editor_max_tokens: int | None = None,
     editor_max_words: int | None = None,
+    _editor_observation: _EditorObservation | None = None,
 ) -> AnswerVerificationResult:
     editor_max_words = validate_editor_max_words(editor_max_words)
     docs = tuple(evidence_docs)
@@ -1985,31 +2126,7 @@ def _verify_answer_impl(
             draft_output=draft,
             editor_context_budget=editor_budget,
         )
-    try:
-        generate_with_egress = getattr(editor, "generate_with_egress", None)
-        if callable(generate_with_egress):
-            if not callable(egress_envelope_factory):
-                raise RuntimeError(
-                    "App Server evidence editing requires a benchmark egress envelope factory"
-                )
-            egress_envelope = egress_envelope_factory(
-                messages=messages,
-                candidate_draft=draft,
-                verifier_evidence_text=bounded_editor_evidence,
-            )
-            editor_output = str(generate_with_egress(messages, egress_envelope)).strip()
-        else:
-            if bool(getattr(editor, "transport_control_active", False)):
-                raise ValueError(
-                    "transport-controlled verification requires callable "
-                    "generate_with_egress"
-                )
-            editor_output = str(editor.generate(messages)).strip()
-    except LocalModelSnapshotUnavailable:
-        raise
-    except (RuntimeError, ValueError) as exc:
-        if bool(getattr(editor, "transport_control_active", False)):
-            raise
+    def provider_failure(exc: BaseException) -> AnswerVerificationResult:
         fallback = fallback_answer()
         final_assessment = assess(fallback)
         return AnswerVerificationResult(
@@ -2023,6 +2140,56 @@ def _verify_answer_impl(
             draft_output=draft,
             editor_context_budget=editor_budget,
         )
+
+    try:
+        generate_with_egress = getattr(editor, "generate_with_egress", None)
+        if callable(generate_with_egress):
+            if not callable(egress_envelope_factory):
+                raise RuntimeError("App Server evidence editing requires a benchmark egress envelope factory")
+            egress_envelope = egress_envelope_factory(
+                messages=messages, candidate_draft=draft, verifier_evidence_text=bounded_editor_evidence,
+            )
+            call, arguments = generate_with_egress, (messages, egress_envelope)
+        else:
+            if bool(getattr(editor, "transport_control_active", False)):
+                raise ValueError("transport-controlled verification requires callable generate_with_egress")
+            call, arguments = editor.generate, (messages,)
+    except LocalModelSnapshotUnavailable:
+        raise
+    except (RuntimeError, ValueError) as exc:
+        if bool(getattr(editor, "transport_control_active", False)):
+            raise
+        return provider_failure(exc)
+    # Evaluation checkpoint failures must never enter the provider fallback handler.
+    if _editor_observation is not None:
+        _editor_observation.enter(messages, editor_budget)
+    try:
+        raw_editor_output = call(*arguments)
+    except BaseException as exc:
+        observer_failed = False
+        if _editor_observation is not None:
+            try:
+                _editor_observation.failed(exc)
+            except BaseException as closeout_error:
+                # Preserve the original cause/control flow. The evaluator retains
+                # this separate failure without replacing the provider's chain.
+                exc._editor_observation_failure = closeout_error
+                observer_failed = True
+        if observer_failed:
+            raise
+        if (isinstance(exc, LocalModelSnapshotUnavailable)
+                or not isinstance(exc, (RuntimeError, ValueError))
+                or bool(getattr(editor, "transport_control_active", False))):
+            raise
+        return provider_failure(exc)
+    if _editor_observation is not None:
+        _editor_observation.returned(raw_editor_output)
+    try:
+        editor_output = str(raw_editor_output).strip()
+    except (RuntimeError, ValueError) as exc:
+        if bool(getattr(editor, "transport_control_active", False)):
+            raise
+        return provider_failure(exc)
     rewrite_assessment = assess(editor_output)
     rejection_reasons = _rewrite_rejection_reasons(
         draft=draft,
@@ -2073,7 +2240,7 @@ RISK_CONDITIONED_SELECTIVE_V3_THRESHOLDS: Mapping[str, int] = {
 }
 
 
-def verify_answer(
+def _verify_answer_policy(
     draft: str,
     *,
     question: str,
@@ -2091,6 +2258,7 @@ def verify_answer(
     editor_context_management: dict[str, Any] | None = None,
     editor_max_tokens: int | None = None,
     editor_max_words: int | None = None,
+    _editor_observation: _EditorObservation | None = None,
 ) -> AnswerVerificationResult:
     """Apply model-independent consequence thresholds before editing."""
 
@@ -2158,6 +2326,7 @@ def verify_answer(
             editor_context_management=editor_context_management,
             editor_max_tokens=editor_max_tokens,
             editor_max_words=editor_max_words,
+            _editor_observation=_editor_observation,
         )
         return AnswerVerificationResult(
             **{
@@ -2183,7 +2352,34 @@ def verify_answer(
         editor_context_management=editor_context_management,
         editor_max_tokens=editor_max_tokens,
         editor_max_words=editor_max_words,
+        _editor_observation=_editor_observation,
     )
+
+
+def verify_answer(
+    draft: str, *, question: str, evidence_text: str, question_type: str,
+    risk_level: str, editor: Any, max_evidence_chars: int = 9000,
+    evidence_docs: Iterable[RetrievedDoc] = (), preserve_entities: Iterable[str] = (),
+    required_entities: Iterable[str] = (), review_mode: str = "risk_gated",
+    jurisdiction: str | None = None, egress_envelope_factory: Any | None = None,
+    editor_context_management: dict[str, Any] | None = None,
+    editor_max_tokens: int | None = None, editor_max_words: int | None = None,
+    editor_observation_hook: Callable[[Mapping[str, Any]], None] | None = None,
+) -> AnswerVerificationResult:
+    """Verify normally; an optional detached local observer records actual editor boundaries."""
+    if editor_observation_hook is not None and not callable(editor_observation_hook):
+        raise TypeError("editor_observation_hook must be callable or None")
+    observation = _EditorObservation(editor, editor_observation_hook) if editor_observation_hook is not None else None
+    result = _verify_answer_policy(
+        draft, question=question, evidence_text=evidence_text, question_type=question_type,
+        risk_level=risk_level, editor=editor, max_evidence_chars=max_evidence_chars,
+        evidence_docs=evidence_docs, preserve_entities=preserve_entities,
+        required_entities=required_entities, review_mode=review_mode, jurisdiction=jurisdiction,
+        egress_envelope_factory=egress_envelope_factory,
+        editor_context_management=editor_context_management, editor_max_tokens=editor_max_tokens,
+        editor_max_words=editor_max_words, _editor_observation=observation,
+    )
+    return observation.finish(result) if observation is not None else result
 
 
 def _defect_claims(answer: str, assessment: ClaimRiskAssessment, reason: str) -> tuple[str, ...]:

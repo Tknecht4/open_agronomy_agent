@@ -100,6 +100,17 @@ export type StructuredAnswerTrace = {
   recommended_next_steps?: string[]
 }
 
+export type TurnExecutionStageReceipt = {
+  schema_version: string
+  topology_version: string
+  stage_id: string
+  position: number
+  state: string
+  evidence: Record<string, unknown>
+  evidence_sha256?: string
+  receipt_sha256?: string
+}
+
 export type TurnTrace = {
   route?: TurnRoute | null
   coverage_checklist?: string[]
@@ -108,7 +119,9 @@ export type TurnTrace = {
   tool_invocations?: ToolInvocation[]
   prompt_messages?: Array<Record<string, unknown>> | null
   structured_answer?: StructuredAnswerTrace | null
-  metadata?: Record<string, unknown>
+  metadata?: Record<string, unknown> & {
+    execution_stage_receipts?: TurnExecutionStageReceipt[]
+  }
 }
 
 export type TurnFeedback = {
@@ -129,6 +142,7 @@ export type TurnSystemState = {
   rag_config: string | null
   prompt_version: string
   latency_ms?: number | null
+  generation_path?: string
   model_identity?: {
     schema_version?: string
     status?: string

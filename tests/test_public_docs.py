@@ -169,7 +169,7 @@ def test_pages_workflow_audit_requires_default_branch_configuration(tmp_path: Pa
 
     errors = check_public_docs.audit_pages_workflow(workflow)
 
-    assert "pages_workflow:configuration_not_default_branch_push_only" in errors
+    assert "pages_workflow:configuration_not_explicit_main_dispatch_only" in errors
 
 
 CANONICAL_OVERVIEWS = (

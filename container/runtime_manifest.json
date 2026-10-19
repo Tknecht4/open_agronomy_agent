@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-10-14T03:02:50+00:00",
+  "generated_at": "2026-10-16T05:00:54+00:00",
   "status": "pass",
-  "contract_sha256": "186660fb8b724fa981cd9aeabd10b8fd9ce8a1b4ffe975917ab74ee4af349f29",
+  "contract_sha256": "c02ebac8f78fe480161e45a112913b731ed42786e089e322d6485ef6d5ac07da",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -414,14 +414,14 @@
     {
       "path": "src/agronomy_agent",
       "file_count": 177,
-      "bytes": 6063265,
-      "sha256": "5284b88a43c5fb2c8bd3431bf83e7d58c82476427928d1ef3ea423906372c4e5"
+      "bytes": 6163986,
+      "sha256": "3ebaaa5258274b6564b14806aa3dc6fe4dce54e37424e74d27d50d75c519f543"
     },
     {
       "path": "frontend/src",
-      "file_count": 108,
-      "bytes": 1668543,
-      "sha256": "c746f99374691a62d036a21bf65b882e3149286e3cc9fc021daeae110c8f4e5d"
+      "file_count": 110,
+      "bytes": 1712577,
+      "sha256": "4c84dd8379198dac5835dbd7ecbf554c69cc17d5d4ec219e4aefbca72ab928f9"
     },
     {
       "path": "frontend/public",
@@ -432,14 +432,14 @@
     {
       "path": "scripts",
       "file_count": 147,
-      "bytes": 1938205,
-      "sha256": "d42f576cadf693202eed0a400dd183b84a307332e16935bc5fe41bd11d238c23"
+      "bytes": 1938899,
+      "sha256": "b3e26bd953be56e83ccaa1ae36c864670ded10e61f20c2d19ab79e4965e32452"
     },
     {
       "path": "configs",
       "file_count": 92,
-      "bytes": 299858,
-      "sha256": "0cec1f002d01745ab4665ea7b2c5ad731cefa21e84bc9a2f538bf3acbd893390"
+      "bytes": 299909,
+      "sha256": "4b38f1f468698d2edaf05e02a82e698d9a49b7a36966f4c53aab119e3cc1ac61"
     },
     {
       "path": "data/manifests",
@@ -462,8 +462,8 @@
     {
       "path": "docs/public",
       "file_count": 99,
-      "bytes": 9347511,
-      "sha256": "af0833bad7290417503b25fa2b84e4bc48d693079b3739119ac95a1a1e80e4d5"
+      "bytes": 9351233,
+      "sha256": "478e0cebc40d335eb04adf533b1984227e8b3a500b052cbf5a7bf707a6779f84"
     }
   ],
   "geo_cache_seed": {

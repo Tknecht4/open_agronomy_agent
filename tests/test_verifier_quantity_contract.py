@@ -210,6 +210,114 @@ def _preservation_result(draft, editor, **kwargs):
                          review_mode=mode, editor_max_tokens=1024, **kwargs)
 
 
+def test_editor_observation_captures_return_before_selection():
+    events = []
+    editor = _PreservationEditor(_SAFE_ANSWER + ' Apply 99 kg/ha immediately.')
+    result = _preservation_result(_SAFE_ANSWER + ' Apply 71 kg/ha immediately.', editor,
+                                  editor_observation_hook=events.append)
+    assert [event['state'] for event in events] == ['dispatch_intent', 'returned']
+    assert events[-1]['raw_output'] == editor.answer
+    assert not result.rewrite_accepted
+    assert result.as_record()['editor_observation']['state'] == 'returned'
+
+
+class _ObservedEditor(_PreservationEditor):
+    def __init__(self, answer, error=None):
+        super().__init__(answer)
+        self.calls = 0
+        self.error = error
+        self.max_tokens = 220
+        self.last_generation_stats = {'finish_reason': 'length', 'generation_tokens': 99}
+        self.generation_stats_call_id = 0
+
+    def generate(self, messages):
+        self.calls += 1
+        self.messages = messages
+        if self.error is not None:
+            raise self.error
+        self.generation_stats_call_id += 1
+        self.last_generation_stats = {'finish_reason': 'stop', 'generation_tokens': 7,
+                                      'generation_stats_call_id': self.generation_stats_call_id}
+        return self.answer
+
+
+@pytest.mark.parametrize('kind', ['accepted', 'rejected', 'unchanged', 'empty', 'failure', 'cancel', 'no_call'])
+def test_editor_observation_lifecycle_retains_each_actual_boundary(kind):
+    from agronomy_agent.execution_core import stable_sha256
+    from agronomy_agent.answer_verifier import validate_editor_observation
+    draft = _SAFE_ANSWER + ' Apply 71 kg/ha immediately.'
+    answer = {'rejected': _SAFE_ANSWER + ' Apply 99 kg/ha immediately.', 'unchanged': draft, 'empty': ''}.get(kind, ' \n' + _SAFE_ANSWER + '\n ')
+    error = KeyboardInterrupt('Synthetic cancel') if kind == 'cancel' else RuntimeError('Synthetic failure') if kind == 'failure' else None
+    editor = _ObservedEditor(answer, error)
+    events = []
+    if kind == 'cancel':
+        with pytest.raises(KeyboardInterrupt) as caught:
+            _preservation_result(draft, editor, editor_observation_hook=events.append)
+        assert caught.value is error
+    else:
+        result = _preservation_result(_SAFE_ANSWER if kind == 'no_call' else draft, editor,
+                                      editor_observation_hook=events.append)
+        assert 'raw_output' not in result.as_record()['editor_observation']
+        assert 'prompt_messages' not in result.as_record()['editor_observation']
+    expected = ['no_call'] if kind == 'no_call' else ['dispatch_intent', 'failed_unknown' if error else 'returned']
+    assert [event['state'] for event in events] == expected
+    assert editor.calls == (0 if kind == 'no_call' else 1)
+    for event in events: validate_editor_observation(event)
+    if kind == 'no_call': assert events[0]['call_invoked'] is False
+    elif error:
+        assert events[-1]['call_invoked'] is None and events[-1]['model_identity'] is None
+        assert events[-1]['generation_stats'] is None
+    else:
+        assert events[-1]['raw_output'] == answer
+        assert events[-1]['raw_output_sha256'] == stable_sha256(answer)
+        assert events[-1]['normalized_output_sha256'] == stable_sha256(answer.strip())
+        assert events[-1]['generation_stats']['generation_tokens'] == 7
+        assert events[-1]['identity_status'] == 'unknown'  # An arbitrary fake cannot qualify native identity.
+
+
+@pytest.mark.parametrize('state', ['dispatch_intent', 'returned', 'failed_unknown'])
+def test_editor_observation_checkpoint_errors_never_become_successful_provider_fallback(state):
+    original = KeyboardInterrupt('Synthetic original cancellation') if state == 'failed_unknown' else None
+    editor = _ObservedEditor(_SAFE_ANSWER, original)
+    events = []
+    def fail(event):
+        events.append(event)
+        if event['state'] == state: raise OSError('Synthetic checkpoint failure')
+    expected = KeyboardInterrupt if original else OSError
+    with pytest.raises(expected) as caught:
+        _preservation_result(_SAFE_ANSWER + ' Apply 71 kg/ha immediately.', editor, editor_observation_hook=fail)
+    if original: assert caught.value is original
+    assert editor.calls == (0 if state == 'dispatch_intent' else 1)
+    assert events[-1]['state'] == state
+
+
+def test_editor_observation_is_detached_and_default_record_is_unchanged():
+    from agronomy_agent.answer_verifier import validate_editor_observation
+    draft = _SAFE_ANSWER + ' Apply 71 kg/ha immediately.'
+    a = _preservation_result(draft, _ObservedEditor(_SAFE_ANSWER))
+    b = _preservation_result(draft, _ObservedEditor(_SAFE_ANSWER), editor_observation_hook=None)
+    assert a.as_record() == b.as_record() and 'editor_observation' not in a.as_record()
+    editor = _ObservedEditor(_SAFE_ANSWER)
+    def mutate(event):
+        event['prompt_messages'].clear()
+        if event['generation_stats'] is not None: event['generation_stats']['finish_reason'] = 'length'
+        event['receipt_sha256'] = 'wrong'
+    result = _preservation_result(draft, editor, editor_observation_hook=mutate)
+    record = validate_editor_observation(result.as_record()['editor_observation'])
+    assert record['generation_stats']['finish_reason'] == 'stop'
+    assert editor.last_generation_stats['finish_reason'] == 'stop'
+
+
+def test_editor_observation_return_precedes_downstream_assessment_error(monkeypatch):
+    import agronomy_agent.answer_verifier as verifier
+    editor, events = _ObservedEditor(_SAFE_ANSWER), []
+    def fail(**_kwargs): raise ValueError('Synthetic post-return assessment failure')
+    monkeypatch.setattr(verifier, '_rewrite_rejection_reasons', fail)
+    with pytest.raises(ValueError, match='post-return'):
+        _preservation_result(_SAFE_ANSWER + ' Apply 71 kg/ha immediately.', editor, editor_observation_hook=events.append)
+    assert editor.calls == 1 and events[-1]['state'] == 'returned'
+
+
 @pytest.mark.parametrize('ceiling', [None, 512])
 @pytest.mark.parametrize('mode', ['risk_gated', 'risk_conditioned_selective_v3'])
 def test_editor_word_ceiling_preserves_supported_record_on_accepted_rewrite(ceiling, mode):
@@ -481,3 +589,40 @@ def test_ascii_identity_does_not_reject_unicode_ranges_or_other_prose(field_id):
     assert 'editor_error' in result.rejection_reasons
     assert record in result.answer and uncertainty in result.answer
     assert '10–25 cm' in result.answer and '71 kg/ha' not in result.answer
+
+
+@pytest.mark.parametrize("kind", ["provider", "keyboard", "system_exit"])
+def test_editor_observation_closeout_failure_preserves_original_cause_and_control(kind):
+    from agronomy_agent.release_eval_executor import exception_evidence
+    original = {"provider": RuntimeError, "keyboard": KeyboardInterrupt, "system_exit": SystemExit}[kind]("Synthetic provider fault")
+    leaf = ValueError("Synthetic original leaf")
+    original.__cause__ = leaf
+    editor = _ObservedEditor("Unused synthetic output.", error=original)
+    events = []
+    def sink(record):
+        events.append(record)
+        if record["state"] == "failed_unknown":
+            raise OSError("Synthetic editor checkpoint failure")
+    with pytest.raises(type(original)) as caught:
+        _preservation_result(_SAFE_ANSWER + " Apply 71 kg/ha immediately.", editor,
+                             editor_observation_hook=sink)
+    assert caught.value is original and original.__cause__ is leaf
+    assert editor.calls == 1 and [event["state"] for event in events] == ["dispatch_intent", "failed_unknown"]
+    retained = exception_evidence(original)
+    assert any(node["message"] == "Synthetic original leaf" and node["path"].endswith(".cause") for node in retained["nodes"])
+    assert any(node["type"] == "OSError" and node["path"].endswith(".editor_observer") for node in retained["nodes"])
+
+
+def test_canonical_provider_observation_does_not_become_native_identity():
+    from agronomy_agent.answer_verifier import _EditorObservation
+    import hashlib
+    class Editor:
+        generation_stats_call_id=0;last_generation_stats=None;model_id="synthetic-luna";max_tokens=220
+    editor=Editor();events=[];observer=_EditorObservation(editor,events.append)
+    observer.enter([{"role":"user","content":"synthetic"}],{})
+    editor.generation_stats_call_id=1
+    editor.last_generation_stats={"generation_stats_call_id":1,"backend":"codex_app_server_chatgpt_auth",
+        "app_server_receipt":{"selected_model":"synthetic-luna","output_sha256":hashlib.sha256(b"safe").hexdigest()}}
+    observer.returned("safe")
+    assert events[-1]["identity_status"]=="unknown" and events[-1]["model_identity"] is None
+    assert events[-1]["provider_observation"]["scope"]=="explicit_thread_selection_not_weights_identity"
