@@ -1,10 +1,11 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, MapPin, Pencil, Upload, Check } from 'lucide-react'
 import { WorkspaceDialog } from './WorkspaceDialog'
+import { recoverableLazy as lazy } from './WorkspaceSectionBoundary'
 import { estimatePolygonAcres, fieldGeometryIssue, validFieldPoint, type FieldGeometry, type MapMode } from './fieldGeometry'
 import { apiUpload } from './api'
 
-const LeafletFieldMap = lazy(() => import('./LeafletFieldMap').then(module => ({ default: module.LeafletFieldMap })))
+const LeafletFieldMap = lazy(() => import('./LeafletFieldMap').then(module => ({ default: module.LeafletFieldMap })), 'Field map')
 export type NewFieldDraft = {
   name: string; crop: string; jurisdiction: string; region: string; concern: string;
   geometry: FieldGeometry; acres: string; notes: string;

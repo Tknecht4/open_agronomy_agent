@@ -104,7 +104,7 @@ Expect `"status": "ok"`; this verifies API configuration, not a completed model 
 
 ## Start in the workspace
 
-Ask a general question directly, or choose **Add field** for a private field record. The three-step flow asks for a name, a pin/drawn boundary/imported GeoJSON, JSON, ZIP, or GPKG boundary, and a final review. Crop and region are optional. A calculated polygon area is an estimate, not a measurement. **Fields** contains Overview, Records & soil tests, and Map context; the question view keeps the map available on demand. **Sources & checks** opens the evidence behind a saved answer. The **Data** area distinguishes private session references from governed source and adapter status.
+Ask a general question directly, or choose **Add field** for a private field record. The three-step flow asks for a name, a pin/drawn boundary/imported GeoJSON, JSON, ZIP, or GPKG boundary, and a final review. Crop and region are optional. A calculated polygon area is an estimate, not a measurement. **Fields** contains Overview, Records & soil tests, and Map context; the desktop workspace opens conversation and map together. Smaller windows use explicit Conversation and Map controls. **Sources & checks** opens the evidence behind a saved answer. The **Data** area distinguishes private session references from governed source and adapter status.
 
 Offline drafts remain local until the API acknowledges a save or sync. Optional Prairie soil layers require a separate verified pack; unavailable layers and providers are reported rather than simulated. [Workspace guide](docs/public/operations/workspace.md) explains the full flow, ingestion boundaries, exports, and recovery.
 

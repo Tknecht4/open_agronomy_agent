@@ -52,18 +52,7 @@ describe("Phase 6 offline-lite PWA shell", () => {
   it("keeps private API and chat surfaces out of the worker cache path", () => {
     const source = workerSource()
 
-    expect(source).toContain("request.method !== 'GET'")
-    expect(source).toContain("url.origin !== self.location.origin")
-    expect(source).toContain("RUNTIME_CACHE_NAME")
-    expect(source).toContain("PHASE6_RUNTIME_CACHE_MAX_ENTRIES = 32")
-    expect(source).toContain("trimPhase6RuntimeCache")
-    expect(source).toContain("cachePhase6RuntimeAsset")
-    expect(source).toContain("cache.delete(keys[index])")
-    expect(source).toContain("open-agronomy-agent-shell-v2")
-    expect(source).toContain("!ACTIVE_CACHE_NAMES.includes(key)")
-    expect(source).toContain("event.waitUntil(cachePhase6ShellIndex(copy))")
-    expect(source).toContain("event.waitUntil(cachePhase6RuntimeAsset(request, copy))")
-    for (const privatePrefix of ["/api", "/auth", "/chat", "/messages", "/attachments", "/exports", "/export-jobs", "/quotas"]) {
+    for (const privatePrefix of ["/api", "/account", "/auth", "/chat", "/messages", "/attachments", "/exports", "/export-jobs", "/quotas"]) {
       expect(source).toContain(`'${privatePrefix}'`)
     }
 

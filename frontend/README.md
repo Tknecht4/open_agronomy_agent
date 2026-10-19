@@ -2,12 +2,14 @@
 
 ## Purpose and status
 
-`frontend/` is the supported field/question React workspace. **Workspace** keeps conversation primary and opens the map on demand; **Fields** manages setup, records, soil tests, history, and map context; **Data** presents private references, knowledge coverage, and adapter diagnostics. It is a client of the FastAPI application; a rendered page does not prove the API, model, corpus, or adapters are ready. See the [workspace guide](../docs/public/operations/workspace.md) for the user flow.
+`frontend/` is the supported field/question React workspace. **Workspace** opens conversation and the map together on desktop, with explicit Conversation/Map controls on mobile; **Fields** manages setup, records, soil tests, history, and map context; **Data** presents private references, knowledge coverage, and adapter diagnostics. It is a client of the FastAPI application; a rendered page does not prove the API, model, corpus, or adapters are ready. See the [workspace guide](../docs/public/operations/workspace.md) for the user flow.
 
 ## Entry points and map
 
 - `src/main.tsx` mounts the application.
 - `src/OpenAgronomyApp.tsx` owns the primary cockpit workflow.
+- `src/WorkspaceNavigation.tsx` owns the open desktop sidebar and native mobile navigation drawer.
+- `src/ModelSettings.tsx` owns the anchored desktop model popover and native mobile model sheet; model choices and availability come from the API.
 - `src/FieldSetupDialog.tsx` owns the name/location/review field wizard; `src/WorkspaceDialog.tsx` supplies accessible modal behavior.
 - `src/MapPresentationControls.tsx` and `src/mapPresentation.ts` own map style/layer display preferences. `src/FieldMapInsights.tsx` renders lazy, on-demand analysis with independent geometry/source requests, compact coverage rows, and stale-request cancellation.
 - `src/FieldSyncPanel.tsx` owns field-event sync, typed soil-test entry, and recovery of unconfirmed record requests; `src/fieldEventSave.ts` persists retry identities before sending either record form; `src/FieldRecords.css` styles compact history and focused entry dialogs.
@@ -20,6 +22,14 @@
 - `src/offline*.ts`, `pwa.ts`, and `localPairing.ts` implement bounded local client behavior.
 - `src/workspacePerformance.tsx` and `rum.ts` capture bounded workspace performance diagnostics.
 - `src/*InfoPages.tsx` and `PublicDemoPages.tsx` are application information views, not the canonical documentation site.
+
+## Navigation and model settings
+
+Workspace, Fields, and Data remain primary. Evidence and Benchmarks are visible under Review; runtime status, Privacy, and About live in the navigation footer. Small windows use the same hierarchy in a navigation drawer.
+
+The desktop workspace gives conversation and GIS equal space by default. A workspace without a field still has a browsable regional overview; it does not create field geometry or infer a location. Map-only and conversation-only views remain available. On mobile, the explicit Map control preserves the question draft while giving GIS the full content width.
+
+Model opens above the entire desktop composer, with technical details available separately. On mobile it opens a native modal sheet. Native dialogs contain focus and restore it when closed; desktop popovers dismiss on Escape, outside interaction, and workspace changes. Unknown availability remains unreported rather than being labelled ready. Selection changes only the next question and does not rewrite previous answer lineage.
 
 ## Inputs and outputs
 
@@ -109,3 +119,19 @@ Each explicit new save gets a new UUID, including intentionally identical record
 A definite first-attempt HTTP 422 may be marked rejected and explicitly resolved, removing its payload while retaining bounded resolution metadata. A transport failure, conflict, unverifiable receipt, or later 422 after uncertainty cannot be resolved this way. The first-attempt rule assumes the matched versioned server validation contract remains stable within protocol v2. The append ledger remains durable in SQLite and must accompany full backup/restore; record-only synchronization does not transfer retry receipts. Unscoped v1 bytes are preserved without automatic display or replay.
 
 Receipt listeners reconcile only a form's own unchanged draft. Edited drafts remain available for a new explicit save. Storage/focus notifications refresh cross-tab recovery; every retry still resolves scope and verifies its receipt, so notification timing is not the correctness boundary. Account changes must use existing authentication/session UI. Local development header-switch tests qualify the request guards, not real OIDC login/logout, CSRF/session expiry or installed Mac-app behavior.
+
+Production builds precache the shell and every emitted JavaScript/CSS dependency
+as one versioned build. A failed download cannot activate a partial build; the
+previous build remains cached for open tabs. Private API routes, including
+`/account/export`, bypass the service worker. Development proxies `/account` to
+the same backend as `/api`.
+
+Map and deferred panel failures stay inside the affected view. **Retry** attempts
+the import again without clearing the surrounding conversation or field draft.
+**Check connection** checks `/api/health` at the current browser address before
+offering an explicit reload choice. The user can keep the page open to preserve
+unsaved field setup, boundary edits and session references. If a cached page uses an old local port, start its
+server again or open the URL printed by the current launcher. Drafts belong to
+their original browser origin; opening another port does not transfer them.
+Do not clear browser storage as a recovery step. An already installed old shell
+needs one successful visit to its server to receive these fixes.

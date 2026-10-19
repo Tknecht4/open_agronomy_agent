@@ -399,3 +399,36 @@ def test_edge_staging_and_sbom_use_the_nested_requirement_input(tmp_path):
     assert {item["name"] for item in sbom["packages"][1:]} == {"fastapi"}
     annotation = json.loads(sbom["annotations"][0]["comment"])
     assert relative in {item["path"] for item in annotation["dependency_inputs"]}
+
+
+def test_edge_frontend_build_helpers_are_staged_and_hash_bound(tmp_path):
+    from scripts.stage_edge_build_context import stage, _copy_sources
+    from scripts.build_edge_runtime_manifest import CONTROL_PATHS
+
+    containerfile = (ROOT / "Containerfile").read_text()
+    frontend_stage = containerfile.split("FROM python:", 1)[0]
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "Containerfile").write_text(frontend_stage)
+    for relative in _copy_sources(frontend_stage):
+        original = ROOT / relative
+        target = source / relative
+        if original.is_dir():
+            target.mkdir(parents=True, exist_ok=True)
+            (target / "sentinel").write_text("synthetic frontend tree")
+        else:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(original.read_bytes())
+    (source / "container").mkdir()
+    (source / "container/runtime_manifest.json").write_text('{}')
+    context = tmp_path / "context"
+    context.mkdir()
+    stage(source, context)
+    # Every relative Vite config import must exist in the staged frontend.
+    import re
+    imports = re.findall(r"from ['\"](\./[^'\"]+)['\"]", (context / "frontend/vite.config.ts").read_text())
+    assert imports
+    for specifier in imports:
+        relative = Path("frontend") / (specifier[2:] + ".ts")
+        assert (context / relative).is_file(), f"missing build helper: {relative}"
+        assert relative.as_posix() in CONTROL_PATHS, f"unhashed build helper: {relative}"

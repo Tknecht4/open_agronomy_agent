@@ -947,6 +947,20 @@ const openFieldTab = (name: 'Overview' | 'Records & soil tests' | 'Map context')
 }
 
 describe('Open Agronomy map upload workflow', () => {
+  it('opens conversation and the real map together on a fresh desktop session', async () => {
+    vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })))
+    installFetchMock()
+    render(<OpenAgronomyApp />)
+    await screen.findByText('Local runtime · connected mode')
+    expect(screen.getByRole('button', { name: 'Together' })).toHaveAttribute('aria-pressed', 'true')
+    expect(await screen.findByTestId('mock-leaflet-map')).toHaveAttribute('data-geometry-kind', 'none')
+    expect(screen.getByLabelText('Your question')).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Conversation' }))
+    expect(screen.queryByTestId('mock-leaflet-map')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Together' }))
+    expect(await screen.findByTestId('mock-leaflet-map')).toBeVisible()
+  })
+
   it('starts with conversation and lets users inspect runtime or map without losing a drafted question', async () => {
     installFetchMock()
     render(<OpenAgronomyApp />)
@@ -981,25 +995,22 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.queryByText('Demonstration inputs')).not.toBeInTheDocument()
   })
 
-  it('keeps field tasks primary while preserving secondary pages behind one disclosure', async () => {
+  it('keeps primary and review navigation open with information pages in the footer', async () => {
     installFetchMock()
     render(<OpenAgronomyApp />)
 
     const navigation = screen.getByRole('navigation', { name: 'Primary' })
     const primaryButtons = Array.from(navigation.querySelectorAll(':scope > button'))
-    expect(primaryButtons.map((button) => button.textContent)).toEqual(['Workspace', 'Fields', 'Data'])
+    expect(primaryButtons.map(button => button.textContent)).toEqual(['Workspace', 'Fields', 'Data'])
     expect(within(navigation).getByRole('button', { name: 'Workspace' })).toHaveAttribute('aria-current', 'page')
-
-    const more = screen.getByText('More', { selector: 'summary' })
-    fireEvent.click(more)
-    expect(within(navigation).getByRole('button', { name: 'Evidence' })).toBeVisible()
-    expect(within(navigation).getByRole('button', { name: 'Benchmarks' })).toBeVisible()
-    expect(within(navigation).getByRole('button', { name: 'Privacy' })).toBeVisible()
-    expect(within(navigation).getByRole('button', { name: 'About' })).toBeVisible()
-
-    fireEvent.click(within(navigation).getByRole('button', { name: 'Evidence' }))
+    const review = screen.getByRole('navigation', { name: 'Review' })
+    expect(within(review).getByRole('button', { name: 'Benchmarks' })).toBeVisible()
+    const information = screen.getByRole('navigation', { name: 'Information' })
+    expect(within(information).getByRole('button', { name: 'Privacy' })).toBeVisible()
+    expect(within(information).getByRole('button', { name: 'About' })).toBeVisible()
+    fireEvent.click(within(review).getByRole('button', { name: 'Evidence' }))
     expect(await screen.findByRole('heading', { name: 'Behind the answer' })).toBeInTheDocument()
-    expect(more.closest('details')).not.toHaveAttribute('open')
+    expect(within(review).getByRole('button', { name: 'Evidence' })).toHaveAttribute('aria-current', 'page')
   })
 
   it('keeps the general question blank until the Alberta example is explicitly selected', async () => {
@@ -1009,6 +1020,7 @@ describe('Open Agronomy map upload workflow', () => {
     expect(await screen.findByRole('button', { name: /Explore an example field/i })).toBeInTheDocument()
     openPrimaryPage('Map')
     expect(screen.getByRole('combobox', { name: 'Active field' })).toHaveValue('')
+    expect(await screen.findByTestId('mock-leaflet-map')).toHaveAttribute('data-geometry-kind', 'none')
     expect(fetchMock.mock.calls.some(([url]) => String(url) === '/api/geo/priors')).toBe(false)
     fireEvent.click(screen.getByRole('button', { name: /Explore an example field/i }))
     expect(await screen.findByText(/Regional context refreshed: AAFC Alberta Detailed Soil Survey AB_SOIL_ABD192014361 matched at 100% confidence/i)).toBeInTheDocument()
@@ -2432,7 +2444,7 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.getByText('What did we inspect?')).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Saved conversations' })).toHaveTextContent('Saved barley chat')
     fireEvent.click(screen.getByLabelText('Model settings'))
-    expect(screen.getByRole('combobox', { name: 'Model' })).toHaveValue('mlx-community/gemma-4-e2b-it-4bit')
+    expect(screen.getByRole('radio', { name: 'Gemma Ready on this device' })).toBeChecked()
     expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual(expect.arrayContaining([
       '/api/health', '/api/sessions?include_archived=true&include_turns=false', '/api/configs', '/api/demo/fields',
     ]))

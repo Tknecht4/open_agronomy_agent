@@ -50,6 +50,8 @@ const scenarioViews: Record<string, { center: [number, number]; zoom: number }> 
   'iowa-phosphorus': { center: [42.03, -93.72], zoom: 12 },
   'irrigated-salinity': { center: [42.9, -114.4], zoom: 12 },
 }
+// An unlocated workspace starts with a regional overview, without inventing a field.
+const overviewView: { center: [number, number]; zoom: number } = { center: [53, -100], zoom: 4 }
 
 const toLatLng = (point: FieldPoint): L.LatLngTuple => [point.lat, point.lon]
 
@@ -174,7 +176,7 @@ export function LeafletFieldMap({
     if (!containerRef.current || mapRef.current) {
       return
     }
-    const view = scenarioViews[scenarioId] || scenarioViews['canola-acidity']
+    const view = scenarioViews[scenarioId] || overviewView
     const map = L.map(containerRef.current, {
       zoomControl: false,
       attributionControl: true,
@@ -335,7 +337,7 @@ export function LeafletFieldMap({
     if (!map || geometry.kind !== 'none') {
       return
     }
-    const view = scenarioViews[scenarioId] || scenarioViews['canola-acidity']
+    const view = scenarioViews[scenarioId] || overviewView
     map.setView(view.center, view.zoom, { animate: true })
   }, [scenarioId])
 
