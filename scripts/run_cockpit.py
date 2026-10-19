@@ -247,6 +247,7 @@ def main() -> int:
         static_dir=Path(args.static_dir) if args.static_dir else None,
         model_config_path=args.model_config,
         allow_local_dev_auth=False if (args.field_lan or args.desktop_local) else None,
+        local_dev_origins=tuple(f"http://{host}:{args.frontend_port}" for host in ("127.0.0.1", "localhost", "[::1]")) if args.frontend else None,
         local_pairing_token_sha256=(
             hashlib.sha256(pairing_token.encode("utf-8")).hexdigest()
             if pairing_token
@@ -280,10 +281,10 @@ def main() -> int:
     if args.frontend:
         frontend_env = {
             **os.environ,
-            "VITE_API_TARGET": f"http://{args.host}:{args.port}",
+            "VITE_API_TARGET": f"http://{'[' + args.host + ']' if ':' in args.host else args.host}:{args.port}",
         }
         frontend_proc = subprocess.Popen(
-            ["npm", "run", "--prefix", args.frontend_dir, "dev", "--", "--host", args.host, "--port", str(args.frontend_port)],
+            ["npm", "run", "--prefix", args.frontend_dir, "dev", "--", "--host", args.host, "--port", str(args.frontend_port), "--strictPort"],
             env=frontend_env,
         )
 
@@ -298,7 +299,7 @@ def main() -> int:
             log_level="info",
             ssl_certfile=args.tls_certfile if args.field_lan else None,
             ssl_keyfile=args.tls_keyfile if args.field_lan else None,
-            proxy_headers=False if args.desktop_local else True,
+            proxy_headers=False,
         )
         server = uvicorn.Server(config)
         scheme = "https" if args.field_lan else "http"

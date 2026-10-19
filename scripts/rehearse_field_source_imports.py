@@ -150,7 +150,7 @@ def rehearse(raw: Path, prepared: Path, output: Path) -> dict:
     settings = build_settings(db_path=output / "demo.sqlite3", artifact_root=output / "artifacts", network_mode="offline", allow_model_id_override=True)
     receipt = {"status": "running", "claim": "deterministic source binding only", "network_mode": "offline", "model_id": "mock", "private_knowledge": "disabled", "groups": [], "expected_refusals": [], "source_index_sha256": sha((prepared / "index.json").read_bytes())}
     try:
-        with TestClient(create_app(settings)) as client:
+        with TestClient(create_app(settings), base_url="http://127.0.0.1:8000") as client:
             for ordinal, job in enumerate(jobs):
                 field = checked(client.post("/api/demo/fields", headers=OWNER, json={"name": job["label"], "field": {"crop": "bean" if "bean" in job["label"] and "soybean" not in job["label"] else "soybean" if "soybean" in job["label"] else "onion", "region": "Research source study unit; geometry unknown"}, "geometry": {"kind": "none"}}), 201)["field"]
                 field_id = field["field_context_id"]

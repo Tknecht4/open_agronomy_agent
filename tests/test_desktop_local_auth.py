@@ -56,6 +56,8 @@ def test_desktop_rejects_spoofed_host_origin_and_missing_origin(tmp_path: Path) 
     assert client.get("/api/health", headers={"Host": "attacker.example"}).status_code == 403
     assert client.get("/api/health", headers={"Origin": "http://attacker.example"}).status_code == 403
     assert client.get("/api/health", headers={"X-Forwarded-Host": "attacker.example"}).status_code == 403
+    assert client.get("/api/health", headers={"X-Forwarded-For": "192.0.2.1"}).status_code == 403
+    assert client.get("/api/health", headers=[("Origin", ORIGIN), ("Origin", "http://attacker.example")]).status_code == 403
     assert client.post("/auth/local-pair", json={"token": TOKEN}).status_code == 403
     assert client.post("/auth/local-pair", json={"token": TOKEN}, headers={"Origin": "http://attacker.example"}).status_code == 403
     assert client.get("/api/health").json()["local_pairing"]["consumed"] is False

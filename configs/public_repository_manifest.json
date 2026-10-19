@@ -251,6 +251,8 @@
     "scripts/build_prairie_detailed_soil_layer.py",
     "scripts/build_prairie_spatial_pack.py",
     "scripts/build_public_repository.py",
+    "scripts/audit_publication_privacy.py",
+    ".githooks/pre-commit",
     "scripts/build_runtime_sbom.py",
     "scripts/build_runtime_corpus_policy.py",
     "scripts/capture_release_environment.py",

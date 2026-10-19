@@ -211,7 +211,7 @@ def test_inflight_conflicting_operation_cannot_persist_context(tmp_path, monkeyp
     )
 
     async def exercise() -> None:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as client:
             created = await client.post("/api/sessions", headers=OWNER, json={"title": "Inflight", "consent": {}, "context": {"field_conversation_key": "sample:review"}})
             assert created.status_code == 200
             sid = created.json()["session_id"]
@@ -250,7 +250,7 @@ def test_queued_turn_rebinds_latest_session_context(tmp_path, monkeypatch, kind)
     )
 
     async def exercise() -> None:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as client:
             initial = {"field_conversation_key": "sample:review", "notes": "old"} if kind == "omitted" else {}
             created = await client.post("/api/sessions", headers=OWNER, json={"title": "Queued", "context": initial, "consent": {}})
             assert created.status_code == 200
@@ -296,7 +296,7 @@ def test_queued_patch_cannot_rebind_a_turns_accepted_scope(tmp_path, monkeypatch
     )
 
     async def exercise() -> None:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as client:
             created = await client.post("/api/sessions", headers=OWNER, json={"title": "Patch", "context": {}, "consent": {}})
             assert created.status_code == 200
             sid = created.json()["session_id"]
@@ -349,7 +349,7 @@ def test_blocked_same_session_http_turn_keeps_health_responsive(tmp_path, monkey
     )
 
     async def exercise() -> None:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as client:
             created = await client.post("/api/sessions", headers=OWNER, json={"title": "Async", "consent": {}, "context": {"field_conversation_key": "general"}})
             assert created.status_code == 200
             sid = created.json()["session_id"]
@@ -397,7 +397,7 @@ def test_hosted_concurrent_turns_keep_visible_pairs_and_health_responsive(tmp_pa
     )
 
     async def exercise() -> None:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as client:
             org = await client.post("/orgs", headers=OWNER, json={"name": "Host"})
             workspace = await client.post("/workspaces", headers=OWNER, json={"organization_id": org.json()["id"], "name": "Host"})
             wid = workspace.json()["id"]
@@ -442,7 +442,7 @@ def test_cancelled_hosted_request_finishes_ordered_visible_pair(tmp_path, monkey
     )
 
     async def exercise() -> None:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as client:
             org = await client.post("/orgs", headers=OWNER, json={"name": "Host"})
             workspace = await client.post("/workspaces", headers=OWNER, json={"organization_id": org.json()["id"], "name": "Host"})
             wid = workspace.json()["id"]
@@ -488,7 +488,7 @@ def test_replay_generation_keeps_health_responsive(tmp_path, monkeypatch):  # no
     )
 
     async def exercise() -> None:
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1:8000") as client:
             created = await client.post("/api/sessions", headers=OWNER, json={"title": "Replay", "consent": {}, "context": {"field_conversation_key": "general"}})
             sid = created.json()["session_id"]
             original = await client.post(f"/api/sessions/{sid}/turns", headers=OWNER, json={"message": "First question about crops?", "mode": "mock"})

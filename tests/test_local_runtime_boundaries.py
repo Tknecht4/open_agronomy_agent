@@ -183,3 +183,80 @@ def test_health_reports_fixed_local_private_backends(tmp_path: Path) -> None:
         "fail_open": False,
         "scope": "application_private",
     }
+
+
+def test_rate_limit_bounds_peers_without_evicting_active_budget():
+    limiter = FixedWindowRateLimiter(limit=1, window_seconds=10, max_keys=2)
+    assert limiter.check('a', now=0).allowed
+    assert limiter.check('b', now=1).allowed
+    assert not limiter.check('c', now=2).allowed
+    assert len(limiter._windows) == 2
+    assert not limiter.check('a', now=3).allowed
+    # Expiration at the exact boundary releases one slot without resetting b.
+    assert limiter.check('c', now=10).allowed
+    assert not limiter.check('b', now=10).allowed
+    assert len(limiter._windows) == 2
+    assert limiter.check('d', now=21).allowed
+    assert list(limiter._windows) == ['d']
+
+
+@pytest.mark.parametrize("local_dev", [True, False])
+def test_public_routes_cannot_buy_rate_budget_with_rotating_identity_headers(tmp_path, local_dev):
+    settings = build_settings(db_path=tmp_path/'rate.sqlite3', artifact_root=tmp_path/'artifacts',
+                              rate_limit_requests=2, rate_limit_window_seconds=60, allow_local_dev_auth=local_dev)
+    # Explicit origin keeps this independent of the shared TestClient default.
+    client = TestClient(create_app(settings), base_url='http://127.0.0.1:8000')
+    for i in range(2):
+        response = client.get('/api/configs', headers={'Authorization': f'Bearer invalid-{i}',
+                              'X-Agronomy-User-Email': f'synthetic-{i}@example.test'})
+        assert response.status_code == 200
+    denied = client.get('/api/configs', headers={'Authorization':'Bearer another', 'X-Agronomy-User-Email':'other@example.test'})
+    assert denied.status_code == 429
+    assert denied.headers['X-RateLimit-Remaining'] == '0'
+    assert 1 <= int(denied.headers['Retry-After']) <= 60
+    # Health remains a deliberately minimal readiness exemption.
+    assert client.get('/api/health').status_code == 200
+    assert 'db_path' not in client.get('/api/health').json()
+
+
+@pytest.mark.parametrize('headers', [
+    {'Host':'attacker.example'}, {'Host':'127.0.0.1.attacker.example'},
+    {'Host':'127.0.0.1:bad'}, {'Host':'localhost@attacker.example'},
+    {'Origin':'http://attacker.example'}, {'Origin':'null'},
+    {'Origin':'http://localhost:9000'}, {'Origin':'http://localhost:5173/path'},
+    {'X-Forwarded-For':'192.0.2.1'}, {'Forwarded':'for=192.0.2.1'},
+    {'X-Forwarded-Host':'localhost:5173'}, {'X-Forwarded-Proto':'http'},
+    {'X-Forwarded-Port':'5173'},
+    [('Host','127.0.0.1:8000'),('Host','attacker.example')],
+    [('Origin','http://localhost:5173'),('Origin','http://attacker.example')],
+])
+def test_dev_browser_authority_rejected_before_private_routes(tmp_path, headers):
+    settings = build_settings(db_path=tmp_path/'origin.sqlite3', artifact_root=tmp_path/'artifacts')
+    client = TestClient(create_app(settings), base_url='http://127.0.0.1:8000')
+    assert client.get('/api/health', headers=headers).status_code == 403
+    assert client.post('/api/sessions', json={'title':'must not save'}, headers=headers).status_code == 403
+    assert client.get('/api/sessions').json() == []
+
+
+@pytest.mark.parametrize('host', ['127.0.0.1:8000','localhost:8000','[::1]:8000'])
+def test_dev_accepts_loopback_cli_same_origin_and_configured_frontend(tmp_path, host):
+    settings = build_settings(db_path=tmp_path/'allowed.sqlite3', artifact_root=tmp_path/'artifacts',
+                              local_dev_origins=('http://localhost:6199',))
+    client = TestClient(create_app(settings), base_url=f'http://{host}')
+    assert client.get('/api/health').status_code == 200
+    assert client.get('/api/health', headers={'Origin':f'http://{host}'}).status_code == 200
+    assert client.get('/api/health', headers={'Origin':'http://localhost:6199'}).status_code == 200
+    assert client.get('/api/health', headers={'Origin':'http://localhost:5173'}).status_code == 403
+
+
+def test_default_vite_origin_and_untrusted_authority_have_distinct_contracts(tmp_path):
+    client = TestClient(create_app(build_settings(db_path=tmp_path/'vite.sqlite3', artifact_root=tmp_path/'artifacts')),
+                        base_url='http://127.0.0.1:8000')
+    assert client.get('/api/health', headers={'Origin':'http://127.0.0.1:5173'}).status_code == 200
+    assert client.get('/api/health', headers={'Host':'testserver'}).status_code == 403
+
+
+def test_dev_settings_reject_remote_frontend_origin(tmp_path):
+    with pytest.raises(ValueError, match='loopback origin'):
+        build_settings(db_path=tmp_path/'invalid.sqlite3', artifact_root=tmp_path/'artifacts',
+                       local_dev_origins=('http://attacker.example:5173',))

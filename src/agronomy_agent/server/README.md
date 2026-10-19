@@ -42,7 +42,7 @@ rejects requests that ask for this guarantee with HTTP 501
 
 - Inputs: validated request schemas, authenticated actor/workspace context, `ServerSettings`, and configured stores/services.
 - Outputs: versioned JSON or streaming events plus durable audit records where the operation mutates state.
-- `GET /api/health` reports application configuration and must return `status: ok` for the native quick-start health gate. It does not prove model generation, corpus sufficiency, or external-provider health.
+- `GET /api/health` reports readiness metadata without local database paths and must return `status: ok` for the native quick-start health gate. It does not prove model generation, corpus sufficiency, or external-provider health.
 
 ## Invariants
 
@@ -192,3 +192,22 @@ configured imagery cache or arbitrary operator output directories.
 `GET /api/demo/fields/{id}/events/operation-scope` uses the existing demo-field principal and write authorization. SQLite returns `protocol`, `actor_user_id`, `workspace_id`, `field_context_id`. It does not grant permission or change memberships. Unsupported receipt storage returns 501.
 
 New clients include `client_operation_id`, `expected_actor_user_id`, `expected_workspace_id`, and `expected_operation_protocol` on either append route. Existing authorization runs before scope/receipt checks. A changed actor/workspace/protocol or incomplete expected scope returns 409 without append. Legacy clients may omit expected scope fields. Control fields do not enter immutable event data or request-content hashing. Successful operation-bearing appends include `operation` with the resolved scope, operation UUID and event ID; clients must verify that receipt. The actor/UUID SQLite ledger and event/audit append still commit atomically. Validation semantics must remain stable within the versioned protocol; bump its version if changing those semantics.
+
+## Local request security
+
+Every non-exempt request consumes the transport peer's in-memory rate budget
+before route authentication. Supplied bearer, development-email, cookie and
+forwarded headers do not establish this identity. At most 4,096 active windows
+are retained; expired windows are removed and a full table rejects new peers
+until a window expires. Active windows are never evicted to admit new callers.
+This remains a single-process local control, not a distributed hosted limit.
+
+Ordinary development authentication requires a single loopback Host and permits
+only same-origin browser requests or explicitly configured loopback frontend
+origins. The default Vite origins use port 5173; `run_cockpit.py --frontend-port`
+passes the selected port. Direct CLI requests may omit Origin. Standalone
+operators can set `AGRONOMY_AGENT_LOCAL_DEV_ORIGINS` to a comma-separated list of
+loopback HTTP(S) origins. Forwarded transport headers are rejected in development
+and desktop mode, and supported launchers disable proxy-header rewriting.
+Desktop pairing retains its exact numeric origin; field-LAN still requires TLS
+and pairing with development authentication disabled.
