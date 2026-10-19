@@ -1,6 +1,6 @@
 # Use the field workspace
 
-The workspace puts a question and its selected field together. **Workspace**, **Fields**, and **Data** are the primary views; **Evidence**, **Benchmarks**, **Privacy**, and **About** are under **More**. The interface is a client of the local API. A page that loads does not establish that the model or optional data providers are ready; check [native setup](native-setup.md) and `/api/health` separately.
+The workspace puts a question and its selected field together. **Workspace**, **Fields**, and **Data** are the primary views; **Evidence** and **Benchmarks** remain visible under **Review**. Runtime status, **Privacy**, and **About** are in the navigation footer. On mobile, use the menu button to open the same navigation drawer. The interface is a client of the local API. A page that loads does not establish that the model or optional data providers are ready; check [native setup](native-setup.md) and `/api/health` separately.
 
 ![Compact general chat and calculator example, with no field selected](../assets/workspace.png)
 
@@ -63,10 +63,21 @@ or a prediction for the next question. Model-free answers can have no token rate
 
 ## Map and connected sources
 
-Use **Conversation**, **Together**, or **Map** to give the current task more room.
-Smaller windows switch between conversation and map; the map can scroll with the
-page so its field details remain accessible. Set-field, weather, and model menus
-close when you click elsewhere, press Escape, or change views.
+Desktop opens **Together**, with equal space for conversation and the map. Use
+**Conversation** or **Map** to give the current task more room. Smaller windows
+keep both controls visible and show one workspace at a time, preserving the
+question draft. The map can scroll with the page so its field details remain
+accessible. An unlocated workspace starts with a regional overview and explicit
+**No location selected** status; browsing does not select or save a field.
+Set-field and weather menus close when you click elsewhere, press Escape, or
+change views.
+
+Use **Model** beside the question to choose the next answer model. Desktop opens a
+popover above the question; mobile opens a sheet with **Done**. Model availability
+comes from the local runtime and stays unknown when it cannot be checked.
+**Technical details** shows the exact model ID and configured answer limit.
+Changing the model preserves the draft and earlier answers retain their original
+model identity.
 
 Connected mode loads public imagery and regional context. Source checks may send
 a point, map bounds, or a field boundary to the selected provider. Map browsing is

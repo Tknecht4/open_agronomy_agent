@@ -1,11 +1,13 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { workspaceServiceWorker } from './workspaceServiceWorker'
 
 const apiTarget = process.env.VITE_API_TARGET || 'http://127.0.0.1:8000'
 const apiProxy = [
   '/api',
   '/admin',
   '/auth',
+  '/account',
   '/orgs',
   '/workspaces',
   '/field-contexts',
@@ -34,7 +36,7 @@ const apiProxy = [
 }, {})
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), workspaceServiceWorker()],
   build: {
     // The field client contract requires an ES2020-capable browser. Keeping
     // that target explicit avoids silently transpiling the local/offline
@@ -42,6 +44,7 @@ export default defineConfig({
     target: 'es2020',
   },
   server: {
+    headers: { 'X-Open-Agronomy-Workspace': 'development' },
     proxy: apiProxy,
   },
   test: {

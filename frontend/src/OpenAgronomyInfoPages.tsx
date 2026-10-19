@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 const dataBoundaries = [
   {
     title: 'Field and account data',
@@ -27,6 +29,32 @@ const dataBoundaries = [
 ]
 
 function PrivacyPage() {
+  const [exporting, setExporting] = useState(false)
+  const [exportStatus, setExportStatus] = useState('')
+  const exportAccount = async () => {
+    setExporting(true)
+    setExportStatus('')
+    try {
+      const response = await fetch('/account/export', { cache: 'no-store' })
+      if (response.status === 401) throw new Error('Account export requires a signed-in account. Your local field records have not changed.')
+      if (!response.ok) throw new Error('Account export could not be prepared. Try again when the server is available.')
+      const payload = await response.json()
+      if (payload?.schema_version !== 'phase6.account_data_export.v1') throw new Error('The server did not return an account export. Check the server connection and try again.')
+      const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }))
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `open-agronomy-account-${new Date().toISOString().slice(0, 10)}.json`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+      setExportStatus('Account data downloaded. Keep this file private.')
+    } catch (error) {
+      setExportStatus(error instanceof Error ? error.message : 'Account export is unavailable. Try again when the server is available.')
+    } finally {
+      setExporting(false)
+    }
+  }
   return (
     <div className="privacy-page">
       <section className="privacy-hero">
@@ -72,9 +100,10 @@ function PrivacyPage() {
           Final hosted retention, organization access, account deletion, and cloud-export policies still need product and
           security review before the internal local demo becomes a public hosted service.
         </p>
-        <a className="manifest-link" href="/account/export">
-          Account data export
-        </a>
+        <button type="button" className="manifest-link" disabled={exporting} onClick={() => void exportAccount()}>
+          {exporting ? 'Preparing account export…' : 'Account data export'}
+        </button>
+        {exportStatus ? <p role="status">{exportStatus}</p> : null}
       </section>
     </div>
   )

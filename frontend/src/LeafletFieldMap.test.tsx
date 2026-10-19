@@ -119,6 +119,14 @@ afterEach(() => {
 })
 
 describe('field map interactions', () => {
+  it('opens an unlocated workspace as a regional overview without creating field geometry', async () => {
+    const change = vi.fn()
+    await act(async () => { render(<LeafletFieldMap {...props} scenarioId="" mode="inspect" geometry={empty} onGeometryChange={change} />) })
+    expect(leaf.maps[0].setView).toHaveBeenCalledWith([53, -100], 4)
+    expect(change).not.toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: 'Fit field' })).not.toBeInTheDocument()
+  })
+
   it('lets a user undo a corner, finish only a valid boundary, then escape to cancel', () => {
     const finish = vi.fn()
     const cancel = vi.fn()

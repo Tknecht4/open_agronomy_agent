@@ -1,4 +1,4 @@
-import { Fragment, FormEvent, Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, FormEvent, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
 import {
@@ -12,7 +12,6 @@ import {
   RefreshCw,
   Save,
   Send,
-  Settings2,
   Sparkles,
   CloudSun,
   Upload,
@@ -23,6 +22,8 @@ import {
   BookOpen,
   Maximize2,
   PanelLeftClose,
+  Map as MapIcon,
+  Columns2,
 } from 'lucide-react'
 import { WorkspacePerformancePanel } from './workspacePerformance'
 import { ConversationRuntimeStatus } from './ConversationRuntimeStatus'
@@ -33,6 +34,9 @@ import { selectedConversation, rememberConversation } from './conversationSelect
 import { powerCoverage } from './weatherPresentation'
 import { useWorkspaceMenus } from './useWorkspaceMenus'
 import { WorkspaceDialog } from './WorkspaceDialog'
+import { WorkspaceNavigation } from './WorkspaceNavigation'
+import { ModelSettings, type ModelProfile } from './ModelSettings'
+import { recoverableLazy as lazy, WorkspaceSectionBoundary } from './WorkspaceSectionBoundary'
 import './FieldRecords.css'
 import { apiDelete, apiGet, apiPatch, apiPost, apiUpload, csrfHeaders } from './api'
 import { submitFieldEvent, FIELD_EVENT_OPERATION_CHANGED, canonicalFieldEvent, watchFieldEventConfirmation, type PendingFieldEvent } from './fieldEventSave'
@@ -162,19 +166,19 @@ const AGROCLIMATE_METRICS = [
   { key: 'percent_of_average_precipitation', label: '13 wk precipitation' },
 ] as const
 
-const FieldMapInsights = lazy(() => import('./FieldMapInsights').then(module => ({ default: module.FieldMapInsights })))
-const FieldSetupDialog = lazy(() => import('./FieldSetupDialog').then(module => ({ default: module.FieldSetupDialog })))
-const BenchmarksRoute = lazy(() => import('./BenchmarksRoute').then((module) => ({ default: module.BenchmarksRoute })))
-const LeafletFieldMap = lazy(() => import('./LeafletFieldMap').then((module) => ({ default: module.LeafletFieldMap })))
-const FieldSyncPanel = lazy(() => import('./FieldSyncPanel').then(module => ({ default: module.FieldSyncPanel })))
-const SoilTestEntryPanel = lazy(() => import('./FieldSyncPanel').then(module => ({ default: module.SoilTestEntryPanel })))
-const FieldEventRecoveryPanel = lazy(() => import('./FieldSyncPanel').then(module => ({ default: module.FieldEventRecoveryPanel })))
-const FieldDataPanel = lazy(() => import('./FieldDataPanel'))
-const FieldImageryAnalyticsPanel = lazy(() => import('./FieldImageryAnalyticsPanel'))
-const PrivateKnowledgePanel = lazy(() => import('./PrivateKnowledgePanel'))
-const OfflineTerrainContextPanel = lazy(() => import('./OfflineTerrainContextPanel'))
-const CanadianKnowledgeCoveragePanel = lazy(() => import('./CanadianKnowledgeCoveragePanel'))
-const OpenAgronomyInfoPages = lazy(() => import('./OpenAgronomyInfoPages'))
+const FieldMapInsights = lazy(() => import('./FieldMapInsights').then(module => ({ default: module.FieldMapInsights })), 'Field insights')
+const FieldSetupDialog = lazy(() => import('./FieldSetupDialog').then(module => ({ default: module.FieldSetupDialog })), 'Field setup')
+const BenchmarksRoute = lazy(() => import('./BenchmarksRoute').then((module) => ({ default: module.BenchmarksRoute })), 'Benchmarks')
+const LeafletFieldMap = lazy(() => import('./LeafletFieldMap').then((module) => ({ default: module.LeafletFieldMap })), 'Field map')
+const FieldSyncPanel = lazy(() => import('./FieldSyncPanel').then(module => ({ default: module.FieldSyncPanel })), 'Field record transfer')
+const SoilTestEntryPanel = lazy(() => import('./FieldSyncPanel').then(module => ({ default: module.SoilTestEntryPanel })), 'Soil test entry')
+const FieldEventRecoveryPanel = lazy(() => import('./FieldSyncPanel').then(module => ({ default: module.FieldEventRecoveryPanel })), 'Field record recovery')
+const FieldDataPanel = lazy(() => import('./FieldDataPanel'), 'Field tables and imagery')
+const FieldImageryAnalyticsPanel = lazy(() => import('./FieldImageryAnalyticsPanel'), 'Satellite indices')
+const PrivateKnowledgePanel = lazy(() => import('./PrivateKnowledgePanel'), 'Private references')
+const OfflineTerrainContextPanel = lazy(() => import('./OfflineTerrainContextPanel'), 'Terrain context')
+const CanadianKnowledgeCoveragePanel = lazy(() => import('./CanadianKnowledgeCoveragePanel'), 'Public knowledge')
+const OpenAgronomyInfoPages = lazy(() => import('./OpenAgronomyInfoPages'), 'Information page')
 
 const pageHash = (page: Page): string => `#${page}`
 
@@ -379,17 +383,6 @@ type ConfigResponse = {
     trust_policy_sha256?: string | null
     startup_validation: 'passed' | 'not_applicable' | string
   }
-}
-
-type ModelProfile = {
-  id: string
-  label: string
-  role: 'default' | 'fast' | string
-  max_tokens: number
-  quality_gate?: string
-  local_ready?: boolean
-  local_status?: string
-  local_detail?: string
 }
 
 type TurnCreateResponse = {
@@ -3855,11 +3848,11 @@ export function OpenAgronomyApp() {
   return (
     <main className="demo-app workspace-shell" data-page={page}>
       <WorkspacePerformancePanel />
-      <DemoHeader page={page} setPage={navigateToPage} answerCapability={answerCapability} />
+      <WorkspaceNavigation page={page} onNavigate={navigateToPage} answerCapability={answerCapability} mobile={!wideWorkspace} />
       <div className="workspace-content">
       <header className="workspace-topbar">
-        <div><span className="eyebrow">{page === 'analyze' ? 'YOUR WORKSPACE' : page === 'fields' ? 'FIELD LIBRARY' : page === 'sources' ? 'KNOWLEDGE & DATA' : 'OPEN AGRONOMY'}</span>
-          <h1>{page === 'analyze' ? (fieldName || 'Ask a question') : page === 'fields' ? 'My fields' : page === 'sources' ? 'Bring your evidence.' : page === 'evidence' ? 'Behind the answer' : page === 'benchmarks' ? 'Research & benchmarks' : page === 'privacy' ? 'Privacy & data' : 'About Open Agronomy'}</h1>
+        <div>{page !== 'analyze' ? <span className="eyebrow">{page === 'fields' ? 'FIELD LIBRARY' : page === 'sources' ? 'KNOWLEDGE & DATA' : 'OPEN AGRONOMY'}</span> : null}
+          <h1>{page === 'analyze' ? (fieldName || 'Workspace') : page === 'fields' ? 'My fields' : page === 'sources' ? 'Bring your evidence.' : page === 'evidence' ? 'Behind the answer' : page === 'benchmarks' ? 'Research & benchmarks' : page === 'privacy' ? 'Privacy & data' : 'About Open Agronomy'}</h1>
         </div>
         {page === 'analyze' || page === 'fields' ? <button className="primary-button" type="button" onClick={() => setNewFieldOpen(true)} disabled={!fieldsHydrated || savingField}><Plus size={17} /> Add field</button> : null}
       </header>
@@ -3871,10 +3864,11 @@ export function OpenAgronomyApp() {
           else startNewField()
         }}><option value="">General question · no field selected</option>{storedFields.map(item => <option key={item.id} value={item.field_context_id || item.id}>{item.name}</option>)}<optgroup label="Demonstration fields">{sampleProfiles.map(sample => <option key={sample.id} value={`sample:${sample.id}`}>{sample.name} · example</option>)}</optgroup></select></label>
         {scenarioId ? <span className="example-badge">Demonstration data</span> : null}
-        <div className="workspace-view-switch" role="group" aria-label="Workspace view">{(['chat', 'split', 'map'] as const).map(view => <button key={view} type="button" className={`view-${view}`} aria-pressed={(workspaceView === 'split' && !wideWorkspace ? 'chat' : workspaceView) === view} onClick={() => setWorkspaceView(view)}>{view === 'chat' ? 'Conversation' : view === 'map' ? 'Map' : 'Together'}</button>)}</div>
+        <div className="workspace-view-switch" role="group" aria-label="Workspace view">{(['chat', 'split', 'map'] as const).map(view => <button key={view} type="button" className={`view-${view}`} aria-pressed={(workspaceView === 'split' && !wideWorkspace ? 'chat' : workspaceView) === view} onClick={() => setWorkspaceView(view)}>{view === 'chat' ? <MessageSquareText size={16} aria-hidden="true" /> : view === 'map' ? <MapIcon size={16} aria-hidden="true" /> : <Columns2 size={16} aria-hidden="true" />}{view === 'chat' ? 'Conversation' : view === 'map' ? 'Map' : 'Together'}</button>)}</div>
       </div> : null}
       {error ? <div className="demo-alert" role="alert">{error}</div> : null}
 
+      <WorkspaceSectionBoundary key={page} label="This page">
       {page === 'analyze' || page === 'fields' ? (
         <div className={`map-workspace ${page === 'fields' ? 'fields-workspace' : `analyze-workspace view-${workspaceView}`}`}>
           {page === 'fields' ? (
@@ -4686,7 +4680,7 @@ export function OpenAgronomyApp() {
                 </details>
               </div>
             </div>
-            {mapGeometry.kind === 'none' && !isEditingGeometry ? <div className="map-start"><MapPin size={28} /><h3>Give your question a place.</h3><p>A pin is enough to start. Add a boundary whenever you’re ready.</p><button type="button" className="primary-button" disabled={!fieldsHydrated || isAnalyzing} onClick={() => setNewFieldOpen(true)}><Plus size={16} /> Add a field</button><button type="button" className="text-button" disabled={isAnalyzing} onClick={() => beginGeometryEdit('point')}>Use a temporary point</button></div> : <Suspense
+            <Suspense
               fallback={
                 <div className="leaflet-map-shell">
                   <div className="leaflet-map map-loading" aria-label="Loading field map">
@@ -4710,7 +4704,7 @@ export function OpenAgronomyApp() {
                 onGeometryChange={onMapGeometryChange}
                 onStatusChange={onMapStatusChange}
               />
-            </Suspense>}
+            </Suspense>
             <div className="map-context-bar" aria-label="Current field context">
               <div>
                 <span aria-live="polite" className={isEditingGeometry || isMapContextChecking || /failed|error|unavailable|invalid|cross|unsupported/i.test(boundaryStatus) ? undefined : 'sr-only'}>{boundaryStatus}</span>
@@ -4724,8 +4718,7 @@ export function OpenAgronomyApp() {
                 </strong>
               </div>
               <div className="map-context-actions">
-                <button type="button" className="map-insights-button" disabled={!geometryReady || isEditingGeometry} title={isEditingGeometry ? 'Save or cancel boundary edits first' : 'Measure the boundary and explore mapped coverage'} onClick={() => setMapInsightsOpen(true)}><Layers3 size={15} /> Field insights <ArrowUpRight size={13} /></button>
-                <button type="button" onClick={() => navigateToPage('fields')}>Open field details</button>
+                {mapGeometry.kind === 'none' && !isEditingGeometry ? <><button type="button" disabled={!fieldsHydrated || isAnalyzing} onClick={() => setNewFieldOpen(true)}><Plus size={15} /> Add a field</button><button type="button" disabled={isAnalyzing} onClick={() => beginGeometryEdit('point')}>Use a temporary point</button></> : <><button type="button" className="map-insights-button" disabled={!geometryReady || isEditingGeometry} title={isEditingGeometry ? 'Save or cancel boundary edits first' : 'Measure the boundary and explore mapped coverage'} onClick={() => setMapInsightsOpen(true)}><Layers3 size={15} /> Field insights <ArrowUpRight size={13} /></button><button type="button" onClick={() => navigateToPage('fields')}>Open field details</button></>}
               </div>
             </div>
           </section> : null}
@@ -4862,21 +4855,7 @@ export function OpenAgronomyApp() {
               <div className="composer-actions">
                 <button type="button" className="composer-reference" onClick={() => navigateToPage('sources')}><Upload size={16} /> Add reference{privateKnowledge.length ? ` (${privateKnowledge.length})` : ''}</button>
                 {sessionId ? <button type="button" className="icon-button" aria-label="Refresh conversation" disabled={isAnalyzing} onClick={() => void refreshConversation()}><RefreshCw size={15} /></button> : null}
-                <details className="model-settings-disclosure" data-workspace-menu>
-                  <summary title="Model settings" aria-label="Model settings"><Settings2 size={17} /></summary>
-                  {modelProfiles.length > 0 ? (
-                    <label className="model-profile-select">
-                      Model
-                      <select value={modelId} onChange={(event) => setModelId(event.target.value)}>
-                        {modelProfiles.map((profile) => (
-                          <option key={profile.id} value={profile.id} disabled={profile.local_ready === false}>
-                            {profile.label} · {profile.role} · {profile.max_tokens} tok{profile.local_ready === false ? ' · setup required' : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  ) : <span>Local model profile</span>}
-                </details>
+                <ModelSettings profiles={modelProfiles} modelId={modelId} onSelect={setModelId} runtimeAccess={runtimeAccess} busy={isAnalyzing} mobile={!wideWorkspace} viewKey={`${page}:${workspaceView}:${activeFieldContextId}`} />
                 <button type="submit" disabled={isAnalyzing || savingField || loadingConversation || !fieldsHydrated || questionContextRequiresSave || !message.trim() || !answerCapability.canGenerateAnswer || !questionModelReady}>
                   <Send size={17} /> {isAnalyzing ? 'Working' : 'Ask'}
                 </button>
@@ -4927,83 +4906,13 @@ export function OpenAgronomyApp() {
           <OpenAgronomyInfoPages page={page} />
         </Suspense>
       ) : null}
+      </WorkspaceSectionBoundary>
       </div>
       {mapInsightsOpen ? <WorkspaceDialog title="Field insights" onClose={() => setMapInsightsOpen(false)}><Suspense fallback={<div role="status" className="dialog-body">Opening field insights…</div>}><FieldMapInsights geometry={fieldGeometryToGeoJson(fieldGeometry)} fieldKey={activeFieldContextId || scenarioId || 'general'} fieldName={fieldName} recordedAcres={field.acres.trim() ? Number(field.acres) : null} layerIds={mapAnalysisLayers} allowNetwork={networkMode === 'online'} /></Suspense></WorkspaceDialog> : null}
       {newFieldOpen ? <Suspense fallback={<div role="status">Opening field setup…</div>}><FieldSetupDialog onClose={() => setNewFieldOpen(false)} onSave={createFieldFromDraft} allowNetwork={networkMode === 'online'} previousRegion={storedFields[0]} /></Suspense> : null}
       {deleteTarget ? <WorkspaceDialog title="Delete field?" onClose={() => setDeleteTarget(null)}><div className="dialog-body"><p>Remove <strong>{deleteTarget.name}</strong> from your field library? Its historical answer records are retained by the server.</p><div className="dialog-actions"><button type="button" onClick={() => setDeleteTarget(null)}>Keep field</button><button type="button" className="danger" onClick={() => { void deleteStoredField(deleteTarget.id); setDeleteTarget(null) }}>Delete field</button></div></div></WorkspaceDialog> : null}
       {evidenceOpen ? <WorkspaceDialog title="Sources & checks" onClose={() => setEvidenceOpen(false)} wide><EvidencePage latestTurn={evidenceTurn} docs={evidenceDocs} liveToolCards={evidenceLiveToolCards} mapEvidenceCards={evidenceMapCards} retrievedDocCount={evidenceRetrievedDocCount} sourceCheckSummary={evidenceSourceSummary} traceToolGroups={evidenceTraceGroups} adapterReadiness={adapterReadiness} onCopyReport={() => void copyReviewerReport()} onDownloadReport={downloadReviewerReport} /></WorkspaceDialog> : null}
     </main>
-  )
-}
-
-function DemoHeader({
-  page,
-  setPage,
-  answerCapability,
-}: {
-  page: Page
-  setPage: (page: Page) => void
-  answerCapability: ReturnType<typeof fieldAnswerCapability>
-}) {
-  const morePagesRef = useRef<HTMLDetailsElement | null>(null)
-  const primaryItems: Array<[Page, string]> = [
-    ['analyze', 'Workspace'],
-    ['fields', 'Fields'],
-    ['sources', 'Data'],
-  ]
-  const secondaryItems: Array<[Page, string]> = [
-    ['evidence', 'Evidence'],
-    ['benchmarks', 'Benchmarks'],
-    ['privacy', 'Privacy'],
-    ['about', 'About'],
-  ]
-  const choosePage = (nextPage: Page) => {
-    setPage(nextPage)
-    if (morePagesRef.current) morePagesRef.current.open = false
-  }
-  return (
-    <header className="demo-header">
-      <div className="brand-block">
-        <div className="brand-symbol"><Sprout size={24} /></div><span>Open Agronomy<span className="brand-agent">AGENT WORKSPACE</span></span>
-        <strong>Grounded in evidence.<br />Built around your field.</strong>
-        <small className={`network-mode-badge ${answerCapability.state}`}>
-          {answerCapability.badge}
-        </small>
-      </div>
-      <nav className="demo-nav" aria-label="Primary">
-        {primaryItems.map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            className={page === id ? 'active' : ''}
-            aria-current={page === id ? 'page' : undefined}
-            onClick={() => choosePage(id)}
-          >
-            {label}
-          </button>
-        ))}
-        <details
-          ref={morePagesRef}
-          data-workspace-menu
-          className={`demo-nav-more ${secondaryItems.some(([id]) => page === id) ? 'active' : ''}`}
-        >
-          <summary aria-label="More pages">More</summary>
-          <div className="demo-nav-more-menu">
-            {secondaryItems.map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                className={page === id ? 'active' : ''}
-                aria-current={page === id ? 'page' : undefined}
-                onClick={() => choosePage(id)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </details>
-      </nav>
-    </header>
   )
 }
 
