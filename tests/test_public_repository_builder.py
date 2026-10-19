@@ -511,3 +511,17 @@ def test_privacy_audit_checks_staged_symlink_type_changes(tmp_path):
     git('add','candidate')
     assert git('diff','--cached','--name-status').startswith(b'T')
     assert audit_index(tmp_path, staged=True)['status']=='fail'
+
+
+def test_query_and_fragment_home_roots_cannot_hide_behind_delimiters():
+    from agronomy_agent.publication_privacy import personal_path_lines
+    from urllib.parse import quote
+    roots = ['/'.join(['', 'Users', 'synthetic-account']),
+             '/'.join(['', 'home', 'synthetic-account'])]
+    roots.append('C:' + roots[0].replace('/', '\\'))
+    for root in roots:
+        for delimiter in ['?', '#']:
+            value = 'https://example.test/' + delimiter + 'path=' + quote(root, safe='') + '&format=json'
+            assert personal_path_lines(value.encode()) == [1]
+    assert personal_path_lines(b'https://example.gov/home/public?format=json') == []
+    assert personal_path_lines(b'https://example.gov/home/?cid=public') == []

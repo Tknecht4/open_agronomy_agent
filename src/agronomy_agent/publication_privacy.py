@@ -14,7 +14,7 @@ _PREFIX = "/"
 _PERSONAL_PATH = re.compile(
     r"(?:[A-Za-z]:/+" + "Users" + r"/+[^\s/<>\[\]{}?#&\"']+|"
     + _PREFIX + r"(?:Users|home)/[^\s/<>\[\]{}?#&\"']+|"
-    + _PREFIX + r"Volumes/[^\s/<>\[\]{}?#&\"']+)(?:/|(?=[\s\"'<]|$))",
+    + _PREFIX + r"Volumes/[^\s/<>\[\]{}?#&\"']+)(?:/|(?=[\s\"'<&#?]|$))",
     re.IGNORECASE,
 )
 _WEB_URL = re.compile(r"(?:https?://|www\.)[^\s<>\"']+", re.IGNORECASE)

@@ -222,6 +222,7 @@ def test_public_routes_cannot_buy_rate_budget_with_rotating_identity_headers(tmp
 @pytest.mark.parametrize('headers', [
     {'Host':'attacker.example'}, {'Host':'127.0.0.1.attacker.example'},
     {'Host':'127.0.0.1:bad'}, {'Host':'localhost@attacker.example'},
+    {'Host':'[invalid'}, {'Host':'[::1'},
     {'Origin':'http://attacker.example'}, {'Origin':'null'},
     {'Origin':'http://localhost:9000'}, {'Origin':'http://localhost:5173/path'},
     {'X-Forwarded-For':'192.0.2.1'}, {'Forwarded':'for=192.0.2.1'},
