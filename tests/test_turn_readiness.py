@@ -493,7 +493,7 @@ def test_preview_waiting_for_session_guard_keeps_other_api_requests_responsive(r
     assert held.wait(1)
 
     async def exercise():
-        async with AsyncClient(transport=ASGITransport(app=client.app), base_url='http://test') as http:
+        async with AsyncClient(transport=ASGITransport(app=client.app), base_url='http://127.0.0.1:8000') as http:
             pending = asyncio.create_task(http.post('/api/turn-readiness', headers=OWNER,
                 json={'request_id': str(uuid.uuid4()), 'session_id': sid, 'turn': turn()}))
             try:

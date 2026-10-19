@@ -15,6 +15,8 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+from agronomy_agent.publication_privacy import personal_path_lines
 DOCS_ROOT = ROOT / "docs/public"
 DEFAULT_MANIFEST = ROOT / "configs/public_repository_manifest.json"
 DEFAULT_MKDOCS = ROOT / "mkdocs.yml"
@@ -273,6 +275,8 @@ def audit_scope(files: Iterable[Path], manifest_path: Path) -> list[str]:
         if relative.lower().endswith(PUBLIC_FORBIDDEN_SUFFIXES):
             errors.append(f"forbidden_public_suffix:{relative}")
         text = path.read_text(encoding="utf-8", errors="replace")
+        if personal_path_lines(path.read_bytes()):
+            errors.append(f"personal_path:{relative}")
         for name, pattern in SECRET_PATTERNS.items():
             if pattern.search(text):
                 errors.append(f"secret_signature:{name}:{relative}")
@@ -329,7 +333,10 @@ def audit_rendered_site(site_dir: Path) -> tuple[list[str], int]:
             errors.append(f"rendered_site:forbidden_name:{relative}")
         if relative.lower().endswith(PUBLIC_FORBIDDEN_SUFFIXES):
             errors.append(f"rendered_site:forbidden_suffix:{relative}")
-        text = path.read_bytes().decode("utf-8", errors="ignore")
+        content = path.read_bytes()
+        text = content.decode("utf-8", errors="ignore")
+        if personal_path_lines(content):
+            errors.append(f"rendered_site:personal_path:{relative}")
         for name, pattern in SECRET_PATTERNS.items():
             if pattern.search(text):
                 errors.append(f"rendered_site:secret_signature:{name}:{relative}")

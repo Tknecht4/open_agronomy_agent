@@ -432,3 +432,96 @@ def test_edge_frontend_build_helpers_are_staged_and_hash_bound(tmp_path):
         relative = Path("frontend") / (specifier[2:] + ".ts")
         assert (context / relative).is_file(), f"missing build helper: {relative}"
         assert relative.as_posix() in CONTROL_PATHS, f"unhashed build helper: {relative}"
+
+
+def test_personal_paths_are_detected_without_rejecting_hardware_or_source_urls():
+    from agronomy_agent.publication_privacy import personal_path_lines
+    from urllib.parse import quote
+    import html
+    personal = '/'.join(['', 'Users', 'synthetic-account', 'project', 'receipt.json'])
+    for value in [personal, personal.replace('/', '\\/'), html.escape(personal).replace('/', '&#47;'),
+                  quote(personal, safe=''), personal.replace('/', '\\u002f'),
+                  'C:' + personal.replace('/', '\\\\'),
+                  '/'.join(['','home','synthetic-account','project']),
+                  '/'.join(['','Volumes','synthetic-volume','project'])]:
+        assert personal_path_lines(value.encode()) == [1]
+    assert personal_path_lines(('https://example.test/?path=' + quote(personal)).encode()) == [1]
+    assert personal_path_lines(b'Apple M4 Max; 16 GB RAM; arm64; 42 tokens/s') == []
+    assert personal_path_lines(b'www.example.gov/static/home/pdfs/public-source.pdf') == []
+    assert personal_path_lines(b'https://example.gov/home/public/source.pdf') == []
+
+
+def test_privacy_audit_checks_index_even_when_working_file_is_clean(tmp_path):
+    import subprocess
+    from scripts.audit_publication_privacy import audit_index
+    subprocess.run(['git','init','-q',str(tmp_path)], check=True)
+    path = tmp_path/'candidate.json'
+    personal = '/'.join(['','Users','synthetic-account','project'])
+    path.write_text(json.dumps({'location':personal}))
+    subprocess.run(['git','add','candidate.json'],cwd=tmp_path,check=True)
+    path.write_text('{"location":"redacted working copy"}')
+    report = audit_index(tmp_path, staged=True)
+    assert report['status'] == 'fail'
+    assert report['findings'] == [{'path':'candidate.json','line':1,'category':'personal_filesystem_path'}]
+    assert personal not in json.dumps(report)
+    subprocess.run(['git','add','candidate.json'],cwd=tmp_path,check=True)
+    assert audit_index(tmp_path, staged=True)['status'] == 'pass'
+
+
+def test_package_copy_cannot_introduce_personal_path_after_source_validation(tmp_path, monkeypatch):
+    import pytest
+    from scripts import build_public_repository as builder
+    monkeypatch.setattr(builder,'ROOT',tmp_path)
+    manifest = _tiny_manifest(tmp_path)
+    original = builder._copy_independent
+    personal = '/'.join(['','Users','synthetic-account','private'])
+    def inject(source,target):
+        original(source,target)
+        target.write_text(personal)
+    monkeypatch.setattr(builder,'_copy_independent',inject)
+    with pytest.raises(ValueError,match='personal filesystem paths') as failure:
+        builder.build(tmp_path/'package',manifest)
+    assert personal not in str(failure.value)
+    assert not (tmp_path/'package/PUBLIC_RELEASE_RECEIPT.json').exists()
+
+
+def test_rendered_docs_reject_paths_but_preserve_benchmark_hardware(tmp_path):
+    from scripts.check_public_docs import audit_rendered_site
+    personal = '/'.join(['','Users','synthetic-account','private'])
+    (tmp_path/'index.html').write_text('<p>' + personal + '</p>')
+    errors,_ = audit_rendered_site(tmp_path)
+    assert any('personal_path:index.html' in error for error in errors)
+    assert personal not in json.dumps(errors)
+    (tmp_path/'index.html').write_text('<p>Apple M4 Max, 16 GB, 42 tokens/s</p>')
+    errors,_ = audit_rendered_site(tmp_path)
+    assert not any('personal_path' in error for error in errors)
+
+
+def test_privacy_audit_checks_staged_symlink_type_changes(tmp_path):
+    import subprocess
+    from scripts.audit_publication_privacy import audit_index
+    def git(*args):return subprocess.check_output(['git',*args],cwd=tmp_path)
+    git('init','-q')
+    path=tmp_path/'candidate'
+    path.write_text('safe original')
+    git('add','candidate')
+    git('-c','user.name=Synthetic','-c','user.email=synthetic@example.test','commit','-qm','synthetic fixture')
+    path.unlink()
+    path.symlink_to('/'.join(['','Users','synthetic-account','private']))
+    git('add','candidate')
+    assert git('diff','--cached','--name-status').startswith(b'T')
+    assert audit_index(tmp_path, staged=True)['status']=='fail'
+
+
+def test_query_and_fragment_home_roots_cannot_hide_behind_delimiters():
+    from agronomy_agent.publication_privacy import personal_path_lines
+    from urllib.parse import quote
+    roots = ['/'.join(['', 'Users', 'synthetic-account']),
+             '/'.join(['', 'home', 'synthetic-account'])]
+    roots.append('C:' + roots[0].replace('/', '\\'))
+    for root in roots:
+        for delimiter in ['?', '#']:
+            value = 'https://example.test/' + delimiter + 'path=' + quote(root, safe='') + '&format=json'
+            assert personal_path_lines(value.encode()) == [1]
+    assert personal_path_lines(b'https://example.gov/home/public?format=json') == []
+    assert personal_path_lines(b'https://example.gov/home/?cid=public') == []

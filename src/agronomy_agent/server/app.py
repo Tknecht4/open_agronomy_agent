@@ -159,6 +159,7 @@ from agronomy_agent.server.services.tool_service import (
     run_local_tool,
 )
 from agronomy_agent.server.observability import build_telemetry, log_request, request_id
+from agronomy_agent.server.local_origin import FORWARDED_HEADERS, development_origin_error, loopback_origin
 from agronomy_agent.server.rate_limit import FixedWindowRateLimiter
 from agronomy_agent.server.settings import ServerSettings, build_settings, make_corpus_audit_id, validate_desktop_local_auth
 from agronomy_agent.server.storage.object_store import LocalObjectStore
@@ -1309,12 +1310,8 @@ def _oidc_logout_redirect_url(settings: ServerSettings, *, logout_hint: str | No
 
 
 def _rate_limit_key(request: Request) -> str:
-    authorization = request.headers.get("authorization", "").strip()
-    if authorization:
-        return "bearer:" + hashlib.sha256(authorization.encode("utf-8")).hexdigest()
-    email = request.headers.get("x-agronomy-user-email", "").strip().lower()
-    if email:
-        return f"local:{email}"
+    # One unavoidable budget per transport peer, before any route authenticates.
+    # Authorization, cookies and forwarded/user headers cannot buy a fresh bucket.
     client_host = request.client.host if request.client else "unknown"
     return f"client:{client_host}"
 
@@ -2227,6 +2224,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         allow_local_dev_auth=settings.allow_local_dev_auth,
         local_pairing_token_sha256=settings.local_pairing_token_sha256,
         desktop_local_origin=settings.desktop_local_origin,
+        local_dev_origins=tuple(loopback_origin(value) for value in settings.local_dev_origins),
         oidc_authorization_endpoint=settings.oidc_authorization_endpoint,
         oidc_token_endpoint=settings.oidc_token_endpoint,
         oidc_client_id=settings.oidc_client_id,
@@ -2361,27 +2359,6 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
     )
 
     @app.middleware("http")
-    async def enforce_desktop_local_origin(request: Request, call_next: Any) -> Any:
-        expected = settings.desktop_local_origin
-        if expected is None:
-            return await call_next(request)
-        hosts = [value.decode("latin-1") for key, value in request.scope["headers"] if key.lower() == b"host"]
-        expected_host = urlparse(expected).netloc
-        if len(hosts) != 1 or hosts[0] != expected_host:
-            return JSONResponse(status_code=403, content={"detail": "desktop-local Host is invalid"})
-        if request.url.scheme != "http" or any(
-            name in request.headers
-            for name in ("forwarded", "x-forwarded-host", "x-forwarded-proto", "x-forwarded-port")
-        ):
-            return JSONResponse(status_code=403, content={"detail": "desktop-local transport is invalid"})
-        origin = request.headers.get("origin")
-        if (origin is not None and origin != expected) or (
-            request.method.upper() not in {"GET", "HEAD"} and origin != expected
-        ):
-            return JSONResponse(status_code=403, content={"detail": "desktop-local Origin is invalid"})
-        return await call_next(request)
-
-    @app.middleware("http")
     async def enforce_rate_limit(request: Request, call_next: Any) -> Any:
         if _rate_limit_exempt_path(request.url.path):
             return await call_next(request)
@@ -2421,6 +2398,33 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         observed = request.headers.get("x-csrf-token") or request.headers.get("x-agronomy-csrf-token")
         if not observed or not hmac.compare_digest(str(observed), expected):
             return JSONResponse(status_code=403, content={"detail": "CSRF token is required for cookie-authenticated unsafe requests"})
+        return await call_next(request)
+
+    @app.middleware("http")
+    async def enforce_desktop_local_origin(request: Request, call_next: Any) -> Any:
+        expected = settings.desktop_local_origin
+        if expected is None:
+            error = development_origin_error(request, settings.local_dev_origins) if settings.allow_local_dev_auth else None
+            if error:
+                return JSONResponse(status_code=403, content={"detail": error})
+            return await call_next(request)
+        hosts = [value.decode("latin-1") for key, value in request.scope["headers"] if key.lower() == b"host"]
+        expected_host = urlparse(expected).netloc
+        if len(hosts) != 1 or hosts[0] != expected_host:
+            return JSONResponse(status_code=403, content={"detail": "desktop-local Host is invalid"})
+        if request.url.scheme != "http" or any(
+            name in request.headers
+            for name in FORWARDED_HEADERS
+        ):
+            return JSONResponse(status_code=403, content={"detail": "desktop-local transport is invalid"})
+        origins = request.headers.getlist("origin")
+        if len(origins) > 1:
+            return JSONResponse(status_code=403, content={"detail": "desktop-local Origin is invalid"})
+        origin = origins[0] if origins else None
+        if (origin is not None and origin != expected) or (
+            request.method.upper() not in {"GET", "HEAD"} and origin != expected
+        ):
+            return JSONResponse(status_code=403, content={"detail": "desktop-local Origin is invalid"})
         return await call_next(request)
 
     @app.middleware("http")
@@ -3774,7 +3778,6 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             "model_configured": settings.default_model_id,
             "default_rag_config": settings.default_rag_config,
             "storage": storage_label_for(store),
-            "db_path": storage_db_path_for(store, settings.db_path),
             "database_backend": settings.database_backend,
             "database_url_configured": bool(settings.database_url),
             "allow_local_dev_auth": settings.allow_local_dev_auth,

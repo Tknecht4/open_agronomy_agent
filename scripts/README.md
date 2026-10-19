@@ -448,3 +448,27 @@ retention and offline analysis. The registry controls required components,
 cohorts, trials and comparison limits. CI uses a mock backend and cannot
 establish Gemma behavior. Full model profiles retain answer-level evidence
 privately; publication uses the aggregate projection after inspection.
+
+## Publication privacy
+
+Run `PYTHONPATH=src python scripts/audit_publication_privacy.py --staged` before
+committing publication candidates. It inspects exact Git index bytes, including
+type changes, so an unstaged cleanup cannot conceal a staged disclosure. CI
+checks all indexed files; curated package and source-distribution validation and
+source/rendered documentation audits also reject common personal filesystem
+locations. Diagnostics retain file/line/rule identifiers, never matched values.
+Benchmark hardware and performance measurements remain valid evidence. Public
+source URLs are distinguished from local filesystem locations.
+
+The optional `.githooks/pre-commit` runs the staged check. If no existing custom
+hook chain needs preserving, enable it with `git config core.hooksPath .githooks`;
+otherwise add the audit command to that chain. Use Python 3.11 or later (or the
+repository environment). Hooks are local Git configuration and are not installed
+by cloning. CI is a second guard, not protection against an initial public push.
+
+Keep original private artifacts intact. Publish separately reviewed derivatives
+with source hashes and provenance when disclosure removal is needed; do not
+rewrite frozen evidence or use a blanket staging command on a dirty research
+checkout. The text gate handles common macOS/Linux/Windows home and volume paths,
+JSON slash/ASCII unicode escapes, HTML entities and percent encoding. It is not
+an OCR, archive inspection or universal personal-data sanitizer.

@@ -1,0 +1,10 @@
+#!/bin/sh
+# Opt in with: git config core.hooksPath .githooks
+# Use the selected Python or the repository environment, without installing tools.
+set -eu
+repo_root=$(git rev-parse --show-toplevel)
+privacy_python=${AGRONOMY_PRIVACY_PYTHON:-python3}
+if [ -x "$repo_root/.venv/bin/python" ]; then
+  privacy_python="$repo_root/.venv/bin/python"
+fi
+exec "$privacy_python" "$repo_root/scripts/audit_publication_privacy.py" --staged

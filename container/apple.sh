@@ -185,6 +185,7 @@ start_stack() {
       "$IMAGE" \
       uvicorn agronomy_agent.server.app:create_app \
         --factory \
+        --no-proxy-headers \
         --host 0.0.0.0 \
         --port "$CONTAINER_PORT" \
         --ssl-certfile /run/open-agronomy-field-lan/tls.crt \

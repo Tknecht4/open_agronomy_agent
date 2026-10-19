@@ -49,3 +49,32 @@ def test_frontend_cleanup_escalates_boundedly() -> None:
     assert process.signals == [signal.SIGINT]
     assert process.terminated
     assert process.killed
+
+
+def test_custom_frontend_port_and_ipv6_proxy_use_the_validated_loopback_profile(tmp_path, monkeypatch):
+    import sys
+    from types import SimpleNamespace
+    import scripts.run_cockpit as launcher
+    observed = {}
+    monkeypatch.setattr(sys,'argv',['run_cockpit.py','--host','::1','--port','8123','--frontend',
+                                  '--frontend-port','6199','--db-path',str(tmp_path/'db.sqlite3'),
+                                  '--artifact-root',str(tmp_path/'artifacts')])
+    monkeypatch.setattr(launcher,'create_app',lambda settings: observed.update(settings=settings) or object())
+    class Process(_FakeProcess):
+        pass
+    def popen(*args,**kwargs):
+        observed['env']=kwargs['env']
+        return Process()
+    monkeypatch.setattr(launcher.subprocess,'Popen',popen)
+    class Config:
+        def __init__(self,*args,**kwargs):observed['config']=kwargs
+    class Server:
+        def __init__(self,config):pass
+        def run(self):return 0
+    # Exercise launcher wiring without requiring the optional server runtime.
+    monkeypatch.setitem(sys.modules, 'uvicorn', SimpleNamespace(Config=Config, Server=Server))
+    assert launcher.main()==0
+    assert observed['env']['VITE_API_TARGET']=='http://[::1]:8123'
+    assert 'http://[::1]:6199' in observed['settings'].local_dev_origins
+    assert 'http://localhost:6199' in observed['settings'].local_dev_origins
+    assert observed['config']['proxy_headers'] is False

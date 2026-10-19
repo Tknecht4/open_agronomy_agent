@@ -222,7 +222,7 @@ def main() -> int:
         write_receipt(receipt)
         return 1
     store: TraceStore = app.state.trace_store
-    with TestClient(app) as client:
+    with TestClient(app, base_url="http://127.0.0.1:8000") as client:
         for name, method, url in (
             ("health", "GET", "/api/health"),
             ("configs", "GET", "/api/configs"),

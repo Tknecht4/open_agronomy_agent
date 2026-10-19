@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from agronomy_agent.server.local_origin import DEFAULT_DEV_ORIGINS, loopback_origin
 from agronomy_agent.paths import repo_path
 from agronomy_agent.agent import load_model_config
 from agronomy_agent.agno_runtime.runtime import AgentRuntimeMode, resolve_agent_runtime
@@ -58,6 +59,7 @@ class ServerSettings:
     allow_local_dev_auth: bool = True
     local_pairing_token_sha256: str | None = None
     desktop_local_origin: str | None = None
+    local_dev_origins: tuple[str, ...] = DEFAULT_DEV_ORIGINS
     oidc_authorization_endpoint: str | None = None
     oidc_token_endpoint: str | None = None
     oidc_client_id: str | None = None
@@ -173,6 +175,7 @@ def build_settings(
     allow_local_dev_auth: bool | None = None,
     local_pairing_token_sha256: str | None = None,
     desktop_local_origin: str | None = None,
+    local_dev_origins: tuple[str, ...] | None = None,
     oidc_authorization_endpoint: str | None = None,
     oidc_token_endpoint: str | None = None,
     oidc_client_id: str | None = None,
@@ -257,6 +260,10 @@ def build_settings(
         if allow_local_dev_auth is not None
         else os.getenv("AGRONOMY_AGENT_ALLOW_LOCAL_DEV_AUTH", "true").lower() not in {"0", "false", "no"}
     )
+    configured_dev_origins = local_dev_origins if local_dev_origins is not None else tuple(
+        value.strip() for value in os.getenv("AGRONOMY_AGENT_LOCAL_DEV_ORIGINS", ",".join(DEFAULT_DEV_ORIGINS)).split(",") if value.strip()
+    )
+    configured_dev_origins = tuple(loopback_origin(value) for value in configured_dev_origins)
     pairing_token_sha256 = str(
         local_pairing_token_sha256
         or os.getenv("AGRONOMY_AGENT_LOCAL_PAIRING_TOKEN_SHA256")
@@ -492,6 +499,7 @@ def build_settings(
         allow_local_dev_auth=local_dev_auth_enabled,
         local_pairing_token_sha256=pairing_token_sha256 or None,
         desktop_local_origin=desktop_local_origin,
+        local_dev_origins=configured_dev_origins,
         oidc_authorization_endpoint=oidc_authorization_endpoint or os.getenv("AGRONOMY_AGENT_OIDC_AUTHORIZATION_ENDPOINT"),
         oidc_token_endpoint=oidc_token_endpoint or os.getenv("AGRONOMY_AGENT_OIDC_TOKEN_ENDPOINT"),
         oidc_client_id=oidc_client_id or os.getenv("AGRONOMY_AGENT_OIDC_CLIENT_ID"),

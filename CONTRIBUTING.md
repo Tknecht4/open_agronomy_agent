@@ -25,3 +25,10 @@ Project-authored contributions are offered under [Apache-2.0](LICENSE). Third-pa
 ## Review and merge
 
 Use a pull request so CI and the change record are visible. `@Tknecht4` is the repository maintainer and review owner. Contributions from others require maintainer review before merge. Because this is currently a one-maintainer project, the maintainer may merge their own PR after required CI and applicable domain gates without an impossible self-approval requirement. Passing CI alone does not promote a source, model, benchmark claim, or release.
+
+Before staging research artifacts for public review, run
+`PYTHONPATH=src python scripts/audit_publication_privacy.py --staged`. The
+[publication privacy procedure](scripts/README.md#publication-privacy) describes
+the optional commit hook, exact-index checks and evidence-preserving derivatives.
+Keep private filesystem locations out of published records; benchmark hardware
+and performance metadata may remain.

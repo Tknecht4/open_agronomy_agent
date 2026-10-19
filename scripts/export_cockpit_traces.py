@@ -19,7 +19,7 @@ def main() -> None:
     settings = build_settings(db_path=Path(args.db_path), artifact_root=Path(args.artifact_root))
 
     # Direct reuse of API call pattern keeps export logic consistent with HTTP surface.
-    client = TestClient(create_app(settings))
+    client = TestClient(create_app(settings), base_url="http://127.0.0.1:8000")
     response = client.get('/api/sessions')
     sessions = response.json()
     for session in sessions:

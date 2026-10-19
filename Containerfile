@@ -86,4 +86,4 @@ HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=4 \
         fi || exit 1
 
 ENTRYPOINT ["/app/container/entrypoint.sh"]
-CMD ["uvicorn", "agronomy_agent.server.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "agronomy_agent.server.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8080", "--no-proxy-headers"]

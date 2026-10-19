@@ -26,6 +26,9 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MANIFEST = ROOT / "configs/public_repository_manifest.json"
 
+sys.path.insert(0, str(ROOT / "src"))
+from agronomy_agent.publication_privacy import require_public_paths
+
 
 def _try_clone(source: Path, target: Path) -> bool:
     """APFS clones share immutable extents, never a writable inode."""
@@ -136,6 +139,7 @@ def _validate_scope(files: list[Path], manifest: dict[str, Any]) -> None:
         if budget < 0:
             raise ValueError(f"maximum_prefix_bytes value must be non-negative for {prefix_text}")
         normalized_prefix_budgets[prefix_text] = budget
+    require_public_paths(files, root=ROOT)
     errors: list[str] = []
     if total_budget is not None:
         total_bytes = sum(path.stat().st_size for path in files)
@@ -242,6 +246,7 @@ def build(destination: Path, manifest_path: Path = DEFAULT_MANIFEST) -> dict[str
     _regenerate_runtime_manifest(destination)
     _validate_destination_inventory(destination, {_relative(source) for source in files})
 
+    require_public_paths([destination / _relative(source) for source in files], root=destination)
     records: list[dict[str, Any]] = []
     total_bytes = 0
     for source in files:

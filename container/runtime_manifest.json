@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-10-19T20:23:58+00:00",
+  "generated_at": "2026-10-19T21:10:07+00:00",
   "status": "pass",
-  "contract_sha256": "4bd5d7ac738c14c141e402a3c23353404d175304a859443314cd3b87bc3e1c32",
+  "contract_sha256": "bba52d6b72583516b941442eca676c71116403792f8130074afdaa9a9c785939",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -413,9 +413,9 @@
   "runtime_assets": [
     {
       "path": "src/agronomy_agent",
-      "file_count": 177,
-      "bytes": 6163986,
-      "sha256": "3ebaaa5258274b6564b14806aa3dc6fe4dce54e37424e74d27d50d75c519f543"
+      "file_count": 179,
+      "bytes": 6171511,
+      "sha256": "784bc6661b928b86ad8fcc2f6e1ca163beb7e1dda950f90fe030facf1c23f368"
     },
     {
       "path": "frontend/src",
@@ -431,15 +431,15 @@
     },
     {
       "path": "scripts",
-      "file_count": 147,
-      "bytes": 1938941,
-      "sha256": "9915b498e69ad10142f1b98c5c4e98cb43cc14fb2a9505a3f6a2b4a4d4962d79"
+      "file_count": 148,
+      "bytes": 1943463,
+      "sha256": "12d0cb00f089d9178cb2627b45dbc22d231798fcb1f68fda0d6d9f443c3d2824"
     },
     {
       "path": "configs",
       "file_count": 92,
-      "bytes": 299909,
-      "sha256": "4b38f1f468698d2edaf05e02a82e698d9a49b7a36966f4c53aab119e3cc1ac61"
+      "bytes": 299981,
+      "sha256": "3a68e91f139fbb195532f0878652d6c1d2fa7db3cdeb0b141a9891859f09b48a"
     },
     {
       "path": "data/manifests",
@@ -510,14 +510,14 @@
     {
       "path": "Containerfile",
       "role": "runtime_control",
-      "bytes": 3889,
-      "sha256": "2237672aee6683a0fc2e397c077aecd5f5a67739ec88fef2dea3e0767fdd5eb4"
+      "bytes": 3911,
+      "sha256": "b4d368a562c1d650d398e75ca8f8ed540acacc289a2341ad5e495dc780d870ed"
     },
     {
       "path": "Containerfile.overlay",
       "role": "runtime_control",
-      "bytes": 1668,
-      "sha256": "75b8aef9353f63b5bcbd56fcb03b6e261cc92650d6003c9fffb6f18811887d74"
+      "bytes": 1690,
+      "sha256": "00b3ae79b12cfc076cb6f2ae14d72d5f591a8c7ff106695a4e11305f6a8b52ee"
     },
     {
       "path": ".dockerignore",
@@ -630,8 +630,8 @@
     {
       "path": "container/apple.sh",
       "role": "runtime_control",
-      "bytes": 10861,
-      "sha256": "69014de84f25e444d1d20077c663eb26b1079cab221a381e3057720801cc8606"
+      "bytes": 10890,
+      "sha256": "19a2aa6cde8cd2ca20594dbeb148830aabfe233a742e311a570fb8262bb6e7a4"
     },
     {
       "path": "container/docker.sh",
