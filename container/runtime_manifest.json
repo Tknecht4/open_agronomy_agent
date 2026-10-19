@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-10-16T05:00:54+00:00",
+  "generated_at": "2026-10-19T15:50:11+00:00",
   "status": "pass",
-  "contract_sha256": "c02ebac8f78fe480161e45a112913b731ed42786e089e322d6485ef6d5ac07da",
+  "contract_sha256": "1b232a92d08488988f28cbb15a4cb7676a18d9debb55ae3337f062651dc0fa93",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -420,8 +420,8 @@
     {
       "path": "frontend/src",
       "file_count": 110,
-      "bytes": 1712577,
-      "sha256": "4c84dd8379198dac5835dbd7ecbf554c69cc17d5d4ec219e4aefbca72ab928f9"
+      "bytes": 1712761,
+      "sha256": "913c91a01ef7d19fea38bf592c59a34a1d5d94a18b86221de22d4bfc00bd4d77"
     },
     {
       "path": "frontend/public",
@@ -462,8 +462,8 @@
     {
       "path": "docs/public",
       "file_count": 99,
-      "bytes": 9351233,
-      "sha256": "478e0cebc40d335eb04adf533b1984227e8b3a500b052cbf5a7bf707a6779f84"
+      "bytes": 9351369,
+      "sha256": "892d67c6760a3c4270a9041f3c1e8bca8352482b7f65dbf5e0d2e0962b00b375"
     }
   ],
   "geo_cache_seed": {
@@ -529,13 +529,13 @@
       "path": "requirements/requirements-container.txt",
       "role": "runtime_control",
       "bytes": 393,
-      "sha256": "bc78e538345c5ac926c10bf59da258a5982c6437f05bcdb2f530494f327b8c6b"
+      "sha256": "997a518bdc87e6eec093145412bb37242bf909940343ad2315981b7710fb8dc5"
     },
     {
       "path": "pyproject.toml",
       "role": "runtime_control",
       "bytes": 1401,
-      "sha256": "172be1223019a59b21887753be6920276c14b957f6ee8d8b5c1efaa86e656587"
+      "sha256": "51a870c99c894205a87fffce8bccb8f75965d05b7b06e760d766e7916d9e884f"
     },
     {
       "path": "docker-compose.edge.yml",
@@ -546,14 +546,14 @@
     {
       "path": "frontend/package.json",
       "role": "runtime_control",
-      "bytes": 904,
-      "sha256": "882937e8c02382b31f8102a5a3386aee3f260f2418178ba5f5726d04a9ef6e1b"
+      "bytes": 903,
+      "sha256": "3d321710f4afb1c697c9ed6dfeef4a1aef2d67f84b76e1109ca69739aa56a38c"
     },
     {
       "path": "frontend/package-lock.json",
       "role": "runtime_control",
-      "bytes": 153082,
-      "sha256": "7bf6bd60fce39b071177daa6fce522c1cd2b89ecbda0a52214f761727e3feec4"
+      "bytes": 135591,
+      "sha256": "c29c1d63e9e84b8e126873e3888752836488cb4cb2bad13614e84cb934d32c87"
     },
     {
       "path": "frontend/index.html",
@@ -564,8 +564,8 @@
     {
       "path": "frontend/tsconfig.json",
       "role": "runtime_control",
-      "bytes": 485,
-      "sha256": "62f161996464da22aefa0a3c7cb921f51d4b85ea9f1f8e0cb12bf269947cc574"
+      "bytes": 465,
+      "sha256": "312e0f3519ea94955cdd57726dae2610d1cc978535b3d824fba449a58cc5ecf7"
     },
     {
       "path": "frontend/vite.config.ts",

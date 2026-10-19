@@ -179,8 +179,10 @@ requires separately admitted fields and rights.
 
 ## Research-only imagery assessment
 
-`requirements/requirements-imagery-models.txt` describes the separately exercised EO/model
-environment. It adds frozen Prithvi encoder and fixed-readout dependencies to
+`requirements/requirements-imagery-models.txt` describes an updated EO/model
+candidate based on the separately exercised environment. Its October dependency
+updates require fresh probes; September receipts describe their original versions.
+It adds frozen Prithvi encoder and fixed-readout dependencies to
 the HLS worker stack; installing it does not activate a serving model or field
 prediction. `scripts/assess_field_imagery.py` freezes or applies a source-bound
 label/split protocol to an explicitly supplied research CSV and writes a new

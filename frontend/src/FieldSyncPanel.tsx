@@ -316,7 +316,7 @@ export function SoilTestEntryPanel({
     return () => { mountedRef.current = false }
   }, [])
 
-  const operationRef = useRef<PendingFieldEvent>()
+  const operationRef = useRef<PendingFieldEvent | undefined>(undefined)
   const operationDraftRef = useRef('')
   const draftRef = useRef('')
   draftRef.current = canonicalFieldEvent([sampleId, metric, value, unit, method, depthTop, depthBottom, depthUnit, spatialScope, sourceQuality, labName, occurredAt, originalReportRetained])
