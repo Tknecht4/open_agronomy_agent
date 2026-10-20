@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-10-20T04:19:59+00:00",
+  "generated_at": "2026-10-20T04:25:51+00:00",
   "status": "pass",
-  "contract_sha256": "a51159285444413aa2616bb3eb32fb2a20518f71a13d102aa85aa642160db27a",
+  "contract_sha256": "e14eb543f087312e188207f287a458977aafb04dcf97f19a7da2dd329d905e07",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -468,9 +468,9 @@
   ],
   "geo_cache_seed": {
     "path": "data/derived/geo_cache",
-    "file_count": 12,
-    "bytes": 212860,
-    "sha256": "7f0980fed989459dad75af1656f3a3a9dbc80c2f9fa1ed202783fc1a68bb1af1"
+    "file_count": 0,
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   },
   "bundled_geo_layers": {
     "path": "data/derived/geo_layers",
