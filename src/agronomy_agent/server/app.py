@@ -4517,6 +4517,10 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         expected = settings.local_pairing_token_sha256
         if not expected:
             raise HTTPException(status_code=404, detail="local pairing is not enabled")
+        if settings.desktop_local_origin is None and (
+            request.url.scheme != "https" or any(name in request.headers for name in FORWARDED_HEADERS)
+        ):
+            raise HTTPException(status_code=403, detail="local pairing requires direct HTTPS")
         observed = hashlib.sha256(payload.token.encode("utf-8")).hexdigest()
         async with local_pairing_lock:
             if app.state.local_pairing_consumed:

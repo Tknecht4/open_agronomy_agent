@@ -9,9 +9,11 @@
 
 ## Install
 
-From the repository root:
+Clone the repository, then install from its root:
 
 ```bash
+git clone https://github.com/Tknecht4/open_agronomy_agent.git
+cd open_agronomy_agent
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
