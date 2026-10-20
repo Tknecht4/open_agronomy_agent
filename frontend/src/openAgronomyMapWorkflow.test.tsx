@@ -1166,7 +1166,7 @@ describe('Open Agronomy map upload workflow', () => {
     ).toBeInTheDocument()
     expect(screen.getAllByText(/Generalized regional context, not current field truth/i).length).toBeGreaterThan(0)
     expect(await screen.findByText('Current regional conditions')).toBeInTheDocument()
-    expect(screen.getByTestId('agroclimate-spi')).toHaveTextContent('13 wk SPI0.43')
+    expect(await screen.findByTestId('agroclimate-spi')).toHaveTextContent('13 wk SPI0.43')
     expect(screen.getByTestId('agroclimate-temperature_anomaly')).toHaveTextContent('4 wk temperature+2.0 C')
     expect(screen.getByTestId('agroclimate-percent_of_average_precipitation')).toHaveTextContent('13 wk precipitation104%')
     expect(screen.getByText(/Observed through/i)).toHaveTextContent('2026-07-12 · 7 days old')
@@ -1182,7 +1182,7 @@ describe('Open Agronomy map upload workflow', () => {
     expect(body.province).toBe('Saskatchewan')
     expect(body.sample_points).toBe(3)
     openPrimaryPage('Map')
-    expect(screen.getByTestId('mock-leaflet-map')).toHaveAttribute('data-first-lon', '-104.734')
+    expect(await screen.findByTestId('mock-leaflet-map')).toHaveAttribute('data-first-lon', '-104.734')
   })
 
   it('resolves a fresh offline agroclimate miss instead of leaving the field panel loading', async () => {

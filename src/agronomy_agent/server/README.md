@@ -209,5 +209,8 @@ passes the selected port. Direct CLI requests may omit Origin. Standalone
 operators can set `AGRONOMY_AGENT_LOCAL_DEV_ORIGINS` to a comma-separated list of
 loopback HTTP(S) origins. Forwarded transport headers are rejected in development
 and desktop mode, and supported launchers disable proxy-header rewriting.
-Desktop pairing retains its exact numeric origin; field-LAN still requires TLS
-and pairing with development authentication disabled.
+Desktop pairing retains its exact numeric HTTP origin. Every other pairing
+exchange requires direct HTTPS at the API boundary, including custom launchers;
+forwarding metadata is rejected even if a proxy has already rewritten the scheme. Rejection issues no session
+cookie and leaves the one-time token available for a valid HTTPS request.
+Field-LAN also requires development authentication disabled.
