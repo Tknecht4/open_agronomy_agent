@@ -3,8 +3,8 @@
 # on 2026-10-19 requiring fresh qualification; transitive resolution is still a
 # release receipt, not a portable hash lock.
 -r requirements-container.txt
-mlx==0.32.3
-mlx-lm==0.32.0
-mlx-vlm==0.7.6
+mlx==0.32.4
+mlx-lm==0.32.2
+mlx-vlm==0.7.8
 huggingface_hub==2.2.0
-transformers==5.19.0
+transformers==5.20.1
