@@ -104,8 +104,16 @@ def test_collection_binds_the_exact_bundle_paths_and_bytes(tmp_path: Path, monke
     library.write_bytes(b'\xcf\xfa\xed\xfe' + b'fixture')
     (external / 'LICENSE').write_text('Copyright Example\nPermission is hereby granted under the MIT licence.')
     dist = SimpleNamespace(metadata={'Name': 'test-lib', 'License-Expression': 'MIT'}, version='1.0', files=[Path('libtest.dylib'), Path('LICENSE')], locate_file=lambda f: external / f)
+    framework_version = f'{licenses.sys.version_info.major}.{licenses.sys.version_info.minor}'
+    interpreter = tmp_path / f'Python.framework/Versions/{framework_version}'
+    plist = interpreter / 'Resources/Info.plist'
+    plist.parent.mkdir(parents=True)
+    plist.write_text('Python framework metadata')
+    monkeypatch.setattr(licenses.sys, 'base_prefix', str(interpreter))
     toc = tmp_path / 'Analysis-00.toc'
-    toc.write_text(repr([('libtest.dylib', str(library), 'BINARY')]))
+    collected = [('libtest.dylib', str(library), 'BINARY'),
+                 (f'Python.framework/Versions/{framework_version}/Resources/Info.plist', str(plist), 'DATA')]
+    toc.write_text(repr(collected))
     toc.with_name('BUNDLE-00.toc').write_text(repr([('Contents/Frameworks/libtest.dylib', str(library), 'BINARY')]))
     app = tmp_path / 'App.app'
     shipped = app / 'Contents/Helpers/OpenAgronomyBackend.app/Contents/Frameworks/libtest.dylib'
@@ -127,6 +135,7 @@ def test_collection_binds_the_exact_bundle_paths_and_bytes(tmp_path: Path, monke
         return {'path': 'sources/' + archive.name, 'sha256': licenses.sha256(archive), 'url': 'https://example.invalid/test-lib-1.0.tar.gz'}
     monkeypatch.setattr(licenses, '_sdist', sdist)
     report = licenses.collect_licenses(root, app, toc, distributions=[dist])
+    assert report['interpreter_resources'][0]['sha256'] == licenses.sha256(plist)
     assert licenses.verify_bundle(app, report)['native_file_count'] == 1
     duplicate = shipped.parent / 'extra/libtest.dylib'
     duplicate.parent.mkdir()
@@ -137,3 +146,11 @@ def test_collection_binds_the_exact_bundle_paths_and_bytes(tmp_path: Path, monke
     shipped.write_bytes(library.read_bytes() + b'changed')
     with pytest.raises(ValueError, match='bundled native input changed'):
         licenses.verify_bundle(app, report)
+    toc.write_text(repr(collected + [('unrelated-framework/Info.plist', str(plist), 'DATA')]))
+    with pytest.raises(ValueError, match='unowned third-party input: unrelated-framework/Info.plist'):
+        licenses.collect_licenses(root, app, toc, distributions=[dist])
+    unrelated = external / 'Info.plist'
+    unrelated.write_bytes(plist.read_bytes())
+    toc.write_text(repr(collected + [('unrelated/Info.plist', str(unrelated), 'DATA')]))
+    with pytest.raises(ValueError, match='unowned third-party input: unrelated/Info.plist'):
+        licenses.collect_licenses(root, app, toc, distributions=[dist])

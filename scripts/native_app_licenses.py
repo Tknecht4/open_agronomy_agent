@@ -175,6 +175,9 @@ def collect_licenses(root: Path, app: Path, toc: Path, *, distributions: Iterabl
             owners.setdefault(Path(dist.locate_file(entry)).resolve(), []).append(dist)
     selected: dict[str, tuple[metadata.Distribution, list[tuple[str, str, str]]]] = {}
     interpreter_inputs = []
+    interpreter_resources = []
+    framework_plist = (Path(sys.base_prefix) / "Resources/Info.plist").resolve()
+    framework_plist_destination = f"Python.framework/Versions/{sys.version_info.major}.{sys.version_info.minor}/Resources/Info.plist"
     stdlib = Path(sysconfig.get_path("stdlib")).resolve()
     source_root = root.resolve()
     for destination, source, kind in inputs:
@@ -195,6 +198,11 @@ def collect_licenses(root: Path, app: Path, toc: Path, *, distributions: Iterabl
             if kind in {"BINARY", "EXTENSION"}:
                 interpreter_inputs.append({"destination": destination, "source_basename": path.name, "sha256": sha256(path)})
             continue
+        elif kind == "DATA" and path == framework_plist and destination == framework_plist_destination:
+            # PyInstaller copies the active Homebrew Python framework's own
+            # metadata outside stdlib. Its terms accompany the CPython source;
+            # an unrelated file with the same basename is still unowned.
+            interpreter_resources.append({"destination": destination, "source_basename": path.name, "sha256": sha256(path)})
         elif kind in {"BINARY", "EXTENSION"}:
             # Non-wheel interpreter libraries need an exact reviewed record too.
             name = "interpreter-libraries"
@@ -342,7 +350,8 @@ def collect_licenses(root: Path, app: Path, toc: Path, *, distributions: Iterabl
     shutil.copy2(legal / "README.md", browser_legal / "README.md")
     report = {"schema_version": "open_agronomy_agent.native_licenses.v1", "project_license": "PolyForm-Noncommercial-1.0.0",
               "python_version": sys.version.split()[0], "packages": packages, "components": sources, "rust_notices": rust_files,
-              "analysis_sha256": sha256(toc), "interpreter_inputs": interpreter_inputs, "bundled_native_inputs": bundled, "excluded_modules": list(EXCLUDED_MODULES)}
+              "analysis_sha256": sha256(toc), "interpreter_inputs": interpreter_inputs, "interpreter_resources": interpreter_resources,
+              "bundled_native_inputs": bundled, "excluded_modules": list(EXCLUDED_MODULES)}
     for target in (legal / "inventory.json", app / "Contents/Resources/runtime/frontend/dist/native-legal/inventory.json"):
         target.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     return report
