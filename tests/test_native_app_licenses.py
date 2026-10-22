@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 from pathlib import Path
 from types import SimpleNamespace
 import tarfile
@@ -33,6 +34,23 @@ def test_archive_notices_never_extract_paths(tmp_path: Path) -> None:
         t.addfile(symlink)
     assert licenses._archive_notices(archive) == {'../../LICENSE': b'Copyright Example'}
     assert not (tmp_path / 'LICENSE').exists()
+
+
+def test_native_destinations_match_the_real_pyinstaller_bundle_layout() -> None:
+    osx = pytest.importorskip('PyInstaller.building.osx')
+    raw = [('OpenAgronomyBackend', '/input/backend', 'EXECUTABLE'),
+           ('pkg.libs/libtest.dylib', '/input/libtest.dylib', 'BINARY'),
+           ('pkg.data/sub.mod/extension.so', '/input/extension.so', 'EXTENSION'),
+           ('vendor.lib/Python.framework/Versions/3.12/Python', '/input/Python', 'BINARY'),
+           ('pkg.data/notice.txt', '/input/notice', 'DATA')]
+    final = osx.BUNDLE._process_bundle_toc(object.__new__(osx.BUNDLE), raw)
+    native = {(source, kind): destination for destination, source, kind in final if kind in {'BINARY', 'EXTENSION', 'EXECUTABLE'}}
+    for destination, source, kind in raw:
+        if kind in {'BINARY', 'EXTENSION', 'EXECUTABLE'}:
+            assert licenses.bundle_native_destination(destination, kind) == native[source, kind]
+    for destination in ('/absolute', '../escape'):
+        with pytest.raises(ValueError, match='unsafe collected binary destination'):
+            licenses.bundle_native_destination(destination, 'EXECUTABLE')
 
 
 def test_actual_bundle_rejects_unaccounted_native_and_prohibited_codecs(tmp_path: Path) -> None:
@@ -127,14 +145,21 @@ def test_collection_binds_the_exact_bundle_paths_and_bytes(tmp_path: Path, monke
                  (f'Python.framework/Versions/{framework_version}/Resources/Info.plist', str(plist), 'DATA'),
                  ('liblzma.5.dylib', str(alias), 'BINARY')]
     toc.write_text(repr(collected))
-    toc.with_name('BUNDLE-00.toc').write_text(repr([
-        ('Contents/Frameworks/libtest.dylib', str(library), 'BINARY'),
-        ('Contents/Frameworks/liblzma.5.dylib', str(alias), 'BINARY')]))
+    executable = external / 'OpenAgronomyBackend'
+    executable.write_bytes(library.read_bytes())
+    bundle_inputs = [
+        ('OpenAgronomyBackend', str(executable), 'EXECUTABLE'),
+        ('libtest.dylib', str(library), 'BINARY'),
+        ('liblzma.5.dylib', str(alias), 'BINARY')]
+    toc.with_name('BUNDLE-00.toc').write_text(repr(bundle_inputs))
     app = tmp_path / 'App.app'
     shipped = app / 'Contents/Helpers/OpenAgronomyBackend.app/Contents/Frameworks/libtest.dylib'
     shipped.parent.mkdir(parents=True)
     shipped.write_bytes(library.read_bytes())
     (shipped.parent / 'liblzma.5.dylib').write_bytes(lzma.read_bytes())
+    bundled_executable = app / 'Contents/Helpers/OpenAgronomyBackend.app/Contents/MacOS/OpenAgronomyBackend'
+    bundled_executable.parent.mkdir(parents=True)
+    bundled_executable.write_bytes(executable.read_bytes())
     index = app / 'Contents/Resources/runtime/frontend/dist/LICENSE_NOTICES.html'
     index.parent.mkdir(parents=True)
     index.write_text('<!-- native-notices -->')
@@ -153,7 +178,16 @@ def test_collection_binds_the_exact_bundle_paths_and_bytes(tmp_path: Path, monke
     report = licenses.collect_licenses(root, app, toc, distributions=[dist])
     assert report['interpreter_resources'][0]['sha256'] == licenses.sha256(plist)
     assert report['interpreter_inputs'][0]['source_version'] == '5.8.4'
-    assert licenses.verify_bundle(app, report)['native_file_count'] == 2
+    assert licenses.verify_bundle(app, report)['native_file_count'] == 3
+    substituted = external / 'substituted.dylib'
+    substituted.write_bytes(library.read_bytes() + b'different input')
+    toc.with_name('BUNDLE-00.toc').write_text(repr([
+        (d, str(substituted) if d == 'libtest.dylib' else s, k) for d, s, k in bundle_inputs]))
+    bad_source_app = tmp_path / 'BadSource.app'
+    shutil.copytree(app / 'Contents/Helpers', bad_source_app / 'Contents/Helpers')
+    with pytest.raises(ValueError, match='BUNDLE source differs from owned analysis input'):
+        licenses.collect_licenses(root, bad_source_app, toc, distributions=[dist])
+    toc.with_name('BUNDLE-00.toc').write_text(repr(bundle_inputs))
     duplicate = shipped.parent / 'extra/libtest.dylib'
     duplicate.parent.mkdir()
     duplicate.write_bytes(library.read_bytes())

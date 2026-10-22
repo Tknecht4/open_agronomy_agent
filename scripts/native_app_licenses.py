@@ -63,6 +63,22 @@ def analysis_inputs(path: Path) -> list[tuple[str, str, str]]:
     return sorted(result)
 
 
+def bundle_native_destination(destination: str, kind: str) -> str:
+    """Apply PyInstaller's BUNDLE layout to its saved pre-layout TOC paths."""
+    path = Path(destination)
+    if path.is_absolute() or ".." in path.parts:
+        raise ValueError("unsafe collected binary destination")
+    parts = list(path.parts)
+    inside_framework = False
+    for index, part in enumerate(parts[:-1]):
+        if part.endswith(".framework"):
+            inside_framework = True
+        if not inside_framework:
+            parts[index] = part.replace(".", "__dot__")
+    prefix = "Contents/MacOS/" if kind == "EXECUTABLE" else "Contents/Frameworks/"
+    return prefix + "/".join(parts)
+
+
 def _download(url: str, target: Path, expected: str | None = None) -> str:
     if not url.startswith("https://"):
         raise ValueError("source downloads require HTTPS")
@@ -278,35 +294,27 @@ def collect_licenses(root: Path, app: Path, toc: Path, *, distributions: Iterabl
     helper = "Contents/Helpers/OpenAgronomyBackend.app/"
     bundled = []
     expected_paths = {}
-    def framework_destination(destination: str) -> str:
-        path = Path(destination)
-        if path.is_absolute() or ".." in path.parts:
-            raise ValueError("unsafe collected binary destination")
-        parts = list(path.parts)
-        inside_framework = False
-        for index, part in enumerate(parts[:-1]):
-            if part.endswith(".framework"):
-                inside_framework = True
-            if not inside_framework:
-                parts[index] = part.replace(".", "__dot__")
-        return "Contents/Frameworks/" + "/".join(parts)
     for package in packages:
         for row in package["native_inputs"]:
-            expected_paths[framework_destination(row["destination"])] = {
+            expected_paths[bundle_native_destination(row["destination"], "BINARY")] = {
                 "owner": package["name"], "source_input_sha256": row["sha256"]}
     for row in interpreter_inputs:
-        expected_paths[framework_destination(row["destination"])] = {
+        expected_paths[bundle_native_destination(row["destination"], "BINARY")] = {
             "owner": "interpreter", "source_input_sha256": row["sha256"]}
     expected_paths["Contents/MacOS/OpenAgronomyBackend"] = {"owner": "project-entrypoint-and-pyinstaller-bootloader"}
     for destination, source, kind in bundle_inputs:
         if kind not in {"BINARY", "EXTENSION", "EXECUTABLE"}:
             continue
+        destination = bundle_native_destination(destination, kind)
         if destination not in expected_paths:
             raise ValueError(f"unowned BUNDLE native input: {destination}")
+        expected = expected_paths[destination]
+        if "source_input_sha256" in expected and sha256(Path(source)) != expected["source_input_sha256"]:
+            raise ValueError(f"BUNDLE source differs from owned analysis input: {destination}")
         path = app / helper / destination
         if not path.is_file() or path.is_symlink():
             raise ValueError(f"missing BUNDLE native input: {destination}")
-        bundled.append({"path": helper + destination, "sha256": sha256(path), **expected_paths[destination]})
+        bundled.append({"path": helper + destination, "sha256": sha256(path), **expected})
     if not bundled:
         raise ValueError("BUNDLE has no native inputs")
     sources = []
