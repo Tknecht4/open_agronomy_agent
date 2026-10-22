@@ -6,6 +6,7 @@ import shutil
 from pathlib import Path
 from types import SimpleNamespace
 import tarfile
+import urllib.error
 
 import pytest
 
@@ -108,6 +109,18 @@ def test_source_hash_checks_fail_for_corrupt_cached_archive(tmp_path: Path) -> N
     assert licenses._download('https://example.invalid/source.tar.gz', archive, expected) == licenses.sha256(archive)
 
 
+def test_download_errors_identify_the_failed_upstream_url(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    url = 'https://example.invalid/LICENSE.txt'
+    def missing(requested_url: str, **_kwargs):
+        raise urllib.error.HTTPError(requested_url, 404, 'Not Found', {}, None)
+    monkeypatch.setattr(licenses.urllib.request, 'urlopen', missing)
+    with pytest.raises(urllib.error.HTTPError, match=url) as error:
+        licenses._download(url, tmp_path / 'LICENSE.txt')
+    assert error.value.code == 404
+    with pytest.raises(ValueError, match='https://pypi.org/pypi/test-lib/1.0/json'):
+        licenses._sdist('test-lib', '1.0', tmp_path)
+
+
 @pytest.mark.parametrize('legacy_metadata', [False, True])
 def test_collection_binds_the_exact_bundle_paths_and_bytes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, legacy_metadata: bool) -> None:
     root = tmp_path / 'checkout'
@@ -164,6 +177,8 @@ def test_collection_binds_the_exact_bundle_paths_and_bytes(tmp_path: Path, monke
     index.parent.mkdir(parents=True)
     index.write_text('<!-- native-notices -->')
     def download(_url: str, target: Path, _expected: str | None = None) -> str:
+        if _url.endswith('/NOTICE'):
+            raise urllib.error.HTTPError(_url, 404, 'Not Found', {}, None)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text('Copyright OpenSSL\nApache License Version 2.0')
         return licenses.sha256(target)
@@ -178,7 +193,21 @@ def test_collection_binds_the_exact_bundle_paths_and_bytes(tmp_path: Path, monke
     report = licenses.collect_licenses(root, app, toc, distributions=[dist])
     assert report['interpreter_resources'][0]['sha256'] == licenses.sha256(plist)
     assert report['interpreter_inputs'][0]['source_version'] == '5.8.4'
+    openssl = next(x for x in report['components'] if x['id'] == 'interpreter-openssl')
+    assert len(openssl['notices']) == 3
+    assert openssl['notice_http_status'] == 404
+    assert openssl['notice_url'].endswith('/NOTICE')
     assert licenses.verify_bundle(app, report)['native_file_count'] == 3
+    def unavailable(url: str, target: Path, expected: str | None = None) -> str:
+        if url.endswith('/NOTICE'):
+            raise urllib.error.HTTPError(url, 503, 'Service Unavailable', {}, None)
+        return download(url, target, expected)
+    monkeypatch.setattr(licenses, '_download', unavailable)
+    unavailable_app = tmp_path / 'Unavailable.app'
+    shutil.copytree(app / 'Contents/Helpers', unavailable_app / 'Contents/Helpers')
+    with pytest.raises(urllib.error.HTTPError, match='503'):
+        licenses.collect_licenses(root, unavailable_app, toc, distributions=[dist])
+    monkeypatch.setattr(licenses, '_download', download)
     substituted = external / 'substituted.dylib'
     substituted.write_bytes(library.read_bytes() + b'different input')
     toc.with_name('BUNDLE-00.toc').write_text(repr([

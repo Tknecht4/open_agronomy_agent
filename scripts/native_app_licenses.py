@@ -18,6 +18,7 @@ import shutil
 import sys
 import sysconfig
 import tarfile
+import urllib.error
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -106,10 +107,15 @@ def _download(url: str, target: Path, expected: str | None = None) -> str:
                 shutil.copy2(cached, target)
             return sha256(target)
     partial = target.with_suffix(target.suffix + ".partial")
-    with urllib.request.urlopen(url, timeout=90) as response, partial.open("wb") as f:
-        if not response.url.startswith("https://"):
-            raise ValueError("source download redirected away from HTTPS")
-        shutil.copyfileobj(response, f)
+    try:
+        with urllib.request.urlopen(url, timeout=90) as response, partial.open("wb") as f:
+            if not response.url.startswith("https://"):
+                raise ValueError("source download redirected away from HTTPS")
+            shutil.copyfileobj(response, f)
+    except urllib.error.HTTPError as error:
+        raise urllib.error.HTTPError(url, error.code, f"{error.reason}; URL: {url}", error.headers, error.fp) from error
+    except urllib.error.URLError as error:
+        raise ValueError(f"source download failed: {url}: {error.reason}") from error
     digest = sha256(partial)
     if expected and not matches(partial):
         raise ValueError(f"source archive hash mismatch: {target.name}")
@@ -137,8 +143,11 @@ def _archive_notices(archive: Path) -> dict[str, bytes]:
 
 def _sdist(name: str, version: str, destination: Path) -> dict:
     url = f"https://pypi.org/pypi/{name}/{version}/json"
-    with urllib.request.urlopen(url, timeout=60) as response:
-        release = json.load(response)
+    try:
+        with urllib.request.urlopen(url, timeout=60) as response:
+            release = json.load(response)
+    except urllib.error.URLError as error:
+        raise ValueError(f"source metadata download failed: {url}: {error.reason}") from error
     candidates = [x for x in release["urls"] if x["packagetype"] == "sdist" and not x.get("yanked")]
     if len(candidates) != 1:
         raise ValueError(f"exactly one unyanked source archive required: {name}=={version}")
@@ -341,12 +350,22 @@ def collect_licenses(root: Path, app: Path, toc: Path, *, distributions: Iterabl
     if not re.fullmatch(r"[34]\.\d+\.\d+", openssl_version):
         raise ValueError("unreviewed interpreter TLS licence family")
     ssl_notices = {}
-    for filename in ("LICENSE.txt", "NOTICE"):
+    notice_status = 200
+    for filename in ("LICENSE.txt", "AUTHORS.md", "README.md", "NOTICE"):
         target = legal / "sources" / ("python-openssl-" + openssl_version + "-" + filename)
         url = f"https://raw.githubusercontent.com/openssl/openssl/openssl-{openssl_version}/{filename}"
-        _download(url, target)
+        try:
+            _download(url, target)
+        except urllib.error.HTTPError as error:
+            # Apache 2.0 requires upstream NOTICE only when one exists.
+            if filename != "NOTICE" or error.code != 404:
+                raise
+            notice_status = error.code
+            continue
         ssl_notices[filename] = target.read_bytes()
     sources.append({"id": "interpreter-openssl", "version": openssl_version,
+                    "upstream_url": f"https://github.com/openssl/openssl/tree/openssl-{openssl_version}",
+                    "notice_url": url, "notice_http_status": notice_status,
                     "license": "Apache-2.0", "notices": _write_notices(legal / "notices/interpreter-openssl", ssl_notices)})
     shutil.copy2(root / "macos_app/THIRD_PARTY_RUNTIME.md", legal / "README.md")
     provenance_path = root / "macos_app/native_source_provenance.json"
