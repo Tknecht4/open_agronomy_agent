@@ -2,6 +2,8 @@
 
 This table is generated from the active governed RAG configuration and its checksum-bound graph manifests. Counts describe the composed runtime graph. Authority roles constrain how graph hits may be used; they do not make a relationship a field observation, diagnosis, or prescription.
 
+The licence column belongs to each pinned graph artifact. The curated seed graph retains its earlier Apache-2.0 grant; it does not declare the current project software licence. See [Licensing and permitted use](licensing.md).
+
 <!-- BEGIN GENERATED CAPABILITY REGISTRY -->
 
 | Graph | Version | Namespaces | Authority | Nodes | Edges | Source | License | SHA-256 |

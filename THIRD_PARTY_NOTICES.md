@@ -1,7 +1,9 @@
 # Third-party data and software notices
 
-This index accompanies the conference source tree and portable knowledge
-archive. It is not a substitute for the per-item licence, source, checksum,
+This index accompanies the source repository and portable knowledge archive.
+Project-authored software and documentation use PolyForm Noncommercial 1.0.0;
+each third-party item retains its own terms. Project attribution is in `NOTICE`.
+This index is not a substitute for the per-item licence, source, checksum,
 jurisdiction, and currency fields preserved in the governed manifests and
 corpus rows.
 
@@ -100,20 +102,25 @@ local research lane; the public package does not include their raw tables.
 The UBC-specific source-derived examples in the Canadian research notes are
 attributed to [UBC Farm / Centre for Sustainable Food Systems](https://borealisdata.ca/dataverse/UBC_CSFS)
 and retain [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)
-terms. They are outside the project's Apache-2.0 grant and should be excluded
+terms. They are outside the project's PolyForm Noncommercial grant and should be excluded
 from an unrestricted commercial content bundle unless separately cleared.
 Their record links and restrictions remain in the Canadian research notes.
 Conditional and unknown-license entries are not grants to redistribute,
-train on, or commercially use the underlying data. The Apache-2.0 project
+train on, or commercially use the underlying data. The PolyForm Noncommercial project
 license does not replace any source-specific terms.
+
+PolyForm's institutional permissions do not override a source's narrower
+non-commercial, attribution, or share-alike conditions. Previously excluded
+sources remain excluded from public distribution, runtime retrieval, and training.
 
 ## Runtime dependencies and model
 
-Direct runtime dependencies use permissive licences recorded in their package
-metadata, including Agno (Apache), cryptography (Apache-2.0 or BSD-3-Clause),
+Runtime dependencies retain the licences recorded in their package
+metadata, including Agno (Apache-2.0), cryptography (Apache-2.0 or BSD-3-Clause),
 React (MIT), and Leaflet (BSD-2-Clause). The installed frontend metadata also
 includes `caniuse-lite` data under CC BY 4.0. Distribution should retain the
-licence files supplied by packaged dependencies.
+licence files supplied by packaged dependencies. Dependencies are not relicensed
+under PolyForm. Compiled app redistribution requires its own dependency review.
 
 Model weights are not redistributed in this repository or portable archive.
 The user downloads the pinned `mlx-community/gemma-4-e2b-it-4bit` revision
@@ -122,8 +129,17 @@ terms.
 
 ## Project software licence
 
-Unless otherwise noted, project-authored repository contents are licensed
-under the Apache License, Version 2.0, as provided in the root `LICENSE` file.
-That licence does not relicense third-party datasets, evaluation material,
-dependencies, external publications, or model weights; those assets remain
-subject to the terms identified above and in their governed source records.
+Project-authored software and documentation use PolyForm Noncommercial 1.0.0
+in the root `LICENSE`, except explicitly separate licences and preserved earlier
+grants. Its standard institutional permissions also apply.
+
+Earlier Apache-2.0 grants remain valid. The earlier text is preserved at
+`LICENSES/Apache-2.0.txt`; it is not an alternative grant for new PolyForm
+contributions. Checksum-bound corpus releases, the curated seed graph, frozen
+production-foundations v1/v2 text, source registries, and historical receipts
+retain their recorded licences and hashes.
+
+Third-party datasets, evaluation material, dependencies, publications, and model
+weights retain the terms identified above and in their governed source records.
+See [Licensing and permitted use](docs/public/licensing.md) for the scope of
+the source-repository licensing change.

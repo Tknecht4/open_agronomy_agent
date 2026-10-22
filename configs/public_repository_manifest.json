@@ -14,6 +14,8 @@
     ".agents/skills/evaluation-evidence/SKILL.md",
     "AGENTS.md",
     "LICENSE",
+    "NOTICE",
+    "LICENSES/Apache-2.0.txt",
     "README.md",
     "mkdocs.yml",
     "requirements/requirements-benchmark-analysis.txt",

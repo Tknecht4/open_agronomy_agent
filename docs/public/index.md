@@ -2,6 +2,8 @@
 
 Open Agronomy Agent is a local-first field workspace and a customizable research-agent foundation. Ask a general question without inventing field facts, then add a field when its own records, location, and history matter. The system joins governed knowledge, graph relationships, deterministic capabilities, a downloadable model, validation, and an auditable trace.
 
+The software is source-available under **PolyForm Noncommercial 1.0.0** for permitted non-commercial uses, including research and evaluation, and the institutional purposes listed in the licence. Read [Licensing and permitted use](licensing.md) for the standard terms, separate data rights, and preserved earlier Apache grants.
+
 It is not an agronomist replacement or a regulatory, diagnostic, or field-outcome authority. Its central design rule is to preserve the difference between **observation**, **model output**, and **interpretation**.
 
 ![Compact general chat and calculator example, with no field selected](assets/workspace.png)

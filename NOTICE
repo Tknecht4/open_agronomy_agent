@@ -1,0 +1,17 @@
+Open Agronomy Agent
+
+Required Notice: Copyright (c) 2026 Tknecht4 and the Open Agronomy Agent contributors.
+
+Project-authored software and documentation are offered under the PolyForm
+Noncommercial License 1.0.0 in LICENSE, except separately licensed material
+and preserved earlier grants. The project maintainer is Tknecht4:
+https://github.com/Tknecht4/open_agronomy_agent
+
+The Yoyodyne example in LICENSE is part of the standard PolyForm text; the
+Required Notice above is this project's actual attribution notice.
+
+Earlier Apache-2.0 grants remain valid. LICENSES/Apache-2.0.txt preserves that
+licence for earlier and explicitly Apache-licensed material, not as an
+alternative grant for new PolyForm contributions. Third-party data, models,
+libraries, and other assets retain their own terms. See THIRD_PARTY_NOTICES.md
+and docs/public/licensing.md for scope and source-specific obligations.
