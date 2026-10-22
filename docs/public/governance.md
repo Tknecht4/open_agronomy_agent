@@ -8,7 +8,7 @@ Never put credentials, pairing URLs, private absolute paths, farmer records, raw
 
 ## Source and licensing
 
-Project-authored code/documentation is Apache-2.0 unless noted. Third-party sources retain their terms. Every admitted source should preserve publisher, URL, date, jurisdiction, rights, exact-byte/content hash, derivation, runtime role, and limitations. Extraction is not permission; inclusion is not authority.
+Project-authored code/documentation is PolyForm Noncommercial 1.0.0 except material with its own explicit licence or a preserved earlier grant. This is source-available software for permitted non-commercial and institutional purposes, including research and evaluation; see [Licensing and permitted use](licensing.md). Earlier Apache grants remain valid. Third-party sources retain their terms, including any non-commercial, attribution, and share-alike obligations; PolyForm does not replace them or admit previously excluded data. Every admitted source should preserve publisher, URL, date, jurisdiction, rights, exact-byte/content hash, derivation, runtime role, and limitations. Extraction is not permission; inclusion is not authority.
 
 ## Evidence authority
 

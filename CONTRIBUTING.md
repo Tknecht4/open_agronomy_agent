@@ -20,7 +20,7 @@ Public reports, logs, tests, screenshots, and PRs must not contain farmer or fie
 
 The [testing guide](docs/public/developer/testing.md) explains focused checks and repository-wide gates. Before a repository-wide claim, run the Python suite, public-documentation checker, strict MkDocs build, and frontend typecheck/tests/build listed in [AGENTS.md](AGENTS.md), plus corpus, retrieval, release, or model gates when their controlling inputs change. Report any unavailable gate honestly; do not label a subset a full pass.
 
-Project-authored contributions are offered under [Apache-2.0](LICENSE). Third-party code, data, model weights, and evaluation material retain their own terms; check [third-party notices](THIRD_PARTY_NOTICES.md) and document any additional rights before adding them. Do not paste material from another project unless its license and attribution requirements are understood and satisfied.
+By submitting an original contribution, you offer it under [PolyForm Noncommercial 1.0.0](LICENSE) and confirm that you have authority to do so, including any necessary employer or other rights-holder permission. This is a source-available, non-commercial project; see [licensing and permitted use](docs/public/licensing.md). Third-party code, data, model weights, and evaluation material retain their own terms; check [third-party notices](THIRD_PARTY_NOTICES.md) and document any additional rights before adding them. Do not paste material from another project unless its license and attribution requirements are understood and satisfied. Existing Apache grants are not revoked by this change.
 
 ## Review and merge
 

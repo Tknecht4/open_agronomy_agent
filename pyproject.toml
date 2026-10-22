@@ -7,10 +7,7 @@ name = "agronomy-agent"
 version = "0.1.0"
 description = "Local-first agronomist agent MVP with RAG, tools, and evals."
 requires-python = ">=3.11"
-license = {file = "LICENSE"}
-classifiers = [
-    "License :: OSI Approved :: Apache Software License",
-]
+license = {text = "PolyForm-Noncommercial-1.0.0"}
 dependencies = [
     "agno>=2.6,<3.2",
     "cryptography>=50.0.1,<51",
@@ -55,6 +52,9 @@ pythonpath = [".", "src"]
 # The suite uses per-test temporary state and passed under four xdist workers.
 # Keeping this bounded avoids the slower process oversubscription seen with -n auto.
 addopts = "-n 4"
+
+[tool.setuptools]
+license-files = ["LICENSE", "NOTICE", "LICENSES/*.txt", "THIRD_PARTY_NOTICES.md"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
