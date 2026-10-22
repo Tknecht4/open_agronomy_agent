@@ -228,6 +228,10 @@ def _check_lgpl_replacement(app: Path, stage: Path) -> dict[str, object]:
     result = json.loads(completed.stdout.strip().splitlines()[-1])
     if result.get("phase") != "verified":
         raise ValueError("modified-library packaged runtime did not pass")
+    expected = {str((copy / path).resolve()) for path in changed}
+    loaded = {str(Path(path).resolve()) for path in result.get("loaded_lgpl_libraries", [])}
+    if expected - loaded:
+        raise ValueError("modified-library packaged runtime did not load every changed library from its app copy")
     shutil.rmtree(copy)
     return {"status": "verified", "modified_libraries": changed, "packaged_runtime": result}
 

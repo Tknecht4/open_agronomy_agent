@@ -442,17 +442,39 @@ def main(argv: list[str] | None = None) -> int:
             import shapely
             import pyogrio
             import pyproj
-            import scipy.special
-            from mlx_lm import load as _load
+            import scipy.odr
+            import ctypes
             from shapely.geometry import Point
             point = pyproj.Transformer.from_crs(4326, 3857, always_xy=True).transform(1, 1)
             if Point(0, 0).buffer(1).area <= 3 or point[0] <= 100000:
                 raise ValueError("bundled geometry libraries failed their smoke check")
-            if scipy.special.expit(0) != 0.5 or not callable(_load):
-                raise ValueError("bundled numerical/model libraries failed their smoke check")
+            fit = scipy.odr.ODR(
+                scipy.odr.Data([0., 1., 2.], [1., 3., 5.]),
+                scipy.odr.Model(lambda beta, x: beta[0] * x + beta[1]),
+                beta0=[2., 1.],
+            ).run()
+            if fit.info > 4 or any(abs(actual - expected) > 1e-6 for actual, expected in zip(fit.beta, [2., 1.])):
+                raise ValueError("bundled Fortran/quadmath libraries failed their smoke check")
+            dyld = ctypes.CDLL(None)
+            dyld._dyld_image_count.restype = ctypes.c_uint32
+            dyld._dyld_get_image_name.argtypes = [ctypes.c_uint32]
+            dyld._dyld_get_image_name.restype = ctypes.c_char_p
+            loaded_paths = set()
+            for index in range(dyld._dyld_image_count()):
+                name = dyld._dyld_get_image_name(index)
+                if name:
+                    path = os.fsdecode(name)
+                    if Path(path).name.startswith(("libgeos", "libgdal", "libquadmath")):
+                        loaded_paths.add(path)
+            loaded = sorted(loaded_paths)
+            if not all(any(Path(path).name.startswith(name) for path in loaded)
+                       for name in ("libgeos", "libgdal", "libquadmath")):
+                raise ValueError("LGPL replacement smoke did not load every required library family")
             print(json.dumps({"phase": "verified", "geos": shapely.geos_version_string,
                               "gdal": pyogrio.__gdal_version_string__,
                               "proj": pyproj.proj_version_str,
+                              "loaded_lgpl_libraries": loaded,
+                              "odr_coefficients": fit.beta.tolist(),
                               "model_downloaded": False}))
             return 0
         if args.command == "status":

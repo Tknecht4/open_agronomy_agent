@@ -11,8 +11,43 @@ from types import SimpleNamespace
 import pytest
 
 from macos_app import backend
-from scripts.build_macos_app import _asset_manifest, _audit_macho_links, _tracked_asset_files
+from scripts.build_macos_app import _asset_manifest, _audit_macho_links, _check_lgpl_replacement, _tracked_asset_files
 from scripts.smoke_macos_app import _startup_summary
+
+
+@pytest.mark.parametrize('loaded_from', ['changed-copy', 'original-app', 'missing-quadmath'])
+def test_library_replacement_requires_loading_every_changed_copy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, loaded_from: str,
+) -> None:
+    import shutil
+    app = tmp_path / 'Original.app'
+    frameworks = Path('Contents/Helpers/OpenAgronomyBackend.app/Contents/Frameworks')
+    libraries = [frameworks / name for name in ('libgeos.dylib', 'libgdal.dylib', 'libquadmath.dylib')]
+    for relative in libraries:
+        path = app / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b'original signed library')
+    stage = tmp_path / 'stage'
+    stage.mkdir()
+    copy = stage / 'Library Replacement Check.app'
+    def run(command, **_kwargs):
+        if command[0] == 'cp':
+            shutil.copytree(app, copy)
+        elif command[0] == 'codesign' and '--identifier' in command:
+            Path(command[-1]).write_bytes(b'changed signed library')
+        elif 'dependency-check' in command:
+            base = app if loaded_from == 'original-app' else copy
+            loaded = [str(base / path) for path in libraries
+                      if loaded_from != 'missing-quadmath' or 'libquadmath' not in path.name]
+            return SimpleNamespace(stdout=json.dumps({'phase': 'verified', 'loaded_lgpl_libraries': loaded}))
+        return SimpleNamespace(stdout='')
+    monkeypatch.setattr('scripts.build_macos_app.subprocess.run', run)
+    if loaded_from == 'changed-copy':
+        assert _check_lgpl_replacement(app, stage)['status'] == 'verified'
+        assert not copy.exists()
+    else:
+        with pytest.raises(ValueError, match='did not load every changed library from its app copy'):
+            _check_lgpl_replacement(app, stage)
 
 
 def test_runtime_asset_selection_uses_tracked_files_only(tmp_path: Path) -> None:
