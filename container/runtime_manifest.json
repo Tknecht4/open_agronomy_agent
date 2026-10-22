@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-10-22T19:19:43+00:00",
+  "generated_at": "2026-10-22T19:25:31+00:00",
   "status": "pass",
-  "contract_sha256": "1fd20be31d722987a7e7e4b32c28dbea40ef46763ad05c33fdd5e5211d22e530",
+  "contract_sha256": "c1d2daf33aeed861a614234c0945eaa7379980ff87269f231e45ed0a22cb6e19",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -420,8 +420,8 @@
     {
       "path": "frontend/src",
       "file_count": 119,
-      "bytes": 1758545,
-      "sha256": "94b30bee5ee1fdbbef11d8afa9190ee729951348da220a8083b62a55210d01cc"
+      "bytes": 1758762,
+      "sha256": "59cad5bc8378b86efeae9244a67e903636efd4d34847ff6b6b5c85ccb069fd33"
     },
     {
       "path": "frontend/scripts",
@@ -553,7 +553,7 @@
       "path": "pyproject.toml",
       "role": "runtime_control",
       "bytes": 1423,
-      "sha256": "27a1d564def9773eb87112c05e8189e7ce0380a4f794c8a49411249623c574b7"
+      "sha256": "948fb5ca56e1e4eeb9cf1205eb57b87d9846a8acf209605053ab56dee030cd3c"
     },
     {
       "path": "docker-compose.edge.yml",

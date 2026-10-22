@@ -2701,7 +2701,9 @@ describe('cockpit app', () => {
     render(<App />)
 
     fireEvent.click(await screen.findByTestId('hosted-load-account'))
+    await waitFor(() => expect(screen.getByTestId('hosted-status')).toHaveTextContent('Hosted account loaded'))
     fireEvent.click(await screen.findByTestId('hosted-create-thread'))
+    await waitFor(() => expect(screen.getByTestId('hosted-status')).toHaveTextContent('Thread created'))
     fireEvent.click(await screen.findByTestId('hosted-export'))
     await waitFor(() => {
       expect(screen.getByTestId('hosted-status')).toHaveTextContent('Export queued')

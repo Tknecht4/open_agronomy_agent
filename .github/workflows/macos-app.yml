@@ -68,6 +68,8 @@ jobs:
           brew upgrade python@3.12
           "$(brew --prefix python@3.12)/bin/python3.12" -c \
             'import sys; assert sys.version.split()[0] == "3.12.15", "Python source registry requires review"'
+          brew info --json=v2 python@3.12 | "$(brew --prefix python@3.12)/bin/python3.12" -c \
+            'import json, sys; p = json.load(sys.stdin)["formulae"][0]; assert p["revision"] == 1 and p["ruby_source_checksum"]["sha256"] == "cfda5591ab44d6d5d61e6efebe57e93c0c3507cdad0c413100dd33995cdb0454", "Homebrew Python recipe requires review"'
           "$(brew --prefix python@3.12)/bin/python3.12" -m venv "$RUNNER_TEMP/native-python"
           echo "$RUNNER_TEMP/native-python/bin" >> "$GITHUB_PATH"
       - name: Set up Node 24
@@ -133,9 +135,15 @@ jobs:
         with:
           name: native-licence-evidence
           path: |
-            outputs/macos/native-license-candidate.zip
             outputs/macos/*.build.json
             outputs/macos/Open Agronomy.app/Contents/Resources/legal/inventory.json
+          retention-days: 14
+      - name: Preserve native licence candidate
+        if: github.event_name == 'workflow_dispatch' && inputs.verify_native_licenses == true && inputs.run_native_candidate != true
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: native-licence-candidate
+          path: outputs/macos/native-license-candidate.zip
           retention-days: 14
       - name: Smoke native first-run model installation
         if: github.event_name == 'workflow_dispatch' && inputs.run_native_candidate == true && github.ref == 'refs/heads/main'
