@@ -494,6 +494,10 @@ def main(argv: list[str] | None = None) -> int:
         )
     except Exception as exc:
         failure = _safe_failure(exc)
+        if args.command == "dependency-check":
+            # This build-only smoke uses a fresh state and no model or service;
+            # retain loader details that ordinary product diagnostics redact.
+            traceback.print_exc(file=sys.stderr)
         if state_root is not None and args.command == "serve":
             try:
                 previous = json.loads(

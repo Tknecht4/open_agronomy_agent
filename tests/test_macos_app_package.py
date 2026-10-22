@@ -15,6 +15,18 @@ from scripts.build_macos_app import _asset_manifest, _audit_macho_links, _check_
 from scripts.smoke_macos_app import _startup_summary
 
 
+def test_dependency_smoke_retains_loader_errors_without_changing_product_diagnostics(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+) -> None:
+    def fail(_args):
+        raise OSError('fixture native loader detail')
+    monkeypatch.setattr(backend, '_configure_runtime', fail)
+    for command in ('dependency-check', 'status'):
+        assert backend.main([command, '--runtime-root', str(tmp_path), '--state-root', str(tmp_path / 'state')]) == 1
+        error = capsys.readouterr().err
+        assert ('fixture native loader detail' in error) is (command == 'dependency-check')
+
+
 @pytest.mark.parametrize('loaded_from', ['changed-copy', 'original-app', 'missing-quadmath', 'backend-error'])
 def test_library_replacement_requires_loading_every_changed_copy(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, loaded_from: str,
