@@ -15,7 +15,9 @@ use of those libraries and modification. You may reverse engineer the combined
 work to debug modifications to these libraries. Nothing in the project licence
 restricts those LGPL rights. Certifi, tqdm and other MPL-covered files retain
 their MPL rights; their exact source archives accompany this distribution.
-Python is unmodified except for freezing and relocation. PyInstaller's standard
+Python is built by Homebrew with its configuration, installation-layout and
+sysconfig changes; the matching build recipe and patch accompany its source.
+PyInstaller freezes and relocates that build. PyInstaller's standard
 bootloader exception permits the generated application to use the project
 licence; its own complete original terms are retained separately.
 

@@ -592,12 +592,30 @@
     },
     {
       "id": "cpython",
-      "version": "3.12.13",
-      "url": "https://www.python.org/ftp/python/3.12.13/Python-3.12.13.tar.xz",
-      "filename": "cpython-3.12.13.tar.xz",
+      "version": "3.12.15",
+      "url": "https://www.python.org/ftp/python/3.12.15/Python-3.12.15.tgz",
+      "filename": "cpython-3.12.15.tgz",
       "packages": [],
       "license": "See complete original source legal files",
-      "sha256": "c08bc65a81971c1dd5783182826503369466c7e67374d1646519adf05207b684"
+      "sha256": "de1a241a519e0a3374fea98988d0b52c886743f9d953f23be8269cc7b59c5fab"
+    },
+    {
+      "id": "cpython-homebrew-build",
+      "filename": "python-3.12.15-homebrew.rb",
+      "url": "https://raw.githubusercontent.com/Homebrew/homebrew-core/8ca2f50cc89eb1f7f9aeab073e2588ab0c23c4a9/Formula/p/python@3.12.rb",
+      "sha256": "cfda5591ab44d6d5d61e6efebe57e93c0c3507cdad0c413100dd33995cdb0454",
+      "packages": [],
+      "plain_text": true,
+      "legal_basis": "Homebrew Python configuration and layout modifications; Homebrew BSD licence supplied separately"
+    },
+    {
+      "id": "cpython-homebrew-sysconfig-patch",
+      "filename": "python-3.11-sysconfig.diff",
+      "url": "https://raw.githubusercontent.com/Homebrew/homebrew-core/8ca2f50cc89eb1f7f9aeab073e2588ab0c23c4a9/Patches/python/3.11-sysconfig.diff",
+      "sha256": "8bfe417c815da4ca2c0a2457ce7ef81bc9dae310e20e4fb36235901ea4be1658",
+      "packages": [],
+      "plain_text": true,
+      "legal_basis": "Homebrew Python sysconfig patch; Homebrew BSD licence supplied separately"
     },
     {
       "id": "gcc-build-gcc@13.rb",
@@ -803,9 +821,7 @@
       "filename": "Homebrew-core-LICENSE.txt",
       "url": "https://raw.githubusercontent.com/Homebrew/homebrew-core/9b4bd9cc4b6fad18a1622e9226d3b3159e59c274/LICENSE.txt",
       "sha256": "f80329e58613ad669c0e73cb132d8060b9b2c55e339c73848068e4d1567f4627",
-      "packages": [
-        "scipy"
-      ],
+      "packages": [],
       "plain_text": true,
       "license": "BSD-2-Clause"
     },
@@ -821,7 +837,7 @@
       "license": "MIT"
     }
   ],
-  "python_version": "3.12.13",
+  "python_version": "3.12.15",
   "source_required_packages": [
     "certifi",
     "tqdm",
