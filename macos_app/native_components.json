@@ -45,11 +45,24 @@
     "libssl\\.3\\.dylib",
     "libcrypto\\.3\\.dylib",
     "libmpdec\\.4\\.dylib",
-    "libsqlite3\\.dylib"
+    "libmpdec\\.4\\.0\\.1\\.dylib",
+    "libsqlite3\\.dylib",
+    "libsqlite3\\.3\\.53\\.4\\.dylib",
+    "libsqlite3\\.3\\.54\\.1\\.dylib",
+    "liblzma\\.5\\.dylib"
   ],
+  "interpreter_library_sources": {
+    "liblzma.5.dylib": {
+      "formula": "xz",
+      "versions": ["5.8.3", "5.8.4"]
+    }
+  },
   "source_overrides": {
     "mlx-metal": "mlx",
     "mlx": "mlx"
+  },
+  "license_metadata_exceptions": {
+    "pandas==3.0.6": "The original multiline BSD/PSF notices mention historical GPL compatibility; this is not a GPL grant. Preserve the complete original notices."
   },
   "sources": [
     {
@@ -291,13 +304,19 @@
       "filename": "liblzma-5.8.3.tar.gz",
       "url": "https://github.com/tukaani-project/xz/archive/v5.8.3.tar.gz",
       "sha512": "8fb5e6a13397d259d8ff7484f9b63f8a6752ff1c63e1a4601170ad8175aadefb5126a1cae7f73370bfc6c2a0b4e1c0bad57a58fc5b781d3f7d45e5a483c091cc",
-      "packages": [
-        "pyogrio",
-        "pyproj"
-      ],
+      "packages": [],
       "provenance": "https://raw.githubusercontent.com/microsoft/vcpkg/89dac9685f8d0ebd0a07d8b93ed51215c3a2fb2c/ports/liblzma/",
       "portfile_sha256": "a9be3166dd293694d1e8f018943b5e10071f5490923d3bbf79180307eca32970",
       "sha256": "8ec1767fa517642ecb4cf08b891ce667ba6f143551e382b07c7ef437bda335e2"
+    },
+    {
+      "id": "interpreter-liblzma",
+      "version": "5.8.4",
+      "license": "liblzma: 0BSD; other source components retain their original terms",
+      "filename": "xz-5.8.4.tar.gz",
+      "url": "https://github.com/tukaani-project/xz/releases/download/v5.8.4/xz-5.8.4.tar.gz",
+      "sha256": "0014c7886930454fe8bd4228665b51af55eeae560ea135c9c4cd33f55b2591d9",
+      "packages": []
     },
     {
       "id": "gdal-libpng",

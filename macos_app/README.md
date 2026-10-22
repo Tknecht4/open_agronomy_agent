@@ -15,7 +15,7 @@ minimum memory requirement.
 
 ## Build on a clean Apple Silicon builder
 
-Create an isolated Python 3.12.15 build environment (the reviewed version in
+Create an isolated Homebrew Python 3.12.15 build environment (the reviewed version in
 `native_components.json`), install
 `requirements/requirements-macos-app-runtime.txt`, the local package, and
 `requirements/requirements-macos-app-build.txt`. Install frontend dependencies with

@@ -90,11 +90,16 @@ def test_source_hash_checks_fail_for_corrupt_cached_archive(tmp_path: Path) -> N
     assert licenses._download('https://example.invalid/source.tar.gz', archive, expected) == licenses.sha256(archive)
 
 
-def test_collection_binds_the_exact_bundle_paths_and_bytes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize('legacy_metadata', [False, True])
+def test_collection_binds_the_exact_bundle_paths_and_bytes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, legacy_metadata: bool) -> None:
     root = tmp_path / 'checkout'
     native = root / 'macos_app'
     native.mkdir(parents=True)
-    (native / 'native_components.json').write_text(json.dumps({'python_version': __import__('sys').version.split()[0], 'native_packages': ['test-lib==1.0'], 'interpreter_binary_patterns': [], 'sources': []}))
+    (native / 'native_components.json').write_text(json.dumps({
+        'python_version': __import__('sys').version.split()[0], 'native_packages': ['test-lib==1.0'],
+        'interpreter_binary_patterns': [r'liblzma\.5\.dylib'],
+        'license_metadata_exceptions': {'test-lib==1.0': 'Reviewed historical GPL-compatible wording in BSD/PSF notices'},
+        'interpreter_library_sources': {'liblzma.5.dylib': {'formula': 'xz', 'versions': ['5.8.4']}}, 'sources': []}))
     (native / 'rust_dependency_licenses.json').write_text(json.dumps({'package_versions': {}}))
     (native / 'native_source_provenance.json').write_text('{}')
     (native / 'THIRD_PARTY_RUNTIME.md').write_text('Upstream terms remain applicable.')
@@ -104,21 +109,32 @@ def test_collection_binds_the_exact_bundle_paths_and_bytes(tmp_path: Path, monke
     library.write_bytes(b'\xcf\xfa\xed\xfe' + b'fixture')
     (external / 'LICENSE').write_text('Copyright Example\nPermission is hereby granted under the MIT licence.')
     dist = SimpleNamespace(metadata={'Name': 'test-lib', 'License-Expression': 'MIT'}, version='1.0', files=[Path('libtest.dylib'), Path('LICENSE')], locate_file=lambda f: external / f)
+    if legacy_metadata:
+        dist.metadata = {'Name': 'test-lib', 'License': 'BSD terms\nPSF history: GPL-compatible does not mean licensed under GPL.'}
     framework_version = f'{licenses.sys.version_info.major}.{licenses.sys.version_info.minor}'
     interpreter = tmp_path / f'Python.framework/Versions/{framework_version}'
     plist = interpreter / 'Resources/Info.plist'
     plist.parent.mkdir(parents=True)
     plist.write_text('Python framework metadata')
     monkeypatch.setattr(licenses.sys, 'base_prefix', str(interpreter))
+    lzma = tmp_path / 'Cellar/xz/5.8.4/lib/liblzma.5.dylib'
+    lzma.parent.mkdir(parents=True)
+    lzma.write_bytes(library.read_bytes())
+    alias = tmp_path / 'liblzma.5.dylib'
+    alias.symlink_to(lzma)
     toc = tmp_path / 'Analysis-00.toc'
     collected = [('libtest.dylib', str(library), 'BINARY'),
-                 (f'Python.framework/Versions/{framework_version}/Resources/Info.plist', str(plist), 'DATA')]
+                 (f'Python.framework/Versions/{framework_version}/Resources/Info.plist', str(plist), 'DATA'),
+                 ('liblzma.5.dylib', str(alias), 'BINARY')]
     toc.write_text(repr(collected))
-    toc.with_name('BUNDLE-00.toc').write_text(repr([('Contents/Frameworks/libtest.dylib', str(library), 'BINARY')]))
+    toc.with_name('BUNDLE-00.toc').write_text(repr([
+        ('Contents/Frameworks/libtest.dylib', str(library), 'BINARY'),
+        ('Contents/Frameworks/liblzma.5.dylib', str(alias), 'BINARY')]))
     app = tmp_path / 'App.app'
     shipped = app / 'Contents/Helpers/OpenAgronomyBackend.app/Contents/Frameworks/libtest.dylib'
     shipped.parent.mkdir(parents=True)
     shipped.write_bytes(library.read_bytes())
+    (shipped.parent / 'liblzma.5.dylib').write_bytes(lzma.read_bytes())
     index = app / 'Contents/Resources/runtime/frontend/dist/LICENSE_NOTICES.html'
     index.parent.mkdir(parents=True)
     index.write_text('<!-- native-notices -->')
@@ -136,7 +152,8 @@ def test_collection_binds_the_exact_bundle_paths_and_bytes(tmp_path: Path, monke
     monkeypatch.setattr(licenses, '_sdist', sdist)
     report = licenses.collect_licenses(root, app, toc, distributions=[dist])
     assert report['interpreter_resources'][0]['sha256'] == licenses.sha256(plist)
-    assert licenses.verify_bundle(app, report)['native_file_count'] == 1
+    assert report['interpreter_inputs'][0]['source_version'] == '5.8.4'
+    assert licenses.verify_bundle(app, report)['native_file_count'] == 2
     duplicate = shipped.parent / 'extra/libtest.dylib'
     duplicate.parent.mkdir()
     duplicate.write_bytes(library.read_bytes())
@@ -154,3 +171,13 @@ def test_collection_binds_the_exact_bundle_paths_and_bytes(tmp_path: Path, monke
     toc.write_text(repr(collected + [('unrelated/Info.plist', str(unrelated), 'DATA')]))
     with pytest.raises(ValueError, match='unowned third-party input: unrelated/Info.plist'):
         licenses.collect_licenses(root, app, toc, distributions=[dist])
+    unreviewed = tmp_path / 'Cellar/xz/5.8.5/lib/liblzma.5.dylib'
+    unreviewed.parent.mkdir(parents=True)
+    unreviewed.write_bytes(lzma.read_bytes())
+    toc.write_text(repr([(d, str(unreviewed) if d == 'liblzma.5.dylib' else s, k) for d, s, k in collected]))
+    with pytest.raises(ValueError, match='unreviewed interpreter library source'):
+        licenses.collect_licenses(root, app, toc, distributions=[dist])
+    toc.write_text(repr(collected))
+    dist.metadata['License-Expression'] = 'GPL-3.0-only'
+    with pytest.raises(ValueError, match='copyleft package requires a separately reviewed combination'):
+        licenses.collect_licenses(root, tmp_path / 'Rejected.app', toc, distributions=[dist])

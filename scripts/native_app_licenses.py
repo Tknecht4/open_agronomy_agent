@@ -207,8 +207,16 @@ def collect_licenses(root: Path, app: Path, toc: Path, *, distributions: Iterabl
             # Non-wheel interpreter libraries need an exact reviewed record too.
             name = "interpreter-libraries"
             if not any(re.fullmatch(x, path.name) for x in policy["interpreter_binary_patterns"]):
-                raise ValueError(f"unowned native input: {destination} ({path.name})")
-            interpreter_inputs.append({"destination": destination, "source_basename": path.name, "sha256": sha256(path)})
+                raise ValueError(f"unowned native input: {destination} ({path})")
+            provenance = {}
+            identity = policy.get("interpreter_library_sources", {}).get(path.name)
+            if identity:
+                version = path.parent.parent.name.split("_")[0]
+                if (path.parent.name != "lib" or path.parent.parent.parent.name != identity["formula"]
+                        or path.parent.parent.parent.parent.name != "Cellar" or version not in identity["versions"]):
+                    raise ValueError(f"unreviewed interpreter library source: {destination} ({path})")
+                provenance = {"source_formula": identity["formula"], "source_version": version}
+            interpreter_inputs.append({"destination": destination, "source_basename": path.name, "sha256": sha256(path), **provenance})
         else:
             raise ValueError(f"unowned third-party input: {destination}")
     legal = app / "Contents/Resources/legal"
@@ -218,7 +226,9 @@ def collect_licenses(root: Path, app: Path, toc: Path, *, distributions: Iterabl
     packages = []
     for name, (dist, records) in sorted(selected.items()):
         declaration = dist.metadata.get("License-Expression") or dist.metadata.get("License") or "See upstream legal texts"
-        if re.search(r"\bA?GPL|LGPL", declaration, re.I) and name not in {"pyinstaller", "scipy"}:
+        reviewed_legacy_text = (not dist.metadata.get("License-Expression") and "\n" in declaration
+                                and f"{name}=={dist.version}" in policy.get("license_metadata_exceptions", {}))
+        if re.search(r"\bA?GPL|LGPL", declaration, re.I) and name not in {"pyinstaller", "scipy"} and not reviewed_legacy_text:
             raise ValueError(f"copyleft package requires a separately reviewed combination: {name}")
         native = [row for row in records if row[2] in {"BINARY", "EXTENSION"}]
         if native and f"{name}=={dist.version}" not in policy["native_packages"]:
