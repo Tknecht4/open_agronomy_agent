@@ -116,7 +116,10 @@ def test_ordinary_ci_and_source_contracts_are_still_automatic():
     assert "frontend/**" in triggers(config)["pull_request"]["paths"]
     steps = config["jobs"]["build-and-smoke"]["steps"]
     source = next(step for step in steps if step["name"] == "Verify desktop source contracts")
-    assert "if" not in source
+    # Pull requests always test the exact source; the separate manual licensing
+    # build may omit that duplicate test run while retaining its binary checks.
+    assert source["if"] == ("github.event_name != 'workflow_dispatch' || inputs.verify_native_licenses != true"
+                            " || inputs.run_native_candidate == true")
     assert "tests/test_macos_app_package.py" in source["run"]
     assert "npm run typecheck" in source["run"] and "npm test" in source["run"]
     assert "Mac source contracts" in config["jobs"]["build-and-smoke"]["name"]

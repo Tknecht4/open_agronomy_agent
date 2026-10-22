@@ -224,7 +224,12 @@ def _check_lgpl_replacement(app: Path, stage: Path) -> dict[str, object]:
         str(helper / "Contents/MacOS/OpenAgronomyBackend"), "dependency-check",
         "--runtime-root", str(copy / "Contents/Resources/runtime"),
         "--state-root", str(stage / "license-check-state"), "--require-bundle-manifest",
-    ], check=True, capture_output=True, text=True)
+    ], check=False, capture_output=True, text=True)
+    diagnostic = {"returncode": completed.returncode,
+                  "stdout": completed.stdout[-12000:], "stderr": completed.stderr[-12000:]}
+    (stage / "library-replacement-check.json").write_text(json.dumps(diagnostic, indent=2) + "\n")
+    if completed.returncode:
+        raise ValueError(f"modified-library packaged runtime failed: {json.dumps(diagnostic)}")
     result = json.loads(completed.stdout.strip().splitlines()[-1])
     if result.get("phase") != "verified":
         raise ValueError("modified-library packaged runtime did not pass")

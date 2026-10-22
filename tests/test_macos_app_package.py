@@ -15,7 +15,7 @@ from scripts.build_macos_app import _asset_manifest, _audit_macho_links, _check_
 from scripts.smoke_macos_app import _startup_summary
 
 
-@pytest.mark.parametrize('loaded_from', ['changed-copy', 'original-app', 'missing-quadmath'])
+@pytest.mark.parametrize('loaded_from', ['changed-copy', 'original-app', 'missing-quadmath', 'backend-error'])
 def test_library_replacement_requires_loading_every_changed_copy(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, loaded_from: str,
 ) -> None:
@@ -36,15 +36,21 @@ def test_library_replacement_requires_loading_every_changed_copy(
         elif command[0] == 'codesign' and '--identifier' in command:
             Path(command[-1]).write_bytes(b'changed signed library')
         elif 'dependency-check' in command:
+            if loaded_from == 'backend-error':
+                return SimpleNamespace(returncode=1, stdout='dependency import failed', stderr='exact loader error')
             base = app if loaded_from == 'original-app' else copy
             loaded = [str(base / path) for path in libraries
                       if loaded_from != 'missing-quadmath' or 'libquadmath' not in path.name]
-            return SimpleNamespace(stdout=json.dumps({'phase': 'verified', 'loaded_lgpl_libraries': loaded}))
+            return SimpleNamespace(returncode=0, stdout=json.dumps({'phase': 'verified', 'loaded_lgpl_libraries': loaded}), stderr='')
         return SimpleNamespace(stdout='')
     monkeypatch.setattr('scripts.build_macos_app.subprocess.run', run)
     if loaded_from == 'changed-copy':
         assert _check_lgpl_replacement(app, stage)['status'] == 'verified'
         assert not copy.exists()
+    elif loaded_from == 'backend-error':
+        with pytest.raises(ValueError, match='exact loader error'):
+            _check_lgpl_replacement(app, stage)
+        assert json.loads((stage / 'library-replacement-check.json').read_text())['returncode'] == 1
     else:
         with pytest.raises(ValueError, match='did not load every changed library from its app copy'):
             _check_lgpl_replacement(app, stage)

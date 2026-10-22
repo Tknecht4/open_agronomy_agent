@@ -103,6 +103,7 @@ jobs:
         run: npm ci
         working-directory: frontend
       - name: Verify desktop source contracts
+        if: github.event_name != 'workflow_dispatch' || inputs.verify_native_licenses != true || inputs.run_native_candidate == true
         run: |
           PYTHONPATH=src python -m pytest -q -n 0 \
             tests/test_macos_app_package.py tests/test_native_app_licenses.py tests/test_project_licensing.py tests/test_runtime_paths.py \
@@ -130,13 +131,15 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent \
             "outputs/macos/Open Agronomy.app" "outputs/macos/native-license-candidate.zip"
       - name: Preserve native licence evidence
-        if: github.event_name == 'workflow_dispatch' && (inputs.verify_native_licenses == true || inputs.run_native_candidate == true)
+        if: always() && github.event_name == 'workflow_dispatch' && (inputs.verify_native_licenses == true || inputs.run_native_candidate == true)
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: native-licence-evidence
           path: |
             outputs/macos/*.build.json
-            outputs/macos/Open Agronomy.app/Contents/Resources/legal/inventory.json
+            outputs/macos/**/Contents/Resources/legal/inventory.json
+            outputs/macos/**/library-replacement-check.json
+            outputs/macos/**/warn-OpenAgronomyBackend.txt
           retention-days: 14
       - name: Preserve native licence candidate
         if: github.event_name == 'workflow_dispatch' && inputs.verify_native_licenses == true && inputs.run_native_candidate != true
