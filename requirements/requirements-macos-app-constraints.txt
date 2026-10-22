@@ -84,7 +84,7 @@ paginate==0.5.7
 pandas==3.0.6
 pathspec==1.1.1
 pgvector==0.5.1
-pillow==12.3.0
+pillow==13.0.0
 platformdirs==4.13.0
 pluggy==1.6.0
 propcache==0.5.4
