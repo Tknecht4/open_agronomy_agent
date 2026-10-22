@@ -304,6 +304,9 @@ def build(root: Path, output: Path, *, python: Path, version: str) -> dict[str, 
                 "--collect-all", "mlx", "--collect-all", "mlx_lm",
                 "--collect-all", "mlx_vlm", "--collect-submodules", "agno",
                 "--collect-submodules", "transformers",
+                # Cython imports sibling extensions dynamically, outside the
+                # static import graph (for example pyogrio._geometry).
+                "--collect-submodules", "pyogrio",
                 *[arg for module in EXCLUDED_MODULES for arg in ("--exclude-module", module)],
                 str(root / "macos_app/backend.py"),
             ],

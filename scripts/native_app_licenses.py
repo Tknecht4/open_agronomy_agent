@@ -31,7 +31,7 @@ LEGAL = re.compile(r"(?:^|[/_-])(licen[cs]e|copying|notice|authors|copyright|pat
 EXCLUDED_MODULES = (
     "cv2", "psycopg", "psycopg_binary", "pymupdf", "fitz", "torch",
     "torchvision", "torchaudio", "tensorflow", "jax", "numba", "llvmlite",
-    "sounddevice", "miniaudio", "rasterio", "pyflwdir",
+    "sounddevice", "miniaudio", "rasterio", "pyflwdir", "pyogrio.tests",
 )
 FORBIDDEN = re.compile(r"(?:^|[/_.-])(cv2|fitz|pymupdf|psycopg|psycopg_binary|libx264|libx265|libavcodec|libavformat)(?:[/_.-]|$)", re.I)
 
