@@ -124,13 +124,18 @@ def test_ordinary_ci_and_source_contracts_are_still_automatic():
 
 def test_all_packager_model_and_publication_entrypoints_are_gated():
     mac = workflow("macos-app.yml")
-    sensitive = ("scripts/build_macos_app.py", "scripts.smoke_macos_first_run",
+    sensitive = ("scripts.smoke_macos_first_run",
                  "scripts/smoke_macos_app.py", "scripts/smoke_macos_launcher.py",
                  "scripts.smoke_macos_offline", "codesign --verify", "ditto -c")
     guarded = authority_steps(mac, "run_native_candidate")
     for step in mac["jobs"]["build-and-smoke"]["steps"]:
         if any(token in step.get("run", "") for token in sensitive):
-            assert step in guarded
+            assert step in guarded or step.get("name") == "Build and verify native distribution licences"
+    packaging = [s for s in mac["jobs"]["build-and-smoke"]["steps"] if "scripts/build_macos_app.py" in s.get("run", "")]
+    assert len(packaging) == 2
+    assert packaging[0] in guarded
+    assert packaging[1]["if"] == ("github.event_name == 'workflow_dispatch' && inputs.verify_native_licenses == true && inputs.run_native_candidate != true")
+    assert triggers(mac)["workflow_dispatch"]["inputs"]["verify_native_licenses"]["default"] is False
     docs = workflow("docs.yml")
     guarded = authority_steps(docs, "publish_docs")
     for step in docs["jobs"]["build"]["steps"]:

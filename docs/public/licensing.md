@@ -89,5 +89,11 @@ Production frontend builds include `LICENSE.txt`, `NOTICE.txt`, and
 texts for the installed, lockfile-verified production dependencies and Vite's
 bundled helpers. Missing required packages, version mismatches, or absent
 licence texts fail the build. Container and Mac builds copy these files with
-the generated frontend. This check covers the frontend payload; Python and
-native dependency obligations remain separate release requirements.
+the generated frontend. The native builder additionally inventories the actual PyInstaller inputs,
+checks every bundled Mach-O owner, preserves complete upstream notices, and
+ships the required package and native-library source/build inputs in the app
+`Contents/Resources/legal/`. Optional OpenCV/GPL codecs, AGPL document tools,
+and Postgres drivers are excluded from the SQLite desktop profile. GEOS,
+SpatiaLite and libquadmath retain LGPL rights, including modification and
+replacement. Missing source, notices, ownership or a reviewed native version
+blocks the app build. See the [native distribution procedure](operations/native-licensing.md).

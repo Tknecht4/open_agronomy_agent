@@ -50,6 +50,7 @@ export function writeLicenseNotices(frontendRoot, output) {
     'THIRD_PARTY_LICENSES.txt': dependencyNotices(frontendRoot),
     'LICENSE.txt': fs.readFileSync(path.join(repositoryRoot, 'LICENSE'), 'utf8'),
     'NOTICE.txt': fs.readFileSync(path.join(repositoryRoot, 'NOTICE'), 'utf8'),
+    'LICENSE_NOTICES.html': '<!doctype html><html lang="en"><meta charset="utf-8"><title>Open Agronomy licences</title><body><h1>Open Agronomy licences</h1><p><a href="LICENSE.txt">Project licence</a> · <a href="NOTICE.txt">Project notice</a> · <a href="THIRD_PARTY_LICENSES.txt">Complete frontend dependency notices</a></p><!-- native-notices --></body></html>\n',
   }
   fs.mkdirSync(output, { recursive: true })
   for (const [name, text] of Object.entries(files)) fs.writeFileSync(path.join(output, name), text)

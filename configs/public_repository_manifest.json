@@ -7,6 +7,7 @@
     ".github/workflows/docs.yml",
     ".github/workflows/macos-app.yml",
     ".dockerignore",
+    ".gitattributes",
     ".gitignore",
     "Containerfile",
     "Containerfile.overlay",
@@ -816,7 +817,9 @@
     "data/derived/rag/offline_agronomy/ask_science/v1/source_receipt.json",
     "data/derived/rag/offline_agronomy/ask_science/v1/store_manifest.json",
     "data/manifests/ask_science_context_admission_v1.json",
-    "data/manifests/ask_science_context_admission_v2.json"
+    "data/manifests/ask_science_context_admission_v2.json",
+    "scripts/native_app_licenses.py",
+    "tests/test_native_app_licenses.py"
   ],
   "trees": [
     "src",

@@ -6,6 +6,12 @@ on:
       - ".github/workflows/macos-app.yml"
       - "macos_app/**"
       - "scripts/build_macos_app.py"
+      - "scripts/native_app_licenses.py"
+      - "LICENSE"
+      - "NOTICE"
+      - "LICENSES/**"
+      - "THIRD_PARTY_NOTICES.md"
+      - "pyproject.toml"
       - "scripts/smoke_macos_app.py"
       - "scripts/smoke_macos_first_run.py"
       - "scripts/smoke_macos_launcher.py"
@@ -26,17 +32,21 @@ on:
         description: "Build the main Mac candidate and run real model smoke checks"
         type: boolean
         default: false
+      verify_native_licenses:
+        description: "Build and verify native redistribution licences without model downloads"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: macos-app-${{ github.workflow }}-${{ github.ref }}-${{ inputs.run_native_candidate == true }}
+  group: macos-app-${{ github.workflow }}-${{ github.ref }}-${{ inputs.run_native_candidate == true }}-${{ inputs.verify_native_licenses == true }}
   cancel-in-progress: true
 
 jobs:
   build-and-smoke:
-    name: ${{ github.event_name == 'workflow_dispatch' && inputs.run_native_candidate == true && github.ref == 'refs/heads/main' && 'Mac native candidate (manual)' || 'Mac source contracts' }}
+    name: ${{ github.event_name == 'workflow_dispatch' && inputs.verify_native_licenses == true && 'Mac native licensing' || github.event_name == 'workflow_dispatch' && inputs.run_native_candidate == true && github.ref == 'refs/heads/main' && 'Mac native candidate (manual)' || 'Mac source contracts' }}
     runs-on: macos-26
     timeout-minutes: 90
     env:
@@ -54,7 +64,7 @@ jobs:
       - name: Set up Python 3.12
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.12"
+          python-version: "3.12.13"
       - name: Set up Node 24
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -88,7 +98,7 @@ jobs:
       - name: Verify desktop source contracts
         run: |
           PYTHONPATH=src python -m pytest -q -n 0 \
-            tests/test_macos_app_package.py tests/test_runtime_paths.py \
+            tests/test_macos_app_package.py tests/test_native_app_licenses.py tests/test_project_licensing.py tests/test_runtime_paths.py \
             tests/test_desktop_local_auth.py tests/test_local_runtime_boundaries.py \
             tests/test_run_cockpit_cleanup.py tests/test_field_lan_launch.py
           cd frontend
@@ -102,6 +112,26 @@ jobs:
             --output "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app"
           python scripts/build_macos_app.py \
             --output "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app"
+      - name: Build and verify native distribution licences
+        if: github.event_name == 'workflow_dispatch' && inputs.verify_native_licenses == true && inputs.run_native_candidate != true
+        run: |
+          mkdir -p outputs/macos
+          python scripts/build_macos_app.py --preflight \
+            --output "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app"
+          python scripts/build_macos_app.py \
+            --output "$GITHUB_WORKSPACE/outputs/macos/Open Agronomy.app"
+          ditto -c -k --sequesterRsrc --keepParent \
+            "outputs/macos/Open Agronomy.app" "outputs/macos/native-license-candidate.zip"
+      - name: Preserve native licence evidence
+        if: github.event_name == 'workflow_dispatch' && (inputs.verify_native_licenses == true || inputs.run_native_candidate == true)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: native-licence-evidence
+          path: |
+            outputs/macos/native-license-candidate.zip
+            outputs/macos/*.build.json
+            outputs/macos/Open Agronomy.app/Contents/Resources/legal/inventory.json
+          retention-days: 14
       - name: Smoke native first-run model installation
         if: github.event_name == 'workflow_dispatch' && inputs.run_native_candidate == true && github.ref == 'refs/heads/main'
         run: |

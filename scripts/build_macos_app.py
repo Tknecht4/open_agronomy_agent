@@ -20,6 +20,11 @@ import sys
 import tempfile
 from pathlib import Path
 
+# Works both as a script and when imported by the source-contract tests.
+if str(Path(__file__).resolve().parents[1]) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from scripts.native_app_licenses import EXCLUDED_MODULES, collect_licenses, verify_bundle
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = "open_agronomy_agent.macos_app_runtime.v1"
@@ -191,6 +196,42 @@ def _audit_macho_links(app: Path) -> int:
     return checked
 
 
+def _check_lgpl_replacement(app: Path, stage: Path) -> dict[str, object]:
+    """Prove a re-signed library can run in a user-modified copy of this app.
+
+    This is an installation/loader check, not a byte reproducibility claim for
+    upstream wheel producers' complete build environments.
+    """
+    copy = stage / "Library Replacement Check.app"
+    subprocess.run(["cp", "-cR", str(app), str(copy)], check=True)
+    changed = []
+    frameworks = copy / "Contents/Helpers/OpenAgronomyBackend.app/Contents/Frameworks"
+    for path in sorted(frameworks.rglob("*.dylib")):
+        if not path.is_symlink() and path.name.startswith(("libgeos", "libgdal", "libquadmath")):
+            before = _sha256(path)
+            subprocess.run(["codesign", "--force", "--sign", "-", "--identifier",
+                            "io.openagronomy.library-replacement-check", str(path)], check=True)
+            if _sha256(path) == before:
+                raise ValueError("replacement check did not change the library signature")
+            changed.append(path.relative_to(copy).as_posix())
+    if not all(any(name in path for path in changed) for name in ("libgeos", "libgdal", "libquadmath")):
+        raise ValueError("replacement check did not exercise every LGPL library family")
+    helper = copy / "Contents/Helpers/OpenAgronomyBackend.app"
+    subprocess.run(["codesign", "--force", "--sign", "-", str(helper)], check=True)
+    subprocess.run(["codesign", "--force", "--sign", "-", str(copy)], check=True)
+    subprocess.run(["codesign", "--verify", "--deep", "--strict", str(copy)], check=True)
+    completed = subprocess.run([
+        str(helper / "Contents/MacOS/OpenAgronomyBackend"), "dependency-check",
+        "--runtime-root", str(copy / "Contents/Resources/runtime"),
+        "--state-root", str(stage / "license-check-state"), "--require-bundle-manifest",
+    ], check=True, capture_output=True, text=True)
+    result = json.loads(completed.stdout.strip().splitlines()[-1])
+    if result.get("phase") != "verified":
+        raise ValueError("modified-library packaged runtime did not pass")
+    shutil.rmtree(copy)
+    return {"status": "verified", "modified_libraries": changed, "packaged_runtime": result}
+
+
 def build(root: Path, output: Path, *, python: Path, version: str) -> dict[str, object]:
     report = preflight(root, output, python=python)
     if not report["space_ready"]:
@@ -241,10 +282,6 @@ def build(root: Path, output: Path, *, python: Path, version: str) -> dict[str, 
             if item.is_file():
                 relative = item.relative_to(root)
                 _copy_asset(item, resources / relative)
-        manifest = _asset_manifest(resources)
-        (contents / "Resources/runtime-manifest.json").write_text(
-            json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
-        )
         (contents / "Info.plist").write_bytes(_info_plist(version))
         subprocess.run(
             [
@@ -258,6 +295,7 @@ def build(root: Path, output: Path, *, python: Path, version: str) -> dict[str, 
                 "--collect-all", "mlx", "--collect-all", "mlx_lm",
                 "--collect-all", "mlx_vlm", "--collect-submodules", "agno",
                 "--collect-submodules", "transformers",
+                *[arg for module in EXCLUDED_MODULES for arg in ("--exclude-module", module)],
                 str(root / "macos_app/backend.py"),
             ],
             cwd=root,
@@ -271,6 +309,13 @@ def build(root: Path, output: Path, *, python: Path, version: str) -> dict[str, 
             ],
             check=True,
         )
+        legal_inventory = collect_licenses(
+            root, app, stage / "pyinstaller-work/OpenAgronomyBackend/Analysis-00.toc"
+        )
+        manifest = _asset_manifest(resources)
+        (contents / "Resources/runtime-manifest.json").write_text(
+            json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+        )
         macho_count = _audit_macho_links(app)
         subprocess.run(
             ["codesign", "--verify", "--deep", "--strict", str(helpers / "OpenAgronomyBackend.app")],
@@ -280,6 +325,8 @@ def build(root: Path, output: Path, *, python: Path, version: str) -> dict[str, 
         subprocess.run(["codesign", "--verify", "--deep", "--strict", str(app)], check=True)
         if not (helpers / "OpenAgronomyBackend.app/Contents/MacOS/OpenAgronomyBackend").is_file():
             raise ValueError("PyInstaller did not produce the backend executable")
+        legal_verification = verify_bundle(app, legal_inventory)
+        replacement_verification = _check_lgpl_replacement(app, stage)
         app.rename(output)
     except Exception:
         print(f"Unpromoted failed build retained at {stage}", file=sys.stderr)
@@ -293,6 +340,8 @@ def build(root: Path, output: Path, *, python: Path, version: str) -> dict[str, 
         "runtime_contract_sha256": manifest["contract_sha256"],
         "asset_file_count": len(manifest["files"]),
         "audited_macho_file_count": macho_count,
+        "dependency_licensing": legal_verification,
+        "lgpl_library_replacement": replacement_verification,
         "output": str(output),
     }
     receipt_path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")

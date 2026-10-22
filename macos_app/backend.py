@@ -425,7 +425,7 @@ def serve(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("status", "install-model", "serve"))
+    parser.add_argument("command", choices=("status", "install-model", "serve", "dependency-check"))
     parser.add_argument("--runtime-root", type=Path, required=True)
     parser.add_argument("--state-root", type=Path, required=True)
     parser.add_argument("--model-cache", type=Path)
@@ -436,6 +436,25 @@ def main(argv: list[str] | None = None) -> int:
     state_root: Path | None = None
     try:
         runtime_root, state_root, model_cache = _configure_runtime(args)
+        if args.command == "dependency-check":
+            # Exercises the distributed libraries without a model download,
+            # a user database, or an external service.
+            import shapely
+            import pyogrio
+            import pyproj
+            import scipy.special
+            from mlx_lm import load as _load
+            from shapely.geometry import Point
+            point = pyproj.Transformer.from_crs(4326, 3857, always_xy=True).transform(1, 1)
+            if Point(0, 0).buffer(1).area <= 3 or point[0] <= 100000:
+                raise ValueError("bundled geometry libraries failed their smoke check")
+            if scipy.special.expit(0) != 0.5 or not callable(_load):
+                raise ValueError("bundled numerical/model libraries failed their smoke check")
+            print(json.dumps({"phase": "verified", "geos": shapely.geos_version_string,
+                              "gdal": pyogrio.__gdal_version_string__,
+                              "proj": pyproj.proj_version_str,
+                              "model_downloaded": False}))
+            return 0
         if args.command == "status":
             try:
                 receipt = verify_model_receipt(runtime_root, state_root, model_cache)

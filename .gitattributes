@@ -1,0 +1,3 @@
+
+# Preserve verbatim upstream licence notices, including original whitespace.
+macos_app/notices/** -whitespace

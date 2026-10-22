@@ -87,6 +87,7 @@ nav:
       - Release evaluation: operations/release-evaluation.md
       - Use the workspace: operations/workspace.md
       - Native setup: operations/native-setup.md
+      - Native distribution licensing: operations/native-licensing.md
       - Field uploads and imagery pilot: operations/field-data-pilot.md
       - Geospatial foundation and terrain: operations/geospatial-foundation.md
       - Compact offline data setup: operations/offline-data-setup.md

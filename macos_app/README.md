@@ -83,3 +83,22 @@ The cookie session currently expires after eight hours. **Reopen and reconnect**
 restarts the owned backend and issues fresh pairing credentials, so an expired
 or deleted browser cookie can be recovered without quitting the app. This
 interrupts any in-flight answer; background browser tabs do not renew themselves.
+
+## Distribution licensing
+
+The app builder inventories the actual PyInstaller Analysis inputs and checks
+every Mach-O in the signed app against a collected owner. It ships complete
+upstream notices, source archives where required, and native-library source and
+build inputs under `Contents/Resources/legal/`. Its receipt records the exact
+source revision, analysis hash and signed binary hashes. Missing ownership,
+legal text, corresponding source or a reviewed native version fails the build.
+Source downloads during packaging are explicit build inputs; the installed app
+does not fetch dependency compliance material.
+
+The SQLite desktop profile excludes optional Postgres drivers, AGPL PDF tools,
+OpenCV/GPL codecs and unused audio/training engines. GEOS, SpatiaLite and
+libquadmath retain LGPL rights and remain replaceable shared libraries. Read
+[the complete runtime notice and replacement procedure](THIRD_PARTY_RUNTIME.md).
+The explicit `verify_native_licenses` workflow input builds the actual app and
+preserves its licensing evidence on the selected branch. Ordinary PRs keep
+source checks; model download and generation require the requested main run.

@@ -138,7 +138,7 @@ function AboutPage() {
           <a href="https://polyformproject.org/licenses/noncommercial/1.0.0">Read the licence</a>
           {' · '}
           <a href="https://tknecht4.github.io/open_agronomy_agent/licensing/">Licensing and data-source terms</a>
-          {import.meta.env.PROD ? <>{' · '}<a href="/THIRD_PARTY_LICENSES.txt">Bundled dependency notices</a></> : null}
+          {import.meta.env.PROD ? <>{' · '}<a href="/LICENSE_NOTICES.html">Bundled dependency notices</a></> : null}
         </p>
       </section>
     </div>

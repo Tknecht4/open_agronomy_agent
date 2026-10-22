@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-10-20T04:44:29+00:00",
+  "generated_at": "2026-10-22T19:19:43+00:00",
   "status": "pass",
-  "contract_sha256": "bc8e136c9d011976f9e9ecc3e768da44383db761b1b2c0cb5badfec600417518",
+  "contract_sha256": "1fd20be31d722987a7e7e4b32c28dbea40ef46763ad05c33fdd5e5211d22e530",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -420,8 +420,14 @@
     {
       "path": "frontend/src",
       "file_count": 119,
-      "bytes": 1757753,
-      "sha256": "bfe6253e9b857838a491fe98b3522836b1800f000a24b2cc82c43f3e96cbe785"
+      "bytes": 1758545,
+      "sha256": "94b30bee5ee1fdbbef11d8afa9190ee729951348da220a8083b62a55210d01cc"
+    },
+    {
+      "path": "frontend/scripts",
+      "file_count": 2,
+      "bytes": 6370,
+      "sha256": "71cfbaf09121f09e23210559ef1414b736cd2eff025b140eec5d52f5ae258012"
     },
     {
       "path": "frontend/public",
@@ -431,15 +437,15 @@
     },
     {
       "path": "scripts",
-      "file_count": 148,
-      "bytes": 1943463,
-      "sha256": "12d0cb00f089d9178cb2627b45dbc22d231798fcb1f68fda0d6d9f443c3d2824"
+      "file_count": 149,
+      "bytes": 1968848,
+      "sha256": "21420261c04ae1b9ff07dddb792a1ec0cd4407ee9dc31cbb38ef4c3b57b852a0"
     },
     {
       "path": "configs",
       "file_count": 92,
-      "bytes": 299981,
-      "sha256": "3a68e91f139fbb195532f0878652d6c1d2fa7db3cdeb0b141a9891859f09b48a"
+      "bytes": 300166,
+      "sha256": "be3f401b2a7276d1f0e3f350acda52fb5261e448b9f2c7329aaff487be8a3f2b"
     },
     {
       "path": "data/manifests",
@@ -461,9 +467,9 @@
     },
     {
       "path": "docs/public",
-      "file_count": 100,
-      "bytes": 10030066,
-      "sha256": "4221f80b3a65d244e88130b0598673dc48b3d816967600ebf1f96e1879125ce6"
+      "file_count": 102,
+      "bytes": 10039173,
+      "sha256": "c4b49f235ac86474f4599eba6dc2559df46605bd1e5d2e5424297abebb656722"
     }
   ],
   "geo_cache_seed": {
@@ -498,20 +504,32 @@
     {
       "path": "LICENSE",
       "role": "runtime_control",
+      "bytes": 4550,
+      "sha256": "7573a6c93397a51d957542a3e258750699c3bf1c437b4b85541ec551b87066a6"
+    },
+    {
+      "path": "NOTICE",
+      "role": "runtime_control",
+      "bytes": 895,
+      "sha256": "1be56e298af7d23dd8e5f75b57abb237c22e24d74ea0551a878865a8d39de36f"
+    },
+    {
+      "path": "LICENSES/Apache-2.0.txt",
+      "role": "runtime_control",
       "bytes": 11358,
       "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
       "role": "runtime_control",
-      "bytes": 7731,
-      "sha256": "aea10404626ff972a117fb81fe589769d8e175d37adeb548d4fb921243963736"
+      "bytes": 10594,
+      "sha256": "dc8cecb0974cfa04b8853e5a069639f967ba647e35372faddb3bf00cbffc578c"
     },
     {
       "path": "Containerfile",
       "role": "runtime_control",
-      "bytes": 3911,
-      "sha256": "b4d368a562c1d650d398e75ca8f8ed540acacc289a2341ad5e495dc780d870ed"
+      "bytes": 4021,
+      "sha256": "8af9bf4c93cb10ae459014d8f5beb9fe22717dc85ff45a4504daf4846971768a"
     },
     {
       "path": "Containerfile.overlay",
@@ -534,8 +552,8 @@
     {
       "path": "pyproject.toml",
       "role": "runtime_control",
-      "bytes": 1401,
-      "sha256": "51a870c99c894205a87fffce8bccb8f75965d05b7b06e760d766e7916d9e884f"
+      "bytes": 1423,
+      "sha256": "27a1d564def9773eb87112c05e8189e7ce0380a4f794c8a49411249623c574b7"
     },
     {
       "path": "docker-compose.edge.yml",
@@ -546,14 +564,14 @@
     {
       "path": "frontend/package.json",
       "role": "runtime_control",
-      "bytes": 903,
-      "sha256": "3d321710f4afb1c697c9ed6dfeef4a1aef2d67f84b76e1109ca69739aa56a38c"
+      "bytes": 1013,
+      "sha256": "6415508aba14b0badea3d89b084871e6f1a553262238d19284b2caf1e43e53e3"
     },
     {
       "path": "frontend/package-lock.json",
       "role": "runtime_control",
-      "bytes": 135591,
-      "sha256": "c29c1d63e9e84b8e126873e3888752836488cb4cb2bad13614e84cb934d32c87"
+      "bytes": 135609,
+      "sha256": "3772c3c1dce17028cb41afad481122ae4c477ef102f014f2de14fd57cb0ca50b"
     },
     {
       "path": "frontend/index.html",

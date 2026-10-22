@@ -132,7 +132,16 @@ Frontend production builds ship the full locked runtime package copyright and
 licence texts in `frontend/dist/THIRD_PARTY_LICENSES.txt`, plus the project
 `LICENSE.txt` and `NOTICE.txt`. The build verifies installed package versions
 and refuses missing required licence texts. These files travel with the
-frontend in the container and desktop distributions.
+frontend in the container and desktop distributions. Native builds additionally
+include `Contents/Resources/legal/inventory.json`, complete upstream notices,
+exact corresponding source archives and native build recipes. Shapely bundles
+LGPL-2.1 GEOS; pyogrio bundles GDAL with GEOS and LGPL-2.1 SpatiaLite; SciPy
+bundles LGPL-2.1 libquadmath and GCC runtimes with the GCC runtime exception.
+These libraries preserve their own permissions, including commercial use,
+modification and debugging of library modifications. See
+`macos_app/THIRD_PARTY_RUNTIME.md` for source and library replacement details.
+The SQLite Mac app explicitly excludes Psycopg, PyMuPDF and OpenCV/GPL codecs;
+source-checkout and container dependency selections retain their own terms.
 
 Model weights are not redistributed in this repository or portable archive.
 The user downloads the pinned `mlx-community/gemma-4-e2b-it-4bit` revision

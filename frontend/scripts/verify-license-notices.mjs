@@ -13,8 +13,8 @@ test('the real locked frontend ships complete upstream and project notices', () 
   try {
     const files = writeLicenseNotices(frontendRoot, output)
     const text = fs.readFileSync(path.join(output, 'THIRD_PARTY_LICENSES.txt'), 'utf8')
-    assert.ok(text.includes('react@18.3.1'))
-    assert.ok(text.includes('Copyright (c) Facebook, Inc. and its affiliates.'))
+    assert.ok(text.includes('react@19.3.0'))
+    assert.ok(text.includes('Copyright (c) Meta Platforms, Inc. and affiliates.'))
     assert.ok(text.includes('Permission is hereby granted, free of charge'))
     assert.ok(text.includes('leaflet@1.9.4'))
     assert.ok(text.includes('Redistribution and use in source and binary forms'))
@@ -24,7 +24,8 @@ test('the real locked frontend ships complete upstream and project notices', () 
       assert.equal(fs.readFileSync(path.join(output, target), 'utf8'),
         fs.readFileSync(path.join(frontendRoot, '..', source), 'utf8'))
     }
-    assert.equal(files.length, 3)
+    assert.equal(files.length, 4)
+    assert.ok(fs.readFileSync(path.join(output, 'LICENSE_NOTICES.html'), 'utf8').includes('THIRD_PARTY_LICENSES.txt'))
   } finally { fs.rmSync(output, { recursive: true, force: true }) }
 })
 
