@@ -93,6 +93,15 @@ separate gate.
 
 ## Validation
 
+Production builds verify installed production-package versions against the
+lockfile and include their full copyright/licence texts plus Vite helper
+notices in `dist/THIRD_PARTY_LICENSES.txt`. They also copy the project
+`LICENSE.txt` and `NOTICE.txt`. Missing required packages or licence texts fail
+the build. The container and Mac builders ship these files with `dist/`.
+The standalone production frontend image uses the repository root as its
+build context so the project legal files are available:
+`docker build -f frontend/Dockerfile.launch .`.
+
 Development and tests require Node 24 LTS. Product code retains its ES2020
 browser contract; Node-hosted tests have a separate ES2022 typecheck.
 

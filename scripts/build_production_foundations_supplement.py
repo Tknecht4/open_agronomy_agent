@@ -362,6 +362,8 @@ def build(seed_path: Path, sources_path: Path, output: Path, *, store_id: str = 
             "knowledge_domains": sorted(set(item.get("knowledge_domains") or []) | {"farmer_knowledge"}),
             "authority_tier": "internal_synthesis",
             "rights_status": "project_authored",
+            # This builder replays the frozen v1/v2 seeds and their earlier
+            # Apache grant, not the current project software licence.
             "license": "Apache-2.0_project_text_only",
             "retrieval_policy": "context_only",
             "raw_sha256": raw_sha,

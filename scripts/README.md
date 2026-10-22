@@ -250,6 +250,9 @@ For the separate v2 method candidate, pass
 Compose its profile with `--supplement-store` pointing at that release
 manifest. The checked-in v2 config and policy are non-active and source-hash
 bound.
+These builders replay frozen v1/v2 source text with its earlier Apache grant;
+that artifact licence does not describe the current PolyForm Noncommercial
+project software licence. New source releases need their own rights review.
 `build_production_foundations_profile.py` composes an ignored candidate profile
 by default. The checked-in `configs/rag_production_foundations_candidate.yaml`
 and companion policy are nonselectable development artifacts. Writing the

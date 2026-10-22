@@ -93,7 +93,8 @@ def build_sbom(root: Path) -> dict[str, Any]:
         "downloadLocation": "NOASSERTION",
         "filesAnalyzed": False,
         "licenseConcluded": "NOASSERTION",
-        "licenseDeclared": "NOASSERTION",
+        "licenseDeclared": "PolyForm-Noncommercial-1.0.0",
+        "comment": "Project software licence only; dependencies and bundled data retain their own terms, and earlier Apache grants remain valid.",
         "supplier": "Organization: Open Agronomy Agent project",
     }
     dependencies = [*_python_packages(requirements), *_frontend_packages(package_lock)]

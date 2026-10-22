@@ -94,7 +94,7 @@ def audit(repo_root: Path, paths: Iterable[Path]) -> dict[str, Any]:
         if candidate.is_file() and candidate.name.lower() in {"license", "license.md", "license.txt"}
     ]
     owner_actions = [] if root_licenses else [
-        "Select and add the project software licence before describing the public repository as open source."
+        "Select and add the project software licence before distributing the public repository."
     ]
     return {
         "schema_version": "open_agronomy_agent.conference_repository_hygiene.v1",

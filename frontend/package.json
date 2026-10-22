@@ -2,14 +2,14 @@
   "name": "agronomy-agent-cockpit",
   "private": true,
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "PolyForm-Noncommercial-1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/build-license-notices.mjs",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "node --test scripts/verify-license-notices.mjs && vitest run"
   },
   "dependencies": {
     "@types/leaflet": "^1.9.22",

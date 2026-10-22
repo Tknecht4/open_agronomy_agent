@@ -18,6 +18,13 @@
 
 ## Active offline corpus
 
+Project software is source-available under PolyForm Noncommercial 1.0.0.
+Each dataset, graph, and checksum-bound release keeps its recorded licence;
+non-commercial and share-alike conditions are not replaced by the software
+licence. Previously excluded sources stay excluded. See
+[Licensing and permitted use](../docs/public/licensing.md) and
+[third-party notices](../THIRD_PARTY_NOTICES.md).
+
 The active clone-contained document corpus is
 `data/derived/rag/offline_agronomy/active/`. It contains 3,086 source-exact
 rows in policy-segregated shards. Its store manifest, source receipt,

@@ -30,6 +30,8 @@ RAG_CONFIG = "configs/rag.yaml"
 MODEL_CONFIG = "configs/model.yaml"
 CONTROL_PATHS = (
     "LICENSE",
+    "NOTICE",
+    "LICENSES/Apache-2.0.txt",
     "THIRD_PARTY_NOTICES.md",
     "Containerfile",
     "Containerfile.overlay",
@@ -67,6 +69,7 @@ RUNTIME_POLICY_ROOTS: tuple[str, ...] = ()
 RUNTIME_ASSET_ROOTS = (
     "src/agronomy_agent",
     "frontend/src",
+    "frontend/scripts",
     "frontend/public",
     "scripts",
     "configs",

@@ -127,6 +127,20 @@ function AboutPage() {
           authority, crop insurance requirements, or region-specific recommendation systems.
         </p>
       </section>
+      <section>
+        <h2>Software licence</h2>
+        <p>
+          Project software is source-available under PolyForm Noncommercial 1.0.0 for permitted non-commercial uses,
+          including research and evaluation, and the institutional purposes listed in the licence. Third-party data,
+          models, and libraries retain their own terms. Earlier Apache grants remain valid.
+        </p>
+        <p>
+          <a href="https://polyformproject.org/licenses/noncommercial/1.0.0">Read the licence</a>
+          {' · '}
+          <a href="https://tknecht4.github.io/open_agronomy_agent/licensing/">Licensing and data-source terms</a>
+          {import.meta.env.PROD ? <>{' · '}<a href="/THIRD_PARTY_LICENSES.txt">Bundled dependency notices</a></> : null}
+        </p>
+      </section>
     </div>
   )
 }

@@ -4,6 +4,8 @@ WORKDIR /build/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend/index.html frontend/tsconfig.json frontend/vite.config.ts frontend/workspaceServiceWorker.ts ./
+COPY LICENSE NOTICE /build/
+COPY frontend/scripts ./scripts
 COPY frontend/public ./public
 COPY frontend/src ./src
 RUN npm run build
@@ -36,7 +38,8 @@ RUN apt-get update \
     && groupadd --gid 10001 agronomy \
     && useradd --uid 10001 --gid agronomy --home-dir /app --shell /usr/sbin/nologin agronomy
 
-COPY pyproject.toml LICENSE THIRD_PARTY_NOTICES.md ./
+COPY pyproject.toml LICENSE NOTICE THIRD_PARTY_NOTICES.md ./
+COPY LICENSES ./LICENSES
 COPY requirements/requirements-container.txt ./requirements/requirements-container.txt
 COPY src ./src
 RUN pip install --no-cache-dir -r requirements/requirements-container.txt \
@@ -72,7 +75,7 @@ ARG RELEASE_VERSION=development
 LABEL org.opencontainers.image.title="Open Agronomy Agent" \
       org.opencontainers.image.description="Local-first Canadian agronomy agent and map workspace" \
       org.opencontainers.image.source="https://github.com/open-agronomy/open-agronomy-agent" \
-      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.licenses="PolyForm-Noncommercial-1.0.0" \
       org.opencontainers.image.version="${RELEASE_VERSION}" \
       io.openagronomy.runtime-manifest-sha256="${RUNTIME_MANIFEST_SHA256}"
 

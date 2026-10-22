@@ -26,6 +26,8 @@ SCHEMA = "open_agronomy_agent.macos_app_runtime.v1"
 MIN_BUILD_FREE_BYTES = 8 * 1024**3
 ASSET_PATHS = (
     "LICENSE",
+    "NOTICE",
+    "LICENSES",
     "THIRD_PARTY_NOTICES.md",
     "pyproject.toml",
     "requirements.txt",

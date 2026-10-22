@@ -1,7 +1,9 @@
 # Third-party data and software notices
 
-This index accompanies the conference source tree and portable knowledge
-archive. It is not a substitute for the per-item licence, source, checksum,
+This index accompanies the source-available project and portable knowledge
+archive. Project software uses PolyForm Noncommercial 1.0.0; each third-party
+item retains its own terms. Project attribution is in `NOTICE`. This index is
+not a substitute for the per-item licence, source, checksum,
 jurisdiction, and currency fields preserved in the governed manifests and
 corpus rows.
 
@@ -100,20 +102,37 @@ local research lane; the public package does not include their raw tables.
 The UBC-specific source-derived examples in the Canadian research notes are
 attributed to [UBC Farm / Centre for Sustainable Food Systems](https://borealisdata.ca/dataverse/UBC_CSFS)
 and retain [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)
-terms. They are outside the project's Apache-2.0 grant and should be excluded
+terms. They are outside the project's PolyForm Noncommercial grant and should be excluded
 from an unrestricted commercial content bundle unless separately cleared.
 Their record links and restrictions remain in the Canadian research notes.
 Conditional and unknown-license entries are not grants to redistribute,
-train on, or commercially use the underlying data. The Apache-2.0 project
+train on, or commercially use the underlying data. The PolyForm Noncommercial project
 license does not replace any source-specific terms.
+
+The project's non-commercial licence does not remove source-specific
+attribution or share-alike duties, grant redistribution or adaptation rights,
+or override a source's narrower non-commercial definition. PolyForm's
+institutional permissions are not permission to use CC BY-NC-SA material
+outside that material's own terms. Previously excluded sources remain excluded
+from the public package, runtime retrieval, and training until separately
+admitted through the existing rights and evidence gates.
 
 ## Runtime dependencies and model
 
-Direct runtime dependencies use permissive licences recorded in their package
-metadata, including Agno (Apache), cryptography (Apache-2.0 or BSD-3-Clause),
-React (MIT), and Leaflet (BSD-2-Clause). The installed frontend metadata also
-includes `caniuse-lite` data under CC BY 4.0. Distribution should retain the
-licence files supplied by packaged dependencies.
+Runtime dependencies retain the licences recorded in their package metadata,
+including Agno (Apache-2.0), cryptography (Apache-2.0 or BSD-3-Clause), React
+(MIT), and Leaflet (BSD-2-Clause). Psycopg and psycopg-binary use LGPL-3.0;
+distribution must satisfy the applicable notice, source, and modification or
+relinking requirements. Optional document-processing tooling imports PyMuPDF,
+which is available under AGPL or a commercial licence. Neither dependency is
+relicensed by the project grant. The installed frontend metadata also includes
+`caniuse-lite` data under CC BY 4.0. Preserve the licence files supplied by
+packaged dependencies and verify obligations against the actual distribution.
+Frontend production builds ship the full locked runtime package copyright and
+licence texts in `frontend/dist/THIRD_PARTY_LICENSES.txt`, plus the project
+`LICENSE.txt` and `NOTICE.txt`. The build verifies installed package versions
+and refuses missing required licence texts. These files travel with the
+frontend in the container and desktop distributions.
 
 Model weights are not redistributed in this repository or portable archive.
 The user downloads the pinned `mlx-community/gemma-4-e2b-it-4bit` revision
@@ -122,8 +141,21 @@ terms.
 
 ## Project software licence
 
-Unless otherwise noted, project-authored repository contents are licensed
-under the Apache License, Version 2.0, as provided in the root `LICENSE` file.
-That licence does not relicense third-party datasets, evaluation material,
-dependencies, external publications, or model weights; those assets remain
-subject to the terms identified above and in their governed source records.
+From the licensing change dated 2026-10-22, project-authored software and
+documentation use PolyForm Noncommercial 1.0.0, as provided in the root
+`LICENSE` file, except material with its own explicit licence or a preserved
+earlier grant. The standard licence permits non-commercial purposes and the
+institutional uses it identifies, including research and evaluation.
+
+Earlier Apache-2.0 grants remain valid for material already released under
+them. `LICENSES/Apache-2.0.txt` retains that earlier text, not an alternative
+grant for new project contributions. Checksum-bound corpus releases, the
+curated seed graph, frozen production-foundations v1/v2 text, and historical
+research/evaluation receipts retain their recorded licences and hashes.
+Historical source-registry distribution descriptions likewise retain their
+hash-bound bytes and do not override the current project software licence.
+
+PolyForm does not relicense third-party datasets, evaluation material,
+dependencies, external publications, private uploads, or model weights;
+those assets remain subject to their source-specific terms. See
+`docs/public/licensing.md` for the transition and permitted-use boundaries.
