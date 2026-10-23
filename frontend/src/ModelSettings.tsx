@@ -76,7 +76,7 @@ export function ModelSettings({ profiles, modelId, onSelect, runtimeAccess, busy
     <p className="answer-model-note">Applies to your next question.</p>
     {runtimeAccess !== 'available' ? <p className="answer-model-warning" role="status">{runtimeAccess === 'checking' ? 'Checking the local runtime.' : 'Connect the local runtime to check available models.'} Your question draft is kept.</p> : null}
     {profiles.length ? <fieldset className="answer-model-options"><legend className="sr-only">Choose an answer model</legend>{profiles.map(profile => <label key={profile.id} className="answer-model-option">
-      <input type="radio" name={radioName} value={profile.id} checked={modelId === profile.id} disabled={busy || runtimeAccess !== 'available' || profile.local_ready === false} onChange={() => onSelect(profile.id)} />
+      <input type="radio" aria-label={`${modelName(profile)} ${availability(profile)}`} name={radioName} value={profile.id} checked={modelId === profile.id} disabled={busy || runtimeAccess !== 'available' || profile.local_ready === false} onChange={() => onSelect(profile.id)} />
       <span><strong>{modelName(profile)}</strong><small>{availability(profile)}</small></span>
     </label>)}</fieldset> : <p className="answer-model-empty">No model profiles available. The local runtime supplies the selectable models.</p>}
     {selected?.local_ready === false && selected.local_detail ? <p className="answer-model-warning">{selected.local_detail}</p> : null}
