@@ -5,7 +5,7 @@
 # native product-path smoke. These exact versions constrain the Mac candidate
 # builder; wheel hashes, clean-host installation, and full runtime parity remain
 # separate release evidence. The editable local project entry was omitted.
-agno==3.1.6
+agno==3.1.10
 aiohappyeyeballs==2.7.1
 aiohttp==3.14.5
 aiosignal==1.4.0
@@ -15,7 +15,7 @@ anyio==4.15.1
 attrs==26.1.0
 babel==2.18.0
 backrefs==8.1
-certifi==2026.10.19
+certifi==2026.10.23
 cffi==2.1.1
 charset-normalizer==3.5.2
 click==8.5.0
@@ -29,12 +29,12 @@ dill==0.4.1
 docstring-parser==0.18.0
 et-xmlfile==2.0.0
 execnet==2.1.2
-fastapi==0.149.0
+fastapi==0.162.0
 filelock==4.2.4
 fonttools==4.67.0
 frozenlist==1.8.0
 # datasets 5.1.0 caps fsspec at 2026.7.0; 2026.6.0 is the security floor.
-fsspec==2026.7.0
+fsspec==2026.9.0
 geopandas==1.2.0
 ghp-import==2.1.0
 gitdb==4.0.12
@@ -44,11 +44,11 @@ h2==4.4.1
 hf-xet==1.7.0
 hpack==4.2.0
 httpcore==1.0.9
-httpcore2==2.15.1
+httpcore2==2.16.0
 httptools==0.9.0
 httpx==0.28.1
-httpx2==2.15.1
-huggingface-hub==2.2.0
+httpx2==2.16.0
+huggingface-hub==2.3.0
 hyperframe==6.1.0
 idna==3.20
 iniconfig==2.3.1
@@ -67,14 +67,14 @@ mergedeep==1.3.4
 miniaudio==1.71
 mkdocs==1.6.1
 mkdocs-get-deps==0.2.2
-mkdocs-material==9.7.7
+mkdocs-material==9.8.0
 mkdocs-material-extensions==1.3.1
 mlx==0.32.4
-mlx-audio==0.6.0
+mlx-audio==0.6.1
 mlx-lm==0.32.2
 mlx-metal==0.32.4
-mlx-vlm==0.7.9
-multidict==7.1.0
+mlx-vlm==0.7.10
+multidict==7.2.1
 multiprocess==0.70.19
 narwhals==2.27.1
 numpy==2.5.4
@@ -82,7 +82,7 @@ opencv-python==5.0.0.93
 openpyxl==3.1.5
 packaging==26.3
 paginate==0.5.7
-pandas==3.0.6
+pandas==3.1.0
 pathspec==1.1.1
 pgvector==0.5.1
 pillow==13.0.0
@@ -93,10 +93,10 @@ protobuf==7.36.2
 psycopg==3.3.6
 psycopg-binary==3.3.6
 pyarrow==26.0.0
-pycparser==3.11
+pycparser==3.12
 pydantic==2.14.1
 pydantic-core==2.50.1
-pydantic-settings==2.16.0
+pydantic-settings==2.16.1
 pygments==2.21.0
 pymdown-extensions==12.3
 pymupdf==1.28.2
@@ -125,7 +125,7 @@ shellingham==1.5.4
 six==1.17.0
 smmap==5.0.3
 sounddevice==0.5.6
-starlette==1.9.0
+starlette==1.10.0
 threadpoolctl==3.7.0
 tokenizers==0.23.3
 tqdm==4.70.1

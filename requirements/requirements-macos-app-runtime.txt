@@ -5,6 +5,6 @@
 -r requirements-container.txt
 mlx==0.32.4
 mlx-lm==0.32.2
-mlx-vlm==0.7.9
-huggingface_hub==2.2.0
+mlx-vlm==0.7.10
+huggingface_hub==2.3.0
 transformers==5.20.2
