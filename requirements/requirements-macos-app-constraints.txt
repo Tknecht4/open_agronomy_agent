@@ -99,7 +99,7 @@ pydantic-core==2.50.1
 pydantic-settings==2.16.0
 pygments==2.21.0
 pymdown-extensions==12.3
-pymupdf==1.28.2
+pymupdf==2.0
 pyogrio==0.13.0
 pyparsing==3.3.3
 pyproj==3.8.0

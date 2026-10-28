@@ -9,7 +9,7 @@ psycopg[binary]>=3.2.0
 python-multipart>=0.0.20
 agno>=2.6,<3.2
 pgvector>=0.4
-PyMuPDF>=1.24.0
+PyMuPDF>=2.0
 cryptography>=50.0.1,<51
 # Synthetic imagery assessment contracts run in backend CI, without EO weights.
 scikit-learn==1.9.1
