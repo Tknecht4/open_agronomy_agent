@@ -3,7 +3,7 @@
 -r requirements-phase4-ci.txt
 mlx[cuda12]==0.32.4
 mlx-lm==0.32.2
-transformers==5.20.2
-huggingface_hub==2.2.0
+transformers==5.22.1
+huggingface_hub==2.4.0
 numpy>=2.5.4,<3
 rdflib>=7,<8
