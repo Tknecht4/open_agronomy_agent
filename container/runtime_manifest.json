@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-11-05T17:57:36+00:00",
+  "generated_at": "2026-11-05T18:10:38+00:00",
   "status": "pass",
-  "contract_sha256": "dc907cc6eba7372f556d65719e8f02d17400df2ecdec836863d82b8a35c60681",
+  "contract_sha256": "27ac6fb6886cf30b65b3952185d31d1a8804dcb9a106a6d20f6bf5756ff2a1f8",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -528,8 +528,8 @@
     {
       "path": "requirements/requirements-container.txt",
       "role": "runtime_control",
-      "bytes": 364,
-      "sha256": "23378817b7311bf69005f28ffb79be84298594d75e4088b2c21ef4d1b84b11a3"
+      "bytes": 365,
+      "sha256": "8033576272c3c9f7f8f611abb82bd00d310e001ec35e36afe11ba3a15c852862"
     },
     {
       "path": "pyproject.toml",
