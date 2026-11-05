@@ -395,3 +395,24 @@ def test_existing_extraction_rejects_pinned_raw_drift(
 
     assert ingestor.main() == 2
     assert raw_path.read_bytes() == b"tampered raw bytes"
+
+
+def test_pdf_extraction_preserves_page_boundaries_and_low_text_flags(tmp_path: Path) -> None:
+    pymupdf = pytest.importorskip("pymupdf")
+    path = tmp_path / "synthetic.pdf"
+    document = pymupdf.open()
+    first_page = document.new_page()
+    first_page.insert_textbox(
+        pymupdf.Rect(50, 50, 500, 200),
+        "Synthetic field report with source evidence. " * 5,
+        fontsize=10,
+    )
+    document.new_page().insert_text((50, 50), "Short page")
+    document.save(path)
+    document.close()
+
+    text, metadata = _load_ingestor().extract_pdf(path)
+
+    assert "[page 1]" in text and "Synthetic field report" in text
+    assert "[page 2]" in text and "Short page" in text
+    assert metadata == {"pages": 2, "low_text_pages": 1, "low_text_page_numbers": [2]}

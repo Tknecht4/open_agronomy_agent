@@ -2,7 +2,7 @@
 
 ## Purpose and status
 
-This package adapts local retrieval, knowledge graphs, and capabilities to the active Agno runtime. `resolve_agent_runtime` currently accepts only `agno`. The adapters do not make every registered capability part of the live chat path; execution and evidence integration must be verified end to end.
+This package implements local retrieval, knowledge graphs, and capability adapters under the `agno` runtime name. The active implementation does not call the Agno SDK; its optional presence and version are reported as metadata only. `resolve_agent_runtime` currently accepts only `agno`. The adapters do not make every registered capability part of the live chat path; execution and evidence integration must be verified end to end.
 
 ## Entry points
 
