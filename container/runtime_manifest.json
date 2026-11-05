@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-11-05T18:10:38+00:00",
+  "generated_at": "2026-11-05T18:16:53+00:00",
   "status": "pass",
-  "contract_sha256": "27ac6fb6886cf30b65b3952185d31d1a8804dcb9a106a6d20f6bf5756ff2a1f8",
+  "contract_sha256": "fbfa99ab1165f38898aa516bb69453034e85f753d25aa25003672c4bf9a71bcc",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -529,7 +529,7 @@
       "path": "requirements/requirements-container.txt",
       "role": "runtime_control",
       "bytes": 365,
-      "sha256": "8033576272c3c9f7f8f611abb82bd00d310e001ec35e36afe11ba3a15c852862"
+      "sha256": "7361a9ddce4081b0a92f7c33be78382c605b02e9a71bc92bf0ef89e01199b72d"
     },
     {
       "path": "pyproject.toml",
@@ -546,14 +546,14 @@
     {
       "path": "frontend/package.json",
       "role": "runtime_control",
-      "bytes": 921,
-      "sha256": "b411fa30a6754cb36d6d92002deed9c9fb2a06910a41df50e21942f2c25e0699"
+      "bytes": 922,
+      "sha256": "c053a348bb972a1faea7855c019b7f020048ae66800f6cba6c1a8a89e212127f"
     },
     {
       "path": "frontend/package-lock.json",
       "role": "runtime_control",
-      "bytes": 126439,
-      "sha256": "1e49e9754f8a2b3b67e0e853ec05daba9fcbcee308d3a563601605169c5778bc"
+      "bytes": 126488,
+      "sha256": "1b5693d81b1c1702b8e9194604fc4849206823ff22916a9e5f8d4de9ed067a75"
     },
     {
       "path": "frontend/index.html",
