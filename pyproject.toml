@@ -9,7 +9,6 @@ description = "Local-first agronomist agent MVP with RAG, tools, and evals."
 requires-python = ">=3.11"
 license = {text = "PolyForm-Noncommercial-1.0.0"}
 dependencies = [
-    "agno>=2.6,<3.2",
     "cryptography>=50.0.1,<51",
     "geopandas>=1.0,<2",
     "pyogrio>=0.10,<1",
