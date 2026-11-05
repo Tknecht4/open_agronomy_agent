@@ -84,7 +84,6 @@ packaging==26.3
 paginate==0.5.7
 pandas==3.0.6
 pathspec==1.1.1
-pgvector==0.5.1
 pillow==13.0.0
 platformdirs==4.13.5
 pluggy==1.7.0

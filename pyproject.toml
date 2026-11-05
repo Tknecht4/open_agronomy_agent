@@ -19,9 +19,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-agno-rag = [
-    "pgvector>=0.4",
-]
 geospatial-prep = [
     "geopandas>=1.0,<2",
     "pyogrio>=0.10,<1",
