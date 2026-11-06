@@ -14,6 +14,8 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from agronomy_agent.geospatial.context_support import mapped_coverage_label
+
 
 TRUSTED_GEOGRAPHIC_CONTEXT_KEY = "_trusted_geographic_context"
 TRUSTED_GEOGRAPHIC_CONTEXT_SCHEMA_VERSION = "open_agronomy_agent.trusted_geographic_context.v1"
@@ -174,9 +176,7 @@ def format_trusted_geographic_context(field_context: dict[str, Any] | None) -> s
             value = record["properties"].get(key)
             if value and str(value) != str(record["name"]) and key != "dissemination_geography_id":
                 details.append(f"{label}={value}")
-        coverage = record.get("coverage_estimate")
-        if coverage is not None and coverage < 0.999999:
-            details.append(f"mapped geometry coverage estimate={round(float(coverage) * 100)}%")
+        details.append(mapped_coverage_label(record))
         lines.append(
             f"- {contract['label']} [{layer_id}]: "
             + "; ".join(details)
@@ -216,6 +216,7 @@ def _project_server_bound_intersections(value: Any) -> list[dict[str, Any]]:
             "code": code,
             "name": name,
             "properties": properties,
+            "coverage_support_type": _support_type(item.get("coverage_support_type")),
         }
         if coverage is not None:
             record["coverage_estimate"] = coverage
@@ -274,6 +275,7 @@ def _project_projection_records(value: Any) -> list[dict[str, Any]]:
             "code": code,
             "name": name,
             "properties": properties,
+            "coverage_support_type": _support_type(item.get("coverage_support_type")),
         }
         coverage = _coverage(item.get("coverage_estimate"))
         if coverage is not None:
@@ -299,13 +301,11 @@ def _project_projection_records(value: Any) -> list[dict[str, Any]]:
 
 
 def _compact_match(record: dict[str, Any]) -> str:
-    coverage = record.get("coverage_estimate")
-    coverage_text = (
-        f", {round(float(coverage) * 100)}% mapped geometry coverage"
-        if coverage is not None
-        else ""
-    )
-    return f"{record['name']} ({record['code']}{coverage_text})"
+    return f"{record['name']} ({record['code']}, {mapped_coverage_label(record)})"
+
+
+def _support_type(value: Any) -> str:
+    return value if value in ("point_membership", "polygon_area") else "unknown"
 
 
 def _code(value: Any, pattern: str) -> str | None:

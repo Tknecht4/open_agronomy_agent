@@ -353,3 +353,16 @@ def test_replay_without_override_rechecks_saved_field_authority(client, monkeypa
     assert denied.status_code == 404, denied.text
     assert store.get_session(session_id, include_turns=False)["context"] == original_context
     assert store.count_session_turns(session_id) == 1
+
+
+def test_season_identity_is_immutable_once_declared_or_used():
+    previous = {"field_context_id": "field-a", "field_conversation_key": "field:field-a", "field_season": 2026}
+    assert bind_conversation_context(previous, {}, has_turns=True)["field_season"] == 2026
+    with pytest.raises(ConversationScopeError, match="season"):
+        bind_conversation_context(previous, {"field_season": 2025}, has_turns=False)
+    with pytest.raises(ConversationScopeError, match="season"):
+        bind_conversation_context({"field_context_id": "field-a"}, {"field_season": 2026}, has_turns=True)
+    with pytest.raises(ConversationScopeError):
+        bind_conversation_context({}, {"field_season": 2026}, has_turns=False)
+    with pytest.raises(ConversationScopeError):
+        bind_conversation_context({}, {"field_context_id": "field-a", "field_season": 2026, "field_context": {"field_season": 2025}}, has_turns=False)

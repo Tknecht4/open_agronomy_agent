@@ -1,10 +1,40 @@
 # Use the field workspace
 
-The workspace puts a question and its selected field together. **Workspace**, **Fields**, and **Data** are the primary views; **Evidence** and **Benchmarks** remain visible under **Review**. Runtime status, **Privacy**, and **About** are in the navigation footer. On mobile, use the menu button to open the same navigation drawer. The interface is a client of the local API. A page that loads does not establish that the model or optional data providers are ready; check [native setup](native-setup.md) and `/api/health` separately.
+The workspace opens in **Farms**. Choose a farm and season, compare fields in the table and map, then open a field for its overview, imagery, soil context, records or imported tables. **Fields** searches across farms, **Records** shows dated activity, and **Questions** keeps general or single-field conversations. Data management, evidence and benchmarks are under Research & settings. The interface is a client of the local API; a loaded page does not establish model or provider readiness.
+
+## Farms, seasons and field summaries
+
+Create a farm with a name, then add a field or import reviewed boundaries. Existing fields remain unassigned until you group them; IDs and historical records are preserved. Manage farm changes its name or archives an empty farm. Move its fields first; archived farms can be restored through the farm selector.
+
+New field setup saves a crop against the season shown in the form. A field's current-season crop is confirmed separately from older undated crop entries. Select the season and use **Confirm crop & season**. Unknown crop stays unknown. Fields without locations remain available for records and questions. Points do not count toward boundary acreage. Combined area excludes overlaps and identifies fields with unknown area.
+
+The overview reads retained summaries. **Refresh field context** explicitly requests bounded weather, mapped soil, historical crop cover and imagery discovery. Connected requests send the saved location/boundary to the relevant public services; offline mode keeps external calls blocked. Each result retains its source, dates, coverage and freshness. Failed checks remain distinct from no matches, with prior successful results labeled separately. Country-specific checks require a confirmed jurisdiction. **Check mapped location** uses only an installed, integrity-verified Canadian province boundary pack. A complete single-province match can be confirmed for source routing; partial, cross-border, missing and failed matches remain unresolved. Confirmation retains the cartographic receipt and never establishes legal jurisdiction. No ecozone or soil map substitutes for an administrative source.
+
+Use **Add another crop** to record an intercrop mixture, crops grown in sequence, or crops in separate parts of a field. Each crop retains its cultivar. Dates describe the season as a whole; the record does not establish crop shares, per-crop dates or spatial allocation.
+
+Canadian crop-cover refresh discovers the latest year advertised by the AAFC image-service catalog and retains its timestamp, source and response hash. The displayed classification year may precede the selected farming season. Existing retained results and explicitly requested years are unchanged. Catalog failure is reported without guessing a year.
+
+Field and season changes use revision checks. A conflicting edit asks for a reload. Geometry changes leave old context and imagery tied to their original revision.
+
+## Boundary intake and editing
+
+**Import fields** previews multiple GeoJSON, zipped shapefile or GeoPackage features. Review labels, source attributes, CRS and selected geometries before saving. Duplicate boundaries are identified; a retried save reuses its original result. Holes and multipart boundaries are retained. Imported crop attributes do not become confirmed crop seasons.
+
+The map has a keyboard coordinate editor for points and named vertices. Multipart edits select a part and outer ring or hole; other components remain intact. Undo/redo operates on the draft. Save validates geometry and retains the earlier revision; Cancel restores the previous boundary. A wide map explains that detailed regional layers require zooming in instead of repeating invalid requests.
+
+## Imagery and records
+
+Field Imagery connects scene discovery, exact-scene selection, durable processing jobs, authenticated previews and map overlays. HLS supports field polygons, containing point pixels and explicit point buffers. Sentinel-2 C1 uses its separate 20 m polygon processing, radiometry and SCL rules; point and multipart analysis remain unsupported. Discovery lists one bounded page and exposes its limit; narrow the window to inspect other dates.
+
+Install the optional worker before processing. HLS uses `requirements-imagery.txt`; Sentinel-2 additionally requires the dependencies in `requirements-geospatial.txt`. Configure `AGRONOMY_AGENT_IMAGERY_PYTHON` and a private `AGRONOMY_AGENT_IMAGERY_CACHE_ROOT` outside the checkout. Setup checks distinguish dependency health from live pixel access. Jobs survive navigation; a server interruption is recorded and requires an explicit retry. Cancellation prevents publication of the pending result rather than terminating a running provider process instantly.
+
+Analyses retain provider, exact scene, boundary revision, masks and index support. The map display is a separate nearest-neighbor reprojection; numerical statistics stay on the processing grid. Historical results remain labeled for their original boundary. Positive pixel support does not establish representative crop conditions, diagnosis or action authority. Save an analysis reference into field records or use it to start a scoped question.
+
+**Add to field** captures observations, operations, notes, outcomes or multi-analyte soil-report transcriptions. Sample metadata is shared across analytes; method, units and depth stay explicit. Drafts remain on this device until acknowledged. A transport retry does not duplicate the record. Corrections preserve originals. Transcription does not imply the original report was uploaded; retain structured originals through Data tables and keep their provenance separate.
 
 ![Compact general chat and calculator example, with no field selected](../assets/workspace.png)
 
-The image shows a compact general chat and calculator example using synthetic inputs. No field is selected and no personal field data is shown.
+The image is an earlier question-view capture and shows a compact general chat and calculator example using synthetic inputs. No field is selected and no personal field data is shown.
 
 ![Condensed workspace demo of a general question and calculator flow](../assets/workspace-demo.gif)
 
@@ -12,7 +42,7 @@ The demo shortens pauses between steps for viewing; its timing is not a measure 
 
 ## Ask a question
 
-Open **Workspace** and type a general question. A field is optional: the app must not invent a crop, location, soil test, or measurement to make a general question look field-specific. If the local runtime is unavailable, the text remains a device-local draft; sending it later requires a working API. A saved answer can show source cards, tool use, missing inputs, and a trace through **Sources & checks**. These records show what the system did, not that its answer is correct.
+Open **Questions** and type a general question. A field is optional: the app must not invent a crop, location, soil test, or measurement to make a general question look field-specific. If the local runtime is unavailable, the text remains a device-local draft; sending it later requires a working API. A saved answer can show source cards, tool use, missing inputs, and a trace through **Sources & checks**. These records show what the system did, not that its answer is correct.
 
 After restarting the local API, use **Retry local runtime**. Recovery reloads
 saved fields, conversations, and model settings before enabling questions, while
@@ -63,7 +93,7 @@ or a prediction for the next question. Model-free answers can have no token rate
 
 ## Map and connected sources
 
-Desktop opens **Together**, with equal space for conversation and the map. Use
+The Questions view opens **Together** on desktop, with equal space for conversation and the map. Use
 **Conversation** or **Map** to give the current task more room. Smaller windows
 keep both controls visible and show one workspace at a time, preserving the
 question draft. The map can scroll with the page so its field details remain

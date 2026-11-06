@@ -231,11 +231,17 @@ def analyze_field_map(
             blocked["elapsed_ms"] = round((time.monotonic() - layer_started) * 1000, 2)
             result["layers"].append(blocked)
             continue
-        if layer.query_backend == "local_sqlite" and not geo._local_layer_installed(layer):
-            missing = _empty_layer(layer, "not_installed", "local_layer_not_installed")
-            missing["elapsed_ms"] = round((time.monotonic() - layer_started) * 1000, 2)
-            result["layers"].append(missing)
-            continue
+        if layer.query_backend == "local_sqlite":
+            readiness = geo._local_layer_readiness(layer)
+            if readiness["status"] != "verified":
+                unavailable = _empty_layer(
+                    layer, "not_installed" if readiness["status"] == "missing" else "integrity_failed",
+                    "local_layer_not_installed" if readiness["status"] == "missing" else "local_source_identity_failed",
+                )
+                unavailable["source_integrity"] = readiness
+                unavailable["elapsed_ms"] = round((time.monotonic() - layer_started) * 1000, 2)
+                result["layers"].append(unavailable)
+                continue
         item = _empty_layer(layer, "unavailable")
         try:
             if _local_candidate_limit_reached(layer, parsed):
@@ -247,6 +253,9 @@ def analyze_field_map(
             features, feature_count, incomplete, transfer = _load_layer_features(
                 layer, parsed, network_mode
             )
+            if layer.query_backend == "local_sqlite":
+                geo._assert_stable_local_source(layer, readiness)
+                item["source_integrity"] = readiness
             item["feature_count"] = feature_count
             item["source_exceeded_transfer_limit"] = transfer
             item["incomplete_reasons"] = incomplete
@@ -359,6 +368,10 @@ def analyze_field_map(
                     zone["fraction_of_field"] = None
             item["zones"] = zones[:MAX_ZONES_SHOWN]
             item["omitted_zone_count"] = max(0, len(zones) - MAX_ZONES_SHOWN)
+        except geo.LocalLayerIntegrityError as exc:
+            item = _empty_layer(layer, "integrity_failed", "local_source_identity_failed")
+            item["source_integrity"] = exc.receipt
+            result["warnings"].append(f"{layer.label}: local source identity changed during analysis.")
         except Exception as exc:
             item["status"] = "unavailable"
             item["reason"] = "analysis_failed"

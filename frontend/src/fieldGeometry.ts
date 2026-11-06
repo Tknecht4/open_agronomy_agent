@@ -5,8 +5,11 @@ export type FieldPoint = {
   lon: number
 }
 
+export type CompleteBoundary = { type: 'Polygon'; coordinates: number[][][] } | { type: 'MultiPolygon'; coordinates: number[][][][] }
+
 export type FieldGeometry =
   | { kind: 'none' }
+  | { kind: 'geojson'; geojson: CompleteBoundary; acres: number }
   | { kind: 'point'; point: FieldPoint }
   | { kind: 'polygon'; points: FieldPoint[]; acres: number }
 
@@ -92,6 +95,7 @@ export const fieldGeometryIssue = (geometry: FieldGeometry): string | null => {
   if (geometry.kind === 'none') {
     return 'Add a point or draw a boundary first.'
   }
+  if (geometry.kind === 'geojson') return completeBoundaryIssue(geometry.geojson)
   if (geometry.kind === 'point') {
     return validFieldPoint(geometry.point) ? null : 'Field point coordinates are invalid.'
   }
@@ -111,3 +115,47 @@ export const fieldGeometryIssue = (geometry: FieldGeometry): string | null => {
 }
 
 export const isUsableFieldGeometry = (geometry: FieldGeometry): boolean => fieldGeometryIssue(geometry) === null
+
+/** Preserve complete imported boundaries. Server validation owns topology/CRS. */
+export function completeBoundaryIssue(value: CompleteBoundary): string | null {
+  const polygons = value.type === 'Polygon' ? [value.coordinates] : value.coordinates
+  if (!Array.isArray(polygons) || !polygons.length) return 'Boundary polygons are missing.'
+  let vertices = 0
+  for (const polygon of polygons) {
+    if (!Array.isArray(polygon) || !polygon.length) return 'Boundary rings are missing.'
+    for (const ring of polygon) {
+      if (!Array.isArray(ring) || ring.length < 4) return 'Each boundary ring needs at least four closed positions.'
+      for (const point of ring) {
+        if (!Array.isArray(point) || point.length !== 2 || !validFieldPoint({ lon: point[0], lat: point[1] })) return 'Boundary coordinates are invalid.'
+        if (++vertices > 10000) return 'Boundary exceeds the 10,000-position limit.'
+      }
+      if (ring[0][0] !== ring[ring.length - 1][0] || ring[0][1] !== ring[ring.length - 1][1]) return 'Boundary rings must be closed.'
+    }
+  }
+  return null
+}
+
+export function completeBoundaryGeometry(value: CompleteBoundary): FieldGeometry {
+  const issue = completeBoundaryIssue(value)
+  if (issue) throw new Error(issue)
+  const polygons = value.type === 'Polygon' ? [value.coordinates] : value.coordinates
+  const acres = polygons.reduce((total, polygon) => total + polygon.reduce((area, ring, index) =>
+    area + (index === 0 ? 1 : -1) * estimatePolygonAcres(ring.slice(0, -1).map(([lon, lat]) => ({ lon, lat }))), 0), 0)
+  return { kind: 'geojson', geojson: structuredClone(value), acres }
+}
+
+export function fieldGeometryGeoJson(geometry: FieldGeometry): { type: string; coordinates: unknown } | null {
+  if (geometry.kind === 'none') return null
+  if (geometry.kind === 'geojson') return geometry.geojson
+  if (geometry.kind === 'point') return { type: 'Point', coordinates: [geometry.point.lon, geometry.point.lat] }
+  const ring = geometry.points.map(({ lon, lat }) => [lon, lat])
+  if (ring.length && (ring[0][0] !== ring[ring.length - 1][0] || ring[0][1] !== ring[ring.length - 1][1])) ring.push(ring[0])
+  return { type: 'Polygon', coordinates: [ring] }
+}
+
+export function boundaryPoints(geometry: FieldGeometry): FieldPoint[] {
+  if (geometry.kind === 'polygon') return geometry.points
+  if (geometry.kind !== 'geojson') return []
+  const polygons = geometry.geojson.type === 'Polygon' ? [geometry.geojson.coordinates] : geometry.geojson.coordinates
+  return polygons.flatMap(polygon => polygon.flatMap(ring => ring.map(([lon, lat]) => ({ lon, lat }))))
+}

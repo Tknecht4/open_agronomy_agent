@@ -1048,6 +1048,7 @@ class PostgresRuntimeStore:
         field_context_id: str,
         actor_user_id: str,
         payload: dict[str, Any],
+        expected_updated_at: str | None = None,
     ) -> dict[str, Any] | None:
         current = self.get_phase4_field_context(field_context_id)
         if not current:
@@ -1076,18 +1077,24 @@ class PostgresRuntimeStore:
         assignments = [f"{key} = %s::jsonb" if key == "metadata" else f"{key} = %s" for key in updates]
         params = [self._to_json(value) if key == "metadata" else value for key, value in updates.items()]
         params.append(field_context_id)
+        precondition = ""
+        if expected_updated_at is not None:
+            precondition = " AND updated_at = %s::timestamptz"
+            params.append(expected_updated_at)
         with self._connect(self.database_url) as connection:
             with self._cursor(connection) as cursor:
                 cursor.execute(
                     f"""
                     UPDATE field_contexts
                     SET {", ".join(assignments)}, updated_at = now()
-                    WHERE id = %s AND deleted_at IS NULL
+                    WHERE id = %s AND deleted_at IS NULL{precondition}
                     RETURNING *
                     """,
                     tuple(params),
                 )
                 updated = self._row_dict(cursor.fetchone())
+                if not updated and expected_updated_at is not None:
+                    raise ValueError("Field changed. Reload before saving.")
                 self._insert_audit_event(
                     cursor,
                     event_type="field_context.updated",

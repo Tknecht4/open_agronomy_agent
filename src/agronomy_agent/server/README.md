@@ -214,3 +214,22 @@ exchange requires direct HTTPS at the API boundary, including custom launchers;
 forwarding metadata is rejected even if a proxy has already rewritten the scheme. Rejection issues no session
 cookie and leaves the one-time token available for a valid HTTPS request.
 Field-LAN also requires development authentication disabled.
+
+## Farms and field summaries
+
+`farm_routes.py` and the local `farm_store` own farm membership, explicit seasons,
+revision preconditions and grouped record writes. `field_import_routes.py` owns
+bounded retained boundary previews and atomic idempotent commits. Existing field
+IDs and histories are preserved; older undated crops are not assigned a year.
+`field_context_store` and `field_enrichment` retain per-source status, scope,
+freshness and receipts. `farm_summary` is read-only and makes no provider calls.
+These new persistence capabilities currently require the migrated SQLite runtime;
+other backends fail explicitly rather than pretending persistence succeeded.
+
+`imagery_job_routes.py` owns bounded durable processing requests, cancellation,
+restart interruption, authorized historical previews and record references.
+`imagery_service` admits HLS and Sentinel-2 with independent validators and
+read-back verification. Display overlays use a separate worker reprojection.
+No browser supplies a worker path, arbitrary asset URL or execution environment.
+
+Season records retain structured crop entries and an explicit single/intercrop/sequence/separate-areas system. Legacy single-crop rows are projected without changing their crop year; edits use the existing revision precondition. The trusted question compiler carries the saved structure and does not infer per-crop acreage or dates. Canadian dossier crop-cover refresh opts into `year: latest`, with a catalog response receipt; direct tool calls retain their pinned default or explicit year.

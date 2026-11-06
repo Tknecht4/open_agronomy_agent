@@ -244,7 +244,10 @@ def analyze_query_context(question: str, field_context: dict[str, Any] | None = 
     if explicit_jurisdiction:
         jurisdictions = _ordered_unique((explicit_jurisdiction.lower(), *jurisdictions))
         explicit_upper = explicit_jurisdiction.upper()
-        if explicit_upper == "CANADA":
+        iso_subdivision = _normalize_iso_subdivision(explicit_upper)
+        if iso_subdivision:
+            country = iso_subdivision[0]
+        elif explicit_upper == "CANADA":
             country = "canada"
         elif explicit_upper in {"UNITED STATES", "US", "USA", "U.S.", "U.S.A."}:
             country = "united states"
@@ -256,17 +259,21 @@ def analyze_query_context(question: str, field_context: dict[str, Any] | None = 
             country = "canada"
         elif explicit_upper in US_STATE_NAME_TO_ALPHA.values() or explicit_upper in US_STATE_NAME_TO_ALPHA:
             country = "united states"
-    provided_country = _clean(provided.get("country"))
+    provided_countries = tuple(
+        value for key in ("country", "country_code")
+        if (value := _clean(provided.get(key)))
+    )
     unsupported_country = False
-    if provided_country:
-        normalized_country = provided_country.casefold().replace(".", "").strip()
-        if normalized_country in {"canada", "canadian", "ca", "can"}:
-            country = "canada"
-        elif normalized_country in {"united states", "us", "usa", "american"}:
-            country = "united states"
-        else:
-            country = None
-            unsupported_country = True
+    if provided_countries:
+        normalized_countries = {_normalize_explicit_country(value) for value in provided_countries}
+        jurisdiction_country, _ = _normalize_jurisdiction_scope((explicit_jurisdiction,)) if explicit_jurisdiction else (set(), set())
+        unsupported_country = (
+            None in normalized_countries
+            or len(normalized_countries) > 1
+            or len(jurisdiction_country) > 1
+            or bool(jurisdiction_country and normalized_countries.isdisjoint(jurisdiction_country))
+        )
+        country = None if unsupported_country else next(iter(normalized_countries))
     destination = _inferred_destination_jurisdiction(text, named_jurisdictions) if not explicit_jurisdiction else None
     destination_country = _inferred_owned_country(text) if not explicit_jurisdiction and destination is None else None
     mixed_named_countries = len({item[2] for item in named_jurisdictions}) > 1
@@ -1161,6 +1168,29 @@ def _jurisdictions_in_text(text: str, names_to_code: dict[str, str]) -> tuple[st
     return tuple(name for _, name in sorted(found))
 
 
+def _normalize_explicit_country(value: str) -> str | None:
+    normalized = value.casefold().replace(".", "").strip()
+    if normalized in {"canada", "canadian", "ca", "can"}:
+        return "canada"
+    if normalized in {"united states", "united states of america", "us", "usa", "american"}:
+        return "united states"
+    return None
+
+
+def _normalize_iso_subdivision(value: str) -> tuple[str, str] | None:
+    """Recognize exact CA-/US- subdivisions without inventing unknown codes."""
+    prefix, separator, code = value.upper().partition("-")
+    if separator and prefix == "CA":
+        names = CANADIAN_PROVINCE_NAMES_TO_CODE
+        country = "canada"
+    elif separator and prefix == "US":
+        names = US_STATE_NAME_TO_ALPHA
+        country = "united states"
+    else:
+        return None
+    return next(((country, name.lower()) for name, alpha in names.items() if alpha == code), None)
+
+
 def _normalize_jurisdiction_scope(values: Iterable[str]) -> tuple[set[str], set[str]]:
     countries: set[str] = set()
     subdivisions: set[str] = set()
@@ -1171,6 +1201,11 @@ def _normalize_jurisdiction_scope(values: Iterable[str]) -> tuple[set[str], set[
         if not raw:
             continue
         upper = raw.upper()
+        iso_subdivision = _normalize_iso_subdivision(upper)
+        if iso_subdivision:
+            countries.add(iso_subdivision[0])
+            subdivisions.add(iso_subdivision[1])
+            continue
         if re.search(r"\b(?:CANADA|CANADIAN)\b", upper):
             countries.add("canada")
         if re.search(r"\b(?:UNITED STATES|U\.S\.|USA|AMERICAN)\b", upper):

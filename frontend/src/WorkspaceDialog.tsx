@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, type ReactNode, type RefObject } from 'react'
 import { X } from 'lucide-react'
 
 /** Native modal semantics provide focus containment, Escape and focus restoration. */
-export function WorkspaceDialog({ title, onClose, children, busy = false, wide = false, className = '', id, returnFocusRef, containFocus = false }: {
+export function WorkspaceDialog({ title, onClose, children, busy = false, wide = false, className = '', id, returnFocusRef, containFocus = true }: {
   title: string; onClose: () => void; children: ReactNode; busy?: boolean; wide?: boolean
   className?: string; id?: string; returnFocusRef?: RefObject<HTMLButtonElement | null>; containFocus?: boolean
 }) {
@@ -25,7 +25,10 @@ export function WorkspaceDialog({ title, onClose, children, busy = false, wide =
     onKeyDown={(event) => {
       if (!containFocus || event.key !== 'Tab') return
       const controls = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), summary, a[href]'))
-        .filter(element => element.getClientRects().length > 0)
+        .filter(element => {
+          const closedDetails = element.closest('details:not([open])')
+          return element.getClientRects().length > 0 && (!closedDetails || element.tagName === 'SUMMARY' && element.parentElement === closedDetails)
+        })
       const first = controls[0], last = controls[controls.length - 1]
       if (first && last && event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
       else if (first && last && !event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }

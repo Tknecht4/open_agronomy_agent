@@ -135,3 +135,19 @@ server again or open the URL printed by the current launcher. Drafts belong to
 their original browser origin; opening another port does not transfer them.
 Do not clear browser storage as a recovery step. An already installed old shell
 needs one successful visit to its server to receive these fixes.
+
+
+## Farm cockpit
+
+The entry route is `#farms`; `FarmWorkspace` owns farm/season filters, table/map
+selection and stable field URLs. `FieldDossier` owns field tabs; `FarmRecords`
+owns idempotent grouped intake. `FieldImportDialog` uses server-retained previews
+and commits. The detailed legacy editor is `#field-editor`, while `#analyze`
+remains the single-field/general Questions view. Farm grouping is not an
+independent authorization boundary.
+
+Imagery jobs use authorized saved geometry and retain result history. HLS and
+Sentinel-2 C1 have independent admission checks. `ImageryMapPreview` displays a
+verified display-only projection without changing numerical source results.
+`GeometryCoordinateEditor` edits the same draft as the map and preserves parts
+and holes. Do not silently simplify imports to satisfy processor limits.

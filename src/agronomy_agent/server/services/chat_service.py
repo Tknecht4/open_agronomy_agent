@@ -33,7 +33,15 @@ from agronomy_agent.agent import (
     load_model_config,
     system_prompt,
 )
-from agronomy_agent.query_context import is_source_grounded_question
+from agronomy_agent.query_context import (
+    CANADIAN_PROVINCE_CODES,
+    CANADIAN_PROVINCE_NAME_ALIASES,
+    CANADIAN_PROVINCE_NAMES_TO_CODE,
+    CANADIAN_PROVINCE_TEXT_ALIASES,
+    US_STATE_NAME_TO_ALPHA,
+    _normalize_explicit_country,
+    is_source_grounded_question,
+)
 from agronomy_agent.capability_planner import build_planner_input, plan_capabilities, select_public_capability_plan
 from agronomy_agent.capability_registry import capability_registry
 from agronomy_agent.agronomic_calculations import _decimal_value, _format_decimal, calculation_tool_schema, validate_tank_coverage_inputs
@@ -79,7 +87,14 @@ from agronomy_agent.server.services.answer_renderer import (
     render_map_interpretation_answer,
     render_structured_answer,
 )
-from agronomy_agent.server.services.field_context_compiler import compile_field_context
+from agronomy_agent.server.services.field_context_compiler import (
+    compile_field_context,
+    render_field_context_prompt,
+)
+from agronomy_agent.geospatial.context_support import (
+    mapped_confidence_label,
+    mapped_coverage_label,
+)
 from agronomy_agent.server.services.conversation_context import (
     OVER_LIMIT_ANSWER,
     cache_scope,
@@ -157,76 +172,6 @@ DEEP_SOURCE_CARD_PATTERNS: tuple[tuple[str, str], ...] = (
         r"\b(sensitivity|break[- ]even|partial budget|cost share|program eligibility|eqip|csp|payment|farm economics|profitability range)\b",
     ),
 )
-
-US_STATE_NAME_TO_ALPHA = {
-    "ALABAMA": "AL",
-    "ALASKA": "AK",
-    "ARIZONA": "AZ",
-    "ARKANSAS": "AR",
-    "CALIFORNIA": "CA",
-    "COLORADO": "CO",
-    "CONNECTICUT": "CT",
-    "DELAWARE": "DE",
-    "FLORIDA": "FL",
-    "GEORGIA": "GA",
-    "HAWAII": "HI",
-    "IDAHO": "ID",
-    "ILLINOIS": "IL",
-    "INDIANA": "IN",
-    "IOWA": "IA",
-    "KANSAS": "KS",
-    "KENTUCKY": "KY",
-    "LOUISIANA": "LA",
-    "MAINE": "ME",
-    "MARYLAND": "MD",
-    "MASSACHUSETTS": "MA",
-    "MICHIGAN": "MI",
-    "MINNESOTA": "MN",
-    "MISSISSIPPI": "MS",
-    "MISSOURI": "MO",
-    "MONTANA": "MT",
-    "NEBRASKA": "NE",
-    "NEVADA": "NV",
-    "NEW HAMPSHIRE": "NH",
-    "NEW JERSEY": "NJ",
-    "NEW MEXICO": "NM",
-    "NEW YORK": "NY",
-    "NORTH CAROLINA": "NC",
-    "NORTH DAKOTA": "ND",
-    "OHIO": "OH",
-    "OKLAHOMA": "OK",
-    "OREGON": "OR",
-    "PENNSYLVANIA": "PA",
-    "RHODE ISLAND": "RI",
-    "SOUTH CAROLINA": "SC",
-    "SOUTH DAKOTA": "SD",
-    "TENNESSEE": "TN",
-    "TEXAS": "TX",
-    "UTAH": "UT",
-    "VERMONT": "VT",
-    "VIRGINIA": "VA",
-    "WASHINGTON": "WA",
-    "WEST VIRGINIA": "WV",
-    "WISCONSIN": "WI",
-    "WYOMING": "WY",
-}
-
-CANADIAN_PROVINCE_NAMES_TO_CODE = {
-    "ALBERTA": "AB",
-    "BRITISH COLUMBIA": "BC",
-    "MANITOBA": "MB",
-    "NEW BRUNSWICK": "NB",
-    "NEWFOUNDLAND AND LABRADOR": "NL",
-    "NOVA SCOTIA": "NS",
-    "ONTARIO": "ON",
-    "PRINCE EDWARD ISLAND": "PE",
-    "QUEBEC": "QC",
-    "SASKATCHEWAN": "SK",
-    "NORTHWEST TERRITORIES": "NT",
-    "NUNAVUT": "NU",
-    "YUKON": "YT",
-}
-CANADIAN_PROVINCE_CODES = set(CANADIAN_PROVINCE_NAMES_TO_CODE.values())
 
 
 def _now_hash(value: Any) -> str:
@@ -1226,7 +1171,7 @@ def _run_turn_impl_inner(
             message
             if source_grounded
             else _append_workspace_evidence(
-                _combined_verification_evidence(context, field_context),
+                _combined_verification_evidence(context, field_context, compiled_field_context),
                 workspace_docs,
             )
         )
@@ -2400,6 +2345,23 @@ def _run_public_adapter_preflight(
 ) -> list[dict[str, Any]]:
     if not isinstance(field_context, dict) or not field_context.get("enable_public_adapters"):
         return []
+    country = _field_country_from_context(field_context)
+    if country is None:
+        return [{
+            "name": "field_jurisdiction",
+            "text": (
+                "US/Canadian public-source selection is unavailable because the field country is "
+                "unknown, unsupported, or conflicts with its province/state. Confirm the field region before refreshing sources."
+            ),
+            "payload": {
+                "kind": "jurisdiction_policy",
+                "status": "jurisdiction_unknown",
+                "transport": "blocked",
+                "external_request_attempted": False,
+                "external_calls_attempted": 0,
+                "boundary": "No country-specific adapter or source card was selected.",
+            },
+        }]
     public_plan = select_public_capability_plan(
         message,
         route=refine_query_route(message, classify_query(message)),
@@ -2410,6 +2372,7 @@ def _run_public_adapter_preflight(
         for item in public_plan.invocations
         if item.operation == "public_source_card"
     }
+    geometry_supplied = field_context.get("geometry") is not None
     normalized_geometry = _public_adapter_geometry(field_context.get("geometry"))
     if normalized_geometry is not None:
         field_context = {**field_context, "geometry": normalized_geometry}
@@ -2418,6 +2381,16 @@ def _run_public_adapter_preflight(
         field_context.pop("geometry", None)
     timeout = int(field_context.get("adapter_timeout_seconds") or 8)
     records: list[dict[str, Any]] = []
+    if geometry_supplied and normalized_geometry is None:
+        records.append({
+            "name": "field_geometry",
+            "text": "Spatial public-source lookup is unavailable because the supplied geometry did not validate; no location was inferred.",
+            "payload": {
+                "kind": "geometry_policy", "status": "geometry_unavailable", "transport": "blocked",
+                "external_request_attempted": False,
+                "boundary": "Supply valid complete WGS84 geometry before spatial public-source lookup.",
+            },
+        })
     offline = network_mode == "offline"
     if offline:
         records.append(
@@ -2438,12 +2411,16 @@ def _run_public_adapter_preflight(
                 },
             }
         )
-    lat_lon = _representative_lat_lon(field_context)
+    lat_lon = (
+        None
+        if geometry_supplied and normalized_geometry is None
+        else _representative_lat_lon(field_context)
+    )
     if lat_lon and not offline:
         latitude, longitude = lat_lon
-        if _is_canadian_field_context(field_context):
+        if country == "Canada":
             field_tasks = _canadian_public_source_tasks(message, field_context, latitude=latitude, longitude=longitude, timeout=timeout)
-        else:
+        elif country == "United States":
             field_tasks = [
                 lambda: _call_nrcs_soil_survey_for_field(latitude, longitude, field_context, timeout=timeout),
                 lambda: _call_nasa_power(latitude, longitude, timeout=timeout),
@@ -2460,7 +2437,7 @@ def _run_public_adapter_preflight(
         adapter_span = profiler.span("agent.tools.public_adapters", metadata={"lat": latitude, "lon": longitude}) if profiler else nullcontext()
         with adapter_span:
             records.extend(_run_public_adapter_tasks(field_tasks))
-    if offline and _is_canadian_field_context(field_context):
+    if offline and country == "Canada":
         crop = _clean_field_text(field_context.get("crop") or field_context.get("commodity"))
         province = _canadian_province_from_context(field_context)
         if crop:
@@ -2479,7 +2456,7 @@ def _run_public_adapter_preflight(
             else nullcontext()
         )
         with adapter_span:
-            if _is_canadian_field_context(field_context):
+            if country == "Canada":
                 records.append(_call_health_canada_pmra(ppls_search))
             else:
                 records.append(_call_epa_ppls(ppls_search, timeout=timeout))
@@ -2507,44 +2484,48 @@ def _run_public_adapter_preflight(
 
 
 def _public_adapter_geometry(value: Any) -> dict[str, Any] | None:
-    """Normalize the UI field shape to the GeoJSON contract used by adapters."""
+    """Normalize and validate complete geometry without dropping bad vertices."""
     if not isinstance(value, dict):
         return None
     geometry_type = str(value.get("type") or "")
+    candidate: dict[str, Any] | None = None
     if geometry_type in {"Point", "Polygon", "MultiPolygon"}:
-        return value
+        candidate = value
     kind = str(value.get("kind") or "").lower()
-    if kind == "point":
+    if candidate is None and kind == "point":
         point = value.get("point")
         if (
             isinstance(point, dict)
             and _is_number(point.get("lon"))
             and _is_number(point.get("lat"))
         ):
-            return {
+            candidate = {
                 "type": "Point",
                 "coordinates": [float(point["lon"]), float(point["lat"])],
             }
-        return None
-    if kind == "polygon":
+    if candidate is None and kind == "polygon":
         points = value.get("points")
         if not isinstance(points, list):
+            return None
+        if any(not isinstance(point, dict) or not _is_number(point.get("lon")) or not _is_number(point.get("lat")) for point in points):
             return None
         ring = [
             [float(point["lon"]), float(point["lat"])]
             for point in points
-            if (
-                isinstance(point, dict)
-                and _is_number(point.get("lon"))
-                and _is_number(point.get("lat"))
-            )
         ]
         if len(ring) < 3:
             return None
         if ring[0] != ring[-1]:
             ring.append(list(ring[0]))
-        return {"type": "Polygon", "coordinates": [ring]}
-    return None
+        candidate = {"type": "Polygon", "coordinates": [ring]}
+    if candidate is None:
+        return None
+    try:
+        from agronomy_agent.geospatial.geometry import canonical_geometry
+
+        return canonical_geometry(candidate)
+    except (ImportError, TypeError, ValueError):
+        return None
 
 
 def _run_public_adapter_tasks(tasks: list[Callable[[], dict[str, Any]]]) -> list[dict[str, Any]]:
@@ -4355,11 +4336,17 @@ def _append_field_context_prompt(context_block: str, field_context: Any) -> str:
     return "\n".join(lines)
 
 
-def _combined_verification_evidence(context: Any, field_context: Any) -> str:
+def _combined_verification_evidence(context: Any, field_context: Any, compiled_context: dict[str, Any] | None = None) -> str:
     parts = [context_evidence_text(context).strip()]
     history_text = _field_history_evidence_text(field_context)
     if history_text:
         parts.append(history_text)
+    if compiled_context is not None:
+        # Use the same server-compiled, admitted source facts seen by the draft.
+        # Raw browser context and table inventories are not numeric evidence.
+        receipt = dict(compiled_context["receipt"])
+        receipt.pop("imported_data", None)
+        parts.append(render_field_context_prompt(receipt))
     return "\n\n".join(part for part in parts if part)
 
 
@@ -4404,6 +4391,9 @@ def _field_history_display_time(record: dict[str, Any]) -> str:
         if status == "unknown":
             return f"Sampling date unknown{recorded_note}"
         return f"Sampling date unspecified{recorded_note}"
+    if record.get("observation_time_status") == "unknown":
+        recorded = _clean_field_text(record.get("recorded_at"))
+        return f"Date unknown (recorded {recorded})" if recorded else "date unknown"
     return _clean_field_text(record.get("occurred_at")) or "date unknown"
 
 
@@ -4424,6 +4414,12 @@ def _safe_field_context_summary(field_context: Any) -> dict[str, Any]:
             ],
             "boundary": "Reviewed private uploads; source meaning and rights remain user-asserted.",
         }
+    if isinstance(field_context.get("field_season"), int):
+        summary["field_season"] = field_context["field_season"]
+        summary["season_crop_status"] = field_context.get("season_crop_status", "unknown")
+        summary["field_season_lineage"] = field_context.get("field_season_lineage")
+    if isinstance(field_context.get("retained_public_context"), list):
+        summary["retained_public_context"] = field_context["retained_public_context"][:4]
     selected_feature = field_context.get("selected_upload_feature")
     if isinstance(selected_feature, dict):
         summary["selected_upload_feature"] = {
@@ -4504,6 +4500,10 @@ def _with_stored_field_data(
         return field_context
     trusted = dict(field_context)
     trusted.pop("field_data", None)
+    trusted.pop("retained_public_context", None)
+    trusted.pop("field_season_lineage", None)
+    trusted.pop("season_crop_status", None)
+
     outer = session_context if isinstance(session_context, dict) else {}
     field_id = outer.get("field_context_id") or trusted.get("field_context_id")
     if not field_id or outer.get("field_access_authorized") is not True:
@@ -4516,6 +4516,30 @@ def _with_stored_field_data(
         raise ValueError("field data workspace binding mismatch")
     from agronomy_agent.server.storage.field_data_store import field_data_snapshot
 
+    if isinstance(store, TraceStore):
+        from agronomy_agent.server.storage.field_context_store import current_sources
+        from agronomy_agent.server.storage.farm_store import get_season
+        retained = []
+        for source in current_sources(store, field).values():
+            raw = source.get("values")
+            if source.get("availability") not in {"available", "partial"} or source.get("freshness") != "current" or not isinstance(raw, dict):
+                continue
+            name = raw.get("tool")
+            if name not in {"nasa_power_daily", "cansis_soil_landscapes_canada", "nrcs_soil_survey_geometry", "aafc_annual_crop_inventory", "cropland_data_layer_geometry"}:
+                continue
+            record = _public_tool_record(name, "Retained source-bound field context", raw,
+                status="partial_available" if source["availability"] == "partial" else "available", transport="cache")
+            record["payload"].update({"snapshot_id": source["snapshot_id"], "receipt_sha256": source["receipt_sha256"], "fetched_at": source["fetched_at"]})
+            retained.append(record)
+        if retained:
+            trusted["retained_public_context"] = retained
+        season = outer.get("field_season")
+        if isinstance(season, int) and not isinstance(season, bool) and 1900 <= season <= 2200:
+            saved = get_season(store, str(field_id), season)
+            trusted.update({"field_season": season, "crop_year": season, "crop": saved.get("crop") if saved else None,
+                "season_crop_status": "grower_confirmed" if saved and saved.get("crop") else "unknown",
+                "field_season_lineage": {"season": season, "crops": saved.get("crops", []) if saved else [], "crop_system": saved.get("crop_system", "unknown") if saved else "unknown", "revision": saved.get("revision", 0) if saved else 0,
+                    "snapshot_sha256": hashlib.sha256(json.dumps(saved, sort_keys=True, default=str).encode()).hexdigest(), "status": "saved" if saved else "unknown"}})
     snapshot = field_data_snapshot(store, str(field_id))
     if snapshot.get("import_count"):
         trusted["field_data"] = snapshot
@@ -4570,7 +4594,12 @@ def _with_stored_field_history(
 
     included: list[dict[str, Any]] = []
     if chain_valid:
-        for event in events[-max(1, limit):]:
+        selected_season = outer.get("field_season")
+        scoped_events = events
+        if isinstance(selected_season, int):
+            from agronomy_agent.server.storage.field_record_store import event_season
+            scoped_events = [event for event in events if event_season(event) == selected_season]
+        for event in scoped_events[-max(1, limit):]:
             if not isinstance(event, dict):
                 continue
             event_id = _clean_field_text(event.get("id"))
@@ -4608,6 +4637,9 @@ def _with_stored_field_history(
                 record["recorded_at"] = _clean_field_text(event.get("recorded_at"))
                 if status == "user_supplied":
                     record["occurred_at"] = event_time
+            elif (event.get("provenance") or {}).get("observation_time_status") == "unknown":
+                record["observation_time_status"] = "unknown"
+                record["recorded_at"] = _clean_field_text(event.get("recorded_at"))
             else:
                 record["occurred_at"] = event_time
             included.append(record)
@@ -4667,6 +4699,7 @@ def _safe_field_history_summary(value: Any) -> dict[str, Any]:
                 "event_time",
                 "recorded_at",
                 "sampling_time_status",
+                "observation_time_status",
                 "corrects_event_id",
                 "superseded_by_event_id",
                 "integrity_sha256",
@@ -4733,7 +4766,10 @@ def _safe_field_context_intersections(value: Any) -> list[dict[str, Any]]:
                 "code",
                 "name",
                 "confidence",
+                "confidence_kind",
                 "coverage_estimate",
+                "coverage_support_type",
+                "coverage_method",
                 "boundary",
                 "capability_label",
                 "capability_summary",
@@ -4877,13 +4913,13 @@ def _field_context_intersection_summaries(value: Any) -> list[str]:
         system = _clean_field_text(item.get("system")) or "Regional layer"
         code = _clean_field_text(item.get("code")) or "unknown code"
         name = _clean_field_text(item.get("name")) or "unnamed region"
-        coverage = item.get("coverage_estimate")
-        confidence = item.get("confidence")
-        suffix = []
-        if _is_number(coverage):
-            suffix.append(f"{round(float(coverage) * 100)}% field coverage estimate")
-        if _is_number(confidence):
-            suffix.append(f"{round(float(confidence) * 100)}% confidence")
+        suffix = [mapped_coverage_label(item)]
+        score = mapped_confidence_label(item)
+        if score:
+            suffix.append(score)
+        scale = _clean_field_text(item.get("source_scale") or item.get("source_scale_range") or item.get("source_scale_label"))
+        if scale:
+            suffix.append(f"source scale {scale[:240]}")
         summaries.append(f"{system} {code}: {name}" + (f" ({'; '.join(suffix)})" if suffix else ""))
     return summaries
 
@@ -4907,29 +4943,25 @@ def _field_context_string_list(value: Any, *, limit: int) -> list[str]:
 
 
 def _representative_lat_lon(field_context: dict[str, Any]) -> tuple[float, float] | None:
-    point = field_context.get("representative_point")
-    if isinstance(point, dict) and _is_number(point.get("lat")) and _is_number(point.get("lon")):
-        return float(point["lat"]), float(point["lon"])
-    geometry = field_context.get("geometry")
-    if not isinstance(geometry, dict):
+    """Use shared validated interior support, never an exterior vertex average."""
+    if field_context.get("geometry") is not None:
+        geometry = _public_adapter_geometry(field_context["geometry"])
+        if geometry is None:
+            return None
+    else:
+        point = field_context.get("representative_point")
+        if not isinstance(point, dict):
+            return None
+        geometry = _public_adapter_geometry({"type": "Point", "coordinates": [point.get("lon"), point.get("lat")]})
+        if geometry is None:
+            return None
+    try:
+        from agronomy_agent.geospatial.geometry import geodesic_metrics
+
+        location = geodesic_metrics(geometry)["representative_point"]
+        return (location["latitude"], location["longitude"]) if location is not None else None
+    except (ImportError, TypeError, ValueError):
         return None
-    geometry_type = str(geometry.get("type") or "").lower()
-    coordinates = geometry.get("coordinates")
-    if geometry_type == "point" and isinstance(coordinates, list) and len(coordinates) >= 2:
-        lon, lat = coordinates[:2]
-        if _is_number(lat) and _is_number(lon):
-            return float(lat), float(lon)
-    if geometry_type == "polygon" and isinstance(coordinates, list) and coordinates:
-        ring = coordinates[0]
-        if isinstance(ring, list):
-            points = [
-                (float(coord[1]), float(coord[0]))
-                for coord in ring
-                if isinstance(coord, list) and len(coord) >= 2 and _is_number(coord[0]) and _is_number(coord[1])
-            ]
-            if points:
-                return sum(point[0] for point in points) / len(points), sum(point[1] for point in points) / len(points)
-    return None
 
 
 def _quickstats_context(field_context: dict[str, Any]) -> tuple[str, str, str | None] | None:
@@ -5016,20 +5048,68 @@ def _openet_window(field_context: dict[str, Any]) -> tuple[str, str]:
     return f"{year}-04-01", f"{year}-09-30"
 
 
-def _is_canadian_field_context(field_context: dict[str, Any]) -> bool:
+def _normalize_field_country(value: Any) -> str | None:
+    return {"canada": "Canada", "united states": "United States"}.get(
+        _normalize_explicit_country(str(value or ""))
+    )
+
+
+def _country_for_jurisdiction(value: Any) -> str | None:
+    """Resolve exact regional aliases; CA as a subdivision means California."""
+    normalized = str(value or "").strip().upper()
+    if normalized.startswith("CA-") and normalized[3:] in CANADIAN_PROVINCE_CODES:
+        return "Canada"
+    if normalized.startswith("US-") and normalized[3:] in US_STATE_NAME_TO_ALPHA.values():
+        return "United States"
+    if (
+        normalized in CANADIAN_PROVINCE_CODES
+        or normalized in CANADIAN_PROVINCE_NAMES_TO_CODE
+        or normalized in CANADIAN_PROVINCE_NAME_ALIASES
+        or normalized in CANADIAN_PROVINCE_TEXT_ALIASES
+    ):
+        return "Canada"
+    if normalized in US_STATE_NAME_TO_ALPHA or normalized in US_STATE_NAME_TO_ALPHA.values():
+        return "United States"
+    return _normalize_field_country(normalized)
+
+
+def _field_country_from_context(field_context: dict[str, Any]) -> str | None:
+    """Choose a supported country only from coherent, recognized field context.
+
+    This is adapter routing, not a coordinate check or legal determination.
+    Unsupported explicit countries and conflicting recognized identities abstain.
+    """
+    countries: set[str] = set()
     for key in ("country", "country_code"):
         value = _clean_field_text(field_context.get(key))
-        if value and value.upper() in {"CA", "CAN", "CANADA"}:
-            return True
-    province = _canadian_province_from_context(field_context)
-    if province:
-        return True
+        if value:
+            country = _normalize_field_country(value)
+            if country is None:
+                return None
+            countries.add(country)
+    regional_keys = ("province", "province_state", "state", "state_alpha", "jurisdiction")
+    has_region = any(_clean_field_text(field_context.get(key)) for key in regional_keys)
+    for key in regional_keys if has_region else (*regional_keys, "region"):
+        country = _country_for_jurisdiction(field_context.get(key))
+        if country is not None:
+            countries.add(country)
+    if len(countries) > 1:
+        return None
+    if countries:
+        return next(iter(countries))
+    if has_region:
+        return None
     for item in _safe_field_context_intersections(field_context.get("regional_intersections")):
-        layer = str(item.get("layer_id") or "").lower()
-        system = str(item.get("system") or "").lower()
-        if "canada" in layer or "canada" in system or "ecozone" in system:
-            return True
-    return False
+        if (
+            item.get("layer_id") in TRUSTED_GEOGRAPHIC_LAYER_IDS
+            and item.get("binding_status") == "server_recomputed_bundled_source"
+        ):
+            return "Canada"
+    return None
+
+
+def _is_canadian_field_context(field_context: dict[str, Any]) -> bool:
+    return _field_country_from_context(field_context) == "Canada"
 
 
 def _canadian_province_from_context(field_context: dict[str, Any]) -> str | None:
@@ -5038,6 +5118,8 @@ def _canadian_province_from_context(field_context: dict[str, Any]) -> str | None
         if not value:
             continue
         normalized = value.upper()
+        normalized = CANADIAN_PROVINCE_NAME_ALIASES.get(normalized, normalized)
+        normalized = CANADIAN_PROVINCE_TEXT_ALIASES.get(normalized, normalized).upper()
         if normalized.startswith("CA-") and normalized[3:] in CANADIAN_PROVINCE_CODES:
             return normalized[3:]
         if normalized in CANADIAN_PROVINCE_CODES:
@@ -5054,12 +5136,14 @@ def _days_in_month(year: int, month: int) -> int:
 
 
 def _state_alpha_from_context(field_context: dict[str, Any]) -> str | None:
-    for key in ("state_alpha", "state", "jurisdiction", "region"):
+    for key in ("state_alpha", "state", "province_state", "jurisdiction", "region"):
         value = _clean_field_text(field_context.get(key))
         if not value:
             continue
         normalized = value.upper()
-        if re.fullmatch(r"[A-Z]{2}", normalized):
+        if normalized.startswith("US-"):
+            normalized = normalized[3:]
+        if normalized in US_STATE_NAME_TO_ALPHA.values():
             return normalized
         if normalized in US_STATE_NAME_TO_ALPHA:
             return US_STATE_NAME_TO_ALPHA[normalized]

@@ -944,7 +944,7 @@ def run_local_tool(
             geometry=payload.get("geometry") if isinstance(payload.get("geometry"), dict) else None,
             crop=_optional_str(payload.get("crop")),
             province=_optional_str(payload.get("province")),
-            year=int(payload.get("year", local_tools.DEFAULT_AAFC_ACI_YEAR)),
+            year=None if payload.get("year") == "latest" else int(payload.get("year", local_tools.DEFAULT_AAFC_ACI_YEAR)),
             sample_points=int(payload.get("sample_points", local_tools.DEFAULT_CDL_SAMPLE_POINTS)),
             cache_dir=str(payload.get("cache_dir", "outputs/tool_cache/aafc_annual_crop_inventory")),
             timeout=int(payload.get("timeout", 20)),

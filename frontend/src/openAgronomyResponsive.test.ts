@@ -71,7 +71,7 @@ describe('Open Agronomy responsive workspace', () => {
     const styles = css()
     const benchmarkStyles = benchmarksCss()
 
-    expect(app).toContain("const APP_PAGES: Page[] = ['analyze', 'fields', 'evidence', 'benchmarks', 'sources', 'privacy', 'about']")
+    expect(app).toContain("const APP_PAGES: Page[] = ['farms', 'records', 'field-editor', 'analyze', 'fields', 'evidence', 'benchmarks', 'sources', 'privacy', 'about']")
     expect(app).toContain("const BenchmarksRoute = lazy(() => import('./BenchmarksRoute')")
     expect(app).toContain("const LeafletFieldMap = lazy(() => import('./LeafletFieldMap')")
     expect(app).toContain("const FieldSyncPanel = lazy(() => import('./FieldSyncPanel').then(module => ({ default: module.FieldSyncPanel }))")
@@ -87,7 +87,7 @@ describe('Open Agronomy responsive workspace', () => {
     expect(app).toContain("page === 'privacy' || page === 'about'")
     expect(app).toContain('<OpenAgronomyInfoPages page={page} />')
     expect(navigationSource()).toContain("['privacy', 'Privacy']")
-    expect(navigationSource()).toContain("['analyze', 'Workspace'")
+    expect(navigationSource()).toContain("['analyze', 'Questions'")
     expect(navigationSource()).toContain('aria-label="Review"')
     expect(app).toContain('<h2>Conversation</h2>')
     expect(app).not.toContain('<h2>Advice</h2>')

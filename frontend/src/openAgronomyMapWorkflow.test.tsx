@@ -165,6 +165,11 @@ const uploadPayload = {
   filename: 'two-fields.geojson',
   content_type: 'application/geo+json',
   source_format: 'geojson',
+  import_receipt: { schema_version: 'open_agronomy_agent.vector_import.v1', source_sha256: 'a'.repeat(64), source_bytes: 1234 },
+  coordinate_reference: {
+    target_crs: 'EPSG:4326', label: 'WGS84 longitude/latitude', reprojected: false,
+    sources: [{ layer: 'geojson', source_crs: 'EPSG:4326', crs_basis: 'RFC7946', target_crs: 'EPSG:4326', reprojected: false }],
+  },
   feature_count: 2,
   parsed_feature_count: 2,
   selected_feature_id: 'geojson:0',
@@ -197,7 +202,7 @@ const uploadPayload = {
       bbox: [-93.72, 42.02, -93.71, 42.03],
       acres: 25,
       selected: true,
-      properties: { name: 'North field' },
+      properties: { name: 'North field', upload_source_layer: 'geojson', upload_source_feature_index: 0, upload_source_feature_id: 'native-north', year_list: [1980, 2022], current_crop: null },
     },
     {
       id: 'geojson:1',
@@ -206,7 +211,7 @@ const uploadPayload = {
       bbox: [-93.68, 42.08, -93.66, 42.1],
       acres: 100,
       selected: false,
-      properties: { name: 'South field' },
+      properties: { name: 'South field', upload_source_layer: 'geojson', upload_source_feature_index: 1, upload_source_feature_id: 'native-south', year_list: [2022], current_crop: null },
     },
   ],
   regional_intersections: [
@@ -237,7 +242,6 @@ const uploadPayload = {
     },
   ],
   warnings: ['2 upload features were detected; the largest polygon or first point was selected by default.'],
-  coordinate_reference: { assumed: 'EPSG:4326', label: 'WGS84 longitude/latitude', reprojected: false },
   status_message: 'two-fields.geojson loaded with 2 features.',
   boundary: 'Uploaded boundaries are field context, not legal boundary evidence.',
 }
@@ -743,7 +747,7 @@ const privateKnowledgeInspection = {
 
 const installFetchMock = (
   demoFields: { schema_version: string; storage: typeof emptyDemoFields.storage; fields: Array<Record<string, unknown>> } = emptyDemoFields,
-  boundaryUpload: typeof uploadPayload = uploadPayload,
+  boundaryUpload: Record<string, unknown> = uploadPayload,
   initialSessions: Array<Record<string, unknown>> = [],
 ) => {
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -832,7 +836,7 @@ const installFetchMock = (
         boundary: 'This local check reports source availability only.',
       })
     }
-    if (url === '/api/geo/boundary-upload?intersect=true') return jsonResponse(boundaryUpload)
+    if (url.startsWith('/api/geo/boundary-upload?')) return jsonResponse(boundaryUpload)
     if (url === '/api/private-knowledge/inspect') return jsonResponse(privateKnowledgeInspection)
     if (url === '/api/tools/weather-power') return jsonResponse(nasaPowerConditions)
     if (url === '/api/geo/priors') {
@@ -860,7 +864,7 @@ const installDegradedFetchMock = () => {
     if (url === '/api/configs') return jsonResponse(bootConfig)
     if (url === '/api/tools/public-adapter-readiness') throw new Error('adapter readiness unavailable')
     if (url === '/api/demo/fields' && (!init?.method || init.method === 'GET')) throw new Error('field storage unavailable')
-    if (url === '/api/geo/boundary-upload?intersect=true') return jsonResponse(uploadLayerErrorPayload)
+    if (url.startsWith('/api/geo/boundary-upload?')) return jsonResponse(uploadLayerErrorPayload)
     return jsonResponse({})
   })
   vi.stubGlobal('fetch', fetchMock)
@@ -917,6 +921,7 @@ const installConversationFetchMock = () => {
 }
 
 beforeEach(() => {
+  window.location.hash = '#analyze'
   Object.defineProperty(window, 'localStorage', {
     value: createTestStorage(),
     configurable: true,
@@ -929,8 +934,8 @@ afterEach(() => {
 })
 
 const openPrimaryPage = (name: 'Map' | 'Fields') => {
-  const navigation = screen.getByRole('navigation', { name: 'Primary' })
-  fireEvent.click(within(navigation).getByRole('button', { name: name === 'Map' ? 'Workspace' : name }))
+  // These regressions exercise the retained detailed editor and question map.
+  act(() => { window.location.hash = name === 'Map' ? '#analyze' : '#field-editor'; window.dispatchEvent(new HashChangeEvent('hashchange')) })
   if (name === 'Map') fireEvent.click(screen.getByRole('button', { name: 'Map' }))
 }
 
@@ -1001,8 +1006,8 @@ describe('Open Agronomy map upload workflow', () => {
 
     const navigation = screen.getByRole('navigation', { name: 'Primary' })
     const primaryButtons = Array.from(navigation.querySelectorAll(':scope > button'))
-    expect(primaryButtons.map(button => button.textContent)).toEqual(['Workspace', 'Fields', 'Data'])
-    expect(within(navigation).getByRole('button', { name: 'Workspace' })).toHaveAttribute('aria-current', 'page')
+    expect(primaryButtons.map(button => button.textContent)).toEqual(['Farms', 'Fields', 'Records', 'Questions'])
+    expect(within(navigation).getByRole('button', { name: 'Questions' })).toHaveAttribute('aria-current', 'page')
     const review = screen.getByRole('navigation', { name: 'Review' })
     expect(within(review).getByRole('button', { name: 'Benchmarks' })).toBeVisible()
     const information = screen.getByRole('navigation', { name: 'Information' })
@@ -1023,7 +1028,7 @@ describe('Open Agronomy map upload workflow', () => {
     expect(await screen.findByTestId('mock-leaflet-map')).toHaveAttribute('data-geometry-kind', 'none')
     expect(fetchMock.mock.calls.some(([url]) => String(url) === '/api/geo/priors')).toBe(false)
     fireEvent.click(screen.getByRole('button', { name: /Explore an example field/i }))
-    expect(await screen.findByText(/Regional context refreshed: AAFC Alberta Detailed Soil Survey AB_SOIL_ABD192014361 matched at 100% confidence/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Regional context refreshed: AAFC Alberta Detailed Soil Survey AB_SOIL_ABD192014361 matched/i)).toBeInTheDocument()
     expect(await screen.findByTestId('mock-leaflet-map')).toHaveAttribute('data-geometry-kind', 'polygon')
     expect(screen.getByTestId('mock-leaflet-map')).toHaveAttribute('data-first-lon', '-113.608')
     openPrimaryPage('Fields')
@@ -1297,7 +1302,7 @@ describe('Open Agronomy map upload workflow', () => {
         lookupCount += 1
         return lookupCount === 1 ? initialLookup : jsonResponse(bcPriors)
       }
-      if (url === '/api/geo/boundary-upload?intersect=true') return jsonResponse(nsPictouUploadPayload)
+      if (url.startsWith('/api/geo/boundary-upload?')) return jsonResponse(nsPictouUploadPayload)
       if (url === '/api/tools/aafc-nasdi-agroclimate') return jsonResponse(nasdiConditions)
       return jsonResponse({})
     })
@@ -1335,7 +1340,7 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.getByRole('button', { name: 'Save edits' })).toBeEnabled()
     fireEvent.click(screen.getByRole('button', { name: 'Save edits' }))
 
-    expect(await screen.findByText(/Regional context refreshed: EPA Level III Ecoregion 47 matched at 92% confidence/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Regional context refreshed: EPA Level III Ecoregion 47 matched/i)).toBeInTheDocument()
     openPrimaryPage('Fields')
     openFieldTab('Map context')
     expect(screen.getByText('Southern Iowa Drift Plain')).toBeInTheDocument()
@@ -1360,7 +1365,7 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.getByRole('button', { name: 'Save edits' })).toBeEnabled()
     fireEvent.click(screen.getByRole('button', { name: 'Save edits' }))
 
-    expect(await screen.findByText(/Regional context refreshed: NRCS MLRA MLRA_103 matched at 94% confidence/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Regional context refreshed: NRCS MLRA MLRA_103 matched/i)).toBeInTheDocument()
     const mapContextBar = screen
       .getByRole('button', { name: 'Open field details' })
       .closest('.map-context-bar')
@@ -1388,7 +1393,7 @@ describe('Open Agronomy map upload workflow', () => {
     render(<OpenAgronomyApp />)
 
     await selectExample('central-alberta-barley', true)
-    await screen.findByText(/Regional context refreshed: AAFC Alberta Detailed Soil Survey AB_SOIL_ABD192014361 matched at 100% confidence/i)
+    await screen.findByText(/Regional context refreshed: AAFC Alberta Detailed Soil Survey AB_SOIL_ABD192014361 matched/i)
     // Let the initial field-bound weather request settle before changing the geometry.
     // Otherwise it can complete during the draft/cancel interaction and leave React's
     // asynchronous state update outside the test's observed work.
@@ -1484,6 +1489,13 @@ describe('Open Agronomy map upload workflow', () => {
     expect(body.geometry.kind).toBe('polygon')
     expect(body.regionalContext).toBe('NRCS MLRA MLRA_103')
     expect(body.sourceBoundary).toContain('context priors')
+    expect(body.boundaryImport.import_receipt).toEqual(uploadPayload.import_receipt)
+    expect(body.boundaryImport.coordinate_reference).toEqual(uploadPayload.coordinate_reference)
+    expect(body.boundaryImport.selected_feature.source_feature_id).toBe('native-north')
+    expect(body.boundaryImport.selected_feature.properties.year_list).toEqual([1980, 2022])
+    expect(body.boundaryImport.selected_feature.properties.current_crop).toBeNull()
+    const uploadCall = fetchMock.mock.calls.find(([url]) => String(url).startsWith('/api/geo/boundary-upload?'))
+    expect(new URL(String(uploadCall?.[0]), 'http://localhost').searchParams.get('jurisdiction')).toBe('Alberta')
   })
 
   it('checks saved Quebec offline context from the Fields tab without starting a download', async () => {
@@ -1686,7 +1698,31 @@ describe('Open Agronomy map upload workflow', () => {
       ([url, init]) => String(url) === '/api/demo/fields' && init?.method === 'POST'
         && JSON.parse(String(init.body || '{}')).name === 'West quarter',
     )).toBe(true))
-    expect(screen.getByRole('heading', { name: 'West quarter' })).toBeInTheDocument()
+    await waitFor(() => expect(new URLSearchParams(window.location.hash.split('?')[1]).get('field')).toBe('field-context-1'))
+  })
+
+  it('retains the selected upload receipt and attributes through guided field creation', async () => {
+    const fetchMock = installFetchMock()
+    render(<OpenAgronomyApp />)
+    openPrimaryPage('Fields')
+    const newField = screen.getByRole('button', { name: 'New field' })
+    await waitFor(() => expect(newField).toBeEnabled())
+    fireEvent.click(newField)
+    const setup = await screen.findByRole('dialog', { name: 'Add a field' })
+    fireEvent.change(within(setup).getByLabelText('Field name'), { target: { value: 'Imported quarter' } })
+    fireEvent.click(within(setup).getByRole('button', { name: 'Continue' }))
+    fireEvent.change(within(setup).getByLabelText('Import field boundary'), { target: { files: [new File(['{}'], 'fields.geojson', { type: 'application/geo+json' })] } })
+    const selection = await within(setup).findByLabelText('Field in this file')
+    fireEvent.change(selection, { target: { value: uploadPayload.feature_summaries[1].id } })
+    fireEvent.click(within(setup).getByRole('button', { name: 'Continue' }))
+    fireEvent.click(within(setup).getByRole('button', { name: 'Save field' }))
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url, init]) => String(url) === '/api/demo/fields' && init?.method === 'POST')).toBe(true))
+    const call = fetchMock.mock.calls.find(([url, init]) => String(url) === '/api/demo/fields' && init?.method === 'POST')!
+    const body = JSON.parse(String(call[1]?.body))
+    expect(body.boundaryImport.import_receipt).toEqual(uploadPayload.import_receipt)
+    expect(body.boundaryImport.coordinate_reference).toEqual(uploadPayload.coordinate_reference)
+    expect(body.boundaryImport.selected_feature.id).toBe(uploadPayload.feature_summaries[1].id)
+    expect(body.boundaryImport.selected_feature.properties).toEqual(uploadPayload.feature_summaries[1].properties)
   })
 
   it('creates a data-only field through the wizard without requesting regional map context', async () => {
@@ -1757,7 +1793,7 @@ describe('Open Agronomy map upload workflow', () => {
     const baseFetch = fetchMock.getMockImplementation()!
     fetchMock.mockImplementation((input: RequestInfo | URL, init?: RequestInit) =>
       String(input) === '/api/demo/fields/field-public/imagery/analytics'
-        ? Promise.resolve(jsonResponse({ status: 'ready', network_mode: 'online', sampling_modes: ['field_polygon','point_pixel','point_buffer'], sample_radius_bounds_m: {min:15,max:1500} }))
+        ? Promise.resolve(jsonResponse({ status: 'ready', providers: [{ id: 'hls-s30-planetary-computer', analysis: true, sampling_modes: ['field_polygon','point_pixel','point_buffer'] }], network_mode: 'online', sampling_modes: ['field_polygon','point_pixel','point_buffer'], sample_radius_bounds_m: {min:15,max:1500} }))
         : baseFetch(input, init))
     render(<OpenAgronomyApp />)
 
@@ -2279,7 +2315,7 @@ describe('Open Agronomy map upload workflow', () => {
   it('loads a private reference only into browser memory from the Data tab', async () => {
     const fetchMock = installFetchMock()
     render(<OpenAgronomyApp />)
-    fireEvent.click(within(screen.getByRole('navigation', { name: 'Primary' })).getByRole('button', { name: 'Data' }))
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Review' })).getByRole('button', { name: 'Data management' }))
     const input = await screen.findByLabelText('Choose private reference')
     fireEvent.change(input, {
       target: {
@@ -2440,7 +2476,7 @@ describe('Open Agronomy map upload workflow', () => {
 
     expect(await screen.findByText('Local runtime · connected mode')).toBeInTheDocument()
     expect(question).toHaveValue('Inspect the wet patch tomorrow.')
-    expect(await screen.findByRole('heading', { name: 'Recovered field' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Questions · Recovered field' })).toBeInTheDocument()
     expect(screen.getByText('What did we inspect?')).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Saved conversations' })).toHaveTextContent('Saved barley chat')
     fireEvent.click(screen.getByLabelText('Model settings'))
@@ -2581,7 +2617,7 @@ describe('Open Agronomy map upload workflow', () => {
     const fetchMock = installFetchMock({ ...emptyDemoFields, fields: [storedField] })
     window.localStorage.setItem('open-agronomy-agent.active-field.v1', 'field-edit')
     render(<OpenAgronomyApp />)
-    expect(await screen.findByRole('heading', { name: 'Original field' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Questions · Original field' })).toBeInTheDocument()
     openPrimaryPage('Fields')
     fireEvent.change(screen.getByRole('textbox', { name: 'Field name' }), { target: { value: 'Edited but not saved' } })
     fireEvent(window, new Event('offline'))
@@ -3330,7 +3366,7 @@ describe('Open Agronomy map upload workflow', () => {
     await waitFor(() => expect(screen.getByLabelText('Your question')).toHaveValue(
       'Inspect the north edge before making a rate decision.',
     ))
-    expect(screen.getByRole('heading', { name: 'Draft field' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Questions · Draft field' })).toBeInTheDocument()
   })
 
   it('ignores the first StrictMode bootstrap when its session response arrives after the second', async () => {
@@ -3430,7 +3466,7 @@ describe('Open Agronomy map upload workflow', () => {
     expect(sessionCreates()).toHaveLength(0)
 
     await act(async () => { releaseFields(jsonResponse({ ...emptyDemoFields, fields: [field] })); await pendingFields })
-    await screen.findByRole('heading', { name: field.name })
+    await screen.findByRole('heading', { name: `Questions · ${field.name}` })
     fireEvent.change(composer, { target: { value: 'Question for the restored field' } })
     await waitFor(() => expect(screen.getByRole('button', { name: 'Ask' })).toBeEnabled())
     fireEvent.keyDown(composer, { key: 'Enter', code: 'Enter' })
@@ -3492,7 +3528,7 @@ describe('Open Agronomy map upload workflow', () => {
     fireEvent.click(await within(setup).findByRole('button', { name: 'Mock drop point' }))
     fireEvent.click(within(setup).getByRole('button', { name: 'Continue' }))
     fireEvent.click(within(setup).getByRole('button', { name: 'Save field' }))
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'StrictMode field' })).toBeInTheDocument())
+    await waitFor(() => expect(new URLSearchParams(window.location.hash.split('?')[1]).get('field')).toBe('field-context-1'))
     expect(fetchMock.mock.calls.filter(([url, init]) => String(url) === '/api/demo/fields' && init?.method === 'POST')).toHaveLength(1)
 
     await act(async () => {
@@ -3530,7 +3566,7 @@ it.each([
     return baseImplementation(input, init)
   })
   render(<OpenAgronomyApp />)
-  await screen.findByRole('heading', { name: storedField.name })
+  await screen.findByRole('heading', { name: `Questions · ${storedField.name}` })
   fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'Question for the newer location' } })
   openPrimaryPage('Fields')
   fireEvent.change(screen.getByLabelText('Crop'), { target: { value: '  soybean  ' } })
@@ -3724,7 +3760,7 @@ it('server calculator readiness cannot enable Ask for newly edited unsaved geome
     return base(input, init)
   })
   render(<OpenAgronomyApp />)
-  await screen.findByRole('heading', { name: field.name })
+  await screen.findByRole('heading', { name: `Questions · ${field.name}` })
   await screen.findByText('Model weights are not installed.')
   fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'Exact conversion for saved field' } })
   await waitFor(() => expect(screen.getByRole('button', { name: 'Ask' })).toBeEnabled())
@@ -3938,4 +3974,34 @@ describe('production answer origin and publicity wording', () => {
       if (revoke) Object.defineProperty(URL, 'revokeObjectURL', revoke); else Reflect.deleteProperty(URL, 'revokeObjectURL')
     }
   })
+})
+
+
+it.each(['general', 'example'])('clears a saved season when changing to %s question scope', async (scope) => {
+  const field = { id: 'season-field', field_context_id: 'season-field', name: 'Season field',
+    crop: '', region: '', jurisdiction: '', concern: '', notes: '', acres: '',
+    geometry: { kind: 'none' }, createdAt: '2026-11-05', storageMode: 'account_workspace' }
+  const session = { session_id: 'season-chat', title: 'Season question', turns: [], turns_included: true,
+    context: { field_context_id: field.id, field_conversation_key: `field:${field.id}`, field_season: 2026 } }
+  window.localStorage.setItem('open-agronomy-agent.active-field.v1', field.id)
+  const fetchMock = installFetchMock({ ...emptyDemoFields, fields: [field] }, uploadPayload, [session])
+  const base = fetchMock.getMockImplementation()!
+  fetchMock.mockImplementation(async (input, init) => String(input) === '/api/sessions/season-chat'
+    ? jsonResponse(session) : base(input, init))
+  render(<OpenAgronomyApp />)
+  const conversations = await screen.findByRole('combobox', { name: 'Saved conversations' })
+  await waitFor(() => expect(within(conversations).getByRole('option', { name: 'Season question' })).toBeInTheDocument())
+  fireEvent.change(conversations, { target: { value: 'season-chat' } })
+  const question = screen.getByLabelText('Your question')
+  fireEvent.change(question, { target: { value: 'Saved season question' } })
+  const requests = () => fetchMock.mock.calls.filter(([url]) => String(url) === '/api/turn-readiness')
+    .map(([, init]) => JSON.parse(String(init?.body)).turn)
+  await waitFor(() => expect(requests().some(turn => turn.session_context.field_season === 2026)).toBe(true))
+  fireEvent.change(screen.getByRole('combobox', { name: 'Active field' }), { target: { value: '' } })
+  if (scope === 'example') fireEvent.click(screen.getByRole('button', { name: /Explore an example field/i }))
+  fireEvent.change(screen.getByLabelText('Your question'), { target: { value: 'New scope question' } })
+  await waitFor(() => expect(requests().some(turn => turn.message === 'New scope question')).toBe(true))
+  const next = requests().find(turn => turn.message === 'New scope question')
+  expect(next.session_context.field_season).toBeUndefined()
+  expect(next.session_context.field_context.field_season).toBeUndefined()
 })

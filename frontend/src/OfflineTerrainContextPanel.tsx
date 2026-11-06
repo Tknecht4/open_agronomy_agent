@@ -15,7 +15,7 @@ type QuebecLidarPlanResponse = {
 type OfflineTerrainContextPanelProps = {
   id: string
   m: 'account_workspace' | 'device'
-  k: 'none' | 'point' | 'polygon'
+  k: 'none' | 'point' | 'polygon' | 'geojson'
   area: string
 }
 

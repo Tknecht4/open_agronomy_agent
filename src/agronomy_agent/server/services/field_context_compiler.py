@@ -10,6 +10,12 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
+from agronomy_agent.geospatial.context_support import (
+    mapped_confidence_label,
+    mapped_coverage_label,
+    validated_fraction,
+)
+
 
 SCHEMA_VERSION = "open_agronomy_agent.field_context_compiler.v1"
 AVAILABLE_STATUSES = {"available", "partial_available", "available_offline_snapshot"}
@@ -30,18 +36,20 @@ def compile_field_context(
     safe_field = safe_field_summary(field_context)
     map_context = _map_context(safe_field.get("regional_intersections"))
     live_context = _live_context(public_adapter_records)
+    retained_context = _live_context(safe_field.get("retained_public_context") or [])
     imported_data = safe_field.get("field_data") if isinstance(safe_field.get("field_data"), dict) else None
-    status = "available" if map_context or live_context or imported_data else "limited"
+    status = "available" if map_context or live_context or retained_context or imported_data else "limited"
     receipt = {
         "schema_version": SCHEMA_VERSION,
         "status": status,
         "field": {
             key: safe_field[key]
-            for key in ("crop", "region", "jurisdiction", "concern", "geometry_summary")
+            for key in ("crop", "region", "jurisdiction", "concern", "geometry_summary", "field_season", "season_crop_status", "field_season_lineage")
             if safe_field.get(key) not in (None, "")
         },
         "map_context": map_context,
         "live_context": live_context,
+        "retained_context": retained_context,
         "boundary": (
             "Compiled context is source-bound decision support. Historical map polygons and gridded or point "
             "public data are priors, not field truth, a soil test, a field sensor, or management-rate authority."
@@ -63,7 +71,9 @@ def render_field_context_prompt(receipt: dict[str, Any]) -> str:
             lines.append(f"- Field: {'; '.join(bits)}")
     for item in receipt.get("map_context") or []:
         label = item.get("label") or item.get("layer_id") or "Mapped context"
-        facts = [item.get("map_unit"), item.get("soil_summary"), item.get("coverage")]
+        facts = [item.get("map_unit"), item.get("soil_summary"), item.get("coverage"), item.get("confidence_label")]
+        if item.get("source_scale"):
+            facts.append(f"source scale {item['source_scale']}")
         components = item.get("dominant_components") or []
         component_text = "; ".join(_component_label(component) for component in components if _component_label(component))
         if component_text:
@@ -73,6 +83,13 @@ def render_field_context_prompt(receipt: dict[str, Any]) -> str:
         label = item.get("label") or item.get("adapter") or "Public source"
         facts = item.get("facts") or []
         lines.append(f"- Public check — {label}: {'; '.join(str(value) for value in facts if value)}")
+    if field.get("field_season"):
+        lines.append(f"- Field season: {field['field_season']}; crop status: {field.get('season_crop_status', 'unknown')}. Do not substitute an undated crop entry.")
+        lineage = field.get("field_season_lineage") or {}
+        if lineage.get("crops"):
+            lines.append(f"- Saved crop system: {lineage.get('crop_system', 'unknown')}; crop entries: {lineage['crops']}. No per-crop acreage, dates or spatial allocation is established by this season record.")
+    for record in receipt.get("retained_context") or []:
+        lines.append(f"- Retained public check — {record.get('label', record.get('adapter'))} (fetched {record.get('fetched_at') or 'unknown'}): {'; '.join(record.get('facts') or [])}")
     imported = receipt.get("imported_data")
     if isinstance(imported, dict):
         lines.append(
@@ -96,8 +113,14 @@ def _map_context(value: Any) -> list[dict[str, Any]]:
             "label": _text(item.get("system")) or _text(item.get("name")),
             "map_unit": _text(item.get("map_unit")) or _text(item.get("code")),
             "soil_summary": _text(item.get("soil_summary")),
-            "coverage": _coverage_label(item),
-            "source_scale": _text(item.get("source_scale")) or _text(item.get("source_scale_range")),
+            "coverage": mapped_coverage_label(item),
+            "coverage_estimate": validated_fraction(item.get("coverage_estimate")),
+            "coverage_support_type": _text(item.get("coverage_support_type")) or "unknown",
+            "coverage_method": _text(item.get("coverage_method")),
+            "confidence_kind": _text(item.get("confidence_kind")) or "unknown",
+            "confidence": validated_fraction(item.get("confidence")),
+            "confidence_label": mapped_confidence_label(item),
+            "source_scale": _text(item.get("source_scale")) or _text(item.get("source_scale_range")) or _text(item.get("source_scale_label")),
             "dominant_components": [_component(component) for component in (item.get("dominant_components") or [])[:3] if isinstance(component, dict)],
             "boundary": _text(item.get("boundary")),
         }
@@ -127,6 +150,9 @@ def _live_context(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "transport": _text(payload.get("transport")),
                 "facts": facts[:5],
                 "source": _text(payload.get("source")),
+                "snapshot_id": _text(payload.get("snapshot_id")),
+                "receipt_sha256": _text(payload.get("receipt_sha256")),
+                "fetched_at": _text(payload.get("fetched_at")),
                 "boundary": _text(payload.get("boundary")),
             }
         )
@@ -213,13 +239,6 @@ def _component_label(component: Any) -> str:
     if _text(component.get("soil_order_code")):
         details.append(f"order {_text(component.get('soil_order_code'))}")
     return f"{name} ({', '.join(details)})" if details else name
-
-
-def _coverage_label(item: dict[str, Any]) -> str | None:
-    value = item.get("coverage_estimate")
-    if isinstance(value, (int, float)) and not isinstance(value, bool) and 0 <= float(value) <= 1:
-        return f"{round(float(value) * 100)}% field coverage estimate"
-    return None
 
 
 def _adapter_label(name: str) -> str:

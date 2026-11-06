@@ -1,3 +1,6 @@
+import { GeometryCoordinateEditor } from './GeometryCoordinateEditor'
+import { completeBoundaryGeometry, fieldGeometryGeoJson, type CompleteBoundary } from './fieldGeometry'
+import { boundaryImportFromUpload, type BoundaryImportSnapshot } from './boundaryImport'
 import { Fragment, FormEvent, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
@@ -85,7 +88,7 @@ import {
 } from './types'
 import type { PrivateKnowledgeDoc, PrivateKnowledgeInspection } from './PrivateKnowledgePanel'
 
-type Page = 'analyze' | 'fields' | 'evidence' | 'benchmarks' | 'sources' | 'privacy' | 'about'
+type Page = 'farms' | 'fields' | 'records' | 'field-editor' | 'analyze' | 'evidence' | 'benchmarks' | 'sources' | 'privacy' | 'about'
 type DemoMode = 'mock' | 'agronomic_rag' | 'baseline'
 
 type AgroclimateIndicator = {
@@ -145,7 +148,7 @@ type NasaPowerState = {
   message?: string
 }
 
-const APP_PAGES: Page[] = ['analyze', 'fields', 'evidence', 'benchmarks', 'sources', 'privacy', 'about']
+const APP_PAGES: Page[] = ['farms', 'records', 'field-editor', 'analyze', 'fields', 'evidence', 'benchmarks', 'sources', 'privacy', 'about']
 const WHITEPAPER_DIR = 'docs/open_agronomy_agent_whitepaper_20260709'
 const CANADIAN_JURISDICTIONS = new Set([
   'alberta',
@@ -175,6 +178,7 @@ const SoilTestEntryPanel = lazy(() => import('./FieldSyncPanel').then(module => 
 const FieldEventRecoveryPanel = lazy(() => import('./FieldSyncPanel').then(module => ({ default: module.FieldEventRecoveryPanel })), 'Field record recovery')
 const FieldDataPanel = lazy(() => import('./FieldDataPanel'), 'Field tables and imagery')
 const FieldImageryAnalyticsPanel = lazy(() => import('./FieldImageryAnalyticsPanel'), 'Satellite indices')
+const FarmWorkspace = lazy(() => import('./FarmWorkspace'), 'Farm workspace')
 const PrivateKnowledgePanel = lazy(() => import('./PrivateKnowledgePanel'), 'Private references')
 const OfflineTerrainContextPanel = lazy(() => import('./OfflineTerrainContextPanel'), 'Terrain context')
 const CanadianKnowledgeCoveragePanel = lazy(() => import('./CanadianKnowledgeCoveragePanel'), 'Public knowledge')
@@ -184,10 +188,10 @@ const pageHash = (page: Page): string => `#${page}`
 
 const pageFromHash = (hash: string): Page => {
   const candidate = hash.replace(/^#\/?/, '').split(/[/?&]/)[0]
-  return APP_PAGES.includes(candidate as Page) ? (candidate as Page) : 'analyze'
+  return APP_PAGES.includes(candidate as Page) ? (candidate as Page) : 'farms'
 }
 
-const currentHashPage = (): Page => (typeof window === 'undefined' ? 'analyze' : pageFromHash(window.location.hash))
+const currentHashPage = (): Page => (typeof window === 'undefined' ? 'farms' : pageFromHash(window.location.hash))
 
 const privateKnowledgeForQuestion = (
   inspections: PrivateKnowledgeInspection[],
@@ -320,7 +324,7 @@ type OfficialLayerStatus = {
   system: string
   source_url?: string
   status: 'matched' | 'error' | 'no_match' | string
-  match_count: number
+  match_count: number | null
   message: string
 }
 
@@ -328,6 +332,8 @@ type BoundaryUploadResponse = {
   schema_version: string
   filename: string
   source_format: string
+  import_receipt?: { schema_version: string; source_sha256: string; source_bytes: number }
+  coordinate_reference?: Record<string, unknown>
   feature_count: number
   parsed_feature_count?: number
   selected_feature_id?: string
@@ -936,6 +942,7 @@ type StoredField = FieldProfile & {
   storageMode?: 'account_workspace' | 'device' | string
   geoPriors?: GeoPriors | null
   sourceBoundary?: string | null
+  boundaryImport?: BoundaryImportSnapshot | null
   fieldRevision?: {
     snapshot_sha256?: string
     previous_snapshot_sha256?: string | null
@@ -1288,6 +1295,7 @@ const geometryForScenario = (scenario: SampleProfile): FieldGeometry => {
   if (geometry.kind === 'point') {
     return { kind: 'point', point: { ...geometry.point } }
   }
+  if (geometry.kind === 'geojson') return structuredClone(geometry)
   return { kind: 'polygon', points: geometry.points.map((point) => ({ ...point })), acres: geometry.acres }
 }
 
@@ -1367,12 +1375,10 @@ const fieldGeometryFromGeoJsonLike = (parsed: {
     const point = fieldPointFromCoords(geometry.coordinates)
     return point ? { kind: 'point', point } : null
   }
-  if (geometry?.type === 'Polygon') {
-    return fieldGeometryFromPolygonCoordinates(geometry.coordinates)
+  if ((geometry?.type === 'Polygon' && Array.isArray(geometry.coordinates) && geometry.coordinates.length > 1) || geometry?.type === 'MultiPolygon') {
+    try { return completeBoundaryGeometry(geometry as CompleteBoundary) } catch { return null }
   }
-  if (geometry?.type === 'MultiPolygon' && Array.isArray(geometry.coordinates)) {
-    return geometry.coordinates.length === 1 ? fieldGeometryFromPolygonCoordinates(geometry.coordinates[0]) : null
-  }
+  if (geometry?.type === 'Polygon') return fieldGeometryFromPolygonCoordinates(geometry.coordinates)
   return null
 }
 
@@ -1525,10 +1531,12 @@ const geometrySummary = (geometry: FieldGeometry): string => {
   if (geometry.kind === 'polygon') {
     return `${geometry.points.length} vertices · approx ${Math.round(geometry.acres).toLocaleString()} ac · editable boundary`
   }
+  if (geometry.kind === 'geojson') return `${geometry.geojson.type} · complete imported boundary · ${Math.round(geometry.acres)} ac estimate`
   return 'No location or boundary recorded'
 }
 
 const sameImageryCoordinates = (saved: FieldGeometry | undefined, current: FieldGeometry): boolean => {
+  if (saved?.kind === 'geojson' && current.kind === 'geojson') return JSON.stringify(saved.geojson) === JSON.stringify(current.geojson)
   if (saved?.kind === 'point' && current.kind === 'point') {
     return Number.isFinite(saved.point?.lat) && Number.isFinite(saved.point?.lon) &&
       saved.point.lat === current.point.lat && saved.point.lon === current.point.lon
@@ -1548,19 +1556,7 @@ const sameImageryCoordinates = (saved: FieldGeometry | undefined, current: Field
       lon === currentPoints[index][0] && lat === currentPoints[index][1])
 }
 
-const fieldGeometryToGeoJson = (geometry: FieldGeometry) => {
-  if (geometry.kind === 'point') {
-    return { type: 'Point', coordinates: [geometry.point.lon, geometry.point.lat] }
-  }
-  if (geometry.kind === 'polygon') {
-    const ring = geometry.points.map((point) => [point.lon, point.lat])
-    if (ring.length > 0) {
-      ring.push(ring[0])
-    }
-    return { type: 'Polygon', coordinates: [ring] }
-  }
-  return null
-}
+const fieldGeometryToGeoJson = fieldGeometryGeoJson
 
 const representativePointForGeometry = (geometry: FieldGeometry): FieldPoint | null => {
   if (geometry.kind === 'point') {
@@ -2062,6 +2058,8 @@ export function OpenAgronomyApp() {
   const regionalLookupRequestRef = useRef(0)
   const agroclimateRequestRef = useRef(0)
   const nasaPowerRequestRef = useRef(0)
+  const [newFieldFarmId, setNewFieldFarmId] = useState<string | null>(null)
+  const [questionSeason, setQuestionSeason] = useState<number | null>(null)
   const [page, setPage] = useState<Page>(() => currentHashPage())
   const [sessions, setSessions] = useState<SessionRecord[]>([])
   const [sessionId, setSessionId] = useState('')
@@ -2251,7 +2249,7 @@ export function OpenAgronomyApp() {
     || !questionGeometryMatches
   ))
   const fieldCanSave = !isEditingGeometry && (geometryReady || (fieldGeometry.kind === 'none' && Boolean(fieldName.trim())))
-  const activeArea = fieldGeometry.kind === 'polygon' ? String(Math.round(fieldGeometry.acres)) : field.acres
+  const activeArea = (fieldGeometry.kind === 'polygon' || fieldGeometry.kind === 'geojson') ? String(Math.round(fieldGeometry.acres)) : field.acres
   const selectedModelProfile = modelProfiles.find((profile) => profile.id === modelId)
   const selectedModelReady = selectedModelProfile?.local_ready !== false
   const selectedUploadFeature =
@@ -2546,6 +2544,7 @@ export function OpenAgronomyApp() {
 
   const applyScenario = (id: string) => {
     if (savingField) return
+    setQuestionSeason(null)
     leaveSubmissionView()
     setFieldTab('details')
     regionalLookupRequestRef.current += 1
@@ -2578,6 +2577,7 @@ export function OpenAgronomyApp() {
 
   const startNewField = () => {
     if (savingField) return
+    setQuestionSeason(null)
     leaveSubmissionView()
     setScenarioId('')
     regionalLookupRequestRef.current += 1
@@ -2621,6 +2621,7 @@ export function OpenAgronomyApp() {
       region: field.region,
       jurisdiction: field.jurisdiction,
       concern: field.concern,
+      field_season: questionSeason ?? undefined,
       field_context_id: activeFieldContextId || undefined,
       field_conversation_key: activeFieldConversationKey,
       field_record_updated_at: activeFieldRecordUpdatedAt || undefined,
@@ -2630,7 +2631,8 @@ export function OpenAgronomyApp() {
         region: field.region,
         jurisdiction: field.jurisdiction,
         concern: field.concern,
-        field_context_id: activeFieldContextId || undefined,
+        field_season: questionSeason ?? undefined,
+      field_context_id: activeFieldContextId || undefined,
         field_conversation_key: activeFieldConversationKey,
         field_record_updated_at: activeFieldRecordUpdatedAt || undefined,
         geometry: fieldGeometryToGeoJson(fieldGeometry),
@@ -2722,6 +2724,7 @@ export function OpenAgronomyApp() {
         region: field.region,
         jurisdiction: field.jurisdiction,
         notes: field.notes,
+        field_season: questionSeason ?? undefined,
         field_context_id: activeFieldContextId || undefined,
         field_conversation_key: activeFieldConversationKey,
         field_record_updated_at: activeFieldRecordUpdatedAt || undefined,
@@ -2759,6 +2762,8 @@ export function OpenAgronomyApp() {
   const openSavedConversation = (id: string) => {
     const selected = sessions.find((session) => session.session_id === id)
     if (!selected) return
+    const savedSeason = (selected.context as Record<string, unknown> | undefined)?.field_season
+    setQuestionSeason(typeof savedSeason === 'number' ? savedSeason : null)
     const key = sessionContextValue(selected, 'field_conversation_key')
     const selectedBase = key === 'general' || key.startsWith('general:chat:') ? 'general' : conversationBaseKey
     if (selectedBase === 'general' && conversationBaseKey !== 'general') startNewField()
@@ -2996,7 +3001,10 @@ export function OpenAgronomyApp() {
     const formData = new FormData()
     formData.append('file', file)
     try {
-      const parsed = await apiUpload<BoundaryUploadResponse>('/api/geo/boundary-upload?intersect=true', formData)
+      const parsed = await apiUpload<BoundaryUploadResponse>(
+        `/api/geo/boundary-upload?intersect=true&jurisdiction=${encodeURIComponent(field.jurisdiction)}`,
+        formData,
+      )
       if (uploadRequestId !== regionalLookupRequestRef.current) return
       const geometry = fieldGeometryFromGeoJsonLike(parsed.geometry)
       if (!geometry) {
@@ -3301,6 +3309,17 @@ export function OpenAgronomyApp() {
     const sourceBoundary = fieldGeometry.kind === 'none'
       ? 'No location or boundary supplied; regional map context is unavailable.'
       : geoPriors?.disclaimer || 'Map and public-source context are decision-support priors, not field truth.'
+    const importedBoundary = boundaryImportFromUpload(uploadContext, selectedUploadFeature)
+    const previousField = storedFields.find((item) => (item.field_context_id || item.id) === activeFieldContextId)
+    const boundaryImport = importedBoundary || (
+      saveAsNew && previousField?.boundaryImport?.validity === 'bound'
+      && JSON.stringify(previousField.geometry) === JSON.stringify(fieldGeometry)
+        ? {
+            import_receipt: previousField.boundaryImport.import_receipt,
+            coordinate_reference: previousField.boundaryImport.coordinate_reference,
+            selected_feature: previousField.boundaryImport.selected_feature,
+          } : undefined
+    )
     const payload = {
       name,
       field: {
@@ -3315,6 +3334,7 @@ export function OpenAgronomyApp() {
       regionalContext: candidate,
       geoPriors: fieldGeometry.kind === 'none' ? null : geoPriors,
       sourceBoundary,
+      ...(boundaryImport ? { boundaryImport } : {}),
     }
     const stored: StoredField = {
       ...field,
@@ -3327,12 +3347,17 @@ export function OpenAgronomyApp() {
       storageMode: fieldStorageMode,
       geoPriors: fieldGeometry.kind === 'none' ? null : geoPriors,
       sourceBoundary,
+      boundaryImport: boundaryImport || (
+        previousField?.boundaryImport && JSON.stringify(previousField.geometry) !== JSON.stringify(fieldGeometry)
+          ? { ...previousField.boundaryImport, validity: 'superseded', binding_status: 'superseded_geometry_edit' }
+          : previousField?.boundaryImport
+      ),
     }
     const updatingCurrentField = Boolean(activeFieldContextId) && !saveAsNew
     try {
       if (fieldStorageMode === 'account_workspace' && (!updatingCurrentField || storedFields.find((item) => (item.field_context_id || item.id) === activeFieldContextId)?.storageMode !== 'device')) {
         const saved = updatingCurrentField
-          ? await apiPatch<DemoFieldSavedResponse>(`/api/demo/fields/${encodeURIComponent(activeFieldContextId)}`, payload)
+          ? await apiPatch<DemoFieldSavedResponse>(`/api/demo/fields/${encodeURIComponent(activeFieldContextId)}`, { ...payload, expectedUpdatedAt: activeFieldRecordUpdatedAt || undefined })
           : await apiPost<DemoFieldSavedResponse>('/api/demo/fields', payload)
         setStoredFields((current) => [saved.field, ...current.filter((item) => item.id !== saved.field.id)])
         const savedFieldId = saved.field.field_context_id || saved.field.id
@@ -3413,6 +3438,7 @@ export function OpenAgronomyApp() {
     leaveSubmissionView()
     activeFieldRef.current = stored.field_context_id || stored.id
     historyRequestRef.current += 1
+    setQuestionSeason(null)
     setScenarioId('')
     setFieldEventSummary('')
     setFieldEventOccurredAt('')
@@ -3589,7 +3615,7 @@ export function OpenAgronomyApp() {
       const candidate = primaryRegionalCandidate(priors)
       setBoundaryStatus(
         candidate
-          ? `Regional context refreshed: ${candidate.system} ${candidate.code} matched at ${Math.round(candidate.confidence * 100)}% confidence.`
+          ? `Regional context refreshed: ${candidate.system} ${candidate.code} matched. Regional context remains a prior; field applicability requires review.`
           : 'Regional context refreshed: no regional candidate matched.',
       )
       setStatus('Regional context ready')
@@ -3715,8 +3741,8 @@ export function OpenAgronomyApp() {
     const sourceBoundary = draft.geometry.kind === 'none'
       ? 'No location or boundary supplied; regional map context and imagery are unavailable.'
       : 'User-entered location. Calculated area and regional maps are context, not a survey or field measurement.'
-    const payload = { name: draft.name, field: { crop: draft.crop, region: draft.region, jurisdiction: draft.jurisdiction,
-      concern: draft.concern, acres: draft.acres, notes: draft.notes }, geometry: draft.geometry, regionalContext: '', geoPriors: null, sourceBoundary }
+    const payload = { operationId: draft.operationId, season: draft.season, name: draft.name, field: { crop: draft.crop, region: draft.region, jurisdiction: draft.jurisdiction,
+      concern: draft.concern, acres: draft.acres, notes: draft.notes }, farmId: newFieldFarmId, geometry: draft.geometry, regionalContext: '', geoPriors: null, sourceBoundary, ...(draft.boundaryImport ? { boundaryImport: draft.boundaryImport } : {}) }
     let saved: StoredField
     if (fieldStorageMode === 'account_workspace') {
       saved = (await apiPost<DemoFieldSavedResponse>('/api/demo/fields', payload)).field
@@ -3727,8 +3753,11 @@ export function OpenAgronomyApp() {
     setStoredFields(current => [saved, ...current])
     loadStoredField(saved)
     setNewFieldOpen(false)
-    navigateToPage('analyze')
-    setWorkspaceView('chat')
+    navigateToPage('farms')
+    window.history.replaceState(null, '', `#farms?season=${draft.season}&field=${encodeURIComponent(saved.field_context_id || saved.id)}${newFieldFarmId ? `&farm=${encodeURIComponent(newFieldFarmId)}` : ''}`)
+    window.dispatchEvent(new HashChangeEvent('hashchange'))
+    setNewFieldFarmId(null)
+    setWorkspaceView('split')
     // Geometry priors remain separate from the supplied facts, and may be unavailable.
     if (isUsableFieldGeometry(draft.geometry)) void lookupRegionalContext(draft.geometry, { ...draft })
   }
@@ -3851,10 +3880,10 @@ export function OpenAgronomyApp() {
       <WorkspaceNavigation page={page} onNavigate={navigateToPage} answerCapability={answerCapability} mobile={!wideWorkspace} />
       <div className="workspace-content">
       <header className="workspace-topbar">
-        <div>{page !== 'analyze' ? <span className="eyebrow">{page === 'fields' ? 'FIELD LIBRARY' : page === 'sources' ? 'KNOWLEDGE & DATA' : 'OPEN AGRONOMY'}</span> : null}
-          <h1>{page === 'analyze' ? (fieldName || 'Workspace') : page === 'fields' ? 'My fields' : page === 'sources' ? 'Bring your evidence.' : page === 'evidence' ? 'Behind the answer' : page === 'benchmarks' ? 'Research & benchmarks' : page === 'privacy' ? 'Privacy & data' : 'About Open Agronomy'}</h1>
+        <div>{page !== 'analyze' ? <span className="eyebrow">{page === 'field-editor' ? 'FIELD LIBRARY' : page === 'sources' ? 'KNOWLEDGE & DATA' : 'OPEN AGRONOMY'}</span> : null}
+          <h1>{page === 'analyze' ? (fieldName ? `Questions · ${fieldName}` : 'Questions') : page === 'farms' ? 'Farms' : page === 'fields' ? 'Fields' : page === 'records' ? 'Records' : page === 'field-editor' ? 'Edit field' : page === 'sources' ? 'Data management' : page === 'evidence' ? 'Behind the answer' : page === 'benchmarks' ? 'Research & benchmarks' : page === 'privacy' ? 'Privacy & data' : 'About Open Agronomy'}</h1>
         </div>
-        {page === 'analyze' || page === 'fields' ? <button className="primary-button" type="button" onClick={() => setNewFieldOpen(true)} disabled={!fieldsHydrated || savingField}><Plus size={17} /> Add field</button> : null}
+        {page === 'analyze' || page === 'field-editor' ? <button className="primary-button" type="button" onClick={() => { setNewFieldFarmId(null); setNewFieldOpen(true) }} disabled={!fieldsHydrated || savingField}><Plus size={17} /> Add field</button> : null}
       </header>
       {page === 'analyze' ? <div className="workspace-context-toolbar">
         <label className="active-field-select"><MapPin size={16} /><span className="sr-only">Active field</span><select aria-label="Active field" value={activeFieldContextId || (scenarioId ? `sample:${scenarioId}` : '')} disabled={!fieldsHydrated || savingField} onChange={event => {
@@ -3863,15 +3892,24 @@ export function OpenAgronomyApp() {
           if (selected) loadStoredField(selected)
           else startNewField()
         }}><option value="">General question · no field selected</option>{storedFields.map(item => <option key={item.id} value={item.field_context_id || item.id}>{item.name}</option>)}<optgroup label="Demonstration fields">{sampleProfiles.map(sample => <option key={sample.id} value={`sample:${sample.id}`}>{sample.name} · example</option>)}</optgroup></select></label>
+        {questionSeason && activeFieldContextId ? <span className="question-season">{questionSeason} season</span> : null}
         {scenarioId ? <span className="example-badge">Demonstration data</span> : null}
         <div className="workspace-view-switch" role="group" aria-label="Workspace view">{(['chat', 'split', 'map'] as const).map(view => <button key={view} type="button" className={`view-${view}`} aria-pressed={(workspaceView === 'split' && !wideWorkspace ? 'chat' : workspaceView) === view} onClick={() => setWorkspaceView(view)}>{view === 'chat' ? <MessageSquareText size={16} aria-hidden="true" /> : view === 'map' ? <MapIcon size={16} aria-hidden="true" /> : <Columns2 size={16} aria-hidden="true" />}{view === 'chat' ? 'Conversation' : view === 'map' ? 'Map' : 'Together'}</button>)}</div>
       </div> : null}
       {error ? <div className="demo-alert" role="alert">{error}</div> : null}
 
       <WorkspaceSectionBoundary key={page} label="This page">
-      {page === 'analyze' || page === 'fields' ? (
-        <div className={`map-workspace ${page === 'fields' ? 'fields-workspace' : `analyze-workspace view-${workspaceView}`}`}>
-          {page === 'fields' ? (
+      {page === 'farms' || page === 'fields' || page === 'records' ? <Suspense fallback={<p role="status">Opening farm workspace…</p>}><FarmWorkspace mode={page} allowNetwork={networkMode === 'online'} refreshKey={storedFields.map(item => `${item.id}:${item.updatedAt || ''}`).join('|')}
+        onFieldsImported={() => { void apiGet<DemoFieldsResponse>('/api/demo/fields').then(result => setStoredFields(result.fields)).catch(cause => setError(String(cause))) }}
+        onAddField={farmId => { setNewFieldFarmId(farmId); setNewFieldOpen(true) }}
+        onGeneralQuestion={() => { startNewField(); setQuestionSeason(null); navigateToPage('analyze') }}
+        onEditField={id => { const selected = storedFields.find(item => (item.field_context_id || item.id) === id); if (selected) { loadStoredField(selected); setFieldTab('details'); navigateToPage('field-editor') } else setError('Reload the workspace to load this field before editing.') }}
+        onAsk={(id, question, season) => { const selected = storedFields.find(item => (item.field_context_id || item.id) === id); if (!selected) { setError('Reload the workspace to load this field before asking.'); return } loadStoredField(selected); setQuestionSeason(season || null); const key = freshConversationKey(storedFieldConversationKey(id)); rememberConversation(storedFieldConversationKey(id), key); setActiveFieldConversationKey(key); setSessionId(''); setTurns([]); if (question) setMessage(question); navigateToPage('analyze'); setWorkspaceView('chat') }}
+      /></Suspense> : null}
+
+      {page === 'analyze' || page === 'field-editor' ? (
+        <div className={`map-workspace ${page === 'field-editor' ? 'fields-workspace' : `analyze-workspace view-${workspaceView}`}`}>
+          {page === 'field-editor' ? (
           <aside id="field-context-panel" className="field-panel" aria-label="Field context">
             <section className="field-library" aria-labelledby="field-library-heading">
               <div className="field-library-heading">
@@ -4661,7 +4699,7 @@ export function OpenAgronomyApp() {
                       aria-pressed={mapMode === 'edit'}
                       aria-label="Edit boundary vertices"
                       onClick={() => beginGeometryEdit('edit')}
-                      disabled={mapGeometry.kind !== 'polygon'}
+                      disabled={mapGeometry.kind !== 'polygon' && mapGeometry.kind !== 'geojson'}
                     >
                       <Pencil size={15} /> Edit boundary
                     </button>
@@ -4705,11 +4743,12 @@ export function OpenAgronomyApp() {
                 onStatusChange={onMapStatusChange}
               />
             </Suspense>
+            {isEditingGeometry ? <GeometryCoordinateEditor geometry={mapGeometry} pointMode={mapMode === 'point'} onChange={onMapGeometryChange} /> : null}
             <div className="map-context-bar" aria-label="Current field context">
               <div>
                 <span aria-live="polite" className={isEditingGeometry || isMapContextChecking || /failed|error|unavailable|invalid|cross|unsupported/i.test(boundaryStatus) ? undefined : 'sr-only'}>{boundaryStatus}</span>
                 <strong>
-                  {mapGeometry.kind === 'point' ? 'Point location' : mapGeometry.kind === 'polygon' ? `${estimatePolygonAcres(mapGeometry.points).toLocaleString(undefined, { maximumFractionDigits: 1 })} ac · boundary estimate` : 'No location selected'}
+                  {mapGeometry.kind === 'point' ? 'Point location' : mapGeometry.kind === 'polygon' ? `${estimatePolygonAcres(mapGeometry.points).toLocaleString(undefined, { maximumFractionDigits: 1 })} ac · boundary estimate` : mapGeometry.kind === 'geojson' ? 'Complete imported boundary' : 'No location selected'}
                   {isEditingGeometry
                     ? ' · draft changes'
                     : primaryGeoCandidate

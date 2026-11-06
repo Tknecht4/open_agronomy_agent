@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import io
 import json
+import hashlib
+
+import pytest
 
 from agronomy_agent.agno_runtime.tool_adapters import load_agno_tool_adapters
 from agronomy_agent import local_tools
@@ -229,6 +232,59 @@ def test_tool_service_exposes_cropland_data_layer_geometry(monkeypatch, tmp_path
     assert payload["geometry_type"] == "Polygon"
     assert payload["years"] == (2024, 2023)
     assert payload["sample_points"] == 3
+
+
+# Original ORNL v4R1 response captured 2026-10-01 at a public Saskatchewan point.
+# Source: https://daymet.ornl.gov/single-pixel/api/data?lat=52.5&lon=-106&vars=tmin,tmax,prcp&start=2020-06-01&end=2020-06-03
+# This is gridded source input for an adapter regression, not a field measurement.
+_DAYMET_NORTHERN_CANADA_RESPONSE = """Latitude: 52.5  Longitude: -106.0
+X & Y on Lambert Conformal Conic: -393394.01 1078467.82
+Tile: 12818
+Elevation: 531 meters
+All years; all variables; Daymet Software Version 4.0
+How to cite: Thornton; M.M.; R. Shrestha; Y. Wei; P.E. Thornton; S-C. Kao; and B.E. Wilson. 2022. Daymet: Daily Surface Weather Data on a 1-km Grid for North America; Version 4 R1. ORNL DAAC; Oak Ridge; Tennessee; USA. https://doi.org/10.3334/ORNLDAAC/2129
+year,yday,prcp (mm/day),tmax (deg c),tmin (deg c)
+2020,153,1.17,23.91,10.49
+2020,154,0.00,23.39,7.25
+2020,155,0.00,18.63,7.60
+"""
+
+
+def test_daymet_northern_canadian_source_response_reaches_adapter(monkeypatch, tmp_path) -> None:
+    raw = _DAYMET_NORTHERN_CANADA_RESPONSE.encode("utf-8")
+    assert hashlib.sha256(raw).hexdigest() == "d22001f0668f44948fa19ea02aa0f39c5b888f7fdd58ac78e14e9e3f3772a7d0"
+    calls = []
+
+    def source_response(request, timeout):  # noqa: ANN001
+        calls.append(request.full_url)
+        return io.BytesIO(raw)
+
+    monkeypatch.setattr(local_tools.urllib.request, "urlopen", source_response)
+    inputs = {"lat": 52.5, "lon": -106, "start": "2020-06-01", "end": "2020-06-03",
+              "variables": ["tmin", "tmax", "prcp"], "cache_dir": str(tmp_path / "daymet")}
+    result = tool_service.run_local_tool("daymet-single-pixel", inputs)
+    assert result["status"] == "available"
+    assert result["record_count"] == 3
+    assert [r["date"] for r in result["daily_records"]] == ["2020-06-01", "2020-06-02", "2020-06-03"]
+    assert result["daily_records"][0]["tmax"] == 23.91
+    assert result["daily_records"][1]["prcp"] == 0.0
+    assert "not a field sensor" in result["boundary"]
+    assert "lat=52.5" in calls[0] and "lon=-106.0" in calls[0]
+    cached = tool_service.run_local_tool("daymet-single-pixel", inputs)
+    assert cached["cache_hit"] is True
+    assert cached["daily_records"] == result["daily_records"]
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize("latitude,longitude", [(91, -106), (52.5, -181), (float("nan"), -106), (52.5, float("inf"))])
+def test_daymet_invalid_coordinates_fail_before_provider(monkeypatch, tmp_path, latitude, longitude) -> None:
+    def unexpected_provider(*args, **kwargs):  # noqa: ANN001
+        raise AssertionError("invalid coordinate reached provider")
+
+    monkeypatch.setattr(local_tools.urllib.request, "urlopen", unexpected_provider)
+    with pytest.raises(ValueError):
+        local_tools.daymet_single_pixel_daily(latitude, longitude, "2020-06-01", "2020-06-03",
+                                             cache_dir=str(tmp_path / "daymet"))
 
 
 def test_tool_service_exposes_daymet_single_pixel(monkeypatch, tmp_path) -> None:
@@ -798,3 +854,33 @@ def test_public_adapter_readiness_rejects_a_stale_or_wrong_smoke_contract(
         "mode_mismatch",
         "case_count_mismatch",
     }
+
+
+def test_aci_latest_catalog_receipt_does_not_change_pinned_year(monkeypatch, tmp_path):
+    data = {'services': [{'name': f'annual_crop_inventory/{year}', 'type': 'ImageServer'} for year in [2024, 2025, 9999]] + [{'name': 'elsewhere/2026', 'type': 'ImageServer'}]}
+    raw = json.dumps(data).encode()
+    calls = []
+    monkeypatch.setattr(local_tools.urllib.request, 'urlopen', lambda request, timeout: calls.append(request.full_url) or io.BytesIO(raw))
+    sampled = []
+    def point(**kwargs):
+        sampled.append(kwargs['year'])
+        return {'aci_code': 133, 'aci_label': 'Barley', 'cache_hit': False}
+    monkeypatch.setattr(local_tools, '_aafc_annual_crop_inventory_point', point)
+    result = local_tools.aafc_annual_crop_inventory(latitude=53.3, longitude=-113.6, year=None, cache_dir=str(tmp_path))
+    assert sampled == [2025]
+    assert result['year_selection']['available_years'] == [2024, 2025]
+    assert result['year_selection']['response_sha256'] == hashlib.sha256(raw).hexdigest()
+    local_tools.aafc_annual_crop_inventory(latitude=53.3, longitude=-113.6, year=2024, cache_dir=str(tmp_path))
+    assert sampled == [2025, 2024] and len(calls) == 1
+    assert local_tools.aafc_crop_inventory_catalog(cache_dir=str(tmp_path), offline_only=True)['cache_hit']
+
+
+def test_aci_discovery_failure_and_offline_do_not_guess_latest(monkeypatch, tmp_path):
+    calls = []
+    monkeypatch.setattr(local_tools.urllib.request, 'urlopen', lambda *args, **kwargs: calls.append(1) or io.BytesIO(b'{"services": []}'))
+    with pytest.raises(local_tools.OfflineCacheMissError):
+        local_tools.aafc_crop_inventory_catalog(cache_dir=str(tmp_path), offline_only=True)
+    assert not calls
+    with pytest.raises(RuntimeError, match='no supported'):
+        local_tools.aafc_crop_inventory_catalog(cache_dir=str(tmp_path))
+    assert not list(tmp_path.glob('*.json'))

@@ -56,3 +56,9 @@ export async function apiDelete<T>(path: string): Promise<T> {
   })
   return decode<T>(response)
 }
+
+export async function apiPut<T>(path: string, body: unknown): Promise<T> {
+  return decode<T>(await fetch(`${API_ROOT}${path}`, {
+    method: 'PUT', headers: { 'content-type': 'application/json', ...csrfHeaders() }, body: JSON.stringify(body),
+  }))
+}

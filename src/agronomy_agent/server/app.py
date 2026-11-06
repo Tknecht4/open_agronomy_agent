@@ -102,8 +102,19 @@ from agronomy_agent.server.schemas import (
 from agronomy_agent.server.services.conversation_scope import (
     ConversationScopeError, bind_conversation_context, identity as conversation_identity,
 )
-from agronomy_agent.server.services.chat_service import ConversationOperationConflict, _session_turn_guard, preview_turn_readiness, run_turn
+from agronomy_agent.server.services.chat_service import (
+    ConversationOperationConflict,
+    _country_for_jurisdiction,
+    _normalize_field_country,
+    _session_turn_guard,
+    preview_turn_readiness,
+    run_turn,
+)
 from agronomy_agent.server.services.answer_renderer import render_structured_answer
+from agronomy_agent.server.services.boundary_import_lineage import (
+    BOUNDARY_IMPORT_UNSET,
+    normalize_boundary_import,
+)
 from agronomy_agent.server.services.attachment_scanner import (
     AttachmentRejected,
     AttachmentScanError,
@@ -2782,6 +2793,8 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                         "type": "Point",
                         "coordinates": [point.get("lon"), point.get("lat")],
                     }
+            elif value.get("kind") == "geojson":
+                value = value.get("geojson")
             elif value.get("kind") == "polygon":
                 points = value.get("points")
                 if isinstance(points, list) and points:
@@ -2829,8 +2842,15 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="demo field not found")
         require_workspace_for_user(user, record["workspace_id"])
         stored = _demo_field_record(record)
+        # Older map fields may contain the previous default-US country value.
+        # Resolve from the saved jurisdiction instead of trusting that fallback.
+        stored_country = _demo_country_for_jurisdiction(stored.get("jurisdiction") or "")
 
         mismatch_fields: list[str] = []
+        for key in ("country", "country_code"):
+            supplied = str(inner.get(key) or "").strip()
+            if supplied and _normalize_field_country(supplied) != stored_country:
+                mismatch_fields.append(key)
         for inner_key, stored_key in (
             ("crop", "crop"),
             ("region", "region"),
@@ -2864,24 +2884,45 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                     "mismatch_fields": sorted(set(mismatch_fields)),
                     "boundary": (
                         "The client-supplied field snapshot differs from the authorized stored field. "
-                        "Reload the field before asking so another crop, concern, or geometry is not "
+                        "Reload the field before asking so another country, crop, concern, or geometry is not "
                         "silently attached to its history."
                     ),
                 },
             )
 
+        # The stored jurisdiction owns location aliases too: a client state or
+        # province cannot shadow it in query parsing or adapter selection.
+        for key in ("province", "province_state", "state", "state_alpha"):
+            inner.pop(key, None)
         inner.update(
             {
                 "field_context_id": field_context_id,
                 "field_conversation_key": str(outer.get("field_conversation_key") or f"field:{field_context_id}"),
                 "crop": stored.get("crop") or inner.get("crop"),
-                "region": stored.get("region") or inner.get("region"),
-                "jurisdiction": stored.get("jurisdiction") or inner.get("jurisdiction"),
+                "region": stored.get("region") or None,
+                "jurisdiction": stored.get("jurisdiction") or None,
+                "province_state": stored.get("jurisdiction") or None,
+                "country": stored_country,
+                "country_code": {"Canada": "CA", "United States": "US"}.get(stored_country),
                 "concern": stored.get("concern") or inner.get("concern"),
                 "geometry": canonical_geometry(stored.get("geometry") or inner.get("geometry")),
                 "regional_context": stored.get("regionalContext") or inner.get("regional_context"),
             }
         )
+        from agronomy_agent.server.services.conversation_scope import season_identity
+        selected_season = season_identity(outer)
+        inner.pop("field_season_lineage", None)
+        if selected_season is not None:
+            if not isinstance(store, TraceStore):
+                raise HTTPException(503, "Season context requires the migrated local runtime")
+            from agronomy_agent.server.storage.farm_store import get_season
+            season_record = get_season(store, field_context_id, selected_season)
+            inner.update({"field_season": selected_season, "crop_year": selected_season,
+                "crop": season_record.get("crop") if season_record else None,
+                "season_crop_status": "grower_confirmed" if season_record and season_record.get("crop") else "unknown",
+                "field_season_lineage": {"season": selected_season, "crops": season_record.get("crops", []) if season_record else [], "crop_system": season_record.get("crop_system", "unknown") if season_record else "unknown", "revision": season_record.get("revision", 0) if season_record else 0,
+                    "snapshot_sha256": _hash_payload(season_record), "status": "saved" if season_record else "unknown"}})
+            outer["crop"] = inner["crop"]
         stored_geo_priors = stored.get("geoPriors") if isinstance(stored.get("geoPriors"), dict) else {}
         for key in (
             "candidate_regions",
@@ -2977,6 +3018,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             "geoContextLineage": open_metadata.get("geo_context_lineage"),
             "fieldRevision": open_metadata.get("field_revision"),
             "sourceBoundary": open_metadata.get("source_boundary"),
+            "boundaryImport": open_metadata.get("boundary_import"),
             "createdAt": record.get("created_at"),
             "updatedAt": record.get("updated_at"),
             "storageMode": "account_workspace",
@@ -3091,6 +3133,14 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         kind = str(value.get("kind") or "")
         if kind == "none":
             return {"kind": "none"}
+        if kind == "geojson":
+            from agronomy_agent.geospatial.geometry import canonical_geometry, geodesic_metrics
+            try:
+                complete = canonical_geometry(value.get("geojson"), allowed_types=("Polygon", "MultiPolygon"))
+                metrics = geodesic_metrics(complete)
+            except (TypeError, ValueError) as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
+            return {"kind": "geojson", "geojson": complete, "acres": metrics["area_m2"] / 4046.8564224}
         if kind == "point":
             point = value.get("point")
             if not isinstance(point, dict) or not isinstance(point.get("lat"), (int, float)) or not isinstance(point.get("lon"), (int, float)):
@@ -3104,11 +3154,10 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             points = value.get("points")
             if not isinstance(points, list) or len(points) < 3:
                 raise HTTPException(status_code=422, detail="polygon field geometry requires at least three points")
-            for point in points[:250]:
+            for point in points:
                 if not isinstance(point, dict) or not isinstance(point.get("lat"), (int, float)) or not isinstance(point.get("lon"), (int, float)):
                     raise HTTPException(status_code=422, detail="polygon field geometry points require lat/lon")
-            retained = points[:250]
-            ring = [[point["lon"], point["lat"]] for point in retained]
+            ring = [[point["lon"], point["lat"]] for point in points]
             ring.append(ring[0])
             try:
                 normalized = validate_geojson_geometry({"type": "Polygon", "coordinates": [ring]})
@@ -3122,27 +3171,11 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         raise HTTPException(status_code=422, detail="field geometry must be point or polygon")
 
     def _demo_country_for_jurisdiction(jurisdiction: str) -> str | None:
-        lowered = jurisdiction.strip().lower()
-        if not lowered:
-            return None
-        canadian = {
-            "alberta",
-            "british columbia",
-            "manitoba",
-            "new brunswick",
-            "newfoundland and labrador",
-            "nova scotia",
-            "ontario",
-            "prince edward island",
-            "quebec",
-            "saskatchewan",
-            "northwest territories",
-            "nunavut",
-            "yukon",
-        }
-        return "Canada" if lowered in canadian else "United States"
+        return _country_for_jurisdiction(jurisdiction)
 
     def _demo_geometry_geojson(geometry: dict[str, Any]) -> dict[str, Any]:
+        if geometry.get("kind") == "geojson":
+            return geometry["geojson"]
         if geometry.get("kind") == "point":
             point = geometry["point"]
             return {"type": "Point", "coordinates": [point["lon"], point["lat"]]}
@@ -3153,6 +3186,8 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
     def _governed_demo_geo_priors(
         geometry: dict[str, Any],
         supplied: Any,
+        *,
+        country_scope: str,
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         """Bind browser context to a server-recomputed bundled-layer snapshot."""
 
@@ -3185,6 +3220,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             geometry=_demo_geometry_geojson(geometry),
             layer_ids=local_layer_ids,
             network_mode=settings.network_mode,
+            country_scope=country_scope,
         )
         server_intersections = [
             {**item, "binding_status": "server_recomputed_bundled_source"}
@@ -3266,8 +3302,26 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         lineage = {
             "schema_version": "open_agronomy_agent.geo_context_lineage.v1",
             "snapshot_sha256": hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
-            "server_recomputed_layer_ids": local_layer_ids,
+            "server_recomputed_layer_ids": server_result.get("query_attempted_layer_ids", local_layer_ids),
+            "source_qualified_layer_ids": server_result.get("source_qualified_layer_ids", []),
+            "source_query_cache_hit": server_result.get("source_query_cache_hit", False),
+            "source_integrity": {
+                layer_id: {
+                    "status": receipt.get("status"),
+                    "fingerprint": receipt.get("fingerprint"),
+                    "source_id": (receipt.get("expected") or {}).get("source_id"),
+                    "source_sha256": (receipt.get("expected") or {}).get("source_sha256"),
+                    "database_sha256": (receipt.get("observed") or {}).get("database_sha256"),
+                    "manifest_sha256": (receipt.get("observed") or {}).get("manifest_sha256"),
+                    "registry_sha256": (receipt.get("observed") or {}).get("registry_sha256"),
+                    "profile_manifest_sha256": (receipt.get("observed") or {}).get("profile_manifest_sha256"),
+                }
+                for layer_id, receipt in (server_result.get("source_integrity") or {}).items()
+                if isinstance(receipt, dict)
+            },
+            "country_scope": country_scope,
             "server_recomputed_match_count": len(server_intersections),
+            "match_count_kind": "observed_returned_records_not_total_coverage",
             "client_snapshot_remote_match_count": len(retained_remote),
             "binding_boundary": (
                 "Bundled-layer matches are server-recomputed. Remote matches are retained "
@@ -3280,6 +3334,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         payload: dict[str, Any],
         *,
         previous_open_metadata: dict[str, Any] | None = None,
+        confirmed_location: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Normalize a map field write and bind a new source-aware context snapshot."""
 
@@ -3291,6 +3346,11 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             max_length=160,
         )
         crop = _field_payload_text(field.get("crop"), max_length=120)
+        season = payload.get("season")
+        if season is not None and (type(season) is not int or not 1900 <= season <= 2200):
+            raise HTTPException(422, "Crop season must be a year between 1900 and 2200")
+        if season is None and previous_open_metadata and previous_open_metadata.get("field", {}).get("crop") == crop:
+            season = previous_open_metadata.get("crop_season")
         jurisdiction = _field_payload_text(field.get("jurisdiction"), max_length=120)
         region = _field_payload_text(field.get("region"), max_length=160)
         regional_context = _field_payload_text(
@@ -3309,8 +3369,18 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         geo_priors, geo_context_lineage = _governed_demo_geo_priors(
             geometry,
             payload.get("geoPriors"),
+            country_scope=_demo_country_for_jurisdiction(jurisdiction) or "unknown",
         )
+        try:
+            boundary_import = normalize_boundary_import(
+                payload.get("boundaryImport", BOUNDARY_IMPORT_UNSET),
+                geometry=geometry,
+                previous_lineage=(previous_open_metadata or {}).get("boundary_import"),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
         snapshot = {
+            "crop_season": season if crop else None,
             "field": {
                 "crop": crop,
                 "region": region,
@@ -3324,7 +3394,13 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             "geo_priors": geo_priors,
             "geo_context_lineage": geo_context_lineage,
             "source_boundary": source_boundary,
+            "boundary_import": boundary_import,
         }
+        if confirmed_location is not None:
+            snapshot["location_confirmation"] = confirmed_location
+        elif previous_open_metadata and previous_open_metadata.get("geometry") == geometry and previous_open_metadata.get("field", {}).get("jurisdiction") == jurisdiction:
+            if previous_open_metadata.get("location_confirmation"):
+                snapshot["location_confirmation"] = previous_open_metadata["location_confirmation"]
         previous_revision = (
             previous_open_metadata.get("field_revision")
             if isinstance(previous_open_metadata, dict)
@@ -3352,6 +3428,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             "country": _demo_country_for_jurisdiction(jurisdiction),
             "province_state": jurisdiction or None,
             "crop_current": crop or None,
+            "crop_year": season if crop else None,
             "management_notes": notes or concern or None,
             "known_constraints": [
                 "regional context is prior-only",
@@ -6361,6 +6438,25 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
 
     register_field_data_routes(app, store=store, settings=settings, authorize=_authorize_field_data)
 
+    def _authorize_farm_workspace(request: Request, write: bool, workspace_id: str | None) -> tuple[dict[str, Any], dict[str, Any]]:
+        user = _demo_field_user(request)
+        workspace_id = workspace_id or _demo_field_workspace(user)["id"]
+        workspace = require_workspace_role(user, workspace_id, WORKSPACE_WRITE_ROLES) if write else require_workspace_for_user(user, workspace_id)
+        return workspace, user
+
+    if isinstance(store, TraceStore):
+        from agronomy_agent.server.storage.field_context_store import recover_interrupted
+        recover_interrupted(store)
+        from agronomy_agent.server.storage.imagery_job_store import recover_interrupted as recover_imagery_jobs
+        recover_imagery_jobs(store)
+    from agronomy_agent.server.farm_routes import register_farm_routes
+    register_farm_routes(app, store=store, settings=settings, workspace_authorize=_authorize_farm_workspace, field_authorize=_authorize_field_data, normalize_field=_demo_field_write_payload)
+    from agronomy_agent.server.field_import_routes import register_field_import_routes
+    register_field_import_routes(app, store=store, authorize=_authorize_farm_workspace, parse=parse_boundary_upload, normalize=_demo_field_write_payload)
+    from agronomy_agent.server.imagery_job_routes import register_imagery_job_routes
+    register_imagery_job_routes(app, store=store, settings=settings, authorize=_authorize_field_data)
+
+
     @app.get("/api/demo/fields")
     async def public_demo_fields(request: Request) -> dict[str, Any]:
         user = _demo_field_user(request)
@@ -6390,11 +6486,22 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         user = _demo_field_user(request)
         workspace = _demo_field_workspace(user)
         normalized = _demo_field_write_payload(payload)
-        record = store.create_phase4_field_context(
-            workspace=workspace,
-            created_by_user_id=user["id"],
-            payload=normalized,
-        )
+        require_workspace_role(user, workspace["id"], WORKSPACE_WRITE_ROLES)
+        farm_id, operation_id = payload.get("farmId"), payload.get("operationId")
+        if any(value is not None and (not isinstance(value, str) or not value or len(value) > 80) for value in (farm_id, operation_id)):
+            raise HTTPException(422, "Farm and save identities must be bounded strings")
+        if isinstance(store, TraceStore):
+            from agronomy_agent.server.storage.farm_store import create_field_in_farm
+            try:
+                record = create_field_in_farm(store, workspace, user["id"], normalized, farm_id, operation_id, payload)
+            except LookupError as exc:
+                raise HTTPException(404, str(exc)) from exc
+            except ValueError as exc:
+                raise HTTPException(409, str(exc)) from exc
+        else:
+            if farm_id or operation_id or payload.get("season") is not None:
+                raise HTTPException(503, "Farm field creation requires the migrated local SQLite runtime")
+            record = store.create_phase4_field_context(workspace=workspace, created_by_user_id=user["id"], payload=normalized)
         return {
             "schema_version": "open_agronomy_agent.demo_field_saved.v1",
             "storage": {
@@ -6421,14 +6528,18 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         if not current or _demo_field_metadata(current).get("kind") != "map_field":
             raise HTTPException(status_code=404, detail="demo field not found")
         workspace = require_workspace_role(user, current["workspace_id"], WORKSPACE_WRITE_ROLES)
-        updated = store.update_phase4_field_context(
-            field_context_id=field_context_id,
-            actor_user_id=user["id"],
-            payload=_demo_field_write_payload(
-                payload,
-                previous_open_metadata=_demo_field_metadata(current),
-            ),
-        )
+        try:
+            updated = store.update_phase4_field_context(
+                field_context_id=field_context_id,
+                actor_user_id=user["id"],
+                expected_updated_at=payload.get("expectedUpdatedAt"),
+                payload=_demo_field_write_payload(
+                    payload,
+                    previous_open_metadata=_demo_field_metadata(current),
+                ),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
         if not updated:
             raise HTTPException(status_code=404, detail="demo field not found")
         return {

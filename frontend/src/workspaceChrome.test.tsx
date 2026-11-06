@@ -125,3 +125,17 @@ describe('workspace navigation', () => {
     expect(trigger).toHaveAttribute('aria-expanded', 'false')
   })
 })
+
+it('contains focus in ordinary dialogs and excludes controls inside closed disclosures', async () => {
+  const { WorkspaceDialog } = await import('./WorkspaceDialog')
+  render(<WorkspaceDialog title="Field edit" onClose={() => {}}><button>Save edit</button><details><summary>Extra details</summary><input aria-label="Hidden coordinate" /></details></WorkspaceDialog>)
+  const close = screen.getByRole('button', { name: 'Close Field edit' })
+  const disclosure = screen.getByText('Extra details')
+  const hidden = screen.getByLabelText('Hidden coordinate')
+  for (const node of [close, disclosure, hidden]) Object.defineProperty(node, 'getClientRects', { value: () => [{ width: 44, height: 44 }] })
+  act(() => close.focus())
+  fireEvent.keyDown(close, { key: 'Tab', shiftKey: true })
+  expect(disclosure).toHaveFocus()
+  fireEvent.keyDown(disclosure, { key: 'Tab' })
+  expect(close).toHaveFocus()
+})

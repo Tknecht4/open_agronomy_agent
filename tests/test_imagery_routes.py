@@ -40,7 +40,7 @@ def _worker(settings, cache, geometry, payload):
     names = {"npz": chip + ".npz", "png": chip + ".png", "receipt": chip + ".json"}
     result = {"status": "available", "chip_hash": chip, "request_hash": request, "preview_version": PREVIEW_VERSION,
         "geometry_hash": geom, "process_hash": "b" * 64, "provider_id": payload["provider_id"],
-        "source": {"collection": "hls2-s30", "scene_id": "hls2-s30:fixture", "asset_ids": {}},
+        "source": {"collection": "hls2-s30", "scene_id": "hls2-s30:fixture", "acquired_at": "2021-06-10T00:00:00Z", "asset_ids": {}},
         "scene_id": "hls2-s30:fixture", "process_version": PROCESS_VERSION, "source_native_grid": True,
         "grid": {"width": 2, "height": 2, "resolution_m": 30},
         "qa": {"field_area_m2": 3600, "valid_area_m2": 2700, "valid_area_fraction": .75,
@@ -60,6 +60,7 @@ def _worker(settings, cache, geometry, payload):
 def test_authenticated_analysis_preview_and_cache_integrity(runtime, monkeypatch):
     client, field_id, settings = runtime
     monkeypatch.setattr(service, "_run_worker", _worker)
+    monkeypatch.setattr(service, "_worker_health", lambda *args: {"status": "healthy", "versions": {"fixture": "synthetic"}})
     base = f"/api/demo/fields/{field_id}/imagery"
     assert client.get(base + "/analytics", headers=OWNER).json()["status"] == "ready"
     result = client.post(base + "/analyze", headers=OWNER, json=PAYLOAD)
@@ -219,7 +220,53 @@ def test_polygon_index_support_can_be_smaller_than_clear_support(runtime, monkey
     response = client.post(f"/api/demo/fields/{field_id}/imagery/analyze", headers=OWNER, json=PAYLOAD).json()
     assert response["status"] == ("empty_valid_area" if empty else "available")
     assert response["zonal_stats"]["NDMI"]["mean"] is None
+    assessment = response["support_assessment"]
+    assert assessment["support_kind"] == "field_polygon"
+    assert assessment["qa_clear_fraction"] == (0 if empty else .75)
+    assert assessment["index_support"]["NDMI"] == {
+        "valid_area_m2": 0, "valid_fraction": 0, "status": "no_valid_index_support"}
+    assert assessment["coverage_admission"] == "not_assessed"
+    assert assessment["minimum_valid_fraction"] is None
+    assert assessment["representativeness"] == "not_assessed"
+    assert assessment["field_action_authority"] == "not_authorized"
     assert client.get(response["preview_url"], headers=OWNER).status_code == 200
+
+
+def test_sparse_support_is_reported_without_quality_promotion_and_old_cache_is_unchanged(runtime, monkeypatch):
+    client, field_id, settings = runtime
+    captured = {}
+    def sparse_worker(settings, cache, geometry, payload):
+        result = _worker(settings, cache, geometry, payload)
+        clear = 3600 * .01725
+        result["qa"].update(valid_area_m2=clear, valid_area_fraction=.01725,
+            nodata_area_m2=3600-clear, excluded_area_m2_by_reason={})
+        result["zonal_stats"] = {name: {"mean": .5, "min": .5, "max": .5, "area_m2": clear}
+            for name in ("NDVI", "NDMI")}
+        # An old/foreign cached quality assertion is not serving authority.
+        result["support_assessment"] = {"coverage_admission": "eligible", "representativeness": "validated"}
+        receipt_path = cache / result["cache_files"]["receipt"]
+        receipt_path.write_text(json.dumps(result))
+        bounds = _request_identity(geometry, payload["provider_id"], None, payload["start_date"], payload["end_date"], 0, None)[1]
+        ImageryStore(cache).put(result, bounds)
+        captured.update(path=receipt_path, original=receipt_path.read_bytes())
+        return result
+    monkeypatch.setattr(service, "_run_worker", sparse_worker)
+    path = f"/api/demo/fields/{field_id}/imagery/analyze"
+    fresh = client.post(path, headers=OWNER, json=PAYLOAD).json()
+    assert fresh["status"] == "available"
+    assessment = fresh["support_assessment"]
+    assert assessment["qa_clear_fraction"] == pytest.approx(.01725)
+    assert assessment["index_support"]["NDVI"]["valid_fraction"] == pytest.approx(.01725)
+    assert assessment["coverage_admission"] == "not_assessed"
+    assert assessment["representativeness"] == "not_assessed"
+    assert assessment["evidence_role"] == "interpretation"
+    assert any("scene-wide" in limitation for limitation in assessment["limitations"])
+    monkeypatch.setattr(service, "_run_worker", lambda *args: pytest.fail("old cache launched worker"))
+    cached = client.post(path, headers=OWNER, json=PAYLOAD).json()
+    assert cached["cache_hit"] is True
+    assert cached["chip_hash"] == fresh["chip_hash"]
+    assert cached["support_assessment"] == assessment
+    assert captured["path"].read_bytes() == captured["original"]
 
 
 def test_water_flag_does_not_include_nodata(tmp_path):
@@ -230,3 +277,13 @@ def test_water_flag_does_not_include_nodata(tmp_path):
     receipt["qa"].update(nodata_area_m2=900, water_flag_area_m2=3600)
     with pytest.raises(ValueError, match="index QA area breakdown"):
         validate_hls_receipt(receipt, geometry=geometry)
+
+
+def test_runtime_readiness_does_not_treat_configuration_as_dependency_health(runtime, monkeypatch):
+    client, field_id, settings = runtime
+    monkeypatch.setattr(service, "_worker_health", lambda *args: {"status": "unavailable", "message": "Synthetic missing raster dependency"})
+    result = client.get(f"/api/demo/fields/{field_id}/imagery/analytics", headers=OWNER).json()
+    assert result["configured"] is True
+    assert result["status"] == "worker_unavailable"
+    assert result["pixel_access"] == "not_live_verified"
+    assert not any(provider["analysis"] for provider in result["providers"])

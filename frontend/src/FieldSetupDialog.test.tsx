@@ -149,17 +149,22 @@ describe('new field setup', () => {
     expect(screen.getByTestId('mock-map')).toHaveAttribute('data-lon', '-113.6')
   })
 
-  it('rejects holes and multipart geometry without converting them to a different field', async () => {
+  it('preserves holes and multipart geometry without flattening the saved boundary', async () => {
     const exterior = polygon(-113.6).coordinates[0]
-    expect(() => importedFieldGeometry({ type: 'Polygon', coordinates: [exterior, polygon(-113.59).coordinates[0]] })).toThrow(/holes/i)
-    expect(() => importedFieldGeometry({ type: 'MultiPolygon', coordinates: [[exterior], [polygon(-114).coordinates[0]]] })).toThrow(/Multipart/i)
-    uploadMock.mockResolvedValueOnce(uploadPayload({ type: 'MultiPolygon', coordinates: [[exterior], [polygon(-114).coordinates[0]]] }) as never)
-    openWizard()
+    const complete = { type: 'MultiPolygon', coordinates: [[exterior], [polygon(-114).coordinates[0]]] }
+    const holes = { type: 'Polygon', coordinates: [exterior, polygon(-113.59).coordinates[0]] }
+    expect(importedFieldGeometry(holes)).toMatchObject({ kind: 'geojson', geojson: holes })
+    expect(importedFieldGeometry(complete)).toMatchObject({ kind: 'geojson', geojson: complete })
+    uploadMock.mockResolvedValueOnce(uploadPayload(complete) as never)
+    const onSave = vi.fn().mockResolvedValue(undefined)
+    openWizard(onSave)
     moveToLocation()
     fireEvent.change(screen.getByLabelText('Import field boundary'), { target: { files: [new File(['{}'], 'fields.geojson')] } })
-    expect(await screen.findByRole('alert')).toHaveTextContent(/Multipart boundaries/i)
-    expect(screen.getByTestId('mock-map')).toHaveAttribute('data-kind', 'none')
-    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled()
+    await waitFor(() => expect(screen.getByTestId('mock-map')).toHaveAttribute('data-kind', 'geojson'))
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save field' }))
+    await waitFor(() => expect(onSave).toHaveBeenCalled())
+    expect(onSave.mock.calls[0][0].geometry.geojson).toEqual(complete)
   })
 
   it('drops upload provenance when the user replaces its boundary with a manual point', async () => {
