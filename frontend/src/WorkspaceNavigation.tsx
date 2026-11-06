@@ -3,7 +3,7 @@ import { BookOpen, ChartNoAxesCombined, Database, MapPin, Menu, MessageSquareTex
 import type { FieldAnswerCapability } from './fieldRuntimeAvailability'
 import { WorkspaceDialog } from './WorkspaceDialog'
 
-export type WorkspacePage = 'analyze' | 'fields' | 'evidence' | 'benchmarks' | 'sources' | 'privacy' | 'about'
+export type WorkspacePage = 'farms' | 'records' | 'field-editor' | 'analyze' | 'fields' | 'evidence' | 'benchmarks' | 'sources' | 'privacy' | 'about'
 
 export function WorkspaceNavigation({ page, onNavigate, answerCapability, mobile }: {
   page: WorkspacePage
@@ -16,9 +16,10 @@ export function WorkspaceNavigation({ page, onNavigate, answerCapability, mobile
   const drawerId = useId()
   useEffect(() => { setOpen(false) }, [page, mobile])
   const primaryItems = [
-    ['analyze', 'Workspace', MessageSquareText],
+    ['farms', 'Farms', Sprout],
     ['fields', 'Fields', MapPin],
-    ['sources', 'Data', Database],
+    ['records', 'Records', BookOpen],
+    ['analyze', 'Questions', MessageSquareText],
   ] as const
   const reviewItems = [
     ['evidence', 'Evidence', BookOpen],
@@ -30,8 +31,9 @@ export function WorkspaceNavigation({ page, onNavigate, answerCapability, mobile
     <nav className="workspace-navigation" aria-label="Primary">
       {primaryItems.map(([id, label, Icon]) => <button key={id} type="button" aria-current={page === id ? 'page' : undefined} onClick={() => choose(id)}><Icon size={18} aria-hidden="true" />{label}</button>)}
     </nav>
-    <div className="workspace-navigation-label">Review</div>
+    <div className="workspace-navigation-label">Research & settings</div>
     <nav className="workspace-navigation" aria-label="Review">
+      <button type="button" aria-current={page === 'sources' ? 'page' : undefined} onClick={() => choose('sources')}><Database size={18} aria-hidden="true" />Data management</button>
       {reviewItems.map(([id, label, Icon]) => <button key={id} type="button" aria-current={page === id ? 'page' : undefined} onClick={() => choose(id)}><Icon size={18} aria-hidden="true" />{label}</button>)}
     </nav>
     <footer className="workspace-navigation-footer">

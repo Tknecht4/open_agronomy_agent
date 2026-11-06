@@ -31,6 +31,24 @@ def _identity_values(context: dict[str, Any], key: str) -> set[str]:
     return values
 
 
+def season_identity(context: dict[str, Any]) -> int | None:
+    records = [context]
+    for record in list(records):
+        for key in ("extra", "field_context"):
+            if isinstance(record.get(key), dict):
+                records.append(record[key])
+    values = set()
+    for record in records:
+        value = record.get("field_season")
+        if value is not None:
+            if isinstance(value, bool) or not isinstance(value, int) or not 1900 <= value <= 2200:
+                raise ConversationScopeError("Field season must be a year between 1900 and 2200.")
+            values.add(value)
+    if len(values) > 1:
+        raise ConversationScopeError("The conversation contains conflicting season aliases.")
+    return next(iter(values), None)
+
+
 def identity(context: dict[str, Any]) -> tuple[str, str]:
     field_ids = _identity_values(context, "field_context_id")
     keys = _identity_values(context, "field_conversation_key")
@@ -67,6 +85,9 @@ def bind_conversation_context(
     """
     previous = dict(stored or {})
     supplied = dict(incoming or {})
+    old_season, new_season = season_identity(previous), season_identity(supplied)
+    if new_season is not None and (old_season is not None or has_turns) and new_season != old_season:
+        raise ConversationScopeError("Start a new chat to change the conversation's season.")
     old_base, old_key = identity(previous)
     new_base, new_key = identity(supplied)
     locked_base = old_base or ("general" if has_turns else "")
@@ -81,6 +102,10 @@ def bind_conversation_context(
     base = locked_base or new_base or "general"
     key = old_key or new_key or base
     merged["field_conversation_key"] = key
+    if old_season is not None or new_season is not None:
+        if not base.startswith("field:"):
+            raise ConversationScopeError("A season requires a saved field.")
+        merged["field_season"] = old_season if old_season is not None else new_season
     if base.startswith("field:"):
         merged["field_context_id"] = base.removeprefix("field:")
     # The model receives history only from the server-owned bounded query.

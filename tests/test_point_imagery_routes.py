@@ -103,6 +103,10 @@ def test_point_sampling_http_cache_authority_and_saved_geometry(runtime, monkeyp
         request["context_pixels"], sampling_mode=request["sampling_mode"],
         sample_radius_m=request["sample_radius_m"])[3] == result["request_hash"]
     assert "field_area_m2" not in result["qa"]
+    assert result["support_assessment"]["support_kind"] == "native_pixel"
+    assert result["support_assessment"]["support_area_m2"] == 900
+    assert result["support_assessment"]["qa_clear_fraction"] == 1
+    assert result["support_assessment"]["representativeness"] == "not_assessed"
     assert client.get(result["preview_url"], headers=OWNER).status_code == 200
     assert client.get(result["preview_url"], headers=OUTSIDER).status_code == 403
     assert client.post(path+"/imagery/analyze", headers=OUTSIDER, json=BODY).status_code == 403
@@ -210,3 +214,27 @@ def test_buffer_radius_must_match_reported_area_and_valid_pixel_support():
     wrong_count["sampling"]["valid_pixel_count"] = 1
     with pytest.raises(ValueError, match="valid pixel support"):
         validate_point_receipt(wrong_count)
+
+
+def test_point_buffer_public_support_uses_sample_area_and_distinct_index_support(runtime, monkeypatch):
+    client, field_id, _ = runtime
+    def partial_worker(settings, cache, geometry, payload):
+        result = worker(settings, cache, geometry, payload)
+        sample_area = result["qa"]["sample_area_m2"]
+        supported = sample_area / 2
+        result["zonal_stats"]["NDMI"].update(area_m2=supported)
+        result["qa"]["index_undefined_area_m2_by_reason"]["ndmi_nonpositive_denominator"] = supported
+        (cache / result["cache_files"]["receipt"]).write_text(json.dumps(result))
+        ImageryStore(cache).put(result, validate_point_receipt(result))
+        return result
+    monkeypatch.setattr(service, "_run_worker", partial_worker)
+    result = client.post(f"/api/demo/fields/{field_id}/imagery/analyze", headers=OWNER,
+        json=BODY | {"sampling_mode": "point_buffer", "sample_radius_m": 60}).json()
+    assert result["status"] == "available"
+    assessment = result["support_assessment"]
+    assert assessment["support_kind"] == "point_buffer"
+    assert assessment["support_area_m2"] == pytest.approx(math.pi * 60**2)
+    assert assessment["qa_clear_fraction"] == 1
+    assert assessment["index_support"]["NDVI"]["valid_fraction"] == 1
+    assert assessment["index_support"]["NDMI"]["valid_fraction"] == .5
+    assert assessment["coverage_admission"] == "not_assessed"

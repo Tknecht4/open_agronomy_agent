@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import io
 import json
+import hashlib
+
+import pytest
 
 from agronomy_agent.agno_runtime.tool_adapters import load_agno_tool_adapters
 from agronomy_agent import local_tools
@@ -798,3 +801,33 @@ def test_public_adapter_readiness_rejects_a_stale_or_wrong_smoke_contract(
         "mode_mismatch",
         "case_count_mismatch",
     }
+
+
+def test_aci_latest_catalog_receipt_does_not_change_pinned_year(monkeypatch, tmp_path):
+    data = {'services': [{'name': f'annual_crop_inventory/{year}', 'type': 'ImageServer'} for year in [2024, 2025, 9999]] + [{'name': 'elsewhere/2026', 'type': 'ImageServer'}]}
+    raw = json.dumps(data).encode()
+    calls = []
+    monkeypatch.setattr(local_tools.urllib.request, 'urlopen', lambda request, timeout: calls.append(request.full_url) or io.BytesIO(raw))
+    sampled = []
+    def point(**kwargs):
+        sampled.append(kwargs['year'])
+        return {'aci_code': 133, 'aci_label': 'Barley', 'cache_hit': False}
+    monkeypatch.setattr(local_tools, '_aafc_annual_crop_inventory_point', point)
+    result = local_tools.aafc_annual_crop_inventory(latitude=53.3, longitude=-113.6, year=None, cache_dir=str(tmp_path))
+    assert sampled == [2025]
+    assert result['year_selection']['available_years'] == [2024, 2025]
+    assert result['year_selection']['response_sha256'] == hashlib.sha256(raw).hexdigest()
+    local_tools.aafc_annual_crop_inventory(latitude=53.3, longitude=-113.6, year=2024, cache_dir=str(tmp_path))
+    assert sampled == [2025, 2024] and len(calls) == 1
+    assert local_tools.aafc_crop_inventory_catalog(cache_dir=str(tmp_path), offline_only=True)['cache_hit']
+
+
+def test_aci_discovery_failure_and_offline_do_not_guess_latest(monkeypatch, tmp_path):
+    calls = []
+    monkeypatch.setattr(local_tools.urllib.request, 'urlopen', lambda *args, **kwargs: calls.append(1) or io.BytesIO(b'{"services": []}'))
+    with pytest.raises(local_tools.OfflineCacheMissError):
+        local_tools.aafc_crop_inventory_catalog(cache_dir=str(tmp_path), offline_only=True)
+    assert not calls
+    with pytest.raises(RuntimeError, match='no supported'):
+        local_tools.aafc_crop_inventory_catalog(cache_dir=str(tmp_path))
+    assert not list(tmp_path.glob('*.json'))

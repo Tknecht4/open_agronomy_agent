@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css'
 import './LeafletFieldMap.css'
 import { MapPresentationControls } from './MapPresentationControls'
 import { BASEMAPS, readMapPreferences, saveMapPreferences, safeSourceUrl, type MapLayerChoice, type BasemapStyle } from './mapPresentation'
-import { estimatePolygonAcres, fieldGeometryIssue, polygonSelfIntersects, type FieldGeometry, type FieldPoint, type MapMode } from './fieldGeometry'
+import { boundaryPoints, fieldGeometryGeoJson, estimatePolygonAcres, fieldGeometryIssue, polygonSelfIntersects, type FieldGeometry, type FieldPoint, type MapMode } from './fieldGeometry'
 
 type RegionalCandidate = {
   system: string
@@ -25,7 +25,16 @@ type GeoJsonGeometry = {
   coordinates: unknown
 }
 
+export type MapField = { id: string; name: string; geometry: FieldGeometry }
+const retainedViewports = new Map<string, { center: L.LatLngTuple; zoom: number }>()
+const noFields: MapField[] = []
+
 type LeafletFieldMapProps = {
+  analyticalOverlay?: { url: string; bounds: [[number, number], [number, number]]; opacity: number }
+  fieldCollection?: MapField[]
+  collectionKey?: string
+  onSelectField?: (id: string) => void
+  viewportKey?: string
   mode: MapMode
   scenarioId: string
   fieldLabel: string
@@ -71,6 +80,7 @@ export function LeafletFieldMap({
   onCancelDrawing,
   allowNetwork = true,
   onLayerSelectionChange,
+  fieldCollection = noFields, collectionKey, onSelectField, viewportKey, analyticalOverlay,
 }: LeafletFieldMapProps) {
   const [viewportFeatures, setViewportFeatures] = useState<GeoJsonFeatureCollection | null>(null)
   const [drawingFinished, setDrawingFinished] = useState(false)
@@ -79,6 +89,7 @@ export function LeafletFieldMap({
   const [catalogStatus, setCatalogStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [layerErrors, setLayerErrors] = useState<Record<string, string>>({})
   const [regionsLoading, setRegionsLoading] = useState(false)
+  const [regionsZoomRequired, setRegionsZoomRequired] = useState(false)
   const [tileError, setTileError] = useState(false)
   const [retry, setRetry] = useState(0)
   const activeLayers = useMemo(() => preferences.layers.filter(id => catalog.some(layer =>
@@ -112,6 +123,10 @@ export function LeafletFieldMap({
   }, [allowNetwork, retry])
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<L.Map | null>(null)
+  const collectionLayerRef = useRef<L.LayerGroup | null>(null)
+  const collectionFitRef = useRef<string | null>(null)
+  const selectFieldRef = useRef(onSelectField)
+  selectFieldRef.current = onSelectField
   const drawLayerRef = useRef<L.LayerGroup | null>(null)
   const regionLayersRef = useRef(new Map<string, L.LayerGroup>())
   const regionStyleTargetsRef = useRef<Array<{ layer: L.GeoJSON; selected: boolean }>>([])
@@ -176,7 +191,7 @@ export function LeafletFieldMap({
     if (!containerRef.current || mapRef.current) {
       return
     }
-    const view = scenarioViews[scenarioId] || overviewView
+    const view = (viewportKey && retainedViewports.get(viewportKey)) || scenarioViews[scenarioId] || overviewView
     const map = L.map(containerRef.current, {
       zoomControl: false,
       attributionControl: true,
@@ -187,6 +202,7 @@ export function LeafletFieldMap({
     basemapLayersRef.current.set('satellite', L.tileLayer(BASEMAPS.satellite.url, {
       maxZoom: 19, attribution: BASEMAPS.satellite.attribution,
     }))
+    collectionLayerRef.current = L.layerGroup().addTo(map)
     const drawLayer = L.layerGroup().addTo(map)
     drawLayerRef.current = drawLayer
     mapRef.current = map
@@ -222,6 +238,7 @@ export function LeafletFieldMap({
     let activeRequest: AbortController | undefined
     let requestVersion = 0
     const loadVisibleRegions = () => {
+      if (viewportKey) { const center = map.getCenter(); retainedViewports.set(viewportKey, { center: [center.lat, center.lng], zoom: map.getZoom() }) }
       const version = ++requestVersion
       if (requestTimer) clearTimeout(requestTimer)
       activeRequest?.abort()
@@ -232,9 +249,19 @@ export function LeafletFieldMap({
         setRegionsLoading(false)
         return
       }
+      setRegionsZoomRequired(false)
       setRegionsLoading(true)
       requestTimer = setTimeout(() => {
         const bounds = map.getBounds()
+        // Match the server's bounded region-query contract before sending a request.
+        if (bounds.getEast() - bounds.getWest() > 12 || bounds.getNorth() - bounds.getSouth() > 12
+          || bounds.getWest() < -180 || bounds.getEast() > 180 || bounds.getSouth() < -90 || bounds.getNorth() > 90) {
+          setViewportFeatures(null)
+          setLayerErrors({})
+          setRegionsLoading(false)
+          setRegionsZoomRequired(true)
+          return
+        }
         const bbox = [
           bounds.getWest().toFixed(5),
           bounds.getSouth().toFixed(5),
@@ -255,7 +282,7 @@ export function LeafletFieldMap({
               setViewportFeatures(payload.feature_collection)
               const errors: Record<string, string> = {}
               for (const item of [...(payload.errors || []), ...(payload.skipped_layers || [])]) {
-                errors[String(item.layer_id || item.id)] = 'Source unavailable'
+                errors[String(item.layer_id || item.id)] = item.status === 'integrity_failed' ? 'Source integrity failed' : item.status === 'not_installed' ? 'Not installed' : item.message || 'Source unavailable'
               }
               setLayerErrors(errors)
             }
@@ -297,6 +324,7 @@ export function LeafletFieldMap({
       map.remove()
       mapRef.current = null
       drawLayerRef.current = null
+      collectionLayerRef.current = null
       regionLayersRef.current.clear()
       regionStyleTargetsRef.current = []
       basemapLayersRef.current.clear()
@@ -334,7 +362,7 @@ export function LeafletFieldMap({
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map || geometry.kind !== 'none') {
+    if (!map || geometry.kind !== 'none' || fieldCollection.length || viewportKey && retainedViewports.has(viewportKey)) {
       return
     }
     const view = scenarioViews[scenarioId] || overviewView
@@ -457,6 +485,10 @@ export function LeafletFieldMap({
       return
     }
 
+    if (geometry.kind === 'geojson') {
+      L.geoJSON(geometry.geojson as GeoJSON.Geometry, { style: { color: '#ffe07a', weight: 3, fillOpacity: 0.18 } }).addTo(layer)
+      return
+    }
     const latLngs = geometry.points.map(toLatLng)
     if (latLngs.length > 1) {
       L.polyline(latLngs, {
@@ -501,6 +533,42 @@ export function LeafletFieldMap({
     })
   }, [fieldLabel, geometry, mode, effectiveStyle])
 
+  const fitAllFields = () => {
+    const map = mapRef.current
+    if (!map) return
+    const positions = fieldCollection.flatMap(field => field.geometry.kind === 'point' ? [field.geometry.point] : boundaryPoints(field.geometry))
+    if (!positions.length) return
+    const bounds = L.latLngBounds(positions.map(toLatLng))
+    if (bounds.isValid()) map.fitBounds(bounds.pad(0.15), { animate: false, maxZoom: 16, padding: [28, 28] })
+  }
+
+  useEffect(() => {
+    const layer = collectionLayerRef.current
+    if (!layer) return
+    layer.clearLayers()
+    for (const field of fieldCollection) {
+      const value = fieldGeometryGeoJson(field.geometry)
+      if (!value) continue
+      const label = document.createElement('span')
+      label.textContent = field.name
+      L.geoJSON(value as GeoJSON.Geometry, {
+        style: { color: field.id === fieldKey ? '#ffdf77' : '#bbd7bd', weight: field.id === fieldKey ? 3 : 2, fillOpacity: field.id === fieldKey ? 0.22 : 0.07 },
+        pointToLayer: (_feature, point) => L.circleMarker(point, { radius: 7, color: '#ffdf77', fillOpacity: 0.8 }),
+      }).bindTooltip(label, { permanent: fieldCollection.length <= 50, direction: 'center', className: 'farm-field-label' }).on('click', () => selectFieldRef.current?.(field.id)).addTo(layer)
+    }
+    if (collectionKey && collectionFitRef.current !== collectionKey && fieldCollection.length) {
+      collectionFitRef.current = collectionKey
+      fitAllFields()
+    }
+  }, [fieldCollection, fieldKey, collectionKey])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !analyticalOverlay) return
+    const layer = L.imageOverlay(analyticalOverlay.url, analyticalOverlay.bounds, { opacity: analyticalOverlay.opacity, interactive: false, zIndex: 350 }).addTo(map)
+    return () => { layer.remove() }
+  }, [analyticalOverlay])
+
   const fitField = () => {
     const map = mapRef.current
     const field = geometryRef.current
@@ -509,11 +577,12 @@ export function LeafletFieldMap({
       map.setView(toLatLng(field.point), Math.max(map.getZoom(), 14), { animate: false })
       return
     }
-    if (field.points.length === 1) {
-      map.setView(toLatLng(field.points[0]), Math.max(map.getZoom(), 14), { animate: false })
+    const positions = boundaryPoints(field)
+    if (positions.length === 1) {
+      map.setView(toLatLng(positions[0]), Math.max(map.getZoom(), 14), { animate: false })
       return
     }
-    const bounds = L.latLngBounds(field.points.map(toLatLng))
+    const bounds = L.latLngBounds(positions.map(toLatLng))
     if (bounds.isValid()) {
       map.fitBounds(bounds.pad(0.35), { animate: false, maxZoom: 16, padding: [28, 28] })
     }
@@ -570,8 +639,9 @@ export function LeafletFieldMap({
   return (
     <div className={`leaflet-map-shell basemap-${effectiveStyle} ${mode !== 'inspect' ? 'is-editing' : ''}`} onKeyDown={handleKeyDown}>
       <div ref={containerRef} className="leaflet-map" tabIndex={0} role="application" aria-label={allowNetwork ? `Field map with ${BASEMAPS[effectiveStyle].label.toLowerCase()} style and regional overlays` : 'Offline field map with regional overlays'} />
-      <MapPresentationControls preferences={preferences} onChange={setPreferences} layers={catalog} allowNetwork={allowNetwork} catalogStatus={catalogStatus} layerErrors={layerErrors} visibleCounts={visibleCounts} loading={regionsLoading} tileError={tileError} onRetry={() => { setRetry(value => value + 1); loadRegionsRef.current() }} />
+      <MapPresentationControls preferences={preferences} onChange={setPreferences} layers={catalog} allowNetwork={allowNetwork} catalogStatus={catalogStatus} layerErrors={layerErrors} visibleCounts={visibleCounts} loading={regionsLoading} zoomRequired={regionsZoomRequired} tileError={tileError} onRetry={() => { setRetry(value => value + 1); loadRegionsRef.current() }} />
       {!allowNetwork ? <div className="leaflet-offline-label" title="Offline map: enter coordinates or import a boundary for precise placement.">Offline map</div> : null}
+      {fieldCollection.length ? <button type="button" className="leaflet-fit-farm" onClick={fitAllFields}>Fit farm</button> : null}
       {geometry.kind !== 'none' ? <button type="button" className="leaflet-fit-field" onClick={fitField}>Fit field</button> : null}
       {mode === 'inspect' ? null : (
         <div className="leaflet-mode-hint">
@@ -579,7 +649,7 @@ export function LeafletFieldMap({
             ? 'Click the field location. This marks a point, not a boundary.'
             : mode === 'boundary'
               ? drawingFinished ? 'Boundary complete. Review and save the field edits.' : 'Click around the field edge. Finish after at least three corners.'
-              : 'Drag boundary corners to correct the shape.'}
+              : geometry.kind === 'geojson' ? 'Complete imported boundary. Replace the source file to change holes or multipart geometry.' : 'Drag boundary corners to correct the shape.'}
           {mode === 'boundary' && !drawingFinished ? (
             <span className="leaflet-drawing-actions">
               <button type="button" aria-label="Undo corner" onClick={undoLastVertex} disabled={geometry.kind !== 'polygon' || geometry.points.length === 0}>Undo</button>

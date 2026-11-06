@@ -224,6 +224,35 @@ describe('field map interactions', () => {
     await act(async () => { await Promise.resolve(); await Promise.resolve() })
     expect(leaf.regions.some((item) => item.properties.name === 'stale')).toBe(false)
   })
+  it('avoids invalid broad-viewport requests and resumes after zooming in', async () => {
+    const request = vi.fn(async (url) => ({ ok: true, json: async () => String(url) === '/api/geo/layers' ? catalog : ({ feature_collection: { type: 'FeatureCollection', features: [] } }) }))
+    vi.stubGlobal('fetch', request)
+    render(<LeafletFieldMap {...props} mode="inspect" geometry={empty} onGeometryChange={vi.fn()} />)
+    const map = leaf.maps[0]
+    const closeBounds = map.getBounds
+    map.getBounds = () => ({ getWest: () => -130, getEast: () => -70, getSouth: () => 37, getNorth: () => 65 })
+    await screen.findByText('Zoom in for detailed context')
+    expect(request.mock.calls.some(([url]) => String(url).includes('/api/geo/regions'))).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Retry sources' }))
+    await waitFor(() => expect(screen.getByText('Zoom in for detailed context')).toBeInTheDocument())
+    expect(request.mock.calls.some(([url]) => String(url).includes('/api/geo/regions'))).toBe(false)
+    map.getBounds = closeBounds
+    act(() => map.fire('moveend'))
+    await waitFor(() => expect(request.mock.calls.some(([url]) => String(url).includes('/api/geo/regions'))).toBe(true))
+    await screen.findByText('No match in view')
+  })
+
+  it('keeps installation integrity failures distinct from offline sources', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ layers: [
+      { ...catalog.layers[0], id: 'soil', label: 'Prairie soil', source_mode: 'local_sqlite', available_in_current_mode: false, installation_status: 'integrity_failed' },
+      { ...catalog.layers[0], available_in_current_mode: false },
+    ] }) })))
+    render(<LeafletFieldMap {...props} mode="inspect" geometry={empty} allowNetwork={false} onGeometryChange={vi.fn()} />)
+    await screen.findByText('Source integrity failed · repair installation')
+    expect(screen.getByText('Offline · connection required')).toBeInTheDocument()
+    expect(screen.queryByText('Online only')).not.toBeInTheDocument()
+  })
+
   it('changes basemap style without moving the viewport or changing the field', async () => {
     const changed = vi.fn()
     render(<LeafletFieldMap {...props} fieldKey="saved-field" mode="inspect" geometry={polygon} onGeometryChange={changed} />)

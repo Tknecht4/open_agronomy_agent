@@ -33,6 +33,7 @@ def _stored_field_history(
     occurred_at: str | None = None,
     sampling_time_status: str | None = None,
     sampled_at: str | None = None,
+    observation_time_status: str | None = None,
 ) -> tuple[dict, dict, dict, dict]:
     store = TraceStore(tmp_path / "field-history.sqlite3")
     field = store.create_phase4_field_context(
@@ -61,6 +62,7 @@ def _stored_field_history(
         ),
         "provenance": {
             **({"sampling_time_status": sampling_time_status} if sampling_time_status is not None else {}),
+            **({"observation_time_status": observation_time_status} if observation_time_status is not None else {}),
             **({"sampled_at": sampled_at} if sampled_at is not None else {}),
         },
     }
@@ -592,3 +594,11 @@ def test_context_receipts_stay_out_of_the_conversational_answer_body() -> None:
     assert "Checked public context" not in rendered.answer
     assert "Treat map context as a prior" not in rendered.answer
     assert "Treat the public context as a prior" not in rendered.answer
+
+
+def test_explicitly_unknown_observation_date_does_not_become_entry_date(tmp_path):
+    stored, context, _, _ = _stored_field_history(tmp_path, event_type='observation', observation_time_status='unknown')
+    record = context['field_history']['events'][0]
+    assert 'occurred_at' not in record
+    assert record['recorded_at'] == stored['recorded_at']
+    assert 'Date unknown (recorded' in _field_history_evidence_text(context)

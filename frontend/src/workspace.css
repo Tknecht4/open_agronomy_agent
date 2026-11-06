@@ -546,3 +546,13 @@
 @media (max-width: 680px) {
  .workspace-shell .composer-reference { width: 44px; min-width: 44px; }
 }
+
+/* Shared keyboard geometry controls use the same draft as the map. */
+.geometry-coordinate-editor { padding: 10px 16px; border-top: 1px solid #dce3dc; max-height: 250px; overflow: auto; background: #fff; }
+.geometry-coordinate-editor summary { cursor: pointer; font-size: 14px; font-weight: 600; }
+.geometry-coordinate-editor p { font-size: 13px; margin: 8px 0; }
+.geometry-coordinate-controls { display:flex; flex-wrap:wrap; align-items:end; gap:10px; }
+.geometry-coordinate-controls label { display:flex; flex-direction:column; gap:4px; font-size:12px; }
+.geometry-coordinate-controls input { max-width:150px; }
+.workspace-shell[data-page=farms] .workspace-header h1,.workspace-shell[data-page=fields] .workspace-header h1,.workspace-shell[data-page=records] .workspace-header h1 { font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size:28px; }
+@media(max-width:650px) { .farm-workspace button { min-height:44px; }.farm-workspace .field-on-map,.farm-workspace button.field-open { min-height:44px; } }

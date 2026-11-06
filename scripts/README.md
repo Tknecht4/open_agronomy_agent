@@ -90,7 +90,7 @@ observed NDVI/NDMI and an authenticated preview in a private cache. A point
 defaults to its containing native pixel; `--sampling-mode point_buffer
 --sample-radius-m 60` selects a 60 m sampling radius with fractional pixel
 weights. Point support stays separate from saved geometry and is not field area.
-It needs `requirements/requirements-imagery.txt` in an isolated worker environment. Set
+HLS needs `requirements/requirements-imagery.txt` in an isolated worker environment. Sentinel-2 C1 polygon processing additionally needs `requirements/requirements-geospatial.txt`. Set
 `AGRONOMY_AGENT_IMAGERY_CACHE_ROOT` to a private directory outside the checkout
 and `AGRONOMY_AGENT_IMAGERY_PYTHON` to that environment's absolute executable
 Python path before launching the app. Both are required for the UI analysis

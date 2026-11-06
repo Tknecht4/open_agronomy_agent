@@ -19,6 +19,8 @@ from urllib.request import Request, urlopen
 from agronomy_agent.paths import repo_path
 from agronomy_agent.geospatial.geometry import canonical_geometry, geodesic_metrics
 from agronomy_agent.geospatial.vector_io import read_vector_upload
+from agronomy_agent.geospatial.json_properties import bounded_json_properties, bounded_json_value
+from agronomy_agent.geospatial.source_integrity import local_layer_integrity
 
 
 GEO_SERVICE_SCHEMA_VERSION = "open_agronomy_agent.geo_service.v1"
@@ -59,6 +61,7 @@ class RegionLayer:
     local_database: str | None = None
     local_match_reason: str = "Bundled official polygon intersection"
     boundary: str = "Official regional map context; not field truth or a legal boundary."
+    country_code: str | None = None
 
 
 def _local_database_path(*, environment_variable: str, filename: str) -> str:
@@ -72,12 +75,61 @@ def _local_database_path(*, environment_variable: str, filename: str) -> str:
 
 
 def _local_layer_installed(layer: RegionLayer) -> bool:
-    return layer.query_backend == "local_sqlite" and Path(str(layer.local_database or "")).is_file()
+    return layer.query_backend == "local_sqlite" and _local_layer_readiness(layer)["status"] == "verified"
+
+
+def _local_layer_readiness(layer: RegionLayer) -> dict[str, Any]:
+    return local_layer_integrity(Path(str(layer.local_database or "")), layer_id=layer.id)
+
+
+class LocalLayerIntegrityError(ValueError):
+    """A local read crossed a source identity boundary; no rows may be used."""
+
+    def __init__(self, layer: RegionLayer, receipt: dict[str, Any], *, reason: str):
+        self.receipt = deepcopy(receipt)
+        self.receipt["status"] = "integrity_failed"
+        self.receipt["errors"] = [*self.receipt.get("errors", []), reason]
+        self.receipt.pop("fingerprint", None)
+        self.receipt["fingerprint"] = hashlib.sha256(
+            json.dumps(self.receipt, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+        ).hexdigest()
+        super().__init__(f"bundled layer source is integrity_failed: {layer.id}: {reason}")
+
+
+def _assert_stable_local_source(layer: RegionLayer, expected: dict[str, Any]) -> None:
+    observed = _local_layer_readiness(layer)
+    if observed.get("status") != "verified" or observed != expected:
+        raise LocalLayerIntegrityError(layer, observed, reason="source_changed_during_query")
+
+
+def _retain_stable_local_sources(
+    layers: list[RegionLayer], readiness: dict[str, Any],
+    features: list[dict[str, Any]], errors: list[dict[str, Any]],
+    intersections: list[dict[str, Any]] | None = None,
+) -> bool:
+    """Recheck source identity before publishing fresh or cached projections."""
+    rejected = False
+    for layer in layers:
+        if layer.query_backend != "local_sqlite":
+            continue
+        try:
+            _assert_stable_local_source(layer, readiness[layer.id])
+        except LocalLayerIntegrityError as exc:
+            rejected = True
+            readiness[layer.id] = exc.receipt
+            errors[:] = [error for error in errors if error.get("layer_id") != layer.id]
+            errors.append({"layer_id": layer.id, "message": str(exc), "status": "integrity_failed"})
+            features[:] = [feature for feature in features
+                if (feature.get("properties") or {}).get("layer_id") != layer.id]
+            if intersections is not None:
+                intersections[:] = [item for item in intersections if item.get("layer_id") != layer.id]
+    return rejected
 
 
 REGION_LAYERS: dict[str, RegionLayer] = {
     "nrcs_mlra": RegionLayer(
         id="nrcs_mlra",
+        country_code="US",
         label="USDA NRCS Major Land Resource Areas",
         system="NRCS MLRA",
         service_url="https://services.arcgis.com/SXbDpmb7xQkk44JV/ArcGIS/rest/services/Major_Land_Resource_Areas/FeatureServer/0",
@@ -88,6 +140,7 @@ REGION_LAYERS: dict[str, RegionLayer] = {
     ),
     "epa_l3_us": RegionLayer(
         id="epa_l3_us",
+        country_code="US",
         label="EPA Level III Ecoregions of the Continental United States",
         system="EPA Level III Ecoregion",
         service_url="https://services2.arcgis.com/FiaPA4ga0iQKduv3/arcgis/rest/services/Level_III_Ecoregions_in_the_US_v1/FeatureServer/0",
@@ -98,6 +151,7 @@ REGION_LAYERS: dict[str, RegionLayer] = {
     ),
     "canada_ecozones": RegionLayer(
         id="canada_ecozones",
+        country_code="CA",
         label="Terrestrial Ecozones of Canada",
         system="AAFC Canada Ecozone",
         service_url="https://services.arcgis.com/lGOekm0RsNxYnT3j/ArcGIS/rest/services/National_ecological_framework_of_Canada_ecozones/FeatureServer/0",
@@ -108,6 +162,7 @@ REGION_LAYERS: dict[str, RegionLayer] = {
     ),
     "ca_statcan_2021_provinces_territories": RegionLayer(
         id="ca_statcan_2021_provinces_territories",
+        country_code="CA",
         label="Statistics Canada Provinces and Territories (2021 Census)",
         system="Statistics Canada 2021 Census geography",
         service_url="",
@@ -129,6 +184,7 @@ REGION_LAYERS: dict[str, RegionLayer] = {
     ),
     "ca_statcan_2021_census_agricultural_regions": RegionLayer(
         id="ca_statcan_2021_census_agricultural_regions",
+        country_code="CA",
         label="Statistics Canada Census Agricultural Regions (2021 Census)",
         system="Statistics Canada 2021 Census agricultural geography",
         service_url="",
@@ -150,6 +206,7 @@ REGION_LAYERS: dict[str, RegionLayer] = {
     ),
     "ca_aafc_terrestrial_ecoregions_v2_2": RegionLayer(
         id="ca_aafc_terrestrial_ecoregions_v2_2",
+        country_code="CA",
         label="AAFC Terrestrial Ecoregions of Canada (v2.2)",
         system="AAFC National Ecological Framework",
         service_url="",
@@ -171,6 +228,7 @@ REGION_LAYERS: dict[str, RegionLayer] = {
     ),
     "bc_agriculture_capability": RegionLayer(
         id="bc_agriculture_capability",
+        country_code="CA",
         label="BC Agriculture Capability Mapping",
         system="BC Agriculture Capability",
         service_url="",
@@ -192,6 +250,7 @@ REGION_LAYERS: dict[str, RegionLayer] = {
     ),
     "sk_detailed_soil": RegionLayer(
         id="sk_detailed_soil",
+        country_code="CA",
         label="Saskatchewan Detailed Soil Survey (DSS v3, 1:100,000)",
         system="AAFC Saskatchewan Detailed Soil Survey",
         service_url="",
@@ -215,6 +274,7 @@ REGION_LAYERS: dict[str, RegionLayer] = {
     ),
     "sk_thematic_soil": RegionLayer(
         id="sk_thematic_soil",
+        country_code="CA",
         label="Saskatchewan Thematic Soil Maps",
         system="AAFC Saskatchewan Thematic Soil",
         service_url="",
@@ -238,6 +298,7 @@ REGION_LAYERS: dict[str, RegionLayer] = {
     ),
     "ab_detailed_soil": RegionLayer(
         id="ab_detailed_soil",
+        country_code="CA",
         label="Alberta Detailed Soil Survey (DSS v3, 1:100,000)",
         system="AAFC Alberta Detailed Soil Survey",
         service_url="",
@@ -260,6 +321,7 @@ REGION_LAYERS: dict[str, RegionLayer] = {
     ),
     "mb_detailed_soil": RegionLayer(
         id="mb_detailed_soil",
+        country_code="CA",
         label="Manitoba Detailed Soil Survey (DSS v3, multiple scales)",
         system="AAFC Manitoba Detailed Soil Survey",
         service_url="",
@@ -283,6 +345,7 @@ REGION_LAYERS: dict[str, RegionLayer] = {
     ),
     "pei_detailed_soil": RegionLayer(
         id="pei_detailed_soil",
+        country_code="CA",
         label="PEI Detailed Soil Survey (1:75,000)",
         system="AAFC PEI Detailed Soil Survey",
         service_url="",
@@ -305,6 +368,7 @@ REGION_LAYERS: dict[str, RegionLayer] = {
     ),
     "ns_pictou_detailed_soil": RegionLayer(
         id="ns_pictou_detailed_soil",
+        country_code="CA",
         label="Pictou County Detailed Soil Survey (1:50,000)",
         system="AAFC Nova Scotia Detailed Soil Survey",
         service_url="",
@@ -327,6 +391,7 @@ REGION_LAYERS: dict[str, RegionLayer] = {
     ),
     "ca_soil_erosion_risk": RegionLayer(
         id="ca_soil_erosion_risk",
+        country_code="CA",
         label="AAFC Soil Erosion Risk 2021",
         system="AAFC Soil Erosion Risk",
         service_url="",
@@ -351,6 +416,10 @@ REGION_LAYERS: dict[str, RegionLayer] = {
 
 def layer_catalog(*, network_mode: str = "online") -> dict[str, Any]:
     _validate_network_mode(network_mode)
+    readiness = {
+        layer.id: _local_layer_readiness(layer)
+        for layer in REGION_LAYERS.values() if layer.query_backend == "local_sqlite"
+    }
     return {
         "schema_version": GEO_SERVICE_SCHEMA_VERSION,
         "network_mode": network_mode,
@@ -362,18 +431,22 @@ def layer_catalog(*, network_mode: str = "online") -> dict[str, Any]:
                 "source_url": layer.source_url,
                 "color": layer.color,
                 "source_mode": layer.query_backend,
+                "country_code": layer.country_code,
                 "available_in_current_mode": (
                     network_mode == "online"
                     if layer.query_backend != "local_sqlite"
-                    else _local_layer_installed(layer)
+                    else readiness[layer.id]["status"] == "verified"
                 ),
                 "installation_status": (
                     "installed"
-                    if _local_layer_installed(layer)
+                    if layer.query_backend == "local_sqlite" and readiness[layer.id]["status"] == "verified"
                     else "not_installed"
+                    if layer.query_backend == "local_sqlite" and readiness[layer.id]["status"] == "missing"
+                    else "integrity_failed"
                     if layer.query_backend == "local_sqlite"
                     else "remote"
                 ),
+                "source_integrity": readiness.get(layer.id),
                 "local_asset": Path(str(layer.local_database or "")).name
                 if layer.query_backend == "local_sqlite"
                 else None,
@@ -385,12 +458,7 @@ def layer_catalog(*, network_mode: str = "online") -> dict[str, Any]:
 
 
 def parse_boundary_upload(*, filename: str, content_type: str | None, raw: bytes) -> dict[str, Any]:
-    """Read bounded vector bytes with explicit CRS and no lost topology.
-
-    The current field editor supports points and single-ring polygons. Complex
-    topology remains available in vector_io and must be explicitly rejected here
-    until the editor can round-trip it without dropping holes or members.
-    """
+    """Read bounded vector bytes, retaining holes and multipart field boundaries."""
     safe_filename = Path(filename or "boundary").name
     imported = read_vector_upload(filename=safe_filename, raw=raw, content_type=content_type)
     source_format = imported["source_format"]
@@ -399,16 +467,10 @@ def parse_boundary_upload(*, filename: str, content_type: str | None, raw: bytes
             **feature["properties"],
             "upload_source_layer": feature["source_layer"],
             "upload_source_feature_index": feature["source_feature_index"],
+            "upload_source_feature_id": feature.get("source_feature_id"),
         }, index=index, source_format=source_format)
         for index, feature in enumerate(imported["features"])
     ]
-    if any(feature["geometry"]["type"] == "MultiPolygon" or (
-        feature["geometry"]["type"] == "Polygon" and len(feature["geometry"]["coordinates"]) > 1
-    ) for feature in features):
-        raise ValueError("The field editor currently supports only points and single-ring polygons; "
-                         "this upload contains multipart geometry or holes. No components were dropped. "
-                         "Prepare an explicitly selected simple field boundary in a GIS tool before import.")
-
     parsed_feature_count = len(features)
 
     primary_feature, primary_geometry = _primary_upload_feature(features)
@@ -449,12 +511,14 @@ def query_region_layers(
     bbox: tuple[float, float, float, float],
     layer_ids: list[str] | None = None,
     network_mode: str = "online",
+    country_scope: str | None = None,
 ) -> dict[str, Any]:
     west, south, east, north = _validate_bbox(bbox)
     requested_layers = _selected_layers(layer_ids)
-    layers, skipped_layers = _layers_for_network_mode(
+    layers, skipped_payload, readiness = _layers_for_request(
         requested_layers,
         network_mode=network_mode,
+        country_scope=country_scope,
     )
     features: list[dict[str, Any]] = []
     errors: list[dict[str, str]] = []
@@ -464,18 +528,25 @@ def query_region_layers(
             features.extend(_normalize_feature_collection(collection, layer))
         except Exception as exc:  # pragma: no cover - network failures vary.
             errors.append({"layer_id": layer.id, "message": str(exc)})
+    _retain_stable_local_sources(layers, readiness, features, errors)
     return {
         "schema_version": GEO_SERVICE_SCHEMA_VERSION,
         "query": {"bbox": [west, south, east, north], "mode": "viewport"},
         "layers": _layer_payload(layers),
-        "skipped_layers": _skipped_layer_payload(skipped_layers),
+        "skipped_layers": skipped_payload,
+        "query_attempted_layer_ids": [layer.id for layer in layers],
+        "source_qualified_layer_ids": [layer.id for layer in layers
+            if layer.query_backend != "local_sqlite" or readiness[layer.id]["status"] == "verified"],
+        "source_query_cache_hit": False,
+        "source_integrity": readiness,
+        "country_scope": country_scope,
         "feature_collection": {"type": "FeatureCollection", "features": features},
         "feature_count": len(features),
         "errors": errors,
         "source_mode": _source_mode(layers),
         "network_policy": _network_policy_payload(
             network_mode=network_mode,
-            skipped_layers=skipped_layers,
+            skipped_layers=[REGION_LAYERS[item["id"]] for item in skipped_payload if item["status"] == "blocked_offline"],
         ),
     }
 
@@ -485,23 +556,38 @@ def intersect_region_layers(
     geometry: dict[str, Any],
     layer_ids: list[str] | None = None,
     network_mode: str = "online",
+    country_scope: str | None = None,
 ) -> dict[str, Any]:
     parsed_geometry = _validate_geojson_geometry(geometry)
     bbox = _geometry_bbox(parsed_geometry)
     west, south, east, north = _expanded_bbox(bbox)
     requested_layers = _selected_layers(layer_ids)
-    layers, skipped_layers = _layers_for_network_mode(
+    layers, skipped_payload, readiness = _layers_for_request(
         requested_layers,
         network_mode=network_mode,
+        country_scope=country_scope,
     )
     offline_cache_key = (
-        _offline_intersection_cache_key(parsed_geometry=parsed_geometry, layers=layers)
+        _offline_intersection_cache_key(
+            parsed_geometry=parsed_geometry, layers=layers,
+            request_state={"country_scope": country_scope, "skipped_layers": skipped_payload, "source_integrity": readiness},
+        )
         if network_mode == "offline"
         else None
     )
     if offline_cache_key:
         cached = _offline_intersection_cache_get(offline_cache_key)
         if cached is not None:
+            cached["query_attempted_layer_ids"] = []
+            cached["source_query_cache_hit"] = True
+            if _retain_stable_local_sources(layers, readiness,
+                    cached["feature_collection"]["features"], cached["errors"], cached["intersections"]):
+                cached["source_integrity"] = readiness
+                cached["feature_count"] = len(cached["feature_collection"]["features"])
+                cached["source_qualified_layer_ids"] = [layer.id for layer in layers
+                    if layer.query_backend != "local_sqlite" or readiness[layer.id]["status"] == "verified"]
+                cached["source_query_cache_hit"] = False
+                cached["source_query_cache_rejected"] = True
             return cached
     features: list[dict[str, Any]] = []
     intersections: list[dict[str, Any]] = []
@@ -530,12 +616,19 @@ def intersect_region_layers(
                 intersections.append(_intersection_record(feature=feature, layer=layer, input_geometry=parsed_geometry))
         except Exception as exc:  # pragma: no cover - network failures vary.
             errors.append({"layer_id": layer.id, "message": str(exc)})
+    _retain_stable_local_sources(layers, readiness, features, errors, intersections)
     intersections.sort(key=lambda item: (item["confidence"], item["coverage_estimate"]), reverse=True)
     result = {
         "schema_version": GEO_SERVICE_SCHEMA_VERSION,
         "query": {"bbox": [west, south, east, north], "mode": "field_intersection"},
         "layers": _layer_payload(layers),
-        "skipped_layers": _skipped_layer_payload(skipped_layers),
+        "skipped_layers": skipped_payload,
+        "query_attempted_layer_ids": [layer.id for layer in layers],
+        "source_qualified_layer_ids": [layer.id for layer in layers
+            if layer.query_backend != "local_sqlite" or readiness[layer.id]["status"] == "verified"],
+        "source_query_cache_hit": False,
+        "source_integrity": readiness,
+        "country_scope": country_scope,
         "input_geometry": parsed_geometry,
         "intersections": intersections,
         "feature_collection": {"type": "FeatureCollection", "features": features},
@@ -545,7 +638,7 @@ def intersect_region_layers(
         "source_mode": _source_mode(layers),
         "network_policy": _network_policy_payload(
             network_mode=network_mode,
-            skipped_layers=skipped_layers,
+            skipped_layers=[REGION_LAYERS[item["id"]] for item in skipped_payload if item["status"] == "blocked_offline"],
         ),
     }
     if offline_cache_key and not errors:
@@ -595,6 +688,7 @@ def _offline_intersection_cache_key(
     *,
     parsed_geometry: dict[str, Any],
     layers: list[RegionLayer],
+    request_state: dict[str, Any] | None = None,
 ) -> str:
     layer_fingerprints: list[dict[str, Any]] = []
     for layer in layers:
@@ -613,6 +707,7 @@ def _offline_intersection_cache_key(
         "geometry": parsed_geometry,
         "layers": layer_fingerprints,
         "schema_version": GEO_SERVICE_SCHEMA_VERSION,
+        "request_state": request_state,
     }
     return hashlib.sha256(
         json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -651,6 +746,7 @@ def attach_region_intersections_to_upload(
     *,
     layer_ids: list[str] | None = None,
     network_mode: str = "online",
+    country_scope: str | None = None,
 ) -> dict[str, Any]:
     """Attach official regional polygon intersections to a parsed upload payload."""
 
@@ -658,6 +754,7 @@ def attach_region_intersections_to_upload(
         geometry=parsed_upload["geometry"],
         layer_ids=layer_ids,
         network_mode=network_mode,
+        country_scope=country_scope,
     )
     return {
         **parsed_upload,
@@ -667,6 +764,9 @@ def attach_region_intersections_to_upload(
         "official_layer_status": official_layer_status(intersections),
         "regional_source_mode": intersections["source_mode"],
         "geo_network_policy": intersections["network_policy"],
+        "geo_country_scope": intersections["country_scope"],
+        "query_attempted_layer_ids": intersections["query_attempted_layer_ids"],
+        "source_integrity": intersections["source_integrity"],
     }
 
 
@@ -708,6 +808,50 @@ def _layers_for_network_mode(
     )
 
 
+def _layers_for_request(
+    layers: list[RegionLayer],
+    *,
+    network_mode: str,
+    country_scope: str | None,
+) -> tuple[list[RegionLayer], list[dict[str, Any]], dict[str, Any]]:
+    """Select by asserted jurisdiction, policy and verified source readiness.
+
+    ``None`` is an explicit GIS request without automatic jurisdiction scope.
+    Saved-field callers pass a recognized country or ``unknown``. Coordinates
+    never manufacture a country and skipped sources never imply zero coverage.
+    """
+    _validate_network_mode(network_mode)
+    if country_scope is not None and not isinstance(country_scope, str):
+        raise ValueError("country_scope must be a country string or null")
+    country = {"canada": "CA", "ca": "CA", "united states": "US", "us": "US", "usa": "US"}.get(
+        country_scope.strip().lower() if country_scope is not None else ""
+    )
+    selected: list[RegionLayer] = []
+    skipped: list[dict[str, Any]] = []
+    readiness: dict[str, Any] = {}
+    for layer in layers:
+        status = reason = None
+        if country_scope is not None and country is None:
+            status, reason = "jurisdiction_unknown", "field_country_unknown_or_unsupported"
+        elif country_scope is not None and layer.country_code is None:
+            status, reason = "source_jurisdiction_unknown", "source_country_not_declared"
+        elif country_scope is not None and layer.country_code != country:
+            status, reason = "inapplicable_country", "source_country_differs_from_field"
+        elif network_mode == "offline" and layer.query_backend != "local_sqlite":
+            status, reason = "blocked_offline", "offline_network_policy"
+        elif layer.query_backend == "local_sqlite":
+            receipt = _local_layer_readiness(layer)
+            readiness[layer.id] = receipt
+            if receipt["status"] != "verified":
+                status = "not_installed" if receipt["status"] == "missing" else "integrity_failed"
+                reason = "local_layer_not_installed" if status == "not_installed" else "local_source_identity_failed"
+        if status is None:
+            selected.append(layer)
+        else:
+            skipped.append({**_layer_payload([layer])[0], "status": status, "reason": reason})
+    return selected, skipped, readiness
+
+
 def _skipped_layer_payload(layers: list[RegionLayer]) -> list[dict[str, Any]]:
     return [
         {
@@ -746,6 +890,7 @@ def _layer_payload(layers: list[RegionLayer]) -> list[dict[str, Any]]:
             "source_url": layer.source_url,
             "color": layer.color,
             "source_mode": layer.query_backend,
+            "country_code": layer.country_code,
             "boundary": layer.boundary,
         }
         for layer in layers
@@ -786,11 +931,12 @@ def _source_mode(layers: list[RegionLayer]) -> str:
 
 def _query_local_sqlite_layer(layer: RegionLayer, *, geometry: str, geometry_type: str) -> dict[str, Any]:
     database = Path(str(layer.local_database or ""))
-    if not database.is_file():
-        raise FileNotFoundError(f"bundled layer database is missing: {database}")
+    readiness = _local_layer_readiness(layer)
+    if readiness["status"] != "verified":
+        raise ValueError(f"bundled layer source is {readiness['status']}: {', '.join(readiness['errors'])}")
     query_geometry, bbox = _local_query_geometry(geometry=geometry, geometry_type=geometry_type)
     west, south, east, north = bbox
-    connection = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
+    connection = sqlite3.connect(database.resolve().as_uri() + "?mode=ro&immutable=1", uri=True)
     connection.row_factory = sqlite3.Row
     try:
         metadata = {
@@ -823,6 +969,7 @@ def _query_local_sqlite_layer(layer: RegionLayer, *, geometry: str, geometry_typ
     finally:
         connection.close()
 
+    _assert_stable_local_source(layer, readiness)
     features: list[dict[str, Any]] = []
     for row in rows:
         if compressed_payloads:
@@ -919,6 +1066,7 @@ def _normalize_feature_collection(collection: dict[str, Any], layer: RegionLayer
 def _intersection_record(*, feature: dict[str, Any], layer: RegionLayer, input_geometry: dict[str, Any]) -> dict[str, Any]:
     properties = feature["properties"]
     coverage = _coverage_estimate(input_geometry, feature["geometry"])
+    coverage_support_type = "point_membership" if canonical_geometry(input_geometry)["type"] == "Point" else "polygon_area"
     record = {
         "layer_id": layer.id,
         "layer_label": layer.label,
@@ -929,6 +1077,7 @@ def _intersection_record(*, feature: dict[str, Any], layer: RegionLayer, input_g
         "source_url": layer.source_url,
         "confidence": 0.94 if coverage >= 0.5 else 0.82,
         "coverage_estimate": coverage,
+        "coverage_support_type": coverage_support_type,
         "coverage_method": "WGS84 geodesic intersection area / complete input area; point uses polygon covers",
         "confidence_kind": "heuristic_not_calibrated",
         "match_reason": (
@@ -1221,24 +1370,39 @@ def _upload_warnings(
 
 def official_layer_status(intersections: dict[str, Any]) -> list[dict[str, Any]]:
     errors_by_layer = {str(error.get("layer_id")): str(error.get("message")) for error in intersections.get("errors", [])}
+    error_statuses = {str(error.get("layer_id")): error.get("status") for error in intersections.get("errors", [])}
     counts: dict[str, int] = {}
     for item in intersections.get("intersections", []):
         layer_id = str(item.get("layer_id") or "")
         counts[layer_id] = counts.get(layer_id, 0) + 1
     status: list[dict[str, Any]] = []
+    collection_by_layer = {
+        str(item.get("layer_id")): item
+        for item in intersections.get("source_collection_status", []) if isinstance(item, dict)
+    }
     for layer in intersections.get("layers", []):
         layer_id = str(layer.get("id") or "")
         matched_count = counts.get(layer_id, 0)
         error_message = errors_by_layer.get(layer_id)
+        collection = collection_by_layer.get(layer_id)
+        incomplete = collection is not None and (
+            collection.get("valid") is not True
+            or collection.get("invalid_feature_count", 0) != 0
+            or collection.get("exceeded_transfer_limit") is True
+        )
+        source_status = ("integrity_failed" if error_statuses.get(layer_id) == "integrity_failed"
+            else "error" if error_message else "partial" if incomplete else "matched" if matched_count else "no_match")
         status.append(
             {
                 "layer_id": layer_id,
                 "label": layer.get("label") or layer_id,
                 "system": layer.get("system") or layer_id,
                 "source_url": layer.get("source_url"),
-                "status": "matched" if matched_count else "error" if error_message else "no_match",
-                "match_count": matched_count,
-                "message": error_message or ("matched official polygon" if matched_count else "no polygon intersected the field geometry"),
+                "status": source_status,
+                "match_count": None if error_message or incomplete else matched_count,
+                "observed_match_count": matched_count,
+                "message": error_message or ("source response is incomplete; total matching coverage is unknown" if incomplete
+                    else "matched official polygon" if matched_count else "no polygon intersected the field geometry"),
             }
         )
     for layer in intersections.get("skipped_layers", []):
@@ -1249,9 +1413,17 @@ def official_layer_status(intersections: dict[str, Any]) -> list[dict[str, Any]]
                 "label": layer.get("label") or layer_id,
                 "system": layer.get("system") or layer_id,
                 "source_url": layer.get("source_url"),
-                "status": "blocked_offline",
-                "match_count": 0,
-                "message": "remote layer skipped before request because runtime network mode is offline",
+                "status": layer.get("status") or "blocked_offline",
+                "match_count": None,
+                "observed_match_count": None,
+                "message": {
+                    "blocked_offline": "remote layer skipped before request because runtime network mode is offline",
+                    "inapplicable_country": "source country differs from the saved field country; source was not queried",
+                    "jurisdiction_unknown": "field country is unknown or unsupported; source was not queried",
+                    "source_jurisdiction_unknown": "source country is not declared; source was not queried",
+                    "not_installed": "source database is not installed; matching coverage is unknown",
+                    "integrity_failed": "source identity verification failed; matching coverage is unknown",
+                }.get(str(layer.get("status")), "source was skipped; matching coverage is unknown"),
             }
         )
     return status
@@ -1271,15 +1443,8 @@ def _upload_status_message(filename: str, source_format: str, feature_count: int
 
 
 def _json_safe_properties(properties: dict[str, Any]) -> dict[str, Any]:
-    cleaned: dict[str, Any] = {}
-    for key, value in properties.items():
-        safe_value = _json_safe_value(value)
-        if safe_value is not None:
-            cleaned[str(key)] = safe_value
-    return cleaned
+    return bounded_json_properties(properties)
 
 
 def _json_safe_value(value: Any) -> Any:
-    if value is None or isinstance(value, (str, int, float, bool)):
-        return value
-    return str(value)
+    return bounded_json_value(value)

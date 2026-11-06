@@ -1,19 +1,22 @@
+import { GeometryCoordinateEditor } from './GeometryCoordinateEditor'
+import { boundaryImportFromUpload, type BoundaryImportSnapshot } from './boundaryImport'
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, MapPin, Pencil, Upload, Check } from 'lucide-react'
 import { WorkspaceDialog } from './WorkspaceDialog'
 import { recoverableLazy as lazy } from './WorkspaceSectionBoundary'
-import { estimatePolygonAcres, fieldGeometryIssue, validFieldPoint, type FieldGeometry, type MapMode } from './fieldGeometry'
+import { completeBoundaryGeometry, type CompleteBoundary, estimatePolygonAcres, fieldGeometryIssue, validFieldPoint, type FieldGeometry, type MapMode } from './fieldGeometry'
 import { apiUpload } from './api'
 
 const LeafletFieldMap = lazy(() => import('./LeafletFieldMap').then(module => ({ default: module.LeafletFieldMap })), 'Field map')
 export type NewFieldDraft = {
-  name: string; crop: string; jurisdiction: string; region: string; concern: string;
-  geometry: FieldGeometry; acres: string; notes: string;
+  operationId: string; season: number; name: string; crop: string; jurisdiction: string; region: string; concern: string;
+  geometry: FieldGeometry; acres: string; notes: string; boundaryImport?: BoundaryImportSnapshot;
 }
-type UploadFeature = { id: string; label: string; acres: number; geometry_type?: string }
+type UploadFeature = { id: string; label: string; acres: number; geometry_type?: string; properties?: Record<string, unknown> }
 type UploadGeometry = { type: string; coordinates?: unknown; geometry?: { type: string; coordinates?: unknown } }
 type UploadGeoFeature = { type: 'Feature'; id?: string; geometry: UploadGeometry; properties?: Record<string, unknown> }
 type BoundaryResponse = {
+  import_receipt?: BoundaryImportSnapshot['import_receipt']; coordinate_reference?: Record<string, unknown>;
   geometry: UploadGeometry;
   filename: string; feature_count?: number; warnings?: string[]; selected_feature_id?: string;
   feature_summaries?: UploadFeature[];
@@ -32,6 +35,9 @@ export const importedFieldGeometry = (value: BoundaryResponse['geometry']): Fiel
   if (geometry.type === 'Point' && Array.isArray(geometry.coordinates)) {
     const [lon, lat] = geometry.coordinates
     if (typeof lat === 'number' && typeof lon === 'number' && validFieldPoint({ lat, lon })) return { kind: 'point', point: { lat, lon } }
+  }
+  if ((geometry.type === 'MultiPolygon' || geometry.type === 'Polygon' && Array.isArray(geometry.coordinates) && geometry.coordinates.length > 1) && Array.isArray(geometry.coordinates)) {
+    return completeBoundaryGeometry(geometry as CompleteBoundary)
   }
   if (geometry.type === 'Polygon' && Array.isArray(geometry.coordinates)) {
     // A field ring with holes cannot be represented by the current editable map contract.
@@ -55,9 +61,11 @@ export function FieldSetupDialog({ onClose, onSave, allowNetwork, previousRegion
   onClose: () => void; onSave: (draft: NewFieldDraft) => Promise<void>; allowNetwork: boolean;
   previousRegion?: { region: string; jurisdiction: string };
 }) {
+  const operationId = useRef(crypto.randomUUID())
   const [step, setStep] = useState(0)
   const [name, setName] = useState('')
   const [crop, setCrop] = useState('')
+  const [season, setSeason] = useState(() => { const year = Number(new URLSearchParams(window.location.hash.split('?')[1] || '').get('season')); return year >= 1900 && year <= 2200 ? year : new Date().getFullYear() })
   const [jurisdiction, setJurisdiction] = useState('')
   const [region, setRegion] = useState('')
   const [geometry, setGeometry] = useState<FieldGeometry>({ kind: 'none' })
@@ -123,8 +131,8 @@ export function FieldSetupDialog({ onClose, onSave, allowNetwork, previousRegion
     if (busy) return
     setBusy(true); setError('')
     try {
-      await onSave({ name: name.trim(), crop: crop.trim(), region: region.trim(), jurisdiction: jurisdiction.trim(),
-        geometry, acres: geometry.kind === 'polygon' ? String(Math.round(geometry.acres)) : '', concern: '', notes: uploadNote })
+      await onSave({ operationId: operationId.current, season, name: name.trim(), crop: crop.trim(), region: region.trim(), jurisdiction: jurisdiction.trim(),
+        geometry, acres: (geometry.kind === 'polygon' || geometry.kind === 'geojson') ? String(Math.round(geometry.acres)) : '', concern: '', notes: uploadNote, boundaryImport: boundaryImportFromUpload(upload, upload?.feature_summaries?.find(feature => feature.id === selectedFeature) || null) })
     } catch (cause) { if (mountedRef.current) setError(String((cause as Error)?.message || cause)) }
     finally { if (mountedRef.current) setBusy(false) }
   }
@@ -141,9 +149,10 @@ export function FieldSetupDialog({ onClose, onSave, allowNetwork, previousRegion
         <button type="button" onClick={onClose}>Discard draft</button>
       </div> : null}
       {step === 0 ? <div className="setup-details">
-        <div><span className="eyebrow">A small start</span><h3>Make it yours.</h3><p>Start with a name. Add a location now or keep it unknown while you add field records and tables.</p></div>
+        <div><span className="eyebrow">New field</span><h3>Field details</h3><p>Start with a name. Add a location now or keep it unknown while you add field records and tables.</p></div>
         <label>Field name<input data-dialog-initial-focus value={name} onChange={event => setName(event.target.value)} placeholder="e.g. North quarter" maxLength={160} /></label>
-        <label>Crop <span className="optional">optional</span><input value={crop} list="field-crops" onChange={event => setCrop(event.target.value)} placeholder="Choose or type a crop" /></label>
+        <label>Crop for {season} <span className="optional">optional</span><input value={crop} list="field-crops" onChange={event => setCrop(event.target.value)} placeholder="Choose or type a crop" /></label>
+        <label>Season year<input type="number" min="1900" max="2200" value={season} onChange={event => { const year = Number(event.target.value); if (year >= 1900 && year <= 2200) setSeason(year) }} /></label>
         <datalist id="field-crops">{['Barley', 'Canola', 'Wheat', 'Oats', 'Corn', 'Soybean', 'Lentils', 'Peas', 'Forage'].map(value => <option key={value} value={value} />)}</datalist>
         <details className="setup-region"><summary>Region & province <span className="optional">optional</span></summary>
           <div className="field-grid"><label>Region<input value={region} onChange={event => setRegion(event.target.value)} placeholder="County or municipality" /></label>
@@ -166,6 +175,7 @@ export function FieldSetupDialog({ onClose, onSave, allowNetwork, previousRegion
           regionalCandidates={[]} regionalFeatureCollection={null} onGeometryChange={setManualGeometry} onStatusChange={setStatus} allowNetwork={allowNetwork}
           onFinishBoundary={() => setMode('edit')} onCancelDrawing={() => { setManualGeometry({ kind: 'none' }); setMode('point') }} /></Suspense></div>
         <p role="status" className="setup-map-status">{status}</p>
+        <GeometryCoordinateEditor geometry={geometry} pointMode={mode === 'point'} onChange={next => { if (!busy) { requestIdRef.current += 1; setDataOnly(false); setGeometry(next) } }} />
         <details className="coordinate-entry"><summary>Enter coordinates instead</summary><div className="field-grid">
           <label>Latitude<input inputMode="decimal" value={latitude} onChange={event => setLatitude(event.target.value)} placeholder="53.3" /></label>
           <label>Longitude<input inputMode="decimal" value={longitude} onChange={event => setLongitude(event.target.value)} placeholder="-113.6" /></label>
@@ -178,10 +188,10 @@ export function FieldSetupDialog({ onClose, onSave, allowNetwork, previousRegion
         {uploadNote ? <p className="prefill-note">{uploadNote}</p> : null}
         {upload?.warnings?.map(warning => <p key={warning} className="prefill-note">{warning}</p>)}</>}
       </div> : null}
-      {step === 2 ? <div className="setup-review"><span className="eyebrow">Ready when you are</span><h3>{name}</h3>
-        <dl><div><dt>Crop</dt><dd>{crop || 'Not specified'}</dd></div><div><dt>Region</dt><dd>{[region, jurisdiction].filter(Boolean).join(', ') || 'Not specified'}</dd></div>
-          <div><dt>Location</dt><dd>{geometry.kind === 'point' ? `${geometry.point.lat.toFixed(5)}, ${geometry.point.lon.toFixed(5)}` : geometry.kind === 'polygon' ? `${geometry.points.length} boundary corners` : 'Unknown · data only'}</dd></div>
-          <div><dt>Area</dt><dd>{geometry.kind === 'polygon' ? `About ${Math.round(geometry.acres).toLocaleString()} acres · calculated from boundary` : 'Not measured · add a boundary later'}</dd></div></dl>
+      {step === 2 ? <div className="setup-review"><span className="eyebrow">Review field</span><h3>{name}</h3>
+        <dl><div><dt>Crop for {season}</dt><dd>{crop || 'Not specified'}</dd></div><div><dt>Region</dt><dd>{[region, jurisdiction].filter(Boolean).join(', ') || 'Not specified'}</dd></div>
+          <div><dt>Location</dt><dd>{geometry.kind === 'point' ? `${geometry.point.lat.toFixed(5)}, ${geometry.point.lon.toFixed(5)}` : geometry.kind === 'polygon' ? `${geometry.points.length} boundary corners` : geometry.kind === 'geojson' ? `${geometry.geojson.type} · complete imported boundary` : 'Unknown · data only'}</dd></div>
+          <div><dt>Area</dt><dd>{(geometry.kind === 'polygon' || geometry.kind === 'geojson') ? `About ${Math.round(geometry.acres).toLocaleString()} acres · calculated from boundary` : 'Not measured · add a boundary later'}</dd></div></dl>
         <p>{dataOnly ? 'Map context and imagery remain unavailable until you add a valid location.' : 'Only the details you entered will be saved. Regional maps add context; they never replace field observations.'}</p>
         {uploadNote ? <p className="prefill-note">{uploadNote}</p> : null}
       </div> : null}

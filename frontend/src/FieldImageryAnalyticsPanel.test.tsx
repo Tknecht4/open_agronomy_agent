@@ -27,7 +27,8 @@ const receipt = {
   zonal_stats: { NDVI: { mean: 0.53, min: 0.1, max: 0.8, area_m2: 8000 }, NDMI: { mean: null, min: null, max: null, area_m2: 0 } },
 }
 
-const pointAvailability = { status: 'ready', network_mode: 'online', sampling_modes: ['field_polygon', 'point_pixel', 'point_buffer'], sample_radius_bounds_m: { min: 15, max: 1500 } }
+const availabilityProviders = ['hls-s30-planetary-computer', 'hls-l30-planetary-computer'].map(id => ({ id, analysis: true, sampling_modes: ['field_polygon', 'point_pixel', 'point_buffer'] }))
+const pointAvailability = { status: 'ready', providers: availabilityProviders, network_mode: 'online', sampling_modes: ['field_polygon', 'point_pixel', 'point_buffer'], sample_radius_bounds_m: { min: 15, max: 1500 } }
 const pointReceipt = {
   ...receipt,
   process_version: 'hls-point-sample-v4-hls-radiometry-index-qa',
@@ -66,6 +67,16 @@ const bufferReceipt = { ...pointReceipt,
   qa: { ...pointReceipt.qa, index_undefined_area_m2_by_reason: { ...pointReceipt.qa.index_undefined_area_m2_by_reason, ndmi_nonpositive_denominator: 8000 }, sample_area_m2: bufferArea, valid_area_m2: 8000, valid_area_fraction: 8000 / bufferArea, excluded_area_m2_by_reason: { cloud: bufferArea - 8000 } },
 }
 
+function supportAssessment(total: number, clear: number, ndvi: number, ndmi: number, supportKind = 'field_polygon') {
+  const index = (valid: number) => ({ valid_area_m2: valid, valid_fraction: valid / total,
+    status: valid > 0 ? 'supported_pixels_only' : 'no_valid_index_support' })
+  return { schema_version: 'imagery_support.v1', evidence_role: 'interpretation', support_kind: supportKind,
+    support_area_m2: total, qa_clear_area_m2: clear, qa_clear_fraction: clear / total,
+    index_support: { NDVI: index(ndvi), NDMI: index(ndmi) }, minimum_valid_fraction: null,
+    coverage_admission: 'not_assessed', representativeness: 'not_assessed', field_action_authority: 'not_authorized',
+    limitations: ['Index summaries describe supported pixels only.'] }
+}
+
 const objectUrl = vi.fn(() => 'blob:field-preview')
 const revokeUrl = vi.fn()
 
@@ -80,7 +91,7 @@ beforeEach(() => {
   apiPost.mockReset()
   objectUrl.mockClear()
   revokeUrl.mockClear()
-  apiGet.mockResolvedValue({ status: 'ready', network_mode: 'online' })
+  apiGet.mockResolvedValue({ status: 'ready', providers: availabilityProviders, network_mode: 'online' })
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, headers: { get: () => 'image/png' }, blob: async () => new Blob(['png'], { type: 'image/png' }) }))
   Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: objectUrl })
   Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeUrl })
@@ -90,12 +101,90 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllGlobals(); document.cookie = 'agronomy_csrf=; Max-Age=0' })
 
 describe('FieldImageryAnalyticsPanel', () => {
+  it('keeps sparse field support visible without claiming representative crop conditions', async () => {
+    apiPost.mockResolvedValue({ ...receipt,
+      qa: { ...receipt.qa, valid_area_m2: 172.5, valid_area_fraction: 0.01725,
+        excluded_area_m2_by_reason: { cloud: 9827.5 },
+        index_undefined_area_m2_by_reason: { ...receipt.qa.index_undefined_area_m2_by_reason, ndmi_nonpositive_denominator: 172.5 } },
+      zonal_stats: { ...receipt.zonal_stats, NDVI: { ...receipt.zonal_stats.NDVI, area_m2: 172.5 } },
+      support_assessment: supportAssessment(10000, 172.5, 172.5, 0),
+    })
+    render(<FieldImageryAnalyticsPanel fieldContextId="field-1" geometryKey="polygon-1" geometry={polygon} imageryReady />)
+    open(); setDates()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Analyze scene' })).toBeEnabled())
+    fireEvent.click(screen.getByRole('button', { name: 'Analyze scene' }))
+    const result = await screen.findByRole('region', { name: 'Imagery analysis result' })
+    expect(within(result).getByText('0.530')).toBeInTheDocument()
+    expect(within(result).getByText('1.7% of the field supports this index.')).toBeInTheDocument()
+    expect(within(result).getByText('No valid pixels support this index.')).toBeInTheDocument()
+    expect(within(result).getByText(/has not been assessed for representative crop conditions/)).toHaveTextContent('A field decision needs other evidence.')
+    expect(within(result).getByText(/no minimum coverage rule has been applied/)).toBeInTheDocument()
+    expect(within(result).getByText('Unknown')).toBeInTheDocument()
+    expect(await within(result).findByRole('img')).toBeInTheDocument()
+  })
+
+  it('uses the sample area as the denominator for each buffered-point index', async () => {
+    apiGet.mockResolvedValue(pointAvailability)
+    apiPost.mockResolvedValue({ ...bufferReceipt,
+      qa: { ...bufferReceipt.qa, index_undefined_area_m2_by_reason: { ...bufferReceipt.qa.index_undefined_area_m2_by_reason, ndmi_nonpositive_denominator: 4000 } },
+      zonal_stats: { ...bufferReceipt.zonal_stats, NDMI: { mean: 0.3, min: 0.1, max: 0.4, area_m2: 4000 } },
+      support_assessment: supportAssessment(bufferArea, 8000, 8000, 4000, 'point_buffer'),
+    })
+    render(<FieldImageryAnalyticsPanel fieldContextId="field-1" geometryKey="point-1" geometry={point} imageryReady />)
+    open(); setDates()
+    await waitFor(() => expect(screen.getByRole('option', { name: 'Area around location' })).toBeEnabled())
+    fireEvent.change(screen.getByLabelText('Sample'), { target: { value: 'point_buffer' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Analyze scene' }))
+    const result = await screen.findByRole('region', { name: 'Imagery analysis result' })
+    expect(within(result).getByText('70.7% of the sample supports this index.')).toBeInTheDocument()
+    expect(within(result).getByText('35.4% of the sample supports this index.')).toBeInTheDocument()
+    expect(within(result).queryByText(/of the field supports/)).not.toBeInTheDocument()
+  })
+
+  it('preserves empty support and null indices without displaying zero-valued observations', async () => {
+    const emptyIndex = { mean: null, min: null, max: null, area_m2: 0 }
+    apiPost.mockResolvedValue({ ...receipt, status: 'empty_valid_area',
+      qa: { ...receipt.qa, valid_area_m2: 0, valid_area_fraction: 0, nodata_area_m2: 10000,
+        excluded_area_m2_by_reason: {}, index_undefined_area_m2_by_reason: {
+          ndvi_negative_reflectance: 0, ndvi_nonpositive_denominator: 0, ndmi_negative_reflectance: 0, ndmi_nonpositive_denominator: 0 } },
+      zonal_stats: { NDVI: emptyIndex, NDMI: emptyIndex }, support_assessment: supportAssessment(10000, 0, 0, 0),
+    })
+    render(<FieldImageryAnalyticsPanel fieldContextId="field-1" geometryKey="polygon-1" geometry={polygon} imageryReady />)
+    open(); setDates()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Analyze scene' })).toBeEnabled())
+    fireEvent.click(screen.getByRole('button', { name: 'Analyze scene' }))
+    const result = await screen.findByRole('region', { name: 'Imagery analysis result' })
+    expect(within(result).getByRole('status')).toHaveTextContent('Index values are unavailable.')
+    expect(within(result).getAllByText('Unknown')).toHaveLength(2)
+    expect(within(result).getAllByText('No valid pixels support this index.')).toHaveLength(2)
+    expect(within(result).queryByText('0.000')).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ['wrong spatial support', { support_kind: 'native_pixel' }],
+    ['contradictory coverage', { qa_clear_fraction: 1 }],
+    ['invented authority', { field_action_authority: 'authorized' }],
+    ['invented threshold', { minimum_valid_fraction: 0.1 }],
+    ['unknown schema', { schema_version: 'imagery_support.v2' }],
+    ['missing index support', { index_support: {} }],
+    ['nonfinite index support', { index_support: { NDVI: { valid_area_m2: 8000, valid_fraction: NaN, status: 'supported_pixels_only' }, NDMI: { valid_area_m2: 0, valid_fraction: 0, status: 'no_valid_index_support' } } }],
+  ])('rejects %s before displaying observations or fetching a preview', async (_label, invalid) => {
+    apiPost.mockResolvedValue({ ...receipt, support_assessment: { ...supportAssessment(10000, 8000, 8000, 0), ...invalid } })
+    render(<FieldImageryAnalyticsPanel fieldContextId="field-1" geometryKey="polygon-1" geometry={polygon} imageryReady />)
+    open(); setDates()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Analyze scene' })).toBeEnabled())
+    fireEvent.click(screen.getByRole('button', { name: 'Analyze scene' }))
+    expect(await screen.findByText(/response did not confirm the requested sampling area/)).toBeInTheDocument()
+    expect(screen.queryByText('0.530')).not.toBeInTheDocument()
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
   it('shows server-observed indices and loads its preview through an authenticated request', async () => {
     apiPost.mockResolvedValue(receipt)
     const view = render(<FieldImageryAnalyticsPanel fieldContextId="field-1" geometryKey="polygon-1" geometry={polygon} imageryReady />)
     open()
     setDates()
-    expect(await screen.findByText(/sends the saved field polygon and selected dates to Microsoft Planetary Computer/)).toHaveTextContent('No account is required.')
+    expect(await screen.findByText(/sends the saved polygon and dates to the selected public imagery catalog/)).toHaveTextContent('No account is required.')
     await waitFor(() => expect(screen.getByRole('button', { name: 'Analyze scene' })).toBeEnabled())
     fireEvent.click(screen.getByRole('button', { name: 'Analyze scene' }))
     expect(await screen.findByText('Observed indices for the saved field polygon.')).toBeInTheDocument()
@@ -130,7 +219,7 @@ describe('FieldImageryAnalyticsPanel', () => {
   })
 
   it('reports offline cache miss and keeps unavailable index values unknown', async () => {
-    apiGet.mockResolvedValue({ status: 'ready', network_mode: 'offline' })
+    apiGet.mockResolvedValue({ status: 'ready', providers: availabilityProviders, network_mode: 'offline' })
     apiPost.mockResolvedValue({ status: 'blocked_offline' })
     render(<FieldImageryAnalyticsPanel fieldContextId="field-1" geometryKey="polygon-1" geometry={polygon} imageryReady />)
     open()
@@ -161,7 +250,7 @@ describe('FieldImageryAnalyticsPanel', () => {
   })
 
   it('labels an exact offline cache read and still loads its authenticated preview', async () => {
-    apiGet.mockResolvedValue({ status: 'ready', network_mode: 'offline' })
+    apiGet.mockResolvedValue({ status: 'ready', providers: availabilityProviders, network_mode: 'offline' })
     apiPost.mockResolvedValue({ ...receipt, cache_hit: true, cog_transfer_bytes: 819200 })
     render(<FieldImageryAnalyticsPanel fieldContextId="field-1" geometryKey="polygon-1" geometry={polygon} imageryReady />)
     open()
@@ -372,7 +461,7 @@ describe('FieldImageryAnalyticsPanel', () => {
     expect(screen.getByRole('button', { name: 'Analyze scene' })).toBeDisabled()
   })
 
-  it.each(['Acquired through', 'HLS source'])('clears an existing point preview after changing %s', async (label) => {
+  it.each(['Acquired through', 'Imagery source'])('clears an existing point preview after changing %s', async (label) => {
     apiGet.mockResolvedValue(pointAvailability)
     apiPost.mockResolvedValue(pointReceipt)
     render(<FieldImageryAnalyticsPanel fieldContextId="field-1" geometryKey="point-1" geometry={point} imageryReady />)
@@ -380,7 +469,7 @@ describe('FieldImageryAnalyticsPanel', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Analyze scene' })).toBeEnabled())
     fireEvent.click(screen.getByRole('button', { name: 'Analyze scene' }))
     await screen.findByRole('img')
-    fireEvent.change(screen.getByLabelText(label), { target: { value:label==='HLS source'?'hls-l30-planetary-computer':'2025-07-01' } })
+    fireEvent.change(screen.getByLabelText(label), { target: { value:label==='Imagery source'?'hls-l30-planetary-computer':'2025-07-01' } })
     expect(screen.queryByRole('region', {name:'Imagery analysis result'})).not.toBeInTheDocument()
     expect(revokeUrl).toHaveBeenCalledWith('blob:field-preview')
   })

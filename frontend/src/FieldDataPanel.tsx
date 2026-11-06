@@ -112,12 +112,14 @@ export function FieldDataPanel({
   geometryKind = 'polygon',
   geometryKey = '',
   onAskQuestion,
+  showImagery = true,
 }: {
   fieldContextId: string
   imageryReady?: boolean
-  geometryKind?: 'none' | 'point' | 'polygon'
+  geometryKind?: 'none' | 'point' | 'polygon' | 'geojson'
   geometryKey?: string
   onAskQuestion?: (question: string) => void
+  showImagery?: boolean
 }) {
   const [preview, setPreview] = useState<Preview | null>(null)
   const [columns, setColumns] = useState<ColumnMapping[]>([])
@@ -486,7 +488,7 @@ export function FieldDataPanel({
         {Object.keys(asObject(queryRecord.filters)).length ? <p>Filtered results remain in this query panel; conversational queries currently use the full committed selection.</p> : null}
       </div> : null}
     </section>
-    <section aria-label="Field imagery scenes">
+    <section hidden={!showImagery} aria-label="Field imagery scenes">
       <h3>Imagery scenes</h3>
       {!imageryReady || geometryKind === 'none' ? <p>Save the current location or boundary before searching imagery. Unknown geometry stays unavailable.</p> : null}
       {point ? <p>Search scenes at the saved location. This is independent of the analysis radius; scene cloud cover does not describe the sampled pixel.</p> : null}

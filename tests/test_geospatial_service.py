@@ -109,7 +109,7 @@ def test_spatial_pack_root_and_per_layer_override_precedence(tmp_path: Path, mon
 
 
 def test_local_soil_layer_intersects_offline_and_preserves_components(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch, qualified_spatial_layer
 ) -> None:
     database = tmp_path / "sk_detailed_soil.sqlite3"
     _write_local_layer(database)
@@ -127,6 +127,7 @@ def test_local_soil_layer_intersects_offline_and_preserves_components(
         local_match_reason="Synthetic local intersection",
     )
     monkeypatch.setitem(geo.REGION_LAYERS, layer.id, layer)
+    qualified_spatial_layer(database, layer.id)
 
     result = geo.intersect_region_layers(
         geometry={
@@ -145,7 +146,7 @@ def test_local_soil_layer_intersects_offline_and_preserves_components(
 
 
 def test_context_boundary_intersection_exposes_only_allowlisted_hierarchy_fields(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch, qualified_spatial_layer
 ) -> None:
     database = tmp_path / "context.sqlite3"
     _write_context_layer(database)
@@ -164,6 +165,7 @@ def test_context_boundary_intersection_exposes_only_allowlisted_hierarchy_fields
         boundary="Context only.",
     )
     monkeypatch.setitem(geo.REGION_LAYERS, layer.id, layer)
+    qualified_spatial_layer(database, layer.id)
 
     result = geo.intersect_region_layers(
         geometry={
@@ -215,15 +217,21 @@ def test_uninstalled_context_layer_is_not_selected_or_silently_fetched_offline(
     )
 
     assert result["feature_count"] == 0
-    assert result["errors"] and result["errors"][0]["layer_id"] == layer.id
+    assert result["errors"] == []
+    assert geo.official_layer_status(result)[0]["status"] == "not_installed"
+    assert geo.official_layer_status(result)[0]["match_count"] is None
     assert result["network_policy"]["external_requests_attempted"] == 0
 
 
 def test_default_layer_selection_omits_uninstalled_and_prefers_detailed_sk(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch, qualified_spatial_layer
 ) -> None:
     installed = tmp_path / "installed.sqlite3"
-    installed.touch()
+    _write_local_layer(installed)
+    thematic = tmp_path / "thematic.sqlite3"
+    _write_local_layer(thematic)
+    qualified_spatial_layer(installed, "sk_detailed_soil")
+    qualified_spatial_layer(thematic, "sk_thematic_soil")
     layers = {
         "sk_detailed_soil": geo.RegionLayer(
             id="sk_detailed_soil",
@@ -247,7 +255,7 @@ def test_default_layer_selection_omits_uninstalled_and_prefers_detailed_sk(
             code_fields=("code",),
             name_fields=("name",),
             query_backend="local_sqlite",
-            local_database=str(installed),
+            local_database=str(thematic),
         ),
         "missing": geo.RegionLayer(
             id="missing",

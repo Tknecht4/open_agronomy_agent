@@ -28,6 +28,7 @@ from agronomy_agent.server.services.field_context_quality import evaluate_field_
 from agronomy_agent.server.services.privacy_boundary import minimized_export_trace_payload
 from agronomy_agent.server.storage.backup import assert_no_pending_restore
 from agronomy_agent.server.storage.field_source_blobs import ensure_source_schema
+from agronomy_agent.server.storage.farm_store import ensure_schema as ensure_farm_schema, record_geometry
 
 
 def _now() -> str:
@@ -1231,6 +1232,16 @@ class TraceStore:
                 "rollback_plan": "TEXT",
             }.items():
                 self._ensure_column(cursor, "optimization_candidates", column, column_type)
+
+            ensure_farm_schema(cursor)
+            from agronomy_agent.server.storage.field_record_store import ensure_schema as ensure_records_schema
+            ensure_records_schema(cursor)
+            from agronomy_agent.server.storage.field_context_store import ensure_schema as ensure_context_schema
+            ensure_context_schema(cursor)
+            from agronomy_agent.server.field_import_routes import ensure_schema as ensure_import_schema
+            ensure_import_schema(cursor)
+            from agronomy_agent.server.storage.imagery_job_store import ensure_schema as ensure_imagery_jobs
+            ensure_imagery_jobs(cursor)
 
     def _ensure_column(self, cursor: sqlite3.Cursor, table_name: str, column_name: str, column_type: str) -> None:
         columns = {row["name"] for row in cursor.execute(f"PRAGMA table_info({table_name})").fetchall()}
@@ -2783,6 +2794,7 @@ class TraceStore:
                     now,
                 ),
             )
+            record_geometry(cursor, field_context_id, workspace["id"], payload.get("metadata", {}).get("open_agronomy_agent", {}))
         return self.get_phase4_field_context(field_context_id) or {}
 
     def list_phase4_field_contexts(self, workspace_id: str) -> list[dict[str, Any]]:
@@ -2804,6 +2816,7 @@ class TraceStore:
         field_context_id: str,
         actor_user_id: str,
         payload: dict[str, Any],
+        expected_updated_at: str | None = None,
     ) -> dict[str, Any] | None:
         current = self.get_phase4_field_context(field_context_id)
         if not current:
@@ -2833,15 +2846,23 @@ class TraceStore:
         assignments = [f"{key} = ?" for key in updates]
         params = [_as_json(value) if key in {"known_constraints", "metadata"} else value for key, value in updates.items()]
         params.extend([now, field_context_id])
+        precondition = ""
+        if expected_updated_at is not None:
+            precondition = " AND updated_at = ?"
+            params.append(expected_updated_at)
         with self._cursor() as cursor:
             cursor.execute(
                 f"""
                 UPDATE phase4_field_contexts
                 SET {", ".join(assignments)}, updated_at = ?
-                WHERE id = ? AND deleted_at IS NULL
+                WHERE id = ? AND deleted_at IS NULL{precondition}
                 """,
                 params,
             )
+            if cursor.rowcount != 1 and expected_updated_at is not None:
+                raise ValueError("Field changed. Reload before saving.")
+            if "metadata" in updates:
+                record_geometry(cursor, field_context_id, current["workspace_id"], updates["metadata"].get("open_agronomy_agent", {}))
             self._insert_phase4_audit(
                 cursor,
                 event_type="field_context.updated",
@@ -2938,7 +2959,8 @@ class TraceStore:
         event_id = self._new_uuid()
         with self._field_event_lock:
             with self._cursor() as cursor:
-                cursor.execute("BEGIN IMMEDIATE")
+                if not self._conn.in_transaction:
+                    cursor.execute("BEGIN IMMEDIATE")
                 if operation_id:
                     prior = cursor.execute(
                         """SELECT field_context_id, request_sha256, event_id

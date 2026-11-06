@@ -1154,18 +1154,54 @@ def cansis_soil_landscapes_canada(
     return summary
 
 
+def aafc_crop_inventory_catalog(*, cache_dir: str = "outputs/tool_cache/aafc_annual_crop_inventory",
+                                timeout: int = 20, offline_only: bool = False) -> dict[str, Any]:
+    """Discover advertised years; the receipt is not proof of pixel availability."""
+    source = AAFC_ACI_IMAGE_SERVER_TEMPLATE.split("/{year}")[0]
+    path = Path(cache_dir) / "catalog_v1.json"
+    cached = _read_fresh_json_cache(path, max_age_seconds=6 * 60 * 60)
+    if cached is not None:
+        return {**cached, "cache_hit": True}
+    if offline_only:
+        raise OfflineCacheMissError("No current ACI catalog receipt; external request not attempted")
+    request = urllib.request.Request(source + "?f=json", headers={"User-Agent": "agronomy-agent-local-tools/0.1"})
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        raw = response.read(2_000_001)
+    if len(raw) > 2_000_000:
+        raise RuntimeError("ACI catalog exceeds response limit")
+    data = json.loads(raw)
+    if not isinstance(data, dict) or data.get("error"):
+        raise RuntimeError("ACI catalog unavailable")
+    years = set()
+    for item in data.get("services", []):
+        if not isinstance(item, dict) or item.get("type") != "ImageServer":
+            continue
+        match = re.fullmatch(r"annual_crop_inventory/([0-9]{4})", str(item.get("name", "")))
+        if match and 2009 <= int(match[1]) <= dt.datetime.now(dt.UTC).year:
+            years.add(int(match[1]))
+    if not years:
+        raise RuntimeError("ACI catalog contains no supported annual image services")
+    result = {"source": source, "fetched_at": dt.datetime.now(dt.UTC).isoformat(),
+        "response_sha256": hashlib.sha256(raw).hexdigest(), "available_years": sorted(years),
+        "selected_year": max(years), "selection": "latest_advertised_year", "cache_hit": False,
+        "boundary": "Catalog presence does not establish pixel coverage or a confirmed planting record."}
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(result, indent=2), encoding="utf-8")
+    return result
+
+
 def aafc_annual_crop_inventory(
     latitude: float | None = None,
     longitude: float | None = None,
     geometry: dict[str, Any] | None = None,
     crop: str | None = None,
     province: str | None = None,
-    year: int = DEFAULT_AAFC_ACI_YEAR,
+    year: int | None = DEFAULT_AAFC_ACI_YEAR,
     sample_points: int = DEFAULT_CDL_SAMPLE_POINTS,
     cache_dir: str = "outputs/tool_cache/aafc_annual_crop_inventory",
     timeout: int = 20,
 ) -> dict[str, Any]:
-    if not 2009 <= int(year) <= dt.datetime.now(dt.UTC).year:
+    if year is not None and not 2009 <= int(year) <= dt.datetime.now(dt.UTC).year:
         raise ValueError("AAFC Annual Crop Inventory year must be between 2009 and the current year")
     if geometry is None and (latitude is None or longitude is None):
         payload = _canada_source_lane_context(
@@ -1186,6 +1222,9 @@ def aafc_annual_crop_inventory(
         raise ValueError("AAFC Annual Crop Inventory geometry query span is too large for local field-context lookup")
     if vertex_count > MAX_CDL_GEOMETRY_VERTICES:
         raise ValueError(f"AAFC Annual Crop Inventory geometry has too many vertices; max is {MAX_CDL_GEOMETRY_VERTICES}")
+    catalog = aafc_crop_inventory_catalog(cache_dir=cache_dir, timeout=timeout) if year is None else None
+    if catalog:
+        year = catalog["selected_year"]
     samples: list[dict[str, Any]] = []
     errors: list[dict[str, Any]] = []
     for index, (sample_lon, sample_lat) in enumerate(points, start=1):
@@ -1211,6 +1250,7 @@ def aafc_annual_crop_inventory(
         "status": status,
         "source": source,
         "cache_hit": bool(samples) and all(bool(sample.get("cache_hit")) for sample in samples),
+        "year_selection": catalog or {"selection": "explicit_or_pinned_year", "selected_year": int(year)},
         "year": int(year),
         "source_lane_id": "aafc_annual_crop_inventory",
         "source_name": "AAFC Annual Crop Inventory",

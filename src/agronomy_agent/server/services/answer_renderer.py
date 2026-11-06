@@ -9,6 +9,7 @@ from agronomy_agent.answer_safety import normalize_general_answer, normalize_pub
 from agronomy_agent.canada_sources import apply_canadian_coverage_disclosure, apply_soileri_coverage_disclosure
 from agronomy_agent.map_component_interpretation import is_map_component_explanation_question
 from agronomy_agent.server.services.leak_guard import detect_prompt_leaks
+from agronomy_agent.geospatial.context_support import mapped_coverage_label
 
 
 @dataclass(frozen=True)
@@ -407,11 +408,8 @@ def _map_component_explanation_answer(question: str | None, trace: dict[str, Any
 
     source = str(selected.get("system") or selected.get("name") or "the mapped soil source").strip()
     map_unit = str(selected.get("map_unit") or selected.get("code") or "").strip()
-    scale = str(selected.get("source_scale_range") or selected.get("source_scale") or "").strip()
-    coverage = selected.get("coverage_estimate")
-    coverage_text = ""
-    if isinstance(coverage, (int, float)) and not isinstance(coverage, bool):
-        coverage_text = f" over about {round(float(coverage) * 100)}% of the selected boundary"
+    scale = str(selected.get("source_scale_range") or selected.get("source_scale") or selected.get("source_scale_label") or "").strip()
+    coverage_text = f" ({mapped_coverage_label(selected)})"
 
     unit_text = f" map unit {map_unit}" if map_unit else " mapped area"
     opening = (
@@ -513,10 +511,7 @@ def _map_interpretation_answer(question: str | None, trace: dict[str, Any]) -> s
         or selected.get("code")
         or "mapped polygon"
     ).strip()
-    coverage = selected.get("coverage_estimate")
-    coverage_text = ""
-    if isinstance(coverage, (int, float)) and not isinstance(coverage, bool):
-        coverage_text = f" over about {round(float(coverage) * 100)}% of the supplied boundary"
+    coverage_text = f" ({mapped_coverage_label(selected)})"
     detail_bits = []
     for label, key in (
         ("drainage", "drainage_class"),
@@ -537,7 +532,7 @@ def _map_interpretation_answer(question: str | None, trace: dict[str, Any]) -> s
         if heterogeneous
         else ""
     )
-    scale = str(selected.get("source_scale_label") or selected.get("source_scale") or "").strip()
+    scale = str(selected.get("source_scale_label") or selected.get("source_scale") or selected.get("source_scale_range") or "").strip()
     scale_sentence = f" at source mapping scale {scale}" if scale else ""
     return (
         "**What the map supports**\n"
@@ -593,12 +588,10 @@ def _map_context_intersection_bits(field_context: dict[str, Any]) -> list[str]:
         system = str(item.get("system") or "Regional layer").strip()
         code = str(item.get("code") or "").strip()
         name = str(item.get("name") or "").strip()
-        coverage = item.get("coverage_estimate")
         label = " ".join(part for part in [system, code] if part)
         if name:
             label = f"{label}: {name}" if label else name
-        if isinstance(coverage, (int, float)) and not isinstance(coverage, bool):
-            label = f"{label} ({round(float(coverage) * 100)}% field coverage estimate)"
+        label = f"{label} ({mapped_coverage_label(item)})"
         if label:
             bits.append(label)
     return bits
@@ -1045,9 +1038,7 @@ def _map_context_cards(trace: dict[str, Any]) -> list[dict[str, Any]]:
         title = " ".join(part for part in [system, code] if part).strip() or system
         if name:
             title = f"{title}: {name}"
-        why_used = "Official regional polygon intersection used as map context."
-        if isinstance(coverage, (int, float)) and not isinstance(coverage, bool):
-            why_used = f"{why_used} Coverage estimate: {round(float(coverage) * 100)}%."
+        why_used = f"Official regional polygon intersection used as map context. {mapped_coverage_label(item)}."
         cards.append(
             {
                 "doc_id": f"map:{item.get('layer_id') or system}:{code or name}",
@@ -1070,7 +1061,11 @@ def _map_context_cards(trace: dict[str, Any]) -> list[dict[str, Any]]:
                     "code": code,
                     "name": name,
                     "confidence": item.get("confidence"),
+                    "confidence_kind": item.get("confidence_kind") or "unknown",
                     "coverage_estimate": coverage,
+                    "coverage_support_type": item.get("coverage_support_type") or "unknown",
+                    "coverage_method": item.get("coverage_method"),
+                    "source_scale": item.get("source_scale") or item.get("source_scale_range") or item.get("source_scale_label"),
                 },
             }
         )

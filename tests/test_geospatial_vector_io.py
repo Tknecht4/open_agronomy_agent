@@ -54,8 +54,12 @@ def test_projected_driver_roundtrip_preserves_members_hole_and_crs(tmp_path, for
     assert result["coordinate_reference"]["reprojected"] is True
     assert result["coordinate_reference"]["sources"][0]["source_crs"] == "EPSG:32612"
     assert result["features"][0]["properties"]["name"] == "Synthetic parcel"
-    with pytest.raises(ValueError, match="No components were dropped"):
-        parse_boundary_upload(filename=filename, raw=raw, content_type=None)
+    parsed = parse_boundary_upload(filename=filename, content_type=None, raw=raw)
+    accepted = shape(parsed["feature_collection"]["features"][0]["geometry"])
+    assert len(accepted.geoms) == 2
+    assert sum(len(part.interiors) for part in accepted.geoms) == 1
+    assert accepted.hausdorff_distance(original) < 1e-10
+
 
 
 def test_geopackage_reads_all_vector_layers_without_silent_selection(tmp_path):
@@ -65,6 +69,18 @@ def test_geopackage_reads_all_vector_layers_without_silent_selection(tmp_path):
     result = read_vector_upload(filename=path.name, raw=path.read_bytes())
     assert {feature["source_layer"] for feature in result["features"]} == {"field_0", "field_1"}
     assert len(result["coordinate_reference"]["sources"]) == 2
+
+
+def test_geopackage_native_fid_is_not_zero_based_import_position(tmp_path):
+    path = tmp_path / "fields.gpkg"
+    gpd.GeoDataFrame({"name": ["first", "second"], "unknown": [None, None]},
+        geometry=[Point(-113, 53), Point(-112, 53)], crs=4326).to_file(
+        path, layer="source_fields", engine="pyogrio", driver="GPKG")
+    result = read_vector_upload(filename=path.name, raw=path.read_bytes())
+    assert [item["source_feature_index"] for item in result["features"]] == [0, 1]
+    assert [item["source_feature_id"] for item in result["features"]] == [1, 2]
+    assert all(item["source_layer"] == "source_fields" for item in result["features"])
+    assert all(item["properties"]["unknown"] is None for item in result["features"])
 
 
 def test_shapefile_missing_crs_and_standalone_shp_are_rejected(tmp_path):

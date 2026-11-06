@@ -82,6 +82,25 @@ PYTHONPATH=src .venv/bin/python scripts/verify_prairie_spatial_pack.py \
 
 The verifier checks the flat pack's hashes, SQLite/RTree integrity, source/derived lineage, and three fixed offline application-path probes. It is evidence of package and map-query integrity, not confirmation of soil conditions at those sample locations.
 
+## Optional administrative location suggestions
+
+The farm dossier can query an explicitly installed Canadian cartographic pack for location suggestions. It is separate from the default soil pack and is never downloaded on application startup. To prepare it outside the checkout:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/setup_offline_data.py \
+  --profile canada-context-boundaries-v1 \
+  --data-root /absolute/path/to/open-agronomy-state \
+  --download --build --verify
+```
+
+The installer pins source bytes and lineage. A publisher denial or browser challenge is a failed installation, not an empty map result. Preserve the failure receipt; do not replace the expected hash to accept changed content. After a successful verification, configure the province database explicitly if the default pack root is already used for soils:
+
+```bash
+export AGRONOMY_AGENT_CA_STATCAN_2021_PR_DB_PATH=/absolute/path/to/open-agronomy-state/spatial-pack/canada-context-boundaries-v1/ca_statcan_2021_provinces_territories.sqlite3
+```
+
+A match suggests a location for grower confirmation. It cannot establish legal jurisdiction, cadastral boundaries or source availability outside the installed Canadian coverage.
+
 ## Record offline readiness
 
 Build a runtime manifest for the exact selected RAG profile, then validate the clone, local model cache, and—when installed—the external DSS pack without making a network request:
@@ -104,7 +123,7 @@ For a RAG-only clone, omit the three spatial arguments. The receipt then records
 
 ## Deliberate exclusions and future intake
 
-The following remain uninstalled and cannot be used as hidden fallbacks: national 100 m soil grids, crop/DEM rasters, province/ecoregion boundary packs, SLC vector data, AESD/Census context tables, and university/extension material. The metadata-only [Canadian source-admission queue](canada-offline-source-admission.md) records inspected candidates, source identities, regional uses, and rights gates. It authorizes no download, RAG admission, redistribution, runtime lookup, or fine-tuning.
+The following remain uninstalled by default and cannot be used as hidden fallbacks: national 100 m soil grids, crop/DEM rasters, province/ecoregion boundary packs, SLC vector data, AESD/Census context tables, and university/extension material. The metadata-only [Canadian source-admission queue](canada-offline-source-admission.md) records inspected candidates, source identities, regional uses, and rights gates. It authorizes no download, RAG admission, redistribution, runtime lookup, or fine-tuning.
 
 To add a future document source, update its source record and reviewed
 companion, produce a source-aware input shard, and build a new immutable corpus

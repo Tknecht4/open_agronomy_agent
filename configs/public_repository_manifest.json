@@ -815,7 +815,20 @@
     "data/derived/rag/offline_agronomy/ask_science/v1/source_receipt.json",
     "data/derived/rag/offline_agronomy/ask_science/v1/store_manifest.json",
     "data/manifests/ask_science_context_admission_v1.json",
-    "data/manifests/ask_science_context_admission_v2.json"
+    "data/manifests/ask_science_context_admission_v2.json",
+    "tests/test_farm_import.py",
+    "tests/test_farm_workspace.py",
+    "tests/test_imagery_jobs.py",
+    "tests/test_sentinel2_app_receipts.py",
+    "tests/test_boundary_import_lineage.py",
+    "tests/test_boundary_import_persistence.py",
+    "tests/test_field_boundary_roundtrip.py",
+    "tests/test_field_country_context.py",
+    "tests/test_geospatial_country_readiness.py",
+    "tests/test_geospatial_source_integrity.py",
+    "tests/test_geospatial_source_properties.py",
+    "tests/test_geospatial_source_read_races.py",
+    "tests/test_mapped_spatial_support.py"
   ],
   "trees": [
     "src",

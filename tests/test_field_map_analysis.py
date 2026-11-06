@@ -39,6 +39,10 @@ def _layer(monkeypatch, *, backend: str = "local_sqlite") -> geo.RegionLayer:
     )
     monkeypatch.setitem(geo.REGION_LAYERS, layer.id, layer)
     monkeypatch.setattr(geo, "_local_layer_installed", lambda candidate: candidate.id == layer.id)
+    monkeypatch.setattr(geo, "_local_layer_readiness", lambda candidate: {
+        "status": "verified" if candidate.id == layer.id else "missing",
+        "errors": [] if candidate.id == layer.id else ["database_missing"],
+    })
     return layer
 
 
@@ -138,7 +142,7 @@ def test_string_positions_cannot_bypass_vertex_cap() -> None:
         )
 
 
-def test_real_local_adapter_finds_second_component_and_east_edge(tmp_path, monkeypatch) -> None:
+def test_real_local_adapter_finds_second_component_and_east_edge(tmp_path, monkeypatch, qualified_spatial_layer) -> None:
     db = tmp_path / "review-local-fixture.sqlite3"
     zone = polygon(0.042, 0.002, 0.043, 0.003)
     with sqlite3.connect(db) as connection:
@@ -159,6 +163,7 @@ def test_real_local_adapter_finds_second_component_and_east_edge(tmp_path, monke
         local_database=str(db),
     )
     monkeypatch.setitem(geo.REGION_LAYERS, layer.id, layer)
+    qualified_spatial_layer(db, layer.id)
     multi = {"type": "MultiPolygon", "coordinates": [
         FIELD["coordinates"], polygon(0.04, 0, 0.06, 0.02)["coordinates"],
     ]}

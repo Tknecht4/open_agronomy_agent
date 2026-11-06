@@ -42,7 +42,7 @@ class FieldImagerySearchRequest(BaseModel):
 
 class FieldImageryAnalyzeRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    provider_id: Literal["hls-s30-planetary-computer", "hls-l30-planetary-computer"]
+    provider_id: Literal["hls-s30-planetary-computer", "hls-l30-planetary-computer", "sentinel2-c1-earth-search"]
     start_date: str = Field(min_length=10, max_length=10)
     end_date: str = Field(min_length=10, max_length=10)
     scene_id: str | None = Field(default=None, max_length=180)
@@ -68,6 +68,9 @@ def _stored_geometry(field: dict[str, Any]) -> dict[str, Any]:
     geometry = entry.get("geometry")
     if not isinstance(geometry, dict):
         raise ValueError("Save a point location or field polygon before requesting imagery.")
+    if geometry.get("kind") == "geojson":
+        from agronomy_agent.geospatial.geometry import canonical_geometry
+        return canonical_geometry(geometry.get("geojson"), allowed_types=("Polygon", "MultiPolygon"))
     if geometry.get("kind") == "polygon":
         points = geometry.get("points")
         if not isinstance(points, list) or len(points) < 3:

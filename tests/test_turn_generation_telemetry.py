@@ -434,7 +434,11 @@ def test_canonical_actual_service_owns_lazy_editor_and_retains_provider_return(t
     # Freeze actual compiled messages before granting fake transport access.
     # The borrowed capture backend stops before producing a draft/editor call.
     class Captured(BaseException):pass
-    captured={};contexts=[]
+    captured={};contexts=[];compiled_contexts=[]
+    real_compile=chat_service.compile_field_context
+    def observe_compile(*args, **kwargs):
+        value=real_compile(*args, **kwargs);compiled_contexts.append(deepcopy(value));return value
+    monkeypatch.setattr(chat_service,"compile_field_context",observe_compile)
     real_context=chat_service.build_context
     def observe_context(*args,**kwargs):
         value=real_context(*args,**kwargs);contexts.append(value);return value
@@ -448,7 +452,7 @@ def test_canonical_actual_service_owns_lazy_editor_and_retains_provider_return(t
         generation_backend=Capture(),execution_class="observed_system_execution_nonclaim")
     with pytest.raises(Captured):chat_service.execute_agent_request(preview)
     messages=captured["messages"]
-    expected_evidence=chat_service._combined_verification_evidence(contexts[-1],None)[:9000]
+    expected_evidence=chat_service._combined_verification_evidence(contexts[-1],None,compiled_contexts[-1])[:9000]
     made=[]
     def factory(phase):
         def create():

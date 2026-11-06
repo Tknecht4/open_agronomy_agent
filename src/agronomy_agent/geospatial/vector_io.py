@@ -15,8 +15,10 @@ import stat
 import tempfile
 from typing import Any
 import zipfile
+from datetime import date, datetime
 
 from .geometry import canonical_geometry, project_geometry
+from .json_properties import bounded_json_properties, bounded_json_value
 
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 MAX_FEATURES = 250
@@ -24,14 +26,27 @@ MAX_ZIP_MEMBERS = 40
 MAX_EXPANDED_BYTES = 30 * 1024 * 1024
 
 
-def _property(value: Any) -> Any:
-    if value is None or isinstance(value, (str, bool, int)):
-        return value
-    if isinstance(value, float):
-        return value if math.isfinite(value) else None
+def _driver_property(value: Any) -> Any:
+    """Translate driver scalars explicitly; never stringify containers.
+
+GDAL/GeoPandas represent missing scalar cells as NaN/NA/NaT. Those remain
+unknown JSON null cells. Infinity is not a missing-cell representation.
+"""
+    if isinstance(value, float) and math.isnan(value):
+        return None
+    if type(value).__name__ in {"NAType", "NaTType"}:
+        return None
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+    if hasattr(value, "tolist"):
+        return value.tolist()
     if hasattr(value, "item"):
-        return _property(value.item())
-    return str(value)
+        return value.item()
+    return value
+
+
+def _property(value: Any) -> Any:
+    return bounded_json_value(value, scalar_adapter=_driver_property)
 
 
 def _geojson(raw: bytes) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -56,10 +71,15 @@ def _geojson(raw: bytes) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         if not isinstance(feature, dict) or feature.get("type") != "Feature":
             raise ValueError(f"GeoJSON feature {index} is malformed")
         geometry = canonical_geometry(feature)
-        properties = feature.get("properties") or {}
+        properties = feature.get("properties")
+        if properties is None:
+            properties = {}
         if not isinstance(properties, dict):
             raise ValueError(f"GeoJSON feature {index} properties must be an object")
-        result.append({"type": "Feature", "geometry": geometry, "properties": properties, "source_layer": "geojson", "source_feature_index": index})
+        source_id = feature.get("id")
+        if source_id is not None and (isinstance(source_id, bool) or not isinstance(source_id, (str, int, float))):
+            raise ValueError(f"GeoJSON feature {index} id must be a string or finite number")
+        result.append({"type": "Feature", "geometry": geometry, "properties": bounded_json_properties(properties), "source_layer": "geojson", "source_feature_index": index, "source_feature_id": bounded_json_value(source_id)})
     return result, [{"layer": "geojson", "source_crs": "EPSG:4326", "crs_basis": "RFC7946", "target_crs": "EPSG:4326", "reprojected": False}]
 
 
@@ -89,19 +109,23 @@ def _read_dataset(path: Path, *, expected_driver: str) -> tuple[list[dict[str, A
                 or any(word in source_crs.name.lower() for word in ("undefined", "unknown"))):
                 raise ValueError(f"layer {layer_name} has missing or ambiguous CRS metadata")
             remaining = MAX_FEATURES - len(output)
-            frame = pyogrio.read_dataframe(path, layer=layer_name, max_features=remaining + 1)
+            frame = pyogrio.read_dataframe(path, layer=layer_name, max_features=remaining + 1, fid_as_index=True)
             if len(frame) > remaining:
                 raise ValueError(f"boundary upload exceeds {MAX_FEATURES} features; split it before import")
             reprojected = not source_crs.equals(CRS.from_epsg(4326), ignore_axis_order=True)
             receipts.append({"layer": str(layer_name), "source_crs": source_crs.to_string(), "source_crs_wkt": source_crs.to_wkt(), "crs_basis": "declared_dataset_metadata", "target_crs": "EPSG:4326", "reprojected": reprojected, "transform_policy": "PyProj always_xy; no ballpark; best available operation required"})
-            for index, (_, row) in enumerate(frame.iterrows()):
+            for index, (source_id, row) in enumerate(frame.iterrows()):
                 original = row[frame.geometry.name]
                 if original is None or original.is_empty:
                     raise ValueError(f"layer {layer_name} feature {index} has missing geometry")
                 if original.geom_type not in {"Point", "Polygon", "MultiPolygon"}:
                     raise ValueError(f"layer {layer_name} feature {index} has unsupported {original.geom_type} geometry")
                 projected = project_geometry(original, "EPSG:4326", source_crs=source_crs)
-                output.append({"type": "Feature", "geometry": canonical_geometry(mapping(projected)), "properties": {str(key): _property(value) for key, value in row.items() if key != frame.geometry.name}, "source_layer": str(layer_name), "source_feature_index": index})
+                properties = bounded_json_properties(
+                    {str(key): value for key, value in row.items() if key != frame.geometry.name},
+                    scalar_adapter=_driver_property,
+                )
+                output.append({"type": "Feature", "geometry": canonical_geometry(mapping(projected)), "properties": properties, "source_layer": str(layer_name), "source_feature_index": index, "source_feature_id": _property(source_id)})
         return output, receipts
     except ValueError:
         raise
