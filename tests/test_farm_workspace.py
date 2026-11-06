@@ -381,7 +381,7 @@ def test_ambiguous_crop_system_writes_are_rejected(settings, payload):
 def test_unknown_record_time_never_becomes_season_context(settings, status_key):
     import uuid
     from datetime import datetime, timezone
-    from agronomy_agent.server.services.chat_service import _with_stored_field_events
+    from agronomy_agent.server.services.chat_service import _with_stored_field_history
     season = datetime.now(timezone.utc).year
     with TestClient(create_app(settings)) as client:
         field = create_field(client)
@@ -400,7 +400,7 @@ def test_unknown_record_time_never_becomes_season_context(settings, status_key):
         assert scoped['total'] == 2
         overview = client.get(f"/api/farms/overview?season={season}", headers=OWNER).json()
         assert overview['fields'][0]['record_count'] == 2
-        projected = _with_stored_field_events(store=client.app.state.trace_store,
+        projected = _with_stored_field_history(store=client.app.state.trace_store,
             session_context={'field_context_id': field['id'], 'field_access_authorized': True, 'field_season': season}, field_context={})
         assert len(projected['field_history']['events']) == 2
         assert all('Undated source note' not in event['summary'] for event in projected['field_history']['events'])
