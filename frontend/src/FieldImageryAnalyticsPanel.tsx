@@ -463,16 +463,16 @@ export function FieldImageryAnalyticsPanel({ fieldContextId, geometryKey, geomet
 
   return <details open={embedded || undefined} className="workspace-disclosure field-imagery-analytics">
     <summary>Observed satellite indices</summary>
-    <p>{point ? 'Inspect one HLS scene at the saved location. A pixel or surrounding sample can include other land covers.' : 'Analyze one satellite scene over a saved field polygon.'} NDVI and NDMI are observations, not yield or diagnosis.</p>
+    <p>{retainedJobId ? '' : point ? 'Inspect one HLS scene at the saved location. A pixel or surrounding sample can include other land covers.' : 'Analyze one satellite scene over a saved field polygon.'} NDVI and NDMI are observations, not yield or diagnosis.</p>
     {!imageryReady || geometry.kind === 'none' ? <p role="status">{geometry.kind === 'none' ? 'Add and save a location or boundary before analyzing imagery.' : retainedJobId ? 'This retained result uses its historical boundary. Select a new scene for the current field to run another analysis.' : 'Save the current location or boundary before analyzing imagery.'}</p> : null}
     {point && availability && !modeSupported ? <p role="status">Point sampling is not supported by this runtime.</p> : null}
     {availabilityError ? <p role="alert">{availabilityError}</p> : null}
-    {availability?.status === 'worker_unavailable' ? <p role="status">{availability.worker?.message || 'The image worker is unavailable. Check its installation.'}<button type="button" onClick={() => setAvailabilityVersion(v => v + 1)}>Check imagery setup again</button></p> : null}
-    {availability?.status === 'not_configured' ? <p role="status">Optional imagery processing is not installed in this runtime.</p> : null}
-    {availability?.status === 'ready' && (!providerCapability?.analysis || !modeSupported) ? <p role="status">Processing this provider and sampling mode is unavailable in the current installation. Scene discovery and retained results remain separate capabilities.</p> : null}
-    {availability?.network_mode === 'online' ? <p>{point ? 'Online analysis sends the saved location and selected dates to Microsoft Planetary Computer to find scenes, then requests imagery covering the sample.' : 'Online analysis sends the saved polygon and dates to the selected public imagery catalog: Earth Search for Sentinel-2 C1, or Microsoft Planetary Computer for HLS.'} No account is required.</p> : null}
+    {!retainedJobId && availability?.status === 'worker_unavailable' ? <p role="status">{availability.worker?.message || 'The image worker is unavailable. Check its installation.'}<button type="button" onClick={() => setAvailabilityVersion(v => v + 1)}>Check imagery setup again</button></p> : null}
+    {!retainedJobId && availability?.status === 'not_configured' ? <p role="status">Optional imagery processing is not installed in this runtime.</p> : null}
+    {!retainedJobId && availability?.status === 'ready' && (!providerCapability?.analysis || !modeSupported) ? <p role="status">Processing this provider and sampling mode is unavailable in the current installation. Scene discovery and retained results remain separate capabilities.</p> : null}
+    {!retainedJobId && availability?.network_mode === 'online' ? <p>{point ? 'Online analysis sends the saved location and selected dates to Microsoft Planetary Computer to find scenes, then requests imagery covering the sample.' : 'Online analysis sends the saved polygon and dates to the selected public imagery catalog: Earth Search for Sentinel-2 C1, or Microsoft Planetary Computer for HLS.'} No account is required.</p> : null}
     {availability?.network_mode === 'offline' ? <p role="status">Network access is off. An exact cached analysis may still be available.</p> : null}
-    <form onSubmit={(event) => void analyze(event)}>
+    {!retainedJobId ? <form onSubmit={(event) => void analyze(event)}>
       {point ? <div className="field-imagery-sampling"><label>Sample<select disabled={Boolean(retainedJobId) || busy} value={pointMode} onChange={event => {
         const next = event.target.value as 'point_pixel' | 'point_buffer'
         setPointMode(next)
@@ -485,7 +485,7 @@ export function FieldImageryAnalyticsPanel({ fieldContextId, geometryKey, geomet
         <label>Acquired through<input type="date" disabled={Boolean(selection) || busy} value={endDate} onChange={(event) => setEndDate(event.target.value)} required /></label>
       </div>
       <button type="submit" disabled={!canAnalyze || !startDate || !endDate || endDate < startDate || busy}>{busy ? 'Analyzing…' : 'Analyze scene'}</button>
-    </form>
+    </form> : null}
     {jobStatus ? <p role="status">Image analysis: {jobStatus}.{busy ? ' You can leave this page and reopen the analysis from history.' : ''}{busy && jobId ? <button type="button" onClick={() => { void apiPost(`/api/imagery-jobs/${jobId}/cancel`, {}).then(() => { setBusy(false); setJobStatus('cancelled'); onJobChanged?.() }).catch(cause => setJobStatus(errorText(cause))) }}>Cancel analysis</button> : null}</p> : null}
     {receipt ? <section className="field-imagery-result" aria-label="Imagery analysis result">
       <p role="status">{statusText(receipt, resultMode)}</p>

@@ -1,9 +1,9 @@
 /* Workspace design: quiet surfaces, a readable conversation, details on demand. */
 .workspace-shell {
-  --ink: #203d36; --muted: #687871; --line: #dfe5df; --paper: #fafbf8;
-  --green: #235447; --wash: #edf3ed; --accent: #e3c87c;
+  --ink: var(--phase6-color-text); --muted: #69716c; --line: var(--phase6-color-border); --paper: var(--phase6-color-surface);
+  --green: #285546; --wash: #f2f5f1; --accent: #e3c87c;
   display: grid; grid-template-columns: 208px minmax(0, 1fr); min-height: 100dvh;
-  background: #f6f7f2; color: var(--ink); font-size: 14px;
+  background: var(--paper); color: var(--ink); font: 14px/1.5 var(--phase6-font-family);
 }
 .workspace-shell *, .workspace-dialog * { box-sizing: border-box; }
 .workspace-shell button, .workspace-dialog button { width: auto; margin: 0; font-family: inherit; cursor: pointer; }
@@ -11,8 +11,29 @@
 .workspace-shell button:focus-visible, .workspace-shell summary:focus-visible, .workspace-dialog button:focus-visible,
 .workspace-dialog summary:focus-visible { outline: 3px solid #b99c43; outline-offset: 3px; }
 .workspace-shell [hidden], .workspace-dialog [hidden] { display: none !important; }
+
+/* Shared control geometry applies to pages and portalled forms. */
+.workspace-shell label, .workspace-dialog label { margin: 0; font-size: 13px; font-weight: 400; }
+.workspace-shell :is(input, select, textarea), .workspace-dialog :is(input, select, textarea) {
+  margin: 0; min-width: 0; max-width: 100%; border: 1px solid var(--phase6-color-border);
+  border-radius: 7px; background: var(--phase6-color-surface); color: var(--phase6-color-text);
+  font: inherit; font-size: 13px; padding: 9px 12px; min-height: 40px;
+}
+.workspace-shell label > :is(input, select, textarea), .workspace-dialog label > :is(input, select, textarea) { margin: 0; }
+.workspace-shell select, .workspace-dialog select { height: 40px; }
+.workspace-shell input[type=checkbox], .workspace-dialog input[type=checkbox] { min-height: 0; width: 16px; height: 16px; padding: 0; accent-color: #285546; }
+.workspace-shell button, .workspace-dialog button { min-height: 40px; border-radius: 7px; font-size: 13px; }
+.workspace-shell :where(.farm-workspace) button, .workspace-dialog .farm-form button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 9px 13px; border: 1px solid var(--phase6-color-border); background: #fff; color: var(--phase6-color-text);
+}
+.workspace-shell :where(.farm-workspace) button:hover:not(:disabled), .workspace-dialog .farm-form button:hover:not(:disabled) { background: #f2f5f1; }
+.workspace-shell :where(.farm-workspace) button.primary-button, .workspace-dialog .farm-form button.primary-button { background: #285546; color: #fff; border-color: #285546; }
+.workspace-shell :where(.farm-workspace) button.primary-button:hover:not(:disabled), .workspace-dialog .farm-form button.primary-button:hover:not(:disabled) { background: #1f4538; }
+.workspace-navigation-divider { margin: 24px 12px 12px; border-top: 1px solid var(--line); }
+
 /* The same navigation hierarchy is visible in the desktop rail and mobile drawer. */
-.workspace-shell .workspace-sidebar { position: sticky; top: 0; height: 100dvh; min-height: 580px; display: flex; flex-direction: column; align-self: start; padding: 24px 12px 16px; border-right: 1px solid var(--line); background: #edf1e9; z-index: 30; }
+.workspace-shell .workspace-sidebar { position: sticky; top: 0; height: 100dvh; min-height: 580px; display: flex; flex-direction: column; align-self: start; padding: 24px 12px 16px; border-right: 1px solid var(--line); background: #f5f6f3; z-index: 30; }
 .workspace-brand { display: flex; align-items: center; gap: 10px; padding: 0 8px 28px; color: #203d36; min-width: 0; }
 .workspace-brand > span:last-child { font-size: 14px; font-weight: 600; letter-spacing: -.3px; line-height: 1.3; }
 .workspace-brand small { display: block; margin-top: 4px; color: #5f7266; font-size: 11px; font-weight: 400; letter-spacing: 0; }
@@ -32,10 +53,10 @@
 .workspace-information button[aria-current=page] { color: #203d36; text-decoration: underline; text-underline-offset: 4px; }
 .workspace-shell .workspace-mobile-header { display: none; }
 .workspace-menu-trigger { display: inline-grid; place-items: center; width: 44px; min-height: 44px; border: 0; background: transparent; color: #285546; padding: 10px; border-radius: 7px; }
-.workspace-content { min-width: 0; padding: 24px; max-width: 1800px; width: 100%; margin: 0 auto; }
+.workspace-content { min-width: 0; padding: 36px; max-width: 1800px; width: 100%; margin: 0 auto; }
 .workspace-topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
 .eyebrow { display: block; color: #61705c; font-size: 10px; letter-spacing: 1.8px; font-weight: 650; }
-.workspace-topbar h1 { font-family: Georgia, 'Times New Roman', serif; font-size: clamp(25px, 2.4vw, 30px); line-height: 1.15; font-weight: 400; letter-spacing: -.9px; margin: 8px 0 0; }
+.workspace-topbar h1 { font-family: inherit; font-size: clamp(25px, 2.4vw, 30px); line-height: 1.15; font-weight: 650; letter-spacing: -.025em; margin: 0; }
 .primary-button, .workspace-dialog .primary-button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; background: #285546; color: #fff; border: 1px solid #285546; border-radius: 8px; min-height: 42px; padding: 0 17px; font-size: 12px; font-weight: 600; white-space: nowrap; }
 .secondary-button, .workspace-dialog .secondary-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: white; border: 1px solid #d8e1d8; color: #435e51; border-radius: 8px; min-height: 42px; padding: 0 14px; }
 .text-button { display: inline-flex; align-items: center; gap: 7px; border: 0; background: transparent; padding: 10px 0; color: #426650; font-size: 12px; }
@@ -90,7 +111,7 @@
 .workspace-shell .conversation-thread { flex: 1; display: block; min-height: 0; height: auto; max-height: none; overflow-y: auto; overflow-x: hidden; padding: 24px; scroll-behavior: auto; }
 .workspace-shell .conversation-empty { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; text-align: left; min-height: 100%; padding: 22px 0; gap: 14px; background: none; border: 0; }
 .conversation-mark { display: grid; place-items: center; width: 60px; height: 60px; border: 1px solid #e2e9dc; border-radius: 50%; background: #f3f7ed; color: #59805c; margin-bottom: 12px; }
-.workspace-shell .conversation-empty > strong { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; font-size: clamp(24px, 2vw, 31px); line-height: 1.22; color: #344f42; max-width: 28ch; }
+.workspace-shell .conversation-empty > strong { font-family: inherit; font-weight: 400; font-size: clamp(24px, 2vw, 31px); line-height: 1.22; color: #344f42; max-width: 28ch; }
 .workspace-shell .conversation-empty > p { max-width: 365px; font-size: 13px; color: #637361; line-height: 1.7; margin: 0 0 9px; }
 .question-starters { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 7px; width: 100%; }
 .question-starters button { display: flex; gap: 14px; align-items: center; justify-content: space-between; padding: 13px 15px; min-height: 44px; text-align: left; line-height: 1.45; color: #4b6553; background: #fbfcf8; border: 1px solid #e7ece3; border-radius: 8px; font-size: 12px; }
@@ -164,7 +185,7 @@
 .quiet-empty h3 { color: #486443; font-size: 18px; font-weight: 500; }
 .quiet-empty p { max-width: 340px; line-height: 1.75; font-size: 13px; }
 /* Dialogs */
-.workspace-dialog { --line: #dfe5df; border: 1px solid #dae2d5; border-radius: 16px; padding: 0; width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); color: #294637; background: #fbfcf8; box-shadow: 0 28px 90px #16281c35; }
+.workspace-dialog { --line: var(--phase6-color-border); --muted: #69716c; font: 14px/1.5 var(--phase6-font-family); border: 1px solid #dae2d5; border-radius: 16px; padding: 0; width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); color: var(--phase6-color-text); background: var(--phase6-color-surface); box-shadow: 0 28px 90px #16281c35; }
 .workspace-dialog.wide { width: min(860px, calc(100vw - 32px)); }
 .workspace-dialog::backdrop { background: #152d2266; backdrop-filter: blur(3px); }
 .dialog-heading { position: sticky; top: 0; z-index: 900; display: flex; align-items: center; justify-content: space-between; gap: 16px; background: #fff; border-bottom: 1px solid #e3e9df; padding: 20px 26px; }
@@ -180,10 +201,10 @@
 .setup-steps li.active > span, .setup-steps li.complete > span { background: #315f40; color: white; }
 .setup-body { padding: 28px 34px; }
 .setup-details { display: flex; flex-direction: column; gap: 20px; max-width: 540px; margin: 0 auto; min-height: 345px; }
-.setup-body h3 { font-family: Georgia, 'Times New Roman', serif; font-size: 30px; font-weight: 400; letter-spacing: -.6px; margin: 10px 0; }
+.setup-body h3 { font-family: inherit; font-size: 30px; font-weight: 400; letter-spacing: -.6px; margin: 10px 0; }
 .setup-body p { color: #72816b; font-size: 13px; line-height: 1.75; }
-.workspace-dialog label { display: flex; flex-direction: column; gap: 8px; color: #536c49; font-size: 12px; font-weight: 550; }
-.workspace-dialog input, .workspace-dialog select { width: 100%; min-height: 45px; background: #fff; color: #2f4d34; padding: 11px 13px; font: inherit; font-size: 13px; border: 1px solid #d7e0ce; border-radius: 7px; }
+.workspace-dialog label { display: flex; flex-direction: column; gap: 8px; color: var(--muted); font-size: 13px; font-weight: 400; }
+.workspace-dialog input, .workspace-dialog select { width: 100%; min-height: 40px; background: #fff; color: var(--phase6-color-text); padding: 9px 12px; font: inherit; font-size: 13px; border: 1px solid var(--line); border-radius: 7px; }
 .workspace-dialog summary { cursor: pointer; font-size: 12px; color: #68805c; padding: 8px 0; }
 .optional { font-size: 10px; color: #829375; font-weight: 400; }
 .workspace-dialog .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px; }

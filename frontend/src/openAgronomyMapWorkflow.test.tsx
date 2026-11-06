@@ -2396,7 +2396,7 @@ describe('Open Agronomy map upload workflow', () => {
 
     await waitFor(() => {
       expect(screen.queryByText('Should I add nitrogen after this wet spring?')).not.toBeInTheDocument()
-      expect(screen.getByText('What are you seeing in the field?')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Plan a soil sample' })).toBeInTheDocument()
       expect(input).toHaveValue('')
     })
     expect(screen.getByTestId('reset-chat')).toBeEnabled()
@@ -3246,7 +3246,7 @@ describe('Open Agronomy map upload workflow', () => {
     })
     expect(screen.queryByText('Late Beta overwrite')).not.toBeInTheDocument()
     expect(screen.queryByText('Beta field answer')).not.toBeInTheDocument()
-    expect(screen.getByText('What are you seeing in the field?')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Plan a soil sample' })).toBeInTheDocument()
   })
 
   it('skips turn hydration without a selected session and hydrates a selected summary before asking', async () => {
@@ -3257,7 +3257,7 @@ describe('Open Agronomy map upload workflow', () => {
     const noSelectionFetch = installFetchMock(emptyDemoFields, uploadPayload, [staleSummary])
     const firstRender = render(<OpenAgronomyApp />)
     await screen.findByText('Local runtime · connected mode')
-    expect(screen.getByText('Start with a question.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Plan a soil sample' })).toBeInTheDocument()
     expect(noSelectionFetch.mock.calls.some(([url]) => String(url) === '/api/sessions/session-sample-only')).toBe(false)
     firstRender.unmount()
 

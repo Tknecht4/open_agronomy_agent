@@ -38,12 +38,12 @@ export function FieldSourceSummary({ source, result, onOpen }: { source: string;
   const successful = ['available', 'partial', 'no_match', 'not_applicable'].includes(result.availability)
   const retained = successful ? result : result.last_success
   return <section className="field-source-summary">
-    <h4>{source === 'crop_cover' ? 'Historical crop cover' : source.charAt(0).toUpperCase() + source.slice(1)}</h4>
-    <p className="field-source-state"><strong>{sourceStateLabel(result.availability)}</strong>{result.refresh_status ? <span>{sourceStateLabel(result.refresh_status)}</span> : null}{result.freshness === 'stale' ? <span>Out of date</span> : null}</p>
+    <div className="field-source-heading"><h4>{source === 'crop_cover' ? 'Historical crop cover' : source.charAt(0).toUpperCase() + source.slice(1)}</h4>
+    <p className="field-source-state"><strong>{sourceStateLabel(result.availability)}</strong>{result.refresh_status ? <span>{sourceStateLabel(result.refresh_status)}</span> : null}{result.freshness === 'stale' ? <span>Out of date</span> : null}</p></div>
     {retained?.values ? <>{!successful ? <p>Previous successful check · {retained.freshness === 'stale' ? 'out of date' : 'retained'}</p> : null}<SourceValues source={source} values={retained.values} /></> : null}
-    {result.fetched_at ? <small>Checked {new Date(result.fetched_at).toLocaleString()}</small> : null}
+    {result.fetched_at ? <small className="field-source-checked">Checked {new Date(result.fetched_at).toLocaleString()}</small> : null}
     {result.message && !successful ? <p>{result.message}</p> : null}
     {(result.values || result.message || result.last_success) ? <details><summary>Coverage & source details</summary><p>{result.message}</p>{result.observed_at ? <p>Observation date / year: {result.observed_at}</p> : null}<pre>{JSON.stringify({ ...result, last_success: result.last_success ? { ...result.last_success, values: result.last_success.values } : undefined }, null, 2)}</pre></details> : null}
-    {onOpen ? <button type="button" onClick={onOpen}>{source === 'imagery' ? 'Find / review images' : 'Inspect mapped context'}</button> : null}
+    {onOpen ? <button type="button" onClick={onOpen}>{source === 'imagery' ? 'View imagery' : 'View soil & terrain'}</button> : null}
   </section>
 }

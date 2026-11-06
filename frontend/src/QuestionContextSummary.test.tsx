@@ -35,6 +35,14 @@ describe('context for the next question', () => {
     expect(screen.getByText(/Save them in Fields/)).toBeVisible()
   })
 
+  it('shows the selected season without mistaking an empty undated crop for a missing season crop', () => {
+    render(<QuestionContextSummary {...defaults} crop="" season={2026} />)
+    expect(screen.getByText('2026 season · Location unknown')).toBeVisible()
+    expect(screen.queryByText(/Crop unknown/)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByText('Saved field selected'))
+    expect(screen.getByText('2026 · saved crop and records checked when asked')).toBeVisible()
+  })
+
   it('distinguishes illustrative and device-only context from server confirmation', () => {
     const { rerender } = render(<QuestionContextSummary {...defaults} kind="example" />)
     fireEvent.click(screen.getByText('Demonstration inputs'))

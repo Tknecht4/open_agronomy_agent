@@ -3,7 +3,7 @@ import type { FieldGeometry } from './fieldGeometry'
 export type QuestionContextKind = 'general' | 'saved' | 'device' | 'example' | 'temporary'
 
 /** Describes visible request inputs, never calculator readiness or field authority. */
-export function QuestionContextSummary({ kind, crop, region, geometry, edited, requiresSave, editingLocation, onOpenField }: {
+export function QuestionContextSummary({ kind, crop, region, geometry, edited, requiresSave, editingLocation, season, onOpenField }: {
   kind: QuestionContextKind
   crop: string
   region: string
@@ -11,6 +11,7 @@ export function QuestionContextSummary({ kind, crop, region, geometry, edited, r
   edited: boolean
   requiresSave: boolean
   editingLocation: boolean
+  season?: number | null
   onOpenField: () => void
 }) {
   const source = kind === 'saved' ? 'Saved field selected' : kind === 'device' ? 'Field on this device'
@@ -21,15 +22,15 @@ export function QuestionContextSummary({ kind, crop, region, geometry, edited, r
   return (
     <><details className="question-context" aria-label="Context for next question">
       <summary>
-        <span className="question-context-target">Next question</span>
+
         <span>{source}</span>
-        <small>{kind === 'general' ? 'No field attached' : `${crop || 'Crop unknown'} · ${location}`}</small>
+        <small>{kind === 'general' ? 'No field attached' : `${kind === 'saved' && season ? `${season} season` : crop || 'Crop unknown'} · ${location}`}</small>
         {edited || editingLocation ? <strong>Unsaved changes</strong> : null}
       </summary>
       <div className="question-context-body">
         {kind === 'general' ? <p>Ask a general question, or select a field above to include its context.</p> : <>
           <dl>
-            <div><dt>Crop</dt><dd>{crop || 'Unknown'}</dd></div>
+            {kind === 'saved' && season ? <div><dt>Season</dt><dd>{season} · saved crop and records checked when asked</dd></div> : <div><dt>Crop</dt><dd>{crop || 'Unknown'}</dd></div>}
             <div><dt>Region</dt><dd>{region || 'Unknown'}</dd></div>
             <div><dt>Location</dt><dd>{location}</dd></div>
           </dl>

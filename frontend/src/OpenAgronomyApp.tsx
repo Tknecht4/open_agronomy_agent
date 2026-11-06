@@ -3879,12 +3879,12 @@ export function OpenAgronomyApp() {
       <WorkspacePerformancePanel />
       <WorkspaceNavigation page={page} onNavigate={navigateToPage} answerCapability={answerCapability} mobile={!wideWorkspace} />
       <div className="workspace-content">
-      <header className="workspace-topbar">
-        <div>{page !== 'analyze' ? <span className="eyebrow">{page === 'field-editor' ? 'FIELD LIBRARY' : page === 'sources' ? 'KNOWLEDGE & DATA' : 'OPEN AGRONOMY'}</span> : null}
+      {!['farms', 'fields', 'records'].includes(page) ? <header className="workspace-topbar">
+        <div>
           <h1>{page === 'analyze' ? (fieldName ? `Questions · ${fieldName}` : 'Questions') : page === 'farms' ? 'Farms' : page === 'fields' ? 'Fields' : page === 'records' ? 'Records' : page === 'field-editor' ? 'Edit field' : page === 'sources' ? 'Data management' : page === 'evidence' ? 'Behind the answer' : page === 'benchmarks' ? 'Research & benchmarks' : page === 'privacy' ? 'Privacy & data' : 'About Open Agronomy'}</h1>
         </div>
         {page === 'analyze' || page === 'field-editor' ? <button className="primary-button" type="button" onClick={() => { setNewFieldFarmId(null); setNewFieldOpen(true) }} disabled={!fieldsHydrated || savingField}><Plus size={17} /> Add field</button> : null}
-      </header>
+      </header> : null}
       {page === 'analyze' ? <div className="workspace-context-toolbar">
         <label className="active-field-select"><MapPin size={16} /><span className="sr-only">Active field</span><select aria-label="Active field" value={activeFieldContextId || (scenarioId ? `sample:${scenarioId}` : '')} disabled={!fieldsHydrated || savingField} onChange={event => {
           if (event.target.value.startsWith('sample:')) { applyScenario(event.target.value.slice(7)); return }
@@ -4782,9 +4782,9 @@ export function OpenAgronomyApp() {
               </button>
             </div>
             <QuestionContextSummary key={activeFieldContextId || scenarioId || 'general'} kind={questionContextKind}
-              crop={field.crop} region={field.region || field.jurisdiction} geometry={fieldGeometry}
+              crop={field.crop} region={field.region || field.jurisdiction} geometry={fieldGeometry} season={questionSeason}
               edited={questionContextEdited} requiresSave={questionContextRequiresSave} editingLocation={isEditingGeometry}
-              onOpenField={() => { setFieldTab('details'); navigateToPage('fields') }} />
+              onOpenField={() => { setFieldTab('details'); navigateToPage('field-editor') }} />
             <div className="conversation-controls">
               <label htmlFor="saved-conversation">Saved conversations</label>
               <select
@@ -4803,7 +4803,7 @@ export function OpenAgronomyApp() {
               </select>
             </div>
             <div className={`network-answer-state ${answerCapability.state}`}>
-              <span>Next question readiness</span>
+              <span className="sr-only">Next question readiness</span>
               <strong>
                 {answerCapability.canGenerateAnswer && !selectedModelReady ? 'Local service connected'
                   : answerCapability.state === 'runtime_online' ? 'Local answers available'
@@ -4814,9 +4814,10 @@ export function OpenAgronomyApp() {
                 <summary>Runtime & request details</summary>
                 {answerCapability.state !== 'notes_only' ? <p>{answerCapability.detail}</p> : null}
                 {latestTurn ? <ConversationRuntimeStatus turn={latestTurn} /> : <p>No answer request yet.</p>}
+                {!selectedModelReady && currentReadiness?.requires_model !== false && selectedModelProfile?.local_detail ? <p>{selectedModelProfile.local_detail}</p> : null}
               </details>
               {answerCapability.state === 'notes_only' ? <span>{answerCapability.detail}</span> : null}
-              {!selectedModelReady ? <div className="model-setup-notice" role="status"><strong>{currentReadiness?.requires_model === false ? currentReadiness.status === 'clarification_required' ? 'Calculation input needed' : 'Calculation ready' : 'Model setup required'}</strong><p>{currentReadiness?.requires_model === false ? currentReadiness.calculator?.clarification || 'This supplied-input calculation can run locally without the model.' : currentReadiness?.status === 'unknown' ? 'This calculation is planned, but its complete-input readiness has not been verified. Model setup is still required before submitting it.' : turnReadiness?.key === readinessKey && turnReadiness.status === 'checking' ? 'Checking whether this question can use a local calculation.' : selectedModelProfile?.local_detail || 'Selected local model is not installed.'}</p></div> : null}
+              {!selectedModelReady ? <div className="model-setup-notice" role="status"><strong>{currentReadiness?.requires_model === false ? currentReadiness.status === 'clarification_required' ? 'Calculation input needed' : 'Calculation ready' : 'Model setup required'}</strong><p>{currentReadiness?.requires_model === false ? currentReadiness.calculator?.clarification || 'This supplied-input calculation can run locally without the model.' : currentReadiness?.status === 'unknown' ? 'This calculation is planned, but its complete-input readiness has not been verified. Model setup is still required before submitting it.' : turnReadiness?.key === readinessKey && turnReadiness.status === 'checking' ? 'Checking whether this question can use a local calculation.' : 'Choose an installed model in Model settings.'}</p></div> : null}
               {runtimeAccess === 'unavailable' ? <button type="button" onClick={() => void recoverRuntime()}>Retry local runtime</button> : null}
             </div>
 
@@ -4825,8 +4826,6 @@ export function OpenAgronomyApp() {
               {turns.length > visibleTurnCount ? <button className="text-button" type="button" onClick={() => setVisibleTurnCount(count => count + 20)}>Show earlier messages</button> : null}
               {turns.length === 0 && !isAnalyzing && !loadingConversation ? (
                 <div className="conversation-empty">
-                  <strong>{fieldName ? 'What are you seeing in the field?' : 'Start with a question.'}</strong>
-                  <p>{fieldName ? 'Describe what you see, or choose a starting question.' : 'Ask directly, or select a field for context.'}</p>
                   <div className="question-starters">
                     {[
                       { label: 'Plan a soil sample', question: 'What should a useful soil sample record include?' },
