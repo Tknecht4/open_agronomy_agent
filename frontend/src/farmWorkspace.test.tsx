@@ -101,7 +101,9 @@ describe('retained record intake', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(writes).toHaveLength(2)
     expect(writes[1]).toEqual(writes[0])
-    await waitFor(() => expect(JSON.parse(localStorage.getItem('open-agronomy.record-draft.west.2026')!).summary).toBe(''))
+    expect(localStorage.getItem('open-agronomy.record-draft.west.2026')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Add record' }))
+    expect(screen.getByLabelText('What did you observe or do?')).toHaveValue('')
     localStorage.clear()
   })
 
