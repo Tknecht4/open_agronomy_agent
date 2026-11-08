@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import sqlite3
 import tempfile
 import threading
@@ -38,6 +39,27 @@ _PUBLIC_KEYS = frozenset((
 ))
 
 
+def _run_process(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess:
+    """Avoid macOS fork handlers in a server with loaded native GIS libraries.
+
+    CPython 3.11+ uses posix_spawn with an absolute executable, no cwd and
+    close_fds=False. A fresh isolated interpreter closes inherited descriptors
+    before executing the worker, retaining the worker's private environment.
+    """
+    if sys.platform == "darwin":
+        directory = str(kwargs.pop("cwd", REPO_ROOT))
+        executable = os.path.abspath(command[0])
+        bootstrap = (
+            "import os,sys; "
+            "os.closerange(3, os.sysconf('SC_OPEN_MAX')); "
+            "os.chdir(sys.argv[1]); "
+            "os.execv(sys.argv[2], sys.argv[2:])"
+        )
+        command = [executable, "-I", "-c", bootstrap, directory, executable, *command[1:]]
+        kwargs["close_fds"] = False
+    return subprocess.run(command, **kwargs)
+
+
 def geometry_hash(geometry: dict[str, Any]) -> str:
     polygon, _ = _valid_search_geometry(geometry)
     return hashlib.sha256(json.dumps(polygon, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
@@ -54,7 +76,7 @@ try:
 except ImportError:
  pass
 print(json.dumps(versions))"""
-        result = subprocess.run([executable, "-I", "-c", code], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        result = _run_process([executable, "-I", "-c", code], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             stdin=subprocess.DEVNULL, timeout=30, env={"PATH": os.defpath, "PYTHONNOUSERSITE": "1"}, check=False)
         if result.returncode == 0 and len(result.stdout) < 4096:
             return {"status": "healthy", "versions": json.loads(result.stdout)}
@@ -170,7 +192,7 @@ def _run_worker(settings: Any, cache: Path, geometry: dict[str, Any], payload: d
         if settings.network_mode == "online":
             command.append("--online")
         with tempfile.TemporaryFile() as output:
-            completed = subprocess.run(command, cwd=REPO_ROOT, env=env, stdin=subprocess.DEVNULL,
+            completed = _run_process(command, cwd=REPO_ROOT, env=env, stdin=subprocess.DEVNULL,
                                        stdout=output, stderr=subprocess.DEVNULL, timeout=150, check=False)
             output.seek(0)
             data = output.read(128 * 1024 + 1)
@@ -261,9 +283,12 @@ def map_overlay(settings: Any, field: dict[str, Any], geometry: dict[str, Any], 
     cache = field_cache(settings, field)
     command = [str(settings.imagery_worker_python), "-m", "agronomy_agent.imagery_overlay", "--cache-root", str(cache), "--chip-hash", chip_hash]
     try:
-        with tempfile.TemporaryFile() as output:
-            completed = subprocess.run(command, cwd=REPO_ROOT, env={"PATH": os.defpath, "PYTHONPATH": str(REPO_ROOT / "src"), "PYTHONNOUSERSITE": "1"},
-                stdin=subprocess.DEVNULL, stdout=output, stderr=subprocess.DEVNULL, timeout=30, check=False)
+        with tempfile.TemporaryFile() as output, tempfile.TemporaryFile() as errors:
+            completed = _run_process(command, cwd=REPO_ROOT, env={"PATH": os.defpath, "PYTHONPATH": str(REPO_ROOT / "src"), "PYTHONNOUSERSITE": "1"},
+                stdin=subprocess.DEVNULL, stdout=output, stderr=errors, timeout=30, check=False)
+            if completed.returncode:
+                errors.seek(0)
+                logging.getLogger(__name__).warning("Image overlay worker exited %s: %s", completed.returncode, errors.read(2048).decode("utf-8", errors="replace"))
             output.seek(0)
             data = output.read(4 * 1024 * 1024 + 1)
         if completed.returncode or len(data) > 4 * 1024 * 1024:

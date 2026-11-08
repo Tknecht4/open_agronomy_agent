@@ -50,7 +50,8 @@ def append_bundle(store: Any, field: dict[str, Any], actor_id: str, operation_id
 
 
 def timeline(store: Any, workspace_id: str, *, field_id: str | None = None, farm_id: str | None = None,
-             season: int | None = None, offset: int = 0, limit: int = 100) -> dict[str, Any]:
+             season: int | None = None, event_type: str | None = None,
+             offset: int = 0, limit: int = 100) -> dict[str, Any]:
     clauses = ["f.workspace_id=?", "f.deleted_at IS NULL"]
     params: list[Any] = [workspace_id]
     if field_id:
@@ -63,6 +64,18 @@ def timeline(store: Any, workspace_id: str, *, field_id: str | None = None, farm
     if season is not None:
         clauses.append(f"({EVENT_SEASON_SQL})=?")
         params.append(season)
+    if event_type == "correction":
+        clauses.append("e.event_type=?")
+        params.append(event_type)
+    elif event_type:
+        # Include the entire correction chain in its original record category.
+        # UNION deduplicates even malformed cyclic legacy history.
+        clauses.append("""e.id IN (WITH RECURSIVE matching(id,field_id) AS (
+            SELECT id,field_context_id FROM phase4_field_events WHERE event_type=?
+            UNION SELECT c.id,c.field_context_id FROM phase4_field_events c
+            JOIN matching p ON c.corrects_event_id=p.id AND c.field_context_id=p.field_id
+        ) SELECT id FROM matching)""")
+        params.append(event_type)
     query = """FROM phase4_field_events e JOIN phase4_field_contexts f ON f.id=e.field_context_id
         LEFT JOIN field_farm_memberships m ON m.field_id=f.id WHERE """ + " AND ".join(clauses)
     with store._cursor() as cursor:

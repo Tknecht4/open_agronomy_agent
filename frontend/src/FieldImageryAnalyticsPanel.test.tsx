@@ -101,6 +101,20 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllGlobals(); document.cookie = 'agronomy_csrf=; Max-Age=0' })
 
 describe('FieldImageryAnalyticsPanel', () => {
+  it('shows a retained failure without presenting controls to run it again', async () => {
+    apiGet.mockImplementation(async (url: string) => url === '/api/imagery-jobs/saved-job'
+      ? { id: 'saved-job', field_id: 'field-1', geometry_revision_id: 'polygon-1', status: 'failed',
+          request: { provider_id: 'hls-s30-planetary-computer', scene_id: 'scene-1' },
+          result: { status: 'unavailable', message: 'Synthetic retained processing failure' } }
+      : { status: 'ready', providers: availabilityProviders, network_mode: 'online' })
+    render(<FieldImageryAnalyticsPanel fieldContextId="field-1" geometryKey="polygon-1" geometry={polygon} imageryReady embedded retainedJobId="saved-job"
+      selection={{ providerId: 'hls-s30-planetary-computer', sceneId: 'scene-1', startDate: '2026-10-01', endDate: '2026-10-31' }} />)
+    expect(await screen.findByText('Synthetic retained processing failure')).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Analyze scene' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Acquired from')).not.toBeInTheDocument()
+    expect(apiPost).not.toHaveBeenCalled()
+  })
+
   it('keeps sparse field support visible without claiming representative crop conditions', async () => {
     apiPost.mockResolvedValue({ ...receipt,
       qa: { ...receipt.qa, valid_area_m2: 172.5, valid_area_fraction: 0.01725,
@@ -194,7 +208,7 @@ describe('FieldImageryAnalyticsPanel', () => {
     const result = screen.getByRole('region', { name: 'Imagery analysis result' })
     expect(within(result).getByText('0.530')).toBeInTheDocument()
     expect(within(result).getByText('Unknown')).toBeInTheDocument()
-    expect(within(result).getByText(/Scene cloud 25.0% · field QA clear coverage 80.0%/)).toBeInTheDocument()
+    expect(within(result).getByText(/Scene cloud 25.0% · usable field coverage 80.0%/)).toBeInTheDocument()
     fireEvent.click(within(result).getByText('Source and processing details'))
     expect(within(result).getByText('B04: hls2-s30:scene-1:B04')).toBeInTheDocument()
     expect(await within(result).findByRole('img')).toHaveAttribute('src', 'blob:field-preview')
@@ -297,7 +311,7 @@ describe('FieldImageryAnalyticsPanel', () => {
     expect(within(result).getByText('Observed indices for the sampled pixel.')).toBeInTheDocument()
     expect(within(result).getByText('Sample area 900 m²')).toBeInTheDocument()
     expect(within(result).getByText(/1 of 1 sample pixels pass QA/)).toBeInTheDocument()
-    expect(within(result).getByText(/sample QA clear fraction 100.0%/)).toBeInTheDocument()
+    expect(within(result).getByText(/usable sample coverage 100.0%/)).toBeInTheDocument()
     expect(within(result).queryByText(/Field area|field clear coverage|whole.field/)).not.toBeInTheDocument()
     expect(await within(result).findByRole('img')).toHaveAttribute('alt', expect.stringContaining('sampled pixel'))
     expect(within(result).getByText(/sample may include neighboring land cover/)).toBeInTheDocument()
@@ -317,7 +331,7 @@ describe('FieldImageryAnalyticsPanel', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Analyze scene' })).toBeEnabled())
     fireEvent.click(screen.getByRole('button', { name: 'Analyze scene' }))
     const result = await screen.findByRole('region', { name: 'Imagery analysis result' })
-    expect(within(result).getByText('QA clear area 900 m²')).toBeInTheDocument()
+    expect(within(result).getByText('Area passing quality checks 900 m²')).toBeInTheDocument()
     expect(within(result).getByText(/Water flagged area 900 m² · retained in QA clear area/)).toBeInTheDocument()
     fireEvent.click(within(result).getByText('Index support limits'))
     expect(within(result).getByText('ndvi negative reflectance: 900 m²')).toBeInTheDocument()

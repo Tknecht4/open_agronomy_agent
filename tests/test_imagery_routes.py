@@ -132,7 +132,7 @@ def test_worker_environment_has_no_account_credentials(tmp_path, monkeypatch):
         assert kwargs["timeout"] == 150
         kwargs["stdout"].write(b'{"status":"blocked_offline"}')
         return type("Completed", (), {"returncode": 2})()
-    monkeypatch.setattr(service.subprocess, "run", run)
+    monkeypatch.setattr(service, "_run_process", run)
     assert service._run_worker(settings, tmp_path / "c", {}, PAYLOAD)["status"] == "blocked_offline"
 
 

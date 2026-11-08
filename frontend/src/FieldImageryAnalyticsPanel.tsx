@@ -3,6 +3,8 @@ import { apiGet, apiPost, csrfHeaders } from './api'
 import type { FieldGeometry } from './fieldGeometry'
 import './FieldImageryAnalyticsPanel.css'
 import ImageryMapPreview from './ImageryMapPreview'
+import { displayDate, imagerySourceLabel } from './fieldLabels'
+import { sourceStateLabel } from './FieldSourceSummary'
 
 export type SamplingMode = 'field_polygon' | 'point_pixel' | 'point_buffer'
 type AnalyticsAvailability = {
@@ -278,7 +280,7 @@ function IndexValue({ name, stats, support, sample = false, singlePixel = false 
   name: 'NDVI' | 'NDMI'; stats?: IndexStats; support?: IndexSupport; sample?: boolean; singlePixel?: boolean
 }) {
   return <div className="field-imagery-index">
-    <strong>{name}</strong>
+    <strong>{name === 'NDVI' ? 'Vegetation index (NDVI)' : 'Moisture index (NDMI)'}</strong>
     <span className="field-imagery-index-value">{decimal(stats?.mean)}</span>
     <small>{singlePixel ? 'Sampled pixel' : `Mean of valid pixels · range ${decimal(stats?.min)} to ${decimal(stats?.max)}`} · valid area {area(stats?.area_m2)}</small>
     {support ? <small>{support.status === 'no_valid_index_support' ? 'No valid pixels support this index.'
@@ -374,7 +376,7 @@ export function FieldImageryAnalyticsPanel({ fieldContextId, geometryKey, geomet
     setPreviewState('Loading authenticated preview…')
     try {
       const response = await fetch(result.preview_url, { headers: csrfHeaders(), credentials: 'same-origin', signal: controller.signal })
-      if (!response.ok) throw new Error(`Preview request failed (${response.status}).`)
+      if (!response.ok) throw new Error(response.status === 404 ? 'The saved image file is not available in this installation. The numerical result is retained; restore the imagery cache to view the image.' : `The image could not be loaded (HTTP ${response.status}). Try opening the analysis again.`)
       if (!response.headers.get('content-type')?.startsWith('image/png')) throw new Error('Preview response was not PNG.')
       const blob = await response.blob()
       if (!blob.size || blob.size > 2 * 1024 * 1024) throw new Error('Preview size is invalid.')
@@ -463,50 +465,50 @@ export function FieldImageryAnalyticsPanel({ fieldContextId, geometryKey, geomet
 
   return <details open={embedded || undefined} className="workspace-disclosure field-imagery-analytics">
     <summary>Observed satellite indices</summary>
-    <p>{point ? 'Inspect one HLS scene at the saved location. A pixel or surrounding sample can include other land covers.' : 'Analyze one satellite scene over a saved field polygon.'} NDVI and NDMI are observations, not yield or diagnosis.</p>
+    <p>{retainedJobId ? '' : point ? 'Inspect one HLS scene at the saved location. A pixel or surrounding sample can include other land covers.' : 'Analyze one satellite scene over a saved field polygon.'} NDVI and NDMI are observations, not yield or diagnosis.</p>
     {!imageryReady || geometry.kind === 'none' ? <p role="status">{geometry.kind === 'none' ? 'Add and save a location or boundary before analyzing imagery.' : retainedJobId ? 'This retained result uses its historical boundary. Select a new scene for the current field to run another analysis.' : 'Save the current location or boundary before analyzing imagery.'}</p> : null}
     {point && availability && !modeSupported ? <p role="status">Point sampling is not supported by this runtime.</p> : null}
     {availabilityError ? <p role="alert">{availabilityError}</p> : null}
-    {availability?.status === 'worker_unavailable' ? <p role="status">{availability.worker?.message || 'The image worker is unavailable. Check its installation.'}<button type="button" onClick={() => setAvailabilityVersion(v => v + 1)}>Check imagery setup again</button></p> : null}
-    {availability?.status === 'not_configured' ? <p role="status">Optional imagery processing is not installed in this runtime.</p> : null}
-    {availability?.status === 'ready' && (!providerCapability?.analysis || !modeSupported) ? <p role="status">Processing this provider and sampling mode is unavailable in the current installation. Scene discovery and retained results remain separate capabilities.</p> : null}
-    {availability?.network_mode === 'online' ? <p>{point ? 'Online analysis sends the saved location and selected dates to Microsoft Planetary Computer to find scenes, then requests imagery covering the sample.' : 'Online analysis sends the saved polygon and dates to the selected public imagery catalog: Earth Search for Sentinel-2 C1, or Microsoft Planetary Computer for HLS.'} No account is required.</p> : null}
+    {!retainedJobId && availability?.status === 'worker_unavailable' ? <p role="status">{availability.worker?.message || 'The image worker is unavailable. Check its installation.'}<button type="button" onClick={() => setAvailabilityVersion(v => v + 1)}>Check imagery setup again</button></p> : null}
+    {!retainedJobId && availability?.status === 'not_configured' ? <p role="status">Optional imagery processing is not installed in this runtime.</p> : null}
+    {!retainedJobId && availability?.status === 'ready' && (!providerCapability?.analysis || !modeSupported) ? <p role="status">Processing this provider and sampling mode is unavailable in the current installation. Scene discovery and retained results remain separate capabilities.</p> : null}
+    {!retainedJobId && availability?.network_mode === 'online' ? <p>{point ? 'Online analysis sends the saved location and selected dates to Microsoft Planetary Computer to find scenes, then requests imagery covering the sample.' : 'Online analysis sends the saved polygon and dates to the selected public imagery catalog: Earth Search for Sentinel-2 C1, or Microsoft Planetary Computer for HLS.'} No account is required.</p> : null}
     {availability?.network_mode === 'offline' ? <p role="status">Network access is off. An exact cached analysis may still be available.</p> : null}
-    <form onSubmit={(event) => void analyze(event)}>
+    {!retainedJobId ? <form onSubmit={(event) => void analyze(event)}>
       {point ? <div className="field-imagery-sampling"><label>Sample<select disabled={Boolean(retainedJobId) || busy} value={pointMode} onChange={event => {
         const next = event.target.value as 'point_pixel' | 'point_buffer'
         setPointMode(next)
         if (next === 'point_buffer' && !radius) setRadius('60')
       }}><option value="point_pixel">Pixel at location</option><option value="point_buffer" disabled={!availability?.sampling_modes?.includes('point_buffer')}>Area around location</option></select></label>
       {mode === 'point_buffer' ? <label>Radius (m)<input aria-label="Radius (m)" aria-describedby={radiusHelpId} disabled={Boolean(retainedJobId) || busy} type="number" min="15" max="1500" step="1" value={radius} onChange={event => setRadius(event.target.value)} required /><small id={radiusHelpId}>15–1,500 m · sampling area, not field size</small></label> : null}</div> : null}
-      <label>Imagery source<select disabled={Boolean(selection) || busy} value={providerId} onChange={(event) => setProviderId(event.target.value as typeof providerId)}>{providers.map((provider) => <option key={provider.id} value={provider.id}>{provider.label}</option>)}</select></label>
+      {!selection ? <><label>Imagery source<select disabled={busy} value={providerId} onChange={(event) => setProviderId(event.target.value as typeof providerId)}>{providers.map((provider) => <option key={provider.id} value={provider.id}>{provider.label}</option>)}</select></label>
       <div className="field-imagery-dates">
         <label>Acquired from<input type="date" disabled={Boolean(selection) || busy} value={startDate} onChange={(event) => setStartDate(event.target.value)} required /></label>
         <label>Acquired through<input type="date" disabled={Boolean(selection) || busy} value={endDate} onChange={(event) => setEndDate(event.target.value)} required /></label>
-      </div>
+      </div></> : null}
       <button type="submit" disabled={!canAnalyze || !startDate || !endDate || endDate < startDate || busy}>{busy ? 'Analyzing…' : 'Analyze scene'}</button>
-    </form>
-    {jobStatus ? <p role="status">Image analysis: {jobStatus}.{busy ? ' You can leave this page and reopen the analysis from history.' : ''}{busy && jobId ? <button type="button" onClick={() => { void apiPost(`/api/imagery-jobs/${jobId}/cancel`, {}).then(() => { setBusy(false); setJobStatus('cancelled'); onJobChanged?.() }).catch(cause => setJobStatus(errorText(cause))) }}>Cancel analysis</button> : null}</p> : null}
+    </form> : null}
+    {jobStatus ? <p role="status">Image analysis: {jobStatus === 'completed' ? 'Ready' : sourceStateLabel(jobStatus)}.{busy ? ' You can leave this page and reopen the analysis from history.' : ''}{busy && jobId ? <button type="button" onClick={() => { void apiPost(`/api/imagery-jobs/${jobId}/cancel`, {}).then(() => { setBusy(false); setJobStatus('cancelled'); onJobChanged?.() }).catch(cause => setJobStatus(errorText(cause))) }}>Cancel analysis</button> : null}</p> : null}
     {receipt ? <section className="field-imagery-result" aria-label="Imagery analysis result">
       <p role="status">{statusText(receipt, resultMode)}</p>
       {receipt.source ? <div className="field-imagery-source">
-        <strong>{receipt.source.collection || receipt.source.provider_id || 'HLS scene'}</strong>
-        <span>Scene {receipt.source.scene_id || receipt.scene_id || 'unknown'} · acquired {receipt.source.acquired_at || 'unknown'}</span>
-        <span>Scene cloud {receipt.source.scene_cloud_percent == null ? 'unknown' : `${decimal(receipt.source.scene_cloud_percent, 1)}%`} · {resultPoint ? 'sample QA clear fraction' : 'field QA clear coverage'} {receipt.qa?.valid_area_fraction == null ? 'unknown' : `${(receipt.qa.valid_area_fraction * 100).toFixed(1)}%`}</span>
+        <strong>{imagerySourceLabel(receipt.source.provider_id || receipt.provider_id || receipt.source.collection || '', 'Satellite image')} · {displayDate(receipt.source.acquired_at)}</strong>
+
+        <span>Scene cloud {receipt.source.scene_cloud_percent == null ? 'unknown' : `${decimal(receipt.source.scene_cloud_percent, 1)}%`} · {resultPoint ? 'usable sample coverage' : 'usable field coverage'} {receipt.qa?.valid_area_fraction == null ? 'unknown' : `${(receipt.qa.valid_area_fraction * 100).toFixed(1)}%`}</span>
       </div> : null}
       {receipt.qa ? <div className="field-imagery-qa">
-        <span>{resultPoint ? `Sample area ${area(receipt.qa.sample_area_m2)}` : `Field area ${area(receipt.qa.field_area_m2)}`}</span><span>QA clear area {area(receipt.qa.valid_area_m2)}</span>
+        <span>{resultPoint ? `Sample area ${area(receipt.qa.sample_area_m2)}` : `Field area ${area(receipt.qa.field_area_m2)}`}</span><span>Area passing quality checks {area(receipt.qa.valid_area_m2)}</span>
         {pointSampling ? <span>{pointSampling.valid_pixel_count} of {pointSampling.pixel_count} sample pixels pass QA · {pointSampling.native_resolution_m} m source pixels</span> : null}
-        <span>Nodata area {area(receipt.qa.nodata_area_m2)}</span>
+        <span>Area with missing data {area(receipt.qa.nodata_area_m2)}</span>
         {receipt.qa.water_flag_area_m2 !== undefined ? <span>Water flagged area {area(receipt.qa.water_flag_area_m2)} · retained in QA clear area when otherwise valid</span> : null}
-        {receipt.qa.excluded_area_m2_by_reason ? <details><summary>QA exclusions</summary><ul>{Object.entries(receipt.qa.excluded_area_m2_by_reason).map(([reason, value]) => <li key={reason}>{reason.replace(/_/g, ' ')}: {area(value)}</li>)}</ul><small>{receipt.qa.overlap_note || 'QA reasons may overlap.'}</small></details> : null}
+        {receipt.qa.excluded_area_m2_by_reason ? <details><summary>Excluded pixels</summary><ul>{Object.entries(receipt.qa.excluded_area_m2_by_reason).map(([reason, value]) => <li key={reason}>{reason.replace(/_/g, ' ')}: {area(value)}</li>)}</ul><small>{receipt.qa.overlap_note || 'QA reasons may overlap.'}</small></details> : null}
         {receipt.provider_id !== 'sentinel2-c1-earth-search' && receipt.qa.index_undefined_area_m2_by_reason && Object.values(receipt.qa.index_undefined_area_m2_by_reason).some(value => value > 0) ? <details><summary>Index support limits</summary><ul>{Object.entries(receipt.qa.index_undefined_area_m2_by_reason).filter(([, value]) => value > 0).map(([reason, value]) => <li key={reason}>{reason.replace(/_/g, ' ')}: {area(value)}</li>)}</ul><small>Negative reflectance or a near-zero band sum can make an index undefined even where scene QA is clear.</small></details> : null}
       </div> : null}
       {pointSampling ? <p className="field-imagery-sampling-note">{pointSampling.limitation}</p> : null}
       {receipt.zonal_stats ? <><div className="field-imagery-indices"><IndexValue name="NDVI" stats={receipt.zonal_stats.NDVI} support={receipt.support_assessment?.index_support.NDVI} sample={resultPoint} singlePixel={resultMode === 'point_pixel'} /><IndexValue name="NDMI" stats={receipt.zonal_stats.NDMI} support={receipt.support_assessment?.index_support.NDMI} sample={resultPoint} singlePixel={resultMode === 'point_pixel'} /></div>
       <p className="field-imagery-sampling-note">These summaries describe valid pixels only. This scene has not been assessed for representative crop conditions. A field decision needs other evidence.</p>
       {receipt.support_assessment ? <p className="field-imagery-sampling-note">Coverage is shown; no minimum coverage rule has been applied. Scene cloud percentage describes the whole scene, rather than valid coverage of this {resultPoint ? 'sample' : 'field'}.</p> : null}</> : null}
-      {previewUrl ? <figure><img src={previewUrl} alt={`Observed NDVI in the ${previewSupport}; transparent pixels are ${transparency}`} />
+      <div className="field-imagery-visuals">{previewUrl ? <figure><img src={previewUrl} alt={`Observed NDVI in the ${previewSupport}; transparent pixels are ${transparency}`} />
         <figcaption>{resultPoint ? `NDVI ${previewSupport} preview` : 'Field-only NDVI display preview'}, enlarged for inspection from {resolution} m source pixels. {resultPoint ? 'The sample may include neighboring land cover. ' : ''}Transparent pixels are {transparency}. Numerical results come from the server receipt.</figcaption>
         <div className="field-imagery-legend" aria-label="NDVI preview color scale">
           <div className="field-imagery-legend-ramp" aria-hidden="true" />
@@ -515,21 +517,22 @@ export function FieldImageryAnalyticsPanel({ fieldContextId, geometryKey, geomet
         </div>
       </figure> : null}
       {previewState ? <p role="status">{previewState}</p> : null}
-      {jobId && receipt.chip_hash && (receipt.status === 'available' || receipt.status === 'empty_valid_area') ? <ImageryMapPreview key={`${jobId}:${receipt.chip_hash}`} jobId={jobId} chipHash={receipt.chip_hash} geometry={geometry} geometryKey={geometryKey} acquiredAt={receipt.source?.acquired_at || ''} allowNetwork={availability?.network_mode === 'online'} /> : null}
+      {jobId && receipt.chip_hash && (receipt.status === 'available' || receipt.status === 'empty_valid_area') ? <ImageryMapPreview key={`${jobId}:${receipt.chip_hash}`} jobId={jobId} chipHash={receipt.chip_hash} geometry={geometry} geometryKey={geometryKey} acquiredAt={receipt.source?.acquired_at || ''} allowNetwork={availability?.network_mode === 'online'} /> : null}</div>
       {receipt.source ? <details className="field-imagery-provenance"><summary>Source and processing details</summary>
         <dl>
           {pointSampling ? <><div><dt>Sample</dt><dd>{pointSampling.mode === 'point_pixel' ? 'Containing native pixel' : `${pointSampling.sample_radius_m} m radius around location`} · {pointSampling.support_kind.replace(/_/g, ' ')}</dd></div>
           <div><dt>Saved point</dt><dd>{pointSampling.original_geometry.coordinates[1]}, {pointSampling.original_geometry.coordinates[0]}</dd></div>
           <div><dt>Position accuracy</dt><dd>Unknown · location role unspecified</dd></div></> : null}
-          <div><dt>Provider</dt><dd>{receipt.source.provider_id || receipt.provider_id || 'unknown'}</dd></div>
-          <div><dt>Published</dt><dd>{receipt.source.availability_at || 'unknown'}</dd></div>
+          <div><dt>Provider</dt><dd>{imagerySourceLabel(receipt.source.provider_id || receipt.provider_id || '')}</dd></div><div><dt>Image identifier</dt><dd>{receipt.source.scene_id || receipt.scene_id || 'Unknown'}</dd></div>
+          <div><dt>Published</dt><dd>{displayDate(receipt.source.availability_at, true)}</dd></div>
           <div><dt>Grid</dt><dd>{receipt.grid?.crs || 'unknown'} · {receipt.grid?.width ?? '?'} × {receipt.grid?.height ?? '?'} pixels · {receipt.grid?.resampling_method || 'method unknown'}</dd></div>
         </dl>
         {receipt.source.asset_ids ? <ul>{Object.entries(receipt.source.asset_ids).map(([band, id]) => <li key={band}>{band}: {id}</li>)}</ul> : null}
-      </details> : null}
       {receipt.limitations ? <ul>{receipt.limitations.map(limit => <li key={limit}>{limit}</li>)}</ul> : null}
       {receipt.chip_hash ? <small>Chip {receipt.chip_hash.slice(0, 12)} · geometry {receipt.geometry_hash?.slice(0, 12) || 'unknown'} · {receipt.process_version || 'version unknown'}{receipt.cache_hit ? ' · cached' : ''}</small> : null}
       {receipt.elapsed_seconds != null ? <small>Processing {decimal(receipt.elapsed_seconds, 1)} s · COG transfer {receipt.cog_transfer_bytes == null ? 'unknown' : `${Math.round(receipt.cog_transfer_bytes).toLocaleString()} bytes`}</small> : null}
+      </details> : null}
+
     </section> : null}
   </details>
 }

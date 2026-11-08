@@ -1,5 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { apiGet } from './api'
+import { displayDate } from './fieldLabels'
 import { readableError } from './farmTypes'
 import type { FieldGeometry } from './fieldGeometry'
 import { recoverableLazy as lazy } from './WorkspaceSectionBoundary'
@@ -36,7 +37,7 @@ export default function ImageryMapPreview({ jobId, chipHash, geometry, geometryK
   const layer = useMemo(() => overlay && url ? { url, bounds: overlay.bounds, opacity } : undefined, [overlay, url, opacity])
   return <section className="imagery-map-preview" aria-label="Image on field map">
     {!overlay ? <button type="button" disabled={busy} onClick={() => void load()}>{busy ? 'Preparing map image…' : 'View image on field map'}</button> : <>
-      <h4>NDVI · {acquiredAt.slice(0, 10) || 'Acquisition date unknown'}</h4>
+      <h4>NDVI · {displayDate(acquiredAt)}</h4>
       <label>Image opacity<input aria-label="Image opacity" type="range" min="0" max="1" step="0.05" value={opacity} onChange={event => setOpacity(Number(event.target.value))} /></label>
       <div className="farm-map"><Suspense fallback={<p>Loading image map…</p>}><LeafletFieldMap mode="inspect" scenarioId="analysis" fieldLabel="Analysis boundary" fieldKey={geometryKey} geometry={geometry} analyticalOverlay={layer} regionalCandidates={[]} regionalFeatureCollection={null} onGeometryChange={() => {}} onStatusChange={() => {}} allowNetwork={allowNetwork} /></Suspense></div>
       <p>NDVI −1 (purple) → 0 → +1 (green). Transparent areas are outside the support, excluded by QA, or have an undefined index.</p><small>{overlay.boundary} Basemap imagery has separate acquisition dates.</small>

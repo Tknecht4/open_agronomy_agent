@@ -26,12 +26,12 @@ export function WorkspaceNavigation({ page, onNavigate, answerCapability, mobile
     ['benchmarks', 'Benchmarks', ChartNoAxesCombined],
   ] as const
   const choose = (next: WorkspacePage) => { onNavigate(next); setOpen(false) }
-  const brand = <div className="workspace-brand"><span className="workspace-brand-symbol"><Sprout size={22} aria-hidden="true" /></span><span>Open Agronomy<small>Field workspace</small></span></div>
+  const brand = <div className="workspace-brand"><span className="workspace-brand-symbol"><Sprout size={22} aria-hidden="true" /></span><span>Open Agronomy</span></div>
   const navigation = <>
     <nav className="workspace-navigation" aria-label="Primary">
       {primaryItems.map(([id, label, Icon]) => <button key={id} type="button" aria-current={page === id ? 'page' : undefined} onClick={() => choose(id)}><Icon size={18} aria-hidden="true" />{label}</button>)}
     </nav>
-    <div className="workspace-navigation-label">Research & settings</div>
+    <div className="workspace-navigation-divider" />
     <nav className="workspace-navigation" aria-label="Review">
       <button type="button" aria-current={page === 'sources' ? 'page' : undefined} onClick={() => choose('sources')}><Database size={18} aria-hidden="true" />Data management</button>
       {reviewItems.map(([id, label, Icon]) => <button key={id} type="button" aria-current={page === id ? 'page' : undefined} onClick={() => choose(id)}><Icon size={18} aria-hidden="true" />{label}</button>)}

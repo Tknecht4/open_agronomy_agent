@@ -2,16 +2,19 @@
 
 ## Purpose and status
 
-`frontend/` is the supported field/question React workspace. **Workspace** opens conversation and the map together on desktop, with explicit Conversation/Map controls on mobile; **Fields** manages setup, records, soil tests, history, and map context; **Data** presents private references, knowledge coverage, and adapter diagnostics. It is a client of the FastAPI application; a rendered page does not prove the API, model, corpus, or adapters are ready. See the [workspace guide](../docs/public/operations/workspace.md) for the user flow.
+`frontend/` is the supported farm and field React workspace. **Farms** opens the farm directory; a farm opens its fields and map, and a field opens its overview, imagery, soil/terrain, records, and tables. **Fields** shows fields across farms. **Records** shows the season's activity. **Questions** provides field-scoped or general conversation. It is a client of the FastAPI application; a rendered page does not prove the API, model, corpus, or adapters are ready. See the [workspace guide](../docs/public/operations/workspace.md) for the user flow.
 
 ## Entry points and map
 
 - `src/main.tsx` mounts the application.
-- `src/OpenAgronomyApp.tsx` owns the primary cockpit workflow.
+- `src/OpenAgronomyApp.tsx` owns routing and the question/editor workflow.
+- `src/FarmWorkspace.tsx` owns farm scope and loading; `FarmDirectory.tsx` and `FarmFieldTable.tsx` render the directory and field list. `FieldDossier.tsx` owns field detail.
+- `src/design-tokens.css` defines shared values; `workspace.css` owns shell and controls; `FarmWorkspace.css` owns farm layouts. Nested semantic sections are not implicitly cards. Farm/field/record views own their single page heading; the outer shell supplies headings for other views.
 - `src/WorkspaceNavigation.tsx` owns the open desktop sidebar and native mobile navigation drawer.
 - `src/ModelSettings.tsx` owns the anchored desktop model popover and native mobile model sheet; model choices and availability come from the API.
 - `src/FieldSetupDialog.tsx` owns the name/location/review field wizard; `src/WorkspaceDialog.tsx` supplies accessible modal behavior.
 - `src/MapPresentationControls.tsx` and `src/mapPresentation.ts` own map style/layer display preferences. `src/FieldMapInsights.tsx` renders lazy, on-demand analysis with independent geometry/source requests, compact coverage rows, and stale-request cancellation.
+- `src/FarmRecords.tsx` owns the paginated record timeline and server-side type filters, including correction chains. `src/RecordEntryDialog.tsx` owns field-scoped entry, lab-report transcription and durable drafts. `src/RecordDetails.tsx` supplies readable record provenance; `src/fieldLabels.ts` maps stored identifiers to presentation names.
 - `src/FieldSyncPanel.tsx` owns field-event sync, typed soil-test entry, and recovery of unconfirmed record requests; `src/fieldEventSave.ts` persists retry identities before sending either record form; `src/FieldRecords.css` styles compact history and focused entry dialogs.
 - `src/FieldImageryAnalyticsPanel.tsx` owns on-demand saved-point/polygon imagery analysis; `src/FieldDataPanel.tsx` owns reviewed table intake and scene discovery. Point results require explicit sampling support in the server receipt.
 - `src/api.ts` is the API client boundary.
@@ -25,9 +28,9 @@
 
 ## Navigation and model settings
 
-Workspace, Fields, and Data remain primary. Evidence and Benchmarks are visible under Review; runtime status, Privacy, and About live in the navigation footer. Small windows use the same hierarchy in a navigation drawer.
+Farms, Fields, Records, and Questions are primary. Data management, Evidence, and Benchmarks form the second navigation group; runtime status, Privacy, and About live in the navigation footer. Small windows use the same hierarchy in a navigation drawer.
 
-The desktop workspace gives conversation and GIS equal space by default. A workspace without a field still has a browsable regional overview; it does not create field geometry or infer a location. Map-only and conversation-only views remain available. On mobile, the explicit Map control preserves the question draft while giving GIS the full content width.
+Questions opens conversation by default; Together gives conversation and GIS equal space on desktop. A workspace without a field still has a browsable regional overview; it does not create field geometry or infer a location. Map-only and conversation-only views remain available. On mobile, the explicit Map control preserves the question draft while giving GIS the full content width.
 
 Model opens above the entire desktop composer, with technical details available separately. On mobile it opens a native modal sheet. Native dialogs contain focus and restore it when closed; desktop popovers dismiss on Escape, outside interaction, and workspace changes. Unknown availability remains unreported rather than being labelled ready. Selection changes only the next question and does not rewrite previous answer lineage.
 

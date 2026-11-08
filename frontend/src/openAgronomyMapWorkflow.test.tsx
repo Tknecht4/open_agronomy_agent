@@ -2396,7 +2396,7 @@ describe('Open Agronomy map upload workflow', () => {
 
     await waitFor(() => {
       expect(screen.queryByText('Should I add nitrogen after this wet spring?')).not.toBeInTheDocument()
-      expect(screen.getByText('What are you seeing in the field?')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Plan a soil sample' })).toBeInTheDocument()
       expect(input).toHaveValue('')
     })
     expect(screen.getByTestId('reset-chat')).toBeEnabled()
@@ -3246,7 +3246,7 @@ describe('Open Agronomy map upload workflow', () => {
     })
     expect(screen.queryByText('Late Beta overwrite')).not.toBeInTheDocument()
     expect(screen.queryByText('Beta field answer')).not.toBeInTheDocument()
-    expect(screen.getByText('What are you seeing in the field?')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Plan a soil sample' })).toBeInTheDocument()
   })
 
   it('skips turn hydration without a selected session and hydrates a selected summary before asking', async () => {
@@ -3257,7 +3257,7 @@ describe('Open Agronomy map upload workflow', () => {
     const noSelectionFetch = installFetchMock(emptyDemoFields, uploadPayload, [staleSummary])
     const firstRender = render(<OpenAgronomyApp />)
     await screen.findByText('Local runtime · connected mode')
-    expect(screen.getByText('Start with a question.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Plan a soil sample' })).toBeInTheDocument()
     expect(noSelectionFetch.mock.calls.some(([url]) => String(url) === '/api/sessions/session-sample-only')).toBe(false)
     firstRender.unmount()
 
@@ -3900,7 +3900,7 @@ describe('production answer origin and publicity wording', () => {
     fireEvent.change(screen.getByLabelText('Your question'), { target: { value: completed.user_message } })
     await waitFor(() => expect(screen.getByRole('button', { name: 'Ask' })).toBeEnabled())
     fireEvent.click(screen.getByRole('button', { name: 'Ask' }))
-    expect(await screen.findByLabelText('Answer execution and origin')).toHaveTextContent('Preparing answer · Execution origin not yet recorded')
+    expect(await screen.findByLabelText('Answer execution and origin')).toHaveTextContent('Preparing answer…')
     await act(async () => { release({ ok: true, status: 200, body: null, text: async () => `event: answer.completed\ndata: ${JSON.stringify({ turn: completed })}\n\n` } as Response) })
     await screen.findByText(completed.answer)
     expect(screen.getByLabelText('Answer execution and origin')).toHaveTextContent('Local tool result · Model not used')
@@ -3991,6 +3991,7 @@ it.each(['general', 'example'])('clears a saved season when changing to %s quest
   render(<OpenAgronomyApp />)
   const conversations = await screen.findByRole('combobox', { name: 'Saved conversations' })
   await waitFor(() => expect(within(conversations).getByRole('option', { name: 'Season question' })).toBeInTheDocument())
+  expect(await screen.findByText('2026 season', { selector: '.question-season' })).toBeVisible()
   fireEvent.change(conversations, { target: { value: 'season-chat' } })
   const question = screen.getByLabelText('Your question')
   fireEvent.change(question, { target: { value: 'Saved season question' } })
