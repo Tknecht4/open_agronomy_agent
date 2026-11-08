@@ -1252,7 +1252,11 @@ export const answerModelLineageView = (
 
 function AnswerOriginLabel({ turn }: { turn: Turn }) {
   const origin = answerExecutionOrigin(turn)
-  return <p aria-label="Answer execution and origin" title={origin.detail}>{origin.finalOrigin} · {origin.execution}</p>
+  return <details className="answer-origin-details">
+    <summary>{origin.status === 'conflicting' ? 'How this answer was made · conflicting records' : origin.status === 'unavailable' ? 'How this answer was made · incomplete records' : 'How this answer was made'}</summary>
+    <p aria-label="Answer execution and origin">{origin.finalOrigin} · {origin.execution}</p>
+    <p>{origin.detail}</p>
+  </details>
 }
 
 const copyTextToClipboard = async (text: string): Promise<void> => {
@@ -2692,6 +2696,16 @@ export function OpenAgronomyApp() {
     }, 150)
     return () => { cancelled = true; window.clearTimeout(timer) }
   }, [readinessKey, answerCapability.canGenerateAnswer, fieldsHydrated, questionContextRequiresSave, savingField, loadingConversation])
+
+  // Automatic conversation recovery must restore the same season as selecting
+  // that saved conversation explicitly. A fresh draft has no session to restore.
+  useEffect(() => {
+    if (!sessionId) return
+    const selected = sessionForField(sessions.filter(item => item.session_id === sessionId), activeFieldConversationKey, activeFieldContextId)
+    if (!selected) return
+    const season = (selected.context as Record<string, unknown> | undefined)?.field_season
+    setQuestionSeason(activeFieldContextId && typeof season === 'number' ? season : null)
+  }, [sessionId, sessions, activeFieldConversationKey, activeFieldContextId])
 
   const ensureSession = async (stillCurrent: () => boolean): Promise<string> => {
     const currentSession = sessions.find((session) => session.session_id === sessionId)
@@ -4847,8 +4861,8 @@ export function OpenAgronomyApp() {
                     className="chat-message assistant-message"
                   >
                     <span>Open Agronomy Agent</span>
-                    <AnswerOriginLabel turn={turn} />
                     <FormattedAnswer text={turn.answer} />
+                    <AnswerOriginLabel turn={turn} />
                     <AnswerContextDisclosure
                       receipt={turn.trace?.metadata?.field_context_compiler as Record<string, unknown> | undefined}
                       onReviewEvidence={() => {
@@ -4868,7 +4882,7 @@ export function OpenAgronomyApp() {
                   </article>
                   <article className="chat-message assistant-message working-message">
                     <span>Open Agronomy Agent</span>
-                    <p aria-label="Answer execution and origin">Preparing answer · Execution origin not yet recorded</p>
+                    <p aria-label="Answer execution and origin">Preparing answer…</p>
                     <StreamProgressPanel steps={streamProgress} draft={streamDraft} />
                     {streamDraft ? <FormattedAnswer text={streamDraft} /> : null}
                   </article>

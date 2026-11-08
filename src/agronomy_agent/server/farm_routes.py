@@ -177,6 +177,7 @@ def register_farm_routes(app: FastAPI, *, store: Any, settings: Any,
     @app.get("/api/records")
     def records(request: Request, workspace_id: str | None = None, farm_id: str | None = None,
                 field_id: str | None = None, season: int | None = Query(default=None, ge=1900, le=2200),
+                event_type: Literal["observation", "sample", "operation", "decision", "outcome", "note", "correction"] | None = None,
                 offset: int = Query(default=0, ge=0), limit: int = Query(default=100, ge=1, le=200)) -> dict[str, Any]:
         if field_id:
             field, _ = field_authorize(request, field_id, False)
@@ -185,7 +186,7 @@ def register_farm_routes(app: FastAPI, *, store: Any, settings: Any,
         local()
         if farm_id and farm_id != "unassigned":
             call(farm_store.get_farm, store, workspace["id"], farm_id)
-        return field_record_store.timeline(store, workspace["id"], farm_id=farm_id, field_id=field_id, season=season, offset=offset, limit=limit)
+        return field_record_store.timeline(store, workspace["id"], farm_id=farm_id, field_id=field_id, season=season, event_type=event_type, offset=offset, limit=limit)
 
     @app.get("/api/fields/{field_id}/location-suggestions")
     def location_suggestions(field_id: str, request: Request) -> dict[str, Any]:

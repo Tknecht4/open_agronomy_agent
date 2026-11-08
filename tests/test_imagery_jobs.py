@@ -110,3 +110,22 @@ def test_deduplicated_operations_remain_bound_after_completion_and_restart(runti
         jobs.ensure_schema(cursor)
     assert jobs.queue(store, field, PAYLOAD, alias, revision)[0]['id'] == original['id']
     assert len(jobs.list_jobs(store, field_id)) == 1
+
+
+def test_worker_spawn_closes_inherited_descriptors_and_avoids_fork(tmp_path, monkeypatch):
+    import os
+    import subprocess
+    import sys
+    import pytest
+    if sys.platform != "darwin":
+        pytest.skip("macOS spawn regression")
+    def forbidden_fork(*args, **kwargs):
+        pytest.fail("GIS worker must not fork the multithreaded server")
+    monkeypatch.setattr(subprocess, "_fork_exec", forbidden_fork)
+    with (tmp_path / "private").open("wb") as private:
+        os.set_inheritable(private.fileno(), True)
+        code = "import os,sys; fd=int(sys.argv[1]);\ntry: os.fstat(fd)\nexcept OSError: print('closed')\nelse: print('leaked')\nprint(os.getcwd())"
+        result = imagery_service._run_process([sys.executable, "-I", "-c", code, str(private.fileno())],
+            cwd=tmp_path, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            env={"PATH": os.defpath}, timeout=10, check=True)
+    assert result.stdout.decode().splitlines() == ["closed", str(tmp_path)]

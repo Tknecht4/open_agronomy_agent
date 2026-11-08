@@ -404,3 +404,37 @@ def test_unknown_record_time_never_becomes_season_context(settings, status_key):
             session_context={'field_context_id': field['id'], 'field_access_authorized': True, 'field_season': season}, field_context={})
         assert len(projected['field_history']['events']) == 2
         assert all('Undated source note' not in event['summary'] for event in projected['field_history']['events'])
+
+
+def test_record_type_filter_applies_before_pagination_and_keeps_correction_history(settings):
+    import uuid
+    with TestClient(create_app(settings)) as client:
+        field = create_field(client)
+        path = f"/api/fields/{field['id']}/records"
+        result = client.post(path, headers=OWNER, json={"operation_id": str(uuid.uuid4()), "events": [
+            {"event_type": "note", "occurred_at": "2026-03-01T12:00:00Z", "payload": {"season": 2026, "summary": "First note"}},
+            {"event_type": "observation", "occurred_at": "2026-04-01T12:00:00Z", "payload": {"season": 2026, "summary": "Newer observation"}},
+            {"event_type": "note", "occurred_at": "2026-02-01T12:00:00Z", "payload": {"season": 2026, "summary": "Second note"}},
+        ]})
+        assert result.status_code == 201, result.text
+        original = result.json()["events"][0]["id"]
+        correction = client.post(path, headers=OWNER, json={"operation_id": str(uuid.uuid4()), "events": [
+            {"event_type": "correction", "corrects_event_id": original, "payload": {"season": 2026, "summary": "Corrected note"}}
+        ]})
+        assert correction.status_code == 201, correction.text
+        url = f"/api/records?field_id={field['id']}&season=2026&event_type=note&limit=1"
+        first = client.get(url, headers=OWNER).json()
+        assert first["total"] == 3 and first["next_offset"] == 1
+        assert first["events"][0]["payload"]["summary"] == "Corrected note"
+        second = client.get(url + "&offset=1", headers=OWNER).json()
+        assert second["events"][0]["payload"]["summary"] == "First note"
+        assert second["events"][0]["corrected_by"] == correction.json()["events"][0]["id"]
+        third = client.get(url + "&offset=2", headers=OWNER).json()
+        assert third["events"][0]["payload"]["summary"] == "Second note" and third["next_offset"] is None
+        next_correction = client.post(path, headers=OWNER, json={"operation_id": str(uuid.uuid4()), "events": [
+            {"event_type": "correction", "corrects_event_id": correction.json()["events"][0]["id"], "payload": {"season": 2026, "summary": "Final corrected note"}}
+        ]})
+        assert next_correction.status_code == 201
+        assert client.get(url, headers=OWNER).json()["total"] == 4
+        assert client.get(url.replace("event_type=note", "event_type=correction"), headers=OWNER).json()["total"] == 2
+        assert client.get(url.replace("event_type=note", "event_type=invalid"), headers=OWNER).status_code == 422

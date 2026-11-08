@@ -198,7 +198,7 @@ def test_point_worker_arguments_keep_sampling_separate_from_polygon_buffer(tmp_p
         assert '--online' not in command
         kwargs['stdout'].write(b'{"status":"blocked_offline"}')
         return type('Completed', (), {'returncode':2})()
-    monkeypatch.setattr(service.subprocess, 'run', run)
+    monkeypatch.setattr(service, '_run_process', run)
     assert service._run_worker(settings, tmp_path/'cache', INPUT,
         BODY|{"sampling_mode":"point_buffer","sample_radius_m":60})["status"] == "blocked_offline"
 

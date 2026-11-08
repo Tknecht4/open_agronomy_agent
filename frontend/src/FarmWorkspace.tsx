@@ -105,7 +105,7 @@ export default function FarmWorkspace({ mode, allowNetwork, refreshKey, onAddFie
         <option value="">All farms</option><option value="unassigned">Unassigned fields</option>{farms.map(item => <option key={item.id} value={item.id}>{item.name}{item.archived ? ' (archived)' : ''}</option>)}
       </select></label>}
       <div className="farm-period-controls"><label>Season<input aria-label="Season" type="number" min="1900" max="2200" value={scope.season} onChange={event => { const year = Number(event.target.value); if (year >= 1900 && year <= 2200) updateScope({ season: year }) }} /></label>
-      <label><span className="sr-only">Area units</span><select aria-label="Area units" value={unit} onChange={event => { const value = event.target.value as 'ac' | 'ha'; setUnit(value); window.localStorage.setItem('open-agronomy.area-unit', value) }}><option value="ac">Acres</option><option value="ha">Hectares</option></select></label></div>
+      {mode !== 'records' || scope.field ? <label><span className="sr-only">Area units</span><select aria-label="Area units" value={unit} onChange={event => { const value = event.target.value as 'ac' | 'ha'; setUnit(value); window.localStorage.setItem('open-agronomy.area-unit', value) }}><option value="ac">Acres</option><option value="ha">Hectares</option></select></label> : null}</div>
     </div>
     {error ? <div role="alert" className="farm-error">{error}<button type="button" onClick={() => setRefresh(v => v + 1)}>Retry</button></div> : null}
     {loading ? <p role="status">Loading farms…</p> : null}

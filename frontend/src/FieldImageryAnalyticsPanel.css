@@ -14,7 +14,7 @@
 .field-imagery-index-value { font-size: 23px; color: #315f40; font-weight: 650; }
 .field-imagery-index small, .field-imagery-result > small { color: #657653; }
 .field-imagery-result figure { margin: 0; }
-.field-imagery-result img { display: block; width: min(100%, 20rem); height: auto; max-height: 20rem; object-fit: contain; image-rendering: pixelated; background: #edf1e9; }
+.field-imagery-result figure > img { display: block; width: min(100%, 20rem); height: auto; max-height: 20rem; object-fit: contain; image-rendering: pixelated; background: #edf1e9; }
 .field-imagery-result figcaption { margin-top: 5px; font-size: 11px; color: #657653; }
 .field-imagery-legend { max-width: min(100%, 360px); margin-top: 8px; font-size: 11px; color: #52634b; }
 .field-imagery-legend-ramp { height: 10px; border: 1px solid #dce6d8; background: linear-gradient(to right, rgb(185, 60, 95), rgb(92, 145, 47), rgb(0, 230, 0)); }
@@ -33,3 +33,15 @@
 .field-imagery-sampling small, .field-imagery-sampling-note { font-size: 12px; line-height: 1.5; color: #596d50; }
 .field-imagery-analytics input, .field-imagery-analytics select { min-width: 0; max-width: 100%; margin: 0; }
 .field-imagery-analytics .field-imagery-result p, .field-imagery-analytics .field-imagery-result span { overflow-wrap: anywhere; }
+
+.field-imagery-visuals { display: grid; grid-template-columns: minmax(200px, 1fr) minmax(0, 2fr); align-items: start; gap: 24px; }
+.field-imagery-visuals > * { min-width: 0; }
+.field-imagery-visuals > figure:only-child { grid-column: 1 / -1; max-width: 32rem; }
+.field-imagery-visuals .imagery-map-preview { margin: 0; }
+.field-imagery-visuals .imagery-map-preview > label { display: flex; align-items: center; gap: 12px; margin: 8px 0; }
+.field-imagery-visuals .imagery-map-preview input[type="range"] { width: 180px; margin: 0; }
+.field-imagery-visuals > figure > img { width: 100%; max-height: 24rem; }
+@media (max-width: 900px) {
+  .field-imagery-visuals { grid-template-columns: minmax(0, 1fr); }
+  .field-imagery-visuals figure { max-width: 32rem; }
+}

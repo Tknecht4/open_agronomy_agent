@@ -14,6 +14,7 @@
 - `src/ModelSettings.tsx` owns the anchored desktop model popover and native mobile model sheet; model choices and availability come from the API.
 - `src/FieldSetupDialog.tsx` owns the name/location/review field wizard; `src/WorkspaceDialog.tsx` supplies accessible modal behavior.
 - `src/MapPresentationControls.tsx` and `src/mapPresentation.ts` own map style/layer display preferences. `src/FieldMapInsights.tsx` renders lazy, on-demand analysis with independent geometry/source requests, compact coverage rows, and stale-request cancellation.
+- `src/FarmRecords.tsx` owns the paginated record timeline and server-side type filters, including correction chains. `src/RecordEntryDialog.tsx` owns field-scoped entry, lab-report transcription and durable drafts. `src/RecordDetails.tsx` supplies readable record provenance; `src/fieldLabels.ts` maps stored identifiers to presentation names.
 - `src/FieldSyncPanel.tsx` owns field-event sync, typed soil-test entry, and recovery of unconfirmed record requests; `src/fieldEventSave.ts` persists retry identities before sending either record form; `src/FieldRecords.css` styles compact history and focused entry dialogs.
 - `src/FieldImageryAnalyticsPanel.tsx` owns on-demand saved-point/polygon imagery analysis; `src/FieldDataPanel.tsx` owns reviewed table intake and scene discovery. Point results require explicit sampling support in the server receipt.
 - `src/api.ts` is the API client boundary.
