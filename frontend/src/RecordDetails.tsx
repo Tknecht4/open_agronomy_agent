@@ -28,6 +28,8 @@ export function RecordMeasurement({ event }: { event: SavedRecord }) {
 
 export function RecordDetails({ event, season }: { event: SavedRecord; season: number }) {
   const measurement = object(event.payload.measurement)
+  const sourceLabels: Record<string, string> = { lab_report: 'Lab report', imported_lab_report: 'Imported lab report', user_transcribed_lab_report: 'Transcribed from a lab report', field_kit: 'Field kit' }
+  const measurementSource = sourceLabels[text(measurement.source_quality)] || 'Source not recorded'
   const depth = object(measurement.sample_depth)
   const image = object(event.payload.imagery_analysis)
   return <details className="record-details">
@@ -47,7 +49,7 @@ export function RecordDetails({ event, season }: { event: SavedRecord; season: n
       {event.corrects_event_id ? <div><dt>History</dt><dd>Corrects an earlier entry. The original remains available.</dd></div> : null}
       {event.corrected_by ? <div><dt>Status</dt><dd>Replaced by a later correction</dd></div> : null}
     </dl>
-    {measurement.metric ? <p>Transcribed from a lab report; values have not been independently verified.</p> : null}
+    {measurement.metric ? <p>{measurementSource}; values have not been independently verified.</p> : null}
     {image.job_id ? <p>Satellite measurements describe processed pixels. They are not a field observation or a diagnosis.</p> : null}
     <details><summary>Technical record</summary><pre>{JSON.stringify({ id: event.id, corrects_event_id: event.corrects_event_id, corrected_by: event.corrected_by, payload: event.payload, provenance: event.provenance }, null, 2)}</pre></details>
   </details>
