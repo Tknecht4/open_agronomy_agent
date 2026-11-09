@@ -6,6 +6,7 @@ from typing import Any, Iterable
 
 from agronomy_agent.decision_capsule import build_decision_capsule, merge_topics
 from agronomy_agent.method_context import method_fit_reason
+from agronomy_agent.router import evidence_interpretation_kind, explanation_focus_query
 
 
 SOILERI_SOURCE_ID = "ca_aafc_soil_erosion_risk_technical_chapter_2021"
@@ -587,6 +588,48 @@ def _doc_rejection_reason(doc: Any, signals: QueryContextSignals, *, primary_int
     title_tags = " ".join(
         [str(getattr(doc, "title", "")), " ".join(str(item) for item in getattr(doc, "tags", ()) or ())]
     ).lower()
+    interpretation = evidence_interpretation_kind(signals.query_text)
+    feed_interpretation = bool(
+        interpretation
+        and re.search(r"\b(?:feed|hay|silage|ration|ruminant|cattle|cows?|pigs?|swine)\b", signals.query_text, re.I)
+        and not re.search(r"\b(?:soil|manure|fertili\w*|field application)\b", signals.query_text, re.I)
+    )
+    if feed_interpretation and re.search(r"\b(?:soil|manure|replant|planting|seeding)\b", title_tags) and not re.search(
+        r"\b(?:feed|hay|silage|ration|animal|ruminant|livestock)\b", title_tags
+    ):
+        return "feed_interpretation_subject_mismatch"
+    # Generic guide titles do not reveal the sampled material. Inspect the
+    # passage too; soil/manure sampling methods cannot support feed analysis.
+    passage = str(getattr(doc, "text", "")).lower()
+    if (feed_interpretation
+            and re.search(r"\b(?:soil|manure)\b", passage)
+            and re.search(r"\b(?:sampl\w*|analys[ie]s|depth|plow layer)\b", passage)
+            and not re.search(r"\b(?:feed|hay|silage|ration|animal|ruminant|livestock)\b", passage)):
+        return "feed_interpretation_subject_mismatch"
+    if (re.search(r"\b(?:ruminant|monogastric|protein digestion|animal nutrition)\b", title_tags)
+            and not re.search(r"\b(?:feed|forage|hay|silage|ration|ruminant|rumen|livestock|animal|cattle|cows?|pigs?|swine|sheep|amino[- ]acid|digestib\w*)\b", signals.query_text, re.I)):
+        return "animal_nutrition_subject_mismatch"
+    if (interpretation == "measurement_comparison"
+            and re.search(r"\b(?:dry matter|as[- ]fed|moisture basis)\b", signals.query_text, re.I)
+            and not re.search(r"\b(?:dry matter|as[- ]fed|moisture|water content)\b", haystack)):
+        return "measurement_basis_mismatch"
+    if interpretation == "measurement_comparison" and source_type == "ontology":
+        # Shared measurement grammar ("per", "area", "units") does not make
+        # a concept about another subject useful evidence for a comparison.
+        generic = {
+            "compare", "comparing", "comparison", "measurement", "measurements",
+            "method", "methods", "unit", "units", "basis", "per", "plot",
+            "hectare", "area", "same", "different", "check", "reported",
+            "report", "reports", "data", "numbers", "percent", "records",
+            "information", "before", "between", "must", "need", "two", "one",
+        }
+        subject_terms = set(signals.query_terms) - generic
+        if subject_terms and subject_terms.isdisjoint(_meaningful_terms(title_tags)):
+            return "measurement_subject_mismatch"
+    if interpretation and re.search(r"\b(?:planting|seeding|traffic|trafficability|compaction)\b", title_tags) and not re.search(
+        r"\b(?:planting|seeding|traffic|trafficability|compaction)\b", signals.query_text, re.I
+    ):
+        return "operational_guidance_not_evidence_interpretation"
     country_only_canola_harvest_transfer = False
     cross_border_analogue = _cross_border_analogue_allowed(doc, signals)
 
@@ -707,7 +750,18 @@ def _doc_rejection_reason(doc: Any, signals: QueryContextSignals, *, primary_int
             and not cross_border_analogue
         ):
             return "jurisdiction_mismatch"
-        if doc_subdivisions and query_subdivisions and doc_subdivisions.isdisjoint(query_subdivisions):
+        sampling_method_reference = bool(
+            interpretation == "sampling_interpretation"
+            and str(primary_intent or "") == "exam_review"
+            and getattr(doc, "retrieval_policy", "") == "context_only"
+            and getattr(doc, "answer_role", "") == "reference_context"
+            and getattr(doc, "transfer_scope", "") == "general_explanation_or_named_study_only"
+            and getattr(doc, "applicability_boundary", "")
+            and doc_countries.intersection(query_countries)
+            and re.search(r"\bsampl\w*\b", title_tags)
+        )
+        if (doc_subdivisions and query_subdivisions and doc_subdivisions.isdisjoint(query_subdivisions)
+                and not sampling_method_reference):
             return "jurisdiction_mismatch"
         country_only_canola_harvest_transfer = bool(
             signals.country == "canada"
@@ -719,7 +773,16 @@ def _doc_rejection_reason(doc: Any, signals: QueryContextSignals, *, primary_int
             and re.search(r"\b(?:harvest|shatter|swath|straight[- ]?cut|direct combin)\w*\b", signals.query_text, re.IGNORECASE)
             and re.search(r"\b(?:harvest|shatter|swath|straight[- ]?cut|direct combin)\w*\b", haystack)
         )
-        if doc_subdivisions and query_countries and not query_subdivisions and not country_only_canola_harvest_transfer:
+        named_study_reference = bool(
+            interpretation and str(primary_intent or "") == "exam_review"
+            and getattr(doc, "retrieval_policy", "") == "context_only"
+            and getattr(doc, "answer_role", "") == "reference_context"
+            and getattr(doc, "transfer_scope", "") == "general_explanation_or_named_study_only"
+            and getattr(doc, "applicability_boundary", "")
+            and doc_countries.intersection(query_countries)
+        )
+        if (doc_subdivisions and query_countries and not query_subdivisions
+                and not country_only_canola_harvest_transfer and not named_study_reference):
             return "jurisdiction_too_specific"
 
     title_crops = set(_extract_crops(title_tags))
@@ -842,7 +905,19 @@ def _doc_rejection_reason(doc: Any, signals: QueryContextSignals, *, primary_int
         return "pest_entity_mismatch"
     if not title_topics and source_type != "boundary":
         title_terms = set(_meaningful_terms(title))
-        if title_terms and title_terms.isdisjoint(signals.query_terms):
+        # A publication title is metadata, not an exhaustive description of
+        # every passage. Require corroborating content overlap before relaxing
+        # a title-only mismatch; jurisdiction and domain gates still apply.
+        relevance_terms = set(signals.query_terms) | set(_meaningful_terms(explanation_focus_query(signals.query_text)))
+        content_overlap = set(_meaningful_terms(str(getattr(doc, "text", "")))) & relevance_terms
+        literal_acronyms = {term.lower() for term in re.findall(r"\b[A-Z]{2,8}s?\b", signals.query_text)}
+        acronym_match = bool(content_overlap & literal_acronyms)
+        content_overlap = {term for term in content_overlap if len(term) >= 5 and term not in {
+            "about", "their", "there", "these", "those", "which", "would", "could", "should",
+            "first", "second", "number", "values", "value", "reports", "report",
+            "different", "compare", "comparison", "available", "following", "using",
+        }}
+        if title_terms and title_terms.isdisjoint(relevance_terms) and len(content_overlap) < 2 and not acronym_match:
             return "lexical_topic_mismatch"
 
     us_federal = any(
@@ -920,7 +995,7 @@ def _topic_families(text: str) -> tuple[str, ...]:
         ("weed", r"\b(weeds?|waterhemp|pigweed|ryegrass|volunteer canola|burndown|glyphosate|herbicide|preemergence|residual activation|control failure|resistance management|mode of action|site of action)\b"),
         ("product", r"\b(sprays?|spraying|drift|pesticide|herbicide|glyphosate|fungicide|insecticide|label|tank mix|application window|application record)\b"),
         ("precision", r"\b(variable-rate|variable rate|prescription|yield map|precision|check strip|trial design)\b"),
-        ("economics", r"\b(econom\w*|roi|net return|return on investment|partial budget|profit|payback|cost)\b"),
+        ("economics", r"\b(econom\w*|roi|net returns?|return on investment|partial budget|profit\w*|payback|costs?|prices?|revenue|stochastic budget)\b"),
         ("regional", r"\b(mlra|ecoregion|ecological site|soil survey|soil map|map-unit|map unit|regional context)\b"),
         ("field_data", r"\b(source availability|adapter|geometry|shapefile|geojson|field-specific public|source card|provenance)\b"),
         ("produce_safety", r"\b(produce[- ]safety|food[- ]safety|crop[- ]contact water|agricultural water|water intake)\b"),

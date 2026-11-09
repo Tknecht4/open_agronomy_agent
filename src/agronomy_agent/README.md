@@ -51,6 +51,35 @@ The supported cockpit composes the system through `server/app.py`. A normal answ
 - High-consequence outputs require current applicable authority; validation cannot promote weak evidence.
 - New versions append or supersede records; they do not rewrite historical traces.
 
+Document applicability travels with selected excerpts, persisted source cards,
+and structured answer caveats. If a slot cannot fit the complete policy and
+applicability prefix plus a useful excerpt, it drops that document and records
+the budget exclusion. `packed_doc_ids` identifies final packed sources; a
+retrieval hit alone does not prove prompt delivery or correct use in prose.
+
+Study-design and measurement-comparison questions can remain explanatory
+without inheriting incidental field-diagnosis obligations. Mixed requests for
+rates, treatments, or field actions retain their operational boundaries. A
+same-country subregional study may support such an explanation only through
+the explicit context-only named-study scope with retained applicability; this
+does not establish transfer of its results to the user's farm.
+
+Focused concept queries, bounded terminology expansions and bilingual equivalents
+supplement the full request during document and graph retrieval; publication
+metadata is not an exhaustive description of a passage. Scoped reference
+passages may become primary evidence for an explanation, while their field-action
+authority remains `not_authorized`. Country and explicit transfer limits still
+apply. A bounded same-country sampling-method explanation can use a source from
+another province; this does not admit its local calibration or prescribe a rate.
+
+Intent checks distinguish confidence in a measurement from an application
+quantity, measurement equivalence from treatment, and subsoil condition from a
+request for subsoiling. Traffic fallback uses the requested operation and does
+not invent a named field location. Verification flags instructions that destroy
+an explicitly requested affected-versus-normal soil sampling contrast, even if
+a later disclaimer follows. These bounded rules and lexical checks do not form
+a general scientific correctness verifier; model answers still require review.
+
 Explicit SoilERI interpretation keeps general erosion context separate from the
 named specification. `named_regional_product_coverage` records whether that
 source is indexed and retrieved; missing coverage is disclosed in the prompt
@@ -133,3 +162,21 @@ warmup and generation, and reload if another pair displaced theirs. Pair changes
 invalidate old KV namespaces. This bounds weight ownership by pair count, not
 peak device memory; model changes can incur reload latency. Prompt caching remains
 disabled in the active profile.
+
+Scoped explanatory references are packed as complete passages or explicitly
+dropped with a budget receipt. They can use otherwise available space within
+the configured total context cap; their field-action authority stays unchanged.
+A separate leading block of copied internal control labels can be removed
+without rewriting the remaining prose only when the original has no other
+verifier defect and the retained prose passes reassessment. The trace records
+this localized cleanup separately from model editing and fallback.
+
+The explanation repair also records isolated control-heading removal as
+`verifier_localized_cleanup` throughout the production execution receipts.
+It is neither an editor rewrite nor a verifier fallback. The quantity screen
+normalizes a bounded set of source-matched ion charges and unit exponents across
+plain, Unicode and LaTeX notation; annotation digits cannot authorize numerical
+rates or scalar claims. This is typography equivalence, not chemical validation.
+A bounded diagnostic sampling check rejects claims that separately attributable
+area results remain recoverable after samples are pooled into one composite.
+These checks do not constitute a general scientific correctness verifier.

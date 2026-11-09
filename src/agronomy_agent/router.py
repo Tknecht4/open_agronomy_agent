@@ -92,7 +92,7 @@ _FIELD_HISTORY_REFERENCE_PATTERN = (
 )
 
 _OPERATIONAL_TRAFFICABILITY_PATTERN = (
-    r"(?:\btrafficability\b|\bfield traffic\b|"
+    r"(?:\btrafficability\b|\bfield traffic\b|\b(?:grain cart|loaded cart|heavy equipment)\b[^.?\n]{0,45}\b(?:across|cross(?:ed|es|ing)?|enter|drive)\b|"
     r"\bdriv(?:e|es|en|ing)\b[^.?\n]{0,35}\b(?:equipment|machinery|tractor|vehicle|field|corner|area)\b|"
     r"\b(?:equipment|machinery|tractor|vehicle)\b[^.?\n]{0,35}"
     r"\b(?:enter(?:s|ed|ing)?|driv(?:e|es|en|ing)|traffic(?:s|ked|king)?)\b|"
@@ -557,6 +557,9 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
         pass
         risk = "low"
         guidance = (
+            "Interpret the study or measurement directly; retain design, units, basis and source applicability. "
+            "Distinguish observations from simulations and do not substitute an operational recommendation."
+            if evidence_interpretation_kind(question) else
             "Explain the agronomy practice or mechanism directly. Distinguish the general concept from a "
             "field diagnosis or prescription without requesting case-specific evidence the user did not need."
         )
@@ -596,6 +599,105 @@ def request_focus(text: str) -> str:
     return text
 
 
+def operational_request_text(text: str) -> str:
+    """Remove only the non-action verb in an explicit equivalence clause."""
+    return re.sub(
+        r"\btreat\b(?=[^.!?;]{0,140}\bas\s+(?:the\s+)?(?:same|equivalent|interchangeable)\b)",
+        "regard", text, flags=re.IGNORECASE,
+    )
+
+
+def evidence_interpretation_kind(text: str) -> str | None:
+    """Distinguish interpretation of evidence from an operational decision.
+
+    Use the complete request so a final comparison clause cannot erase an
+    application or product request elsewhere in the question.
+    """
+    q = _routing_text(text)
+    # "Treat these measurements as equivalent" is a comparison, not a
+    # pesticide/treatment request. Only remove that bounded grammatical use.
+    q = operational_request_text(q)
+    if has(_OPERATIONAL_TRAFFICABILITY_PATTERN, q):
+        return None
+    if _is_named_product_permission_request(text) or has(
+        r"\b(?:spray|apply|prescrib|recommend|treat|diagnos)\w*\b|"
+        r"\b(?:herbicide|fungicide|insecticide|pesticide|label|dose|dosage|"
+        r"phi|rei|pre[- ]?harvest interval|restricted[- ]?entry interval|application rate|how much(?!\s+(?:confidence|certainty|trust)\b)|(?:nitrogen|fertilizer|seeding) rate|"
+        r"(?:should|can|may|could|must) (?:i|we) (?:plant|seed|sow|irrigate|fertilize|feed|harvest|till|rip|subsoil|spread|drill|enter|drive)|"
+        r"what should (?:i|we) do)\b", q
+    ):
+        return None
+    comparison = has(r"\b(?:compar\w*|same|different|equivalent|interchangeable|independent|"
+                     r"count|mean|interpret\w*|check|averag\w*|distinguish|confidence|represent\w*|unchanged|directly)\b", q)
+    if comparison and has(r"\b(?:simulat\w*|replicat\w*|resampl\w*|bootstrap\w*|experimental design|field trials?)\b", q):
+        return "study_methods"
+    if comparison and has(r"\b(?:per plot|per hectare|moisture basis|moisture|dry matter|"
+                          r"as[- ]fed|water content|water tension|water potential|carbon stock|carbon concentration|units?|extractants?|area[- ]weight\w*|soil[- ]test results?|height|endpoints?|heading|dates?|digestib\w*|amino[- ]acids?)\b", q):
+        return "measurement_comparison"
+    if (comparison or has(r"\b(?:mix|mixed|combine|combined|composite)\b", q)) and has(r"\b(?:samples?|sampling|soil cores?|analys[ie]s|hay stack|soil tests?)\b", q):
+        return "sampling_interpretation"
+    if has(r"\b(?:difference between|diff[eé]rence entre)\b", q):
+        return "concept_explanation"
+    if has(r"^(?:please )?(?:what (?:is|are)|explain|describe)\b", q) and not has(
+        r"\b(?:my|our|this field|wrong|symptoms?|yellow\w*|wilting|patch\w*|injury|today|tomorrow)\b", q
+    ):
+        return "concept_explanation"
+    if has(r"\b(?:reports?|measures?|measurement)\b", q) and has(r"\b(?:is that|does that mean|does it mean)\b", q):
+        return "measurement_meaning"
+    if has(r"^(?:please )?(?:why|how) (?:does|do|can|is|are)\b", q) and not has(
+        r"\b(?:safe|safety|symptoms?|diagnos\w*|treatment|today|tomorrow)\b", q
+    ):
+        return "concept_explanation"
+    if has(r"\b(?:explain the difference|automatically make|automatically mean)\b", q) and not has(
+        r"\b(?:safe|safety|symptoms?|treatment|today|tomorrow)\b", q
+    ):
+        return "concept_explanation"
+    if has(r"^(?:can|does|do|is|are) (?!i\b|we\b)", q) and not has(
+        r"\b(?:my|our|should|safe|safety|symptoms?|diagnos\w*|treatment|today|tomorrow|subsoiler)\b", q
+    ) and has(r"\b(?:particles?|fractions?|protein|microb\w*|digestion|structure|texture)\b", q):
+        return "concept_explanation"
+    return None
+
+
+
+def explanation_focus_query(text: str) -> str:
+    """Extract concepts and bounded terminology expansions for retrieval.
+
+    No answer text enters retrieval. Translations and physical-process search
+    terms expand vocabulary, not evidence. The original request
+    still controls jurisdiction, authority and final evidence eligibility.
+    """
+    if not evidence_interpretation_kind(text):
+        return ""
+    if re.search(r"\b(?:capacit[eé] d.[eé]change cationique|[eé]change cationique)\b", text, re.I):
+        return "cation exchange capacity" + (" potassium" if re.search(r"\bpotassium\b", text, re.I) else "")
+    if re.search(r"\b(?:seals?|sealing|crust\w*|infiltrat\w*|aggregat\w*|pores?)\b", text, re.I) and re.search(
+        r"\b(?:soil|fields?|clay|texture)\b", text, re.I
+    ):
+        return "soil structure " + " ".join(dict.fromkeys(re.findall(r"\b(?:clay|texture|aggregation|pores?|infiltration)\b", text.lower())))
+    if re.search(r"\bmating\b", text, re.I) and re.search(r"\b(?:close|related|relatives)\b", text, re.I):
+        return "inbreeding " + " ".join(re.findall(r"\b(?:mating|relatives|related|plants?|seed)\b", text.lower()))
+    contrast = re.search(
+        r"\b(?:difference between|diff[eé]rence entre)\s+([^?!.]{3,120}?)(?=\s+(?:after|before|when|if|because)\b|[?!.]|$)",
+        text, re.IGNORECASE,
+    )
+    if contrast:
+        return contrast.group(1).strip()
+    if evidence_interpretation_kind(text) == "sampling_interpretation":
+        # Keep the sampled material and contrast literal; drop conversational
+        # framing which otherwise overwhelms short methodological passages.
+        terms = re.findall(r"\b(?:soil|feed|hay|grain|water|plant|tissue|cores?|samples?|sampling|mixed|mix|normal|healthy|affected|patch|poor|composite|lot)\b", text, re.I)
+        if re.search(r"\bsoil cores?\b", text, re.I):
+            terms.append("sample")
+        return " ".join(dict.fromkeys(term.lower() for term in terms))
+    if evidence_interpretation_kind(text) == "measurement_comparison":
+        terms = re.findall(r"\b(?:dry matter|as[- ]fed|water content|water tension|water potential|carbon stock|carbon concentration|depth|moisture|protein|digestib\w*|amino[- ]acids?|feed|silage|grain|yield|wheat|height|awns?|spike|heading|julian|dates?|units?|soil[- ]test|area|weight\w*)\b", text, re.I)
+        if terms:
+            return " ".join(dict.fromkeys(term.lower() for term in terms))
+    acronym = re.search(r"\b(?:reports?|measures?|lab lists?)\s+([A-Z][A-Z0-9]{1,7})\b", text)
+    return acronym.group(1) if acronym else ""
+
+
 def _is_benign_conceptual_explanation(text: str) -> bool:
     """Recognize non-operational agronomy concept and mechanism questions.
 
@@ -606,6 +708,8 @@ def _is_benign_conceptual_explanation(text: str) -> bool:
     diagnostic or product routes.
     """
 
+    if evidence_interpretation_kind(text):
+        return True
     q = _routing_text(text).strip()
     focus = request_focus(q).strip()
     explanatory_form = has(
@@ -707,7 +811,9 @@ def _resolve_primary_question_type(text: str, current: str) -> str:
     ):
         return "field_data"
 
-    if has(_OPERATIONAL_TRAFFICABILITY_PATTERN, focus):
+    if has(_OPERATIONAL_TRAFFICABILITY_PATTERN, focus) or has(
+        r"\b(?:should|can|may|could|must) (?:i|we) (?:till|rip|subsoil)\b", text
+    ):
         return "soil_water"
 
     if (
@@ -2441,6 +2547,9 @@ def classify_query(question: str) -> QueryRoute:
         risk = "low"
         style = "exam_review"
         guidance = (
+            "Interpret the study or measurement directly; retain design, units, basis and source applicability. "
+            "Distinguish observations from simulations and do not substitute an operational recommendation."
+            if evidence_interpretation_kind(question) else
             "Explain the agronomy practice or mechanism directly. Distinguish the general concept from a "
             "field diagnosis or prescription without requesting case-specific evidence the user did not need."
         )
@@ -2610,7 +2719,26 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
 
     elif qtype == "exam_review":
         namespaces.update({"crop_management", "exam_review"})
-        if benign_conceptual_explanation:
+        interpretation = evidence_interpretation_kind(question)
+        if interpretation:
+            # Measurement and study interpretation need their own evidence,
+            # not the planting and diagnostic expansion attached to a crop.
+            if interpretation == "study_methods":
+                expansions.update({"experimental design", "replication", "simulation", "uncertainty"})
+            elif interpretation == "sampling_interpretation":
+                expansions.update({"representative sample", "composite sample", "separate samples", "sampling bias"})
+            elif interpretation in {"measurement_comparison", "measurement_meaning"}:
+                expansions.update({"measurement method", "units", "measurement basis", "comparability"})
+            else:
+                focus_query = explanation_focus_query(question)
+                if focus_query:
+                    expansions.add(focus_query)
+            guidance = (
+                "Answer the evidence interpretation directly. Preserve the source's study design, "
+                "measurement basis and applicability; distinguish observations from model output. "
+                "Do not substitute an operational field recommendation."
+            )
+        elif benign_conceptual_explanation:
             expansions.update(
                 {
                     "agronomic mechanism",

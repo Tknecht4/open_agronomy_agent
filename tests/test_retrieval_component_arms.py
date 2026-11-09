@@ -167,3 +167,21 @@ def test_typed_tool_disabled_arm_proves_empty_plan_and_outputs() -> None:
     assert metadata["tool_plan"]["status"] == "disabled_by_arm"
     assert metadata["tool_invocations"] == []
     assert metadata["tool_results"] == []
+
+
+def test_focused_graph_search_keeps_original_question_scope(monkeypatch):
+    question = "Why does mating close relatives affect seed populations?"
+    resources = load_agent_resources(RAG_CONFIG)
+    original_search = resources.graph.search
+    calls = []
+
+    def search(query, *args, **kwargs):
+        calls.append((query, kwargs.get("scope_query")))
+        return original_search(query, *args, **kwargs)
+
+    monkeypatch.setattr(resources.graph, "search", search)
+    build_context(question, resources=resources, use_context_cache=False,
+                  use_search_cache=False, document_retrieval_enabled=False)
+    focused = [(query, scope) for query, scope in calls if query != question]
+    assert focused
+    assert all(scope == question for _, scope in focused)

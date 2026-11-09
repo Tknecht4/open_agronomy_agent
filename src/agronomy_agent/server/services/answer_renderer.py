@@ -109,7 +109,8 @@ def render_structured_answer(
         risk_level=_risk_level(trace),
         answer_type=_answer_type(trace),
         field_context_used=_field_context_used(trace),
-        caveats=_extract_caveats(clean_answer, trace=trace, risk_banner=risk_banner),
+        caveats=_dedupe(_extract_caveats(clean_answer, trace=trace, risk_banner=risk_banner)
+                       + _packed_source_limits(trace)),
         recommended_next_steps=_recommended_next_steps(clean_answer, missing_data),
         report_actions=_report_actions(trace),
         feedback_prompt=_feedback_prompt(trace),
@@ -992,6 +993,15 @@ def _extract_risk_banner(answer_text: str, *, trace: dict[str, Any] | None) -> s
     return None
 
 
+def _packed_source_limits(trace: dict[str, Any]) -> list[str]:
+    """Keep source conditions visible even when prose is normalized or replaced."""
+    packed = set((trace.get("metadata") or {}).get("packed_doc_ids") or [])
+    return [f"Source limit ({doc.get('title') or 'untitled source'}): {doc['applicability_boundary']}"
+            for doc in trace.get("retrieved_docs", []) or []
+            if isinstance(doc, dict) and doc.get("doc_id") in packed
+            and doc.get("applicability_boundary")]
+
+
 def _evidence_cards(trace: dict[str, Any]) -> list[dict[str, Any]]:
     cards: list[dict[str, Any]] = []
     for doc in trace.get("retrieved_docs", []) or []:
@@ -1011,6 +1021,9 @@ def _evidence_cards(trace: dict[str, Any]) -> list[dict[str, Any]]:
                 "updated_at": doc.get("updated_at") or doc.get("ingested_at"),
                 "license_status": doc.get("license_status") or "review_required",
                 "score": score,
+                "applicability_boundary": doc.get("applicability_boundary"),
+                "transfer_scope": doc.get("transfer_scope"),
+                "retrieval_policy": doc.get("retrieval_policy"),
                 "why_used": _why_used(doc),
                 "known_limitations": _source_limitations(doc),
             }
@@ -1321,6 +1334,10 @@ def _why_used(doc: dict[str, Any]) -> str:
 
 def _source_limitations(doc: dict[str, Any]) -> list[str]:
     limitations = []
+    if doc.get("applicability_boundary"):
+        limitations.append(str(doc["applicability_boundary"]))
+    if doc.get("retrieval_policy") == "context_only":
+        limitations.append("General context only; this source does not authorize a field action.")
     if not doc.get("updated_at") and not doc.get("ingested_at"):
         limitations.append("Source date was not available in the local metadata.")
     if not doc.get("url") and not doc.get("source_url"):

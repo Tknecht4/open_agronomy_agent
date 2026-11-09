@@ -374,7 +374,9 @@ def extract_html(path: Path) -> tuple[str, dict[str, Any]]:
 def clean_text(text: str) -> str:
     text = text.replace("\x00", " ")
     text = text.replace("\u00ad", "")
-    text = re.sub(r"([a-z])-\s+([a-z])", r"\1\2", text)
+    # Only rejoin line-end hyphenation. Suspended compounds such as
+    # "macro- and mesopores" must keep their hyphens and word boundaries.
+    text = re.sub(r"([a-z])-[ \t]*\n[ \t]*([a-z])", r"\1\2", text)
     text = re.sub(r"[ \t]{2,}", " ", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
@@ -503,7 +505,11 @@ def chunk_risk(source: dict[str, Any], chunk: str) -> tuple[list[str], str]:
     return sorted(set(tags)), policy
 
 
-def chunk_text(text: str, max_words: int, overlap_words: int) -> list[str]:
+def chunk_text(text: str, max_words: int, overlap_words: int, *, min_words: int = 50) -> list[str]:
+    if type(min_words) is not int or not 20 <= min_words <= max_words:
+        raise ValueError("min_chunk_words must be an integer between 20 and max_words")
+    if not 0 <= overlap_words < max_words:
+        raise ValueError("overlap_words must be nonnegative and smaller than max_words")
     paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
     chunks: list[str] = []
     current: list[str] = []
@@ -523,7 +529,7 @@ def chunk_text(text: str, max_words: int, overlap_words: int) -> list[str]:
             step = max_words - overlap_words
             for i in range(0, len(words), step):
                 piece = words[i : i + max_words]
-                if len(piece) >= 50:
+                if len(piece) >= min_words:
                     chunks.append(" ".join(piece).strip())
             continue
         if current_words + len(words) > max_words and current:
@@ -535,7 +541,7 @@ def chunk_text(text: str, max_words: int, overlap_words: int) -> list[str]:
         current_words += len(words)
     if current:
         chunks.append(" ".join(current).strip())
-    return [chunk for chunk in chunks if len(chunk.split()) >= 50]
+    return [chunk for chunk in chunks if len(chunk.split()) >= min_words]
 
 
 def make_rows(
@@ -552,7 +558,9 @@ def make_rows(
     filtered_text, filter_report = apply_source_ingest_policy(text, source)
     extraction = {**extraction, **filter_report}
     cleaned_text = clean_text(filtered_text)
-    chunks = chunk_text(cleaned_text, max_words=max_words, overlap_words=overlap_words)
+    min_words = (source.get("ingest_policy") or {}).get("min_chunk_words", 50)
+    chunks = chunk_text(cleaned_text, max_words=max_words, overlap_words=overlap_words, min_words=min_words)
+    extraction = {**extraction, "min_chunk_words": min_words}
     rows: list[dict[str, Any]] = []
     source_url = source.get("url", "")
     runtime_source_type = str(source.get("runtime_source_type") or "applied_guidance")

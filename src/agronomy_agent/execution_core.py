@@ -483,10 +483,23 @@ def classify_verification_origin(
             "answer verification cannot accept an editor rewrite and apply fallback"
         )
     replacement_used = draft_sha256 != post_verification_sha256
+    cleanup = record.get("localized_cleanup")
+    if cleanup is not None:
+        if not (
+            isinstance(cleanup, Mapping)
+            and cleanup.get("kind") == "leading_control_capsule"
+            and cleanup.get("retained_prose_unchanged") is True
+            and cleanup.get("editor_invoked") is False
+            and triggered and replacement_used
+            and not fallback_applied and not rewrite_accepted
+        ):
+            raise ValueError("localized cleanup record contradicts verifier outcome")
     if str(record.get("schema_version") or "").startswith(
         "open_agronomy_agent.typed_capability_validation."
     ):
         action = "typed_capability_validation"
+    elif cleanup is not None:
+        action = "localized_cleanup"
     elif fallback_applied:
         action = "conservative_fallback"
     elif rewrite_accepted:
@@ -683,7 +696,14 @@ def _validate_stage_semantics(receipts: list[dict[str, Any]]) -> None:
             or origin_class != "verifier_editor_rewrite"
         ):
             raise ValueError("accepted editor rewrite is incorrectly classified")
+    elif verification_action == "localized_cleanup":
+        if (origin_class != "verifier_localized_cleanup"
+                or rewrite_accepted is not False
+                or verification_fallback_applied is not False
+                or replacement_used is not True):
+            raise ValueError("localized verifier cleanup is incorrectly classified")
     elif origin_class in {
+        "verifier_localized_cleanup",
         "verifier_conservative_fallback",
         "verifier_editor_rewrite",
     }:

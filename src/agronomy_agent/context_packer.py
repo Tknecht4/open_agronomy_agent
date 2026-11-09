@@ -12,6 +12,7 @@ import yaml
 from agronomy_agent.decision_route import build_decision_route_state
 from agronomy_agent.geographic_context import format_trusted_geographic_context
 from agronomy_agent.paths import repo_path
+from agronomy_agent.router import evidence_interpretation_kind
 
 
 DEFAULT_CONTEXT_POLICY_PATH = "configs/context_policy_v1.yaml"
@@ -112,7 +113,7 @@ class ContextPacker:
     def pack(self, *, question: str, context: Any, field_context: dict[str, Any] | None = None) -> PackedContext:
         sections: list[ContextSection] = []
         budget_report: dict[str, Any] = {
-            "budget_version": "phase5_context_source_budget_v1",
+            "budget_version": "phase5_context_source_budget_v2",
             "max_context_tokens": self.max_context_tokens,
             "source_type_budgets": dict(self._source_type_budgets),
             "available_by_source_type": {},
@@ -342,6 +343,16 @@ class ContextPacker:
         }
         budget_report["dropped_doc_ids"].extend(region_filtered_doc_ids)
         budget_report["ranking_features"] = list(self.policy.get("ranking_features") or [])
+        explanation_budget = None
+        if evidence_interpretation_kind(question):
+            # Complete explanatory passages carry their own conditions. Use
+            # available context, within the existing total cap, rather than
+            # splitting a small slot equally into incomplete definitions.
+            explanation_budget = max(
+                int(self._slots.get("primary_applied_evidence", {}).get("max_tokens") or 900),
+                min(1500, self.max_context_tokens - sum(s.token_estimate for s in sections) - 350),
+            )
+            budget_report["explanation_slot_tokens"] = explanation_budget
         self._append_doc_slot(
             sections,
             "primary_applied_evidence",
@@ -351,15 +362,17 @@ class ContextPacker:
                 route_namespaces=route_namespaces,
                 required_tools=required_tools,
                 field_terms=field_terms,
+                question=question,
             ), evidence_handshake),
             source_type_budget="applied_guidance",
             budget_report=budget_report,
             evidence_roles=evidence_roles,
+            max_tokens_override=explanation_budget,
         )
         self._append_doc_slot(
             sections,
             "boundary_evidence",
-            _prioritize_evidence_roles(self._rank_docs(boundary_docs, source_type_key="boundary", route_namespaces=route_namespaces, required_tools=required_tools, field_terms=field_terms), evidence_handshake),
+            _prioritize_evidence_roles(self._rank_docs(boundary_docs, source_type_key="boundary", route_namespaces=route_namespaces, required_tools=required_tools, field_terms=field_terms, question=question), evidence_handshake),
             source_type_budget="boundary",
             budget_report=budget_report,
             evidence_roles=evidence_roles,
@@ -373,6 +386,7 @@ class ContextPacker:
                 route_namespaces=route_namespaces,
                 required_tools=required_tools,
                 field_terms=field_terms,
+                question=question,
             ), evidence_handshake),
             source_type_budget="regional_environment",
             budget_report=budget_report,
@@ -386,7 +400,7 @@ class ContextPacker:
         self._append_doc_slot(
             sections,
             "ontology_reference",
-            _prioritize_evidence_roles(self._rank_docs(ontology_docs, source_type_key="ontology", route_namespaces=route_namespaces, required_tools=required_tools, field_terms=field_terms), evidence_handshake),
+            _prioritize_evidence_roles(self._rank_docs(ontology_docs, source_type_key="ontology", route_namespaces=route_namespaces, required_tools=required_tools, field_terms=field_terms, question=question), evidence_handshake),
             source_type_budget="ontology",
             budget_report=budget_report,
             evidence_roles=evidence_roles,
@@ -400,14 +414,20 @@ class ContextPacker:
         route_namespaces: set[str],
         required_tools: set[str],
         field_terms: set[str],
+        question: str = "",
     ) -> list[Any]:
+        # Explicit source/method abbreviations belong to the user's question,
+        # and must not be displaced by incidental geographic metadata.
+        anchors = set(re.findall(r"\b[A-Z][A-Z0-9]{2,}\b", question))
         tool_terms = _tool_terms(required_tools)
         remaining = [
             _RankedDocCandidate(
                 original_index=index,
                 doc=doc,
                 source=str(getattr(doc, "source", "")),
-                static_score=self._score_doc_static(
+                static_score=sum(2.0 for term in anchors
+                                 if re.search(r"\b" + re.escape(term) + r"\b", _doc_search_text(doc), re.I))
+                + self._score_doc_static(
                     doc,
                     source_type_key=source_type_key,
                     route_namespaces=route_namespaces,
@@ -471,7 +491,7 @@ class ContextPacker:
         namespace_match = (
             0.0
             if source_type_key == "regional_environment"
-            else 2.0 * len(namespaces & route_namespaces)
+            else 2.0 * bool(namespaces & route_namespaces)
         )
         source_type_bonus = {
             "applied_guidance": 1.5,
@@ -526,8 +546,8 @@ class ContextPacker:
         )
         lines = []
         source_ids = []
+        remaining_tokens = slot_token_budget - 12
         for doc in selected:
-            source_ids.append(str(doc.doc_id))
             assigned_role = evidence_roles.get(str(doc.doc_id))
             retrieval_policy = str(getattr(doc, "retrieval_policy", "standard") or "standard").strip().lower()
             if retrieval_policy == "context_only" and assigned_role != "interpretive":
@@ -549,11 +569,45 @@ class ContextPacker:
             else:
                 role = "VOCABULARY"
             policy_note = _doc_policy_note(doc)
-            lines.append(_trim_to_tokens(
+            prefix = (
                 f"- [{role}] [{doc.doc_id}].{policy_note} "
-                f"Title: {doc.title}. Source: {doc.source}. Excerpt: {doc.text}",
-                per_doc_token_budget,
-            ))
+                f"Title: {doc.title}. Source: {doc.source}. Excerpt: "
+            )
+            prefix_tokens = estimate_tokens(prefix)
+            complete_reference = (
+                retrieval_policy == "context_only"
+                and str(getattr(doc, "answer_role", "")) == "reference_context"
+                and str(getattr(doc, "transfer_scope", "")) in {
+                    "general_explanation_only", "general_explanation_or_named_study_only"
+                }
+                and bool(getattr(doc, "applicability_boundary", ""))
+            )
+            if complete_reference:
+                line = prefix + str(doc.text)
+                if estimate_tokens(line) > remaining_tokens:
+                    budget_report["dropped_doc_ids"].append(str(doc.doc_id))
+                    budget_report.setdefault("complete_passage_budget_dropped_doc_ids", []).append(str(doc.doc_id))
+                    continue
+                source_ids.append(str(doc.doc_id))
+                lines.append(line)
+                remaining_tokens -= estimate_tokens(line) + 1
+                budget_report.setdefault("complete_reference_doc_ids", []).append(str(doc.doc_id))
+                continue
+            allocation = min(remaining_tokens, max(per_doc_token_budget, prefix_tokens + 48))
+            excerpt_budget = allocation - prefix_tokens
+            if excerpt_budget < 32:
+                # Never deliver a claim with a silently truncated condition.
+                budget_report["dropped_doc_ids"].append(str(doc.doc_id))
+                budget_report.setdefault("scope_budget_dropped_doc_ids", []).append(str(doc.doc_id))
+                continue
+            source_ids.append(str(doc.doc_id))
+            line = prefix + _trim_to_tokens(str(doc.text), excerpt_budget)
+            lines.append(line)
+            remaining_tokens -= estimate_tokens(line) + 1
+        selected_counter[source_type_budget] -= len(selected) - len(source_ids)
+        budget_report["selected_by_source_type"] = dict(sorted(selected_counter.items()))
+        if not lines:
+            return
         self._append(
             sections,
             slot,
@@ -620,6 +674,9 @@ def _prioritize_evidence_roles(docs: list[Any], handshake: Any | None) -> list[A
     indexed.sort(
         key=lambda item: (
             0 if str(getattr(item[1], "doc_id", "")) == primary_doc_id else 1,
+            # Context-only is an authority restriction, not evidence of
+            # irrelevance. Keep its retrieval rank among supporting material.
+            1 if getattr(item[1], "retrieval_policy", "") == "context_only" else
             priority.get(roles.get(str(getattr(item[1], "doc_id", "")), "supporting"), 1),
             item[0],
         )
@@ -670,6 +727,16 @@ def _doc_policy_note(doc: Any) -> str:
             "use a validated calculation tool for supplied-input arithmetic; "
             "FIELD ACTION: NOT AUTHORIZED"
         )
+    elif (policy == "context_only"
+          and str(getattr(doc, "answer_role", "")) == "reference_context"
+          and str(getattr(doc, "transfer_scope", "")) in {
+              "general_explanation_only", "general_explanation_or_named_study_only"
+          }
+          and bool(getattr(doc, "applicability_boundary", ""))):
+        notes.append(
+            "REFERENCE CONTEXT ONLY: explain these source definitions and methods within their stated limits; "
+            "FIELD ACTION: NOT AUTHORIZED; no field diagnosis, numeric recommendation, product use or current local calibration"
+        )
     elif policy == "context_only":
         notes.append(
             "CONTEXT ONLY: use qualitative background only; do not copy numeric thresholds, "
@@ -696,6 +763,11 @@ def _doc_policy_note(doc: Any) -> str:
         notes.append("numeric fertility guidance requires current local soil-test calibration")
     if "pesticide_guidance_requires_current_pmra_label" in risks:
         notes.append("pesticide use requires the current PMRA label")
+    # Preserve action and jurisdiction restrictions before optional source
+    # detail, since the containing document slot has a fixed token budget.
+    applicability = " ".join(str(getattr(doc, "applicability_boundary", "") or "").split())
+    if applicability:
+        notes.append("SOURCE APPLICABILITY: " + applicability)
     return " Evidence policy: " + "; ".join(notes) + "." if notes else ""
 
 

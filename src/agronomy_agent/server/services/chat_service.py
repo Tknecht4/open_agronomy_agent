@@ -1080,6 +1080,8 @@ def _run_turn_impl_inner(
                 "query_expansion": list(context.route.query_expansion),
                 "route_query_expansion": list(context.route.query_expansion),
                 "cache_status": dict(context.cache_status or {}),
+                "packed_doc_ids": sorted({doc_id for section in context.packed_context.sections
+                                          for doc_id in section.source_ids}) if context.packed_context else [],
                 "context_packer_version": context.packed_context.version if context.packed_context else None,
                 "context_tokens_est": context.packed_context.token_estimate if context.packed_context else None,
                 "agent_runtime": context.runtime_mode,
@@ -2076,6 +2078,10 @@ def _production_stage_observations(
         origin_class = "verifier_editor_rewrite"
         fallback_reason = "verification_editor_rewrite_origin"
         fallback_kind = None
+    elif verification_origin["verification_action"] == "localized_cleanup":
+        origin_class = "verifier_localized_cleanup"
+        fallback_reason = "verification_localized_cleanup_origin"
+        fallback_kind = "generation_unavailable" if fallback_record else None
     elif fallback_record:
         origin_class = "analysis_unavailable_fallback"
         fallback_reason = "generation_fallback_applied"
@@ -5515,6 +5521,8 @@ def _build_doc_snapshot(idx: int, doc: Any, *, store_text: bool) -> dict[str, An
         "manifest_sha256": doc.manifest_sha256,
         "distribution_scope": doc.distribution_scope,
         "answer_role": doc.answer_role,
+        "transfer_scope": doc.transfer_scope,
+        "applicability_boundary": doc.applicability_boundary,
         **({
             "authority_tier": doc.authority_tier,
             "supporting_source_ids": list(doc.supporting_source_ids),

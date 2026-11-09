@@ -20,7 +20,7 @@ from agronomy_agent.query_context import (
     CANADIAN_PROVINCE_TEXT_ALIASES,
     analyze_query_context,
 )
-from agronomy_agent.router import request_focus
+from agronomy_agent.router import request_focus, evidence_interpretation_kind
 from agronomy_agent.model_prompt_budget import positive_int, prompt_budget_receipt
 from agronomy_agent.model_errors import LocalModelSnapshotUnavailable
 from agronomy_agent.quantity_claims import unsupported_quantities
@@ -373,6 +373,7 @@ class AnswerVerificationResult:
     risk_threshold_receipt: Mapping[str, Any] | None = None
     editor_context_budget: Mapping[str, Any] | None = None
     editor_observation: Mapping[str, Any] | None = None
+    localized_cleanup: Mapping[str, Any] | None = None
 
     def as_record(self) -> dict[str, Any]:
         failed_claims = _risk_excerpts(self.draft_output or "", self.draft_assessment)
@@ -393,6 +394,9 @@ class AnswerVerificationResult:
             for reason, rule_id in zip(self.draft_assessment.reasons, failed_rule_ids, strict=True)
         )
         intervention_action = (
+            "localized_cleanup"
+            if self.localized_cleanup is not None
+            else
             "accept_rewrite"
             if self.rewrite_accepted
             else "fallback_or_degraded"
@@ -409,6 +413,7 @@ class AnswerVerificationResult:
             "final_assessment": self.final_assessment.as_record() if self.final_assessment else None,
             "rejection_reasons": list(self.rejection_reasons),
             "fallback_applied": self.fallback_applied,
+            "localized_cleanup": dict(self.localized_cleanup) if self.localized_cleanup is not None else None,
             "draft_output": self.draft_output,
             "editor_output": self.editor_output,
             **({"editor_observation": deepcopy(self.editor_observation)} if self.editor_observation is not None else {}),
@@ -434,6 +439,7 @@ class AnswerVerificationResult:
                 defect_records=defect_records,
                 fallback_applied=self.fallback_applied,
                 rewrite_accepted=self.rewrite_accepted,
+                localized_cleanup=self.localized_cleanup is not None,
             ),
             "risk_threshold_receipt": (
                 dict(self.risk_threshold_receipt)
@@ -1248,6 +1254,43 @@ def _aafc_soil_erosion_risk_fallback(
     )
 
 
+def _destroys_diagnostic_sampling_contrast(question: str, answer: str) -> bool:
+    """Do not let a later disclaimer excuse an instruction to erase a contrast.
+
+    This is a bounded instruction check, not a general scientific grader.
+    Compositing within each separately identified area remains valid.
+    """
+    if not (
+        re.search(r"\bsoil\b", question, re.I)
+        and re.search(r"\b(?:sampl\w*|cores?)\b", question, re.I)
+        and re.search(r"\b(?:patch|affected|abnormal|symptom\w*|diagnos\w*|zones?|areas?)\b", question, re.I)
+        and re.search(r"\b(?:understand|explain|compare|distinguish|differen\w*|diagnos\w*|cause|why)\b", question, re.I)
+    ):
+        return False
+    pooling_context = bool(re.search(r"\b(?:mix|combin|blend|pool)\w*\b|\b(?:one|same|single) bag\b", question, re.I))
+    separate_area_samples = bool(re.search(
+        r"\bwithin each\b|\b(?:keep|kept|keeping)\b[^.!?;]{0,45}\bseparate(?:ly)?\b|"
+        r"\b(?:separate|different) (?:bags|composites|containers)\b", question, re.I
+    )) and not re.search(r"\b(?:one|same|single) (?:bag|composite|container)\b", question, re.I)
+    # Mixing cores within separately identified areas preserves the between-area
+    # contrast. A general ability to compare them is not a recovery claim.
+    pooling_context = pooling_context and not separate_area_samples
+    for sentence in re.split(r"(?<=[.!?])\s+|\n+", answer):
+        if (pooling_context and re.search(r"\b(?:can|could|will|may)\s+(?:still\s+)?(?:be able to\s+)?(?:determine|detect|distinguish|recover|identify|compare)\b", sentence, re.I)
+                and re.search(r"\b(?:difference\w*|separate|areas?|zones?|patch\w*)\b", sentence, re.I)
+                and not re.search(r"\b(?:cannot|can't|not|no longer|unless|separately|separate bags)\b", sentence, re.I)):
+            return True
+        if not re.search(r"\b(?:mix|combine|blend|pool)\w*\b", sentence, re.I):
+            continue
+        if re.search(r"\b(?:do not|don't|never|avoid|should not|must not|cannot|can't|not appropriate|separately|within each)\b", sentence, re.I):
+            continue
+        directive = re.search(r"^\s*(?:mix|combine|blend|pool)\b|\b(?:you should|you can|should consider|recommend|consider mixing)\b", sentence, re.I)
+        contrast = re.search(r"\b(?:normal|unaffected|healthy)\b|\b(?:all|both)\b.{0,30}\b(?:samples?|cores?)\b", sentence, re.I)
+        if directive and contrast:
+            return True
+    return False
+
+
 def assess_claim_risk(
     answer: str,
     *,
@@ -1321,6 +1364,8 @@ def assess_claim_risk(
         reasons.append("unsupported_named_pest")
     if _unsupported_diagnostic_assertion(candidate, evidence_text):
         reasons.append("unsupported_diagnostic_certainty")
+    if _destroys_diagnostic_sampling_contrast(question, candidate):
+        reasons.append("diagnostic_sampling_contrast_destroyed")
     if _MAP_ASSERTION_RE.search(candidate):
         reasons.append("map_prior_presented_as_field_truth")
     if _REGULATED_ASSERTION_RE.search(candidate):
@@ -1669,6 +1714,19 @@ def _verify_answer_impl(
         return None
 
     draft_assessment = assess(draft)
+    if "diagnostic_sampling_contrast_destroyed" in draft_assessment.reasons:
+        correction = (
+            "Once soil from contrasting areas is mixed and analyzed as one composite, the result cannot recover "
+            "the separate area results. Keep affected and comparison areas separately identified; compositing "
+            "within each uniform area can be appropriate. Compare samples with consistent depth, analyte and "
+            "laboratory method. Appearance alone does not establish the cause of the contrast."
+        )
+        return AnswerVerificationResult(
+            answer=correction, triggered=True, rewrite_accepted=False,
+            draft_assessment=draft_assessment, draft_output=draft,
+            fallback_applied=True, final_assessment=assess(correction),
+            rejection_reasons=("diagnostic_sampling_contrast_correction",),
+        )
     protocol_fallback = _protocol_failure_answer(question)
     if (
         review_mode in {"model_agnostic_selective_v2", "risk_conditioned_selective_v3"}
@@ -2266,6 +2324,28 @@ def _verify_answer_policy(
     docs = tuple(evidence_docs)
     entities = tuple(preserve_entities)
     required = tuple(required_entities)
+    cleaned, removed = _remove_leading_control_capsule(draft)
+    if removed:
+        original_assessment = assess_claim_risk(
+            draft, question=question, evidence_text=evidence_text,
+            question_type=question_type, risk_level=risk_level,
+            evidence_docs=docs, preserve_entities=entities, required_entities=required,
+        )
+        cleaned_assessment = assess_claim_risk(
+            cleaned, question=question, evidence_text=evidence_text,
+            question_type=question_type, risk_level=risk_level,
+            evidence_docs=docs, preserve_entities=entities, required_entities=required,
+        )
+        # Only remove an isolated copied control block. Any other defect still
+        # takes the ordinary verification path, including unsafe prescriptions.
+        if set(original_assessment.reasons) == {"internal_process_leakage"} and not cleaned_assessment.reasons:
+            return AnswerVerificationResult(
+                answer=cleaned, triggered=True, rewrite_accepted=False,
+                draft_assessment=original_assessment, final_assessment=cleaned_assessment,
+                draft_output=draft, selection_policy="localized_control_capsule_cleanup_v1",
+                localized_cleanup={"kind": "leading_control_capsule", "removed_text": removed,
+                                   "retained_prose_unchanged": True, "editor_invoked": False},
+            )
     if review_mode == "risk_conditioned_selective_v3":
         assessment = assess_claim_risk(
             draft,
@@ -2382,12 +2462,33 @@ def verify_answer(
     return observation.finish(result) if observation is not None else result
 
 
+def _remove_leading_control_capsule(answer: str) -> tuple[str, str]:
+    """Remove only a separate leading block made entirely of control labels."""
+    blocks = answer.strip().split("\n\n", 1)
+    if len(blocks) != 2 or not blocks[1].strip():
+        return answer, ""
+    header, prose = blocks
+    control_line = re.compile(
+        r"^\s*(?:[-*]\s*)?(?:decision|preserve|primary decision evidence|"
+        r"supporting or boundary evidence|evidence roles?)\s*:", re.I
+    )
+    if not _INTERNAL_CONTROL_CAPSULE_RE.search(header) or not all(
+        control_line.search(line) for line in header.splitlines() if line.strip()
+    ):
+        return answer, ""
+    return prose.strip(), header
+
+
 def _defect_claims(answer: str, assessment: ClaimRiskAssessment, reason: str) -> tuple[str, ...]:
     """Locate a rule's lexical trigger; omissions stay answer-scoped.
 
     This attribution does not prove the whole sentence false, or assign a
     source as claim-level support. Those semantic relationships are unknown.
     """
+    if reason == "internal_process_leakage":
+        _, removed = _remove_leading_control_capsule(answer)
+        if removed:
+            return tuple(value.strip() for value in re.split(r"(?<=[.!?])\s+|\n+", removed) if value.strip())
     markers = {
         "unsupported_numeric_specificity": assessment.unsupported_numbers,
         "unsupported_crop_stage": assessment.unsupported_crop_stages,
@@ -2415,6 +2516,7 @@ def _claim_edit_ledger(
     defect_records: Iterable[Mapping[str, Any]],
     fallback_applied: bool,
     rewrite_accepted: bool,
+    localized_cleanup: bool = False,
 ) -> dict[str, Any]:
     import hashlib
 
@@ -2447,6 +2549,9 @@ def _claim_edit_ledger(
             for claim in changed
         ],
         "replacement_kind": (
+            "localized_cleanup"
+            if localized_cleanup
+            else
             "deterministic_fallback"
             if fallback_applied
             else "evidence_editor"
@@ -3059,6 +3164,12 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
         requirements.append(_IntentRequirement(name=name, instruction=instruction, patterns=tuple(patterns)))
 
     decision = build_decision_route_state(question, question_type).decision
+    if decision == "field_trafficability":
+        add("traffic_profile", "Check soil condition below the surface, not surface appearance alone.", r"\b(?:subsoil|subsurface|below the surface|soil moisture|soil condition)\b")
+        add("traffic_load", "Assess the intended equipment load and contact pressure.", r"\b(?:axle load|equipment load|tire pressure|track pressure|contact pressure)\b")
+        add("traffic_damage", "Assess rutting, smearing, compaction and operator safety before entry.", r"\b(?:rutt\w*|smear\w*|compact\w*|operator safety)\b")
+        add("traffic_hold", "Delay and recheck when load-bearing conditions are uncertain.", r"\b(?:delay|do not enter|stay out|recheck|cannot.*safe)\b")
+        return tuple(requirements)
     if _is_wet_forage_establishment_question(question):
         add(
             "wet_establishment_workability",
@@ -4077,12 +4188,12 @@ def _decision_route_failure_answer(
     lower = state.question.lower()
     if decision == "field_trafficability":
         return (
-            "Do not use the rejected answer, a dry-looking surface, or a full machinery pass as evidence that the "
-            "corner is trafficable. Reinspect the northeast corner and a nearby normal area now. Record the extent "
+            "A dry-looking surface alone does not prove that the soil is trafficable. Check the area in question "
+            "and a nearby contrasting area before entering with equipment. Record the extent "
             "and duration of standing water or ponding, whether drainage and outlets are functioning, and recent "
             "rain or irrigation. Walk and probe both areas to compare soil condition below the surface, not just at "
             "the crust. "
-            "Then assess the intended machine, load, tire or track setup, and route. Do not enter if that load would "
+            "Then assess the intended equipment load, axle load, tire or track contact pressure, and route. Do not enter if that load would "
             "leave ruts, shear or smear the soil, displace soil, compact the profile, damage the crop, or create an "
             "operator-safety problem. Delay, keep traffic out of the affected area, and repeat the same checks after "
             "drainage or drying; preserve the fresh observations in the field record."
@@ -4793,7 +4904,7 @@ def _looks_like_french(question: str) -> bool:
     return bool(
         re.search(
             r"\b(?:est-ce(?: que)?|puis-je|dois-je|j'ai|je |mon |ma |mes |cela|qu'il|dont|"
-            r"aucun|seulement|avant d'|pourquoi ne pas|combien de|comment l'agent|"
+            r"aucun|seulement|avant d'|pourquoi ne pas|combien de|comment l'agent|quelle est|diff[eé]rence entre|"
             r"pommes? de terre|ma[iï]s|chaux|d[eé]pist(?:er|age)|res[eè]me)\b",
             question,
             re.IGNORECASE,
@@ -5176,6 +5287,8 @@ def _conservative_failure_answer(question_type: str, *, question: str = "") -> s
             "If any of those conditions cannot be verified or satisfied, delay or do not spray."
         )
     if question_type == "field_data":
+        if evidence_interpretation_kind(question):
+            return _exam_review_failure_answer(question)
         if re.search(r"\b(on[- ]farm trial|strip trial|trial design)\b", lower):
             return (
                 "A credible on-farm trial needs a documented trial layout with treatment and check strip or control, practical replication and randomization, and blocking or management zones that account for field variability. Keep all other operations consistent where possible and record deviations, weather and as-applied data. Calibrate the yield monitor, preserve raw files and clean data for headlands, overlaps, delays and obvious errors before analysis. "
@@ -5236,7 +5349,9 @@ def _conservative_failure_answer(question_type: str, *, question: str = "") -> s
                 "Frame the choice as a field-specific partial budget and net-return decision, not a guaranteed payback. Ask for the practice's establishment, operating, maintenance, and opportunity costs; crop price; expected yield response and other benefits; risk reduction; useful life; and any current cost-share program or incentive for which eligibility can be verified. "
                 "Anchor the estimate in baseline field records and, where response is uncertain, a check strip or replicated field trial. Show sensitivity or scenarios for plausible response, price, cost, and weather outcomes, and state the remaining uncertainty because public guidance cannot replace the farm's books."
             )
-        if re.search(r"\b(econom\w*|profit\w*|roi|return|defensible|cost|spend|partial budget)\b", focus):
+        if re.search(r"\b(econom\w*|profit\w*|roi|return|defensible|cost|spend|partial budget)\b", focus) and re.search(
+            r"\b(prescription|variable[- ]rate|management zones?)\b", lower
+        ):
             return (
                 "Evaluate the prescription with a field-specific response and a partial budget, not map appearance alone. Validate the boundary, soil tests, yield maps, as-applied records, and management zones; estimate the yield-response curve with check strips or a replicated field trial; then compare added input and application cost with crop price, expected revenue, and downside uncertainty. "
                 "Keep zones only where the response is repeatable and the expected profit remains positive under realistic price and yield ranges."

@@ -472,3 +472,13 @@ rewrite frozen evidence or use a blanket staging command on a dirty research
 checkout. The text gate handles common macOS/Linux/Windows home and volume paths,
 JSON slash/ASCII unicode escapes, HTML entities and percent encoding. It is not
 an OCR, archive inspection or universal personal-data sanitizer.
+
+### Short document-source passages
+
+`ingest_document_sources.py` keeps the default minimum of 50 words per chunk.
+A source registry may set `ingest_policy.min_chunk_words` to an integer from
+20 through the configured `max_words` for explicitly reviewed, complete short
+passages. The effective minimum is recorded in extraction metadata. This
+changes chunk size only; source permission, provenance and retrieval admission
+checks still apply. Text cleanup rejoins hyphenation only across a single line
+break and preserves suspended compounds such as “macro- and mesopores”.

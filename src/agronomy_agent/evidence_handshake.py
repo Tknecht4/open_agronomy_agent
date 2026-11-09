@@ -8,6 +8,7 @@ from agronomy_agent.agno_runtime.local_index import RetrievedDoc, tokenize
 from agronomy_agent.decision_route import DecisionRouteState, build_decision_route_state
 from agronomy_agent.decision_contract import AgronomyDecisionContract, obligation_coverage
 from agronomy_agent.evidence_authority import classify_evidence_authority
+from agronomy_agent.router import evidence_interpretation_kind, explanation_focus_query
 
 
 _GENERIC_TAGS = {
@@ -262,6 +263,7 @@ def rerank_evidence_docs(
         if existing is None or float(doc.score) > float(existing.score):
             unique[doc.doc_id] = doc
 
+    focus_tokens = set(tokenize(explanation_focus_query(question)))
     scored: list[tuple[float, int, RetrievedDoc]] = []
     for index, doc in enumerate(unique.values()):
         title_tags = " ".join((doc.title, *doc.tags)).lower()
@@ -311,6 +313,17 @@ def rerank_evidence_docs(
                 jurisdiction_bonus = 0.35
             else:
                 jurisdiction_bonus = -1.5
+        scoped_explanation = bool(
+            evidence_interpretation_kind(question)
+            and doc.retrieval_policy == "context_only"
+            and doc.answer_role == "reference_context"
+            and doc.transfer_scope in {"general_explanation_only", "general_explanation_or_named_study_only"}
+            and doc.applicability_boundary
+        )
+        if scoped_explanation:
+            # Query-fit has already enforced country and bounded method scope.
+            # A province match does not make a mechanism more explanatory.
+            jurisdiction_bonus = 0.0
         doc_crops = {str(value).strip().casefold() for value in doc.crops if str(value).strip()}
         crop_set = {str(value).strip().casefold() for value in crops if str(value).strip()}
         crop_scope_bonus = 0.0
@@ -349,6 +362,8 @@ def rerank_evidence_docs(
             + crop_scope_bonus
             + currency_bonus
             + authority_fit_bonus
+            + (2.0 if scoped_explanation and _query_coverage(question, doc) >= 0.25 else 0.0)
+            + (4.0 * len(focus_tokens & doc_tokens) / len(focus_tokens) if focus_tokens else 0.0)
         )
         scored.append((score, -index, replace(doc, score=round(score, 6))))
     scored.sort(key=lambda item: (item[0], item[1]), reverse=True)
@@ -508,9 +523,13 @@ def evidence_grounded_fallback(
     if not selected:
         return None
     midpoint = max(1, min(len(selected) - 1, round(len(selected) * 0.55))) if len(selected) > 1 else 1
-    if len(selected) == 1:
-        return selected[0]
-    return " ".join(selected[:midpoint]) + "\n\n" + " ".join(selected[midpoint:])
+    answer = " ".join(selected[:midpoint])
+    if len(selected) > 1:
+        answer += "\n\n" + " ".join(selected[midpoint:])
+    boundary = str(getattr(primary, "applicability_boundary", "") or "").strip()
+    if boundary:
+        answer += "\n\nSource limits: " + boundary
+    return answer
 
 
 def _classify_evidence_role(
@@ -523,6 +542,15 @@ def _classify_evidence_role(
     if retrieval_policy == "context_only":
         if _is_named_regional_product_interpretation(state, doc):
             return "interpretive", "named_regional_product_interpretation"
+        if (
+            evidence_interpretation_kind(state.question)
+            and doc.source_type not in _BOUNDARY_TYPES
+            and doc.answer_role == "reference_context"
+            and doc.transfer_scope in {"general_explanation_only", "general_explanation_or_named_study_only"}
+            and doc.applicability_boundary
+            and _query_coverage(state.question, doc) >= 0.16
+        ):
+            return "interpretive", "scoped_reference_explanation"
         return "boundary", "context_only_not_decisive"
 
     if doc.source_type in _BOUNDARY_TYPES:
@@ -683,6 +711,9 @@ def _query_coverage(question: str, doc: RetrievedDoc) -> float:
     )
     coverage = min(1.0, weighted_hits / (3 * len(question_tokens)))
     if phrase_hits:
+        coverage = max(0.4, coverage)
+    focus_tokens = set(tokenize(explanation_focus_query(question)))
+    if focus_tokens and len(focus_tokens & (title_tags | text_tokens)) / len(focus_tokens) >= 0.5:
         coverage = max(0.4, coverage)
     return coverage
 

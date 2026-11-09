@@ -43,6 +43,15 @@ The loader accepts multiple paths under `retrieval.graph_paths`; governed runtim
 
 Current graph JSON uses `nodes` and `edges`; node records require at least `id` and `name`, while edges use `source`, `target`, and an optional `relation`. Governed composition verifies the manifest/schema/checksum, declared namespaces and relation vocabulary, duplicate graph and node identities, collision precedence, and dangling edges before use. Manifest-free loading remains only as a non-authoritative compatibility path for direct callers and fixtures.
 
+Nodes may declare `query_scope` as a nonempty list of nonempty term groups.
+Every group must match at least one term in the literal query; a term matches
+when all its normalized tokens occur. Planner expansion cannot satisfy this
+scope. Focused searches and mapped-name joins pass the original user question
+as `scope_query`. Direct callers that omit it use their literal search query or
+requested name; a short alias alone may not retrieve a scoped node. Edges between different
+scopes are rejected to prevent out-of-scope neighbors from leaking into hints.
+Scope is a lexical retrieval restriction, not proof of relevance or authority.
+
 ## Add a retriever or model backend
 
 Implement the shared backend contract, preserve stable result fields, inject it during resource composition, and run parity tests against the default local implementation. Do not branch behavior throughout `agent.py` or chat services based on concrete backend classes.
