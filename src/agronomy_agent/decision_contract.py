@@ -89,7 +89,7 @@ class _ObligationRule:
 
 _ACTION_RE = re.compile(
     r"\b(?:advise|adviser|recommend|approve|support|decide|decision|apply|application|"
-    r"should|must|whether to|good idea|time to|spray|treat|rate|timing|plant|harvest|irrigat\w*|diagnos\w*|manage|management|"
+    r"should|must|whether to|good idea|time to|(?:how|why) (?:can|could)|spray|treat|rate|timing|plant|harvest|irrigat\w*|diagnos\w*|manage|management|"
     r"what (?:should|has to|is needed)|what do (?:i|we)|how (?:much|many)|"
     r"is (?:this|that|it) enough|can (?:i|we|the grower)|should (?:i|we|the grower)|"
     r"recommander|appliquer|pulv[eé]riser|traiter|diagnostiquer|combien)\b",

@@ -350,6 +350,8 @@ def test_analytical_first_person_questions_remain_interpretation(question):
     "Compare water content and water potential",
 ])
 @pytest.mark.parametrize("action_clause, guards", [
+    ("how could growers add lime", {"fertility_guard", "field_data_guard"}),
+    ("why could growers add lime", {"fertility_guard", "field_data_guard"}),
     ("tell me whether John can start irrigation", {"field_data_guard"}),
     ("tell me whether adding lime would help my field", {"fertility_guard", "field_data_guard"}),
     ("would adding lime to my field make a difference", {"fertility_guard", "field_data_guard"}),

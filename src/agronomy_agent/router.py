@@ -648,7 +648,12 @@ def _interpretation_only_request(q: str) -> bool:
     for request in re.finditer(r"\b(?:can|could|may|might|would)(?:n't)?\b", q):
         tail = re.split(r"[.;?!]|\b(?:and|then)\s+(?=(?:can|could|may|might|would|should|must|is|are|do|does|tell)\b)", q[request.end():], maxsplit=1)[0].strip()
         prefix = q[:request.start()].rstrip()
-        causal = has(r"\b(?:why|how)$", prefix) and not has(r"\b(?:my|our|this|these|the)\b", tail)
+        # A why/how prefix does not make a human action request causal
+        # analysis. Admit only explicit impersonal process subjects here;
+        # unrecognized causal constructions keep the ordinary obligations.
+        causal = prefix in {"why", "how"} and has(
+            r"^(?:repeated )?(?:mating|inbreeding|self[- ]pollination)\b", tail
+        )
         mechanism = has(r"^(?:tillage|compaction|soil texture)\b", tail) and has(r"\b(?:change|alter|affect)\b", tail)
         first_person = re.match(r"^(?:i|we|you)\s+", tail)
         if first_person:
