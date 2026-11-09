@@ -307,3 +307,113 @@ def test_concept_comparison_does_not_erase_operational_clause(action):
     assert route.question_type != "exam_review"
     from agronomy_agent.decision_contract import build_decision_contract
     assert "field_data_guard" in build_decision_contract(question, route).required_tools
+
+
+@pytest.mark.parametrize(("question", "guards"), [
+    ("Why are my wheat leaves yellow?", {"field_data_guard"}),
+    ("Why is my canola wilting?", {"field_data_guard"}),
+    ("Can I check if my yellow leaves mean nitrogen deficiency?", {"field_data_guard", "fertility_guard"}),
+    ("Can I compare my yellow leaves with a nitrogen deficiency picture?", {"field_data_guard", "fertility_guard"}),
+    ("How can I tell whether my yellow leaves mean nitrogen deficiency?", {"field_data_guard", "fertility_guard"}),
+    ("What is the difference between soil texture and structure, and should I add lime to my field?", {"field_data_guard", "fertility_guard"}),
+    ("Explain the difference between water content and water potential; should I start irrigation?", {"field_data_guard"}),
+    ("Explain soil water potential; should we stop irrigation?", {"field_data_guard"}),
+    ("Explain soil texture; could we increase irrigation?", {"field_data_guard"}),
+    ("What is the difference between soil texture and structure; would it be advisable to add lime to my field?", {"field_data_guard", "fertility_guard"}),
+])
+def test_field_diagnoses_and_mixed_permissions_retain_production_guards(question, guards):
+    from agronomy_agent.agent import build_context
+    assert evidence_interpretation_kind(question) is None
+    context = build_context(question, use_decision_contract=True,
+                            use_context_cache=False, use_search_cache=False)
+    contract = context.runtime_metadata["decision_contract"]
+    assert guards <= set(contract["required_tools"])
+    assert contract["evidence_obligations"]
+
+
+@pytest.mark.parametrize("question", [
+    "How much confidence can I place in a hay sample for the lot?",
+    "Can I compare my feed analyses on dry matter and as-fed bases?",
+    "What should I check before comparing soil-test results?",
+    "How much confidence should I put in a hay sample for the lot?",
+    "My soil carbon concentration rose but bulk density changed. Can I claim the same percentage increase in carbon stock?",
+    "For a wheat height measurement, should I treat the top of the awns and the tip of the spike excluding awns as the same endpoint?",
+    "Why can repeated mating of close relatives reduce vigor in some crop populations?",
+    "A salty patch covers a small part of my Alberta field. Should its sample be mixed with normal-looking soil when I want to understand the patch?",
+])
+def test_analytical_first_person_questions_remain_interpretation(question):
+    assert evidence_interpretation_kind(question)
+
+
+@pytest.mark.parametrize("prefix", [
+    "Explain the difference between soil texture and structure",
+    "Compare water content and water potential",
+])
+@pytest.mark.parametrize("action_clause, guards", [
+    ("tell me whether John can start irrigation", {"field_data_guard"}),
+    ("tell me whether adding lime would help my field", {"fertility_guard", "field_data_guard"}),
+    ("would adding lime to my field make a difference", {"fertility_guard", "field_data_guard"}),
+    ("can the grower start irrigation under the same conditions", {"field_data_guard"}),
+    ("would adding lime help my field", {"fertility_guard", "field_data_guard"}),
+    ("is lime necessary for my field", {"fertility_guard", "field_data_guard"}),
+    ("can the grower start irrigation now", {"field_data_guard"}),
+    ("should lime be added to my field", {"fertility_guard", "field_data_guard"}),
+    ("should farmers add lime", {"fertility_guard", "field_data_guard"}),
+    ("is adding lime a good idea", {"fertility_guard", "field_data_guard"}),
+    ("is it time to start irrigation", {"field_data_guard"}),
+    ("do you think I should start irrigation", {"field_data_guard"}),
+    ("tell me whether to irrigate", {"field_data_guard"}),
+    ("can I compare the readings and start irrigation", {"field_data_guard"}),
+])
+@pytest.mark.parametrize("reverse", [False, True])
+def test_composed_requests_preserve_ordinary_obligations(prefix, action_clause, guards, reverse):
+    from agronomy_agent.agent import build_context
+    parts = [prefix, action_clause]
+    if reverse:
+        parts.reverse()
+    question = "; ".join(parts) + "?"
+    assert evidence_interpretation_kind(question) is None
+    context = build_context(question, use_decision_contract=True,
+                            use_context_cache=False, use_search_cache=False)
+    contract = context.runtime_metadata["decision_contract"]
+    assert guards <= set(contract["required_tools"])
+    assert "field_observation" in {o["key"] for o in contract["evidence_obligations"]}
+
+
+@pytest.mark.parametrize("question", [
+    "Why does my canola keep wilting?",
+    "Why does my wheat keep turning yellow?",
+    "Why are the wheat leaves in my field red?",
+    "Why are the leaves in this field curling?",
+    "Why are leaves turning yellow on wheat?",
+    "Can I compare my purple leaves with a deficiency picture?",
+    "Why is my canola wilting?",
+])
+def test_physical_observations_preserve_evidence_without_symptom_enumeration(question):
+    from agronomy_agent.agent import build_context
+    assert evidence_interpretation_kind(question) is None
+    context = build_context(question, use_decision_contract=True,
+                            use_context_cache=False, use_search_cache=False)
+    assert "field_data_guard" in context.runtime_metadata["decision_contract"]["required_tools"]
+
+
+def test_analytical_use_of_measurement_basis_has_no_spurious_weather_requirement():
+    from agronomy_agent.agent import build_context
+    question = "Can I use dry matter basis to compare my feed analyses?"
+    assert evidence_interpretation_kind(question) == "measurement_comparison"
+    context = build_context(question, use_decision_contract=True,
+                            use_context_cache=False, use_search_cache=False)
+    assert not context.runtime_metadata["decision_contract"]["evidence_obligations"]
+
+
+@pytest.mark.parametrize("question, obligation", [
+    ("What is the difference between two product measurements?", "regulated_product_authority"),
+    ("What is resistance?", "resistance_stewardship"),
+    ("What is the difference between a soil map and a survey?", "regional_or_mapped_context"),
+])
+def test_interpretation_retains_authority_and_source_boundary_rules(question, obligation):
+    from agronomy_agent.agent import build_context
+    assert evidence_interpretation_kind(question)
+    context = build_context(question, use_decision_contract=True,
+                            use_context_cache=False, use_search_cache=False)
+    assert obligation in {o["key"] for o in context.runtime_metadata["decision_contract"]["evidence_obligations"]}

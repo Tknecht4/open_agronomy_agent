@@ -607,6 +607,91 @@ def operational_request_text(text: str) -> str:
     )
 
 
+def _interpretation_only_request(q: str) -> bool:
+    """Conservative eligibility for dropping topical evidence obligations.
+
+    Recognizing an explanation somewhere in a request is insufficient. Decision
+    clauses must have an explicit analytical construction; unresolved clauses
+    keep the ordinary contract, regardless of subject or active/passive voice.
+    """
+    analytic = r"(?:compar\w*|interpret\w*|distinguish|average|count|regard|understand|check)"
+    # Operational coordination remains disqualifying even after an analytical
+    # verb (e.g. 'compare the reports and start irrigation').
+    if has(
+        r"\b(?:and|then|also|to)\s+(?:please\s+)?(?:start|stop|increase|reduce|add|"
+        r"remove|change|shorten|lengthen|plant|seed|sow|irrigate|fertilize|feed|"
+        r"harvest|till|rip|spread|drill|enter|drive|use)\b", q
+    ):
+        return False
+    if has(
+        r"\b(?:whether\s+to|(?:safe|okay|ok|advisable)\s+to|time\s+to|"
+        r"good\s+idea|need(?:ed)?\s+to|permission|approve|authorize)\b", q
+    ):
+        return False
+    # Check every decision modal, including embedded and passive requests.
+    for request in re.finditer(r"\b(?:should|must|ought)\b", q):
+        tail = q[request.end():].lstrip()
+        safe = has(rf"^(?:i|we)\s+{analytic}\b", tail)
+        safe |= has(r"^(?:i|we)\s+(?:put|place)\b", tail) and has(
+            r"\bhow much (?:confidence|certainty|trust)\b", q[:request.start()]
+        )
+        safe |= has(r"^be established before compar\w*\b", tail)
+        safe |= has(
+            r"^(?:(?:its|the|these|those|soil|affected|normal)\s+){0,3}samples?\s+"
+            r"(?:from\s+[^;?.]{1,70}?\s+)?be\s+(?:mixed|combined|sampled|compared)\b", tail
+        )
+        if not safe:
+            return False
+    # Permission questions use the same analytical restriction for every
+    # subject and voice. Bound the predicate to its clause, so an explanation
+    # elsewhere cannot qualify 'would adding lime help?' or 'can a grower ...?'.
+    for request in re.finditer(r"\b(?:can|could|may|might|would)(?:n't)?\b", q):
+        tail = re.split(r"[.;?!]|\b(?:and|then)\s+(?=(?:can|could|may|might|would|should|must|is|are|do|does|tell)\b)", q[request.end():], maxsplit=1)[0].strip()
+        prefix = q[:request.start()].rstrip()
+        causal = has(r"\b(?:why|how)$", prefix) and not has(r"\b(?:my|our|this|these|the)\b", tail)
+        mechanism = has(r"^(?:tillage|compaction|soil texture)\b", tail) and has(r"\b(?:change|alter|affect)\b", tail)
+        first_person = re.match(r"^(?:i|we|you)\s+", tail)
+        if first_person:
+            act = tail[first_person.end():]
+            safe = has(rf"^{analytic}\b", act)
+            safe |= has(r"^claim (?:the )?same (?:percentage|proportion|increase|decrease)\b", act)
+            safe |= has(r"^use (?:the |a )?(?:dry matter|as[- ]fed|moisture) basis to compare\b", act)
+            safe |= has(r"^(?:put|place)\b", act) and has(
+                r"\bhow much (?:confidence|certainty|trust)\b", prefix
+            )
+            if not safe:
+                return False
+        else:
+            # These are bounded analytical subject/predicate constructions,
+            # not a bag of words found anywhere in the modal's tail.
+            safe = causal or mechanism or has(rf"^{analytic}\b", tail)
+            safe |= has(r"^(?:soil )?texture (?:alone )?explain\b", tail)
+            safe |= has(
+                r"^(?:(?:the|these|those|two|several|soil|barley|wheat|yield|water|feed|reported|sensor)\s+){0,7}"
+                r"(?:values|measurements|results|numbers|samples|cores)\s+be\s+"
+                r"(?:compared|interpreted|averaged|counted|regarded)\b", tail
+            )
+            safe |= has(r"^(?:the |a )?(?:grower|farmer|analyst|researcher|lab|laboratory)\s+" + analytic + r"\b", tail)
+            safe |= has(r"^(?:the )?lab\s+(?:still )?tell me how\b", tail)
+            safe |= has(r"^(?:several|multiple|soil) cores from (?:one|a|the) (?:[a-z]+ ){0,5}(?:zone|area|field) (?:form|make) (?:a )?(?:useful )?(?:representative )?sample\b", tail)
+            if not safe:
+                return False
+    # Unresolved evaluative clauses retain the ordinary contract regardless of
+    # where they occur or whether the speaker names an actor.
+    if has(r"\b(?:necessary|needed|advisable|safe|safely|okay|ok)\b", q):
+        return False
+    # Local physical observations need evidence even if the symptom is a novel
+    # color or shape. Do not enumerate symptom words as the eligibility test.
+    if has(r"\b(?:why|how)\s+(?:is|are|was|were|does|do|can|could)\s+(?:my|our|this|these|the)\b", q):
+        return False
+    if has(r"\b(?:leaves|leaf|roots?|stems?|seedlings?)\b", q) and (
+        has(r"\b(?:my|our|this|these|the)\b", q)
+        or has(r"\b(?:why|what|whether|if)\b", q)
+    ):
+        return False
+    return True
+
+
 def evidence_interpretation_kind(text: str) -> str | None:
     """Distinguish interpretation of evidence from an operational decision.
 
@@ -626,6 +711,8 @@ def evidence_interpretation_kind(text: str) -> str | None:
         r"(?:should|can|may|could|must) (?:i|we) (?:plant|seed|sow|irrigate|fertilize|feed|harvest|till|rip|subsoil|spread|drill|enter|drive)|"
         r"what should (?:i|we) do)\b", q
     ):
+        return None
+    if not _interpretation_only_request(q):
         return None
     comparison = has(r"\b(?:compar\w*|same|different|equivalent|interchangeable|independent|"
                      r"count|mean|interpret\w*|check|averag\w*|distinguish|confidence|represent\w*|unchanged|directly)\b", q)
