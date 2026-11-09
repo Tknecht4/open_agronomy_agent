@@ -626,3 +626,28 @@ def test_canonical_provider_observation_does_not_become_native_identity():
     observer.returned("safe")
     assert events[-1]["identity_status"]=="unknown" and events[-1]["model_identity"] is None
     assert events[-1]["provider_observation"]["scope"]=="explicit_thread_selection_not_weights_identity"
+
+
+@pytest.mark.parametrize(('source', 'answer', 'unsupported'), [
+    ('Al3+ and Ca2+; cmol kg-1.', r'\text{Al}^{3+} and \mathrm{Ca}^{2+}; cmol \text{kg}^{-1}.', False),
+    ('Al³⁺ and kg⁻¹.', r'Al^{3+} and kg^{-1}.', False),
+    ('Al3+ and kg-1.', r'Al^{2+} and kg^{-1}.', True),
+    ('Al3+ and kg-1.', r'Al^{3+} and kg^{-2}.', True),
+    ('Al3+ and kg-1.', 'There are 3 and -1.', True),
+    ('Al3+ and kg-1.', r'Al^{3+}. Apply 12 kg/ha.', True),
+    ('2 kg-1.', r'2 kg^{-1}.', False),
+    ('2 kg-1.', r'2 g^{-1}.', True),
+    ('2 kg-1.', '2 kg.', True),
+    ('Al3+.', r'Al^{3+} and Ca^{3+}.', True),
+])
+def test_scientific_annotations_require_whole_source_identity(source, answer, unsupported):
+    assert bool(unsupported_quantities(answer, question='', evidence=source)) is unsupported
+
+
+
+def test_scientific_latex_whitespace_does_not_invent_scalar_quantities():
+    source = 'Al3+ and K+; 10 cmol(+) kg-1.'
+    answer = r'\text{ Al }^{3+} and \text{K}^{+}; 10 \text{ cmol }(+) \text{ kg}^{-1}.'
+    assert not unsupported_quantities(answer, question='', evidence=source)
+    assert unsupported_quantities(answer + ' Apply 12 kg/ha.', question='', evidence=source)
+    assert unsupported_quantities(r'\text{ K}^{2+}', question='', evidence=source)

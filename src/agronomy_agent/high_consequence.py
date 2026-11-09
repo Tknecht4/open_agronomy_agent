@@ -26,7 +26,7 @@ def classify_high_consequence_domains(question: str) -> list[str]:
     if product_term and product_action:
         domains.append("product_label")
     explicit_rate_request = re.search(
-        r"\b(?:how much|what rate|rate should|dose|apply per|fertilizer rate|"
+        r"\b(?:how much(?!\s+(?:confidence|certainty|trust)\b)|what rate|rate should|dose|apply per|fertilizer rate|"
         r"nitrogen rate|phosphorus rate|combien|quel(?:le)? taux|quel(?:le)? dose|"
         r"dose par|taux d['’](?:engrais|azote|phosphore))\b",
         question,
@@ -51,7 +51,11 @@ def classify_high_consequence_domains(question: str) -> list[str]:
         re.IGNORECASE,
     ):
         domains.append("diagnosis")
-    if re.search(
+    financial_forecast_only = bool(
+        re.search(r"\b(?:profit|revenue|price|economic\w*|margin)\b", question, re.I)
+        and not re.search(r"\b(?:weather|rain\w*|wind|temperature|frost|storm|spray|météo|pluie|vent)\b", question, re.I)
+    )
+    if not financial_forecast_only and re.search(
         r"\b(?:current weather|forecast|spray window|spray today|spray tomorrow|rain today|rain tomorrow|wind now|"
         r"météo actuelle|prévisions?|fenêtre de pulvérisation|pulvériser aujourd['’]hui|pulvériser demain|"
         r"pluie aujourd['’]hui|pluie demain|vent maintenant)\b",

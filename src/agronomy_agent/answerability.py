@@ -224,7 +224,7 @@ _UNSAFE_BYPASS_RE = re.compile(
     re.IGNORECASE,
 )
 _DIRECT_RATE_RE = re.compile(
-    r"\b(?:how much|what (?:fertilizer |nitrogen |product |application )?rate|give me (?:a |the )?rate)\b",
+    r"\b(?:how much(?!\s+(?:confidence|certainty|trust)\b)|what (?:fertilizer |nitrogen |product |application )?rate|give me (?:a |the )?(?:(?:herbicide|fungicide|insecticide|pesticide) )?(?:product and )?rate)\b",
     re.IGNORECASE,
 )
 _REGULATED_ROUTE_TYPES = {

@@ -104,7 +104,7 @@ from agronomy_agent.agno_runtime.knowledge_graph import (
 )
 from agronomy_agent.agno_runtime.local_index import LexicalRetriever, RetrievedDoc
 from agronomy_agent.on_demand_corpus import OnDemandCorpusRelease
-from agronomy_agent.router import QueryRoute, classify_query, refine_query_route
+from agronomy_agent.router import QueryRoute, classify_query, refine_query_route, explanation_focus_query, evidence_interpretation_kind, operational_request_text
 from agronomy_agent.runtime_profiles import DEFAULT_MODEL_CONFIG, DEFAULT_RAG_CONFIG
 from agronomy_agent.skill_registry import skill_metadata
 from agronomy_agent.tool_planner import PLANNER_VERSION as TOOL_PLANNER_VERSION
@@ -285,7 +285,20 @@ def _required_evidence_entities(
 
 
 def build_answer_prompt(context_block: str, question: str) -> str:
-    return f"{answer_output_contract()}\n\n{context_block}\n\nField question:\n{question}"
+    interpretation = evidence_interpretation_kind(question)
+    task_note = (
+        "Explain the requested distinction first. Preserve the source's direction of causation, "
+        "measurement basis and population/species limits. Explain the complete relevant relationship, "
+        "including its conditions; do not replace a definition or a logical distinction with a request for field data. "
+        "Separate source statements from inference, and never attribute an unsupported mechanism to a source. "
+        "A source about one population cannot establish physiology or performance in another. "
+        "If a necessary comparison is unsupported, name that specific gap. "
+        "Do not expand an acronym unless the source explicitly defines it."
+        if interpretation else ""
+    )
+    if re.search(r"\b(?:quelle est|diff[eé]rence entre|est-ce|puis-je|pourquoi|comment)\b", question, re.I):
+        task_note += " Répondez en français."
+    return f"{answer_output_contract()}\n\n{context_block}\n\n{task_note}\nField question:\n{question}"
 
 
 def resolve_local_model_snapshot(
@@ -1734,6 +1747,19 @@ def build_context(
         if document_retrieval_enabled
         else []
     )
+    explanation_focus = explanation_focus_query(question)
+    if document_retrieval_enabled and explanation_focus:
+        # Merge literal concept candidates into the raw lane; all ordinary
+        # query-fit, authority, governance and budget gates still follow.
+        focus_docs = loaded.retriever.search(
+            explanation_focus,
+            top_k=raw_candidate_k,
+            allowed_roles=filters.get("audience") or (),
+            source_types=filters.get("source_type") or (),
+            retrieval_policies=filters.get("retrieval_policy") or ("standard", "context_only"),
+        )
+        raw_ids = {doc.doc_id for doc in raw_docs}
+        raw_docs = [*raw_docs, *(doc for doc in focus_docs if doc.doc_id not in raw_ids)]
     private_raw_docs = (
         loaded.private_retriever.search(
             question,
@@ -2329,14 +2355,18 @@ def build_context(
                     namespaces=route.namespaces,
                     query_expansion=route.query_expansion,
                 )
+                focus_hits = (
+                    loaded.graph.search(explanation_focus, limit=5, namespaces=route.namespaces, scope_query=question)
+                    if explanation_focus else []
+                )
                 bridge_hits = (
-                    loaded.graph.lookup_names(field_graph_terms)
+                    loaded.graph.lookup_names(field_graph_terms, scope_query=question)
                     if field_graph_terms
                     else []
                 )
                 combined: list[Any] = []
                 seen: set[str] = set()
-                for hit in (*primary_hits, *bridge_hits):
+                for hit in (*focus_hits, *primary_hits, *bridge_hits):
                     node_id = str(getattr(hit, "node_id", ""))
                     if not node_id or node_id in seen:
                         continue
@@ -3584,9 +3614,9 @@ _EXPLICIT_PROCESS_BOUNDARY_RE = re.compile(
     re.IGNORECASE,
 )
 _DIRECT_COMMITMENT_REQUEST_RE = re.compile(
-    r"\b(?:how much|what (?:fertilizer |pesticide |herbicide |fungicide |insecticide )?rate|"
+    r"\b(?:how much(?!\s+(?:confidence|certainty|trust)\b)|what (?:fertilizer |pesticide |herbicide |fungicide |insecticide )?rate|"
     r"which (?:product|pesticide|herbicide|fungicide|insecticide)|what is the (?:action )?threshold|"
-    r"give me (?:a |the )?(?:rate|threshold|product)|can (?:i|we) (?:apply|spray|treat)|"
+    r"give me (?:a |the )?(?:(?:herbicide|fungicide|insecticide|pesticide) )?(?:rate|threshold|product)|can (?:i|we) (?:apply|spray|treat)|"
     r"should (?:i|we) (?:apply|spray|treat)|is it safe to (?:apply|spray|treat)|"
     r"apply (?:now|today)|spray (?:now|today)|"
     r"(?:cut|reduce) (?:the )?(?:nitrogen|fertilizer|nutrient) "
@@ -3763,7 +3793,7 @@ def _legacy_decide_evidence_intervention(
     coverage_statuses = tuple(
         dict.fromkeys(str(row.get("status") or "") for row in coverage_rows if isinstance(row, dict))
     )
-    direct_commitment = bool(_DIRECT_COMMITMENT_REQUEST_RE.search(question))
+    direct_commitment = bool(_DIRECT_COMMITMENT_REQUEST_RE.search(operational_request_text(question)))
     high_consequence = direct_commitment or bool(classify_high_consequence_domains(question)) or bool(
         context is not None and context.route.risk_level in {"high", "regulated"}
     )
@@ -3928,7 +3958,7 @@ def _allows_bounded_process_without_primary(
         return False
     if context.route.question_type == "product_label" and not explicit_boundary:
         return False
-    if _DIRECT_COMMITMENT_REQUEST_RE.search(question) and not explicit_boundary:
+    if _DIRECT_COMMITMENT_REQUEST_RE.search(operational_request_text(question)) and not explicit_boundary:
         return False
     return True
 

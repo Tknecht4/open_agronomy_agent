@@ -422,3 +422,41 @@ def test_evaluation_identity_binds_active_graph_manifests() -> None:
         "graph",
         "graph_manifest",
     ]
+
+
+
+def test_scoped_graph_requires_literal_crop_and_measurement_intent(tmp_path):
+    node = {"id": "wheat_yield", "name": "wheat grain yield measurement", "kind": "variable",
+            "description": "Wheat grain yield per plot and moisture basis.",
+            "query_scope": [["wheat"], ["measurement", "units", "per plot", "moisture"]]}
+    path = _write_graph(tmp_path / "scoped.json", nodes=[node])
+    graph = KnowledgeGraph(path)
+    assert graph.search("Compare wheat grain yield per plot with hectare units")
+    assert not graph.search("Compare feed moisture", query_expansion=["wheat grain yield measurement"])
+    assert not graph.search("When should I sow wheat?", query_expansion=["measurement units"])
+    assert not graph.lookup_names(["grain yield"])
+    assert graph.lookup_names(["wheat grain yield measurement"])
+    # Focus queries and mapped concept names cannot authorize scope that is
+    # absent from the original grower request.
+    assert not graph.search("wheat grain yield measurement", scope_query="Compare feed moisture")
+    assert not graph.lookup_names(["wheat grain yield measurement"], scope_query="Compare feed moisture")
+    assert not graph.search("wheat grain yield measurement", scope_query="")
+    assert graph.search("grain yield", scope_query="Compare wheat moisture units")
+    assert graph.lookup_names(["wheat grain yield measurement"], scope_query="Compare wheat moisture units")
+
+
+@pytest.mark.parametrize("scope", [None, [], [[], ["wheat"]], [[""]], ["wheat"]])
+def test_malformed_graph_query_scope_is_rejected(tmp_path, scope):
+    path = _write_graph(tmp_path / "bad_scope.json", nodes=[
+        {"id": "x", "name": "wheat", "kind": "crop", "query_scope": scope}])
+    with pytest.raises(GraphValidationError, match="query_scope"):
+        KnowledgeGraph(path)
+
+
+def test_graph_edge_cannot_leak_restricted_neighbor(tmp_path):
+    path = _write_graph(tmp_path / "scope_edge.json", nodes=[
+        {"id": "a", "name": "soil", "kind": "topic"},
+        {"id": "b", "name": "wheat units", "kind": "variable", "query_scope": [["wheat"], ["units"]]}],
+        edges=[{"source": "a", "target": "b", "relation": "related_to"}])
+    with pytest.raises(GraphValidationError, match="query scopes"):
+        KnowledgeGraph(path)

@@ -806,3 +806,41 @@ def test_canonical_full_cannot_be_a_hidden_ablation(control):
         generation_backend_factory=lambda:None,verification_backend_factory=lambda:None,benchmark_eval_id="fixture")
     values[control]="baseline" if control=="mode" else False
     with pytest.raises(ValueError):AgentExecutionRequest(**values)
+
+
+def test_actual_control_cleanup_survives_production_adapter_and_receipts(tmp_path, monkeypatch):
+    from agronomy_agent.answer_verifier import verify_answer as real_verify
+    answer = 'Water content measures water amount. Water potential is an energy quantity; they are not the same measurement.'
+    draft = '- Decision: Are these the same measurement?\n- Preserve: basis.\n- Primary decision evidence: [source_water_method].\n- Evidence roles: interpretive.\n\n' + answer
+    class Generator(_FakeGenerator):
+        def generate(self, messages):
+            return draft
+    monkeypatch.setattr('agronomy_agent.server.services.chat_service._build_mlx_generator', lambda *args, **kwargs: Generator())
+    def verified(*args, **kwargs):
+        assert args[0] == draft
+        return real_verify(draft, question='Are water content and water potential the same measurement?',
+            evidence_text=answer, question_type='exam_review', risk_level='low', editor=Generator(),
+            review_mode='risk_conditioned_selective_v3')
+    monkeypatch.setattr('agronomy_agent.server.services.chat_service.verify_answer', verified)
+    result = ObservedSystemBenchmarkAdapter().execute(_nonclaim_request(tmp_path,
+        'cleanup_production', question=RETRIEVAL_QUESTION, model_id='fake-local-model')).execution
+    assert result.answer == answer
+    assert len(result.stage_receipts) == len(EXECUTION_STAGE_IDS)
+    origin = next(r['evidence'] for r in result.stage_receipts if r['stage_id'] == 'fallback_origin')
+    assert origin['origin_class'] == 'verifier_localized_cleanup'
+    assert origin['verification_action'] == 'localized_cleanup'
+    assert origin['replacement_used'] is True
+    assert origin['fallback_used'] is False
+    assert origin['rewrite_accepted'] is False
+
+
+@pytest.mark.parametrize('changes', [
+    {'fallback_applied': True}, {'rewrite_accepted': True}, {'triggered': False},
+    {'localized_cleanup': {'kind': 'unknown'}},
+])
+def test_cleanup_origin_rejects_contradictory_records(changes):
+    from agronomy_agent.execution_core import classify_verification_origin
+    record = {'triggered': True, 'fallback_applied': False, 'rewrite_accepted': False,
+        'localized_cleanup': {'kind': 'leading_control_capsule', 'retained_prose_unchanged': True, 'editor_invoked': False}}
+    with pytest.raises(ValueError):
+        classify_verification_origin(record | changes, draft_sha256='a', post_verification_sha256='b')

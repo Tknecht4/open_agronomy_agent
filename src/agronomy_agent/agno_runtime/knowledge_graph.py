@@ -437,6 +437,8 @@ class KnowledgeGraph:
             source_id = edge["source"]
             target_id = edge["target"]
             label = edge["relation"]
+            if self.nodes[source_id].get("query_scope") != self.nodes[target_id].get("query_scope"):
+                raise GraphValidationError("Graph edges cannot cross different query scopes")
             self.neighbor_names[source_id].append(f"{label}: {self.nodes[target_id]['name']}")
             relation_path = f"{edge_origin.graph_id}:{source_id}-[{label}]->{target_id}"
             self.relation_paths[source_id].append(relation_path)
@@ -486,7 +488,7 @@ class KnowledgeGraph:
 
         return self.graph_registry.catalog()
 
-    def lookup_names(self, names: Iterable[str]) -> list[GraphHit]:
+    def lookup_names(self, names: Iterable[str], *, scope_query: str | None = None) -> list[GraphHit]:
         """Resolve exact concept names or aliases without semantic overreach.
 
         This is used for governed cross-store joins where a broad token search
@@ -507,6 +509,8 @@ class KnowledgeGraph:
                     if str(alias).strip()
                 },
             }
+            if not any(_scope_matches(node, scope_query if scope_query is not None else name) for name in requested):
+                continue
             if not requested.intersection(labels):
                 continue
             hits.append(self._hit(node_id))
@@ -518,6 +522,8 @@ class KnowledgeGraph:
         limit: int = 5,
         namespaces: Iterable[str] | None = None,
         query_expansion: Iterable[str] | None = None,
+        *,
+        scope_query: str | None = None,
     ) -> list[GraphHit]:
         q_tokens = set(tokenize(query)) - GRAPH_QUERY_STOPWORDS
         expansion_tokens = set(tokenize(" ".join(query_expansion or []))) - GRAPH_QUERY_STOPWORDS
@@ -526,6 +532,8 @@ class KnowledgeGraph:
         route_namespaces = set(namespaces or [])
         hits: list[tuple[float, str]] = []
         for node_id in self.nodes:
+            if not _scope_matches(self.nodes[node_id], scope_query if scope_query is not None else query):
+                continue
             hay_tokens = self.node_tokens.get(node_id, set())
             overlap = q_tokens & hay_tokens
             expansion_overlap = expansion_tokens & hay_tokens
@@ -571,6 +579,13 @@ class KnowledgeGraph:
         )
 
 
+def _scope_matches(node: dict[str, Any], query: str) -> bool:
+    # Scope uses the literal question, never planner expansion tokens.
+    tokens = set(tokenize(query))
+    return all(any(set(tokenize(term)).issubset(tokens) for term in group)
+               for group in node.get("query_scope", []))
+
+
 def _load_graph(manifest: GraphManifest) -> _LoadedGraphArtifact:
     payload = _read_json_object(manifest.data_path, kind="knowledge graph")
     raw_nodes = payload.get("nodes")
@@ -597,6 +612,13 @@ def _load_graph(manifest: GraphManifest) -> _LoadedGraphArtifact:
         for key in ("description", "source", "license"):
             if key in raw_node and not isinstance(raw_node[key], str):
                 raise GraphValidationError(f"{location}.{key} must be a string")
+        if "query_scope" in raw_node:
+            scope = raw_node["query_scope"]
+            if (not isinstance(scope, list) or not scope or
+                any(not isinstance(group, list) or not group or
+                    any(not isinstance(term, str) or not tokenize(term) for term in group)
+                    for group in scope)):
+                raise GraphValidationError(f"{location}.query_scope must be nonempty groups of terms")
         aliases = raw_node.get("aliases", [])
         if not isinstance(aliases, list) or any(not isinstance(value, str) for value in aliases):
             raise GraphValidationError(f"{location}.aliases must be an array of strings")

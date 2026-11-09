@@ -167,3 +167,51 @@ def test_eval_trace_uses_benign_conceptual_route_without_safety_tool_inflation()
     assert metadata["route"]["risk_level"] == "low"
     assert metadata["route"]["required_tools"] == ()
     assert metadata["route_tool_notes"] == []
+
+
+@pytest.mark.parametrize("question", [
+    "In Canadian Prairie rotation research, are 500 simulated economic returns the same as 500 independent field trials?",
+    "Does running a simulation a thousand times count as independent replication?",
+    "What must I check before comparing wheat grain yield per plot with yield at 15 percent moisture per hectare?",
+    "Can I compare my feed analyses on an as-fed and dry matter basis?",
+    "What do different units in two yield reports mean?",
+    "Are wheat grain masses per plant and per plot interchangeable?",
+])
+def test_evidence_interpretation_has_no_operational_expansion(question):
+    from agronomy_agent.router import evidence_interpretation_kind
+    route = refine_query_route(question, classify_query(question))
+    assert evidence_interpretation_kind(question)
+    assert route.question_type == "exam_review"
+    assert route.risk_level == "low"
+    assert not {"planting window", "trafficability", "soil test", "yield goal"}.intersection(route.query_expansion)
+
+
+@pytest.mark.parametrize("question", [
+    "Compare yield units and recommend a herbicide rate for my wheat.",
+    "Are these independent field trials enough to prescribe nitrogen for my field?",
+    "How much fertilizer should I apply when yield per plot differs?",
+    "Compare moisture bases and tell me whether I should spray Roundup now.",
+])
+def test_interpretation_gate_does_not_erase_mixed_operational_intent(question):
+    from agronomy_agent.router import evidence_interpretation_kind
+    assert evidence_interpretation_kind(question) is None
+    route = refine_query_route(question, classify_query(question))
+    assert route.question_type != "exam_review"
+
+
+def test_stale_field_data_route_never_replaces_study_question_with_prescription():
+    from agronomy_agent.answer_verifier import _conservative_failure_answer
+    answer = _conservative_failure_answer("field_data", question=
+        "Are simulated economic returns the same as independent field trials?")
+    assert "Evaluate the prescription" not in answer
+    assert "soil survey" not in answer.lower()
+
+
+@pytest.mark.parametrize("question", [
+    "Compare soil-test results and tell me what nitrogen rate to use.",
+    "What do moisture units mean and should I irrigate today?",
+    "Are these independent field trials and what should I do in my field?",
+])
+def test_mixed_non_pesticide_actions_are_not_interpretation(question):
+    from agronomy_agent.router import evidence_interpretation_kind
+    assert evidence_interpretation_kind(question) is None

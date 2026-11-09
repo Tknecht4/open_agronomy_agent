@@ -96,8 +96,48 @@ def _container_total(question: str, evidence: str) -> tuple[Decimal, Decimal, Qu
     return count, mass, Quantity(count * mass, None, unit)
 
 
+
+def _scientific_notation(text: str) -> tuple[str, set[str]]:
+    """Normalize a bounded vocabulary of charges/exponents, never magnitudes.
+
+    Whole ion/unit identity must occur in the supplied material. Annotation
+    digits cannot authorize scalar quantities. This is typography equivalence,
+    not a chemical correctness or general unit-conversion check.
+    """
+    text = re.sub(r"\\(?:text|mathrm)\{\s*([A-Za-z][A-Za-z0-9]*)\s*\}", r"\1", text)
+    text = re.sub(r"[⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻]+", lambda m: "^" + m.group().translate(
+        str.maketrans("⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻", "0123456789+-")), text)
+    text = re.sub(r"\^\{([+-]?\d+[+-]?|[+-])\}", r"^\1", text)
+    text = text.replace("−", "-")
+    annotations: set[str] = set()
+    digits = str.maketrans("0123456789+-", "abcdefghijpm")
+    def ion(m: re.Match[str]) -> str:
+        token = m.group('ion') + m.group('charge')
+        annotations.add(token)
+        return "ion" + token.translate(digits)
+    text = re.sub(r"(?<![A-Za-z0-9])(?P<ion>NH4|NO3|SO4|PO4|Al|Ca|Mg|Na|K|H)"
+                  r"\^?(?P<charge>\d*[+-])(?![\w+-])", ion, text)
+    def exponent(m: re.Match[str]) -> str:
+        token = m.group('unit') + '^' + m.group('exp')
+        annotations.add(token)
+        return m.group('unit') + 'power' + m.group('exp').translate(digits)
+    text = re.sub(r"(?<![A-Za-z0-9])(?P<unit>kg|cm|mm|ha|mol|mg|g|m|s|L)"
+                  r"(?:\^(?P<exp>[+-]?\d+)|(?P<plain>-[123]))(?!\w|\.\d)",
+                  lambda m: exponent(m) if m.group('exp') is not None else
+                  _plain_unit_exponent(m, annotations, digits), text)
+    return text, annotations
+
+
+def _plain_unit_exponent(match: re.Match[str], annotations: set[str], digits: dict) -> str:
+    exp = match.group('plain')
+    annotations.add(match.group('unit') + '^' + exp)
+    return match.group('unit') + 'power' + exp.translate(digits)
+
+
 def unsupported_quantities(answer: str, *, question: str, evidence: str) -> tuple[str, ...]:
-    allowed = {_quantity(m) for m in NUMBER_RE.finditer(f"{question}\n{evidence}")}
+    normalized_source, source_annotations = _scientific_notation(f"{question}\n{evidence}")
+    answer, answer_annotations = _scientific_notation(answer)
+    allowed = {_quantity(m) for m in NUMBER_RE.finditer(normalized_source)}
     derived = _container_total(question, evidence)
     grounded_operand_spans: list[tuple[int, int]] = []
     if derived:
@@ -106,7 +146,7 @@ def unsupported_quantities(answer: str, *, question: str, evidence: str) -> tupl
             a, b, total = (Decimal(v.replace(",", "")) for v in equation.groups())
             if sorted([a, b]) == sorted([count, mass]) and total == result.value:
                 grounded_operand_spans.extend((equation.span(1), equation.span(2)))
-    values: list[str] = []
+    values: list[str] = sorted(answer_annotations - source_annotations)
     for match in NUMBER_RE.finditer(answer):
         q = _quantity(match)
         prefix = answer[max(0, match.start() - 80):match.start()]

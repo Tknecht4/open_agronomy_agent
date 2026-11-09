@@ -72,6 +72,45 @@ def _source(source_id: str, *, local_rag: bool = True) -> dict:
     }
 
 
+def test_complete_short_passage_requires_explicit_source_minimum():
+    ingestor = _load_ingestor()
+    text = " ".join(f"word{i}" for i in range(32))
+    source = _source("short_passage")
+    assert ingestor.make_rows(source, text, {}, 100, 0) == []
+    source["ingest_policy"] = {"min_chunk_words": 20}
+    rows = ingestor.make_rows(source, text, {}, 100, 0)
+    assert len(rows) == 1
+    assert rows[0]["text"] == text
+    assert rows[0]["lineage"]["chunk_sha256"] == hashlib.sha256(text.encode()).hexdigest()
+    assert rows[0]["extraction"]["min_chunk_words"] == 20
+    assert ingestor.chunk_text(" ".join(text.split()[:19]), 100, 0, min_words=20) == []
+
+
+@pytest.mark.parametrize("minimum", [0, 19, 101, "20", 20.5, True, None])
+def test_source_minimum_rejects_invalid_values(minimum):
+    ingestor = _load_ingestor()
+    source = _source("invalid_minimum")
+    source["ingest_policy"] = {"min_chunk_words": minimum}
+    with pytest.raises(ValueError, match="min_chunk_words"):
+        ingestor.make_rows(source, "word " * 80, {}, 100, 0)
+
+
+def test_short_passage_minimum_preserves_pdf_page_boundaries():
+    ingestor = _load_ingestor()
+    pages = "[page 1] " + "alpha " * 28 + "\n\n[page 2] " + "beta " * 28
+    chunks = ingestor.chunk_text(pages, 100, 5, min_words=20)
+    assert len(chunks) == 2
+    assert "beta" not in chunks[0]
+    assert "alpha" not in chunks[1]
+
+
+def test_clean_text_preserves_suspended_compounds_and_rejoins_line_breaks():
+    ingestor = _load_ingestor()
+    assert ingestor.clean_text("macro- and meso-organisms") == "macro- and meso-organisms"
+    assert ingestor.clean_text("water-\n soluble") == "watersoluble"
+    assert ingestor.clean_text("water-\n\nsoluble") == "water-\n\nsoluble"
+
+
 def _manifest(path: Path, source: dict) -> Path:
     path.write_text(
         json.dumps(

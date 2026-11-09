@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from agronomy_agent.decision_capsule import DecisionCapsule, build_decision_capsule
 from agronomy_agent.query_context import analyze_query_context
-from agronomy_agent.router import request_focus
+from agronomy_agent.router import request_focus, evidence_interpretation_kind
 
 
 _US_ONLY_SOURCE_PATTERNS: tuple[tuple[str, str], ...] = (
@@ -902,7 +902,7 @@ def _decision_name(lower: str, question_type: str) -> str:
     ):
         return "manure_credit_boundary"
     if re.search(
-        r"(?:\btrafficability\b|\bfield traffic\b|"
+        r"(?:\btrafficability\b|\bfield traffic\b|\b(?:grain cart|loaded cart|heavy equipment)\b[^.?\n]{0,45}\b(?:across|cross(?:ed|ing|es)?|enter(?:ed|ing|s)?|driv(?:e|es|en|ing))\b|"
         r"\bdriv(?:e|es|en|ing)\b[^.?\n]{0,35}\b(?:equipment|machinery|tractor|vehicle|field|corner|area)\b|"
         r"\b(?:equipment|machinery|tractor|vehicle)\b[^.?\n]{0,35}"
         r"\b(?:enter(?:s|ed|ing)?|driv(?:e|es|en|ing)|traffic(?:s|ked|king)?)\b|"
@@ -1209,10 +1209,12 @@ def _decision_name(lower: str, question_type: str) -> str:
         r"\b(?:emerg|hypocotyl|rotary[- ]hoe)\w*\b", lower
     ):
         return "soil_crusting"
-    if re.search(r"\b(?:deep[- ]?rip|deep till|subsoil)\w*\b", lower) or (
+    if re.search(r"\b(?:deep[- ]?rip\w*|deep till\w*|subsoil(?:ing|er|ers))\b", lower) or (
         re.search(r"\b(?:compaction|wheel tracks?)\b", focus)
         and re.search(r"\b(?:till|rip|alleviat|remediat|management options?)\w*\b", focus)
     ):
+        if evidence_interpretation_kind(lower) == "concept_explanation":
+            return "exam_review"
         return "compaction_tillage"
     if re.search(r"\b(?:blossom[- ]end rot|tipburn)\b", lower) or re.search(
         r"\b(?:dark|black|brown),?\s+sunken\b[^.]{0,45}\bblossom ends?\b", lower

@@ -13,6 +13,7 @@ import re
 from typing import Any, Iterable, Mapping, Sequence
 
 from agronomy_agent.query_context import QueryContextSignals, analyze_query_context
+from agronomy_agent.router import evidence_interpretation_kind
 from agronomy_agent.method_context import (
     METHODS, METHOD_SCHEMA, LEGACY_METHOD_IDS, PHYSICAL_METHOD_SCHEMA,
     PHYSICAL_METHOD_SOURCE_IDS, requested_methods, reviewed_method_ids,
@@ -88,7 +89,7 @@ class _ObligationRule:
 
 _ACTION_RE = re.compile(
     r"\b(?:advise|adviser|recommend|approve|support|decide|decision|apply|application|"
-    r"spray|treat|rate|timing|plant|harvest|irrigat\w*|diagnos\w*|manage|management|"
+    r"should|must|whether to|good idea|time to|(?:how|why) (?:can|could)|spray|treat|rate|timing|plant|harvest|irrigat\w*|diagnos\w*|manage|management|"
     r"what (?:should|has to|is needed)|what do (?:i|we)|how (?:much|many)|"
     r"is (?:this|that|it) enough|can (?:i|we|the grower)|should (?:i|we|the grower)|"
     r"recommander|appliquer|pulv[eé]riser|traiter|diagnostiquer|combien)\b",
@@ -434,15 +435,21 @@ def build_decision_contract(
         sorted({str(value) for value in _route_value(route, "required_tools", ())})
     )
     action = _action(question)
-    active_rules: list[_ObligationRule] = []
-    for rule in _RULES:
-        if re.search(rule.trigger, question, re.IGNORECASE):
-            active_rules.append(rule)
-
+    # Construct the ordinary contract first; explanation is an eligibility
+    # condition for a bounded topical exemption, never a blanket rule bypass.
+    active_rules = [rule for rule in _RULES
+                    if re.search(rule.trigger, question, re.IGNORECASE)]
     if _ACTION_RE.search(question) and not any(
         rule.key == "field_observation" for rule in active_rules
     ):
         active_rules.insert(0, _RULES[0])
+    interpreting = primary == "exam_review" and evidence_interpretation_kind(question) is not None
+    topical_exemptions = {
+        "field_observation", "plant_health_differential", "fertility_diagnosis",
+        "current_weather", "soil_water_condition", "salinity_sodicity", "soil_structure",
+    }
+    if interpreting:
+        active_rules = [rule for rule in active_rules if rule.key not in topical_exemptions]
 
     obligations: list[EvidenceObligation] = []
     intents = {primary}
