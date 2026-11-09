@@ -419,3 +419,51 @@ def test_interpretation_retains_authority_and_source_boundary_rules(question, ob
     context = build_context(question, use_decision_contract=True,
                             use_context_cache=False, use_search_cache=False)
     assert obligation in {o["key"] for o in context.runtime_metadata["decision_contract"]["evidence_obligations"]}
+
+
+@pytest.mark.parametrize("question", [
+    "A pale strip and a green strip were cored separately, but the soil was then mixed and submitted as a single composite. Can its analysis tell me which strip had more potassium?",
+    "Two sample areas were pooled. Could the report tell me which area contained less organic carbon?",
+])
+def test_reported_sample_contrast_is_analytical(question):
+    from agronomy_agent.agent import build_context
+    assert evidence_interpretation_kind(question) == "sampling_interpretation"
+    context = build_context(question, use_decision_contract=True,
+                            use_context_cache=False, use_search_cache=False)
+    assert "fertility_guard" not in context.runtime_metadata["decision_contract"]["required_tools"]
+
+
+@pytest.mark.parametrize("action_clause", [
+    "Can its analysis tell me which strip had more potassium and tell me which amendment to choose for my field?",
+    "Can its report show how to correct potassium deficiency?",
+    "Can its analysis tell me which amendment to choose for my field?",
+    "Can its analysis tell me which strip needs more potassium?",
+    "Can its analysis tell me which strip had more potassium, and should lime be added?",
+])
+def test_report_complement_cannot_authorize_field_actions(action_clause):
+    from agronomy_agent.agent import build_context
+    question = "Explain the difference between soil texture and structure. " + action_clause
+    assert evidence_interpretation_kind(question) is None
+    context = build_context(question, use_decision_contract=True,
+                            use_context_cache=False, use_search_cache=False)
+    assert context.runtime_metadata["decision_contract"]["evidence_obligations"]
+
+
+@pytest.mark.parametrize("separator", ["; ", ". ", "? ", " and "])
+@pytest.mark.parametrize("directive", [
+    "tell me which amendment to choose for my field",
+    "tell me how to correct potassium deficiency",
+    "help me choose an amendment for my field",
+])
+@pytest.mark.parametrize("reverse", [False, True])
+def test_sample_interpretation_does_not_consume_another_directive(separator, directive, reverse):
+    from agronomy_agent.agent import build_context
+    comparison = "Can its analysis tell me which strip had more potassium"
+    parts = [comparison, directive]
+    if reverse:
+        parts.reverse()
+    question = "Pale and green strips were pooled in one soil sample. " + separator.join(parts)
+    assert evidence_interpretation_kind(question) is None
+    context = build_context(question, use_decision_contract=True,
+                            use_context_cache=False, use_search_cache=False)
+    assert {"field_data_guard", "fertility_guard"} <= set(context.runtime_metadata["decision_contract"]["required_tools"])

@@ -615,6 +615,13 @@ def _interpretation_only_request(q: str) -> bool:
     keep the ordinary contract, regardless of subject or active/passive voice.
     """
     analytic = r"(?:compar\w*|interpret\w*|distinguish|average|count|regard|understand|check)"
+    # A later directive is a separate request, including after punctuation.
+    # Do not let a recognized analytical clause consume that request's guards.
+    if has(
+        r"(?:^|[.;?!]|\b(?:and|then|also))\s*(?:please\s+)?"
+        r"(?:tell|give|show|help|advise|recommend|suggest|choose|select|correct|fix|add|start|stop)\b", q
+    ):
+        return False
     # Operational coordination remains disqualifying even after an analytical
     # verb (e.g. 'compare the reports and start irrigation').
     if has(
@@ -678,6 +685,15 @@ def _interpretation_only_request(q: str) -> bool:
             )
             safe |= has(r"^(?:the |a )?(?:grower|farmer|analyst|researcher|lab|laboratory)\s+" + analytic + r"\b", tail)
             safe |= has(r"^(?:the )?lab\s+(?:still )?tell me how\b", tail)
+            # Reading a contrast between already sampled areas is analytical.
+            # Bind the entire complement: reports do not authorize an amendment
+            # merely because the question begins with "can its analysis".
+            safe |= has(
+                r"^(?:its|the|this|that) (?:analysis|result|report) tell me which "
+                r"(?:strip|area|zone|sample) (?:had|has|contained|contains) "
+                r"(?:more|less|higher|lower) [a-z-]+(?: [a-z-]+){0,2}$",
+                re.split(r"[.;?!]", q[request.end():], maxsplit=1)[0].strip(),
+            )
             safe |= has(r"^(?:several|multiple|soil) cores from (?:one|a|the) (?:[a-z]+ ){0,5}(?:zone|area|field) (?:form|make) (?:a )?(?:useful )?(?:representative )?sample\b", tail)
             if not safe:
                 return False
@@ -710,7 +726,7 @@ def evidence_interpretation_kind(text: str) -> str | None:
     if has(_OPERATIONAL_TRAFFICABILITY_PATTERN, q):
         return None
     if _is_named_product_permission_request(text) or has(
-        r"\b(?:spray|apply|prescrib|recommend|treat|diagnos)\w*\b|"
+        r"\b(?:spray|apply|prescrib|recommend|treat|diagnos|choos|select)\w*\b|"
         r"\b(?:herbicide|fungicide|insecticide|pesticide|label|dose|dosage|"
         r"phi|rei|pre[- ]?harvest interval|restricted[- ]?entry interval|application rate|how much(?!\s+(?:confidence|certainty|trust)\b)|(?:nitrogen|fertilizer|seeding) rate|"
         r"(?:should|can|may|could|must) (?:i|we) (?:plant|seed|sow|irrigate|fertilize|feed|harvest|till|rip|subsoil|spread|drill|enter|drive)|"
@@ -726,7 +742,7 @@ def evidence_interpretation_kind(text: str) -> str | None:
     if comparison and has(r"\b(?:per plot|per hectare|moisture basis|moisture|dry matter|"
                           r"as[- ]fed|water content|water tension|water potential|carbon stock|carbon concentration|units?|extractants?|area[- ]weight\w*|soil[- ]test results?|height|endpoints?|heading|dates?|digestib\w*|amino[- ]acids?)\b", q):
         return "measurement_comparison"
-    if (comparison or has(r"\b(?:mix|mixed|combine|combined|composite)\b", q)) and has(r"\b(?:samples?|sampling|soil cores?|analys[ie]s|hay stack|soil tests?)\b", q):
+    if (comparison or has(r"\b(?:mix|mixed|combine|combined|composite|pool|pooled|pooling)\b", q)) and has(r"\b(?:samples?|sampling|soil cores?|analys[ie]s|hay stack|soil tests?)\b", q):
         return "sampling_interpretation"
     if has(r"\b(?:difference between|diff[eé]rence entre)\b", q):
         return "concept_explanation"
