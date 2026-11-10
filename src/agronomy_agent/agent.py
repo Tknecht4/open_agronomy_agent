@@ -1060,12 +1060,13 @@ def _load_retriever_with_policy_cache(
             corpus_eligibility_by_path=eligibility_by_path,
         ), "disabled", None
     cache_path = repo_path(cache_dir_value) / f"{key}.pickle"
-    if cache_path.exists():
+    _prune_compiled_index_cache(cache_path.parent, keep_path=cache_path)
+    if cache_path.is_file() and not cache_path.is_symlink():
         try:
             retriever = LexicalRetriever.from_compiled_cache(cache_path)
             _mark_compiled_index_cache_used(cache_path)
             _prune_compiled_index_cache(cache_path.parent, keep_path=cache_path)
-            return retriever, "hit", str(cache_path)
+            return retriever, "hit" if cache_path.exists() else "hit_evicted_over_budget", str(cache_path)
         except (OSError, ValueError, pickle.UnpicklingError, AttributeError, EOFError):
             status_prefix = "rebuild_after_cache_error"
     else:
@@ -1076,7 +1077,10 @@ def _load_retriever_with_policy_cache(
         corpus_eligibility_by_path=eligibility_by_path,
     )
     try:
-        retriever.write_compiled_cache(cache_path)
+        retriever.write_compiled_cache(
+            cache_path, max_bytes=_compiled_index_cache_max_bytes(),
+            min_free_bytes=_compiled_index_cache_min_free_bytes(),
+        )
         _prune_compiled_index_cache(cache_path.parent, keep_path=cache_path)
         return retriever, f"{status_prefix}_written", str(cache_path)
     except OSError:
@@ -1085,24 +1089,34 @@ def _load_retriever_with_policy_cache(
 
 def _mark_compiled_index_cache_used(cache_path: Path) -> None:
     try:
-        os.utime(cache_path, None)
+        os.utime(cache_path, None, follow_symlinks=False)
     except OSError:
         return
 
 
 def _prune_compiled_index_cache(cache_dir: Path, *, keep_path: Path) -> None:
     max_entries = _compiled_index_cache_max_entries()
-    if max_entries is None:
-        return
+    max_bytes = _compiled_index_cache_max_bytes()
     try:
         entries = [
             path
             for path in cache_dir.glob("*.pickle")
-            if path.is_file() and path.resolve() != keep_path.resolve()
+            if re.fullmatch(r"[0-9a-f]{64}\.pickle", path.name)
+            and path != keep_path and path.is_file() and not path.is_symlink()
         ]
         entries.sort(key=lambda path: path.stat().st_mtime_ns, reverse=True)
-        for stale_path in entries[max(0, max_entries - 1) :]:
-            stale_path.unlink(missing_ok=True)
+        kept_entries = int(keep_path.is_file() and not keep_path.is_symlink())
+        kept_bytes = keep_path.stat().st_size if kept_entries else 0
+        if kept_bytes > max_bytes:
+            keep_path.unlink(missing_ok=True)
+            kept_bytes = kept_entries = 0
+        for path in entries:
+            size = path.stat().st_size
+            if (max_entries is not None and kept_entries >= max_entries) or kept_bytes + size > max_bytes:
+                path.unlink(missing_ok=True)
+            else:
+                kept_bytes += size
+                kept_entries += 1
     except OSError:
         return
 
@@ -1115,6 +1129,25 @@ def _compiled_index_cache_max_entries() -> int | None:
         return max(1, int(raw))
     except ValueError:
         return 8
+
+
+def _compiled_index_cache_max_bytes() -> int:
+    return _compiled_index_cache_byte_setting("AGRONOMY_AGENT_AGNO_INDEX_CACHE_MAX_BYTES", 256 * 1024**2)
+
+
+def _compiled_index_cache_min_free_bytes() -> int:
+    return _compiled_index_cache_byte_setting("AGRONOMY_AGENT_AGNO_INDEX_CACHE_MIN_FREE_BYTES", 1024**3)
+
+
+def _compiled_index_cache_byte_setting(name: str, default: int) -> int:
+    raw = os.getenv(name, str(default)).strip()
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be a non-negative integer") from exc
+    if value < 0:
+        raise ValueError(f"{name} must be a non-negative integer")
+    return value
 
 
 def reset_phase5_query_caches() -> None:

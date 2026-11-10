@@ -4,6 +4,8 @@ import json
 import math
 import pickle
 import re
+import shutil
+import tempfile
 from collections import Counter, OrderedDict, defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
@@ -482,12 +484,32 @@ class LexicalRetriever:
             raise ValueError("compiled lexical index cache payload is invalid")
         return retriever
 
-    def write_compiled_cache(self, path: Path) -> None:
+    def write_compiled_cache(
+        self, path: Path, *, max_bytes: int | None = None, min_free_bytes: int = 0,
+    ) -> None:
+        if (max_bytes is not None and max_bytes < 0) or min_free_bytes < 0:
+            raise ValueError("cache budgets must be non-negative")
         path.parent.mkdir(parents=True, exist_ok=True)
-        tmp_path = path.with_name(f"{path.name}.tmp")
-        with tmp_path.open("wb") as handle:
-            pickle.dump({"version": INDEX_CACHE_VERSION, "retriever": self}, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        tmp_path.replace(path)
+        # Separate staging inodes prevent parallel compilers from overwriting
+        # each other's temporary file. Failed writes preserve the old cache.
+        with tempfile.NamedTemporaryFile(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent, delete=False) as handle:
+            tmp_path = Path(handle.name)
+            class BudgetedWriter:
+                written = 0
+                def write(self, data):
+                    if max_bytes is not None and self.written + len(data) > max_bytes:
+                        raise OSError("compiled index exceeds byte budget")
+                    if shutil.disk_usage(path.parent).free - len(data) < min_free_bytes:
+                        raise OSError("compiled index free-space reserve reached")
+                    count = handle.write(data)
+                    self.written += count
+                    return count
+            try:
+                pickle.dump({"version": INDEX_CACHE_VERSION, "retriever": self}, BudgetedWriter(), protocol=pickle.HIGHEST_PROTOCOL)
+                handle.flush()
+                tmp_path.replace(path)
+            finally:
+                tmp_path.unlink(missing_ok=True)
 
     def search(
         self,

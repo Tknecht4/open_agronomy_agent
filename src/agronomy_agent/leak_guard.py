@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from html import unescape
 
 
-LEAK_GUARD_VERSION = "phase5.leak_guard.v4"
+LEAK_GUARD_VERSION = "phase5.leak_guard.v5"
 
 _LABEL_SEPARATOR = r"[\s_-]+"
 
@@ -20,9 +20,11 @@ _FIELD_NAME_PATTERNS = {
     "question_type": r"question(?:[_-]*type|Type)",
     "risk": r"risk(?:[_-]*level|Level)?",
     "priority_namespaces": r"priority(?:[_-]*namespaces|Namespaces)",
-    "product_label": r"product(?:[_-]+label|Label)",
-    "field_data": r"field(?:[_-]+data|Data)",
-    "soil_water": r"soil(?:[_-]+water|Water)",
+    # Hyphens also join ordinary agronomic prose. Internal routing labels and
+    # assignments are scanned separately; a compound noun alone is not a leak.
+    "product_label": r"product(?:_+label|Label)",
+    "field_data": r"field(?:_+data|Data)",
+    "soil_water": r"soil(?:_+water|Water)",
 }
 
 

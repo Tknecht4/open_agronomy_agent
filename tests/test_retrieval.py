@@ -11,6 +11,73 @@ from agronomy_agent.router import classify_query
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_compiled_cache_refuses_oversize_and_preserves_previous_bytes(tmp_path):
+    import pytest
+    cache = tmp_path / "index.pickle"
+    retriever = LexicalRetriever([{"doc_id": "one", "text": "soil nitrogen"}])
+    retriever.write_compiled_cache(cache)
+    previous = cache.read_bytes()
+    with pytest.raises(OSError, match="byte budget"):
+        retriever.write_compiled_cache(cache, max_bytes=10)
+    assert cache.read_bytes() == previous
+    assert not list(tmp_path.glob("*.tmp"))
+    assert not list(tmp_path.glob(".*.tmp"))
+    assert LexicalRetriever.from_compiled_cache(cache).search("nitrogen")[0].doc_id == "one"
+
+
+def test_compiled_cache_preserves_free_space_reserve(tmp_path, monkeypatch):
+    import pytest
+    from types import SimpleNamespace
+    from agronomy_agent.agno_runtime import local_index
+    monkeypatch.setattr(local_index.shutil, "disk_usage", lambda _: SimpleNamespace(free=100))
+    cache = tmp_path / "index.pickle"
+    with pytest.raises(OSError, match="reserve"):
+        LexicalRetriever([]).write_compiled_cache(cache, min_free_bytes=100)
+    assert not cache.exists()
+    assert not list(tmp_path.iterdir())
+
+
+def test_compiled_cache_pruning_enforces_bytes_even_when_entry_cap_disabled(tmp_path, monkeypatch):
+    import os
+    from agronomy_agent import agent
+    monkeypatch.setenv("AGRONOMY_AGENT_AGNO_INDEX_CACHE_MAX_BYTES", "12")
+    monkeypatch.setenv("AGRONOMY_AGENT_AGNO_INDEX_CACHE_MAX_ENTRIES", "off")
+    keep, newest, oldest = (tmp_path / f"{digit * 64}.pickle" for digit in "abc")
+    unrelated = tmp_path / "personal.pickle"
+    unrelated.write_bytes(b"not an index cache entry")
+    for path in (keep, newest, oldest):
+        path.write_bytes(b"123456")
+    os.utime(oldest, (1, 1))
+    os.utime(newest, (2, 2))
+    agent._prune_compiled_index_cache(tmp_path, keep_path=keep)
+    assert keep.exists() and newest.exists() and not oldest.exists()
+    assert keep.stat().st_size + newest.stat().st_size == 12
+    assert unrelated.read_bytes() == b"not an index cache entry"
+
+
+def test_compiled_cache_oversized_existing_entry_is_evicted(tmp_path, monkeypatch):
+    from agronomy_agent import agent
+    monkeypatch.setenv("AGRONOMY_AGENT_AGNO_INDEX_CACHE_MAX_BYTES", "5")
+    cache = tmp_path / "oversized.pickle"
+    cache.write_bytes(b"123456")
+    agent._prune_compiled_index_cache(tmp_path, keep_path=cache)
+    assert not cache.exists()
+
+
+def test_cache_budget_refusal_keeps_retrieval_available_in_memory(tmp_path, monkeypatch):
+    from agronomy_agent import agent
+    corpus = tmp_path / "corpus.jsonl"
+    corpus.write_text(json.dumps({"doc_id": "budgeted", "text": "soil nitrogen"}) + "\n")
+    cache = tmp_path / "cache"
+    monkeypatch.setenv("AGRONOMY_AGENT_AGNO_INDEX_CACHE_DIR", str(cache))
+    monkeypatch.setenv("AGRONOMY_AGENT_AGNO_INDEX_CACHE_MAX_BYTES", "10")
+    retriever, status, path = agent._load_retriever_with_compiled_cache([corpus], key="budgeted")
+    assert status == "miss_write_failed"
+    assert retriever.search("nitrogen")[0].doc_id == "budgeted"
+    assert not Path(path).exists()
+    assert not list(cache.glob(".*.tmp"))
+
+
 def test_named_official_guide_outweighs_incidental_candidate_overlap() -> None:
     retriever = load_agent_resources("configs/rag_production_foundations_candidate.yaml").retriever
 

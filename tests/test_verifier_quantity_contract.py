@@ -651,3 +651,46 @@ def test_scientific_latex_whitespace_does_not_invent_scalar_quantities():
     assert not unsupported_quantities(answer, question='', evidence=source)
     assert unsupported_quantities(answer + ' Apply 12 kg/ha.', question='', evidence=source)
     assert unsupported_quantities(r'\text{ K}^{2+}', question='', evidence=source)
+
+
+@pytest.mark.parametrize('answer', [
+    r'Al^{ 3+ } and 10 cmol kg^{ -1 }.',
+    r'Al^ { 3+ } and 10 cmol kg^ { -1 }.',
+])
+def test_scientific_exponent_spacing_preserves_whole_annotation_identity(answer):
+    source = 'Al3+ and 10 cmol kg-1.'
+    assert not unsupported_quantities(answer, question='', evidence=source)
+    assert unsupported_quantities(answer.replace('3+', '2+'), question='', evidence=source)
+    assert unsupported_quantities(answer.replace('-1', '-2'), question='', evidence=source)
+    assert unsupported_quantities(answer + ' Apply 12 kg/ha.', question='', evidence=source)
+
+
+def test_sampling_location_is_not_a_named_disease():
+    assessment = assess_claim_risk(
+        'At each test spot, infiltration reflects the local surface and the ring contact.',
+        question='How do ring tests differ from hydraulic conductivity?',
+        evidence_text='Infiltration reflects the surface and local ring contact.')
+    assert not assessment.unsupported_named_conditions
+    for disease in ('leaf spot', 'gray leaf spot', 'bacterial spot', 'rust', 'root rot'):
+        diagnosis = assess_claim_risk('The diagnosis is ' + disease + '.',
+                                     question='What caused these symptoms?')
+        assert diagnosis.unsupported_named_conditions
+
+
+@pytest.mark.parametrize('answer,unsupported', [
+    ('90 à 95 pour cent', False), ('90 to 95 per cent', False), ('90–95%', False),
+    ('90 à 96 pour cent', True), ('95 à 90 pour cent', True),
+    ('90 pour cent', True), ('90 à 95 kg', True), ('90 à 95 percentile', True),
+])
+def test_percentage_ranges_preserve_bounds_and_units_across_french_and_english(answer, unsupported):
+    assert bool(unsupported_quantities(answer, question='', evidence='90 to 95 per cent')) is unsupported
+
+
+@pytest.mark.parametrize('name,missing', [('sulfur', False), ('sulphur', False), ('zinc', True)])
+def test_canola_differential_accepts_both_sulfur_spellings(name, missing):
+    assessment = assess_claim_risk(
+        f'{name.capitalize()} deficiency tends to show first on young leaves.',
+        question='What distinguishes sulphur from nitrogen deficiency in canola?',
+        question_type='crop_management',
+    )
+    assert ('sulfur_young_growth' in assessment.missing_intent_facets) is missing

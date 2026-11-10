@@ -609,6 +609,7 @@ def test_retention_rejects_symlink_experiment_entries_without_creating_bundle(
 
 
 def test_copy_drift_fails_before_atomic_bundle_publication(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr("scripts.build_benchmark_retention_bundle._try_clone_retained", lambda *_: False)
     database = tmp_path / "full_system_benchmark.sqlite3"
     _database(database)
     experiment = tmp_path / "experiment"
@@ -647,6 +648,35 @@ def test_copy_drift_fails_before_atomic_bundle_publication(tmp_path, monkeypatch
     assert drift_injected is True
     assert bundle_root.is_dir()
     assert list(bundle_root.iterdir()) == []
+
+
+def test_retention_copies_have_independent_writable_inodes(tmp_path, monkeypatch):
+    from scripts import build_benchmark_retention_bundle as builder
+    source = tmp_path / "source"
+    source.write_bytes(b"preserved failed observation")
+    first = tmp_path / "first"
+    builder._copy_retained_bytes(source, first)
+    assert first.read_bytes() == source.read_bytes()
+    assert first.stat().st_ino != source.stat().st_ino
+    first.write_bytes(b"changed destination")
+    assert source.read_bytes() == b"preserved failed observation"
+    monkeypatch.setattr(builder, "_try_clone_retained", lambda *_: False)
+    fallback = tmp_path / "fallback"
+    builder._copy_retained_bytes(source, fallback)
+    fallback.write_bytes(b"changed fallback")
+    assert source.read_bytes() == b"preserved failed observation"
+
+
+def test_retention_refuses_low_space_without_partial_bundle(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from scripts import build_benchmark_retention_bundle as builder
+    database = tmp_path / "database.sqlite3"
+    _database(database)
+    monkeypatch.setattr(builder.shutil, "disk_usage", lambda _: SimpleNamespace(free=1))
+    bundle_root = tmp_path / "retained"
+    with pytest.raises(ValueError, match="insufficient retention free space"):
+        builder.build_retention_bundle(database=database, bundle_root=bundle_root)
+    assert not bundle_root.exists()
 
 
 def test_verifier_recomputes_content_address_identity_and_public_transform(tmp_path) -> None:

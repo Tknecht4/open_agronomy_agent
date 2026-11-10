@@ -61,9 +61,11 @@ improvement or independent holdout performance.
 
 The master source-coverage receipt records source-declared crop, topic, and
 jurisdiction applicability. This is routing metadata, not proof of a field
-condition. Five bounded Manitoba canola-insect semantic rows are admitted after
-source-specific OpenMB review; product tables and third-party material remain
-excluded. Discovery or a file on disk does not make content model-visible.
+condition. The Manitoba canola-insect companion retains five source-reviewed
+semantic records with a source-specific OpenMB review, but the active release
+does not include them in its shards. They are unavailable to default retrieval;
+product tables and third-party material remain excluded. Source-registry
+permission, discovery or a file on disk does not make content model-visible.
 
 The NASS QuickStats snapshot is not a RAG corpus. It is a typed, dated static
 tool snapshot with its own manifest and freshness boundary. It must not be
@@ -71,8 +73,9 @@ described as live data or as Canadian evidence.
 
 ## U.S. analogue pack and retrieval baseline
 
-The active profile preserves Canadian evidence as the highest-priority
-authority and includes 218,258 hash-bound historical USDA NRCS records in 51
+For Canadian questions, the active profile prioritizes applicable Canadian
+material; ranking does not establish authority. It also includes 218,258
+hash-bound historical USDA NRCS records in 51
 deterministic JSONL shards (each capped at 16 MiB). The full U.S. pack is
 **not** loaded into ordinary Canadian startup retrieval: it is verified and
 opened on demand only for an explicit U.S./NRCS request that names an MLRA
@@ -91,6 +94,9 @@ it is labelled U.S. analogue context and cannot establish a Canadian label,
 law, rate, threshold, calibration, or field condition. Raw archive and spatial
 bytes remain separate hash-bound optional packs.
 
+The active local retriever scores lexical matches with a BM25-like index.
+The `hybrid` value under `agno.knowledge.search_type` is a configured compatibility
+label; the current local implementation does not execute dense vector search.
 The fixed retrieval baseline is evaluated by a source-grounded suite before any
 hybrid, dense, or reranking profile can be promoted. The repository records its
 protocol in `configs/offline_corpus_retrieval_preregistration.json`, its result

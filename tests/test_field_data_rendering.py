@@ -8,6 +8,28 @@ from agronomy_agent.leak_guard import detect_prompt_leaks
 from agronomy_agent.server.services.answer_renderer import render_structured_answer
 
 
+@pytest.mark.parametrize("text", [
+    "A soil-water balance accounts for rainfall and evapotranspiration.",
+    "The product-label restriction still applies.",
+    "These field-data values describe historical observations.",
+])
+def test_ordinary_hyphenated_agronomy_terms_survive_final_rendering(text):
+    assert not detect_prompt_leaks(text)
+    rendered = render_structured_answer(text, trace={"metadata": {"answer_policy_profile": "general_agronomy"}})
+    assert text in rendered.answer
+    assert not rendered.leak_classes_removed
+
+
+@pytest.mark.parametrize("text", [
+    "question_type=soil-water; risk_level=high",
+    "Routing notes: soil-water",
+    "soil_water", "soilWater", "product_label", "productLabel", "field_data", "fieldData",
+])
+def test_internal_route_syntax_is_still_removed(text):
+    assert detect_prompt_leaks(text)
+    assert text not in render_structured_answer(text).answer
+
+
 @pytest.mark.parametrize("text", ['Unique crop: ["Wheat"].', 'Row locators: [{"record":2}].', 'Values: [1, 2, 3].'])
 def test_valid_data_arrays_are_not_erased_as_evaluation_regex(text):
     assert not detect_prompt_leaks(text)

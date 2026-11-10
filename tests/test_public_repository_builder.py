@@ -99,6 +99,46 @@ def test_verification_rejects_corrupted_copy_even_with_self_consistent_receipt(t
     assert (tmp_path / "source.txt").read_text() == "synthetic public content\n"
 
 
+def test_verification_retains_at_most_two_failed_or_interrupted_stages(tmp_path, monkeypatch):
+    import pytest
+    from scripts import build_public_repository as builder
+
+    monkeypatch.setattr(builder, "ROOT", tmp_path)
+    manifest = _tiny_manifest(tmp_path)
+
+    def interrupt(*_args):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(builder, "_copy_independent", interrupt)
+    for n in range(2):
+        receipt = tmp_path / f"interrupted-{n}.json"
+        with pytest.raises(KeyboardInterrupt):
+            builder.verify(manifest, receipt)
+        assert json.loads(receipt.read_text())["error_type"] == "KeyboardInterrupt"
+
+    with pytest.raises(ValueError, match="retained verification stage limit"):
+        builder.verify(manifest, tmp_path / "third.json")
+    assert len(list((tmp_path / "outputs/public-repository-verification").glob("stage-*"))) == 2
+    assert not (tmp_path / "third.json").exists()
+
+
+def test_verification_cannot_stage_while_another_process_holds_the_lock(tmp_path, monkeypatch):
+    import fcntl
+    import pytest
+    from scripts import build_public_repository as builder
+
+    monkeypatch.setattr(builder, "ROOT", tmp_path)
+    manifest = _tiny_manifest(tmp_path)
+    stage_root = tmp_path / "outputs/public-repository-verification"
+    stage_root.mkdir(parents=True)
+    with (stage_root / ".verification.lock").open("w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        with pytest.raises(ValueError, match="another public package verification is active"):
+            builder.verify(manifest, tmp_path / "concurrent.json")
+    assert not list(stage_root.glob("stage-*"))
+    assert builder.verify(manifest, tmp_path / "after-lock.json")["status"] == "pass"
+
+
 def test_public_package_total_budget_accounts_for_many_small_files(tmp_path, monkeypatch):
     import pytest
     from scripts import build_public_repository as builder

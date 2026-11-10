@@ -187,7 +187,8 @@ _PAREN_BINOMIAL_RE = re.compile(r"\(([A-Z][a-z]{2,}\s+[a-z][a-z-]{2,})\)")
 _EMPHASIZED_TERM_RE = re.compile(r"\*\*([^*\n]{2,80})\*\*")
 _NAMED_CONDITION_RE = re.compile(
     r"\b((?:(?:gray leaf|grey leaf|early|late|stem|stripe|leaf|root|seedling|downy|powdery|white|gray|grey|bacterial|"
-    r"fusarium|verticillium)\s+)?(?:blight|rust|mildew|rot|spot|wilt|mosaic|canker|smut|mold|scab|anthracnose))\b",
+    r"fusarium|verticillium)\s+)(?:blight|rust|mildew|rot|spot|wilt|mosaic|canker|smut|mold|scab|anthracnose)"
+    r"|(?:blight|rust|mildew|rot|wilt|mosaic|canker|smut|mold|scab|anthracnose))\b",
     re.IGNORECASE,
 )
 _NAMED_PEST_RE = re.compile(
@@ -3408,7 +3409,7 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
         add("idc_water_context", "Check wetness, drainage, salinity, roots, and the field pattern.", r"\bwet", r"\bdrain", r"\bsalinity\b", r"\bfield pattern\b")
         add("idc_management", "Emphasize IDC-tolerant varieties and validated field management rather than an assumed iron rate.", r"\bIDC[- ]tolerant\b", r"\btolerant variet", r"\bvariety tolerance\b", r"\bvarieties? with IDC tolerance\b")
     elif decision == "sulfur_nitrogen_differential":
-        add("sulfur_young_growth", "State that sulfur deficiency tends to be clearest in younger growth and can disrupt flowering.", r"\bsulfur\b[^.]{0,55}\b(?:young|new)\w* (?:leaves|growth)\b", r"\b(?:young|new)\w* (?:leaves|growth)\b[^.]{0,55}\bsulfur\b")
+        add("sulfur_young_growth", "State that sulfur deficiency tends to be clearest in younger growth and can disrupt flowering.", r"\bsul(?:f|ph)ur\b[^.]{0,55}\b(?:young|new)\w* (?:leaves|growth)\b", r"\b(?:young|new)\w* (?:leaves|growth)\b[^.]{0,55}\bsul(?:f|ph)ur\b")
         add("nitrogen_old_growth", "State that mobile nitrogen deficiency usually appears first on older or lower leaves.", r"\bnitrogen\b[^.]{0,55}\b(?:older|lower) leaves\b", r"\b(?:older|lower) leaves\b[^.]{0,55}\bnitrogen\b")
         add("sulfur_field_risk", "Use field uniformity, texture, organic matter, rainfall, and fertilizer history.", r"\bfield pattern\b", r"\borganic matter\b", r"\brainfall\b", r"\bfertilizer history\b")
         add("sulfur_sampling", "Compare affected and normal areas with representative soil and tissue samples.", r"\baffected and (?:normal|unaffected)\b", r"\btissue (?:sample|test)\b", r"\bsoil (?:sample|test)\b")
@@ -4003,7 +4004,7 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
         add("mapped_attributes", "Use texture, drainage class, hydrologic group, hydric rating, slope, and restrictive-layer clues as screening attributes.", r"\bdrainage class\b", r"\bhydrologic group\b", r"\bhydric rating\b", r"\brestrictive[- ]layer\b")
         add("screening_context", "Describe mapped attributes only as a prior or screening context.", r"\bprior\b", r"\bscreening\b", r"\bregional context\b")
         add("map_truth_boundary", "State that the map cannot prove point or field conditions.", r"\bcannot prove\b", r"\bnot field truth\b", r"\bcannot confirm\b")
-        add("map_not_replacement", "State that the map does not replace soil tests or field observations.", r"\bnot (?:a )?replacement\b", r"\bdo not replace\b", r"\bcannot replace\b")
+        add("map_not_replacement", "State that the map does not replace soil tests or field observations.", r"\bnot (?:a )?replacement\b", r"\b(?:do|does) not replace\b", r"\bcannot replace\b")
         add("field_ground_truth", "Require boundary or point confirmation plus field ground-truth observations or samples.", r"\bground[- ]truth\b", r"\bfield observations?\b", r"\bsoil pit\b", r"\bprobe\b")
 
     elif question_type == "crop_management" and re.search(r"\b(poor fruit set|poor kernel set|fruit set)\b", lower):

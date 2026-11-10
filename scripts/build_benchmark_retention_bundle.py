@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import ctypes
 import datetime as dt
 import errno
 import hashlib
@@ -18,9 +19,11 @@ import hmac
 import io
 import json
 import math
+import os
 import shutil
 import sqlite3
 import stat
+import sys
 import tempfile
 import unicodedata
 from pathlib import Path
@@ -30,6 +33,29 @@ from jsonschema import Draft202012Validator
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _try_clone_retained(source: Path, target: Path) -> bool:
+    if sys.platform != "darwin":
+        return False
+    try:
+        clone = ctypes.CDLL(None, use_errno=True).clonefile
+        clone.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int]
+        clone.restype = ctypes.c_int
+        return clone(os.fsencode(source), os.fsencode(target), 0) == 0
+    except (AttributeError, OSError):
+        return False
+
+
+def _copy_retained_bytes(source: Path, target: Path) -> None:
+    # Immutable extents can be shared while the files keep independent inodes.
+    # Ordinary copies remain the fallback; every byte is verified before publish.
+    if _try_clone_retained(source, target):
+        shutil.copystat(source, target)
+    else:
+        shutil.copy2(source, target)
+
+
 SCHEMA_VERSION = "open_agronomy_agent.benchmark_retention_bundle.v1"
 LEGACY_PUBLIC_SCHEMA_VERSION = "open_agronomy_agent.benchmark_public_safe_response.v2"
 LEGACY_PUBLIC_TRANSFORM_POLICY_VERSION = (
@@ -986,7 +1012,10 @@ def build_retention_bundle(
     bundle_root: Path,
     experiment_dir: Path | None = None,
     implementation_commit: str | None = None,
+    min_free_bytes: int = 1024**3,
 ) -> dict[str, Any]:
+    if min_free_bytes < 0:
+        raise ValueError("min_free_bytes must be non-negative")
     database = database.resolve()
     bundle_root = bundle_root.resolve()
     if not database.is_file():
@@ -1033,6 +1062,14 @@ def build_retention_bundle(
     if destination.exists():
         return verify_retention_bundle(destination)
 
+    probe = bundle_root
+    while not probe.exists():
+        probe = probe.parent
+    # Reserve the ordinary-copy fallback, public projection and manifest space.
+    required = sum(int(entry["bytes"]) for entry in (database_entry, *private_entries))
+    required += len(_csv_bytes(public_rows)) + 1024**2 + min_free_bytes
+    if shutil.disk_usage(probe).free < required:
+        raise ValueError(f"insufficient retention free space; {required} bytes required")
     bundle_root.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="benchmark-retention-", dir=bundle_root) as temporary:
         staging = Path(temporary) / bundle_id
@@ -1040,7 +1077,7 @@ def build_retention_bundle(
         for entry in (database_entry, *private_entries):
             target = staging / str(entry["path"])
             target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(Path(entry["source"]), target)
+            _copy_retained_bytes(Path(entry["source"]), target)
         public_dir = staging / "public_safe"
         public_dir.mkdir(parents=True, exist_ok=True)
         public_csv = public_dir / "response_measurements.csv"
@@ -1195,6 +1232,7 @@ def main() -> int:
     parser.add_argument("--bundle-root", type=Path)
     parser.add_argument("--experiment-dir", type=Path)
     parser.add_argument("--implementation-commit")
+    parser.add_argument("--min-free-bytes", type=int, default=1024**3)
     parser.add_argument("--verify", type=Path)
     args = parser.parse_args()
     if args.verify is not None:
@@ -1207,6 +1245,7 @@ def main() -> int:
             bundle_root=args.bundle_root,
             experiment_dir=args.experiment_dir,
             implementation_commit=args.implementation_commit,
+            min_free_bytes=args.min_free_bytes,
         )
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0

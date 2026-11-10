@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import ctypes
 import datetime as dt
+import fcntl
 import fnmatch
 import hashlib
 import importlib.util
@@ -25,6 +26,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MANIFEST = ROOT / "configs/public_repository_manifest.json"
+MAX_RETAINED_VERIFICATION_STAGES = 2
 
 sys.path.insert(0, str(ROOT / "src"))
 from agronomy_agent.publication_privacy import require_public_paths
@@ -290,14 +292,35 @@ def check_scope(manifest_path: Path = DEFAULT_MANIFEST) -> dict[str, Any]:
 
 def verify(manifest_path: Path, receipt_path: Path) -> dict[str, Any]:
     """Retire a successful owned stage; retain failures for bounded inspection."""
-    if receipt_path.exists():
+    if receipt_path.exists() or receipt_path.is_symlink():
         raise FileExistsError("verification receipt must be new")
     scope = check_scope(manifest_path)
-    # This is a builder floor; callers also account for other outstanding work.
     stage_root = ROOT / "outputs/public-repository-verification"
-    if shutil.disk_usage(ROOT).free < scope["total_bytes"] + 1024 ** 3:
-        raise ValueError("verification requires package bytes plus a 1 GiB free floor")
+    if stage_root.resolve() != stage_root.absolute():
+        raise ValueError("verification stage root must not contain symlinks")
+    if receipt_path.resolve().is_relative_to(stage_root):
+        raise ValueError("verification receipt must be outside the stage root")
     stage_root.mkdir(parents=True, exist_ok=True)
+    lock_fd = os.open(stage_root / ".verification.lock", os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(lock_fd, "w") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as error:
+            raise ValueError("another public package verification is active") from error
+        if receipt_path.exists() or receipt_path.is_symlink():
+            raise FileExistsError("verification receipt must be new")
+        if len(list(stage_root.glob("stage-*"))) >= MAX_RETAINED_VERIFICATION_STAGES:
+            raise ValueError("retained verification stage limit reached; inspect existing stages")
+        # Admit the ordinary-copy fallback on the staging volume. This is not
+        # a reservation against other applications using the same volume.
+        if shutil.disk_usage(stage_root).free < scope["total_bytes"] + 1024 ** 3:
+            raise ValueError("verification requires package bytes plus a 1 GiB free floor")
+        return _verify_stage(stage_root, manifest_path, receipt_path, scope)
+
+
+def _verify_stage(
+    stage_root: Path, manifest_path: Path, receipt_path: Path, scope: dict[str, Any],
+) -> dict[str, Any]:
     stage = Path(tempfile.mkdtemp(prefix="stage-", dir=stage_root))
     receipt = {"schema_version": "open_agronomy_agent.public_repository_verification.v1",
                "stage_path": str(stage), "manifest_sha256": scope["manifest_sha256"]}
@@ -321,11 +344,14 @@ def verify(manifest_path: Path, receipt_path: Path) -> dict[str, Any]:
         receipt.update(status="pass", stage_state="retired", package=built,
                        derived_paths=sorted(derived & selected))
         shutil.rmtree(stage)  # Only the fresh stage owned by this invocation.
-    except Exception as error:
+    except BaseException as error:
         receipt.update(status="failed", stage_state="retained", error_type=type(error).__name__)
-        receipt_path.parent.mkdir(parents=True, exist_ok=True)
-        with receipt_path.open("x", encoding="utf-8") as handle:
-            json.dump(receipt, handle, indent=2); handle.write("\n")
+        try:
+            receipt_path.parent.mkdir(parents=True, exist_ok=True)
+            with receipt_path.open("x", encoding="utf-8") as handle:
+                json.dump(receipt, handle, indent=2); handle.write("\n")
+        except OSError as receipt_error:
+            error.add_note(f"Could not write verification receipt: {receipt_error}; stage: {stage}")
         raise
     receipt_path.parent.mkdir(parents=True, exist_ok=True)
     with receipt_path.open("x", encoding="utf-8") as handle:
