@@ -133,9 +133,11 @@ copy cannot change the other. The builder still computes every output hash.
 Use `--check` for routine scope/hash validation without a staging tree. When
 materialization itself needs checking, use `--verify --receipt <new-json-path>`:
 the builder compares copied bytes with the source pins, verifies derived
-inventory/receipt hashes, retires only its fresh successful stage and retains a
-failed stage under `outputs/public-repository-verification`. Reserve package
-bytes plus the builder's 1 GiB floor and other outstanding work before that mode.
+inventory/receipt hashes, retires only its fresh successful stage and retains
+failed or interrupted stages under `outputs/public-repository-verification`.
+A process-held lock admits one verification at a time; two retained stages
+block new verification until the operator reviews them. Reserve package bytes
+plus the builder's 1 GiB floor and other outstanding work before that mode.
 Use `--destination` when a downstream consumer needs a retained tree. Existing
 receipt paths are never overwritten.
 
@@ -146,6 +148,12 @@ are stable; do not edit `container/runtime_manifest.json` by hand. An unchanged
 contract retains its prior generated timestamp.
 
 ## Workspace profiling
+
+Private benchmark retention uses independent copy-on-write clones when the
+filesystem supports them and copies otherwise. It verifies bytes before atomic
+publication. New bundles require the ordinary-copy payload, public projection
+and a 1 GiB free-space margin (`--min-free-bytes` adjusts that margin). An exact
+existing bundle can be verified and reused without a new space admission.
 
 `profile_workspace_backend.py` creates an isolated synthetic SQLite database in a
 new output directory. It measures cold/warm API calls and a mock production-core

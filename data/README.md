@@ -41,9 +41,11 @@ The former `curated_canada/v1` through `v4` development stores are no longer
 current payload directories. Their milestones survive in compact profile
 manifests, review records, and Git history rather than as competing runtime
 copies. Frozen evidence never activates a profile.
-The Manitoba canola-insect companion is admitted only as five bounded semantic
-rows after source-specific OpenMB review; product tables and third-party
-material remain excluded. Discovery alone never makes content model-visible.
+The Manitoba canola-insect companion retains five source-reviewed semantic
+records and a source-specific OpenMB review in the source registry. It is absent
+from the active release's shards and is not available to default retrieval.
+Product tables and third-party material remain excluded. A registry permission
+or a retained companion does not activate content.
 
 The full `offline_agronomy/us_nrcs/` pack contains 218,258 U.S. NRCS records in
 51 bounded JSONL shards plus persisted exact-token BM25 statistics. It is loaded

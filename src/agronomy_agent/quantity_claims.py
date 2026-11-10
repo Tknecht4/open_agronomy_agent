@@ -16,10 +16,11 @@ _UNIT = (
     r"kg\s*/\s*ha|lb(?:s)?\s*/\s*(?:acre|ac)|bu\s*/\s*acre|mg\s*/?\s*L|km\s*/?\s*h|"
     r"kilograms?|kg|milligrams?|mg|grams?|g|pounds?|lbs?|ounces?|oz|tonnes?|"
     r"millilitres?|milliliters?|litres?|liters?|mL|L|gallons?|quarts?|hectares?|ha|"
-    r"ppm|ppb|kPa|MPa|Pa|mph|mm|cm|inches?|feet|ft|days?|hours?|acres?|%|°?[CF]"
+    r"ppm|ppb|kPa|MPa|Pa|mph|mm|cm|inches?|feet|ft|days?|hours?|acres?|"
+    r"per\s+cent|pour\s+cent|percent|%|°?[CF]"
 )
 NUMBER_RE = re.compile(
-    rf"(?<![\w.,])(?P<number>{_NUM})(?:\s*(?:-|–|to)\s*(?P<upper>{_NUM}))?"
+    rf"(?<![\w.,])(?P<number>{_NUM})(?:\s*(?:-|–|to|à)\s*(?P<upper>{_NUM}))?"
     rf"(?:\s*(?P<unit>[A-Za-z°%]+\s*/\s*[A-Za-z0-9²³]+|{_UNIT})(?![\w/])"
     rf"|(?P<opaque_unit>[A-Za-z][A-Za-z0-9/²³]*))?(?!\w|[.,]\d)", re.IGNORECASE,
 )
@@ -32,6 +33,7 @@ _ALIASES = {
     "hectare": "ha", "hectares": "ha", "gallon": "gallons", "quart": "quarts",
     "millilitre": "ml", "millilitres": "ml", "milliliter": "ml", "milliliters": "ml",
     "milligram": "mg", "milligrams": "mg",
+    "percent": "%", "pourcent": "%",
 }
 _CONTAINERS = r"bags?|boxes|box|sacks?|packs?|packages?|bales?|containers?"
 
@@ -107,7 +109,7 @@ def _scientific_notation(text: str) -> tuple[str, set[str]]:
     text = re.sub(r"\\(?:text|mathrm)\{\s*([A-Za-z][A-Za-z0-9]*)\s*\}", r"\1", text)
     text = re.sub(r"[⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻]+", lambda m: "^" + m.group().translate(
         str.maketrans("⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻", "0123456789+-")), text)
-    text = re.sub(r"\^\{([+-]?\d+[+-]?|[+-])\}", r"^\1", text)
+    text = re.sub(r"\^\s*\{\s*([+-]?\d+[+-]?|[+-])\s*\}", r"^\1", text)
     text = text.replace("−", "-")
     annotations: set[str] = set()
     digits = str.maketrans("0123456789+-", "abcdefghijpm")

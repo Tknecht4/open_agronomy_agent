@@ -65,6 +65,17 @@ benchmark identity inputs and may point to intentionally absent legacy payloads.
 Relative configured artifacts resolve through repository/config artifact roots
 and must be included in identity hashing.
 
+Compiled lexical indexes are disposable cache state. Each directory defaults
+to eight retained entries and 256 MiB of logical bytes, controlled by
+`AGRONOMY_AGENT_AGNO_INDEX_CACHE_MAX_ENTRIES` and
+`AGRONOMY_AGENT_AGNO_INDEX_CACHE_MAX_BYTES`. The byte limit still applies when
+the entry limit is disabled; zero bytes disables persistence. Cache writes
+preserve a 1 GiB free-space reserve by default, configured by
+`AGRONOMY_AGENT_AGNO_INDEX_CACHE_MIN_FREE_BYTES`. A refused write leaves
+retrieval available in memory. Writers use separate staging files; pruning is
+best effort across processes. Keep this directory private and separate from
+user or source records.
+
 ## Validation
 
 ```bash
