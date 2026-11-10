@@ -95,5 +95,7 @@ jobs:
         run: npm run typecheck
       - name: Test
         run: npm test
+      - name: Verify frontend license notices
+        run: npm run test:licenses
       - name: Build
         run: npm run build

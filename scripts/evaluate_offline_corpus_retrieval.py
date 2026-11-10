@@ -60,6 +60,10 @@ def _relative(root: Path, value: str) -> str:
 def _case_result(case: dict[str, Any], docs: list[Any], tiers: dict[str, str], elapsed_ms: float) -> dict[str, Any]:
     expected = {str(value) for value in case.get("expected_source_ids") or []}
     forbidden = {str(value) for value in case.get("forbidden_evidence_tiers") or []}
+    allowed_policies = case.get("expected_retrieval_policy")
+    if allowed_policies is not None and (not isinstance(allowed_policies, list) or not allowed_policies or
+            any(not isinstance(v, str) or not v.strip() for v in allowed_policies)):
+        raise ValueError("expected_retrieval_policy must be a nonempty list of policy names")
     retrieved = []
     for rank, doc in enumerate(docs, start=1):
         locator_ok, locator_status = source_locator_status(doc.source_locator)
@@ -82,7 +86,7 @@ def _case_result(case: dict[str, Any], docs: list[Any], tiers: dict[str, str], e
     source_ranks = [entry["rank"] for entry in retrieved if entry["source_id"] in expected]
     first_rank = min(source_ranks) if source_ranks else None
     positive = bool(expected)
-    negative_contract = bool(forbidden or case.get("expect_no_us_analogue_context") or case.get("expect_no_admitted_community_context"))
+    negative_contract = bool(forbidden or case.get("expect_no_us_analogue_context") or case.get("expect_no_admitted_community_context") or allowed_policies)
     # A source repeated across chunks earns relevance once, not once per chunk.
     unique_source_ranks: dict[str, int] = {}
     for entry in retrieved:
@@ -110,6 +114,24 @@ def _case_result(case: dict[str, Any], docs: list[Any], tiers: dict[str, str], e
     if case.get("required_applicability_boundary_fragment"):
         fragment = str(case["required_applicability_boundary_fragment"]).casefold()
         boundary_ok = boundary_ok and any(fragment in str(entry["applicability_boundary"]).casefold() for entry in retrieved if entry["source_id"] in expected)
+    policy_ok = None
+    if allowed_policies is not None:
+        policy_entries = [entry for entry in retrieved if not positive or entry["source_id"] in expected]
+        observed_policies = [entry["retrieval_policy"] for entry in policy_entries]
+        if any(isinstance(value, str) and value.strip() and value not in allowed_policies for value in observed_policies):
+            policy_ok = False
+        elif expected - {entry["source_id"] for entry in policy_entries} or any(
+            not isinstance(value, str) or not value.strip() for value in observed_policies
+        ):
+            policy_ok = None
+        else:
+            policy_ok = True
+    authority_ok = not forbidden_hit and boundary_ok
+    if authority_ok and (any(entry["evidence_tier"] == "unknown" for entry in retrieved) or
+                         allowed_policies is not None and policy_ok is None):
+        authority_ok = None
+    if policy_ok is False:
+        authority_ok = False
     return {
         "case_id": case["case_id"],
         "partition": case["partition"],
@@ -121,9 +143,11 @@ def _case_result(case: dict[str, Any], docs: list[Any], tiers: dict[str, str], e
         "first_expected_source_rank": first_rank,
         "recall_at": {str(k): sum(rank <= k for rank in unique_source_ranks.values()) / len(expected) if positive else None for k in K_VALUES},
         "ndcg_at_7": dcg / ideal if positive else None,
-        "negative_control_compliant": (not forbidden_hit and boundary_ok) if not positive and negative_contract else None,
+        "negative_control_compliant": authority_ok if not positive and negative_contract else None,
+        "expected_retrieval_policy": allowed_policies,
+        "expected_source_policy_compliant": policy_ok,
         "source_locator_valid": all(entry["source_locator_complete"] for entry in retrieved) and precision_ok,
-        "authority_compliant": not forbidden_hit and boundary_ok,
+        "authority_compliant": authority_ok,
         "latency_ms": round(elapsed_ms, 3),
     }
 
@@ -150,6 +174,7 @@ def summarize_results(results: list[dict[str, Any]]) -> dict[str, Any]:
         ("negative_control_compliance_rate", "negative_control_compliant", None),
         ("source_locator_validity_rate", "source_locator_valid", None),
         ("jurisdiction_authority_compliance_rate", "authority_compliant", None),
+        ("expected_source_policy_compliance_rate", "expected_source_policy_compliant", None),
     ):
         values = []
         for row in results:
@@ -157,6 +182,16 @@ def summarize_results(results: list[dict[str, Any]]) -> dict[str, Any]:
             if value is not None:
                 values.append(float(value))
         summary[metric] = _interval(values, seed_offset=len(summary))
+    for metric, key, negative_only in [
+            ("jurisdiction_authority_compliance_rate", "authority_compliant", False),
+            ("negative_control_compliance_rate", "negative_control_compliant", True)]:
+        eligible = [row for row in results if row.get("execution_status") == "completed" and
+                    (not negative_only or row.get("metric_population") == "negative_control")]
+        summary[metric].update(contracted_cases=len(eligible), unknown_cases=sum(row.get(key) is None for row in eligible))
+    contracted = [row for row in results if row.get("expected_retrieval_policy") is not None]
+    summary["expected_source_policy_compliance_rate"].update(
+        contracted_cases=len(contracted), unknown_cases=sum(row.get("expected_source_policy_compliant") is None for row in contracted),
+        scope="all chunks of expected sources; source recall remains a separate relevance metric")
     latencies = sorted(row["latency_ms"] for row in results if row.get("latency_ms") is not None)
     summary["latency_ms"] = {
         "median": statistics.median(latencies) if latencies else None,
@@ -191,6 +226,8 @@ def evaluation_gate(report: dict[str, Any], threshold_policy: dict[str, Any] | N
         observed = report["summary"][metric]["mean"]
         if observed is None or observed < threshold:
             failures.append(f"threshold_not_met:{metric}")
+        if report["summary"][metric].get("unknown_cases", 0):
+            failures.append(f"threshold_coverage_unknown:{metric}")
     return {"passed": not failures, "failures": failures, "threshold_policy": policy,
             "performance_thresholds_supplied": bool(rates), "claim_eligible": False}
 
@@ -237,6 +274,7 @@ def evaluate(*, config_path: Path, case_path: Path, suite_path: Path,
             results.append({"case_id": case["case_id"], "partition": case["partition"],
                             "case_status": case["case_status"], "execution_status": "failed",
                             "metric_population": "not_executed", "error_type": type(exc).__name__,
+                            "expected_retrieval_policy": case.get("expected_retrieval_policy"),
                             "error": str(exc)})
     completed = [row for row in results if row["execution_status"] == "completed"]
     by_partition: dict[str, list[dict[str, Any]]] = {}
@@ -264,7 +302,7 @@ def evaluate(*, config_path: Path, case_path: Path, suite_path: Path,
         "negative_case_count": sum(row.get("metric_population") == "negative_control" for row in results),
         "positive_source_case_count": sum(row.get("metric_population") == "positive_source" for row in results),
         "negative_control_case_count": sum(row.get("metric_population") == "negative_control" for row in results),
-        "summary": summarize_results(completed),
+        "summary": summarize_results(results),
         "partitions": {partition: {"cases": len(rows), "summary": summarize_results(rows),
                                     "statuses": dict(Counter(row["execution_status"] for row in rows))}
                        for partition, rows in sorted(by_partition.items())},

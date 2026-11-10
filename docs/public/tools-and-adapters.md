@@ -37,7 +37,7 @@ Guards add field-data, fertility, weather, label, product-safety, resistance, so
 
 | Family | Examples | Availability | Boundary |
 |---|---|---|---|
-| Weather/climate | NASA POWER, Daymet, Canadian agroclimate lanes | Live provider or dated cache | Gridded context; not a field sensor or guaranteed forecast |
+| Weather/climate | NASA POWER, Daymet, Canadian agroclimate lanes | Live provider or dated cache | Gridded context; not a field sensor or guaranteed forecast. Daymet validates geographic coordinates and leaves grid coverage to the provider. |
 | Evapotranspiration | OpenET and Canadian source lane | Credential/provider or explicit unavailable result | Planning prior, not irrigation prescription or water-right record |
 | Soil/land cover | NRCS/CanSIS/AAFC, packaged Prairie layers | Geography, network/cache, or installed pack | Mapped/classified prior, not point truth or lab result |
 | Crop statistics | NASS/Statistics Canada snapshots or queries | Credential/provider/cache dependent | Regional context, not a field yield |

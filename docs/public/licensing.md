@@ -26,6 +26,9 @@ commercial-use permissions, when their conditions are met. The earlier text
 is preserved in
 [LICENSES/Apache-2.0.txt](https://github.com/Tknecht4/open_agronomy_agent/blob/main/LICENSES/Apache-2.0.txt).
 It is not an alternative licence for new PolyForm-licensed contributions.
+The desktop, edge and portable packages carry the project notice and earlier
+licence. Production browser builds include project attribution and full legal
+texts from the locked frontend dependencies.
 
 Checksum-bound corpus releases, graph manifests, historical research and
 evaluation receipts, and source registries retain their original licences and

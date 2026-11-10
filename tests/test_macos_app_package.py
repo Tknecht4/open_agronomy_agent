@@ -36,6 +36,8 @@ def test_runtime_assets_copy_only_the_nested_container_requirements(tmp_path: Pa
     subprocess.run(["git", "init", "-q", str(source)], check=True)
     payload = b"fastapi==0.1\n"
     files = {
+        "NOTICE": b"project attribution\n",
+        "LICENSES/Apache-2.0.txt": b"historical license\n",
         "requirements.txt": b"base dependencies\n",
         "requirements/requirements-container.txt": payload,
         "requirements/requirements-macos-app-build.txt": b"build-only dependency\n",
@@ -46,13 +48,14 @@ def test_runtime_assets_copy_only_the_nested_container_requirements(tmp_path: Pa
         path.write_bytes(data)
     subprocess.run(["git", "-C", str(source), "add", "."], check=True)
     selected = _tracked_asset_files(source)
-    assert selected == [Path("requirements.txt"), Path("requirements/requirements-container.txt")]
+    assert {path.as_posix() for path in selected} == set(files) - {"requirements/requirements-macos-app-build.txt"}
     runtime = tmp_path / "runtime"
     for relative in selected:
         _copy_asset(source / relative, runtime / relative)
     manifest = _asset_manifest(runtime)
     assert {row["path"] for row in manifest["files"]} == {str(path) for path in selected}
-    assert (runtime / "requirements/requirements-container.txt").read_bytes() == payload
+    for path in selected:
+        assert (runtime / path).read_bytes() == files[path.as_posix()]
     assert not (runtime / "requirements-container.txt").exists()
     assert not (runtime / "requirements/requirements-macos-app-build.txt").exists()
 
