@@ -63,7 +63,11 @@ def observation_guidance(question: str) -> ObservationGuidance | None:
             ("imagery_comparability", "Compare processing and crop stage before causal interpretation.", (r"\b(?:processing|sensor|product)\b",)),
             ("imagery_stage", "Check crop stage or phenology on both dates.", (r"\b(?:crop|growth) stage\b", r"\bphenolog")),
         ))
-    if has(r"\b(?:gps|dropped|single|one)\b[^.]{0,35}\b(?:pin|point)\b") and has(r"\barea\b"):
+    if (
+        has(r"\b(?:gps|dropped|single|one)\b[^.]{0,35}\b(?:pin|point)\b")
+        and has(r"\barea\b")
+        and not has(r"\b(?:pixels?|buffers?|footprints?|sampling support)\b")
+    ):
         return ObservationGuidance("point_area", (
             "One GPS pin locates a point; it does not describe the planted area. Trace or survey the planted boundary to make a closed polygon. "
             "For a genuinely rectangular planted block, measure both length and width and multiply them in compatible units. "

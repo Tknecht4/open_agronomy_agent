@@ -83,7 +83,11 @@ The executed runtime source commit was
 The pinned native MLX model was `mlx-community/gemma-4-e2b-it-4bit`, revision
 `238767527555cb75a05732a84dff5d6ba0dd6809`; the active model configuration SHA256
 was `02311ba0dca40e33abf0efa396c7f17593d87b42a4f01d8c2e0af786f1fa8946`.
-The final report-only commit preserves that runtime source fingerprint.
+A subsequent scope guard keeps satellite pixel and declared buffer footprints
+on their existing sampling-support interpretation path, rather than applying
+the bare field-pin method. Two reproduced selector regressions cover that
+boundary. The completed study above remains bound to `c6d6134`; subsequent
+current-source confirmation and exact-head checks are retained with the PR.
 
 Local verification passed 3,776 backend tests with 58 skips, 607 focused
 source/context/renderer regressions, and 505 frontend tests plus typecheck and

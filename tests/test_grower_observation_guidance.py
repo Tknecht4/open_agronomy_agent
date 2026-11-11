@@ -239,3 +239,13 @@ def test_haskap_is_a_named_crop_for_live_guide_compatibility():
         crops = set(extract_crop_entities(question))
         assert crops == {"haskap"}
         assert not _live_reference_crop_compatible({"crops": ["vegetables", "potato"]}, query_crops=crops)
+
+
+@pytest.mark.parametrize("question", [
+    "What is the support area of the satellite pixel at my GPS point?",
+    "Does the footprint area of a declared buffer around one GPS point equal the planted area?",
+])
+def test_point_support_and_buffer_questions_keep_the_existing_interpretation_path(question):
+    # Instrument support can have a known two-dimensional footprint. It is not
+    # the bare field pin that the planted-area observation method addresses.
+    assert observation_guidance(question) is None
