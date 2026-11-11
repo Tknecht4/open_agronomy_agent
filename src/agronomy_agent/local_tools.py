@@ -1964,8 +1964,10 @@ def daymet_single_pixel_daily(
     end_date = _validate_iso_date(end)
     if end_date < start_date:
         raise ValueError("end must be on or after start")
-    if not (14.5 <= latitude <= 52.0 and -131.0 <= longitude <= -53.0):
-        raise ValueError("latitude/longitude outside Daymet North America single-pixel bounds")
+    # Validate geographic coordinates, then let the provider determine coverage.
+    # The old v3 rectangle excludes valid v4R1 Canadian cells north of 52 N.
+    # A valid coordinate is not evidence that a Daymet grid cell is available.
+    longitude, latitude = _validate_lon_lat_pair((longitude, latitude))
     max_year = dt.datetime.now(dt.UTC).year - 1
     if start_date.year < 1980 or end_date.year > max_year:
         raise ValueError(f"Daymet date range must be between 1980 and the latest full calendar year ({max_year})")

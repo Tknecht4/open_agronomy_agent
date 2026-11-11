@@ -6,6 +6,7 @@ import hashlib
 import json
 import re
 import sys
+import tomllib
 import uuid
 from pathlib import Path
 from typing import Any
@@ -86,6 +87,8 @@ def _frontend_packages(path: Path) -> list[dict[str, Any]]:
 def build_sbom(root: Path) -> dict[str, Any]:
     requirements = root / "requirements/requirements-container.txt"
     package_lock = root / "frontend/package-lock.json"
+    project_metadata = (root / "pyproject.toml").read_bytes()
+    project_license = tomllib.loads(project_metadata.decode("utf-8"))["project"]["license"]
     root_package = {
         "SPDXID": "SPDXRef-OpenAgronomyAgent",
         "name": "open-agronomy-agent-edge-runtime",
@@ -93,12 +96,12 @@ def build_sbom(root: Path) -> dict[str, Any]:
         "downloadLocation": "NOASSERTION",
         "filesAnalyzed": False,
         "licenseConcluded": "NOASSERTION",
-        "licenseDeclared": "NOASSERTION",
+        "licenseDeclared": project_license,
         "supplier": "Organization: Open Agronomy Agent project",
     }
     dependencies = [*_python_packages(requirements), *_frontend_packages(package_lock)]
     input_digest = hashlib.sha256(
-        (requirements.read_bytes() + package_lock.read_bytes())
+        (requirements.read_bytes() + package_lock.read_bytes() + project_metadata)
     ).hexdigest()
     namespace_uuid = uuid.uuid5(uuid.NAMESPACE_URL, f"open-agronomy-agent-sbom:{input_digest}")
     return {

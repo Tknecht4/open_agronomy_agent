@@ -29,7 +29,19 @@ A function plus endpoint is not a chat capability. A config flag plus prompt ins
 4. Add a separate runtime-policy admission decision.
 5. Validate rights, counts, hashes, leakage, retrieval behavior, and public-release scope.
 
-Never use held-out evaluation answers as runtime retrieval or training material.
+Evaluation cases and answers, including exposed development cases, never enter
+runtime retrieval or training. Preserve their suite, case, answer and trace
+lineage; a `train` split or a false flag cannot override evaluation identity.
+Original source datasets require separate rights and training admission review;
+sharing a source family with a benchmark does not itself identify an evaluation
+case.
+
+The Phase 5 candidate routes recheck stored trace, thread, message and event
+provenance during creation, approval and export. Explicitly unresolved lineage
+and unavailable or inconsistent original identities block approval/export.
+Candidate labels retain lineage declarations across review. Consent, human
+review, leak checks and source evidence remain required. These checks do not
+certify constituent rights, expert correctness or training readiness.
 
 ## Add an API/service domain
 

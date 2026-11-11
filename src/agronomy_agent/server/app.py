@@ -41,9 +41,14 @@ from agronomy_agent.phase5_reports import model_registry_comparison, stage_laten
 from agronomy_agent.phase5_sft import (
     contains_private_field_data,
     has_explicit_private_training_consent,
-    is_held_out_eval_trace,
     redact_training_text,
     source_evidence_from_trace_payload,
+    training_lineage_block_reason,
+    training_lineage_snapshot,
+)
+from agronomy_agent.server.services.sft_lineage import (
+    candidate_training_block_reason,
+    resolve_sft_source_lineage,
 )
 from agronomy_agent.server.schemas import (
     AccountConsentUpdate,
@@ -856,7 +861,8 @@ def _phase5_dataset_card(workspace_id: str, *, candidate_count: int = 0) -> dict
             "unreviewed traces",
             "prompt leaks",
             "raw private field facts without explicit training consent",
-            "held-out eval rows",
+            "all evaluation cases, answers and traces, including exposed development",
+            "unresolved original trace lineage",
         ],
         "training_plan": "LoRA/QLoRA only after readiness gates pass; adapters remain independently rollbackable.",
     }
@@ -4396,6 +4402,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             raise HTTPException(status_code=400, detail="failure_class is required for SFT candidates")
         trace_events = store.list_phase4_trace_events(thread["id"])
         source_trace = {
+            **trace_payload,
             "trace_id": metrics["trace_id"],
             "metrics": metrics,
             "labels": payload.labels,
@@ -4404,8 +4411,14 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 "metadata": thread.get("metadata") or {},
             },
         }
-        if is_held_out_eval_trace(source_trace, labels=payload.labels):
-            raise HTTPException(status_code=400, detail="held-out eval rows cannot become SFT candidates")
+        original_lineage, lineage_reason = resolve_sft_source_lineage(
+            store, str(payload.trace_id), thread_id=thread["id"], workspace_id=thread["workspace_id"],
+        )
+        lineage_reason = training_lineage_block_reason(source_trace) or lineage_reason
+        if payload.labels.get("source_trace_id") and str(payload.labels["source_trace_id"]) != str(payload.trace_id):
+            lineage_reason = lineage_reason or "unresolved_lineage"
+        if lineage_reason:
+            raise HTTPException(status_code=400, detail={"error": "trace cannot become an SFT candidate", "reason": lineage_reason})
         private_field_training_blocked = contains_private_field_data(
             source_trace,
             labels=payload.labels,
@@ -4436,6 +4449,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
             "source_trace_id": metrics["trace_id"],
             "reviewer_user_id": user["id"],
             "source_evidence": source_evidence,
+            "source_lineage": training_lineage_snapshot(original_lineage or {}, labels=payload.labels),
         }
         candidate = store.create_phase5_training_candidate(
             {
@@ -4474,11 +4488,24 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         if not candidate:
             raise HTTPException(status_code=404, detail="training candidate not found")
         require_workspace_role(user, candidate["workspace_id"], RESEARCH_REVIEW_ROLES)
+        original_lineage, lineage_reason = candidate_training_block_reason(store, candidate, proposed_labels=payload.labels)
+        if payload.review_status == "approved" and lineage_reason:
+            raise HTTPException(status_code=400, detail={"error": "candidate cannot be approved for training", "reason": lineage_reason})
+        review_labels = {
+            **payload.labels,
+            "source_lineage": training_lineage_snapshot({
+                "source_lineage": [
+                    *training_lineage_snapshot(candidate),
+                    *training_lineage_snapshot(original_lineage or {}),
+                    *training_lineage_snapshot({"labels": payload.labels}),
+                ],
+            }),
+        }
         updated = store.update_phase5_training_candidate_review(
             candidate_id,
             review_status=payload.review_status,
             reviewer_user_id=user["id"],
-            labels=payload.labels,
+            labels=review_labels,
         )
         return updated or {}
 
@@ -4491,8 +4518,9 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
         seen_hashes: set[str] = set()
         for candidate in approved:
             labels = candidate.get("labels") if isinstance(candidate.get("labels"), dict) else {}
-            if is_held_out_eval_trace(candidate, labels=labels):
-                excluded_records.append({"candidate_id": str(candidate.get("id")), "reason": "held_out_eval"})
+            _, lineage_reason = candidate_training_block_reason(store, candidate)
+            if lineage_reason:
+                excluded_records.append({"candidate_id": str(candidate.get("id")), "reason": lineage_reason})
                 continue
             if not labels.get("source_evidence"):
                 excluded_records.append({"candidate_id": str(candidate.get("id")), "reason": "missing_source_evidence"})

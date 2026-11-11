@@ -488,3 +488,7 @@ discards inherited agronomy environment overrides, selects the native MLX
 transport, and uses offline model loading after explicit snapshot provisioning.
 The recorded GPU environment is its performance reference; it does not measure
 native Mac latency.
+
+The offline retrieval scorer reports source recall separately from retrieval
+policy and authority compliance. A configured compliance threshold cannot pass
+if any case covered by that threshold has unknown compliance.

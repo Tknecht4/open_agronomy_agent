@@ -435,7 +435,9 @@ def test_edge_staging_and_sbom_use_the_nested_requirement_input(tmp_path):
     assert result["source_count"] == 1
     assert (context / relative).read_bytes() == path.read_bytes()
     assert not (context / "requirements-container.txt").exists()
+    (source / "pyproject.toml").write_text('[project]\nlicense = "PolyForm-Noncommercial-1.0.0"\n')
     sbom = build_sbom(source)
+    assert sbom["packages"][0]["licenseDeclared"] == "PolyForm-Noncommercial-1.0.0"
     assert {item["name"] for item in sbom["packages"][1:]} == {"fastapi"}
     annotation = json.loads(sbom["annotations"][0]["comment"])
     assert relative in {item["path"] for item in annotation["dependency_inputs"]}

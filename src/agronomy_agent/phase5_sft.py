@@ -11,6 +11,35 @@ EMAIL_RE = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.I)
 PHONE_RE = re.compile(r"\b(?:\+?1[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)\d{3}[-.\s]?\d{4}\b")
 APPROVED_REVIEW_STATUSES = {"approved", "reviewed", "expert_reviewed", "accepted"}
 HELD_OUT_SPLIT_VALUES = {"heldout", "held_out", "holdout", "eval", "evaluation", "test"}
+EVALUATION_FLAGS = {
+    "held_out_eval", "is_held_out", "held_out", "is_evaluation", "is_evaluation_case",
+    "is_evaluation_answer", "is_evaluation_trace", "evaluation_case", "evaluation_answer",
+}
+EVALUATION_IDS = {
+    "evaluation_suite_id", "evaluation_case_id", "evaluation_answer_id", "evaluation_trace_id",
+    "evaluation_run_id", "eval_suite_id", "eval_case_id", "eval_answer_id", "eval_run_id",
+    "benchmark_suite_id", "benchmark_case_id", "benchmark_answer_id",
+    "eval_id", "benchmark_id", "source_eval_id", "evaluation_partition",
+}
+SPLIT_KEYS = {"split", "dataset_split", "eval_split", "data_split"}
+LINEAGE_STATUS_KEYS = {"lineage_status", "evaluation_lineage_status", "provenance_status"}
+UNRESOLVED_LINEAGE_VALUES = {"unknown", "unresolved", "unverified", "pending", "missing"}
+# Follow provenance-bearing structures, never arbitrary document or message text.
+LINEAGE_CONTAINERS = {
+    "labels", "review_labels", "trace", "metadata", "metrics", "lineage", "source_lineage",
+    "evaluation_lineage", "answer_lineage", "provenance", "structured_answer", "source_evidence",
+    "trace_events", "spans", "messages", "payload", "attributes",
+    "eval_metadata", "evaluation_metadata", "benchmark_generation_input", "benchmark_egress_receipt",
+}
+EVALUATION_CONTAINERS = {"eval_metadata", "evaluation_metadata", "benchmark_generation_input", "benchmark_egress_receipt"}
+PROVENANCE_CONTAINERS = {"lineage", "source_lineage", "evaluation_lineage", "answer_lineage", "provenance"}
+EVALUATION_SCHEMAS = {
+    "open_agronomy_agent.release_product_cell.v1", "open_agronomy_agent.benchmark_generation_input.v1",
+}
+LINEAGE_SNAPSHOT_KEYS = EVALUATION_FLAGS | EVALUATION_IDS | SPLIT_KEYS | LINEAGE_STATUS_KEYS | {
+    "exposure", "source_dataset", "source_family", "source_version", "source_suite",
+    "suite_id", "case_id", "schema_version", "distribution_scope",
+}
 
 
 @dataclass(frozen=True)
@@ -42,7 +71,7 @@ def trace_to_sft_candidate(trace_payload: dict[str, Any], *, reviewer_id: str, c
     if not consented:
         return None
     labels = dict(trace_payload.get("labels") or trace_payload.get("review_labels") or {})
-    if is_held_out_eval_trace(trace_payload, labels=labels):
+    if training_lineage_block_reason(trace_payload, labels=labels):
         return None
     if contains_private_field_data(trace_payload, labels=labels) and not has_explicit_private_training_consent(
         trace_payload,
@@ -83,7 +112,9 @@ def trace_to_sft_candidate(trace_payload: dict[str, Any], *, reviewer_id: str, c
         if item.get("role") and item.get("content")
     )
     messages = (*messages, {"role": "assistant", "content": redact_training_text(str(ideal_answer))})
-    trace_id = str(trace_payload.get("trace_id") or metrics.get("trace_id"))
+    trace_id = _first_text(trace_payload.get("trace_id"), metrics.get("trace_id"))
+    if not trace_id:
+        return None
     return SftCandidate(
         candidate_id=hashlib.sha256(json.dumps(messages, sort_keys=True).encode("utf-8")).hexdigest()[:24],
         trace_id=trace_id,
@@ -102,32 +133,123 @@ def trace_to_sft_candidate(trace_payload: dict[str, Any], *, reviewer_id: str, c
             "rejected_answer": redact_training_text(str(rejected_answer)) if rejected_answer else None,
             "source_evidence": source_evidence,
             "source_trace_id": trace_id,
+            "source_lineage": training_lineage_snapshot(trace_payload, labels=labels),
         },
         dataset_card={
             "purpose": "Phase 5 reviewed, consented agronomy-agent answer-discipline candidate.",
             "consent": "research_and_training_opt_in",
             "redaction": "email_phone_regex_v1",
-            "excluded": "unreviewed traces, prompt leaks, private field facts without consent",
+            "excluded": "all evaluation cases/answers/traces, unresolved lineage, unreviewed traces, prompt leaks, private field facts without consent",
         },
     )
 
 
 def is_held_out_eval_trace(trace_payload: dict[str, Any], *, labels: dict[str, Any] | None = None) -> bool:
-    labels = labels or {}
-    trace = trace_payload.get("trace") if isinstance(trace_payload.get("trace"), dict) else {}
-    metadata = trace.get("metadata") if isinstance(trace.get("metadata"), dict) else {}
-    for container in (trace_payload, labels, trace, metadata):
-        if bool(container.get("held_out_eval") or container.get("is_held_out") or container.get("held_out")):
-            return True
-        split = _first_text(
-            container.get("split"),
-            container.get("dataset_split"),
-            container.get("eval_split"),
-            container.get("data_split"),
-        ).lower()
-        if split in HELD_OUT_SPLIT_VALUES:
-            return True
-    return False
+    """Compatibility name: identify *all* explicit evaluation lineage, including development.
+
+    Exposure and original source-family names alone do not identify evaluation
+    cases. A false flag cannot override a suite, case, answer, or trace identity.
+    Training consumers must also use ``training_lineage_block_reason`` to block
+    explicitly unresolved lineage; absence of a marker is not authorization.
+    """
+    return training_lineage_block_reason(trace_payload, labels=labels) == "evaluation_lineage"
+
+
+def training_lineage_block_reason(trace_payload: dict[str, Any], *, labels: dict[str, Any] | None = None) -> str | None:
+    unresolved = False
+    for path, container in _lineage_containers(trace_payload, labels=labels):
+        if _first_text(container.get("schema_version")) in EVALUATION_SCHEMAS or container.get("distribution_scope") == "machine_local_benchmark_only":
+            return "evaluation_lineage"
+        # These named containers are native evaluation artifacts, not original
+        # source datasets. Retain their presence even after compacting lineage.
+        for key in EVALUATION_CONTAINERS:
+            if key in container:
+                if isinstance(container[key], dict) and container[key]:
+                    return "evaluation_lineage"
+                unresolved = True
+        if container.get("suite_id") and container.get("case_id") and _first_text(container.get("exposure")) in {"exposed_development", "prospective_confirmation"}:
+            return "evaluation_lineage"
+        for key in PROVENANCE_CONTAINERS:
+            if key in container and not isinstance(container[key], (dict, list, tuple)):
+                unresolved = True
+        if "evaluation_lineage" in container and not container["evaluation_lineage"]:
+            unresolved = True
+        provenance_kind = path.rsplit(".", 1)[-1].split("[", 1)[0]
+        if provenance_kind in PROVENANCE_CONTAINERS and "status" in container:
+            if str(container["status"] or "").strip().lower() in UNRESOLVED_LINEAGE_VALUES | {""}:
+                unresolved = True
+        for key in EVALUATION_FLAGS:
+            if key not in container:
+                continue
+            value = container[key]
+            if value is True or value == 1 or (isinstance(value, str) and value.strip().lower() in {"true", "yes", "1"}):
+                return "evaluation_lineage"
+            if value is not False and value != 0 and not (isinstance(value, str) and value.strip().lower() in {"false", "no", "0"}):
+                unresolved = True
+        for key in EVALUATION_IDS:
+            if key not in container:
+                continue
+            value = container[key]
+            if value is not None and str(value).strip().lower() not in {"", "unknown", "unresolved", "none", "null"}:
+                return "evaluation_lineage"
+            unresolved = True
+        for key in SPLIT_KEYS:
+            value = str(container.get(key) or "").strip().lower()
+            if value in HELD_OUT_SPLIT_VALUES:
+                return "evaluation_lineage"
+            if key in container and (not value or value in UNRESOLVED_LINEAGE_VALUES):
+                unresolved = True
+        for key in LINEAGE_STATUS_KEYS:
+            if key in container and str(container[key] or "").strip().lower() in UNRESOLVED_LINEAGE_VALUES | {""}:
+                unresolved = True
+    return "unresolved_lineage" if unresolved else None
+
+
+def training_lineage_snapshot(trace_payload: dict[str, Any], *, labels: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    """Preserve declarations, without certifying rights, consent, or non-evaluation status."""
+    records: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for path, container in _lineage_containers(trace_payload, labels=labels):
+        markers = {key: value for key, value in container.items() if key in LINEAGE_SNAPSHOT_KEYS}
+        for key in EVALUATION_CONTAINERS:
+            if key in container:
+                if isinstance(container[key], dict) and container[key]:
+                    markers["is_evaluation_trace"] = True
+                else:
+                    markers["lineage_status"] = "unresolved"
+        for key in PROVENANCE_CONTAINERS:
+            if key in container and not isinstance(container[key], (dict, list, tuple)):
+                markers["lineage_status"] = "unresolved"
+        if "evaluation_lineage" in container and not container["evaluation_lineage"]:
+            markers["lineage_status"] = "unresolved"
+        provenance_kind = path.rsplit(".", 1)[-1].split("[", 1)[0]
+        if provenance_kind in PROVENANCE_CONTAINERS and "status" in container:
+            markers["lineage_status"] = container["status"]
+        if not markers:
+            continue
+        # Existing snapshots retain their original path rather than acquiring
+        # an ever-growing labels.source_lineage prefix on every review.
+        record = {"lineage_path": _first_text(container.get("lineage_path"), path), **markers}
+        identity = json.dumps(record, sort_keys=True, default=str)
+        if identity not in seen:
+            seen.add(identity)
+            records.append(record)
+    return sorted(records, key=lambda record: json.dumps(record, sort_keys=True, default=str))
+
+
+def _lineage_containers(trace_payload: dict[str, Any], *, labels: dict[str, Any] | None = None):
+    pending = [("payload", trace_payload), ("labels", labels or {})]
+    seen: set[int] = set()
+    while pending:
+        path, value = pending.pop()
+        if not isinstance(value, (dict, list, tuple)) or id(value) in seen:
+            continue
+        seen.add(id(value))
+        if isinstance(value, (list, tuple)):
+            pending.extend((f"{path}[{index}]", item) for index, item in enumerate(value))
+            continue
+        yield path, value
+        pending.extend((f"{path}.{key}", item) for key, item in value.items() if key in LINEAGE_CONTAINERS)
 
 
 def contains_private_field_data(trace_payload: dict[str, Any], *, labels: dict[str, Any] | None = None) -> bool:

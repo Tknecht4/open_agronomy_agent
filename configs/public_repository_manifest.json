@@ -395,6 +395,8 @@
     "tests/test_benchmark_child_timeout.py",
     "tests/test_backup_restore_guard.py",
     "tests/test_local_runtime_boundaries.py",
+    "tests/test_phase5_sft.py",
+    "tests/test_phase5_sft_api.py",
     "tests/test_public_tool_adapters.py",
     "tests/test_public_adapter_planner.py",
     "tests/test_public_docs.py",
