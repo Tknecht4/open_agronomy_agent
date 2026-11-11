@@ -69,8 +69,11 @@ the formula as standalone kilogram totals. The original report and answers are
 retained with that failure.
 
 The evaluator repair rejects qualified compound-unit prefixes while retaining
-contradictory-total and negation checks. All other functions in that module
-retain identical syntax trees. A fresh nine-case numeric run at `1b010ca`
+contradictory-total and negation checks. A bounded stress check also caught
+ambiguous qualifier repetition on a long trailing token. The repair requires
+whitespace between qualifier words and adds a 3,000-character regression case
+with a subprocess timeout. All other functions in that module retain identical
+syntax trees. A fresh nine-case numeric run at `6966d1d`
 passed **9/9** numeric contracts, all six foundation components and every
 execution check. Its status is `smoke_complete`, with `source_stable: true`.
 These are repeated exposed cases. The evaluator correction adds no model
