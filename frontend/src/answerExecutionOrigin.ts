@@ -21,10 +21,12 @@ export function retainedDraftHitTokenLimit(turn: Turn): boolean {
   const stats = record(metadata.generation_stats)
   const stages = record(metadata.answer_stages)
   const draftHash = record(stages.draft).sha256
-  const finalHash = record(stages.final).sha256
+  const final = record(stages.final)
   const integrity = turn.answer_integrity_receipt
-  return stats.finish_reason === 'length' && digest(draftHash) && draftHash === finalHash
-    && integrity?.status !== 'invalid' && (!integrity?.answer_sha256 || integrity.answer_sha256 === finalHash)
+  if (stats.finish_reason !== 'length' || !digest(draftHash) || draftHash !== final.sha256) return false
+  if (integrity?.status === 'invalid' || (integrity?.answer_sha256 && integrity.answer_sha256 !== draftHash)) return false
+  if (typeof final.text === 'string') return final.text === turn.answer
+  return integrity?.status === 'verified' && integrity.answer_sha256 === draftHash
 }
 
 /** Present the production server's retained observations, not current runtime readiness.

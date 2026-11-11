@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import FarmWorkspace from './FarmWorkspace'
 import type { FarmField } from './farmTypes'
@@ -100,6 +100,59 @@ describe('farm cockpit workflows',()=>{
       method: 'POST', body: JSON.stringify({ sources: ['soil'] }),
     })))
   })
+  it('shows completion when a soil update finishes before cancellation', async () => {
+    window.history.replaceState(null, '', '#fields?season=2026&field=west&tab=soil')
+    let summaryReads = 0
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      let result: unknown = { id: 'soil-update', status: 'running' }
+      if (url === '/api/farms') result = { farms }
+      else if (url.startsWith('/api/farms/overview')) result = { fields, coverage: {} }
+      else if (url.includes('/summary')) {
+        summaryReads += 1
+        result = { ...fields[0], seasons: [], geometry_revisions: [], public_context: {}, source_status: {} }
+      } else if (url.endsWith('/cancel')) result = { id: 'soil-update', status: 'completed' }
+      return { ok: true, json: async () => result }
+    }))
+    render(<FarmWorkspace {...props} mode="fields" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Refresh mapped soil' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel update' }))
+    expect(await screen.findByText('Updated', { exact: true })).toBeVisible()
+    expect(screen.queryByText('Cancelled', { exact: true })).not.toBeInTheDocument()
+    await waitFor(() => expect(summaryReads).toBeGreaterThan(1))
+  })
+
+  it('drops an in-flight terrain result when the saved boundary revision changes', async () => {
+    window.history.replaceState(null, '', '#fields?season=2026&field=west&tab=soil')
+    let revision = 'first-revision'
+    let resolveTerrain!: (value: unknown) => void
+    const terrain = new Promise(resolve => { resolveTerrain = resolve })
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      let result: unknown = { id: 'soil-update', status: 'completed' }
+      if (url === '/api/farms') result = { farms }
+      else if (url.startsWith('/api/farms/overview')) result = { fields, coverage: {} }
+      else if (url.includes('/summary')) result = {
+        ...fields[0], name: revision, geometry_revision_id: revision,
+        geometry: { kind: 'polygon', points: [], acres: 1 },
+        confirmed_facts: { province_state: 'Quebec' }, seasons: [], geometry_revisions: [],
+        public_context: {}, source_status: {},
+      }
+      else if (url.endsWith('/quebec-lidar/plan')) result = await terrain
+      return { ok: true, json: async () => result }
+    }))
+    render(<FarmWorkspace {...props} mode="fields" />)
+    fireEvent.click(await screen.findByText('Offline terrain context'))
+    fireEvent.click(screen.getByRole('button', { name: 'Check saved field' }))
+    revision = 'second-revision'
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh mapped soil' }))
+    await screen.findByRole('heading', { name: 'second-revision' })
+    await act(async () => resolveTerrain({
+      status: 'ready_to_download', receipt: { matched_tile_count: 1, field_geometry_sha256: 'prior-boundary' },
+    }))
+    expect(screen.queryByLabelText('Offline terrain availability receipt')).not.toBeInTheDocument()
+  })
+
   it('reports a malformed farm response without inventing an empty farm',async()=>{
     vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,status:200,json:async()=>({}),text:async()=>'{}'})))
     render(<FarmWorkspace {...props} />)

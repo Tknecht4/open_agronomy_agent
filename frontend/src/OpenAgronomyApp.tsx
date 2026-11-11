@@ -3825,6 +3825,7 @@ export function OpenAgronomyApp() {
             ) : null}
             <Suspense fallback={null}>
               <OfflineTerrainContextPanel
+                key={`${activeFieldContextId}:${activeFieldRecordUpdatedAt}:${fieldStorageMode}:${fieldGeometry.kind}:${field.jurisdiction}`}
                 id={activeFieldContextId}
                 m={fieldStorageMode}
                 k={fieldGeometry.kind}

@@ -11,6 +11,7 @@ const FieldDataPanel = lazy(() => import('./FieldDataPanel'), 'Field tables')
 const FieldImageryWorkspace = lazy(() => import('./FieldImageryWorkspace'), 'Imagery')
 const FarmRecords = lazy(() => import('./FarmRecords'), 'Field records')
 const tabs = [['overview', 'Overview'], ['imagery', 'Imagery'], ['soil', 'Soil & terrain'], ['records', 'Records'], ['tables', 'Data tables']] as const
+const isActiveContextJob = (status: string) => status === 'queued' || status === 'running'
 type LocationSuggestions = { status: string; message: string; boundary: string; candidates: Array<{ id: string; country: string; province: string; coverage: number; confirmable: boolean; source_url: string }> }
 
 
@@ -36,11 +37,11 @@ export default function FieldDossier({ fieldId, season, tab, farms, allowNetwork
   useEffect(() => {
     const id = ++epoch.current
     setField(current => current?.id === fieldId && current.season === season ? current : null); setError('')
-    apiGet<FieldSummary>(`/api/fields/${encodeURIComponent(fieldId)}/summary?season=${season}`).then(value => { if (id === epoch.current) { setField(value); if (value.latest_context_job && ['queued', 'running'].includes(value.latest_context_job.status)) { setJobId(value.latest_context_job.id); setEnrichment(stateLabel(value.latest_context_job.status)) } } }).catch(cause => { if (id === epoch.current) setError(readableError(cause)) })
+    apiGet<FieldSummary>(`/api/fields/${encodeURIComponent(fieldId)}/summary?season=${season}`).then(value => { if (id === epoch.current) { setField(value); if (value.latest_context_job && isActiveContextJob(value.latest_context_job.status)) { setJobId(value.latest_context_job.id); setEnrichment(stateLabel(value.latest_context_job.status)) } } }).catch(cause => { if (id === epoch.current) setError(readableError(cause)) })
     return () => { epoch.current += 1 }
   }, [fieldId, season, refresh])
   useEffect(() => {
-    if (!jobId) return
+    if (!jobId || requestingEnrichment) return
     let active = true
     let timer: ReturnType<typeof setTimeout>
     const poll = async () => {
@@ -48,13 +49,13 @@ export default function FieldDossier({ fieldId, season, tab, farms, allowNetwork
         const result = await apiGet<{ status: string }>(`/api/enrichment-jobs/${encodeURIComponent(jobId)}`)
         if (!active) return
         setEnrichment(stateLabel(result.status))
-        if (['queued', 'running'].includes(result.status)) timer = setTimeout(poll, 1500)
+        if (isActiveContextJob(result.status)) timer = setTimeout(poll, 1500)
         else { setJobId(''); setRefresh(v => v + 1); onChanged() }
       } catch (cause) { if (active) { setError(readableError(cause)); setJobId('') } }
     }
     void poll()
     return () => { active = false; clearTimeout(timer) }
-  }, [jobId])
+  }, [jobId, requestingEnrichment])
   const move = async (farmId: string) => {
     if (!field) return
     setBusy(true); setError('')
@@ -76,6 +77,24 @@ export default function FieldDossier({ fieldId, season, tab, farms, allowNetwork
     } catch (cause) {
       setError(readableError(cause))
       setEnrichment('Update unavailable')
+    } finally {
+      setRequestingEnrichment(false)
+    }
+  }
+  const cancelContextRefresh = async () => {
+    if (!jobId || requestingEnrichment) return
+    setError('')
+    setRequestingEnrichment(true)
+    try {
+      const result = await apiPost<{ status: string }>(`/api/enrichment-jobs/${encodeURIComponent(jobId)}/cancel`, {})
+      setEnrichment(stateLabel(result.status))
+      if (!isActiveContextJob(result.status)) {
+        setJobId('')
+        setRefresh(v => v + 1)
+        onChanged()
+      }
+    } catch (cause) {
+      setError(readableError(cause))
     } finally {
       setRequestingEnrichment(false)
     }
@@ -108,7 +127,7 @@ export default function FieldDossier({ fieldId, season, tab, farms, allowNetwork
         <div className="field-source-summaries">{Object.entries(field.source_status).map(([source, result]) => <FieldSourceSummary key={source} source={source} result={result} onOpen={source === 'imagery' ? () => onTab('imagery') : source === 'soil' ? () => onTab('soil') : undefined} />)}</div>
         <details className="field-source-details"><summary>Boundary source & revisions</summary><p>{field.geometry_revisions.length} saved {field.geometry_revisions.length === 1 ? 'boundary version' : 'boundary versions'}. Older analyses stay linked to the boundary used at the time.</p><ol>{field.geometry_revisions.map((revision, index) => <li key={revision.id}>{index === 0 ? 'Current boundary' : 'Previous boundary'} · {displayDate(revision.created_at, true)}</li>)}</ol><details><summary>Technical boundary record</summary><pre>{JSON.stringify({ boundary_import: field.boundary_import, location_confirmation: field.location_confirmation, geometry_revisions: field.geometry_revisions }, null, 2)}</pre></details></details>
       </> : null}
-      {(tab === 'overview' || tab === 'soil') && enrichment ? <p role="status">{enrichment}{jobId ? <button type="button" onClick={() => { void apiPost(`/api/enrichment-jobs/${jobId}/cancel`, {}).then(() => { setJobId(''); setEnrichment('Cancelled'); setRefresh(v => v + 1) }).catch(cause => setError(readableError(cause))) }}>Cancel update</button> : null}</p> : null}
+      {(tab === 'overview' || tab === 'soil') && enrichment ? <p role="status">{enrichment}{jobId ? <button type="button" disabled={requestingEnrichment} onClick={() => void cancelContextRefresh()}>Cancel update</button> : null}</p> : null}
       <Suspense fallback={<p role="status">Opening field section…</p>}>
         {tab === 'imagery' ? <FieldImageryWorkspace field={field} allowNetwork={allowNetwork} onAsk={onAsk} /> : null}
         {tab === 'soil' ? <>
@@ -118,7 +137,7 @@ export default function FieldDossier({ fieldId, season, tab, farms, allowNetwork
           </div>
           <p>{field.geometry.kind === 'none' ? 'Add a field location to check mapped soil.' : allowNetwork ? 'Refresh may share the field location with a public soil data provider.' : 'Offline · using saved data and installed sources.'}</p>
           <FieldSourceSummary source="soil" result={field.source_status.soil || { availability: 'not_requested', freshness: 'unknown' }} />
-          <OfflineTerrainContextPanel id={fieldId} m="account_workspace" k={field.geometry.kind} area={field.confirmed_facts?.province_state || ''} />
+          <OfflineTerrainContextPanel key={`${field.geometry_revision_id}:${field.confirmed_facts?.province_state || ''}`} id={fieldId} m="account_workspace" k={field.geometry.kind} area={field.confirmed_facts?.province_state || ''} />
           <details className="field-source-details"><summary>Technical regional record</summary><pre>{JSON.stringify(field.public_context, null, 2)}</pre></details>
         </> : null}
         {tab === 'records' ? <FarmRecords key={`${fieldId}:${season}`} fieldId={fieldId} fields={[field]} season={season} onChanged={() => { setRefresh(v => v + 1); onChanged() }} /> : null}

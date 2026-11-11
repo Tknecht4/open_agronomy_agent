@@ -174,7 +174,27 @@ describe('retained model length stop', () => {
   })
 
   it('flags a length stop when the shown answer preserves the draft', () => {
-    expect(retainedDraftHitTokenLimit(turnWith('length'))).toBe(true)
+    expect(retainedDraftHitTokenLimit({
+      ...turnWith('length'),
+      answer_integrity_receipt: { schema_version: 'v1', status: 'verified', answer_sha256: hash },
+    })).toBe(true)
+  })
+
+  it('requires evidence that binds the retained final stage to the displayed answer', () => {
+    const turn = turnWith('length')
+    const withFinalText = (text: string): Turn => ({
+      ...turn,
+      trace: { metadata: {
+        ...turn.trace?.metadata,
+        answer_stages: { draft: { sha256: hash }, final: { sha256: hash, text } },
+      } },
+    })
+    expect(retainedDraftHitTokenLimit(withFinalText(turn.answer))).toBe(true)
+    expect(retainedDraftHitTokenLimit(withFinalText('A different answer'))).toBe(false)
+    expect(retainedDraftHitTokenLimit({
+      ...turn,
+      answer_integrity_receipt: { schema_version: 'v1', status: 'legacy_not_captured' },
+    })).toBe(false)
   })
 
   it('keeps replaced, conflicting, and unmeasured results separate', () => {
