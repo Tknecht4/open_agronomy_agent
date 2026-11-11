@@ -1,0 +1,44 @@
+{
+  "schema_version": "open_agronomy_agent.quebec_lidar_source.v1",
+  "observed_at": "2026-11-11",
+  "licence": {
+    "identifier": "CC-BY-4.0",
+    "url": "https://www.donneesquebec.ca/licence/#cc-by",
+    "permits_modification": true,
+    "permits_commercial_use": true,
+    "permits_redistribution": true,
+    "attribution": "Ministère de l'Agriculture, des Pêcheries et de l'Alimentation. Relief agricole issu du LiDAR. Données Québec."
+  },
+  "candidates": [
+    {
+      "source_id": "qc_relief_agricole_lidar",
+      "title": "Relief agricole issu du LiDAR",
+      "publisher": "Ministère de l'Agriculture, des Pêcheries et de l'Alimentation",
+      "package_id": "46f9e38c-7802-4a78-80bb-a0d7faa46b78",
+      "catalogue_url": "https://www.donneesquebec.ca/recherche/dataset/relief-agricole-issu-du-lidar",
+      "metadata_api_url": "https://www.donneesquebec.ca/recherche/api/3/action/package_show?id=46f9e38c-7802-4a78-80bb-a0d7faa46b78",
+      "selected_resources": [
+        {
+          "resource_id": "a27a7124-6d86-41be-803c-9e7abf0c0c93",
+          "url": "https://www.donneesquebec.ca/recherche/dataset/46f9e38c-7802-4a78-80bb-a0d7faa46b78/resource/a27a7124-6d86-41be-803c-9e7abf0c0c93/download/feuillets_reliefagricolelidar_parcellesagricoles_mapaq_epsg4326.geojson",
+          "bytes": 3706830,
+          "sha256": "62c33000018abb718f4d651a461cd3a2db723a99facca79cb9f75fbd917d2411"
+        }
+      ],
+      "does_not_establish": [
+        "current wetness",
+        "drainage performance",
+        "observed erosion",
+        "field-wide data coverage",
+        "management recommendation",
+        "training permission"
+      ]
+    }
+  ],
+  "activation": {
+    "purpose": "optional offline saved-field terrain availability and vector context",
+    "runtime_retrieval": false,
+    "training": false,
+    "raw_index_preparation": "explicit fetch-index --online with pinned bytes"
+  }
+}

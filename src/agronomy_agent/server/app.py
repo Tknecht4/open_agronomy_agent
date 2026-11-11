@@ -6644,7 +6644,7 @@ def create_app(settings: ServerSettings | None = None) -> FastAPI:
                 "private_plan_retained_by_server": False,
                 "automatic_download_started": False,
                 "download_requires_explicit_operator_network_permission": True,
-                "operator_workflow": "docs/quebec_lidar_offline_pack_workflow_20260725.md",
+                "operator_workflow": "docs/public/operations/quebec-terrain.md",
             },
             "boundary": (
                 "This local check reports source availability only. It does not download "

@@ -832,7 +832,11 @@
     "tests/test_geospatial_source_integrity.py",
     "tests/test_geospatial_source_properties.py",
     "tests/test_geospatial_source_read_races.py",
-    "tests/test_mapped_spatial_support.py"
+    "tests/test_mapped_spatial_support.py",
+    "data/manifests/quebec_lidar_context.json",
+    "scripts/manage_quebec_lidar_field_pack.py",
+    "tests/test_quebec_lidar_preparation.py",
+    "docs/reviews/pr129-terrain-agronomy-assessment-20261111.md"
   ],
   "trees": [
     "src",

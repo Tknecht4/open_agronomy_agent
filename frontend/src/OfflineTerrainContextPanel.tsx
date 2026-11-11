@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Database } from 'lucide-react'
 
-import { apiPost } from './api'
+import { ApiError, apiPost } from './api'
 
 type QuebecLidarPlanResponse = {
   status: 'ready_to_download' | 'no_matching_tiles' | string
@@ -71,7 +71,9 @@ export default function OfflineTerrainContextPanel(props: OfflineTerrainContextP
           : 'No MAPAQ source tile matched the saved field.',
       )
     } catch (error) {
-      setStatus(`Offline context check unavailable: ${String((error as Error).message || error)}`)
+      setStatus(error instanceof ApiError && error.status === 503
+        ? 'Terrain data needs setup on this device. Ask the workspace maintainer to prepare the MAPAQ index.'
+        : `Offline context check unavailable: ${String((error as Error).message || error)}`)
     }
   }
 
