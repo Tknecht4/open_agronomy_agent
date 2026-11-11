@@ -162,6 +162,9 @@ cleanup can retain that reviewed help when replacing an unverified answer, but
 cannot preserve arbitrary draft permissions or rates. These lexical method
 checks do not establish complete scientific verification. Source rationale and
 transfer limits are in the [field observation guide](../../docs/public/operations/field-observations.md).
+Numeric-rate obligations distinguish pesticide scouting, stages and application
+history from fertility tests and credits. Mixed pesticide/nutrient requests
+retain the product-label and fertility authority lanes.
 
 The active verifier retains its risk-conditioned review thresholds. A proposed
 advisory-only bypass was withdrawn after a paired development run exposed an

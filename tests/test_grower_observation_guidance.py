@@ -164,3 +164,27 @@ def test_seasonal_water_snapshot_requires_repeat_sampling_and_joint_sodium_inter
     assert "repeat irrigation-water" in result.answer
     assert "Interpret SAR with water EC" in result.answer
     assert "growth stage" in result.answer and "uniformity" in result.answer
+
+
+@pytest.mark.parametrize("question", [
+    "What herbicide rate should I use for weeds in oats?",
+    "What rate should I use then? I have not named the weed or product.",
+])
+def test_pesticide_rate_obligations_do_not_ask_for_fertilizer_tests(question):
+    from agronomy_agent.high_consequence import evaluate_high_consequence_policy
+    policy = evaluate_high_consequence_policy(question=question, trace={}, field_context={}, network_mode="offline")
+    assert policy["blocked"] is True
+    assert "product_label" in policy["domains"] and "numeric_rate" in policy["domains"]
+    missing = " ".join(policy["missing_evidence"])
+    assert "current product label" in missing
+    assert "target pressure" in missing and "crop growth stage" in missing
+    assert "yield goal" not in missing and "soil or tissue test" not in missing
+
+
+def test_mixed_pesticide_and_nitrogen_requests_retain_both_authority_lanes():
+    from agronomy_agent.high_consequence import evaluate_high_consequence_policy
+    policy = evaluate_high_consequence_policy(question="What herbicide rate and nitrogen fertilizer rate should I apply?",
+        trace={}, field_context={}, network_mode="offline")
+    missing = " ".join(policy["missing_evidence"])
+    assert "current product label" in missing and "soil or tissue test" in missing
+    assert policy["blocked"] is True

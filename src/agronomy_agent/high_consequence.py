@@ -169,12 +169,25 @@ def evaluate_high_consequence_policy(
             missing.append("target pest, weed, or disease")
 
     if "numeric_rate" in domains:
-        for description, keys in (
+        # Bind missing evidence to the quantity being requested. A pesticide
+        # rate does not require a fertilizer yield goal or nutrient-credit test.
+        # Mixed requests retain the fertility obligations as well as the label.
+        fertility_subject = re.search(
+            r"\b(?:fertiliz\w*|fertilis\w*|nitrogen|phosphorus|potassium|sulphur|sulfur|manure|lime|"
+            r"engrais|azote|phosphore|soufre|fumier|chaux)\b", question, re.I
+        )
+        requirements = (
             ("current method-identified soil or tissue test with units and date", ("soil_test_summary", "soil_test")),
             ("crop and realistic yield goal", ("yield_goal", "target_yield")),
             ("field application and crop-credit history", ("fertility_history", "application_history", "manure_history")),
             ("jurisdiction-specific calibration or authority", ("local_calibration", "recommendation_authority")),
-        ):
+        ) if "product_label" not in domains or fertility_subject else (
+            ("crop growth stage", ("crop_stage", "growth_stage")),
+            ("target weed or pest growth/life stage", ("target_stage", "weed_stage", "pest_stage")),
+            ("representative target pressure and distribution", ("scouting_summary", "weed_scouting", "pest_scouting")),
+            ("prior application and resistance history", ("application_history", "pesticide_history", "resistance_history")),
+        )
+        for description, keys in requirements:
             if not _has_value(context, *keys):
                 missing.append(description)
 
