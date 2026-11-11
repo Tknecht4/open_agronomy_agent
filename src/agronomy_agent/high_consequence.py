@@ -7,6 +7,24 @@ from typing import Any
 HIGH_CONSEQUENCE_SCHEMA = "open_agronomy_agent.high_consequence_policy.v1"
 
 
+def _fertility_quantity_requested(question: str) -> bool:
+    nutrient = r"(?:fertiliz\w*|fertilis\w*|nitrogen|phosphorus|potassium|sulphur|sulfur|manure|lime|N|engrais|azote|phosphore|soufre|fumier|chaux)"
+    # Bind quantity words to their subject. Input history such as "after
+    # nitrogen last week" cannot create a second requested rate.
+    if re.search(
+        rf"\b{nutrient}(?:\s+fertiliz\w*)?\s+(?:application\s+)?(?:rate|dose|amount|taux)\b|"
+        rf"\b(?:rate|dose|amount|taux)\s+(?:(?:of|for|de|du)\s+|d['’])?(?:the\s+)?{nutrient}\b|"
+        rf"\b(?:how much|combien de)\s+{nutrient}\b", question, re.I
+    ):
+        return True
+    for clause in re.split(r"[.;,?!]|\b(?:and|also|but|after|et|mais|apr[eè]s)\b", question, flags=re.I):
+        if (re.search(rf"\b{nutrient}\b", clause, re.I)
+                and re.search(r"\b(?:what rate|how much|quelle dose|quel taux)\b", clause, re.I)
+                and not re.search(r"\b(?:herbicide|fungicide|insecticide|pesticide|spray|weed)\w*\b", clause, re.I)):
+            return True
+    return False
+
+
 def classify_high_consequence_domains(question: str) -> list[str]:
     domains: list[str] = []
     product_term = re.search(
@@ -172,10 +190,7 @@ def evaluate_high_consequence_policy(
         # Bind missing evidence to the quantity being requested. A pesticide
         # rate does not require a fertilizer yield goal or nutrient-credit test.
         # Mixed requests retain the fertility obligations as well as the label.
-        fertility_subject = re.search(
-            r"\b(?:fertiliz\w*|fertilis\w*|nitrogen|phosphorus|potassium|sulphur|sulfur|manure|lime|"
-            r"engrais|azote|phosphore|soufre|fumier|chaux)\b", question, re.I
-        )
+        fertility_subject = _fertility_quantity_requested(question)
         requirements = (
             ("current method-identified soil or tissue test with units and date", ("soil_test_summary", "soil_test")),
             ("crop and realistic yield goal", ("yield_goal", "target_yield")),

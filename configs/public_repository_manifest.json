@@ -837,7 +837,8 @@
     "scripts/manage_quebec_lidar_field_pack.py",
     "tests/test_quebec_lidar_preparation.py",
     "docs/reviews/pr129-terrain-agronomy-assessment-20261111.md",
-    "tests/test_grower_observation_guidance.py"
+    "tests/test_grower_observation_guidance.py",
+    "docs/reviews/grower-answer-completion-20261111.md"
   ],
   "trees": [
     "src",
