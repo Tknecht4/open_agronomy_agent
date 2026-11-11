@@ -15,7 +15,7 @@ from typing import Any, Mapping
 
 from agronomy_agent.agronomic_calculations import calculation_tool_schema
 from agronomy_agent.calculator_contracts import CALCULATOR_VERSION, TOOL_PLANNER_VERSION, format_calculator_clarification, tool_version_for
-from agronomy_agent.foundation_math_parser import _unsafe_action_request, parse_foundation_calculation
+from agronomy_agent.foundation_math_parser import AREA, _unsafe_action_request, parse_foundation_calculation
 
 
 PLANNER_VERSION = TOOL_PLANNER_VERSION
@@ -328,7 +328,25 @@ def _strong_arithmetic_request(lower: str) -> bool:
 
 
 def _parse_unit_conversion(text: str, lower: str):  # noqa: ANN202
-    if "convert" not in lower:
+    # Anchor area conversions to a complete arithmetic question so a second,
+    # field-specific request is not swallowed by a deterministic answer.
+    amount = r"(?P<value>[0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)"
+    area_forms = (
+        rf"(?:please )?convert {amount}\s*(?P<from_unit>{AREA}) (?:to|into) (?P<to_unit>{AREA})",
+        rf"(?:about )?how many (?P<to_unit>{AREA}) (?:are )?in {amount}\s*(?P<from_unit>{AREA})",
+        rf"what is {amount}\s*(?P<from_unit>{AREA}) in (?P<to_unit>{AREA})",
+    )
+    for form in area_forms:
+        match = re.fullmatch(rf"{form}[?.]?", text, re.IGNORECASE)
+        if match:
+            return "unit_conversion", {
+                "value": _number(match["value"]),
+                "from_unit": match["from_unit"],
+                "to_unit": match["to_unit"],
+            }, ()
+    if re.match(rf"(?:please )?convert {amount}\s*{AREA}\b(?!/)", lower):
+        return None
+    if not re.search(r"\bconvert\b", lower):
         return None
     match = re.search(
         rf"convert(?: a fertilizer rate of)?\s*{_NUMBER}\s*(kg/ha|lb/ac)"

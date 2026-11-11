@@ -406,3 +406,24 @@ def test_gdd_parser_applies_both_consistent_caps() -> None:
     assert results[0].payload["value"] == 10.0
     assert results[0].payload["inputs"]["lower_cap_c"] == 10.0
     assert results[0].payload["inputs"]["upper_cap_c"] == 30.0
+
+
+@pytest.mark.parametrize("question, expected, unit", [
+    ("What is 100 acres in hectares?", 40.468564224, "ha"),
+    ("Convert 10 ha into ac.", 24.710538, "ac"),
+    ("How many acres are in 1,250.5 hectares?", 3090.052795246903, "ac"),
+])
+def test_area_conversion_binds_direction_and_units(question, expected, unit):
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == "ready"
+    assert results[0].payload["value"] == pytest.approx(expected)
+    assert results[0].payload["unit"] == unit
+
+
+@pytest.mark.parametrize("question", [
+    "How many acres are in 40 hectares and what should I plant?",
+    "Convert 40 hectares to acres and compare the two fields.",
+    "How many acres are in 40,50 hectares?",
+])
+def test_area_conversion_does_not_bypass_ambiguous_or_mixed_requests(question):
+    assert plan_tools(question).status == "not_applicable"

@@ -951,6 +951,16 @@ const openFieldTab = (name: 'Overview' | 'Records & soil tests' | 'Map context')
   fireEvent.click(within(group).getByRole('button', { name }))
 }
 
+const requestRegionalConditions = async () => {
+  fireEvent.click(await screen.findByText('Current regional conditions', { selector: 'summary' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh AAFC regional conditions' }))
+}
+
+const requestMapWeather = () => {
+  fireEvent.click(screen.getByLabelText('NASA POWER field weather'))
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh NASA POWER field weather' }))
+}
+
 describe('Open Agronomy map upload workflow', () => {
   it('opens conversation and the real map together on a fresh desktop session', async () => {
     vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })))
@@ -1034,6 +1044,7 @@ describe('Open Agronomy map upload workflow', () => {
     openPrimaryPage('Fields')
     openFieldTab('Map context')
     expect(screen.getAllByText(/Alberta detailed soil map unit MMNV9\/U1l/i).length).toBeGreaterThan(0)
+    await requestRegionalConditions()
     expect(await screen.findByTestId('agroclimate-spi')).toHaveTextContent('13 wk SPI0.43')
 
     const priorsCall = fetchMock.mock.calls.find(([url, init]) => {
@@ -1082,8 +1093,8 @@ describe('Open Agronomy map upload workflow', () => {
           } })) : base(input, init)))
     render(<OpenAgronomyApp />)
     await selectExample('central-alberta-barley', true)
+    requestMapWeather()
     expect(await screen.findByTestId('map-nasa-power-summary')).toHaveTextContent('1/3 days')
-    fireEvent.click(screen.getByLabelText('NASA POWER field weather'))
     expect(screen.getByText('1 of 3 requested days available')).toBeVisible()
     expect(screen.getByText('Observed UTC 2026-09-25')).toBeVisible()
     expect(screen.getByText('0.0 mm')).toBeVisible()
@@ -1096,9 +1107,9 @@ describe('Open Agronomy map upload workflow', () => {
       ? Promise.resolve(jsonResponse({ ...nasaPowerConditions, status: 'no_data', requested_day_count: 3, observed_day_count: 0, parameter_summary: {} })) : base(input, init)))
     render(<OpenAgronomyApp />)
     await selectExample('central-alberta-barley', true)
+    requestMapWeather()
     await screen.findByText('unavailable', { selector: '.map-weather-pill small' })
     expect(screen.queryByTestId('map-nasa-power-summary')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByLabelText('NASA POWER field weather'))
     expect(screen.getByText('No usable observations in this window')).toBeVisible()
     expect(screen.getByText(/No usable weather observations have been published/)).toBeVisible()
   })
@@ -1109,9 +1120,10 @@ describe('Open Agronomy map upload workflow', () => {
 
     await selectExample('central-alberta-barley', true)
 
+    expect(screen.getByText('On request', { selector: '.map-weather-pill small' })).toBeVisible()
+    expect(fetchMock.mock.calls.some(([url]) => String(url) === '/api/tools/weather-power')).toBe(false)
+    requestMapWeather()
     expect(await screen.findByTestId('map-nasa-power-summary')).toHaveTextContent('3.2 mm · 2.9 m/s')
-    const weatherSummary = screen.getByLabelText('NASA POWER field weather')
-    fireEvent.click(weatherSummary)
     expect(screen.getByText('Recent gridded weather')).toBeInTheDocument()
     expect(screen.getByText('19.3 °C')).toBeInTheDocument()
     expect(screen.getByText('3.2 mm')).toBeInTheDocument()
@@ -1171,6 +1183,7 @@ describe('Open Agronomy map upload workflow', () => {
     ).toBeInTheDocument()
     expect(screen.getAllByText(/Generalized regional context, not current field truth/i).length).toBeGreaterThan(0)
     expect(await screen.findByText('Current regional conditions')).toBeInTheDocument()
+    await requestRegionalConditions()
     expect(await screen.findByTestId('agroclimate-spi')).toHaveTextContent('13 wk SPI0.43')
     expect(screen.getByTestId('agroclimate-temperature_anomaly')).toHaveTextContent('4 wk temperature+2.0 C')
     expect(screen.getByTestId('agroclimate-percent_of_average_precipitation')).toHaveTextContent('13 wk precipitation104%')
@@ -1211,6 +1224,7 @@ describe('Open Agronomy map upload workflow', () => {
 
     await selectExample()
     openFieldTab('Map context')
+    await requestRegionalConditions()
     expect(
       await screen.findByText('Current AAFC regional conditions are unavailable for this geometry.'),
     ).toBeInTheDocument()
@@ -1367,7 +1381,7 @@ describe('Open Agronomy map upload workflow', () => {
 
     expect(await screen.findByText(/Regional context refreshed: NRCS MLRA MLRA_103 matched/i)).toBeInTheDocument()
     const mapContextBar = screen
-      .getByRole('button', { name: 'Open field details' })
+      .getByRole('button', { name: 'Browse saved fields' })
       .closest('.map-context-bar')
     expect(mapContextBar).not.toBeNull()
     expect(
@@ -1394,10 +1408,6 @@ describe('Open Agronomy map upload workflow', () => {
 
     await selectExample('central-alberta-barley', true)
     await screen.findByText(/Regional context refreshed: AAFC Alberta Detailed Soil Survey AB_SOIL_ABD192014361 matched/i)
-    // Let the initial field-bound weather request settle before changing the geometry.
-    // Otherwise it can complete during the draft/cancel interaction and leave React's
-    // asynchronous state update outside the test's observed work.
-    await screen.findByTestId('map-nasa-power-summary')
     const map = await screen.findByTestId('mock-leaflet-map')
     expect(map).toHaveAttribute('data-first-lon', '-113.608')
 
@@ -2344,7 +2354,7 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.getByRole('button', { name: 'Pause editing' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'Edit boundary vertices' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Start over' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Field details & history' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Browse saved fields' })).toBeEnabled()
     expect(within(screen.getByRole('navigation', { name: 'Primary' })).getByRole('button', { name: 'Fields' })).toBeEnabled()
 
     const userText = await screen.findByText('Should I add nitrogen after this wet spring?')

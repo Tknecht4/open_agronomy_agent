@@ -20,17 +20,17 @@
 - `src/api.ts` is the API client boundary.
 - `src/LeafletFieldMap.tsx` and `src/fieldGeometry.ts` render and validate pin, boundary, and imported-geometry interaction.
 - `src/types.ts` defines shared client-side response shapes.
-- `src/fieldContextReadiness.ts` and `fieldRuntimeAvailability.ts` keep missing context/capability state explicit.
+- `src/QuestionContextSummary.tsx` and `fieldRuntimeAvailability.ts` keep missing context/capability state explicit.
 - `src/sourceCards.ts` and `formattedAnswer` present answer evidence.
 - `src/offline*.ts`, `pwa.ts`, and `localPairing.ts` implement bounded local client behavior.
 - `src/workspacePerformance.tsx` and `rum.ts` capture bounded workspace performance diagnostics.
-- `src/*InfoPages.tsx` and `PublicDemoPages.tsx` are application information views, not the canonical documentation site.
+- `src/OpenAgronomyInfoPages.tsx` renders the application’s About and Privacy views.
 
 ## Navigation and model settings
 
 Farms, Fields, Records, and Questions are primary. Data management, Evidence, and Benchmarks form the second navigation group; runtime status, Privacy, and About live in the navigation footer. Small windows use the same hierarchy in a navigation drawer.
 
-Questions opens conversation by default; Together gives conversation and GIS equal space on desktop. A workspace without a field still has a browsable regional overview; it does not create field geometry or infer a location. Map-only and conversation-only views remain available. On mobile, the explicit Map control preserves the question draft while giving GIS the full content width.
+Questions opens in Together on desktop and Conversation on smaller screens. A workspace without a field still has a browsable regional overview; it does not create field geometry or infer a location. Map-only and conversation-only views remain available. On mobile, the explicit Map control preserves the question draft while giving GIS the full content width.
 
 Model opens above the entire desktop composer, with technical details available separately. On mobile it opens a native modal sheet. Native dialogs contain focus and restore it when closed; desktop popovers dismiss on Escape, outside interaction, and workspace changes. Unknown availability remains unreported rather than being labelled ready. Selection changes only the next question and does not rewrite previous answer lineage.
 
@@ -46,7 +46,7 @@ storage updates across tabs; the server ledger arbitrates concurrent retries.
 Storage/coordination failure blocks dispatch. Corrupt and legacy unscoped bytes
 are preserved for review. See the scoped recovery contract below.
 
-Conversation is the default view; Map and Together remain available in the view switch. The compact next-question context shows missing location and unsaved edits, with crop, region and provenance behind a disclosure. It describes request inputs rather than capability readiness or recommendation authority. Changed crop, region, jurisdiction, concern or location on a saved server field must be acknowledged by a save before asking; **Review & save** opens Overview directly. Saved text and geometry are reconciled to the server response so normalization cannot leave Ask blocked. Prior answers retain their own context receipts. Runtime and retained-request diagnostics are available under **Runtime & request details**; blocked runtime/model states remain visible. Starter actions populate and focus the question without submitting it. Answers, their safety boundaries and **Sources & checks** remain visible.
+The compact next-question context shows missing location and unsaved edits, with crop, region and provenance behind a disclosure. It describes request inputs rather than capability readiness or recommendation authority. Changed crop, region, jurisdiction, concern or location on a saved server field must be acknowledged by a save before asking; **Review & save** opens Overview directly. Saved text and geometry are reconciled to the server response so normalization cannot leave Ask blocked. Prior answers retain their own context receipts. Runtime and retained-request diagnostics are available under **Runtime & request details**; blocked runtime/model states remain visible. Starter actions populate and focus the question without submitting it. Answers, their safety boundaries and **Sources & checks** remain visible.
 
 General questions do not require a fabricated field. The field wizard requires a name and accepts either a reviewed pin/boundary/import or **No location yet · data only**; crop and region remain optional. Missing geometry stays unknown. Imported geometry is reviewed before persistence. Regional overlays and calculated polygon area are labelled context/estimates, never field measurements. **Sources & checks** opens answer evidence without hiding the question or saved answer.
 

@@ -17,6 +17,7 @@ from agronomy_agent.tool_planner import plan_tools
 OWNER = {"X-Agronomy-User-Email": "readiness-owner@example.test"}
 OTHER = {"X-Agronomy-User-Email": "readiness-other@example.test"}
 CONVERSION = "Convert 100 lb/ac to kg/ha"
+AREA_CONVERSION = "How many acres are in 40 hectares?"
 TANK = "Calculate how much area will a 1000 L sprayer tank cover applying 100 L/ha, ignoring unusable tank volume?"
 SEED_MISSING = "Calculate seed rate: target stand is 200 plants/m², TKW is missing, germination is 95%, expected field survival is 90%."
 
@@ -54,6 +55,7 @@ def no_generator(*args, **kwargs):
 
 
 @pytest.mark.parametrize("question,path", [(CONVERSION, "deterministic_tool_result"),
+                                          (AREA_CONVERSION, "deterministic_tool_result"),
                                           (TANK, "deterministic_tool_result"),
                                           (SEED_MISSING, "deterministic_tool_clarification")])
 @pytest.mark.parametrize("backend", ["mlx", "http"])
@@ -78,7 +80,8 @@ def test_actual_missing_model_calculation_and_clarification_persist_without_cons
     saved = store.get_turn(response.json()["turn_id"])
     assert saved["trace"]["metadata"]["generation_path"] == path
     if path.endswith("result"):
-        assert saved["answer"].startswith("10 ha" if question == TANK else "112.085 kg/ha")
+        expected = {TANK: "10 ha", CONVERSION: "112.085 kg/ha", AREA_CONVERSION: "98.842 ac"}
+        assert saved["answer"].startswith(expected[question])
     else:
         assert "tkw_g" in saved["answer"]
 

@@ -241,15 +241,21 @@ _UNIT_DIMENSIONS = {
 }
 
 
-def _unit_conversion(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+def validate_unit_conversion_inputs(inputs: Mapping[str, Any]) -> tuple[Decimal, str, str]:
+    """Bind a finite value and two units in the same dimension."""
     _require_only(inputs, required={"value", "from_unit", "to_unit"})
     value = _decimal(inputs, "value")
     from_unit = _unit(inputs.get("from_unit"))
     to_unit = _unit(inputs.get("to_unit"))
-    from_dimension, from_factor = _UNIT_DIMENSIONS[from_unit]
-    to_dimension, to_factor = _UNIT_DIMENSIONS[to_unit]
-    if from_dimension != to_dimension:
+    if _UNIT_DIMENSIONS[from_unit][0] != _UNIT_DIMENSIONS[to_unit][0]:
         raise ValueError(f"cannot convert {from_unit} to {to_unit}: dimensions differ")
+    return value, from_unit, to_unit
+
+
+def _unit_conversion(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    value, from_unit, to_unit = validate_unit_conversion_inputs(inputs)
+    _, from_factor = _UNIT_DIMENSIONS[from_unit]
+    _, to_factor = _UNIT_DIMENSIONS[to_unit]
     answer = value * from_factor / to_factor
     factor = from_factor / to_factor
     return _result(

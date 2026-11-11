@@ -15,6 +15,18 @@ const text = (value: unknown): string => typeof value === 'string' ? value.trim(
 const digest = (value: unknown): boolean => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value)
 const positions = { deterministic_bypass: 10, draft_generation: 11, verification: 12, fallback_origin: 16 } as const
 
+/** A length stop applies to the displayed answer only when the retained draft was preserved. */
+export function retainedDraftHitTokenLimit(turn: Turn): boolean {
+  const metadata = record(turn.trace?.metadata)
+  const stats = record(metadata.generation_stats)
+  const stages = record(metadata.answer_stages)
+  const draftHash = record(stages.draft).sha256
+  const finalHash = record(stages.final).sha256
+  const integrity = turn.answer_integrity_receipt
+  return stats.finish_reason === 'length' && digest(draftHash) && draftHash === finalHash
+    && integrity?.status !== 'invalid' && (!integrity?.answer_sha256 || integrity.answer_sha256 === finalHash)
+}
+
 /** Present the production server's retained observations, not current runtime readiness.
  * Receipt hashes are retained identifiers; this view does not authenticate their bytes.
  */

@@ -1,4 +1,5 @@
 import { ArrowUpRight, Sprout } from 'lucide-react'
+import { displayDate } from './fieldLabels'
 import { fieldArea, type Farm, type FarmOverview } from './farmTypes'
 
 export function FarmDirectory({ farms, overview, season, unit, onOpen }: {
@@ -24,7 +25,7 @@ export function FarmDirectory({ farms, overview, season, unit, onOpen }: {
             <span className="farm-directory-name"><span className="farm-icon"><Sprout size={20} aria-hidden="true" /></span><span><strong>{farm.name}</strong>{review > 0 ? <span className="farm-status caution">{review} source checks to review</span> : null}</span></span>
             <span className="farm-directory-count">{members.length}<span className="mobile-only"> {members.length === 1 ? 'field' : 'fields'}</span></span>
             <span className="farm-directory-area">{fieldArea(coverage?.boundary_area_m2, unit)}</span>
-            <span className="farm-directory-date">{latest ? <time dateTime={latest}>{new Date(latest).toLocaleDateString()}</time> : 'No records'}</span>
+            <span className="farm-directory-date">{latest ? <time dateTime={latest}>{displayDate(latest)}</time> : 'No records'}</span>
             <ArrowUpRight size={16} aria-hidden="true" />
           </button>
         </li>
@@ -37,6 +38,6 @@ export function FarmDirectory({ farms, overview, season, unit, onOpen }: {
         </button>
       </li> : null}
     </ul>
-    <a className="farm-directory-link" href={`#fields?season=${season}`}>View all {overview.fields.length} fields <ArrowUpRight size={14} aria-hidden="true" /></a>
+    {overview.fields.length ? <a className="farm-directory-link" href={`#fields?season=${season}`}>{overview.fields.length === 1 ? 'View field' : `View all ${overview.fields.length} fields`} <ArrowUpRight size={14} aria-hidden="true" /></a> : null}
   </div>
 }

@@ -44,7 +44,7 @@ from agronomy_agent.query_context import (
 )
 from agronomy_agent.capability_planner import build_planner_input, plan_capabilities, select_public_capability_plan
 from agronomy_agent.capability_registry import capability_registry
-from agronomy_agent.agronomic_calculations import _decimal_value, _format_decimal, calculation_tool_schema, validate_tank_coverage_inputs
+from agronomy_agent.agronomic_calculations import _format_decimal, calculation_tool_schema, validate_tank_coverage_inputs, validate_unit_conversion_inputs
 from agronomy_agent.decision_contract import build_decision_contract
 from agronomy_agent.evidence_contracts import question_frame_from_runtime
 from agronomy_agent.tool_planner import plan_tools
@@ -401,13 +401,11 @@ def preview_turn_readiness(
         validated_inputs = False
         if calculator.operation == "unit_conversion":
             try:
-                value = _decimal_value(calculator.inputs.get("value"), "value")
-                # The canonical formatter also has a finite precision limit.
-                # Reserve one decimal order for the supported kg/ha <-> lb/ac
-                # factors without computing a conversion or executing a tool.
+                value, _, _ = validate_unit_conversion_inputs(calculator.inputs)
+                # Every supported conversion factor is below 10. Reserve one
+                # decimal order for the formatter without executing the tool.
                 _format_decimal(value.scaleb(1))
-                validated_inputs = all(str(calculator.inputs.get(key)).casefold() in {"kg/ha", "lb/ac"}
-                                           for key in ("from_unit", "to_unit"))
+                validated_inputs = True
             except (ValueError, DecimalException):
                 validated_inputs = False
         elif calculator.operation == "tank_coverage":

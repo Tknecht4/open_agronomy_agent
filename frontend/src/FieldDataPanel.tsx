@@ -402,8 +402,8 @@ export function FieldDataPanel({
   const receiptQuestion = questionFromReceipt()
 
   return <details className="workspace-disclosure field-data-panel">
-    <summary>Field tables and imagery</summary>
-    <p>Import a field table after reviewing its columns and source. Scene searches show imagery metadata, not a diagnosis.</p>
+    <summary>{showImagery ? 'Field tables and imagery' : 'Field tables'}</summary>
+    <p>Import a field table after reviewing its columns and source.{showImagery ? ' Scene searches return imagery metadata.' : ''}</p>
     <section aria-label="Field table import">
       <h3>Import a table</h3>
       <label>Text encoding

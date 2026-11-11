@@ -21,6 +21,7 @@ export type SourceState = { freshness?: string; refresh_status?: string; last_su
 export type FieldSummary = FarmField & {
   latest_image?: { job_id: string; acquired_at: string | null; provider_id: string; scene_id: string; current_geometry: boolean; completed_at: string } | null
   location_confirmation?: unknown
+  confirmed_facts?: { province_state?: string | null }
   seasons: Array<{ crops?: SeasonCrop[]; crop_system?: CropSystem; season: number; crop: string | null; cultivar: string | null; planted_at: string | null; harvested_at: string | null; revision: number }>
   geometry_revisions: Array<{ id: string; geometry_sha256: string; supersedes_id: string | null; created_at: string }>
   public_context: { regional: unknown; lineage: unknown; role: string; freshness: string }

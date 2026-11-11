@@ -64,9 +64,41 @@ describe('farm cockpit workflows',()=>{
     expect(screen.getByRole('heading', { level: 1, name: 'Home' })).toBeInTheDocument()
     expect(screen.getByRole('spinbutton', { name: 'Season' })).toHaveValue(2025)
     expect(window.location.hash).toContain('farm=a')
+    const season = screen.getByRole('spinbutton', { name: 'Season' })
+    fireEvent.change(season, { target: { value: '2' } })
+    expect(season).toHaveValue(2)
+    expect(window.location.hash).toContain('season=2025')
+    fireEvent.change(season, { target: { value: '2024' } })
+    fireEvent.blur(season)
+    expect(window.location.hash).toContain('season=2024')
+    const changedSeason = screen.getByRole('spinbutton', { name: 'Season' })
+    fireEvent.change(changedSeason, { target: { value: '2025' } })
+    fireEvent.blur(changedSeason)
     fireEvent.click(screen.getByRole('button', { name: 'Farms' }))
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'View all 2 fields' })).toHaveAttribute('href', '#fields?season=2025')
+  })
+  it('shows retained soil context and refreshes only soil on request', async () => {
+    window.history.replaceState(null, '', '#fields?season=2026&field=west&tab=soil')
+    const request = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      let result: unknown = { id: 'soil-update', status: 'completed' }
+      if (url === '/api/farms') result = { farms }
+      else if (url.startsWith('/api/farms/overview')) result = { fields, coverage: {} }
+      else if (url.includes('/summary')) result = {
+        ...fields[0], seasons: [], geometry_revisions: [], public_context: {},
+        source_status: { soil: { availability: 'available', freshness: 'current', values: { map_units: [{ name: 'Synthetic soil map unit' }] } } },
+      }
+      return { ok: true, status: 200, json: async () => result }
+    })
+    vi.stubGlobal('fetch', request)
+    render(<FarmWorkspace {...props} mode="fields" />)
+    expect(await screen.findByText('Synthetic soil map unit')).toBeVisible()
+    expect(request.mock.calls.some(([url]) => String(url).includes('/enrichment-jobs'))).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh mapped soil' }))
+    await waitFor(() => expect(request).toHaveBeenCalledWith('/api/fields/west/enrichment-jobs', expect.objectContaining({
+      method: 'POST', body: JSON.stringify({ sources: ['soil'] }),
+    })))
   })
   it('reports a malformed farm response without inventing an empty farm',async()=>{
     vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,status:200,json:async()=>({}),text:async()=>'{}'})))
