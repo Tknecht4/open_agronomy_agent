@@ -60,4 +60,66 @@ without first answering whether mapped data proved a current problem. Its
 replacement leads with the evidence limit and requires current local assessment
 before selecting a practice or design.
 
-Final execution and automated answer-review results follow after verification.
+## Execution and review results
+
+The 50-case product run at `36e73a5` completed all cells, with 24 verified
+generated turns and six passing foundation components. Its original evaluator
+retained one numeric failure because it read `kg N/ha` and `kg product/ha` in
+the formula as standalone kilogram totals. The original report and answers are
+retained with that failure.
+
+The evaluator repair rejects qualified compound-unit prefixes while retaining
+contradictory-total and negation checks. All other functions in that module
+retain identical syntax trees. A fresh nine-case numeric run at `1b010ca`
+passed **9/9** numeric contracts, all six foundation components and every
+execution check. Its status is `smoke_complete`, with `source_stable: true`.
+These are repeated exposed cases. The evaluator correction adds no model
+generation evidence.
+
+The maintained analyzer bound automated reviews to all **33** review-required
+answers from the 50-case run. Those reviews marked **18 complete** and
+**15 incomplete** for the requested task. Seven source-support labels and three
+material-error labels remain unknown. The analyzer preserves
+`domain_status: review_pending` and excludes automated triage from qualified
+semantic metrics. Human agronomist review and field validation remain pending.
+
+| Workflow | Automated assessment |
+| --- | --- |
+| Explicit arithmetic | Supplied-input calculations return parseable values and units. The two repaired requests also passed the built chat UI, readiness and persisted API checks without model construction. |
+| Soil methods and records | The product answers preserve extraction-method/depth limits and distinguish collection date from report issue date. |
+| Suspected disease and pests | Treatment and rate authorization are generally withheld. Several answers omit the requested differential, representative counts, or useful scouting procedure. The clubroot answer omits the explicit answer about a one-year break. |
+| Nutrients and weather | Rescue-rate and spray decisions retain missing-evidence boundaries. Useful affected-normal/root comparisons appear in nutrient answers, while some weather answers need a clearer explanation of regional versus current local evidence. |
+| Terrain and imagery | The repaired erosion fallback preserves mapped-data limits. The empty MAPAQ clip explanation still omits source parcel coverage and acquisition age. The NDVI answer needs a stronger QA/valid-pixel comparison before interpreting crop vigor. |
+| Basic explanations | Crop rotation and soil texture receive definitions. The single-pin area explanation leaves the boundary or two-dimensional shape requirement incomplete. The vegetable-guide/haskap answer misses the requested crop-applicability comparison. |
+
+The earlier pinned Kaggle GPU diagnostics remain raw-model observations.
+Their completion, soil-water saturation wording, and report-date/analysis-date
+confusion reinforce the need to assess the delivered product answer separately.
+The fast profile's 35-token ceiling frequently leaves explanations unfinished.
+This round retains the serving model pins and budgets.
+
+## Verification scope
+
+The terrain repair passed synthetic analytic area/length checks, real-provider
+acquisition and clipping, saved-field authorization checks, and Chromium
+prepared/missing/recovered-index flows. Both new calculations passed API
+readiness/execution tests with the generator constructor forbidden, and the
+built browser returned 2,086.957 kg and 72 mm through ordinary chat submission.
+All 19 declared calculator operations have canonical conformance fixtures.
+The source revision preceding the arithmetic extension passed 3,709 local
+backend tests with 58 skips. Later arithmetic, scorer and integration checks
+passed their focused suites. Final PR CI supplies the full composed-source
+verification. Frontend verification passed 505 tests, typecheck and build.
+
+Raw provider responses, frozen source/archive hashes, synthetic geometry,
+execution plans, failed attempts, observations, review bindings, browser
+captures and analyzer lineage remain in private assessment artifacts.
+
+The source references used for automated review include provincial sampling
+and soil-test guidance, public crop guidance, and satellite QA documentation.
+[Alberta sampling guidance](https://www.alberta.ca/manure-management-planning),
+[Manitoba soil-test methods](https://www.gov.mb.ca/agriculture/crops/soil-fertility/soil-fertility-guide/fertilizer-recommendation-guidelines.html),
+[soil-water definitions](https://extension.umn.edu/natural-resources/conservation/agricultural-soil-and-water/how-agricultural-drainage-works),
+[Canola Council clubroot guidance](https://www.canolacouncil.org/canola-encyclopedia/diseases/clubroot/),
+[New Brunswick potato storage](https://www2.gnb.ca/content/gnb/en/departments/10/agriculture/content/crops/potatoes/storage.html),
+[HLS QA documentation](https://lpdaac.usgs.gov/documents/1698/HLS_User_Guide_V2.pdf).
