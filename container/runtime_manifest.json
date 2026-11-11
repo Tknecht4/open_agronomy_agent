@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-11-11T13:41:06+00:00",
+  "generated_at": "2026-11-11T13:54:08+00:00",
   "status": "pass",
-  "contract_sha256": "79dd548f993ad7f7258df3a0b4308909abb216af320c97c3610bce7768a97f52",
+  "contract_sha256": "88627f2da96f2497db37e830fcb53f8058cdaf2249dfbcf17027c64f55389c19",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -414,8 +414,8 @@
     {
       "path": "src/agronomy_agent",
       "file_count": 196,
-      "bytes": 6412024,
-      "sha256": "1b1befb4404030f8b79a505781b01f2209e918ade0a00994ed35cb51510f5688"
+      "bytes": 6412480,
+      "sha256": "d2f668b4b8a5ebd95551771201e34703cce4735d5aff9a86e69722be8830d6f9"
     },
     {
       "path": "frontend/src",

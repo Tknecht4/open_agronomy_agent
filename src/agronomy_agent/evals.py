@@ -874,7 +874,14 @@ def score_item_numeric(output: str, item: dict[str, Any]) -> dict[str, Any]:
         # Whitespace and slash spacing are typography, not a unit conversion.
         alias_patterns = [re.escape(value).replace(r"\ ", r"\s+") for value in sorted(aliases, key=len, reverse=True)]
         unit_pattern = "|".join(value.replace("/", r"\s*/\s*") for value in alias_patterns)
-        pattern = re.compile(rf"(?<![\w.])(-?\d+(?:,\d{{3}})*(?:\.\d+)?)\s*(?:{unit_pattern})(?![\w/⁻^-])", re.I)
+        # A numerator followed by a qualifier and denominator is a compound
+        # unit, including "kg N/ha" and "kg product ha⁻¹". It must not become
+        # a contradictory standalone mass in a field-total calculation.
+        qualifier = r"(?!(?:and|or|but|then|is|equals)\b)[A-Za-z][\w₂₅-]*"
+        compound_tail = rf"(?!\s*(?:{qualifier}\s*){{0,3}}(?:/|\bper\b|\b(?:ha|ac|m[²2])(?:\^-1|⁻¹|-1)))"
+        pattern = re.compile(
+            rf"(?<![\w.])(-?\d+(?:,\d{{3}})*(?:\.\d+)?)\s*(?:{unit_pattern})(?![\w/⁻^-]){compound_tail}", re.I,
+        )
         for match in pattern.finditer(output):
             value = float(match.group(1).replace(",", ""))
             # Restrict negation to this clause rather than an unrelated caveat.

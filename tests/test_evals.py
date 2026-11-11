@@ -1484,6 +1484,28 @@ def test_numeric_scorer_accepts_unit_typography_and_consistent_rounding(output: 
     assert score_item_numeric(output, {"reference_numeric": 120, "reference_unit": "L/ha", "absolute_tolerance": 1})["score"] == 100.0
 
 
+@pytest.mark.parametrize("output", [
+    "2,086.957 kg. Calculation: 40 kg N/ha at 46% gives 86.957 kg product/ha over 24 ha.",
+    "2,086.957 kg. The input is 40 kg N per hectare and the product rate is 86.957 kg of product per hectare.",
+    "2,086.957 kg. Intermediate product rate: 86.957 kg product ha⁻¹.",
+])
+def test_numeric_scorer_keeps_qualified_rates_separate_from_a_field_mass(output):
+    score = score_item_numeric(output, {"reference_numeric": 2086.956521739, "reference_unit": "kg", "absolute_tolerance": .1})
+    assert score["score"] == 100
+    assert score["asserted_values"] == [2086.957]
+
+
+@pytest.mark.parametrize("output", [
+    "2,086.957 kg or 960 kg of product.",
+    "The result is 120 L/ha per day.",
+])
+def test_numeric_scorer_still_rejects_conflicting_totals_and_extended_rate_units(output):
+    item = {"reference_numeric": 2086.956521739, "reference_unit": "kg", "absolute_tolerance": .1}
+    if "L/ha" in output:
+        item = {"reference_numeric": 120, "reference_unit": "L/ha", "absolute_tolerance": 1}
+    assert score_item_numeric(output, item)["score"] == 0
+
+
 def test_empty_pattern_contract_is_undefined_and_excluded_from_aggregate() -> None:
     score = score_item("A plausible answer.", {"required_patterns": [], "forbidden_patterns": []})
     assert score["score"] is None
