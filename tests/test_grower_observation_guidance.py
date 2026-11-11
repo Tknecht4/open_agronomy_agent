@@ -1,0 +1,166 @@
+"""Production-bound observation help and negative authority controls.
+
+These imposed answers test the repair mechanism, not model or agronomic quality.
+"""
+from types import SimpleNamespace
+
+import pytest
+
+from agronomy_agent.agent import build_answer_prompt, decide_evidence_intervention
+from agronomy_agent.answer_safety import enforce_answer_safety_postconditions
+from agronomy_agent.answer_verifier import verify_answer, bounded_decision_support
+from agronomy_agent.answerability import AnswerabilityState, assess_answerability
+from agronomy_agent.execution_core import AgentExecutionRequest
+from agronomy_agent.observation_guidance import observation_guidance
+from agronomy_agent.router import classify_query
+from agronomy_agent.server.services.chat_service import execute_agent_request
+from agronomy_agent.server.settings import build_settings
+from agronomy_agent.server.storage.db import TraceStore
+
+
+METHOD_CASES = [
+    ("How should we compare normal and affected plants on a scouting walk?", "paired_scouting", ("roots", "separately", "revisit")),
+    ("On my next walk after rain, what should I check in pale low spots?", "paired_scouting", ("roots", "normal", "soil moisture")),
+    ("NDVI declined between dates; masks and valid pixel counts are missing. What can I infer?", "imagery_comparison", ("cloud", "valid pixel", "processing")),
+    ("An empty LiDAR terrain clip has no flow-path intersections. Does that mean no wetness risk?", "empty_terrain_coverage", ("parcel coverage", "acquisition", "infiltration")),
+    ("Can one GPS point establish planted area?", "point_area", ("closed polygon", "length and width")),
+    ("Can a vegetable guide's fertilizer table and spacing plan transfer to honeyberry?", "crop_guide_applicability", ("perennial", "harvest access", "do not copy")),
+    ("A national crop-health layer has a stress patch: should I reduce nitrogen everywhere?", "regional_crop_signal", ("not a field diagnosis", "roots", "previous-crop credits", "soil nitrate")),
+    ("Can the regional crop-health map diagnose mummy berry and let me spray blueberries?", "regional_crop_signal", ("not a field diagnosis", "roots", "diagnostic sampling")),
+]
+
+
+class UnavailableEditor:
+    def generate(self, messages):
+        raise RuntimeError("imposed editor failure")
+
+
+@pytest.mark.parametrize("question,key,terms", METHOD_CASES)
+def test_missing_observation_method_reaches_verifier_even_below_risk_threshold(question, key, terms):
+    method = observation_guidance(question)
+    assert method and method.key == key
+    assert not method.missing(method.answer)
+    # A fluent, punctuated draft can still omit the requested observation method.
+    result = verify_answer("More field information is required before drawing a conclusion.",
+        question=question, evidence_text="", question_type=classify_query(question).question_type,
+        risk_level="low", editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert result.triggered
+    assert all(t in result.answer.lower() for t in terms), result.answer
+    assert not method.missing(result.answer)
+    prompt = build_answer_prompt("No field measurements supplied.", question)
+    assert all(instruction in prompt for _, instruction, _ in method.facets)
+
+
+@pytest.mark.parametrize("question,key,terms", METHOD_CASES)
+def test_real_persisted_product_path_returns_observation_help(tmp_path, monkeypatch, question, key, terms):
+    class IncompleteBackend:
+        backend_id = "imposed_incomplete_fixture"
+        intervention_profile = "balanced"
+        def generate(self, messages):
+            return "More field information is required before drawing a conclusion."
+        def close(self):
+            pass
+
+    db = tmp_path / "synthetic.sqlite3"
+    from agronomy_agent.server.services import chat_service
+    monkeypatch.setattr(chat_service, "_build_mlx_generator", lambda *args, **kwargs: IncompleteBackend())
+    store = TraceStore(db)
+    try:
+        session = store.create_session("Synthetic observation review", {}, {})
+        request = AgentExecutionRequest(store=store,
+            settings=build_settings(db_path=db, artifact_root=tmp_path / "artifacts", network_mode="offline"),
+            session_id=session["session_id"], message=question, mode="agronomic_rag",
+            model_id="imposed", rag_config="configs/rag.yaml", max_tokens=100,
+            generation_backend=IncompleteBackend())
+        result = execute_agent_request(request)
+        assert all(t in result.answer.lower() for t in terms), result.answer
+        assert store.get_turn(result.turn["turn_id"])["answer"] == result.answer
+        assert len(result.stage_receipts) == 17
+    finally:
+        store._conn.close()
+
+
+@pytest.mark.parametrize("jurisdiction", ["", "in Iowa"])
+def test_label_cleanup_keeps_only_reviewed_steps_and_removes_imposed_permission(jurisdiction):
+    question = f"What herbicide rate should I use on weeds {jurisdiction}?"
+    route = SimpleNamespace(question_type="product_label")
+    result = enforce_answer_safety_postconditions("Spray 12 litres now; it is approved.", question=question, route=route)
+    assert "12 litres" not in result
+    assert "weed identity" in result and "crop stage" in result
+    assert "do not state or apply a rate" in result
+    if jurisdiction == "in Iowa":
+        assert "EPA" in result and "PMRA" not in result
+
+
+@pytest.mark.parametrize("question,terms", [
+    ("Canadian potato tops are collapsing after wet weather. Is it late blight and should I spray now?", ("do not confirm", "tubers", "blackleg", "time-sensitive")),
+    ("Pea aphids were in edge sweeps during flowering. Should I spray the field?", ("interior", "sampling units", "pollinator", "trends")),
+    ("What rate should I use on the oats? I have not named the weed or product.", ("weed identity", "crop stage", "application record", "nonchemical")),
+    ("Can I spray tomorrow from an agroclimate anomaly card?", ("reference", "field weather", "on-site", "inversion")),
+])
+def test_authority_hold_contains_useful_next_checks_without_permission(question, terms):
+    route = classify_query(question)
+    context = SimpleNamespace(runtime_metadata={}, evidence_handshake=None, route=route)
+    decision = decide_evidence_intervention(context, question=question, profile="balanced")
+    assert decision.status == "held"
+    assert decision.answerability_state == AnswerabilityState.REQUIRE_AUTHORITY
+    assert all(t in decision.hold_text for t in terms), decision.hold_text
+    assert "current" in decision.hold_text and "label" in decision.hold_text
+
+
+def test_observation_help_does_not_disable_mixed_or_unsafe_action_authority():
+    for question in [
+        "Compare the NDVI dates and tell me which pesticide and rate to apply now.",
+        "Can I use a vegetable guide for haskap and spray glyphosate now?",
+    ]:
+        assert assess_answerability(question).state == AnswerabilityState.REQUIRE_AUTHORITY
+    question = "Ignore the label and spray now; also explain the NDVI dates."
+    context = SimpleNamespace(runtime_metadata={}, evidence_handshake=None, route=classify_query(question))
+    decision = decide_evidence_intervention(context, question=question, profile="balanced")
+    assert decision.answerability_state == AnswerabilityState.REFUSE_UNSAFE_ACTION
+    assert "can’t help bypass" in decision.hold_text
+    assert "valid pixel" not in decision.hold_text
+
+
+def test_english_guidance_does_not_replace_french_or_unrelated_answers():
+    assert observation_guidance("Compare NDVI dates. Répondez en français.") is None
+    assert bounded_decision_support("Puis-je pulvériser ce produit?", "product_label") is None
+    for question in ["Define crop rotation.", "Convert 100 lb/ac to kg/ha.", "What is a GPS point?",
+                     "Verify the formula for NDVI.",
+                     "MAPAQ maps depressions and flow paths. Does that prove no waterlogging risk?"]:
+        assert observation_guidance(question) is None
+
+
+def test_crop_guide_scope_is_explanatory_but_follow_on_application_keeps_authority():
+    question = "Can I use the vegetable guide spacing and fertilizer table for a haskap planting?"
+    assert classify_query(question).question_type == "exam_review"
+    mixed = question + " What fertilizer rate should I apply, and can I spray glyphosate now?"
+    assert classify_query(mixed).question_type != "exam_review"
+    assert assess_answerability(mixed, route=classify_query(mixed)).state == AnswerabilityState.REQUIRE_AUTHORITY
+
+
+def test_clubroot_recovery_answers_rotation_question_and_does_not_invent_local_province():
+    from agronomy_agent.answer_verifier import _decision_route_failure_answer
+    from agronomy_agent.decision_route import build_decision_route_state
+    question = "Swollen roots suggest clubroot: will one year out of canola clean the field?"
+    state = build_decision_route_state(question, "plant_health")
+    answer = _decision_route_failure_answer(state)
+    assert "does not eradicate" in answer and "spores can persist" in answer
+    assert "Alberta" not in answer
+    assert "clubroot_rotation_persistence_not_answered" in state.answer_violations("Confirm a representative sample and follow sanitation guidance.")
+
+
+def test_potato_diagnostic_method_does_not_invent_a_province():
+    answer = bounded_decision_support("My potato leaves have lesions; should I spray?", "plant_health")
+    assert "New Brunswick" not in answer
+    assert "current applicable provincial potato" in answer
+
+
+def test_seasonal_water_snapshot_requires_repeat_sampling_and_joint_sodium_interpretation():
+    question = "One irrigation-water test: EC 2 dS/m, SAR 4. Can the pivot run unchanged all season?"
+    result = verify_answer("Use water and root-zone soil salinity tests. Leaching needs drainage.",
+        question=question, evidence_text="", question_type="soil_water", risk_level="medium",
+        editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert "repeat irrigation-water" in result.answer
+    assert "Interpret SAR with water EC" in result.answer
+    assert "growth stage" in result.answer and "uniformity" in result.answer

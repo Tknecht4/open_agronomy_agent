@@ -151,6 +151,18 @@ non-ASCII names disable this recovery. These lexical checks can leave valid
 unrecognized records unresolved and do not establish field truth or general
 semantic completeness.
 
+`observation_guidance.py` owns bounded observation-method requirements shared
+by drafting, completeness review and fallback selection. Applicable methods
+cover paired scouting, satellite comparability, empty terrain coverage, point
+versus area geometry, crop-guide scope and regional stress interpretation.
+Explicit missing method steps receive review even below the ordinary risk score
+threshold; complete answers keep the existing thresholds. Authority holds reuse
+reviewed procedural help without granting the blocked action. Product-label
+cleanup can retain that reviewed help when replacing an unverified answer, but
+cannot preserve arbitrary draft permissions or rates. These lexical method
+checks do not establish complete scientific verification. Source rationale and
+transfer limits are in the [field observation guide](../../docs/public/operations/field-observations.md).
+
 The active verifier retains its risk-conditioned review thresholds. A proposed
 advisory-only bypass was withdrawn after a paired development run exposed an
 unsupported field-action recommendation. An unknown map type is not renamed as

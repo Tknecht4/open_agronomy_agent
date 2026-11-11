@@ -124,6 +124,10 @@ class DecisionRouteState:
             sanitation = bool(re.search(r"\b(?:clean|remove) soil\b[^.]{0,80}\b(?:equipment|machinery|boots?)\b|\bsanitation\b", lower))
             if not confirmation or not sanitation:
                 violations.append("clubroot_today_actions_incomplete")
+            if re.search(r"\b(?:one|1|single) year\b", self.question, re.I) and not re.search(
+                r"\bspores?\b[^.]{0,70}\b(?:persist|years)\b|\b(?:does not|cannot|will not) eradicat\w*\b", lower
+            ):
+                violations.append("clubroot_rotation_persistence_not_answered")
         if self.decision == "ambiguous_product_followup" and re.search(
             r"\b(?:should|must) hold off\b|\bdo not apply\b",
             lower,
@@ -924,8 +928,8 @@ def _decision_name(lower: str, question_type: str) -> str:
         return "slc_map_interpretation"
     if re.search(r"\bregional soil map\b", lower) and re.search(r"\b(?:rescue nitrogen|nitrogen pass)\b", lower):
         return "map_based_rescue_n"
-    if re.search(r"\b(?:what|which)(?:\s+\w+){0,3}\s+rate\b|\bhow much\b", lower) and re.search(
-        r"\b(?:herbicide|insecticide|fungicide|pesticide|spray)\b", lower
+    if re.search(r"\b(?:what|which)(?:\s+\w+){0,3}\s+rate\b|\bhow much\b|\busual herbicide rate\b", lower) and re.search(
+        r"\b(?:herbicide|insecticide|fungicide|pesticide|spray|weed)\b", lower
     ):
         return "pesticide_rate_request"
     if re.fullmatch(r"\s*(?:what|which) (?:should|do) i spray\??\s*", lower):
@@ -1064,7 +1068,7 @@ def _decision_name(lower: str, question_type: str) -> str:
     if not re.search(r"\b(?:injury|off[- ]target|symptom|separat)\w*\b", lower) and re.search(
         r"\b(?:spray|application|custom rig)\b", lower
     ) and re.search(
-        r"\b(?:wind|gust|drift|storm|rainfast|shelterbelt|sensitive)\w*\b", lower
+        r"\b(?:wind|gust|drift|storm|rainfast|shelterbelt|sensitive|anomaly|agroclimate)\w*\b", lower
     ):
         return "spray_weather_window"
     if re.search(r"\b(?:variable[- ]rate|increase|raise|additional)\w*\b", lower) and re.search(

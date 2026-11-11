@@ -708,7 +708,7 @@ def test_equivalent_english_regulated_routes_keep_english_deterministic_hold(
     assert decision.status == "held"
     assert decision.answerability_state == AnswerabilityState.REQUIRE_AUTHORITY.value
     assert decision.hold_text is not None
-    assert decision.hold_text.startswith("I can explain the decision factors")
+    assert "I can explain the decision factors" in decision.hold_text
     assert "Je peux expliquer" not in decision.hold_text
 
 

@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-11-11T14:07:33+00:00",
+  "generated_at": "2026-11-11T19:12:38+00:00",
   "status": "pass",
-  "contract_sha256": "a79a6d4b9926f62b4b1d7740b2e499e422c19b208ec50d533cea694a5a1d5d9d",
+  "contract_sha256": "7f9393b929a0a6d451f06ba08d02fabb7d1bf7048a03d332d8292e00300416c5",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -413,9 +413,9 @@
   "runtime_assets": [
     {
       "path": "src/agronomy_agent",
-      "file_count": 196,
-      "bytes": 6412687,
-      "sha256": "3d27a57142ee57a23a03d3d55da1d08bb42f92a3f23d1b47572070cb514004eb"
+      "file_count": 197,
+      "bytes": 6430870,
+      "sha256": "1dc457993a2207b47e1d96e99e8caf8d6bbc85767eecbbd69f5b8c6b22c5b689"
     },
     {
       "path": "frontend/src",
@@ -444,8 +444,8 @@
     {
       "path": "configs",
       "file_count": 92,
-      "bytes": 302341,
-      "sha256": "cb92353c49018f126e30bcd76b41be818a54f89e93c8cb0fe781074e45307ab5"
+      "bytes": 302390,
+      "sha256": "54187af9e76dad62b9e86769705607e371e0b027f7bc061fb6d9e0dadac5797b"
     },
     {
       "path": "data/manifests",
@@ -467,9 +467,9 @@
     },
     {
       "path": "docs/public",
-      "file_count": 102,
-      "bytes": 10047336,
-      "sha256": "c96be43b91ef34689007eabbc5ca98243c67a395ccf667e8ca0f37339a84d1a7"
+      "file_count": 103,
+      "bytes": 10052007,
+      "sha256": "4716f46f3f74579a4c3ef9ed818bd45a2f72c3e801f5b81e5e9f6a9c9e16a931"
     }
   ],
   "geo_cache_seed": {

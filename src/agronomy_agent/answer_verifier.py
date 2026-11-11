@@ -25,6 +25,7 @@ from agronomy_agent.model_prompt_budget import positive_int, prompt_budget_recei
 from agronomy_agent.model_errors import LocalModelSnapshotUnavailable
 from agronomy_agent.quantity_claims import unsupported_quantities
 from agronomy_agent.execution_core import stable_sha256
+from agronomy_agent.observation_guidance import observation_guidance
 
 
 def editor_observation_record(observation: Mapping[str, Any]) -> dict[str, Any]:
@@ -1504,6 +1505,9 @@ def _verify_answer_impl(
         )
 
     def fallback_without_retained_record() -> str:
+        method = observation_guidance(question)
+        if method:
+            return method.answer
         weather_boundary = _localized_weather_event_answer(question)
         if weather_boundary:
             return weather_boundary
@@ -1682,6 +1686,9 @@ def _verify_answer_impl(
         return tuple(f"requested_record_not_preserved:{loss}" for loss in losses)
 
     def fast_fallback_answer() -> str | None:
+        method = observation_guidance(question)
+        if method:
+            return method.answer
         weather_boundary = _localized_weather_event_answer(question)
         if weather_boundary:
             return weather_boundary
@@ -2379,7 +2386,9 @@ def _verify_answer_policy(
             "model_conditioned": False,
             "development_basis": "exposed_successor_development_suites",
         }
-        if not blocking and assessment.score < threshold:
+        method = observation_guidance(question)
+        missing_method = method is not None and bool(method.missing(draft))
+        if not blocking and assessment.score < threshold and not missing_method:
             return AnswerVerificationResult(
                 answer=draft.strip(),
                 triggered=False,
@@ -3164,6 +3173,13 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
     def add(name: str, instruction: str, *patterns: str) -> None:
         requirements.append(_IntentRequirement(name=name, instruction=instruction, patterns=tuple(patterns)))
 
+    method = observation_guidance(question)
+    if method:
+        for name, instruction, patterns in method.facets:
+            add(name, instruction, *patterns)
+    if re.search(r"\bclubroot\b", lower) and re.search(r"\b(?:one|1|single) year\b", lower):
+        add("clubroot_persistence", "Answer that one nonhost year does not eradicate persistent clubroot spores.", r"\b(?:does not|will not|cannot|not enough|not eradicate|not clean)\b[^.]{0,90}\b(?:clubroot|eradicat|clean|spores?)\b", r"\bspores?\b[^.]{0,60}\b(?:persist|years)\b")
+
     decision = build_decision_route_state(question, question_type).decision
     if decision == "field_trafficability":
         add("traffic_profile", "Check soil condition below the surface, not surface appearance alone.", r"\b(?:subsoil|subsurface|below the surface|soil moisture|soil condition)\b")
@@ -3448,6 +3464,9 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
         add("salinity_sodium", "Assess electrical conductivity and sodium or infiltration hazard where relevant.", r"\belectrical conductivity\b", r"\bconductivit[eé] [eé]lectrique\b", r"\bsodium hazard\b", r"\bSAR\b", r"\binfiltration\b")
         add("salinity_crop_system", "Relate the measurements to crop tolerance, symptoms, uniformity, and drainage.", r"\bcrop tolerance\b", r"\btol[eé]rance de la culture\b", r"\birrigation uniformity\b", r"\bdrainage\b", r"\bwater table\b", r"\bnappe phr[eé]atique\b")
         add("salinity_leaching_boundary", "Recommend leaching only when water quality, infiltration, and drainage can move salts below roots.", r"\bleaching\b[^.]{0,130}\bdrainage\b", r"\blessivage\b[^.]{0,130}\bdrainage\b", r"\bbelow the (?:active )?root zone\b", r"\bsous la zone racinaire\b")
+        if re.search(r"\b(?:water test|irrigation[- ]water|pivot)\b", lower) and re.search(r"\b(?:one|single|all season|unchanged)\b", lower):
+            add("water_seasonal_sampling", "Repeat dated source-water samples through the season or when the source changes.", r"\brepeat\b[^.]{0,100}\b(?:water|EC|SAR|sampl)", r"\bseasonal sampling\b")
+            add("water_sodium_interpretation", "Interpret SAR with EC, soil texture and infiltration; do not classify the field from one water test.", r"\bSAR\b[^.]{0,100}\b(?:EC|sodium|infiltration)\b", r"\bsodium\b[^.]{0,100}\b(?:EC|infiltration|texture)\b")
         if re.search(r"\b(?:gypsum|gypse)\b", lower):
             add("sodicity_gypsum_boundary", "State that gypsum is not automatic and requires confirmed sodicity plus a reclamation calculation.", r"\bgypsum\b[^.]{0,60}\bnot automatic\b", r"\bgypse\b[^.]{0,80}\b(?:pas automatique|sodicit[eé] confirm[eé]e)\b", r"\bconfirmed sodicity\b", r"\breclamation (?:calculation|requirement)\b", r"\bcalcul (?:de|du) (?:r[eé]habilitation|besoin d'amendement)\b")
     elif decision == "flood_recovery":
@@ -4202,7 +4221,7 @@ def _decision_route_failure_answer(
     if decision == "clubroot_containment":
         guidance_scope = _clubroot_guidance_scope(state.question, jurisdiction)
         return (
-            "Treat this as suspected clubroot and act today to limit soil movement while arranging confirmation. Mark the patch and approach, keep unnecessary traffic out, work the suspect area last, and avoid moving soil, roots, or contaminated material to clean parts of the field. Before equipment, tools, or boots leave, remove adhering soil at the site and follow current provincial sanitation guidance; record where material and wash water go. "
+            "Swollen roots are a reason to suspect clubroot, not confirmation. One year out of canola does not eradicate clubroot; resting spores can persist for many years, and rotation reduces risk rather than proving a field clean. Treat this as suspected clubroot and act today to limit soil movement while arranging confirmation. Mark the patch and approach, keep unnecessary traffic out, work the suspect area last, and avoid moving soil, roots, or contaminated material to clean parts of the field. Before equipment, tools, or boots leave, remove adhering soil at the site and follow current provincial sanitation guidance; record where material and wash water go. "
             "Dig several plants from the patch margin and normal plants outside it, keep roots intact, photograph the pattern and galls, and submit a representative sample through the provincial or diagnostic-lab pathway. Record crop stage, recent weather, field distribution and disease risk, rotation, variety, equipment movement, and symptom progression. Confirmation and "
             f"{guidance_scope} should control longer-term rotation, resistant-variety, access, and sanitation decisions, but containment should not wait for the result."
         )
@@ -4213,8 +4232,8 @@ def _decision_route_failure_answer(
                 "Identify the exact product and registration, then verify the current PMRA product label for the crop and target disease. That label controls the rate, timing and interval, maximum applications, preharvest and re-entry intervals, mixing, buffers, and other restrictions. Fit any treatment into current local disease guidance and a resistance-management program that rotates effective FRAC or mode-of-action groups. Until the diagnosis, field risk, exact product, current label, and resistance fit are known, do not name or apply a product or rate."
             )
         return (
-            "I cannot set a herbicide rate from the crop and weed name alone. Identify the exact product and registration, confirm that the crop and target weed are on the current PMRA product label, and record crop stage, weed stage and size, density and distribution, prior products and herbicide groups, survivor or resistance history, and whether this is a first or follow-up application. "
-            "Check on-site wind, inversion, temperature, rain and crop-stress conditions plus buffers, adjuvant, water volume, intervals and seasonal maximum. Use only the labeled rate and timing that match all of those conditions; if the exact product, registration or label fit is unknown, do not state or apply a rate."
+            "I cannot set a herbicide rate from incomplete crop, weed or product details. Confirm weed identity, weed stage and size, density and distribution, crop stage, jurisdiction, the exact product and registration, and the current product label. Review the application record, prior products and herbicide groups, and survivor or resistance history. For a follow-up, map and revisit escapes and separate application failure, late emergence and resistance. "
+            "Compare crop competition, cultivation or other nonchemical tactics where crop stage and field conditions permit them; do not repeat an ineffective mode of action by changing brand names. Check on-site wind, inversion, temperature, rain and crop-stress conditions plus buffers, adjuvant, water volume, intervals and seasonal maximum. If the exact product, current label or crop/target fit is unknown, do not state or apply a rate."
         )
     if decision == "slc_map_interpretation":
         if _looks_like_french(state.question):
@@ -4340,9 +4359,12 @@ def _decision_route_failure_answer(
                 "Attach clear photos and submit a fresh representative leaf sample or use a diagnostic lab when the signs remain uncertain. Consider a fungicide only after diagnosis, disease pressure and movement toward yield-critical leaves, crop stage, current Alberta risk guidance, expected yield protection and economics support it, then verify the current PMRA product label and resistance group."
             )
         if state.crop == "potato" and re.search(r"\b(?:lesions?|disease program)\b", lower):
+            local_guidance = _clubroot_guidance_scope(state.question, jurisdiction).replace(
+                "clubroot guidance", "potato disease alerts or IPM guidance"
+            )
             return (
                 "Before changing the potato disease program, collect representative fresh leaves and stems from the advancing lesion margin in affected, edge and normal areas; photograph upper and lower leaf surfaces and canopy position, and submit a diagnostic sample when identity would change the program. Record incidence, severity, lesion expansion, distribution, crop stage, variety, rotation, seed and disease history, irrigation, recent rain, humidity and leaf-wetness period. "
-                "Compare those observations with current New Brunswick potato disease alerts or IPM guidance. Change prevention, timing or product only when the working diagnosis and risk justify it, and verify the current PMRA product label for potato, target, crop stage, timing, intervals, resistance group and seasonal restrictions."
+                f"Compare those observations with {local_guidance}. Change prevention, timing or product only when the working diagnosis and risk justify it, and verify the current PMRA product label for potato, target, crop stage, timing, intervals, resistance group and seasonal restrictions."
             )
     if decision == "ambiguous_product_followup":
         return (
@@ -4617,8 +4639,13 @@ def _decision_route_failure_answer(
             "A tile or drainage design also needs survey grade, spacing and depth appropriate to the soil, a verified outlet and downstream capacity, and local wetland and drainage requirements. Use those observations and a qualified design before installing a drain."
         )
     if decision == "spray_weather_window":
-        return (
-            "No. Staying on schedule is not the main priority when the product is unknown, wind is increasing toward a sensitive shelterbelt, and rain may challenge the application window. Select the exact crop, target, product and adjuvant first, then verify the current product label for wind, direction, gusts, inversion, buffer or sensitive-area restrictions, temperature and humidity limits, and the required rainfast interval. "
+        regional_limit = (
+            "A regional agroclimate anomaly describes departure from a reference over its stated area and period; it is not tomorrow's field weather or spray permission. "
+            if re.search(r"\b(?:anomaly|agroclimate)\b", lower) else
+            "Do not make an application from the schedule or a regional forecast alone. "
+        )
+        return regional_limit + (
+            "Select the exact crop, target, product and adjuvant first, then verify the current product label for wind, direction, gusts, inversion, buffer or sensitive-area restrictions, temperature and humidity limits, and the required rainfast interval. "
             "Use on-site observations and a field-specific forecast to judge efficacy, drift, and runoff risk without inventing a generic cutoff. Delay or reschedule if the selected label and conditions do not support a compliant application, and preserve the weather, setup, product, and application records."
         )
     if decision == "forage_frost_safety":
@@ -4759,8 +4786,8 @@ def _decision_route_failure_answer(
                 "Compare trap trend, crop and fruit stage, orchard history, fruit injury, natural enemies, and a locally valid apple-pest action threshold. Treat only when that evidence supports the target and timing, then verify the current label, preharvest interval, pollinator and beneficial-insect precautions, and resistance group for the exact product."
             )
         return (
-            "Do not spray from pest presence or a green-looking canopy alone. Confirm the pest species and active feeding stage, then use a defined scouting method and scout counts across representative field areas to record pest count, pest density, injury level, whole-canopy defoliation, and crop stage. "
-            "Make a beneficial count as well, then compare those observations with a current locally valid economic threshold, population trend, plant stress, natural enemies, and beneficials. Review previous products and IRAC groups when resistance is a concern. Rotate effective modes only when treatment is justified, verify the current product label and all current label restrictions for the crop, target, and timing, and use IPM or a selective product to preserve beneficial insects where an effective labeled option fits."
+            "Do not spray from pest presence or a green-looking canopy alone. Confirm the pest species and active feeding stage. Sample representative edge and interior locations using the same defined method; edge sweeps alone cannot establish field-wide density. Record counts per sweep or sampled plant unit, pest density, injury level, whole-canopy defoliation where relevant, and crop stage. "
+            "Count beneficial insects and natural enemies, recheck population trends, and compare with a current locally valid crop-and-pest threshold using the same sampling units. During flowering, assess pollinator activity and the label's bee-protection restrictions; evening timing alone does not establish safety. Review previous products and IRAC groups when resistance is a concern. Rotate effective modes only when treatment is justified, verify the current product label and all current label restrictions for the crop, target, and timing, and use IPM or a selective product to preserve beneficial insects where an effective labeled option fits."
         )
     if decision == "fungicide_decision" and state.crop == "potato":
         return (
@@ -4823,7 +4850,7 @@ def _decision_route_failure_answer(
                 "plausible, soil sodium or ESP. "
                 "Track crop response and field pattern, irrigation uniformity, infiltration, drainage, and water-table "
                 "conditions through the season. Relate those measurements to the crop's salt tolerance and rooting "
-                "depth. Any leaching or amendment plan also requires suitable water, adequate infiltration, and a "
+                "depth and growth stage. EC indicates salinity; SAR describes sodium relative to calcium and magnesium. Interpret SAR with water EC, soil texture and infiltration, not as a stand-alone diagnosis of soil sodicity. Any leaching or amendment plan also requires suitable water, adequate infiltration, and a "
                 "working drainage outlet; the water-test values alone cannot authorize unchanged operation or set a "
                 "season-long leaching amount."
             )
@@ -5023,9 +5050,39 @@ def _exam_review_failure_answer(question: str) -> str:
     )
 
 
+def bounded_decision_support(question: str, question_type: str) -> str | None:
+    """Reuse reviewed procedural fallbacks when an unsupported action is held.
+
+    This never preserves an unverified model prescription or supplies authority.
+    English-only methods cannot replace a requested French response.
+    """
+    if _looks_like_french(question):
+        return None
+    method = observation_guidance(question)
+    if method:
+        return method.answer
+    if question_type == "product_label" and re.search(
+        r"\b(?:disease|blight|mummy berry|aphids?|pests?|collaps\w*)\b", question, re.I
+    ):
+        question_type = "plant_health"
+    state = build_decision_route_state(question, question_type)
+    if state.decision in {
+        "pesticide_rate_request", "underspecified_spray", "plant_health_diagnostic",
+        "crop_stress_differential", "drought_nitrogen_adjustment", "spray_weather_window",
+        "clubroot_containment",
+    } or question_type == "plant_health":
+        answer = _conservative_failure_answer(question_type, question=question)
+        # The procedural method transfers; a Canadian label reference does not.
+        return answer.replace("current PMRA product label", "current jurisdiction-specific product label").replace("PMRA registration", "applicable registration")
+    return None
+
+
 def _conservative_failure_answer(question_type: str, *, question: str = "") -> str:
     if _looks_like_french(question):
         return _french_conservative_failure_answer(question_type)
+    method = observation_guidance(question)
+    if method:
+        return method.answer
     lower = question.lower()
     focus = request_focus(lower)
     decision_state = build_decision_route_state(question, question_type)
@@ -5052,6 +5109,11 @@ def _conservative_failure_answer(question_type: str, *, question: str = "") -> s
         )
     )
     if question_type == "plant_health":
+        if re.search(r"\bpotato\w*\b", lower) and re.search(r"\b(?:collaps\w*|late blight|wilt\w*)\b", lower):
+            return (
+                "No. Collapsing potato tops after cool, wet weather do not confirm late blight. Treat the possibility as time-sensitive: inspect fresh leaf lesions and their undersides, stems, roots and tubers from affected margins and normal plants. Compare late blight with blackleg or other root/tuber decay, waterlogging and physical or application injury; do not diagnose from weather alone. "
+                "Record crop stage, incidence, severity, symptom progression, drainage, variety, seed and application history. Contact a local potato specialist or diagnostic lab promptly for sampling and current disease alerts. A spray decision requires the working diagnosis, current local risk and exact crop/target/product label; a foliar spray will not correct every cause of collapse."
+            )
         if decision_state.crop == "wheat" and re.search(r"\bwet planting|wet seedbed|poor growth after wet|patchy poor growth\b", lower):
             return (
                 "Do not treat patchy wheat growth after a wet planting period as a foliar disease by default. Map affected and normal areas, count plants and tillers, and dig intact seedlings to inspect seed, seminal and crown roots, crowns, mesocotyl or subcrown internode, and the depth and pattern of discoloration or decay. Compare planting depth, seed quality and treatment, soil temperature, saturation duration, drainage, compaction or crusting, herbicide and fertilizer placement, nutrient status, and root or crown disease; submit representative whole plants and soil when the cause remains unclear. "
@@ -5089,7 +5151,7 @@ def _conservative_failure_answer(question_type: str, *, question: str = "") -> s
             )
         if re.search(r"\b(pests?|insects?|aphids?|threshold|beneficials?|natural enem|scout|sampling count|trap captures?|fruit injury)\b", lower):
             return (
-                "The available evidence does not justify treating the field. Identify the pest and establish correct identification and life stage, use a defined sampling or scouting method to record the pest count, pest density and injury level, record crop stage and plant stress, and make a beneficial count for beneficial insects or natural enemies. Compare those observations with a locally valid economic threshold or action threshold. "
+                "The available evidence does not justify treating the whole field. Sample representative edge and interior locations using the same defined method; edge sweeps alone cannot establish field-wide density. Identify the pest and active life stage, record counts per sweep or sampled plant unit, injury, crop stage and plant stress, and count beneficial insects or natural enemies. Recheck population trends and compare counts with a current locally valid crop-and-pest threshold using the same sampling units. During flowering, assess pollinator activity and the label's bee-protection restrictions before any treatment; evening timing alone does not establish safety. "
                 "If treatment is justified, verify the current product label for the crop, target, jurisdiction, timing, and restrictions; prefer a selective product that preserves beneficials where an effective labeled option fits. Rotate effective modes of action and use nonchemical IPM tactics where they fit to reduce resistance risk."
             )
         if re.search(r"\bcorn\b", lower) and re.search(r"\brectangular\b[^?]{0,100}\blesions?\b|\blesions?\b[^?]{0,100}\bleaf veins?\b", lower):
@@ -5631,6 +5693,8 @@ def _conservative_failure_answer(question_type: str, *, question: str = "") -> s
 
 
 def _has_specific_failure_answer(question_type: str, question: str) -> bool:
+    if observation_guidance(question):
+        return True
     lower = question.lower()
     focus = request_focus(lower)
     if _is_wet_forage_establishment_question(question):

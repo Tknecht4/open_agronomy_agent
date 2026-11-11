@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass
 
 from agronomy_agent.map_component_interpretation import is_map_component_explanation_question
+from agronomy_agent.observation_guidance import observation_guidance
 
 
 _AAFC_CROP_HEALTH_PRODUCT_PATTERN = (
@@ -733,6 +734,9 @@ def evidence_interpretation_kind(text: str) -> str | None:
         r"what should (?:i|we) do)\b", q
     ):
         return None
+    method = observation_guidance(text)
+    if method is not None and method.key == "crop_guide_applicability":
+        return "source_applicability"
     if not _interpretation_only_request(q):
         return None
     comparison = has(r"\b(?:compar\w*|same|different|equivalent|interchangeable|independent|"
