@@ -14,6 +14,27 @@ from agronomy_agent.agronomic_calculations import (
 )
 
 
+@pytest.mark.parametrize("inputs", [
+    {"volumetric_water_content": -0.1, "layer_depth_cm": 30},
+    {"volumetric_water_content": 1.1, "layer_depth_cm": 30},
+    {"volumetric_water_content": True, "layer_depth_cm": 30},
+    {"volumetric_water_content": "NaN", "layer_depth_cm": 30},
+    {"volumetric_water_content": .24, "layer_depth_cm": 0},
+])
+def test_soil_water_storage_rejects_invalid_fraction_or_layer(inputs):
+    from agronomy_agent.agronomic_calculations import calculate_agronomic
+    with pytest.raises(ValueError):
+        calculate_agronomic("soil_water_storage", inputs)
+
+
+def test_zero_soil_water_is_valid_without_inventing_available_water():
+    from agronomy_agent.agronomic_calculations import calculate_agronomic
+    result = calculate_agronomic("soil_water_storage", {"volumetric_water_content": 0, "layer_depth_cm": 30})
+    assert result.value == 0
+    assert "plant-available" in result.boundary
+
+
+
 def test_tank_validation_is_nonmutating_and_shared_by_execution(monkeypatch):
     import agronomy_agent.agronomic_calculations as calculations
     supplied = {"tank_volume_l": 1000, "application_volume_l_per_ha": 100}

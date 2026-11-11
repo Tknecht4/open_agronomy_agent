@@ -356,6 +356,8 @@ def _parse_unit_conversion(text: str, lower: str):  # noqa: ANN202
         re.IGNORECASE,
     )
     if not match:
+        if not re.match(r"^(?:please )?convert\b", lower):
+            return None
         return "unit_conversion", {}, ("value", "from unit", "to unit")
     return "unit_conversion", {
         "value": _number(match.group(1)),

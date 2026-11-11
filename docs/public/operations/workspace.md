@@ -55,8 +55,9 @@ saved fields, conversations, and model settings before enabling questions, while
 preserving the unsent draft. A delayed recovery does not replace a newer field or
 chat selection. Device-only field notes remain on the device.
 
-With a working API, supported kg/ha ↔ lb/ac conversions, validated tank-coverage
-calculations and calculator requests that need a missing input can proceed
+With a working API, supported unit conversions, validated tank-coverage,
+nitrogen-product field-total and soil-water-storage calculations, and calculator
+requests that need a missing input can proceed
 without a ready model. Tank coverage uses your supplied tank volume and
 application volume per hectare; it does not select an application rate. Supplied
 unusable volume must be smaller than tank volume; conflicting values for unusable
@@ -65,6 +66,13 @@ before sending. Ordinary answers need the selected model. Other complete
 calculations still require model readiness until their input-validation path is
 qualified; a detected calculator intent alone does not establish readiness.
 Save field edits before asking.
+
+For example, calculating a hypothetical 40 kg N/ha over 24 hectares from a
+46% nitrogen product returns 2,086.957 kg of product. Converting a uniform
+30 cm soil layer at 0.24 m³/m³ water content returns 72 mm of total stored
+water. The water result also identifies the additional information needed for
+plant-available water. These calculations preserve the supplied scenario and
+provide no field application or irrigation recommendation.
 
 Select a field when its known details matter to the question. Field observations and soil tests are user records; map intersections and provider data are separate contextual inputs. If a field is incomplete, leave unknowns blank and ask a bounded question. A model answer should not turn an unknown into a zero, a pass, or a prescription.
 

@@ -44,7 +44,11 @@ from agronomy_agent.query_context import (
 )
 from agronomy_agent.capability_planner import build_planner_input, plan_capabilities, select_public_capability_plan
 from agronomy_agent.capability_registry import capability_registry
-from agronomy_agent.agronomic_calculations import _format_decimal, calculation_tool_schema, validate_tank_coverage_inputs, validate_unit_conversion_inputs
+from agronomy_agent.agronomic_calculations import (
+    _format_decimal, calculation_tool_schema, validate_tank_coverage_inputs,
+    validate_unit_conversion_inputs, validate_fertilizer_field_total_inputs,
+    validate_soil_water_storage_inputs,
+)
 from agronomy_agent.decision_contract import build_decision_contract
 from agronomy_agent.evidence_contracts import question_frame_from_runtime
 from agronomy_agent.tool_planner import plan_tools
@@ -408,9 +412,12 @@ def preview_turn_readiness(
                 validated_inputs = True
             except (ValueError, DecimalException):
                 validated_inputs = False
-        elif calculator.operation == "tank_coverage":
+        elif calculator.operation in {"tank_coverage", "fertilizer_field_total", "soil_water_storage"}:
             try:
-                validate_tank_coverage_inputs(calculator.inputs)
+                validators = {"tank_coverage": validate_tank_coverage_inputs,
+                              "fertilizer_field_total": validate_fertilizer_field_total_inputs,
+                              "soil_water_storage": validate_soil_water_storage_inputs}
+                validators[calculator.operation](calculator.inputs)
                 validated_inputs = True
             except (ValueError, DecimalException):
                 validated_inputs = False

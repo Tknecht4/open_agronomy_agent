@@ -12,6 +12,8 @@ FOUNDATION_OPERATIONS = frozenset({
     "break_even_yield",
     "current_ratio",
     "debt_to_asset_percent",
+    "fertilizer_field_total",
+    "soil_water_storage",
 })
 
 

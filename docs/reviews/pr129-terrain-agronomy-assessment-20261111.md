@@ -45,4 +45,19 @@ The first additional execution could not locate the primary checkout's cached
 model from the isolated worktree. Its failed observations are retained. The
 corrected invocation names the existing read-only cache explicitly.
 
-Results will be appended after execution and source review complete.
+The first provisioned run completed all 50 product cells. Its nine numeric cases
+included two failures. Supplied nitrogen percentage, target and area were
+replaced with a missing-input prompt, and a volumetric soil-water question was
+misclassified as a simple unit conversion with missing units. The repairs add
+two typed v2 operations with shared input validators for readiness and execution.
+Field-total arithmetic composes the existing nutrient-product and area-total
+calculators. Soil-water storage returns the dimensional result with its uniform
+layer assumption and plant-available-water limit. Operational requests remain
+outside these arithmetic selectors.
+
+The terrain question also reached an erosion fallback that suggested practices
+without first answering whether mapped data proved a current problem. Its
+replacement leads with the evidence limit and requires current local assessment
+before selecting a practice or design.
+
+Final execution and automated answer-review results follow after verification.
