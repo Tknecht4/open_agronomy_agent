@@ -878,7 +878,10 @@ def score_item_numeric(output: str, item: dict[str, Any]) -> dict[str, Any]:
         # unit, including "kg N/ha" and "kg product ha⁻¹". It must not become
         # a contradictory standalone mass in a field-total calculation.
         qualifier = r"(?!(?:and|or|but|then|is|equals)\b)[A-Za-z][\w₂₅-]*"
-        compound_tail = rf"(?!\s*(?:{qualifier}\s*){{0,3}}(?:/|\bper\b|\b(?:ha|ac|m[²2])(?:\^-1|⁻¹|-1)))"
+        # Require whitespace between qualifier words so a long token cannot
+        # be repartitioned into multiple words during regex backtracking.
+        qualifiers = rf"(?:(?:{qualifier}\s+){{0,2}}{qualifier}\s*)?"
+        compound_tail = rf"(?!\s*{qualifiers}(?:/|\bper\b|\b(?:ha|ac|m[²2])(?:\^-1|⁻¹|-1)))"
         pattern = re.compile(
             rf"(?<![\w.])(-?\d+(?:,\d{{3}})*(?:\.\d+)?)\s*(?:{unit_pattern})(?![\w/⁻^-]){compound_tail}", re.I,
         )

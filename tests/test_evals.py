@@ -1506,6 +1506,20 @@ def test_numeric_scorer_still_rejects_conflicting_totals_and_extended_rate_units
     assert score_item_numeric(output, item)["score"] == 0
 
 
+def test_numeric_scorer_bounds_matching_on_a_long_trailing_token():
+    import json
+    import subprocess
+    import sys
+
+    code = (
+        "import json; from agronomy_agent.evals import score_item_numeric; "
+        "print(json.dumps(score_item_numeric('120 kg ' + 'a' * 3000, "
+        "{'reference_numeric': 120, 'reference_unit': 'kg', 'absolute_tolerance': .1})))"
+    )
+    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=10, check=True)
+    assert json.loads(result.stdout)["score"] == 100
+
+
 def test_empty_pattern_contract_is_undefined_and_excluded_from_aggregate() -> None:
     score = score_item("A plausible answer.", {"required_patterns": [], "forbidden_patterns": []})
     assert score["score"] is None
