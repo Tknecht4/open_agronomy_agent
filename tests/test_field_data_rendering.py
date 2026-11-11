@@ -20,6 +20,15 @@ def test_ordinary_hyphenated_agronomy_terms_survive_final_rendering(text):
     assert not rendered.leak_classes_removed
 
 
+def test_source_water_sampling_prose_survives_without_hiding_a_real_identifier():
+    text = "Repeat dated source-water samples through the season. Interpret SAR with EC and soil infiltration."
+    assert not detect_prompt_leaks(text)
+    rendered = render_structured_answer(text, trace={"metadata": {"answer_policy_profile": "general_agronomy"}})
+    assert text == rendered.answer
+    assert "raw_source_id" in {f.leak_class for f in detect_prompt_leaks(text + " source_private")}
+    assert detect_prompt_leaks("Source: source-water")
+
+
 @pytest.mark.parametrize("text", [
     "question_type=soil-water; risk_level=high",
     "Routing notes: soil-water",

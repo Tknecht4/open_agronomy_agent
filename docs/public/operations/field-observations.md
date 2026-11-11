@@ -53,7 +53,7 @@ leaching prescription. See [Alberta agricultural water](https://www.alberta.ca/a
 and its [irrigation procedures manual](https://www1.agriculture.alberta.ca/%24department/deptdocs.nsf/all/irr4437/%24FILE/procedures.pdf).
 
 Check a guide's crop and production-system scope before using its tables.
-Haskap is a perennial fruit crop: a vegetable spacing or fertilizer table does
+Haskap (also called honeyberry or [camerise](https://www.oqlf.gouv.qc.ca/ressources/bibliotheque/dictionnaires/VocabulairesPDF/terminologie_fruits.pdf)) is a perennial fruit crop: a vegetable spacing or fertilizer table does
 not establish its layout or nutrient requirement. Mature size, equipment,
 harvest access and compatible pollinizers matter. Ontario's
 [haskap profile](https://omafra.gov.on.ca/CropOp/en/spec_fruit/berries/hask.html)

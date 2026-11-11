@@ -23,6 +23,26 @@ class ObservationGuidance:
         return tuple(name for name, _, patterns in self.facets
                      if not any(re.search(p, answer, re.I) for p in patterns))
 
+    def unsupported_inference(self, answer: str) -> bool:
+        """Reject bounded contradictions even when a correct check is appended."""
+        for sentence in re.split(r"[.!?;]\s*|\n+", answer):
+            if self.key == "empty_terrain_coverage":
+                if re.search(
+                    r"\b(?:absence|empty|no (?:mapped )?features?|lack of data)\b[^.!?]{0,160}"
+                    r"\b(?:suggest\w*|indicat\w*|means?|proves?|confirms?)\b[^.!?]{0,100}"
+                    r"\b(?:low(?:er)?[- ]risk|(?:low|lower|reduced|minimal|no) (?:waterlogging )?risk|lack of coverage|missing coverage|no coverage)\b",
+                    sentence, re.I,
+                ) and not re.search(r"\b(?:does not|do not|cannot|can't|doesn't|not enough to)\s+(?:by itself\s+)?(?:suggest|indicat|mean|prove|confirm)\w*", sentence, re.I):
+                    return True
+            if self.key == "point_area":
+                if re.search(r"\b(?:area|size)\b[^.;]{0,35}\b(?:covered by|of)\b[^.;]{0,25}\b(?:pin|point)\b", sentence, re.I):
+                    return True
+                if re.search(r"\b(?:simplest|only|sufficient)\b[^.;]{0,160}\b(?:known|single|one) (?:distance|dimension|scale|reference point)\b", sentence, re.I) and not re.search(r"\b(?:not|insufficient|both|length and width|closed boundary|closed polygon)\b", sentence, re.I):
+                    return True
+                if re.search(r"\b(?:estimate slope length|use benchmark sites|directed benchmark sampling)\b", sentence, re.I) and not re.search(r"\b(?:not|cannot|insufficient|doesn't)\b", sentence, re.I):
+                    return True
+        return False
+
 
 def observation_guidance(question: str) -> ObservationGuidance | None:
     q = question.lower()
@@ -41,6 +61,7 @@ def observation_guidance(question: str) -> ObservationGuidance | None:
             ("imagery_qa", "Check cloud/shadow masks before interpreting a change.", (r"\b(?:cloud|shadow)\b[^.]{0,90}\b(?:mask|QA)",)),
             ("imagery_support", "Check valid pixel count/coverage and comparable spatial support.", (r"\bvalid (?:pixel|field|coverage)",)),
             ("imagery_comparability", "Compare processing and crop stage before causal interpretation.", (r"\b(?:processing|sensor|product)\b",)),
+            ("imagery_stage", "Check crop stage or phenology on both dates.", (r"\b(?:crop|growth) stage\b", r"\bphenolog")),
         ))
     if has(r"\b(?:gps|dropped|single|one)\b[^.]{0,35}\b(?:pin|point)\b") and has(r"\barea\b"):
         return ObservationGuidance("point_area", (
@@ -73,6 +94,7 @@ def observation_guidance(question: str) -> ObservationGuidance | None:
             ("guide_rate_transfer", "Do not transfer the table's crop-specific fertilizer rates.", (r"\b(?:do not copy|not.*prescription|locally calibrated)\b",)),
         ))
     if has(r"\b(?:crop[- ]health|national.*stress|regional.*stress)\b") and has(r"\b(?:map|layer|index|indices|patch)\b"):
+        nitrogen = has(r"\b(?:nitrogen|fertiliz\w*)\b")
         return ObservationGuidance("regional_crop_signal", (
             "A regional crop-health or stress layer is a screening signal, not a field diagnosis of drought, nutrient deficiency or a named disease. "
             "Verify the exact metric, date, spatial resolution, source and uncertainty; determine whether it is a modelled weather/water-balance product or a satellite observation before interpreting it. "
@@ -80,14 +102,14 @@ def observation_guidance(question: str) -> ObservationGuidance | None:
             "Waterlogging, drought, root injury, nutrient constraints and disease remain alternatives until those observations discriminate them. Arrange timely crop-specific diagnostic sampling if disease is suspected. "
         ) + (
             "For a nitrogen decision, reconcile fertilizer already applied, manure and previous-crop credits with a current soil nitrate test or crop nitrogen status, realistic yield response, available water and the remaining uptake window; use current local calibration. "
-            if has(r"\b(?:nitrogen|fertiliz\w*)\b") else ""
+            if nitrogen else ""
         ) + (
             "Do not change management from the map alone; a pesticide application also needs current crop/target/product label authority."
         ), (
             ("regional_not_diagnosis", "State that the regional signal cannot diagnose a field cause.", (r"\b(?:not a field diagnosis|cannot diagnose|does not diagnose)\b",)),
             ("regional_field_comparison", "Compare representative affected and normal field observations.", (r"\baffected and normal\b",)),
             ("regional_root_water", "Inspect roots and current root-zone water before inferring stress.", (r"\broots?\b",)),
-        ))
+        ) + (("regional_nitrogen_budget", "Reconcile applied nitrogen and nutrient credits with remaining response and local calibration.", (r"\b(?:credits?|soil nitrate|applied nitrogen)\b",)),) * nitrogen)
     if has(r"\b(?:scout\w*|walk|check)\b") and (
         has(r"\baffected\b.*\b(?:normal|healthy)\b|\b(?:normal|healthy)\b.*\baffected\b")
         or has(r"\b(?:yellow\w*|pale|chlorosis)\b") and has(r"\b(?:rain|wet|low spots?|waterlog\w*)\b")
@@ -101,6 +123,8 @@ def observation_guidance(question: str) -> ObservationGuidance | None:
         ), (
             ("scouting_comparison", "Compare patch margins with representative nearby normal areas.", (r"\b(?:affected.*normal|normal.*affected)\b",)),
             ("scouting_roots", "Dig intact plants and compare roots/crowns, not just leaves.", (r"\b(?:dig|inspect|examine)\b[^.]{0,100}\broots?\b",)),
-            ("scouting_records", "Keep separately labelled samples and revisit marked locations.", (r"\b(?:separately|separate|revisit|marked locations)\b",)),
+            ("scouting_samples", "Keep affected and normal samples separately labelled.", (r"\b(?:separately|separate)\b",)),
+            ("scouting_follow_up", "Revisit marked locations to track recovery or symptom progression.", (r"\b(?:revisit|recheck|marked locations|track.{0,35}progression)\b",)),
+            ("scouting_water", "Compare soil moisture and drainage in the contrasting areas.", (r"\b(?:soil moisture|root[- ]zone moisture|ponding|drainage)\b",)),
         ))
     return None

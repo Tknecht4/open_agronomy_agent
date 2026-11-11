@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from html import unescape
 
 
-LEAK_GUARD_VERSION = "phase5.leak_guard.v5"
+LEAK_GUARD_VERSION = "phase5.leak_guard.v6"
 
 _LABEL_SEPARATOR = r"[\s_-]+"
 
@@ -84,7 +84,9 @@ def detect_prompt_leaks(answer_text: str, *, literal_identifiers: tuple[str, ...
         match = next(
             (candidate for candidate in pattern.finditer(scan_text)
              if not (leak_class == "eval_regex_fragment" and _is_json_array(candidate.group(0)))
-             and not (leak_class == "raw_source_id" and candidate.group(0) in literal_identifiers)),
+             and not (leak_class == "raw_source_id" and (
+                 candidate.group(0) in literal_identifiers or _is_source_water_prose(candidate, scan_text)
+             ))),
             None,
         )
         if not match:
@@ -97,6 +99,15 @@ def detect_prompt_leaks(answer_text: str, *, literal_identifiers: tuple[str, ...
             )
         )
     return findings
+
+
+def _is_source_water_prose(match: re.Match[str], text: str) -> bool:
+    # A narrow ordinary noun phrase, not a general hyphenated-ID exemption.
+    # Keep scanning so a later real identifier on the same line remains visible.
+    return match.group(0).lower() == "source-water" and bool(re.match(
+        r"\s+(?:samples?|sampling|quality|tests?|EC|SAR|salinity|measurements?)\b",
+        text[match.end():], re.I,
+    ))
 
 
 def _is_json_array(fragment: str) -> bool:

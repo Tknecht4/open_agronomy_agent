@@ -40,6 +40,7 @@ def test_missing_observation_method_reaches_verifier_even_below_risk_threshold(q
     method = observation_guidance(question)
     assert method and method.key == key
     assert not method.missing(method.answer)
+    assert not method.unsupported_inference(method.answer)
     # A fluent, punctuated draft can still omit the requested observation method.
     result = verify_answer("More field information is required before drawing a conclusion.",
         question=question, evidence_text="", question_type=classify_query(question).question_type,
@@ -197,3 +198,44 @@ def test_mixed_pesticide_and_nitrogen_requests_retain_both_authority_lanes(quest
     missing = " ".join(policy["missing_evidence"])
     assert "current product label" in missing and "soil or tissue test" in missing
     assert policy["blocked"] is True
+
+
+@pytest.mark.parametrize("question,bad", [
+    ("An empty LiDAR terrain clip has no mapped features. Does that mean no wetness risk?",
+     "An empty clip suggests a low-risk scenario. Check source parcel coverage and acquisition age."),
+    ("Can one GPS point establish planted area?",
+     "Require a closed boundary or both dimensions of a known shape. The simplest information needed is a known distance, such as the area covered by the pin."),
+])
+def test_appending_correct_requirements_does_not_hide_a_contradictory_inference(question, bad):
+    result = verify_answer(bad, question=question, evidence_text="", question_type="conceptual",
+        risk_level="low", editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert result.triggered
+    assert "unsupported_observation_inference" in result.draft_assessment.reasons
+    assert result.answer != bad
+    assert "low-risk scenario" not in result.answer and "area covered by the pin" not in result.answer
+
+
+def test_seasonal_water_answer_cannot_omit_crop_stage_and_system_checks():
+    question = "One irrigation-water test with EC and SAR: can the pivot run unchanged all season?"
+    draft = ("Repeat irrigation-water and root-zone soil salinity tests through the season. Interpret SAR with EC and infiltration. "
+             "Leaching needs adequate water and drainage.")
+    result = verify_answer(draft, question=question, evidence_text="", question_type="soil_water",
+        risk_level="medium", editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert "growth stage" in result.answer and "uniformity" in result.answer
+
+
+def test_paired_scouting_keeps_water_checks_and_follow_up_separate_from_sample_labels():
+    question = "How should I compare affected and normal areas while scouting?"
+    draft = "Compare affected and normal plants, dig roots for galls and keep separately labelled samples."
+    result = verify_answer(draft, question=question, evidence_text="", question_type="plant_health",
+        risk_level="high", editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert "soil moisture" in result.answer and "Revisit" in result.answer
+
+
+def test_haskap_is_a_named_crop_for_live_guide_compatibility():
+    from agronomy_agent.query_context import extract_crop_entities
+    from agronomy_agent.canada_sources import _live_reference_crop_compatible
+    for question in ["haskap planting", "honeyberry planting"]:
+        crops = set(extract_crop_entities(question))
+        assert crops == {"haskap"}
+        assert not _live_reference_crop_compatible({"crops": ["vegetables", "potato"]}, query_crops=crops)

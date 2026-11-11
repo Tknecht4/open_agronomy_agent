@@ -165,6 +165,14 @@ transfer limits are in the [field observation guide](../../docs/public/operation
 Numeric-rate obligations distinguish pesticide scouting, stages and application
 history from fertility tests and credits. Mixed pesticide/nutrient requests
 retain the product-label and fertility authority lanes.
+When a bounded observation method is incomplete or contradicts its own evidence
+limit, a reviewed method can replace it before editing only after the normal
+safety and requested-record preservation checks pass. Coverage words alone do
+not validate an unsupported low-risk inference, and a correct boundary sentence
+cannot validate a subsequent one-dimensional area claim. The final leak screen
+preserves the ordinary phrase `source-water samples` while retaining identifier
+and internal-control detection. Haskap/honeyberry crop identity also participates
+in the existing live-reference compatibility filter.
 
 The active verifier retains its risk-conditioned review thresholds. A proposed
 advisory-only bypass was withdrawn after a paired development run exposed an

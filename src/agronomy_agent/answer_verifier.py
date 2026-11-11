@@ -1328,6 +1328,7 @@ def assess_claim_risk(
     unsupported_conditions = _unsupported_values(_NAMED_CONDITION_RE, candidate, condition_allowed)
     unsupported_pests = _unsupported_values(_NAMED_PEST_RE, candidate, allowed)
     missing_intent_facets = _missing_intent_facets(candidate, question=question, question_type=question_type)
+    observation_method = observation_guidance(question)
     decision_state = build_decision_route_state(question, question_type)
     route_violations = decision_state.answer_violations(candidate)
     premise_coverage = decision_state.premise_coverage(candidate)
@@ -1352,6 +1353,8 @@ def assess_claim_risk(
     named_product_fidelity = _uses_named_product_fidelity(question, evidence_handshake, docs)
 
     reasons: list[str] = []
+    if observation_method is not None and observation_method.unsupported_inference(candidate):
+        reasons.append("unsupported_observation_inference")
     if _looks_like_french(question) and not _looks_like_french_output(candidate):
         reasons.append("wrong_response_language")
     if unsupported_numbers:
@@ -1722,6 +1725,18 @@ def _verify_answer_impl(
         return None
 
     draft_assessment = assess(draft)
+    observation_method = observation_guidance(question)
+    if observation_method and (
+        observation_method.missing(draft) or observation_method.unsupported_inference(draft)
+    ):
+        method_assessment = assess(observation_method.answer)
+        if not _blocking_claim_reasons(method_assessment) and not requested_record_losses(observation_method.answer):
+            return AnswerVerificationResult(
+                answer=observation_method.answer, triggered=True, rewrite_accepted=False,
+                draft_assessment=draft_assessment, final_assessment=method_assessment,
+                draft_output=draft, fallback_applied=True,
+                rejection_reasons=("bounded_observation_method_repair", observation_method.key),
+            )
     if "diagnostic_sampling_contrast_destroyed" in draft_assessment.reasons:
         correction = (
             "Once soil from contrasting areas is mixed and analyzed as one composite, the result cannot recover "
@@ -3467,6 +3482,8 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
         if re.search(r"\b(?:water test|irrigation[- ]water|pivot)\b", lower) and re.search(r"\b(?:one|single|all season|unchanged)\b", lower):
             add("water_seasonal_sampling", "Repeat dated source-water samples through the season or when the source changes.", r"\brepeat\b[^.]{0,100}\b(?:water|EC|SAR|sampl)", r"\bseasonal sampling\b")
             add("water_sodium_interpretation", "Interpret SAR with EC, soil texture and infiltration; do not classify the field from one water test.", r"\bSAR\b[^.]{0,100}\b(?:EC|sodium|infiltration)\b", r"\bsodium\b[^.]{0,100}\b(?:EC|infiltration|texture)\b")
+            add("water_crop_stage", "Relate water quality to crop growth stage and salt tolerance.", r"\b(?:crop|growth) stage\b")
+            add("water_system_performance", "Check irrigation uniformity or system performance through the season.", r"\b(?:uniformity|system performance|system capacity|delivery)\b")
         if re.search(r"\b(?:gypsum|gypse)\b", lower):
             add("sodicity_gypsum_boundary", "State that gypsum is not automatic and requires confirmed sodicity plus a reclamation calculation.", r"\bgypsum\b[^.]{0,60}\bnot automatic\b", r"\bgypse\b[^.]{0,80}\b(?:pas automatique|sodicit[eé] confirm[eé]e)\b", r"\bconfirmed sodicity\b", r"\breclamation (?:calculation|requirement)\b", r"\bcalcul (?:de|du) (?:r[eé]habilitation|besoin d'amendement)\b")
     elif decision == "flood_recovery":
