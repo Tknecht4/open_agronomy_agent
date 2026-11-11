@@ -117,7 +117,7 @@
             "row_spacing_m": 0.3
           },
           "expected_value": 60,
-          "expected_unit": "plants/m\u00b2",
+          "expected_unit": "plants/m²",
           "absolute_tolerance": 0.0001
         },
         {
@@ -231,6 +231,30 @@
           "expected_value": 25,
           "expected_unit": "%",
           "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "fertilizer_field_total",
+          "operation": "fertilizer_field_total",
+          "inputs": {
+            "area_ha": 24,
+            "nutrient_target_kg_per_ha": 40,
+            "nutrient_percent": 46,
+            "nutrient_label": "N"
+          },
+          "expected_value": 2086.956521739,
+          "expected_unit": "kg",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "soil_water_storage",
+          "operation": "soil_water_storage",
+          "inputs": {
+            "volumetric_water_content": 0.24,
+            "layer_depth_cm": 30
+          },
+          "expected_value": 72,
+          "expected_unit": "mm",
+          "absolute_tolerance": 0.0001
         }
       ],
       "negative_fixtures": [
@@ -301,6 +325,25 @@
             "field_survival_pct": 85
           },
           "expected_error_contains": "missing required fields"
+        },
+        {
+          "fixture_id": "invalid_volumetric_water_fraction",
+          "operation": "soil_water_storage",
+          "inputs": {
+            "volumetric_water_content": 1.2,
+            "layer_depth_cm": 30
+          },
+          "expected_error_contains": "fraction from 0 to 1"
+        },
+        {
+          "fixture_id": "invalid_fertilizer_field_percentage",
+          "operation": "fertilizer_field_total",
+          "inputs": {
+            "area_ha": 24,
+            "nutrient_target_kg_per_ha": 40,
+            "nutrient_percent": 0
+          },
+          "expected_error_contains": "must be greater than 0"
         }
       ]
     }
