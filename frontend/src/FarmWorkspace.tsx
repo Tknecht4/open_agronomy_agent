@@ -18,7 +18,7 @@ const readScope = () => {
   const query = new URLSearchParams(window.location.hash.split('?')[1] || '')
   const year = Number(query.get('season'))
   return { farm: query.get('farm') || '', field: query.get('field') || '',
-    season: year >= 1900 && year <= 2200 ? year : new Date().getFullYear(),
+    season: Number.isInteger(year) && year >= 1900 && year <= 2200 ? year : new Date().getFullYear(),
     tab: query.get('tab') || 'overview', query: query.get('q') || '' }
 }
 
@@ -55,7 +55,7 @@ export default function FarmWorkspace({ mode, allowNetwork, refreshKey, onAddFie
   }).sort((a, b) => sort === 'records' ? (b.last_record_at || '').localeCompare(a.last_record_at || '') : sort === 'crop' ? (a.crop || '').localeCompare(b.crop || '') || a.name.localeCompare(b.name) : a.name.localeCompare(b.name)), [scopedFields, scope.query, filter, sort, farms])
   const coverage = scope.farm ? overview?.farm_coverage?.[scope.farm] : overview?.coverage
   const mapFields = useMemo(() => fields.map(({ id, name, geometry }) => ({ id, name, geometry })), [fields])
-  const updateScope = (patch: Partial<typeof scope>) => {
+  const updateScope = (patch: Partial<typeof scope>, replace = false) => {
     const next = { ...scope, ...patch }
     setScope(next)
     const query = new URLSearchParams({ season: String(next.season) })
@@ -63,7 +63,9 @@ export default function FarmWorkspace({ mode, allowNetwork, refreshKey, onAddFie
     if (next.field) query.set('field', next.field)
     if (next.tab !== 'overview') query.set('tab', next.tab)
     if (next.query) query.set('q', next.query)
-    window.history.pushState(null, '', `#${mode}?${query}`)
+    const hash = `#${mode}?${query}`
+    if (replace) window.history.replaceState(null, '', hash)
+    else if (window.location.hash !== hash) window.history.pushState(null, '', hash)
   }
   useEffect(() => {
     const changed = () => setScope(readScope())
@@ -97,14 +99,23 @@ export default function FarmWorkspace({ mode, allowNetwork, refreshKey, onAddFie
       {mode !== 'records' ? <div className="farm-actions">
         {farm ? <button type="button" onClick={() => { setEditFarm(farm); setFarmName(farm.name); setArchived(Boolean(farm.archived)); setNewFarm(true) }}>Manage farm</button> : null}
         <button type="button" onClick={() => setImportOpen(true)}>Import fields</button>
-        {directory ? <button type="button" className="primary-button" onClick={createFarm}><Plus size={16} />Create farm</button> : <button type="button" className="primary-button" onClick={() => onAddField(farm?.id || null)}><Plus size={16} />Add field</button>}
+        {directory ? overview && !overview.fields.length && !farms.length ? null : <button type="button" className="primary-button" onClick={createFarm}><Plus size={16} />Create farm</button> : <button type="button" className="primary-button" onClick={() => onAddField(farm?.id || null)}><Plus size={16} />Add field</button>}
       </div> : null}
     </header> : null}
     <div className="farm-scope-bar">
       {scope.field ? <button type="button" className="farm-back" onClick={() => updateScope({ field: '', tab: 'overview' })}><ArrowLeft size={16} />{farm?.name || (mode === 'farms' ? 'Farms' : mode === 'records' ? 'Records' : 'Fields')}</button> : <label className="farm-scope-select"><span className="sr-only">Farm</span><select aria-label="Farm" value={scope.farm} onChange={event => openFarm(event.target.value)}>
         <option value="">All farms</option><option value="unassigned">Unassigned fields</option>{farms.map(item => <option key={item.id} value={item.id}>{item.name}{item.archived ? ' (archived)' : ''}</option>)}
       </select></label>}
-      <div className="farm-period-controls"><label>Season<input aria-label="Season" type="number" min="1900" max="2200" value={scope.season} onChange={event => { const year = Number(event.target.value); if (year >= 1900 && year <= 2200) updateScope({ season: year }) }} /></label>
+      <div className="farm-period-controls"><label>Season<input key={scope.season} aria-label="Season" type="number" min="1900" max="2200" defaultValue={scope.season}
+        onBlur={event => {
+          const year = event.currentTarget.valueAsNumber
+          if (Number.isInteger(year) && year >= 1900 && year <= 2200 && year !== scope.season) {
+            updateScope({ season: year })
+          } else {
+            event.currentTarget.value = String(scope.season)
+          }
+        }}
+        onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur() }} /></label>
       {mode !== 'records' || scope.field ? <label><span className="sr-only">Area units</span><select aria-label="Area units" value={unit} onChange={event => { const value = event.target.value as 'ac' | 'ha'; setUnit(value); window.localStorage.setItem('open-agronomy.area-unit', value) }}><option value="ac">Acres</option><option value="ha">Hectares</option></select></label> : null}</div>
     </div>
     {error ? <div role="alert" className="farm-error">{error}<button type="button" onClick={() => setRefresh(v => v + 1)}>Retry</button></div> : null}
@@ -118,7 +129,7 @@ export default function FarmWorkspace({ mode, allowNetwork, refreshKey, onAddFie
     </> : <>
       <div className="farm-overview-summary"><span><strong>{scopedFields.length}</strong> {scopedFields.length === 1 ? 'field' : 'fields'}</span><span><strong>{fieldArea(coverage?.boundary_area_m2, unit)}</strong> boundary coverage</span>{scopedFields.some(field => field.geometry_status !== 'boundary') ? <span>{scopedFields.filter(field => field.geometry_status !== 'boundary').length} with unknown area</span> : null}</div>
       {(coverage?.overlapping_area_m2 || 0) > 1 ? <p className="farm-area-summary">{fieldArea(coverage?.overlapping_area_m2, unit)} of overlapping area excluded.</p> : null}
-      <div className="farm-filters"><label className="farm-search"><Search size={16} aria-hidden="true" /><span className="sr-only">Search fields</span><input aria-label="Search fields" value={scope.query} placeholder="Search fields" onChange={event => updateScope({ query: event.target.value })} /></label>
+      <div className="farm-filters"><label className="farm-search"><Search size={16} aria-hidden="true" /><span className="sr-only">Search fields</span><input aria-label="Search fields" value={scope.query} placeholder="Search fields" onChange={event => updateScope({ query: event.target.value }, true)} /></label>
         <label><span className="sr-only">Show</span><select aria-label="Show" value={filter} onChange={event => setFilter(event.target.value)}><option value="all">All fields</option><option value="boundary">Boundary needed</option><option value="crop">Crop not confirmed</option><option value="records">With records</option><option value="context">Sources to review</option></select></label>
         <label><span className="sr-only">Sort</span><select aria-label="Sort" value={sort} onChange={event => setSort(event.target.value)}><option value="name">Field name</option><option value="crop">Crop</option><option value="records">Latest record</option></select></label>
       </div>

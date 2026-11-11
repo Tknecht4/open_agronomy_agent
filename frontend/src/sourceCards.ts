@@ -433,7 +433,7 @@ const toolFacts = (name: string, summary: JsonRecord, status: string): string[] 
   if (isCanadaSourceLane(name)) return canadaSourceLaneFacts(summary)
   if (isPublicSourceCard(name)) return publicSourceCardFacts(summary)
   if (name === 'nasa_power_daily' && status === 'partial_available') return nasaPowerFacts(summary)
-  if (status !== 'available') return unavailableFacts(name, summary, status)
+  if (status !== 'available') return unavailableFacts(summary, status)
   if (name === 'nrcs_soil_survey_geometry') return nrcsGeometryFacts(summary)
   if (name === 'nrcs_soil_survey_point') return nrcsPointFacts(summary)
   if (name === 'cropland_data_layer_geometry') return cdlGeometryFacts(summary)
@@ -705,7 +705,7 @@ const toolLinks = (name: string, summary: JsonRecord): PublicToolCard['links'] =
     .map((url, index) => ({ label: index === 0 ? 'Label PDF' : `Label PDF ${index + 1}`, url }))
 }
 
-const unavailableFacts = (name: string, summary: JsonRecord, status: string): string[] => {
+const unavailableFacts = (summary: JsonRecord, status: string): string[] => {
   if (status === 'source_lane_available') return publicSourceCardFacts(summary)
   if (status === 'canada_source_lane_planned') return canadaSourceLaneFacts(summary).length ? canadaSourceLaneFacts(summary) : ['Canadian source lane identified']
   if (status === 'canada_source_lane_needed') return canadaSourceLaneFacts(summary).length ? canadaSourceLaneFacts(summary) : ['Source lane still needs selection']

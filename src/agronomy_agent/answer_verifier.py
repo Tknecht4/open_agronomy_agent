@@ -5453,8 +5453,8 @@ def _conservative_failure_answer(question_type: str, *, question: str = "") -> s
             r"\b(riparian buffers?|stream buffers?|filter strips?|drainage improvements?|wetland determination)\b", lower
         ):
             return (
-                "Start with field observations of rill, gully or sheet erosion, then estimate slope, soil texture, infiltration, drainage, runoff pathways, rainfall and erosion history, and the places where soil loss or sediment deposition is occurring. Keep crop residue and minimize disturbance with tillage reduction or no-till where it fits; establish a suitable cover crop when the rotation and moisture allow. "
-                "Use contour farming, strip cropping, terraces, a grassed waterway, buffer or setback where concentrated flow and slope require them. Match the combination to NRCS guidance or a local conservation plan, field access, and outlet conditions, then monitor residue cover, runoff, and soil loss after major events."
+                "Slope or mapped terrain alone does not establish active erosion, current waterlogging, a soil-loss amount, or a suitable drainage design. Verify source coverage and acquisition age, then ground-truth rill, gully or sheet erosion, slope, soil texture, infiltration, drainage, runoff pathways, rainfall and erosion history, and sediment deposition. "
+                "Use current local conservation guidance, contributing area, field access and outlet conditions before selecting a practice or design. Depending on that assessment, options can include residue retention, tillage reduction or no-till, a suitable cover crop, contour farming, strip cropping, terraces, a grassed waterway, buffer or setback. Monitor residue cover, runoff and soil loss after major events."
             )
         if re.search(r"\bdrainage improvements?\b", lower) and re.search(r"\b(wet spots?|tile outlet|drainage ditch|conservation boundar)\b", lower):
             return (

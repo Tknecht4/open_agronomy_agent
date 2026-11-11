@@ -17,7 +17,10 @@ from agronomy_agent.tool_planner import plan_tools
 OWNER = {"X-Agronomy-User-Email": "readiness-owner@example.test"}
 OTHER = {"X-Agronomy-User-Email": "readiness-other@example.test"}
 CONVERSION = "Convert 100 lb/ac to kg/ha"
+AREA_CONVERSION = "How many acres are in 40 hectares?"
 TANK = "Calculate how much area will a 1000 L sprayer tank cover applying 100 L/ha, ignoring unusable tank volume?"
+FIELD_N_TOTAL = "A field covers 24 hectares. The fertilizer is 46% nitrogen. Calculate the total product for 40 kg N/ha."
+WATER_STORAGE = "Convert 0.24 m3/m3 over a uniform 30 cm layer to mm of water stored."
 SEED_MISSING = "Calculate seed rate: target stand is 200 plants/m², TKW is missing, germination is 95%, expected field survival is 90%."
 
 
@@ -54,7 +57,10 @@ def no_generator(*args, **kwargs):
 
 
 @pytest.mark.parametrize("question,path", [(CONVERSION, "deterministic_tool_result"),
+                                          (AREA_CONVERSION, "deterministic_tool_result"),
                                           (TANK, "deterministic_tool_result"),
+                                          (FIELD_N_TOTAL, "deterministic_tool_result"),
+                                          (WATER_STORAGE, "deterministic_tool_result"),
                                           (SEED_MISSING, "deterministic_tool_clarification")])
 @pytest.mark.parametrize("backend", ["mlx", "http"])
 def test_actual_missing_model_calculation_and_clarification_persist_without_constructor(runtime, monkeypatch, question, path, backend):
@@ -78,7 +84,9 @@ def test_actual_missing_model_calculation_and_clarification_persist_without_cons
     saved = store.get_turn(response.json()["turn_id"])
     assert saved["trace"]["metadata"]["generation_path"] == path
     if path.endswith("result"):
-        assert saved["answer"].startswith("10 ha" if question == TANK else "112.085 kg/ha")
+        expected = {TANK: "10 ha", CONVERSION: "112.085 kg/ha", AREA_CONVERSION: "98.842 ac",
+                    FIELD_N_TOTAL: "2,086.957 kg", WATER_STORAGE: "72 mm"}
+        assert saved["answer"].startswith(expected[question])
     else:
         assert "tkw_g" in saved["answer"]
 
@@ -101,7 +109,10 @@ def test_preview_is_read_only_and_does_not_create_a_session(runtime, monkeypatch
     assert counts() == before
 
 
-def test_tank_preview_never_executes_an_adapter_or_creates_a_receipt(runtime, monkeypatch):
+@pytest.mark.parametrize("question,operation", [(TANK, "tank_coverage"),
+                                               (FIELD_N_TOTAL, "fertilizer_field_total"),
+                                               (WATER_STORAGE, "soil_water_storage")])
+def test_qualified_calculation_preview_never_executes_an_adapter_or_creates_a_receipt(runtime, monkeypatch, question, operation):
     import agronomy_agent.agronomic_calculations as calculations
     import agronomy_agent.capability_registry as registry
     client, store = runtime
@@ -114,9 +125,9 @@ def test_tank_preview_never_executes_an_adapter_or_creates_a_receipt(runtime, mo
     tables = [row[0] for row in store._conn.execute("SELECT name FROM sqlite_master WHERE type='table'")]
     counts = lambda: {name: store._conn.execute(f'SELECT COUNT(*) FROM "{name}"').fetchone()[0] for name in tables}
     before = counts()
-    view = preview(client, turn(TANK))
+    view = preview(client, turn(question))
     assert view["requires_model"] is False and view["status"] == "ready"
-    assert view["calculator"]["operation"] == "tank_coverage"
+    assert view["calculator"]["operation"] == operation
     assert "value" not in view["calculator"] and "result_id" not in view["calculator"]
     assert counts() == before
 

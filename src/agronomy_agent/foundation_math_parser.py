@@ -66,7 +66,7 @@ def _requested_arithmetic(lower: str) -> bool:
     if re.search(r"^\s*(?:what does|what is a|what is an|why|how does|explain|define|compare)\b", lower):
         return False
     return bool(re.search(
-        r"\b(?:calculate|compute|work out|how many|about how many|what is (?:the|one|my)|"
+        r"\b(?:calculate|compute|convert|work out|how many|about how many|what is (?:the|one|my)|"
         r"what yield breaks even|break-even (?:price|yield)|break even (?:price|yield))\b",
         lower,
     ))
@@ -74,7 +74,7 @@ def _requested_arithmetic(lower: str) -> bool:
 
 def _unsafe_action_request(lower: str) -> bool:
     return bool(re.search(
-        r"\b(?:should (?:i|we) (?:apply|spray|sell|buy|use)|"
+        r"\b(?:should (?:i|we) (?:apply|spray|sell|buy|use|irrigate|water|fertilize|drain)|"
         r"recommended (?:application |herbicide |pesticide |fertilizer )?rate|"
         r"legal (?:application |fertilizer |herbicide |pesticide )?rate|"
         r"today['’]s (?:cash |market |local )?(?:bid|price)|sell (?:now|today)|lock in (?:a )?sale)\b",
@@ -87,11 +87,39 @@ def parse_foundation_calculation(question: str) -> tuple[str, dict[str, Any], tu
     lower = text.casefold()
     if not _requested_arithmetic(lower) or _unsafe_action_request(lower):
         return None
-    for parser in (_seed_rate, _gdd, _partial_budget, _break_even, _current_ratio, _debt_asset):
+    for parser in (_soil_water_storage, _fertilizer_field_total, _seed_rate, _gdd, _partial_budget, _break_even, _current_ratio, _debt_asset):
         parsed = parser(text, lower)
         if parsed is not None:
             return parsed
     return None
+
+
+def _soil_water_storage(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, ...]] | None:
+    storage_requested = re.search(r"\b(?:water stor(?:age|ed)|stored water|millimetres of water|millimeters of water)\b", lower)
+    volumetric_units = re.search(r"m[³3]\s*/\s*m[³3]|cubic met(?:re|er)|volumetric", lower)
+    if not storage_requested or not volumetric_units:
+        return None
+    fraction = _find_number(text, rf"{NUMBER}\s*(?:m[³3]\s*/\s*m[³3]|cubic met(?:re|er)s? of water per cubic met(?:re|er)s? of soil)")
+    depth = _find_number(text, rf"{NUMBER}\s*cm\s*(?:soil\s+)?(?:layer|depth)")
+    values = {"volumetric_water_content": fraction, "layer_depth_cm": depth}
+    inputs = {key: value for key, value in values.items() if value is not None}
+    missing = tuple(key for key, value in values.items() if value is None)
+    return "soil_water_storage", inputs, missing
+
+
+def _fertilizer_field_total(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, ...]] | None:
+    product_query = re.search(r"\b(?:fertili[sz]er|product)\b", lower)
+    total_query = re.search(r"\b(?:product kilograms|total (?:product|fertili[sz]er)|whole field)\b", lower)
+    nitrogen_query = re.search(r"\bnitrogen\b|\bkg\s*N\b", text, re.IGNORECASE)
+    if not product_query or not total_query or not nitrogen_query:
+        return None
+    area = _find_number(text, rf"\bfield(?: area)?\s+(?:covers\s+|is\s+|of\s+)?{NUMBER}\s*(?:ha|hectares?)\b")
+    target = _find_number(text, rf"{NUMBER}\s*kg\s*N\s*/\s*ha\b")
+    percent = _find_number(text, rf"{NUMBER}\s*%\s*(?:nitrogen|N)\b")
+    values = {"area_ha": area, "nutrient_target_kg_per_ha": target, "nutrient_percent": percent}
+    inputs = {key: value for key, value in values.items() if value is not None}
+    missing = tuple(key for key, value in values.items() if value is None)
+    return "fertilizer_field_total", {**inputs, "nutrient_label": "N"}, missing
 
 
 def _seed_rate(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, ...]] | None:

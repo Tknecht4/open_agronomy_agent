@@ -3,7 +3,6 @@ import { apiGet } from './api'
 import './BenchmarksRoute.css'
 
 const LOCAL_NOT_OFFICIAL = 'Local diagnostic; not official AI AgriBench.'
-const WHITEPAPER_DIR = 'docs/open_agronomy_agent_whitepaper_20260709'
 type CanonicalBenchmarkSummary = {
   available: boolean
   benchmark_id?: string
@@ -1175,8 +1174,6 @@ export function BenchmarksRoute() {
   const publicCoverage = benchmarkSummary.public_coverage
   const fullGap = benchmarkSummary.public_full_gap
   const smokeGap = benchmarkSummary.public_smoke_gap
-  const claimStressFocus =
-    benchmarkSummary.public_claim_stress_focus || fallbackBenchmarkSummary.public_claim_stress_focus
   const fullGapCurrent = isCurrentFullGap(fullGap, publicCoverage)
   const activeGap = fullGapCurrent ? fullGap : smokeGap
   const gapMatrix = benchmarkSummary.agentic_gap_matrix
@@ -1202,12 +1199,10 @@ export function BenchmarksRoute() {
     benchmarkSummary.direct_semantic_review || fallbackBenchmarkSummary.direct_semantic_review || { available: false }
   const canadianSemantic: DirectSemanticReviewSummary =
     benchmarkSummary.canadian_semantic_review || fallbackBenchmarkSummary.canadian_semantic_review || { available: false }
-  const primarySemantic = canadianSemantic.available ? canadianSemantic : directSemantic
   const freezeArtifacts = useMemo(
     () => [...(freezeManifest.artifacts || []), ...(freezeManifest.corpora || []).slice(0, 4), ...(freezeManifest.graphs || [])].slice(0, 10),
     [freezeManifest],
   )
-  const activeGapLabel = fullGapCurrent ? 'Full gap mean' : 'Smoke gap mean'
   const activeGapTitle = fullGapCurrent ? 'Public-domain full coverage gaps' : 'Public-domain smoke gaps'
   const activeGapHasOpenMisses = Boolean((activeGap?.under90_rows ?? 0) > 0 || (activeGap?.flagged_missing_required ?? 0) > 0)
   const rehearsalPrompts = rehearsalPacket.prompts || []

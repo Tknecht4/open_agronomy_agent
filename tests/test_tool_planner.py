@@ -9,6 +9,36 @@ from agronomy_agent.tool_planner import CALCULATOR_VERSION
 from agronomy_agent.capability_registry import capability_registry
 
 
+@pytest.mark.parametrize("question,operation,value,unit", [
+    ("A synthetic field covers 24 hectares. A dry fertilizer product is 46% nitrogen by mass. Calculate the product kilograms needed for a hypothetical 40 kg N/ha, and show the units. This is a math exercise, not a rate recommendation.",
+     "fertilizer_field_total", 2086.956521739, "kg"),
+    ("A soil moisture probe reports 0.24 cubic metres of water per cubic metre of soil over a hypothetical uniform 30 cm layer. Convert that to millimetres of water stored. Explain whether that alone tells me plant-available water.",
+     "soil_water_storage", 72, "mm"),
+])
+def test_supplied_field_quantities_are_computed_without_inventing_missing_inputs(question, operation, value, unit):
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == "ready", plan.to_dict()
+    assert plan.invocations[0].operation == operation
+    assert results[0].payload["value"] == pytest.approx(value)
+    assert results[0].payload["unit"] == unit
+    if operation == "soil_water_storage":
+        assert "wilting point" in results[0].answer
+
+
+@pytest.mark.parametrize("question", [
+    "A probe reports 0.24 m3/m3 over 30 cm. Convert that to mm of water stored. Should I irrigate today?",
+    "A field covers 24 hectares with 46% nitrogen product. Calculate the product kilograms for 40 kg N/ha. Should I apply it today?",
+])
+def test_new_quantity_calculations_do_not_consume_an_operational_decision(question):
+    assert plan_tools(question).status == "not_applicable"
+
+
+def test_conflicting_water_inputs_remain_a_clarification():
+    plan = plan_tools("Calculate water storage for 0.24 m3/m3 and 0.30 m3/m3 over a 30 cm layer.")
+    assert plan.status == "clarification_required"
+    assert "volumetric_water_content" in plan.invocations[0].missing_inputs
+
+
 def test_development_gdd_supplied_json_binds_explicit_celsius_inputs():
     question = "Calculate daily GDD manually. Supplied facts: " + json.dumps({
         "max_temp_C": "24", "min_temp_C": "8", "base_temp_C": "6",
@@ -406,3 +436,24 @@ def test_gdd_parser_applies_both_consistent_caps() -> None:
     assert results[0].payload["value"] == 10.0
     assert results[0].payload["inputs"]["lower_cap_c"] == 10.0
     assert results[0].payload["inputs"]["upper_cap_c"] == 30.0
+
+
+@pytest.mark.parametrize("question, expected, unit", [
+    ("What is 100 acres in hectares?", 40.468564224, "ha"),
+    ("Convert 10 ha into ac.", 24.710538, "ac"),
+    ("How many acres are in 1,250.5 hectares?", 3090.052795246903, "ac"),
+])
+def test_area_conversion_binds_direction_and_units(question, expected, unit):
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == "ready"
+    assert results[0].payload["value"] == pytest.approx(expected)
+    assert results[0].payload["unit"] == unit
+
+
+@pytest.mark.parametrize("question", [
+    "How many acres are in 40 hectares and what should I plant?",
+    "Convert 40 hectares to acres and compare the two fields.",
+    "How many acres are in 40,50 hectares?",
+])
+def test_area_conversion_does_not_bypass_ambiguous_or_mixed_requests(question):
+    assert plan_tools(question).status == "not_applicable"

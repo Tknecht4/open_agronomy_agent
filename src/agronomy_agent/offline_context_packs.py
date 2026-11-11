@@ -30,7 +30,7 @@ QUEBEC_LIDAR_DERIVED_PUBLIC_RECEIPT_SCHEMA = (
     "open_agronomy_agent.quebec_lidar_field_context_public_receipt.v1"
 )
 DEFAULT_QUEBEC_CONTEXT_MANIFEST = repo_path(
-    "data/manifests/quebec_open_context_candidates_20260725.json"
+    "data/manifests/quebec_lidar_context.json"
 )
 DEFAULT_QUEBEC_LIDAR_INDEX = repo_path(
     "data/raw/quebec_open_context/qc_relief_agricole_lidar/field_tile_index.geojson"
@@ -129,6 +129,8 @@ def _validate_index(
     index_path: Path,
     resource: dict[str, Any],
 ) -> dict[str, Any]:
+    if not index_path.exists():
+        raise ValueError("Quebec LiDAR field-tile index is missing")
     if not index_path.is_file() or index_path.is_symlink():
         raise ValueError("Quebec LiDAR field-tile index must be a regular local file")
     expected_bytes = int(resource.get("bytes") or -1)

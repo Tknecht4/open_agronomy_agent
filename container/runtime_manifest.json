@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-11-10T23:47:57+00:00",
+  "generated_at": "2026-11-11T14:07:33+00:00",
   "status": "pass",
-  "contract_sha256": "232cab76c6b66278d91e3e222dee426a6907d20182aed6a86f0aef1e285c72c1",
+  "contract_sha256": "a79a6d4b9926f62b4b1d7740b2e499e422c19b208ec50d533cea694a5a1d5d9d",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -414,14 +414,14 @@
     {
       "path": "src/agronomy_agent",
       "file_count": 196,
-      "bytes": 6404372,
-      "sha256": "7aa864410d4fd2b7a24f94015f156d3c5d26ccc00aa4b27807b7eeef7c468ed9"
+      "bytes": 6412687,
+      "sha256": "3d27a57142ee57a23a03d3d55da1d08bb42f92a3f23d1b47572070cb514004eb"
     },
     {
       "path": "frontend/src",
-      "file_count": 138,
-      "bytes": 1942869,
-      "sha256": "6a068760f1ca80e01ee372c23373ced3d3af0d17da044d958e951f2a8ca6ba41"
+      "file_count": 122,
+      "bytes": 1559569,
+      "sha256": "b8ed8021e0f0e351c1984a8069e9e0a0575ae4d255b3f53ba406d7e2e77fe525"
     },
     {
       "path": "frontend/scripts",
@@ -437,21 +437,21 @@
     },
     {
       "path": "scripts",
-      "file_count": 148,
-      "bytes": 1951302,
-      "sha256": "36326a10cf51f0e579d90d4db2a7efc6fb060cce30860056f557cc7a1f146aa9"
+      "file_count": 149,
+      "bytes": 1955840,
+      "sha256": "d0ede8e807818aa8182db24fb9fc760a134e7522097f8166ea1b06d32be69100"
     },
     {
       "path": "configs",
       "file_count": 92,
-      "bytes": 300757,
-      "sha256": "46bb3475a8178730dfc7f7a604da889c3ba128a042b9204aa2979da7e1f62a8e"
+      "bytes": 302341,
+      "sha256": "cb92353c49018f126e30bcd76b41be818a54f89e93c8cb0fe781074e45307ab5"
     },
     {
       "path": "data/manifests",
-      "file_count": 40,
-      "bytes": 19673826,
-      "sha256": "09f87f6d54701c1c09a1ac324378751d7cf6d0ccdcd4b99419538dfa804f5cb4"
+      "file_count": 41,
+      "bytes": 19675733,
+      "sha256": "2f85b1724320a02a47502fad15d06f15896ddfe486bf2503cf449a9bfadb7415"
     },
     {
       "path": "data/eval",
@@ -467,9 +467,9 @@
     },
     {
       "path": "docs/public",
-      "file_count": 101,
-      "bytes": 10042560,
-      "sha256": "1e209bc9cff4777627a54f9af74d682b09c70aaed29c3c14ee69824da7500356"
+      "file_count": 102,
+      "bytes": 10047336,
+      "sha256": "c96be43b91ef34689007eabbc5ca98243c67a395ccf667e8ca0f37339a84d1a7"
     }
   ],
   "geo_cache_seed": {
@@ -588,8 +588,8 @@
     {
       "path": "frontend/vite.config.ts",
       "role": "runtime_control",
-      "bytes": 1523,
-      "sha256": "4096b70938bcea2665b34b9d17aab26fc7ec38a232bbd6ba3437cba978df8037"
+      "bytes": 1526,
+      "sha256": "1989eea59405dd3a3511fb1f07f721453adc1d0edae289e18da0e0870dac2ddb"
     },
     {
       "path": "frontend/workspaceServiceWorker.ts",

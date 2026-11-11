@@ -2,6 +2,10 @@
 
 The app now shares geometry, source definitions and raster support between map services, HLS imagery and a new terrain operator path. This is the first development slice: source discovery is available through the app API and CLI; terrain runs on an explicitly prepared local DTM. Government DEM acquisition, mosaicking and an interactive terrain UI are not yet connected.
 
+Saved Quebec polygons also have a local MAPAQ tile availability check. Follow
+the [Quebec terrain setup](quebec-terrain.md) to prepare its pinned index and
+optionally derive a private clipped vector summary.
+
 ## Data flow and ownership
 
 ```mermaid

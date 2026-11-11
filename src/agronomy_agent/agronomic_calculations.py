@@ -33,6 +33,8 @@ class FoundationCalculationOperation(StrEnum):
     BREAK_EVEN_YIELD = "break_even_yield"
     CURRENT_RATIO = "current_ratio"
     DEBT_TO_ASSET_PERCENT = "debt_to_asset_percent"
+    FERTILIZER_FIELD_TOTAL = "fertilizer_field_total"
+    SOIL_WATER_STORAGE = "soil_water_storage"
 
 
 ALL_CALCULATION_OPERATIONS = tuple(CalculationOperation) + tuple(FoundationCalculationOperation)
@@ -163,6 +165,11 @@ def calculation_tool_schema() -> dict[str, Any]:
             },
             "current_ratio": {"required": ["current_assets", "current_liabilities"]},
             "debt_to_asset_percent": {"required": ["total_debt", "total_assets"]},
+            "fertilizer_field_total": {
+                "required": ["area_ha", "nutrient_target_kg_per_ha", "nutrient_percent"],
+                "optional": ["nutrient_label"],
+            },
+            "soil_water_storage": {"required": ["volumetric_water_content", "layer_depth_cm"]},
         },
         "boundary": _ARITHMETIC_BOUNDARY,
     }
@@ -202,6 +209,8 @@ def calculate_agronomic(operation: str | CalculationOperation | FoundationCalcul
         FoundationCalculationOperation.BREAK_EVEN_YIELD: _break_even_yield,
         FoundationCalculationOperation.CURRENT_RATIO: _current_ratio,
         FoundationCalculationOperation.DEBT_TO_ASSET_PERCENT: _debt_to_asset_percent,
+        FoundationCalculationOperation.FERTILIZER_FIELD_TOTAL: _fertilizer_field_total,
+        FoundationCalculationOperation.SOIL_WATER_STORAGE: _soil_water_storage,
     }
     return handlers[selected](inputs)
 
@@ -241,15 +250,21 @@ _UNIT_DIMENSIONS = {
 }
 
 
-def _unit_conversion(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+def validate_unit_conversion_inputs(inputs: Mapping[str, Any]) -> tuple[Decimal, str, str]:
+    """Bind a finite value and two units in the same dimension."""
     _require_only(inputs, required={"value", "from_unit", "to_unit"})
     value = _decimal(inputs, "value")
     from_unit = _unit(inputs.get("from_unit"))
     to_unit = _unit(inputs.get("to_unit"))
-    from_dimension, from_factor = _UNIT_DIMENSIONS[from_unit]
-    to_dimension, to_factor = _UNIT_DIMENSIONS[to_unit]
-    if from_dimension != to_dimension:
+    if _UNIT_DIMENSIONS[from_unit][0] != _UNIT_DIMENSIONS[to_unit][0]:
         raise ValueError(f"cannot convert {from_unit} to {to_unit}: dimensions differ")
+    return value, from_unit, to_unit
+
+
+def _unit_conversion(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    value, from_unit, to_unit = validate_unit_conversion_inputs(inputs)
+    _, from_factor = _UNIT_DIMENSIONS[from_unit]
+    _, to_factor = _UNIT_DIMENSIONS[to_unit]
     answer = value * from_factor / to_factor
     factor = from_factor / to_factor
     return _result(
@@ -358,6 +373,60 @@ def _fertilizer_product_mass(inputs: Mapping[str, Any]) -> AgronomicCalculation:
         "kg product/ha",
         f"{_format_operand(target)} kg {nutrient}/ha ÷ {_format_operand(percent / Decimal('100'))} {_format_formula_result(answer)} kg product/ha",
         {"nutrient_target_kg_per_ha": target, "nutrient_percent": percent, "nutrient_label": nutrient},
+    )
+
+
+def validate_fertilizer_field_total_inputs(inputs: Mapping[str, Any]) -> dict[str, Any]:
+    _require_only(inputs, required={"area_ha", "nutrient_target_kg_per_ha", "nutrient_percent"}, optional={"nutrient_label"})
+    area = _positive(inputs, "area_ha")
+    target = _positive(inputs, "nutrient_target_kg_per_ha")
+    percent = _percent(inputs, "nutrient_percent")
+    # Bound both formula stages conservatively using decimal orders, without
+    # executing a calculator in the request-readiness preview.
+    rate_order = target.adjusted() - percent.adjusted() + 3
+    total_order = area.adjusted() + rate_order + 1
+    if min(rate_order, total_order) < -300 or max(rate_order, total_order, area.adjusted()) > 23:
+        raise ValueError("fertilizer field total exceeds supported decimal precision")
+    return {"area_ha": area, "nutrient_target_kg_per_ha": target, "nutrient_percent": percent,
+            "nutrient_label": str(inputs.get("nutrient_label") or "nutrient")}
+
+
+def _fertilizer_field_total(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    normalized = validate_fertilizer_field_total_inputs(inputs)
+    area = normalized["area_ha"]
+    rate = _fertilizer_product_mass({key: value for key, value in normalized.items() if key != "area_ha"})
+    total = _field_product_total({"area_ha": area, "product_rate_kg_per_ha": rate.value})
+    return _result(
+        FoundationCalculationOperation.FERTILIZER_FIELD_TOTAL,
+        total.value, "kg", f"({rate.formula}) then {total.formula}",
+        {"area_ha": area, **rate.inputs},
+    )
+
+
+def validate_soil_water_storage_inputs(inputs: Mapping[str, Any]) -> dict[str, Decimal]:
+    _require_only(inputs, required={"volumetric_water_content", "layer_depth_cm"})
+    fraction = _nonnegative(inputs, "volumetric_water_content")
+    if fraction > 1:
+        raise ValueError("volumetric_water_content must be a fraction from 0 to 1")
+    depth = _positive(inputs, "layer_depth_cm")
+    result_order = fraction.adjusted() + depth.adjusted() + 2
+    if not -300 <= result_order <= 23 or not -300 <= depth.adjusted() <= 23:
+        raise ValueError("soil water storage exceeds supported decimal precision")
+    return {"volumetric_water_content": fraction, "layer_depth_cm": depth}
+
+
+def _soil_water_storage(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    normalized = validate_soil_water_storage_inputs(inputs)
+    fraction = normalized["volumetric_water_content"]
+    depth = normalized["layer_depth_cm"]
+    answer = fraction * depth * Decimal("10")
+    return _result(
+        FoundationCalculationOperation.SOIL_WATER_STORAGE,
+        answer, "mm",
+        f"{_format_operand(fraction)} m³/m³ × {_format_operand(depth)} cm × 10 mm/cm {_format_formula_result(answer)} mm",
+        normalized,
+        assumptions=("the supplied volumetric water content represents the uniform soil layer",),
+        boundary=_ARITHMETIC_BOUNDARY + " Total stored water alone does not establish plant-available water. That also needs the effective rooting depth, field capacity and permanent wilting point.",
     )
 
 

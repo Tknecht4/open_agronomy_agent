@@ -471,7 +471,9 @@ def test_edge_frontend_build_helpers_are_staged_and_hash_bound(tmp_path):
     imports = re.findall(r"from ['\"](\./[^'\"]+)['\"]", (context / "frontend/vite.config.ts").read_text())
     assert imports
     for specifier in imports:
-        relative = Path("frontend") / (specifier[2:] + ".ts")
+        relative = Path("frontend") / specifier[2:]
+        if not relative.suffix:
+            relative = relative.with_suffix(".ts")
         assert (context / relative).is_file(), f"missing build helper: {relative}"
         assert relative.as_posix() in CONTROL_PATHS, f"unhashed build helper: {relative}"
 

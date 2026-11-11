@@ -627,18 +627,6 @@ body {
   }
 }
 
-.cockpit-shell {
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: 24px;
-  display: grid;
-  gap: 16px;
-}
-
-.cockpit-shell > * {
-  min-width: 0;
-}
-
 section {
   min-width: 0;
   background: var(--phase6-color-surface);
@@ -765,64 +753,11 @@ ul {
   margin: 8px 0 0;
 }
 
-pre,
-[data-testid='trace-artifacts'],
-[data-testid='hosted-trace'] {
+pre {
   overflow: auto;
 }
 
-.answer-panel,
-.evidence-panel,
-.phase5-trace-summary {
-  margin-top: 10px;
-  padding: 10px;
-  border: 1px solid var(--phase6-color-border);
-  border-radius: 6px;
-  background: var(--phase6-color-input-bg);
-  overflow-wrap: anywhere;
-}
-
-.phase5-trace-summary {
-  background: var(--phase6-color-internal-debug-bg);
-}
-
-.phase5-trace-summary ul,
-.evidence-panel ul {
-  padding-left: 18px;
-}
-
-.hosted-eval-dashboard,
-.hosted-eval-drilldown {
-  overflow-wrap: anywhere;
-}
-
-.hosted-eval-drilldown {
-  margin-top: 8px;
-  padding: 10px;
-  border: 1px solid var(--phase6-color-border);
-  border-radius: 6px;
-  background: var(--phase6-color-input-bg);
-}
-
-.hosted-eval-drilldown ul {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 4px 12px;
-  padding-left: 18px;
-}
-
-.hosted-eval-trend {
-  display: grid;
-  gap: 4px;
-  margin: 8px 0;
-  padding-left: 22px;
-}
-
 @media (max-width: 720px) {
-  .cockpit-shell {
-    padding: 14px;
-  }
-
   button,
   input,
   select {

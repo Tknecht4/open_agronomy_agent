@@ -48,7 +48,11 @@ A compliant addition should require one implementation, one contract, and testsâ
 The calculator takes an operation and a typed input object, uses decimal arithmetic, validates units/ranges, and returns formula, value, unit, assumptions, and boundary. It verifies arithmetic only. A natural-language request is complete only when the planner invokes it, the same result identity reaches evidence/validation/trace, and the final answer contains the parseable result.
 
 The v2 calculator adds explicit crop-establishment, growing-degree-day, partial-budget,
-break-even, and farm-ratio forms. It uses only numbers supplied in the question.
+break-even, farm-ratio, nitrogen-product field-total and soil-water-storage forms.
+Field totals combine the existing nutrient-to-product and area-total calculations.
+Soil-water storage multiplies supplied volumetric water content by uniform layer
+depth and preserves the distinction from plant-available water. It uses only
+numbers supplied in the question.
 Missing or invalid inputs yield a specific clarification. Currency, area,
 yield, and cost basis remain attached to the result. The Manitoba published
 factor-10 imperial seeding approximation and exact dimensional conversion are

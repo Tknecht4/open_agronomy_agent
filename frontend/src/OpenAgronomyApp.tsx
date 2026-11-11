@@ -19,18 +19,15 @@ import {
   CloudSun,
   Upload,
   X,
-  Sprout,
   Plus,
   ArrowUpRight,
   BookOpen,
-  Maximize2,
-  PanelLeftClose,
   Map as MapIcon,
   Columns2,
 } from 'lucide-react'
 import { WorkspacePerformancePanel } from './workspacePerformance'
 import { ConversationRuntimeStatus } from './ConversationRuntimeStatus'
-import { answerExecutionOrigin } from './answerExecutionOrigin'
+import { answerExecutionOrigin, retainedDraftHitTokenLimit } from './answerExecutionOrigin'
 import { QuestionContextSummary, type QuestionContextKind } from './QuestionContextSummary'
 import type { NewFieldDraft } from './FieldSetupDialog'
 import { selectedConversation, rememberConversation } from './conversationSelection'
@@ -149,7 +146,6 @@ type NasaPowerState = {
 }
 
 const APP_PAGES: Page[] = ['farms', 'records', 'field-editor', 'analyze', 'fields', 'evidence', 'benchmarks', 'sources', 'privacy', 'about']
-const WHITEPAPER_DIR = 'docs/open_agronomy_agent_whitepaper_20260709'
 const CANADIAN_JURISDICTIONS = new Set([
   'alberta',
   'british columbia',
@@ -391,11 +387,6 @@ type ConfigResponse = {
   }
 }
 
-type TurnCreateResponse = {
-  turn_id: string
-  turn: Turn
-}
-
 type ParsedSseEvent = {
   event: string
   payload: Record<string, unknown>
@@ -411,85 +402,6 @@ type StreamProgressStep = {
   status?: string
   category?: string
   durationMs?: number
-}
-
-type BenchmarkFamilyFloor = {
-  family: string
-  samples: number
-  mean_score: number
-  min_score: number
-  max_score: number
-  flagged_missing_required: number
-}
-
-type BenchmarkLowestRow = {
-  eval_id: string
-  score: number
-  task_family: string
-  crop?: string
-  region?: string
-}
-
-type PublicCoverageSummary = {
-  available: boolean
-  suite?: string
-  suite_path?: string
-  core_items?: number
-  expansion_items?: number
-  total_items?: number
-  official_ai_agribench?: boolean
-  domain_counts?: Record<string, number>
-  source_lane_counts?: Record<string, number>
-  aiagribench_topic_category_counts?: Record<string, number>
-  source_boundaries?: string[]
-  score_warning?: string
-}
-
-type PublicSmokeDomain = {
-  domain: string
-  samples: number
-  mean_score?: number
-  min_score?: number
-  flagged_missing_required?: number
-  common_missing_required?: Array<[string, number]>
-}
-
-type PublicSmokeLane = {
-  source_lane: string
-  samples: number
-  mean_score?: number
-  min_score?: number
-  flagged_missing_required?: number
-  common_missing_required?: Array<[string, number]>
-}
-
-type PublicSmokeGapSummary = {
-  available: boolean
-  suite?: string
-  run_dir?: string
-  report_path?: string
-  markdown_report_path?: string
-  suite_path?: string
-  scope?: string
-  suite_items?: number
-  core_items?: number
-  expansion_items?: number
-  samples?: number
-  coverage_total_items?: number
-  is_current_to_manifest?: boolean
-  missing_manifest_rows?: number
-  mean_score?: number
-  under90_rows?: number
-  flagged_missing_required?: number
-  demo_quality_mean?: number
-  demo_quality_under82_rows?: number
-  quality_risk_row_count?: number
-  high_proxy_quality_risk_count?: number
-  common_quality_flags?: Array<[string, number]>
-  low_domains?: PublicSmokeDomain[]
-  low_source_lanes?: PublicSmokeLane[]
-  source_boundaries?: string[]
-  score_warning?: string
 }
 
 type PublicAdapterReadinessItem = {
@@ -546,380 +458,6 @@ type PublicAdapterReadiness = {
   smoke_checks?: PublicAdapterSmokeCheck[]
   adapters: PublicAdapterReadinessItem[]
   boundary?: string
-}
-
-type AgenticGapMatrixRow = {
-  eval_id: string
-  scope?: string
-  coverage_domain?: string
-  public_source_lane?: string
-  scenario_type?: string
-  raw_score?: number
-  current_score?: number
-  score_delta?: number
-  gap_status?: string
-  action_priority?: string
-  recommended_action?: string
-}
-
-type AgenticGapMatrixSummary = {
-  available: boolean
-  suite?: string
-  summary_path?: string
-  matrix_path?: string
-  markdown_path?: string
-  rows?: number
-  core_rows?: number
-  public_expansion_rows?: number
-  raw_under90_rows?: number
-  current_under90_rows?: number
-  raw_missing_required_rows?: number
-  current_missing_required_rows?: number
-  repaired_contract_gaps?: number
-  open_failures?: number
-  low_floor_human_review_rows?: number
-  tool_integration_review_rows?: number
-  live_adapter_review_rows?: number
-  planned_source_lane_review_rows?: number
-  source_gap_backlog_rows?: number
-  source_requirement_counts?: Record<string, number>
-  status_counts?: Record<string, number>
-  action_priority_counts?: Record<string, number>
-  gap_type_counts?: Record<string, number>
-  top_raw_missing_required_patterns?: Array<[string, number]>
-  lowest_current_rows?: AgenticGapMatrixRow[]
-  highest_raw_to_current_repairs?: AgenticGapMatrixRow[]
-  source_boundaries?: string[]
-  score_warning?: string
-}
-
-type PublicDemoRehearsalSummary = {
-  available: boolean
-  suite?: string
-  suite_path?: string
-  manifest_path?: string
-  markdown_path?: string
-  prompt_count?: number
-  context_count?: number
-  adapter_lane_count?: number
-  contexts?: Record<string, number>
-  adapter_counts?: Record<string, number>
-  workflow_counts?: Record<string, number>
-  public_source_lanes?: Record<string, number>
-  regional_matrix_artifact?: string
-  official_ai_agribench?: boolean
-  source_boundaries?: string[]
-  score_warning?: string
-}
-
-type PublicDemoRehearsalPrompt = {
-  prompt_id: string
-  context_id?: string
-  context_label?: string
-  crop?: string
-  state_alpha?: string
-  workflow?: string
-  public_source_lane?: string
-  source_lane_label?: string
-  question: string
-  expected_public_adapters?: string[]
-  expected_visible_evidence?: string[]
-  expected_boundaries?: string[]
-  human_review_focus?: string
-  release_blocking_failure?: string
-  official_ai_agribench?: boolean
-}
-
-type PublicDemoRehearsalPacket = PublicDemoRehearsalSummary & {
-  prompt_count_returned: number
-  prompts: PublicDemoRehearsalPrompt[]
-  boundary?: string
-}
-
-type PublicShadowHeldoutSummary = {
-  available: boolean
-  suite?: string
-  suite_path?: string
-  manifest_path?: string
-  markdown_path?: string
-  row_count?: number
-  context_count?: number
-  topic_category_count?: number
-  domain_count?: number
-  source_lane_count?: number
-  source_family_count?: number
-  contexts?: Record<string, number>
-  domain_counts?: Record<string, number>
-  aiagribench_topic_category_counts?: Record<string, number>
-  public_source_lanes?: Record<string, number>
-  source_family_counts?: Record<string, number>
-  expected_tool_counts?: Record<string, number>
-  heldout_policy?: {
-    excluded_from_rag_ingestion?: boolean
-    excluded_from_gap_repair?: boolean
-    excluded_from_training?: boolean
-    run_after_answer_contract_freeze?: boolean
-    human_or_external_judge_only?: boolean
-    purpose?: string
-  }
-  official_ai_agribench?: boolean
-  source_boundaries?: string[]
-  score_warning?: string
-}
-
-type PublicShadowHeldoutResultSummary = PublicSmokeGapSummary & {
-  manifest_row_count?: number
-  is_complete_to_manifest?: boolean
-  low_topics?: Array<{
-    topic: string
-    samples: number
-    mean_score?: number
-    min_score?: number
-    flagged_missing_required?: number
-    common_missing_required?: Array<[string, number]>
-  }>
-  lowest_rows?: AgenticGapMatrixRow[]
-  heldout_policy?: PublicShadowHeldoutSummary['heldout_policy']
-}
-
-type HumanReviewQueueSummary = {
-  available: boolean
-  suite?: string
-  manifest_path?: string
-  queue_path?: string
-  markdown_path?: string
-  queue_item_count?: number
-  source_counts?: Record<string, number>
-  by_source?: Record<string, number>
-  by_priority?: Record<string, number>
-  by_review_type?: Record<string, number>
-  top_coverage_domains?: Array<[string, number]>
-  top_public_source_lanes?: Array<[string, number]>
-  review_policy?: string[]
-  source_boundaries?: string[]
-  official_ai_agribench?: boolean
-  score_warning?: string
-}
-
-type HumanReviewQueueItem = {
-  review_id: string
-  source?: string
-  source_id?: string
-  priority?: string
-  review_type?: string
-  workflow?: string
-  context_label?: string
-  question?: string
-  coverage_domain?: string
-  public_source_lane?: string
-  expected_public_adapters?: string[]
-  expected_visible_evidence?: string[]
-  release_blocking_failure?: string
-  human_review_focus?: string
-  official_ai_agribench?: boolean
-  no_repair_loop?: boolean
-}
-
-type HumanReviewQueuePacket = HumanReviewQueueSummary & {
-  item_count_returned: number
-  items: HumanReviewQueueItem[]
-  boundary?: string
-}
-
-type HumanReviewBatch = {
-  batch_id?: string
-  label?: string
-  purpose?: string
-  review_goal?: string
-  csv_path?: string
-  absolute_path?: string
-  row_count?: number
-  by_priority?: Record<string, number>
-  by_review_type?: Record<string, number>
-  by_source?: Record<string, number>
-}
-
-type HumanReviewOutcomeBatch = {
-  batch_id?: string
-  label?: string
-  csv_path?: string
-  row_count?: number
-  reviewed_count?: number
-  unreviewed_count?: number
-  blocking_issue_count?: number
-  record_issue_count?: number
-  status?: string
-}
-
-type HumanReviewBlocker = {
-  review_id?: string
-  priority?: string
-  review_type?: string
-  result_status?: string
-  severity?: string
-  issue_summary?: string
-  followup_owner?: string
-}
-
-type HumanReviewRecordIssue = {
-  review_id?: string
-  priority?: string
-  issue_type?: string
-  detail?: string
-}
-
-type HumanReviewBatchesSummary = {
-  available: boolean
-  suite?: string
-  manifest_path?: string
-  markdown_path?: string
-  queue_path?: string
-  queue_item_count?: number
-  quality_claim_review_floor?: number
-  p0_public_demo_rows?: number
-  p1_available_rows?: number
-  p2_available_rows?: number
-  quality_sample_plus_p0_rows?: number
-  batch_count?: number
-  batches?: HumanReviewBatch[]
-  source_boundaries?: string[]
-  official_ai_agribench?: boolean
-  score_warning?: string
-}
-
-type HumanReviewOutcomeSummary = {
-  available: boolean
-  suite?: string
-  summary_path?: string
-  template_path?: string
-  markdown_path?: string
-  queue_item_count?: number
-  outcome_row_count?: number
-  reviewed_count?: number
-  unreviewed_count?: number
-  p0_total?: number
-  p0_reviewed?: number
-  p0_unreviewed?: number
-  review_record_issue_count?: number
-  p0_review_record_issue_count?: number
-  review_record_issues?: HumanReviewRecordIssue[]
-  blocking_issue_count?: number
-  release_blocking_count?: number
-  demo_blocking_count?: number
-  public_demo_gate?: { status?: string; requirement?: string }
-  quality_claim_gate?: { status?: string; requirement?: string }
-  review_batch_count?: number
-  review_batches?: HumanReviewOutcomeBatch[]
-  next_actions?: string[]
-  top_blockers?: HumanReviewBlocker[]
-  source_boundaries?: string[]
-  official_ai_agribench?: boolean
-  score_warning?: string
-}
-
-type FreezeChecklistItem = {
-  id: string
-  label: string
-  status: 'pass' | 'pending' | 'manual' | 'needs_review' | 'fail' | string
-  detail: string
-}
-
-type FreezeArtifact = {
-  label: string
-  kind: string
-  path: string
-  exists: boolean
-  bytes?: number
-  sha256?: string
-  line_count?: number
-}
-
-type FreezeManifest = {
-  schema_version: string
-  generated_at?: string
-  target?: string
-  status?: string
-  score_warning?: string
-  git?: {
-    short_commit?: string | null
-    commit?: string | null
-    ref?: string | null
-    dirty_state_note?: string
-  }
-  runner?: {
-    path?: string
-    command_template?: string
-    official_response_file?: string
-    audit_response_files?: string[]
-    preflight_file?: string
-    internal_trace_file?: string
-    submission_boundary?: string
-  }
-  model?: {
-    model_id?: string
-    max_tokens?: number
-    serving_max_tokens?: number
-    assistant_model_id?: string
-    assistant_max_tokens?: number
-    temperature?: number
-    answer_profile?: string
-  }
-  rag?: {
-    config_path?: string
-    retrieval_top_k?: number
-    retrieval_min_score?: number
-    configured_corpus_paths?: number
-    configured_graph_paths?: number
-    agent_runtime?: string
-    agno_enabled?: boolean
-  }
-  local_evidence?: {
-    proxy?: { samples?: number; mean_score?: number; under90_rows?: number; missing_required_flags?: number }
-    public_full_gap?: { samples?: number; mean_score?: number; under90_rows?: number; flagged_missing_required?: number }
-    public_claim_stress_focus?: { samples?: number; mean_score?: number; under90_rows?: number; flagged_missing_required?: number }
-    public_demo_rehearsal?: { prompt_count?: number; context_count?: number; adapter_lane_count?: number }
-    public_shadow_heldout?: { row_count?: number; context_count?: number; topic_category_count?: number; excluded_from_gap_repair?: boolean }
-    human_review_queue?: { queue_item_count?: number; p0_items?: number; p1_items?: number; p2_items?: number }
-    human_review_batches?: { batch_count?: number; p0_public_demo_rows?: number; quality_sample_plus_p0_rows?: number; quality_claim_review_floor?: number }
-    human_review_outcomes?: { reviewed_count?: number; unreviewed_count?: number; blocking_issue_count?: number; public_demo_gate?: string; quality_claim_gate?: string }
-  }
-  artifacts?: FreezeArtifact[]
-  corpora?: FreezeArtifact[]
-  graphs?: FreezeArtifact[]
-  checklist?: FreezeChecklistItem[]
-  data_boundaries?: string[]
-}
-
-type BenchmarkSummary = {
-  available: boolean
-  suite: string
-  run_id?: string
-  created_at?: string
-  mode?: string
-  model_id?: string
-  answer_profile?: string
-  samples?: number
-  mean_score?: number
-  metrics?: Record<string, number>
-  missing_required_flags?: number
-  under90_rows?: number
-  average_seconds?: number
-  max_seconds?: number
-  family_floors?: BenchmarkFamilyFloor[]
-  lowest_rows?: BenchmarkLowestRow[]
-  public_coverage?: PublicCoverageSummary
-  public_full_gap?: PublicSmokeGapSummary
-  public_smoke_gap?: PublicSmokeGapSummary
-  public_claim_stress_focus?: PublicSmokeGapSummary
-  public_demo_rehearsal?: PublicDemoRehearsalSummary
-  public_shadow_heldout?: PublicShadowHeldoutSummary
-  public_shadow_heldout_result?: PublicShadowHeldoutResultSummary
-  agentic_gap_matrix?: AgenticGapMatrixSummary
-  human_review_queue?: HumanReviewQueueSummary
-  human_review_batches?: HumanReviewBatchesSummary
-  human_review_outcomes?: HumanReviewOutcomeSummary
-  score_warning?: string
-  message?: string
 }
 
 type FieldProfile = {
@@ -2124,10 +1662,8 @@ export function OpenAgronomyApp() {
   const [visibleAnswerCount, setVisibleAnswerCount] = useState(12)
   const [geoPriors, setGeoPriors] = useState<GeoPriors | null>(null)
   const [agroclimate, setAgroclimate] = useState<AgroclimateState>({ status: 'idle' })
-  const [agroclimateRefresh, setAgroclimateRefresh] = useState(0)
   const [nasaPower, setNasaPower] = useState<NasaPowerState>({ status: 'idle' })
   const nasaCoverage = powerCoverage(nasaPower.payload)
-  const [nasaPowerRefresh, setNasaPowerRefresh] = useState(0)
   const [message, setMessage] = useState('')
   const [mode] = useState<DemoMode>('agronomic_rag')
   const [modelId, setModelId] = useState('mock')
@@ -2233,6 +1769,7 @@ export function OpenAgronomyApp() {
   const geometryIssue = fieldGeometryIssue(fieldGeometry)
   const geometryReady = isUsableFieldGeometry(fieldGeometry)
   const savedImageryField = storedFields.find((stored) => (stored.field_context_id || stored.id) === activeFieldContextId)
+  const hasSavedFieldDetails = Boolean(savedImageryField && savedImageryField.storageMode !== 'device')
   const imageryReady = fieldGeometry.kind !== 'none' && geometryReady && !isEditingGeometry
     && sameImageryCoordinates(savedImageryField?.geometry, fieldGeometry)
   const questionContextKind: QuestionContextKind = activeFieldContextId
@@ -2266,15 +1803,27 @@ export function OpenAgronomyApp() {
   const geoErrorCount = geoErrors.length
   const answerCapability = fieldAnswerCapability(runtimeAccess, networkMode)
 
-  const navigateToPage = (nextPage: Page) => {
+  const navigateToPage = (nextPage: Page, scope?: URLSearchParams) => {
     setPage(nextPage)
     if (typeof window === 'undefined') {
       return
     }
-    const nextHash = pageHash(nextPage)
+    const nextHash = scope ? `${pageHash(nextPage)}?${scope}` : pageHash(nextPage)
     if (window.location.hash !== nextHash) {
+      const oldURL = window.location.href
       window.history.pushState(null, '', nextHash)
+      window.dispatchEvent(new HashChangeEvent('hashchange', { oldURL, newURL: window.location.href }))
     }
+  }
+
+  const openActiveFieldDetails = () => {
+    if (!hasSavedFieldDetails) {
+      navigateToPage('fields')
+      return
+    }
+    const scope = new URLSearchParams({ field: activeFieldContextId })
+    if (questionSeason) scope.set('season', String(questionSeason))
+    navigateToPage('fields', scope)
   }
 
   const contextCompleteness = useMemo(() => {
@@ -3657,72 +3206,61 @@ export function OpenAgronomyApp() {
   }, [scenarioId])
 
   useEffect(() => {
-    const requestId = agroclimateRequestRef.current + 1
-    agroclimateRequestRef.current = requestId
-    if (networkMode !== 'online' || !geoPriors || !geometryReady || !isCanadianJurisdiction(field.jurisdiction)) {
-      setAgroclimate({ status: 'idle' })
-      return
-    }
-
-    setAgroclimate({ status: 'loading' })
-    ;(async () => {
-      try {
-        const payload = await apiPost<AgroclimateResponse>('/api/tools/aafc-nasdi-agroclimate', {
-          geometry: fieldGeometryToGeoJson(fieldGeometry),
-          crop: field.crop,
-          province: field.jurisdiction,
-          sample_points: fieldGeometry.kind === 'polygon' ? 3 : 1,
-        })
-        if (requestId !== agroclimateRequestRef.current) return
-        if (payload.status === 'available' || payload.status === 'partial_available') {
-          setAgroclimate({ status: payload.status, payload })
-        } else {
-          setAgroclimate({
-            status: 'unavailable',
-            payload,
-            message: 'Current AAFC regional conditions are unavailable for this geometry.',
-          })
-        }
-      } catch (err) {
-        if (requestId !== agroclimateRequestRef.current) return
-        setAgroclimate({
-          status: 'error',
-          message: String((err as Error).message || err),
-        })
-      }
-    })()
-  }, [networkMode, agroclimateRefresh, field.crop, field.jurisdiction, fieldGeometry, geoPriors, geometryReady])
+    agroclimateRequestRef.current += 1
+    setAgroclimate({ status: 'idle' })
+    return () => { agroclimateRequestRef.current += 1 }
+  }, [networkMode, activeFieldContextId, scenarioId, field.crop, field.jurisdiction, fieldGeometry])
 
   useEffect(() => {
-    const requestId = nasaPowerRequestRef.current + 1
-    nasaPowerRequestRef.current = requestId
-    if (networkMode !== 'online' || !committedWeatherPoint) {
-      setNasaPower({ status: 'idle' })
-      return
-    }
+    nasaPowerRequestRef.current += 1
+    setNasaPower({ status: 'idle' })
+    return () => { nasaPowerRequestRef.current += 1 }
+  }, [networkMode, activeFieldContextId, scenarioId, committedWeatherPoint?.lat, committedWeatherPoint?.lon])
 
+  const requestAgroclimate = async () => {
+    if (networkMode !== 'online' || !geometryReady || !isCanadianJurisdiction(field.jurisdiction)) return
+    const requestId = ++agroclimateRequestRef.current
+    setAgroclimate({ status: 'loading' })
+    try {
+      const payload = await apiPost<AgroclimateResponse>('/api/tools/aafc-nasdi-agroclimate', {
+        geometry: fieldGeometryToGeoJson(fieldGeometry),
+        crop: field.crop,
+        province: field.jurisdiction,
+        sample_points: fieldGeometry.kind === 'polygon' ? 3 : 1,
+      })
+      if (requestId !== agroclimateRequestRef.current) return
+      if (payload.status === 'available' || payload.status === 'partial_available') {
+        setAgroclimate({ status: payload.status, payload })
+      } else {
+        setAgroclimate({ status: 'unavailable', payload, message: 'Current AAFC regional conditions are unavailable for this geometry.' })
+      }
+    } catch (err) {
+      if (requestId !== agroclimateRequestRef.current) return
+      setAgroclimate({ status: 'error', message: String((err as Error).message || err) })
+    }
+  }
+
+  const requestNasaPower = async () => {
+    if (networkMode !== 'online' || !committedWeatherPoint) return
+    const requestId = ++nasaPowerRequestRef.current
     const { start, end } = powerWindowDates()
     setNasaPower({ status: 'loading' })
-    ;(async () => {
-      try {
-        const payload = await apiPost<NasaPowerResponse>('/api/tools/weather-power', {
-          lat: committedWeatherPoint.lat,
-          lon: committedWeatherPoint.lon,
-          start,
-          end,
-          parameters: ['T2M', 'PRECTOTCORR', 'WS2M'],
-        })
-        if (requestId !== nasaPowerRequestRef.current) return
-        setNasaPower({ status: powerCoverage(payload).status, payload, message: powerCoverage(payload).hasData ? undefined : 'No usable weather observations have been published for this window yet.' })
-      } catch (err) {
-        if (requestId !== nasaPowerRequestRef.current) return
-        setNasaPower({
-          status: 'error',
-          message: String((err as Error).message || err),
-        })
-      }
-    })()
-  }, [networkMode, committedWeatherPoint?.lat, committedWeatherPoint?.lon, nasaPowerRefresh])
+    try {
+      const payload = await apiPost<NasaPowerResponse>('/api/tools/weather-power', {
+        lat: committedWeatherPoint.lat,
+        lon: committedWeatherPoint.lon,
+        start,
+        end,
+        parameters: ['T2M', 'PRECTOTCORR', 'WS2M'],
+      })
+      if (requestId !== nasaPowerRequestRef.current) return
+      const coverage = powerCoverage(payload)
+      setNasaPower({ status: coverage.status, payload, message: coverage.hasData ? undefined : 'No usable weather observations have been published for this window yet.' })
+    } catch (err) {
+      if (requestId !== nasaPowerRequestRef.current) return
+      setNasaPower({ status: 'error', message: String((err as Error).message || err) })
+    }
+  }
 
   const selectUploadedFeature = async (featureId: string) => {
     const feature = uploadFeatureById(uploadContext, featureId)
@@ -3772,8 +3310,6 @@ export function OpenAgronomyApp() {
     window.dispatchEvent(new HashChangeEvent('hashchange'))
     setNewFieldFarmId(null)
     setWorkspaceView('split')
-    // Geometry priors remain separate from the supplied facts, and may be unavailable.
-    if (isUsableFieldGeometry(draft.geometry)) void lookupRegionalContext(draft.geometry, { ...draft })
   }
 
   const retrieveConversation = async (id: string) => {
@@ -3895,7 +3431,7 @@ export function OpenAgronomyApp() {
       <div className="workspace-content">
       {!['farms', 'fields', 'records'].includes(page) ? <header className="workspace-topbar">
         <div>
-          <h1>{page === 'analyze' ? (fieldName ? `Questions · ${fieldName}` : 'Questions') : page === 'farms' ? 'Farms' : page === 'fields' ? 'Fields' : page === 'records' ? 'Records' : page === 'field-editor' ? 'Edit field' : page === 'sources' ? 'Data management' : page === 'evidence' ? 'Behind the answer' : page === 'benchmarks' ? 'Research & benchmarks' : page === 'privacy' ? 'Privacy & data' : 'About Open Agronomy'}</h1>
+          <h1>{page === 'analyze' ? (fieldName ? `Questions · ${fieldName}` : 'Questions') : page === 'field-editor' ? 'Edit field' : page === 'sources' ? 'Data management' : page === 'evidence' ? 'Behind the answer' : page === 'benchmarks' ? 'Research & benchmarks' : page === 'privacy' ? 'Privacy & data' : 'About Open Agronomy'}</h1>
         </div>
         {page === 'analyze' || page === 'field-editor' ? <button className="primary-button" type="button" onClick={() => { setNewFieldFarmId(null); setNewFieldOpen(true) }} disabled={!fieldsHydrated || savingField}><Plus size={17} /> Add field</button> : null}
       </header> : null}
@@ -4229,7 +3765,7 @@ export function OpenAgronomyApp() {
                 <summary>
                   <RefreshCw size={16} />
                   Current regional conditions
-                  <span>{agroclimate.status === 'partial_available' ? 'partial' : agroclimate.status}</span>
+                  <span>{agroclimate.status === 'idle' ? 'On request' : agroclimate.status === 'partial_available' ? 'partial' : agroclimate.status}</span>
                 </summary>
                 <section className="agroclimate-context" aria-label="Current regional conditions">
                   <div className="agroclimate-heading">
@@ -4242,8 +3778,8 @@ export function OpenAgronomyApp() {
                       className="icon-button agroclimate-refresh"
                       title="Refresh AAFC regional conditions"
                       aria-label="Refresh AAFC regional conditions"
-                      disabled={agroclimate.status === 'loading'}
-                      onClick={() => setAgroclimateRefresh((value) => value + 1)}
+                      disabled={networkMode !== 'online' || !geometryReady || agroclimate.status === 'loading'}
+                      onClick={() => void requestAgroclimate()}
                     >
                       <RefreshCw size={15} className={agroclimate.status === 'loading' ? 'spin' : ''} />
                     </button>
@@ -4273,7 +3809,7 @@ export function OpenAgronomyApp() {
                     </>
                   ) : (
                     <p className="agroclimate-status">
-                      {agroclimate.message || 'Current official conditions are not available for this field.'}
+                      {agroclimate.message || (networkMode === 'online' ? 'Request AAFC regional conditions using this field’s location.' : 'Connect to public sources to request AAFC regional conditions.')}
                     </p>
                   )}
                   <div className="agroclimate-source">
@@ -4289,6 +3825,7 @@ export function OpenAgronomyApp() {
             ) : null}
             <Suspense fallback={null}>
               <OfflineTerrainContextPanel
+                key={`${activeFieldContextId}:${activeFieldRecordUpdatedAt}:${fieldStorageMode}:${fieldGeometry.kind}:${field.jurisdiction}`}
                 id={activeFieldContextId}
                 m={fieldStorageMode}
                 k={fieldGeometry.kind}
@@ -4630,7 +4167,7 @@ export function OpenAgronomyApp() {
                           {nasaPower.status === 'partial_available' ? `${nasaCoverage.observed}/${nasaCoverage.requested} days · ` : ''}{powerMetricValue(nasaPower.payload?.parameter_summary?.PRECTOTCORR, 'sum')} mm · {powerMetricValue(nasaPower.payload?.parameter_summary?.WS2M, 'mean')} m/s
                         </small>
                       ) : (
-                        <small>unavailable</small>
+                        <small>{nasaPower.status === 'idle' ? 'On request' : 'unavailable'}</small>
                       )}
                     </summary>
                     <section className="map-weather-popover" aria-label="NASA POWER recent field weather">
@@ -4645,7 +4182,7 @@ export function OpenAgronomyApp() {
                           title="Refresh NASA POWER field weather"
                           aria-label="Refresh NASA POWER field weather"
                           disabled={nasaPower.status === 'loading'}
-                          onClick={() => setNasaPowerRefresh((value) => value + 1)}
+                          onClick={() => void requestNasaPower()}
                         >
                           <RefreshCw size={15} className={nasaPower.status === 'loading' ? 'spin' : ''} />
                         </button>
@@ -4666,7 +4203,7 @@ export function OpenAgronomyApp() {
                           ) : null}
                         </>
                       ) : (
-                        <p>{nasaPower.status === 'loading' ? 'Fetching recent gridded weather…' : nasaPower.message || 'NASA POWER weather is unavailable for this field.'}</p>
+                        <p>{nasaPower.status === 'loading' ? 'Fetching recent gridded weather…' : nasaPower.message || 'Request recent weather using this field’s location.'}</p>
                       )}
                     </section>
                   </details>
@@ -4725,9 +4262,9 @@ export function OpenAgronomyApp() {
                     >
                       <Eraser size={15} /> Start over
                     </button>
-                    <button type="button" onClick={() => navigateToPage('fields')}>
+                    {hasSavedFieldDetails ? <button type="button" onClick={openActiveFieldDetails}>
                       <Database size={15} /> Field details & history
-                    </button>
+                    </button> : null}
                   </div>
                 </details>
               </div>
@@ -4771,7 +4308,7 @@ export function OpenAgronomyApp() {
                 </strong>
               </div>
               <div className="map-context-actions">
-                {mapGeometry.kind === 'none' && !isEditingGeometry ? <><button type="button" disabled={!fieldsHydrated || isAnalyzing} onClick={() => setNewFieldOpen(true)}><Plus size={15} /> Add a field</button><button type="button" disabled={isAnalyzing} onClick={() => beginGeometryEdit('point')}>Use a temporary point</button></> : <><button type="button" className="map-insights-button" disabled={!geometryReady || isEditingGeometry} title={isEditingGeometry ? 'Save or cancel boundary edits first' : 'Measure the boundary and explore mapped coverage'} onClick={() => setMapInsightsOpen(true)}><Layers3 size={15} /> Field insights <ArrowUpRight size={13} /></button><button type="button" onClick={() => navigateToPage('fields')}>Open field details</button></>}
+                {mapGeometry.kind === 'none' && !isEditingGeometry ? <><button type="button" disabled={!fieldsHydrated || isAnalyzing} onClick={() => setNewFieldOpen(true)}><Plus size={15} /> Add a field</button><button type="button" disabled={isAnalyzing} onClick={() => beginGeometryEdit('point')}>Use a temporary point</button></> : <><button type="button" className="map-insights-button" disabled={!geometryReady || isEditingGeometry} title={isEditingGeometry ? 'Save or cancel boundary edits first' : 'Measure the boundary and explore mapped coverage'} onClick={() => setMapInsightsOpen(true)}><Layers3 size={15} /> Field insights <ArrowUpRight size={13} /></button><button type="button" onClick={openActiveFieldDetails}>{hasSavedFieldDetails ? 'Open field details' : 'Browse saved fields'}</button></>}
               </div>
             </div>
           </section> : null}
@@ -4861,6 +4398,7 @@ export function OpenAgronomyApp() {
                     className="chat-message assistant-message"
                   >
                     <span>Open Agronomy Agent</span>
+                    {retainedDraftHitTokenLimit(turn) ? <p className="answer-limit-note">The model reached its token limit. This answer may be incomplete.</p> : null}
                     <FormattedAnswer text={turn.answer} />
                     <AnswerOriginLabel turn={turn} />
                     <AnswerContextDisclosure

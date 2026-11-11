@@ -8,7 +8,13 @@ Create a farm with a name, then add a field or import reviewed boundaries. Exist
 
 New field setup saves a crop against the season shown in the form. A field's current-season crop is confirmed separately from older undated crop entries. Select the season and use **Confirm crop & season**. Unknown crop stays unknown. Fields without locations remain available for records and questions. Points do not count toward boundary acreage. Combined area excludes overlaps and identifies fields with unknown area.
 
-The overview reads retained summaries. **Refresh field context** explicitly requests bounded weather, mapped soil, historical crop cover and imagery discovery. Connected requests send the saved location/boundary to the relevant public services; offline mode keeps external calls blocked. Each result retains its source, dates, coverage and freshness. Failed checks remain distinct from no matches, with prior successful results labeled separately. Country-specific checks require a confirmed jurisdiction. **Check mapped location** uses only an installed, integrity-verified Canadian province boundary pack. A complete single-province match can be confirmed for source routing; partial, cross-border, missing and failed matches remain unresolved. Confirmation retains the cartographic receipt and never establishes legal jurisdiction. No ecozone or soil map substitutes for an administrative source.
+The overview reads retained summaries. **Refresh sources** explicitly requests bounded weather, mapped soil, historical crop cover and imagery discovery. Connected requests send the saved location/boundary to the relevant public services; offline mode keeps external calls blocked. Each result retains its source, dates, coverage and freshness. Failed checks remain distinct from no matches, with prior successful results labeled separately. Country-specific checks require a confirmed jurisdiction. **Check mapped location** uses only an installed, integrity-verified Canadian province boundary pack. A complete single-province match can be confirmed for source routing; partial, cross-border, missing and failed matches remain unresolved. Confirmation retains the cartographic receipt and never establishes legal jurisdiction. No ecozone or soil map substitutes for an administrative source.
+
+**Soil & terrain** shows the retained mapped-soil check and its source details. Use
+**Refresh mapped soil** to check that source on its own. The Quebec terrain
+availability check uses the installed MAPAQ tile index for eligible saved fields.
+It identifies source tiles for preparation and leaves terrain derivation to the
+operator workflow.
 
 Use **Add another crop** to record an intercrop mixture, crops grown in sequence, or crops in separate parts of a field. Each crop retains its cultivar. Dates describe the season as a whole; the record does not establish crop shares, per-crop dates or spatial allocation.
 
@@ -49,8 +55,9 @@ saved fields, conversations, and model settings before enabling questions, while
 preserving the unsent draft. A delayed recovery does not replace a newer field or
 chat selection. Device-only field notes remain on the device.
 
-With a working API, supported kg/ha ↔ lb/ac conversions, validated tank-coverage
-calculations and calculator requests that need a missing input can proceed
+With a working API, supported unit conversions, validated tank-coverage,
+nitrogen-product field-total and soil-water-storage calculations, and calculator
+requests that need a missing input can proceed
 without a ready model. Tank coverage uses your supplied tank volume and
 application volume per hectare; it does not select an application rate. Supplied
 unusable volume must be smaller than tank volume; conflicting values for unusable
@@ -59,6 +66,13 @@ before sending. Ordinary answers need the selected model. Other complete
 calculations still require model readiness until their input-validation path is
 qualified; a detected calculator intent alone does not establish readiness.
 Save field edits before asking.
+
+For example, calculating a hypothetical 40 kg N/ha over 24 hectares from a
+46% nitrogen product returns 2,086.957 kg of product. Converting a uniform
+30 cm soil layer at 0.24 m³/m³ water content returns 72 mm of total stored
+water. The water result also identifies the additional information needed for
+plant-available water. These calculations preserve the supplied scenario and
+provide no field application or irrigation recommendation.
 
 Select a field when its known details matter to the question. Field observations and soil tests are user records; map intersections and provider data are separate contextual inputs. If a field is incomplete, leave unknowns blank and ask a bounded question. A model answer should not turn an unknown into a zero, a pass, or a prescription.
 
@@ -114,9 +128,9 @@ a point, map bounds, or a field boundary to the selected provider. Map browsing 
 separate from the source receipts retained with an answer. The Privacy view explains
 these boundaries.
 
-The weather summary reports actual published observation dates and coverage for
-each metric. Recent NASA POWER windows can be partial because observations lag the
-requested dates. A partial total is not a full-window total; missing values are not
+Use the weather control to request NASA POWER observations for the field location.
+The summary reports published observation dates and coverage for each metric.
+Recent NASA POWER windows can be partial because observations lag the requested dates. A partial total is not a full-window total; missing values are not
 zero rainfall. **Sources & checks** preserves these limits with the saved answer.
 A missing public-knowledge readiness report remains unavailable, even when other
 online providers work.

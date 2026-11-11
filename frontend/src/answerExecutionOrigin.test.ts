@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { answerExecutionOrigin } from './answerExecutionOrigin'
+import { answerExecutionOrigin, retainedDraftHitTokenLimit } from './answerExecutionOrigin'
 import type { Turn, TurnExecutionStageReceipt } from './types'
 
 const receipt = (stage_id: string, position: number, state: string, evidence: Record<string, unknown>): TurnExecutionStageReceipt => ({
@@ -157,5 +157,53 @@ describe('retained production execution and final origin', () => {
     expect(answerExecutionOrigin(notExecuted).status).toBe('conflicting')
     const incomplete = fixture(kind); delete stages(incomplete).find(stage => stage.stage_id === 'verification')!.evidence.executed
     expect(answerExecutionOrigin(incomplete).status).toBe('unavailable')
+  })
+})
+
+describe('retained model length stop', () => {
+  const hash = 'a'.repeat(64)
+  const turnWith = (reason: string | undefined, finalHash = hash): Turn => ({
+    turn_id: 'length-stop',
+    user_message: 'Synthetic question',
+    answer: 'An incomplete',
+    answer_status: 'draft',
+    trace: { metadata: {
+      generation_stats: { finish_reason: reason },
+      answer_stages: { draft: { sha256: hash }, final: { sha256: finalHash } },
+    } },
+  })
+
+  it('flags a length stop when the shown answer preserves the draft', () => {
+    expect(retainedDraftHitTokenLimit({
+      ...turnWith('length'),
+      answer_integrity_receipt: { schema_version: 'v1', status: 'verified', answer_sha256: hash },
+    })).toBe(true)
+  })
+
+  it('requires evidence that binds the retained final stage to the displayed answer', () => {
+    const turn = turnWith('length')
+    const withFinalText = (text: string): Turn => ({
+      ...turn,
+      trace: { metadata: {
+        ...turn.trace?.metadata,
+        answer_stages: { draft: { sha256: hash }, final: { sha256: hash, text } },
+      } },
+    })
+    expect(retainedDraftHitTokenLimit(withFinalText(turn.answer))).toBe(true)
+    expect(retainedDraftHitTokenLimit(withFinalText('A different answer'))).toBe(false)
+    expect(retainedDraftHitTokenLimit({
+      ...turn,
+      answer_integrity_receipt: { schema_version: 'v1', status: 'legacy_not_captured' },
+    })).toBe(false)
+  })
+
+  it('keeps replaced, conflicting, and unmeasured results separate', () => {
+    expect(retainedDraftHitTokenLimit(turnWith('length', 'b'.repeat(64)))).toBe(false)
+    expect(retainedDraftHitTokenLimit(turnWith('stop'))).toBe(false)
+    expect(retainedDraftHitTokenLimit(turnWith(undefined))).toBe(false)
+    expect(retainedDraftHitTokenLimit({
+      ...turnWith('length'),
+      answer_integrity_receipt: { schema_version: 'v1', status: 'invalid' },
+    })).toBe(false)
   })
 })

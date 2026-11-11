@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import FarmWorkspace from './FarmWorkspace'
 import type { FarmField } from './farmTypes'
@@ -64,10 +64,95 @@ describe('farm cockpit workflows',()=>{
     expect(screen.getByRole('heading', { level: 1, name: 'Home' })).toBeInTheDocument()
     expect(screen.getByRole('spinbutton', { name: 'Season' })).toHaveValue(2025)
     expect(window.location.hash).toContain('farm=a')
+    const season = screen.getByRole('spinbutton', { name: 'Season' })
+    fireEvent.change(season, { target: { value: '2' } })
+    expect(season).toHaveValue(2)
+    expect(window.location.hash).toContain('season=2025')
+    fireEvent.change(season, { target: { value: '2024' } })
+    fireEvent.blur(season)
+    expect(window.location.hash).toContain('season=2024')
+    const changedSeason = screen.getByRole('spinbutton', { name: 'Season' })
+    fireEvent.change(changedSeason, { target: { value: '2025' } })
+    fireEvent.blur(changedSeason)
     fireEvent.click(screen.getByRole('button', { name: 'Farms' }))
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'View all 2 fields' })).toHaveAttribute('href', '#fields?season=2025')
   })
+  it('shows retained soil context and refreshes only soil on request', async () => {
+    window.history.replaceState(null, '', '#fields?season=2026&field=west&tab=soil')
+    const request = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      let result: unknown = { id: 'soil-update', status: 'completed' }
+      if (url === '/api/farms') result = { farms }
+      else if (url.startsWith('/api/farms/overview')) result = { fields, coverage: {} }
+      else if (url.includes('/summary')) result = {
+        ...fields[0], seasons: [], geometry_revisions: [], public_context: {},
+        source_status: { soil: { availability: 'available', freshness: 'current', values: { map_units: [{ name: 'Synthetic soil map unit' }] } } },
+      }
+      return { ok: true, status: 200, json: async () => result }
+    })
+    vi.stubGlobal('fetch', request)
+    render(<FarmWorkspace {...props} mode="fields" />)
+    expect(await screen.findByText('Synthetic soil map unit')).toBeVisible()
+    expect(request.mock.calls.some(([url]) => String(url).includes('/enrichment-jobs'))).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh mapped soil' }))
+    await waitFor(() => expect(request).toHaveBeenCalledWith('/api/fields/west/enrichment-jobs', expect.objectContaining({
+      method: 'POST', body: JSON.stringify({ sources: ['soil'] }),
+    })))
+  })
+  it('shows completion when a soil update finishes before cancellation', async () => {
+    window.history.replaceState(null, '', '#fields?season=2026&field=west&tab=soil')
+    let summaryReads = 0
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      let result: unknown = { id: 'soil-update', status: 'running' }
+      if (url === '/api/farms') result = { farms }
+      else if (url.startsWith('/api/farms/overview')) result = { fields, coverage: {} }
+      else if (url.includes('/summary')) {
+        summaryReads += 1
+        result = { ...fields[0], seasons: [], geometry_revisions: [], public_context: {}, source_status: {} }
+      } else if (url.endsWith('/cancel')) result = { id: 'soil-update', status: 'completed' }
+      return { ok: true, json: async () => result }
+    }))
+    render(<FarmWorkspace {...props} mode="fields" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Refresh mapped soil' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel update' }))
+    expect(await screen.findByText('Updated', { exact: true })).toBeVisible()
+    expect(screen.queryByText('Cancelled', { exact: true })).not.toBeInTheDocument()
+    await waitFor(() => expect(summaryReads).toBeGreaterThan(1))
+  })
+
+  it('drops an in-flight terrain result when the saved boundary revision changes', async () => {
+    window.history.replaceState(null, '', '#fields?season=2026&field=west&tab=soil')
+    let revision = 'first-revision'
+    let resolveTerrain!: (value: unknown) => void
+    const terrain = new Promise(resolve => { resolveTerrain = resolve })
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      let result: unknown = { id: 'soil-update', status: 'completed' }
+      if (url === '/api/farms') result = { farms }
+      else if (url.startsWith('/api/farms/overview')) result = { fields, coverage: {} }
+      else if (url.includes('/summary')) result = {
+        ...fields[0], name: revision, geometry_revision_id: revision,
+        geometry: { kind: 'polygon', points: [], acres: 1 },
+        confirmed_facts: { province_state: 'Quebec' }, seasons: [], geometry_revisions: [],
+        public_context: {}, source_status: {},
+      }
+      else if (url.endsWith('/quebec-lidar/plan')) result = await terrain
+      return { ok: true, json: async () => result }
+    }))
+    render(<FarmWorkspace {...props} mode="fields" />)
+    fireEvent.click(await screen.findByText('Offline terrain context'))
+    fireEvent.click(screen.getByRole('button', { name: 'Check saved field' }))
+    revision = 'second-revision'
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh mapped soil' }))
+    await screen.findByRole('heading', { name: 'second-revision' })
+    await act(async () => resolveTerrain({
+      status: 'ready_to_download', receipt: { matched_tile_count: 1, field_geometry_sha256: 'prior-boundary' },
+    }))
+    expect(screen.queryByLabelText('Offline terrain availability receipt')).not.toBeInTheDocument()
+  })
+
   it('reports a malformed farm response without inventing an empty farm',async()=>{
     vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,status:200,json:async()=>({}),text:async()=>'{}'})))
     render(<FarmWorkspace {...props} />)
