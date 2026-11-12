@@ -28,10 +28,15 @@ after wet weather alone does not identify the cause. Inspect fresh foliage,
 stems, roots and tubers. [Alberta's late-blight guidance](https://www.alberta.ca/late-blight-of-potatoes-and-tomatoes)
 and [Cornell's lookalike guide](https://cce.cornell.edu/cornell-vegetable-program/late-blight-and-its-lookalikes-correctly-identify-late-blight-potatoes)
 support identification, with product decisions subject to local authority.
+For a healthy potato crop, monitor leaves and stems regularly and use local
+alerts and crop-specific IPM guidance for prevention planning; visible collapse
+is not a prerequisite. See [Minnesota late-blight monitoring](https://extension.umn.edu/agriculture/specialty-crops/vegetable-farming/disease-management/late-blight)
+for general scouting methods, with treatment authority still local.
 For suspected clubroot, limit movement of contaminated soil while arranging
 confirmation. One nonhost year does not establish eradication: resting spores
 can persist for many years. Follow the [current applicable provincial plan](https://www.alberta.ca/alberta-clubroot-management-plan)
-and any municipal requirements for the field.
+and any municipal requirements for the field. Check all susceptible brassica
+crops, volunteers and cruciferous weeds when assessing a nonhost interval.
 
 Treat regional crop-health and agroclimate layers as screening context. Confirm
 the exact metric, date, spatial support and whether it is a modelled or observed
@@ -41,6 +46,10 @@ and current local observations. For a satellite comparison, examine cloud and
 shadow QA, valid pixels and coverage, comparable processing and spatial support,
 and crop stage before attributing an NDVI difference to crop condition. See
 [HLS quality documentation](https://lpdaac.usgs.gov/documents/1698/HLS_User_Guide_V2.pdf).
+Identical sensor names are not required when a documented harmonization makes
+the observations comparable. [NASA's HLS algorithms](https://hls.gsfc.nasa.gov/algorithms/)
+explain cross-sensor corrections and shared spatial support; QA, crop stage and
+remaining measurement uncertainty still need review.
 An empty terrain clip also requires source coverage and acquisition-age checks;
 see [Quebec terrain preparation](quebec-terrain.md).
 
@@ -59,6 +68,11 @@ harvest access and compatible pollinizers matter. Ontario's
 [haskap profile](https://omafra.gov.on.ca/CropOp/en/spec_fruit/berries/hask.html)
 supports the crop distinction and explicitly limits transfer of regional
 fertility guidance. It does not establish a British Columbia rate.
+Pollination requirements are crop- and cultivar-specific: [haskap needs compatible
+cross-pollination with overlapping bloom](https://gardening.usask.ca/gardening-advice/gardenline-nested-pages/food-plant-pages/fruit/haskap.php),
+while [raspberries are generally self-fruitful](https://yardandgarden.extension.iastate.edu/how-to/pollination-requirements-tree-and-small-fruits).
+A pollinizer requirement for one perennial fruit must not become a universal
+planting rule for other berries; insect pollination remains important.
 
 These references support general observation methods. Their presence here
 does not admit them into runtime retrieval or qualify a field recommendation.

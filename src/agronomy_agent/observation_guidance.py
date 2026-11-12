@@ -6,6 +6,7 @@ guide. Never load assessment questions, gold or reviewer labels here.
 """
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass
 import re
 
@@ -18,6 +19,10 @@ class ObservationGuidance:
     answer: str
     # Every facet is required; alternatives within a facet accept equivalent prose.
     facets: tuple[tuple[str, str, tuple[str, ...]], ...]
+    method_ids: tuple[str, ...] = ()
+
+    def has_method(self, key: str) -> bool:
+        return self.key == key or key in self.method_ids
 
     def missing(self, answer: str) -> tuple[str, ...]:
         return tuple(name for name, _, patterns in self.facets
@@ -26,7 +31,7 @@ class ObservationGuidance:
     def unsupported_inference(self, answer: str) -> bool:
         """Reject bounded contradictions even when a correct check is appended."""
         for sentence in re.split(r"[.!?;]\s*|\n+", answer):
-            if self.key == "empty_terrain_coverage":
+            if self.has_method("empty_terrain_coverage"):
                 if re.search(
                     r"\b(?:absence|empty|no (?:mapped )?features?|lack of data)\b[^.!?]{0,160}"
                     r"\b(?:suggest\w*|indicat\w*|means?|proves?|confirms?)\b[^.!?]{0,100}"
@@ -34,7 +39,7 @@ class ObservationGuidance:
                     sentence, re.I,
                 ) and not re.search(r"\b(?:does not|do not|cannot|can't|doesn't|not enough to)\s+(?:by itself\s+)?(?:suggest|indicat|mean|prove|confirm)\w*", sentence, re.I):
                     return True
-            if self.key == "point_area":
+            if self.has_method("point_area"):
                 if re.search(r"\b(?:area|size)\b[^.;]{0,35}\b(?:covered by|of)\b[^.;]{0,25}\b(?:pin|point)\b", sentence, re.I):
                     return True
                 if re.search(r"\b(?:simplest|only|sufficient)\b[^.;]{0,160}\b(?:known|single|one) (?:distance|dimension|scale|reference point)\b", sentence, re.I) and not re.search(r"\b(?:not|insufficient|both|length and width|closed boundary|closed polygon)\b", sentence, re.I):
@@ -45,16 +50,30 @@ class ObservationGuidance:
 
 
 def observation_guidance(question: str) -> ObservationGuidance | None:
+    methods = tuple(_matching_observation_methods(question))
+    if not methods:
+        return None
+    if len(methods) == 1:
+        return methods[0]
+    return ObservationGuidance(
+        "combined_observations",
+        "\n\n".join(method.answer for method in methods),
+        tuple(facet for method in methods for facet in method.facets),
+        tuple(method.key for method in methods),
+    )
+
+
+def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance]:
     q = question.lower()
     has = lambda p: bool(re.search(p, q))
     # English method text must never replace a French answer.
     if preferred_response_language(question) == "fr" or has(r"\b(?:en fran[cç]ais|in french)\b"):
         return None
     if has(r"\b(?:ndvi|vegetation index)\b") and has(r"\b(?:compar\w*|dates?|lower|declin\w*|chang\w*)\b"):
-        return ObservationGuidance("imagery_comparison", (
+        yield ObservationGuidance("imagery_comparison", (
             "A lower displayed NDVI alone does not establish a real crop-vigor decline, a cause, or a yield loss. "
             "First check each scene's cloud, shadow, snow and other QA masks, valid pixel counts and valid field coverage. "
-            "Compare the same boundary and spatial support, sensor/product, processing and resolution; use comparable valid pixels rather than different clear fragments of the field. "
+            "Match the field boundary and comparable spatial support; check sensor/product definitions, harmonization, processing and resolution. Documented harmonization such as HLS can make different sensors comparable, subject to QA and remaining uncertainty. Use comparable valid pixels rather than different clear fragments of the field. "
             "Then compare acquisition dates, crop stage, canopy cover, harvest and management history. Only after those checks should you scout the corresponding affected and normal areas, including roots and soil moisture, to test possible causes. "
             "Until QA and comparable support are available, the apparent difference remains unverified and cannot justify a treatment."
         ), (
@@ -63,12 +82,19 @@ def observation_guidance(question: str) -> ObservationGuidance | None:
             ("imagery_comparability", "Compare processing and crop stage before causal interpretation.", (r"\b(?:processing|sensor|product)\b",)),
             ("imagery_stage", "Check crop stage or phenology on both dates.", (r"\b(?:crop|growth) stage\b", r"\bphenolog")),
         ))
+    area_clauses = re.split(
+        r"[.!?;]|\b(?:and|also)\s*,?\s*(?=(?:can|could|does|is|what|how|should|will|do|may)\b)",
+        q,
+    )
     if (
         has(r"\b(?:gps|dropped|single|one)\b[^.]{0,35}\b(?:pin|point)\b")
-        and has(r"\barea\b")
-        and not has(r"\b(?:pixels?|buffers?|footprints?|sampling support)\b")
+        and any(
+            re.search(r"\barea\b", clause)
+            and not re.search(r"\b(?:pixels?|buffers?|footprints?|sampling support)\b", clause)
+            for clause in area_clauses
+        )
     ):
-        return ObservationGuidance("point_area", (
+        yield ObservationGuidance("point_area", (
             "One GPS pin locates a point; it does not describe the planted area. Trace or survey the planted boundary to make a closed polygon. "
             "For a genuinely rectangular planted block, measure both length and width and multiply them in compatible units. "
             "A known distance or scale alone still leaves the other dimension and field shape unknown. Exclude unplanted areas; an estimated field boundary need not equal the area actually planted."
@@ -76,7 +102,7 @@ def observation_guidance(question: str) -> ObservationGuidance | None:
     if has(r"\b(?:mapaq|lidar|terrain)\b") and has(
         r"\b(?:zero|no)\s+(?:mapped\s+)?(?:depressions?|flow[- ]paths?|intersections?|features?)\b|\bempty\b[^.]{0,50}\b(?:clip|layer|result)\b"
     ):
-        return ObservationGuidance("empty_terrain_coverage", (
+        yield ObservationGuidance("empty_terrain_coverage", (
             "No mapped intersection does not establish absence of waterlogging risk. Verify source parcel coverage and missing or excluded areas, the acquisition period and age, layer completeness, the saved field boundary and the clipping CRS. "
             "An empty clip means no features from that layer intersected that boundary; it cannot distinguish true absence from missing coverage. "
             "Ground-truth low and normal areas after rain: record ponding duration, soil moisture by depth, roots, infiltration, drainage and outlet condition, and compaction. "
@@ -85,11 +111,23 @@ def observation_guidance(question: str) -> ObservationGuidance | None:
             ("terrain_coverage", "Check source parcel coverage before interpreting absence.", (r"\b(?:source|parcel|layer) coverage\b",)),
             ("terrain_age", "Check acquisition period/age separately from publication.", (r"\bacquisition\b",)),
         ))
-    if has(r"\b(?:guide|table|manual)\b") and has(r"\bvegetable\w*\b") and has(r"\b(?:haskap|honeyberry|perennial berr\w*|berry shrub)\b"):
-        return ObservationGuidance("crop_guide_applicability", (
-            "A vegetable spacing or fertilizer table is not a planting prescription for a perennial berry shrub. "
-        ) + ("Haskap (honeyberry) is a perennial fruit crop. " if has(r"\b(?:haskap|honeyberry)\b") else "") + (
-            "Check the guide's named crop, production system and region before transferring any table. Use crop-specific perennial-berry guidance to plan mature plant size, row and in-row spacing, machinery and harvest access, compatible pollinizer cultivars and bloom overlap. "
+    guide_scope = has(r"\b(?:guide|table|manual)\b") and has(r"\bvegetable\w*\b")
+    haskap = False
+    if guide_scope:
+        # query_context also uses the router: resolve its canonical aliases at
+        # request time rather than introducing an import-time dependency cycle.
+        from agronomy_agent.query_context import extract_crop_entities
+
+        haskap = "haskap" in extract_crop_entities(question)
+    if guide_scope and (haskap or has(r"\b(?:perennial berr\w*|berry shrub)\b")):
+        yield ObservationGuidance("crop_guide_applicability", (
+            "A vegetable spacing or fertilizer table is not a planting prescription for a perennial berry crop. "
+        ) + ("Haskap (honeyberry) is a perennial fruit crop that needs compatible cultivars with overlapping bloom for cross-pollination. " if haskap else "") + (
+            "Check the guide's named crop, production system and region before transferring any table. Use crop-specific perennial-berry guidance to plan mature plant size, row and in-row spacing, machinery and harvest access. Check crop- and cultivar-specific pollination requirements. "
+        ) + (
+            "Raspberries are generally self-fruitful, so another cultivar is not normally required for pollination; pollinating insects still matter. "
+            if has(r"\braspberr(?:y|ies)\b") else ""
+        ) + (
             "For fertility, distinguish establishment from bearing years and use current soil tests and locally appropriate crop guidance; do not copy a vegetable rate. "
             "General sampling or soil-preparation principles may transfer with their limits, but they do not establish suitable spacing or a locally calibrated fertilizer recommendation."
         ), (
@@ -99,9 +137,9 @@ def observation_guidance(question: str) -> ObservationGuidance | None:
         ))
     if has(r"\b(?:crop[- ]health|national.*stress|regional.*stress)\b") and has(r"\b(?:map|layer|index|indices|patch)\b"):
         nitrogen = has(r"\b(?:nitrogen|fertiliz\w*)\b")
-        return ObservationGuidance("regional_crop_signal", (
-            "A regional crop-health or stress layer is a screening signal, not a field diagnosis of drought, nutrient deficiency or a named disease. "
-            "Verify the exact metric, date, spatial resolution, source and uncertainty; determine whether it is a modelled weather/water-balance product or a satellite observation before interpreting it. "
+        yield ObservationGuidance("regional_crop_signal", (
+            "A crop-health or stress layer is a screening signal, not a field diagnosis of drought, nutrient deficiency or a named disease. "
+            "Verify the exact metric, date, spatial resolution, source and uncertainty; distinguish modelled weather/water-balance context from satellite, aerial or other observations before interpreting it. "
             "Scout affected and normal areas, including the field interior: record crop stage, plant and leaf symptoms, incidence or severity, roots, root-zone moisture, drainage, compaction and recent weather. "
             "Waterlogging, drought, root injury, nutrient constraints and disease remain alternatives until those observations discriminate them. Arrange timely crop-specific diagnostic sampling if disease is suspected. "
         ) + (
@@ -118,7 +156,7 @@ def observation_guidance(question: str) -> ObservationGuidance | None:
         has(r"\baffected\b.*\b(?:normal|healthy)\b|\b(?:normal|healthy)\b.*\baffected\b")
         or has(r"\b(?:yellow\w*|pale|chlorosis)\b") and has(r"\b(?:rain|wet|low spots?|waterlog\w*)\b")
     ):
-        return ObservationGuidance("paired_scouting", (
+        yield ObservationGuidance("paired_scouting", (
             "On the next safe field walk, compare several affected patch margins with nearby normal areas of the same crop and stage, and check representative areas beyond the first patch. "
             "At each, photograph and locate symptoms, count plants and record incidence or severity and which leaves or tissues are affected. "
             "Dig intact plants from both areas to compare roots and crowns for restriction, discoloration or decay; compare soil moisture by depth, ponding, drainage and compaction. "

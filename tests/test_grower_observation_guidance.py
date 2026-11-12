@@ -19,6 +19,9 @@ from agronomy_agent.server.storage.db import TraceStore
 
 
 METHOD_CASES = [
+    ("NDVI declined between dates and masks are missing. Also, can one GPS point establish planted area?", "combined_observations", ("valid pixel", "closed polygon", "length and width")),
+    ("An empty LiDAR terrain clip has zero features. How should I compare affected and normal plants while scouting?", "combined_observations", ("parcel coverage", "separately", "revisit")),
+    ("Can a vegetable spacing guide describe a haskap layout, and can one GPS point establish planted area?", "combined_observations", ("closed polygon", "perennial", "harvest access")),
     ("How should we compare normal and affected plants on a scouting walk?", "paired_scouting", ("roots", "separately", "revisit")),
     ("On my next walk after rain, what should I check in pale low spots?", "paired_scouting", ("roots", "normal", "soil moisture")),
     ("NDVI declined between dates; masks and valid pixel counts are missing. What can I infer?", "imagery_comparison", ("cloud", "valid pixel", "processing")),
@@ -173,6 +176,10 @@ def test_seasonal_water_snapshot_requires_repeat_sampling_and_joint_sodium_inter
     "What herbicide rate should I use after nitrogen fertilizer last week?",
     "After nitrogen fertilizer last week, what herbicide rate should I use?",
     "What herbicide rate should I use on nitrogen-deficient lentils?",
+    "Last year the nitrogen rate was 80 kg/ha. What herbicide rate should I use?",
+    "Following last year's nitrogen rate of 80 kg/ha, what herbicide rate should I use?",
+    "What herbicide rate should I use after last year's nitrogen rate of 80 kg/ha?",
+    "What was last year's nitrogen rate? And what herbicide rate should I apply now?",
 ])
 def test_pesticide_rate_obligations_do_not_ask_for_fertilizer_tests(question):
     from agronomy_agent.high_consequence import evaluate_high_consequence_policy
@@ -190,6 +197,11 @@ def test_pesticide_rate_obligations_do_not_ask_for_fertilizer_tests(question):
     "What herbicide rate and what rate of nitrogen should I apply?",
     "What herbicide rate and how much fertilizer should I apply?",
     "What herbicide rate should I use? Also, what rate should I apply for nitrogen?",
+    "What herbicide rate should I use and how much urea should I sidedress?",
+    "Quelle dose d'herbicide et quelle dose d'azote dois-je appliquer?",
+    "What herbicide rate should I use, and should I apply 40 kg N/ha?",
+    "Should I apply 40 kg/ha of nitrogen and spray this herbicide?",
+    "Should I apply 0.5 kg/ha of nitrogen and spray this herbicide?",
 ])
 def test_mixed_pesticide_and_nitrogen_requests_retain_both_authority_lanes(question):
     from agronomy_agent.high_consequence import evaluate_high_consequence_policy
@@ -197,6 +209,7 @@ def test_mixed_pesticide_and_nitrogen_requests_retain_both_authority_lanes(quest
         trace={}, field_context={}, network_mode="offline")
     missing = " ".join(policy["missing_evidence"])
     assert "current product label" in missing and "soil or tissue test" in missing
+    assert "crop growth stage" in missing and "target pressure" in missing
     assert policy["blocked"] is True
 
 
@@ -249,3 +262,86 @@ def test_point_support_and_buffer_questions_keep_the_existing_interpretation_pat
     # Instrument support can have a known two-dimensional footprint. It is not
     # the bare field pin that the planted-area observation method addresses.
     assert observation_guidance(question) is None
+
+
+def test_complete_fertility_and_label_records_do_not_fill_missing_pesticide_scouting():
+    from agronomy_agent.high_consequence import evaluate_high_consequence_policy
+    policy = evaluate_high_consequence_policy(
+        question="What herbicide rate and nitrogen fertilizer rate should I apply?",
+        trace={"tool_invocations": [{"name": "health_canada_pmra_label_search", "payload": {
+            "status": "available", "current_label_text_verified": True,
+            "freshness": {"safe_for_high_consequence": True},
+        }}]},
+        field_context={"product_name": "Synthetic product", "crop": "canola", "target_weed": "wild oat",
+                       "soil_test": "Synthetic dated test with units", "yield_goal": "Synthetic local goal",
+                       "fertility_history": "Synthetic nutrient credits", "local_calibration": "Synthetic local calibration"},
+        network_mode="offline",
+    )
+    assert policy["blocked"] is True
+    assert "crop growth stage" in policy["missing_evidence"]
+    assert "representative target pressure and distribution" in policy["missing_evidence"]
+
+
+@pytest.mark.parametrize("field_context", [
+    {"diagnosis_confirmed_by_lab": False},
+    {"confirmed_diagnosis": False},
+    {"diagnostic_lab_result": False},
+    {"metadata": {"diagnosis_confirmed_by_lab": False}},
+    {"diagnosis_confirmed_by_lab": False, "metadata": {"diagnosis_confirmed_by_lab": True}},
+])
+def test_negative_diagnostic_confirmation_cannot_qualify_as_evidence(field_context):
+    from agronomy_agent.high_consequence import evaluate_high_consequence_policy
+    policy = evaluate_high_consequence_policy(question="What disease is this?", trace={},
+        field_context=field_context, network_mode="offline")
+    assert policy["blocked"] is True
+    assert "representative sample or qualified diagnostic confirmation" in policy["missing_evidence"]
+
+
+def test_known_zero_cost_and_response_remain_distinct_from_false_confirmation():
+    from agronomy_agent.high_consequence import evaluate_high_consequence_policy
+    policy = evaluate_high_consequence_policy(question="Could this change improve profit?", trace={},
+        field_context={"input_cost": 0, "crop_price": 0, "expected_response": 0}, network_mode="offline")
+    assert policy["domains"] == ["financial"]
+    assert policy["missing_evidence"] == []
+
+
+def test_healthy_potato_monitoring_does_not_invent_collapse_or_weather():
+    question = "How should I monitor my healthy potato crop for late blight?"
+    answer = bounded_decision_support(question, classify_query(question).question_type)
+    assert answer
+    assert not answer.startswith("No.")
+    assert "Collapsing potato tops after cool, wet weather" not in answer
+    assert "inspect" in answer.lower() or "scout" in answer.lower()
+
+
+@pytest.mark.parametrize("crop", ["haskaps", "honeyberries", "camerises"])
+def test_observation_guide_uses_the_same_haskap_identity_as_live_sources(crop):
+    from agronomy_agent.query_context import extract_crop_entities
+    question = f"Can I use vegetable guide spacing for {crop}?"
+    assert set(extract_crop_entities(question)) == {"haskap"}
+    method = observation_guidance(question)
+    assert method and method.has_method("crop_guide_applicability")
+    assert "cross-pollination" in method.answer
+
+
+def test_combined_observations_keep_each_component_contradiction_check():
+    question = "An empty LiDAR clip has zero features. Can one GPS point establish planted area?"
+    method = observation_guidance(question)
+    assert method and method.has_method("point_area") and method.has_method("empty_terrain_coverage")
+    draft = method.answer + " An empty clip suggests a low-risk scenario."
+    assert not method.missing(draft)
+    result = verify_answer(draft, question=question, evidence_text="", question_type="conceptual",
+        risk_level="low", editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert "unsupported_observation_inference" in result.draft_assessment.reasons
+    assert "low-risk scenario" not in result.answer
+    assert "closed polygon" in result.answer and "parcel coverage" in result.answer
+
+
+@pytest.mark.parametrize("question", [
+    "NDVI declined and valid pixel counts are missing; can one GPS point establish planted area?",
+    "NDVI valid pixels are missing and can one GPS point establish planted area?",
+    "Can one GPS pin establish planted area? Also, which pesticide buffers should I check?",
+])
+def test_independent_pixel_or_buffer_question_does_not_hide_bare_field_pin_method(question):
+    method = observation_guidance(question)
+    assert method and method.has_method("point_area")

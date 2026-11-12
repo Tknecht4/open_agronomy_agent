@@ -735,7 +735,7 @@ def evidence_interpretation_kind(text: str) -> str | None:
     ):
         return None
     method = observation_guidance(text)
-    if method is not None and method.key == "crop_guide_applicability":
+    if method is not None and method.has_method("crop_guide_applicability"):
         return "source_applicability"
     if not _interpretation_only_request(q):
         return None

@@ -203,3 +203,12 @@ rates or scalar claims. This is typography equivalence, not chemical validation.
 A bounded diagnostic sampling check rejects claims that separately attributable
 area results remain recoverable after samples are pooled into one composite.
 These checks do not constitute a general scientific correctness verifier.
+
+Compound observation requests combine each recognized method's requirements and
+contradiction checks. Instrument footprint terms in a separate request do not
+suppress an explicitly asked planted-area method. Crop-guide recovery uses the
+same canonical haskap identity as live-source compatibility. Mixed pesticide
+and nutrient quantities retain both evidence lanes; historical rates do not
+create a new requested fertilizer rate. Explicit negative confirmation flags
+cannot satisfy evidence requirements, while a supplied numeric zero remains a
+value. These bounded checks do not constitute a general scientific verifier.

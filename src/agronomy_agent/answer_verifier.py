@@ -4238,7 +4238,7 @@ def _decision_route_failure_answer(
     if decision == "clubroot_containment":
         guidance_scope = _clubroot_guidance_scope(state.question, jurisdiction)
         return (
-            "Swollen roots are a reason to suspect clubroot, not confirmation. One year out of canola does not eradicate clubroot; resting spores can persist for many years, and rotation reduces risk rather than proving a field clean. Treat this as suspected clubroot and act today to limit soil movement while arranging confirmation. Mark the patch and approach, keep unnecessary traffic out, work the suspect area last, and avoid moving soil, roots, or contaminated material to clean parts of the field. Before equipment, tools, or boots leave, remove adhering soil at the site and follow current provincial sanitation guidance; record where material and wash water go. "
+            "Swollen roots are a reason to suspect clubroot, not confirmation. One nonhost year does not eradicate clubroot; resting spores can persist for many years, and rotation reduces risk rather than proving a field clean. Check for susceptible brassica crops, volunteers and cruciferous weeds throughout the rotation. Treat this as suspected clubroot and act today to limit soil movement while arranging confirmation. Mark the patch and approach, keep unnecessary traffic out, work the suspect area last, and avoid moving soil, roots, or contaminated material to clean parts of the field. Before equipment, tools, or boots leave, remove adhering soil at the site and follow current provincial sanitation guidance; record where material and wash water go. "
             "Dig several plants from the patch margin and normal plants outside it, keep roots intact, photograph the pattern and galls, and submit a representative sample through the provincial or diagnostic-lab pathway. Record crop stage, recent weather, field distribution and disease risk, rotation, variety, equipment movement, and symptom progression. Confirmation and "
             f"{guidance_scope} should control longer-term rotation, resistant-variety, access, and sanitation decisions, but containment should not wait for the result."
         )
@@ -5126,10 +5126,16 @@ def _conservative_failure_answer(question_type: str, *, question: str = "") -> s
         )
     )
     if question_type == "plant_health":
-        if re.search(r"\bpotato\w*\b", lower) and re.search(r"\b(?:collaps\w*|late blight|wilt\w*)\b", lower):
+        if re.search(r"\bpotato\w*\b", lower) and re.search(r"\b(?:collaps\w*|wilt\w*)\b", lower):
             return (
-                "No. Collapsing potato tops after cool, wet weather do not confirm late blight. Treat the possibility as time-sensitive: inspect fresh leaf lesions and their undersides, stems, roots and tubers from affected margins and normal plants. Compare late blight with blackleg or other root/tuber decay, waterlogging and physical or application injury; do not diagnose from weather alone. "
+                "Collapsing or wilting potato tops alone do not confirm late blight. Treat the possibility as time-sensitive: inspect fresh leaf lesions and their undersides, stems, roots and tubers from affected margins and normal plants. Compare late blight with blackleg or other root/tuber decay, waterlogging and physical or application injury; do not diagnose from weather alone. "
                 "Record crop stage, incidence, severity, symptom progression, drainage, variety, seed and application history. Contact a local potato specialist or diagnostic lab promptly for sampling and current disease alerts. A spray decision requires the working diagnosis, current local risk and exact crop/target/product label; a foliar spray will not correct every cause of collapse."
+            )
+        if re.search(r"\bpotato\w*\b", lower) and re.search(r"\blate blight\b", lower):
+            return (
+                "Scout representative areas of the potato crop regularly for late-blight symptoms, including places where the canopy stays damp longer. Inspect leaves, their undersides and stems for new or spreading lesions; early-morning scouting can help reveal signs before the canopy dries. "
+                "If suspect symptoms appear, photograph and locate them, compare suspect and nearby healthy plants, and promptly contact a local potato specialist or diagnostic lab for sampling instructions and confirmation. Follow current local disease alerts and crop-specific IPM guidance. "
+                "Use crop stage, local disease risk and forecasts, and the exact crop/target/product label to plan any preventive fungicide program; visible collapse is not a prerequisite for prevention planning."
             )
         if decision_state.crop == "wheat" and re.search(r"\bwet planting|wet seedbed|poor growth after wet|patchy poor growth\b", lower):
             return (
