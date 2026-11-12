@@ -130,7 +130,7 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
         ), (
             ("date_collection", "Use the collection event for sampling-date comparisons.", (r"\bcollection date\b", r"\bdate of collection\b", r"\bsampling[- ]event date\b")),
             ("date_report", "Preserve the report issuance event under its own role.", (r"\breport (?:issuance|issue) date\b", r"\bdate (?:the )?(?:lab(?:oratory)? )?report was issued\b")),
-            ("date_separation", "Keep distinct events and their provenance linked without overwriting.", (r"\bseparate\b", r"\bdistinct\b", r"\b(?:retain|keep|preserve) both\b")),
+            ("date_separation", "Keep distinct events and their provenance linked without overwriting.", (r"\bseparate(?:ly)?\b", r"\bdistinct\b", r"\b(?:retain|keep|preserve) both\b")),
         ))
     if has(r"\b(?:ndvi|vegetation index)\b") and has(r"\b(?:compar\w*|dates?|lower|declin\w*|chang\w*)\b"):
         yield ObservationGuidance("imagery_comparison", (

@@ -4772,8 +4772,8 @@ def _decision_route_failure_answer(
                 "Include seed cost and the downside of poor feed quality or missed harvest moisture. If local silage evidence is thin, keep the discounted hybrid to an on-farm strip or limited acreage with a suitable comparator rather than projecting grain-trial performance to the whole silage program."
             )
         return (
-            "The stable variety should carry more weight than the one-year winner unless broader evidence shows a repeatable advantage. Compare replicated multi-year and multi-location trials from similar environments, including statistical separation or LSD and yield stability, rather than rank from one dry site-year. Match maturity and drought or soil adaptation with the reported disease resistance, lodging, test weight, protein or end-use quality, herbicide system, and market requirements. "
-            "Use seed cost in a partial budget and consider downside risk across fields. Where uncertainty remains material, retain both in a small on-farm comparison instead of committing the farm from one result."
+            "A top rank in one trial does not establish the best variety across regions. If another candidate has demonstrated stable performance in relevant trials, weigh that repeatability against the single-trial winner. Compare replicated multi-year and multi-location trials from similar environments, including statistical separation or LSD and yield stability, rather than rank from one trial. Match maturity and drought or soil adaptation with the reported disease resistance, lodging, test weight, protein or end-use quality, herbicide system, and market requirements. "
+            "Use seed cost in a partial budget and consider downside risk across fields. Where uncertainty remains material, compare locally adapted candidates in a small on-farm comparison instead of committing the farm from one result."
         )
     if decision == "integrated_preharvest_specialty":
         return (

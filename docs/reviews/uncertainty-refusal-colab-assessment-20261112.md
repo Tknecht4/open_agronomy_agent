@@ -82,7 +82,7 @@ The corrected source supplies shared, source-referenced rate-basis and scouting
 methods and checks that their essential concepts survive. Adequate model prose
 is retained, with no exact field label needed merely to explain the terms.
 
-An independent counterfactual also showed that an unasked application instruction
+A separate counterfactual also showed that an unasked application instruction
 could survive when its quantity already appeared in history. Known quantity and
 current authority are different claims. Remove a direct numeric application
 instruction locally from an otherwise supported terminology explanation. Preserve
@@ -105,6 +105,22 @@ The model's complete method remains unchanged. A mocked unavailable editor did
 not reproduce the defect; an editor returning the incomplete text did. Retain
 that discriminating negative test and the interrupted source condition. A
 persisted-backend regression verifies the final saved method and all 17 stages.
+
+Actual model inspection also found an avoidable date-role replacement: a correct
+short answer preserved the collection and report-issuance dates “separately”,
+but the coverage check recognized only “separate”. Accept that ordinary wording
+so correct literal dates and concise model prose survive. The distinct guard
+against inferring processing from report issuance remains active. A negative
+before/after regression verifies retention; final production assessment
+confirmation remains pending.
+
+The actual soybean comparison recovery also exposed an older template assumption:
+it described an unprovided stable alternative and a dry site-year. General trial
+comparison now refers only to one supplied trial, makes any stable alternative
+conditional on demonstrated relevant performance, and compares candidates
+without inventing a supplied pair. Replication, regional adaptation, statistical
+separation, stability and economic checks remain. A before/after negative control
+reproduces the invented-premise defect independently of model generation.
 
 ## Scientific basis and task scope
 

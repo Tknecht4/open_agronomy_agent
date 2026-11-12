@@ -493,3 +493,23 @@ def test_persisted_regional_alert_keeps_counts_when_editor_cannot_complete(tmp_p
         assert len(result.stage_receipts) == 17
     finally:
         store._conn.close()
+
+
+def test_short_correct_date_roles_with_separately_are_preserved():
+    question = "My soil sample was collected May 12 and its report issued May 19. Which sampling date should I compare across seasons and how do I keep the other date?"
+    answer = "The soil sample collection date should be May 12. Preserve the lab report issuance date of May 19 separately, because it represents a different event."
+    result = verify_answer(answer, question=question, evidence_text="", question_type="field_data", risk_level="low",
+        editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert result.answer == answer and not result.fallback_applied
+
+
+def test_single_trial_method_does_not_invent_a_stable_alternative_or_dry_site():
+    from agronomy_agent.answer_verifier import _decision_route_failure_answer
+    question = "One soybean variety topped one trial. What evidence should we compare before choosing it across Canadian regions?"
+    state = build_decision_route_state(question, "crop_management")
+    assert state.decision == "variety_trial_selection"
+    answer = _decision_route_failure_answer(state)
+    assert answer
+    assert "stable variety" not in answer and "dry site-year" not in answer
+    assert "retain both" not in answer
+    assert "statistical separation" in answer and "multi-year" in answer
