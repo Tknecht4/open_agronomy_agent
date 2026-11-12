@@ -25,6 +25,10 @@ scope and retained evidence independently of the earlier automated labels.
    analysis-role assertions. A question about an analysis date does not supply
    one; a separately declared analysis event does. Positive retention controls,
    negative inference controls and persisted turns cover both directions.
+   A follow-up control reproduced two failures on day-first date notation in
+   the initial repair. Preserve supplied day-first and ordinal dates as well as
+   month-first, ISO and numeric dates. The superseded partial full-suite run is
+   retained and does not qualify the corrected source.
 
 3. **Root swelling was being promoted into a crop-independent clubroot concern.**
    The added word-order alias routed soybean, corn, carrot and potato symptoms

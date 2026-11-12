@@ -1297,11 +1297,12 @@ def _destroys_diagnostic_sampling_contrast(question: str, answer: str) -> bool:
 
 def _sample_analysis_date_supplied(question: str) -> bool:
     """A question about an analysis date is not a supplied analysis event."""
-    date = (
-        r"(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?|"
+    month = (
         r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|"
-        r"Aug(?:ust)?|Sept?(?:ember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2})"
+        r"Aug(?:ust)?|Sept?(?:ember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)"
     )
+    day = r"\d{1,2}(?:st|nd|rd|th)?"
+    date = rf"(?:\d{{4}}-\d{{1,2}}-\d{{1,2}}|\d{{1,2}}[/-]\d{{1,2}}(?:[/-]\d{{2,4}})?|{month}\s+{day}|{day}\s+{month})"
     return bool(re.search(
         rf"\b(?:(?:processing|analysis) date\s*(?:(?:was|is)\s+|:\s*)?|"
         rf"(?:processed|analy[sz]ed)\s+(?:on\s+)?){date}\b", question, re.I,

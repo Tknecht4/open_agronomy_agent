@@ -512,9 +512,10 @@ def test_sample_analysis_role_cannot_be_inferred_from_report_issuance(ending):
     assert ending not in result.answer and result.fallback_applied
 
 
-def test_explicitly_supplied_analysis_event_is_not_treated_as_inferred():
-    question = "The soil sample was collected May 12 and the lab report was issued May 19. The analysis date was May 18. Which sampling date should I compare across seasons?"
-    answer = "Use May 12 as the collection date. Preserve May 19 as the report issuance date in a separate field. The analysis date is May 18, a separately supplied event."
+@pytest.mark.parametrize("analysis_date", ["May 18", "18 May", "18th May", "2026-05-18", "18/05/2026"])
+def test_explicitly_supplied_analysis_event_is_not_treated_as_inferred(analysis_date):
+    question = f"The soil sample was collected May 12 and the lab report was issued May 19. The analysis date was {analysis_date}. Which sampling date should I compare across seasons?"
+    answer = f"Use May 12 as the collection date. Preserve May 19 as the report issuance date in a separate field. The analysis date is {analysis_date}, a separately supplied event."
     result = verify_answer(answer, question=question, evidence_text="", question_type="field_data", risk_level="low",
         editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
     assert result.answer == answer and not result.triggered
