@@ -9,6 +9,7 @@ from agronomy_agent.decision_route import DecisionRouteState, build_decision_rou
 from agronomy_agent.decision_contract import AgronomyDecisionContract, obligation_coverage
 from agronomy_agent.evidence_authority import classify_evidence_authority
 from agronomy_agent.router import evidence_interpretation_kind, explanation_focus_query
+from agronomy_agent.answerability import simple_definition_subject
 
 
 _GENERIC_TAGS = {
@@ -206,7 +207,7 @@ class EvidenceHandshake:
         primary = (
             f"[{self.primary_doc_id}] {self.primary_title}"
             if self.primary_doc_id and self.primary_title
-            else "none; hold unsupported factual commitments"
+            else "none; a bounded general explanation is allowed, but do not invent source results, field measurements or action authority"
         )
         supporting = ", ".join(f"[{doc_id}]" for doc_id in self.supporting_doc_ids) or "none"
         roles = "; ".join(
@@ -219,12 +220,11 @@ class EvidenceHandshake:
         return (
             "Compact evidence handshake:\n"
             f"- Decision: {self.decision}\n"
+            "- Commit rule: answer the named question; preserve applicable source scope. Hold unsupported field-specific claims or source-result claims, not an otherwise useful general explanation.\n"
             f"- Preserve: {entities}.\n"
             f"- Primary decision evidence: {primary}. Supporting or boundary evidence: {supporting}.\n"
             f"- Evidence roles: {roles}.\n"
             f"- Authority axes: {authorities}.\n"
-            "- Commit rule: answer the named decision first; use primary evidence for agronomic logic, use boundary evidence only to constrain it, "
-            "and do not switch crop, problem, or operation. If primary evidence does not support the decision, state the hold explicitly."
         )
 
 
@@ -540,6 +540,18 @@ def _classify_evidence_role(
     if retrieval_policy == "requires_live_authority":
         return "boundary", "live_authority_not_decisive"
     if retrieval_policy == "context_only":
+        subject = simple_definition_subject(state.question)
+        if (
+            subject
+            and doc.source_type not in {"boundary", "regional_environment_profile", "regional_environment"}
+            and not _definition_context_fit(subject, doc)
+        ):
+            return "distractor", "unrelated_to_definition_subject"
+        if state.decision == "variety_trial_selection" and doc.source_type == "ontology" and not re.search(
+            r"\b(?:variet\w*|cultivar\w*|hybrid\w*|trial\w*|replicat\w*|maturity|photoperiod|yield|lodging|adaptation|disease|salinity|pH|drainage)\b",
+            " ".join((doc.title, doc.text, *doc.tags)), re.I,
+        ):
+            return "distractor", "ontology_not_variety_comparison_evidence"
         if _is_named_regional_product_interpretation(state, doc):
             return "interpretive", "named_regional_product_interpretation"
         if (
@@ -651,6 +663,20 @@ def _classify_evidence_role(
             return capsule_role
 
     return "supporting", "general_support"
+
+
+def _definition_context_fit(subject: str, doc: RetrievedDoc) -> bool:
+    # A context-only management paragraph mentioning texture incidentally is
+    # not a definition. Keep topic references and definitions inside broad works.
+    terms = set(re.findall(r"[a-z0-9]+", subject)) - {"soil", "crop", "the", "a", "an", "of"}
+    terms = terms or set(re.findall(r"[a-z0-9]+", subject))
+    identity = set(re.findall(r"[a-z0-9]+", " ".join((doc.title, *doc.tags)).lower()))
+    if terms and terms <= identity:
+        return True
+    return bool(re.search(
+        rf"\b{re.escape(subject)}\s+(?:is|are|means|refers? to|describes?|consists? of|comprises?)\b",
+        doc.text, re.I,
+    ))
 
 
 def _is_named_regional_product_interpretation(

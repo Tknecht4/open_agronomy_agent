@@ -14,6 +14,19 @@ instructions and revisit marked locations. Symptoms can have biological,
 weather, soil or application causes. See [Alberta field scouting](https://www.alberta.ca/index.php/field-scouting)
 and [Manitoba sample submission instructions](https://www.gov.mb.ca/agriculture/crops/crop-diagnostic-services/pubs/sample-submission-instructions.pdf).
 
+For a nutrient sampling plan, keep contrasting landscape and management zones
+separate; an eroded knoll, wet depression and old manure strip need not be
+represented by one whole-field average. Record the sampling depth and date and
+keep handling and laboratory methods comparable. [Alberta's sampling guidance](https://www1.agric.gov.ab.ca/%24department/deptdocs.nsf/all/agdex1341)
+and [British Columbia's sampling-zone guidance](https://www2.gov.bc.ca/gov/content/industry/agriculture-seafood/agricultural-land-and-environment/soil-nutrients/nutrient-management/what-to-apply/soil-nutrient-testing/soil-sampling-methods-tools)
+support representative sampling. Test-specific depths, seasonal timing and
+nutrient calibration still need the applicable local protocol.
+
+Use the actual collection date when comparing sampling events across seasons.
+Keep the laboratory report issuance date separately, linked to the sample and
+original report. Issuance does not establish when laboratory processing or
+analysis occurred; retain those dates separately when supplied.
+
 Edge pest counts alone cannot establish whole-field density. Match a current
 crop-and-pest threshold to the actual sampling units, representative interior
 counts, growth stage, population trend and beneficial insects. Bloom and
@@ -22,6 +35,25 @@ pollinator restrictions still apply to an evening application. The
 describes representative sampling; [Alberta's threshold guidance](https://www.alberta.ca/economic-thresholds-for-insects-attacking-special-crops)
 also shows why crop value and control costs affect interpretation. Neither is
 an exact product's current application label.
+
+Matching threshold units means comparing the same counting basis; a per-plant
+count is not a per-sweep count without a validated relationship. Treatment
+thresholds alone do not establish whether a sample is representative or precise
+enough. Sparse, variable or borderline observations can require more sampling,
+and below-threshold populations may still need monitoring. See
+[Minnesota scouting methods](https://extension.umn.edu/agriculture/crop-production/soybean/scouting-for-soybean-aphid)
+and [Iowa State scouting guidance](https://crops.extension.iastate.edu/encyclopedia/soybean-aphid).
+Their crop-specific numerical thresholds are not transferred here.
+
+A product rate describes the commercial formulation on its stated application
+basis. A field nutrient application rate commonly describes nutrient mass per
+area; other systems may use an explicitly stated concentration/volume basis.
+Use the declared nutrient basis and product analysis for conversion. A pesticide
+label specifies the applicable use directions and rate basis; an application
+rate is distinct from a residue limit in food. See [EPA label guidance](https://www.epa.gov/pesticide-labels/introduction-pesticide-labels)
+and [residue-tolerance definitions](https://www.epa.gov/pesticide-tolerances/setting-tolerances-pesticide-residues-foods).
+A historical quantity does not authorize a current application, and a terminology
+explanation does not select a product or field target.
 
 Suspected late blight deserves prompt local diagnostic attention; collapse
 after wet weather alone does not identify the cause. Inspect fresh foliage,

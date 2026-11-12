@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from agronomy_agent.map_component_interpretation import is_map_component_explanation_question
 from agronomy_agent.observation_guidance import observation_guidance
+from agronomy_agent.answerability import is_rate_basis_explanation, product_action_request_text
 
 
 _AAFC_CROP_HEALTH_PRODUCT_PATTERN = (
@@ -143,7 +144,7 @@ def _routing_text(question: str) -> str:
     agronomy concepts with the same policies used for English questions.
     """
 
-    text = question.lower()
+    text = product_action_request_text(question).lower()
     if not re.search(
         r"\b(?:est-ce(?: que)?|puis-je|dois-je|j'ai|je |mon |ma |mes |cela|qu'il|dont|"
         r"aucun|seulement|avant d'|pourquoi ne pas|combien de|comment l'agent|"
@@ -211,6 +212,15 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     field evidence. It does not encode benchmark answers.
     """
 
+    if is_rate_basis_explanation(question):
+        return QueryRoute(
+            question_type="exam_review", risk_level="low",
+            namespaces=("exam_review", "product_stewardship"), required_tools=(),
+            answer_style="exam_review", audience=route.audience,
+            query_expansion=("product rate", "nutrient basis"),
+            guidance="Explain the named rate bases directly; do not choose a product dose or a field nutrient target.",
+            knowledge_bucket="farmer_knowledge", knowledge_domains=("farmer_knowledge",),
+        )
     q = _routing_text(question)
     benign_conceptual_explanation = _is_benign_conceptual_explanation(question)
     qtype = route.question_type
@@ -852,7 +862,7 @@ def _is_benign_conceptual_explanation(text: str) -> bool:
         r"\b(?:herbicide|fungicide|insecticide|pesticide|tank mix|product[- ]?label|"
         r"label|rates?|dose|dosage|threshold|how much|"
         r"pre[- ]?harvest interval|restricted[- ]?entry interval|phi|rei|ppe)\b",
-        focus,
+        re.sub(r"\bthreshold units\b", "measurement basis", focus, flags=re.I),
     ) or _is_named_product_permission_request(text)
     diagnostic_observation = has(
         r"\b(?:symptoms?|lesions?|leaf spots?|root rot|yellow(?:ing)?|pale|wilting|"

@@ -844,3 +844,23 @@ def test_cleanup_origin_rejects_contradictory_records(changes):
         'localized_cleanup': {'kind': 'leading_control_capsule', 'retained_prose_unchanged': True, 'editor_invoked': False}}
     with pytest.raises(ValueError):
         classify_verification_origin(record | changes, draft_sha256='a', post_verification_sha256='b')
+
+
+@pytest.mark.parametrize('changes', [
+    {'draft_assessment': {'reasons': []}},
+    {'draft_assessment': {'reasons': None}},
+    {'final_assessment': {'reasons': None}},
+    {'final_assessment': {'reasons': ['unsupported_numbers']}},
+    {'localized_cleanup': {'kind': 'unasked_application_instruction', 'removed_text': []}},
+    {'fallback_applied': True},
+])
+def test_application_cleanup_requires_named_defect_and_known_clean_remainder(changes):
+    from agronomy_agent.execution_core import classify_verification_origin
+    record = {'triggered': True, 'fallback_applied': False, 'rewrite_accepted': False,
+        'draft_assessment': {'reasons': ['unasked_application_instruction']},
+        'final_assessment': {'reasons': []},
+        'localized_cleanup': {'kind': 'unasked_application_instruction', 'removed_text': ['Unasked instruction.'],
+            'retained_prose_unchanged': True, 'editor_invoked': False}}
+    assert classify_verification_origin(record, draft_sha256='a', post_verification_sha256='b')['verification_action'] == 'localized_cleanup'
+    with pytest.raises(ValueError):
+        classify_verification_origin(record | changes, draft_sha256='a', post_verification_sha256='b')

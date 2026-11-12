@@ -151,7 +151,7 @@ _DOMAIN_RULES: tuple[_DomainRule, ...] = (
         primary_intent="plant_health",
         signals=(
             (r"\bclubroot\b", 7),
-            (r"\b(?:swollen roots?|galls?|dying patch)\b", 4),
+            (r"\b(?:swollen roots?|roots?\s+(?:are|look|appear)\s+swollen|galls?|dying patch)\b", 4),
             (r"\b(?:approach|entrance|what do I do|today|contain|sanitation)\b", 3),
             (r"\b(?:soil[- ]movement|precautions?|restrict\w* traffic|equipment clean\w*)\b", 4),
         ),
@@ -360,6 +360,18 @@ def build_decision_capsule(question: str, *, crop: str | None = None) -> Decisio
     lower = " ".join(question.lower().split())
     scored: list[tuple[int, int, _DomainRule]] = []
     for order, rule in enumerate(_DOMAIN_RULES):
+        if rule.name == "clubroot_containment" and not re.search(r"\bclubroot\b", lower):
+            # Swelling or galls are not crop-independent evidence of clubroot.
+            # Preserve explicit soil/rotation concerns even in a nonhost year.
+            host_context = (
+                crop in {None, "canola", "field vegetables", "leafy greens"} and bool(re.search(
+                    r"\b(?:canola|rapeseed|mustard|brassica\w*|crucifer\w*|cole crops?|"
+                    r"cabbage|broccoli|cauliflower|brussels sprouts|kale|kohlrabi|radish|rutabaga|turnip)\b",
+                    lower,
+                ))
+            )
+            if not host_context:
+                continue
         score = sum(weight for pattern, weight in rule.signals if re.search(pattern, lower, re.IGNORECASE))
         scored.append((score, -order, rule))
     score, _, rule = max(scored, key=lambda item: (item[0], item[1]))

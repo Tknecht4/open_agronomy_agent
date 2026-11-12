@@ -3,11 +3,15 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from agronomy_agent.answerability import is_rate_basis_explanation, product_action_request_text
+
 
 HIGH_CONSEQUENCE_SCHEMA = "open_agronomy_agent.high_consequence_policy.v1"
 
 
 def fertility_quantity_requested(question: str) -> bool:
+    if is_rate_basis_explanation(question):
+        return False
     # Fertilizer shorthand is case-sensitive here: a possessive "label's rate"
     # is not a sulphur request. Numeric proposals below have their own units.
     nutrient = r"(?:fertiliz\w*|fertilis\w*|nitrogen|urea|urée|phosphorus|potassium|sulphur|sulfur|manure|lime|N|engrais|azote|phosphore|soufre|fumier|chaux|(?-i:(?<!['’])(?:P2O5|K2O|P|K|S)))"
@@ -53,6 +57,8 @@ def fertility_quantity_requested(question: str) -> bool:
 
 
 def classify_high_consequence_domains(question: str) -> list[str]:
+    if is_rate_basis_explanation(question):
+        return []
     domains: list[str] = []
     product_term = re.search(
         r"\b(?:spray|herbicide|fungicide|insecticide|pesticide|product|tank mix|adjuvant|label|registration|"
@@ -64,14 +70,14 @@ def classify_high_consequence_domains(question: str) -> list[str]:
         r"\b(?:can|should|may|would|do)\s+(?:i|we)\b|\b(?:use|apply|spray|mix|recommend|choose|select)\b"
         r"|\b(?:rate|timing|interval|preharvest|re-entry|grazing restriction)\b"
         r"|\b(?:puis-je|devrais-je|peut-on|utiliser|appliquer|pulvériser|mélanger|recommander|choisir|"
-        r"taux|dose|moment|délai|avant récolte|rentrée|restriction de pâturage)\b",
-        question,
+        r"taux|dose(?![-\s]+r[eé]s?ponse\b)|moment|délai|avant récolte|rentrée|restriction de pâturage)\b",
+        product_action_request_text(question),
         re.IGNORECASE,
     )
     if product_term and product_action:
         domains.append("product_label")
     explicit_rate_request = re.search(
-        r"\b(?:how much(?!\s+(?:confidence|certainty|trust)\b)|what rate|rate should|dose|apply per|fertilizer rate|"
+        r"\b(?:how much(?!\s+(?:confidence|certainty|trust)\b)|what rate|rate should|dose(?![-\s]+r[eé]s?ponse\b)|apply per|fertilizer rate|"
         r"nitrogen rate|phosphorus rate|combien|quel(?:le)? taux|quel(?:le)? dose|"
         r"dose par|taux d['’](?:engrais|azote|phosphore))\b",
         question,

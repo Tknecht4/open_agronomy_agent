@@ -34,6 +34,8 @@ _LEAK_PATTERNS: tuple[tuple[str, str, re.Pattern[str]], ...] = (
     ("coverage_checklist", "high", _internal_label_pattern("answer coverage checklist")),
     ("management_lane", "high", _internal_label_pattern("management lane")),
     ("decision_focus", "high", _internal_label_pattern("decision focus")),
+    ("decision_evidence_requirements", "high", _internal_label_pattern("decision evidence requirements")),
+    ("explanation_task", "high", _internal_label_pattern("explanation task")),
     ("start_answer_instruction", "high", re.compile(r"Start the answer with", re.IGNORECASE)),
     ("evidence_handshake", "high", re.compile(r"\bcompact evidence handshake\b", re.IGNORECASE)),
     ("primary_decision_evidence", "high", re.compile(r"\bprimary decision evidence\s*:", re.IGNORECASE)),

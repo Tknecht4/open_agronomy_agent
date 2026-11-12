@@ -179,7 +179,7 @@ def test_clubroot_recovery_answers_rotation_question_and_does_not_invent_local_p
 def test_potato_diagnostic_method_does_not_invent_a_province():
     answer = bounded_decision_support("My potato leaves have lesions; should I spray?", "plant_health")
     assert "New Brunswick" not in answer
-    assert "current applicable provincial potato" in answer
+    assert "current applicable local potato" in answer
 
 
 def test_seasonal_water_snapshot_requires_repeat_sampling_and_joint_sodium_interpretation():

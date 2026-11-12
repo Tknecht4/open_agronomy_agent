@@ -23,10 +23,11 @@ from agronomy_agent.query_context import (
 from agronomy_agent.router import request_focus, evidence_interpretation_kind
 from agronomy_agent.model_prompt_budget import positive_int, prompt_budget_receipt
 from agronomy_agent.model_errors import LocalModelSnapshotUnavailable
-from agronomy_agent.quantity_claims import unsupported_quantities
+from agronomy_agent.quantity_claims import unsupported_quantities, remove_numeric_application_instructions
 from agronomy_agent.execution_core import stable_sha256
-from agronomy_agent.observation_guidance import observation_guidance
+from agronomy_agent.observation_guidance import observation_guidance, sample_event_roles_stated, POTATO_MONITORING_ANSWER
 from agronomy_agent.high_consequence import classify_high_consequence_domains, fertility_quantity_requested
+from agronomy_agent.answerability import simple_definition_subject, is_rate_basis_explanation
 
 
 def editor_observation_record(observation: Mapping[str, Any]) -> dict[str, Any]:
@@ -237,7 +238,7 @@ _INTERNAL_PROCESS_RE = re.compile(
 )
 _INTERNAL_CONTROL_CAPSULE_RE = re.compile(
     r"^\s*(?:[-*]\s*)?(?:[*_`#]+\s*)?(?:preserve|primary decision evidence|supporting or boundary evidence|"
-    r"decision control state|crop frame|decisive evidence|constraints|evidence role|guard notes|route guidance)\s*:",
+    r"decision control state|crop frame|decisive evidence|decision evidence requirements|explanation task|constraints|evidence role|guard notes|route guidance)\s*:",
     re.IGNORECASE | re.MULTILINE,
 )
 _VACUOUS_INSTRUCTION_ECHO_RE = re.compile(
@@ -1294,6 +1295,20 @@ def _destroys_diagnostic_sampling_contrast(question: str, answer: str) -> bool:
     return False
 
 
+def _sample_analysis_date_supplied(question: str) -> bool:
+    """A question about an analysis date is not a supplied analysis event."""
+    month = (
+        r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|"
+        r"Aug(?:ust)?|Sept?(?:ember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)"
+    )
+    day = r"\d{1,2}(?:st|nd|rd|th)?"
+    date = rf"(?:\d{{4}}-\d{{1,2}}-\d{{1,2}}|\d{{1,2}}[/-]\d{{1,2}}(?:[/-]\d{{2,4}})?|{month}\s+{day}|{day}\s+{month})"
+    return bool(re.search(
+        rf"\b(?:(?:processing|analysis) date\s*(?:(?:was|is)\s+|:\s*)?|"
+        rf"(?:processed|analy[sz]ed)\s+(?:on\s+)?){date}\b", question, re.I,
+    ))
+
+
 def assess_claim_risk(
     answer: str,
     *,
@@ -1409,6 +1424,35 @@ def assess_claim_risk(
         reasons.append("scope_drift")
     if missing_intent_facets:
         reasons.append("missing_decision_content")
+    if is_rate_basis_explanation(question) and remove_numeric_application_instructions(candidate)[1]:
+        reasons.append("unasked_application_instruction")
+    if sample_event_roles_stated(question) and not _sample_analysis_date_supplied(question):
+        for clause in re.split(r"[.!?;\n]", candidate):
+            if re.search(
+                r"\b(?:date (?:the )?lab(?:oratory)? (?:processed|analy[sz]ed)|(?:lab(?:oratory)? )?(?:processing|analysis) date)\b",
+                clause, re.I,
+            ) and not re.search(
+                r"\b(?:not|unknown|unprovided|unavailable|unspecified|unreported|"
+                r"cannot(?: be)? infer\w*|can't(?: be)? infer\w*|if provided|if supplied)\b", clause, re.I
+            ):
+                reasons.append("sample_event_role_conflation")
+    definition = simple_definition_subject(question)
+    if definition in {"soil texture"}:
+        for clause in re.split(r"[.!?;\n]", candidate):
+            if re.search(r"\btexture\b\s+(?:is|means|refers? to|describes?)\b[^.!?;]{0,85}\barrangement\b", clause, re.I) and not re.search(
+                r"\b(?:not(?!\s+(?:just|only|merely)\b)|rather than|structure)\b[^.!?;]{0,70}\barrangement\b", clause, re.I
+            ):
+                reasons.append("texture_structure_conflation")
+    if definition == "crop rotation":
+        drift_terms: set[str] = set()
+        for clause in re.split(r"[.!?;\n]", candidate):
+            if re.search(r"\b(?:not (?:be )?confused with|differs? from|distinct from|different from)\b[^.!?;]{0,70}\b(?:variet\w*|cultivar\w*|hybrid\w*)\b", clause, re.I):
+                continue
+            drift_terms.update(term.lower() for term in re.findall(
+                r"\b(?:standability|drydown|lodging|seed quality|trait package)\b", clause, re.I
+            ))
+        if len(drift_terms) >= 3:
+            reasons.append("definition_topic_drift")
     if evidence_commit_score is not None and evidence_commit_score < 0.4:
         reasons.append("weak_primary_evidence_alignment")
     if named_product_fidelity and missing_evidence_terms:
@@ -2348,6 +2392,23 @@ def _verify_answer_policy(
     docs = tuple(evidence_docs)
     entities = tuple(preserve_entities)
     required = tuple(required_entities)
+    if is_rate_basis_explanation(question):
+        application_cleaned, application_removed = remove_numeric_application_instructions(draft)
+        if application_removed:
+            retained = application_cleaned or bounded_decision_support(question, question_type)
+            original_assessment = assess_claim_risk(draft, question=question, evidence_text=evidence_text,
+                question_type=question_type, risk_level=risk_level, evidence_docs=docs,
+                preserve_entities=entities, required_entities=required)
+            retained_assessment = assess_claim_risk(retained or "", question=question, evidence_text=evidence_text,
+                question_type=question_type, risk_level=risk_level, evidence_docs=docs,
+                preserve_entities=entities, required_entities=required)
+            if retained and not retained_assessment.reasons:
+                return AnswerVerificationResult(answer=retained, triggered=True, rewrite_accepted=False,
+                    fallback_applied=not bool(application_cleaned), draft_assessment=original_assessment,
+                    final_assessment=retained_assessment, draft_output=draft,
+                    selection_policy="localized_application_scope_cleanup_v1" if application_cleaned else "bounded_application_scope_recovery_v1",
+                    localized_cleanup=({"kind":"unasked_application_instruction", "removed_text":list(application_removed),
+                        "retained_prose_unchanged":True, "editor_invoked":False} if application_cleaned else None))
     cleaned, removed = _remove_leading_control_capsule(draft)
     if removed:
         original_assessment = assess_claim_risk(
@@ -3197,6 +3258,13 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
         add("clubroot_persistence", "Answer that one nonhost year does not eradicate persistent clubroot spores.", r"\b(?:does not|will not|cannot|not enough|not eradicate|not clean)\b[^.]{0,90}\b(?:clubroot|eradicat|clean|spores?)\b", r"\bspores?\b[^.]{0,60}\b(?:persist|years)\b")
 
     decision = build_decision_route_state(question, question_type).decision
+    if decision == "stratified_soil_sampling":
+        add("zone_samples", "Collect representative samples separately from contrasting management zones; do not average unlike zones.",
+            r"\bsampl\w*\b[^.]{0,90}\b(?:each|separate)\b[^.]{0,30}\bzone", r"\b(?:each|separate)\b[^.]{0,45}\bzone\b[^.]{0,60}\bsampl\w*\b", r"\bdo not (?:mix|combine)\b[^.]{0,45}\bzones?\b")
+        # A correct short separation method can answer whether one average is
+        # adequate. Detailed protocols remain useful recovery guidance, not
+        # extra mandatory facets for every zone-comparison question.
+        return tuple(requirements)
     if decision == "field_trafficability":
         add("traffic_profile", "Check soil condition below the surface, not surface appearance alone.", r"\b(?:subsoil|subsurface|below the surface|soil moisture|soil condition)\b")
         add("traffic_load", "Assess the intended equipment load and contact pressure.", r"\b(?:axle load|equipment load|tire pressure|track pressure|contact pressure)\b")
@@ -3376,7 +3444,7 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
         add("map_crop_business_fit", "Include market, equipment, labour, inputs, and expected economics.", r"\bmarket\b", r"\bequipment\b", r"\blabou?r\b", r"\beconomic")
     elif decision == "variety_trial_selection":
         add("variety_trial_scope", "Prefer replicated multi-year and multi-location evidence over a top result from one environment.", r"\bmulti[- ]year\b", r"\bmulti[- ]location\b", r"\bacross (?:years|sites)\b")
-        add("variety_statistics", "Use statistical separation and yield stability rather than rank alone.", r"\bstatistical", r"\bLSD\b", r"\bleast significant difference\b", r"\byield stability\b")
+        add("variety_statistics", "Check statistical separation or reported trial uncertainty before treating rank differences as real; yield stability alone does not establish that separation.", r"\bstatistical", r"\bLSD\b", r"\bleast significant difference\b", r"\bconfidence intervals?\b", r"\bstandard errors?\b", r"\b(?:reported|trial|sampling|yield) uncertainty\b")
         add("variety_adaptation", "Match maturity, disease, lodging, environment, and crop-purpose quality to the farm.", r"\bmaturity\b", r"\bdisease\b", r"\blodging\b", r"\badaptation\b")
         if re.search(r"\bsilage\b", lower):
             add("silage_quality", "Use silage trials with whole-plant yield, harvest moisture, starch, and fiber digestibility.", r"\bsilage trials?\b", r"\bwhole[- ]plant yield\b", r"\bstarch\b", r"\bfiber digest")
@@ -4214,7 +4282,7 @@ def _clubroot_guidance_scope(question: str, jurisdiction: str | None) -> str:
     )
     if len(candidates) == 1:
         return f"current {candidates[0]} clubroot guidance"
-    return "current applicable provincial clubroot guidance"
+    return "current applicable local clubroot guidance"
 
 
 def _decision_route_failure_answer(
@@ -4239,8 +4307,8 @@ def _decision_route_failure_answer(
     if decision == "clubroot_containment":
         guidance_scope = _clubroot_guidance_scope(state.question, jurisdiction)
         return (
-            "Swollen roots are a reason to suspect clubroot, not confirmation. One nonhost year does not eradicate clubroot; resting spores can persist for many years, and rotation reduces risk rather than proving a field clean. Check for susceptible brassica crops, volunteers and cruciferous weeds throughout the rotation. Treat this as suspected clubroot and act today to limit soil movement while arranging confirmation. Mark the patch and approach, keep unnecessary traffic out, work the suspect area last, and avoid moving soil, roots, or contaminated material to clean parts of the field. Before equipment, tools, or boots leave, remove adhering soil at the site and follow current provincial sanitation guidance; record where material and wash water go. "
-            "Dig several plants from the patch margin and normal plants outside it, keep roots intact, photograph the pattern and galls, and submit a representative sample through the provincial or diagnostic-lab pathway. Record crop stage, recent weather, field distribution and disease risk, rotation, variety, equipment movement, and symptom progression. Confirmation and "
+            "Swollen roots are a reason to suspect clubroot, not confirmation. One nonhost year does not eradicate clubroot; resting spores can persist for many years, and rotation reduces risk rather than proving a field clean. Check for susceptible brassica crops, volunteers and cruciferous weeds throughout the rotation. Treat this as suspected clubroot and act today to limit soil movement while arranging confirmation. Mark the patch and approach, keep unnecessary traffic out, work the suspect area last, and avoid moving soil, roots, or contaminated material to clean parts of the field. Before equipment, tools, or boots leave, remove adhering soil at the site and follow current applicable local sanitation guidance; record where material and wash water go. "
+            "Dig several plants from the patch margin and normal plants outside it, keep roots intact, photograph the pattern and galls, and submit a representative sample through an appropriate crop-diagnostic laboratory or local referral pathway. Record crop stage, recent weather, field distribution and disease risk, rotation, variety, equipment movement, and symptom progression. Confirmation and "
             f"{guidance_scope} should control longer-term rotation, resistant-variety, access, and sanitation decisions, but containment should not wait for the result."
         )
     if decision == "pesticide_rate_request":
@@ -4719,8 +4787,8 @@ def _decision_route_failure_answer(
                 "Include seed cost and the downside of poor feed quality or missed harvest moisture. If local silage evidence is thin, keep the discounted hybrid to an on-farm strip or limited acreage with a suitable comparator rather than projecting grain-trial performance to the whole silage program."
             )
         return (
-            "The stable variety should carry more weight than the one-year winner unless broader evidence shows a repeatable advantage. Compare replicated multi-year and multi-location trials from similar environments, including statistical separation or LSD and yield stability, rather than rank from one dry site-year. Match maturity and drought or soil adaptation with the reported disease resistance, lodging, test weight, protein or end-use quality, herbicide system, and market requirements. "
-            "Use seed cost in a partial budget and consider downside risk across fields. Where uncertainty remains material, retain both in a small on-farm comparison instead of committing the farm from one result."
+            "A top rank in one trial does not establish the best variety across regions. If another candidate has demonstrated stable performance in relevant trials, weigh that repeatability against the single-trial winner. Compare replicated multi-year and multi-location trials from similar environments, including statistical separation or LSD and yield stability, rather than rank from one trial. Match maturity and drought or soil adaptation with the reported disease resistance, lodging, test weight, protein or end-use quality, herbicide system, and market requirements. "
+            "Use seed cost in a partial budget and consider downside risk across fields. Where uncertainty remains material, compare locally adapted candidates in a small on-farm comparison instead of committing the farm from one result."
         )
     if decision == "integrated_preharvest_specialty":
         return (
@@ -5028,6 +5096,23 @@ def _exam_review_failure_answer(question: str) -> str:
     """Return only a topic-matched conceptual capsule; never substitute a lesson."""
 
     lower = question.lower()
+    subject = simple_definition_subject(question)
+    if subject in {"soil texture"}:
+        return (
+            "Soil texture describes the relative proportions of sand, silt and clay mineral particles. It influences "
+            "water storage, drainage and nutrient retention, but does not by itself establish a field's condition. "
+            "Soil structure is how particles are arranged into aggregates and pores; soils with the same texture "
+            "can have different structure and water movement. A field sample can identify your soil's texture, "
+            "but no sample is needed to explain the definition."
+        )
+    if subject in {"crop rotation"}:
+        return (
+            "Crop rotation is the planned sequence of crops grown in the same field over successive seasons. "
+            "Changing crop families, rooting patterns and planting or harvest timing can help manage soil cover, "
+            "nutrient cycling, water use and host-specific pests or diseases. Choose a sequence that fits the soil, "
+            "climate, farm resources and market. Rotation does not eradicate every pest: broad host ranges, "
+            "persistent soilborne survival structures and incoming inoculum can limit its effect."
+        )
     asks_nutrient_classification_or_mobility = bool(
         re.search(
             r"\b(?:(?:primary|secondary)\s+)?(?:macro|micro)nutrients?\b|"
@@ -5132,6 +5217,8 @@ def bounded_decision_support(question: str, question_type: str) -> str | None:
 def _conservative_failure_answer(question_type: str, *, question: str = "") -> str:
     if _looks_like_french(question):
         return _french_conservative_failure_answer(question_type)
+    if simple_definition_subject(question) in {"soil texture", "crop rotation"}:
+        return _exam_review_failure_answer(question)
     method = observation_guidance(question)
     if method:
         return method.answer
@@ -5167,11 +5254,8 @@ def _conservative_failure_answer(question_type: str, *, question: str = "") -> s
                 "Record crop stage, incidence, severity, symptom progression, drainage, variety, seed and application history. Contact a local potato specialist or diagnostic lab promptly for sampling and current disease alerts. A spray decision requires the working diagnosis, current local risk and exact crop/target/product label; a foliar spray will not correct every cause of collapse."
             )
         if re.search(r"\bpotato\w*\b", lower) and re.search(r"\blate blight\b", lower):
-            return (
-                "Scout representative areas of the potato crop regularly for late-blight symptoms, including places where the canopy stays damp longer. Inspect leaves, their undersides and stems for new or spreading lesions; early-morning scouting can help reveal signs before the canopy dries. "
-                "If suspect symptoms appear, photograph and locate them, compare suspect and nearby healthy plants, and promptly contact a local potato specialist or diagnostic lab for sampling instructions and confirmation. Follow current local disease alerts and crop-specific IPM guidance. "
-                "Use crop stage, local disease risk and forecasts, and the exact crop/target/product label to plan any preventive fungicide program; visible collapse is not a prerequisite for prevention planning."
-            )
+            return POTATO_MONITORING_ANSWER
+
         if decision_state.crop == "wheat" and re.search(r"\bwet planting|wet seedbed|poor growth after wet|patchy poor growth\b", lower):
             return (
                 "Do not treat patchy wheat growth after a wet planting period as a foliar disease by default. Map affected and normal areas, count plants and tillers, and dig intact seedlings to inspect seed, seminal and crown roots, crowns, mesocotyl or subcrown internode, and the depth and pattern of discoloration or decay. Compare planting depth, seed quality and treatment, soil temperature, saturation duration, drainage, compaction or crusting, herbicide and fertilizer placement, nutrient status, and root or crown disease; submit representative whole plants and soil when the cause remains unclear. "

@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from agronomy_agent.decision_capsule import DecisionCapsule, build_decision_capsule
 from agronomy_agent.query_context import analyze_query_context
 from agronomy_agent.router import request_focus, evidence_interpretation_kind
+from agronomy_agent.answerability import simple_definition_subject
+from agronomy_agent.observation_guidance import sample_event_roles_stated
 
 
 _US_ONLY_SOURCE_PATTERNS: tuple[tuple[str, str], ...] = (
@@ -70,8 +72,10 @@ class DecisionRouteState:
         lines = [f"Decision control state: {self.decision}."]
         if self.crop:
             lines.append(f"Crop frame: {self.crop}.")
-        if self.decisive_evidence:
-            lines.append("Decisive evidence: " + "; ".join(self.decisive_evidence) + ".")
+        if simple_definition_subject(self.question):
+            lines.append("Explanation task: give a bounded general explanation of the named concept without requiring field measurements.")
+        elif self.decisive_evidence:
+            lines.append("Decision evidence requirements: not observations; " + "; ".join(self.decisive_evidence) + ".")
         if self.constraints:
             lines.append("Constraints: " + "; ".join(self.constraints) + ".")
         if self.premise_anchors:
@@ -696,6 +700,12 @@ def build_decision_route_state(question: str, question_type: str = "") -> Decisi
     decisive = _decisive_evidence(decision, crop)
     premise_anchors = _premise_anchors(decision)
     constraints = [f"Use only field conditions stated in the question: {question.strip()}"]
+    if sample_event_roles_stated(question):
+        constraints.append(
+            "Keep stated event dates distinct: use the actual sample collection date for sampling comparisons; "
+            "preserve report issuance date and provenance separately. Report issuance alone does not establish "
+            "an analysis or processing date."
+        )
     if source_boundary:
         constraints.append(f"Reject the {source_boundary.upper()} coverage premise before giving field advice")
     if decision == "fertility_rate":
@@ -861,6 +871,10 @@ def build_decision_route_state(question: str, question_type: str = "") -> Decisi
 
 def _decision_name(lower: str, question_type: str) -> str:
     focus = request_focus(lower)
+    # A bounded explanation of matching count/threshold bases is not a
+    # treatment decision. The router retains action/field clauses before this.
+    if question_type == "exam_review" and re.search(r"\bthreshold units\b", lower):
+        return "exam_review"
     if re.search(r"\b(?:hail|storm|frost|rain|wind)\b", lower) and re.search(
         r"\b(?:tomorrow|tonight|at \d{1,2}(?::\d{2})?\s*(?:am|pm)|this afternoon|this evening)\b",
         lower,
@@ -1318,7 +1332,7 @@ def _decisive_evidence(decision: str, crop: str | None) -> tuple[str, ...]:
     if decision == "crop_stress_differential":
         return ("affected-versus-normal field pattern and symptom position", "stand, roots, crowns or growing points in affected and normal areas", "saturation duration, drainage, compaction, and recovery after drying", "fertilizer, manure, previous-crop, placement, and paired soil or tissue evidence")
     if decision == "clubroot_containment":
-        return ("suspected clubroot symptoms and a representative confirmation sample", "marking the patch and restricting traffic or soil movement", "cleaning soil from equipment before leaving the area", "current provincial clubroot containment and sanitation guidance")
+        return ("suspected clubroot symptoms and a representative confirmation sample", "marking the patch and restricting traffic or soil movement", "cleaning soil from equipment before leaving the area", "current applicable local clubroot containment and sanitation guidance")
     if decision == "fall_banded_nitrogen":
         return ("soil temperature and nitrogen form at fall application", "banded versus broadcast placement", "spring saturation, drainage and denitrification loss risk", "local moisture, seedbed and crop-response tradeoffs versus spring banding")
     if decision == "high_p_starter_decision":
