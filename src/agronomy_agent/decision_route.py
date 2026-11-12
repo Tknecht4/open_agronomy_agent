@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from agronomy_agent.decision_capsule import DecisionCapsule, build_decision_capsule
 from agronomy_agent.query_context import analyze_query_context
 from agronomy_agent.router import request_focus, evidence_interpretation_kind
+from agronomy_agent.answerability import simple_definition_subject
 
 
 _US_ONLY_SOURCE_PATTERNS: tuple[tuple[str, str], ...] = (
@@ -70,8 +71,10 @@ class DecisionRouteState:
         lines = [f"Decision control state: {self.decision}."]
         if self.crop:
             lines.append(f"Crop frame: {self.crop}.")
-        if self.decisive_evidence:
-            lines.append("Decisive evidence: " + "; ".join(self.decisive_evidence) + ".")
+        if simple_definition_subject(self.question):
+            lines.append("Explanation task: give a bounded general explanation of the named concept without requiring field measurements.")
+        elif self.decisive_evidence:
+            lines.append("Decision evidence requirements: not observations; " + "; ".join(self.decisive_evidence) + ".")
         if self.constraints:
             lines.append("Constraints: " + "; ".join(self.constraints) + ".")
         if self.premise_anchors:

@@ -967,6 +967,24 @@ def matching_rule_pack(question: str) -> DomainRulePack:
     )
 
 
+def simple_definition_subject(question: str) -> str | None:
+    """Identify a single benign definition without admitting a follow-on action."""
+    match = re.fullmatch(r"\s*what does\s+([^.!?;\n]+?)\s+mean[.!?]*\s*", question, re.I)
+    if match is None:
+        match = re.fullmatch(r"\s*(?:what (?:is|are)|define|explain)\s+([^.!?;\n]+?)[.!?]*\s*", question, re.I)
+    if match is None:
+        return None
+    subject = re.sub(r"^(?:a|an|the)\s+", "", match.group(1).strip().lower())
+    subject = {"soil textures": "soil texture", "crop rotations": "crop rotation"}.get(subject, subject)
+    if len(subject.split()) > 8 or re.search(
+        r"\b(?:and|or|how|why|whether|should|can|would|my|our|after|before|apply|spray|recommend)\b", subject
+    ):
+        return None
+    if matching_rule_pack(question).evidence_authority != "bounded_general_knowledge":
+        return None
+    return subject
+
+
 def assess_answerability(
     question: str,
     *,

@@ -27,6 +27,7 @@ from agronomy_agent.quantity_claims import unsupported_quantities
 from agronomy_agent.execution_core import stable_sha256
 from agronomy_agent.observation_guidance import observation_guidance
 from agronomy_agent.high_consequence import classify_high_consequence_domains, fertility_quantity_requested
+from agronomy_agent.answerability import simple_definition_subject
 
 
 def editor_observation_record(observation: Mapping[str, Any]) -> dict[str, Any]:
@@ -237,7 +238,7 @@ _INTERNAL_PROCESS_RE = re.compile(
 )
 _INTERNAL_CONTROL_CAPSULE_RE = re.compile(
     r"^\s*(?:[-*]\s*)?(?:[*_`#]+\s*)?(?:preserve|primary decision evidence|supporting or boundary evidence|"
-    r"decision control state|crop frame|decisive evidence|constraints|evidence role|guard notes|route guidance)\s*:",
+    r"decision control state|crop frame|decisive evidence|decision evidence requirements|explanation task|constraints|evidence role|guard notes|route guidance)\s*:",
     re.IGNORECASE | re.MULTILINE,
 )
 _VACUOUS_INSTRUCTION_ECHO_RE = re.compile(
@@ -1409,6 +1410,17 @@ def assess_claim_risk(
         reasons.append("scope_drift")
     if missing_intent_facets:
         reasons.append("missing_decision_content")
+    definition = simple_definition_subject(question)
+    if definition in {"soil texture"}:
+        for clause in re.split(r"[.!?;\n]", candidate):
+            if re.search(r"\btexture\b\s+(?:is|means|refers? to|describes?)\b[^.!?;]{0,85}\barrangement\b", clause, re.I) and not re.search(
+                r"\b(?:not|rather than|structure)\b[^.!?;]{0,70}\barrangement\b", clause, re.I
+            ):
+                reasons.append("texture_structure_conflation")
+    if definition in {"crop rotation"} and len(set(term.lower() for term in re.findall(
+        r"\b(?:standability|drydown|lodging|seed quality|trait package)\b", candidate, re.I
+    ))) >= 3:
+        reasons.append("definition_topic_drift")
     if evidence_commit_score is not None and evidence_commit_score < 0.4:
         reasons.append("weak_primary_evidence_alignment")
     if named_product_fidelity and missing_evidence_terms:
@@ -5028,6 +5040,23 @@ def _exam_review_failure_answer(question: str) -> str:
     """Return only a topic-matched conceptual capsule; never substitute a lesson."""
 
     lower = question.lower()
+    subject = simple_definition_subject(question)
+    if subject in {"soil texture"}:
+        return (
+            "Soil texture describes the relative proportions of sand, silt and clay mineral particles. It influences "
+            "water storage, drainage and nutrient retention, but does not by itself establish a field's condition. "
+            "Soil structure is how particles are arranged into aggregates and pores; soils with the same texture "
+            "can have different structure and water movement. A field sample can identify your soil's texture, "
+            "but no sample is needed to explain the definition."
+        )
+    if subject in {"crop rotation"}:
+        return (
+            "Crop rotation is the planned sequence of crops grown in the same field over successive seasons. "
+            "Changing crop families, rooting patterns and planting or harvest timing can help manage soil cover, "
+            "nutrient cycling, water use and host-specific pests or diseases. Choose a sequence that fits the soil, "
+            "climate, farm resources and market. Rotation does not eradicate every pest: broad host ranges, "
+            "persistent soilborne survival structures and incoming inoculum can limit its effect."
+        )
     asks_nutrient_classification_or_mobility = bool(
         re.search(
             r"\b(?:(?:primary|secondary)\s+)?(?:macro|micro)nutrients?\b|"
@@ -5132,6 +5161,8 @@ def bounded_decision_support(question: str, question_type: str) -> str | None:
 def _conservative_failure_answer(question_type: str, *, question: str = "") -> str:
     if _looks_like_french(question):
         return _french_conservative_failure_answer(question_type)
+    if simple_definition_subject(question) in {"soil texture", "crop rotation"}:
+        return _exam_review_failure_answer(question)
     method = observation_guidance(question)
     if method:
         return method.answer
