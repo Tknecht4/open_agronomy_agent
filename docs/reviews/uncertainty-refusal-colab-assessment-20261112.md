@@ -40,6 +40,9 @@ context for any remaining request. A bounded threshold-unit explanation keeps
 its explanation route; follow-on treatment requests retain their guards. The
 correct sampling-method draft survives the persisted production path without
 an unnecessary editor call or added field-label requirement.
+A final terminology control also reproduced a dose-response-curve explanation
+being classified as a dose request. Exclude that compound scientific term while
+retaining any separate request for a dose or application.
 
 ## Scientific basis and task scope
 

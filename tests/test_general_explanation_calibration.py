@@ -243,3 +243,10 @@ def test_threshold_unit_explanation_cannot_hide_a_follow_on_treatment(directive)
     route = refine_query_route(question, classify_query(question))
     assert assess_answerability(question, route=route).state.value != "answer_directly"
     assert "product_label" in classify_high_consequence_domains(question)
+
+
+def test_dose_request_backstop_does_not_promote_dose_response_terminology_to_action():
+    from agronomy_agent.high_consequence import classify_high_consequence_domains
+    assert classify_high_consequence_domains("Explain a pesticide dose-response curve in general.") == []
+    assert "product_label" in classify_high_consequence_domains("Do not choose a pesticide. Give me a dose.")
+    assert "product_label" in classify_high_consequence_domains("Explain a pesticide dose-response curve. What dose should I apply?")
