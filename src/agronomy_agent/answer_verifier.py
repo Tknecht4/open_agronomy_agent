@@ -1423,13 +1423,19 @@ def assess_claim_risk(
     if definition in {"soil texture"}:
         for clause in re.split(r"[.!?;\n]", candidate):
             if re.search(r"\btexture\b\s+(?:is|means|refers? to|describes?)\b[^.!?;]{0,85}\barrangement\b", clause, re.I) and not re.search(
-                r"\b(?:not|rather than|structure)\b[^.!?;]{0,70}\barrangement\b", clause, re.I
+                r"\b(?:not(?!\s+(?:just|only|merely)\b)|rather than|structure)\b[^.!?;]{0,70}\barrangement\b", clause, re.I
             ):
                 reasons.append("texture_structure_conflation")
-    if definition in {"crop rotation"} and len(set(term.lower() for term in re.findall(
-        r"\b(?:standability|drydown|lodging|seed quality|trait package)\b", candidate, re.I
-    ))) >= 3:
-        reasons.append("definition_topic_drift")
+    if definition == "crop rotation":
+        drift_terms: set[str] = set()
+        for clause in re.split(r"[.!?;\n]", candidate):
+            if re.search(r"\b(?:not (?:be )?confused with|differs? from|distinct from|different from)\b[^.!?;]{0,70}\b(?:variet\w*|cultivar\w*|hybrid\w*)\b", clause, re.I):
+                continue
+            drift_terms.update(term.lower() for term in re.findall(
+                r"\b(?:standability|drydown|lodging|seed quality|trait package)\b", clause, re.I
+            ))
+        if len(drift_terms) >= 3:
+            reasons.append("definition_topic_drift")
     if evidence_commit_score is not None and evidence_commit_score < 0.4:
         reasons.append("weak_primary_evidence_alignment")
     if named_product_fidelity and missing_evidence_terms:
@@ -3404,7 +3410,7 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
         add("map_crop_business_fit", "Include market, equipment, labour, inputs, and expected economics.", r"\bmarket\b", r"\bequipment\b", r"\blabou?r\b", r"\beconomic")
     elif decision == "variety_trial_selection":
         add("variety_trial_scope", "Prefer replicated multi-year and multi-location evidence over a top result from one environment.", r"\bmulti[- ]year\b", r"\bmulti[- ]location\b", r"\bacross (?:years|sites)\b")
-        add("variety_statistics", "Use statistical separation and yield stability rather than rank alone.", r"\bstatistical", r"\bLSD\b", r"\bleast significant difference\b", r"\byield stability\b")
+        add("variety_statistics", "Check statistical separation or reported trial uncertainty before treating rank differences as real; yield stability alone does not establish that separation.", r"\bstatistical", r"\bLSD\b", r"\bleast significant difference\b", r"\bconfidence intervals?\b", r"\bstandard errors?\b", r"\b(?:reported|trial|sampling|yield) uncertainty\b")
         add("variety_adaptation", "Match maturity, disease, lodging, environment, and crop-purpose quality to the farm.", r"\bmaturity\b", r"\bdisease\b", r"\blodging\b", r"\badaptation\b")
         if re.search(r"\bsilage\b", lower):
             add("silage_quality", "Use silage trials with whole-plant yield, harvest moisture, starch, and fiber digestibility.", r"\bsilage trials?\b", r"\bwhole[- ]plant yield\b", r"\bstarch\b", r"\bfiber digest")

@@ -90,6 +90,21 @@ def test_definition_guard_keeps_an_explicit_texture_structure_distinction():
     assert result.answer == answer and not result.fallback_applied
 
 
+def test_texture_not_only_arrangement_is_still_a_conflation():
+    result = verify_answer("Soil texture is not just the arrangement of particles but also the relative proportions of sand, silt and clay. It affects water movement and nutrient retention.",
+        question="Define soil texture.", evidence_text="", question_type="conceptual", risk_level="low",
+        editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert "texture_structure_conflation" in result.draft_assessment.reasons
+
+
+def test_rotation_definition_can_explicitly_contrast_variety_selection():
+    answer = "Crop rotation is the planned sequence of crops in the same field across seasons. It differs from variety selection using standability, drydown and lodging: rotation concerns the crop sequence and its effects on soil cover, nutrient cycling and host-specific pest cycles. The appropriate sequence depends on local conditions and crop biology."
+    result = verify_answer(answer, question="Explain crop rotation.", evidence_text="", question_type="conceptual", risk_level="low",
+        editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert "definition_topic_drift" not in result.draft_assessment.reasons
+    assert result.answer == answer and not result.fallback_applied
+
+
 @pytest.mark.parametrize("question,answer", [
     ("What does soil texture mean?", "Soil texture describes the relative proportions of sand, silt and clay mineral particles. It influences water storage and nutrient retention. Soil structure describes how particles are arranged into aggregates; texture alone does not establish a field's drainage or condition."),
     ("Explain crop rotation.", "Crop rotation is the planned sequence of crops grown in the same field across seasons. It can help manage crop-specific pests, nutrient cycling, soil cover and water use. Benefits depend on the crop sequence, organism biology and local conditions; rotation does not eradicate every persistent disease."),
@@ -323,3 +338,13 @@ def test_date_method_does_not_remove_a_product_authority_request():
     question = "The soil sample was collected May 12 and the lab report was issued May 19. Which date should I preserve? Which herbicide rate should I spray today?"
     route = refine_query_route(question, classify_query(question))
     assert assess_answerability(question, route=route).state.value == "require_authority"
+
+
+def test_yield_stability_does_not_replace_statistical_separation_in_variety_comparison():
+    from agronomy_agent.answer_verifier import assess_claim_risk
+    question = "One soybean variety topped a trial. What evidence should we compare before choosing it across Canadian regions?"
+    answer = "Compare replicated multi-year and multi-location trials for yield stability. Match maturity, disease, lodging and adaptation to each region. Compare seed cost and downside risk and retain an on-farm comparison where uncertainty remains. The winner in one environment does not automatically establish the best cultivar for every farm."
+    assessment = assess_claim_risk(answer, question=question, evidence_text="", question_type="crop_management", risk_level="medium")
+    assert "variety_statistics" in assessment.missing_intent_facets
+    adequate = answer + " Check reported statistical separation or uncertainty before treating a small yield-rank difference as real."
+    assert "variety_statistics" not in assess_claim_risk(adequate, question=question, evidence_text="", question_type="crop_management", risk_level="medium").missing_intent_facets

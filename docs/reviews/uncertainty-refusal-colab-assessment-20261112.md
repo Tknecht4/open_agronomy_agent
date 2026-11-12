@@ -44,6 +44,12 @@ A final terminology control also reproduced a dose-response-curve explanation
 being classified as a dose request. Exclude that compound scientific term while
 retaining any separate request for a dose or application.
 
+The variety-comparison validator also treated “yield stability” as an alternative
+to statistical separation. These are distinct questions. Require the reported
+statistical separation or uncertainty before treating rank differences as real;
+stability alone cannot discharge that requirement. No actual trial result or
+numeric significance value is invented.
+
 ## Follow-ups from the matched GPU baseline
 
 The baseline completed all 87 production cells and all six required components,
