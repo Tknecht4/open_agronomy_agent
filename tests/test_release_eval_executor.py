@@ -44,6 +44,22 @@ def test_development_nested_cell_failure_retains_actual_leaf(tmp_path, monkeypat
                for node in evidence["nodes"])
 
 
+def test_failed_turn_stops_dependent_conversation_without_dispatching_later_requests(tmp_path, monkeypatch):
+    import agronomy_agent.release_eval_executor as executor
+    monkeypatch.setattr(executor, "TraceStore", _ReferenceStoreFixture)
+    calls = []
+    def fail(question, *_args, **_kwargs):
+        calls.append(question)
+        raise OSError("Synthetic first-turn failure")
+    monkeypatch.setattr(executor, "_production_turn", fail)
+    row = case(turns=["Explain a synthetic observation.", "Now interpret that answer."], question="")
+    row.pop("question")
+    result = run(tmp_path, row)
+    assert result["status"] == "failed"
+    assert len(result["turns"]) == 1 and result["turns"][0]["status"] == "failed"
+    assert calls == ["Explain a synthetic observation."]
+
+
 def test_development_exception_evidence_is_bounded_under_actual_result_encoding():
     from agronomy_agent.release_eval_executor import exception_evidence
     error = ExceptionGroup("Synthetic root", [ValueError("水" * 10000) for _ in range(40)])

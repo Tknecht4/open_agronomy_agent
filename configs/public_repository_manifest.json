@@ -842,7 +842,9 @@
     "docs/reviews/pr130-independent-agronomic-review-20261112.md",
     "tests/test_general_explanation_calibration.py",
     "docs/reviews/uncertainty-refusal-colab-assessment-20261112.md",
-    "docs/reviews/pr131-independent-review-20261112.md"
+    "docs/reviews/pr131-independent-review-20261112.md",
+    "docs/reviews/full-evaluation-20261112.md",
+    "tests/test_release_eval_external.py"
   ],
   "trees": [
     "src",

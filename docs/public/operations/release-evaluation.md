@@ -145,10 +145,27 @@ without retry and cannot turn unknown execution into a successful observation.
 
 ### Provider diagnostics
 
-The optional Python-only App Server integration is a nonqualifying diagnostic
-boundary, exercised with fake providers. It does not activate an HTTP route,
-change the active model, or add a supported release-runner profile. Native
-revision, editor and termination requirements remain unchanged.
+The optional App Server integration is a nonqualifying diagnostic boundary.
+An explicitly selected version-3 registry
+(`open_agronomy_agent.release_evaluation_registry.v3`) can wire
+`codex_app_server` into the canonical runner's existing profiles for
+`raw_model` and `production_full`. The default version-1 registry and its
+native MLX execution are unchanged. The diagnostic registry requires four
+content-pinned controls under `external_generation`: `authorization`, `suite`,
+`artifacts` and `static_prompts`. Each declares a repository-relative `path`
+and `sha256`. Controls bind the actual source and complete case inventory,
+are frozen before dispatch, and are rechecked before later cells. Effective
+per-trial configuration hashes select separately bound grants.
+
+This does not activate an HTTP route, select a new product model, grant egress
+authority, or qualify native provider weights. A hosted revision must be
+explicitly `null`. An attributed provider return is recorded separately from
+native model eligibility; missing effective output limits, terminal evidence
+and weight identity remain unknown. Native revision, editor and termination
+requirements remain unchanged. Lazy phase factories let valid deterministic
+bypasses avoid provider construction. A failed turn stops its dependent
+conversation, retaining the observed prefix instead of dispatching later turns
+without their antecedent.
 Retain application-message and transport-instruction hashes separately: the
 App Server text-only control also changes its raw-reference prompt recipe.
 
@@ -169,6 +186,32 @@ unknown. Local process closeout does not establish remote cancellation. Record
 every draft and editor attempt, including failed and unknown outcomes, without
 automatic retries. Such diagnostics cannot satisfy native qualification or
 support a matched three-model performance claim.
+
+### Complete comparison campaigns
+
+A campaign must declare its complete model/arm/trial matrix and freeze cases,
+controller rubrics, scoring policies, source, model revisions and budgets before
+generation. Run every declared cell and all six components for each canonical
+run. Preserve blocked, failed, interrupted and unknown outcomes. A case limit or
+a targeted regression panel cannot stand in for the full declared comparison.
+
+The retained 560-case comparison contains 36 harness scenarios, 256 successor
+development cases, 240 scientific-reference tasks and 28 CCA-reference tasks.
+The scientific and CCA references remain project-authored and pending expert
+alignment. With three configured backends, raw/full arms and two trials it
+contains 6,720 planned observations, including explicit synthetic fault controls.
+This is an exposed development instrument, not an independent holdout.
+Additional refusal/crop-scope regressions use a separately versioned cohort and
+policy, preserving the original cohort's denominator and weights. The repository
+README links the current campaign's reviewed record, whose status distinguishes
+planned work from completed observations.
+
+Keep reference answers, rubric text and numeric oracles in the controller;
+inspect the actual `worker_case` projection before dispatch. A Colab controller
+and its model workers remain separate boundaries. No controller gold enters
+runtime retrieval, generation prompts or training. Keep private overlays and
+grower records disabled. GPU observations describe their recorded environment;
+hosted-provider results do not establish native Mac timing or immutable weights.
 
 Larger finite output ceilings require a new frozen execution configuration and
 budget. They do not establish information retention or answer quality. Review

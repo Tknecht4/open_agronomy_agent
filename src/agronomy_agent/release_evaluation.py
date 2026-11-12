@@ -27,6 +27,7 @@ import yaml
 from agronomy_agent.benchmark_arms import ALL_ARM_IDS
 
 REGISTRY_SCHEMA = "open_agronomy_agent.release_evaluation_registry.v1"
+EXTERNAL_REGISTRY_SCHEMA = "open_agronomy_agent.release_evaluation_registry.v3"
 PLAN_SCHEMA = "open_agronomy_agent.release_evaluation_plan.v1"
 REPORT_SCHEMA = "open_agronomy_agent.release_evaluation_report.v1"
 SCORER_VERSION = "open_agronomy_agent.release_evaluation_scoring.v1"
@@ -299,7 +300,7 @@ def load_registry(
 ) -> dict[str, Any]:
     registry = json.loads(path.read_text(encoding="utf-8"))
     if (
-        registry.get("schema_version") != REGISTRY_SCHEMA
+        registry.get("schema_version") not in {REGISTRY_SCHEMA, EXTERNAL_REGISTRY_SCHEMA}
         or registry.get("claim_eligible") is not False
     ):
         raise ValueError("unsupported registry or claim-bearing release registry")
@@ -312,12 +313,23 @@ def load_registry(
             "registry must declare ci, smoke, baseline and release profiles"
         )
     for name, profile in registry["profiles"].items():
-        if profile.get("backend") != ("mock" if name == "ci" else "mlx"):
+        allowed = {"mock"} if name == "ci" else {"mlx"}
+        if name != "ci" and registry["schema_version"] == EXTERNAL_REGISTRY_SCHEMA:
+            allowed.add("codex_app_server")
+        if profile.get("backend") not in allowed:
             raise ValueError("only CI may use the mock default backend")
         _positive(profile.get("trials"), "trials", integer=True)
         _positive(
             profile.get("performance_repeats"), "performance_repeats", integer=True
         )
+    has_external = any(p["backend"] == "codex_app_server" for p in registry["profiles"].values())
+    if has_external:
+        from agronomy_agent.release_eval_external import read_external_inputs
+        read_external_inputs(registry.get("external_generation"), root)
+        if not set(registry.get("arms", [])) <= {"raw_model", "production_full"}:
+            raise ValueError("external generation supports only raw/full nonclaim arms")
+    elif "external_generation" in registry:
+        raise ValueError("external controls cannot alter native execution")
     if set(registry.get("required_components") or []) != COMPONENTS or len(
         registry["required_components"]
     ) != len(COMPONENTS):
@@ -766,7 +778,10 @@ def build_plan(
         )
     model_bytes = checked_path(root, registry["model_config"]).read_bytes()
     model = yaml.safe_load(model_bytes)
-    if not str(model.get("model_revision") or "").strip():
+    external_backend = registry["profiles"][profile]["backend"] == "codex_app_server"
+    if external_backend and ("model_revision" not in model or model["model_revision"] is not None):
+        raise ValueError("hosted provider revision must remain explicitly unknown")
+    if not external_backend and not str(model.get("model_revision") or "").strip():
         raise ValueError("revision-pinned model required")
     profile_config = registry["profiles"][profile]
     matrix = []
@@ -839,7 +854,7 @@ def build_plan(
             "prompt_cache_policy": "disabled",
             "retrieval_cache_policy": "shared_source_bound_compiled_index",
             "kernel_cache_policy": "runtime_managed",
-            "environment_policy": "discard_inherited_agronomy_overrides_native_mlx_offline",
+            "environment_policy": ("controlled_nonclaim_codex_text_transport_provider_revision_unknown" if external_backend else "discard_inherited_agronomy_overrides_native_mlx_offline"),
             "process_policy": "fresh_process_per_scenario",
             "case_order_policy": "seeded_trial_shuffle",
         },

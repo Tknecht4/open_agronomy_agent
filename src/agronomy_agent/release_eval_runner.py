@@ -631,7 +631,12 @@ def execute_worker(spec: Mapping[str, Any]) -> dict[str, Any]:
     directory = Path(spec["directory"])
     if kind == "product":
         from agronomy_agent.release_eval_executor import execute_product_case
-
+        factory_arguments = {}
+        if spec["cell"]["backend"] == "codex_app_server":
+            from agronomy_agent.release_eval_external import phase_factories
+            draft, editor = phase_factories(spec["external_generation"],
+                model_config=Path(spec["model_config"]), arm=spec["cell"]["arm_id"], max_tokens=spec["max_tokens"])
+            factory_arguments = {"generation_backend_factory": draft, "verification_backend_factory": editor}
         return execute_product_case(
             spec["case"],
             model_config=Path(spec["model_config"]),
@@ -641,6 +646,7 @@ def execute_worker(spec: Mapping[str, Any]) -> dict[str, Any]:
             max_tokens=spec["max_tokens"],
             output_dir=directory / "product",
             trial_id=spec["cell"]["trial_id"],
+            **factory_arguments,
         )
     if kind == "instrument":
         return _instrument_controls()
@@ -1121,6 +1127,10 @@ def run_suite(
     stop_input = read_stop_policy(stop_policy_path)
     stop_policy = stop_input["policy"] if stop_input else None
     registry = load_registry(registry_path)
+    external_inputs = {}
+    if "external_generation" in registry:
+        from agronomy_agent.release_eval_external import read_external_inputs
+        external_inputs = read_external_inputs(registry["external_generation"], ROOT)
     if profile == "release" and reference_path is None:
         raise ValueError("release profile requires a retained full reference report")
     if reference_path is not None and profile not in {"baseline", "release"}:
@@ -1140,6 +1150,9 @@ def run_suite(
         raise ValueError("review input must contain JSON objects")
     controller = read_controller_inputs(rubrics_path=model_rubrics_path, policy_path=model_policy_path)
     plan = bind_controller_inputs(build_plan(registry, profile=profile, run_id=run_id, limit=limit), controller, comparison_cohort)
+    if external_inputs:
+        from agronomy_agent.release_eval_external import validate_external_plan
+        validate_external_plan(external_inputs, plan)
     model_bytes = checked_path(ROOT, registry["model_config"]).read_bytes()
     if hashlib.sha256(model_bytes).hexdigest() != plan["model"]["config_sha256"]:
         raise ValueError("model config changed during planning")
@@ -1249,7 +1262,25 @@ def run_suite(
                     with path.open("xb") as handle:
                         handle.write(item["bytes"])
 
+            frozen_external = {}
+            for name, item in external_inputs.items():
+                path = output_dir / f"external-{name}.private.json"
+                if path.exists():
+                    if path.is_symlink() or path.read_bytes() != item["bytes"]:
+                        raise ValueError("frozen external control bytes changed")
+                else:
+                    preparation_guard(path, item["bytes"])
+                    with path.open("xb") as handle:
+                        handle.write(item["bytes"])
+                frozen_external[name] = {"path": str(path), "sha256": item["sha256"]}
+
             def verify_prospective_inputs():
+                if external_inputs:
+                    current_external = read_external_inputs(registry["external_generation"], ROOT)
+                    if any(current_external[name]["bytes"] != item["bytes"] or
+                           file_digest(Path(frozen_external[name]["path"])) != item["sha256"]
+                           for name, item in external_inputs.items()):
+                        raise ValueError("prospective external controls changed")
                 if stop_input:
                     current_stop = read_stop_policy(stop_policy_path)
                     if current_stop["bytes"] != stop_input["bytes"] or (output_dir / "stop-policy.private.json").read_bytes() != stop_input["bytes"]:
@@ -1450,6 +1481,7 @@ def run_suite(
                         "model_config": str(effective / f"model-{trial_id}.yaml"),
                         "rag_config": str(public_rag),
                         "max_tokens": registry["max_tokens"],
+                        **({"external_generation": frozen_external} if cell["backend"] == "codex_app_server" else {}),
                     }
                     result = (
                         dispatch(

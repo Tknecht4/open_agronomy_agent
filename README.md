@@ -40,6 +40,21 @@ Start with the [architecture](docs/public/architecture.md), [customization guide
 
 See [contributing](CONTRIBUTING.md), [support](SUPPORT.md), and [security reporting](SECURITY.md). Public screenshots and reports must use synthetic or redacted examples. Keep private records, credentials, and local filesystem paths out of publication.
 
+## Evaluate the current agent
+
+The [evaluation guide](docs/public/operations/release-evaluation.md) identifies
+the canonical runner, complete comparison matrix, controller-only references,
+and the distinction between software checks and agronomic evidence. Benchmark
+results depend on the exact source, model, cohort, arm and runtime. Raw-model,
+full-system and hosted Luna results retain their separate execution limits;
+neither a refusal nor a fluent answer establishes correctness.
+
+The [current full-evaluation record](docs/reviews/full-evaluation-20261112.md)
+tracks the rerun of merged main, refusal and crop-scope checks, and the complete
+comparison campaign. Its status explicitly distinguishes planned work from
+completed observations. Historical smoke panels and frozen benchmarks remain
+evidence for their original revisions.
+
 ## Evidence and licensing
 
 This is development and research software. Regional map context is a prior, calculated area is an estimate, and model output is not field truth or pesticide-label authority. Confirm consequential decisions with current local evidence and qualified professional judgment.

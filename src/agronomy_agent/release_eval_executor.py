@@ -365,6 +365,22 @@ def _selected_assertions(
     return selected, scope
 
 
+def _observed_hosted_return(turn: Mapping[str, Any]) -> bool:
+    """Observed attributed provider text is distinct from native weight identity."""
+    stats = turn.get("generation_stats") or {}
+    receipt = stats.get("app_server_receipt") or {}
+    egress = stats.get("benchmark_egress_receipt") or {}
+    identity = turn.get("model_identity") or {}
+    draft = turn.get("draft")
+    return (stats.get("backend") == "codex_app_server_chatgpt_auth"
+        and receipt.get("provider_status") == "completed"
+        and isinstance(identity.get("model_id"), str)
+        and receipt.get("selected_model") == identity["model_id"]
+        and all(isinstance(receipt.get(key), str) and receipt[key] for key in ("thread_id", "turn_id"))
+        and isinstance(draft, str)
+        and receipt.get("output_sha256") == egress.get("model_output_sha256") == hashlib.sha256(draft.encode()).hexdigest())
+
+
 def _reference_turn(
     question: str,
     *,
@@ -594,11 +610,11 @@ def _checks(
                 turn["generation_origin"],
             )
             if turn["model_execution"]["disposition"] == "model_generated":
-                check(
-                    f"{prefix}.real_generation_observed",
-                    turn["model_execution_eligible"],
-                    turn["model_execution"],
-                )
+                if case.get("_requested_backend") == "codex_app_server":
+                    check(f"{prefix}.attributed_hosted_return_observed", _observed_hosted_return(turn),
+                          {"scope": "provider_return_only; native_weights_and_effective_limits_unqualified"})
+                else:
+                    check(f"{prefix}.real_generation_observed", turn["model_execution_eligible"], turn["model_execution"])
         receipts = {row["stage_id"]: row for row in turn["stage_receipts"]}
         check(
             f"{prefix}.ordered_stages",
@@ -1137,7 +1153,9 @@ def execute_product_case(
                 except (AttributeError, RuntimeError):
                     pass
             result["turns"].append(turn)
-            if pending_control_flow is not None or (
+            # A later turn depends on a completed prior answer. Preserve the
+            # observed prefix when a turn fails instead of skipping past it.
+            if turn["status"] != "completed" or pending_control_flow is not None or (
                 checkpoint.attempted and turn.get("draft_checkpoint", {}).get("status") != "retained"
             ):
                 break
