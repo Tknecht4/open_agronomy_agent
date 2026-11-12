@@ -5,6 +5,21 @@ from agronomy_agent.context_packer import ContextPacker, _doc_policy_note
 from agronomy_agent.server.services.chat_service import _build_doc_snapshot
 
 
+def test_guard_and_graph_records_keep_complete_conditions_with_budget_receipts():
+    from agronomy_agent.context_packer import estimate_tokens
+    for slot in ("guard_summary", "kg_vocabulary_hints"):
+        records = [("too_long", "- too_long: " + "Required condition. " * 100),
+                   ("short", "- short: Complete source statement with its required condition."),
+                   ("overflow", "- overflow: " + "Another condition. " * 100)]
+        packer = ContextPacker({"slots": [{"slot": slot, "max_tokens": 30}]})
+        report, sections = {}, []
+        packer._append_complete_records(sections, slot, "Evidence:", records, budget_report=report)
+        assert sections[0].text == "Evidence:\n" + records[1][1]
+        assert estimate_tokens(sections[0].text) <= 30
+        assert report["record_budget"][slot]["selected_ids"] == ["short"]
+        assert report["record_budget"][slot]["dropped_ids"] == ["too_long", "overflow"]
+
+
 def _doc() -> RetrievedDoc:
     return RetrievedDoc(
         doc_id="source-scope-fixture", title="Soil test interpretation",

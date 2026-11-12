@@ -4320,6 +4320,7 @@ def _matching_outbound_line(
     normalized_text = re.sub(r"\s+", " ", text).strip()
     text_prefix = normalized_text[:48]
     truncated_text_prefix = normalized_text[:12]
+    fallback = None
     for raw_line in outbound_text.splitlines():
         line = raw_line.strip()
         if not line:
@@ -4336,9 +4337,9 @@ def _matching_outbound_line(
         )
         if identity_match and ("Excerpt:" in line or "Source:" in line or text_match):
             return line
-        if title_match and text_match:
-            return line
-    return None
+        if fallback is None and title_match and text_match:
+            fallback = line
+    return fallback
 
 
 def _shared_outbound_fragment(source_text: str, outbound_text: str, *, field: str) -> str:
@@ -4363,10 +4364,13 @@ def _benchmark_document_egress_records(
     records: list[dict[str, Any]] = []
     for doc in context.retrieved_docs:
         exact_source_projection = f"Source: {doc.title}: {doc.text}"
+        packed_marker = f"Title: {doc.title}. Source: {doc.source}. Excerpt: "
+        packed_header = next((line.strip() for line in outbound_text.splitlines()
+                              if f"[{doc.doc_id}]" in line and packed_marker in line), None)
         fragment = (
             exact_source_projection
             if exact_source_projection in outbound_text
-            else _matching_outbound_line(
+            else packed_header or _matching_outbound_line(
                 outbound_text,
                 identity=f"[{doc.doc_id}]",
                 title=doc.title,
@@ -4375,6 +4379,18 @@ def _benchmark_document_egress_records(
         )
         if fragment is None:
             continue
+        packed_source_fragment = None
+        if f"[{doc.doc_id}]" in fragment and packed_marker in fragment:
+            # Packed PDF excerpts retain newlines. Bind the actual source
+            # prefix, rather than treating its page-number header as the
+            # complete excerpt or borrowing words from the policy wrapper.
+            start = outbound_text.index(fragment)
+            excerpt_start = start + fragment.index(packed_marker) + len(packed_marker)
+            prefix = os.path.commonprefix([doc.text, outbound_text[excerpt_start:]])
+            if len(prefix.strip()) < min(8, len(doc.text.strip())) or not prefix.strip():
+                raise ValueError(f"benchmark egress could not bind document {doc.doc_id} to final outbound messages")
+            fragment = outbound_text[start:excerpt_start + len(prefix)].rstrip()
+            packed_source_fragment = prefix.strip()
         relative = _repository_relative_path(doc.corpus_path)
         corpus_path_sha256 = sha256_text(relative)
         allowed = allowed_corpora.get(corpus_path_sha256)
@@ -4402,7 +4418,7 @@ def _benchmark_document_egress_records(
             raise ValueError(
                 f"outbound benchmark document is not a member of its corpus: {doc.doc_id}"
             )
-        source_text_fragment = _shared_outbound_fragment(
+        source_text_fragment = packed_source_fragment or _shared_outbound_fragment(
             doc.text,
             fragment,
             field=f"document {doc.doc_id}",
@@ -4445,7 +4461,10 @@ def _benchmark_graph_egress_records(
     allowed_graphs = artifact_contract.get("allowed_graphs") or {}
     records: list[dict[str, Any]] = []
     for hit in context.graph_hits:
-        fragment = _matching_outbound_line(
+        header = f"- {hit.name} ({hit.kind}): "
+        fragment = next((line.strip() for line in outbound_text.splitlines()
+                         if line.strip().startswith(header)), None)
+        fragment = fragment or _matching_outbound_line(
             outbound_text,
             identity=str(getattr(hit, "node_id", "") or ""),
             title=str(getattr(hit, "name", "") or ""),

@@ -393,9 +393,11 @@ def product_action_request_text(question: str) -> str:
     Keep the product context and every remaining request available to policy.
     A coordinated directive cannot disappear inside this narrow exclusion.
     """
+    declined_object = r"(?:real field target|pesticide|herbicide|fungicide|insecticide|product)"
     return re.sub(
         r"(?:^|(?<=[.!?;]))\s*(?:do not|don't)\s+(?:choose|select|recommend)\s+"
-        r"(?:a|any)\s+(?:pesticide|herbicide|fungicide|insecticide|product)\s*(?:[.!?;]|$)",
+        rf"(?:a|any)\s+{declined_object}(?:\s+(?:or|and)\s+(?:(?:a|any)\s+)?{declined_object})*"
+        r"\s*(?:[.!?;]|$)",
         " ", question, flags=re.I,
     )
 
@@ -413,11 +415,14 @@ def is_rate_basis_explanation(question: str) -> bool:
         rf"|what does\s+{term}\s+mean"
         rf"|(?:what is|explain)\s+the difference between\s+{term}\s+and\s+{term}"
         rf"|how do\s+{term}\s+and\s+{term}\s+differ"
+        rf"|(?:explain|compare)\s+{term}\s+(?:versus|vs\.?|and|with)\s+{term}"
     )
     return bool(re.fullmatch(
-        rf"\s*(?:in general,?\s+)?(?:{request})[.!?]*"
+        rf"\s*(?:please\s+)?(?:(?:can|could)\s+you\s+)?(?:in general,?\s+)?(?:{request})"
+        r"(?:\s+(?:using|with)\s+(?:an?\s+)?(?:clearly\s+)?"
+        r"(?:hypothetical|illustrative|made[- ]up)\s+(?:fertili[sz]er\s+)?example)?[.!?]*"
         r"(?:\s+I am not asking which product or dose to use[.!?]*)?\s*",
-        question, re.I,
+        product_action_request_text(question), re.I,
     ))
 
 

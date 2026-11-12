@@ -8,6 +8,24 @@ from agronomy_agent.leak_guard import detect_prompt_leaks
 from agronomy_agent.server.services.answer_renderer import render_structured_answer
 
 
+@pytest.mark.parametrize("records", [
+    "- **Collection date:** 2026-05-12.\n- **Analysis date:** 2026-05-18.\n- **Report date:** 2026-05-19.",
+    "1. Keep the collection date separately.\n2. Preserve the actual analysis date.\n3. Retain report issuance separately.",
+    "- Keep the date records.\n  - Preserve provenance with the record.\n- Compare compatible events.",
+])
+def test_final_sentence_cleanup_preserves_markdown_record_boundaries(records):
+    text = "Keep the events separate:\n\n" + records
+    rendered = render_structured_answer(text, question="How should I store these sample dates?",
+        trace={"metadata": {"answer_policy_profile": "general_agronomy"}})
+    assert rendered.answer == text
+
+
+def test_sentence_deduplication_still_removes_repeated_prose():
+    from agronomy_agent.answer_safety import _dedupe_repeated_sentences
+    sentence = "Retain the actual collection date and the original report as separate records."
+    assert _dedupe_repeated_sentences(sentence + " " + sentence) == sentence
+
+
 @pytest.mark.parametrize("text", [
     "A soil-water balance accounts for rainfall and evapotranspiration.",
     "The product-label restriction still applies.",

@@ -29,7 +29,7 @@ def normalize_general_answer(answer_text: str, *, question: str | None = None, r
     answer_text = enforce_answer_safety_postconditions(answer_text, question=question, route=route)
     answer_text = _dedupe_repeated_sentences(answer_text)
     answer_text = _strip_incomplete_label_lines(answer_text)
-    answer_text = re.sub(r"[ \t]{2,}", " ", answer_text)
+    answer_text = re.sub(r"(?<=\S)[ \t]{2,}", " ", answer_text)
     answer_text = re.sub(r"\n{3,}", "\n\n", answer_text)
     return answer_text.strip()
 
@@ -1404,7 +1404,7 @@ def _normalize_rainfall_intensity_runoff_window_gaps(answer_text: str, *, questi
             answer_text,
             "Rainfall/runoff operation timing should ask for forecast rainfall amount and rainfall intensity, storm timing, slope and runoff path, drainage or infiltration condition, water-quality setback or buffer, label rainfast interval, incorporation requirement, application window, and whether to delay, wait, or recheck before the fertilizer or pesticide operation.",
         )
-    answer_text = re.sub(r"[ \t]{2,}", " ", answer_text)
+    answer_text = re.sub(r"(?<=\S)[ \t]{2,}", " ", answer_text)
     answer_text = re.sub(r"\n{3,}", "\n\n", answer_text)
     return answer_text
 
@@ -1798,7 +1798,7 @@ def _normalize_root_rot_drainage_differential_gaps(answer_text: str, *, question
             answer_text,
             "Root rot differential diagnosis should not rely on discoloration alone; sample roots and collect a root sample with surrounding soil for a diagnostic lab, record drainage history, saturated soil or waterlogging duration, field pattern, crop rotation, variety susceptibility, compaction or root restriction, salinity or EC, and nutrient-stress checks before fungicide, drainage, or fertility changes.",
         )
-    answer_text = re.sub(r"[ \t]{2,}", " ", answer_text)
+    answer_text = re.sub(r"(?<=\S)[ \t]{2,}", " ", answer_text)
     answer_text = re.sub(r"\n{3,}", "\n\n", answer_text)
     return answer_text.strip()
 
@@ -2728,7 +2728,7 @@ def _strip_compaction_topic_drift(answer_text: str, *, question: str | None = No
     ]
     for pattern in drift_patterns:
         answer_text = re.sub(pattern, "", answer_text, flags=re.IGNORECASE)
-    answer_text = re.sub(r"[ \t]{2,}", " ", answer_text)
+    answer_text = re.sub(r"(?<=\S)[ \t]{2,}", " ", answer_text)
     answer_text = re.sub(r"\n{3,}", "\n\n", answer_text)
     return answer_text.strip()
 
@@ -2750,7 +2750,7 @@ def _strip_precision_economic_topic_drift(answer_text: str, *, question: str | N
     ]
     for pattern in drift_patterns:
         answer_text = re.sub(pattern, "", answer_text, flags=re.IGNORECASE)
-    answer_text = re.sub(r"[ \t]{2,}", " ", answer_text)
+    answer_text = re.sub(r"(?<=\S)[ \t]{2,}", " ", answer_text)
     answer_text = re.sub(r"\n{3,}", "\n\n", answer_text)
     return answer_text.strip()
 
@@ -2769,7 +2769,7 @@ def _strip_spray_product_topic_drift(answer_text: str, *, question: str | None =
             r"\s*Do not approve spraying until[^.\n]*\.",
         ]:
             answer_text = re.sub(pattern, "", answer_text, flags=re.IGNORECASE)
-        answer_text = re.sub(r"[ \t]{2,}", " ", answer_text)
+        answer_text = re.sub(r"(?<=\S)[ \t]{2,}", " ", answer_text)
         answer_text = re.sub(r"\n{3,}", "\n\n", answer_text)
         return answer_text.strip()
 
@@ -2789,7 +2789,7 @@ def _strip_spray_product_topic_drift(answer_text: str, *, question: str | None =
                 answer_text,
                 "Before changing the nitrogen rate, verify recent weather, rainfall, or irrigation outlook along with soil nitrate, yield goal, credits, crop uptake timing, drainage or leaching risk, and split timing.",
             )
-        answer_text = re.sub(r"[ \t]{2,}", " ", answer_text)
+        answer_text = re.sub(r"(?<=\S)[ \t]{2,}", " ", answer_text)
         answer_text = re.sub(r"\n{3,}", "\n\n", answer_text)
         return answer_text.strip()
 
@@ -2853,7 +2853,7 @@ def _strip_spray_product_topic_drift(answer_text: str, *, question: str | None =
             "Check temperature inversion risk as part of the spray-weather window, and do not spray during an inversion or inversion-prone conditions.",
         )
 
-    answer_text = re.sub(r"[ \t]{2,}", " ", answer_text)
+    answer_text = re.sub(r"(?<=\S)[ \t]{2,}", " ", answer_text)
     answer_text = re.sub(r"\n{3,}", "\n\n", answer_text)
     return answer_text.strip()
 
@@ -2898,7 +2898,7 @@ def _normalize_cdl_crop_history_gaps(answer_text: str, *, question: str | None =
             answer_text,
             "CDL is not acreage proof, not crop insurance evidence, not a planting record, and not field truth.",
         )
-    answer_text = re.sub(r"[ \t]{2,}", " ", answer_text)
+    answer_text = re.sub(r"(?<=\S)[ \t]{2,}", " ", answer_text)
     answer_text = re.sub(r"\n{3,}", "\n\n", answer_text)
     return answer_text.strip()
 
@@ -3013,7 +3013,7 @@ def _strip_no_question_nitrate_spray_drift(answer_text: str, *, question: str | 
             "Next move",
             "Check soil nitrate, soil texture, rainfall or irrigation timing, drainage or leaching risk, crop uptake timing, cover crop establishment, and inhibitor or stabilizer fit before changing the nitrogen plan.",
         )
-    answer_text = re.sub(r"[ \t]{2,}", " ", answer_text)
+    answer_text = re.sub(r"(?<=\S)[ \t]{2,}", " ", answer_text)
     answer_text = re.sub(r"\n{3,}", "\n\n", answer_text)
     return answer_text.strip()
 
@@ -3087,7 +3087,7 @@ def _normalize_public_transfer_contract_gaps(answer_text: str, *, question: str 
             "Pest and IPM decisions should combine pest ID, scouting counts, crop stage, injury level, beneficial insects or natural enemies, economic threshold, current label, resistance management, and local extension or crop adviser guidance before treating.",
         )
 
-    answer_text = re.sub(r"[ \t]{2,}", " ", answer_text)
+    answer_text = re.sub(r"(?<=\S)[ \t]{2,}", " ", answer_text)
     answer_text = re.sub(r"\n{3,}", "\n\n", answer_text)
     return answer_text.strip()
 
@@ -3222,7 +3222,7 @@ def _normalize_deep_public_decision_gaps(answer_text: str, *, question: str | No
             "Preserve the spray or application record and timestamp, product, rate, wind, direction, gusts, boundary and nearby sensitive area; compare symptom pattern, field-edge or downwind gradient, photos, crop stage, and a diagnostic sample before attributing the injury to drift.",
         )
 
-    answer_text = re.sub(r"[ \t]{2,}", " ", answer_text)
+    answer_text = re.sub(r"(?<=\S)[ \t]{2,}", " ", answer_text)
     answer_text = re.sub(r"\n{3,}", "\n\n", answer_text)
     return answer_text.strip()
 
@@ -3345,7 +3345,7 @@ def _strip_phosphorus_water_quality_topic_drift(answer_text: str, *, question: s
         drift_patterns.append(r"\s*Traffic-compaction diagnosis changes with[^.\n]*\.")
     for pattern in drift_patterns:
         answer_text = re.sub(pattern, "", answer_text, flags=re.IGNORECASE)
-    answer_text = re.sub(r"[ \t]{2,}", " ", answer_text)
+    answer_text = re.sub(r"(?<=\S)[ \t]{2,}", " ", answer_text)
     answer_text = re.sub(r"\n{3,}", "\n\n", answer_text)
     return answer_text.strip()
 
@@ -3403,7 +3403,7 @@ def _normalize_submission_visible_hygiene(answer_text: str) -> str:
     )
     for pattern, replacement in replacements:
         answer_text = re.sub(pattern, replacement, answer_text, flags=re.IGNORECASE)
-    answer_text = re.sub(r"[ \t]{2,}", " ", answer_text)
+    answer_text = re.sub(r"(?<=\S)[ \t]{2,}", " ", answer_text)
     answer_text = re.sub(r"\n{3,}", "\n\n", answer_text)
     return answer_text.strip()
 
@@ -3426,7 +3426,7 @@ def _normalize_tank_mix_adjuvant_crop_safety_gaps(answer_text: str, *, question:
             answer_text,
             "Tank-mix and adjuvant decisions need the current product labels for every product, tank-mix compatibility, mixing order or jar test where required, allowed adjuvant, surfactant, oil or water conditioning, crop stage, crop safety and variety tolerance, weed species, weed size and growth stage, mode of action and resistance history, weather window, rainfall or runoff restrictions, and local registration before recommending the mix.",
         )
-    answer_text = re.sub(r"[ \t]{2,}", " ", answer_text)
+    answer_text = re.sub(r"(?<=\S)[ \t]{2,}", " ", answer_text)
     answer_text = re.sub(r"\n{3,}", "\n\n", answer_text)
     return answer_text.strip()
 
@@ -3455,7 +3455,7 @@ def _normalize_herbicide_drift_injury_differential_gaps(answer_text: str, *, que
             answer_text,
             "Herbicide drift/crop-injury differential should compare the spray record and application map, active ingredient or growth-regulator risk, mode of action, product label, wind direction, gusts, inversion and weather at application, field edge or downwind gradient, symptom pattern and photos, crop stage, and timing after application; rule out disease, nutrient or weather stress with scouting, tissue or soil test where relevant, and a plant sample or diagnostic lab if symptoms do not match the exposure pattern.",
         )
-    answer_text = re.sub(r"[ \t]{2,}", " ", answer_text)
+    answer_text = re.sub(r"(?<=\S)[ \t]{2,}", " ", answer_text)
     answer_text = re.sub(r"\n{3,}", "\n\n", answer_text)
     return answer_text.strip()
 
@@ -3485,7 +3485,7 @@ def _normalize_relative_maturity_planting_window_gaps(answer_text: str, *, quest
             answer_text,
             "Delayed planting seed selection should compare the actual planting date and planting window with relative maturity, maturity group or days to maturity, remaining GDD and season length, frost risk, drydown or harvest moisture, harvest window, disease package, standability or lodging, local trial data and yield stability, market quality, seed availability, and field condition before changing hybrids or varieties.",
         )
-    answer_text = re.sub(r"[ \t]{2,}", " ", answer_text)
+    answer_text = re.sub(r"(?<=\S)[ \t]{2,}", " ", answer_text)
     answer_text = re.sub(r"\n{3,}", "\n\n", answer_text)
     return answer_text.strip()
 
@@ -3563,13 +3563,15 @@ def _strip_incomplete_label_lines(answer_text: str) -> str:
 
 
 def _dedupe_repeated_sentences(answer_text: str) -> str:
-    paragraphs = re.split(r"\n\s*\n", answer_text.strip())
     cleaned: list[str] = []
     seen: set[str] = set()
-    for paragraph in paragraphs:
-        if not paragraph.strip():
+    # Markdown list items and table rows are structural records. Joining a
+    # paragraph's sentences flattened those records into the first list item.
+    for line in answer_text.strip().splitlines():
+        if not line.strip():
+            cleaned.append("")
             continue
-        sentences = re.split(r"(?<=[.!?])\s+", paragraph.strip())
+        sentences = re.split(r"(?<=[.!?])[ \t]+", line.strip())
         kept: list[str] = []
         for sentence in sentences:
             normalized = re.sub(r"\s+", " ", sentence).strip().lower()
@@ -3579,8 +3581,8 @@ def _dedupe_repeated_sentences(answer_text: str) -> str:
                 seen.add(normalized)
             kept.append(sentence.strip())
         if kept:
-            cleaned.append(" ".join(kept))
-    return "\n\n".join(cleaned)
+            cleaned.append(line[:len(line) - len(line.lstrip())] + " ".join(kept))
+    return "\n".join(cleaned).strip()
 
 
 def _strip_contract_leakage(answer_text: str, *, question: str | None = None) -> str:
@@ -3647,5 +3649,5 @@ def _strip_contract_leakage(answer_text: str, *, question: str | None = None) ->
         flags=re.IGNORECASE,
     )
     answer_text = re.sub(r"\.([A-Z])", r". \1", answer_text)
-    answer_text = re.sub(r"[ \t]{2,}", " ", answer_text)
+    answer_text = re.sub(r"(?<=\S)[ \t]{2,}", " ", answer_text)
     return re.sub(r"\n{3,}", "\n\n", answer_text).strip()

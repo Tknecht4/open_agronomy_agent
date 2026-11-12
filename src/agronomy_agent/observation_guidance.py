@@ -10,7 +10,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 import re
 
-from agronomy_agent.answerability import preferred_response_language, is_rate_basis_explanation
+from agronomy_agent.answerability import preferred_response_language, is_rate_basis_explanation, product_action_request_text
 
 
 POTATO_MONITORING_ANSWER = (
@@ -93,6 +93,7 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
     if preferred_response_language(question) == "fr" or has(r"\b(?:en fran[cç]ais|in french)\b"):
         return None
     if is_rate_basis_explanation(question):
+        q = product_action_request_text(question).lower()
         parts: list[str] = []
         facets: list[tuple[str, str, tuple[str, ...]]] = []
         if has(r"\b(?:label|pesticide)\b"):
@@ -104,6 +105,10 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
         if has(r"\bnutrient\b"):
             parts.append("For a field application, a fertilizer nutrient rate commonly expresses the mass of a named nutrient per area. Other application systems may use an explicitly stated concentration or volume basis. Use the declared nutrient basis and product analysis to convert nutrient mass into product amount; it is not a nutrient concentration measured in the crop or soil.")
             facets.append(("nutrient_rate_basis", "Explain nutrient mass per area, distinct from product amount or measured crop concentration.", (r"\b(?:mass|amount|kg|kilograms?|lb|pounds?)\b[^.]{0,100}\b(?:nutrient|nitrogen|phosphorus|N|P|K)\b[^.]{0,60}\b(?:area|hectare|ha|acre|ac)\b", r"\bnutrient\b[^.]{0,60}\bmass per (?:unit )?area\b")))
+        if has(r"\bexample\b"):
+            parts.append("For a requested hypothetical illustration, label the invented nutrient mass fraction and the product and nutrient quantities explicitly. Keep the mass and area bases consistent and check the arithmetic. The illustration does not choose a field target or establish a real product's analysis or permission.")
+            facets.append(("illustrative_rate_example", "Include the requested clearly hypothetical illustration without a field recommendation.",
+                (r"\b(?:hypothetical|illustrative|made[- ]up|fictional|suppose)\b",)))
         yield ObservationGuidance("rate_basis_terms", "\n\n".join(parts), tuple(facets))
     if has(r"\b(?:pests?|insects?|aphids?)\b") and has(r"\b(?:regional|area|regional-scale)\s+(?:insect\s+|pest\s+)?alert\b") and has(r"\b(?:count\w*|threshold|infestation)\b"):
         yield ObservationGuidance("regional_pest_alert", (
@@ -133,7 +138,10 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
             ("potato_monitor_surfaces", "Inspect potato foliage and stems for early symptoms.", (r"\b(?:leaves|foliage|stems)\b",)),
             ("potato_monitor_alerts", "Check current local disease alerts as part of healthy-crop monitoring.", (r"\b(?:local|regional)\b[^.]{0,60}\b(?:disease )?alerts?\b", r"\balerts?\b[^.]{0,60}\b(?:local|regional)\b")),
         ))
-    if sample_event_roles_stated(question) and has(r"\b(?:sampling dates?|sample date|collection date|which date|preserv\w*)\b"):
+    if sample_event_roles_stated(question) and has(
+        r"\b(?:sampling dates?|sample date|collection date|which date|preserv\w*)\b|"
+        r"\b(?:store|record|keep|retain|distinguish)\b[^.!?;]{0,50}\bdates?\b"
+    ):
         yield ObservationGuidance("sample_record_dates", (
             "Use the actual sample collection date as the sampling-event date when comparing seasons. "
             "Preserve the laboratory report issuance date in a separate field linked to the sample identifier "
@@ -142,7 +150,7 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
         ), (
             ("date_collection", "Use the collection event for sampling-date comparisons.", (r"\bcollection date\b", r"\bdate of collection\b", r"\bsampling[- ]event date\b")),
             ("date_report", "Preserve the report issuance event under its own role.", (r"\breport (?:issuance|issue) date\b", r"\bdate (?:the )?(?:lab(?:oratory)? )?report was issued\b")),
-            ("date_separation", "Keep distinct events and their provenance linked without overwriting.", (r"\bseparate(?:ly)?\b", r"\bdistinct\b", r"\b(?:retain|keep|preserve) both\b")),
+            ("date_separation", "Keep distinct events and their provenance linked without overwriting.", (r"\bseparate(?:ly)?\b", r"\bdistinct(?:ly)?\b", r"\b(?:retain|keep|preserve) both\b")),
         ))
     if has(r"\b(?:ndvi|vegetation index)\b") and has(r"\b(?:compar\w*|dates?|lower|declin\w*|chang\w*)\b"):
         yield ObservationGuidance("imagery_comparison", (

@@ -6,6 +6,73 @@ from agronomy_agent.answer_verifier import assess_claim_risk, _looks_incomplete,
 from agronomy_agent.quantity_claims import unsupported_quantities
 
 
+@pytest.mark.parametrize("answer,unsupported", [
+    ("The collection date is May 12, 2026.", False),
+    ("Collected on 12 May 2026.", False),
+    ("Collected on May 12th, 2026.", False),
+    ("The collection date is 2026-05-12.", False),
+    ("The collection date is May 13, 2026.", True),
+    ("The collection date is 2025-05-12.", True),
+    ("The collection date is 2026-02-30.", True),
+    ("Apply 2026 kg/ha.", True),
+    ("The measured value is 12.", True),
+])
+def test_calendar_identity_survives_formatting_without_authorizing_scalar_values(answer, unsupported):
+    assert bool(unsupported_quantities(answer, question="The sample was collected 2026-05-12.", evidence="")) is unsupported
+
+
+def test_calendar_date_equivalence_works_in_both_directions_and_validates_leap_days():
+    assert not unsupported_quantities("Collected 2024-02-29.", question="Collected February 29, 2024.", evidence="")
+    assert unsupported_quantities("Collected February 29, 2025.", question="Collected 2024-02-29.", evidence="")
+    assert unsupported_quantities("Collected 2025-02-29.", question="Collected 2025-02-29.", evidence="")
+
+
+def test_literal_identifier_is_not_reinterpreted_as_a_calendar_event():
+    question = "The record ID is 2026-05-12. Repeat the identifier."
+    assert not unsupported_quantities("Record ID: 2026-05-12.", question=question, evidence="")
+    assert unsupported_quantities("Record ID: May 12, 2026.", question=question, evidence="")
+
+
+def test_reporting_an_invalid_calendar_date_does_not_endorse_it():
+    question = "Was the sample collected 2025-02-29?"
+    assert not unsupported_quantities("February 29, 2025 is not a valid date.", question=question, evidence="")
+    assert unsupported_quantities("The collection date was February 29, 2025.", question=question, evidence="")
+
+
+ILLUSTRATION_QUESTION = "Explain product rate versus nutrient rate using a hypothetical example. Do not choose a real field target or pesticide."
+
+
+@pytest.mark.parametrize("answer", [
+    "Suppose a fictional product contains 12% N. A product rate of 25 kg/ha gives a nutrient rate of 3 kg N/ha (25 × 0.12 = 3).",
+    "For a hypothetical example, a 20% phosphorus product at 40 kg product/ha supplies 8 kg P/ha.",
+    "Suppose an illustrative 10% N product. A product rate of 20 kg/ha yields a nutrient rate of 2000 g N/ha.",
+])
+def test_requested_fictional_rate_examples_have_checked_internal_arithmetic(answer):
+    assert not unsupported_quantities(answer, question=ILLUSTRATION_QUESTION, evidence="")
+
+
+@pytest.mark.parametrize("answer", [
+    "Suppose a fictional product contains 12% N. A product rate of 25 kg/ha gives a nutrient rate of 4 kg N/ha.",
+    "Suppose a fictional product contains 10% N. A product rate of 2 kg/ha gives a nutrient rate of 20 kg N/ha.",
+    "Suppose a fictional product contains 12% N. A product rate of 25 kg/ha gives a nutrient rate of 3 kg N/acre.",
+    "Suppose a fictional product contains 12% P2O5. A product rate of 25 kg/ha gives a nutrient rate of 3 kg P/ha.",
+    "Suppose a fictional product contains 12% N. A product rate of 25 kg/ha gives a nutrient rate of 3 kg N/ha (25 × 0.12 = 25).",
+    "Suppose your field needs a 12% N product. A product rate of 25 kg/ha gives a nutrient rate of 3 kg N/ha.",
+    "Suppose a fictional product contains 12% N. Apply 25 kg/ha to supply 3 kg N/ha.",
+    "Suppose a fictional product contains 12% N. A product rate of 25 kg/ha gives a nutrient rate of 3 kg N/ha.\n\nThe actual application is 25 kg/ha.",
+    "Suppose a fictional product contains 12% N. A product rate of 25 kg/ha gives a nutrient rate of 3 kg N/ha. Storage bags weigh 25 kg.",
+    "Suppose a fictional product contains 12% N. A product rate of 25 kg/ha gives a nutrient rate of 3 kg N/ha. The probability of disease is 12%.",
+])
+def test_illustration_does_not_admit_wrong_math_basis_or_field_claims(answer):
+    assert unsupported_quantities(answer, question=ILLUSTRATION_QUESTION, evidence="")
+
+
+def test_hypothetical_disclaimer_does_not_hide_a_real_requested_rate():
+    answer = "Suppose a fictional product contains 12% N. A product rate of 25 kg/ha gives a nutrient rate of 3 kg N/ha."
+    assert unsupported_quantities(answer,
+        question=ILLUSTRATION_QUESTION+" Also recommend a herbicide dose for my field.", evidence="")
+
+
 @pytest.mark.parametrize(('source', 'answer', 'unsupported'), [
     ('Mass: 120 kg.', 'Mass: 20 kg.', True),
     ('Mass: 120 kg.', 'Mass: 120 kg.', False),

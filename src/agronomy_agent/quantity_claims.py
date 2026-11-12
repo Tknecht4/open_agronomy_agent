@@ -2,12 +2,13 @@
 
 This is a screening contract, not a general mathematical or semantic verifier.
 A mentioned quantity is not proof of its relation to an entity or of authority
-for an action. Only an unambiguous, explicitly requested container mass total is
-derived here. Other calculations need a typed calculation result in evidence.
+for an action. An explicit container mass total and a bounded fictional
+mass-fraction illustration can be checked here. Neither grants field authority.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
 import re
 
@@ -177,9 +178,157 @@ def _plain_unit_exponent(match: re.Match[str], annotations: set[str], digits: di
     return match.group('unit') + 'power' + exp.translate(digits)
 
 
+def _calendar_dates(text: str) -> tuple[str, set[str]]:
+    """Keep whole valid dates distinct from scalar amounts and ranges."""
+    months = {name: index for index, names in enumerate((
+        ("january", "jan"), ("february", "feb"), ("march", "mar"), ("april", "apr"),
+        ("may",), ("june", "jun"), ("july", "jul"), ("august", "aug"),
+        ("september", "sep", "sept"), ("october", "oct"), ("november", "nov"), ("december", "dec"),
+    ), 1) for name in names}
+    month = "|".join(months)
+    patterns = (
+        re.compile(r"(?<![\w-])(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})(?![\d-])"),
+        re.compile(rf"\b(?P<month_name>{month})\.?\s+(?P<day>\d{{1,2}})(?:st|nd|rd|th)?"
+                   r",?\s+(?P<year>\d{4})\b", re.I),
+        re.compile(rf"\b(?P<day>\d{{1,2}})(?:st|nd|rd|th)?\s+(?P<month_name>{month})\.?"
+                   r",?\s+(?P<year>\d{4})\b", re.I),
+    )
+    identities: set[str] = set()
+    def replace(match: re.Match[str]) -> str:
+        fields = match.groupdict()
+        month_number = months[fields["month_name"].lower()] if fields.get("month_name") else int(fields["month"])
+        try:
+            identity = date(int(fields["year"]), month_number, int(fields["day"])).isoformat()
+        except ValueError:
+            identity = "invalid calendar date: " + match.group()
+            suffix = text[match.end():match.end() + 70]
+            if re.match(r"\s+(?:(?:is|was)\s+(?:an?\s+)?(?:invalid(?: calendar)? date|"
+                        r"not (?:a )?valid (?:calendar )?date)|does not exist)\b", suffix, re.I):
+                return "calendar_date"
+        identities.add(identity)
+        # Mask the entire date, including its year. A supplied date does not
+        # authorize the same digits as a fertilizer quantity or free scalar.
+        return "calendar_date"
+    for pattern in patterns:
+        text = pattern.sub(replace, text)
+    return text, identities
+
+
+def _checked_rate_illustration_spans(answer: str, question: str) -> set[tuple[int, int]]:
+    """Check fictional operands and a labelled mass-fraction relation.
+
+    This is not candidate-generated evidence. It checks internal arithmetic
+    under an explicitly requested illustration, never a field observation,
+    label permission, chosen target or an unrelated paragraph.
+    """
+    from agronomy_agent.answerability import is_rate_basis_explanation, _NAMED_PESTICIDE_RE
+    if (not is_rate_basis_explanation(question) or not re.search(r"\bexample\b", question, re.I)
+            or not re.search(r"\b(?:hypothetical|illustrative|made[- ]up)\b", question, re.I)):
+        return set()
+    mass = {"kg": Decimal(1), "kilogram": Decimal(1), "kilograms": Decimal(1),
+            "g": Decimal("0.001"), "gram": Decimal("0.001"), "grams": Decimal("0.001"),
+            "lb": Decimal(1), "lbs": Decimal(1), "pound": Decimal(1), "pounds": Decimal(1)}
+    aliases = {"nitrogen": "n", "phosphorus": "p", "potassium": "k", "nutrient": "", "nutrients": ""}
+    nutrient = r"nitrogen|phosphorus|potassium|nutrients?|P2O5|K2O|N|P|K"
+    product = r"product|it|(?:(?:this|the)\s+)?fertili[sz]er"
+    rate = re.compile(rf"(?<![\w.,])(?P<value>{_NUM})\s*(?P<mass>kilograms?|grams?|pounds?|kg|lbs?|g)\b"
+        rf"(?:\s+(?:of\s+)?(?P<basis>{nutrient}|{product}))?"
+        r"\s*(?:/|\bper\s+)(?P<area>hectares?|acres?|ha|ac)\b", re.I)
+    checked: set[tuple[int, int]] = set()
+    offset = 0
+    for block in re.split(r"(\n\s*\n)", answer):
+        start = offset
+        offset += len(block)
+        if (not re.search(r"\b(?:hypothetical|illustrative|made[- ]up|fictional|suppose)\b", block, re.I)
+                or _NAMED_PESTICIDE_RE.search(block)
+                or remove_numeric_application_instructions(block)[1]
+                or re.search(r"\b(?:my|your|our|this|the)\s+field\b|"
+                    r"\b(?:you|we)\s+(?:can|should|may|must)\s+(?:apply|use|spray)\b|"
+                    r"\b(?:actual|current|legal|registered|approved|authorized|recommended|protein|density|volume)\b", block, re.I)):
+            continue
+        percentage_mentions = list(re.finditer(
+            rf"(?<![\w.,])({_NUM})\s*(?:%|percent\b|per\s+cent\b)\s*({nutrient})\b", block, re.I))
+        percentages = {(Decimal(m[1].replace(',', '')), aliases.get(m[2].lower(), m[2].lower()))
+            for m in percentage_mentions}
+        if len(percentages) != 1:
+            continue
+        percent, percent_basis = next(iter(percentages))
+        if not 0 <= percent <= 100:
+            continue
+        rows = []
+        rate_spans = []
+        invalid = False
+        for match in rate.finditer(block):
+            rate_spans.append(match.span())
+            unit, area = match['mass'].lower(), match['area'].lower()
+            area = 'ha' if area in {'ha','hectare','hectares'} else 'ac'
+            value = Decimal(match['value'].replace(',', ''))
+            basis = (match['basis'] or '').lower()
+            role = ('product' if re.fullmatch(product, basis, re.I) else 'nutrient' if basis else None)
+            identity = aliases.get(basis, basis) if role == 'nutrient' else None
+            prefix = re.sub(r'[*_`]', '', block[max(0,match.start()-80):match.start()])
+            label = re.search(r"\b(product|nutrient|nitrogen|phosphorus|potassium)\s+"
+                r"(?:rate|mass|amount)\s*(?:(?:of|is)\s*|[:=]\s*)?$", prefix, re.I)
+            if label:
+                labelled = 'product' if label[1].lower() == 'product' else 'nutrient'
+                labelled_identity = aliases.get(label[1].lower(), label[1].lower())
+                if role and (role != labelled or role == 'nutrient' and identity and labelled_identity
+                             and identity != labelled_identity):
+                    invalid = True
+                role = labelled
+                if role == 'nutrient' and not identity:
+                    identity = labelled_identity
+            if role == 'nutrient' and identity and identity != percent_basis:
+                invalid = True
+            rows.append((value * mass[unit], 'lb' if unit in {'lb','lbs','pound','pounds'} else 'kg', area, role, value))
+        products = {r[0] for r in rows if r[3] == 'product'}
+        nutrients = {r[0] for r in rows if r[3] == 'nutrient'}
+        if (invalid or len(products) != 1 or len(nutrients) != 1 or not rows
+                or len({(r[1], r[2]) for r in rows}) != 1 or any(r[0] < 0 for r in rows)):
+            continue
+        product_mass, nutrient_mass = next(iter(products)), next(iter(nutrients))
+        if product_mass * percent / 100 != nutrient_mass or any(r[0] not in {product_mass,nutrient_mass} for r in rows):
+            continue
+        equations = list(re.finditer(rf"({_NUM})\s*[×*]\s*({_NUM})\s*=\s*({_NUM})", block))
+        if any(Decimal(m[1].replace(',', '')) * Decimal(m[2].replace(',', '')) != Decimal(m[3].replace(',', ''))
+               for m in equations):
+            continue
+        scalars = {percent, percent/100, *(r[4] for r in rows)}
+        bound_spans = rate_spans + [m.span() for m in percentage_mentions]
+        bound_spans += [m.span() for m in equations
+                        if all(Decimal(v.replace(',', '')) in scalars for v in m.groups())]
+        for match in NUMBER_RE.finditer(block):
+            if not any(left <= match.start() and match.end() <= right for left, right in bound_spans):
+                continue
+            quantity = _quantity(match)
+            if quantity.upper is not None:
+                continue
+            supported = quantity.unit == '%' and quantity.value == percent
+            if not quantity.unit:
+                supported = quantity.value in scalars
+            unit_match = re.fullmatch(r"(kilograms?|grams?|pounds?|kg|lbs?|g)(?:/(hectares?|acres?|ha|ac))?", quantity.unit)
+            if unit_match:
+                base, area = unit_match.groups()
+                area = 'ha' if area in {'ha','hectare','hectares'} else 'ac' if area else ''
+                supported = (quantity.value * mass[base] in {product_mass,nutrient_mass}
+                    and (not area or area == rows[0][2])
+                    and ('lb' if base in {'lb','lbs','pound','pounds'} else 'kg') == rows[0][1])
+            if supported:
+                checked.add((start + match.start(), start + match.end()))
+    return checked
+
+
 def unsupported_quantities(answer: str, *, question: str, evidence: str) -> tuple[str, ...]:
-    normalized_source, source_annotations = _scientific_notation(f"{question}\n{evidence}")
+    source = f"{question}\n{evidence}"
+    source_dates: set[str] = set()
+    answer_dates: set[str] = set()
+    if re.search(r"\b(?:dates?|dated|collected|sampled|analy[sz]ed|issued|issuance|reported|"
+                 r"acquired|acquisition|sown|planted|harvested)\b", question, re.I):
+        source, source_dates = _calendar_dates(source)
+        answer, answer_dates = _calendar_dates(answer)
+    normalized_source, source_annotations = _scientific_notation(source)
     answer, answer_annotations = _scientific_notation(answer)
+    illustrative_spans = _checked_rate_illustration_spans(answer, question)
     allowed = {_quantity(m) for m in NUMBER_RE.finditer(normalized_source)}
     derived = _container_total(question, evidence)
     grounded_operand_spans: list[tuple[int, int]] = []
@@ -189,8 +338,11 @@ def unsupported_quantities(answer: str, *, question: str, evidence: str) -> tupl
             a, b, total = (Decimal(v.replace(",", "")) for v in equation.groups())
             if sorted([a, b]) == sorted([count, mass]) and total == result.value:
                 grounded_operand_spans.extend((equation.span(1), equation.span(2)))
-    values: list[str] = sorted(answer_annotations - source_annotations)
+    values: list[str] = sorted((answer_annotations - source_annotations) | (answer_dates - source_dates)
+                               | {value for value in answer_dates if value.startswith("invalid calendar date:")})
     for match in NUMBER_RE.finditer(answer):
+        if match.span() in illustrative_spans:
+            continue
         q = _quantity(match)
         prefix = answer[max(0, match.start() - 80):match.start()]
         suffix = answer[match.end():match.end() + 40]

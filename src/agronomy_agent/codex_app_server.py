@@ -1145,6 +1145,14 @@ def _declared_evidence_section_lines(outbound_text: str) -> dict[str, list[str]]
     active_kind: str | None = None
     for raw_line in outbound_text.splitlines():
         line = raw_line.strip()
+        # Packed excerpts may contain PDF line breaks and source bullets.
+        # Discover every subsequent packed header even after a continuation
+        # ended legacy single-line section discovery.
+        if (re.match(r"^- \[[A-Z][A-Z ]*\] \[[^\]\n]+\]\.", line)
+                and "Title: " in line and ". Source: " in line and ". Excerpt: " in line):
+            records["document"].append(line)
+            active_kind = "document"
+            continue
         if line in header_kinds:
             active_kind = header_kinds[line]
             continue
@@ -1174,9 +1182,24 @@ def _validate_evidence_section_completeness(
     graph_rows: Sequence[Mapping[str, Any]],
     guard_rows: Sequence[Mapping[str, Any]],
 ) -> None:
-    section_lines = _declared_evidence_section_lines(outbound_text)
+    discovery_text = outbound_text
+    for record in documents:
+        fragment = str(record.get("content_fragment") or "")
+        marker = f"Title: {record.get('title')}. Source: {record.get('source')}. Excerpt: "
+        if "\n" in fragment and marker in fragment.split("\n", 1)[0]:
+            excerpt = fragment.split(marker, 1)[1]
+            if not str(record.get("source_text") or "").startswith(excerpt):
+                raise CodexAppServerError("cannot mask an unbound packed source continuation")
+            # A dash in a validated PDF continuation is source content, not a
+            # new evidence record. Keep its header visible for completeness.
+            header, continuation = fragment.split("\n", 1)
+            discovery_text = discovery_text.replace(fragment, header + "\n" * (continuation.count("\n") + 1))
+    section_lines = _declared_evidence_section_lines(discovery_text)
     declared = {
-        "document": {str(record.get("content_fragment") or "").strip() for record in documents},
+        # A packed document can contain a multiline, source-bound excerpt.
+        # Section discovery identifies its header; membership validation below
+        # independently checks the full rendered excerpt, including its body.
+        "document": {str(record.get("content_fragment") or "").split("\n", 1)[0].strip() for record in documents},
         "graph": {str(record.get("evidence_fragment") or "").strip() for record in graph_rows},
         "tool": set(),
         "guard": {str(record.get("outbound_fragment") or "").strip() for record in guard_rows},
@@ -1354,6 +1377,11 @@ def _validate_egress_records(envelope, artifact_contract, question_fragment):
             raise CodexAppServerError(
                 f"benchmark egress document fragment lacks source membership: {doc_id}"
             )
+        packed_marker = f"Title: {title}. Source: {source}. Excerpt: "
+        if packed_marker in content_fragment:
+            rendered_excerpt = content_fragment.split(packed_marker, 1)[1]
+            if not rendered_excerpt or not source_text.startswith(rendered_excerpt):
+                raise CodexAppServerError(f"benchmark egress packed excerpt differs from source prefix: {doc_id}")
         expected_document_identity = _sha256(
             _canonical_json(
                 {

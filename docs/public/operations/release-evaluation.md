@@ -145,6 +145,23 @@ without retry and cannot turn unknown execution into a successful observation.
 
 ### Provider diagnostics
 
+Packed public excerpts can retain PDF line breaks. Their complete rendered
+source prefix, corpus membership and rights are checked before hosted dispatch;
+a source ID mentioned in a planning note is not the excerpt. Guard notes and
+graph hints are packed as complete records within their slot budgets, with
+omitted identities recorded in the context budget report. Dropping a record
+does not establish its fact or remove an application authority requirement.
+
+The draft quantity screen distinguishes valid calendar dates from scalar
+amounts for explicit calendar-event questions. ISO and English named-month
+forms may identify the same full date; changing a date, inventing a year or
+reusing date digits as a physical quantity is not authorized by that match.
+An explicitly requested fictional fertilizer illustration has a separate,
+bounded internal check for labelled mass fractions, nutrient identity,
+consistent mass/area bases and arithmetic. It does not validate a real product,
+choose a field target or provide a general algebra proof. Other claims still
+need their normal evidence and authority checks.
+
 The optional App Server integration is a nonqualifying diagnostic boundary.
 An explicitly selected version-3 registry
 (`open_agronomy_agent.release_evaluation_registry.v3`) can wire

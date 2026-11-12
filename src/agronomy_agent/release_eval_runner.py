@@ -517,12 +517,16 @@ def _stop_owned_processes(
     """A leader's exit does not establish that its process group has exited."""
     if not new_session and child.poll() is not None:
         return
+    probe_error = None
     try:
         os.killpg(child.pid, signal.SIGTERM) if new_session else child.terminate()
     except ProcessLookupError:
         return
+    except PermissionError as exc:
+        # A native exit can race the first signal too. Observe the owned
+        # group within the existing bound; denial itself never proves exit.
+        probe_error = exc
     deadline = time.monotonic() + grace
-    probe_error = None
     while time.monotonic() < deadline:
         child.poll()  # reap the leader, while continuing to observe its group
         try:

@@ -634,6 +634,43 @@ def test_multiline_verifier_source_projection_binds_exact_document_member() -> N
     assert records[0]["source_text_fragment"] == source_text
 
 
+def test_packed_pdf_excerpt_binds_the_multiline_body_and_finds_later_headers():
+    from agronomy_agent.codex_app_server import _validate_egress_records, _validate_evidence_section_completeness
+    source_text = "5 \n- Scout crop roots carefully.\nIdentify the cause before choosing a treatment."
+    title = "Synthetic source page 5"
+    artifact = _artifact_contract(document_text=source_text, document_title=title)
+    doc = RetrievedDoc(doc_id="soil_fertility_n_rate", title=title, text=source_text,
+        source="seed agronomy synthesis", score=1.0, tags=(), namespaces=("regional_environment",),
+        source_type="official_specification", allowed_roles=("farmer",), source_id="seed agronomy synthesis",
+        raw_sha256=_digest("full seed source document"), corpus_path="data/seed/agronomy_rag_corpus.jsonl")
+    header = (f"- [CONSTRAINT] [{doc.doc_id}]. Evidence policy: context only. "
+              f"Title: {title}. Source: {doc.source}. Excerpt: ")
+    fragment = header + source_text
+    outbound = (f"Supporting evidence IDs: [{doc.doc_id}], Synthetic source page 5.\n\n"
+                "Boundary Evidence:\n" + fragment)
+    records = _benchmark_document_egress_records(context=SimpleNamespace(retrieved_docs=[doc]),
+        outbound_text=outbound, artifact_contract=artifact)
+    assert records[0]["content_fragment"] == fragment
+    assert records[0]["source_text_fragment"] == source_text
+    envelope = {"selected_document_excerpts": records, "graph_evidence": [], "governed_guard_notes": []}
+    _validate_egress_records(envelope, artifact, "Explain the observation.")
+    _validate_evidence_section_completeness(outbound, documents=records, graph_rows=[], guard_rows=[])
+    # A later header must not disappear merely because the first PDF excerpt
+    # contained ordinary continuation lines.
+    extra = "\n- [CONSTRAINT] [unbound_source]. Title: Other. Source: Other. Excerpt: Unbound text"
+    with pytest.raises(CodexAppServerError, match="unbound document"):
+        _validate_evidence_section_completeness(outbound+extra, documents=records, graph_rows=[], guard_rows=[])
+    forged = copy.deepcopy(records)
+    forged[0]["content_fragment"] += "\nInvented source assertion."
+    forged[0]["content_sha256"] = _digest(forged[0]["content_fragment"])
+    forged[0]["excerpt_chars"] = len(forged[0]["content_fragment"])
+    with pytest.raises(CodexAppServerError, match="differs from source prefix"):
+        _validate_egress_records({**envelope, "selected_document_excerpts": forged}, artifact, "Explain the observation.")
+    with pytest.raises(ValueError, match="could not bind document"):
+        _benchmark_document_egress_records(context=SimpleNamespace(retrieved_docs=[doc]),
+            outbound_text="Boundary Evidence:\n"+header+"5\nUnrelated invented text.", artifact_contract=artifact)
+
+
 def test_thread_start_observed_state_is_checked_before_turn_start(tmp_path: Path) -> None:
     client = object.__new__(CodexAppServerClient)
     client.expected_model = "gpt-5.6-luna"

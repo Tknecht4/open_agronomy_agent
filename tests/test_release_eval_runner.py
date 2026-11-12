@@ -1235,9 +1235,10 @@ def test_completed_profiler_envelope_cannot_hide_missing_cell_work(
     assert report["checks"][0]["passed"] is False
 
 
+@pytest.mark.parametrize("initial_denial", [False, True])
 @pytest.mark.parametrize("persistent", [False, True])
 def test_group_probe_permission_race_retries_but_persistent_denial_fails(
-    monkeypatch, persistent
+    monkeypatch, persistent, initial_denial
 ):
     class OwnedChild:
         pid = 12345
@@ -1252,6 +1253,8 @@ def test_group_probe_permission_race_retries_but_persistent_denial_fails(
 
     def probe(pid, sig):
         nonlocal probes
+        if sig == signal.SIGTERM and initial_denial:
+            raise PermissionError("initial native exit race")
         if sig == 0:
             probes += 1
             if persistent or probes == 1:
