@@ -3,13 +3,16 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from agronomy_agent.answer_verifier import bounded_decision_support
+from agronomy_agent.answerability import preferred_response_language
+
 
 def normalize_general_answer(answer_text: str, *, question: str | None = None, route: Any | None = None) -> str:
-    """Apply structural and safety cleanup without injecting agronomy content.
+    """Apply structural cleanup and fail-closed authority postconditions.
 
-    The model remains responsible for the answer. This profile removes internal
-    prompt artifacts, softens unsupported absolute-safety language, and tidies
-    repetition; it deliberately does not append topic-specific checklists.
+    Unverified action text can be replaced by the authority boundary and a
+    reviewed observation method. Arbitrary model prescriptions are not retained
+    by that replacement. Other cleanup removes internal artifacts and repetition.
     """
 
     internal_line = re.compile(
@@ -175,6 +178,13 @@ def _ensure_current_product_label_boundary(answer_text: str, *, question: str | 
     """Bind product-label boundaries to the treatment jurisdiction when known."""
 
     query = str(question or "")
+    # Keep only project-authored procedural help when replacing an unverified
+    # action answer. Never retain arbitrary draft rates or permissions here.
+    support = bounded_decision_support(query, "product_label")
+
+    def with_support(boundary: str) -> str:
+        return (support + "\n\n" if support else "") + boundary
+
     target_country = _product_target_country(question)
     action_request = bool(
         re.search(
@@ -189,7 +199,7 @@ def _ensure_current_product_label_boundary(answer_text: str, *, question: str | 
             answer_text,
             re.IGNORECASE,
         ):
-            return (
+            return with_support(
                 "I cannot choose a U.S. pesticide or application rate from general agronomy principles. "
                 "Provide the exact product and formulation, EPA registration number, crop or use site, target, "
                 "and state. Check the current EPA-registered product labeling and applicable state requirements "
@@ -204,11 +214,15 @@ def _ensure_current_product_label_boundary(answer_text: str, *, question: str | 
 
     if target_country is None:
         boundary = (
+            "Je ne peux pas choisir un pesticide ou une dose sans connaître le territoire de traitement, "
+            "le produit exact et sa formulation, la culture ou le site, la cible, ainsi que l'étiquette "
+            "et l'homologation actuellement applicables. Confirmer ces éléments avant toute application."
+        ) if preferred_response_language(query) == "fr" else (
             "I cannot choose a pesticide or application rate without the treatment jurisdiction, exact product "
             "and formulation, crop or use site, target, and its current applicable product label and registration. "
             "Resolve those details before any application."
         )
-        return boundary if action_request else answer_text.rstrip() + "\n\n" + boundary
+        return with_support(boundary) if action_request else answer_text.rstrip() + "\n\n" + boundary
 
     wrong_us_authority_instruction = re.search(
         r"\b(?:check|verify|follow|consult)\b[^.\n]{0,100}"
@@ -221,7 +235,7 @@ def _ensure_current_product_label_boundary(answer_text: str, *, question: str | 
         or re.search(r"\b(?:U\.S\.?A?\.?|United States|American)\b", query, re.IGNORECASE)
     )
     if wrong_us_authority_instruction or (action_request and us_source_in_question):
-        return (
+        return with_support(
             "A U.S. product label or recommendation does not authorize pesticide use on a Canadian field. "
             "Verify the exact product's current Health Canada registered product label and Canadian registration, "
             "crop or use site, target, and applicable provincial or territorial requirements before any application."

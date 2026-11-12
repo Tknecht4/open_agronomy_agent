@@ -7,6 +7,51 @@ from typing import Any
 HIGH_CONSEQUENCE_SCHEMA = "open_agronomy_agent.high_consequence_policy.v1"
 
 
+def fertility_quantity_requested(question: str) -> bool:
+    # Fertilizer shorthand is case-sensitive here: a possessive "label's rate"
+    # is not a sulphur request. Numeric proposals below have their own units.
+    nutrient = r"(?:fertiliz\w*|fertilis\w*|nitrogen|urea|urée|phosphorus|potassium|sulphur|sulfur|manure|lime|N|engrais|azote|phosphore|soufre|fumier|chaux|(?-i:(?<!['’])(?:P2O5|K2O|P|K|S)))"
+    # Bind quantity words to their subject. Input history such as "after
+    # nitrogen last week" cannot create a second requested rate.
+    for clause in re.split(
+        r"(?<!\d)\.|\.(?!\d)|[;,?!]|\b(?:and|also|but|after|et|mais|apr[eè]s)\b",
+        question, flags=re.I,
+    ):
+        request = re.search(r"\b(?:what|which|how much|combien|quel(?:le)?)\b", clause, re.I)
+        if request:
+            clause = clause[request.start():]
+        historical = re.search(
+            r"\b(?:last (?:year|season|week|month)|previous\w*|historical|was|were|applied|used|était|étaient)\b",
+            clause, re.I,
+        )
+        current_request = re.search(
+            r"\b(?:should|shall|need|recommend|dois|doit|devrais)\b|"
+            r"\b(?:can|could|may|will|would|do)\s+(?:i|we)\b|"
+            r"^\s*(?:(?:can|could|may|will|would)\b|(?:please\s+)?(?:apply|use|sidedress|appliquer)\b)",
+            clause, re.I,
+        )
+        if historical and not current_request:
+            continue
+        proposal_nutrient = rf"(?:{nutrient}|P2O5|K2O|P|K|S)"
+        if current_request and re.search(
+            rf"\b\d+(?:\.\d+)?\s*(?:kg|lb)\s*{proposal_nutrient}\s*/\s*(?:ha|ac)\b|"
+            rf"\b\d+(?:\.\d+)?\s*(?:kg|lb)\s*/\s*(?:ha|ac)\s+(?:of\s+)?{proposal_nutrient}\b",
+            clause, re.I,
+        ):
+            return True
+        if re.search(
+            rf"\b{nutrient}(?:\s+fertiliz\w*)?\s+(?:application\s+)?(?:rate|dose|amount|taux)\b|"
+            rf"\b(?:rate|dose|amount|taux)\s+(?:(?:of|for|de|du)\s+|d['’])?(?:the\s+)?{nutrient}\b|"
+            rf"\b(?:how much|combien de)\s+{nutrient}\b", clause, re.I
+        ):
+            return True
+        if (re.search(rf"\b{nutrient}\b", clause, re.I)
+                and re.search(r"\b(?:what rate|how much|quelle dose|quel taux)\b", clause, re.I)
+                and not re.search(r"\b(?:herbicide|fungicide|insecticide|pesticide|spray|weed)\w*\b", clause, re.I)):
+            return True
+    return False
+
+
 def classify_high_consequence_domains(question: str) -> list[str]:
     domains: list[str] = []
     product_term = re.search(
@@ -113,7 +158,13 @@ def _context_value(context: dict[str, Any], key: str) -> Any:
 
 
 def _has_value(context: dict[str, Any], *keys: str) -> bool:
-    return any(_context_value(context, key) not in (None, "", [], {}) for key in keys)
+    for key in keys:
+        value = _context_value(context, key)
+        # An explicit negative confirmation cannot satisfy an evidence gate.
+        # Keep a supplied numeric zero distinct from the Boolean False.
+        if value is not False and value not in (None, "", [], {}):
+            return True
+    return False
 
 
 def _tool_payloads(trace: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
@@ -169,12 +220,26 @@ def evaluate_high_consequence_policy(
             missing.append("target pest, weed, or disease")
 
     if "numeric_rate" in domains:
-        for description, keys in (
-            ("current method-identified soil or tissue test with units and date", ("soil_test_summary", "soil_test")),
-            ("crop and realistic yield goal", ("yield_goal", "target_yield")),
-            ("field application and crop-credit history", ("fertility_history", "application_history", "manure_history")),
-            ("jurisdiction-specific calibration or authority", ("local_calibration", "recommendation_authority")),
-        ):
+        # Bind missing evidence to the quantity being requested. A pesticide
+        # rate does not require a fertilizer yield goal or nutrient-credit test.
+        # Mixed requests retain both sets of field evidence plus the label.
+        fertility_subject = fertility_quantity_requested(question)
+        requirements: list[tuple[str, tuple[str, ...]]] = []
+        if "product_label" in domains:
+            requirements.extend((
+                ("crop growth stage", ("crop_stage", "growth_stage")),
+                ("target weed or pest growth/life stage", ("target_stage", "weed_stage", "pest_stage")),
+                ("representative target pressure and distribution", ("scouting_summary", "weed_scouting", "pest_scouting")),
+                ("prior application and resistance history", ("application_history", "pesticide_history", "resistance_history")),
+            ))
+        if "product_label" not in domains or fertility_subject:
+            requirements.extend((
+                ("current method-identified soil or tissue test with units and date", ("soil_test_summary", "soil_test")),
+                ("crop and realistic yield goal", ("yield_goal", "target_yield")),
+                ("field application and crop-credit history", ("fertility_history", "application_history", "manure_history")),
+                ("jurisdiction-specific calibration or authority", ("local_calibration", "recommendation_authority")),
+            ))
+        for description, keys in requirements:
             if not _has_value(context, *keys):
                 missing.append(description)
 

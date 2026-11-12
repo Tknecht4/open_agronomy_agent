@@ -43,7 +43,8 @@ from agronomy_agent.answerability import (
     validated_deterministic_tool_clarification,
     validated_deterministic_tool_execution,
 )
-from agronomy_agent.answer_verifier import context_evidence_text, verify_answer
+from agronomy_agent.answer_verifier import bounded_decision_support, context_evidence_text, verify_answer
+from agronomy_agent.observation_guidance import observation_guidance
 from agronomy_agent.canada_sources import (
     apply_canadian_coverage_disclosure, apply_soileri_coverage_disclosure,
     build_canadian_coverage_boundary, build_soileri_source_coverage,
@@ -298,6 +299,11 @@ def build_answer_prompt(context_block: str, question: str) -> str:
     )
     if re.search(r"\b(?:quelle est|diff[eé]rence entre|est-ce|puis-je|pourquoi|comment)\b", question, re.I):
         task_note += " Répondez en français."
+    method = observation_guidance(question)
+    if method:
+        task_note += " Answer concisely, preserving these observation-method requirements: " + " ".join(
+            instruction for _, instruction, _ in method.facets
+        )
     return f"{answer_output_contract()}\n\n{context_block}\n\n{task_note}\nField question:\n{question}"
 
 
@@ -3774,11 +3780,19 @@ def decide_evidence_intervention(
         AnswerabilityState.REQUIRE_AUTHORITY,
         AnswerabilityState.REFUSE_UNSAFE_ACTION,
     }:
+        support = (
+            bounded_decision_support(question, context.route.question_type)
+            if context is not None and decision.state == AnswerabilityState.REQUIRE_AUTHORITY
+            else None
+        )
+        hold_text = decision.response_text or baseline.hold_text
+        if support:
+            hold_text = support + ("\n\n" + hold_text if hold_text else "")
         return replace(
             baseline,
             status="held",
             reason=decision.reason,
-            hold_text=decision.response_text or baseline.hold_text,
+            hold_text=hold_text,
             **common,
         )
     if baseline.status == "held" and not baseline.direct_commitment:
@@ -3788,6 +3802,10 @@ def decide_evidence_intervention(
             reason=decision.reason,
             hold_text=None,
         )
+    if baseline.status == "held" and context is not None:
+        support = bounded_decision_support(question, context.route.question_type)
+        if support:
+            baseline = replace(baseline, hold_text=support + ("\n\n" + baseline.hold_text if baseline.hold_text else ""))
     return replace(baseline, **common)
 
 

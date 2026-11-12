@@ -151,6 +151,29 @@ non-ASCII names disable this recovery. These lexical checks can leave valid
 unrecognized records unresolved and do not establish field truth or general
 semantic completeness.
 
+`observation_guidance.py` owns bounded observation-method requirements shared
+by drafting, completeness review and fallback selection. Applicable methods
+cover paired scouting, satellite comparability, empty terrain coverage, point
+versus area geometry, crop-guide scope and regional stress interpretation.
+Explicit missing method steps receive review even below the ordinary risk score
+threshold; complete answers keep the existing thresholds. Authority holds reuse
+reviewed procedural help without granting the blocked action. Product-label
+cleanup can retain that reviewed help when replacing an unverified answer, but
+cannot preserve arbitrary draft permissions or rates. These lexical method
+checks do not establish complete scientific verification. Source rationale and
+transfer limits are in the [field observation guide](../../docs/public/operations/field-observations.md).
+Numeric-rate obligations distinguish pesticide scouting, stages and application
+history from fertility tests and credits. Mixed pesticide/nutrient requests
+retain the product-label and fertility authority lanes.
+When a bounded observation method is incomplete or contradicts its own evidence
+limit, a reviewed method can replace it before editing only after the normal
+safety and requested-record preservation checks pass. Coverage words alone do
+not validate an unsupported low-risk inference, and a correct boundary sentence
+cannot validate a subsequent one-dimensional area claim. The final leak screen
+preserves the ordinary phrase `source-water samples` while retaining identifier
+and internal-control detection. Haskap/honeyberry crop identity also participates
+in the existing live-reference compatibility filter.
+
 The active verifier retains its risk-conditioned review thresholds. A proposed
 advisory-only bypass was withdrawn after a paired development run exposed an
 unsupported field-action recommendation. An unknown map type is not renamed as
@@ -180,3 +203,17 @@ rates or scalar claims. This is typography equivalence, not chemical validation.
 A bounded diagnostic sampling check rejects claims that separately attributable
 area results remain recoverable after samples are pooled into one composite.
 These checks do not constitute a general scientific correctness verifier.
+
+Compound observation requests combine each recognized method's requirements and
+contradiction checks. Instrument footprint terms in a separate request do not
+suppress an explicitly asked planted-area method. Crop-guide recovery uses the
+same canonical haskap identity as live-source compatibility. Mixed pesticide
+and nutrient quantities retain both evidence lanes; historical rates do not
+create a new requested fertilizer rate. Explicit negative confirmation flags
+cannot satisfy evidence requirements, while a supplied numeric zero remains a
+value. These bounded checks do not constitute a general scientific verifier.
+
+Mixed pesticide and fertilizer requests share the quantity-subject check between
+the evidence policy and final procedural support. Final label-safety replacement
+must preserve both requested methods, including supported French guidance;
+a complete machine-policy record alone does not establish a complete visible answer.
