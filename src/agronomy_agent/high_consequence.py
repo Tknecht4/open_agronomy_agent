@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from agronomy_agent.answerability import is_rate_basis_explanation
+from agronomy_agent.answerability import is_rate_basis_explanation, product_action_request_text
 
 
 HIGH_CONSEQUENCE_SCHEMA = "open_agronomy_agent.high_consequence_policy.v1"
@@ -68,10 +68,10 @@ def classify_high_consequence_domains(question: str) -> list[str]:
     )
     product_action = re.search(
         r"\b(?:can|should|may|would|do)\s+(?:i|we)\b|\b(?:use|apply|spray|mix|recommend|choose|select)\b"
-        r"|\b(?:rate|timing|interval|preharvest|re-entry|grazing restriction)\b"
+        r"|\b(?:rate|dose|timing|interval|preharvest|re-entry|grazing restriction)\b"
         r"|\b(?:puis-je|devrais-je|peut-on|utiliser|appliquer|pulvériser|mélanger|recommander|choisir|"
         r"taux|dose|moment|délai|avant récolte|rentrée|restriction de pâturage)\b",
-        question,
+        product_action_request_text(question),
         re.IGNORECASE,
     )
     if product_term and product_action:

@@ -32,6 +32,15 @@ Named products, numeric proposals, field scope and follow-on directives do not
 qualify. Numeric claims in model output still undergo verification; an imposed
 invented dose is rejected. This permission concerns explanation, not application.
 
+A scouting-method counterfactual reproduced a second false authority requirement:
+“Do not choose a pesticide” triggered product-action classification, and a
+threshold-unit explanation acquired treatment obligations. Exclude only a whole
+explicit declined-selection sentence from action matching, retaining its product
+context for any remaining request. A bounded threshold-unit explanation keeps
+its explanation route; follow-on treatment requests retain their guards. The
+correct sampling-method draft survives the persisted production path without
+an unnecessary editor call or added field-label requirement.
+
 ## Scientific basis and task scope
 
 [NRCS soil guidance](https://www.nrcs.usda.gov/sites/default/files/2022-10/National-Agronomy-Manual.pdf)

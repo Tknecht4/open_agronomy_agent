@@ -387,6 +387,19 @@ def _normalized_scope(value: Any) -> str:
     return " ".join(re.findall(r"[a-z0-9]+", str(value or "").casefold()))
 
 
+def product_action_request_text(question: str) -> str:
+    """Exclude only a complete, explicit declined product-selection sentence.
+
+    Keep the product context and every remaining request available to policy.
+    A coordinated directive cannot disappear inside this narrow exclusion.
+    """
+    return re.sub(
+        r"(?:^|(?<=[.!?;]))\s*(?:do not|don't)\s+(?:choose|select|recommend)\s+"
+        r"(?:a|any)\s+(?:pesticide|herbicide|fungicide|insecticide|product)\s*(?:[.!?;]|$)",
+        " ", question, flags=re.I,
+    )
+
+
 def is_rate_basis_explanation(question: str) -> bool:
     """Recognize a whole terminology request, never a disclaimer around an action.
 

@@ -864,6 +864,10 @@ def build_decision_route_state(question: str, question_type: str = "") -> Decisi
 
 def _decision_name(lower: str, question_type: str) -> str:
     focus = request_focus(lower)
+    # A bounded explanation of matching count/threshold bases is not a
+    # treatment decision. The router retains action/field clauses before this.
+    if question_type == "exam_review" and re.search(r"\bthreshold units\b", lower):
+        return "exam_review"
     if re.search(r"\b(?:hail|storm|frost|rain|wind)\b", lower) and re.search(
         r"\b(?:tomorrow|tonight|at \d{1,2}(?::\d{2})?\s*(?:am|pm)|this afternoon|this evening)\b",
         lower,
