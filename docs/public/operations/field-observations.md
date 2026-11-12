@@ -14,6 +14,19 @@ instructions and revisit marked locations. Symptoms can have biological,
 weather, soil or application causes. See [Alberta field scouting](https://www.alberta.ca/index.php/field-scouting)
 and [Manitoba sample submission instructions](https://www.gov.mb.ca/agriculture/crops/crop-diagnostic-services/pubs/sample-submission-instructions.pdf).
 
+For a nutrient sampling plan, keep contrasting landscape and management zones
+separate; an eroded knoll, wet depression and old manure strip need not be
+represented by one whole-field average. Record the sampling depth and date and
+keep handling and laboratory methods comparable. [Alberta's sampling guidance](https://www1.agric.gov.ab.ca/%24department/deptdocs.nsf/all/agdex1341)
+and [British Columbia's sampling-zone guidance](https://www2.gov.bc.ca/gov/content/industry/agriculture-seafood/agricultural-land-and-environment/soil-nutrients/nutrient-management/what-to-apply/soil-nutrient-testing/soil-sampling-methods-tools)
+support representative sampling. Test-specific depths, seasonal timing and
+nutrient calibration still need the applicable local protocol.
+
+Use the actual collection date when comparing sampling events across seasons.
+Keep the laboratory report issuance date separately, linked to the sample and
+original report. Issuance does not establish when laboratory processing or
+analysis occurred; retain those dates separately when supplied.
+
 Edge pest counts alone cannot establish whole-field density. Match a current
 crop-and-pest threshold to the actual sampling units, representative interior
 counts, growth stage, population trend and beneficial insects. Bloom and

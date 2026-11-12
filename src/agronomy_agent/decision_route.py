@@ -7,6 +7,7 @@ from agronomy_agent.decision_capsule import DecisionCapsule, build_decision_caps
 from agronomy_agent.query_context import analyze_query_context
 from agronomy_agent.router import request_focus, evidence_interpretation_kind
 from agronomy_agent.answerability import simple_definition_subject
+from agronomy_agent.observation_guidance import sample_event_roles_stated
 
 
 _US_ONLY_SOURCE_PATTERNS: tuple[tuple[str, str], ...] = (
@@ -699,6 +700,12 @@ def build_decision_route_state(question: str, question_type: str = "") -> Decisi
     decisive = _decisive_evidence(decision, crop)
     premise_anchors = _premise_anchors(decision)
     constraints = [f"Use only field conditions stated in the question: {question.strip()}"]
+    if sample_event_roles_stated(question):
+        constraints.append(
+            "Keep stated event dates distinct: use the actual sample collection date for sampling comparisons; "
+            "preserve report issuance date and provenance separately. Report issuance alone does not establish "
+            "an analysis or processing date."
+        )
     if source_boundary:
         constraints.append(f"Reject the {source_boundary.upper()} coverage premise before giving field advice")
     if decision == "fertility_rate":

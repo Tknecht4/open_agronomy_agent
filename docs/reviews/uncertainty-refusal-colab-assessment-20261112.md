@@ -44,6 +44,28 @@ A final terminology control also reproduced a dose-response-curve explanation
 being classified as a dose request. Exclude that compound scientific term while
 retaining any separate request for a dose or application.
 
+## Follow-ups from the matched GPU baseline
+
+The baseline completed all 87 production cells and all six required components,
+with no failed execution checks. Controller-side semantic review then found gaps
+that those checks do not measure:
+
+- The root wording “roots are swollen” missed the existing suspected-clubroot
+  method. Extend the shared capsule signal so confirmation and soil-movement
+  precautions survive, without treating symptoms as a confirmed diagnosis.
+- A zone-sampling answer acknowledged variability but never instructed separate
+  representative samples. Add that critical missing-method check; preserve
+  correct short model advice without requiring every optional protocol detail.
+- Report issuance was described as processing-or-reporting. Keep sample event
+  roles distinct in the prompt and verifier. Recover with a shared date-record
+  method that composes with other requested observations and retains product
+  authority guards.
+
+The new date guidance does not infer dates. It preserves collection, issuance
+and any separately supplied processing/analysis event as distinct provenance.
+The retained baseline, carried exact-answer labels and new automated judgments
+remain separate; they are development evidence, not expert grades.
+
 ## Scientific basis and task scope
 
 [NRCS soil guidance](https://www.nrcs.usda.gov/sites/default/files/2022-10/National-Agronomy-Manual.pdf)
@@ -59,6 +81,11 @@ and its [trial interpretation guidance](https://seedmb.ca/trials/oilseed-crops/)
 support comparison across relevant site-years, maturity/adaptation and statistical
 uncertainty. Guidance to compare trials is not evidence that those trial results
 were supplied. No current variety ranking or numeric agronomic target is inferred.
+[Alberta's clubroot plan](https://www.alberta.ca/alberta-clubroot-management-plan)
+supports diagnostic confirmation and limiting soil movement while disease is
+suspected. [Provincial soil-sampling guidance](https://www2.gov.bc.ca/gov/content/industry/agriculture-seafood/agricultural-land-and-environment/soil-nutrients/nutrient-management/what-to-apply/soil-nutrient-testing/soil-sampling-methods-tools)
+supports separate representative zone samples. No numeric sanitation recipe,
+sampling depth, seasonal date or field rate is transferred across jurisdictions.
 
 The earlier ambiguous imagery/area probe remains unchanged with its original
 unknown completeness label. Two versioned probes separate an explicitly requested

@@ -151,7 +151,7 @@ _DOMAIN_RULES: tuple[_DomainRule, ...] = (
         primary_intent="plant_health",
         signals=(
             (r"\bclubroot\b", 7),
-            (r"\b(?:swollen roots?|galls?|dying patch)\b", 4),
+            (r"\b(?:swollen roots?|roots?\s+(?:are|look|appear)\s+swollen|galls?|dying patch)\b", 4),
             (r"\b(?:approach|entrance|what do I do|today|contain|sanitation)\b", 3),
             (r"\b(?:soil[- ]movement|precautions?|restrict\w* traffic|equipment clean\w*)\b", 4),
         ),

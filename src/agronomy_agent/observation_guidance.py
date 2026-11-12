@@ -49,6 +49,14 @@ class ObservationGuidance:
         return False
 
 
+def sample_event_roles_stated(question: str) -> bool:
+    """The request names collection and report issuance as separate events."""
+    return bool(
+        re.search(r"\bsampl\w*\b[^.!?;]{0,80}\b(?:collected|collection date)\b", question, re.I)
+        and re.search(r"\breport\b[^.!?;]{0,80}\b(?:issued|issuance|issue date)\b", question, re.I)
+    )
+
+
 def observation_guidance(question: str) -> ObservationGuidance | None:
     methods = tuple(_matching_observation_methods(question))
     if not methods:
@@ -69,6 +77,17 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
     # English method text must never replace a French answer.
     if preferred_response_language(question) == "fr" or has(r"\b(?:en fran[cç]ais|in french)\b"):
         return None
+    if sample_event_roles_stated(question) and has(r"\b(?:sampling dates?|sample date|collection date|which date|preserv\w*)\b"):
+        yield ObservationGuidance("sample_record_dates", (
+            "Use the actual sample collection date as the sampling-event date when comparing seasons. "
+            "Preserve the laboratory report issuance date in a separate field linked to the sample identifier "
+            "and original report. Keep an analysis or processing date separately if supplied; do not infer it "
+            "from report issuance. Compare sampling depth, timing and analytical method as well as the dates."
+        ), (
+            ("date_collection", "Use the collection event for sampling-date comparisons.", (r"\bcollection date\b", r"\bdate of collection\b", r"\bsampling[- ]event date\b")),
+            ("date_report", "Preserve the report issuance event under its own role.", (r"\breport (?:issuance|issue) date\b", r"\bdate (?:the )?(?:lab(?:oratory)? )?report was issued\b")),
+            ("date_separation", "Keep distinct events and their provenance linked without overwriting.", (r"\bseparate\b", r"\bdistinct\b", r"\b(?:retain|keep|preserve) both\b")),
+        ))
     if has(r"\b(?:ndvi|vegetation index)\b") and has(r"\b(?:compar\w*|dates?|lower|declin\w*|chang\w*)\b"):
         yield ObservationGuidance("imagery_comparison", (
             "A lower displayed NDVI alone does not establish a real crop-vigor decline, a cause, or a yield loss. "

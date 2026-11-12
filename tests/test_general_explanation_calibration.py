@@ -123,6 +123,7 @@ def test_variety_checklist_drift_is_corrected_in_rotation_definition():
     ("Explain crop rotation.", "Crop rotation is the planned sequence of crops grown in the same field over time. Different crops can change soil cover, rooting and nutrient demand, and interrupt host-specific pest cycles. The useful sequence depends on climate, soil, market and pest biology; a rotation does not eliminate every persistent pathogen."),
     ("In general, what is a pesticide label rate and how is it different from a fertilizer nutrient rate? I am not asking which product or dose to use.", "A pesticide label rate is the product amount or concentration specified for the labelled use, with crop, target, method and restrictions. A fertilizer nutrient rate expresses the mass of a named nutrient per area; product concentration converts that nutrient amount to fertilizer product mass. These bases are different. This explanation does not choose a pesticide dose or a field nutrient target."),
     ("Explain how representative aphid scouting and matching threshold units help decide whether more sampling is needed. Do not choose a pesticide.", "Use representative samples from the field interior and compare affected and normal areas; an edge hotspot alone may not represent the field. Record crop and pest stage, aphid counts, damage, beneficial insects and the sampling method. Compare observations with current local guidance using the same counting basis and threshold units. If the sample is sparse, variable or not comparable, take additional representative samples rather than inferring field-wide pressure or a spray decision."),
+    ("The soil sample was collected May 12 and the lab report was issued May 19. Which sampling date should I compare across seasons?", "Use May 12, the collection date, for sampling-date comparisons. Preserve May 19 as the report issuance date in a separate field linked to the sample and original report. The laboratory processing date is not established by issuance; retain it separately if supplied. Keep sampling depth, timing and analytical method comparable across seasons."),
 ])
 def test_correct_definition_survives_the_persisted_product_path(tmp_path, monkeypatch, message, answer):
     from agronomy_agent.execution_core import AgentExecutionRequest
@@ -250,3 +251,75 @@ def test_dose_request_backstop_does_not_promote_dose_response_terminology_to_act
     assert classify_high_consequence_domains("Explain a pesticide dose-response curve in general.") == []
     assert "product_label" in classify_high_consequence_domains("Do not choose a pesticide. Give me a dose.")
     assert "product_label" in classify_high_consequence_domains("Explain a pesticide dose-response curve. What dose should I apply?")
+
+
+def test_suspected_clubroot_word_order_keeps_confirmation_and_containment():
+    question = "My canola roots are swollen beside the field gate. Is that enough to confirm clubroot?"
+    assert build_decision_route_state(question, "plant_health").decision == "clubroot_containment"
+    result = verify_answer("Symptoms alone cannot confirm a diagnosis. Arrange a representative diagnostic sample.",
+        question=question, evidence_text="", question_type="plant_health", risk_level="medium",
+        editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert result.fallback_applied
+    assert "soil movement" in result.answer and "sanitation" in result.answer
+    assert "not confirmation" in result.answer
+
+
+def test_stratified_sampling_recovery_requires_a_useful_zone_method():
+    question = "An adviser wants one composite soil sample for an Alberta barley field with eroded knolls, wet depressions and an old manure strip. Is one average good enough for the nutrient plan?"
+    result = verify_answer("One sample may not be enough. These are contrasting management zones. Provide soil tests and nutrient requirements before I can evaluate whether an average is adequate.",
+        question=question, evidence_text="", question_type="field_data", risk_level="medium",
+        editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert result.fallback_applied
+    assert "zone_samples" in result.draft_assessment.missing_intent_facets
+    assert "each zone" in result.answer and "sampling depth" in result.answer
+    assert "laboratory method" in result.answer
+
+
+@pytest.mark.parametrize("answer", [
+    "No. Collect representative soil samples from each zone separately; do not mix the eroded knolls, wet depressions and manure strip. Keep sampling depth, timing, handling and laboratory method consistent. Interpret each zone using its history, crop needs, method and current local calibration before setting a nutrient rate.",
+    "No. Keep the eroded knolls, wet depressions and old manure strip as separate sampling zones and collect representative samples within each zone. A whole-field average could conceal differences among those areas; interpret each zone's results against its own management history.",
+])
+def test_adequate_stratified_sampling_model_method_is_preserved(answer):
+    question = "Should one composite sample combine eroded knolls, wet depressions and an old manure strip for a barley nutrient plan?"
+    result = verify_answer(answer, question=question, evidence_text="", question_type="field_data", risk_level="medium",
+        editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert result.answer == answer and not result.fallback_applied
+
+
+def test_sampling_date_prompt_preserves_collection_and_report_event_roles():
+    question = "The soil sample was collected May 12 and the lab report was issued May 19. Which sampling date should I compare across seasons?"
+    state = build_decision_route_state(question, "field_data")
+    assert any("issuance alone does not establish" in x.lower() for x in state.constraints)
+
+
+def test_report_issuance_is_not_relabelled_as_sample_processing():
+    question = "The soil sample was collected May 12 and the lab report was issued May 19. Which sampling date should I compare across seasons?"
+    result = verify_answer("Use May 12 as the sampling date. Preserve May 19 as the date the laboratory processed or reported on that sample.",
+        question=question, evidence_text="", question_type="field_data", risk_level="low",
+        editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert "sample_event_role_conflation" in result.draft_assessment.reasons
+    assert "issuance" in result.answer and "separate" in result.answer
+    assert "processed or reported" not in result.answer
+
+
+def test_correct_sample_date_roles_are_preserved():
+    question = "The soil sample was collected May 12 and the lab report was issued May 19. Which sampling date should I compare across seasons?"
+    answer = "Use May 12, the collection date, for sampling-date comparisons. Preserve May 19 as the report issuance date in a separate field linked to the sample and original report. The laboratory processing date is not established by issuance; retain it separately if supplied. Keep sampling depth, timing and analytical method comparable across seasons."
+    result = verify_answer(answer, question=question, evidence_text="", question_type="field_data", risk_level="low",
+        editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert result.answer == answer and not result.fallback_applied
+
+
+def test_date_method_composes_with_an_independent_area_request():
+    from agronomy_agent.observation_guidance import observation_guidance
+    question = "The soil sample was collected May 12 and the lab report was issued May 19. Which date belongs to the sampling event? Also, can one GPS pin establish planted area?"
+    method = observation_guidance(question)
+    assert method.has_method("sample_record_dates") and method.has_method("point_area")
+    assert "collection date" in method.answer and "closed polygon" in method.answer
+
+
+def test_date_method_does_not_remove_a_product_authority_request():
+    from agronomy_agent.router import classify_query, refine_query_route
+    question = "The soil sample was collected May 12 and the lab report was issued May 19. Which date should I preserve? Which herbicide rate should I spray today?"
+    route = refine_query_route(question, classify_query(question))
+    assert assess_answerability(question, route=route).state.value == "require_authority"

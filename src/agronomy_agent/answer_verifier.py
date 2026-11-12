@@ -25,7 +25,7 @@ from agronomy_agent.model_prompt_budget import positive_int, prompt_budget_recei
 from agronomy_agent.model_errors import LocalModelSnapshotUnavailable
 from agronomy_agent.quantity_claims import unsupported_quantities
 from agronomy_agent.execution_core import stable_sha256
-from agronomy_agent.observation_guidance import observation_guidance
+from agronomy_agent.observation_guidance import observation_guidance, sample_event_roles_stated
 from agronomy_agent.high_consequence import classify_high_consequence_domains, fertility_quantity_requested
 from agronomy_agent.answerability import simple_definition_subject
 
@@ -1410,6 +1410,15 @@ def assess_claim_risk(
         reasons.append("scope_drift")
     if missing_intent_facets:
         reasons.append("missing_decision_content")
+    if sample_event_roles_stated(question) and not re.search(
+        r"\b(?:processing date|processed|analy[sz]ed|analysis date)\b", question, re.I
+    ):
+        for clause in re.split(r"[.!?;\n]", candidate):
+            if re.search(
+                r"\b(?:date (?:the )?lab(?:oratory)? (?:processed|analy[sz]ed)|(?:lab(?:oratory)? )?processing date)\b",
+                clause, re.I,
+            ) and not re.search(r"\b(?:not|unknown|unprovided|cannot infer|if provided|if supplied)\b", clause, re.I):
+                reasons.append("sample_event_role_conflation")
     definition = simple_definition_subject(question)
     if definition in {"soil texture"}:
         for clause in re.split(r"[.!?;\n]", candidate):
@@ -3209,6 +3218,13 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
         add("clubroot_persistence", "Answer that one nonhost year does not eradicate persistent clubroot spores.", r"\b(?:does not|will not|cannot|not enough|not eradicate|not clean)\b[^.]{0,90}\b(?:clubroot|eradicat|clean|spores?)\b", r"\bspores?\b[^.]{0,60}\b(?:persist|years)\b")
 
     decision = build_decision_route_state(question, question_type).decision
+    if decision == "stratified_soil_sampling":
+        add("zone_samples", "Collect representative samples separately from contrasting management zones; do not average unlike zones.",
+            r"\bsampl\w*\b[^.]{0,90}\b(?:each|separate)\b[^.]{0,30}\bzone", r"\b(?:each|separate)\b[^.]{0,45}\bzone\b[^.]{0,60}\bsampl\w*\b", r"\bdo not (?:mix|combine)\b[^.]{0,45}\bzones?\b")
+        # A correct short separation method can answer whether one average is
+        # adequate. Detailed protocols remain useful recovery guidance, not
+        # extra mandatory facets for every zone-comparison question.
+        return tuple(requirements)
     if decision == "field_trafficability":
         add("traffic_profile", "Check soil condition below the surface, not surface appearance alone.", r"\b(?:subsoil|subsurface|below the surface|soil moisture|soil condition)\b")
         add("traffic_load", "Assess the intended equipment load and contact pressure.", r"\b(?:axle load|equipment load|tire pressure|track pressure|contact pressure)\b")
