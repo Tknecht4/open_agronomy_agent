@@ -2,7 +2,7 @@ import pytest
 
 from agronomy_agent.agno_runtime.local_index import RetrievedDoc
 from agronomy_agent.answer_verifier import verify_answer
-from agronomy_agent.answerability import simple_definition_subject
+from agronomy_agent.answerability import simple_definition_subject, is_rate_basis_explanation, assess_answerability
 from agronomy_agent.decision_route import build_decision_route_state
 from agronomy_agent.evidence_handshake import build_evidence_handshake, filter_decision_distractors
 
@@ -119,13 +119,15 @@ def test_variety_checklist_drift_is_corrected_in_rotation_definition():
     assert "do not have enough" not in result.answer
 
 
-def test_correct_definition_survives_the_persisted_product_path(tmp_path, monkeypatch):
+@pytest.mark.parametrize("message,answer", [
+    ("Explain crop rotation.", "Crop rotation is the planned sequence of crops grown in the same field over time. Different crops can change soil cover, rooting and nutrient demand, and interrupt host-specific pest cycles. The useful sequence depends on climate, soil, market and pest biology; a rotation does not eliminate every persistent pathogen."),
+    ("In general, what is a pesticide label rate and how is it different from a fertilizer nutrient rate? I am not asking which product or dose to use.", "A pesticide label rate is the product amount or concentration specified for the labelled use, with crop, target, method and restrictions. A fertilizer nutrient rate expresses the mass of a named nutrient per area; product concentration converts that nutrient amount to fertilizer product mass. These bases are different. This explanation does not choose a pesticide dose or a field nutrient target."),
+])
+def test_correct_definition_survives_the_persisted_product_path(tmp_path, monkeypatch, message, answer):
     from agronomy_agent.execution_core import AgentExecutionRequest
     from agronomy_agent.server.services import chat_service
     from agronomy_agent.server.settings import build_settings
     from agronomy_agent.server.storage.db import TraceStore
-
-    answer = "Crop rotation is the planned sequence of crops grown in the same field over time. Different crops can change soil cover, rooting and nutrient demand, and interrupt host-specific pest cycles. The useful sequence depends on climate, soil, market and pest biology; a rotation does not eliminate every persistent pathogen."
 
     class Backend:
         backend_id = "imposed_correct_definition"
@@ -147,7 +149,7 @@ def test_correct_definition_survives_the_persisted_product_path(tmp_path, monkey
         session = store.create_session("Synthetic definition", {}, {})
         result = chat_service.execute_agent_request(AgentExecutionRequest(store=store,
             settings=build_settings(db_path=database, artifact_root=tmp_path / "artifacts", network_mode="offline"),
-            session_id=session["session_id"], message="Explain crop rotation.", mode="agronomic_rag",
+            session_id=session["session_id"], message=message, mode="agronomic_rag",
             model_id="imposed", rag_config="configs/rag.yaml", max_tokens=150, generation_backend=backend))
         assert result.answer == answer
         assert store.get_turn(result.turn["turn_id"])["answer"] == answer
@@ -155,6 +157,51 @@ def test_correct_definition_survives_the_persisted_product_path(tmp_path, monkey
         assert len(backend.calls) == 1
         prompt = "\n".join(x["content"] for x in backend.calls[0])
         assert "standability, drydown" not in prompt
-        assert "the next field action" not in prompt
+        if message == "Explain crop rotation.":
+            assert "the next field action" not in prompt
     finally:
         store._conn.close()
+
+
+@pytest.mark.parametrize("question", [
+    "What is a pesticide label rate?",
+    "Define a nutrient rate.",
+    "Explain the difference between product rate and nutrient rate.",
+    "How do pesticide label rates and fertilizer nutrient rates differ?",
+])
+def test_rate_basis_terminology_does_not_require_field_authority(question):
+    from agronomy_agent.high_consequence import classify_high_consequence_domains, fertility_quantity_requested
+    from agronomy_agent.router import classify_query, refine_query_route
+    from agronomy_agent.answer_safety import enforce_answer_safety_postconditions
+    assert is_rate_basis_explanation(question)
+    route = refine_query_route(question, classify_query(question))
+    assert route.question_type == "exam_review" and route.risk_level == "low"
+    assert assess_answerability(question, route=route).state.value == "answer_directly"
+    assert classify_high_consequence_domains(question) == []
+    assert not fertility_quantity_requested(question)
+    assert enforce_answer_safety_postconditions("A supported explanation.", question=question, route=route) == "A supported explanation."
+
+
+@pytest.mark.parametrize("question", [
+    "What is a pesticide label rate for glyphosate?",
+    "What is a pesticide label rate for my field?",
+    "Define a pesticide label rate. What herbicide rate should I spray tomorrow?",
+    "Explain the difference between product rate and nutrient rate and choose a herbicide dose.",
+    "In general, what is a pesticide label rate? I am not asking which product or dose to use. Also recommend a dose for canola.",
+    "Explain a pesticide label rate; use 2 L/ha on my field?",
+])
+def test_terminology_does_not_exempt_named_or_follow_on_action_requests(question):
+    from agronomy_agent.high_consequence import classify_high_consequence_domains
+    from agronomy_agent.router import classify_query, refine_query_route
+    assert not is_rate_basis_explanation(question)
+    route = refine_query_route(question, classify_query(question))
+    assert assess_answerability(question, route=route).state.value != "answer_directly"
+    assert "product_label" in classify_high_consequence_domains(question)
+
+
+def test_terminology_question_still_rejects_an_invented_numeric_dose():
+    result = verify_answer("Apply glyphosate at 2 L/ha today to control weeds in canola.",
+        question="What is a pesticide label rate?", evidence_text="", question_type="exam_review",
+        risk_level="low", editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert result.fallback_applied
+    assert "2 L/ha" not in result.answer

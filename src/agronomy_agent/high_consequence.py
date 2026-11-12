@@ -3,11 +3,15 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from agronomy_agent.answerability import is_rate_basis_explanation
+
 
 HIGH_CONSEQUENCE_SCHEMA = "open_agronomy_agent.high_consequence_policy.v1"
 
 
 def fertility_quantity_requested(question: str) -> bool:
+    if is_rate_basis_explanation(question):
+        return False
     # Fertilizer shorthand is case-sensitive here: a possessive "label's rate"
     # is not a sulphur request. Numeric proposals below have their own units.
     nutrient = r"(?:fertiliz\w*|fertilis\w*|nitrogen|urea|urée|phosphorus|potassium|sulphur|sulfur|manure|lime|N|engrais|azote|phosphore|soufre|fumier|chaux|(?-i:(?<!['’])(?:P2O5|K2O|P|K|S)))"
@@ -53,6 +57,8 @@ def fertility_quantity_requested(question: str) -> bool:
 
 
 def classify_high_consequence_domains(question: str) -> list[str]:
+    if is_rate_basis_explanation(question):
+        return []
     domains: list[str] = []
     product_term = re.search(
         r"\b(?:spray|herbicide|fungicide|insecticide|pesticide|product|tank mix|adjuvant|label|registration|"

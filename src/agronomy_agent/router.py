@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from agronomy_agent.map_component_interpretation import is_map_component_explanation_question
 from agronomy_agent.observation_guidance import observation_guidance
+from agronomy_agent.answerability import is_rate_basis_explanation
 
 
 _AAFC_CROP_HEALTH_PRODUCT_PATTERN = (
@@ -211,6 +212,15 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     field evidence. It does not encode benchmark answers.
     """
 
+    if is_rate_basis_explanation(question):
+        return QueryRoute(
+            question_type="exam_review", risk_level="low",
+            namespaces=("exam_review", "product_stewardship"), required_tools=(),
+            answer_style="exam_review", audience=route.audience,
+            query_expansion=("product rate", "nutrient basis"),
+            guidance="Explain the named rate bases directly; do not choose a product dose or a field nutrient target.",
+            knowledge_bucket="farmer_knowledge", knowledge_domains=("farmer_knowledge",),
+        )
     q = _routing_text(question)
     benign_conceptual_explanation = _is_benign_conceptual_explanation(question)
     qtype = route.question_type

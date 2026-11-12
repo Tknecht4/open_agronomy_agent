@@ -23,6 +23,15 @@ when an inadequate draft cannot be repaired. Compound and regulated-action
 requests retain their existing precedence. No model pin, sampling budget,
 corpus admission or pesticide/diagnosis authority was relaxed.
 
+A persisted-backend counterfactual also reproduced a terminology over-refusal:
+a correct product-rate versus nutrient-rate explanation was replaced by an
+unrelated diagnosis checklist and label-authority refusal. A shared whole-request
+grammar now identifies these unnamed rate-basis definitions/comparisons across
+answerability, routing, safety postconditions and consequence classification.
+Named products, numeric proposals, field scope and follow-on directives do not
+qualify. Numeric claims in model output still undergo verification; an imposed
+invented dose is rejected. This permission concerns explanation, not application.
+
 ## Scientific basis and task scope
 
 [NRCS soil guidance](https://www.nrcs.usda.gov/sites/default/files/2022-10/National-Agronomy-Manual.pdf)

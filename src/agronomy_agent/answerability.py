@@ -387,7 +387,30 @@ def _normalized_scope(value: Any) -> str:
     return " ".join(re.findall(r"[a-z0-9]+", str(value or "").casefold()))
 
 
+def is_rate_basis_explanation(question: str) -> bool:
+    """Recognize a whole terminology request, never a disclaimer around an action.
+
+    Only unnamed product/label and nutrient bases fit this grammar. A named
+    product, numeric proposal, field scope or any follow-on directive does not.
+    """
+    term = r"(?:(?:a|the)\s+)?(?:(?:pesticide\s+)?(?:label|product)|(?:fertilizer\s+)?nutrient)\s+rates?"
+    request = (
+        rf"(?:what is|define|explain)\s+{term}"
+        rf"(?:\s+and how is it different from\s+{term})?"
+        rf"|what does\s+{term}\s+mean"
+        rf"|(?:what is|explain)\s+the difference between\s+{term}\s+and\s+{term}"
+        rf"|how do\s+{term}\s+and\s+{term}\s+differ"
+    )
+    return bool(re.fullmatch(
+        rf"\s*(?:in general,?\s+)?(?:{request})[.!?]*"
+        r"(?:\s+I am not asking which product or dose to use[.!?]*)?\s*",
+        question, re.I,
+    ))
+
+
 def _is_benign_regulated_definition(question: str) -> bool:
+    if is_rate_basis_explanation(question):
+        return True
     if not _BENIGN_DEFINITION_RE.search(question):
         return False
     lower = question.casefold()
@@ -942,6 +965,8 @@ def matching_rule_pack(question: str) -> DomainRulePack:
         "conceptual.explanation.v1",
     )
     by_id = {pack.pack_id: pack for pack in DOMAIN_RULE_PACKS}
+    if is_rate_basis_explanation(question):
+        return by_id["conceptual.explanation.v1"]
     for pack_id in precedence:
         pack = by_id[pack_id]
         if pack.matches(question):
