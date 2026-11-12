@@ -98,6 +98,18 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
             parts.append("For a field application, a fertilizer nutrient rate commonly expresses the mass of a named nutrient per area. Other application systems may use an explicitly stated concentration or volume basis. Use the declared nutrient basis and product analysis to convert nutrient mass into product amount; it is not a nutrient concentration measured in the crop or soil.")
             facets.append(("nutrient_rate_basis", "Explain nutrient mass per area, distinct from product amount or measured crop concentration.", (r"\b(?:mass|amount|kg|kilograms?|lb|pounds?)\b[^.]{0,100}\b(?:nutrient|nitrogen|phosphorus|N|P|K)\b[^.]{0,60}\b(?:area|hectare|ha|acre|ac)\b", r"\bnutrient\b[^.]{0,60}\bmass per (?:unit )?area\b")))
         yield ObservationGuidance("rate_basis_terms", "\n\n".join(parts), tuple(facets))
+    if has(r"\b(?:pests?|insects?|aphids?)\b") and has(r"\b(?:regional|area|regional-scale)\s+(?:insect\s+|pest\s+)?alert\b") and has(r"\b(?:count\w*|threshold|infestation)\b"):
+        yield ObservationGuidance("regional_pest_alert", (
+            "A regional insect alert or map pin does not establish field infestation or that a threshold is exceeded. "
+            "Confirm the pest identity and active life stage, then scout representative locations across the field, including interior and normal areas. "
+            "Collect representative field counts of pest population density or measure injury with the appropriate crop-and-pest sampling method; identifying the pest alone is not the field measurement. "
+            "Compare those observations with a current local economic or action threshold on the same sampling units and crop stage. "
+            "Record population trend and natural enemies, and continue or repeat sampling when uncertainty remains. Verify the current product label only if treatment is justified."
+        ), (
+            ("alert_field_measurement", "Obtain representative field population or injury measurements, not identity alone.", (r"\b(?:representative|field|scout)\b[^.]{0,100}\b(?:count\w*|density|injury)\b", r"\b(?:count\w*|density|injury)\b[^.]{0,100}\b(?:representative|field|scout)\b")),
+            ("alert_local_threshold", "Match field observations to the applicable local crop-and-pest threshold.", (r"\b(?:local|economic|action)\b[^.]{0,50}\bthreshold\b",)),
+            ("alert_trend_enemies", "Retain population trend and natural-enemy observations.", (r"\b(?:trend|natural enem|beneficial)\w*\b",)),
+        ))
     if has(r"\b(?:aphids?|pests?|insects?)\b") and has(r"\b(?:scout\w*|sampl\w*)\b") and has(r"\b(?:threshold units?|counting basis|sampling units?)\b"):
         yield ObservationGuidance("scouting_unit_interpretation", (
             "Scout representative interior locations across the field, including affected and normal areas; an edge hotspot alone is not a field-wide count. "

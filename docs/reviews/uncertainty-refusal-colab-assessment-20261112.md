@@ -95,6 +95,17 @@ state cannot satisfy that proof. Persisted production-seam tests retain all
 
 Unknown location now uses applicable local guidance, without inventing a province.
 
+The next candidate (`f1cb525`) passed its full local suite, but changed-answer
+review caught a regional-alert regression during GPU execution. The verifier
+recognized that the answer omitted field measurements; when the editor also
+failed, the policy preserved that incomplete draft. A shared regional-alert
+observation method now requires actual representative counts or injury,
+comparison with an applicable local threshold, and trend/natural-enemy context.
+The model's complete method remains unchanged. A mocked unavailable editor did
+not reproduce the defect; an editor returning the incomplete text did. Retain
+that discriminating negative test and the interrupted source condition. A
+persisted-backend regression verifies the final saved method and all 17 stages.
+
 ## Scientific basis and task scope
 
 [NRCS soil guidance](https://www.nrcs.usda.gov/sites/default/files/2022-10/National-Agronomy-Manual.pdf)
@@ -121,6 +132,39 @@ unknown completeness label. Two versioned probes separate an explicitly requeste
 GPS-area limitation from an explicitly requested imagery-QA-plus-area explanation.
 Answering an unasked imagery question is not required to pass the area-only probe.
 
+## Frozen study and interpretation
+
+Before editing, freeze 87 production cases (the prior 80 unchanged, five new
+calibration controls and two versioned task scopes) and eight diagnostic cases
+across four arms. The diagnostic panel deliberately repeats three original
+questions; it is an explanatory probe, not independent replication. Keep the
+semantic rubric and review labels on the controller. Only the separately approved
+synthetic execution capsule crosses to the task-owned Colab VM.
+
+Baseline main completed 87 production and 32 diagnostic observations with all
+six required components passing and no failed execution checks. Its ten numeric
+production cases passed their independent checks. Automated source review found
+three unnecessary holds, five incomplete answers, five source-support defects
+and two clear material errors among 70 review-required production observations.
+One historical completeness label and one attribution materiality label remain
+unknown. These dimensions overlap and are not a summed failure rate.
+
+The raw controls do not support globally disabling refusal or verification.
+They attempted terminology and scouting help but also conflated application
+rate with residue tolerance, confused treatment-threshold position with sampling
+adequacy, and misidentified the clubroot causal organism. Four raw responses hit
+the fixed token limit. Those outputs do not establish uncapped model capability.
+Removing just risk intervention or just verification did not repair the shared
+terminology classification. The repairs therefore address request scope,
+relevance, evidence wording and specific conceptual checks across active backend
+layers; the serving weights and generation budgets are unchanged.
+
+Worker input projections are verified separately from answer reviews. The
+recorded baseline contains 21 production observations and eight diagnostic cells
+with field-only facts, so raw-versus-product matching remains unknown for those
+inputs. Five performance repeats are below the 20-sample performance qualification
+minimum. Neither timing nor domain accuracy is promoted to a release claim.
+
 ## Verification boundaries
 
 Corrected baseline regressions reproduced eight failures with two positive
@@ -135,4 +179,15 @@ review labels and previous answers remain controller-side. Historical receipts
 are immutable. Development exposure, diagnostic overlap and automated review
 remain explicit; this work does not establish expert agronomic or field validity.
 
-Final source, GPU outcomes and CI receipts will be recorded after verification.
+The preceding runtime source was `f1cb5250d765a44210656d3683394879c07fa323`,
+with source fingerprint
+`6b6278924301cb6c9e7ee208bb6e7d69015eff887a5977011000eee0d52284c6`.
+Its full local backend verification passed 3,887 tests with 58 skips. The focused
+contract selection passed 938 tests. Unchanged frontend code passed 505 tests,
+typecheck and build using Node 24 with an existing dependency tree matching the
+lockfile. Public scope, tracked-source privacy and strict documentation checks
+passed. A preceding sandbox-limited full attempt failed at localhost HTTP binds
+and was interrupted; its failures are retained separately from the permitted
+successful run. No skipped native build is represented as an installed-app pass.
+
+Final GPU outcomes and CI receipts will be recorded after verification.

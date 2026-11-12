@@ -442,3 +442,54 @@ def test_yield_stability_does_not_replace_statistical_separation_in_variety_comp
     assert "variety_statistics" in assessment.missing_intent_facets
     adequate = answer + " Check reported statistical separation or uncertainty before treating a small yield-rank difference as real."
     assert "variety_statistics" not in assess_claim_risk(adequate, question=question, evidence_text="", question_type="crop_management", risk_level="medium").missing_intent_facets
+
+
+def test_regional_pest_alert_requires_field_measurement_even_on_low_risk_route():
+    question = "A regional alert mentions insects near my Canadian corn field. Is my field over threshold, or what must be counted first?"
+    draft = "The regional alert does not mean your field is over threshold. Find the specific pest identity and life stage in the alert; without the identity it is impossible to determine what population count is required."
+    class IncompleteEditor:
+        def generate(self, messages):
+            return draft
+    result = verify_answer(draft, question=question, evidence_text="", question_type="plant_health", risk_level="low",
+        editor=IncompleteEditor(), review_mode="risk_conditioned_selective_v3")
+    assert result.answer != draft
+    assert "representative" in result.answer and "count" in result.answer
+    assert "current local" in result.answer and "threshold" in result.answer
+
+
+def test_regional_pest_alert_keeps_complete_model_method():
+    question = "A regional insect alert covers my field pin. Does that prove infestation or what counts should I collect?"
+    draft = "A regional alert does not establish field density. Identify the pest and active life stage, scout representative interior locations and count population density or injury with the crop and pest's sampling method. Compare the field measurements with a current local economic threshold using the same units and crop stage; record population trend and natural enemies. Check the current product label only if treatment is justified."
+    result = verify_answer(draft, question=question, evidence_text="", question_type="plant_health", risk_level="low",
+        editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert result.answer == draft and not result.fallback_applied
+
+
+def test_persisted_regional_alert_keeps_counts_when_editor_cannot_complete(tmp_path, monkeypatch):
+    from agronomy_agent.execution_core import AgentExecutionRequest
+    from agronomy_agent.server.services import chat_service
+    from agronomy_agent.server.settings import build_settings
+    from agronomy_agent.server.storage.db import TraceStore
+    class Backend:
+        backend_id = "imposed_incomplete_alert"
+        intervention_profile = "balanced"
+        def generate(self, messages):
+            return "A regional alert cannot prove that your field is over threshold. First identify the pest and active life stage. Without the identity I cannot determine what count is required."
+        def close(self):
+            pass
+    backend = Backend()
+    monkeypatch.setattr(chat_service, "_build_mlx_generator", lambda *a, **k: backend)
+    database = tmp_path / "alert.sqlite3"
+    store = TraceStore(database)
+    try:
+        session = store.create_session("Synthetic alert", {}, {})
+        result = chat_service.execute_agent_request(AgentExecutionRequest(store=store,
+            settings=build_settings(db_path=database, artifact_root=tmp_path / "artifacts", network_mode="offline"),
+            session_id=session["session_id"], message="A regional insect alert covers my field pin. Does that prove infestation or what counts should I collect?", mode="agronomic_rag",
+            model_id="imposed", rag_config="configs/rag.yaml", max_tokens=150, generation_backend=backend))
+        assert "representative field counts" in result.answer
+        assert "current local" in result.answer and "threshold" in result.answer
+        assert store.get_turn(result.turn["turn_id"])["answer"] == result.answer
+        assert len(result.stage_receipts) == 17
+    finally:
+        store._conn.close()
