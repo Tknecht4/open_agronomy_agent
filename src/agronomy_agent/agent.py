@@ -4229,6 +4229,12 @@ def deterministic_tool_response(
         for item in (runtime.get("tool_results") or ())
         if isinstance(item, Mapping)
     )
+    if assess_answerability(
+        question, route=getattr(context, "route", None),
+        tool_plan=plan, tool_results=results,
+        field_context=runtime.get("answerability_field_context"),
+    ).state == AnswerabilityState.REFUSE_UNSAFE_ACTION:
+        return None, None
     if validated_deterministic_tool_execution(question, plan, results, field_context=runtime.get("answerability_field_context")):
         payload = results[0].get("payload") if isinstance(results[0], Mapping) else None
         answer = str((payload or {}).get("answer") or "").strip() if isinstance(payload, Mapping) else ""

@@ -426,6 +426,54 @@ def is_rate_basis_explanation(question: str) -> bool:
     ))
 
 
+def is_mechanism_explanation(question: str) -> bool:
+    """Recognize an impersonal mechanism or differential-evidence request.
+
+    The whole request excludes field actions, permission and extra decision
+    modals. Process subjects are open vocabulary; a topic name is not an
+    instruction to manage that topic.
+    """
+    text = " ".join(question.lower().split())
+    request = re.search(
+        r"(?:^|[.!?;]\s*)(?:please\s+)?(?:"
+        r"(?:why|how)\s+(?:does|do|can|could|is|are)\b|"
+        r"(?:explain|describe)\s+(?:the\s+)?(?:mechanism|process|how|why)\b|"
+        r"which\s+(?:rival|alternative|possible)\s+(?:explanations|causes)\s+"
+        r"should\s+be\s+(?:investigated|considered|checked)\b)", text,
+    )
+    if request is None:
+        return False
+    if re.search(
+        r"\b(?:my|our|your|i|we|you|growers?|farmers?|operators?|advis[eo]rs?)\b|"
+        r"\b(?:this|these|that|those)\s+(?:field|farm|crop|plant|stand|sample|test|map|roots?|leaves)\b|"
+        r"\b(?:today|tomorrow|tonight|currently|permission|authorize|approve|legal|legally|"
+        r"safe|safely|advisable|necessary|rates?|dose|dosage|thresholds?|labels?|"
+        r"phi|rei|ppe|herbicide|fungicide|insecticide|pesticide)\b", text,
+    ):
+        return False
+    if re.search(
+        r"\b(?:why|how)\s+(?:is|are|was|were)\s+(?:(?:the|a|an)\s+)?"
+        r"(?:leaves|roots?|stems?|seedlings?|plants?|crops?)\b", text,
+    ):
+        # A physical state of a plant is not established as a general process
+        # merely by omitting a possessive or naming an unfamiliar symptom.
+        return False
+    # Only the leading causal modal or explicit analytical 'should be
+    # investigated' construction is admitted. Later or passive proposals stay
+    # under the ordinary decision contract, even with an explanatory prefix.
+    remaining = text[:request.start()] + text[request.end():]
+    if re.search(r"\b(?:should|must|ought|can|could|may|might|would)\b", remaining):
+        return False
+    if re.search(
+        r"\b(?:apply|spray|treat|diagnose|prescribe|recommend|choose|select|"
+        r"irrigate|fertilize|harvest|till|rip|subsoil|spread|drill|drive)\b|"
+        r"(?:^|[.!?;]|\b(?:and|then|also))\s*(?:please\s+)?"
+        r"(?:start|stop|add|remove|change|plant|seed|sow|feed|use)\b", text,
+    ):
+        return False
+    return True
+
+
 def _is_benign_regulated_definition(question: str) -> bool:
     if is_rate_basis_explanation(question):
         return True
@@ -983,7 +1031,7 @@ def matching_rule_pack(question: str) -> DomainRulePack:
         "conceptual.explanation.v1",
     )
     by_id = {pack.pack_id: pack for pack in DOMAIN_RULE_PACKS}
-    if is_rate_basis_explanation(question):
+    if is_rate_basis_explanation(question) or is_mechanism_explanation(question):
         return by_id["conceptual.explanation.v1"]
     for pack_id in precedence:
         pack = by_id[pack_id]

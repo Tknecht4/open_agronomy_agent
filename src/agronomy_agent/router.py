@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from agronomy_agent.map_component_interpretation import is_map_component_explanation_question
 from agronomy_agent.observation_guidance import observation_guidance
-from agronomy_agent.answerability import is_rate_basis_explanation, product_action_request_text
+from agronomy_agent.answerability import is_rate_basis_explanation, is_mechanism_explanation, product_action_request_text
 
 
 _AAFC_CROP_HEALTH_PRODUCT_PATTERN = (
@@ -559,7 +559,9 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
         or variety_decision
         or regulated_boundary_explanation
     )
-    if benign_conceptual_explanation and not protected_boundary_explanation:
+    if benign_conceptual_explanation and (
+        not protected_boundary_explanation or is_mechanism_explanation(question)
+    ):
         qtype = "exam_review"
         namespaces.difference_update(
             {"plant_health", "product_stewardship", "label_boundary", "field_data_boundary"}
@@ -830,7 +832,7 @@ def _is_benign_conceptual_explanation(text: str) -> bool:
     diagnostic or product routes.
     """
 
-    if evidence_interpretation_kind(text):
+    if is_mechanism_explanation(text) or evidence_interpretation_kind(text):
         return True
     q = _routing_text(text).strip()
     focus = request_focus(q).strip()

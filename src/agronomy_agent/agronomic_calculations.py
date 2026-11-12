@@ -35,6 +35,9 @@ class FoundationCalculationOperation(StrEnum):
     DEBT_TO_ASSET_PERCENT = "debt_to_asset_percent"
     FERTILIZER_FIELD_TOTAL = "fertilizer_field_total"
     SOIL_WATER_STORAGE = "soil_water_storage"
+    NUTRIENT_BASIS_CONVERSION = "nutrient_basis_conversion"
+    APPARENT_NUTRIENT_BALANCE = "apparent_nutrient_balance"
+    LIQUID_PRODUCT_TOTAL = "liquid_product_total"
 
 
 ALL_CALCULATION_OPERATIONS = tuple(CalculationOperation) + tuple(FoundationCalculationOperation)
@@ -170,6 +173,10 @@ def calculation_tool_schema() -> dict[str, Any]:
                 "optional": ["nutrient_label"],
             },
             "soil_water_storage": {"required": ["volumetric_water_content", "layer_depth_cm"]},
+            "nutrient_basis_conversion": {"required": ["quantity_kg_per_ha", "from_basis", "to_basis"],
+                                           "optional": ["factor"]},
+            "apparent_nutrient_balance": {"required": ["applied_kg_per_ha", "removed_kg_per_ha", "nutrient_basis"]},
+            "liquid_product_total": {"required": ["area_ha", "product_rate_l_per_ha"]},
         },
         "boundary": _ARITHMETIC_BOUNDARY,
     }
@@ -211,6 +218,9 @@ def calculate_agronomic(operation: str | CalculationOperation | FoundationCalcul
         FoundationCalculationOperation.DEBT_TO_ASSET_PERCENT: _debt_to_asset_percent,
         FoundationCalculationOperation.FERTILIZER_FIELD_TOTAL: _fertilizer_field_total,
         FoundationCalculationOperation.SOIL_WATER_STORAGE: _soil_water_storage,
+        FoundationCalculationOperation.NUTRIENT_BASIS_CONVERSION: _nutrient_basis_conversion,
+        FoundationCalculationOperation.APPARENT_NUTRIENT_BALANCE: _apparent_nutrient_balance,
+        FoundationCalculationOperation.LIQUID_PRODUCT_TOTAL: _liquid_product_total,
     }
     return handlers[selected](inputs)
 
@@ -401,6 +411,84 @@ def _fertilizer_field_total(inputs: Mapping[str, Any]) -> AgronomicCalculation:
         total.value, "kg", f"({rate.formula}) then {total.formula}",
         {"area_ha": area, **rate.inputs},
     )
+
+
+def validate_supplied_nutrient_inputs(operation: str, inputs: Mapping[str, Any]) -> dict[str, Any]:
+    """Share exact input validation with readiness; never infer field authority."""
+    specifications = {
+        "nutrient_basis_conversion": ({"quantity_kg_per_ha", "from_basis", "to_basis"}, {"factor"}),
+        "apparent_nutrient_balance": ({"applied_kg_per_ha", "removed_kg_per_ha", "nutrient_basis"}, set()),
+        "liquid_product_total": ({"area_ha", "product_rate_l_per_ha"}, set()),
+    }
+    if operation not in specifications:
+        raise ValueError("unsupported supplied-input operation")
+    required, optional = specifications[operation]
+    _require_only(inputs, required=required, optional=optional)
+    for key in (required - {"quantity_kg_per_ha", "applied_kg_per_ha", "removed_kg_per_ha", "area_ha", "product_rate_l_per_ha"}):
+        if not isinstance(inputs[key], str):
+            raise ValueError(f"{key} must be a nutrient basis string")
+    normalized: dict[str, Any] = dict(inputs)
+    numeric = {key for key in inputs if key not in {"from_basis", "to_basis", "nutrient_basis"}}
+    for key in numeric:
+        value = _nonnegative(inputs, key)
+        if len(value.as_tuple().digits) > 12 or value and not -12 <= value.adjusted() <= 10:
+            raise ValueError(f"{key} exceeds supported supplied-input precision")
+        normalized[key] = value
+    if operation == "nutrient_basis_conversion":
+        factors = {("P2O5", "P"): Decimal("0.436"), ("K2O", "K"): Decimal("0.830")}
+        pair = (inputs["from_basis"], inputs["to_basis"])
+        if pair in factors:
+            expected = factors[pair]
+        elif pair[::-1] in factors:
+            expected = (Decimal(1) / factors[pair[::-1]]).quantize(Decimal("0.000000000001"))
+        else:
+            raise ValueError("use matching elemental/oxide bases: P2O5 and P, or K2O and K")
+        if "factor" in normalized and abs(normalized["factor"] - expected) > Decimal("0.0005"):
+            raise ValueError("supplied factor conflicts with the stated nutrient bases")
+        normalized["factor"] = normalized.get("factor", expected)
+    elif operation == "apparent_nutrient_balance":
+        if inputs["nutrient_basis"] not in {"N", "P", "P2O5", "K", "K2O"}:
+            raise ValueError("use one explicit matching nutrient basis")
+        amounts = (normalized["applied_kg_per_ha"], normalized["removed_kg_per_ha"])
+        if max(value.adjusted() for value in amounts) - min(value.as_tuple().exponent for value in amounts) + 2 > 28:
+            raise ValueError("balance exceeds supported decimal precision")
+    return normalized
+
+
+def _nutrient_basis_conversion(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    values = validate_supplied_nutrient_inputs("nutrient_basis_conversion", inputs)
+    quantity, factor = values["quantity_kg_per_ha"], values["factor"]
+    unit = f"kg {values['to_basis']}/ha"
+    with localcontext() as context:
+        context.prec = 64
+        result = quantity * factor
+    return _result(FoundationCalculationOperation.NUTRIENT_BASIS_CONVERSION, result, unit,
+                   f"{_format_operand(quantity)} kg {values['from_basis']}/ha × {_format_operand(factor)} {_format_formula_result(result)} {unit}",
+                   values, assumptions=("oxide reporting basis and elemental nutrient are distinguished; this does not change the physical fertilizer",))
+
+
+def _apparent_nutrient_balance(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    values = validate_supplied_nutrient_inputs("apparent_nutrient_balance", inputs)
+    applied, removed = values["applied_kg_per_ha"], values["removed_kg_per_ha"]
+    with localcontext() as context:
+        context.prec = 64
+        result = applied - removed
+    unit = f"kg {values['nutrient_basis']}/ha"
+    return _result(FoundationCalculationOperation.APPARENT_NUTRIENT_BALANCE, result, unit,
+                   f"{_format_operand(applied)} − {_format_operand(removed)} {_format_formula_result(result)} {unit}", values,
+                   assumptions=("applied minus removed, using the same nutrient basis and area",),
+                   boundary=_ARITHMETIC_BOUNDARY + " An apparent surplus or deficit is not a measurement of soil-test change, plant availability or environmental loss; other inputs, outputs and transformations are outside this balance.")
+
+
+def _liquid_product_total(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    values = validate_supplied_nutrient_inputs("liquid_product_total", inputs)
+    area, rate = values["area_ha"], values["product_rate_l_per_ha"]
+    with localcontext() as context:
+        context.prec = 64
+        result = area * rate
+    return _result(FoundationCalculationOperation.LIQUID_PRODUCT_TOTAL, result, "L product",
+                   f"{_format_operand(area)} ha × {_format_operand(rate)} L product/ha {_format_formula_result(result)} L product", values,
+                   boundary=_ARITHMETIC_BOUNDARY + " This is product quantity, not total carrier water or finished spray volume.")
 
 
 def validate_soil_water_storage_inputs(inputs: Mapping[str, Any]) -> dict[str, Decimal]:

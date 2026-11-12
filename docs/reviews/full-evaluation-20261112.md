@@ -4,9 +4,12 @@ November 12, 2026. Reference main: `91125d30acd447537184184352d8fadf96ee89ee`.
 
 ## Current status
 
-Preparation is in progress. No new model observations or scores are claimed in
-this record yet. The prior full comparison used a separate evaluation checkpoint;
-the recent 87-case smoke assessment does not replace that complete matrix.
+Collection and repair verification are in progress. The hosted regression
+collection has closed; the original full collection and replacement native
+campaigns are still running. No complete current matrix or new quality scores
+are claimed yet. Interrupted GPU attempts and failed provider-control attempts
+remain separate evidence. The prior full comparison used a separate evaluation
+checkpoint; the recent 87-case smoke assessment does not replace that matrix.
 
 ## Frozen campaign scope
 
@@ -44,6 +47,14 @@ The application runtime starts from merged main. Instrument-only changes are
 identified separately from any later application repair. Source/configuration
 changes require new run identities and complete successor collections; previous
 failed or interrupted attempts remain visible.
+
+The main-compatible instrument checkpoint is `6eddf53`; serving code and active
+configuration remain equivalent to reference main. Preliminary repair checkpoint
+`188de19` fixes complete multiline evidence binding, guard/graph packing,
+calendar-date identity, bounded fictional examples and answer layout. Subsequent
+repairs are under verification: whole-request mechanism explanations, typed
+nutrient/product arithmetic and final-renderer preservation of verified results.
+These repairs have not yet completed their successor model campaign.
 
 No evaluation reference or rubric enters model prompts or runtime knowledge.
 Private grower data and overlays stay disabled. Controller references remain

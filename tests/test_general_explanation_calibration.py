@@ -2,6 +2,48 @@ import pytest
 
 from agronomy_agent.agno_runtime.local_index import RetrievedDoc
 from agronomy_agent.answer_verifier import verify_answer
+
+
+@pytest.mark.parametrize("question,answer", [
+    ("Why can applying manure to supply nitrogen add too much phosphorus?",
+     "Manure supplies nitrogen and phosphorus in a ratio that can differ from crop demand. When only part of its nitrogen is available, meeting nitrogen demand can add more phosphorus than the crop removes. Repeated surpluses can accumulate phosphorus in soil. This explains the mechanism and does not select a field application."),
+    ("How can a shallow water table supply roots and also increase salinity risk?",
+     "Capillary flow can move groundwater upward into the root zone. That water can carry dissolved salts. Evaporation and plant water uptake leave much of the salt behind, so salts can accumulate. The importance depends on groundwater salinity, soil texture, water-table depth and drainage; this explanation does not establish the condition of a field."),
+    ("A seed lot has strong laboratory germination but poor emergence. Which alternative causes should be checked?",
+     "Laboratory germination under favorable conditions differs from field vigor. Investigate seed-lot vigor, health and storage or handling damage, along with planting depth, soil temperature and moisture, seed-to-soil contact and compaction. Compare seeds and seedlings in affected and normal areas to distinguish seed failure from a hostile seedbed."),
+    ("Rain followed by drying produced a surface crust and poor emergence. Explain the mechanism and what observations distinguish crusting from seed failure.",
+     "Rain can break down surface aggregates and create a seal that hardens as it dries. Viable seedlings can then be trapped under the crust. Dig carefully along affected and normal rows and compare intact, viable seedlings bent beneath the crust with missing, dead or decayed seeds. Record crust strength, seed depth and emergence progress. Poor emergence alone does not identify the cause."),
+])
+def test_mechanism_request_keeps_supported_model_explanation_in_saved_answer(tmp_path, monkeypatch, question, answer):
+    from agronomy_agent.execution_core import AgentExecutionRequest
+    from agronomy_agent.server.services import chat_service
+    from agronomy_agent.server.settings import build_settings
+    from agronomy_agent.server.storage.db import TraceStore
+    class Backend:
+        backend_id = "synthetic_mechanism_contract"
+        intervention_profile = "balanced"
+        calls = 0
+        def generate(self, messages):
+            self.calls += 1
+            return answer
+        def close(self):
+            pass
+    backend = Backend()
+    monkeypatch.setattr(chat_service, "_build_mlx_generator", lambda *a, **k: backend)
+    database = tmp_path / "mechanism.sqlite3"
+    store = TraceStore(database)
+    try:
+        session = store.create_session("Synthetic mechanism", {}, {})
+        result = chat_service.execute_agent_request(AgentExecutionRequest(store=store,
+            settings=build_settings(db_path=database, artifact_root=tmp_path / "artifacts", network_mode="offline"),
+            session_id=session["session_id"], message=question, mode="agronomic_rag",
+            model_id="imposed", rag_config="configs/rag.yaml", max_tokens=180, generation_backend=backend))
+        assert result.answer == answer
+        assert store.get_turn(result.turn["turn_id"])["answer"] == answer
+        assert backend.calls == 1
+        assert len(result.stage_receipts) == 17
+    finally:
+        store._conn.close()
 from agronomy_agent.answerability import simple_definition_subject, is_rate_basis_explanation, assess_answerability
 from agronomy_agent.decision_route import build_decision_route_state
 from agronomy_agent.evidence_handshake import build_evidence_handshake, filter_decision_distractors

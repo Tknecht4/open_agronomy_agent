@@ -64,7 +64,9 @@ def render_structured_answer(
     metadata = trace.get("metadata") or {}
     retrieval_policy = str(metadata.get("retrieval_policy") or "")
     answer_profile = str(metadata.get("answer_policy_profile") or "")
-    if retrieval_policy == "user_grounded_bypass":
+    if _validated_calculator_answer(sanitized, trace, question):
+        clean_answer = sanitized
+    elif retrieval_policy == "user_grounded_bypass":
         clean_answer = sanitized
     elif answer_profile == "general_agronomy":
         clean_answer = normalize_general_answer(sanitized, question=question, route=trace.get("route"))
@@ -894,6 +896,23 @@ def _append_to_labeled_line(answer_text: str, label: str, sentence: str) -> str:
     if not stripped:
         return f"**{label}**\n\n{sentence.strip()}"
     return f"{stripped}\n\n**{label}**\n\n{sentence.strip()}"
+
+
+def _validated_calculator_answer(answer_text: str, trace: dict[str, Any], question: str | None) -> bool:
+    """Preserve exact arithmetic after replay; a trace status cannot opt out."""
+    from agronomy_agent.answerability import assess_answerability
+
+    if not question:
+        return False
+    metadata = trace.get("metadata") or {}
+    plan = metadata.get("tool_plan") or {}
+    results = [item for item in trace.get("tool_invocations", [])
+               if isinstance(item, dict) and item.get("tool_id") == "agronomic_calculator"
+               and item.get("result_id")]
+    if len(results) != 1 or answer_text != (results[0].get("payload") or {}).get("answer"):
+        return False
+    decision = assess_answerability(question, tool_plan=plan, tool_results=results)
+    return decision.reason == "validated_deterministic_tool_result_available"
 
 
 def _validated_field_column_identifiers(

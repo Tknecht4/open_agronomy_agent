@@ -14,6 +14,7 @@ from typing import Any, Iterable, Mapping, Sequence
 
 from agronomy_agent.query_context import QueryContextSignals, analyze_query_context
 from agronomy_agent.router import evidence_interpretation_kind
+from agronomy_agent.answerability import is_mechanism_explanation
 from agronomy_agent.method_context import (
     METHODS, METHOD_SCHEMA, LEGACY_METHOD_IDS, PHYSICAL_METHOD_SCHEMA,
     PHYSICAL_METHOD_SOURCE_IDS, requested_methods, reviewed_method_ids,
@@ -443,7 +444,9 @@ def build_decision_contract(
         rule.key == "field_observation" for rule in active_rules
     ):
         active_rules.insert(0, _RULES[0])
-    interpreting = primary == "exam_review" and evidence_interpretation_kind(question) is not None
+    interpreting = primary == "exam_review" and (
+        evidence_interpretation_kind(question) is not None or is_mechanism_explanation(question)
+    )
     topical_exemptions = {
         "field_observation", "plant_health_differential", "fertility_diagnosis",
         "current_weather", "soil_water_condition", "salinity_sodicity", "soil_structure",

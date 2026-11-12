@@ -179,6 +179,22 @@ advisory-only bypass was withdrawn after a paired development run exposed an
 unsupported field-action recommendation. An unknown map type is not renamed as
 a suitability product by a fallback.
 
+Whole-request mechanism and differential-evidence explanations do not inherit
+an operational checklist merely because they mention manure, salinity, seed
+vigor or crusting. Personal field diagnosis, authority questions and follow-up
+actions retain their normal requirements. This is bounded intent calibration,
+not a general scientific verifier.
+
+The supplied-input calculator also supports elemental/oxide P and K basis
+conversion, apparent nutrient balances, and liquid-product totals. Named
+quantities, units and nutrient bases must bind without conflicts; invalid or
+ambiguous premises need clarification. Apparent balances do not establish
+soil-test changes or losses, and product litres are distinct from carrier
+volume. Readiness shares the execution validators. The saved answer and final
+renderer preserve an exact, recomputed calculator result with its boundary;
+neither a generation-path flag nor a plausible trace can bypass validation.
+Universal requests to evade safety or authority remain blocked.
+
 MLX adapters retain at most one target/draft model pair across serialized public
 operations. Generators release temporary references after token counting,
 warmup and generation, and reload if another pair displaced theirs. Pair changes

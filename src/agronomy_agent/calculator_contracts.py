@@ -14,6 +14,9 @@ FOUNDATION_OPERATIONS = frozenset({
     "debt_to_asset_percent",
     "fertilizer_field_total",
     "soil_water_storage",
+    "nutrient_basis_conversion",
+    "apparent_nutrient_balance",
+    "liquid_product_total",
 })
 
 

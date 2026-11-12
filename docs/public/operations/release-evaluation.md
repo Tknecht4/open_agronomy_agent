@@ -162,6 +162,22 @@ consistent mass/area bases and arithmetic. It does not validate a real product,
 choose a field target or provide a general algebra proof. Other claims still
 need their normal evidence and authority checks.
 
+The production calculator separately handles supplied P/K elemental-to-oxide
+basis conversions, two-term apparent nutrient balances, and liquid-product
+totals. It checks named inputs and units instead of accepting a derived number
+because it resembles a source number. Conflicting bases, factors or operands
+need clarification. These results retain their arithmetic-only boundary, and
+the final renderer replays the current calculation before preserving its
+answer. An apparent balance is not a measured soil change; product quantity
+is not carrier volume or permission to apply. Other unsupported arithmetic
+remains outside this bounded capability.
+
+Mechanism and differential-evidence explanations use whole-request intent.
+A topic word alone does not require a field-management checklist. Actual field
+diagnosis, product permission and follow-up action requests retain their
+evidence requirements. Targeted repairs and deterministic replay are software
+evidence; new model behavior requires the complete source-bound campaign.
+
 The optional App Server integration is a nonqualifying diagnostic boundary.
 An explicitly selected version-3 registry
 (`open_agronomy_agent.release_evaluation_registry.v3`) can wire

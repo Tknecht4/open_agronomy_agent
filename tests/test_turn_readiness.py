@@ -21,6 +21,9 @@ AREA_CONVERSION = "How many acres are in 40 hectares?"
 TANK = "Calculate how much area will a 1000 L sprayer tank cover applying 100 L/ha, ignoring unusable tank volume?"
 FIELD_N_TOTAL = "A field covers 24 hectares. The fertilizer is 46% nitrogen. Calculate the total product for 40 kg N/ha."
 WATER_STORAGE = "Convert 0.24 m3/m3 over a uniform 30 cm layer to mm of water stored."
+P_CONVERSION = "Convert 75 kg P2O5/ha to elemental phosphorus."
+P_BALANCE = "Calculate the apparent balance: 45 kg P/ha applied and 28 kg P/ha removed."
+LIQUID_TOTAL = "Compute total product volume at 3 L product/ha over 16 ha."
 SEED_MISSING = "Calculate seed rate: target stand is 200 plants/m², TKW is missing, germination is 95%, expected field survival is 90%."
 
 
@@ -61,6 +64,9 @@ def no_generator(*args, **kwargs):
                                           (TANK, "deterministic_tool_result"),
                                           (FIELD_N_TOTAL, "deterministic_tool_result"),
                                           (WATER_STORAGE, "deterministic_tool_result"),
+                                          (P_CONVERSION, "deterministic_tool_result"),
+                                          (P_BALANCE, "deterministic_tool_result"),
+                                          (LIQUID_TOTAL, "deterministic_tool_result"),
                                           (SEED_MISSING, "deterministic_tool_clarification")])
 @pytest.mark.parametrize("backend", ["mlx", "http"])
 def test_actual_missing_model_calculation_and_clarification_persist_without_constructor(runtime, monkeypatch, question, path, backend):
@@ -85,7 +91,8 @@ def test_actual_missing_model_calculation_and_clarification_persist_without_cons
     assert saved["trace"]["metadata"]["generation_path"] == path
     if path.endswith("result"):
         expected = {TANK: "10 ha", CONVERSION: "112.085 kg/ha", AREA_CONVERSION: "98.842 ac",
-                    FIELD_N_TOTAL: "2,086.957 kg", WATER_STORAGE: "72 mm"}
+                    FIELD_N_TOTAL: "2,086.957 kg", WATER_STORAGE: "72 mm",
+                    P_CONVERSION: "32.7 kg P/ha", P_BALANCE: "17 kg P/ha", LIQUID_TOTAL: "48 L product"}
         assert saved["answer"].startswith(expected[question])
     else:
         assert "tkw_g" in saved["answer"]
@@ -111,7 +118,10 @@ def test_preview_is_read_only_and_does_not_create_a_session(runtime, monkeypatch
 
 @pytest.mark.parametrize("question,operation", [(TANK, "tank_coverage"),
                                                (FIELD_N_TOTAL, "fertilizer_field_total"),
-                                               (WATER_STORAGE, "soil_water_storage")])
+                                               (WATER_STORAGE, "soil_water_storage"),
+                                               (P_CONVERSION, "nutrient_basis_conversion"),
+                                               (P_BALANCE, "apparent_nutrient_balance"),
+                                               (LIQUID_TOTAL, "liquid_product_total")])
 def test_qualified_calculation_preview_never_executes_an_adapter_or_creates_a_receipt(runtime, monkeypatch, question, operation):
     import agronomy_agent.agronomic_calculations as calculations
     import agronomy_agent.capability_registry as registry

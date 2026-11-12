@@ -48,6 +48,7 @@ from agronomy_agent.agronomic_calculations import (
     _format_decimal, calculation_tool_schema, validate_tank_coverage_inputs,
     validate_unit_conversion_inputs, validate_fertilizer_field_total_inputs,
     validate_soil_water_storage_inputs,
+    validate_supplied_nutrient_inputs,
 )
 from agronomy_agent.decision_contract import build_decision_contract
 from agronomy_agent.evidence_contracts import question_frame_from_runtime
@@ -412,6 +413,13 @@ def preview_turn_readiness(
                 validated_inputs = True
             except (ValueError, DecimalException):
                 validated_inputs = False
+        elif calculator.operation in {"nutrient_basis_conversion", "apparent_nutrient_balance", "liquid_product_total"}:
+            try:
+                validate_supplied_nutrient_inputs(calculator.operation, calculator.inputs)
+                validated_inputs = True
+            except (ValueError, DecimalException):
+                validated_inputs = False
+                reason = "invalid_calculator_inputs"
         elif calculator.operation in {"tank_coverage", "fertilizer_field_total", "soil_water_storage"}:
             try:
                 validators = {"tank_coverage": validate_tank_coverage_inputs,
@@ -1282,7 +1290,15 @@ def _run_turn_impl_inner(
             deepcopy(identity), model_to_use if draft_completed else None,
         )
 
-    safety_answer = enforce_answer_safety_postconditions(
+    # Revalidate the exact deterministic response, not a path flag supplied by
+    # a backend. A topical product-label route must not append a refusal to
+    # authentic supplied-input arithmetic that already retains its boundary.
+    checked_answer, checked_path = deterministic_tool_response(context, question=message)
+    deterministic_calculation_path = (
+        checked_answer is not None and answer == checked_answer
+        and generation_metadata.get("generation_path") == checked_path
+    )
+    safety_answer = answer if deterministic_calculation_path else enforce_answer_safety_postconditions(
         answer,
         question=message,
         route=None if context is None else context.route,
@@ -1292,10 +1308,6 @@ def _run_turn_impl_inner(
     if safety_postconditions_changed:
         trace_store_payload["metadata"]["answer_safety_normalized"] = True
         answer = safety_answer
-    deterministic_calculation_path = generation_metadata.get("generation_path") in {
-        "deterministic_tool_result",
-        "deterministic_tool_clarification",
-    }
     high_consequence_policy = (
         {
             "schema_version": "open_agronomy_agent.high_consequence_policy.v1",

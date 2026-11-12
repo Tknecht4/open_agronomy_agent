@@ -27,7 +27,7 @@ from agronomy_agent.quantity_claims import unsupported_quantities, remove_numeri
 from agronomy_agent.execution_core import stable_sha256
 from agronomy_agent.observation_guidance import observation_guidance, sample_event_roles_stated, POTATO_MONITORING_ANSWER
 from agronomy_agent.high_consequence import classify_high_consequence_domains, fertility_quantity_requested
-from agronomy_agent.answerability import simple_definition_subject, is_rate_basis_explanation
+from agronomy_agent.answerability import simple_definition_subject, is_rate_basis_explanation, is_mechanism_explanation
 
 
 def editor_observation_record(observation: Mapping[str, Any]) -> dict[str, Any]:
@@ -5217,6 +5217,8 @@ def bounded_decision_support(question: str, question_type: str) -> str | None:
 def _conservative_failure_answer(question_type: str, *, question: str = "") -> str:
     if _looks_like_french(question):
         return _french_conservative_failure_answer(question_type)
+    if is_mechanism_explanation(question):
+        return _exam_review_failure_answer(question)
     if simple_definition_subject(question) in {"soil texture", "crop rotation"}:
         return _exam_review_failure_answer(question)
     method = observation_guidance(question)

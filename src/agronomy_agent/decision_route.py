@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from agronomy_agent.decision_capsule import DecisionCapsule, build_decision_capsule
 from agronomy_agent.query_context import analyze_query_context
 from agronomy_agent.router import request_focus, evidence_interpretation_kind
-from agronomy_agent.answerability import simple_definition_subject
+from agronomy_agent.answerability import simple_definition_subject, is_mechanism_explanation
 from agronomy_agent.observation_guidance import sample_event_roles_stated
 
 
@@ -681,7 +681,6 @@ def build_decision_route_state(question: str, question_type: str = "") -> Decisi
     signals = analyze_query_context(question)
     lower = question.lower()
     crop = signals.primary_crop
-    capsule = build_decision_capsule(question, crop=crop)
     source_boundary = None
     if signals.country == "canada":
         for name, pattern in _US_ONLY_SOURCE_PATTERNS:
@@ -689,6 +688,16 @@ def build_decision_route_state(question: str, question_type: str = "") -> Decisi
                 source_boundary = name
                 break
 
+    if is_mechanism_explanation(question):
+        return DecisionRouteState(
+            question=question, decision="exam_review", crop=crop, country=signals.country,
+            decisive_evidence=(), premise_anchors=(), source_boundary=source_boundary,
+            constraints=("Explain the requested mechanism or rival explanations and discriminating observations; "
+                         "do not add a field operation, diagnosis or application recommendation.",),
+            capsule=None,
+        )
+
+    capsule = build_decision_capsule(question, crop=crop)
     decision = _decision_name(lower, question_type)
     capsule_can_override = not (
         decision == "plant_health" and capsule.domain == "crop_stress_differential"
