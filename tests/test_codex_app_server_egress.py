@@ -1415,6 +1415,118 @@ def test_canonical_protocol_completion_keeps_cap_effort_revision_and_eos_unknown
     with pytest.raises(CodexAppServerError,match="single-turn"):client.generate(user_text="again",base_instructions="")
 
 
+@pytest.mark.parametrize("change", [None, "missing_start", "foreign_thread", "foreign_turn", "duplicate_start", "foreign_terminal"])
+def test_current_turn_response_requires_observed_thread_binding(change):
+    # The current generated TurnStartResponse has only a turn; attribution is
+    # independently observed in turn/started and turn/completed notifications.
+    start = {"method": "turn/started", "params": {"threadId": "thread-1", "turn": {"id": "turn-1"}}}
+    events = [start, *_terminal_events()]
+    if change == "missing_start": events.pop(0)
+    if change == "foreign_thread": start["params"]["threadId"] = "foreign"
+    if change == "foreign_turn": start["params"]["turn"]["id"] = "foreign"
+    if change == "duplicate_start": events.insert(1, copy.deepcopy(start))
+    if change == "foreign_terminal": events[-1]["params"]["threadId"] = "foreign"
+    client = _protocol_client(events)
+    request = client._request
+    def current_request(method, params):
+        value = request(method, params)
+        if method == "turn/start": value.pop("threadId")
+        return value
+    client._request = current_request
+    if change:
+        with pytest.raises(CodexAppServerError): client.generate(user_text="question", base_instructions="")
+    else:
+        result = client.generate(user_text="question", base_instructions="")
+        assert result.receipt["thread_binding_evidence"] == {
+            "turn_start_response": False, "turn_started_notification": True, "completed_notification": True}
+
+
+@pytest.mark.parametrize("change", [None, "thread", "cwd", "model", "effort", "network", "approval", "profile", "missing", "missing_profile"])
+def test_settings_notifications_must_preserve_controlled_transport(change):
+    settings = {"cwd": "/owned/empty", "model": "gpt-6-luna", "effort": "medium",
+                "approvalPolicy": "never", "sandboxPolicy": {"type": "readOnly", "networkAccess": False},
+                "activePermissionProfile": None}
+    event = {"method": "thread/settings/updated", "params": {"threadId": "thread-1", "threadSettings": settings}}
+    if change == "thread": event["params"]["threadId"] = "foreign"
+    if change in {"cwd", "model", "effort"}: settings[change] = "foreign"
+    if change == "network": settings["sandboxPolicy"]["networkAccess"] = True
+    if change == "approval": settings["approvalPolicy"] = "on-request"
+    if change == "profile": settings["activePermissionProfile"] = {"name": "other"}
+    if change == "missing": settings.pop("model")
+    if change == "missing_profile": settings.pop("activePermissionProfile")
+    client = _protocol_client([event, *_terminal_events()])
+    if change:
+        with pytest.raises(CodexAppServerError, match="controlled transport"): client.generate(user_text="question", base_instructions="")
+    else:
+        assert client.generate(user_text="question", base_instructions="").text == "synthetic answer"
+
+
+@pytest.mark.parametrize("change", [None, "foreign_thread", "unknown_warning", "remote_enabled"])
+def test_only_expected_isolation_warning_and_disabled_remote_state_are_admitted(change):
+    warning = {"method": "warning", "params": {"threadId": "thread-1", "message":
+        "Failed to read global AGENTS.md instructions from `/synthetic/config/AGENTS.md`: Operation not permitted (os error 1)"}}
+    remote = {"method": "remoteControl/status/changed", "params": {"status": "disabled", "environmentId": None}}
+    if change == "foreign_thread": warning["params"]["threadId"] = "foreign"
+    if change == "unknown_warning": warning["params"]["message"] = "Unreviewed transport condition"
+    if change == "remote_enabled": remote["params"]["status"] = "enabled"
+    client = _protocol_client([warning, remote, *_terminal_events()])
+    if change:
+        with pytest.raises(CodexAppServerError): client.generate(user_text="question", base_instructions="")
+    else:
+        result = client.generate(user_text="question", base_instructions="")
+        assert result.receipt["transport_warning_classifications"] == ["global_instruction_read_denied"]
+
+
+def test_explicit_disabled_code_mode_warning_is_retained_without_enabling_tools():
+    event = {"method": "warning", "params": {"threadId": "thread-1", "message":
+        "Code Mode is unavailable because code-mode host is disabled. Code mode will fail closed; "
+        "enable `features.code_mode_host` and install `codex-code-mode-host`."}}
+    result = _protocol_client([event, *_terminal_events()]).generate(user_text="question", base_instructions="")
+    assert result.receipt["transport_warning_classifications"] == ["code_mode_host_disabled"]
+    assert result.receipt["transport_policy"] == "text_only_no_tools_v1"
+
+
+@pytest.mark.parametrize("mode", ["chatgpt", "apikey", None])
+def test_account_notifications_cannot_change_the_declared_auth_transport(mode):
+    event = {"method": "account/updated", "params": {"authMode": mode, "planType": None}}
+    client = _protocol_client([event, *_terminal_events()])
+    if mode != "chatgpt":
+        with pytest.raises(CodexAppServerError, match="authentication state"): client.generate(user_text="question", base_instructions="")
+    else:
+        assert client.generate(user_text="question", base_instructions="").text == "synthetic answer"
+
+
+@pytest.mark.parametrize("foreign", [False, True])
+def test_moderation_metadata_remains_attributed_observation_not_answer_authority(foreign):
+    event = {"method": "turn/moderationMetadata", "params": {"threadId": "thread-1",
+        "turnId": "foreign" if foreign else "turn-1", "metadata": {"synthetic_observation": True}}}
+    client = _protocol_client([event, *_terminal_events()])
+    if foreign:
+        with pytest.raises(CodexAppServerError, match="binding mismatch"): client.generate(user_text="question", base_instructions="")
+    else:
+        result = client.generate(user_text="question", base_instructions="")
+        assert result.receipt["moderation_metadata"] == [event["params"]]
+        assert result.receipt["moderation_metadata_scope"].startswith("provider_observation_only")
+
+
+def test_sparse_account_quota_observation_does_not_become_turn_attribution():
+    event = {"method": "account/rateLimits/updated", "params": {"rateLimits": {"primary": None}}}
+    result = _protocol_client([event, *_terminal_events()]).generate(user_text="question", base_instructions="")
+    assert result.receipt["account_rate_limit_observations"] == [event["params"]]
+    assert result.receipt["effective_turn_reasoning_effort_observed"] is False
+
+
+@pytest.mark.parametrize("stream_answer", [False, True])
+def test_terminal_fallback_cannot_hide_a_forbidden_tool_item(stream_answer):
+    events = _terminal_events()
+    events[-1]["params"]["turn"]["items"] = [
+        {"id": "item-1", "type": "agentMessage", "text": "synthetic answer"},
+        {"id": "tool-1", "type": "commandExecution"}]
+    if not stream_answer: events.pop(0)
+    with pytest.raises(CodexAppServerError, match="forbidden.*terminal items"):
+        _protocol_client(events).generate(user_text="question", base_instructions="")
+
+
 @pytest.mark.parametrize("stage",["thread/start","turn/start"])
 def test_canonical_fresh_authority_check_occurs_at_both_egress_boundaries(stage):
     calls=[]

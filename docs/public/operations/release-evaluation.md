@@ -175,6 +175,24 @@ payloads. Legacy authorizations do not grant the current production recipe or
 additional payload classes. Private records, controller references and whole
 corpora are excluded. Deterministic bypasses remain local and do not require
 provider construction. A rejected egress contract is a failed observation.
+
+Check the actual account transport with a neutral generation before a complete
+collection; a catalog listing or thread handshake alone is insufficient. An
+isolated command may be pinned in the private model configuration under
+`app_server_command`. The returned instruction-source list must remain empty;
+do not allow global instructions merely to make a run proceed.
+
+Current App Server `turn/start` responses contain only a turn. When an explicit
+thread binding is absent there, a matching `turn/started` notification and the
+matching completed notification are required before accepting its output.
+Settings notifications must retain the selected model, requested effort,
+dedicated working directory, read-only network-disabled sandbox and no active
+permission profile. Only the known warnings for intentionally denied global
+instructions and disabled Code Mode are admitted and recorded. Unknown warnings,
+foreign events, changed authentication and forbidden tool items, including
+terminal-only items, still fail. Attributed moderation and sparse account quota
+metadata remain provider observations; they do not grant application authority
+or establish a category meaning, effective output cap or available quota.
 Model-bound typed-tool results remain unsupported and are rejected; admitting
 them requires a separately reviewed payload contract and authorization.
 

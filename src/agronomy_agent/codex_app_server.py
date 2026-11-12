@@ -832,12 +832,15 @@ class CodexAppServerClient:
         if not isinstance(turn_id,str) or not turn_id:
             raise CodexAppServerError("turn/start did not return a turn id")
         self.last_attempt_evidence.update(turn_id=turn_id,turn_acknowledged=True,state="turn_acknowledged")
-        if turn_result.get("threadId") is None:
-            # Missing explicit binding is unknown, not the requested thread.
-            raise CodexAppServerError("turn/start thread binding is missing")
+        # Current TurnStartResponse contains only `turn`. Its request is
+        # correlated by RPC id, but require an observed matching turn/started
+        # notification before qualifying a return without an explicit binding.
+        response_thread_bound = turn_result.get("threadId") == thread_id
+        started_thread_bound = False
         events = list(self._pending_notifications)
         self._pending_notifications.clear()
         completed_turn: dict[str, Any] | None = None
+        warning_classifications: list[str] = []
         pending=list(events);events=[]
         while completed_turn is None:
             payload = pending.pop(0) if pending else self._read_message()
@@ -850,7 +853,7 @@ class CodexAppServerClient:
             params=payload.get("params") or {}
             method=payload.get("method")
             if not isinstance(params,dict):raise CodexAppServerError("App Server event params malformed")
-            if method in {"item/completed","thread/tokenUsage/updated","turn/completed","model/rerouted","model/verification"}:
+            if method in {"item/completed","thread/tokenUsage/updated","turn/completed","model/rerouted","model/verification","turn/moderationMetadata"}:
                 event_turn=(params.get("turn") or {}).get("id") if method=="turn/completed" else params.get("turnId")
                 if params.get("threadId")!=thread_id or event_turn!=turn_id:
                     raise CodexAppServerError("App Server event thread/turn binding mismatch")
@@ -859,10 +862,56 @@ class CodexAppServerClient:
                 event_turn=(params.get("turn") or {}).get("id") if method=="turn/started" else params.get("turnId")
                 if params.get("threadId")!=thread_id or event_turn!=turn_id:
                     raise CodexAppServerError("progress event binding mismatch")
+                if method == "turn/started":
+                    if started_thread_bound:
+                        raise CodexAppServerError("duplicate turn/started binding")
+                    started_thread_bound = True
             elif method in {"thread/started","thread/status/changed"}:
                 event_thread=(params.get("thread") or {}).get("id") if method=="thread/started" else params.get("threadId")
                 if event_thread!=thread_id:raise CodexAppServerError("thread metadata binding mismatch")
-            elif method not in {"item/completed","thread/tokenUsage/updated","turn/completed","model/rerouted","model/verification"}:
+            elif method == "thread/settings/updated":
+                settings = params.get("threadSettings")
+                if (params.get("threadId") != thread_id or not isinstance(settings, dict)
+                        or settings.get("cwd") != self.cwd
+                        or settings.get("model") != self.expected_model
+                        or settings.get("effort") != self.expected_reasoning_effort
+                        or settings.get("approvalPolicy") != "never"
+                        or settings.get("sandboxPolicy") != expected_sandbox
+                        or "activePermissionProfile" not in settings
+                        or settings.get("activePermissionProfile") is not None):
+                    raise CodexAppServerError("thread settings changed controlled transport conditions")
+            elif method == "warning":
+                # The local isolation wrapper intentionally denies the global
+                # instruction file. Its expected warning is safe only after
+                # thread/start independently confirmed no instruction sources.
+                message = params.get("message")
+                if params.get("threadId") != thread_id or not isinstance(message, str):
+                    raise CodexAppServerError("unreviewed App Server warning")
+                if re.fullmatch(
+                        r"Failed to read global AGENTS\.md instructions from `[^`\n]{1,2048}`: "
+                        r"Operation not permitted \(os error 1\)", message):
+                    warning_classifications.append("global_instruction_read_denied")
+                elif message == (
+                        "Code Mode is unavailable because code-mode host is disabled. "
+                        "Code mode will fail closed; enable `features.code_mode_host` "
+                        "and install `codex-code-mode-host`."):
+                    warning_classifications.append("code_mode_host_disabled")
+                else:
+                    raise CodexAppServerError("unreviewed App Server warning")
+            elif method == "remoteControl/status/changed":
+                if params.get("status") != "disabled" or params.get("environmentId") is not None:
+                    raise CodexAppServerError("unexpected remote control state")
+            elif method == "account/updated":
+                if (set(params) != {"authMode", "planType"} or params.get("authMode") != "chatgpt"
+                        or params.get("planType") is not None and not isinstance(params["planType"], str)):
+                    raise CodexAppServerError("unexpected benchmark account authentication state")
+            elif method == "account/rateLimits/updated":
+                # Sparse account-level resource observations are not turn
+                # attribution or permission. Preserve them without assuming a
+                # particular quota belongs to the selected model.
+                if set(params) != {"rateLimits"} or not isinstance(params["rateLimits"], dict):
+                    raise CodexAppServerError("malformed account rate-limit observation")
+            elif method not in {"item/completed","thread/tokenUsage/updated","turn/completed","model/rerouted","model/verification","turn/moderationMetadata"}:
                 raise CodexAppServerError("unclassified App Server event")
             self._retain_event(events,payload)
             if payload.get("method") == "turn/completed":
@@ -871,6 +920,8 @@ class CodexAppServerClient:
                     completed_turn = params.get("turn")
         if pending:
             raise CodexAppServerError("events/duplicate terminals after completed turn")
+        if not response_thread_bound and not started_thread_bound:
+            raise CodexAppServerError("turn/start thread binding is unobserved")
         # Do not assign delayed notifications from this request to a later turn.
         if completed_turn.get("status") != "completed":
             raise CodexAppServerError(
@@ -886,6 +937,11 @@ class CodexAppServerClient:
             if event.get("method") == "item/completed"
         )
         allowed_item_types = {"userMessage", "agentMessage", "reasoning"}
+        terminal_items = completed_turn.get("items")
+        if terminal_items is not None and (not isinstance(terminal_items, list) or any(
+                not isinstance(item, dict) or item.get("type") not in allowed_item_types
+                for item in terminal_items)):
+            raise CodexAppServerError("completed turn contains forbidden or malformed terminal items")
         forbidden_item_types = {
             item_type: count
             for item_type, count in completed_item_types.items()
@@ -957,6 +1013,9 @@ class CodexAppServerClient:
             "model_provider": thread_result.get("modelProvider") or thread.get("modelProvider"),
             "thread_id": thread_id,
             "turn_id": turn_id,
+            "thread_binding_evidence": {"turn_start_response": response_thread_bound,
+                                        "turn_started_notification": started_thread_bound,
+                                        "completed_notification": True},
             "thread_ephemeral": True,
             "cwd_sha256": _sha256(self.cwd),
             "sandbox": thread_result["sandbox"],
@@ -964,10 +1023,18 @@ class CodexAppServerClient:
             "approval_policy": thread_result["approvalPolicy"],
             "runtime_workspace_roots": thread_result["runtimeWorkspaceRoots"],
             "instruction_sources": thread_result["instructionSources"],
+            "transport_warning_classifications": warning_classifications,
             "transport_policy": "text_only_no_tools_v1",
             "reroutes": reroutes,
             "model_verifications": [
                 event.get("params") or {} for event in events if event.get("method") == "model/verification"
+            ],
+            "moderation_metadata": [
+                event.get("params") or {} for event in events if event.get("method") == "turn/moderationMetadata"
+            ],
+            "moderation_metadata_scope": "provider_observation_only; no inferred safety_permission_or_category_meaning",
+            "account_rate_limit_observations": [
+                event.get("params") or {} for event in events if event.get("method") == "account/rateLimits/updated"
             ],
             "token_usage": token_usage,
             "elapsed_ms": round((perf_counter() - started) * 1000.0, 3),
