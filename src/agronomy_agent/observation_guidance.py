@@ -13,6 +13,13 @@ import re
 from agronomy_agent.answerability import preferred_response_language, is_rate_basis_explanation
 
 
+POTATO_MONITORING_ANSWER = (
+    "Scout representative areas of the potato crop regularly for late-blight symptoms, including places where the canopy stays damp longer. Inspect leaves, their undersides and stems for new or spreading lesions; early-morning scouting can help reveal signs before the canopy dries. "
+    "If suspect symptoms appear, photograph and locate them, compare suspect and nearby healthy plants, and promptly contact a local potato specialist or diagnostic lab for sampling instructions and confirmation. Follow current local disease alerts and crop-specific IPM guidance. "
+    "Use crop stage, local disease risk and forecasts, and the exact crop/target/product label to plan any preventive fungicide program; visible collapse is not a prerequisite for prevention planning."
+)
+
+
 @dataclass(frozen=True)
 class ObservationGuidance:
     key: str
@@ -120,6 +127,11 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
             ("scouting_representative", "Explain representative field-interior coverage rather than one hotspot.", (r"\bfield interior\b", r"\binterior locations\b", r"\bacross (?:the )?field\b", r"\bnormal areas\b")),
             ("scouting_unit_basis", "Match observations and threshold on the same counting basis.", (r"\bsame (?:counting )?basis\b", r"\bmatching (?:sampling|counting) units\b", r"\b(?:per plant|per tiller|per sweep)\b")),
             ("sampling_adequacy", "Use sampling uncertainty/variability and appropriate repeat sampling, not threshold position alone.", (r"\bsampling (?:uncertainty|variability)\b", r"\b(?:sparse|patchy|precision|representativeness|resampl\w*)\b", r"\badditional representative samples\b")),
+        ))
+    if has(r"\bpotato\w*\b") and has(r"\blate blight\b") and has(r"\bhealthy potato\w*\b|\bpotato\w*(?: crop)? (?:is|are|looks?|appears?) healthy\b") and has(r"\b(?:monitor|scout|watch)\w*\b"):
+        yield ObservationGuidance("healthy_potato_monitoring", POTATO_MONITORING_ANSWER, (
+            ("potato_monitor_surfaces", "Inspect potato foliage and stems for early symptoms.", (r"\b(?:leaves|foliage|stems)\b",)),
+            ("potato_monitor_alerts", "Check current local disease alerts as part of healthy-crop monitoring.", (r"\b(?:local|regional)\b[^.]{0,60}\b(?:disease )?alerts?\b", r"\balerts?\b[^.]{0,60}\b(?:local|regional)\b")),
         ))
     if sample_event_roles_stated(question) and has(r"\b(?:sampling dates?|sample date|collection date|which date|preserv\w*)\b"):
         yield ObservationGuidance("sample_record_dates", (

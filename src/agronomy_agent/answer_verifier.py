@@ -25,7 +25,7 @@ from agronomy_agent.model_prompt_budget import positive_int, prompt_budget_recei
 from agronomy_agent.model_errors import LocalModelSnapshotUnavailable
 from agronomy_agent.quantity_claims import unsupported_quantities, remove_numeric_application_instructions
 from agronomy_agent.execution_core import stable_sha256
-from agronomy_agent.observation_guidance import observation_guidance, sample_event_roles_stated
+from agronomy_agent.observation_guidance import observation_guidance, sample_event_roles_stated, POTATO_MONITORING_ANSWER
 from agronomy_agent.high_consequence import classify_high_consequence_domains, fertility_quantity_requested
 from agronomy_agent.answerability import simple_definition_subject, is_rate_basis_explanation
 
@@ -5239,11 +5239,8 @@ def _conservative_failure_answer(question_type: str, *, question: str = "") -> s
                 "Record crop stage, incidence, severity, symptom progression, drainage, variety, seed and application history. Contact a local potato specialist or diagnostic lab promptly for sampling and current disease alerts. A spray decision requires the working diagnosis, current local risk and exact crop/target/product label; a foliar spray will not correct every cause of collapse."
             )
         if re.search(r"\bpotato\w*\b", lower) and re.search(r"\blate blight\b", lower):
-            return (
-                "Scout representative areas of the potato crop regularly for late-blight symptoms, including places where the canopy stays damp longer. Inspect leaves, their undersides and stems for new or spreading lesions; early-morning scouting can help reveal signs before the canopy dries. "
-                "If suspect symptoms appear, photograph and locate them, compare suspect and nearby healthy plants, and promptly contact a local potato specialist or diagnostic lab for sampling instructions and confirmation. Follow current local disease alerts and crop-specific IPM guidance. "
-                "Use crop stage, local disease risk and forecasts, and the exact crop/target/product label to plan any preventive fungicide program; visible collapse is not a prerequisite for prevention planning."
-            )
+            return POTATO_MONITORING_ANSWER
+
         if decision_state.crop == "wheat" and re.search(r"\bwet planting|wet seedbed|poor growth after wet|patchy poor growth\b", lower):
             return (
                 "Do not treat patchy wheat growth after a wet planting period as a foliar disease by default. Map affected and normal areas, count plants and tillers, and dig intact seedlings to inspect seed, seminal and crown roots, crowns, mesocotyl or subcrown internode, and the depth and pattern of discoloration or decay. Compare planting depth, seed quality and treatment, soil temperature, saturation duration, drainage, compaction or crusting, herbicide and fertilizer placement, nutrient status, and root or crown disease; submit representative whole plants and soil when the cause remains unclear. "

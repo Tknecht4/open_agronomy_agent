@@ -465,7 +465,15 @@ def test_regional_pest_alert_keeps_complete_model_method():
     assert result.answer == draft and not result.fallback_applied
 
 
-def test_persisted_regional_alert_keeps_counts_when_editor_cannot_complete(tmp_path, monkeypatch):
+@pytest.mark.parametrize("question,draft,required", [
+    ("A regional insect alert covers my field pin. Does that prove infestation or what counts should I collect?",
+     "A regional alert cannot prove that your field is over threshold. First identify the pest and active life stage. Without the identity I cannot determine what count is required.",
+     ("representative field counts", "current local", "threshold")),
+    ("How should I monitor my healthy potato crop for late blight?",
+     "Inspect potato leaves and stems for spots and lesions. Note crop stage and weather; I cannot diagnose without field observations.",
+     ("local disease alerts", "regularly", "undersides")),
+])
+def test_persisted_observation_method_completes_failed_draft(tmp_path, monkeypatch, question, draft, required):
     from agronomy_agent.execution_core import AgentExecutionRequest
     from agronomy_agent.server.services import chat_service
     from agronomy_agent.server.settings import build_settings
@@ -474,7 +482,7 @@ def test_persisted_regional_alert_keeps_counts_when_editor_cannot_complete(tmp_p
         backend_id = "imposed_incomplete_alert"
         intervention_profile = "balanced"
         def generate(self, messages):
-            return "A regional alert cannot prove that your field is over threshold. First identify the pest and active life stage. Without the identity I cannot determine what count is required."
+            return draft
         def close(self):
             pass
     backend = Backend()
@@ -485,10 +493,9 @@ def test_persisted_regional_alert_keeps_counts_when_editor_cannot_complete(tmp_p
         session = store.create_session("Synthetic alert", {}, {})
         result = chat_service.execute_agent_request(AgentExecutionRequest(store=store,
             settings=build_settings(db_path=database, artifact_root=tmp_path / "artifacts", network_mode="offline"),
-            session_id=session["session_id"], message="A regional insect alert covers my field pin. Does that prove infestation or what counts should I collect?", mode="agronomic_rag",
+            session_id=session["session_id"], message=question, mode="agronomic_rag",
             model_id="imposed", rag_config="configs/rag.yaml", max_tokens=150, generation_backend=backend))
-        assert "representative field counts" in result.answer
-        assert "current local" in result.answer and "threshold" in result.answer
+        assert all(term in result.answer for term in required)
         assert store.get_turn(result.turn["turn_id"])["answer"] == result.answer
         assert len(result.stage_receipts) == 17
     finally:
@@ -513,3 +520,28 @@ def test_single_trial_method_does_not_invent_a_stable_alternative_or_dry_site():
     assert "stable variety" not in answer and "dry site-year" not in answer
     assert "retain both" not in answer
     assert "statistical separation" in answer and "multi-year" in answer
+
+
+def test_healthy_potato_monitoring_requires_local_alert_checks():
+    question = "How should I scout my healthy potato crop for late blight?"
+    draft = "Monitor the potato foliage and stems for spots, lesions and necrosis. Note the field pattern, crop stage and recent leaf wetness. I cannot offer a diagnosis without field observations."
+    result = verify_answer(draft, question=question, evidence_text="", question_type="plant_health", risk_level="low",
+        editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert result.answer != draft
+    assert "local disease alerts" in result.answer
+    assert "regularly" in result.answer and "undersides" in result.answer
+    assert "Collapsing" not in result.answer
+
+
+def test_complete_healthy_potato_monitoring_prose_is_retained():
+    question = "How should I scout my healthy potato crop for late blight?"
+    answer = "Scout representative potato areas regularly and inspect leaves, undersides and stems for new or spreading lesions. Monitor crop stage, weather and local disease alerts or IPM guidance. If suspect symptoms appear, contact the diagnostic lab for confirmation; this is monitoring advice, not a field diagnosis or permission to spray."
+    result = verify_answer(answer, question=question, evidence_text="", question_type="plant_health", risk_level="low",
+        editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert result.answer == answer and not result.fallback_applied
+
+
+def test_diagnostic_healthy_comparator_does_not_select_healthy_crop_monitoring():
+    from agronomy_agent.observation_guidance import observation_guidance
+    method = observation_guidance("Potato foliage has lesions. Compare affected and nearby healthy plants for late blight.")
+    assert method is None or not method.has_method("healthy_potato_monitoring")

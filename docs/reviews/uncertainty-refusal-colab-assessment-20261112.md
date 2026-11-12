@@ -122,6 +122,16 @@ without inventing a supplied pair. Replication, regional adaptation, statistical
 separation, stability and economic checks remain. A before/after negative control
 reproduces the invented-premise defect independently of model generation.
 
+The full changed-answer scan also found healthy-potato monitoring had lost the
+local-alert check required by its original rubric. Centralize the existing
+source-referenced monitoring answer and use it in a narrowly scoped shared
+observation method. Incomplete monitoring gains local disease-alert checks;
+complete model guidance remains unchanged. Healthy comparison plants in a
+diagnostic request do not imply that the crop is healthy. Persisted tests cover
+both this method and regional-alert recovery, including the saved answer and
+17 stage receipts. No numeric prevention program or application permission is
+inferred from an alert.
+
 ## Scientific basis and task scope
 
 [NRCS soil guidance](https://www.nrcs.usda.gov/sites/default/files/2022-10/National-Agronomy-Manual.pdf)
