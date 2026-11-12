@@ -205,15 +205,103 @@ review labels and previous answers remain controller-side. Historical receipts
 are immutable. Development exposure, diagnostic overlap and automated review
 remain explicit; this work does not establish expert agronomic or field validity.
 
-The preceding runtime source was `f1cb5250d765a44210656d3683394879c07fa323`,
+The composed runtime source is `fb2bc783d9734da90c4325bd1fcc0d32c71e9871`,
 with source fingerprint
-`6b6278924301cb6c9e7ee208bb6e7d69015eff887a5977011000eee0d52284c6`.
-Its full local backend verification passed 3,887 tests with 58 skips. The focused
-contract selection passed 938 tests. Unchanged frontend code passed 505 tests,
+`e4c372f99ac31cc293b5fd7667c27e5489d8eaf32da8609271cce2e1c0dced08`.
+Full local backend verification passed 3,896 tests with 58 skips. The focused
+contract selection passed 453 tests. Unchanged frontend code passed 505 tests,
 typecheck and build using Node 24 with an existing dependency tree matching the
-lockfile. Public scope, tracked-source privacy and strict documentation checks
-passed. A preceding sandbox-limited full attempt failed at localhost HTTP binds
-and was interrupted; its failures are retained separately from the permitted
-successful run. No skipped native build is represented as an installed-app pass.
+lockfile. Public scope, all 1,514 tracked files in the privacy audit, and strict
+documentation checks passed. No skipped native build is represented as an
+installed-app pass.
 
-Final GPU outcomes and CI receipts will be recorded after verification.
+Intermediate full suites passed but actual-model review still exposed semantic
+and retention defects. Their successful source tests do not qualify those model
+answers. A separate sandbox-limited attempt failed at localhost HTTP binds and
+was interrupted; its failures remain distinct from permitted successful runs.
+Failed/interrupted model conditions and the completed intermediate product run
+remain retained, with unobserved cells explicitly recorded.
+
+## Completed product assessment
+
+The final Colab L4 product run completed 87/87 observations at the source above,
+with all six required components passing, `source_stable: true`, no failed
+execution checks and 10/10 independent numeric contracts correct. Canonical
+retention, worker projections and all 87 persisted answers with 17 stage receipts
+passed local verification. Input delivery is verified; the 21 cases with
+field-only facts still do not establish matched raw-versus-product inputs.
+
+All 15 changed final answers were read. Seventeen source-bound automated reviews
+include the two explicit scope probes; 53 other reviews carry only after exact
+case-and-answer identity matches. There are zero expert reviews. Dimensions
+overlap and are not additive failure counts:
+
+| Automated final-answer triage, 70 required reviews | Baseline | Candidate |
+| --- | --- | --- |
+| Required task complete | 64 true, 5 false, 1 unknown | 69 true, 1 unknown |
+| Source supported | 65 true, 5 false | 70 true |
+| Material error | 2 true, 67 false, 1 unknown | 70 false |
+| Unnecessary abstention | 3 true, 67 false | 70 false |
+
+The original ambiguous completeness label remains unknown. Both explicitly
+specified v2 task scopes are complete. Canonical qualified domain metrics remain
+`review_pending`, because automated triage is excluded from expert gates.
+
+Final origins are 42 deterministic bypasses, 39 verifier method recoveries, five
+retained model answers and one accepted editor rewrite. Correct rotation,
+collection/issuance-date and healthy-monitoring model answers survive directly;
+this does not establish improved serving weights or broad parametric ability.
+Two editor attempts reached the fixed output limit; their complete final recovery
+methods and those failed attempts are both retained.
+
+The canonical reference comparison is **blocked**, not release-qualified. Both
+runs have `smoke_complete` status, and five timing repeats are below the required
+20-sample minimum, leaving qualified paired backend cells unavailable. Registry,
+cohort, scorer, model, sampling and paired case/numeric identities match. No gate
+or unknown was changed to make that comparison pass; these results support
+observed development repairs, not a model release or latency claim.
+
+## Diagnostic outcomes and compute
+
+The fixed eight-case, four-arm panel completed 32/32 observations, all six
+required components, zero failed execution checks and its numeric control. Both
+final runs retain the exact same model/config, case and sampling identities as
+the baseline. Canonical retention and all 24 governed persisted turns with
+17-stage receipts passed; the eight raw-reference turns retain their separate
+execution contract. Eighteen changed final answers were read and 14 labels carry
+only by exact case-and-answer identity, including all eight unchanged raw outputs.
+
+In source-referenced AI triage, production and risk-intervention-off each complete
+all eight tasks with supported final answers. Verification-off leaves four tasks
+incomplete, three material factual errors and one unknown source-support label.
+The ungoverned reference retains four material errors and one unknown completion
+label. These are overlapping exposed development cases, not independent error
+rates or a model ranking. Four raw outputs hit the fixed draft limit. Two
+comparison-editor attempts also hit their limit, with complete final recoveries.
+No generation budget was changed to remove those observations.
+
+The observations support permitting bounded explanations while retaining factual
+verification and field-specific authority checks. Removing a false hold alone
+does not correct a nutrient basis, texture definition or sampling inference.
+Twenty-four diagnostic cells have recorded inline-fact matching; eight have
+field-only context, so raw-versus-product causal matching remains unknown for
+those inputs. Diagnostic reference qualification is also blocked by the smoke
+profile and insufficient performance samples; expert metrics remain pending.
+
+The task-owned Colab L4 session was stopped after both archives and runtime
+receipts were collected and locally verified. The final receipt records Python
+3.13.16, NVIDIA L4 with 23,034 MiB and driver 580.82.07; full local source tests
+used Python 3.12.13. Colab reported zero active assignments and zero usage rate
+after stopping. The observed account balance changed from 435.27 to 428.34
+compute units (6.93); that rounded account-level delta includes setup, failed
+attempts and idle time and is not a per-inference cost measurement.
+
+Three verified inactive test-scratch directories from this task were deleted,
+with a retained content-hash inventory and their logs. Logical files totalled
+651,025,791 bytes; measured local free-space increase was 653,410,304 bytes.
+Active test state, unrelated project scratch, runtime data and all model evidence
+were preserved. No historical study was rewritten or activated.
+
+PR CI is a separate exact-head source gate; its terminal receipts are retained
+with the PR and private closeout. No model release or installed-native-app
+qualification follows from these development results.
