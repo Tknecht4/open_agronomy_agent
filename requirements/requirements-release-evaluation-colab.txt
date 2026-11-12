@@ -2,6 +2,8 @@
 # The completed run also retains every resolved package version.
 -r requirements-phase4-ci.txt
 mlx[cuda12]==0.32.4
+# Match NVRTC's major version even when Colab supplies system CUDA 13 headers.
+nvidia-cuda-runtime-cu12==12.9.79
 mlx-lm==0.32.2
 transformers==5.22.1
 huggingface_hub==2.4.0

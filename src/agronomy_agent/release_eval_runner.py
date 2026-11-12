@@ -567,7 +567,7 @@ def _command(
     }
     environment["AGRONOMY_AGENT_RUNTIME_ROOT"] = str(cwd)
     environment["AGRONOMY_AGENT_MODEL_BACKEND"] = "mlx"
-    environment["AGRONOMY_AGENT_PRIVATE_KNOWLEDGE"] = "disabled"
+    environment["AGRONOMY_AGENT_PRIVATE_KNOWLEDGE"] = "0"
     environment["HF_HUB_OFFLINE"] = "1"
     environment["HF_HUB_DISABLE_TELEMETRY"] = "1"
     environment.pop("AGRONOMY_AGENT_PRIVATE_KNOWLEDGE_MANIFEST", None)

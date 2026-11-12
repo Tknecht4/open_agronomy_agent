@@ -532,6 +532,14 @@ transport, and uses offline model loading after explicit snapshot provisioning.
 The recorded GPU environment is its performance reference; it does not measure
 native Mac latency.
 
+Keep the pinned CUDA 12 runtime headers installed with the CUDA 12 MLX extra.
+Without them, MLX can fall back to Colab's system CUDA 13 headers: a small
+matrix multiplication may pass while model kernel compilation fails. Validate
+an actual pinned-model generation before dispatching the full suite. The
+canonical CLI and child environment explicitly disable private knowledge with
+`AGRONOMY_AGENT_PRIVATE_KNOWLEDGE=0`; the external envelope independently checks
+that boundary before any outbound request.
+
 The offline retrieval scorer reports source recall separately from retrieval
 policy and authority compliance. A configured compliance threshold cannot pass
 if any case covered by that threshold has unknown compliance.

@@ -87,6 +87,43 @@ def test_trial_grants_are_frozen_and_selected_by_effective_config(tmp_path):
                         arm="raw_model", max_tokens=640)
 
 
+def test_canonical_cli_worker_admits_public_envelope_with_private_overlay_disabled(tmp_path, monkeypatch):
+    """Exercise the actual child environment and CLI before the egress seam."""
+    import sys
+    from pathlib import Path
+    from agronomy_agent.release_eval_runner import _command
+    from agronomy_agent.release_evaluation import ROOT
+    monkeypatch.setenv("AGRONOMY_AGENT_PRIVATE_KNOWLEDGE", "1")
+    monkeypatch.setenv("AGRONOMY_AGENT_PRIVATE_KNOWLEDGE_MANIFEST", "must-not-be-inherited.json")
+    spec, output = tmp_path/"spec.json", tmp_path/"result.json"
+    spec.write_text("{}")
+    code = f'''
+import json, os, runpy, sys
+from pathlib import Path
+sys.path.insert(0, {str(ROOT/'tests')!r})
+import test_codex_app_server_egress as fixtures
+from agronomy_agent import agent, release_eval_runner
+def execute(spec):
+    assert os.environ['AGRONOMY_AGENT_PRIVATE_KNOWLEDGE'] == '0'
+    assert 'AGRONOMY_AGENT_PRIVATE_KNOWLEDGE_MANIFEST' not in os.environ
+    generator = fixtures._canonical_generator(Path({str(tmp_path/'contract')!r}), arm='raw_model')
+    envelope = agent._build_benchmark_egress_envelope(
+        generator=generator, messages=[{{'role':'user','content':'Explain a synthetic supplied observation.'}}],
+        eval_id=fixtures._EVAL_ID, question='Explain a synthetic supplied observation.',
+        field_context=None, context=None, resources=None)
+    assert envelope['private_knowledge_policy'] == 'disabled'
+    assert envelope['private_knowledge_overlay_loaded'] is False
+    return {{'status':'completed','checks':[]}}
+release_eval_runner.execute_worker = execute
+sys.argv = ['run_release_evaluation.py','--worker-spec',{str(spec)!r},'--worker-output',{str(output)!r}]
+runpy.run_path({str(ROOT/'scripts/run_release_evaluation.py')!r},run_name='__main__')
+'''
+    status, disposition = _command([sys.executable, "-c", code], cwd=ROOT,
+                                   output=tmp_path/"child.log", timeout=30)
+    assert (status, disposition) == (0, "completed"), (tmp_path/"child.log").read_text()
+    assert json.loads(output.read_text())["status"] == "completed"
+
+
 def test_trial_bundle_rejects_mislabeled_config_and_unbound_trial(tmp_path):
     from agronomy_agent.release_eval_external import TRIAL_AUTHORIZATION_SCHEMA
     generator, declaration = _controls(tmp_path)

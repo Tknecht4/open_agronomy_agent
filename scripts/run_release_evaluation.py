@@ -46,7 +46,8 @@ def main() -> int:
     parser.add_argument("--worker-output", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
     # Public/synthetic suite execution never inherits a private local overlay.
-    os.environ["AGRONOMY_AGENT_PRIVATE_KNOWLEDGE"] = "disabled"
+    # Canonical external envelopes require the explicit off sentinel too.
+    os.environ["AGRONOMY_AGENT_PRIVATE_KNOWLEDGE"] = "0"
     os.environ.pop("AGRONOMY_AGENT_PRIVATE_KNOWLEDGE_MANIFEST", None)
     try:
         if args.worker_spec:

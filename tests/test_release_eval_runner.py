@@ -461,7 +461,7 @@ def test_command_excludes_inherited_private_overlay(tmp_path, monkeypatch):
         timeout=3,
     )
     assert result == (0, "completed")
-    assert (tmp_path / "log").read_text() == "disabled\nNone\n"
+    assert (tmp_path / "log").read_text() == "0\nNone\n"
     assert _command(
         [
             sys.executable,
