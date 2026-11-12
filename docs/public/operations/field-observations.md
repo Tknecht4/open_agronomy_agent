@@ -36,6 +36,25 @@ describes representative sampling; [Alberta's threshold guidance](https://www.al
 also shows why crop value and control costs affect interpretation. Neither is
 an exact product's current application label.
 
+Matching threshold units means comparing the same counting basis; a per-plant
+count is not a per-sweep count without a validated relationship. Treatment
+thresholds alone do not establish whether a sample is representative or precise
+enough. Sparse, variable or borderline observations can require more sampling,
+and below-threshold populations may still need monitoring. See
+[Minnesota scouting methods](https://extension.umn.edu/agriculture/crop-production/soybean/scouting-for-soybean-aphid)
+and [Iowa State scouting guidance](https://crops.extension.iastate.edu/encyclopedia/soybean-aphid).
+Their crop-specific numerical thresholds are not transferred here.
+
+A product rate describes the commercial formulation on its stated application
+basis. A field nutrient application rate commonly describes nutrient mass per
+area; other systems may use an explicitly stated concentration/volume basis.
+Use the declared nutrient basis and product analysis for conversion. A pesticide
+label specifies the applicable use directions and rate basis; an application
+rate is distinct from a residue limit in food. See [EPA label guidance](https://www.epa.gov/pesticide-labels/introduction-pesticide-labels)
+and [residue-tolerance definitions](https://www.epa.gov/pesticide-tolerances/setting-tolerances-pesticide-residues-foods).
+A historical quantity does not authorize a current application, and a terminology
+explanation does not select a product or field target.
+
 Suspected late blight deserves prompt local diagnostic attention; collapse
 after wet weather alone does not identify the cause. Inspect fresh foliage,
 stems, roots and tubers. [Alberta's late-blight guidance](https://www.alberta.ca/late-blight-of-potatoes-and-tomatoes)

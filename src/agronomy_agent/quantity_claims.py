@@ -54,6 +54,38 @@ def _quantity(match: re.Match[str]) -> Quantity:
     )
 
 
+def remove_numeric_application_instructions(text: str) -> tuple[str, tuple[str, ...]]:
+    """Separate direct numeric application instructions from explanatory prose.
+
+    This bounded screening helper does not infer authority from a known value.
+    Callers decide whether an application instruction was actually requested.
+    Marked examples, historical statements and conversion instructions remain.
+    """
+    pieces = re.split(r"((?<!\d)\.|\.(?!\d)|[;!?\n]+)", text)
+    kept: list[str] = []
+    removed: list[str] = []
+    physical = {"kg", "g", "lb", "oz", "ml", "l", "gallons", "quarts", "tonnes", "gal", "qt", "pt", "fl"}
+    for index in range(0, len(pieces), 2):
+        clause = pieces[index]
+        ending = pieces[index + 1] if index + 1 < len(pieces) else ""
+        action = re.search(
+            r"^\s*(?:[-*•]\s*)?(?:(?:recommendation|next step|action)\s*:\s*)?"
+            r"(?:(?:then|next|please)\s+)?(?:(?:you|we)\s+(?:should|can|may|must)\s+)?"
+            r"(?:apply|spray(?!\s+(?:volume|rate|coverage)\b)|use)\b|"
+            r"^\s*(?:I|we)\s+(?:recommend|advise|suggest)\b[^.!?;]{0,45}\b(?:applying|spraying|using)\b",
+            clause, re.I,
+        )
+        conversion = re.search(
+            rf"^\s*(?:use\s+{_NUM}\s+to\s+convert\b|(?:use|apply)\s+(?:the\s+)?(?:conversion factor|unit conversion)\b)",
+            clause, re.I,
+        )
+        quantities = [_quantity(m) for m in NUMBER_RE.finditer(clause)]
+        chosen_amount = any(q.unit.split("/")[0] in physical for q in quantities)
+        part = clause + ending
+        (removed if action and chosen_amount and not conversion else kept).append(part)
+    return ("".join(kept).strip(), tuple(removed)) if removed else (text, ())
+
+
 def _container_total(question: str, evidence: str) -> tuple[Decimal, Decimal, Quantity] | None:
     """Admit one count and one per-container mass, without unit conversion.
 

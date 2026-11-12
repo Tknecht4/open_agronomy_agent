@@ -72,6 +72,29 @@ and any separately supplied processing/analysis event as distinct provenance.
 The retained baseline, carried exact-answer labels and new automated judgments
 remain separate; they are development evidence, not expert grades.
 
+## Interrupted candidate and claim-scope repair
+
+The first model candidate (`edba8ed`) passed its six engineering components, but
+completed target answers still omitted the nutrient mass basis and mistook
+threshold matching for a sampling decision rule. Stop that unsuccessful source
+condition and retain its interrupted evidence; unobserved cells are not passes.
+The corrected source supplies shared, source-referenced rate-basis and scouting
+methods and checks that their essential concepts survive. Adequate model prose
+is retained, with no exact field label needed merely to explain the terms.
+
+An independent counterfactual also showed that an unasked application instruction
+could survive when its quantity already appeared in history. Known quantity and
+current authority are different claims. Remove a direct numeric application
+instruction locally from an otherwise supported terminology explanation. Preserve
+marked examples and conversion steps. Enforce this postcondition independently
+of verifier selection; when no useful explanation remains, use the bounded
+method and record deterministic recovery rather than model retention. Cleanup
+receipts require a named defect and a known clean remainder; null assessment
+state cannot satisfy that proof. Persisted production-seam tests retain all
+17 stage receipts and the correct saved answer.
+
+Unknown location now uses applicable local guidance, without inventing a province.
+
 ## Scientific basis and task scope
 
 [NRCS soil guidance](https://www.nrcs.usda.gov/sites/default/files/2022-10/National-Agronomy-Manual.pdf)

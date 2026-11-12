@@ -485,9 +485,23 @@ def classify_verification_origin(
     replacement_used = draft_sha256 != post_verification_sha256
     cleanup = record.get("localized_cleanup")
     if cleanup is not None:
+        original = record.get("draft_assessment")
+        final = record.get("final_assessment")
+        original_reasons = original.get("reasons") if isinstance(original, Mapping) else None
+        final_reasons = final.get("reasons") if isinstance(final, Mapping) else None
+        scoped_application_cleanup = (
+            isinstance(cleanup, Mapping)
+            and cleanup.get("kind") == "unasked_application_instruction"
+            and isinstance(cleanup.get("removed_text"), list)
+            and bool(cleanup["removed_text"])
+            and all(isinstance(text, str) and text.strip() for text in cleanup["removed_text"])
+            and isinstance(original_reasons, (list, tuple))
+            and "unasked_application_instruction" in original_reasons
+            and isinstance(final_reasons, (list, tuple)) and not final_reasons
+        )
         if not (
             isinstance(cleanup, Mapping)
-            and cleanup.get("kind") == "leading_control_capsule"
+            and (cleanup.get("kind") == "leading_control_capsule" or scoped_application_cleanup)
             and cleanup.get("retained_prose_unchanged") is True
             and cleanup.get("editor_invoked") is False
             and triggered and replacement_used

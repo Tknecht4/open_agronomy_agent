@@ -23,11 +23,11 @@ from agronomy_agent.query_context import (
 from agronomy_agent.router import request_focus, evidence_interpretation_kind
 from agronomy_agent.model_prompt_budget import positive_int, prompt_budget_receipt
 from agronomy_agent.model_errors import LocalModelSnapshotUnavailable
-from agronomy_agent.quantity_claims import unsupported_quantities
+from agronomy_agent.quantity_claims import unsupported_quantities, remove_numeric_application_instructions
 from agronomy_agent.execution_core import stable_sha256
 from agronomy_agent.observation_guidance import observation_guidance, sample_event_roles_stated
 from agronomy_agent.high_consequence import classify_high_consequence_domains, fertility_quantity_requested
-from agronomy_agent.answerability import simple_definition_subject
+from agronomy_agent.answerability import simple_definition_subject, is_rate_basis_explanation
 
 
 def editor_observation_record(observation: Mapping[str, Any]) -> dict[str, Any]:
@@ -1410,6 +1410,8 @@ def assess_claim_risk(
         reasons.append("scope_drift")
     if missing_intent_facets:
         reasons.append("missing_decision_content")
+    if is_rate_basis_explanation(question) and remove_numeric_application_instructions(candidate)[1]:
+        reasons.append("unasked_application_instruction")
     if sample_event_roles_stated(question) and not re.search(
         r"\b(?:processing date|processed|analy[sz]ed|analysis date)\b", question, re.I
     ):
@@ -2375,6 +2377,23 @@ def _verify_answer_policy(
     docs = tuple(evidence_docs)
     entities = tuple(preserve_entities)
     required = tuple(required_entities)
+    if is_rate_basis_explanation(question):
+        application_cleaned, application_removed = remove_numeric_application_instructions(draft)
+        if application_removed:
+            retained = application_cleaned or bounded_decision_support(question, question_type)
+            original_assessment = assess_claim_risk(draft, question=question, evidence_text=evidence_text,
+                question_type=question_type, risk_level=risk_level, evidence_docs=docs,
+                preserve_entities=entities, required_entities=required)
+            retained_assessment = assess_claim_risk(retained or "", question=question, evidence_text=evidence_text,
+                question_type=question_type, risk_level=risk_level, evidence_docs=docs,
+                preserve_entities=entities, required_entities=required)
+            if retained and not retained_assessment.reasons:
+                return AnswerVerificationResult(answer=retained, triggered=True, rewrite_accepted=False,
+                    fallback_applied=not bool(application_cleaned), draft_assessment=original_assessment,
+                    final_assessment=retained_assessment, draft_output=draft,
+                    selection_policy="localized_application_scope_cleanup_v1" if application_cleaned else "bounded_application_scope_recovery_v1",
+                    localized_cleanup=({"kind":"unasked_application_instruction", "removed_text":list(application_removed),
+                        "retained_prose_unchanged":True, "editor_invoked":False} if application_cleaned else None))
     cleaned, removed = _remove_leading_control_capsule(draft)
     if removed:
         original_assessment = assess_claim_risk(
@@ -4248,7 +4267,7 @@ def _clubroot_guidance_scope(question: str, jurisdiction: str | None) -> str:
     )
     if len(candidates) == 1:
         return f"current {candidates[0]} clubroot guidance"
-    return "current applicable provincial clubroot guidance"
+    return "current applicable local clubroot guidance"
 
 
 def _decision_route_failure_answer(
@@ -4273,8 +4292,8 @@ def _decision_route_failure_answer(
     if decision == "clubroot_containment":
         guidance_scope = _clubroot_guidance_scope(state.question, jurisdiction)
         return (
-            "Swollen roots are a reason to suspect clubroot, not confirmation. One nonhost year does not eradicate clubroot; resting spores can persist for many years, and rotation reduces risk rather than proving a field clean. Check for susceptible brassica crops, volunteers and cruciferous weeds throughout the rotation. Treat this as suspected clubroot and act today to limit soil movement while arranging confirmation. Mark the patch and approach, keep unnecessary traffic out, work the suspect area last, and avoid moving soil, roots, or contaminated material to clean parts of the field. Before equipment, tools, or boots leave, remove adhering soil at the site and follow current provincial sanitation guidance; record where material and wash water go. "
-            "Dig several plants from the patch margin and normal plants outside it, keep roots intact, photograph the pattern and galls, and submit a representative sample through the provincial or diagnostic-lab pathway. Record crop stage, recent weather, field distribution and disease risk, rotation, variety, equipment movement, and symptom progression. Confirmation and "
+            "Swollen roots are a reason to suspect clubroot, not confirmation. One nonhost year does not eradicate clubroot; resting spores can persist for many years, and rotation reduces risk rather than proving a field clean. Check for susceptible brassica crops, volunteers and cruciferous weeds throughout the rotation. Treat this as suspected clubroot and act today to limit soil movement while arranging confirmation. Mark the patch and approach, keep unnecessary traffic out, work the suspect area last, and avoid moving soil, roots, or contaminated material to clean parts of the field. Before equipment, tools, or boots leave, remove adhering soil at the site and follow current applicable local sanitation guidance; record where material and wash water go. "
+            "Dig several plants from the patch margin and normal plants outside it, keep roots intact, photograph the pattern and galls, and submit a representative sample through an appropriate crop-diagnostic laboratory or local referral pathway. Record crop stage, recent weather, field distribution and disease risk, rotation, variety, equipment movement, and symptom progression. Confirmation and "
             f"{guidance_scope} should control longer-term rotation, resistant-variety, access, and sanitation decisions, but containment should not wait for the result."
         )
     if decision == "pesticide_rate_request":

@@ -10,7 +10,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 import re
 
-from agronomy_agent.answerability import preferred_response_language
+from agronomy_agent.answerability import preferred_response_language, is_rate_basis_explanation
 
 
 @dataclass(frozen=True)
@@ -31,6 +31,14 @@ class ObservationGuidance:
     def unsupported_inference(self, answer: str) -> bool:
         """Reject bounded contradictions even when a correct check is appended."""
         for sentence in re.split(r"[.!?;]\s*|\n+", answer):
+            if self.has_method("scouting_unit_interpretation"):
+                if (
+                    re.search(r"\bbelow\b[^.!?]{0,70}\bthreshold\b", sentence, re.I)
+                    and re.search(r"\b(?:means?|therefore|suggests?|deemed)\b", sentence, re.I)
+                    and re.search(r"\b(?:no|not|unnecessary|stop)\b[^.!?]{0,75}\b(?:sampl|scout)\w*|\b(?:sampl|scout)\w*[^.!?]{0,60}\b(?:not|unnecessary)\b", sentence, re.I)
+                    and not re.search(r"\b(?:does not mean|doesn't mean|not a reason|rather than|continue|still require|still need)\b", sentence, re.I)
+                ):
+                    return True
             if self.has_method("empty_terrain_coverage"):
                 if re.search(
                     r"\b(?:absence|empty|no (?:mapped )?features?|lack of data)\b[^.!?]{0,160}"
@@ -77,6 +85,30 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
     # English method text must never replace a French answer.
     if preferred_response_language(question) == "fr" or has(r"\b(?:en fran[cç]ais|in french)\b"):
         return None
+    if is_rate_basis_explanation(question):
+        parts: list[str] = []
+        facets: list[tuple[str, str, tuple[str, ...]]] = []
+        if has(r"\b(?:label|pesticide)\b"):
+            parts.append("A pesticide label rate states the product amount or concentration for a specified labelled use and formulation. Read the label's stated product or active-ingredient basis and units; do not assume they are interchangeable. An application rate is distinct from a maximum residue limit, which concerns residue remaining in food.")
+            facets.append(("label_rate_basis", "Explain the amount/concentration basis specified by the product label.", (r"\b(?:amount|quantity|concentration)\b[^.]{0,100}\b(?:product|label|pesticide|formulation)\b", r"\b(?:product|label|pesticide|formulation)\b[^.]{0,100}\b(?:amount|quantity|concentration)\b")))
+        elif has(r"\bproduct\b"):
+            parts.append("A product rate describes the amount of the commercial formulation on its stated application basis, such as product mass or volume per area.")
+            facets.append(("product_rate_basis", "Explain the commercial-product amount basis.", (r"\bproduct\b[^.]{0,100}\b(?:amount|mass|volume|quantity)\b", r"\b(?:amount|mass|volume|quantity)\b[^.]{0,100}\bproduct\b")))
+        if has(r"\bnutrient\b"):
+            parts.append("For a field application, a fertilizer nutrient rate commonly expresses the mass of a named nutrient per area. Other application systems may use an explicitly stated concentration or volume basis. Use the declared nutrient basis and product analysis to convert nutrient mass into product amount; it is not a nutrient concentration measured in the crop or soil.")
+            facets.append(("nutrient_rate_basis", "Explain nutrient mass per area, distinct from product amount or measured crop concentration.", (r"\b(?:mass|amount|kg|kilograms?|lb|pounds?)\b[^.]{0,100}\b(?:nutrient|nitrogen|phosphorus|N|P|K)\b[^.]{0,60}\b(?:area|hectare|ha|acre|ac)\b", r"\bnutrient\b[^.]{0,60}\bmass per (?:unit )?area\b")))
+        yield ObservationGuidance("rate_basis_terms", "\n\n".join(parts), tuple(facets))
+    if has(r"\b(?:aphids?|pests?|insects?)\b") and has(r"\b(?:scout\w*|sampl\w*)\b") and has(r"\b(?:threshold units?|counting basis|sampling units?)\b"):
+        yield ObservationGuidance("scouting_unit_interpretation", (
+            "Scout representative interior locations across the field, including affected and normal areas; an edge hotspot alone is not a field-wide count. "
+            "Use the sampling method and units in current local guidance for the crop and pest. Match the same counting basis: counts per plant, tiller or sweep are not interchangeable without a validated relationship. "
+            "Record crop and pest stage, population trend, natural enemies and sampling variability. If observations are sparse, patchy, inconsistent or near a decision boundary, follow the applicable resampling or sequential-sampling protocol. "
+            "An action threshold does not by itself establish sample adequacy or permission to spray; below-threshold populations can still require monitoring."
+        ), (
+            ("scouting_representative", "Explain representative field-interior coverage rather than one hotspot.", (r"\bfield interior\b", r"\binterior locations\b", r"\bacross (?:the )?field\b", r"\bnormal areas\b")),
+            ("scouting_unit_basis", "Match observations and threshold on the same counting basis.", (r"\bsame (?:counting )?basis\b", r"\bmatching (?:sampling|counting) units\b", r"\b(?:per plant|per tiller|per sweep)\b")),
+            ("sampling_adequacy", "Use sampling uncertainty/variability and appropriate repeat sampling, not threshold position alone.", (r"\bsampling (?:uncertainty|variability)\b", r"\b(?:sparse|patchy|precision|representativeness|resampl\w*)\b", r"\badditional representative samples\b")),
+        ))
     if sample_event_roles_stated(question) and has(r"\b(?:sampling dates?|sample date|collection date|which date|preserv\w*)\b"):
         yield ObservationGuidance("sample_record_dates", (
             "Use the actual sample collection date as the sampling-event date when comparing seasons. "

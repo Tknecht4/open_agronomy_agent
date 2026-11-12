@@ -5,6 +5,7 @@ from typing import Any
 
 from agronomy_agent.answer_verifier import bounded_decision_support
 from agronomy_agent.answerability import preferred_response_language, is_rate_basis_explanation
+from agronomy_agent.quantity_claims import remove_numeric_application_instructions
 
 
 def normalize_general_answer(answer_text: str, *, question: str | None = None, route: Any | None = None) -> str:
@@ -45,6 +46,10 @@ def enforce_answer_safety_postconditions(
     answer_text = _normalize_field_trafficability_gaps(answer_text, question=question)
     answer_text = _normalize_salinity_terminology(answer_text, question=question, route=route)
     answer_text = _ensure_cross_border_fertility_authority_boundary(answer_text, question=question)
+    if is_rate_basis_explanation(str(question or "")):
+        cleaned, removed = remove_numeric_application_instructions(answer_text)
+        if removed:
+            answer_text = cleaned or bounded_decision_support(str(question), _route_question_type(route)) or ""
     if _route_question_type(route) == "product_label" and not is_rate_basis_explanation(str(question or "")):
         answer_text = _ensure_current_product_label_boundary(answer_text, question=question)
     return answer_text

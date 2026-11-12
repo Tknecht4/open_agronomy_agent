@@ -224,6 +224,100 @@ def test_terminology_question_still_rejects_an_invented_numeric_dose():
     assert "2 L/ha" not in result.answer
 
 
+@pytest.mark.parametrize("instruction", [
+    "Apply glyphosate at 2 L/ha today and record the application.",
+    "You can apply glyphosate at 2 L/ha today.",
+    "Use glyphosate at 2 L/ha to convert the field.",
+])
+def test_historical_quantity_does_not_authorize_an_unasked_application(instruction):
+    from types import SimpleNamespace
+    from agronomy_agent.answer_safety import enforce_answer_safety_postconditions
+    question = "What is a pesticide label rate?"
+    explanation = "A pesticide label rate describes the amount or concentration specified for the labelled use and formulation. A fertilizer nutrient rate expresses the mass of a named nutrient per area, so product analysis converts nutrient mass to product mass. The unit bases differ and the exact label still controls product use."
+    draft = explanation + " " + instruction
+    evidence = "Field history reports a previous glyphosate application at 2 L/ha, not current label authority."
+    result = verify_answer(draft, question=question, evidence_text=evidence, question_type="exam_review", risk_level="low",
+        editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert result.answer == explanation
+    assert "unasked_application_instruction" in result.draft_assessment.reasons
+    assert result.localized_cleanup is not None
+    assert enforce_answer_safety_postconditions(draft, question=question, route=SimpleNamespace(question_type="exam_review")) == explanation
+
+
+def test_safe_rate_explanation_keeps_a_marked_label_example_and_conversion():
+    from types import SimpleNamespace
+    from agronomy_agent.answer_safety import enforce_answer_safety_postconditions
+    question = "Explain the difference between product rate and nutrient rate."
+    answer = "For example, a hypothetical label could say 'apply 2 L/ha'; that is a product-volume basis, not a nutrient target. Use 0.46 to convert a supplied 40 kg N/ha into product mass. This illustrates the bases and does not choose a field rate."
+    assert enforce_answer_safety_postconditions(answer, question=question, route=SimpleNamespace(question_type="exam_review")) == answer
+
+
+def test_persisted_terminology_answer_cannot_authorize_a_historical_rate(tmp_path, monkeypatch):
+    from agronomy_agent.execution_core import AgentExecutionRequest
+    from agronomy_agent.server.services import chat_service
+    from agronomy_agent.server.settings import build_settings
+    from agronomy_agent.server.storage.db import TraceStore
+    explanation = "A pesticide label rate describes the product amount or concentration for the labelled use and formulation. Read its stated unit basis and restrictions; this general explanation does not choose an application rate."
+    class Backend:
+        backend_id = "imposed_history_scope_error"
+        intervention_profile = "balanced"
+        calls = 0
+        def generate(self, messages):
+            self.calls += 1
+            return explanation + " Apply glyphosate at 2 L/ha today."
+        def close(self):
+            pass
+    backend = Backend()
+    monkeypatch.setattr(chat_service, "_build_mlx_generator", lambda *a, **k: backend)
+    database = tmp_path / "history.sqlite3"
+    store = TraceStore(database)
+    try:
+        session = store.create_session("Synthetic history", {}, {})
+        result = chat_service.execute_agent_request(AgentExecutionRequest(store=store,
+            settings=build_settings(db_path=database, artifact_root=tmp_path / "artifacts", network_mode="offline"),
+            session_id=session["session_id"], message="What is a pesticide label rate?", mode="agronomic_rag",
+            session_context={"field_context":{"application_history":"A previous glyphosate application was 2 L/ha; no current label is verified."}},
+            model_id="imposed", rag_config="configs/rag.yaml", max_tokens=150, generation_backend=backend))
+        assert result.answer == explanation
+        assert store.get_turn(result.turn["turn_id"])["answer"] == explanation
+        assert len(result.stage_receipts) == 17 and backend.calls == 1
+    finally:
+        store._conn.close()
+
+
+def test_rate_basis_recovery_explains_input_mass_rather_than_crop_concentration():
+    question = "Explain the difference between a pesticide label rate and a fertilizer nutrient rate."
+    draft = "Pesticide label rates are controlled by the label and determine the amount used for the crop and pest. Fertilizer nutrient rates refer to the desired level of a nutrient in the crop, which is a reference for calculation. Both depend on the purpose and conditions of the operation."
+    result = verify_answer(draft, question=question, evidence_text="", question_type="exam_review", risk_level="low",
+        editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert "nutrient_rate_basis" in result.draft_assessment.missing_intent_facets
+    assert "mass" in result.answer and "per area" in result.answer
+    assert "not a nutrient concentration measured" in result.answer
+
+
+def test_below_threshold_cannot_alone_discharge_sampling_adequacy():
+    from agronomy_agent.observation_guidance import observation_guidance
+    question = "Explain aphid scouting and matching threshold units before deciding whether more sampling is needed."
+    method = observation_guidance(question)
+    assert method.has_method("scouting_unit_interpretation")
+    assert method.unsupported_inference("Counts below the threshold suggest further sampling is not required.")
+    assert not method.unsupported_inference("Being below the threshold does not mean that further scouting is unnecessary; continue monitoring under the appropriate sampling protocol.")
+
+
+def test_entirely_unasked_numeric_instruction_recovers_a_definition():
+    from types import SimpleNamespace
+    from agronomy_agent.answer_safety import enforce_answer_safety_postconditions
+    answer = enforce_answer_safety_postconditions("Apply 2 L/ha today.", question="What is a pesticide label rate?", route=SimpleNamespace(question_type="exam_review"))
+    assert answer and "product amount" in answer and "2 L/ha" not in answer
+
+
+def test_clubroot_recovery_does_not_invent_a_province():
+    from agronomy_agent.answer_verifier import bounded_decision_support
+    answer = bounded_decision_support("My canola roots are swollen. Is that enough to confirm clubroot?", "plant_health")
+    assert "current applicable local" in answer
+    assert "provincial" not in answer
+
+
 def test_declined_product_selection_does_not_create_a_sampling_authority_requirement():
     from agronomy_agent.high_consequence import classify_high_consequence_domains
     from agronomy_agent.router import classify_query, refine_query_route
