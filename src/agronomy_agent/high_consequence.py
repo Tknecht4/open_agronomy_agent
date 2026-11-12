@@ -8,7 +8,9 @@ HIGH_CONSEQUENCE_SCHEMA = "open_agronomy_agent.high_consequence_policy.v1"
 
 
 def _fertility_quantity_requested(question: str) -> bool:
-    nutrient = r"(?:fertiliz\w*|fertilis\w*|nitrogen|urea|urée|phosphorus|potassium|sulphur|sulfur|manure|lime|N|engrais|azote|phosphore|soufre|fumier|chaux)"
+    # Fertilizer shorthand is case-sensitive here: a possessive "label's rate"
+    # is not a sulphur request. Numeric proposals below have their own units.
+    nutrient = r"(?:fertiliz\w*|fertilis\w*|nitrogen|urea|urée|phosphorus|potassium|sulphur|sulfur|manure|lime|N|engrais|azote|phosphore|soufre|fumier|chaux|(?-i:(?<!['’])(?:P2O5|K2O|P|K|S)))"
     # Bind quantity words to their subject. Input history such as "after
     # nitrogen last week" cannot create a second requested rate.
     for clause in re.split(

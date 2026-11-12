@@ -180,6 +180,8 @@ def test_seasonal_water_snapshot_requires_repeat_sampling_and_joint_sodium_inter
     "Following last year's nitrogen rate of 80 kg/ha, what herbicide rate should I use?",
     "What herbicide rate should I use after last year's nitrogen rate of 80 kg/ha?",
     "What was last year's nitrogen rate? And what herbicide rate should I apply now?",
+    "What herbicide rate should I use? The supplier's rate card is attached.",
+    "What herbicide rate should I use? The label's rate table is attached.",
 ])
 def test_pesticide_rate_obligations_do_not_ask_for_fertilizer_tests(question):
     from agronomy_agent.high_consequence import evaluate_high_consequence_policy
@@ -202,6 +204,11 @@ def test_pesticide_rate_obligations_do_not_ask_for_fertilizer_tests(question):
     "What herbicide rate should I use, and should I apply 40 kg N/ha?",
     "Should I apply 40 kg/ha of nitrogen and spray this herbicide?",
     "Should I apply 0.5 kg/ha of nitrogen and spray this herbicide?",
+    "What herbicide rate and P rate should I use?",
+    "What herbicide rate and K rate should I use?",
+    "What herbicide rate and S rate should I use?",
+    "What herbicide rate and P2O5 rate should I use?",
+    "What herbicide rate and K2O rate should I use?",
 ])
 def test_mixed_pesticide_and_nitrogen_requests_retain_both_authority_lanes(question):
     from agronomy_agent.high_consequence import evaluate_high_consequence_policy
