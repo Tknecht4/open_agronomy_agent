@@ -1295,6 +1295,19 @@ def _destroys_diagnostic_sampling_contrast(question: str, answer: str) -> bool:
     return False
 
 
+def _sample_analysis_date_supplied(question: str) -> bool:
+    """A question about an analysis date is not a supplied analysis event."""
+    date = (
+        r"(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?|"
+        r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|"
+        r"Aug(?:ust)?|Sept?(?:ember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2})"
+    )
+    return bool(re.search(
+        rf"\b(?:(?:processing|analysis) date\s*(?:(?:was|is)\s+|:\s*)?|"
+        rf"(?:processed|analy[sz]ed)\s+(?:on\s+)?){date}\b", question, re.I,
+    ))
+
+
 def assess_claim_risk(
     answer: str,
     *,
@@ -1412,14 +1425,15 @@ def assess_claim_risk(
         reasons.append("missing_decision_content")
     if is_rate_basis_explanation(question) and remove_numeric_application_instructions(candidate)[1]:
         reasons.append("unasked_application_instruction")
-    if sample_event_roles_stated(question) and not re.search(
-        r"\b(?:processing date|processed|analy[sz]ed|analysis date)\b", question, re.I
-    ):
+    if sample_event_roles_stated(question) and not _sample_analysis_date_supplied(question):
         for clause in re.split(r"[.!?;\n]", candidate):
             if re.search(
-                r"\b(?:date (?:the )?lab(?:oratory)? (?:processed|analy[sz]ed)|(?:lab(?:oratory)? )?processing date)\b",
+                r"\b(?:date (?:the )?lab(?:oratory)? (?:processed|analy[sz]ed)|(?:lab(?:oratory)? )?(?:processing|analysis) date)\b",
                 clause, re.I,
-            ) and not re.search(r"\b(?:not|unknown|unprovided|cannot infer|if provided|if supplied)\b", clause, re.I):
+            ) and not re.search(
+                r"\b(?:not|unknown|unprovided|unavailable|unspecified|unreported|"
+                r"cannot(?: be)? infer\w*|can't(?: be)? infer\w*|if provided|if supplied)\b", clause, re.I
+            ):
                 reasons.append("sample_event_role_conflation")
     definition = simple_definition_subject(question)
     if definition in {"soil texture"}:

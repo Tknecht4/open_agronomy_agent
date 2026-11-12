@@ -139,6 +139,7 @@ def test_variety_checklist_drift_is_corrected_in_rotation_definition():
     ("In general, what is a pesticide label rate and how is it different from a fertilizer nutrient rate? I am not asking which product or dose to use.", "A pesticide label rate is the product amount or concentration specified for the labelled use, with crop, target, method and restrictions. A fertilizer nutrient rate expresses the mass of a named nutrient per area; product concentration converts that nutrient amount to fertilizer product mass. These bases are different. This explanation does not choose a pesticide dose or a field nutrient target."),
     ("Explain how representative aphid scouting and matching threshold units help decide whether more sampling is needed. Do not choose a pesticide.", "Use representative samples from the field interior and compare affected and normal areas; an edge hotspot alone may not represent the field. Record crop and pest stage, aphid counts, damage, beneficial insects and the sampling method. Compare observations with current local guidance using the same counting basis and threshold units. If the sample is sparse, variable or not comparable, take additional representative samples rather than inferring field-wide pressure or a spray decision."),
     ("The soil sample was collected May 12 and the lab report was issued May 19. Which sampling date should I compare across seasons?", "Use May 12, the collection date, for sampling-date comparisons. Preserve May 19 as the report issuance date in a separate field linked to the sample and original report. The laboratory processing date is not established by issuance; retain it separately if supplied. Keep sampling depth, timing and analytical method comparable across seasons."),
+    ("The soil sample was collected May 12 and the lab report was issued May 19. Which sampling date should I compare across seasons?", "Use May 12 as the collection date. Preserve May 19 as the report issuance date in a separate field. The processing date cannot be inferred from issuance."),
 ])
 def test_correct_definition_survives_the_persisted_product_path(tmp_path, monkeypatch, message, answer):
     from agronomy_agent.execution_core import AgentExecutionRequest
@@ -228,6 +229,13 @@ def test_terminology_question_still_rejects_an_invented_numeric_dose():
     "Apply glyphosate at 2 L/ha today and record the application.",
     "You can apply glyphosate at 2 L/ha today.",
     "Use glyphosate at 2 L/ha to convert the field.",
+    "Apply 100 mg/ha today.",
+    "Apply .5 L/ha today.",
+    "Apply 2% solution today.",
+    "**Apply 2 L/ha today.**",
+    "1) Apply 2 L/ha today.",
+    "1. Apply 2 L/ha today.",
+    "Apply **2 L/ha** today.",
 ])
 def test_historical_quantity_does_not_authorize_an_unasked_application(instruction):
     from types import SimpleNamespace
@@ -252,7 +260,8 @@ def test_safe_rate_explanation_keeps_a_marked_label_example_and_conversion():
     assert enforce_answer_safety_postconditions(answer, question=question, route=SimpleNamespace(question_type="exam_review")) == answer
 
 
-def test_persisted_terminology_answer_cannot_authorize_a_historical_rate(tmp_path, monkeypatch):
+@pytest.mark.parametrize("instruction", ["Apply glyphosate at 2 L/ha today.", "**Apply .5 L/ha today.**", "Apply 100 mg/ha today.", "Apply 2% solution today."])
+def test_persisted_terminology_answer_cannot_authorize_a_historical_rate(tmp_path, monkeypatch, instruction):
     from agronomy_agent.execution_core import AgentExecutionRequest
     from agronomy_agent.server.services import chat_service
     from agronomy_agent.server.settings import build_settings
@@ -264,7 +273,7 @@ def test_persisted_terminology_answer_cannot_authorize_a_historical_rate(tmp_pat
         calls = 0
         def generate(self, messages):
             self.calls += 1
-            return explanation + " Apply glyphosate at 2 L/ha today."
+            return explanation + " " + instruction
         def close(self):
             pass
     backend = Backend()
@@ -276,7 +285,7 @@ def test_persisted_terminology_answer_cannot_authorize_a_historical_rate(tmp_pat
         result = chat_service.execute_agent_request(AgentExecutionRequest(store=store,
             settings=build_settings(db_path=database, artifact_root=tmp_path / "artifacts", network_mode="offline"),
             session_id=session["session_id"], message="What is a pesticide label rate?", mode="agronomic_rag",
-            session_context={"field_context":{"application_history":"A previous glyphosate application was 2 L/ha; no current label is verified."}},
+            session_context={"field_context":{"application_history":"Past application records mention 2 L/ha, .5 L/ha, 100 mg/ha and a 2% solution; no current label is verified."}},
             model_id="imposed", rag_config="configs/rag.yaml", max_tokens=150, generation_backend=backend))
         assert result.answer == explanation
         assert store.get_turn(result.turn["turn_id"])["answer"] == explanation
@@ -316,6 +325,7 @@ def test_clubroot_recovery_does_not_invent_a_province():
     answer = bounded_decision_support("My canola roots are swollen. Is that enough to confirm clubroot?", "plant_health")
     assert "current applicable local" in answer
     assert "provincial" not in answer
+    assert "provincial" not in build_decision_route_state("My canola roots are swollen. Is that enough to confirm clubroot?", "plant_health").prompt_block()
 
 
 def test_declined_product_selection_does_not_create_a_sampling_authority_requirement():
@@ -373,6 +383,60 @@ def test_suspected_clubroot_word_order_keeps_confirmation_and_containment():
     assert "not confirmation" in result.answer
 
 
+@pytest.mark.parametrize("crop", ["soybean", "corn", "carrot", "potato"])
+def test_root_swelling_alone_does_not_create_a_clubroot_concern_for_other_crops(crop):
+    question = f"My {crop} roots are swollen. What should I inspect today?"
+    assert build_decision_route_state(question, "plant_health").decision != "clubroot_containment"
+
+
+@pytest.mark.parametrize("crop", ["canola", "cabbage", "broccoli", "mustard"])
+def test_susceptible_crop_root_swelling_retains_clubroot_confirmation_and_containment(crop):
+    question = f"My {crop} roots are swollen. What should I do today?"
+    assert build_decision_route_state(question, "plant_health").decision == "clubroot_containment"
+
+
+def test_explicit_clubroot_soil_concern_is_preserved_in_a_rotation_crop():
+    question = "Corn is planted this year. Clubroot was confirmed in the previous canola crop. What soil-movement precautions should I take today?"
+    assert build_decision_route_state(question, "plant_health").decision == "clubroot_containment"
+
+
+def test_unknown_crop_root_swelling_does_not_assume_a_susceptible_host():
+    assert build_decision_route_state("The roots are swollen. What should I inspect today?", "plant_health").decision != "clubroot_containment"
+
+
+def test_soybean_swelling_does_not_inject_clubroot_into_the_persisted_product_prompt(tmp_path, monkeypatch):
+    from agronomy_agent.execution_core import AgentExecutionRequest
+    from agronomy_agent.server.services import chat_service
+    from agronomy_agent.server.settings import build_settings
+    from agronomy_agent.server.storage.db import TraceStore
+    class Backend:
+        backend_id = "imposed_root_observation"
+        intervention_profile = "balanced"
+        calls = []
+        def generate(self, messages):
+            self.calls.append(messages)
+            return "Root swelling alone does not identify a cause. Compare affected and normal soybean plants, inspect intact roots for nodules, galls or injury, record crop stage and field distribution, and arrange representative diagnostic samples if the cause is uncertain."
+        def close(self):
+            pass
+    backend = Backend()
+    monkeypatch.setattr(chat_service, "_build_mlx_generator", lambda *a, **k: backend)
+    database = tmp_path / "soybean.sqlite3"
+    store = TraceStore(database)
+    try:
+        session = store.create_session("Synthetic root observations", {}, {})
+        result = chat_service.execute_agent_request(AgentExecutionRequest(store=store,
+            settings=build_settings(db_path=database, artifact_root=tmp_path / "artifacts", network_mode="offline"),
+            session_id=session["session_id"], message="My soybean roots are swollen. What should I inspect today?",
+            mode="agronomic_rag", model_id="imposed", rag_config="configs/rag.yaml", max_tokens=150,
+            generation_backend=backend))
+        assert "clubroot_containment" not in "\n".join(m["content"] for call in backend.calls for m in call)
+        assert "suspected clubroot" not in result.answer.lower()
+        assert store.get_turn(result.turn["turn_id"])["answer"] == result.answer
+        assert len(result.stage_receipts) == 17
+    finally:
+        store._conn.close()
+
+
 def test_stratified_sampling_recovery_requires_a_useful_zone_method():
     question = "An adviser wants one composite soil sample for an Alberta barley field with eroded knolls, wet depressions and an old manure strip. Is one average good enough for the nutrient plan?"
     result = verify_answer("One sample may not be enough. These are contrasting management zones. Provide soil tests and nutrient requirements before I can evaluate whether an average is adequate.",
@@ -417,6 +481,43 @@ def test_correct_sample_date_roles_are_preserved():
     result = verify_answer(answer, question=question, evidence_text="", question_type="field_data", risk_level="low",
         editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
     assert result.answer == answer and not result.fallback_applied
+
+
+@pytest.mark.parametrize("ending", [
+    "The processing date is unavailable.",
+    "The processing date cannot be inferred from issuance.",
+    "The analysis date is unknown.",
+    "The analysis date cannot be inferred from the report issuance date.",
+    "If supplied, keep the processing date separately.",
+])
+def test_sample_date_unknowns_do_not_trigger_unnecessary_replacement(ending):
+    question = "The soil sample was collected May 12 and the lab report was issued May 19. Which sampling date should I compare across seasons?"
+    answer = "Use May 12 as the collection date. Preserve May 19 as the report issuance date in a separate field. " + ending
+    result = verify_answer(answer, question=question, evidence_text="", question_type="field_data", risk_level="low",
+        editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert result.answer == answer and not result.triggered
+
+
+@pytest.mark.parametrize("ending", [
+    "The report issuance date is the analysis date.",
+    "Use the report issuance date as the analysis date.",
+    "The analysis date is May 19.",
+])
+def test_sample_analysis_role_cannot_be_inferred_from_report_issuance(ending):
+    question = "The soil sample was collected May 12 and the lab report was issued May 19. Which sampling date should I compare across seasons? Can I infer the analysis date?"
+    draft = "Use May 12 as the collection date. Preserve May 19 as the report issuance date in a separate field. " + ending
+    result = verify_answer(draft, question=question, evidence_text="", question_type="field_data", risk_level="low",
+        editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert "sample_event_role_conflation" in result.draft_assessment.reasons
+    assert ending not in result.answer and result.fallback_applied
+
+
+def test_explicitly_supplied_analysis_event_is_not_treated_as_inferred():
+    question = "The soil sample was collected May 12 and the lab report was issued May 19. The analysis date was May 18. Which sampling date should I compare across seasons?"
+    answer = "Use May 12 as the collection date. Preserve May 19 as the report issuance date in a separate field. The analysis date is May 18, a separately supplied event."
+    result = verify_answer(answer, question=question, evidence_text="", question_type="field_data", risk_level="low",
+        editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert result.answer == answer and not result.triggered
 
 
 def test_date_method_composes_with_an_independent_area_request():
@@ -472,6 +573,9 @@ def test_regional_pest_alert_keeps_complete_model_method():
     ("How should I monitor my healthy potato crop for late blight?",
      "Inspect potato leaves and stems for spots and lesions. Note crop stage and weather; I cannot diagnose without field observations.",
      ("local disease alerts", "regularly", "undersides")),
+    ("The soil sample was collected May 12 and the lab report was issued May 19. Which sampling date should I compare across seasons? Can I infer the analysis date?",
+     "Use May 12 as the collection date. Preserve May 19 as the report issuance date in a separate field. The report issuance date is the analysis date.",
+     ("actual sample collection date", "do not infer it")),
 ])
 def test_persisted_observation_method_completes_failed_draft(tmp_path, monkeypatch, question, draft, required):
     from agronomy_agent.execution_core import AgentExecutionRequest

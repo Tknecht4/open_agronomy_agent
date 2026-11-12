@@ -1332,7 +1332,7 @@ def _decisive_evidence(decision: str, crop: str | None) -> tuple[str, ...]:
     if decision == "crop_stress_differential":
         return ("affected-versus-normal field pattern and symptom position", "stand, roots, crowns or growing points in affected and normal areas", "saturation duration, drainage, compaction, and recovery after drying", "fertilizer, manure, previous-crop, placement, and paired soil or tissue evidence")
     if decision == "clubroot_containment":
-        return ("suspected clubroot symptoms and a representative confirmation sample", "marking the patch and restricting traffic or soil movement", "cleaning soil from equipment before leaving the area", "current provincial clubroot containment and sanitation guidance")
+        return ("suspected clubroot symptoms and a representative confirmation sample", "marking the patch and restricting traffic or soil movement", "cleaning soil from equipment before leaving the area", "current applicable local clubroot containment and sanitation guidance")
     if decision == "fall_banded_nitrogen":
         return ("soil temperature and nitrogen form at fall application", "banded versus broadcast placement", "spring saturation, drainage and denitrification loss risk", "local moisture, seedbed and crop-response tradeoffs versus spring banding")
     if decision == "high_p_starter_decision":
