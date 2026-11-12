@@ -7,7 +7,7 @@ from typing import Any
 HIGH_CONSEQUENCE_SCHEMA = "open_agronomy_agent.high_consequence_policy.v1"
 
 
-def _fertility_quantity_requested(question: str) -> bool:
+def fertility_quantity_requested(question: str) -> bool:
     # Fertilizer shorthand is case-sensitive here: a possessive "label's rate"
     # is not a sulphur request. Numeric proposals below have their own units.
     nutrient = r"(?:fertiliz\w*|fertilis\w*|nitrogen|urea|urée|phosphorus|potassium|sulphur|sulfur|manure|lime|N|engrais|azote|phosphore|soufre|fumier|chaux|(?-i:(?<!['’])(?:P2O5|K2O|P|K|S)))"
@@ -223,7 +223,7 @@ def evaluate_high_consequence_policy(
         # Bind missing evidence to the quantity being requested. A pesticide
         # rate does not require a fertilizer yield goal or nutrient-credit test.
         # Mixed requests retain both sets of field evidence plus the label.
-        fertility_subject = _fertility_quantity_requested(question)
+        fertility_subject = fertility_quantity_requested(question)
         requirements: list[tuple[str, tuple[str, ...]]] = []
         if "product_label" in domains:
             requirements.extend((

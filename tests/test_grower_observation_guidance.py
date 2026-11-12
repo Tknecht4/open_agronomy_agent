@@ -57,6 +57,10 @@ def test_missing_observation_method_reaches_verifier_even_below_risk_threshold(q
 
 @pytest.mark.parametrize("question,key,terms", METHOD_CASES)
 def test_real_persisted_product_path_returns_observation_help(tmp_path, monkeypatch, question, key, terms):
+    _assert_persisted_product_answer(tmp_path, monkeypatch, question, terms)
+
+
+def _assert_persisted_product_answer(tmp_path, monkeypatch, question, terms):
     class IncompleteBackend:
         backend_id = "imposed_incomplete_fixture"
         intervention_profile = "balanced"
@@ -82,6 +86,24 @@ def test_real_persisted_product_path_returns_observation_help(tmp_path, monkeypa
         assert len(result.stage_receipts) == 17
     finally:
         store._conn.close()
+
+
+@pytest.mark.parametrize("question,terms", [
+    ("What herbicide rate and nitrogen fertilizer rate should I apply?", ("soil", "yield", "credits", "label")),
+    ("What herbicide rate and K2O rate should I use?", ("soil", "yield", "credits", "label")),
+    ("What herbicide rate should I use and how much urea should I sidedress?", ("soil", "yield", "credits", "label")),
+    ("Compare NDVI dates and tell me what herbicide rate and nitrogen rate to apply.", ("valid pixel", "soil", "credits", "label")),
+    ("Quelle dose d'herbicide et quelle dose d'azote dois-je appliquer?", ("analyses", "crédits", "étiquette", "méthode")),
+])
+def test_mixed_rate_requirements_survive_final_product_rendering(tmp_path, monkeypatch, question, terms):
+    # The policy record alone is insufficient: label cleanup replaces prose.
+    cleaned = enforce_answer_safety_postconditions("Apply 12 litres now; it is approved.",
+        question=question, route=SimpleNamespace(question_type="product_label"))
+    assert all(term in cleaned.lower() for term in terms), cleaned
+    assert "12 litres" not in cleaned
+    if question.startswith("Quelle"):
+        assert "I cannot choose" not in cleaned
+    _assert_persisted_product_answer(tmp_path, monkeypatch, question, terms)
 
 
 @pytest.mark.parametrize("jurisdiction", ["", "in Iowa"])

@@ -12,7 +12,7 @@ or field-qualification pass.
 | Finding | Repair and evidence |
 | --- | --- |
 | First-match observation recovery omitted another explicitly requested method. A global pixel/buffer exclusion also suppressed an independent planted-area question. | Compose recognized methods and their facets; retain each contradiction check. Scope footprint exclusions to the relevant area clause. Persisted production-seam tests cover combined requests. |
-| A mixed pesticide and nutrient rate request selected fertility evidence instead of retaining pesticide stages, pressure and history. It could report minimum evidence satisfied with only fertility and label records. | Require both field-evidence lanes. Numeric nutrient proposals, including decimal quantities and common uppercase P/K/S/P2O5/K2O shorthand, retain the nutrient lane. |
+| A mixed pesticide and nutrient rate request selected fertility evidence instead of retaining pesticide stages, pressure and history. It could report minimum evidence satisfied with only fertility and label records. | Require both field-evidence lanes. Numeric proposals and common uppercase fertilizer shorthand retain the nutrient lane. Compose both requested methods in final label-safety rendering, including French support; machine-policy evidence alone did not ensure the grower could see it. |
 | A historical nitrogen-rate phrase created a new fertilizer request inside a current herbicide question. | Bind quantity obligations to request clauses; retain historical facts without inventing a second requested rate. |
 | Explicit `False` diagnostic-confirmation values satisfied the shared evidence-presence check. This defect preceded PR 130. | Negative confirmation cannot satisfy an evidence requirement. Numeric zero remains distinct. |
 | Healthy potato monitoring received an invented collapse/wet-weather scenario and a categorical negative lead. | Keep collapse differentials conditional on collapse/wilting; give healthy-crop monitoring and local prevention checks otherwise. |
@@ -22,13 +22,17 @@ The initial added regressions failed in 22 cases with 41 passing. A separate
 healthy-potato regression and three original-source alias probes reproduced
 additional gaps. Follow-up scope and numeric-proposal failures were retained.
 After correction, the focused source/context/rendering/answerability selection
-passed 375 tests. An intermediate full-suite run was stopped because source
+passed 380 tests. An intermediate full-suite run was stopped because source
 changed after it started; it does not qualify the final composed revision.
 A subsequent full local run passed 3,799 tests but failed nine localhost
 server tests because the sandbox denied socket binding; this is retained as a
 failed attempt. The first native regression run completed 58/58 cells with no
 failed execution checks. Common fertilizer-symbol probes then exposed five
-additional request forms missing the nutrient lane. Fresh final-source
+additional request forms missing the nutrient lane. The expanded native attempt
+then exposed label-safety rendering discarding the nutrient method despite
+the policy record retaining its requirements. Five persisted rendering regressions
+reproduced that loss. Both partial verification attempts were stopped before
+repair and are retained without qualification. Fresh final-source
 full-suite, expanded 80-cell model and exact-head CI receipts are retained
 with the PR.
 

@@ -26,6 +26,7 @@ from agronomy_agent.model_errors import LocalModelSnapshotUnavailable
 from agronomy_agent.quantity_claims import unsupported_quantities
 from agronomy_agent.execution_core import stable_sha256
 from agronomy_agent.observation_guidance import observation_guidance
+from agronomy_agent.high_consequence import classify_high_consequence_domains, fertility_quantity_requested
 
 
 def editor_observation_record(observation: Mapping[str, Any]) -> dict[str, Any]:
@@ -5067,12 +5068,46 @@ def _exam_review_failure_answer(question: str) -> str:
     )
 
 
+def _mixed_rate_support(question: str) -> str | None:
+    """Keep both requested decisions visible through final label replacement."""
+    if not fertility_quantity_requested(question) or "product_label" not in classify_high_consequence_domains(question):
+        return None
+    if _looks_like_french(question):
+        return (
+            "Ne pas fixer une dose de pesticide sans confirmer la culture et son stade, la cible et son stade, "
+            "la densité et la répartition au champ, le produit exact et son numéro d'homologation. Vérifier "
+            "l'historique des applications et de la résistance, l'étiquette actuelle applicable dans le territoire "
+            "de traitement, les restrictions et la météo au moment de l'application.\n\n"
+            "Pour la dose d'engrais, confirmer le nutriment et la composition du produit. Obtenir des analyses "
+            "représentatives actuelles avec la méthode, les unités, la date et, pour le sol, la profondeur de "
+            "prélèvement. Réconcilier les apports déjà faits, les crédits de fumier et de culture précédente avec "
+            "la culture et l'objectif de rendement réaliste. Vérifier les contraintes d'eau et de racines, la "
+            "période d'absorption restante et l'étalonnage local actuel. L'étiquette du pesticide ne permet pas "
+            "de déduire une dose d'engrais; ne pas donner de dose sans ces données."
+        )
+    method = observation_guidance(question)
+    return (method.answer + "\n\n" if method else "") + (
+        "Do not set a pesticide rate without the crop and growth stage, target and growth/life stage, "
+        "representative pressure and distribution, exact product and registration, and prior application and "
+        "resistance history. Verify the current jurisdiction-specific product label, restrictions and weather "
+        "at application.\n\n"
+        "For the fertilizer rate, confirm the nutrient and product analysis. Use current representative soil "
+        "or tissue tests with method, units and date, and soil sampling depth where relevant. Reconcile "
+        "fertilizer already applied and manure/previous-crop credits with the crop and realistic yield goal. "
+        "Check water and root constraints, the remaining uptake window and current local crop calibration. "
+        "The pesticide label does not establish a fertilizer rate; do not give either rate without its evidence."
+    )
+
+
 def bounded_decision_support(question: str, question_type: str) -> str | None:
     """Reuse reviewed procedural fallbacks when an unsupported action is held.
 
     This never preserves an unverified model prescription or supplies authority.
     English-only methods cannot replace a requested French response.
     """
+    mixed = _mixed_rate_support(question)
+    if mixed:
+        return mixed
     if _looks_like_french(question):
         return None
     method = observation_guidance(question)

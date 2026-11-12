@@ -212,3 +212,8 @@ and nutrient quantities retain both evidence lanes; historical rates do not
 create a new requested fertilizer rate. Explicit negative confirmation flags
 cannot satisfy evidence requirements, while a supplied numeric zero remains a
 value. These bounded checks do not constitute a general scientific verifier.
+
+Mixed pesticide and fertilizer requests share the quantity-subject check between
+the evidence policy and final procedural support. Final label-safety replacement
+must preserve both requested methods, including supported French guidance;
+a complete machine-policy record alone does not establish a complete visible answer.

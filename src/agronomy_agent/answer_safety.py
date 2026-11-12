@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from agronomy_agent.answer_verifier import bounded_decision_support
+from agronomy_agent.answerability import preferred_response_language
 
 
 def normalize_general_answer(answer_text: str, *, question: str | None = None, route: Any | None = None) -> str:
@@ -213,6 +214,10 @@ def _ensure_current_product_label_boundary(answer_text: str, *, question: str | 
 
     if target_country is None:
         boundary = (
+            "Je ne peux pas choisir un pesticide ou une dose sans connaître le territoire de traitement, "
+            "le produit exact et sa formulation, la culture ou le site, la cible, ainsi que l'étiquette "
+            "et l'homologation actuellement applicables. Confirmer ces éléments avant toute application."
+        ) if preferred_response_language(query) == "fr" else (
             "I cannot choose a pesticide or application rate without the treatment jurisdiction, exact product "
             "and formulation, crop or use site, target, and its current applicable product label and registration. "
             "Resolve those details before any application."
