@@ -128,6 +128,13 @@ operand, explicit new requests remain authoritative, and ambiguous references
 stay unresolved. The original user text is saved unchanged; the effective
 question, source turn and policy are recorded in the trace and execution hashes.
 The current tool recomputes the result, independent of the prior model's success.
+The v3 calculation-reference policy also accepts an explicit whole-reply seed
+denominator choice when that is the sole seed-calculator gap. If conditional
+survival then leaves only laboratory germination missing, one adjacent explicit
+percentage reply can complete it. Both steps reconstruct only authorized user
+requests, preserve all previous operands and the operation, and replan through
+the current calculator. Extra actions, unrelated turns, failed/rejected history,
+missing roots and other missing roles cannot supply this bounded seed chain.
 Typed-tool ablations and baseline modes disable this interpretation. The legacy
 stream bridge resolves references only from a contiguous suffix of completed
 visible user/assistant pairs linked to saved turn IDs. A failed visible message

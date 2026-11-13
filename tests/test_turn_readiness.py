@@ -76,6 +76,89 @@ def no_generator(*args, **kwargs):
     raise AssertionError("calculator readiness/execution must not construct a generator")
 
 
+@pytest.mark.parametrize("backend", ["mlx", "http"])
+@pytest.mark.parametrize("question,reply,answer", [
+    (SEED_AMBIGUOUS, "Overall, of seeds sown.", "4.8 kg/ha"),
+    (SEED_AMBIGUOUS, "Only germinated seeds.", "5 kg/ha"),
+    (SEED_AMBIGUOUS.replace("germination is 96%, ", ""), "All seeds sown.", "4.8 kg/ha"),
+])
+def test_seed_denominator_clarification_reply_previews_and_persists_without_model(runtime, monkeypatch, backend, question, reply, answer):
+    client, store = runtime
+    monkeypatch.setattr(chat_service, "_build_mlx_generator", no_generator)
+    monkeypatch.setenv("AGRONOMY_AGENT_MODEL_BACKEND", backend)
+    monkeypatch.delenv("AGRONOMY_AGENT_MODEL_BASE_URL", raising=False)
+    sid = session(client)
+    first = client.post(f"/api/sessions/{sid}/turns", headers=OWNER, json=turn(question))
+    assert first.status_code == 200, first.text
+    original = store.get_turn(first.json()["turn_id"])
+    assert original["trace"]["metadata"]["generation_path"] == "deterministic_tool_clarification"
+    view = preview(client, turn(reply), sid)
+    assert view["requires_model"] is False
+    assert view["calculator"]["operation"] == "seed_rate_mass"
+    assert view["calculator"]["missing_inputs"] == []
+    result = client.post(f"/api/sessions/{sid}/turns", headers=OWNER,
+                         json={**turn(reply), "readiness_binding": view["readiness_binding"]})
+    assert result.status_code == 200, result.text
+    saved = store.get_turn(result.json()["turn_id"])
+    assert saved["user_message"] == reply and saved["answer"].startswith(answer)
+    assert saved["trace"]["metadata"]["generation_path"] == "deterministic_tool_result"
+    resolution = saved["trace"]["metadata"]["conversation_resolution"]
+    assert resolution["status"] == "resolved_seed_survival_basis"
+    assert resolution["source_turn_id"] == original["turn_id"]
+    assert resolution["effective_question"].startswith(question)
+    assert store.get_turn(original["turn_id"]) == original
+
+
+def test_seed_basis_reply_cannot_use_another_session_or_stale_conversation_head(runtime, monkeypatch):
+    client, store = runtime
+    monkeypatch.setattr(chat_service, "_build_mlx_generator", no_generator)
+    sid = session(client)
+    first = client.post(f"/api/sessions/{sid}/turns", headers=OWNER, json=turn(SEED_AMBIGUOUS))
+    assert first.status_code == 200, first.text
+    other = session(client)
+    reply = turn("Overall, of seeds sown.")
+    assert preview(client, reply, other)["requires_model"] is True
+    assert preview(client, turn("Overall, and apply it tomorrow."), sid)["requires_model"] is True
+    view = preview(client, reply, sid)
+    assert view["requires_model"] is False
+    intervening = client.post(f"/api/sessions/{sid}/turns", headers=OWNER, json=turn(CONVERSION))
+    assert intervening.status_code == 200, intervening.text
+    for suffix in ("", "/stream"):
+        result = client.post(f"/api/sessions/{sid}/turns{suffix}", headers=OWNER,
+                             json={**reply, "readiness_binding": view["readiness_binding"]})
+        assert result.status_code == 409, result.text
+        assert result.json()["detail"]["code"] == "turn_readiness_stale"
+    assert store.count_session_turns(sid) == 2
+
+
+@pytest.mark.parametrize("backend", ["mlx", "http"])
+def test_conditional_seed_basis_and_missing_lab_germination_complete_without_model(runtime, monkeypatch, backend):
+    client, store = runtime
+    monkeypatch.setattr(chat_service, "_build_mlx_generator", no_generator)
+    monkeypatch.setenv("AGRONOMY_AGENT_MODEL_BACKEND", backend)
+    monkeypatch.delenv("AGRONOMY_AGENT_MODEL_BASE_URL", raising=False)
+    sid = session(client)
+    question = SEED_AMBIGUOUS.replace("germination is 96%, ", "")
+    first = client.post(f"/api/sessions/{sid}/turns", headers=OWNER, json=turn(question))
+    assert first.status_code == 200, first.text
+    for message, expected_path in [("Only germinated seeds.", "deterministic_tool_clarification"),
+                                    ("Germination is 96%.", "deterministic_tool_result")]:
+        view = preview(client, turn(message), sid)
+        assert view["requires_model"] is False
+        response = client.post(f"/api/sessions/{sid}/turns", headers=OWNER,
+                               json={**turn(message), "readiness_binding": view["readiness_binding"]})
+        assert response.status_code == 200, response.text
+        saved = store.get_turn(response.json()["turn_id"])
+        assert saved["user_message"] == message
+        assert saved["trace"]["metadata"]["generation_path"] == expected_path
+        if expected_path.endswith("clarification"):
+            assert "germination percent" in saved["answer"]
+        else:
+            assert saved["answer"].startswith("5 kg/ha")
+            resolution = saved["trace"]["metadata"]["conversation_resolution"]
+            assert resolution["status"] == "resolved_seed_germination" and resolution["chain_depth"] == 2
+
+
 @pytest.mark.parametrize("question,path", [(CONVERSION, "deterministic_tool_result"),
                                           (AREA_CONVERSION, "deterministic_tool_result"),
                                           (TANK, "deterministic_tool_result"),

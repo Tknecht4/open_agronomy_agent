@@ -258,3 +258,10 @@ The answer records the basis and shows the effective established fraction.
 Unqualified survival or mortality prompts a denominator clarification. A complete
 supplied-input calculation can run without a model; it does not choose a target
 stand or estimate field establishment.
+
+When only the denominator is missing, reply **“All seeds sown”** or **“Only
+germinated seeds”** in the same chat. If the latter leaves laboratory germination
+missing, a next reply such as **“Germination is 96%”** completes the calculation.
+These short replies use the adjacent saved user requests and can run without a
+model. A changed topic, unavailable history or other missing quantities requires
+a complete request or the model; assistant answers never supply the operands.

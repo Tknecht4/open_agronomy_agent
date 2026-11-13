@@ -115,7 +115,7 @@ from agronomy_agent.server.services.conversation_context import (
 )
 from agronomy_agent.server.services.conversation_resolution import (
     ConversationResolution,
-    resolve_numeric_follow_up,
+    resolve_calculation_follow_up,
 )
 from agronomy_agent.server.settings import ServerSettings
 from agronomy_agent.server.storage.db import TraceStore
@@ -366,7 +366,7 @@ def prepare_turn_question(
     elif not reference_history_verified:
         conversation_resolution = ConversationResolution(message, "conversation_reference_gap")
     else:
-        conversation_resolution = resolve_numeric_follow_up(message, resolution_turns)
+        conversation_resolution = resolve_calculation_follow_up(message, resolution_turns)
     return {
         "model_config": model_config, "conversation_config": conversation_config,
         "history_cutoff": history_cutoff, "recent_turns": recent_turns,

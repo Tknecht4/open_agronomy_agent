@@ -11,6 +11,8 @@ import re
 from typing import Any
 
 SEED_SURVIVAL_BASES = ("seeds_sown", "germinated_seeds")
+SEED_SURVIVAL_BASIS_GAP = "the survival denominator (all seeds sown or only germinated seeds)"
+SEED_GERMINATION_GAP = "seed-lot germination percent for post-germination survival"
 _NUMBER = r"(-?[0-9][0-9,]*(?:\.[0-9]+)?)"
 
 
@@ -104,11 +106,11 @@ def parse_seed_establishment(text: str) -> tuple[dict[str, Any], tuple[str, ...]
     elif len(bases) > 1:
         missing.append("invalid conflicting survival bases: distinguish seeds sown from germinated seeds")
     elif survival is not None:
-        missing.append("the survival denominator (all seeds sown or only germinated seeds)")
+        missing.append(SEED_SURVIVAL_BASIS_GAP)
     if survival is None:
         missing.append("supplied overall emergence, or post-germination survival/mortality with its denominator")
     if inputs.get("survival_basis") == "germinated_seeds" and germination is None:
-        missing.append("seed-lot germination percent for post-germination survival")
+        missing.append(SEED_GERMINATION_GAP)
     for key, label in [("germination_pct", "germination"), ("field_survival_pct", "field survival")]:
         if key in inputs and not 0 < inputs[key] <= 100:
             missing.append(f"invalid {label}: use a percentage above zero and at most 100")

@@ -144,3 +144,23 @@ Independent review also found missing parser/helper dependencies in the tool
 implementation fingerprint. The receipt now binds the shared action guard,
 seed establishment, supplied-input parsers and their arithmetic helpers, so a
 readiness-affecting helper change produces a different system identity.
+
+## Seed clarification follow-up qualification
+
+The `29fb3a2` checkpoint passed 4,431 backend checks and complete public package
+verification, but a subsequent real browser flow exposed a separate dialog gap.
+Overall emergence produced 4.8 kg/ha, conditional survival produced 5 kg/ha, and
+the saved overall result survived reload. After the ambiguous variant requested
+a denominator, however, “Overall, of seeds sown” required a model instead of
+completing the local calculation. Its candidate collection was stopped after
+21 regression observations; no full-cohort or native candidate collection ran
+there. That partial attempt remains separate evidence and is not reused.
+
+The successor repair uses the shared authenticated preview/execution question
+resolver. It accepts only an explicit denominator choice for the adjacent user
+seed calculation's sole basis gap, preserving the operation and all operands.
+When that choice makes laboratory germination the sole remaining input, one
+adjacent percentage reply can finish the same calculation. It rebuilds that
+short chain from user requests, not assistant answers. Other missing roles,
+changed topics, mixed action requests and broken history remain unresolved.
+Whole source and successor model verification remain required.
