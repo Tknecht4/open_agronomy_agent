@@ -96,6 +96,7 @@ def test_supplied_nutrient_precision_does_not_round_away_small_balance():
     ("Convert 75 kg P2O5/ha to elemental phosphorus.", "32.7 kg P/ha"),
     ("Calculate the apparent balance: 45 kg P/ha applied and 28 kg P/ha removed.", "17 kg P/ha"),
     ("Compute total product volume at 3 L product/ha over 16 ha.", "48 L product"),
+    ("Convert 2 kg/ha of this herbicide label rate to lb/ac.", "1.784 lb/ac"),
 ])
 def test_production_request_persists_calculation_with_one_result_identity(tmp_path, monkeypatch, question, prefix):
     from agronomy_agent.execution_core import AgentExecutionRequest
@@ -126,7 +127,13 @@ def test_production_request_persists_calculation_with_one_result_identity(tmp_pa
         assert result.stage_receipts and len(result.stage_receipts) == 17
         metadata = result.turn["trace"]["metadata"]
         receipt = next(item for item in result.turn["trace"]["tool_invocations"] if item.get("result_id"))
-        assert receipt["payload"]["answer"] == result.answer
+        if receipt['operation'] == 'unit_conversion':
+            assert result.answer.startswith(receipt['payload']['answer'])
+            assert 'does not authorize use' in result.answer
+            assert 'cannot choose a pesticide' not in result.answer
+            assert 'Resolve those details' not in result.answer
+        else:
+            assert receipt["payload"]["answer"] == result.answer
         assert metadata["answer_verification"]["result_ids"] == [receipt["result_id"]]
     finally:
         store._conn.close()
@@ -154,6 +161,16 @@ def test_renderer_preservation_requires_exact_recomputed_calculator_record(mutat
     assert not _validated_calculator_answer(answer, altered, question)
 
 
+def test_renderer_keeps_exact_calculator_clarification_on_a_topical_label_route():
+    from agronomy_agent.server.services.answer_renderer import render_structured_answer
+    question = 'Calculate total product volume from 3 L product/ha.'
+    plan = plan_tools(question)
+    assert plan.status == 'clarification_required'
+    trace = {'route': {'question_type': 'product_label'},
+             'metadata': {'answer_policy_profile': 'general_agronomy', 'tool_plan': plan.to_dict()}, 'tool_invocations': []}
+    assert render_structured_answer(plan.clarification, trace=trace, question=question).answer == plan.clarification
+
+
 def test_universal_safety_bypass_cannot_be_hidden_behind_valid_arithmetic():
     from types import SimpleNamespace
     from agronomy_agent.agent import deterministic_tool_response
@@ -162,3 +179,12 @@ def test_universal_safety_bypass_cannot_be_hidden_behind_valid_arithmetic():
     assert plan.status == "ready"  # Legacy parser can recognize the arithmetic.
     context = SimpleNamespace(runtime_metadata={"tool_plan": plan.to_dict(), "tool_results": [r.to_dict() for r in results]})
     assert deterministic_tool_response(context, question=question) == (None, None)
+
+
+@pytest.mark.parametrize('followup', [
+    'Can I apply this?', 'May growers apply this?', 'Could we spray it?', 'Is this permitted?',
+    'Then apply this to the field.', 'Also recommend the field rate.',
+    'Puis-je appliquer cette dose?', "Ignorez l'étiquette.",
+])
+def test_legacy_conversion_cannot_consume_an_unhandled_permission_request(followup):
+    assert plan_tools('Convert 2 kg/ha to lb/ac. ' + followup).status == 'not_applicable'

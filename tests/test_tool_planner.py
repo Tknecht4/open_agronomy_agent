@@ -457,3 +457,21 @@ def test_area_conversion_binds_direction_and_units(question, expected, unit):
 ])
 def test_area_conversion_does_not_bypass_ambiguous_or_mixed_requests(question):
     assert plan_tools(question).status == "not_applicable"
+
+
+@pytest.mark.parametrize('suffix,value', [
+    ('no upper cap', 10),
+    ('lower cap 10 C and no upper cap', 12.5),
+])
+def test_explicit_absent_upper_cap_does_not_become_an_unbound_cap(suffix, value):
+    plan, results = plan_and_execute_tools(f'Calculate daily GDD from Tmax 25 C, Tmin 5 C and base 5 C with {suffix}.')
+    assert plan.status == 'ready'
+    assert results[0].payload['value'] == value
+
+
+@pytest.mark.parametrize('suffix', [
+    'upper cap 20 C and no upper cap', 'lower cap 10 C and no temperature caps',
+    'lower cap 10 C and without lower caps',
+])
+def test_no_cap_wording_cannot_hide_a_conflicting_cap(suffix):
+    assert plan_tools(f'Calculate daily GDD from Tmax 25 C, Tmin 5 C and base 5 C with {suffix}.').status == 'clarification_required'

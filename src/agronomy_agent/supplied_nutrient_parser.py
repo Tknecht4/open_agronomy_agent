@@ -1,4 +1,4 @@
-"""Extract three bounded, supplied-input arithmetic families.
+"""Extract bounded nutrient and product arithmetic from supplied inputs.
 
 No operand comes from a retrieved passage, a model answer or an assumed field
 condition. Conflicting quantities and mixed nutrient bases need clarification.
@@ -8,53 +8,53 @@ from __future__ import annotations
 
 import re
 from typing import Any
-from agronomy_agent.agronomic_calculations import validate_supplied_nutrient_inputs
+from agronomy_agent.agronomic_calculations import validate_supplied_nutrient_inputs, validate_fertilizer_product_mass_inputs
+from agronomy_agent.supplied_math_scope import supplied_math_scope
+from agronomy_agent.calculator_contracts import supplied_input_label
 
-_NUMBER = r"[+-]?(?:\d+(?:,\d{3})*)(?:\.\d+)?"
+_NUMBER = r"[+-]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+)"
 _BASIS = r"P2O5|K2O|N|P|K"
 
 
 def _one(matches: list[re.Match[str]], group: str) -> str | None:
     # Repeated identical premises are fine; conflicting operands are not.
+    if group in {'quantity', 'factor'} and any(re.match(rf'\s*(?:or|to)\s*{_NUMBER}', m.string[m.end():], re.I) for m in matches):
+        return None
     values = {m[group].replace(",", "") for m in matches}
     return next(iter(values)) if len(values) == 1 else None
 
 
 def parse_supplied_nutrient_calculation(question: str) -> tuple[str, dict[str, Any], tuple[str, ...]] | None:
-    text = " ".join(question.translate(str.maketrans("₂₅−", "25-")).split())
-    if not re.search(r"\b(?:calculate|compute|convert|how many)\b", text, re.I):
+    scope = supplied_math_scope(question)
+    if scope is None:
         return None
-    if re.match(r"(?:why|explain|define|how (?:does|do))\b", text, re.I):
-        return None
-    # Only a closed exclusion of requested output categories is ignored. A
-    # later sentence/imperative still participates in the whole-request check.
-    scope = re.sub(r",?\s+not a recommended rate(?: or carrier[- ]water volume)?(?=[.!?]|$)", "", text, flags=re.I)
-    if re.search(
-        r"\b(?:should|may|can|could|would|must|legal|permitted|authorize|recommend|recommended|"
-        r"safe to|safety|label|mixing order|re[- ]entry|withholding|today|tomorrow|allowed|approved|"
-        r"permissible|choose|select|decide|advise|apply|applying|spray|spraying|irrigate)\b|"
-        r"\b(?:which|what)\s+(?:product|rate|crop|treatment)\b|"
-        r"\b(?:then|also|and)\s+(?:please\s+)?(?:apply|spray|use|mix|irrigate)\b|"
-        r"(?:^|[.!?;])\s*(?:please\s+)?(?:apply|spray|use|mix|irrigate)\b",
-        scope, re.I,
-    ):
-        return None
-    other_question = re.sub(r"^how many\b", "", scope, flags=re.I)
-    if re.search(r"\b(?:what|which|when|where|who|why|how)\b", other_question, re.I):
-        return None
-    if re.search(r"\bexplain\b(?!\s+(?:its|the|their)\s+(?:limits|limitations|boundaries)\b)", scope, re.I):
-        return None
-    # Do not consume a second unrelated arithmetic or decision question.
-    if re.search(r"\b(?:and|also|then)\s+(?:calculate|compute|convert|choose|select|decide)\b", scope, re.I):
-        return None
-    parsed = _basis_conversion(scope) or _nutrient_balance(scope) or _liquid_total(scope)
+    parsed = _basis_conversion(scope) or _nutrient_balance(scope) or _liquid_total(scope) or _product_mass(scope)
     if parsed is not None and not parsed[2]:
         operation, values, missing = parsed
         try:
-            validate_supplied_nutrient_inputs(operation, values)
+            if operation == 'fertilizer_product_mass':
+                validate_fertilizer_product_mass_inputs(values)
+            else:
+                validate_supplied_nutrient_inputs(operation, values)
         except ValueError as error:
             return operation, values, ("invalid " + str(error),)
     return parsed
+
+
+def _product_mass(text: str):
+    if not re.search(r'\b(?:how much|calculate|compute)\b', text, re.I) or not re.search(r'\b(?:blend|fertili[sz]er|product)\b', text, re.I):
+        return None
+    if not re.search(r'\bsuppl(?:y|ies)\b', text, re.I):
+        return None
+    targets = list(re.finditer(rf'\bsuppl(?:y|ies)\s+(?P<quantity>{_NUMBER})\s*kg\s*(?P<basis>{_BASIS})\s*/\s*ha\b', text, re.I))
+    if not targets:
+        return None
+    target = _one(targets, 'quantity');basis = _one(targets, 'basis')
+    percentages = list(re.finditer(rf'(?<![\w.,+-])(?P<quantity>{_NUMBER})\s*%\s*[- ]?\s*(?P<basis>{_BASIS})\b', text, re.I))
+    matching = [m for m in percentages if basis and m['basis'].upper() == basis.upper()]
+    percent = _one(matching, 'quantity')
+    values = {'nutrient_target_kg_per_ha': target, 'nutrient_percent': percent, 'nutrient_label': basis.upper() if basis else None}
+    return 'fertilizer_product_mass', {k:v for k,v in values.items() if v is not None}, tuple(supplied_input_label(k) for k,v in values.items() if v is None)
 
 
 def _basis_conversion(text: str):
@@ -68,7 +68,7 @@ def _basis_conversion(text: str):
     basis = _one(amounts, "basis")
     destination = {"phosphorus": "P", "potassium": "K"}.get(target["basis"].lower(), target["basis"].upper())
     values = {"quantity_kg_per_ha": quantity, "from_basis": basis.upper() if basis else None, "to_basis": destination}
-    missing = tuple(key for key, value in values.items() if value is None)
+    missing = tuple(supplied_input_label(key) for key, value in values.items() if value is None)
     # A supplied factor must be attached to the same destination/source
     # relation. Never silently discard a conflicting or unrecognized factor.
     equations = list(re.finditer(rf"\b(?P<to>{_BASIS})\s*=\s*(?P<factor>{_NUMBER})\s*[×*]\s*(?P<from>{_BASIS})\b", text, re.I))
@@ -120,7 +120,7 @@ def _liquid_total(text: str):
     if not rates:
         return None
     values = {"area_ha": _one(areas, "quantity"), "product_rate_l_per_ha": _one(rates, "quantity")}
-    missing = tuple(key for key, value in values.items() if value is None)
+    missing = tuple(supplied_input_label(key) for key, value in values.items() if value is None)
     if re.search(r"\b(?:carrier|water|tank)\b", text, re.I) and not re.search(r"\bdistinguish\b", text, re.I):
         return None
     return "liquid_product_total", {key: value for key, value in values.items() if value is not None}, missing

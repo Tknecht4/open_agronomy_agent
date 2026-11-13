@@ -55,6 +55,13 @@ comparison campaign. Its status explicitly distinguishes planned work from
 completed observations. Historical smoke panels and frozen benchmarks remain
 evidence for their original revisions.
 
+The calculator checks supplied quantities for nutrient, product, water,
+sprayer-calibration, grain-moisture and thermal-time arithmetic. It shows the
+units and assumptions and asks for missing or conflicting inputs. A calculated
+quantity does not select a field target, authorize a product or establish crop
+stage. Conceptual explanations and requests for field actions retain distinct
+evidence requirements.
+
 ## Evidence and licensing
 
 This is development and research software. Regional map context is a prior, calculated area is an estimate, and model output is not field truth or pesticide-label authority. Confirm consequential decisions with current local evidence and qualified professional judgment.

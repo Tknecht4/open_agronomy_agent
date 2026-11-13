@@ -195,6 +195,20 @@ renderer preserve an exact, recomputed calculator result with its boundary;
 neither a generation-path flag nor a plausible trace can bypass validation.
 Universal requests to evade safety or authority remain blocked.
 
+Water accounting uses supplied volumetric contents and uniform depth for
+available capacity or refill deficit, standard-condition `ETc = Kc × ETo`,
+supplied net depth/application efficiency, and depth/area volume. It does not
+choose irrigation timing, stress coefficients or layered soil properties.
+Single-nozzle calibration retains supplied spacing and flow without inventing
+whole-boom width or nozzle count. Grain moisture adjustment conserves dry
+matter, preserves any yield-area denominator and excludes handling losses;
+storage and marketing targets must be supplied. A separate uncapped daily-mean
+GDD operation uses the actual supplied mean and base, with a stated zero floor;
+it cannot infer individually capped temperature extremes. These operations
+share non-executing readiness validators and whole-request guards for extra
+decisions, permission requests and unhandled questions. The historical v1
+operation family remains distinct from the current v2 extensions.
+
 MLX adapters retain at most one target/draft model pair across serialized public
 operations. Generators release temporary references after token counting,
 warmup and generation, and reload if another pair displaced theirs. Pair changes

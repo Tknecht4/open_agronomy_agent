@@ -6,6 +6,7 @@ from enum import StrEnum
 from typing import Any, Mapping, Sequence
 
 from agronomy_agent.calculator_contracts import CALCULATOR_SCHEMA_VERSION, CALCULATOR_VERSION
+from agronomy_agent.water_arithmetic import WATER_INPUTS, water_arithmetic
 
 
 class CalculationOperation(StrEnum):
@@ -38,9 +39,17 @@ class FoundationCalculationOperation(StrEnum):
     NUTRIENT_BASIS_CONVERSION = "nutrient_basis_conversion"
     APPARENT_NUTRIENT_BALANCE = "apparent_nutrient_balance"
     LIQUID_PRODUCT_TOTAL = "liquid_product_total"
+    WATER_STORAGE_DIFFERENCE = "water_storage_difference"
+    CROP_EVAPOTRANSPIRATION = "crop_evapotranspiration"
+    GROSS_IRRIGATION_DEPTH = "gross_irrigation_depth"
+    WATER_DEPTH_VOLUME = "water_depth_volume"
+    GRAIN_MOISTURE_ADJUSTMENT = "grain_moisture_adjustment"
+    SINGLE_NOZZLE_APPLICATION_VOLUME = "single_nozzle_application_volume"
+    MEAN_TEMPERATURE_GDD = "mean_temperature_gdd"
 
 
 ALL_CALCULATION_OPERATIONS = tuple(CalculationOperation) + tuple(FoundationCalculationOperation)
+GRAIN_MASS_UNITS = ("kg", "t", "lb", "kg/ha", "t/ha", "lb/ha", "kg/ac", "t/ac", "lb/ac")
 
 
 _ARITHMETIC_BOUNDARY = (
@@ -177,6 +186,12 @@ def calculation_tool_schema() -> dict[str, Any]:
                                            "optional": ["factor"]},
             "apparent_nutrient_balance": {"required": ["applied_kg_per_ha", "removed_kg_per_ha", "nutrient_basis"]},
             "liquid_product_total": {"required": ["area_ha", "product_rate_l_per_ha"]},
+            **{operation: {"required": sorted(inputs)} for operation, inputs in WATER_INPUTS.items()},
+            "grain_moisture_adjustment": {"required": ["wet_mass", "mass_unit", "initial_moisture_pct", "target_moisture_pct"],
+                                          "supported_mass_units": list(GRAIN_MASS_UNITS)},
+            "single_nozzle_application_volume": {"required": ["flow_l_per_min_per_nozzle", "speed_km_per_h", "nozzle_spacing_m"]},
+            "mean_temperature_gdd": {"required": ["mean_temp_c", "base_temp_c", "method"],
+                                     "methods": ["daily_mean_no_temperature_caps"]},
         },
         "boundary": _ARITHMETIC_BOUNDARY,
     }
@@ -221,7 +236,14 @@ def calculate_agronomic(operation: str | CalculationOperation | FoundationCalcul
         FoundationCalculationOperation.NUTRIENT_BASIS_CONVERSION: _nutrient_basis_conversion,
         FoundationCalculationOperation.APPARENT_NUTRIENT_BALANCE: _apparent_nutrient_balance,
         FoundationCalculationOperation.LIQUID_PRODUCT_TOTAL: _liquid_product_total,
+        FoundationCalculationOperation.GRAIN_MOISTURE_ADJUSTMENT: _grain_moisture_adjustment,
+        FoundationCalculationOperation.SINGLE_NOZZLE_APPLICATION_VOLUME: _single_nozzle_application_volume,
+        FoundationCalculationOperation.MEAN_TEMPERATURE_GDD: _mean_temperature_gdd,
     }
+    if selected.value in WATER_INPUTS:
+        value, unit, formula, normalized, assumptions, boundary = water_arithmetic(selected.value, inputs)
+        return _result(selected, value, unit, f"{formula} {_format_formula_result(value)} {unit}", normalized,
+                       assumptions=assumptions, boundary=_ARITHMETIC_BOUNDARY + " " + boundary)
     return handlers[selected](inputs)
 
 
@@ -367,7 +389,7 @@ def _seed_rate_mass_imperial(inputs: Mapping[str, Any]) -> AgronomicCalculation:
     )
 
 
-def _fertilizer_product_mass(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+def validate_fertilizer_product_mass_inputs(inputs: Mapping[str, Any]) -> dict[str, Any]:
     _require_only(
         inputs,
         required={"nutrient_target_kg_per_ha", "nutrient_percent"},
@@ -376,6 +398,17 @@ def _fertilizer_product_mass(inputs: Mapping[str, Any]) -> AgronomicCalculation:
     target = _positive(inputs, "nutrient_target_kg_per_ha")
     percent = _percent(inputs, "nutrient_percent")
     nutrient = str(inputs.get("nutrient_label") or "nutrient").strip() or "nutrient"
+    for value in (target, percent):
+        if len(value.as_tuple().digits) > 28 or not -300 <= value.adjusted() <= 23:
+            raise ValueError("fertilizer operands exceed supported decimal precision")
+    if not -300 <= target.adjusted() - percent.adjusted() + 3 <= 23:
+        raise ValueError("fertilizer product mass exceeds supported decimal precision")
+    return {"nutrient_target_kg_per_ha": target, "nutrient_percent": percent, "nutrient_label": nutrient}
+
+
+def _fertilizer_product_mass(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    normalized = validate_fertilizer_product_mass_inputs(inputs)
+    target, percent, nutrient = (normalized[key] for key in ("nutrient_target_kg_per_ha", "nutrient_percent", "nutrient_label"))
     answer = target / (percent / Decimal("100"))
     return _result(
         CalculationOperation.FERTILIZER_PRODUCT_MASS,
@@ -491,6 +524,32 @@ def _liquid_product_total(inputs: Mapping[str, Any]) -> AgronomicCalculation:
                    boundary=_ARITHMETIC_BOUNDARY + " This is product quantity, not total carrier water or finished spray volume.")
 
 
+def validate_grain_moisture_inputs(inputs: Mapping[str, Any]) -> dict[str, Any]:
+    _require_only(inputs, required={"wet_mass", "mass_unit", "initial_moisture_pct", "target_moisture_pct"})
+    if inputs["mass_unit"] not in GRAIN_MASS_UNITS:
+        raise ValueError("use a grain mass unit (kg, t or lb), optionally per ha or ac")
+    values = {key: _nonnegative(inputs, key) for key in ("wet_mass", "initial_moisture_pct", "target_moisture_pct")}
+    for key, value in values.items():
+        if len(value.as_tuple().digits) > 12 or value and not -12 <= value.adjusted() <= 10:
+            raise ValueError(f"{key} exceeds supported grain-mass precision")
+    if max(values["initial_moisture_pct"], values["target_moisture_pct"]) >= 100:
+        raise ValueError("wet-basis moisture percentages must be below 100")
+    return {**values, "mass_unit": inputs["mass_unit"]}
+
+
+def _grain_moisture_adjustment(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    values = validate_grain_moisture_inputs(inputs)
+    mass, initial, target = (values[key] for key in ("wet_mass", "initial_moisture_pct", "target_moisture_pct"))
+    unit = values["mass_unit"]
+    dry = mass * (1 - initial / 100)
+    equivalent = dry / (1 - target / 100)
+    return _result(FoundationCalculationOperation.GRAIN_MOISTURE_ADJUSTMENT, equivalent, unit,
+                   f"dry matter = {_format_operand(mass)} {unit} × (1 − {_format_operand(initial)}/100) {_format_formula_result(dry)} {unit}; "
+                   f"equivalent mass = {_format_operand(dry)} {unit} ÷ (1 − {_format_operand(target)}/100) {_format_formula_result(equivalent)} {unit}",
+                   values, assumptions=("both moisture contents are on a wet-mass basis; dry matter is conserved and handling losses are excluded",),
+                   boundary=_ARITHMETIC_BOUNDARY + " This does not select a safe storage moisture or establish a buyer's shrink, drying fees or grading rules.")
+
+
 def validate_soil_water_storage_inputs(inputs: Mapping[str, Any]) -> dict[str, Decimal]:
     _require_only(inputs, required={"volumetric_water_content", "layer_depth_cm"})
     fraction = _nonnegative(inputs, "volumetric_water_content")
@@ -537,7 +596,7 @@ def _nutrient_delivery(inputs: Mapping[str, Any]) -> AgronomicCalculation:
     )
 
 
-def _sprayer_application_volume(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+def validate_sprayer_application_volume_inputs(inputs: Mapping[str, Any]) -> dict[str, Decimal]:
     required = {"nozzle_count", "flow_l_per_min_per_nozzle", "speed_km_per_h", "boom_width_m"}
     _require_only(inputs, required=required)
     nozzle_count = _positive(inputs, "nozzle_count")
@@ -546,6 +605,42 @@ def _sprayer_application_volume(inputs: Mapping[str, Any]) -> AgronomicCalculati
     flow = _positive(inputs, "flow_l_per_min_per_nozzle")
     speed = _positive(inputs, "speed_km_per_h")
     boom = _positive(inputs, "boom_width_m")
+    values = {"nozzle_count": nozzle_count, "flow_l_per_min_per_nozzle": flow, "speed_km_per_h": speed, "boom_width_m": boom}
+    for value in values.values():
+        if len(value.as_tuple().digits) > 28 or not -300 <= value.adjusted() <= 23:
+            raise ValueError("sprayer operands exceed supported decimal precision")
+    order = nozzle_count.adjusted() + flow.adjusted() + 3 - speed.adjusted() - boom.adjusted()
+    if not -300 <= order <= 23:
+        raise ValueError("sprayer volume exceeds supported decimal precision")
+    return values
+
+
+def validate_single_nozzle_inputs(inputs: Mapping[str, Any]) -> dict[str, Decimal]:
+    required = {"flow_l_per_min_per_nozzle", "speed_km_per_h", "nozzle_spacing_m"}
+    _require_only(inputs, required=required)
+    values = {key: _positive(inputs, key) for key in required}
+    for value in values.values():
+        if len(value.as_tuple().digits) > 28 or not -300 <= value.adjusted() <= 23:
+            raise ValueError("nozzle operands exceed supported decimal precision")
+    order = values["flow_l_per_min_per_nozzle"].adjusted() + 3 - values["speed_km_per_h"].adjusted() - values["nozzle_spacing_m"].adjusted()
+    if not -300 <= order <= 23:
+        raise ValueError("nozzle application volume exceeds supported decimal precision")
+    return values
+
+
+def _single_nozzle_application_volume(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    values = validate_single_nozzle_inputs(inputs)
+    flow, speed, spacing = (values[key] for key in ("flow_l_per_min_per_nozzle", "speed_km_per_h", "nozzle_spacing_m"))
+    answer = flow * 600 / (speed * spacing)
+    return _result(FoundationCalculationOperation.SINGLE_NOZZLE_APPLICATION_VOLUME, answer, "L/ha",
+                   f"600 × {_format_operand(flow)} L/min ÷ ({_format_operand(speed)} km/h × {_format_operand(spacing)} m) {_format_formula_result(answer)} L/ha",
+                   values, assumptions=("representative nozzle flow and uniform spacing; spacing is the effective treated width per nozzle",),
+                   boundary=_ARITHMETIC_BOUNDARY + " This is total application volume, not a pesticide product dose; no full-boom width or nozzle count was supplied or inferred.")
+
+
+def _sprayer_application_volume(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    normalized = validate_sprayer_application_volume_inputs(inputs)
+    nozzle_count, flow, speed, boom = (normalized[key] for key in ("nozzle_count", "flow_l_per_min_per_nozzle", "speed_km_per_h", "boom_width_m"))
     answer = nozzle_count * flow * Decimal("600") / (speed * boom)
     return _result(
         CalculationOperation.SPRAYER_APPLICATION_VOLUME,
@@ -611,6 +706,30 @@ def _tank_coverage(inputs: Mapping[str, Any]) -> AgronomicCalculation:
         {"tank_volume_l": tank, "application_volume_l_per_ha": rate, "unusable_volume_l": unusable},
         assumptions=assumptions,
     )
+
+
+def validate_mean_temperature_gdd_inputs(inputs: Mapping[str, Any]) -> dict[str, Any]:
+    _require_only(inputs, required={"mean_temp_c", "base_temp_c", "method"})
+    if inputs["method"] != "daily_mean_no_temperature_caps":
+        raise ValueError("a supplied daily mean supports only the explicit no-temperature-caps method")
+    values = {"mean_temp_c": _decimal(inputs, "mean_temp_c"),
+              "base_temp_c": _decimal(inputs, "base_temp_c"), "method": inputs["method"]}
+    for key in ("mean_temp_c", "base_temp_c"):
+        value = values[key]
+        if len(value.as_tuple().digits) > 12 or value and not -12 <= value.adjusted() <= 10:
+            raise ValueError(f"{key} exceeds supported precision")
+    return values
+
+
+def _mean_temperature_gdd(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    values = validate_mean_temperature_gdd_inputs(inputs)
+    mean, base = values["mean_temp_c"], values["base_temp_c"]
+    answer = max(Decimal(0), mean - base)
+    return _result(FoundationCalculationOperation.MEAN_TEMPERATURE_GDD, answer, "GDD",
+                   f"max(0, {_format_operand(mean)} − {_format_operand(base)}) {_format_formula_result(answer)} GDD",
+                   values, assumptions=("supplied daily mean temperature in Celsius; no temperature caps",
+                                        "negative accumulation floored at zero",
+                                        "thermal accumulation is not a crop-yield prediction or field-stage observation"))
 
 
 def _daily_gdd(inputs: Mapping[str, Any]) -> AgronomicCalculation:

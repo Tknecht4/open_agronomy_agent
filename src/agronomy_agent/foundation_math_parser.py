@@ -74,10 +74,18 @@ def _requested_arithmetic(lower: str) -> bool:
 
 def _unsafe_action_request(lower: str) -> bool:
     return bool(re.search(
-        r"\b(?:should (?:i|we) (?:apply|spray|sell|buy|use|irrigate|water|fertilize|drain)|"
+        r"\b(?:(?:should|can|may|could|would|must) (?:i|we|you|growers?|farmers?|operators?) (?:apply|spray|sell|buy|use|irrigate|water|fertilize|drain)|"
         r"recommended (?:application |herbicide |pesticide |fertilizer )?rate|"
         r"legal (?:application |fertilizer |herbicide |pesticide )?rate|"
-        r"today['’]s (?:cash |market |local )?(?:bid|price)|sell (?:now|today)|lock in (?:a )?sale)\b",
+        r"today['’]s (?:cash |market |local )?(?:bid|price)|sell (?:now|today)|lock in (?:a )?sale)\b|"
+        r"(?:^|[.!?;]\s*|\b(?:and|also|then)\s+)(?:please\s+)?(?:apply|spray|irrigate|fertilize|drain)\b|"
+        r"(?:^|[.!?;]\s*|\b(?:and|also|then)\s+)(?:please\s+)?(?:recommend|choose|select|authorize|approve)\b[^.!?;]{0,80}\b(?:product|rate|dose|treatment|timing|irrigation)\b|"
+        r"(?:^|[.!?;]\s*|\band\s+)(?:is|would|will|can|may)\b[^.!?;]{0,50}\b(?:legal|allowed|permitted|safe to|authorized|approved)\b|"
+        r"\b(?:puis-je|peut-on|peux-tu|pouvez-vous|devrais-je|dois-je|pouvons-nous)\s+(?:appliquer|pulvériser|utiliser|irriguer|fertiliser|traiter|drainer)\b|"
+        r"(?:^|[.!?;]\s*|\b(?:et|puis)\s+)(?:appliquez|pulvérisez|irriguez|fertilisez|traitez)\b|"
+        r"\b(?:ignorez|ignorer|contourner|contournez)\b.{0,80}\b(?:étiquette|EPI|loi|règlement)\b|"
+        r"(?:[.!?;]\s*|\b(?:and|also|then)\s+)(?:(?:should|can|may|could|would|must|might)\s+(?:i|we|you|growers?|farmers?|operators?)\b|"
+        r"(?:puis-je|peut-on|peux-tu|pouvez-vous|devrais-je|dois-je|pouvons-nous)\b)",
         lower,
     ))
 
@@ -87,7 +95,7 @@ def parse_foundation_calculation(question: str) -> tuple[str, dict[str, Any], tu
     lower = text.casefold()
     if not _requested_arithmetic(lower) or _unsafe_action_request(lower):
         return None
-    for parser in (_soil_water_storage, _fertilizer_field_total, _seed_rate, _gdd, _partial_budget, _break_even, _current_ratio, _debt_asset):
+    for parser in (_soil_water_storage, _fertilizer_field_total, _seed_rate, _mean_temperature_gdd, _gdd, _partial_budget, _break_even, _current_ratio, _debt_asset):
         parsed = parser(text, lower)
         if parsed is not None:
             return parsed
@@ -197,6 +205,42 @@ def _seed_rate(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, .
     return "seed_rate_mass", inputs, missing
 
 
+def _mean_temperature_gdd(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, ...]] | None:
+    if not re.search(r"\b(?:gdd|growing degree[- ]days?)\b", lower) or not re.search(r"\b(?:mean daily|daily mean|average daily|daily average) temperature\b", lower):
+        return None
+    # Reuse the whole-request guard. A possessive date here names the daily
+    # accounting period; it is not permission to act or a weather observation.
+    from agronomy_agent.supplied_math_scope import supplied_math_scope
+    scoped = re.sub(r"\btoday['’]s\s+(?:gdd|growing degree[- ]days?)\b", "daily GDD", text, flags=re.I)
+    if supplied_math_scope(scoped) is None:
+        return None
+    number = r"([+-]?(?:\d+(?:\.\d+)?|\.\d+))"
+    mean = _find_number(text, rf"\b(?:mean daily|daily mean|average daily|daily average) temperature\s*(?:is|of|:|=)?\s*{number}\s*°?\s*C\b")
+    base = _find_number(text, rf"\bbase(?: temperature)?\s*(?:is|of|:|=)?\s*{number}\s*°?\s*C\b")
+    values = {"mean_temp_c": mean, "base_temp_c": base}
+    missing = tuple(label for key, label in (("mean_temp_c", "one supplied daily mean temperature in Celsius"),
+                                            ("base_temp_c", "base temperature in Celsius")) if values[key] is None)
+    no_caps = list(re.finditer(r"\b(?:no|without)\s+(?:(?:upper|temperature)\s+)?caps?\b", lower))
+    remainder = lower
+    for match in reversed(no_caps):
+        remainder = remainder[:match.start()] + " " + remainder[match.end():]
+    if not no_caps or re.search(r"\b(?:cap(?:s|ped|ping)?|tmax|tmin|maximum|minimum|modified)\b", remainder):
+        missing += ("invalid method: supply the uncapped daily-mean method; individual temperature caps need maximum and minimum temperatures",)
+    if not re.search(r"\b(?:negative (?:values|accumulation) (?:are )?floored at zero|floor (?:negative (?:values|accumulation) )?at zero|max\s*\(\s*0\s*,)", lower):
+        missing += ("invalid method: specify zero as the floor for negative accumulation",)
+    if re.search(rf"\b(?:or|to)\s*{number}\s*(?:°?\s*C\b)?", text, re.I):
+        missing += ("invalid temperatures: supply one value for each named temperature",)
+    inputs = {key: value for key, value in values.items() if value is not None}
+    inputs["method"] = "daily_mean_no_temperature_caps"
+    if not missing:
+        from agronomy_agent.agronomic_calculations import validate_mean_temperature_gdd_inputs
+        try:
+            validate_mean_temperature_gdd_inputs(inputs)
+        except ValueError as error:
+            missing += ("invalid " + str(error),)
+    return "mean_temperature_gdd", inputs, missing
+
+
 def _gdd_json_inputs(text: str) -> tuple[dict[str, float], tuple[str, ...], str | None, str]:
     """Read one bounded supplied object; unit-bearing keys are never guesses."""
     if not re.search(r'"(?:max_temp_[Cc]|min_temp_[Cc]|base_temp_[Cc]|upper_cap_[Cc]|lower_cap_[Cc]|method)"\s*:', text):
@@ -264,6 +308,10 @@ def _gdd_json_inputs(text: str) -> tuple[dict[str, float], tuple[str, ...], str 
 def _gdd(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, ...]] | None:
     if not re.search(r"\b(?:gdd|growing degree[- ]days?|heat units?)\b", lower):
         return None
+    if re.search(r"\b(?:mean daily|daily mean|average daily|daily average) temperature\b", lower):
+        # The separate mean-input contract owns these requests, including
+        # its decision to decline an extra unhandled question.
+        return None
     structured, structured_errors, structured_method, text = _gdd_json_inputs(text)
     lower = text.casefold()
     patterns = {
@@ -307,9 +355,12 @@ def _gdd(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, ...]] |
         missing += ("invalid temperatures: maximum must be at least minimum",)
     if lower_cap is not None and upper_cap is not None and lower_cap > upper_cap:
         missing += ("invalid caps: lower cap must not exceed upper cap",)
-    says_no_cap = bool(re.search(r"\b(?:no|without)\s+(?:temperature\s+)?caps?\b", lower))
-    if says_no_cap and any(key in structured for key in ("upper_cap_c", "lower_cap_c")):
-        missing += ("invalid conflicting prose no-cap method and structured cap",)
+    no_cap_matches = list(re.finditer(r"\b(?:no|without)\s+(?:(upper|lower|temperature)\s+)?caps?\b", lower))
+    no_cap_roles = {match.group(1) for match in no_cap_matches}
+    no_upper = bool(no_cap_roles & {None, "temperature", "upper"})
+    no_lower = bool(no_cap_roles & {None, "temperature", "lower"})
+    if no_upper and upper_cap is not None or no_lower and lower_cap is not None:
+        missing += ("invalid conflicting prose no-cap method and supplied cap",)
     if len(upper_values) > 1 or len(lower_values) > 1:
         missing += ("invalid caps: conflicting values were supplied",)
     cap_mentions = list(re.finditer(r"\bcap(?:s|ped|ping)?\b", text, re.IGNORECASE))
@@ -317,10 +368,10 @@ def _gdd(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, ...]] |
     if structured_method == "daily_mean_no_temperature_caps" and parsed_cap_matches:
         missing += ("invalid conflicting prose cap and structured no-cap method",)
     unbound_cap = any(
-        not any(parsed.start() <= mention.start() < parsed.end() for parsed in parsed_cap_matches)
+        not any(parsed.start() <= mention.start() < parsed.end() for parsed in parsed_cap_matches + no_cap_matches)
         for mention in cap_mentions
     )
-    if (unbound_cap and not says_no_cap) or (says_no_cap and parsed_cap_matches):
+    if unbound_cap:
         missing += ("invalid cap: specify one consistent cap method and value in C",)
     return "daily_gdd", inputs, missing
 

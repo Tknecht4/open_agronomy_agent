@@ -49,10 +49,15 @@ from agronomy_agent.agronomic_calculations import (
     validate_unit_conversion_inputs, validate_fertilizer_field_total_inputs,
     validate_soil_water_storage_inputs,
     validate_supplied_nutrient_inputs,
+    validate_fertilizer_product_mass_inputs, validate_sprayer_application_volume_inputs,
+    validate_grain_moisture_inputs,
+    validate_single_nozzle_inputs,
+    validate_mean_temperature_gdd_inputs,
 )
 from agronomy_agent.decision_contract import build_decision_contract
 from agronomy_agent.evidence_contracts import question_frame_from_runtime
 from agronomy_agent.tool_planner import plan_tools
+from agronomy_agent.water_arithmetic import WATER_INPUTS, validate_water_arithmetic_inputs
 from agronomy_agent.router import classify_query, refine_query_route
 from agronomy_agent.answer_verifier import _EditorObservation, context_evidence_text, validate_editor_max_words, verify_answer
 from agronomy_agent.answer_safety import enforce_answer_safety_postconditions
@@ -413,6 +418,20 @@ def preview_turn_readiness(
                 validated_inputs = True
             except (ValueError, DecimalException):
                 validated_inputs = False
+        elif calculator.operation in WATER_INPUTS or calculator.operation in {"fertilizer_product_mass", "sprayer_application_volume", "grain_moisture_adjustment", "single_nozzle_application_volume", "mean_temperature_gdd"}:
+            try:
+                if calculator.operation in WATER_INPUTS:
+                    validate_water_arithmetic_inputs(calculator.operation, calculator.inputs)
+                else:
+                    {"fertilizer_product_mass": validate_fertilizer_product_mass_inputs,
+                     "grain_moisture_adjustment": validate_grain_moisture_inputs,
+                     "single_nozzle_application_volume": validate_single_nozzle_inputs,
+                     "mean_temperature_gdd": validate_mean_temperature_gdd_inputs,
+                     "sprayer_application_volume": validate_sprayer_application_volume_inputs}[calculator.operation](calculator.inputs)
+                validated_inputs = True
+            except (ValueError, DecimalException):
+                validated_inputs = False
+                reason = "invalid_calculator_inputs"
         elif calculator.operation in {"nutrient_basis_conversion", "apparent_nutrient_balance", "liquid_product_total"}:
             try:
                 validate_supplied_nutrient_inputs(calculator.operation, calculator.inputs)

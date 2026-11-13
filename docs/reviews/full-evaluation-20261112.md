@@ -53,7 +53,8 @@ configuration remain equivalent to reference main. Preliminary repair checkpoint
 `188de19` fixes complete multiline evidence binding, guard/graph packing,
 calendar-date identity, bounded fictional examples and answer layout. Subsequent
 repairs are under verification: whole-request mechanism explanations, typed
-nutrient/product arithmetic and final-renderer preservation of verified results.
+nutrient/product, water, grain-moisture and uncapped daily-mean GDD arithmetic,
+single-nozzle calibration, and final-renderer preservation of verified results.
 These repairs have not yet completed their successor model campaign.
 
 No evaluation reference or rubric enters model prompts or runtime knowledge.
@@ -62,6 +63,26 @@ separate from the allowlisted worker projection. Fresh source-bound provider
 controls identify the exact payload classes and exclude credentials, private
 records, controller references and whole local knowledge files from Luna
 generation requests.
+
+Before semantic grading, a projection audit found that globally attached case
+facts could imply that the raw, question-only arm had received field context.
+Review packets now bind facts per answer to the recorded task delivery. A
+missing or mismatched delivery remains unknown; planned arm flags cannot
+substitute for actual inputs. The original cases, scoring weights, rubrics and
+ungraded outputs are unchanged. Public-source excerpts are also bound to their
+actual packed prefixes, including complete multiline passages; source recovery
+receipts remain separate from original transport receipts.
+
+The calculator repairs follow supplied-input relationships rather than copied
+case answers. Water formulas and their standard-condition limits were checked
+against [FAO Paper 56](https://www.fao.org/4/x0490e/x0490e0b.htm).
+[Purdue's grain moisture accounting](https://www.agry.purdue.edu/ext/corn/news/timeless/WaterShrink.html)
+distinguishes water removal from handling losses. The
+[Montana Climate Office's GDD methods](https://climate.umt.edu/mesonet/ag_tools/gdds/)
+make temperature clipping a method choice before averaging. A supplied mean
+therefore does not establish clipped extremes or current crop stage. These
+source checks support the arithmetic contracts, not agronomist or field
+validation of the agent.
 
 ## Completion requirements
 

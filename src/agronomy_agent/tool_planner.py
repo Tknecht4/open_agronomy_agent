@@ -17,6 +17,8 @@ from agronomy_agent.agronomic_calculations import calculation_tool_schema
 from agronomy_agent.calculator_contracts import CALCULATOR_VERSION, TOOL_PLANNER_VERSION, format_calculator_clarification, tool_version_for
 from agronomy_agent.foundation_math_parser import AREA, _unsafe_action_request, parse_foundation_calculation
 from agronomy_agent.supplied_nutrient_parser import parse_supplied_nutrient_calculation
+from agronomy_agent.supplied_water_parser import parse_supplied_water_calculation
+from agronomy_agent.supplied_grain_parser import parse_supplied_grain_calculation
 
 
 PLANNER_VERSION = TOOL_PLANNER_VERSION
@@ -204,7 +206,7 @@ def calculator_contract() -> dict[str, Any]:
 def _parse_calculation(question: str) -> tuple[str, dict[str, Any], tuple[str, ...]] | None:
     text = " ".join(question.replace("−", "-").split())
     lower = text.casefold()
-    supplied = parse_supplied_nutrient_calculation(text)
+    supplied = parse_supplied_nutrient_calculation(text) or parse_supplied_water_calculation(text) or parse_supplied_grain_calculation(text)
     if supplied is not None:
         return supplied
     if _unsafe_action_request(lower):

@@ -24,6 +24,15 @@ WATER_STORAGE = "Convert 0.24 m3/m3 over a uniform 30 cm layer to mm of water st
 P_CONVERSION = "Convert 75 kg P2O5/ha to elemental phosphorus."
 P_BALANCE = "Calculate the apparent balance: 45 kg P/ha applied and 28 kg P/ha removed."
 LIQUID_TOTAL = "Compute total product volume at 3 L product/ha over 16 ha."
+WATER_CAPACITY = "For a uniform 0.8 m root zone, field capacity is 0.32 and wilting point 0.12 m3/m3. Compute total available water."
+WATER_REFILL = "Under a uniform profile, measured volumetric water is 0.21, target field capacity 0.31 and rooting depth 0.4 m. Compute water needed to refill storage, ignoring losses."
+CROP_ET = "For a standard-conditions model ETc = Kc × ETo, Kc is 1.1 and ETo is 4 mm/day. Compute ETc."
+GROSS_DEPTH = "A teaching plan needs 24 mm net irrigation and assumes 80% application efficiency. Calculate gross depth."
+DEPTH_VOLUME = "How many cubic metres supply 15 mm uniformly over 8 ha, ignoring losses?"
+NOZZLE_VOLUME = "A nozzle delivers 1.2 L/min, travel speed is 10 km/h and nozzle spacing 0.5 m. Calculate application volume."
+PRODUCT_MASS = "How much 25%-N fertilizer supplies 75 kg N/ha in a product-mass calculation?"
+GRAIN_MASS = "Grain mass is 12 t at 25% wet-basis moisture. Calculate dry matter and equivalent mass at 10% moisture, ignoring losses."
+MEAN_GDD = "Daily mean temperature is 17 C, base 6 C, no upper cap and negative values are floored at zero. Calculate GDD."
 SEED_MISSING = "Calculate seed rate: target stand is 200 plants/m², TKW is missing, germination is 95%, expected field survival is 90%."
 
 
@@ -67,6 +76,7 @@ def no_generator(*args, **kwargs):
                                           (P_CONVERSION, "deterministic_tool_result"),
                                           (P_BALANCE, "deterministic_tool_result"),
                                           (LIQUID_TOTAL, "deterministic_tool_result"),
+                                          *[(q, "deterministic_tool_result") for q in (WATER_CAPACITY, WATER_REFILL, CROP_ET, GROSS_DEPTH, DEPTH_VOLUME, NOZZLE_VOLUME, PRODUCT_MASS, GRAIN_MASS, MEAN_GDD)],
                                           (SEED_MISSING, "deterministic_tool_clarification")])
 @pytest.mark.parametrize("backend", ["mlx", "http"])
 def test_actual_missing_model_calculation_and_clarification_persist_without_constructor(runtime, monkeypatch, question, path, backend):
@@ -92,7 +102,9 @@ def test_actual_missing_model_calculation_and_clarification_persist_without_cons
     if path.endswith("result"):
         expected = {TANK: "10 ha", CONVERSION: "112.085 kg/ha", AREA_CONVERSION: "98.842 ac",
                     FIELD_N_TOTAL: "2,086.957 kg", WATER_STORAGE: "72 mm",
-                    P_CONVERSION: "32.7 kg P/ha", P_BALANCE: "17 kg P/ha", LIQUID_TOTAL: "48 L product"}
+                    P_CONVERSION: "32.7 kg P/ha", P_BALANCE: "17 kg P/ha", LIQUID_TOTAL: "48 L product",
+                    WATER_CAPACITY: "160 mm", WATER_REFILL: "40 mm", CROP_ET: "4.4 mm/day", GROSS_DEPTH: "30 mm",
+                    DEPTH_VOLUME: "1,200 m³", NOZZLE_VOLUME: "144 L/ha", PRODUCT_MASS: "300 kg product/ha", GRAIN_MASS: "10 t", MEAN_GDD: "11 GDD"}
         assert saved["answer"].startswith(expected[question])
     else:
         assert "tkw_g" in saved["answer"]
@@ -121,7 +133,11 @@ def test_preview_is_read_only_and_does_not_create_a_session(runtime, monkeypatch
                                                (WATER_STORAGE, "soil_water_storage"),
                                                (P_CONVERSION, "nutrient_basis_conversion"),
                                                (P_BALANCE, "apparent_nutrient_balance"),
-                                               (LIQUID_TOTAL, "liquid_product_total")])
+                                               (LIQUID_TOTAL, "liquid_product_total"),
+                                               (WATER_CAPACITY, "water_storage_difference"), (WATER_REFILL, "water_storage_difference"),
+                                               (CROP_ET, "crop_evapotranspiration"), (GROSS_DEPTH, "gross_irrigation_depth"),
+                                               (DEPTH_VOLUME, "water_depth_volume"), (NOZZLE_VOLUME, "single_nozzle_application_volume"),
+                                               (PRODUCT_MASS, "fertilizer_product_mass"), (GRAIN_MASS, "grain_moisture_adjustment"), (MEAN_GDD, "mean_temperature_gdd")])
 def test_qualified_calculation_preview_never_executes_an_adapter_or_creates_a_receipt(runtime, monkeypatch, question, operation):
     import agronomy_agent.agronomic_calculations as calculations
     import agronomy_agent.capability_registry as registry
@@ -334,7 +350,7 @@ def test_disabled_mock_mode_cannot_claim_real_calculator_availability(runtime):
 
 @pytest.mark.parametrize("question", [
     "Calculate how much area will a 1000 L sprayer tank cover applying 0 L/ha, ignoring unusable tank volume?",
-    "Calculate application volume for 20 nozzles flowing 1.1 L/min, travels at 10 km/h on an 11 m boom.",
+    "Calculate current ratio from current assets CAD 300,000 and current liabilities CAD 120,000.",
 ])
 def test_a_complete_plan_without_separate_canonical_validation_stays_unknown(runtime, monkeypatch, question):
     client, store = runtime

@@ -900,19 +900,26 @@ def _append_to_labeled_line(answer_text: str, label: str, sentence: str) -> str:
 
 def _validated_calculator_answer(answer_text: str, trace: dict[str, Any], question: str | None) -> bool:
     """Preserve exact arithmetic after replay; a trace status cannot opt out."""
-    from agronomy_agent.answerability import assess_answerability
-
     if not question:
         return False
     metadata = trace.get("metadata") or {}
     plan = metadata.get("tool_plan") or {}
+    if not isinstance(plan, dict):
+        return False
+    invocations = plan.get("invocations")
+    if (not isinstance(invocations, (list, tuple)) or len(invocations) != 1
+            or not isinstance(invocations[0], dict) or invocations[0].get("tool_id") != "agronomic_calculator"):
+        return False
     results = [item for item in trace.get("tool_invocations", [])
                if isinstance(item, dict) and item.get("tool_id") == "agronomic_calculator"
                and item.get("result_id")]
-    if len(results) != 1 or answer_text != (results[0].get("payload") or {}).get("answer"):
-        return False
-    decision = assess_answerability(question, tool_plan=plan, tool_results=results)
-    return decision.reason == "validated_deterministic_tool_result_available"
+    # Reuse the exact canonical formatter, including its product-conversion
+    # boundary and minimal clarification. A plausible status flag is insufficient.
+    from types import SimpleNamespace
+    from agronomy_agent.agent import deterministic_tool_response
+    context = SimpleNamespace(runtime_metadata={"tool_plan": plan, "tool_results": results}, route=None)
+    expected, _ = deterministic_tool_response(context, question=question)
+    return expected is not None and answer_text == expected
 
 
 def _validated_field_column_identifiers(
