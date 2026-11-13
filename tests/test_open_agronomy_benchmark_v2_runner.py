@@ -770,3 +770,21 @@ def test_frozen_synthetic_fixture_never_executes_or_discards_conditional_scenari
     assert run["result_class"] == "synthetic_contract_qa_not_system_performance"
     assert all(result["status"] != "clarification_scenarios"
                for observation in run["observations"] for result in observation["tool_results"])
+
+
+@pytest.mark.parametrize("helper,consumers", [
+    ("agronomic_concepts.py", {"kernel_config", "verifier_policy", "fallback_policy"}),
+    ("observation_guidance.py", {"kernel_config", "verifier_policy", "fallback_policy"}),
+    ("quantity_claims.py", {"verifier_policy", "fallback_policy"}),
+])
+def test_shared_helper_bytes_change_their_consumer_implementation_identities(monkeypatch, helper, consumers):
+    monkeypatch.setattr(runner_module, "_retrieval_runtime_paths", lambda: ())
+    original_sha = runner_module.file_sha256
+    before = runner_module._runtime_implementation_receipts()
+    def changed_sha(path):
+        if Path(path).name == helper:
+            return hashlib.sha256(Path(path).read_bytes() + b"\n# imposed identity perturbation\n").hexdigest()
+        return original_sha(path)
+    monkeypatch.setattr(runner_module, "file_sha256", changed_sha)
+    after = runner_module._runtime_implementation_receipts()
+    assert {name for name in before if before[name] != after[name]} == consumers

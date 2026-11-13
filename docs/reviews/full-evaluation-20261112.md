@@ -4,21 +4,36 @@ November 12, 2026. Reference main: `91125d30acd447537184184352d8fadf96ee89ee`.
 
 ## Current status
 
-The 13 November successor is under source verification after actual answers
+The 13 November successor passed source verification after actual answers
 exposed another backend over-refusal: otherwise complete seed calculations
 asked for the survival denominator without showing either conditional result.
 The repair retains the unresolved basis and both labelled calculations. Its
-whole candidate assessment is pending; earlier candidate outputs are diagnostic
-and do not fill the new matrix.
+whole candidate assessment must repeat after further repairs; earlier outputs
+are diagnostic and do not fill the new matrix. The superseded application
+checkpoint `96d0094` passed 4,736 backend tests, with 58 skipped, and 508 frontend
+tests plus type checking, build and public-package checks. These software checks
+do not establish agronomic accuracy. A real browser request, denominator reply
+and reload verified the saved conditional-calculation flow without model use.
 
 The E4B baseline has closed all 2,240 full-cohort slots, including seven failed
 observations. Its complete physical raw collection was verified locally and on
 the original VM before archival and VM shutdown. The fresh E2B full baseline is
-still collecting. The old candidate's Luna diagnostic is finishing unchanged;
-a fresh main-compatible Luna baseline with unchanged serving messages and
-corrected transport instrumentation remains required. No semantic grades or
-updated quality ranking are claimed. The interrupted E4B candidate prefix is
-fully retained and its task-owned VM is stopped.
+still collecting. The old candidate's Luna diagnostic has closed and remains
+separate evidence. A fresh main-compatible Luna baseline with unchanged serving
+messages and corrected transport instrumentation is collecting its full cohort;
+its regression cohort has closed. Independent review of all 96 E4B full-system
+regression answers found four remaining issues: an unfulfilled requested
+hypothetical example, harvest drydown confused with drought tolerance, fertilizer
+nutrient analysis confused with pesticide active ingredients, and correct
+yearless dates stripped by the quantity screen. Source `96d0094` was stopped
+after 192 regression and 86 full-cohort observations. Both complete raw archives,
+including the pending full-cohort attempt, were verified remotely and locally
+before its task-owned VM was stopped. Shared backend repairs and their complete
+source verification are in progress; this is not a new scientific grade. E2B and
+Luna candidate dispatches require their corresponding complete, verified
+baselines. No semantic grades or updated quality ranking are claimed. The
+interrupted earlier E4B candidate prefix is fully retained and its task-owned VM
+is stopped. At most two task-owned Colab GPUs run concurrently.
 
 ## Retained campaign history
 
@@ -93,7 +108,7 @@ The main-compatible instrument checkpoint is `6eddf53`; serving code and active
 configuration remain equivalent to reference main. Preliminary repair checkpoint
 `188de19` fixes complete multiline evidence binding, guard/graph packing,
 calendar-date identity, bounded fictional examples and answer layout. Subsequent
-repairs are under verification: whole-request mechanism explanations, typed
+repairs passed source verification: whole-request mechanism explanations, typed
 nutrient/product, water, grain-moisture and uncapped daily-mean GDD arithmetic,
 single-nozzle calibration, and final-renderer preservation of verified results.
 These repairs have not yet completed their successor model campaign.
@@ -118,7 +133,10 @@ fallback, preserving immediate containment and sanitation. The source check is
 consistent with [Alberta's soil-spread and sanitation guidance](https://www.alberta.ca/alberta-clubroot-management-plan).
 No new crop diagnosis, pesticide permission or numeric sanitation rate follows.
 
-No evaluation reference or rubric enters model prompts or runtime knowledge.
+No evaluation reference or rubric enters candidate or comparator generation
+prompts, runtime retrieval or training. After collection, the separate blinded
+semantic reviewer receives controller-held provisional references and rubrics.
+Its automated labels remain diagnostic and are not expert certification.
 Private grower data and overlays stay disabled. Controller references remain
 separate from the allowlisted worker projection. Fresh source-bound provider
 controls identify the exact payload classes and exclude credentials, private
@@ -154,6 +172,17 @@ unknown bounds, failures, refusals, fallbacks and editor attempts explicitly.
 Use the canonical analyzer and existing scoring policies. Automated grades are
 diagnostic AI review, not expert or field validation. No model release,
 agronomist equivalence or matched cross-provider latency claim follows.
+
+Raw collections are verified and restored serially to fit local storage. Each
+retired expansion retains a complete content-addressed archive, member inventory
+and migration receipt. Small source-bound inputs for reconstructing prompt
+structure are derivatives, not complete raw runs. Semantic preparation must
+retain all twelve complete-run verification proofs before admitting any real
+grading job. Per-run answer projections are staged first; global deterministic
+batching prevents restore order from deciding which answers share a reviewer
+prompt. All four final Luna answer collections must close and their owned
+processes must be quiescent before reviewer calls. Canonical analysis still
+requires restoring every raw member of each run.
 
 Before workspace cleanup, retain the latest complete inputs, results, failed
 attempts, source/compute receipts and migration/deletion records in one campaign

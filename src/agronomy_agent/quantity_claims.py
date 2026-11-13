@@ -189,16 +189,23 @@ def _calendar_dates(text: str) -> tuple[str, set[str]]:
     patterns = (
         re.compile(r"(?<![\w-])(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})(?![\d-])"),
         re.compile(rf"\b(?P<month_name>{month})\.?\s+(?P<day>\d{{1,2}})(?:st|nd|rd|th)?"
-                   r",?\s+(?P<year>\d{4})\b", re.I),
+                   r"(?:,?\s+(?P<year>\d{4}))?\b", re.I),
         re.compile(rf"\b(?P<day>\d{{1,2}})(?:st|nd|rd|th)?\s+(?P<month_name>{month})\.?"
-                   r",?\s+(?P<year>\d{4})\b", re.I),
+                   r"(?:,?\s+(?P<year>\d{4}))?\b", re.I),
     )
     identities: set[str] = set()
     def replace(match: re.Match[str]) -> str:
         fields = match.groupdict()
+        if re.match(r"\s*(?:kg|kilograms?|g|grams?|lbs?|pounds?|mL|L|litres?|liters?|%|percent)\b|\s*%",
+                    text[match.end():], re.I):
+            # 'May 18 kg/ha' must not mask a quantity as a yearless date.
+            return match.group()
         month_number = months[fields["month_name"].lower()] if fields.get("month_name") else int(fields["month"])
         try:
-            identity = date(int(fields["year"]), month_number, int(fields["day"])).isoformat()
+            # A leap reference year validates month/day without inventing the
+            # missing year. Unknown-year identities cannot authorize a year.
+            value = date(int(fields["year"] or 2000), month_number, int(fields["day"]))
+            identity = value.isoformat() if fields["year"] else value.strftime("--%m-%d")
         except ValueError:
             identity = "invalid calendar date: " + match.group()
             suffix = text[match.end():match.end() + 70]
@@ -222,8 +229,7 @@ def _checked_rate_illustration_spans(answer: str, question: str) -> set[tuple[in
     label permission, chosen target or an unrelated paragraph.
     """
     from agronomy_agent.answerability import is_rate_basis_explanation, _NAMED_PESTICIDE_RE
-    if (not is_rate_basis_explanation(question) or not re.search(r"\bexample\b", question, re.I)
-            or not re.search(r"\b(?:hypothetical|illustrative|made[- ]up)\b", question, re.I)):
+    if not is_rate_basis_explanation(question) or not re.search(r"\bexample\b", question, re.I):
         return set()
     mass = {"kg": Decimal(1), "kilogram": Decimal(1), "kilograms": Decimal(1),
             "g": Decimal("0.001"), "gram": Decimal("0.001"), "grams": Decimal("0.001"),

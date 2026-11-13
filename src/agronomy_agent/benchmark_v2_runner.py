@@ -179,7 +179,6 @@ def _runtime_implementation_receipts() -> dict[str, str]:
         "graph_contract": "src/agronomy_agent/agno_runtime/knowledge_graph.py",
         "evidence_contract": "src/agronomy_agent/evidence_contracts.py",
         "answerability_policy": "src/agronomy_agent/answerability.py",
-        "verifier_policy": "src/agronomy_agent/answer_verifier.py",
     }
     receipts = {
         receipt_id: file_sha256(PROJECT_ROOT / relative)
@@ -196,7 +195,21 @@ def _runtime_implementation_receipts() -> dict[str, str]:
                 )
             ),
             "kernel_config": _bundle_sha256(
-                (PROJECT_ROOT / "src/agronomy_agent/agent.py",)
+                (
+                    PROJECT_ROOT / "src/agronomy_agent/agent.py",
+                    PROJECT_ROOT / "src/agronomy_agent/agronomic_concepts.py",
+                    PROJECT_ROOT / "src/agronomy_agent/observation_guidance.py",
+                    PROJECT_ROOT / "src/agronomy_agent/answerability.py",
+                )
+            ),
+            "verifier_policy": _bundle_sha256(
+                (
+                    PROJECT_ROOT / "src/agronomy_agent/answer_verifier.py",
+                    PROJECT_ROOT / "src/agronomy_agent/agronomic_concepts.py",
+                    PROJECT_ROOT / "src/agronomy_agent/observation_guidance.py",
+                    PROJECT_ROOT / "src/agronomy_agent/quantity_claims.py",
+                    PROJECT_ROOT / "src/agronomy_agent/answerability.py",
+                )
             ),
             "field_context_contract": _bundle_sha256(
                 (
@@ -241,6 +254,10 @@ def _runtime_implementation_receipts() -> dict[str, str]:
                     PROJECT_ROOT
                     / "src/agronomy_agent/server/services/chat_service.py",
                     PROJECT_ROOT / "src/agronomy_agent/answer_verifier.py",
+                    PROJECT_ROOT / "src/agronomy_agent/agronomic_concepts.py",
+                    PROJECT_ROOT / "src/agronomy_agent/observation_guidance.py",
+                    PROJECT_ROOT / "src/agronomy_agent/quantity_claims.py",
+                    PROJECT_ROOT / "src/agronomy_agent/answerability.py",
                 )
             ),
         }

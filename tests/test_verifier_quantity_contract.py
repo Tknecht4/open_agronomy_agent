@@ -39,6 +39,30 @@ def test_reporting_an_invalid_calendar_date_does_not_endorse_it():
     assert unsupported_quantities("The collection date was February 29, 2025.", question=question, evidence="")
 
 
+@pytest.mark.parametrize("answer", [
+    "The analysis date is June 7.", "The analysis date is 7 June.",
+    "The analysis date is June 7th.",
+])
+def test_yearless_ordinal_calendar_dates_keep_the_month_day_identity(answer):
+    assert not unsupported_quantities(answer, question="The analysis date was 7th June.", evidence="")
+
+
+@pytest.mark.parametrize("answer", [
+    "The analysis date is June 8.", "The analysis date is July 7.",
+    "The analysis date is June 7, 2026.", "The analysis date is 2026-06-07.",
+    "The analysis value is 7.", "Apply 7 kg/ha.",
+    "The analysis date is June 7. The measured value is 7.",
+    "The analysis date is June 7 kg/ha.",
+])
+def test_yearless_calendar_date_does_not_authorize_a_year_or_scalar(answer):
+    assert unsupported_quantities(answer, question="The analysis date was 7th June.", evidence="")
+
+
+def test_yearless_calendar_validation_retains_unknown_leap_year():
+    assert not unsupported_quantities("Collected on February 29.", question="Collected 29th February.", evidence="")
+    assert unsupported_quantities("Collected April 31.", question="Collected 31st April.", evidence="")
+
+
 ILLUSTRATION_QUESTION = "Explain product rate versus nutrient rate using a hypothetical example. Do not choose a real field target or pesticide."
 
 

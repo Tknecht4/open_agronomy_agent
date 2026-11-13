@@ -27,6 +27,7 @@ from agronomy_agent.model_errors import LocalModelSnapshotUnavailable
 from agronomy_agent.quantity_claims import unsupported_quantities, remove_numeric_application_instructions
 from agronomy_agent.execution_core import stable_sha256
 from agronomy_agent.observation_guidance import observation_guidance, sample_event_roles_stated, POTATO_MONITORING_ANSWER
+from agronomy_agent.agronomic_concepts import correct_concept_claims
 from agronomy_agent.high_consequence import classify_high_consequence_domains, fertility_quantity_requested
 from agronomy_agent.answerability import simple_definition_subject, is_quantity_concept_explanation, is_mechanism_explanation, requests_regulated_action, bounded_product_help_kind, is_sampling_basis_explanation
 
@@ -1370,6 +1371,8 @@ def assess_claim_risk(
     named_product_fidelity = _uses_named_product_fidelity(question, evidence_handshake, docs)
 
     reasons: list[str] = []
+    _, concept_edits = correct_concept_claims(candidate, question)
+    reasons.extend(edit["reason"] for edit in concept_edits)
     if observation_method is not None and observation_method.unsupported_inference(candidate):
         reasons.append("unsupported_observation_inference")
     if _looks_like_french(question) and not _looks_like_french_output(candidate):
@@ -2393,6 +2396,20 @@ def _verify_answer_policy(
     docs = tuple(evidence_docs)
     entities = tuple(preserve_entities)
     required = tuple(required_entities)
+    corrected, concept_edits = correct_concept_claims(draft, question)
+    if concept_edits:
+        original_assessment = assess_claim_risk(draft, question=question, evidence_text=evidence_text,
+            question_type=question_type, risk_level=risk_level, evidence_docs=docs,
+            preserve_entities=entities, required_entities=required)
+        corrected_assessment = assess_claim_risk(corrected, question=question, evidence_text=evidence_text,
+            question_type=question_type, risk_level=risk_level, evidence_docs=docs,
+            preserve_entities=entities, required_entities=required)
+        if not corrected_assessment.reasons:
+            return AnswerVerificationResult(answer=corrected, triggered=True, rewrite_accepted=False,
+                draft_assessment=original_assessment, final_assessment=corrected_assessment,
+                draft_output=draft, selection_policy="localized_agronomic_concept_correction_v1",
+                localized_cleanup={"kind": "agronomic_concept_correction", "edits": list(concept_edits),
+                    "other_prose_unchanged": True, "editor_invoked": False})
     if is_quantity_concept_explanation(question) or is_mechanism_explanation(question) or bounded_product_help_kind(question):
         application_cleaned, application_removed = remove_numeric_application_instructions(draft)
         if application_removed:
@@ -2589,6 +2606,8 @@ def _defect_claims(answer: str, assessment: ClaimRiskAssessment, reason: str) ->
         "unsupported_regulated_permission": _REGULATED_ASSERTION_RE,
         "map_prior_presented_as_field_truth": _MAP_ASSERTION_RE,
         "unsupported_field_certainty": _UNSUPPORTED_CERTAINTY_RE,
+        "drydown_drought_conflation": re.compile(r"\bdry[- ]?down\b", re.I),
+        "nutrient_active_ingredient_conflation": re.compile(r"\bactive[- ]ingredient", re.I),
     }.get(reason)
     claims = tuple(value.strip() for value in re.split(r"(?<=[.!?])\s+|\n+", answer) if value.strip())
     return tuple(claim for claim in claims if (

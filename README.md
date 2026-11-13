@@ -71,6 +71,10 @@ and requests for field actions retain distinct
 evidence requirements.
 General product-rate and dose-response explanations, and bounded questions
 about evidence to collect, do not require permission to apply a pesticide.
+Requested fictional fertilizer examples show the product-to-nutrient arithmetic
+without selecting a field target. General concept checks distinguish harvest
+drydown from drought tolerance and fertilizer nutrient analysis from pesticide
+active ingredients. They are bounded checks, not a general scientific validator.
 Explaining why sampling counts use different units does not require a treatment
 plan; thresholds retain the sampling method and basis for which they were validated.
 Product selection, application rates and use restrictions retain their current

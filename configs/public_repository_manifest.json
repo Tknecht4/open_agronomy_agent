@@ -326,6 +326,7 @@
     "tests/test_answerability.py",
     "tests/test_answer_verifier_exam_review.py",
     "tests/test_agronomic_calculations.py",
+    "tests/test_agronomic_concepts.py",
     "tests/test_benchmark_retention_bundle.py",
     "tests/test_benchmark_report.py",
     "tests/test_benchmark_capability_conformance.py",

@@ -409,7 +409,7 @@ def is_rate_basis_explanation(question: str) -> bool:
     Only unnamed product/label and nutrient bases fit this grammar. A named
     product, numeric proposal, field scope or any follow-on directive does not.
     """
-    term = r"(?:(?:a|the)\s+)?(?:(?:pesticide\s+)?(?:label|product)|(?:fertilizer\s+)?nutrient)\s+rates?"
+    term = r"(?:(?:a|the)\s+)?(?:(?:pesticide\s+)?label|(?:(?:pesticide|fertili[sz]er)\s+)?product|(?:fertili[sz]er\s+)?nutrient)\s+rates?"
     request = (
         rf"(?:what is|define|explain)\s+{term}"
         rf"(?:\s+and how is it different from\s+{term})?"

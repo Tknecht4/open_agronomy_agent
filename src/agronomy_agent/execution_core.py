@@ -499,10 +499,28 @@ def classify_verification_origin(
             and "unasked_application_instruction" in original_reasons
             and isinstance(final_reasons, (list, tuple)) and not final_reasons
         )
+        concept_edits = cleanup.get("edits") if isinstance(cleanup, Mapping) else None
+        scoped_concept_correction = (
+            isinstance(cleanup, Mapping)
+            and cleanup.get("kind") == "agronomic_concept_correction"
+            and cleanup.get("other_prose_unchanged") is True
+            and isinstance(concept_edits, list) and bool(concept_edits)
+            and isinstance(original_reasons, (list, tuple))
+            and isinstance(final_reasons, (list, tuple)) and not final_reasons
+            and all(
+                isinstance(edit, Mapping)
+                and edit.get("reason") in {"drydown_drought_conflation", "nutrient_active_ingredient_conflation"}
+                and edit["reason"] in original_reasons
+                and isinstance(edit.get("original"), str) and bool(edit["original"].strip())
+                and isinstance(edit.get("replacement"), str) and bool(edit["replacement"].strip())
+                and edit["original"] != edit["replacement"]
+                for edit in concept_edits
+            )
+        )
         if not (
             isinstance(cleanup, Mapping)
-            and (cleanup.get("kind") == "leading_control_capsule" or scoped_application_cleanup)
-            and cleanup.get("retained_prose_unchanged") is True
+            and (((cleanup.get("kind") == "leading_control_capsule" or scoped_application_cleanup)
+                  and cleanup.get("retained_prose_unchanged") is True) or scoped_concept_correction)
             and cleanup.get("editor_invoked") is False
             and triggered and replacement_used
             and not fallback_applied and not rewrite_accepted

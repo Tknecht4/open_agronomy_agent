@@ -281,6 +281,31 @@ A bounded diagnostic sampling check rejects claims that separately attributable
 area results remain recoverable after samples are pooled into one composite.
 These checks do not constitute a general scientific correctness verifier.
 
+`agronomic_concepts.py` supplies project-authored prompt boundaries and bounded
+claim corrections, separately from retrieved evidence. In a variety/harvest
+context, drydown concerns crop or grain moisture loss toward harvest, rather
+than drought survival; see [Purdue's grain-drydown explanation](https://agry.purdue.edu/ext/corn/news/timeless/GrainDrying.html).
+Fertilizer nutrient conversion uses the declared nutrient analysis and its mass
+basis, rather than a pesticide active-ingredient concentration; see
+[UMN's nutrient-analysis explanation](https://extension.umn.edu/agriculture/specialty-crops/interpreting-soil-tests-for-fruit-and-vegetable-crops)
+and [NPIC's active-ingredient definition](https://npic.orst.edu/ingred/active.html).
+Materials can have both nutrient and pesticidal roles. Mentioning nutrient
+supply alone does not trigger a correction. These general definitions provide
+neither a crop-specific drydown rate nor a fertilizer target or product permission.
+Localized corrections preserve the original draft and explicit changed spans,
+retain coordinated prose, and require reassessment of the entire result. Their
+typed provenance is validated at the production execution boundary, separately
+from model rewrites and fallbacks. The declared prompt, verifier and fallback
+implementation bundles bind their shared helpers.
+
+Requested fictional product/nutrient examples include an internally checked
+mass-fraction calculation; the word “hypothetical” alone cannot satisfy example
+completion. Yearless textual calendar dates retain a validated month/day
+identity across ordinal and reordered forms, with the year still unknown.
+Calendar identities do not authorize the same digits as quantities or an
+invented year. These checks do not validate every scientific claim or every
+event/date relationship.
+
 Compound observation requests combine each recognized method's requirements and
 contradiction checks. Instrument footprint terms in a separate request do not
 suppress an explicitly asked planted-area method. Crop-guide recovery uses the

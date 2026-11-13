@@ -54,6 +54,12 @@ rejects requests that ask for this guarantee with HTTP 501
   limit, or artifact-store selection remains.
 - Trace and evidence identities survive rendering and persistence.
 
+Localized agronomic concept corrections retain the original model draft and
+explicit changed spans. The execution boundary accepts this provenance only
+with a named supported defect, a nonempty edit record, a clean final assessment,
+unchanged other prose and no editor/fallback claim. They remain bounded project
+rules, not retrieved source evidence or a general scientific validation result.
+
 A validated seed-survival clarification may execute two hypothetical arithmetic
 scenarios while the plan remains `clarification_required`. The tool-execution
 stage is `executed` with reason

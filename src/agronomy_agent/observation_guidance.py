@@ -32,8 +32,16 @@ class ObservationGuidance:
         return self.key == key or key in self.method_ids
 
     def missing(self, answer: str) -> tuple[str, ...]:
-        return tuple(name for name, _, patterns in self.facets
-                     if not any(re.search(p, answer, re.I) for p in patterns))
+        missing = [name for name, _, patterns in self.facets
+                   if not any(re.search(p, answer, re.I) for p in patterns)]
+        if any(name == "illustrative_rate_example" for name, _, _ in self.facets):
+            # A disclaimer alone is not an example. Reuse the same arithmetic
+            # and span contract that guards quantities; never whitelist values.
+            from agronomy_agent.quantity_claims import _checked_rate_illustration_spans
+            request = "Explain product rate versus nutrient rate using a hypothetical example."
+            if not _checked_rate_illustration_spans(answer, request):
+                missing.append("illustrative_rate_example")
+        return tuple(dict.fromkeys(missing))
 
     def unsupported_inference(self, answer: str) -> bool:
         """Reject bounded contradictions even when a correct check is appended."""
@@ -129,7 +137,7 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
             parts.append("For a field application, a fertilizer nutrient rate commonly expresses the mass of a named nutrient per area. Other application systems may use an explicitly stated concentration or volume basis. Use the declared nutrient basis and product analysis to convert nutrient mass into product amount; it is not a nutrient concentration measured in the crop or soil.")
             facets.append(("nutrient_rate_basis", "Explain nutrient mass per area, distinct from product amount or measured crop concentration.", (r"\b(?:mass|amount|kg|kilograms?|lb|pounds?)\b[^.]{0,100}\b(?:nutrient|nitrogen|phosphorus|N|P|K)\b[^.]{0,60}\b(?:area|hectare|ha|acre|ac)\b", r"\bnutrient\b[^.]{0,60}\bmass per (?:unit )?area\b")))
         if has(r"\bexample\b"):
-            parts.append("For a requested hypothetical illustration, label the invented nutrient mass fraction and the product and nutrient quantities explicitly. Keep the mass and area bases consistent and check the arithmetic. The illustration does not choose a field target or establish a real product's analysis or permission.")
+            parts.append("For a hypothetical illustration, suppose a fictional fertilizer contains 20% N. A product rate of 60 kg/ha supplies a nutrient rate of 12 kg N/ha (60 × 0.20 = 12). These invented quantities illustrate the mass-fraction relationship; they do not select a field target or establish a real product's analysis or permission.")
             facets.append(("illustrative_rate_example", "Include the requested clearly hypothetical illustration without a field recommendation.",
                 (r"\b(?:hypothetical|illustrative|made[- ]up|fictional|suppose)\b",)))
         yield ObservationGuidance("rate_basis_terms", "\n\n".join(parts), tuple(facets))
