@@ -285,7 +285,7 @@ def _checked_rate_illustration_spans(answer: str, question: str) -> set[tuple[in
         for product_row in (row for row in rows if row[3] == 'product'):
             for nutrient_row in (row for row in rows if row[3] == 'nutrient' and row[5] >= product_row[6]):
                 connector = re.sub(r'[*_`]', '', block[product_row[6]:nutrient_row[5]])
-                if re.fullmatch(r"\s*(?:gives?|delivers?|suppl(?:y|ies)|contains?|equals?|corresponds? to)\s+"
+                if re.fullmatch(r"\s*(?:gives?|delivers?|yields?|suppl(?:y|ies)|contains?|equals?|corresponds? to)\s+"
                     r"(?:(?:a|an|the)\s+)?(?:(?:nutrient|nitrogen|phosphorus|potassium)\s+"
                     r"(?:rate|mass|amount)\s*(?:(?:of|is)\s*|[:=]\s*)?)?", connector, re.I):
                     related_rows.extend((product_row, nutrient_row))
