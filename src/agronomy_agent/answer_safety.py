@@ -48,7 +48,9 @@ def enforce_answer_safety_postconditions(
     answer_text = _ensure_cross_border_fertility_authority_boundary(answer_text, question=question)
     if (is_quantity_concept_explanation(str(question or ""))
             or is_mechanism_explanation(str(question or ""))
-            or bounded_product_help_kind(str(question or ""))):
+            or bounded_product_help_kind(str(question or ""))
+            or (_route_question_type(route) == "product_label"
+                and not requests_regulated_action(str(question or "")))):
         cleaned, removed = remove_numeric_application_instructions(answer_text)
         if removed:
             answer_text = cleaned or bounded_decision_support(str(question), _route_question_type(route)) or (
@@ -195,15 +197,24 @@ def _ensure_current_product_label_boundary(answer_text: str, *, question: str | 
     def with_support(boundary: str) -> str:
         return (support + "\n\n" if support else "") + boundary
 
+    def affirmative_authority_instruction(pattern: str) -> bool:
+        for clause in re.split(r"[;!?\n]|\.(?=\s|$)", answer_text):
+            for match in re.finditer(pattern, clause, re.I):
+                if re.search(r"\b(?:do not|don't|never|cannot|can't|must not|should not|shouldn't|mustn't)\s+(?:(?:ever|directly|simply|blindly|automatically)\s+){0,2}$", clause[:match.start()], re.I):
+                    continue
+                return True
+        return False
+
     target_country = _product_target_country(question)
     action_request = requests_regulated_action(query)
-    if not action_request:
+    # Preserve factual regulator definitions. A known treatment jurisdiction
+    # still receives its brief authority reminder without rewriting the fact.
+    authority_definition = target_country is not None and re.search(r"\b(?:EPA|PMRA|Health Canada)\b", query, re.I)
+    if not action_request and not authority_definition:
         return answer_text
     if target_country == "united states":
-        if action_request or re.search(
+        if action_request or affirmative_authority_instruction(
             r"\b(?:check|verify|follow|consult)\b[^.\n]{0,100}\b(?:PMRA|Canadian registration|Canadian label)\b",
-            answer_text,
-            re.IGNORECASE,
         ):
             return with_support(
                 "I cannot choose a U.S. pesticide or application rate from general agronomy principles. "
@@ -230,11 +241,9 @@ def _ensure_current_product_label_boundary(answer_text: str, *, question: str | 
         )
         return with_support(boundary) if action_request else answer_text.rstrip() + "\n\n" + boundary
 
-    wrong_us_authority_instruction = re.search(
+    wrong_us_authority_instruction = affirmative_authority_instruction(
         r"\b(?:check|verify|follow|consult)\b[^.\n]{0,100}"
         r"\b(?:EPA|U\.S\.?|US|United States)\b[^.\n]{0,50}\b(?:label|labeling|registration)\b",
-        answer_text,
-        re.IGNORECASE,
     )
     us_source_in_question = bool(
         re.search(r"\b(?:US|USA)\b", query)
