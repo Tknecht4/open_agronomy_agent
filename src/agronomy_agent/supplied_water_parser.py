@@ -15,7 +15,7 @@ from agronomy_agent.supplied_numeric_inputs import NUMBER as _NUMBER, supplied_n
 def _value(text: str, *patterns: str, bindings: list[re.Match[str]]) -> str | None:
     matches = [m for pattern in patterns for m in re.finditer(pattern, text, re.I)]
     bindings.extend(matches)
-    if any(extended_unit(match) for match in matches if match.end() != match.end('quantity')):
+    if any(extended_unit(match) for match in matches):
         return None
     for match in matches:
         tail = text[match.end():]
@@ -55,6 +55,8 @@ def _bound(operation: str, values: dict[str, Any], text: str, bindings: list[re.
     missing = tuple(("measured volumetric water content" if values.get('interpretation') == 'refill_deficit' else "wilting point as a volumetric fraction")
                     if key == 'lower_volumetric' else supplied_input_label(key)
                     for key, value in values.items() if value is None)
+    if any(extended_unit(match) for match in bindings):
+        missing += ('invalid compound unit: use the named calculation units; Kc and volumetric contents must be dimensionless',)
     return operation, {key: value for key, value in values.items() if value is not None}, missing + supplied_numeric_gaps(text, bindings)
 
 

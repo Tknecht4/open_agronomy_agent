@@ -15,7 +15,7 @@ from typing import Any, Mapping
 
 from agronomy_agent.agronomic_calculations import calculation_tool_schema
 from agronomy_agent.request_scope import has_unqualified_followup
-from agronomy_agent.supplied_numeric_inputs import NUMBER as SUPPLIED_NUMBER, area_unit_extension_gaps
+from agronomy_agent.supplied_numeric_inputs import NUMBER as SUPPLIED_NUMBER, SPACED_SIGNED_NUMBER, area_unit_extension_gaps
 from agronomy_agent.calculator_contracts import CALCULATOR_VERSION, TOOL_PLANNER_VERSION, format_calculator_clarification, tool_version_for
 from agronomy_agent.foundation_math_parser import AREA, _unsafe_action_request, parse_foundation_calculation
 from agronomy_agent.supplied_nutrient_parser import parse_supplied_nutrient_calculation
@@ -449,7 +449,7 @@ def _parse_tank_coverage(text: str, lower: str):  # noqa: ANN202
         return None
     # This operation must bind signs rather than find a positive substring.
     # _parse_calculation already normalizes Unicode minus and whitespace.
-    number = r"(?<![\w.,+-])([+-]?\s*[0-9][0-9,]*(?:\.[0-9]+)?)"
+    number = rf"({SPACED_SIGNED_NUMBER})"
     tank = re.search(rf"{number}\s*L sprayer tank", text, re.IGNORECASE)
     rate = re.search(rf"applying\s*{number}\s*L/ha", text, re.IGNORECASE)
     values = {"tank_volume_l": tank, "application_volume_l_per_ha": rate}

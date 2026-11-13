@@ -51,7 +51,7 @@ def has_unqualified_followup(text: str, *, calculation: bool = False) -> bool:
         if position >= 0:
             try:
                 _, consumed = json.JSONDecoder().raw_decode(text[position:])
-            except (ValueError, json.JSONDecodeError):
+            except (ValueError, RecursionError):
                 return False  # The owned GDD path returns its invalid-data clarification.
             remainder = text[position + consumed:]
             if '{' in remainder:
@@ -78,13 +78,9 @@ def has_unqualified_followup(text: str, *, calculation: bool = False) -> bool:
             continue
         return True
     if calculation:
-        # A comma followed by a bare imperative/object construction is still
-        # a request, not a new arithmetic premise. The verb vocabulary is open.
-        if re.search(r",\s*(?!(?:not|given|using|with|from|as|at|for|and)\b)[a-z-]+\s+(?:the|an?|my|our|your)\s+\w", text[first.start():], re.I):
-            return True
-        premise = (r"(?:[+-]?(?:\d|\.\d)|(?:of|with|without|does(?: not|n['’]t)|is|are|has|have)\b|(?:the\s+)?(?:base(?: temperature)?|tmin|tmax|"
-            r"germination|(?:(?:expected|post[- ]germination) )?field (?:survival|mortality|loss)|expected emergence|target (?:stand|population)|"
-            r"tkw|seed[- ]lot germination|rooting depth|root[- ]zone depth|field (?:area|capacity)|wilting point|"
+        premise = (r"(?:(?:an?\s+)?[+-]?(?:\d|\.\d)|(?:of|with|without|does(?: not|n['’]t)|is|are|has|have)\b|(?:(?:the|an?)\s+)?(?:base(?: temperature)?|tmin|tmax|"
+            r"(?:lab(?:oratory)? )?germination|(?:(?:expected|post[- ]germination) )?field (?:survival|mortality|loss)|expected emergence|target (?:stand|population)|"
+            r"(?:measured )?tkw|(?:(?:expected|overall|field|seedling|post[- ]germination|lab(?:oratory)?) )*(?:survival|emergence|mortality|loss|germination)|seed[- ]lot germination|rooting depth|root[- ]zone depth|field (?:area|capacity)|wilting point|"
             r"measured volumetric water|kc|eto|net depth|application efficiency|travel speed|nozzle spacing|"
             r"grain dry (?:mass|matter)|total above[- ]ground dry (?:biomass|mass|matter)|"
             r"(?:upper|lower) cap|(?:no|without) (?:upper |lower |temperature )?caps?|negative (?:values|accumulation)|"
@@ -93,8 +89,10 @@ def has_unqualified_followup(text: str, *, calculation: bool = False) -> bool:
         presentation = (r"(?:units|assumptions|arithmetic limits|(?:(?:show|give|state|include) (?:the )?(?:units|assumptions|arithmetic limits|formula|calculation)|"
             r"explain (?:its|the|their) (?:limits|limitations|boundaries)|"
             r"distinguish it from total carrier volume))\b")
-        for tail in [tail for clause in clauses for tail in re.split(r"\b(?:and|then|also)\b", clause, flags=re.I)[1:]]:
-            tail = tail.strip()
+        for tail in [tail for clause in clauses for tail in re.split(r",\s*(?!\d)|\b(?:and|then|also)\b", clause, flags=re.I)[1:]]:
+            tail = re.sub(r"^\s*(?:(?:and|then|also)\s+)*", "", tail, flags=re.I).strip()
+            if re.fullmatch(r"(?:ignoring (?:losses|(?:unusable )?(?:tank )?volume)|not a (?:recommended rate|rate recommendation)|assuming the label basis is correct|not of (?:germinated seeds|seeds sown)|(?:not including|excluding) germination)", tail, re.I):
+                continue
             if not tail or re.match(premise, tail, re.I) or re.match(presentation, tail, re.I):
                 continue
             if re.search(r"\bgrain\b.*\bwet[- ]basis moisture\b", text, re.I) and re.match(r"equivalent (?:grain )?mass\b", tail, re.I):
@@ -105,21 +103,25 @@ def has_unqualified_followup(text: str, *, calculation: bool = False) -> bool:
     # shared impersonal predicate. Bare unknown commands after 'explain why'
     # do not acquire the causal auxiliary from some earlier sentence.
     for clause in clauses:
+        causal = re.match(r"(?:why|how)\s+(?:can|could|do|does|is|are)\b", clause, re.I)
+        definition = re.match(r"(?:what (?:is|are)|define|explain(?!\s+(?:why|how|(?:the )?(?:mechanism|process))\b))\b", clause, re.I)
         for tail in re.split(r",\s*(?!\d)|\b(?:and|then|also)\b", clause, flags=re.I)[1:]:
-            tail = re.sub(r"^\s*(?:(?:then|also)\s+)*", "", tail, flags=re.I)
+            tail = re.sub(r"^\s*(?:(?:then|also)\s+)*", "", tail, flags=re.I).strip()
             if not tail or re.match(r"(?:why|how|what|which|explain|describe|its|their|matching (?:threshold |measurement )?units|the (?:limits|limitations|mechanism|process)|observations?)\b", tail, re.I):
                 continue
+            # Coordinated concepts in a definition are noun phrases, not
+            # additional finite requests (texture, structure and porosity).
+            if definition and (re.fullmatch(r"[a-z-]+[.!?]*", tail, re.I) or re.fullmatch(
+                    r"(?:soil|plant|crop|root|seed|carbon|nitrogen|phosphorus|potassium|sulfur|sulphur|nutrient|water) (?!the\b|an?\b|my\b|our\b|your\b)[a-z-]+(?: [a-z-]+){0,2}[.!?]*", tail, re.I)):
+                continue
             predicate = re.match(r"([a-z]+)\b", tail, re.I)
-            if predicate and predicate[1].casefold() in {
-                'increase', 'increases', 'decrease', 'decreases', 'reduce', 'reduces',
-                'raise', 'raises', 'lower', 'lowers', 'change', 'changes', 'alter', 'alters',
-                'affect', 'affects', 'influence', 'influences', 'delay', 'delays', 'slow', 'slows',
-                'supply', 'supplies', 'move', 'moves', 'carry', 'carries', 'leave', 'leaves',
-                'accumulate', 'accumulates', 'limit', 'limits', 'cause', 'causes', 'help', 'helps',
-                'result', 'results', 'contribute', 'contributes', 'disrupt', 'disrupts',
-                'promote', 'promotes', 'improve', 'improves', 'worsen', 'worsens',
-                'prevent', 'prevents', 'release', 'releases', 'retain', 'retains',
-            }:
+            finite = {'increases', 'decreases', 'reduces', 'raises', 'lowers',
+                'changes', 'alters', 'affects', 'influences', 'delays', 'slows',
+                'supplies', 'moves', 'carries', 'leaves', 'accumulates', 'limits',
+                'causes', 'helps', 'results', 'contributes', 'disrupts', 'promotes',
+                'improves', 'worsens', 'prevents', 'releases', 'retains'}
+            if predicate and (predicate[1].casefold() in finite or
+                    causal and predicate[1].casefold() in {'increase', 'decrease', 'reduce', 'raise', 'lower'}):
                 continue
             return True
     return False

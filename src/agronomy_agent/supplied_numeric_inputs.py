@@ -6,7 +6,10 @@ import re
 # Ordinary decimals and correctly grouped comma thousands are supported.
 # Assertions prevent backtracking into a valid substring of a malformed token,
 # exponent or arithmetic expression. Attached supported units remain possible.
-NUMBER = r"(?<![\w.,+-])[+-]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+)(?!\d|\.\d|,\s*\d|[eE]|[+*/-]\s*\d)"
+_BODY = r"(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+)"
+_END = r"(?!\d|\.\d|,\s*\d|[eE]|[+*/-]\s*\d)"
+NUMBER = rf"(?<![\w.,+-])[+-]?{_BODY}{_END}"
+SPACED_SIGNED_NUMBER = rf"(?<![\w.,+-])[+-]?\s*{_BODY}{_END}"
 
 # Matches whole numeric-looking tokens, including unsupported notation, so a
 # shorter valid prefix cannot masquerade as the supplied operand. Digits inside

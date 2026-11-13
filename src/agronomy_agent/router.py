@@ -232,14 +232,21 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     expansions = set(route.query_expansion)
     risk = route.risk_level
     guidance = route.guidance
-    operational_directive = has_action_directive(question)
+    operational_directive = (
+        has_action_directive(question)
+        or has_unqualified_followup(product_action_request_text(question))
+        or (
+            has(r"\b(?:calculate|compute|convert|work out)\b", question)
+            and has_unqualified_followup(question, calculation=True)
+        )
+    )
     if operational_directive and risk == "low":
         risk = "medium"
     if operational_directive and qtype in {"conceptual", "exam_review"}:
         qtype = "crop_management"
         namespaces.discard("exam_review")
         namespaces.add("crop_management")
-        guidance = "Answer the explanation and the additional operational request separately; use the field evidence needed for the requested action."
+        guidance = "Answer the explanatory portion directly. Assess any additional request separately against its own scope and evidence; do not infer a field operation from an explanatory prefix."
 
     pesticide_terms = has(r"\b(?:herbicide|fungicide|insecticide|pesticide|spray|tank mix)\b", q)
     explicit_agrochemical_context = has(

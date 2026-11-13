@@ -4,11 +4,13 @@ import pytest
 from agronomy_agent.answerability import is_mechanism_explanation
 from agronomy_agent.decision_route import build_decision_route_state
 from agronomy_agent.plant_health_scope import clubroot_question_scope
+from agronomy_agent.router import classify_query, refine_query_route
 from agronomy_agent.tool_planner import plan_and_execute_tools, plan_tools
 
 
 @pytest.mark.parametrize('question', [
     'For a uniform profile, field capacity is 0,31, wilting point 0,15 and rooting depth 0.4 m. Compute total available water.',
+    'For a standard-conditions model ETc = Kc × ETo, Kc is 1/day and ETo is 4 mm/day. Compute ETc.',
     'For a standard-conditions model ETc = Kc × ETo, Kc is 0,9 and ETo is 4 mm/day. Compute ETc.',
     'For a standard-conditions model ETc = Kc × ETo, Kc is 0.11e1 and ETo is 4 mm/day. Compute ETc.',
     'Calculate harvest index from 1e3 kg grain dry mass and 2000 kg total above-ground dry biomass.',
@@ -42,13 +44,18 @@ def test_valid_decimals_thousands_and_incidental_area_keep_their_contract(questi
     assert results[0].payload['value'] == pytest.approx(value)
 
 
-@pytest.mark.parametrize('directive', ['Thin the stand.', 'Reseed the field.', 'Mulch the bed.', 'Transplant the seedlings.'])
+@pytest.mark.parametrize('directive', ['Thin the stand.', 'Reseed the field.', 'Mulch the bed.', 'Transplant the seedlings.', 'Mulch beds.', 'Transplant seedlings.'])
 def test_an_unknown_followup_cannot_inherit_an_explanation_or_calculation_bypass(directive):
     question = 'Why does cold slow emergence? ' + directive
     assert not is_mechanism_explanation(question)
+    route = refine_query_route(question, classify_query(question))
+    assert route.question_type != 'exam_review' and route.risk_level != 'low'
     arithmetic = 'Daily mean temperature is 17 C, base temperature 6 C, no temperature caps and negative accumulation floored at zero. Calculate GDD. '
-    assert plan_tools(arithmetic + directive).status == 'not_applicable'
-    assert plan_tools(arithmetic.rstrip('. ') + ' and ' + directive).status == 'not_applicable'
+    for complete in [arithmetic + directive, arithmetic.rstrip('. ') + ' and ' + directive,
+                     arithmetic.rstrip('. ') + ', ' + directive]:
+        assert plan_tools(complete).status == 'not_applicable'
+        routed = refine_query_route(complete, classify_query(complete))
+        assert routed.question_type != 'exam_review' and routed.risk_level != 'low'
 
 
 def test_coordinated_explanation_does_not_authorize_mixing():
@@ -167,10 +174,13 @@ def test_seed_and_gdd_cannot_drop_unsupported_notation_units_or_keys(question):
 @pytest.mark.parametrize('question', [
     'Explain why soil acidifies and topdress wheat.',
     'Explain why cold slows emergence and weed the field.',
+    'Explain why cold slows emergence and improve soil drainage.',
     'Why does cold slow emergence, mulch the field?',
 ])
 def test_verb_spelling_and_comma_syntax_do_not_authorize_an_operational_followup(question):
     assert not is_mechanism_explanation(question)
+    route = refine_query_route(question, classify_query(question))
+    assert route.question_type != 'exam_review' and route.risk_level != 'low'
 
 
 def test_a_comma_does_not_hide_a_command_from_the_calculator():
@@ -185,3 +195,30 @@ def test_a_comma_does_not_hide_a_command_from_the_calculator():
 def test_a_reference_inside_the_affected_clause_does_not_erase_current_symptoms(comparison):
     scope = clubroot_question_scope(f'My canola roots are swollen {comparison}. Could this be clubroot?')
     assert scope.host_scope == 'susceptible' and scope.current_symptoms and scope.confirmation_requested
+
+
+@pytest.mark.parametrize('question', [
+    'Explain soil texture, structure and porosity.',
+    'What are photosynthesis and respiration?',
+    'Explain soil texture and soil structure.',
+])
+def test_coordinated_concept_definitions_remain_direct_low_risk_explanations(question):
+    route = refine_query_route(question, classify_query(question))
+    assert route.question_type == 'exam_review' and route.risk_level == 'low'
+
+
+@pytest.mark.parametrize('question', [
+    'Calculate break-even price from total cost CAD 40,50/ac and expected yield 50 bu/ac.',
+    'Calculate how much area will a 1000 L sprayer tank cover applying 10,0 L/ha, ignoring unusable tank volume?',
+])
+def test_reachable_legacy_cost_and_tank_extractors_use_the_same_number_contract(question):
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status != 'ready'
+    assert not results
+
+
+def test_deep_unrecognized_gdd_data_is_clarified_without_an_uncaught_decoder_error():
+    nested = '[' * 1100 + '0' + ']' * 1100
+    question = 'Calculate daily GDD. {"max_temp_C":25,"min_temp_C":9,"base_temp_C":7,"extra":' + nested + '}'
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'clarification_required' and not results

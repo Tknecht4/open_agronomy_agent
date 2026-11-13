@@ -428,9 +428,9 @@ def _partial_budget(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[s
 
 def _cost_candidates(text: str) -> set[tuple[float, str, str]]:
     specific_patterns = (
-        rf"\b(?P<basis>total economic|total|operating)\s+costs?\s*(?:of|is|are|:)?\s*(?:CAD|USD|\$)\s*(?P<value>-?[0-9][0-9,]*(?:\.[0-9]+)?)\s*(?:/|per\s+)(?P<area>{AREA})\b",
-        rf"\b(?:crop\s+)?budget\s+totals?\s*(?:CAD|USD|\$)\s*(?P<value>-?[0-9][0-9,]*(?:\.[0-9]+)?)\s*(?:/|per\s+)(?P<area>{AREA})\b",
-        rf"(?:CAD|USD|\$)\s*(?P<value>-?[0-9][0-9,]*(?:\.[0-9]+)?)\s*(?:/|per\s+)(?P<area>{AREA})\s+(?P<basis>total|operating)\s+cost\b",
+        rf"\b(?P<basis>total economic|total|operating)\s+costs?\s*(?:of|is|are|:)?\s*(?:CAD|USD|\$)\s*(?P<value>{SUPPLIED_NUMBER})\s*(?:/|per\s+)(?P<area>{AREA})\b",
+        rf"\b(?:crop\s+)?budget\s+totals?\s*(?:CAD|USD|\$)\s*(?P<value>{SUPPLIED_NUMBER})\s*(?:/|per\s+)(?P<area>{AREA})\b",
+        rf"(?:CAD|USD|\$)\s*(?P<value>{SUPPLIED_NUMBER})\s*(?:/|per\s+)(?P<area>{AREA})\s+(?P<basis>total|operating)\s+cost\b",
     )
     candidates: set[tuple[float, str, str]] = set()
     for index, pattern in enumerate(specific_patterns):
@@ -439,7 +439,7 @@ def _cost_candidates(text: str) -> set[tuple[float, str, str]]:
             candidates.add((_number(match.group("value")), _area(match.group("area")), "total_economic" if basis == "total economic" else basis))
     if candidates:
         return candidates
-    generic = rf"\bcosts?\s*(?:of|is|are|:)?\s*(?:CAD|USD|\$)\s*(?P<value>-?[0-9][0-9,]*(?:\.[0-9]+)?)\s*(?:/|per\s+)(?P<area>{AREA})\b"
+    generic = rf"\bcosts?\s*(?:of|is|are|:)?\s*(?:CAD|USD|\$)\s*(?P<value>{SUPPLIED_NUMBER})\s*(?:/|per\s+)(?P<area>{AREA})\b"
     return {
         (_number(match.group("value")), _area(match.group("area")), "")
         for match in re.finditer(generic, text, re.IGNORECASE)
