@@ -109,3 +109,27 @@ attempts, source/compute receipts and migration/deletion records in one campaign
 bundle. Inventory consumers and protect configured runtime, spatial, grower
 records and unrelated active work. Verify runtime identities and Git state after
 deletion. The final PR and next-agent handoff will state any remaining limits.
+
+## Seed-establishment reference qualification
+
+A later independent source check reproduced double counting of germination
+when a question explicitly supplied overall emergence. The preliminary
+`2e316ab` candidate was stopped and superseded: all 192 regression observations
+and 184 full-cohort observations remain separate retained evidence. No native
+candidate ran at that source. Main-compatible baselines continue unchanged.
+The successor must repeat the whole candidate matrix.
+
+[Manitoba Agriculture](https://www.gov.mb.ca/agriculture/crops/crop-management/print,seeding-by-plant-population.html)
+defines expected seed survival as including germination adjusted for mortality.
+[Canola Council](https://www.canolacouncil.org/canola-encyclopedia/plant-establishment/seeding-rate/)
+uses emergence relative to seeds sown. Conditional survival of germinated seeds
+is a different denominator. The repair preserves that distinction across
+planning, typed execution, readiness and saved answers.
+
+The frozen `HR1-seed-complete`, `ca_calc_seed_rate_01` and
+`ca_calc_seed_rate_02` questions use unqualified survival/emergence while their
+references assume a conditional denominator. Original case/rubric/policy bytes
+and mechanical scores remain unchanged. These reference limitations must stay
+visible alongside any automated scientific triage; no retrospective gold repair
+or exclusion from the full denominator is authorized. Active software checks
+use separately versioned qualified fixtures.

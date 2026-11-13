@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation, localcontext
+from decimal import Decimal, DecimalException, InvalidOperation, localcontext
 from enum import StrEnum
+import math
 from typing import Any, Mapping, Sequence
 
 from agronomy_agent.calculator_contracts import CALCULATOR_SCHEMA_VERSION, CALCULATOR_VERSION
 from agronomy_agent.water_arithmetic import WATER_INPUTS, water_arithmetic
+from agronomy_agent.seed_establishment import SEED_SURVIVAL_BASES, established_fraction
 
 
 class CalculationOperation(StrEnum):
@@ -139,10 +141,16 @@ def calculation_tool_schema() -> dict[str, Any]:
                 "supported_units": ["kg/ha", "lb/ac", "ha", "ac", "L/ha", "US gal/ac"],
             },
             "seed_rate_mass": {
-                "required": ["target_plants_per_m2", "tkw_g", "germination_pct", "field_survival_pct"],
+                "required": ["target_plants_per_m2", "tkw_g", "field_survival_pct", "survival_basis"],
+                "optional": ["germination_pct", "mortality_pct"],
+                "survival_bases": list(SEED_SURVIVAL_BASES),
+                "germination_requirement": "required only for germinated_seeds; contextual for seeds_sown",
             },
             "seed_rate_mass_imperial": {
-                "required": ["target_plants_per_ft2", "tkw_g", "germination_pct", "field_survival_pct", "method"],
+                "required": ["target_plants_per_ft2", "tkw_g", "field_survival_pct", "survival_basis", "method"],
+                "optional": ["germination_pct", "mortality_pct"],
+                "survival_bases": list(SEED_SURVIVAL_BASES),
+                "germination_requirement": "required only for germinated_seeds; contextual for seeds_sown",
                 "methods": ["dimensional", "published_factor_10", "compare"],
             },
             "fertilizer_product_mass": {
@@ -322,44 +330,91 @@ def _unit_conversion(inputs: Mapping[str, Any]) -> AgronomicCalculation:
 
 
 def _seed_rate_mass(inputs: Mapping[str, Any]) -> AgronomicCalculation:
-    required = {"target_plants_per_m2", "tkw_g", "germination_pct", "field_survival_pct"}
-    _require_only(inputs, required=required)
-    target = _positive(inputs, "target_plants_per_m2")
-    tkw = _positive(inputs, "tkw_g")
-    germination = _percent(inputs, "germination_pct") / Decimal("100")
-    survival = _percent(inputs, "field_survival_pct") / Decimal("100")
-    answer = target * tkw / (germination * survival * Decimal("100"))
+    inputs = validate_seed_rate_inputs("seed_rate_mass", inputs)
+    target = inputs["target_plants_per_m2"]
+    tkw = inputs["tkw_g"]
+    fraction, normalized, assumptions = _seed_establishment_values(inputs)
+    answer = target * tkw / (fraction * Decimal("100"))
     return _result(
         CalculationOperation.SEED_RATE_MASS,
         answer,
         "kg/ha",
         (
             f"({_format_operand(target)} plants/m² × {_format_operand(tkw)} g/1,000 seeds) ÷ "
-            f"({_format_operand(germination)} × {_format_operand(survival)} × 100) "
+            f"({_format_operand(fraction)} × 100) "
             f"{_format_formula_result(answer)} kg/ha"
         ),
         {
             "target_plants_per_m2": target,
             "tkw_g": tkw,
-            "germination_pct": germination * Decimal("100"),
-            "field_survival_pct": survival * Decimal("100"),
+            **normalized,
         },
+        assumptions=assumptions,
     )
+
+
+def _seed_establishment_values(inputs: Mapping[str, Any]) -> tuple[Decimal, dict[str, Any], tuple[str, ...]]:
+    survival = _percent(inputs, "field_survival_pct")
+    germination = _percent(inputs, "germination_pct") if "germination_pct" in inputs else None
+    basis = str(inputs["survival_basis"])
+    fraction, note = established_fraction(survival, basis, germination)
+    normalized: dict[str, Any] = {"field_survival_pct": survival, "survival_basis": basis}
+    if germination is not None:
+        normalized["germination_pct"] = germination
+    if "mortality_pct" in inputs:
+        mortality = _nonnegative(inputs, "mortality_pct")
+        if mortality >= 100 or abs(mortality + survival - 100) > Decimal("0.0001"):
+            raise ValueError("mortality_pct and field_survival_pct must be complementary percentages on the same basis")
+        normalized["mortality_pct"] = mortality
+    return fraction, normalized, (note, f"effective established fraction = {_format_operand(fraction)}")
+
+
+def validate_seed_rate_inputs(operation: str, inputs: Mapping[str, Any]) -> dict[str, Any]:
+    """Pure seed-input validation shared by readiness and actual execution."""
+    if operation not in {"seed_rate_mass", "seed_rate_mass_imperial"}:
+        raise ValueError("unsupported seed-rate operation")
+    imperial = operation == "seed_rate_mass_imperial"
+    target_key = "target_plants_per_ft2" if imperial else "target_plants_per_m2"
+    required = {target_key, "tkw_g", "field_survival_pct", "survival_basis"}
+    if imperial:
+        required.add("method")
+    _require_only(inputs, required=required, optional={"germination_pct", "mortality_pct"})
+    target, tkw = _positive(inputs, target_key), _positive(inputs, "tkw_g")
+    fraction, normalized, _ = _seed_establishment_values(inputs)
+    result = {target_key: target, "tkw_g": tkw, **normalized}
+    if imperial:
+        method = str(inputs["method"]).strip().lower()
+        if method not in {"dimensional", "published_factor_10", "compare"}:
+            raise ValueError("method must be dimensional, published_factor_10, or compare")
+        result["method"] = method
+    try:
+        # The public record retains both operands and result as JSON numbers.
+        # A finite result cannot repair an overflowing operand, and a nonzero
+        # Decimal must not silently become a JSON zero.
+        def representable(value: Decimal) -> bool:
+            serialized = float(value)
+            return math.isfinite(serialized) and (value == 0 or serialized != 0)
+
+        if not all(representable(value) for value in result.values() if isinstance(value, Decimal)):
+            raise ValueError("seed operands are outside the supported numeric output range")
+        scale = target * tkw / fraction
+        values = ([scale / Decimal(10), scale * Decimal(43560) / (Decimal(1000) * Decimal("453.59237"))]
+                  if imperial else [scale / Decimal(100)])
+        for value in values:
+            if not representable(value):
+                raise ValueError("seed mass is outside the supported numeric output range")
+            _format_decimal(value)
+    except DecimalException as exc:
+        raise ValueError("seed mass is outside the supported numeric output range") from exc
+    return result
 
 
 def _seed_rate_mass_imperial(inputs: Mapping[str, Any]) -> AgronomicCalculation:
-    _require_only(
-        inputs,
-        required={"target_plants_per_ft2", "tkw_g", "germination_pct", "field_survival_pct", "method"},
-    )
-    target = _positive(inputs, "target_plants_per_ft2")
-    tkw = _positive(inputs, "tkw_g")
-    germination = _percent(inputs, "germination_pct") / Decimal("100")
-    survival = _percent(inputs, "field_survival_pct") / Decimal("100")
-    method = str(inputs["method"]).strip().lower()
-    if method not in {"dimensional", "published_factor_10", "compare"}:
-        raise ValueError("method must be dimensional, published_factor_10, or compare")
-    established_fraction = germination * survival
+    inputs = validate_seed_rate_inputs("seed_rate_mass_imperial", inputs)
+    target = inputs["target_plants_per_ft2"]
+    tkw = inputs["tkw_g"]
+    established_fraction, normalized, basis_assumptions = _seed_establishment_values(inputs)
+    method = inputs["method"]
     # 43,560 ft²/ac and 453.59237 g/lb are dimensional conversions. The
     # Manitoba guide's denominator of 10 is a distinct approximate rule.
     dimensional = target * tkw * Decimal("43560") / (
@@ -390,12 +445,11 @@ def _seed_rate_mass_imperial(inputs: Mapping[str, Any]) -> AgronomicCalculation:
         {
             "target_plants_per_ft2": target,
             "tkw_g": tkw,
-            "germination_pct": germination * Decimal("100"),
-            "field_survival_pct": survival * Decimal("100"),
+            **normalized,
             "method": method,
         },
         assumptions=(
-            f"established fraction = germination × post-germination survival = {_format_operand(established_fraction)}",
+            *basis_assumptions,
             "published_factor_10 is an approximate provincial formula" if method == "published_factor_10" else "dimensional conversion is the primary result",
             alternative,
         ),

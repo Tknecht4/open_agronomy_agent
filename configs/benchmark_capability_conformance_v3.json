@@ -1,0 +1,650 @@
+{
+  "schema_version": "open_agronomy_agent.benchmark_capability_conformance.v3",
+  "suite_id": "open_agronomy_capability_conformance_v3",
+  "status": "public_exposed_deterministic_conformance_not_performance",
+  "claim_eligible": false,
+  "capabilities": [
+    {
+      "capability_id": "agronomic_calculator",
+      "capability_version": "agronomic_calculator_v3",
+      "operation_contract": "every declared structured operation must execute through the canonical registry",
+      "fixtures": [
+        {
+          "fixture_id": "unit_conversion_mass_per_area",
+          "operation": "unit_conversion",
+          "inputs": {
+            "value": 100,
+            "from_unit": "lb/ac",
+            "to_unit": "kg/ha"
+          },
+          "expected_value": 112.0851156,
+          "expected_unit": "kg/ha",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "seed_rate_mass",
+          "operation": "seed_rate_mass",
+          "inputs": {
+            "target_plants_per_m2": 250,
+            "tkw_g": 40,
+            "germination_pct": 92,
+            "field_survival_pct": 88,
+            "survival_basis": "germinated_seeds"
+          },
+          "expected_value": 123.5178,
+          "expected_unit": "kg/ha",
+          "absolute_tolerance": 0.001
+        },
+        {
+          "fixture_id": "fertilizer_product_mass",
+          "operation": "fertilizer_product_mass",
+          "inputs": {
+            "nutrient_target_kg_per_ha": 72,
+            "nutrient_percent": 46,
+            "nutrient_label": "N"
+          },
+          "expected_value": 156.5217,
+          "expected_unit": "kg product/ha",
+          "absolute_tolerance": 0.001
+        },
+        {
+          "fixture_id": "nutrient_delivery",
+          "operation": "nutrient_delivery",
+          "inputs": {
+            "product_rate_kg_per_ha": 180,
+            "nutrient_percent": 28,
+            "nutrient_label": "N"
+          },
+          "expected_value": 50.4,
+          "expected_unit": "kg N/ha",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "sprayer_application_volume",
+          "operation": "sprayer_application_volume",
+          "inputs": {
+            "nozzle_count": 20,
+            "flow_l_per_min_per_nozzle": 1.1,
+            "speed_km_per_h": 10,
+            "boom_width_m": 11
+          },
+          "expected_value": 120,
+          "expected_unit": "L/ha",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "tank_coverage",
+          "operation": "tank_coverage",
+          "inputs": {
+            "tank_volume_l": 2400,
+            "application_volume_l_per_ha": 120
+          },
+          "expected_value": 20,
+          "expected_unit": "ha",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "daily_gdd",
+          "operation": "daily_gdd",
+          "inputs": {
+            "max_temp_c": 22,
+            "min_temp_c": 8,
+            "base_temp_c": 5
+          },
+          "expected_value": 10,
+          "expected_unit": "GDD",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "accumulated_gdd",
+          "operation": "accumulated_gdd",
+          "inputs": {
+            "daily_gdd_values": [
+              5,
+              8,
+              10,
+              7
+            ]
+          },
+          "expected_value": 30,
+          "expected_unit": "GDD",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "row_population",
+          "operation": "row_population",
+          "inputs": {
+            "plants_per_row_m": 18,
+            "row_spacing_m": 0.3
+          },
+          "expected_value": 60,
+          "expected_unit": "plants/m\u00b2",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "field_product_total",
+          "operation": "field_product_total",
+          "inputs": {
+            "area_ha": 42,
+            "product_rate_kg_per_ha": 75
+          },
+          "expected_value": 3150,
+          "expected_unit": "kg",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "area_weighted_average",
+          "operation": "area_weighted_average",
+          "inputs": {
+            "total_area_ha": 120,
+            "zones": [
+              {
+                "area_ha": 30,
+                "value": 60
+              },
+              {
+                "area_ha": 90,
+                "value": 40
+              }
+            ],
+            "value_unit": "bu/ac"
+          },
+          "expected_value": 45,
+          "expected_unit": "bu/ac",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "partial_budget",
+          "operation": "partial_budget",
+          "inputs": {
+            "added_returns": 120,
+            "reduced_costs": 20,
+            "added_costs": 75,
+            "reduced_returns": 10,
+            "currency": "CAD"
+          },
+          "expected_value": 55,
+          "expected_unit": "CAD",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "seed_rate_mass_imperial_published",
+          "operation": "seed_rate_mass_imperial",
+          "inputs": {
+            "target_plants_per_ft2": 28,
+            "tkw_g": 39,
+            "germination_pct": 99,
+            "field_survival_pct": 85,
+            "method": "published_factor_10",
+            "survival_basis": "germinated_seeds"
+          },
+          "expected_value": 129.76827,
+          "expected_unit": "lb/ac",
+          "absolute_tolerance": 0.001
+        },
+        {
+          "fixture_id": "break_even_price_total",
+          "operation": "break_even_price",
+          "inputs": {
+            "cost_per_area": 840,
+            "yield_per_area": 4,
+            "currency": "CAD",
+            "area_unit": "ha",
+            "yield_unit": "tonne",
+            "cost_basis": "total"
+          },
+          "expected_value": 210,
+          "expected_unit": "CAD/tonne",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "break_even_yield_operating",
+          "operation": "break_even_yield",
+          "inputs": {
+            "cost_per_area": 480,
+            "price_per_unit": 8,
+            "currency": "USD",
+            "area_unit": "ac",
+            "yield_unit": "bu",
+            "cost_basis": "operating"
+          },
+          "expected_value": 60,
+          "expected_unit": "bu/ac",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "current_ratio",
+          "operation": "current_ratio",
+          "inputs": {
+            "current_assets": 250000,
+            "current_liabilities": 100000
+          },
+          "expected_value": 2.5,
+          "expected_unit": "ratio",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "debt_to_asset_percent",
+          "operation": "debt_to_asset_percent",
+          "inputs": {
+            "total_debt": 275000,
+            "total_assets": 1100000
+          },
+          "expected_value": 25,
+          "expected_unit": "%",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "fertilizer_field_total",
+          "operation": "fertilizer_field_total",
+          "inputs": {
+            "area_ha": 24,
+            "nutrient_target_kg_per_ha": 40,
+            "nutrient_percent": 46,
+            "nutrient_label": "N"
+          },
+          "expected_value": 2086.956521739,
+          "expected_unit": "kg",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "soil_water_storage",
+          "operation": "soil_water_storage",
+          "inputs": {
+            "volumetric_water_content": 0.24,
+            "layer_depth_cm": 30
+          },
+          "expected_value": 72,
+          "expected_unit": "mm",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "nutrient_basis_conversion",
+          "operation": "nutrient_basis_conversion",
+          "inputs": {
+            "quantity_kg_per_ha": 75,
+            "from_basis": "P2O5",
+            "to_basis": "P"
+          },
+          "expected_value": 32.73,
+          "expected_unit": "kg P/ha",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "apparent_nutrient_balance",
+          "operation": "apparent_nutrient_balance",
+          "inputs": {
+            "applied_kg_per_ha": 45,
+            "removed_kg_per_ha": 28,
+            "nutrient_basis": "P"
+          },
+          "expected_value": 17,
+          "expected_unit": "kg P/ha",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "liquid_product_total",
+          "operation": "liquid_product_total",
+          "inputs": {
+            "area_ha": 16,
+            "product_rate_l_per_ha": 3
+          },
+          "expected_value": 48,
+          "expected_unit": "L product",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "water_storage_difference",
+          "operation": "water_storage_difference",
+          "inputs": {
+            "upper_volumetric": 0.32,
+            "lower_volumetric": 0.12,
+            "root_depth_m": 0.8,
+            "interpretation": "available_capacity"
+          },
+          "expected_value": 160,
+          "expected_unit": "mm",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "crop_evapotranspiration",
+          "operation": "crop_evapotranspiration",
+          "inputs": {
+            "crop_coefficient": 1.1,
+            "reference_et_mm_per_day": 4
+          },
+          "expected_value": 4.4,
+          "expected_unit": "mm/day",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "gross_irrigation_depth",
+          "operation": "gross_irrigation_depth",
+          "inputs": {
+            "net_depth_mm": 24,
+            "application_efficiency_pct": 80
+          },
+          "expected_value": 30,
+          "expected_unit": "mm",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "water_depth_volume",
+          "operation": "water_depth_volume",
+          "inputs": {
+            "depth_mm": 15,
+            "area_ha": 8
+          },
+          "expected_value": 1200,
+          "expected_unit": "m\u00b3",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "grain_moisture_adjustment",
+          "operation": "grain_moisture_adjustment",
+          "inputs": {
+            "wet_mass": 12,
+            "mass_unit": "t",
+            "initial_moisture_pct": 25,
+            "target_moisture_pct": 10
+          },
+          "expected_value": 10,
+          "expected_unit": "t",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "single_nozzle_application_volume",
+          "operation": "single_nozzle_application_volume",
+          "inputs": {
+            "flow_l_per_min_per_nozzle": 1.2,
+            "speed_km_per_h": 10,
+            "nozzle_spacing_m": 0.5
+          },
+          "expected_value": 144,
+          "expected_unit": "L/ha",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "mean_temperature_gdd",
+          "operation": "mean_temperature_gdd",
+          "inputs": {
+            "mean_temp_c": 17,
+            "base_temp_c": 6,
+            "method": "daily_mean_no_temperature_caps"
+          },
+          "expected_value": 11,
+          "expected_unit": "GDD",
+          "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "grain_harvest_index",
+          "operation": "grain_harvest_index",
+          "inputs": {
+            "grain_dry_mass": 4.2,
+            "aboveground_dry_mass": 12,
+            "mass_unit": "t/ha"
+          },
+          "expected_value": 0.35,
+          "expected_unit": "harvest index",
+          "absolute_tolerance": 1e-08
+        },
+        {
+          "fixture_id": "circular_sampling_area",
+          "operation": "circular_sampling_area",
+          "inputs": {
+            "radius_m": 12
+          },
+          "expected_value": 452.389342,
+          "expected_unit": "m\u00b2",
+          "absolute_tolerance": 1e-05
+        },
+        {
+          "fixture_id": "seed_rate_overall_emergence",
+          "operation": "seed_rate_mass",
+          "inputs": {
+            "target_plants_per_m2": 80,
+            "tkw_g": 4.5,
+            "germination_pct": 96,
+            "field_survival_pct": 75,
+            "survival_basis": "seeds_sown"
+          },
+          "expected_value": 4.8,
+          "expected_unit": "kg/ha",
+          "absolute_tolerance": 1e-05
+        },
+        {
+          "fixture_id": "seed_rate_imperial_overall_without_lab_germination",
+          "operation": "seed_rate_mass_imperial",
+          "inputs": {
+            "target_plants_per_ft2": 8,
+            "tkw_g": 4.5,
+            "field_survival_pct": 75,
+            "survival_basis": "seeds_sown",
+            "method": "dimensional"
+          },
+          "expected_value": 4.609601347571169,
+          "expected_unit": "lb/ac",
+          "absolute_tolerance": 1e-05
+        }
+      ],
+      "negative_fixtures": [
+        {
+          "fixture_id": "missing_seed_inputs",
+          "operation": "seed_rate_mass",
+          "inputs": {
+            "target_plants_per_m2": 250
+          },
+          "expected_error_contains": "missing required fields"
+        },
+        {
+          "fixture_id": "invalid_percentage",
+          "operation": "seed_rate_mass",
+          "inputs": {
+            "target_plants_per_m2": 250,
+            "tkw_g": 40,
+            "germination_pct": 110,
+            "field_survival_pct": 88,
+            "survival_basis": "germinated_seeds"
+          },
+          "expected_error_contains": "germination_pct"
+        },
+        {
+          "fixture_id": "dimension_mismatch",
+          "operation": "unit_conversion",
+          "inputs": {
+            "value": 1,
+            "from_unit": "kg/ha",
+            "to_unit": "ha"
+          },
+          "expected_error_contains": "dimensions differ"
+        },
+        {
+          "fixture_id": "unknown_operation",
+          "operation": "invented_rate_selector",
+          "inputs": {},
+          "expected_error_contains": "unknown calculation operation"
+        },
+        {
+          "fixture_id": "invalid_break_even_yield_denominator",
+          "operation": "break_even_price",
+          "inputs": {
+            "cost_per_area": 840,
+            "yield_per_area": 0,
+            "currency": "CAD",
+            "area_unit": "ha",
+            "yield_unit": "tonne",
+            "cost_basis": "total"
+          },
+          "expected_error_contains": "expected yield must be greater than zero"
+        },
+        {
+          "fixture_id": "invalid_financial_assets_denominator",
+          "operation": "debt_to_asset_percent",
+          "inputs": {
+            "total_debt": 275000,
+            "total_assets": 0
+          },
+          "expected_error_contains": "total_assets must be greater than zero"
+        },
+        {
+          "fixture_id": "missing_imperial_seed_method",
+          "operation": "seed_rate_mass_imperial",
+          "inputs": {
+            "target_plants_per_ft2": 28,
+            "tkw_g": 39,
+            "germination_pct": 99,
+            "field_survival_pct": 85,
+            "survival_basis": "germinated_seeds"
+          },
+          "expected_error_contains": "missing required fields"
+        },
+        {
+          "fixture_id": "invalid_volumetric_water_fraction",
+          "operation": "soil_water_storage",
+          "inputs": {
+            "volumetric_water_content": 1.2,
+            "layer_depth_cm": 30
+          },
+          "expected_error_contains": "fraction from 0 to 1"
+        },
+        {
+          "fixture_id": "invalid_fertilizer_field_percentage",
+          "operation": "fertilizer_field_total",
+          "inputs": {
+            "area_ha": 24,
+            "nutrient_target_kg_per_ha": 40,
+            "nutrient_percent": 0
+          },
+          "expected_error_contains": "must be greater than 0"
+        },
+        {
+          "fixture_id": "wrong_nutrient_pair",
+          "operation": "nutrient_basis_conversion",
+          "inputs": {
+            "quantity_kg_per_ha": 75,
+            "from_basis": "P2O5",
+            "to_basis": "K"
+          },
+          "expected_error_contains": "matching elemental/oxide"
+        },
+        {
+          "fixture_id": "mixed_balance_basis",
+          "operation": "apparent_nutrient_balance",
+          "inputs": {
+            "applied_kg_per_ha": 45,
+            "removed_kg_per_ha": 28,
+            "nutrient_basis": "P/K"
+          },
+          "expected_error_contains": "matching nutrient basis"
+        },
+        {
+          "fixture_id": "negative_product_volume",
+          "operation": "liquid_product_total",
+          "inputs": {
+            "area_ha": -1,
+            "product_rate_l_per_ha": 3
+          },
+          "expected_error_contains": "cannot be negative"
+        },
+        {
+          "fixture_id": "invalid_water_fraction",
+          "operation": "water_storage_difference",
+          "inputs": {
+            "upper_volumetric": 1.2,
+            "lower_volumetric": 0.12,
+            "root_depth_m": 0.8,
+            "interpretation": "available_capacity"
+          },
+          "expected_error_contains": "fractions from zero to one"
+        },
+        {
+          "fixture_id": "invalid_reference_et",
+          "operation": "crop_evapotranspiration",
+          "inputs": {
+            "crop_coefficient": 1.1,
+            "reference_et_mm_per_day": -4
+          },
+          "expected_error_contains": "nonnegative"
+        },
+        {
+          "fixture_id": "zero_irrigation_efficiency",
+          "operation": "gross_irrigation_depth",
+          "inputs": {
+            "net_depth_mm": 24,
+            "application_efficiency_pct": 0
+          },
+          "expected_error_contains": "above zero"
+        },
+        {
+          "fixture_id": "negative_water_volume_area",
+          "operation": "water_depth_volume",
+          "inputs": {
+            "depth_mm": 15,
+            "area_ha": -8
+          },
+          "expected_error_contains": "nonnegative"
+        },
+        {
+          "fixture_id": "invalid_grain_target_moisture",
+          "operation": "grain_moisture_adjustment",
+          "inputs": {
+            "wet_mass": 12,
+            "mass_unit": "t",
+            "initial_moisture_pct": 25,
+            "target_moisture_pct": 100
+          },
+          "expected_error_contains": "below 100"
+        },
+        {
+          "fixture_id": "zero_nozzle_spacing",
+          "operation": "single_nozzle_application_volume",
+          "inputs": {
+            "flow_l_per_min_per_nozzle": 1.2,
+            "speed_km_per_h": 10,
+            "nozzle_spacing_m": 0
+          },
+          "expected_error_contains": "greater than zero"
+        },
+        {
+          "fixture_id": "mean_gdd_cannot_infer_capped_extremes",
+          "operation": "mean_temperature_gdd",
+          "inputs": {
+            "mean_temp_c": 17,
+            "base_temp_c": 6,
+            "method": "modified_corn"
+          },
+          "expected_error_contains": "explicit no-temperature-caps"
+        },
+        {
+          "fixture_id": "grain_larger_than_total_biomass",
+          "operation": "grain_harvest_index",
+          "inputs": {
+            "grain_dry_mass": 8,
+            "aboveground_dry_mass": 4,
+            "mass_unit": "kg"
+          },
+          "expected_error_contains": "cannot exceed"
+        },
+        {
+          "fixture_id": "negative_sampling_radius",
+          "operation": "circular_sampling_area",
+          "inputs": {
+            "radius_m": -1
+          },
+          "expected_error_contains": "cannot be negative"
+        },
+        {
+          "fixture_id": "seed_survival_basis_required",
+          "operation": "seed_rate_mass",
+          "inputs": {
+            "target_plants_per_m2": 80,
+            "tkw_g": 4.5,
+            "germination_pct": 96,
+            "field_survival_pct": 75
+          },
+          "expected_error_contains": "survival_basis"
+        }
+      ]
+    }
+  ]
+}

@@ -1,10 +1,10 @@
 """Current typed-calculator identities shared by planning and verification."""
 
-CALCULATOR_VERSION = "agronomic_calculator_v2"
+CALCULATOR_VERSION = "agronomic_calculator_v3"
 LEGACY_CALCULATOR_VERSION = "agronomic_calculator_v1"
-CALCULATOR_SCHEMA_VERSION = "open_agronomy_agent.agronomic_calculator.schema.v2"
-TOOL_PLANNER_VERSION = "open_agronomy_agent.tool_planner.v2"
-EXPLICIT_ARITHMETIC_SELECTOR_ID = "explicit_arithmetic_parser_v2"
+CALCULATOR_SCHEMA_VERSION = "open_agronomy_agent.agronomic_calculator.schema.v3"
+TOOL_PLANNER_VERSION = "open_agronomy_agent.tool_planner.v3"
+EXPLICIT_ARITHMETIC_SELECTOR_ID = "explicit_arithmetic_parser_v3"
 
 FOUNDATION_OPERATIONS = frozenset({
     "seed_rate_mass_imperial",
@@ -30,9 +30,9 @@ FOUNDATION_OPERATIONS = frozenset({
 
 
 def tool_version_for(operation: str) -> str:
-    """Keep the frozen v1 operation family distinct from v2 additions."""
+    """Keep unchanged v1 contracts distinct from current additions/revisions."""
 
-    return CALCULATOR_VERSION if operation in FOUNDATION_OPERATIONS else LEGACY_CALCULATOR_VERSION
+    return CALCULATOR_VERSION if operation in FOUNDATION_OPERATIONS or operation == "seed_rate_mass" else LEGACY_CALCULATOR_VERSION
 
 
 def supplied_input_label(name: str) -> str:

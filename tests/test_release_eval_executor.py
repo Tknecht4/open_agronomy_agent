@@ -538,7 +538,7 @@ from agronomy_agent.release_eval_executor import (
 ROOT = Path(__file__).resolve().parents[1]
 CASES = [
     json.loads(line)
-    for line in (ROOT / "data/eval/release_harness_v1.jsonl").read_text().splitlines()
+    for line in (ROOT / "data/eval/release_harness_v2.jsonl").read_text().splitlines()
 ]
 
 

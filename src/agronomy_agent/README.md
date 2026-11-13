@@ -228,7 +228,7 @@ GDD operation uses the actual supplied mean and base, with a stated zero floor;
 it cannot infer individually capped temperature extremes. These operations
 share non-executing readiness validators and whole-request guards for extra
 decisions, permission requests and unhandled questions. The historical v1
-operation family remains distinct from the current v2 extensions.
+operation family remains distinct from the current calculator contract. Seed-mass arithmetic now uses the revised contract because its survival denominator must be explicit.
 Grain harvest index divides supplied grain dry mass by total above-ground dry
 biomass, including grain, on the same mass and area basis; both fraction and
 percentage are shown. This follows the [FAO biomass/harvest-index definition](https://www.fao.org/4/y5146e/y5146e07.htm)
@@ -275,3 +275,14 @@ Mixed pesticide and fertilizer requests share the quantity-subject check between
 the evidence policy and final procedural support. Final label-safety replacement
 must preserve both requested methods, including supported French guidance;
 a complete machine-policy record alone does not establish a complete visible answer.
+
+Seed-mass inputs distinguish overall establishment per seed sown from survival
+per germinated seed. Overall emergence already includes germination; supplied
+laboratory germination stays in the record and is not multiplied again.
+Conditional survival requires a separate supplied germination percentage. Both
+metric and imperial execution share the same validator with API readiness.
+Unqualified survival or mortality needs a denominator clarification; conventional
+emergence uses a visibly stated seeds-sown interpretation. No germination value
+is invented, and no crop population or survival percentage is selected. See
+[Manitoba's establishment definition](https://www.gov.mb.ca/agriculture/crops/crop-management/print,seeding-by-plant-population.html)
+and [Canola Council's emergence basis](https://www.canolacouncil.org/canola-encyclopedia/plant-establishment/seeding-rate/).

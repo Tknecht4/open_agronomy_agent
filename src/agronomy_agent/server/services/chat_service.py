@@ -55,6 +55,7 @@ from agronomy_agent.agronomic_calculations import (
     validate_circular_sampling_area_inputs,
     validate_single_nozzle_inputs,
     validate_mean_temperature_gdd_inputs,
+    validate_seed_rate_inputs,
 )
 from agronomy_agent.decision_contract import build_decision_contract
 from agronomy_agent.evidence_contracts import question_frame_from_runtime
@@ -420,6 +421,13 @@ def preview_turn_readiness(
                 validated_inputs = True
             except (ValueError, DecimalException):
                 validated_inputs = False
+        elif calculator.operation in {"seed_rate_mass", "seed_rate_mass_imperial"}:
+            try:
+                validate_seed_rate_inputs(calculator.operation, calculator.inputs)
+                validated_inputs = True
+            except (ValueError, DecimalException):
+                validated_inputs = False
+                reason = "invalid_calculator_inputs"
         elif calculator.operation in WATER_INPUTS or calculator.operation in {"fertilizer_product_mass", "sprayer_application_volume", "grain_moisture_adjustment", "single_nozzle_application_volume", "mean_temperature_gdd", "grain_harvest_index", "circular_sampling_area"}:
             try:
                 if calculator.operation in WATER_INPUTS:

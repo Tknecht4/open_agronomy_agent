@@ -11,6 +11,7 @@ import math
 import re
 from typing import Any
 from agronomy_agent.request_scope import FIELD_ACTION_PATTERN as _FIELD_IMPERATIVE, has_action_directive
+from agronomy_agent.seed_establishment import parse_seed_establishment
 
 
 NUMBER = r"(-?[0-9][0-9,]*(?:\.[0-9]+)?)"
@@ -69,7 +70,8 @@ def _requested_arithmetic(lower: str) -> bool:
         return False
     return bool(re.search(
         r"\b(?:calculate|compute|convert|work out|how many|about how many|what is (?:the|one|my)|"
-        r"what yield breaks even|break-even (?:price|yield)|break even (?:price|yield))\b",
+        r"what yield breaks even|what seed(?:ing)? (?:rate|mass) (?:is|would be) (?:required|needed)|"
+        r"break-even (?:price|yield)|break even (?:price|yield))\b",
         lower,
     ))
 
@@ -147,51 +149,20 @@ def _seed_rate(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, .
         rf"{NUMBER}\s*g\s*(?:thousand[- ]kernel weight|tkw)\b",
         rf"(?:thousand[- ]kernel weight|tkw)\s*(?:is|of|:)?\s*{NUMBER}\s*g\b",
     )
-    germination = _find_number(
-        text,
-        rf"{NUMBER}\s*%\s*(?:seed[- ]lot\s+)?germination\b",
-        rf"\bgermination\s*(?:is|of|:)?\s*{NUMBER}\s*%",
-    )
-    survival = _find_number(
-        text,
-        rf"{NUMBER}\s*%\s*(?:(?:expected|field|emergence)\s+)*(?:survival|emergence)\b",
-        rf"\b(?:field|emergence|seedling)\s+survival\s*(?:is|of|:)?\s*{NUMBER}\s*%",
-    )
-    loss = _find_number(
-        text,
-        rf"{NUMBER}\s*%\s*(?:expected\s+)?(?:post[- ]germination\s+)?(?:seedling\s+)?(?:loss|mortality)\b",
-        rf"\b(?:loss|mortality)\s*(?:is|of|:)?\s*{NUMBER}\s*%",
-    )
-    if survival is not None and loss is not None and abs(survival + loss - 100) > 0.0001:
-        return "seed_rate_mass_imperial" if imperial else "seed_rate_mass", {}, ("consistent survival and loss percentages",)
-    if survival is None and loss is not None:
-        survival = 100 - loss
-    inputs: dict[str, Any] = {}
+    establishment, establishment_missing = parse_seed_establishment(text)
+    inputs: dict[str, Any] = dict(establishment)
     target_key = "target_plants_per_ft2" if imperial else "target_plants_per_m2"
     if target is not None:
         inputs[target_key] = target
     if tkw is not None:
         inputs["tkw_g"] = tkw
-    if germination is not None:
-        inputs["germination_pct"] = germination
-    if survival is not None:
-        inputs["field_survival_pct"] = survival
-    missing = tuple(
-        label for key, label in (
-            (target_key, "target plants per square metre or foot"),
-            ("tkw_g", "thousand-kernel weight in grams"),
-            ("germination_pct", "seed-lot germination percent"),
-            ("field_survival_pct", "post-germination field survival or mortality percent"),
-        ) if key not in inputs
-    )
+    missing = tuple(label for key, label in (
+        (target_key, "target plants per square metre or foot"),
+        ("tkw_g", "thousand-kernel weight in grams"),
+    ) if key not in inputs) + establishment_missing
     for key, label in ((target_key, "target plants"), ("tkw_g", "thousand-kernel weight")):
         if key in inputs and inputs[key] <= 0:
             missing += (f"invalid {label}: use a positive value",)
-    for key, label in (("germination_pct", "germination"), ("field_survival_pct", "field survival")):
-        if key in inputs and not 0 < inputs[key] <= 100:
-            missing += (f"invalid {label}: use a percentage above zero and at most 100",)
-    if loss is not None and not 0 <= loss < 100:
-        missing += ("invalid mortality: use a percentage from zero to below 100",)
     requested_unit = re.search(r"\b(?:give|in|as)\s+(kg/ha|lb/ac)\b", lower)
     if requested_unit and requested_unit.group(1) != ("lb/ac" if imperial else "kg/ha"):
         missing += ("invalid requested output unit: use a separate unit conversion",)

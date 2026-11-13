@@ -658,7 +658,7 @@ def execute_worker(spec: Mapping[str, Any]) -> dict[str, Any]:
         from scripts.run_benchmark_capability_conformance import run_conformance
 
         result = run_conformance(
-            ROOT / "configs/benchmark_capability_conformance_v2.json"
+            ROOT / "configs/benchmark_capability_conformance_v3.json"
         )
         write_new_json(directory / "capability.json", result)
         return {

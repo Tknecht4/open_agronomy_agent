@@ -36,7 +36,12 @@ MEAN_GDD = "Daily mean temperature is 17 C, base 6 C, no upper cap and negative 
 JOINT_PRODUCT = "Calculate fertilizer product rate and total product: how much 25%-N fertilizer supplies 75 kg N/ha over 16 ha?"
 HARVEST_INDEX = "Total above-ground dry biomass is 12 t/ha and grain dry mass is 4.2 t/ha. Compute harvest index."
 SAMPLING_AREA = "Calculate area of a circular sampling plot with radius 12 metres. Explain why this is not the field area."
-SEED_MISSING = "Calculate seed rate: target stand is 200 plants/m², TKW is missing, germination is 95%, expected field survival is 90%."
+SEED_MISSING = "Calculate seed rate: target stand is 200 plants/m², TKW is missing, germination is 95%, post-germination field survival is 90%."
+SEED_OVERALL = "Calculate seed rate: target stand is 80 plants/m², TKW is 4.5 g, germination is 96%, expected emergence is 75% overall of seeds sown (already including germination)."
+SEED_CONDITIONAL = "Calculate seed rate: target stand is 80 plants/m², TKW is 4.5 g, germination is 96%, field survival is 75% of germinated seeds."
+SEED_NO_LAB = "Calculate seed rate: target stand is 80 plants/m², TKW is 4.5 g, overall emergence is 75%."
+SEED_IMPERIAL = "Calculate seed rate: target stand is 8 plants/ft², TKW is 4.5 g, overall emergence is 75%."
+SEED_AMBIGUOUS = "Calculate seed rate: target stand is 80 plants/m², TKW is 4.5 g, germination is 96%, field survival is 75%."
 
 
 @pytest.fixture(scope="module")
@@ -80,6 +85,8 @@ def no_generator(*args, **kwargs):
                                           (P_BALANCE, "deterministic_tool_result"),
                                           (LIQUID_TOTAL, "deterministic_tool_result"),
                                           *[(q, "deterministic_tool_result") for q in (WATER_CAPACITY, WATER_REFILL, CROP_ET, GROSS_DEPTH, DEPTH_VOLUME, NOZZLE_VOLUME, PRODUCT_MASS, GRAIN_MASS, MEAN_GDD, HARVEST_INDEX, SAMPLING_AREA, JOINT_PRODUCT)],
+                                          *[(q, "deterministic_tool_result") for q in (SEED_OVERALL, SEED_CONDITIONAL, SEED_NO_LAB, SEED_IMPERIAL)],
+                                          (SEED_AMBIGUOUS, "deterministic_tool_clarification"),
                                           (SEED_MISSING, "deterministic_tool_clarification")])
 @pytest.mark.parametrize("backend", ["mlx", "http"])
 def test_actual_missing_model_calculation_and_clarification_persist_without_constructor(runtime, monkeypatch, question, path, backend):
@@ -107,10 +114,13 @@ def test_actual_missing_model_calculation_and_clarification_persist_without_cons
                     FIELD_N_TOTAL: "2,086.957 kg", WATER_STORAGE: "72 mm",
                     P_CONVERSION: "32.73 kg P/ha", P_BALANCE: "17 kg P/ha", LIQUID_TOTAL: "48 L product",
                     WATER_CAPACITY: "160 mm", WATER_REFILL: "40 mm", CROP_ET: "4.4 mm/day", GROSS_DEPTH: "30 mm",
-                    DEPTH_VOLUME: "1,200 m³", NOZZLE_VOLUME: "144 L/ha", PRODUCT_MASS: "300 kg product/ha", GRAIN_MASS: "10 t", MEAN_GDD: "11 GDD", HARVEST_INDEX: "0.35 harvest index", SAMPLING_AREA: "452.389 m²", JOINT_PRODUCT: "4,800 kg"}
+                    DEPTH_VOLUME: "1,200 m³", NOZZLE_VOLUME: "144 L/ha", PRODUCT_MASS: "300 kg product/ha", GRAIN_MASS: "10 t", MEAN_GDD: "11 GDD", HARVEST_INDEX: "0.35 harvest index", SAMPLING_AREA: "452.389 m²", JOINT_PRODUCT: "4,800 kg",
+                    SEED_OVERALL: "4.8 kg/ha", SEED_CONDITIONAL: "5 kg/ha", SEED_NO_LAB: "4.8 kg/ha", SEED_IMPERIAL: "4.61 lb/ac"}
         assert saved["answer"].startswith(expected[question])
+    elif question == SEED_AMBIGUOUS:
+        assert "seeds sown" in saved["answer"] and "germinated seeds" in saved["answer"]
     else:
-        assert "tkw_g" in saved["answer"]
+        assert "thousand-kernel weight in grams" in saved["answer"]
 
 
 def test_preview_is_read_only_and_does_not_create_a_session(runtime, monkeypatch):

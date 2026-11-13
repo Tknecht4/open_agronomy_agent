@@ -247,3 +247,14 @@ Reopen the field in the original signed-in account and use **Retry saved record*
 A first attempt rejected by validation offers **Resolve rejected request**. Resolution releases that request's local slot; correct and review the form before starting a new save. A request whose receipt was lost remains uncertain and must be recovered or reviewed against the timeline. Changing accounts will not replay another account's pending request. Older unscoped requests remain preserved for manual review in their original account.
 
 Use a supported secure browser with persistent storage and Web Locks. If safe storage is unavailable, saves are blocked before dispatch. Retain a full workspace backup: moving only field records between devices does not move retry receipts. Browser-local data is readable to someone with access to the browser profile.
+
+### Seed establishment calculations
+
+For seed mass, supply the target population and thousand-kernel weight, then
+state what the survival percentage measures. **Overall emergence** means plants
+established per seed sown and already includes germination. **Post-germination
+survival** needs the laboratory germination percentage as a separate factor.
+The answer records the basis and shows the effective established fraction.
+Unqualified survival or mortality prompts a denominator clarification. A complete
+supplied-input calculation can run without a model; it does not choose a target
+stand or estimate field establishment.

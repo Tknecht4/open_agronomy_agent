@@ -60,7 +60,8 @@ sprayer-calibration, grain-moisture, thermal-time, harvest-index and circular
 sampling-area arithmetic. It shows the
 units and assumptions and asks for missing or conflicting inputs. A calculated
 quantity does not select a field target, authorize a product or establish crop
-stage. Conceptual explanations and requests for field actions retain distinct
+stage. Seed-mass calculations distinguish overall emergence from survival after
+germination, retain the supplied basis, and ask when that denominator is unclear. Conceptual explanations and requests for field actions retain distinct
 evidence requirements.
 Reported disease history informs soil biosecurity across rotations; current
 symptoms and diagnostic confirmation retain their own evidence scope.

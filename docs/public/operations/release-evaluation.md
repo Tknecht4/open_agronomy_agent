@@ -594,3 +594,21 @@ that boundary before any outbound request.
 The offline retrieval scorer reports source recall separately from retrieval
 policy and authority compliance. A configured compliance threshold cannot pass
 if any case covered by that threshold has unknown compliance.
+
+## Revised seed-establishment contract
+
+The current default registry selects `release_harness_v2.jsonl` and capability
+conformance v3. The revised seed fixture explicitly declares survival after
+germination; its successor case identity and provenance distinguish it from
+the original v1 case. Existing v1 case files and conformance v1/v2 remain intact.
+The calculator's structured seed inputs require `survival_basis`: `seeds_sown`
+uses overall emergence once, while `germinated_seeds` additionally requires
+`germination_pct`. Both imperial methods retain their stated conversion method.
+
+Frozen full-comparison cases retain their original questions, gold, masks and
+weights. Some historical seed questions leave the denominator unspecified while
+their numeric reference assumes conditional survival. Preserve those mechanical
+results and annotate the reference ambiguity separately. A correct overall
+emergence calculation or an appropriate denominator question must not be called
+an agronomic error solely because it differs from that unstated assumption.
+The original mechanical report and any later scientific triage remain distinct.

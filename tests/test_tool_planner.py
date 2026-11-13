@@ -119,13 +119,27 @@ def test_frozen_operation_identity_and_current_extension_are_distinct() -> None:
     )
 
     assert legacy.invocations[0].tool_version == "agronomic_calculator_v1"
-    assert extension.invocations[0].tool_version == "agronomic_calculator_v2"
+    assert extension.invocations[0].tool_version == CALCULATOR_VERSION
 
 
 @pytest.mark.parametrize("row", [json.loads(line) for line in open("data/eval/canadian_agronomic_calculations_v1.jsonl", encoding="utf-8") if line.strip()])
-def test_planner_executes_every_frozen_calculation_case(row: dict) -> None:
+def test_current_planner_preserves_frozen_cases_and_exposes_seed_basis_reference_gaps(row: dict) -> None:
     plan, results = plan_and_execute_tools(row["question"], field_context=row.get("field_context"))
 
+    # Frozen references assume a conditional percentage that their questions
+    # do not always declare. Preserve those bytes instead of perpetuating the
+    # denominator error in current execution.
+    if row["eval_id"] == "ca_calc_seed_rate_01":
+        assert row["reference_numeric"] == 122.8
+        assert plan.status == "clarification_required" and not results
+        assert "seeds sown" in plan.clarification
+        return
+    if row["eval_id"] == "ca_calc_seed_rate_02":
+        assert row["reference_numeric"] == 5.0
+        assert plan.status == "ready"
+        assert results[0].payload["value"] == pytest.approx(4.8)
+        assert results[0].payload["inputs"]["survival_basis"] == "seeds_sown"
+        return
     assert plan.status == "ready", row["eval_id"]
     assert len(results) == 1
     result = results[0]
@@ -160,12 +174,12 @@ def test_planner_does_not_turn_a_benign_nutrient_definition_into_a_calculation()
         "What is the measured soil nitrogen here?",
         "How many soil nitrogen values were measured in my saved records?",
         "What is the recorded 4.7 lb/ac seeding rate for this field?",
-        "What is the recorded seed rate for 260 plants/m² target, TKW 40 g, germination 90%, and field survival 85%?",
+        "What is the recorded seed rate for 260 plants/m² target, TKW 40 g, germination 90%, and post-germination field survival 85%?",
         "What is the soil nitrogen result of 15 mg/kg in the lab report?",
         "What is the seed-rate formula?",
         "What is the seed-rate formula for 260 plants/m² and 40 g TKW?",
-        "What is the seed-rate formula for 260 plants/m² target, TKW 40 g, germination 90%, and field survival 85%?",
-        "What is the seed-rate formula for 260 plants/m² target, TKW 40 g, germination 0%, and field survival 85%?",
+        "What is the seed-rate formula for 260 plants/m² target, TKW 40 g, germination 90%, and post-germination field survival 85%?",
+        "What is the seed-rate formula for 260 plants/m² target, TKW 40 g, germination 0%, and post-germination field survival 85%?",
         "Explain how a fertilizer product mass is calculated.",
         "How do I calculate a seed rate?",
         "How do I calculate a seed rate if germination is 0%?",
@@ -185,7 +199,7 @@ def test_record_lookup_and_method_questions_do_not_request_calculator_inputs(que
         ("Calculate the wheat seed rate.", "clarification_required", "seed_rate_mass"),
         ("How many kg of urea supplies 80 kg N/ha?", "clarification_required", "fertilizer_product_mass"),
         (
-            "What is the seed rate for 260 plants/m² target, TKW 40 g, germination 90%, and field survival 85%?",
+            "What is the seed rate for 260 plants/m² target, TKW 40 g, germination 90%, and post-germination field survival 85%?",
             "ready", "seed_rate_mass",
         ),
         (
@@ -224,7 +238,7 @@ def test_arithmetic_questions_keep_typed_plans_with_or_without_all_inputs(
             "partial_budget", 30,
         ),
         (
-            "What is the seed rate for 260 plants/m² target, measured TKW 40 g, germination 90%, and field survival 85%?",
+            "What is the seed rate for 260 plants/m² target, measured TKW 40 g, germination 90%, and post-germination field survival 85%?",
             "seed_rate_mass", 135.9477,
         ),
     ],
@@ -248,7 +262,7 @@ def test_complete_foundation_operands_bypass_lookup_word_gate(
             "break_even_yield", "invalid assumed selling price must be positive",
         ),
         (
-            "What is the seed rate for 260 plants/m² target, measured TKW 40 g, germination 0%, and field survival 85%?",
+            "What is the seed rate for 260 plants/m² target, measured TKW 40 g, germination 0%, and post-germination field survival 85%?",
             "seed_rate_mass", "invalid germination: use a percentage above zero and at most 100",
         ),
         (
@@ -277,9 +291,9 @@ def test_recognized_invalid_or_incomplete_arithmetic_retains_typed_clarification
     ("family", "complete", "one_missing", "invalid", "operation"),
     [
         (
-            "seed", "What is the seed rate for 260 plants/m² target, measured TKW 40 g, germination 90%, and field survival 85%?",
+            "seed", "What is the seed rate for 260 plants/m² target, measured TKW 40 g, germination 90%, and post-germination field survival 85%?",
             "What is the seed rate for 260 plants/m² target, measured TKW 40 g, and germination 90%? Field survival is unknown.",
-            "What is the seed rate for 260 plants/m² target, measured TKW 40 g, germination 0%, and field survival 85%?", "seed_rate_mass",
+            "What is the seed rate for 260 plants/m² target, measured TKW 40 g, germination 0%, and post-germination field survival 85%?", "seed_rate_mass",
         ),
         (
             "gdd", "What is the GDD from Tmax 25 C, Tmin 9 C, and base 7 C?",
@@ -346,7 +360,7 @@ def test_planner_identity_is_deterministic() -> None:
 @pytest.mark.parametrize(
     ("question", "operation", "value", "unit"),
     [
-        ("Calculate wheat seed mass from 260 plants/m² target, TKW 40 g, germination 90%, and field survival 85% in kg/ha.", "seed_rate_mass", 135.9477, "kg/ha"),
+        ("Calculate wheat seed mass from 260 plants/m² target, TKW 40 g, germination 90%, and post-germination field survival 85% in kg/ha.", "seed_rate_mass", 135.9477, "kg/ha"),
         ("Using the Manitoba guide's factor-10 method, calculate seed mass for 28 plants/ft² target, 39 g thousand-kernel weight, 99% germination and 15% post-germination mortality in lb/ac.", "seed_rate_mass_imperial", 129.76827, "lb/ac"),
         ("Calculate one day's GDD from Tmax 25 C, Tmin 9 C and base 7 C.", "daily_gdd", 10, "GDD"),
         ("Calculate a partial-budget net change: added revenue USD 100/ac, saved costs USD 25/ac, added costs USD 80/ac and lost revenue USD 15/ac.", "partial_budget", 30, "USD/ac"),
@@ -397,11 +411,11 @@ def test_planner_avoids_ambiguous_or_action_seeking_math(question: str, expected
         "Calculate debt-to-asset ratio from total debt CAD 250 thousand and total assets CAD 1 million.",
         "Calculate debt-to-asset ratio from total debt CAD 250k and total assets CAD 1m.",
         "Calculate break-even price from total cost CAD 500/ac and expected yield -50 bu/ac.",
-        "Calculate wheat seed mass from -260 plants/m² target, TKW 40 g, germination 90%, and field survival 85% in kg/ha.",
+        "Calculate wheat seed mass from -260 plants/m² target, TKW 40 g, germination 90%, and post-germination field survival 85% in kg/ha.",
         "Calculate a partial-budget net change: added revenue USD 100/ac, saved costs USD 25 total for the whole farm, added costs USD 80/ac and lost revenue USD 15/ac.",
         "Calculate partial-budget net change per acre: added revenue USD 100/ac, saved costs USD 25, added costs USD 80/ac and lost revenue USD 15/ac.",
-        "Calculate seed mass from 28 plants/ft² target, TKW 39 g, germination 99% and field survival 85% in kg/ha.",
-        "Calculate seed mass from 260 plants/m² target, TKW 39 g, germination 99% and field survival 85% in lb/ac.",
+        "Calculate seed mass from 28 plants/ft² target, TKW 39 g, germination 99% and post-germination field survival 85% in kg/ha.",
+        "Calculate seed mass from 260 plants/m² target, TKW 39 g, germination 99% and post-germination field survival 85% in lb/ac.",
         "Calculate one day's GDD from Tmax 35 C, Tmin 9 C and base 10 C with cap 30 C.",
         "Calculate one day's GDD from Tmax 35 C, Tmin 5 C and base 10 C with lower cap 10 C, upper cap 30 C, and upper cap 32 C.",
         "Calculate one day's GDD from Tmax 35 C, Tmin 5 C and base 10 C with lower cap 10 C and an unspecified upper cap.",

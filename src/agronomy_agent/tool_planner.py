@@ -234,7 +234,6 @@ def _parse_calculation(question: str) -> tuple[str, dict[str, Any], tuple[str, .
         return foundation
     parsers = (
         _parse_unit_conversion,
-        _parse_seed_rate,
         _parse_sprayer_volume,
         _parse_tank_coverage,
         _parse_daily_gdd,
@@ -291,7 +290,7 @@ def _parse_calculation(question: str) -> tuple[str, dict[str, Any], tuple[str, .
             "target plants/m²",
             "TKW in grams",
             "germination percent",
-            "field survival or emergence percent",
+            "overall emergence, or survival with a seeds-sown/post-germination denominator",
         )
     return None
 
@@ -378,24 +377,6 @@ def _parse_unit_conversion(text: str, lower: str):  # noqa: ANN202
         "from_unit": match.group(2),
         "to_unit": match.group(3),
     }, ()
-
-
-def _parse_seed_rate(text: str, lower: str):  # noqa: ANN202
-    if "tkw" not in lower or "plants/m²" not in lower:
-        return None
-    target = re.search(rf"(?:target stand is|targets?)\s*{_NUMBER}\s*plants/m²", text, re.IGNORECASE)
-    tkw = re.search(rf"tkw\s+is\s*{_NUMBER}\s*g", text, re.IGNORECASE)
-    germination = re.search(rf"germination\s+is\s*{_NUMBER}%", text, re.IGNORECASE)
-    survival = re.search(rf"expected (?:field survival|emergence)\s+is\s*{_NUMBER}%", text, re.IGNORECASE)
-    values = {
-        "target_plants_per_m2": target,
-        "tkw_g": tkw,
-        "germination_pct": germination,
-        "field_survival_pct": survival,
-    }
-    missing = tuple(key for key, value in values.items() if value is None)
-    inputs = {key: _number(value.group(1)) for key, value in values.items() if value is not None}
-    return "seed_rate_mass", inputs, missing
 
 
 def _parse_fertilizer_product_mass(text: str, lower: str):  # noqa: ANN202

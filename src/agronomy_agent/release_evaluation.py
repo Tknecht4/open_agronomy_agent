@@ -686,7 +686,7 @@ def controlled_inputs(registry: Mapping[str, Any], root: Path = ROOT) -> dict[st
         "data/manifests/offline_corpus_retrieval_suite.json",
         "data/eval/field_data_pilot_v1/manifest.json",
         "data/eval/field_data_pilot_v1/gold_cases.jsonl",
-        "configs/benchmark_capability_conformance_v2.json",
+        "configs/benchmark_capability_conformance_v3.json",
         *registry["product_contract_tests"],
     }
     # An absent optional admission queue remains absent. Adding one changes
