@@ -1576,14 +1576,21 @@ def _validate_egress_records(envelope, artifact_contract, question_fragment):
     return documents, graph_rows, guard_rows
 
 
-def _validate_canonical_outbound(envelope, *, authorization, artifact_contract,
+def _validate_canonical_header(envelope, *, authorization, artifact_contract,
         suite_case_contract, static_prompt_contract, expected_candidate_output_sha256,
-        expected_phase, expected_arm, messages):
+        expected_phase, expected_arm, messages, _schema_version=CANONICAL_ENVELOPE_SCHEMA,
+        _render_profile_sha256=None):
     fields={"schema_version","eval_id","phase","arm","question_fragment","field_context",
         "source_sha256","suite_case_contract_sha256","egress_artifact_contract_sha256","static_prompt_contract_sha256",
         "private_knowledge_policy","private_knowledge_overlay_loaded","whole_corpus_included",
         "outbound_messages_sha256","selected_document_excerpts","graph_evidence","governed_guard_notes","payload_classes"}
     if expected_phase=="verification":fields|={"candidate_draft_text","verifier_evidence_text","candidate_generation_output_sha256"}
+    if _render_profile_sha256 is not None:
+        fields.add("render_profile_sha256")
+        if envelope.get("render_profile_sha256") != _render_profile_sha256:
+            raise CodexAppServerError("canonical render profile differs")
+    if envelope.get("schema_version") != _schema_version:
+        raise CodexAppServerError("canonical envelope version differs")
     if set(envelope)!=fields:raise CodexAppServerError("unclassified canonical envelope fields")
     if authorization.get("schema_version")!=CANONICAL_EGRESS_AUTHORIZATION_SCHEMA:
         raise CodexAppServerError("legacy grant cannot authorize canonical egress")
@@ -1621,12 +1628,31 @@ def _validate_canonical_outbound(envelope, *, authorization, artifact_contract,
                 or not isinstance(evidence,str) or _sha256(evidence)!=row["verification_evidence_sha256"]):
             raise CodexAppServerError("canonical editor draft/evidence mismatch")
         _validate_verifier_application_message_contract(messages,envelope=envelope,static_prompt_contract=static_prompt_contract)
+
+
+def _validate_canonical_outbound(envelope, *, authorization, artifact_contract,
+        suite_case_contract, static_prompt_contract, expected_candidate_output_sha256,
+        expected_phase, expected_arm, messages):
+    _validate_canonical_header(envelope, authorization=authorization, artifact_contract=artifact_contract,
+        suite_case_contract=suite_case_contract, static_prompt_contract=static_prompt_contract,
+        expected_candidate_output_sha256=expected_candidate_output_sha256,
+        expected_phase=expected_phase, expected_arm=expected_arm, messages=messages)
+    question, facts = envelope["question_fragment"], envelope["field_context"]
+    phase, arm = envelope["phase"], envelope["arm"]
     documents,graphs,guards=_validate_egress_records(envelope,artifact_contract,question)
+    return _finalize_canonical_outbound(envelope, messages=messages,
+        documents=documents, graphs=graphs, guards=guards)
+
+
+def _finalize_canonical_outbound(envelope, *, messages, documents, graphs, guards,
+        check_completeness=True):
+    facts, phase, arm = envelope["field_context"], envelope["phase"], envelope["arm"]
     instructions,user=split_chat_messages(messages)
     outbound=instructions+"\n\n"+user
     for rows,key in ((documents,"content_fragment"),(graphs,"evidence_fragment"),(guards,"outbound_fragment")):
         if any(record[key] not in outbound for record in rows):raise CodexAppServerError("canonical evidence fragment absent")
-    _validate_evidence_section_completeness(outbound,documents=documents,graph_rows=graphs,guard_rows=guards)
+    if check_completeness:
+        _validate_evidence_section_completeness(outbound,documents=documents,graph_rows=graphs,guard_rows=guards)
     actual=["project_owned_frozen_benchmark_questions"]
     if any(m["role"]=="system" for m in messages):actual.append("benchmark_system_and_answer_contract_prompts")
     if arm=="production_full" and facts:actual.append("case_bound_synthetic_facts")
@@ -1646,6 +1672,82 @@ def _validate_canonical_outbound(envelope, *, authorization, artifact_contract,
         sanitized[key]=[{k:v for k,v in record.items() if k not in private} for record in sanitized[key]]
     return {"instructions":instructions,"user_text":user,"sanitized_envelope":sanitized,
             "payload_classes":actual}
+
+
+def _validate_render_bound_outbound(envelope, *, authorization, artifact_contract,
+        suite_case_contract, static_prompt_contract, expected_candidate_output_sha256,
+        expected_phase, expected_arm, messages):
+    from agronomy_agent.benchmark_render_provenance import (
+        ARTIFACT_SCHEMA, ENVELOPE_SCHEMA, KINDS, build_records,
+    )
+    if artifact_contract.get("schema_version") != ARTIFACT_SCHEMA:
+        raise CodexAppServerError("render-bound envelope requires its admitted artifact profile")
+    profile = artifact_contract["render_profile"]
+    _validate_canonical_header(envelope, authorization=authorization,
+        artifact_contract=artifact_contract, suite_case_contract=suite_case_contract,
+        static_prompt_contract=static_prompt_contract,
+        expected_candidate_output_sha256=expected_candidate_output_sha256,
+        expected_phase=expected_phase, expected_arm=expected_arm, messages=messages,
+        _schema_version=ENVELOPE_SCHEMA, _render_profile_sha256=profile["sha256"])
+    question = envelope["question_fragment"]
+    try:
+        expected = build_records(profile, eval_id=envelope["eval_id"],
+            phase=expected_phase, arm=expected_arm, messages=messages,
+            question=question, verifier_evidence_text=envelope.get("verifier_evidence_text"))
+    except (ValueError, KeyError, TypeError) as exc:
+        raise CodexAppServerError("render-bound source projection is invalid") from exc
+    for group in expected:
+        if envelope.get(group) != expected[group]:
+            raise CodexAppServerError("render-bound records differ from exact frozen message spans")
+    # Full templates prove public-source membership through the unchanged strict
+    # validator. Only actual transmitted prefixes count toward delivery bounds.
+    for group, records in expected.items():
+        for record in records:
+            identity = record["render_provenance"]["record_id"]
+            template = profile["records"][identity]
+            _validate_egress_records({group: [template["full_record"]]},
+                artifact_contract["base_artifact_contract"], question)
+    documents, graphs, guards = (expected[name] for name in
+        ("selected_document_excerpts", "graph_evidence", "governed_guard_notes"))
+    def occurrence_count(record):
+        return len(record["render_provenance"]["spans"])
+    if (sum(occurrence_count(r) for r in documents) > _MAX_SELECTED_DOCUMENT_EXCERPTS
+            or sum(occurrence_count(r) for r in graphs) > _MAX_GRAPH_EVIDENCE_ROWS
+            or sum(len(r["content_fragment"])*occurrence_count(r) for r in documents) > _MAX_SELECTED_DOCUMENT_CHARS
+            or sum(len(r["evidence_fragment"])*occurrence_count(r) for r in graphs) > _MAX_GRAPH_EVIDENCE_CHARS
+            or sum(len(r["outbound_fragment"])*occurrence_count(r) for r in guards) > _MAX_GUARD_NOTE_CHARS):
+        raise CodexAppServerError("render-bound actual source delivery exceeds its bound")
+    # Mask entire independently validated occurrences, including their headers.
+    # A unique nonempty bullet preserves section discovery across source PDF
+    # newlines. Any remaining structured record is necessarily unbound, even
+    # when its text duplicates the header of a bound record.
+    sentinel = "- BOUND_SOURCE_" + envelope["outbound_messages_sha256"]
+    if any(sentinel in m["content"] for m in messages):
+        raise CodexAppServerError("render-bound completeness sentinel collision")
+    masked = [m["content"] for m in messages]
+    spans = [span for records in expected.values() for record in records
+        for span in record["render_provenance"]["spans"]]
+    for span in sorted(spans, key=lambda item: (item["message_index"], item["start"]), reverse=True):
+        index, start, end = span["message_index"], span["start"], span["end"]
+        fragment = messages[index]["content"][start:end]
+        masked[index] = masked[index][:start] + "\n".join(sentinel for _ in fragment.split("\n")) + masked[index][end:]
+    if expected_phase == "verification":
+        prefix = f"USER QUESTION\n{question}\n\nALLOWED EVIDENCE\n"
+        discovery = envelope["verifier_evidence_text"].strip()
+        for span in sorted(spans, key=lambda item: item["start"], reverse=True):
+            a, b = span["start"]-len(prefix), span["end"]-len(prefix)
+            fragment = envelope["verifier_evidence_text"].strip()[a:b]
+            discovery = discovery[:a] + "\n".join(sentinel for _ in fragment.split("\n")) + discovery[b:]
+    else:
+        discovery = "\n\n".join(masked)
+    discovered = _declared_evidence_section_lines(discovery)
+    discovered["document"].extend(line.strip() for line in discovery.splitlines()
+        if line.startswith("Source: "))
+    for kind, lines in discovered.items():
+        if any(line != sentinel for line in lines):
+            raise CodexAppServerError("render-bound envelope has unbound " + kind + " source lines")
+    return _finalize_canonical_outbound(envelope, messages=messages,
+        documents=documents, graphs=graphs, guards=guards, check_completeness=False)
 
 
 def _validated_suite_case_contract(
@@ -1745,6 +1847,18 @@ def _validated_static_prompt_contract(
 def _validated_artifact_contract(contract: Mapping[str, Any] | None) -> dict[str, Any]:
     if not isinstance(contract, Mapping):
         raise ValueError("Codex App Server benchmark generation requires an artifact contract")
+    from agronomy_agent.benchmark_render_provenance import ARTIFACT_SCHEMA, checked_profile
+    if contract.get("schema_version") == ARTIFACT_SCHEMA:
+        if set(contract) != {"schema_version", "base_artifact_contract", "render_profile", "sha256"}:
+            raise ValueError("render-bound artifact contract fields differ")
+        if contract.get("sha256") != _sha256(_canonical_json({k:v for k,v in contract.items() if k != "sha256"})):
+            raise ValueError("render-bound artifact contract hash differs")
+        base = contract["base_artifact_contract"]
+        if not isinstance(base, Mapping) or base.get("schema_version") != BENCHMARK_EGRESS_ARTIFACT_CONTRACT_SCHEMA:
+            raise ValueError("render-bound artifact contract requires a strict V1 public inventory")
+        _validated_artifact_contract(base)
+        checked_profile(contract["render_profile"], base_artifact_contract=base)
+        return json.loads(_canonical_json(contract))
     expected_keys = {
         "schema_version",
         "sha256",
@@ -2025,9 +2139,18 @@ def _validate_outbound_envelope(
     expected_arm: str,
     messages: Sequence[Mapping[str, str]],
 ) -> dict[str, Any]:
+    from agronomy_agent.benchmark_render_provenance import ENVELOPE_SCHEMA as RENDER_BOUND_ENVELOPE_SCHEMA
+    from agronomy_agent.benchmark_render_provenance import ARTIFACT_SCHEMA as RENDER_BOUND_ARTIFACT_SCHEMA
+    if (artifact_contract.get("schema_version") == RENDER_BOUND_ARTIFACT_SCHEMA) != (envelope.get("schema_version") == RENDER_BOUND_ENVELOPE_SCHEMA):
+        raise CodexAppServerError("render-bound envelope and artifact authority versions differ")
     canonical=suite_case_contract.get("schema_version")==CANONICAL_SUITE_SCHEMA
-    if canonical != (envelope.get("schema_version")==CANONICAL_ENVELOPE_SCHEMA):
+    if canonical != (envelope.get("schema_version") in {CANONICAL_ENVELOPE_SCHEMA, RENDER_BOUND_ENVELOPE_SCHEMA}):
         raise CodexAppServerError("envelope and suite authority versions differ")
+    if envelope.get("schema_version") == RENDER_BOUND_ENVELOPE_SCHEMA:
+        return _validate_render_bound_outbound(envelope, authorization=authorization,
+            artifact_contract=artifact_contract, suite_case_contract=suite_case_contract,
+            static_prompt_contract=static_prompt_contract, expected_candidate_output_sha256=expected_candidate_output_sha256,
+            expected_phase=expected_phase, expected_arm=expected_arm, messages=messages)
     if envelope.get("schema_version") == CANONICAL_ENVELOPE_SCHEMA:
         return _validate_canonical_outbound(envelope, authorization=authorization,
             artifact_contract=artifact_contract, suite_case_contract=suite_case_contract,
@@ -2429,6 +2552,10 @@ class CodexAppServerGenerator:
             suite_case_contract,
             benchmark_suite_sha256=benchmark_suite_sha256,
         )
+        from agronomy_agent.benchmark_render_provenance import ARTIFACT_SCHEMA as RENDER_BOUND_ARTIFACT_SCHEMA
+        if (self.expected_artifact_contract["schema_version"] == RENDER_BOUND_ARTIFACT_SCHEMA
+                and self.expected_suite_case_contract["schema_version"] != CANONICAL_SUITE_SCHEMA):
+            raise ValueError("render-bound artifacts require a canonical suite")
         self.expected_suite_case_contract_sha256 = self.expected_suite_case_contract["sha256"]
         self.expected_static_prompt_contract = _validated_static_prompt_contract(
             static_prompt_contract

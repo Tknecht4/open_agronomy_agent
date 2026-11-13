@@ -4,6 +4,24 @@ November 12, 2026. Reference main: `91125d30acd447537184184352d8fadf96ee89ee`.
 
 ## Current status
 
+The 13 November successor is under source verification after actual answers
+exposed another backend over-refusal: otherwise complete seed calculations
+asked for the survival denominator without showing either conditional result.
+The repair retains the unresolved basis and both labelled calculations. Its
+whole candidate assessment is pending; earlier candidate outputs are diagnostic
+and do not fill the new matrix.
+
+The E4B baseline has closed all 2,240 full-cohort slots, including seven failed
+observations. Its complete physical raw collection was verified locally and on
+the original VM before archival and VM shutdown. The fresh E2B full baseline is
+still collecting. The old candidate's Luna diagnostic is finishing unchanged;
+a fresh main-compatible Luna baseline with unchanged serving messages and
+corrected transport instrumentation remains required. No semantic grades or
+updated quality ranking are claimed. The interrupted E4B candidate prefix is
+fully retained and its task-owned VM is stopped.
+
+## Retained campaign history
+
 Merged-main Luna and both native regression cohorts are retained. The E2B
 full-cohort VM disappeared after 2,054 archived observations; its last durable
 status reports 2,055, so a lost tail remains unknown. A complete fresh E2B
@@ -12,8 +30,8 @@ E4B reached a controlled checkpoint at 1,794 full-cohort observations. All raw
 files, including its pending case, were physically restored and hash-verified.
 The original live VM passed full plan and pinned-environment equality before
 canonical resume; its original deadline remains in effect and the interrupted
-case is recorded as a failure without retry. No complete
-native full-cohort result is claimed. Independent composed-source review found additional input, request
+case is recorded as a failure without retry. At that historical checkpoint no complete
+native full-cohort result was claimed. Independent composed-source review found additional input, request
 and crop-role defects. The `4bd948a` candidate was stopped after 192 regression
 and 49 full-cohort observations; its outputs remain separate and are not reused.
 The later `222be26` source passed 4,577 backend checks but its real model outputs
@@ -252,3 +270,31 @@ These findings come from retained outputs and production-path regression
 checks. They do not alter the approved cases, references, rubrics or policies.
 Independent composed review, whole-source verification and the complete new
 model comparison remain required before updated benchmark results or a PR.
+
+## Conditional seed arithmetic successor
+
+Actual candidate answers still withheld all arithmetic for an otherwise
+complete target, seed mass, laboratory germination and unqualified field-survival
+percentage. The ambiguity is real: Manitoba's plant-population guidance treats
+expected survival as incorporating germination and subsequent loss, while a
+post-germination interpretation uses both percentages. The [Manitoba
+explanation](https://www.gov.mb.ca/agriculture/crops/crop-management/print,seeding-by-plant-population.html)
+and [Canola Council seeding-rate guidance](https://www.canolacouncil.org/canola-encyclopedia/plant-establishment/seeding-rate/)
+were rechecked on 13 November. The three source-qualified frozen references and
+all strict mechanical outcomes remain unchanged.
+
+Independent review agreed that a denominator question alone is unnecessarily
+restrictive when both conditional calculations are available. The successor
+retains the unresolved basis and shows both labelled scenarios through checked
+calculator children, without selecting a scalar rate or converting assumptions
+into field facts. Readiness, stored lineage and user-only follow-ups retain
+their contracts. Exact-replayed arithmetic also avoids an unrelated provincial
+source-gap tail; its arithmetic boundary and evidence records remain.
+
+The prior source is retained as diagnostic evidence. Its E4 prefix was stopped
+intentionally and retained with its pending attempt. A whole 608-case successor
+collection for every candidate model, source qualification, canonical analysis
+and final PR checks remain required. No output from a superseded source is
+silently substituted into that successor. The historical V2 synthetic fixture
+stays limited to its frozen construct; current conditional results require the
+production tests and whole release assessment.

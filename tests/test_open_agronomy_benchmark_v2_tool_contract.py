@@ -23,7 +23,9 @@ def test_frozen_v2_calculations_expose_unstated_seed_basis_without_rewriting_gol
         assert row["expected_tools"] == ["agronomic_calculator"]
         if row["eval_id"] == "oab2::spring_wheat_stand::fully_specified_calculation":
             assert "survival is 85%" in row["question"]
-            assert plan.status == "clarification_required" and not results
+            assert plan.status == "clarification_required"
+            assert len(results) == 1 and results[0].status == "clarification_scenarios"
+            assert "value" not in results[0].payload and results[0].payload["selected_scenario"] is None
             assert list(plan.invocations[0].missing_inputs) == [
                 "the survival denominator (all seeds sown or only germinated seeds)"
             ]

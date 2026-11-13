@@ -1850,12 +1850,24 @@ def _production_stage_observations(
             tool_execution_state = "executed"
             tool_execution_reason = "typed_capability_execution_completed"
         elif tool_plan_status == "clarification_required":
-            if not tool_invocation_ids or tool_result_ids:
-                raise ValueError(
-                    "clarification-required tool-plan has incompatible execution records"
-                )
-            tool_execution_state = "bypassed"
-            tool_execution_reason = "missing_typed_inputs"
+            if not tool_invocation_ids:
+                raise ValueError("clarification-required tool-plan has no invocation")
+            if tool_result_ids:
+                from agronomy_agent.answerability import validated_deterministic_tool_clarification
+                resolution = metadata.get("conversation_resolution") or {}
+                question = resolution.get("effective_question")
+                if (not isinstance(question, str)
+                        or sha256_text(question) != resolution.get("effective_question_sha256")
+                        or len(tool_result_records) != 1
+                        or tool_result_records[0].get("status") != "clarification_scenarios"
+                        or validated_deterministic_tool_clarification(
+                            question, tool_plan_record, tool_result_records) is None):
+                    raise ValueError("clarification scenario execution has no exact replay")
+                tool_execution_state = "executed"
+                tool_execution_reason = "conditional_arithmetic_scenarios_no_selected_result"
+            else:
+                tool_execution_state = "bypassed"
+                tool_execution_reason = "missing_typed_inputs"
         else:
             if tool_invocation_ids or tool_result_ids:
                 raise ValueError(

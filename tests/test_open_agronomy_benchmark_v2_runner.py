@@ -214,7 +214,7 @@ def test_seed_revision_is_declared_and_frozen_reference_gap_remains_observed() -
 
 
 @pytest.mark.parametrize("helper", [
-    "calculator_contracts.py", "foundation_math_parser.py", "seed_establishment.py",
+    "calculator_contracts.py", "foundation_math_parser.py", "seed_establishment.py", "seed_survival_scenarios.py",
     "request_scope.py", "supplied_math_scope.py", "supplied_nutrient_parser.py",
     "supplied_water_parser.py", "supplied_grain_parser.py",
     "supplied_geometry_biomass_parser.py", "water_arithmetic.py",
@@ -757,3 +757,16 @@ def test_v2_cli_bootstraps_repository_imports_outside_repo_cwd(
 
     assert result.returncode == 0, result.stderr
     assert "deterministic-contract-qa" in result.stdout
+
+
+def test_frozen_synthetic_fixture_never_executes_or_discards_conditional_scenarios(monkeypatch):
+    from agronomy_agent import seed_survival_scenarios
+    def forbidden(*args, **kwargs):
+        raise AssertionError("frozen construct fixture must not execute current conditional scenarios")
+    monkeypatch.setattr(seed_survival_scenarios, "conditional_seed_payload", forbidden)
+    run = _run()
+    assert run["status"] == "complete"
+    assert DeterministicContractExecutor.executor_version == "v2"
+    assert run["result_class"] == "synthetic_contract_qa_not_system_performance"
+    assert all(result["status"] != "clarification_scenarios"
+               for observation in run["observations"] for result in observation["tool_results"])

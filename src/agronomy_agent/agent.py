@@ -4295,6 +4295,10 @@ def deterministic_tool_response(
             return answer, "deterministic_tool_result"
     if validated_deterministic_tool_clarification(question, plan, results, field_context=runtime.get("answerability_field_context")) is not None:
         clarification = str(plan.get("clarification") or "").strip()
+        if results:
+            # Exact clarification replay above admits only the canonical
+            # unresolved-basis scenario payload, never a guessed scalar.
+            clarification = str((results[0].get("payload") or {}).get("answer") or "").strip()
         if clarification:
             return clarification, "deterministic_tool_clarification"
     return None, None
@@ -4600,16 +4604,29 @@ def _build_benchmark_egress_envelope(
                 str(row.get("claim_text") or (row.get("payload") or {}).get("answer") or "").strip() in outbound
                 for row in results if isinstance(row,Mapping) and (row.get("claim_text") or (row.get("payload") or {}).get("answer"))):
             raise ValueError("typed-tool model egress requires a separately reviewed payload class")
-        docs=_benchmark_document_egress_records(context=context,outbound_text=outbound,artifact_contract=generator.expected_artifact_contract)
-        graphs=_benchmark_graph_egress_records(context=context,outbound_text=outbound,artifact_contract=generator.expected_artifact_contract)
-        guards=_benchmark_guard_note_egress_records(context=context,outbound_text=outbound)
+        from agronomy_agent.benchmark_render_provenance import ARTIFACT_SCHEMA, ENVELOPE_SCHEMA, build_records
+        artifact = generator.expected_artifact_contract
+        render_fields = {}
+        envelope_schema = CANONICAL_ENVELOPE_SCHEMA
+        if artifact.get("schema_version") == ARTIFACT_SCHEMA:
+            rendered = build_records(artifact["render_profile"], eval_id=eval_id,
+                phase=generator.egress_phase, arm=generator.benchmark_arm,
+                messages=messages, question=question, verifier_evidence_text=verifier_evidence_text)
+            docs, graphs, guards = (rendered[name] for name in
+                ("selected_document_excerpts", "graph_evidence", "governed_guard_notes"))
+            envelope_schema = ENVELOPE_SCHEMA
+            render_fields = {"render_profile_sha256": artifact["render_profile"]["sha256"]}
+        else:
+            docs=_benchmark_document_egress_records(context=context,outbound_text=outbound,artifact_contract=artifact)
+            graphs=_benchmark_graph_egress_records(context=context,outbound_text=outbound,artifact_contract=artifact)
+            guards=_benchmark_guard_note_egress_records(context=context,outbound_text=outbound)
         classes=["project_owned_frozen_benchmark_questions"]
         if any(m["role"]=="system" for m in messages):classes.append("benchmark_system_and_answer_contract_prompts")
         if generator.benchmark_arm=="production_full" and field_context:classes.append("case_bound_synthetic_facts")
         if docs:classes.append("selected_public_release_runtime_document_source_excerpts")
         if graphs:classes.append("public_release_runtime_graph_evidence")
         if generator.egress_phase=="verification":classes += ["candidate_drafts_for_verification","verifier_evidence"]
-        return {"schema_version":CANONICAL_ENVELOPE_SCHEMA,"eval_id":eval_id,
+        return {"schema_version":envelope_schema,"eval_id":eval_id, **render_fields,
             "selected_document_excerpts":docs,"graph_evidence":graphs,"governed_guard_notes":guards,
             "payload_classes":[c for c in CANONICAL_PAYLOAD_CLASSES if c in classes],
             "phase":generator.egress_phase,"arm":generator.benchmark_arm,

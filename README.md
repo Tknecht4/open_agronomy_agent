@@ -61,8 +61,10 @@ sampling-area arithmetic. It shows the
 units and assumptions and asks for missing or conflicting inputs. A calculated
 quantity does not select a field target, authorize a product or establish crop
 stage. Seed-mass calculations distinguish overall emergence from survival after
-germination, retain the supplied basis, and ask when that denominator is unclear.
-A reply can supply that basis and, when needed, the laboratory germination
+germination and retain the supplied basis. When otherwise complete inputs include
+laboratory germination but leave field survival's denominator unclear, the agent
+shows both labelled arithmetic scenarios and asks which basis applies. Neither
+scenario selects a field rate. A reply can supply that basis and, when needed, the laboratory germination
 percentage in the same chat without using the model. Conceptual explanations
 and requests for field actions retain distinct
 evidence requirements.

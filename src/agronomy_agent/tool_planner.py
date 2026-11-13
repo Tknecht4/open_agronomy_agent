@@ -155,18 +155,24 @@ def plan_tools(question: str, *, field_context: Mapping[str, Any] | None = None)
     return ToolPlan(TOOL_PLAN_SCHEMA_VERSION, PLANNER_VERSION, "ready", (invocation,))
 
 
-def execute_tool_plan(plan: ToolPlan) -> tuple[ToolResult, ...]:
+def execute_tool_plan(plan: ToolPlan, *, question: str) -> tuple[ToolResult, ...]:
     results: list[ToolResult] = []
     for invocation in plan.invocations:
+        conditional = False
         if invocation.status != "planned":
-            continue
+            from agronomy_agent.seed_survival_scenarios import conditional_seed_payload
+            payload = conditional_seed_payload(invocation, question=question)
+            if payload is None:
+                continue
+            conditional = True
         from agronomy_agent.capability_registry import capability_registry, execute_registered_capability
         spec = capability_registry().require(invocation.tool_id)
         if spec.kind not in {"calculator", "local_data"}:
             raise ValueError(f"unsupported planned tool: {invocation.tool_id}")
-        payload = execute_registered_capability(invocation.tool_id, {
-            "operation": invocation.operation, "inputs": dict(invocation.inputs),
-        })
+        if not conditional:
+            payload = execute_registered_capability(invocation.tool_id, {
+                "operation": invocation.operation, "inputs": dict(invocation.inputs),
+            })
         payload_sha256 = hashlib.sha256(_canonical(payload).encode("utf-8")).hexdigest()
         results.append(
             ToolResult(
@@ -187,7 +193,7 @@ def execute_tool_plan(plan: ToolPlan) -> tuple[ToolResult, ...]:
                 payload_sha256=payload_sha256,
                 authority_role=invocation.authority_role,
                 freshness_status="not_time_sensitive",
-                provenance=("agronomy_agent.agronomic_calculations" if invocation.tool_id == CALCULATOR_ID else spec.executor_ref.split(":")[0]),
+                provenance=("agronomy_agent.seed_survival_scenarios" if conditional else "agronomy_agent.agronomic_calculations" if invocation.tool_id == CALCULATOR_ID else spec.executor_ref.split(":")[0]),
                 limitations=(str(payload.get("boundary") or ""), *(str(item) for item in payload.get("limitations", ()))),
             )
         )
@@ -200,7 +206,7 @@ def plan_and_execute_tools(
     field_context: Mapping[str, Any] | None = None,
 ) -> tuple[ToolPlan, tuple[ToolResult, ...]]:
     plan = plan_tools(question, field_context=field_context)
-    return plan, execute_tool_plan(plan)
+    return plan, execute_tool_plan(plan, question=question)
 
 
 def calculator_contract() -> dict[str, Any]:

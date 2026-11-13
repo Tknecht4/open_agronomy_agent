@@ -853,18 +853,17 @@ def validated_deterministic_tool_execution(
     # The runtime records are untrusted trace input at this boundary.  Accept
     # only the exact current planner output and exact deterministic execution,
     # not a mapping that merely borrows familiar status or identifier fields.
-    from agronomy_agent.tool_planner import plan_and_execute_tools
+    from agronomy_agent.tool_planner import plan_tools, execute_tool_plan
 
+    expected_plan = plan_tools(question, field_context=field_context)
+    if (expected_plan.status != "ready"
+            or _canonical_json(dict(tool_plan or {})) != _canonical_json(expected_plan.to_dict())):
+        return False
     try:
-        expected_plan, expected_results = plan_and_execute_tools(question, field_context=field_context)
+        expected_results = execute_tool_plan(expected_plan, question=question)
     except (ArithmeticError, TypeError, ValueError):
         return False
-    if (
-        expected_plan.status != "ready"
-        or _canonical_json(dict(tool_plan or {})) != _canonical_json(expected_plan.to_dict())
-        or _canonical_json(list(tool_results))
-        != _canonical_json([result.to_dict() for result in expected_results])
-    ):
+    if _canonical_json(list(tool_results)) != _canonical_json([result.to_dict() for result in expected_results]):
         return False
     if expected_plan.invocations[0].tool_id == "field_table_query":
         # Exact re-selection and execution above require the independently supplied
@@ -920,9 +919,7 @@ def validated_deterministic_tool_clarification(
     tool_results: Sequence[Mapping[str, Any]],
     *, field_context: Mapping[str, Any] | None = None,
 ) -> tuple[str, ...] | None:
-    if tool_results:
-        return None
-    from agronomy_agent.tool_planner import plan_tools
+    from agronomy_agent.tool_planner import plan_tools, execute_tool_plan
 
     expected_plan = plan_tools(question, field_context=field_context)
     if (
@@ -930,6 +927,15 @@ def validated_deterministic_tool_clarification(
         or _canonical_json(dict(tool_plan or {})) != _canonical_json(expected_plan.to_dict())
     ):
         return None
+    if tool_results:
+        try:
+            expected_results = execute_tool_plan(expected_plan, question=question)
+        except (ArithmeticError, TypeError, ValueError):
+            return None
+        if _canonical_json(list(tool_results)) != _canonical_json([item.to_dict() for item in expected_results]):
+            return None
+    # An unexecuted clarification remains a valid ASK state. Numerical
+    # scenarios gain that path only through the exact nonempty replay above.
     if expected_plan.invocations[0].tool_id == "field_table_query":
         return expected_plan.invocations[0].missing_inputs
     invocation = _validated_calculator_invocation(

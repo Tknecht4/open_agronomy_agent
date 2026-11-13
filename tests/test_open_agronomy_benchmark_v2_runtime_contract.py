@@ -34,7 +34,12 @@ def test_all_v2_cases_match_planner_and_answerability_contract() -> None:
         }:
             # Frozen v2 assumes that unqualified survival is conditional on
             # germination. Current execution must expose that reference gap.
-            assert plan.status == "clarification_required" and not results
+            assert plan.status == "clarification_required"
+            if stratum == "fully_specified_calculation":
+                assert len(results) == 1 and results[0].status == "clarification_scenarios"
+                assert "value" not in results[0].payload
+            else:
+                assert not results
             assert decision.state.value == "ask_one_discriminating_question"
             missing = list(plan.invocations[0].missing_inputs)
             assert missing == list(decision.missing_inputs)

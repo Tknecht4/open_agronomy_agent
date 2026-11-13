@@ -101,6 +101,13 @@ Runtime selection starts in `configs/`.
 config file does not activate it. See [`configs/README.md`](../../configs/README.md)
 before changing an active profile.
 
+The opt-in hosted benchmark transport owns exact-message evidence delivery in
+`codex_app_server.py` and `benchmark_render_provenance.py`. Frozen controller
+profiles can describe unchanged historical prefixes, including metadata-only
+clipped headers; they do not render prompts, select runtime evidence or grant
+source-body support. See the [evaluation operator guide](../../docs/public/operations/release-evaluation.md)
+for authority, delivery and retained-comparison limits.
+
 ## Validation
 
 ```bash
@@ -228,7 +235,19 @@ GDD operation uses the actual supplied mean and base, with a stated zero floor;
 it cannot infer individually capped temperature extremes. These operations
 share non-executing readiness validators and whole-request guards for extra
 decisions, permission requests and unhandled questions. The historical v1
-operation family remains distinct from the current calculator contract. Seed-mass arithmetic now uses the revised contract because its survival denominator must be explicit.
+operation family remains distinct from the current calculator contract. Seed-mass
+arithmetic requires an explicit denominator for a selected scalar result. The v4
+planner wrapper can execute two labelled conditional calculations when the sole
+gap is unqualified survival and all other inputs, including germination, are
+valid. Its `seed_survival_clarification.v1` parent remains unresolved, has no
+primary value and retains PARTIAL evidence coverage. Both children use the
+unchanged v3 calculator and preserve metric or imperial method, supplied
+percentages and assumptions. Preview plans without executing them; the adjacent
+user-only denominator reply still resolves the original calculation. Missing,
+invalid, explicitly excluded bases and mixed operational requests retain their
+existing boundaries. Exact-replayed pure arithmetic keeps its scope boundary
+without appending unrelated provincial guidance prose; source/coverage receipts
+remain available in the evidence view.
 Grain harvest index divides supplied grain dry mass by total above-ground dry
 biomass, including grain, on the same mass and area basis; both fraction and
 percentage are shown. This follows the [FAO biomass/harvest-index definition](https://www.fao.org/4/y5146e/y5146e07.htm)

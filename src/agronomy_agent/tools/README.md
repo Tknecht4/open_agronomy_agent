@@ -59,6 +59,18 @@ factor-10 imperial seeding approximation and exact dimensional conversion are
 shown as distinct methods; they can differ. A computed scenario is not a
 current quote, observed field outcome, or regulated rate.
 
+The v4 planner wrapper can retain a seed-survival clarification while executing
+two conditional v3 calculator children. This requires an otherwise complete
+pure seed calculation, valid supplied germination and a sole unqualified-survival
+basis gap. The parent `clarification_scenarios` record has its own schema and
+provenance, retains the original missing input and contains no selected scalar
+or basis. Its evidence coverage stays PARTIAL. Each child retains its exact
+assumed basis, input values, imperial method if applicable, result and content
+hash. Exact replay qualifies the response; altered child values, IDs or prose
+cannot inherit the bypass. Readiness remains non-executing, and choosing a basis
+in the next user turn produces the ordinary single-result calculation.
+The structured single-calculation API still requires a denominator.
+
 ```bash
 PYTHONPATH=src python -m agronomy_agent.tool_cli calculate unit_conversion \
   --inputs-json '{"value":100,"from_unit":"kg/ha","to_unit":"lb/ac"}'

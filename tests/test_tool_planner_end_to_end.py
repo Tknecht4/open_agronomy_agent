@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from agronomy_agent.agent import generate_answer, load_agent_resources
 from agronomy_agent.server.services.chat_service import run_turn
 from agronomy_agent.server.settings import build_settings
@@ -47,7 +49,11 @@ def test_all_frozen_calculations_use_one_result_identity_through_the_full_agent_
         if row["eval_id"] == "ca_calc_seed_rate_01":
             assert row["reference_numeric"] == 122.8
             assert metadata["generation_path"] == "deterministic_tool_clarification"
-            assert not metadata["tool_results"]
+            assert len(metadata["tool_results"]) == 1
+            scenarios = metadata["tool_results"][0]["payload"]
+            assert scenarios["status"] == "clarification_scenarios"
+            assert "value" not in scenarios and scenarios["selected_scenario"] is None
+            assert [item["calculation"]["value"] for item in scenarios["scenarios"]] == pytest.approx([116.6666667, 122.8070175])
             assert "seeds sown" in answer
             assert metadata["answer_verification"]["status"] == "needs_input"
             continue

@@ -32,7 +32,8 @@ def established_fraction(survival_pct: Decimal, basis: str,
     return germination_pct / Decimal(100) * survival, "established fraction = germination × post-germination survival"
 
 
-def parse_seed_establishment(text: str, *, bindings: list[re.Match[str]] | None = None) -> tuple[dict[str, Any], tuple[str, ...]]:
+def parse_seed_establishment(text: str, *, bindings: list[re.Match[str]] | None = None,
+                             unqualified_basis: list[bool] | None = None) -> tuple[dict[str, Any], tuple[str, ...]]:
     """Extract one supplied establishment model; ambiguity is never a default."""
     def matches(*patterns: str) -> list[re.Match[str]]:
         return [m for pattern in patterns for m in re.finditer(pattern, text, re.IGNORECASE)]
@@ -83,6 +84,8 @@ def parse_seed_establishment(text: str, *, bindings: list[re.Match[str]] | None 
         after = re.split(r"(?<!\d)\.(?!\d)|[!?;]", after, maxsplit=1)[0]
         before = re.split(r"(?<!\d)\.(?!\d)|[!?;]", before)[-1]
         context = role + after
+        denied_basis = bool(re.search(
+            r"\b(?:not|rather than|instead of)\s+(?:of\s+)?(?:all\s+)?(?:germinated seeds?|viable seeds?|seeds? sown|seeds? planted|post[- ]germination)", context))
         # Explicit negation of a denominator must not activate that denominator.
         context = re.sub(r"\b(?:not|rather than|instead of)\s+(?:of\s+)?(?:all\s+)?(?:germinated seeds?|viable seeds?|seeds? sown|seeds? planted|post[- ]germination)", "", context)
         excludes_germination = bool(re.search(
@@ -94,6 +97,12 @@ def parse_seed_establishment(text: str, *, bindings: list[re.Match[str]] | None 
                        or re.match(r"\s*overall\b", after)
                        or re.search(r"\b(?:of|among)\s+(?:all\s+|the\s+)?seeds?\s+(?:sown|planted)\b", context)
                        or (not excludes_germination and re.search(r"\b(?:already\s+)?includ(?:es|ing)\s+germination\b", context)))
+        if unqualified_basis is not None:
+            # Keep qualification attached to this percentage's role and clause;
+            # "overall germination" or a later "overall seed rate" is not a
+            # denominator for an earlier unqualified survival percentage.
+            unqualified_basis.append(not (overall or conditional or excludes_germination
+                                           or denied_basis or "emerg" in role))
         if overall and excludes_germination:
             missing.append("invalid overall emergence cannot also exclude germination; confirm the percentage denominator")
         if conditional:

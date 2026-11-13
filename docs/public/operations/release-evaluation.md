@@ -209,6 +209,29 @@ additional payload classes. Private records, controller references and whole
 corpora are excluded. Deterministic bypasses remain local and do not require
 provider construction. A rejected egress contract is a failed observation.
 
+A canonical diagnostic can opt into
+`open_agronomy_agent.render_bound_artifact_contract.v1` and the corresponding
+version-2 egress envelope to describe an unchanged historical rendering. The
+wrapper retains the strict public artifact inventory and adds a frozen,
+source-bound render profile compiled through the actual product path. The
+consumer checks public source membership, renderer bytes, document policy,
+graph neighbors, exact message/evidence hashes and every delivered occurrence.
+It accepts complete renderings or exact prefixes without changing model inputs;
+character and row bounds charge every occurrence. Version-1 envelopes retain
+their existing strict validation and cannot downgrade a render-bound contract.
+
+Delivery provenance records the actual source-body prefix length. A header-only
+fragment has zero delivered source characters and receives no source-body
+evidence credit. An incomplete header has controller-inferred identity only:
+graph fragments require the original ordered, budget-bound slot; document and
+guard fragments require a unique header in the original selected context.
+Ambiguous or unframed fragments fail. Complete source text and profile templates
+stay in the controller; sanitized receipts retain hashes, positions and delivery
+states. This mechanism grants no additional payload class, first-turn or
+follow-up scope, scoring authority, or native model qualification. A comparison
+using different transport versions must disclose that difference and retain the
+original failed attempts as pipeline evidence.
+
 Check the actual account transport with a neutral generation before a complete
 collection; a catalog listing or thread handshake alone is insufficient. An
 isolated command may be pinned in the private model configuration under
@@ -621,3 +644,14 @@ These implementation identities change the system fingerprint, not the frozen
 construct or cohort. The executor records actual planner clarification fields,
 including the unstated seed denominator in two old wheat cases. This remains
 synthetic trace QA and cannot establish agronomic performance.
+
+The v4 planner wrapper adds conditional seed-survival clarification records to
+the current product path. These contain two checked v3 arithmetic children,
+retain ASK/PARTIAL and choose no rate. Their semantics are outside the historical
+frozen-v1 construct. The version-2 **synthetic contract executor** is restricted
+to executing ready calculations and recording current planner clarification
+states; it does not execute and discard conditional scenarios. The frozen
+construct, validator, metric identity, cases and gold stay unchanged. Qualify the
+current scenario feature through persisted production/preview/follow-up tests
+and the complete canonical release assessment, not a historical V2 fixture
+score. Tool implementation receipts include the scenario module.

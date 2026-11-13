@@ -681,3 +681,64 @@ def test_product_total_negative_output_boundary_remains_model_free(runtime, monk
     saved = store.get_turn(result.json()['turn_id'])
     assert saved['answer'].startswith('48 L product.')
     assert saved['trace']['metadata']['generation_path'] == 'deterministic_tool_result'
+
+
+@pytest.mark.parametrize("backend", ["mlx", "http"])
+def test_ambiguous_seed_scenarios_persist_partial_evidence_without_model_or_provincial_tail(runtime, monkeypatch, backend):
+    client, store = runtime
+    monkeypatch.setattr(chat_service, "_build_mlx_generator", no_generator)
+    monkeypatch.setenv("AGRONOMY_AGENT_MODEL_BACKEND", backend)
+    monkeypatch.delenv("AGRONOMY_AGENT_MODEL_BASE_URL", raising=False)
+    sid = session(client)
+    question = ("Calculate seed rate for an Alberta field: target 240 plants/m2, TKW 36 g, "
+                "germination 92%, and field survival 80%.")
+    from agronomy_agent import capability_registry as registry
+    with monkeypatch.context() as preview_patch:
+        preview_patch.setattr(registry, "execute_registered_capability", no_generator)
+        readiness = preview(client, turn(question), sid)
+    assert readiness["requires_model"] is False
+    assert "survival denominator" in readiness["calculator"]["missing_inputs"][0]
+    response = client.post(f"/api/sessions/{sid}/turns", headers=OWNER,
+                          json={**turn(question), "readiness_binding":readiness["readiness_binding"]})
+    assert response.status_code == 200, response.text
+    stored = store.get_turn(response.json()["turn_id"])
+    metadata = stored["trace"]["metadata"]
+    assert metadata["tool_plan"]["status"] == "clarification_required"
+    structured = stored["trace"]["structured_answer"]
+    gaps = metadata["tool_plan"]["invocations"][0]["missing_inputs"]
+    assert structured["missing_data"] == structured["missing_data_prompts"] == gaps
+    assert structured["recommended_next_steps"] == [f"Provide {item}." for item in gaps]
+    assert not any("label" in item.lower() for item in structured["recommended_next_steps"])
+    result = next(item for item in stored["trace"]["tool_invocations"] if item.get("result_id"))
+    assert result["status"] == "clarification_scenarios"
+    assert "value" not in result["payload"] and result["payload"]["selected_scenario"] is None
+    assert [item["calculation"]["value"] for item in result["payload"]["scenarios"]] == pytest.approx([108, 108/.92])
+    assert "108 kg/ha" in stored["answer"] and "117.391 kg/ha" in stored["answer"]
+    assert "only germinated seeds" in stored["answer"]
+    assert "Alberta-specific applied guidance" not in stored["answer"]
+    assert "Soil Fertility Overview" not in stored["answer"]
+    assert "does not choose an agronomic target" in stored["answer"]
+    coverage = metadata["evidence_fabric"]["evidence_packet"]["coverage"]
+    assert next(item for item in coverage if item["slot_key"] == "capability_result")["status"] == "PARTIAL"
+    stage = next(item for item in metadata["execution_stage_receipts"] if item["stage_id"] == "tool_execution")
+    assert stage["state"] == "executed"
+    assert stage["evidence"]["reason"] == "conditional_arithmetic_scenarios_no_selected_result"
+    assert metadata.get("generation_stats") is None
+    from agronomy_agent.server.services.answer_renderer import _validated_calculator_answer, render_structured_answer
+    changed = stored["answer"].replace("108 kg/ha", "109 kg/ha", 1)
+    assert not _validated_calculator_answer(changed, stored["trace"], question)
+    rendered = render_structured_answer(changed, trace=stored["trace"], question=question)
+    assert "current Alberta agricultural guidance" in rendered.answer
+    mixed = question + " Should I use this rate on my field?"
+    assert preview(client, turn(mixed), sid)["requires_model"] is True
+    assert not _validated_calculator_answer(stored["answer"], stored["trace"], mixed)
+    # A later explicit basis uses only the prior USER operands and selects the
+    # ordinary canonical scalar; the original two-scenario receipt is immutable.
+    original = deepcopy(stored)
+    reply = "Only germinated seeds."
+    view = preview(client, turn(reply), sid)
+    follow = client.post(f"/api/sessions/{sid}/turns", headers=OWNER,
+                        json={**turn(reply),"readiness_binding":view["readiness_binding"]})
+    assert follow.status_code == 200, follow.text
+    assert store.get_turn(follow.json()["turn_id"])["answer"].startswith("117.391 kg/ha")
+    assert store.get_turn(original["turn_id"]) == original

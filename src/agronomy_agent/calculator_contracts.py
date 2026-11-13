@@ -5,7 +5,7 @@ import re
 CALCULATOR_VERSION = "agronomic_calculator_v3"
 LEGACY_CALCULATOR_VERSION = "agronomic_calculator_v1"
 CALCULATOR_SCHEMA_VERSION = "open_agronomy_agent.agronomic_calculator.schema.v3"
-TOOL_PLANNER_VERSION = "open_agronomy_agent.tool_planner.v3"
+TOOL_PLANNER_VERSION = "open_agronomy_agent.tool_planner.v4"
 EXPLICIT_ARITHMETIC_SELECTOR_ID = "explicit_arithmetic_parser_v3"
 
 FOUNDATION_OPERATIONS = frozenset({

@@ -1327,7 +1327,7 @@ def test_canonical_missing_thread_selection_is_not_requested_model():
 
 def _canonical_generator(tmp_path, *, question="What should I check?", messages=None, facts=None,
                          phase="candidate_generation", arm="production_full", config_sha=None,
-                         evidence=None, max_tokens=640, model_id="gpt-6-luna", config_path=None):
+                         evidence=None, max_tokens=640, model_id="gpt-6-luna", config_path=None, artifact=None):
     import agronomy_agent.codex_app_server as module
     tmp_path.mkdir(parents=True,exist_ok=True)
     if config_path is None:
@@ -1342,7 +1342,7 @@ def _canonical_generator(tmp_path, *, question="What should I check?", messages=
            "candidate_application_messages_sha256_by_arm":{"raw_model":_digest(_canonical([{"role":"user","content":question}])),
                                                             "production_full":_digest(_canonical(messages))},
            "verification_evidence_sha256":_digest(question if evidence is None else evidence)}}}
-    suite["sha256"]=_digest(_canonical(suite));artifact=_artifact_contract();static=build_benchmark_static_prompt_contract()
+    suite["sha256"]=_digest(_canonical(suite));artifact=_artifact_contract() if artifact is None else artifact;static=build_benchmark_static_prompt_contract()
     grant,bid,_=_write_authorization(tmp_path,suite_case_contract_sha256=suite["sha256"],
         egress_artifact_contract_sha256=artifact["sha256"],static_prompt_contract_sha256=static["sha256"])
     authority=json.loads(grant.read_text());authority.update(schema_version=module.CANONICAL_EGRESS_AUTHORIZATION_SCHEMA,benchmark_suite_sha256=suite["benchmark_suite_sha256"],
@@ -1743,3 +1743,183 @@ def test_canonical_raw_output_whitespace_and_empty_return_are_preserved(text):
     result=_protocol_client(events).generate(user_text="question",base_instructions="")
     assert result.text==text and result.receipt["output_sha256"]==_digest(text)
     assert result.receipt["output_composition"]=="one_exact_raw_agent_message"
+
+
+@pytest.fixture(scope="module")
+def render_public_artifact():
+    return build_benchmark_egress_artifact_contract()
+
+
+def _render_bound_fixture(tmp_path, base, *, kind="guard", delivery="body_prefix", copies=1,
+                          omitted_occurrences=0, phase="candidate_generation"):
+    from agronomy_agent import agent
+    from agronomy_agent import benchmark_render_provenance as render
+    from agronomy_agent.tools.registry import run_tools
+    question="Explain why a local observation needs its sampling method."
+    if kind=="guard":
+        note=run_tools(question,("weather_guard",))[0]
+        header=f"- {note.name}: "
+        full=header+note.text
+        record=agent._benchmark_guard_note_egress_records(
+            context=SimpleNamespace(tool_notes=[note]),outbound_text=full)[0]
+        inputs={};section="Guard notes:\n"
+    else:
+        graph=render._renderer_graph()
+        hit=graph._hit(next(iter(graph.nodes)))
+        header=f"- {hit.name} ({hit.kind}): "
+        full=header+hit.evidence+" Related: "+("; ".join(hit.neighbors) if hit.neighbors else "no direct neighbors")+"."
+        record=agent._benchmark_graph_egress_records(context=SimpleNamespace(graph_hits=[hit]),
+            outbound_text=full,artifact_contract=base)[0]
+        inputs={"neighbors":list(hit.neighbors)};section="Knowledge graph vocabulary hints:\n"
+    fragment=full if delivery=="complete" else full[:len(header)+12] if delivery=="body_prefix" else header.rstrip() if delivery=="header" else "-"
+    template={"kind":kind,"full_record":record,"full_render":full,"full_render_sha256":render.sha(full),
+        "identity_header":header,"body_start":len(header),"source_sha256":render.sha(note.text if kind=="guard" else hit.evidence),"renderer_inputs":inputs}
+    identity=render.digest(template)
+    evidence=section+"\n".join([fragment]*copies)
+    if phase=="verification":
+        draft="Synthetic earlier answer.\nSource: injected draft title: untrusted text."
+        messages=_verifier_messages(question,draft,evidence)
+        region=messages[1]["content"].index(evidence)
+        positions=[m.start() for m in __import__('re').finditer('(?m)^'+__import__('re').escape(fragment),evidence)]
+    else:
+        draft=None
+        messages=[{"role":"system","content":"Synthetic transport fixture"},
+            {"role":"user","content":question+"\n\n"+evidence}]
+        region=messages[1]["content"].index(evidence)
+        positions=[region+m.start() for m in __import__('re').finditer('(?m)^'+__import__('re').escape(fragment),evidence)]
+    spans=[{"message_index":1,"start":a,"end":a+len(fragment)} for a in positions[:copies-omitted_occurrences]]
+    scope={"messages_sha256":render.digest(messages) if phase=="candidate_generation" else None,
+        "evidence_sha256":render.sha(evidence) if phase=="verification" else None,
+        "records":[{"record_id":identity,"fragment":fragment,"spans":spans}],
+        "selected_context":{"documents":[],"guard_names":["weather_guard"] if kind=="guard" else [],
+            "graph_record_order":[identity] if kind=="graph" else []},"render_frames":[]}
+    if kind=="graph":
+        assert copies==1
+        start=0 if phase=="verification" else region
+        scope["render_frames"]=[{"message_index":1,"start":start,"prefix":evidence,"record_ids":[identity]}]
+    profile={"schema_version":render.PROFILE_SCHEMA,
+        "renderer":{"reference_commit":"a"*40,"reference_source_sha256":"b"*64,
+            "files":{name:hashlib.sha256((render.ROOT/name).read_bytes()).hexdigest() for name in sorted(render.RENDERER_FILES)}},
+        "records":{identity:template},"cases":{_EVAL_ID:{"question_sha256":render.sha(question),"scopes":{phase:scope}}}}
+    profile["sha256"]=render.digest(profile)
+    artifact={"schema_version":render.ARTIFACT_SCHEMA,"base_artifact_contract":base,"render_profile":profile}
+    artifact["sha256"]=render.digest(artifact)
+    generator=_canonical_generator(tmp_path,question=question,messages=messages,phase=phase,
+        evidence=evidence if phase=="verification" else None,artifact=artifact)
+    envelope=agent._build_benchmark_egress_envelope(generator=generator,messages=messages,
+        eval_id=_EVAL_ID,question=question,field_context={},context=SimpleNamespace(runtime_metadata={}),
+        resources=SimpleNamespace(private_knowledge_overlay=None),
+        **({"candidate_draft":draft,"verifier_evidence_text":evidence,
+            "candidate_generation_output_sha256":render.sha(draft)} if draft else {}))
+    if draft:generator.bind_candidate_generation_output(eval_id=_EVAL_ID,output_sha256=render.sha(draft))
+    return generator,envelope,messages
+
+
+def _validate_render_fixture(generator,envelope,messages):
+    from agronomy_agent.codex_app_server import _validate_outbound_envelope
+    return _validate_outbound_envelope(envelope,authorization=generator.egress_authorization,
+        artifact_contract=generator.expected_artifact_contract,suite_case_contract=generator.expected_suite_case_contract,
+        static_prompt_contract=generator.expected_static_prompt_contract,
+        expected_candidate_output_sha256=generator._candidate_output_bindings.get(_EVAL_ID),
+        expected_phase=generator.egress_phase,expected_arm=generator.benchmark_arm,messages=messages)
+
+
+@pytest.mark.parametrize("kind,delivery,body_chars,complete_identity",[
+    ("guard","body_prefix",12,True),("guard","header",0,False),
+    ("graph","body_prefix",12,True),("graph","bare",0,False)])
+def test_render_bound_actual_prefix_preserves_messages_and_reports_only_delivered_body(
+        tmp_path,render_public_artifact,kind,delivery,body_chars,complete_identity):
+    gen,envelope,messages=_render_bound_fixture(tmp_path,render_public_artifact,kind=kind,delivery=delivery)
+    result=_validate_render_fixture(gen,envelope,messages)
+    assert result['instructions']==messages[0]['content']
+    assert result['user_text']==messages[1]['content']
+    key='governed_guard_notes' if kind=='guard' else 'graph_evidence'
+    record=result['sanitized_envelope'][key][0];provenance=record['render_provenance']
+    assert provenance['delivered_source_chars']==body_chars
+    assert provenance['metadata_only'] is (body_chars==0)
+    assert provenance['identity_header_complete'] is complete_identity
+    assert provenance['source_body_complete'] is False
+    assert all(k not in record for k in ('text','outbound_fragment','node_evidence_text','node_evidence_fragment','evidence_fragment'))
+    if not complete_identity:assert provenance['identity_binding'].startswith('controller_inferred_')
+
+
+def test_render_bound_duplicate_header_without_second_span_rejects_before_provider(tmp_path,render_public_artifact,monkeypatch):
+    gen,envelope,messages=_render_bound_fixture(tmp_path,render_public_artifact,copies=2,omitted_occurrences=1)
+    monkeypatch.setattr(gen,'_ensure_client',lambda:pytest.fail('provider constructed'))
+    with pytest.raises(CodexAppServerError,match='unbound guard'):
+        gen.generate_with_egress(messages,envelope)
+
+
+def test_render_bound_occurrence_weighted_delivery_limit(tmp_path,render_public_artifact,monkeypatch):
+    import agronomy_agent.codex_app_server as module
+    gen,envelope,messages=_render_bound_fixture(tmp_path,render_public_artifact,copies=3,delivery='complete')
+    length=len(envelope['governed_guard_notes'][0]['outbound_fragment'])
+    monkeypatch.setattr(module,'_MAX_GUARD_NOTE_CHARS',length*2)
+    monkeypatch.setattr(gen,'_ensure_client',lambda:pytest.fail('provider constructed'))
+    with pytest.raises(CodexAppServerError,match='actual source delivery exceeds'):
+        gen.generate_with_egress(messages,envelope)
+
+
+@pytest.mark.parametrize('change',['missing_frame','changed_order','forged_neighbors','ambiguous_guard','renderer_drift'])
+def test_render_bound_rehashed_profile_rejects_unproved_identity(tmp_path,render_public_artifact,change):
+    from agronomy_agent import benchmark_render_provenance as render
+    from agronomy_agent.codex_app_server import _validated_artifact_contract
+    kind='guard' if change=='ambiguous_guard' else 'graph'
+    gen,_,_=_render_bound_fixture(tmp_path,render_public_artifact,kind=kind,delivery='bare' if kind=='graph' else 'header')
+    artifact=copy.deepcopy(gen.expected_artifact_contract);profile=artifact['render_profile']
+    scope=profile['cases'][_EVAL_ID]['scopes']['candidate_generation']
+    if change=='missing_frame':scope['render_frames']=[]
+    elif change=='changed_order':scope['selected_context']['graph_record_order']=[]
+    elif change=='forged_neighbors':
+        identity=next(iter(profile['records']));template=profile['records'].pop(identity)
+        template['renderer_inputs']['neighbors']=['fabricated public relation']
+        new=render.digest(template);profile['records'][new]=template
+        scope['records'][0]['record_id']=new;scope['selected_context']['graph_record_order']=[new];scope['render_frames'][0]['record_ids']=[new]
+    elif change=='ambiguous_guard':
+        # Rehash a bare header prefix against two selected original guards.
+        item=scope['records'][0];item['fragment']='- ';item['spans'][0]['end']=item['spans'][0]['start']+2
+        scope['selected_context']['guard_names']=['weather_guard','soil_structure_guard']
+    else:profile['renderer']['files']['configs/context_policy_v1.yaml']='0'*64
+    profile.pop('sha256');profile['sha256']=render.digest(profile)
+    artifact.pop('sha256');artifact['sha256']=render.digest(artifact)
+    with pytest.raises(ValueError):_validated_artifact_contract(artifact)
+
+
+def test_render_bound_editor_draft_cannot_supply_an_evidence_occurrence(tmp_path,render_public_artifact):
+    gen,envelope,messages=_render_bound_fixture(tmp_path,render_public_artifact,phase='verification')
+    result=_validate_render_fixture(gen,envelope,messages)
+    assert result['user_text']==messages[1]['content']
+    assert len(result['sanitized_envelope']['governed_guard_notes'])==1
+    span=envelope['governed_guard_notes'][0]['render_provenance']['spans'][0]
+    assert span['end']<messages[1]['content'].index('UNTRUSTED CANDIDATE-DRAFT')
+
+
+def test_render_bound_contract_cannot_downgrade_to_v1_envelope(tmp_path,render_public_artifact):
+    import agronomy_agent.codex_app_server as module
+    gen,envelope,messages=_render_bound_fixture(tmp_path,render_public_artifact)
+    envelope['schema_version']=module.CANONICAL_ENVELOPE_SCHEMA
+    with pytest.raises(CodexAppServerError,match='authority versions differ'):
+        _validate_render_fixture(gen,envelope,messages)
+
+
+@pytest.mark.parametrize('phase',['candidate_generation','verification'])
+def test_render_bound_declared_graph_frame_must_exist_in_actual_message(tmp_path,render_public_artifact,phase):
+    from agronomy_agent import benchmark_render_provenance as render
+    gen,envelope,messages=_render_bound_fixture(tmp_path,render_public_artifact,kind='graph',delivery='bare',phase=phase)
+    profile=copy.deepcopy(gen.expected_artifact_contract['render_profile'])
+    scope=profile['cases'][_EVAL_ID]['scopes'][phase]
+    header='Knowledge graph vocabulary hints:'
+    replacement='Unrelated synthetic section'.ljust(len(header))
+    changed=copy.deepcopy(messages)
+    changed[1]['content']=changed[1]['content'].replace(header,replacement,1)
+    evidence=envelope.get('verifier_evidence_text')
+    if phase=='verification':
+        evidence=evidence.replace(header,replacement,1)
+        scope['evidence_sha256']=render.sha(evidence)
+    else:scope['messages_sha256']=render.digest(changed)
+    profile.pop('sha256');profile['sha256']=render.digest(profile)
+    # Declared source/order/offset proof alone is valid; actual frame is absent.
+    render.checked_profile(profile,base_artifact_contract=render_public_artifact)
+    with pytest.raises(ValueError,match='actual original render frame differs'):
+        render.build_records(profile,eval_id=_EVAL_ID,phase=phase,arm='production_full',
+            messages=changed,question=envelope['question_fragment'],verifier_evidence_text=evidence)

@@ -64,7 +64,8 @@ def render_structured_answer(
     metadata = trace.get("metadata") or {}
     retrieval_policy = str(metadata.get("retrieval_policy") or "")
     answer_profile = str(metadata.get("answer_policy_profile") or "")
-    if _validated_calculator_answer(sanitized, trace, question):
+    validated_calculator = _validated_calculator_answer(sanitized, trace, question)
+    if validated_calculator:
         clean_answer = sanitized
     elif retrieval_policy == "user_grounded_bypass":
         clean_answer = sanitized
@@ -86,11 +87,12 @@ def render_structured_answer(
         or agno_runtime.get("canadian_coverage_boundaries")
         or []
     )
-    clean_answer = apply_canadian_coverage_disclosure(
-        clean_answer,
-        question=question,
-        boundaries=coverage_boundaries,
-    )
+    if not validated_calculator:
+        clean_answer = apply_canadian_coverage_disclosure(
+            clean_answer,
+            question=question,
+            boundaries=coverage_boundaries,
+        )
     clean_answer = apply_soileri_coverage_disclosure(
         clean_answer, question=question,
         coverage=metadata.get("named_regional_product_coverage") or agno_runtime.get("named_regional_product_coverage"),
@@ -101,7 +103,13 @@ def render_structured_answer(
         trace=trace,
     )
     clean_answer = _localize_known_safety_boundaries(clean_answer, question=question)
-    missing_data = _extract_missing_data(clean_answer, trace=trace)
+    calculator_clarification = (validated_calculator
+                               and (metadata.get("tool_plan") or {}).get("status") == "clarification_required")
+    # Exact whole-request replay binds these typed gaps. Generic word matching
+    # would miss the denominator and mistake the arithmetic boundary's label
+    # disclaimer for a product-decision next step.
+    missing_data = (list(metadata["tool_plan"]["invocations"][0]["missing_inputs"])
+                    if calculator_clarification else _extract_missing_data(clean_answer, trace=trace))
     risk_banner = _extract_risk_banner(clean_answer, trace=trace)
     return StructuredAnswer(
         answer=clean_answer,
@@ -113,7 +121,8 @@ def render_structured_answer(
         field_context_used=_field_context_used(trace),
         caveats=_dedupe(_extract_caveats(clean_answer, trace=trace, risk_banner=risk_banner)
                        + _packed_source_limits(trace)),
-        recommended_next_steps=_recommended_next_steps(clean_answer, missing_data),
+        recommended_next_steps=([f"Provide {item}." for item in missing_data]
+                                if calculator_clarification else _recommended_next_steps(clean_answer, missing_data)),
         report_actions=_report_actions(trace),
         feedback_prompt=_feedback_prompt(trace),
         debug_ref=_debug_ref(trace),

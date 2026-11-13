@@ -39,7 +39,7 @@ from agronomy_agent.benchmark_v2_metrics import (
 from agronomy_agent.tool_planner import (
     PLANNER_VERSION,
     TOOL_PLAN_SCHEMA_VERSION,
-    plan_and_execute_tools,
+    plan_tools, execute_tool_plan,
 )
 
 
@@ -192,6 +192,7 @@ def _runtime_implementation_receipts() -> dict[str, str]:
                     PROJECT_ROOT / "src/agronomy_agent/agent.py",
                     PROJECT_ROOT
                     / "src/agronomy_agent/server/services/chat_service.py",
+                    PROJECT_ROOT / "src/agronomy_agent/server/services/answer_renderer.py",
                 )
             ),
             "kernel_config": _bundle_sha256(
@@ -221,6 +222,7 @@ def _runtime_implementation_receipts() -> dict[str, str]:
                     PROJECT_ROOT / "src/agronomy_agent/calculator_contracts.py",
                     PROJECT_ROOT / "src/agronomy_agent/foundation_math_parser.py",
                     PROJECT_ROOT / "src/agronomy_agent/seed_establishment.py",
+                    PROJECT_ROOT / "src/agronomy_agent/seed_survival_scenarios.py",
                     PROJECT_ROOT / "src/agronomy_agent/request_scope.py",
                     PROJECT_ROOT / "src/agronomy_agent/supplied_math_scope.py",
                     PROJECT_ROOT / "src/agronomy_agent/supplied_numeric_inputs.py",
@@ -379,13 +381,16 @@ def _verifier_artifact_id(
 class DeterministicContractExecutor:
     """Exercise orchestration and local contracts without model inference.
 
-    Outputs are derived from frozen case expectations and deterministic tools.
-    They are intentionally labeled synthetic and are prohibited from capability
-    reporting, model comparison, or external claims.
+    Outputs are derived from frozen case expectations and ready calculations.
+    This frozen-v1 construct fixture plans current clarification states without
+    executing conditional scenarios, whose result semantics are outside that
+    construct. Current scenarios require production-path qualification instead.
+    All fixture outputs are synthetic and prohibited from capability reporting,
+    model comparison, or external claims.
     """
 
     executor_id = "deterministic_contract_executor"
-    executor_version = "v1"
+    executor_version = "v2"
     result_class = "synthetic_contract_qa_not_system_performance"
 
     _COMPONENT_CONTRACT_VERSIONS = {
@@ -444,10 +449,15 @@ class DeterministicContractExecutor:
         case = request.case
         components = dict(request.components)
         expected = case["expected_response"]
-        plan, results = plan_and_execute_tools(
+        plan = plan_tools(
             str(case["question"]),
             field_context=case.get("field_context") if components.get("field_context") else None,
         )
+        # Frozen construct-v1 has no conditional-result state. This synthetic
+        # fixture intentionally exercises ready calculations and planner ASK
+        # states, never executes and then discards current conditional results.
+        results = (execute_tool_plan(plan, question=str(case["question"]))
+                   if components.get("typed_tools") and plan.status == "ready" else ())
         plan_record = plan.to_dict()
         result_records = _tool_records(results) if components.get("typed_tools") else []
         invocation_records = [

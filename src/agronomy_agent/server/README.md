@@ -54,6 +54,17 @@ rejects requests that ask for this guarantee with HTTP 501
   limit, or artifact-store selection remains.
 - Trace and evidence identities survive rendering and persistence.
 
+A validated seed-survival clarification may execute two hypothetical arithmetic
+scenarios while the plan remains `clarification_required`. The tool-execution
+stage is `executed` with reason
+`conditional_arithmetic_scenarios_no_selected_result`; this does not promote the
+plan to ready or its evidence to ADEQUATE. The saved parent has no selected
+value. Preview still performs no capability execution. Subsequent denominator
+selection uses authorized prior user inputs and preserves the original turn.
+The answer renderer skips Canadian source-gap prose only after exact whole
+calculator-response replay; mixed requests, changed answers and other safety or
+conflict disclosures retain their existing checks.
+
 ## Add or change an endpoint
 
 1. Define or reuse a request/response schema in `schemas.py`.
