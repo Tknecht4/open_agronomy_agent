@@ -78,3 +78,16 @@ def test_production_save_keeps_both_derived_results(tmp_path, monkeypatch):
         assert len(result.stage_receipts) == 17
     finally:
         store._conn.close()
+
+
+@pytest.mark.parametrize('question', [
+    QUESTION.replace('12 t', '12 t or 14 t'),
+    QUESTION.replace('12 t', '12 t and 14 t'),
+    QUESTION.replace('25% wet-basis', '25% or 30% wet-basis'),
+    QUESTION.replace('25% wet-basis', '25% and 30% wet-basis'),
+    QUESTION.replace('10% moisture', '10% or 15% moisture'),
+])
+def test_unlabelled_alternatives_never_become_a_selected_grain_operand(question):
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'clarification_required'
+    assert not results

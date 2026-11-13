@@ -159,3 +159,10 @@ def test_mean_temperature_math_does_not_consume_other_decisions(suffix):
 ])
 def test_mean_temperature_gdd_needs_one_complete_consistent_method(question):
     assert plan_tools(question).status == "clarification_required"
+
+
+@pytest.mark.parametrize('formula', ['600Q/(speed + spacing)', '600Q/(speed × spacing) × 2',
+    '600Q/(speed × spacing), L/ha = 650Q/(speed × spacing)'])
+def test_nozzle_formula_cannot_silently_disagree_with_its_supplied_inputs(formula):
+    question = f'A nozzle delivers 1.2 L/min, travel speed is 10 km/h and nozzle spacing 0.5 m. Using L/ha = {formula}, calculate application volume.'
+    assert plan_tools(question).status == 'clarification_required'

@@ -1,12 +1,11 @@
 """Bind water and calibration arithmetic to supplied quantities and units."""
 from __future__ import annotations
 
-from decimal import Decimal
 import re
 from typing import Any
 
 from agronomy_agent.supplied_math_scope import supplied_math_scope
-from agronomy_agent.water_arithmetic import WATER_INPUTS, validate_water_arithmetic_inputs
+from agronomy_agent.water_arithmetic import validate_water_arithmetic_inputs
 from agronomy_agent.agronomic_calculations import validate_single_nozzle_inputs
 from agronomy_agent.calculator_contracts import supplied_input_label
 
@@ -106,7 +105,8 @@ def _nozzle_volume(text: str):
     spacing = _value(text, rf'\bnozzle spacing\s*(?:is|of|:|=)?\s*(?P<quantity>{_NUMBER})\s*m\b')
     # Preserve spacing as spacing; neither whole-boom width nor total nozzle
     # count is a supplied fact. Do not ignore a conflicting formula.
-    constant = re.search(r'\bL/ha\s*=\s*(\d+(?:\.\d+)?)\s*Q', text, re.I)
-    missing = ('invalid supplied nozzle formula constant: use 600 with L/min, km/h and metres',) if constant and Decimal(constant[1]) != 600 else ()
+    formulas = list(re.finditer(r'\bL/ha\s*=', text, re.I))
+    valid = list(re.finditer(r'\bL/ha\s*=\s*600(?:\.0+)?\s*Q\s*/\s*\(\s*speed\s*[×*]\s*spacing\s*\)(?=\s*(?:[,.;!?]|$|calculate\b))', text, re.I))
+    missing = ('invalid supplied nozzle formula: use 600Q/(speed × spacing) with L/min, km/h and metres',) if len(valid) != len(formulas) else ()
     operation, values, absent = _bound('single_nozzle_application_volume', {'flow_l_per_min_per_nozzle': flow, 'speed_km_per_h': speed, 'nozzle_spacing_m': spacing})
     return operation, values, absent + missing

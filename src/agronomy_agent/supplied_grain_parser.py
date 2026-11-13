@@ -34,6 +34,12 @@ def parse_supplied_grain_calculation(question: str) -> tuple[str, dict[str, Any]
     values = {'wet_mass': one(masses), 'mass_unit': next(iter(units)) if len(units) == 1 else None,
               'initial_moisture_pct': one(initial), 'target_moisture_pct': one(target)}
     missing = tuple(supplied_input_label(key) for key, value in values.items() if value is None)
+    # An alternative need not repeat its role label. Do not choose the first
+    # mass or the last percentage in "12 t or 14 t" / "25% or 30%".
+    if re.search(rf'\b(?:or|to)\s*{_NUMBER}', text, re.I) or re.search(
+        rf'{_NUMBER}\s*(?:%|kg|tonnes?|t|pounds?|lbs?)(?:\s*/\s*(?:ha|ac))?\s+and\s*{_NUMBER}\s*(?:%(?!\d)|(?:kg|tonnes?|t|pounds?|lbs?)\b)', text, re.I
+    ):
+        missing += ('invalid alternatives: supply one grain mass and one moisture value for each role',)
     values = {key:value for key,value in values.items() if value is not None}
     if not missing:
         try:
