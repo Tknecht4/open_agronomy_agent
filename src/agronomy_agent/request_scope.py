@@ -11,11 +11,20 @@ FIELD_ACTION_PATTERN = (
 )
 
 
-def has_action_directive(text: str, *, coordinated: bool = True) -> bool:
-    start = r"(?:^|[.!?;]\s*|\b(?:and|also|then)\s+)" if coordinated else r"(?:^|[.!?;]\s*)"
-    return bool(re.search(
-        start + r"(?:please\s+)?(?:" + FIELD_ACTION_PATTERN +
+def has_action_directive(text: str) -> bool:
+    start = r"(?:^|[.!?;]\s*|\b(?:and|also|then)\s+)"
+    pattern = (start + r"(?:please\s+)?(?:(?P<verb>" + FIELD_ACTION_PATTERN +
         r"|proceed|go ahead|carry out|execute|perform|implement|undertake|turn|begin|commence)\b|"
-        + start + r"(?:please\s+)?(?:give|provide|write|show|develop|create|design)\b[^.!?;]{0,55}\b(?:instructions|directions|steps|plan)\b",
-        text, re.I,
-    ))
+        r"(?:give|provide|write|show|develop|create|design)\b[^.!?;]{0,55}\b(?:instructions|directions|steps|plan)\b)")
+    for match in re.finditer(pattern, text, re.I):
+        # In a single finite causal question, "How can X supply ... and
+        # increase Y?" shares the auxiliary and subject. Exempt only that
+        # weak predicate span; later commands must still be inspected.
+        prefix = text[:match.start()]
+        if (match['verb'] and match['verb'].lower() in {'increase', 'decrease', 'reduce', 'raise', 'lower'}
+                and re.match(r'(?:and|also)\s+(?!please\b)', match.group(), re.I)
+                and re.match(r'^\s*(?:how|why)\s+(?:can|could|do|does)\b', prefix, re.I)
+                and not re.search(r'[.!?;,]|\bthen\b', prefix, re.I)):
+            continue
+        return True
+    return False

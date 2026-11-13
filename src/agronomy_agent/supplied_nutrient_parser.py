@@ -61,7 +61,8 @@ def _product_mass(text: str):
     matching = [m for m in percentages if basis and _basis(m['basis']) == basis]
     percent = _one(matching, 'quantity')
     values = {'nutrient_target_kg_per_ha': target, 'nutrient_percent': percent, 'nutrient_label': basis}
-    total = bool(re.search(r'\b(?:whole[- ]field|in total|total (?:product|fertili[sz]er)|product kilograms)\b', text, re.I))
+    total = bool(re.search(r'\b(?:whole[- ]field|in total|total (?:product|fertili[sz]er|kilograms|kg|mass|amount|quantity|area)|product kilograms)\b', text, re.I)
+                 or re.search(rf'\b(?:over|across)\s+(?:a\s+)?(?:(?:whole|entire|total)\s+)?(?:area\s+(?:of\s+)?)?{_NUMBER}\s*(?:ha|hectares?)\b', text, re.I))
     if total:
         areas = list(re.finditer(rf'(?<![\w.,+-])(?P<quantity>{_NUMBER})\s*(?:ha|hectares?)\b', text, re.I))
         values['area_ha'] = _one(areas, 'quantity')

@@ -55,7 +55,7 @@ def parse_supplied_geometry_biomass_calculation(question: str) -> tuple[str, dic
 def _harvest_index(text):
     if not re.search(r'\b(?:harvest index|HI)\b', text, re.I):
         return None
-    if re.search(r'\b(?:wet|fresh|root|tuber|below[- ]ground|excluding|without grain|straw only)\b', text, re.I):
+    if re.search(r"\b(?:wet|fresh|root|tuber|below[- ]ground|excluding|without grain|straw only|not includ(?:e[ds]?|ing)|doesn't include|does not include)\b|\bgrain\b[^.!?;]{0,35}\bnot (?:included|part)\b", text, re.I):
         return None
     grain = list(re.finditer(_MASS + r'\s+(?:of\s+)?grain dry (?:mass|matter)\b', text, re.I))
     grain += list(re.finditer(r'\bgrain dry (?:mass|matter)\s*(?:is|of|:|=)\s*' + _MASS, text, re.I))
@@ -69,9 +69,9 @@ def _harvest_index(text):
 
 
 def _circle(text):
-    if not re.search(r'\b(?:sampling (?:buffer|circle)|circular sampling (?:buffer|area|plot)|sampling plot)\b', text, re.I):
+    if not re.search(r'\b(?:circular|circle)\b', text, re.I) or not re.search(r'\bsampling (?:buffer|circle|area|plot)\b', text, re.I):
         return None
-    if not re.search(r'\barea\b', text, re.I) or re.search(r'\b(?:diameter|annulus|ring|geodesic|slope|terrain|circumference|perimeter|polygon)\b', text, re.I):
+    if not re.search(r'\barea\b', text, re.I) or re.search(r'\b(?:diameter|annulus|ring|geodesic|slope|terrain|circumference|perimeter|polygon|semicircl\w*|semicircular|half|quarter|partial|sector|ellips\w*|elliptical|square|rectang\w*|noncircular)\b', text, re.I):
         return None
     rows = list(re.finditer(rf'(?<![\w.,+-])(?P<value>{_NUMBER})\s*m(?:etre|eter)?s?[- ]radius\b', text, re.I))
     rows += list(re.finditer(rf'\bradius\s*(?:is|of|:|=)?\s*(?P<value>{_NUMBER})\s*(?:m|metres?|meters?)\b', text, re.I))

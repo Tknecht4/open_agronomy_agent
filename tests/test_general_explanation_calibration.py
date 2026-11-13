@@ -849,6 +849,11 @@ def test_same_sentence_fictional_result_cannot_whitelist_a_separate_same_value_t
     'Why does cold slow emergence? Proceed with planting the field.',
     'Why does soil compact? Give instructions for driving a tractor through the field.',
     'Why does frost damage forage? Turn cattle into the pasture.',
+    'Explain why cold slows emergence and give instructions for planting the field.',
+    'Explain why frost damages forage and turn cattle into the pasture.',
+    'Why does cold slow emergence, then begin planting?',
+    'Why does cold slow emergence and then increase the seeding rate?',
+    'Why does cold slow emergence? Increase the seeding rate.',
 ])
 def test_a_causal_prefix_does_not_hide_an_extra_operational_directive(question):
     from agronomy_agent.answerability import is_mechanism_explanation
@@ -890,3 +895,33 @@ def test_a_current_susceptible_crop_still_needs_confirmation_after_an_unrelated_
     state = build_decision_route_state(question, 'plant_health')
     assert state.decision == 'clubroot_containment'
     assert 'clubroot_confirmation' in {anchor.name for anchor in state.premise_anchors}
+
+
+@pytest.mark.parametrize('question', [
+    'After wheat last year, canola now has swollen roots. What should I do today?',
+    'We grew wheat last year and now canola roots are swollen. What should I do today?',
+    'We grew wheat last year and canola now has swollen roots. What should I do today?',
+])
+def test_explicit_present_crop_after_historical_preface_retains_current_diagnosis_scope(question):
+    from agronomy_agent.plant_health_scope import clubroot_question_scope
+    scope = clubroot_question_scope(question)
+    assert scope.current_crops == ('canola',)
+    assert scope.current_symptoms
+    state = build_decision_route_state(question, 'plant_health')
+    assert state.decision == 'clubroot_containment'
+    assert 'clubroot_confirmation' in {anchor.name for anchor in state.premise_anchors}
+
+
+@pytest.mark.parametrize('question', [
+    'How can a shallow water table supply roots and also increase salinity risk?',
+    'Why do cold soils delay emergence and reduce early nitrogen uptake?',
+    'Explain how a shallow water table supplies roots and also increases salinity risk.',
+    'Explain how water moves through soil and how roots absorb nutrients.',
+])
+def test_coordinated_causal_predicates_remain_explanations(question):
+    from agronomy_agent.answerability import is_mechanism_explanation
+    from agronomy_agent.router import classify_query, refine_query_route
+    assert is_mechanism_explanation(question)
+    route = refine_query_route(question, classify_query(question))
+    assert route.question_type == 'exam_review'
+    assert route.risk_level == 'low'

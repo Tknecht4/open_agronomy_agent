@@ -46,6 +46,13 @@ def test_ambiguous_units_or_invalid_values_need_clarification(question):
     HI + ' Should I harvest tomorrow?', HI + ' Proceed with planting.',
     CIRCLE + ' Then drain the field.', CIRCLE.replace('radius', 'diameter'),
     CIRCLE.replace('circular sampling plot', 'sampling ring'),
+    CIRCLE.replace('circular sampling plot', 'semicircular sampling plot'),
+    CIRCLE.replace('circular sampling plot', 'elliptical sampling plot'),
+    CIRCLE.replace('circular sampling plot', 'sampling plot'),
+    CIRCLE.replace('circular sampling plot', 'half of a circular sampling plot'),
+    HI.replace('Compute harvest index.', 'The biomass value does not include grain. Compute harvest index.'),
+    HI.replace('Compute harvest index.', 'Grain is not included in the biomass value. Compute harvest index.'),
+    HI.replace('Compute harvest index.', 'The biomass value is not including grain. Compute harvest index.'),
     HI + ' Explain why this is not the field area.',
     CIRCLE.replace('Explain why this is not the field area.', 'Explain why this crop is failing.'),
 ])

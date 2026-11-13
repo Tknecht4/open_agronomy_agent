@@ -232,7 +232,7 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     expansions = set(route.query_expansion)
     risk = route.risk_level
     guidance = route.guidance
-    operational_directive = has_action_directive(question, coordinated=False)
+    operational_directive = has_action_directive(question)
     if operational_directive and risk == "low":
         risk = "medium"
     if operational_directive and qtype in {"conceptual", "exam_review"}:
@@ -741,7 +741,7 @@ def evidence_interpretation_kind(text: str) -> str | None:
     Use the complete request so a final comparison clause cannot erase an
     application or product request elsewhere in the question.
     """
-    if has_action_directive(text, coordinated=False):
+    if has_action_directive(text):
         return None
     q = _routing_text(text)
     # "Treat these measurements as equivalent" is a comparison, not a
@@ -843,7 +843,7 @@ def _is_benign_conceptual_explanation(text: str) -> bool:
     diagnostic or product routes.
     """
 
-    if has_action_directive(text, coordinated=False):
+    if has_action_directive(text):
         return False
     if is_mechanism_explanation(text) or evidence_interpretation_kind(text):
         return True

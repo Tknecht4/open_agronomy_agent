@@ -50,7 +50,9 @@ def clubroot_question_scope(question: str) -> ClubrootQuestionScope:
     # a contrast can reset the time frame only when it names a current period.
     for sentence in re.split(r'(?<=[.!?;])\s+', text):
         historical_context = False
-        for clause in re.split(r'\bbut\b', sentence):
+        # An explicit present period after a comma/conjunction starts a new
+        # current clause. The historical prefix must not erase that crop.
+        for clause in re.split(r'\bbut\b|,|\band\b(?=[^,;.!?]{0,100}\b(?:now|currently|today|this (?:year|season|crop))\b)', sentence):
             history = _HISTORY.search(clause);present = _CURRENT.search(clause)
             if history is not None:
                 history_reported = True;historical_context = True

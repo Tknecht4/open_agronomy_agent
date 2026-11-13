@@ -246,3 +246,17 @@ def test_a_requested_field_total_does_not_become_an_unasked_per_area_result():
 def test_explicit_volume_percentage_is_not_used_as_a_mass_fraction():
     plan, results = plan_and_execute_tools('How much fertilizer with 25% nitrogen by volume supplies 75 kg N/ha?')
     assert plan.status == 'clarification_required' and not results
+
+
+@pytest.mark.parametrize('question', [
+    'Calculate total kilograms of 25%-N fertilizer to supply 75 kg N/ha over 16 ha.',
+    'How much 25%-N fertilizer supplies 75 kg N/ha over a total area of 16 ha?',
+    'How much 25%-N fertilizer supplies 75 kg N/ha across 16 hectares?',
+])
+def test_explicit_area_total_never_returns_only_the_per_hectare_quantity(question):
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'ready'
+    assert results[0].operation == 'fertilizer_field_total'
+    assert results[0].payload['value'] == 4800
+    assert results[0].payload['unit'] == 'kg'
+    assert results[0].payload['inputs']['area_ha'] == 16

@@ -442,7 +442,7 @@ def is_mechanism_explanation(question: str) -> bool:
         r"which\s+(?:rival|alternative|possible)\s+(?:explanations|causes)\s+"
         r"should\s+be\s+(?:investigated|considered|checked)\b)", text,
     )
-    if request is None or has_action_directive(text, coordinated=False):
+    if request is None or has_action_directive(text):
         return False
     if re.search(
         r"\b(?:my|our|your|i|we|you|growers?|farmers?|operators?|advis[eo]rs?)\b|"
