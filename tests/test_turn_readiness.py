@@ -33,6 +33,7 @@ NOZZLE_VOLUME = "A nozzle delivers 1.2 L/min, travel speed is 10 km/h and nozzle
 PRODUCT_MASS = "How much 25%-N fertilizer supplies 75 kg N/ha in a product-mass calculation?"
 GRAIN_MASS = "Grain mass is 12 t at 25% wet-basis moisture. Calculate dry matter and equivalent mass at 10% moisture, ignoring losses."
 MEAN_GDD = "Daily mean temperature is 17 C, base 6 C, no upper cap and negative values are floored at zero. Calculate GDD."
+JOINT_PRODUCT = "Calculate fertilizer product rate and total product: how much 25%-N fertilizer supplies 75 kg N/ha over 16 ha?"
 HARVEST_INDEX = "Total above-ground dry biomass is 12 t/ha and grain dry mass is 4.2 t/ha. Compute harvest index."
 SAMPLING_AREA = "Calculate area of a circular sampling plot with radius 12 metres. Explain why this is not the field area."
 SEED_MISSING = "Calculate seed rate: target stand is 200 plants/m², TKW is missing, germination is 95%, expected field survival is 90%."
@@ -78,7 +79,7 @@ def no_generator(*args, **kwargs):
                                           (P_CONVERSION, "deterministic_tool_result"),
                                           (P_BALANCE, "deterministic_tool_result"),
                                           (LIQUID_TOTAL, "deterministic_tool_result"),
-                                          *[(q, "deterministic_tool_result") for q in (WATER_CAPACITY, WATER_REFILL, CROP_ET, GROSS_DEPTH, DEPTH_VOLUME, NOZZLE_VOLUME, PRODUCT_MASS, GRAIN_MASS, MEAN_GDD, HARVEST_INDEX, SAMPLING_AREA)],
+                                          *[(q, "deterministic_tool_result") for q in (WATER_CAPACITY, WATER_REFILL, CROP_ET, GROSS_DEPTH, DEPTH_VOLUME, NOZZLE_VOLUME, PRODUCT_MASS, GRAIN_MASS, MEAN_GDD, HARVEST_INDEX, SAMPLING_AREA, JOINT_PRODUCT)],
                                           (SEED_MISSING, "deterministic_tool_clarification")])
 @pytest.mark.parametrize("backend", ["mlx", "http"])
 def test_actual_missing_model_calculation_and_clarification_persist_without_constructor(runtime, monkeypatch, question, path, backend):
@@ -106,7 +107,7 @@ def test_actual_missing_model_calculation_and_clarification_persist_without_cons
                     FIELD_N_TOTAL: "2,086.957 kg", WATER_STORAGE: "72 mm",
                     P_CONVERSION: "32.73 kg P/ha", P_BALANCE: "17 kg P/ha", LIQUID_TOTAL: "48 L product",
                     WATER_CAPACITY: "160 mm", WATER_REFILL: "40 mm", CROP_ET: "4.4 mm/day", GROSS_DEPTH: "30 mm",
-                    DEPTH_VOLUME: "1,200 m³", NOZZLE_VOLUME: "144 L/ha", PRODUCT_MASS: "300 kg product/ha", GRAIN_MASS: "10 t", MEAN_GDD: "11 GDD", HARVEST_INDEX: "0.35 harvest index", SAMPLING_AREA: "452.389 m²"}
+                    DEPTH_VOLUME: "1,200 m³", NOZZLE_VOLUME: "144 L/ha", PRODUCT_MASS: "300 kg product/ha", GRAIN_MASS: "10 t", MEAN_GDD: "11 GDD", HARVEST_INDEX: "0.35 harvest index", SAMPLING_AREA: "452.389 m²", JOINT_PRODUCT: "4,800 kg"}
         assert saved["answer"].startswith(expected[question])
     else:
         assert "tkw_g" in saved["answer"]

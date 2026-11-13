@@ -94,6 +94,7 @@ def test_supplied_nutrient_precision_does_not_round_away_small_balance():
 
 @pytest.mark.parametrize("question,prefix", [
     ("Convert 75 kg P2O5/ha to elemental phosphorus.", "32.73 kg P/ha"),
+    ("Calculate fertilizer product rate and total product: how much 25%-N fertilizer supplies 75 kg N/ha over 16 ha?", "4,800 kg"),
     ("Total above-ground dry biomass is 12 t/ha and grain dry mass is 4.2 t/ha. Compute harvest index.", "0.35 harvest index"),
     ("Calculate area of a circular sampling plot with radius 12 metres. Explain why this is not the field area.", "452.389 m²"),
     ("Calculate the apparent balance: 45 kg P/ha applied and 28 kg P/ha removed.", "17 kg P/ha"),
@@ -271,6 +272,18 @@ def test_explicit_per_area_output_is_not_changed_by_incidental_field_area():
     assert results[0].payload['unit'] == 'kg product/ha'
 
 
-def test_conflicting_requested_product_output_bases_need_clarification():
+def test_compatible_rate_and_total_are_both_answered_by_one_validated_operation():
     question = 'Calculate fertilizer product rate and total product: how much 25%-N fertilizer supplies 75 kg N/ha over 16 ha?'
-    assert plan_tools(question).status == 'clarification_required'
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'ready'
+    assert results[0].operation == 'fertilizer_field_total'
+    assert results[0].payload['value'] == 4800
+    assert '300 kg product/ha' in results[0].answer
+
+
+def test_total_area_is_an_input_and_does_not_override_an_explicit_rate_output():
+    question = 'Calculate fertilizer product rate: how much 25%-N fertilizer supplies 75 kg N/ha over a total area of 16 ha?'
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'ready'
+    assert results[0].operation == 'fertilizer_product_mass'
+    assert results[0].payload['value'] == 300

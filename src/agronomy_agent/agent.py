@@ -4272,11 +4272,13 @@ def deterministic_tool_response(
                 and has_recognized_regulated_product(question)
                 and re.search(r"\bfor\s+(?:the\s+)?[a-z0-9][a-z0-9 .®™'/-]*[?.!]*\s*$", question, re.I)
             )
-            if results[0].get("tool_id") == "agronomic_calculator" and (named_product_conversion or re.search(
+            if (invocation and isinstance(invocation[0], Mapping)
+                    and invocation[0].get("operation") == "unit_conversion"
+                    and results[0].get("tool_id") == "agronomic_calculator" and (named_product_conversion or re.search(
                 r"\b(?:product|herbicide|fungicide|insecticide|pesticide)\b.{0,40}\b(?:label|rate)\b",
                 question,
                 re.IGNORECASE,
-            )):
+            ))):
                 answer += (
                     " This only converts the user-supplied number; it does not establish that a label is "
                     "current or applicable, does not establish label authority or product applicability, "

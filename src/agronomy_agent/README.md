@@ -209,7 +209,10 @@ A supplied rounded factor is preserved when it has at least two significant
 digits and lies within half its last decimal unit plus 0.01% of the reference
 factor. This is an explicit engineering rounding policy, not a field safety
 tolerance; inversion of a rounded forward factor is not used as the reference.
-Whole-field product requests retain their area and total-mass output. Unlabelled
+Whole-field product requests retain their area and total-mass output. The
+calculation also shows product mass per hectare, so a request for both quantities
+uses one checked operation. An input described as total area does not override an
+explicit request for a per-hectare result. Unlabelled
 numeric alternatives and multiple destination nutrient bases require clarification.
 Universal requests to evade safety or authority remain blocked.
 
