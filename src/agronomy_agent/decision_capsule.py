@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from typing import Iterable
+from agronomy_agent.plant_health_scope import clubroot_confirmation_requested
 
 
 @dataclass(frozen=True)
@@ -68,7 +69,7 @@ class DecisionCapsule:
         lower = text.lower()
         if self.domain == "general":
             return 0.0
-        anchor_hits = sum(any(re.search(pattern, lower, re.IGNORECASE) for pattern in group) for group in _anchor_groups(self.domain))
+        anchor_hits = sum(any(re.search(pattern, lower, re.IGNORECASE) for pattern in group) for group in _anchor_groups(self.domain, self.question))
         incompatible_hits = sum(bool(re.search(pattern, lower, re.IGNORECASE)) for _, pattern in self.incompatible_patterns)
         crop_hit = bool(self.crop and re.search(rf"\b{re.escape(self.crop)}s?\b", lower))
         return float(2.0 * anchor_hits + crop_hit - 2.5 * incompatible_hits)
@@ -87,7 +88,7 @@ class DecisionCapsule:
             return ()
         lower = answer.lower()
         violations: list[str] = []
-        groups = _anchor_groups(self.domain)
+        groups = _anchor_groups(self.domain, self.question)
         if groups and not any(any(re.search(pattern, lower, re.IGNORECASE) for pattern in group) for group in groups):
             violations.append("decision_capsule_anchor_missing")
         for reason, pattern in self.incompatible_patterns:
@@ -388,8 +389,12 @@ def build_decision_capsule(question: str, *, crop: str | None = None) -> Decisio
             primary_intent="",
             confidence=0.0,
         )
-    groups = rule.evidence_anchors
+    groups = _anchor_groups(rule.name, question)
     objects = tuple(_display_anchor(group[0]) for group in groups)
+    retrieval_terms = rule.retrieval_terms
+    if rule.name == "clubroot_containment" and not clubroot_confirmation_requested(question):
+        retrieval_terms = ("clubroot containment restrict soil movement", "clubroot equipment cleaning sanitation",
+                           "clubroot soil persistence crop rotation")
     confidence = min(1.0, 0.45 + score / 14)
     return DecisionCapsule(
         question=question,
@@ -399,15 +404,18 @@ def build_decision_capsule(question: str, *, crop: str | None = None) -> Decisio
         decision_clause=_decision_clause(question),
         management_objects=objects,
         retrieval_topics=_domain_topics(rule.name),
-        retrieval_terms=rule.retrieval_terms,
+        retrieval_terms=retrieval_terms,
         primary_intent=rule.primary_intent,
         confidence=round(confidence, 3),
         incompatible_patterns=rule.incompatible_patterns,
     )
 
 
-def _anchor_groups(domain: str) -> tuple[tuple[str, ...], ...]:
-    return next((rule.evidence_anchors for rule in _DOMAIN_RULES if rule.name == domain), ())
+def _anchor_groups(domain: str, question: str) -> tuple[tuple[str, ...], ...]:
+    groups = next((rule.evidence_anchors for rule in _DOMAIN_RULES if rule.name == domain), ())
+    if domain == "clubroot_containment" and not clubroot_confirmation_requested(question):
+        return groups[:3]
+    return groups
 
 
 def _domain_topics(domain: str) -> tuple[str, ...]:

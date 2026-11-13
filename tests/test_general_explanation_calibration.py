@@ -495,7 +495,49 @@ def test_susceptible_crop_root_swelling_retains_clubroot_confirmation_and_contai
 
 def test_explicit_clubroot_soil_concern_is_preserved_in_a_rotation_crop():
     question = "Corn is planted this year. Clubroot was confirmed in the previous canola crop. What soil-movement precautions should I take today?"
-    assert build_decision_route_state(question, "plant_health").decision == "clubroot_containment"
+    state = build_decision_route_state(question, "plant_health")
+    assert state.decision == "clubroot_containment"
+    assert "clubroot_confirmation" not in {anchor.name for anchor in state.premise_anchors}
+    assert "suspected clubroot symptoms" not in state.prompt_block()
+    assert "representative sample" not in state.capsule.retrieval_query
+
+
+@pytest.mark.parametrize("crop", ["corn", "soybean", "barley", "potato"])
+def test_clubroot_history_hygiene_answer_does_not_need_current_symptoms(crop):
+    question = f"We grow {crop} now after reported clubroot in an earlier canola crop. What soil-movement precautions should we take today?"
+    answer = "Use the reported clubroot history to mark known risk areas and restrict traffic and soil movement. Clean soil from equipment and boots before leaving affected ground; use current applicable local sanitation guidance."
+    result = verify_answer(answer, question=question, evidence_text="", question_type="plant_health",
+        risk_level="medium", editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert result.answer == answer
+    assert not result.fallback_applied
+    assert not result.draft_assessment.missing_intent_facets
+    assert not result.draft_assessment.route_violations
+
+
+def test_clubroot_history_fallback_does_not_invent_a_current_root_inspection():
+    from agronomy_agent.answer_verifier import _decision_route_failure_answer
+    question = "Barley is planted now after reported clubroot in earlier canola. What soil-movement precautions should I take today?"
+    answer = _decision_route_failure_answer(build_decision_route_state(question, "plant_health"))
+    assert "soil movement" in answer and "sanitation" in answer
+    assert "reported history" in answer
+    assert "Dig several plants" not in answer and "galls" not in answer and "Swollen roots" not in answer
+
+
+@pytest.mark.parametrize("history", ["reported clubroot", "suspected clubroot in a previous crop", "possible clubroot in earlier canola; no galls now"])
+def test_soil_hygiene_scope_does_not_depend_on_diagnostic_certainty_in_reported_history(history):
+    question = f"We grow barley now after {history}. What soil-movement precautions should we take today?"
+    state = build_decision_route_state(question, "plant_health")
+    assert state.decision == "clubroot_containment"
+    assert "clubroot_confirmation" not in {anchor.name for anchor in state.premise_anchors}
+    assert "clubroot_today_actions_incomplete" in state.answer_violations("Wait for a diagnostic sample.")
+
+
+@pytest.mark.parametrize("year_phrase", ["one year", "one nonhost year", "one non-host year", "a single nonhost year", "1 year"])
+def test_short_rotation_history_keeps_persistence_requirement_without_new_diagnosis(year_phrase):
+    question = f"Clubroot was reported in previous canola. Will {year_phrase} clean the field, and what soil-movement precautions apply today?"
+    state = build_decision_route_state(question, "plant_health")
+    assert "clubroot_rotation_persistence_not_answered" in state.answer_violations("Use sanitation and restrict soil movement.")
+    assert "clubroot_today_actions_incomplete" not in state.answer_violations("Use sanitation. Resting spores persist for many years.")
 
 
 def test_unknown_crop_root_swelling_does_not_assume_a_susceptible_host():
@@ -748,3 +790,32 @@ def test_diagnostic_healthy_comparator_does_not_select_healthy_crop_monitoring()
     from agronomy_agent.observation_guidance import observation_guidance
     method = observation_guidance("Potato foliage has lesions. Compare affected and nearby healthy plants for late blight.")
     assert method is None or not method.has_method("healthy_potato_monitoring")
+
+
+def test_reported_clubroot_history_remains_soil_hygiene_through_saved_product_answer(tmp_path, monkeypatch):
+    from agronomy_agent.execution_core import AgentExecutionRequest
+    from agronomy_agent.server.services import chat_service
+    from agronomy_agent.server.settings import build_settings
+    from agronomy_agent.server.storage.db import TraceStore
+    question = 'We grow barley now after reported clubroot in an earlier canola crop. What soil-movement precautions should we take today?'
+    answer = 'Use the reported clubroot history to mark known risk areas and restrict traffic and soil movement. Clean soil from equipment and boots before leaving affected ground; use current applicable local sanitation guidance.'
+    class Backend:
+        backend_id = 'imposed_history_biosecurity'
+        intervention_profile = 'balanced'
+        def generate(self, messages):
+            return answer
+        def close(self):
+            pass
+    backend = Backend();monkeypatch.setattr(chat_service, '_build_mlx_generator', lambda *a, **k: backend)
+    database = tmp_path/'history.sqlite3';store = TraceStore(database)
+    try:
+        session = store.create_session('Synthetic soil history', {}, {})
+        result = chat_service.execute_agent_request(AgentExecutionRequest(store=store,
+            settings=build_settings(db_path=database, artifact_root=tmp_path/'artifacts', network_mode='offline'),
+            session_id=session['session_id'], message=question, mode='agronomic_rag', model_id='imposed',
+            rag_config='configs/rag.yaml', max_tokens=150, generation_backend=backend))
+        assert result.answer == answer
+        assert store.get_turn(result.turn['turn_id'])['answer'] == answer
+        assert len(result.stage_receipts) == 17
+    finally:
+        store._conn.close()

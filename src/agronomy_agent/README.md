@@ -185,6 +185,13 @@ vigor or crusting. Personal field diagnosis, authority questions and follow-up
 actions retain their normal requirements. This is bounded intent calibration,
 not a general scientific verifier.
 
+Clubroot soil biosecurity preserves reported history without inventing symptoms
+in the current rotation crop. Capsule retrieval, route anchors and verifier
+completeness checks require symptom confirmation only for a symptom or diagnosis
+question. Soil-movement advice retains containment and equipment-cleaning checks;
+generic crop-stage, weather and fresh plant-sample prerequisites do not belong
+to a history-only hygiene request. The fallback keeps those scopes distinct.
+
 The supplied-input calculator also supports elemental/oxide P and K basis
 conversion, apparent nutrient balances, and liquid-product totals. Named
 quantities, units and nutrient bases must bind without conflicts; invalid or

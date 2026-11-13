@@ -57,6 +57,16 @@ nutrient/product, water, grain-moisture and uncapped daily-mean GDD arithmetic,
 single-nozzle calibration, and final-renderer preservation of verified results.
 These repairs have not yet completed their successor model campaign.
 
+Native baseline traces also exposed a history-scope defect: a soil-hygiene
+request during corn after earlier canola clubroot was replaced with a current
+root/gall sampling workflow. The drafts already supplied useful precautions;
+unconditional confirmation anchors and generic plant-health completeness facets
+forced replacement. The repair separates reported soil risk from current
+symptom confirmation across capsule retrieval, route constraints, verifier and
+fallback, preserving immediate containment and sanitation. The source check is
+consistent with [Alberta's soil-spread and sanitation guidance](https://www.alberta.ca/alberta-clubroot-management-plan).
+No new crop diagnosis, pesticide permission or numeric sanitation rate follows.
+
 No evaluation reference or rubric enters model prompts or runtime knowledge.
 Private grower data and overlays stay disabled. Controller references remain
 separate from the allowlisted worker projection. Fresh source-bound provider

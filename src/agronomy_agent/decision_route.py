@@ -8,6 +8,7 @@ from agronomy_agent.query_context import analyze_query_context
 from agronomy_agent.router import request_focus, evidence_interpretation_kind
 from agronomy_agent.answerability import simple_definition_subject, is_mechanism_explanation
 from agronomy_agent.observation_guidance import sample_event_roles_stated
+from agronomy_agent.plant_health_scope import clubroot_confirmation_requested, clubroot_short_rotation_requested
 
 
 _US_ONLY_SOURCE_PATTERNS: tuple[tuple[str, str], ...] = (
@@ -126,9 +127,9 @@ class DecisionRouteState:
         if self.decision == "clubroot_containment":
             confirmation = bool(re.search(r"\b(?:representative sample|diagnostic lab|confirm(?:ation)?)\b", lower))
             sanitation = bool(re.search(r"\b(?:clean|remove) soil\b[^.]{0,80}\b(?:equipment|machinery|boots?)\b|\bsanitation\b", lower))
-            if not confirmation or not sanitation:
+            if (clubroot_confirmation_requested(self.question) and not confirmation) or not sanitation:
                 violations.append("clubroot_today_actions_incomplete")
-            if re.search(r"\b(?:one|1|single) year\b", self.question, re.I) and not re.search(
+            if clubroot_short_rotation_requested(self.question) and not re.search(
                 r"\bspores?\b[^.]{0,70}\b(?:persist|years)\b|\b(?:does not|cannot|will not) eradicat\w*\b", lower
             ):
                 violations.append("clubroot_rotation_persistence_not_answered")
@@ -708,6 +709,9 @@ def build_decision_route_state(question: str, question_type: str = "") -> Decisi
         }.get(capsule.domain, capsule.domain)
     decisive = _decisive_evidence(decision, crop)
     premise_anchors = _premise_anchors(decision)
+    if decision == "clubroot_containment" and not clubroot_confirmation_requested(question):
+        decisive = ("reported clubroot soil risk, history and affected-area records", *decisive[1:])
+        premise_anchors = tuple(anchor for anchor in premise_anchors if anchor.name != "clubroot_confirmation")
     constraints = [f"Use only field conditions stated in the question: {question.strip()}"]
     if sample_event_roles_stated(question):
         constraints.append(
@@ -757,6 +761,8 @@ def build_decision_route_state(question: str, question_type: str = "") -> Decisi
         constraints.append("Compare affected and normal plants, roots, stand, wetness, field pattern, and input history before treating crop colour as a nutrient rate")
     if decision == "seeding_rate_calculation":
         constraints.append("Do not finish the calculation without target stand and expected field establishment or mortality in compatible units")
+    if decision == "clubroot_containment" and not clubroot_confirmation_requested(question):
+        constraints.append("Keep soil biosecurity separate from current symptom diagnosis; preserve reported history without inventing symptoms in the rotation crop or requiring a new symptomatic plant sample")
     if decision == "erosion_control_plan":
         constraints.append("Treat mapped slope as screening context and ground-truth flow paths, cover, rotation, tillage, and observed erosion before selecting controls")
     if decision == "drought_nitrogen_adjustment":

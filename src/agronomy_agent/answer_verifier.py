@@ -10,6 +10,7 @@ from pathlib import Path
 
 from agronomy_agent.agno_runtime.local_index import RetrievedDoc
 from agronomy_agent.decision_route import build_decision_route_state
+from agronomy_agent.plant_health_scope import clubroot_confirmation_requested, clubroot_short_rotation_requested
 from agronomy_agent.evidence_handshake import (
     EvidenceHandshake,
     build_evidence_handshake,
@@ -3254,10 +3255,15 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
     if method:
         for name, instruction, patterns in method.facets:
             add(name, instruction, *patterns)
-    if re.search(r"\bclubroot\b", lower) and re.search(r"\b(?:one|1|single) year\b", lower):
+    if re.search(r"\bclubroot\b", lower) and clubroot_short_rotation_requested(question):
         add("clubroot_persistence", "Answer that one nonhost year does not eradicate persistent clubroot spores.", r"\b(?:does not|will not|cannot|not enough|not eradicate|not clean)\b[^.]{0,90}\b(?:clubroot|eradicat|clean|spores?)\b", r"\bspores?\b[^.]{0,60}\b(?:persist|years)\b")
 
     decision = build_decision_route_state(question, question_type).decision
+    if decision == "clubroot_containment":
+        # The route already checks soil hygiene and, when actually requested,
+        # symptom confirmation. A generic plant-health checklist must not add
+        # crop-stage, weather or fresh diagnostic prerequisites to biosecurity.
+        return tuple(requirements)
     if decision == "stratified_soil_sampling":
         add("zone_samples", "Collect representative samples separately from contrasting management zones; do not average unlike zones.",
             r"\bsampl\w*\b[^.]{0,90}\b(?:each|separate)\b[^.]{0,30}\bzone", r"\b(?:each|separate)\b[^.]{0,45}\bzone\b[^.]{0,60}\bsampl\w*\b", r"\bdo not (?:mix|combine)\b[^.]{0,45}\bzones?\b")
@@ -4306,6 +4312,16 @@ def _decision_route_failure_answer(
         )
     if decision == "clubroot_containment":
         guidance_scope = _clubroot_guidance_scope(state.question, jurisdiction)
+        if not clubroot_confirmation_requested(state.question):
+            return (
+                "For clubroot soil risk or reported history, limit soil movement even during a nonhost rotation. "
+                "Rotation reduces risk rather than proving the soil clean; resting spores can persist for many years, so one nonhost year does not eradicate clubroot. "
+                "Mark known or suspect areas and access routes, restrict unnecessary traffic, work affected ground last, and avoid carrying soil or crop debris to clean areas. "
+                "Before equipment, tools or boots leave, remove adhering soil and follow current applicable local sanitation guidance; contain removed material and wash water. "
+                "Use any available diagnostic and field-location records to map the reported risk, and check susceptible brassica volunteers and cruciferous weeds in the rotation. "
+                f"Use {guidance_scope} for access, cleaning and longer-term rotation decisions. "
+                "If new symptoms appear in a susceptible crop, arrange representative diagnosis; soil-movement precautions need not wait for those symptoms."
+            )
         return (
             "Swollen roots are a reason to suspect clubroot, not confirmation. One nonhost year does not eradicate clubroot; resting spores can persist for many years, and rotation reduces risk rather than proving a field clean. Check for susceptible brassica crops, volunteers and cruciferous weeds throughout the rotation. Treat this as suspected clubroot and act today to limit soil movement while arranging confirmation. Mark the patch and approach, keep unnecessary traffic out, work the suspect area last, and avoid moving soil, roots, or contaminated material to clean parts of the field. Before equipment, tools, or boots leave, remove adhering soil at the site and follow current applicable local sanitation guidance; record where material and wash water go. "
             "Dig several plants from the patch margin and normal plants outside it, keep roots intact, photograph the pattern and galls, and submit a representative sample through an appropriate crop-diagnostic laboratory or local referral pathway. Record crop stage, recent weather, field distribution and disease risk, rotation, variety, equipment movement, and symptom progression. Confirmation and "
