@@ -663,3 +663,21 @@ def test_partial_gdd_arithmetic_does_not_mark_the_whole_request_model_free(runti
     view = preview(client, turn(question))
     assert view['requires_model'] is True and view['status'] == 'model_required'
     assert view['reason'] == 'additional_request_requires_generation'
+
+
+@pytest.mark.parametrize('water_phrase', ['carrier-water volume', 'carrier water volume'])
+def test_product_total_negative_output_boundary_remains_model_free(runtime, monkeypatch, water_phrase):
+    client, store = runtime
+    monkeypatch.setattr(chat_service, '_build_mlx_generator', no_generator)
+    question = ('A hypothetical field is 16 ha and a teaching example uses 3 L product/ha. '
+                'Calculate the total product volume, not a recommended rate or ' + water_phrase + '.')
+    sid = session(client)
+    payload = turn(question)
+    view = preview(client, payload, sid)
+    assert view['requires_model'] is False and view['status'] == 'ready'
+    result = client.post(f'/api/sessions/{sid}/turns', headers=OWNER,
+                        json={**payload, 'readiness_binding':view['readiness_binding']})
+    assert result.status_code == 200, result.text
+    saved = store.get_turn(result.json()['turn_id'])
+    assert saved['answer'].startswith('48 L product.')
+    assert saved['trace']['metadata']['generation_path'] == 'deterministic_tool_result'

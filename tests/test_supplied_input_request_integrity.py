@@ -316,3 +316,9 @@ def test_polite_concept_lists_do_not_become_operational_requests(question):
     route = refine_query_route(question, classify_query(question))
     assert route.risk_level == 'low'
     assert route.question_type in {'conceptual', 'exam_review'}
+
+
+def test_closed_product_volume_exclusion_does_not_hide_an_additional_operation():
+    question = ('A hypothetical field is 16 ha and a teaching example uses 3 L product/ha. '
+                'Calculate the total product volume, not a recommended rate or carrier-water volume, mulch beds.')
+    assert plan_tools(question).status != 'ready'

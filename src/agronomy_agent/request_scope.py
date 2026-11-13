@@ -149,7 +149,7 @@ def has_unqualified_followup(text: str, *, calculation: bool = False) -> bool:
             r"distinguish it from total carrier volume))\b")
         for tail in [tail for clause in clauses for tail in re.split(r",\s*(?!\d)|\b(?:and|then|also)\b", clause, flags=re.I)[1:]]:
             tail = re.sub(r"^\s*(?:(?:and|then|also)\s+)*", "", tail, flags=re.I).strip()
-            if re.fullmatch(r"(?:ignoring (?:losses|(?:unusable )?(?:tank )?volume)|not a (?:recommended rate|rate recommendation)|assuming the label basis is correct|not of (?:germinated seeds|seeds sown)|(?:not including|excluding) germination)", tail, re.I):
+            if re.fullmatch(r"(?:ignoring (?:losses|(?:unusable )?(?:tank )?volume)|not a (?:recommended rate(?: or carrier[- ]water volume)?|rate recommendation)|assuming the label basis is correct|not of (?:germinated seeds|seeds sown)|(?:not including|excluding) germination)", tail, re.I):
                 continue
             if re.fullmatch(data_declaration, tail, re.I):
                 continue
