@@ -99,3 +99,10 @@ Unit tests prove executor behavior. Add a conversational path test before claimi
 ## Failure modes
 
 Expected statuses include invalid input, missing input, unsupported operation, blocked offline, provider not configured, provider unavailable, stale cache, out-of-scope jurisdiction, and verifier rejection. Unknown required capabilities and duplicate aliases should fail startup/preflight rather than disappear.
+
+Seedling loss is not automatically the complement of overall emergence.
+The two-scenario clarification requires directly supplied survival; mortality
+inputs do not gain that path. A stage-specific seedling loss needs actual
+overall emergence or an explicit loss definition among germinated seeds. The
+parser and short follow-up resolver do not turn its complement into a supplied
+overall survival fact. Explicit post-germination mortality remains supported.

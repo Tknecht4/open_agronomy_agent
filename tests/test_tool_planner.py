@@ -131,7 +131,11 @@ def test_current_planner_preserves_frozen_cases_and_exposes_seed_basis_reference
     # denominator error in current execution.
     if row["eval_id"] == "ca_calc_seed_rate_01":
         assert row["reference_numeric"] == 122.8
-        assert plan.status == "clarification_required" and not results
+        assert plan.status == "clarification_required" and len(results) == 1
+        assert results[0].status == "clarification_scenarios"
+        assert results[0].payload["selected_scenario"] is None
+        assert "value" not in results[0].payload
+        assert {s["assumed_survival_basis"] for s in results[0].payload["scenarios"]} == {"seeds_sown", "germinated_seeds"}
         assert "seeds sown" in plan.clarification
         return
     if row["eval_id"] == "ca_calc_seed_rate_02":

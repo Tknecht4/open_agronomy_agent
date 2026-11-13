@@ -298,3 +298,20 @@ and final PR checks remain required. No output from a superseded source is
 silently substituted into that successor. The historical V2 synthetic fixture
 stays limited to its frozen construct; current conditional results require the
 production tests and whole release assessment.
+
+Seedling loss is not automatically the complement of overall emergence.
+The two-scenario clarification requires directly supplied survival; mortality
+inputs do not gain that path. A stage-specific seedling loss needs actual
+overall emergence or an explicit loss definition among germinated seeds. The
+parser and short follow-up resolver do not turn its complement into a supplied
+overall survival fact. Explicit post-germination mortality remains supported.
+
+The local-only `c3c8d07` checkpoint completed whole Python QA with 4,705
+passes, 58 skips and two failures: an outdated empty-result assertion and a
+missing new test in the public package allowlist. Those repairs are under
+replacement-source verification. Independent agronomic review also found that
+mortality-derived survival overextended the new two-scenario feature. Seedling
+loss per seed sown can be additional to germination failure; it cannot become
+overall survival merely by subtraction from 100. The bounded repair keeps
+conditional-loss arithmetic and asks for overall emergence or an explicit
+post-germination loss definition. No model collection started at `c3c8d07`.

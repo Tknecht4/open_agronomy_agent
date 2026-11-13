@@ -18,13 +18,18 @@ STATUS = "clarification_scenarios"
 
 
 def conditional_seed_payload(invocation: Any, *, question: str) -> dict[str, Any] | None:
-    """Execute both explicit assumptions only when this is the sole input gap."""
+    """Execute two bases for directly supplied survival, not derived loss.
+
+    A seedling loss may be conditional mortality or an additional share of
+    seeds sown. Its complement is not necessarily overall establishment.
+    """
     if (invocation.tool_id != "agronomic_calculator"
             or invocation.operation not in {"seed_rate_mass", "seed_rate_mass_imperial"}
             or invocation.status != "clarification_required"
             or tuple(invocation.missing_inputs) != (SEED_SURVIVAL_BASIS_GAP,)
             or "survival_basis" in invocation.inputs
-            or "germination_pct" not in invocation.inputs):
+            or "germination_pct" not in invocation.inputs
+            or "mortality_pct" in invocation.inputs):
         return None
     from agronomy_agent.calculator_contracts import calculation_request_is_complete
     qualifiers: list[bool] = []

@@ -13,6 +13,7 @@ from agronomy_agent.supplied_numeric_inputs import NUMBER as SUPPLIED_NUMBER
 
 SEED_SURVIVAL_BASES = ("seeds_sown", "germinated_seeds")
 SEED_SURVIVAL_BASIS_GAP = "the survival denominator (all seeds sown or only germinated seeds)"
+SEED_LOSS_MODEL_GAP = "the seedling-loss definition: supply overall emergence of seeds sown, or mortality among germinated seeds"
 SEED_GERMINATION_GAP = "seed-lot germination percent for post-germination survival"
 _NUMBER = rf"({SUPPLIED_NUMBER})"
 
@@ -30,6 +31,17 @@ def established_fraction(survival_pct: Decimal, basis: str,
     if germination_pct is None:
         raise ValueError("germination_pct is required for survival of germinated seeds")
     return germination_pct / Decimal(100) * survival, "established fraction = germination × post-germination survival"
+
+
+def _germination_inclusion(text: str) -> tuple[bool, bool]:
+    """Read one bound inclusion cue; a negative cannot grant inclusion."""
+    noun = r"(?:lab(?:oratory)?\s+)?germination\b"
+    excluded = bool(re.search(
+        r"\b(?:(?:not|doesn['’]t|does\s+not|without)\s+(?:already\s+)?includ(?:e|es|ing)|"
+        r"exclud(?:e|es|ing)|without)\s+" + noun, text))
+    included = bool(not excluded and re.search(
+        r"\b(?:already\s+)?includ(?:e|es|ing)\s+" + noun, text))
+    return excluded, included
 
 
 def parse_seed_establishment(text: str, *, bindings: list[re.Match[str]] | None = None,
@@ -75,6 +87,7 @@ def parse_seed_establishment(text: str, *, bindings: list[re.Match[str]] | None 
         inputs["field_survival_pct"] = survival
 
     bases: set[str] = set()
+    unsupported_seedling_loss = False
     for match in survival_matches + loss_matches:
         role = match.group(0).casefold()
         before = text[max(0, match.start() - 48):match.start()].casefold()
@@ -88,15 +101,29 @@ def parse_seed_establishment(text: str, *, bindings: list[re.Match[str]] | None 
             r"\b(?:not|rather than|instead of)\s+(?:of\s+)?(?:all\s+)?(?:germinated seeds?|viable seeds?|seeds? sown|seeds? planted|post[- ]germination)", context))
         # Explicit negation of a denominator must not activate that denominator.
         context = re.sub(r"\b(?:not|rather than|instead of)\s+(?:of\s+)?(?:all\s+)?(?:germinated seeds?|viable seeds?|seeds? sown|seeds? planted|post[- ]germination)", "", context)
-        excludes_germination = bool(re.search(
-            r"\b(?:not|doesn['’]t)\s+includ(?:e|es|ing)\s+germination\b|"
-            r"\b(?:exclud(?:e|es|ing)|without)\s+germination\b", context))
+        excludes_germination, includes_germination = _germination_inclusion(context)
         conditional = bool(re.search(r"post[- ]germination|\b(?:of|among)\s+(?:the\s+)?(?:germinated|viable)\s+seeds?\b", context)
                            or re.search(r"post[- ]germination\s*[:,-]?\s*$", before))
         overall = bool(re.search(r"\boverall\b", role)
                        or re.match(r"\s*overall\b", after)
                        or re.search(r"\b(?:of|among)\s+(?:all\s+|the\s+)?seeds?\s+(?:sown|planted)\b", context)
-                       or (not excludes_germination and re.search(r"\b(?:already\s+)?includ(?:es|ing)\s+germination\b", context)))
+                       or includes_germination)
+        # Keep stage language with this percentage, stopping before another
+        # supplied quantity or sentence; never scan the whole question.
+        quantity_tail = re.split(SUPPLIED_NUMBER, after, maxsplit=1)[0]
+        stage_specific_loss = bool(
+            re.search(r"\bseedlings?\b|\b(?:after|following)\s+germination\b", role + quantity_tail)
+            # A germination percentage can itself be part of the stage
+            # qualifier, rather than the start of an unrelated quantity.
+            or re.search(rf"\b(?:after|following)\s+{SUPPLIED_NUMBER}\s*%\s+germination\b", context)
+            or re.search(r"\b(?:seedling(?:\s+stage)?|(?:after|following)\s+germination)[\s,:-]*$", before))
+        # Inclusion attached to a later percentage cannot redefine this loss.
+        _, loss_includes_germination = _germination_inclusion(role + quantity_tail)
+        if match in loss_matches and stage_specific_loss and not conditional and not loss_includes_germination:
+            # Stage-specific deaths per seed sown are additional to failed
+            # germination, not the complement of overall establishment.
+            # This calculator owns only explicit overall or conditional rates.
+            unsupported_seedling_loss = True
         if unqualified_basis is not None:
             # Keep qualification attached to this percentage's role and clause;
             # "overall germination" or a later "overall seed rate" is not a
@@ -128,4 +155,10 @@ def parse_seed_establishment(text: str, *, bindings: list[re.Match[str]] | None 
             missing.append(f"invalid {label}: use a percentage above zero and at most 100")
     if loss is not None and not 0 <= loss < 100:
         missing.append("invalid mortality: use a percentage from zero to below 100")
+    if unsupported_seedling_loss:
+        missing = [item for item in missing if item not in {SEED_SURVIVAL_BASIS_GAP, SEED_GERMINATION_GAP}]
+        missing.append(SEED_LOSS_MODEL_GAP)
+        if not survival_matches:
+            inputs.pop("field_survival_pct", None)
+            inputs.pop("survival_basis", None)
     return inputs, tuple(dict.fromkeys(missing))

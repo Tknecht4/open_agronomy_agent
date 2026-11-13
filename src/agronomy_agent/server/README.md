@@ -252,3 +252,10 @@ read-back verification. Display overlays use a separate worker reprojection.
 No browser supplies a worker path, arbitrary asset URL or execution environment.
 
 Season records retain structured crop entries and an explicit single/intercrop/sequence/separate-areas system. Legacy single-crop rows are projected without changing their crop year; edits use the existing revision precondition. The trusted question compiler carries the saved structure and does not infer per-crop acreage or dates. Canadian dossier crop-cover refresh opts into `year: latest`, with a catalog response receipt; direct tool calls retain their pinned default or explicit year.
+
+Seedling loss is not automatically the complement of overall emergence.
+The two-scenario clarification requires directly supplied survival; mortality
+inputs do not gain that path. A stage-specific seedling loss needs actual
+overall emergence or an explicit loss definition among germinated seeds. The
+parser and short follow-up resolver do not turn its complement into a supplied
+overall survival fact. Explicit post-germination mortality remains supported.

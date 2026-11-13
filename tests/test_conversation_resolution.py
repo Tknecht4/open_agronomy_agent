@@ -233,3 +233,11 @@ def test_unrooted_reference_chain_never_borrows_assistant_number() -> None:
     )
     assert result.effective_question == "What about 300 instead?"
     assert result.status == "unresolved_reference_chain"
+
+
+@pytest.mark.parametrize("reply", ["Overall, of seeds sown.", "Only germinated seeds."])
+def test_undefined_seedling_loss_cannot_be_recast_as_user_supplied_survival(reply):
+    root = "Calculate seed rate for 240 plants/m2, TKW 36 g, germination 90%, and 20% seedling mortality."
+    resolution = resolve_calculation_follow_up(reply, [{"turn_id":"loss-root","message":root}])
+    assert resolution.status == "antecedent_not_seed_basis_clarification"
+    assert resolution.effective_question == reply

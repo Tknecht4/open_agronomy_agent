@@ -416,6 +416,7 @@
     "tests/test_security_evidence.py",
     "tests/test_run_cockpit_cleanup.py",
     "tests/test_seed_establishment_basis.py",
+    "tests/test_seed_survival_scenarios.py",
     "tests/test_tool_planner.py",
     "tests/test_tool_planner_end_to_end.py",
     "tests/test_statcan_tillage_seeding_context_snapshot.py",

@@ -742,3 +742,34 @@ def test_ambiguous_seed_scenarios_persist_partial_evidence_without_model_or_prov
     assert follow.status_code == 200, follow.text
     assert store.get_turn(follow.json()["turn_id"])["answer"].startswith("117.391 kg/ha")
     assert store.get_turn(original["turn_id"]) == original
+
+
+@pytest.mark.parametrize("backend", ["mlx", "http"])
+def test_seedling_loss_stage_cannot_become_a_supplied_overall_survival_fact(runtime, monkeypatch, backend):
+    client, store = runtime
+    monkeypatch.setattr(chat_service, "_build_mlx_generator", no_generator)
+    monkeypatch.setenv("AGRONOMY_AGENT_MODEL_BACKEND", backend)
+    monkeypatch.delenv("AGRONOMY_AGENT_MODEL_BASE_URL", raising=False)
+    sid = session(client)
+    question = "Calculate seed rate for 240 plants/m2, TKW 36 g, germination 90%, and 20% seedling mortality of all seeds sown."
+    view = preview(client, turn(question), sid)
+    assert view["requires_model"] is False
+    response = client.post(f"/api/sessions/{sid}/turns", headers=OWNER,
+                          json={**turn(question), "readiness_binding":view["readiness_binding"]})
+    assert response.status_code == 200, response.text
+    original = deepcopy(store.get_turn(response.json()["turn_id"]))
+    plan = original["trace"]["metadata"]["tool_plan"]
+    assert plan["status"] == "clarification_required"
+    assert "field_survival_pct" not in plan["invocations"][0]["inputs"]
+    assert "seedling-loss definition" in original["answer"]
+    assert not any(item.get("result_id") for item in original["trace"]["tool_invocations"])
+    assert preview(client, turn("Overall, of seeds sown."), sid)["requires_model"] is True
+    # A complete explicitly conditional restatement remains ordinary arithmetic.
+    qualified = question.replace("of all seeds sown", "among germinated seeds")
+    ready = preview(client, turn(qualified), sid)
+    assert ready["requires_model"] is False
+    completed = client.post(f"/api/sessions/{sid}/turns", headers=OWNER,
+                            json={**turn(qualified), "readiness_binding":ready["readiness_binding"]})
+    assert completed.status_code == 200, completed.text
+    assert store.get_turn(completed.json()["turn_id"])["answer"].startswith("120 kg/ha")
+    assert store.get_turn(original["turn_id"]) == original

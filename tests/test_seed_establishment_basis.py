@@ -148,3 +148,78 @@ def test_seed_record_cannot_overflow_operands_or_underflow_nonzero_result(target
         validate_seed_rate_inputs("seed_rate_mass", inputs)
     with pytest.raises(ValueError, match="numeric output range"):
         calculate_agronomic("seed_rate_mass", inputs)
+
+
+@pytest.mark.parametrize("suffix", ["20% seedling mortality", "20% seedling mortality of all seeds sown", "seedling mortality is 20% overall", "20% mortality of seedlings",
+    "20% mortality of all seeds sown at the seedling stage",
+    "20% mortality of all seeds sown after germination",
+    "20% mortality of all seeds sown after 96% germination"])
+def test_stage_specific_seedling_loss_does_not_become_overall_survival(suffix):
+    from agronomy_agent.seed_establishment import SEED_LOSS_MODEL_GAP
+    plan, results = _plan(suffix)
+    assert plan.status == "clarification_required" and not results
+    assert SEED_LOSS_MODEL_GAP in plan.invocations[0].missing_inputs
+    assert "field_survival_pct" not in plan.invocations[0].inputs
+    assert "survival_basis" not in plan.invocations[0].inputs
+    assert plan.invocations[0].inputs["mortality_pct"] == 20
+
+
+def test_explicit_seedling_mortality_among_germinated_seeds_is_preserved():
+    plan, results = _plan("20% seedling mortality among germinated seeds")
+    assert plan.status == "ready"
+    assert results[0].payload["value"] == pytest.approx(80 * 4.5 / (.96 * .8 * 100))
+    assert results[0].payload["inputs"]["survival_basis"] == "germinated_seeds"
+
+
+def test_explicit_total_mortality_including_germination_remains_overall():
+    plan, results = _plan("20% overall mortality including germination and seedling loss")
+    assert plan.status == "ready"
+    assert results[0].payload["inputs"]["survival_basis"] == "seeds_sown"
+    assert results[0].payload["value"] == pytest.approx(4.5)
+
+
+def test_later_sentence_stage_language_does_not_requalify_total_mortality():
+    from agronomy_agent.seed_establishment import parse_seed_establishment, SEED_LOSS_MODEL_GAP
+    inputs, gaps = parse_seed_establishment("germination 90%; 20% mortality of all seeds sown. The seedling stage is discussed separately.")
+    assert inputs["field_survival_pct"] == 80 and inputs["survival_basis"] == "seeds_sown"
+    assert SEED_LOSS_MODEL_GAP not in gaps
+
+
+def test_loss_stage_prefix_is_not_an_overall_complement_or_a_whole_request_bypass():
+    from agronomy_agent.seed_establishment import parse_seed_establishment, SEED_LOSS_MODEL_GAP
+    text = "germination 96%, and after germination, 20% mortality of all seeds sown"
+    inputs, gaps = parse_seed_establishment(text)
+    assert "field_survival_pct" not in inputs and SEED_LOSS_MODEL_GAP in gaps
+    plan, results = _plan("after germination, 20% mortality of all seeds sown")
+    assert plan.status != "ready" and not results
+
+
+@pytest.mark.parametrize("exclusion", [
+    "without including germination", "without already including germination",
+    "not already including germination", "does not already include germination",
+    "doesn't include germination", "doesn’t already include germination",
+    "without laboratory germination",
+])
+def test_negative_inclusion_cue_cannot_authorize_an_overall_seedling_loss(exclusion):
+    from agronomy_agent.seed_establishment import SEED_LOSS_MODEL_GAP
+    plan, results = _plan("20% seedling mortality " + exclusion)
+    assert plan.status == "clarification_required" and not results
+    assert "field_survival_pct" not in plan.invocations[0].inputs
+    assert SEED_LOSS_MODEL_GAP in plan.invocations[0].missing_inputs
+
+
+@pytest.mark.parametrize("inclusion", ["including germination", "already includes germination", "does include laboratory germination"])
+def test_affirmative_total_loss_inclusion_is_not_treated_as_an_exclusion(inclusion):
+    from agronomy_agent.seed_establishment import parse_seed_establishment
+    inputs, gaps = parse_seed_establishment("germination 96%; 20% overall mortality " + inclusion + " and seedling loss")
+    assert not gaps and inputs["field_survival_pct"] == 80 and inputs["survival_basis"] == "seeds_sown"
+
+
+def test_later_emergence_inclusion_cannot_redefine_the_earlier_seedling_loss():
+    from agronomy_agent.seed_establishment import SEED_LOSS_MODEL_GAP
+    plan, results = _plan("20% seedling mortality, overall emergence 80% including germination")
+    assert plan.status == "clarification_required" and not results
+    assert SEED_LOSS_MODEL_GAP in plan.invocations[0].missing_inputs
+    # The explicitly supplied emergence remains a user input; the unresolved
+    # additional loss is not falsely executed as its total-loss complement.
+    assert plan.invocations[0].inputs["field_survival_pct"] == 80

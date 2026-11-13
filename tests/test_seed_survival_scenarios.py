@@ -59,7 +59,7 @@ def test_missing_invalid_excluded_basis_and_mixed_actions_do_not_gain_scenarios(
 def test_imperial_scenarios_keep_each_requested_method(method):
     modifier = {"dimensional":"", "published_factor_10":" using the Manitoba guide's factor-10 method", "compare":" using the Manitoba guide"}[method]
     query = (f"Calculate seed mass{modifier} for 7 plants/ft2 target, 5 g thousand-kernel weight, "
-             "90% germination and 20% seedling mortality in lb/ac.")
+             "90% germination and 80% field survival in lb/ac.")
     plan, results = plan_and_execute_tools(query)
     assert plan.status == "clarification_required" and len(results) == 1
     for scenario in results[0].payload["scenarios"]:
@@ -83,3 +83,11 @@ def test_other_quantity_or_later_output_qualifier_does_not_suppress_scenarios(qu
     plan, results = plan_and_execute_tools(question)
     assert plan.status == "clarification_required" and len(results) == 1
     assert results[0].status == "clarification_scenarios"
+
+
+@pytest.mark.parametrize("loss", ["20% mortality", "20% seedling mortality", "seedling mortality is 20%"])
+def test_loss_complement_is_not_a_directly_supplied_survival_scenario(loss):
+    query = QUESTION.replace("field survival 80%", loss)
+    plan, results = plan_and_execute_tools(query)
+    assert plan.status == "clarification_required"
+    assert not results

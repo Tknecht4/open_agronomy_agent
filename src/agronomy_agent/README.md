@@ -372,3 +372,10 @@ only the complete recognized declaration and explanation fit that exclusion.
 Pesticide-rate fallbacks distinguish insect, disease and weed targets, with a
 neutral path when the class is unknown. A leaf-feeding percentage is not by
 itself a sampling protocol, threshold or application authorization.
+
+Seedling loss is not automatically the complement of overall emergence.
+The two-scenario clarification requires directly supplied survival; mortality
+inputs do not gain that path. A stage-specific seedling loss needs actual
+overall emergence or an explicit loss definition among germinated seeds. The
+parser and short follow-up resolver do not turn its complement into a supplied
+overall survival fact. Explicit post-germination mortality remains supported.

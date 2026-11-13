@@ -64,7 +64,8 @@ stage. Seed-mass calculations distinguish overall emergence from survival after
 germination and retain the supplied basis. When otherwise complete inputs include
 laboratory germination but leave field survival's denominator unclear, the agent
 shows both labelled arithmetic scenarios and asks which basis applies. Neither
-scenario selects a field rate. A reply can supply that basis and, when needed, the laboratory germination
+scenario selects a field rate. Seedling-loss percentages need a clear relation
+to germination before their complement can represent overall survival. A reply can supply that basis and, when needed, the laboratory germination
 percentage in the same chat without using the model. Conceptual explanations
 and requests for field actions retain distinct
 evidence requirements.
