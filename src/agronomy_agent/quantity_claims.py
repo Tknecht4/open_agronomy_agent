@@ -256,10 +256,8 @@ def _checked_rate_illustration_spans(answer: str, question: str) -> set[tuple[in
         if not 0 <= percent <= 100:
             continue
         rows = []
-        rate_spans = []
         invalid = False
         for match in rate.finditer(block):
-            rate_spans.append(match.span())
             unit, area = match['mass'].lower(), match['area'].lower()
             area = 'ha' if area in {'ha','hectare','hectares'} else 'ac'
             value = Decimal(match['value'].replace(',', ''))
@@ -280,7 +278,18 @@ def _checked_rate_illustration_spans(answer: str, question: str) -> set[tuple[in
                     identity = labelled_identity
             if role == 'nutrient' and identity and identity != percent_basis:
                 invalid = True
-            rows.append((value * mass[unit], 'lb' if unit in {'lb','lbs','pound','pounds'} else 'kg', area, role, value))
+            rows.append((value * mass[unit], 'lb' if unit in {'lb','lbs','pound','pounds'} else 'kg', area, role, value, *match.span()))
+        # Only spans in an actual product-to-nutrient relation receive an
+        # exemption. Equal numeric values elsewhere are not derived evidence.
+        related_rows = []
+        for product_row in (row for row in rows if row[3] == 'product'):
+            for nutrient_row in (row for row in rows if row[3] == 'nutrient' and row[5] >= product_row[6]):
+                connector = re.sub(r'[*_`]', '', block[product_row[6]:nutrient_row[5]])
+                if re.fullmatch(r"\s*(?:gives?|delivers?|suppl(?:y|ies)|contains?|equals?|corresponds? to)\s+"
+                    r"(?:(?:a|an|the)\s+)?(?:(?:nutrient|nitrogen|phosphorus|potassium)\s+"
+                    r"(?:rate|mass|amount)\s*(?:(?:of|is)\s*|[:=]\s*)?)?", connector, re.I):
+                    related_rows.extend((product_row, nutrient_row))
+        rows = related_rows
         products = {r[0] for r in rows if r[3] == 'product'}
         nutrients = {r[0] for r in rows if r[3] == 'nutrient'}
         if (invalid or len(products) != 1 or len(nutrients) != 1 or not rows
@@ -294,7 +303,11 @@ def _checked_rate_illustration_spans(answer: str, question: str) -> set[tuple[in
                for m in equations):
             continue
         scalars = {percent, percent/100, *(r[4] for r in rows)}
-        bound_spans = rate_spans + [m.span() for m in percentage_mentions]
+        bound_spans = [(row[5], row[6]) for row in rows]
+        bound_spans += [m.span() for m in percentage_mentions if (
+            re.search(r"\b(?:product|fertili[sz]er)\s+(?:contains?|is|has)\s*(?:(?:about|approximately)\s+)?$",
+                      block[max(0, m.start()-90):m.start()], re.I)
+            or re.match(r"\s*(?:product|fertili[sz]er)\b", block[m.end():], re.I))]
         bound_spans += [m.span() for m in equations
                         if all(Decimal(v.replace(',', '')) in scalars for v in m.groups())]
         for match in NUMBER_RE.finditer(block):

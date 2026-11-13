@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from typing import Iterable
-from agronomy_agent.plant_health_scope import clubroot_confirmation_requested
+from agronomy_agent.plant_health_scope import clubroot_confirmation_requested, clubroot_workflow_applicable
 
 
 @dataclass(frozen=True)
@@ -361,18 +361,8 @@ def build_decision_capsule(question: str, *, crop: str | None = None) -> Decisio
     lower = " ".join(question.lower().split())
     scored: list[tuple[int, int, _DomainRule]] = []
     for order, rule in enumerate(_DOMAIN_RULES):
-        if rule.name == "clubroot_containment" and not re.search(r"\bclubroot\b", lower):
-            # Swelling or galls are not crop-independent evidence of clubroot.
-            # Preserve explicit soil/rotation concerns even in a nonhost year.
-            host_context = (
-                crop in {None, "canola", "field vegetables", "leafy greens"} and bool(re.search(
-                    r"\b(?:canola|rapeseed|mustard|brassica\w*|crucifer\w*|cole crops?|"
-                    r"cabbage|broccoli|cauliflower|brussels sprouts|kale|kohlrabi|radish|rutabaga|turnip)\b",
-                    lower,
-                ))
-            )
-            if not host_context:
-                continue
+        if rule.name == "clubroot_containment" and not clubroot_workflow_applicable(question):
+            continue
         score = sum(weight for pattern, weight in rule.signals if re.search(pattern, lower, re.IGNORECASE))
         scored.append((score, -order, rule))
     score, _, rule = max(scored, key=lambda item: (item[0], item[1]))

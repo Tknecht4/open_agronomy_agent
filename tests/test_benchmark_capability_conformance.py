@@ -25,8 +25,8 @@ def test_all_calculator_operations_execute_through_canonical_registry() -> None:
     assert report["failures"] == []
     calculator = report["capabilities"][0]
     assert calculator["capability_id"] == "agronomic_calculator"
-    assert calculator["declared_operation_count"] == 29
-    assert calculator["implemented_operation_count"] == 29
+    assert calculator["declared_operation_count"] == 31
+    assert calculator["implemented_operation_count"] == 31
     assert calculator["conformance_exercised"] is True
     assert calculator["performance_benchmark_exercised"] is False
     assert all(row["passed"] for row in calculator["positive_fixtures"])

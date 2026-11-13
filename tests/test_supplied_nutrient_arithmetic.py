@@ -8,8 +8,8 @@ from agronomy_agent.tool_planner import plan_and_execute_tools, plan_tools
 
 @pytest.mark.parametrize("question,operation,expected,unit", [
     ("Using P = 0.436 × P2O5, convert 75 kg P2O5/ha to elemental phosphorus.", "nutrient_basis_conversion", 32.7, "kg P/ha"),
-    ("Convert 90 kg K2O/ha to elemental potassium.", "nutrient_basis_conversion", 74.7, "kg K/ha"),
-    ("Convert 21.8 kg P/ha to P2O5.", "nutrient_basis_conversion", 50, "kg P2O5/ha"),
+    ("Convert 90 kg K2O/ha to elemental potassium.", "nutrient_basis_conversion", 74.718, "kg K/ha"),
+    ("Convert 21.8 kg P/ha to P2O5.", "nutrient_basis_conversion", 49.9547, "kg P2O5/ha"),
     ("A teaching budget has 45 kg P/ha applied and 28 kg P/ha removed. Calculate the apparent balance and explain its limits.", "apparent_nutrient_balance", 17, "kg P/ha"),
     ("Compute nutrient balance: 10 kg K2O/ha applied and 25 kg K2O/ha removed.", "apparent_nutrient_balance", -15, "kg K2O/ha"),
     ("A hypothetical field is 16 ha and a teaching example uses 3 L product/ha. Calculate the total product volume, not a recommended rate or carrier-water volume.", "liquid_product_total", 48, "L product"),
@@ -93,7 +93,9 @@ def test_supplied_nutrient_precision_does_not_round_away_small_balance():
 
 
 @pytest.mark.parametrize("question,prefix", [
-    ("Convert 75 kg P2O5/ha to elemental phosphorus.", "32.7 kg P/ha"),
+    ("Convert 75 kg P2O5/ha to elemental phosphorus.", "32.73 kg P/ha"),
+    ("Total above-ground dry biomass is 12 t/ha and grain dry mass is 4.2 t/ha. Compute harvest index.", "0.35 harvest index"),
+    ("Calculate area of a circular sampling plot with radius 12 metres. Explain why this is not the field area.", "452.389 m²"),
     ("Calculate the apparent balance: 45 kg P/ha applied and 28 kg P/ha removed.", "17 kg P/ha"),
     ("Compute total product volume at 3 L product/ha over 16 ha.", "48 L product"),
     ("Convert 2 kg/ha of this herbicide label rate to lb/ac.", "1.784 lb/ac"),
@@ -188,3 +190,59 @@ def test_universal_safety_bypass_cannot_be_hidden_behind_valid_arithmetic():
 ])
 def test_legacy_conversion_cannot_consume_an_unhandled_permission_request(followup):
     assert plan_tools('Convert 2 kg/ha to lb/ac. ' + followup).status == 'not_applicable'
+
+
+@pytest.mark.parametrize('question', [
+    'How much 20% or 40%-N fertilizer supplies 80 kg N/ha?',
+    'Compute total product volume at 3 or 6 L product/ha over 16 ha.',
+    'Compute total product volume at 3 and 6 L product/ha over 16 ha.',
+    'Convert 75 kg P2O5/ha to P or K.',
+    'Convert 75 kg P2O5/ha to P and K.',
+])
+def test_no_unlabelled_numeric_or_basis_alternative_is_selected(question):
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'clarification_required'
+    assert not results
+
+
+@pytest.mark.parametrize('source,target,factor,expected', [
+    ('P', 'P2O5', '2.29', '114.50'), ('P', 'P2O5', '2.2913', '114.5650'),
+    ('P2O5', 'P', '.44', '22.00'), ('P2O5', 'P', '.436', '21.800'),
+    ('K', 'K2O', '1.2', '60.0'), ('K', 'K2O', '1.205', '60.250'),
+])
+def test_published_rounded_factors_are_preserved_in_the_requested_direction(source, target, factor, expected):
+    inputs = {'quantity_kg_per_ha': 50, 'from_basis': source, 'to_basis': target, 'factor': factor}
+    result = calculate_agronomic('nutrient_basis_conversion', inputs)
+    assert result.value == Decimal(expected)
+    assert result.inputs['factor'] == Decimal(factor)
+    assert 'rounded reporting factor' in result.answer()
+
+
+@pytest.mark.parametrize('factor', ['.4', '2.0', '1.3', '.8', '2.28'])
+def test_wrong_or_unjustifiably_coarse_phosphorus_factors_remain_invalid(factor):
+    with pytest.raises(ValueError):
+        validate_supplied_nutrient_inputs('nutrient_basis_conversion', {'quantity_kg_per_ha': 50, 'from_basis': 'P', 'to_basis': 'P2O5', 'factor': factor})
+
+
+@pytest.mark.parametrize('question', [
+    'A field covers 16 hectares. A dry fertilizer product is 25% nitrogen by mass. Calculate the total product kilograms needed to supply 75 kg N/ha.',
+    'How much 25%-N fertilizer supplies 75 kg N/ha over 16 ha in total?',
+    'A field covers 16 hectares. A dry fertilizer product is 25 percent nitrogen by mass. Calculate the total product kilograms needed to supply 75 kg N/ha.',
+])
+def test_complete_whole_field_requests_keep_the_area_and_existing_total_operation(question):
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'ready'
+    assert results[0].operation == 'fertilizer_field_total'
+    assert results[0].payload['value'] == 4800
+    assert results[0].payload['unit'] == 'kg'
+
+
+def test_a_requested_field_total_does_not_become_an_unasked_per_area_result():
+    plan, results = plan_and_execute_tools('How much 25%-N fertilizer supplies 75 kg N/ha in total?')
+    assert plan.status == 'clarification_required' and not results
+    assert 'area in hectares' in plan.invocations[0].missing_inputs
+
+
+def test_explicit_volume_percentage_is_not_used_as_a_mass_fraction():
+    plan, results = plan_and_execute_tools('How much fertilizer with 25% nitrogen by volume supplies 75 kg N/ha?')
+    assert plan.status == 'clarification_required' and not results

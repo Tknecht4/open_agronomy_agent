@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from agronomy_agent.map_component_interpretation import is_map_component_explanation_question
 from agronomy_agent.observation_guidance import observation_guidance
 from agronomy_agent.answerability import is_rate_basis_explanation, is_mechanism_explanation, product_action_request_text
+from agronomy_agent.request_scope import has_action_directive
 
 
 _AAFC_CROP_HEALTH_PRODUCT_PATTERN = (
@@ -231,6 +232,14 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     expansions = set(route.query_expansion)
     risk = route.risk_level
     guidance = route.guidance
+    operational_directive = has_action_directive(question, coordinated=False)
+    if operational_directive and risk == "low":
+        risk = "medium"
+    if operational_directive and qtype in {"conceptual", "exam_review"}:
+        qtype = "crop_management"
+        namespaces.discard("exam_review")
+        namespaces.add("crop_management")
+        guidance = "Answer the explanation and the additional operational request separately; use the field evidence needed for the requested action."
 
     pesticide_terms = has(r"\b(?:herbicide|fungicide|insecticide|pesticide|spray|tank mix)\b", q)
     explicit_agrochemical_context = has(
@@ -582,7 +591,7 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
         risk_level=risk,
         namespaces=tuple(sorted(namespaces)),
         required_tools=tuple(sorted(tools)),
-        answer_style="exam_review" if benign_conceptual_explanation else route.answer_style,
+        answer_style="plain" if operational_directive else "exam_review" if benign_conceptual_explanation else route.answer_style,
         audience=route.audience,
         query_expansion=tuple(sorted(expansions)),
         guidance=guidance,
@@ -732,6 +741,8 @@ def evidence_interpretation_kind(text: str) -> str | None:
     Use the complete request so a final comparison clause cannot erase an
     application or product request elsewhere in the question.
     """
+    if has_action_directive(text, coordinated=False):
+        return None
     q = _routing_text(text)
     # "Treat these measurements as equivalent" is a comparison, not a
     # pesticide/treatment request. Only remove that bounded grammatical use.
@@ -832,6 +843,8 @@ def _is_benign_conceptual_explanation(text: str) -> bool:
     diagnostic or product routes.
     """
 
+    if has_action_directive(text, coordinated=False):
+        return False
     if is_mechanism_explanation(text) or evidence_interpretation_kind(text):
         return True
     q = _routing_text(text).strip()

@@ -51,6 +51,8 @@ from agronomy_agent.agronomic_calculations import (
     validate_supplied_nutrient_inputs,
     validate_fertilizer_product_mass_inputs, validate_sprayer_application_volume_inputs,
     validate_grain_moisture_inputs,
+    validate_grain_harvest_index_inputs,
+    validate_circular_sampling_area_inputs,
     validate_single_nozzle_inputs,
     validate_mean_temperature_gdd_inputs,
 )
@@ -418,13 +420,15 @@ def preview_turn_readiness(
                 validated_inputs = True
             except (ValueError, DecimalException):
                 validated_inputs = False
-        elif calculator.operation in WATER_INPUTS or calculator.operation in {"fertilizer_product_mass", "sprayer_application_volume", "grain_moisture_adjustment", "single_nozzle_application_volume", "mean_temperature_gdd"}:
+        elif calculator.operation in WATER_INPUTS or calculator.operation in {"fertilizer_product_mass", "sprayer_application_volume", "grain_moisture_adjustment", "single_nozzle_application_volume", "mean_temperature_gdd", "grain_harvest_index", "circular_sampling_area"}:
             try:
                 if calculator.operation in WATER_INPUTS:
                     validate_water_arithmetic_inputs(calculator.operation, calculator.inputs)
                 else:
                     {"fertilizer_product_mass": validate_fertilizer_product_mass_inputs,
                      "grain_moisture_adjustment": validate_grain_moisture_inputs,
+                     "grain_harvest_index": validate_grain_harvest_index_inputs,
+                     "circular_sampling_area": validate_circular_sampling_area_inputs,
                      "single_nozzle_application_volume": validate_single_nozzle_inputs,
                      "mean_temperature_gdd": validate_mean_temperature_gdd_inputs,
                      "sprayer_application_volume": validate_sprayer_application_volume_inputs}[calculator.operation](calculator.inputs)

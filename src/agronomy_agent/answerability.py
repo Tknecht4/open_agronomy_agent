@@ -16,6 +16,7 @@ import json
 import re
 from typing import Any, Mapping, Sequence
 
+from agronomy_agent.request_scope import has_action_directive
 from agronomy_agent.calculator_contracts import TOOL_PLANNER_VERSION, format_calculator_clarification, tool_version_for
 
 
@@ -441,7 +442,7 @@ def is_mechanism_explanation(question: str) -> bool:
         r"which\s+(?:rival|alternative|possible)\s+(?:explanations|causes)\s+"
         r"should\s+be\s+(?:investigated|considered|checked)\b)", text,
     )
-    if request is None:
+    if request is None or has_action_directive(text, coordinated=False):
         return False
     if re.search(
         r"\b(?:my|our|your|i|we|you|growers?|farmers?|operators?|advis[eo]rs?)\b|"

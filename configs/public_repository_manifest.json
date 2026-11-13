@@ -797,6 +797,7 @@
     "tests/test_release_eval_model_metrics.py",
     "tests/test_release_eval_diagnostic_inputs.py",
     "tests/test_checkpoint_truthfulness.py",
+    "tests/test_supplied_geometry_biomass_arithmetic.py",
     "tests/test_supplied_grain_arithmetic.py",
     "tests/test_supplied_nutrient_arithmetic.py",
     "tests/test_supplied_water_arithmetic.py",

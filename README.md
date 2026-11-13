@@ -56,7 +56,8 @@ completed observations. Historical smoke panels and frozen benchmarks remain
 evidence for their original revisions.
 
 The calculator checks supplied quantities for nutrient, product, water,
-sprayer-calibration, grain-moisture and thermal-time arithmetic. It shows the
+sprayer-calibration, grain-moisture, thermal-time, harvest-index and circular
+sampling-area arithmetic. It shows the
 units and assumptions and asks for missing or conflicting inputs. A calculated
 quantity does not select a field target, authorize a product or establish crop
 stage. Conceptual explanations and requests for field actions retain distinct

@@ -19,6 +19,7 @@ from agronomy_agent.foundation_math_parser import AREA, _unsafe_action_request, 
 from agronomy_agent.supplied_nutrient_parser import parse_supplied_nutrient_calculation
 from agronomy_agent.supplied_water_parser import parse_supplied_water_calculation
 from agronomy_agent.supplied_grain_parser import parse_supplied_grain_calculation
+from agronomy_agent.supplied_geometry_biomass_parser import parse_supplied_geometry_biomass_calculation
 
 
 PLANNER_VERSION = TOOL_PLANNER_VERSION
@@ -206,8 +207,15 @@ def calculator_contract() -> dict[str, Any]:
 def _parse_calculation(question: str) -> tuple[str, dict[str, Any], tuple[str, ...]] | None:
     text = " ".join(question.replace("−", "-").split())
     lower = text.casefold()
-    supplied = parse_supplied_nutrient_calculation(text) or parse_supplied_water_calculation(text) or parse_supplied_grain_calculation(text)
+    supplied = parse_supplied_nutrient_calculation(text) or parse_supplied_water_calculation(text) or parse_supplied_grain_calculation(text) or parse_supplied_geometry_biomass_calculation(text)
     if supplied is not None:
+        # A new incomplete per-area recognizer cannot hide an already complete
+        # field-total request. Invalid/ambiguous inputs never fall through.
+        if (supplied[0] in {'fertilizer_product_mass', 'fertilizer_field_total'} and supplied[2]
+                and not any(item.startswith('invalid ') for item in supplied[2])):
+            existing = parse_foundation_calculation(text)
+            if existing is not None and existing[0] == 'fertilizer_field_total' and not existing[2]:
+                return existing
         return supplied
     if _unsafe_action_request(lower):
         return None

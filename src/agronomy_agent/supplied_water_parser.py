@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from agronomy_agent.supplied_math_scope import supplied_math_scope
+from agronomy_agent.supplied_math_scope import supplied_math_scope, has_unlabelled_numeric_alternatives
 from agronomy_agent.water_arithmetic import validate_water_arithmetic_inputs
 from agronomy_agent.agronomic_calculations import validate_single_nozzle_inputs
 from agronomy_agent.calculator_contracts import supplied_input_label
@@ -35,6 +35,8 @@ def parse_supplied_water_calculation(question: str) -> tuple[str, dict[str, Any]
     if text is None:
         return None
     parsed = _water_storage(text) or _crop_et(text) or _gross_depth(text) or _depth_volume(text) or _nozzle_volume(text)
+    if parsed is not None and has_unlabelled_numeric_alternatives(text):
+        return parsed[0], parsed[1], parsed[2] + ('invalid alternatives: supply one quantity for each named role',)
     if parsed is not None and not parsed[2]:
         try:
             if parsed[0] == 'single_nozzle_application_volume':

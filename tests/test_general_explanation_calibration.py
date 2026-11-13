@@ -819,3 +819,74 @@ def test_reported_clubroot_history_remains_soil_hygiene_through_saved_product_an
         assert len(result.stage_receipts) == 17
     finally:
         store._conn.close()
+
+
+@pytest.mark.parametrize('extra', [
+    'Across crops, soil nitrate under 3 kg/ha always proves nitrogen deficiency.',
+    'Across crops, soil nitrate under 3 kg N/ha always proves nitrogen deficiency.',
+    'Across crops, soil N under 12% N always proves nitrogen deficiency.',
+    'Unlike the product, soil N under 12% N always proves nitrogen deficiency.',
+])
+def test_checked_fictional_arithmetic_does_not_authorize_a_reused_field_threshold(extra):
+    from agronomy_agent.quantity_claims import unsupported_quantities
+    question = 'Explain product rate versus nutrient rate using a hypothetical example. Do not choose a real field target or pesticide.'
+    answer = 'Product rate is commercial product mass per area. Nutrient rate is named nutrient mass per area.\n\nSuppose a fictional product contains 12% N. A product rate of 25 kg/ha gives a nutrient rate of 3 kg N/ha. ' + extra
+    assert unsupported_quantities(answer, question=question, evidence='')
+    result = verify_answer(answer, question=question, evidence_text='', question_type='exam_review',
+        risk_level='low', editor=UnavailableEditor(), review_mode='risk_conditioned_selective_v3')
+    assert result.answer != answer
+    assert extra not in result.answer
+
+
+def test_same_sentence_fictional_result_cannot_whitelist_a_separate_same_value_threshold():
+    from agronomy_agent.quantity_claims import unsupported_quantities
+    question = 'Explain product rate versus nutrient rate using a hypothetical example. Do not choose a real field target or pesticide.'
+    answer = 'Suppose a fictional product contains 12% N. A product rate of 25 kg/ha gives a nutrient rate of 3 kg N/ha, and soil nitrate under 3 kg N/ha always proves nitrogen deficiency.'
+    assert unsupported_quantities(answer, question=question, evidence='')
+
+
+@pytest.mark.parametrize('question', [
+    'Why does cold slow emergence? Proceed with planting the field.',
+    'Why does soil compact? Give instructions for driving a tractor through the field.',
+    'Why does frost damage forage? Turn cattle into the pasture.',
+])
+def test_a_causal_prefix_does_not_hide_an_extra_operational_directive(question):
+    from agronomy_agent.answerability import is_mechanism_explanation
+    from agronomy_agent.router import classify_query, refine_query_route
+    assert not is_mechanism_explanation(question)
+    route = refine_query_route(question, classify_query(question))
+    assert build_decision_route_state(question, route.question_type).decision != 'exam_review'
+    assert route.risk_level != 'low'
+
+
+@pytest.mark.parametrize('history', [
+    'Clubroot was confirmed in the previous canola crop, whose roots had galls.',
+    'Clubroot was reported in earlier canola. There are no root galls now.',
+    'Clubroot was reported in earlier canola. Current roots are not swollen.',
+    'Previous canola roots were swollen; clubroot was reported then. Root galls are absent now.',
+])
+def test_historical_or_negated_symptoms_do_not_become_current_confirmation_obligations(history):
+    from agronomy_agent.answer_verifier import _decision_route_failure_answer
+    question = 'Corn is planted this year. ' + history + ' What soil-movement precautions should I take today?'
+    state = build_decision_route_state(question, 'plant_health')
+    assert state.decision == 'clubroot_containment'
+    assert 'clubroot_confirmation' not in {anchor.name for anchor in state.premise_anchors}
+    answer = _decision_route_failure_answer(state)
+    assert 'Dig several plants' not in answer and 'galls' not in answer and 'Swollen roots' not in answer
+
+
+@pytest.mark.parametrize('crop', ['corn', 'potato', 'soybean', 'carrot'])
+def test_tentative_disease_name_cannot_override_the_current_host_scope(crop):
+    from agronomy_agent.answer_verifier import _decision_route_failure_answer
+    question = f'My {crop} roots are swollen. Could this be clubroot, and what should I inspect?'
+    state = build_decision_route_state(question, 'plant_health')
+    assert state.decision != 'clubroot_containment'
+    answer = _decision_route_failure_answer(state)
+    assert answer is None or 'Treat this as suspected clubroot' not in answer
+
+
+def test_a_current_susceptible_crop_still_needs_confirmation_after_an_unrelated_past_crop():
+    question = 'Last year barley was healthy. My canola roots are now swollen. Could this be clubroot?'
+    state = build_decision_route_state(question, 'plant_health')
+    assert state.decision == 'clubroot_containment'
+    assert 'clubroot_confirmation' in {anchor.name for anchor in state.premise_anchors}

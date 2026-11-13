@@ -46,10 +46,18 @@ class FoundationCalculationOperation(StrEnum):
     GRAIN_MOISTURE_ADJUSTMENT = "grain_moisture_adjustment"
     SINGLE_NOZZLE_APPLICATION_VOLUME = "single_nozzle_application_volume"
     MEAN_TEMPERATURE_GDD = "mean_temperature_gdd"
+    GRAIN_HARVEST_INDEX = "grain_harvest_index"
+    CIRCULAR_SAMPLING_AREA = "circular_sampling_area"
 
 
 ALL_CALCULATION_OPERATIONS = tuple(CalculationOperation) + tuple(FoundationCalculationOperation)
 GRAIN_MASS_UNITS = ("kg", "t", "lb", "kg/ha", "t/ha", "lb/ha", "kg/ac", "t/ac", "lb/ac")
+# USDA NRCS National Agronomy Manual, Table 503-42: independent reporting
+# factors in each direction. Inverting a rounded display factor adds error.
+NUTRIENT_REPORTING_FACTORS = {
+    ("P", "P2O5"): Decimal("2.2915"), ("P2O5", "P"): Decimal("0.4364"),
+    ("K", "K2O"): Decimal("1.2045"), ("K2O", "K"): Decimal("0.8302"),
+}
 
 
 _ARITHMETIC_BOUNDARY = (
@@ -192,6 +200,9 @@ def calculation_tool_schema() -> dict[str, Any]:
             "single_nozzle_application_volume": {"required": ["flow_l_per_min_per_nozzle", "speed_km_per_h", "nozzle_spacing_m"]},
             "mean_temperature_gdd": {"required": ["mean_temp_c", "base_temp_c", "method"],
                                      "methods": ["daily_mean_no_temperature_caps"]},
+            "grain_harvest_index": {"required": ["grain_dry_mass", "aboveground_dry_mass", "mass_unit"],
+                                     "supported_mass_units": list(GRAIN_MASS_UNITS)},
+            "circular_sampling_area": {"required": ["radius_m"]},
         },
         "boundary": _ARITHMETIC_BOUNDARY,
     }
@@ -239,6 +250,8 @@ def calculate_agronomic(operation: str | CalculationOperation | FoundationCalcul
         FoundationCalculationOperation.GRAIN_MOISTURE_ADJUSTMENT: _grain_moisture_adjustment,
         FoundationCalculationOperation.SINGLE_NOZZLE_APPLICATION_VOLUME: _single_nozzle_application_volume,
         FoundationCalculationOperation.MEAN_TEMPERATURE_GDD: _mean_temperature_gdd,
+        FoundationCalculationOperation.GRAIN_HARVEST_INDEX: _grain_harvest_index,
+        FoundationCalculationOperation.CIRCULAR_SAMPLING_AREA: _circular_sampling_area,
     }
     if selected.value in WATER_INPUTS:
         value, unit, formula, normalized, assumptions, boundary = water_arithmetic(selected.value, inputs)
@@ -468,16 +481,20 @@ def validate_supplied_nutrient_inputs(operation: str, inputs: Mapping[str, Any])
             raise ValueError(f"{key} exceeds supported supplied-input precision")
         normalized[key] = value
     if operation == "nutrient_basis_conversion":
-        factors = {("P2O5", "P"): Decimal("0.436"), ("K2O", "K"): Decimal("0.830")}
         pair = (inputs["from_basis"], inputs["to_basis"])
-        if pair in factors:
-            expected = factors[pair]
-        elif pair[::-1] in factors:
-            expected = (Decimal(1) / factors[pair[::-1]]).quantize(Decimal("0.000000000001"))
-        else:
+        if pair not in NUTRIENT_REPORTING_FACTORS:
             raise ValueError("use matching elemental/oxide bases: P2O5 and P, or K2O and K")
-        if "factor" in normalized and abs(normalized["factor"] - expected) > Decimal("0.0005"):
-            raise ValueError("supplied factor conflicts with the stated nutrient bases")
+        expected = NUTRIENT_REPORTING_FACTORS[pair]
+        if "factor" in normalized:
+            supplied = normalized["factor"].normalize()
+            # Reporting factors are approximations, not precision-qualified
+            # measurements. Ignore trailing zero formatting. Admit the last
+            # decimal's rounding interval plus 0.01% relative for published
+            # atomic-weight/last-digit variants; require two significant digits.
+            rounding = Decimal(1).scaleb(supplied.as_tuple().exponent) / 2
+            allowance = rounding + abs(expected) * Decimal("0.0001")
+            if len(supplied.as_tuple().digits) < 2 or abs(supplied - expected) > allowance:
+                raise ValueError("supplied factor conflicts with the stated nutrient bases or is too coarse")
         normalized["factor"] = normalized.get("factor", expected)
     elif operation == "apparent_nutrient_balance":
         if inputs["nutrient_basis"] not in {"N", "P", "P2O5", "K", "K2O"}:
@@ -497,7 +514,7 @@ def _nutrient_basis_conversion(inputs: Mapping[str, Any]) -> AgronomicCalculatio
         result = quantity * factor
     return _result(FoundationCalculationOperation.NUTRIENT_BASIS_CONVERSION, result, unit,
                    f"{_format_operand(quantity)} kg {values['from_basis']}/ha × {_format_operand(factor)} {_format_formula_result(result)} {unit}",
-                   values, assumptions=("oxide reporting basis and elemental nutrient are distinguished; this does not change the physical fertilizer",))
+                   values, assumptions=("oxide and elemental nutrient use the displayed rounded reporting factor; this does not change the physical fertilizer",))
 
 
 def _apparent_nutrient_balance(inputs: Mapping[str, Any]) -> AgronomicCalculation:
@@ -522,6 +539,55 @@ def _liquid_product_total(inputs: Mapping[str, Any]) -> AgronomicCalculation:
     return _result(FoundationCalculationOperation.LIQUID_PRODUCT_TOTAL, result, "L product",
                    f"{_format_operand(area)} ha × {_format_operand(rate)} L product/ha {_format_formula_result(result)} L product", values,
                    boundary=_ARITHMETIC_BOUNDARY + " This is product quantity, not total carrier water or finished spray volume.")
+
+
+def validate_grain_harvest_index_inputs(inputs: Mapping[str, Any]) -> dict[str, Any]:
+    _require_only(inputs, required={"grain_dry_mass", "aboveground_dry_mass", "mass_unit"})
+    if inputs["mass_unit"] not in GRAIN_MASS_UNITS:
+        raise ValueError("use one common dry-mass unit, including any area denominator")
+    grain = _nonnegative(inputs, "grain_dry_mass")
+    total = _positive(inputs, "aboveground_dry_mass")
+    for value in (grain, total):
+        if len(value.as_tuple().digits) > 12 or value and not -12 <= value.adjusted() <= 10:
+            raise ValueError("dry mass exceeds supported precision")
+    if grain > total:
+        raise ValueError("grain dry mass cannot exceed total above-ground dry biomass")
+    return {"grain_dry_mass": grain, "aboveground_dry_mass": total, "mass_unit": inputs["mass_unit"]}
+
+
+def _grain_harvest_index(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    values = validate_grain_harvest_index_inputs(inputs)
+    grain, total, unit = (values[key] for key in ("grain_dry_mass", "aboveground_dry_mass", "mass_unit"))
+    with localcontext() as context:
+        context.prec = 64
+        ratio = grain / total
+    return _result(FoundationCalculationOperation.GRAIN_HARVEST_INDEX, ratio, "harvest index",
+                   f"{_format_operand(grain)} {unit} dry grain ÷ {_format_operand(total)} {unit} total above-ground dry biomass "
+                   f"{_format_formula_result(ratio)} ({_format_decimal(ratio * 100)}%)", values,
+                   assumptions=("both masses use the same dry-matter and area basis; total above-ground biomass includes grain",),
+                   boundary=_ARITHMETIC_BOUNDARY + " This ratio does not determine harvest timing or establish a crop-specific yield target.")
+
+
+def validate_circular_sampling_area_inputs(inputs: Mapping[str, Any]) -> dict[str, Decimal]:
+    _require_only(inputs, required={"radius_m"})
+    radius = _nonnegative(inputs, "radius_m")
+    if len(radius.as_tuple().digits) > 12 or radius and not -6 <= radius.adjusted() <= 7:
+        raise ValueError("radius exceeds supported planar-area precision")
+    return {"radius_m": radius}
+
+
+def _circular_sampling_area(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    values = validate_circular_sampling_area_inputs(inputs)
+    radius = values["radius_m"]
+    pi = Decimal("3.1415926535897932384626433832795028841971693993751")
+    with localcontext() as context:
+        context.prec = 64
+        area = pi * radius * radius
+    return _result(FoundationCalculationOperation.CIRCULAR_SAMPLING_AREA, area, "m²",
+                   f"π × ({_format_operand(radius)} m)² ≈ {_format_decimal(area)} m² "
+                   f"(≈ {_format_decimal(area / 10000)} ha)", values,
+                   assumptions=("a planar circle with the supplied radius; no terrain or map-projection correction",),
+                   boundary=_ARITHMETIC_BOUNDARY + " This is the sampling footprint, not the farm field area: it uses the sampling radius rather than a mapped field boundary.")
 
 
 def validate_grain_moisture_inputs(inputs: Mapping[str, Any]) -> dict[str, Any]:

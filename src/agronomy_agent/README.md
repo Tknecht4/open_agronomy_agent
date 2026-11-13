@@ -190,7 +190,9 @@ in the current rotation crop. Capsule retrieval, route anchors and verifier
 completeness checks require symptom confirmation only for a symptom or diagnosis
 question. Soil-movement advice retains containment and equipment-cleaning checks;
 generic crop-stage, weather and fresh plant-sample prerequisites do not belong
-to a history-only hygiene request. The fallback keeps those scopes distinct.
+to a history-only hygiene request. The fallback keeps those scopes distinct. Current crop and symptom mentions are
+separate from historical or negated observations; a tentative disease name
+does not establish that the current crop is a susceptible host.
 
 The supplied-input calculator also supports elemental/oxide P and K basis
 conversion, apparent nutrient balances, and liquid-product totals. Named
@@ -200,6 +202,15 @@ soil-test changes or losses, and product litres are distinct from carrier
 volume. Readiness shares the execution validators. The saved answer and final
 renderer preserve an exact, recomputed calculator result with its boundary;
 neither a generation-path flag nor a plausible trace can bypass validation.
+Default P/K reporting conversions use the four direction-specific factors in
+[USDA NRCS National Agronomy Manual, Table 503-42](https://www.nrcs.usda.gov/sites/default/files/2022-10/National-Agronomy-Manual.pdf):
+P→P2O5 2.2915, P2O5→P 0.4364, K→K2O 1.2045 and K2O→K 0.8302.
+A supplied rounded factor is preserved when it has at least two significant
+digits and lies within half its last decimal unit plus 0.01% of the reference
+factor. This is an explicit engineering rounding policy, not a field safety
+tolerance; inversion of a rounded forward factor is not used as the reference.
+Whole-field product requests retain their area and total-mass output. Unlabelled
+numeric alternatives and multiple destination nutrient bases require clarification.
 Universal requests to evade safety or authority remain blocked.
 
 Water accounting uses supplied volumetric contents and uniform depth for
@@ -215,6 +226,13 @@ it cannot infer individually capped temperature extremes. These operations
 share non-executing readiness validators and whole-request guards for extra
 decisions, permission requests and unhandled questions. The historical v1
 operation family remains distinct from the current v2 extensions.
+Grain harvest index divides supplied grain dry mass by total above-ground dry
+biomass, including grain, on the same mass and area basis; both fraction and
+percentage are shown. This follows the [FAO biomass/harvest-index definition](https://www.fao.org/4/y5146e/y5146e07.htm)
+and does not set a crop-specific target or harvest date. Circular sampling area
+uses a supplied radius and planar πr², reports square metres and hectares, and
+explains why a sampling footprint is not a mapped field boundary. Diameter,
+annulus, terrain-corrected and geodesic requests are outside that operation.
 
 MLX adapters retain at most one target/draft model pair across serialized public
 operations. Generators release temporary references after token counting,

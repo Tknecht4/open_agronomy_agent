@@ -10,6 +10,7 @@ import json
 import math
 import re
 from typing import Any
+from agronomy_agent.request_scope import FIELD_ACTION_PATTERN as _FIELD_IMPERATIVE, has_action_directive
 
 
 NUMBER = r"(-?[0-9][0-9,]*(?:\.[0-9]+)?)"
@@ -17,6 +18,7 @@ SIGNED_NUMBER = NUMBER
 AREA = r"(?:ac|acre|acres|ha|hectare|hectares)"
 YIELD_UNIT = r"(?:bu|bushels?|tonnes?|kg|lb)"
 MONEY = rf"(?:CAD|USD|\$)\s*{NUMBER}"
+
 
 
 def _number(value: str) -> float:
@@ -73,12 +75,12 @@ def _requested_arithmetic(lower: str) -> bool:
 
 
 def _unsafe_action_request(lower: str) -> bool:
-    return bool(re.search(
-        r"\b(?:(?:should|can|may|could|would|must) (?:i|we|you|growers?|farmers?|operators?) (?:apply|spray|sell|buy|use|irrigate|water|fertilize|drain)|"
+    return has_action_directive(lower) or bool(re.search(
+        rf"\b(?:(?:should|can|may|could|would|must) (?:i|we|you|growers?|farmers?|operators?) (?:use|mix|{_FIELD_IMPERATIVE})|"
         r"recommended (?:application |herbicide |pesticide |fertilizer )?rate|"
         r"legal (?:application |fertilizer |herbicide |pesticide )?rate|"
         r"today['’]s (?:cash |market |local )?(?:bid|price)|sell (?:now|today)|lock in (?:a )?sale)\b|"
-        r"(?:^|[.!?;]\s*|\b(?:and|also|then)\s+)(?:please\s+)?(?:apply|spray|irrigate|fertilize|drain)\b|"
+        rf"(?:^|[.!?;]\s*|\b(?:and|also|then)\s+)(?:please\s+)?{_FIELD_IMPERATIVE}\b|"
         r"(?:^|[.!?;]\s*|\b(?:and|also|then)\s+)(?:please\s+)?(?:recommend|choose|select|authorize|approve)\b[^.!?;]{0,80}\b(?:product|rate|dose|treatment|timing|irrigation)\b|"
         r"(?:^|[.!?;]\s*|\band\s+)(?:is|would|will|can|may)\b[^.!?;]{0,50}\b(?:legal|allowed|permitted|safe to|authorized|approved)\b|"
         r"\b(?:puis-je|peut-on|peux-tu|pouvez-vous|devrais-je|dois-je|pouvons-nous)\s+(?:appliquer|pulvériser|utiliser|irriguer|fertiliser|traiter|drainer)\b|"

@@ -8,7 +8,7 @@ from agronomy_agent.query_context import analyze_query_context
 from agronomy_agent.router import request_focus, evidence_interpretation_kind
 from agronomy_agent.answerability import simple_definition_subject, is_mechanism_explanation
 from agronomy_agent.observation_guidance import sample_event_roles_stated
-from agronomy_agent.plant_health_scope import clubroot_confirmation_requested, clubroot_short_rotation_requested
+from agronomy_agent.plant_health_scope import clubroot_confirmation_requested, clubroot_short_rotation_requested, clubroot_workflow_applicable, clubroot_question_scope
 
 
 _US_ONLY_SOURCE_PATTERNS: tuple[tuple[str, str], ...] = (
@@ -763,6 +763,9 @@ def build_decision_route_state(question: str, question_type: str = "") -> Decisi
         constraints.append("Do not finish the calculation without target stand and expected field establishment or mortality in compatible units")
     if decision == "clubroot_containment" and not clubroot_confirmation_requested(question):
         constraints.append("Keep soil biosecurity separate from current symptom diagnosis; preserve reported history without inventing symptoms in the rotation crop or requiring a new symptomatic plant sample")
+    disease_scope = clubroot_question_scope(question)
+    if disease_scope.explicit_clubroot and disease_scope.host_scope == 'other' and disease_scope.current_symptoms:
+        constraints.append("Preserve the named current crop; a tentative disease name does not establish a susceptible host. Investigate its root symptoms separately from any clubroot soil-history concern")
     if decision == "erosion_control_plan":
         constraints.append("Treat mapped slope as screening context and ground-truth flow paths, cover, rotation, tillage, and observed erosion before selecting controls")
     if decision == "drought_nitrogen_adjustment":
@@ -984,10 +987,10 @@ def _decision_name(lower: str, question_type: str) -> str:
         r"\b(?:nitrogen|N rate|fertiliz)\w*\b", lower, re.IGNORECASE
     ) and re.search(r"\b(?:cut|reduce|increase|change|adjust|rate)\w*\b", lower):
         return "drought_nitrogen_adjustment"
-    if re.search(r"\bclubroot\b", lower) and re.search(
-        r"\b(?:swollen roots?|galls?|dying patch|approach|what do i do|today|contain|sanitation)\b",
+    if clubroot_workflow_applicable(lower) and (clubroot_confirmation_requested(lower) or re.search(
+        r"\b(?:swollen roots?|roots? (?:are|look|appear) swollen|galls?|dying patch|approach|what do i do|today|contain|sanitation|soil[- ]movement|precautions?)\b",
         lower,
-    ):
+    )):
         return "clubroot_containment"
     if re.search(
         r"\bfall[- ](?:banded|applied)\b[^.]{0,45}\bnitrogen\b|\bnitrogen\b[^.]{0,45}\bfall[- ](?:banded|applied)\b",

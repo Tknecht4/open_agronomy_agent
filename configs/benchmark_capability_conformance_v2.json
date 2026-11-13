@@ -264,7 +264,7 @@
             "from_basis": "P2O5",
             "to_basis": "P"
           },
-          "expected_value": 32.7,
+          "expected_value": 32.73,
           "expected_unit": "kg P/ha",
           "absolute_tolerance": 0.0001
         },
@@ -373,6 +373,28 @@
           "expected_value": 11,
           "expected_unit": "GDD",
           "absolute_tolerance": 0.0001
+        },
+        {
+          "fixture_id": "grain_harvest_index",
+          "operation": "grain_harvest_index",
+          "inputs": {
+            "grain_dry_mass": 4.2,
+            "aboveground_dry_mass": 12,
+            "mass_unit": "t/ha"
+          },
+          "expected_value": 0.35,
+          "expected_unit": "harvest index",
+          "absolute_tolerance": 1e-08
+        },
+        {
+          "fixture_id": "circular_sampling_area",
+          "operation": "circular_sampling_area",
+          "inputs": {
+            "radius_m": 12
+          },
+          "expected_value": 452.389342,
+          "expected_unit": "m\u00b2",
+          "absolute_tolerance": 1e-05
         }
       ],
       "negative_fixtures": [
@@ -560,6 +582,24 @@
             "method": "modified_corn"
           },
           "expected_error_contains": "explicit no-temperature-caps"
+        },
+        {
+          "fixture_id": "grain_larger_than_total_biomass",
+          "operation": "grain_harvest_index",
+          "inputs": {
+            "grain_dry_mass": 8,
+            "aboveground_dry_mass": 4,
+            "mass_unit": "kg"
+          },
+          "expected_error_contains": "cannot exceed"
+        },
+        {
+          "fixture_id": "negative_sampling_radius",
+          "operation": "circular_sampling_area",
+          "inputs": {
+            "radius_m": -1
+          },
+          "expected_error_contains": "cannot be negative"
         }
       ]
     }

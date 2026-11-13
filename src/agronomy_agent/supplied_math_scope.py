@@ -5,6 +5,12 @@ import re
 from agronomy_agent.foundation_math_parser import _unsafe_action_request
 
 
+def has_unlabelled_numeric_alternatives(text: str) -> bool:
+    """Do not pick the last number in '24 or 30 mm' or '20% or 40%-N'."""
+    number = r"[+-]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+)"
+    return bool(re.search(rf"(?<![\w.,+-]){number}\s*%?\s*(?:or|and|to)\s*{number}(?![\d.,])", text, re.I))
+
+
 def supplied_math_scope(question: str) -> str | None:
     text = " ".join(question.translate(str.maketrans("₂₅−", "25-")).split())
     if not re.search(r"\b(?:calculate|compute|convert|how many|how much)\b", text, re.I):

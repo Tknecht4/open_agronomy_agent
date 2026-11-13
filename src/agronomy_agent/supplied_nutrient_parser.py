@@ -8,19 +8,23 @@ from __future__ import annotations
 
 import re
 from typing import Any
-from agronomy_agent.agronomic_calculations import validate_supplied_nutrient_inputs, validate_fertilizer_product_mass_inputs
-from agronomy_agent.supplied_math_scope import supplied_math_scope
+from agronomy_agent.agronomic_calculations import validate_supplied_nutrient_inputs, validate_fertilizer_product_mass_inputs, validate_fertilizer_field_total_inputs
+from agronomy_agent.supplied_math_scope import supplied_math_scope, has_unlabelled_numeric_alternatives
 from agronomy_agent.calculator_contracts import supplied_input_label
 
 _NUMBER = r"[+-]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+)"
-_BASIS = r"P2O5|K2O|N|P|K"
+_BASIS = r"P2O5|K2O|nitrogen|phosphorus|potassium|N|P|K"
+
+
+def _basis(value: str) -> str:
+    return {'nitrogen': 'N', 'phosphorus': 'P', 'potassium': 'K'}.get(value.lower(), value.upper())
 
 
 def _one(matches: list[re.Match[str]], group: str) -> str | None:
     # Repeated identical premises are fine; conflicting operands are not.
     if group in {'quantity', 'factor'} and any(re.match(rf'\s*(?:or|to)\s*{_NUMBER}', m.string[m.end():], re.I) for m in matches):
         return None
-    values = {m[group].replace(",", "") for m in matches}
+    values = {_basis(m[group]) if group == 'basis' else m[group].replace(",", "") for m in matches}
     return next(iter(values)) if len(values) == 1 else None
 
 
@@ -29,11 +33,14 @@ def parse_supplied_nutrient_calculation(question: str) -> tuple[str, dict[str, A
     if scope is None:
         return None
     parsed = _basis_conversion(scope) or _nutrient_balance(scope) or _liquid_total(scope) or _product_mass(scope)
+    if parsed is not None and has_unlabelled_numeric_alternatives(scope):
+        return parsed[0], parsed[1], parsed[2] + ("invalid alternatives: supply one quantity for each named role",)
     if parsed is not None and not parsed[2]:
         operation, values, missing = parsed
         try:
-            if operation == 'fertilizer_product_mass':
-                validate_fertilizer_product_mass_inputs(values)
+            if operation in {'fertilizer_product_mass', 'fertilizer_field_total'}:
+                {'fertilizer_product_mass': validate_fertilizer_product_mass_inputs,
+                 'fertilizer_field_total': validate_fertilizer_field_total_inputs}[operation](values)
             else:
                 validate_supplied_nutrient_inputs(operation, values)
         except ValueError as error:
@@ -50,30 +57,39 @@ def _product_mass(text: str):
     if not targets:
         return None
     target = _one(targets, 'quantity');basis = _one(targets, 'basis')
-    percentages = list(re.finditer(rf'(?<![\w.,+-])(?P<quantity>{_NUMBER})\s*%\s*[- ]?\s*(?P<basis>{_BASIS})\b', text, re.I))
-    matching = [m for m in percentages if basis and m['basis'].upper() == basis.upper()]
+    percentages = list(re.finditer(rf'(?<![\w.,+-])(?P<quantity>{_NUMBER})\s*(?:%|percent\b|per cent\b)\s*[- ]?\s*(?P<basis>{_BASIS})\b', text, re.I))
+    matching = [m for m in percentages if basis and _basis(m['basis']) == basis]
     percent = _one(matching, 'quantity')
-    values = {'nutrient_target_kg_per_ha': target, 'nutrient_percent': percent, 'nutrient_label': basis.upper() if basis else None}
-    return 'fertilizer_product_mass', {k:v for k,v in values.items() if v is not None}, tuple(supplied_input_label(k) for k,v in values.items() if v is None)
+    values = {'nutrient_target_kg_per_ha': target, 'nutrient_percent': percent, 'nutrient_label': basis}
+    total = bool(re.search(r'\b(?:whole[- ]field|in total|total (?:product|fertili[sz]er)|product kilograms)\b', text, re.I))
+    if total:
+        areas = list(re.finditer(rf'(?<![\w.,+-])(?P<quantity>{_NUMBER})\s*(?:ha|hectares?)\b', text, re.I))
+        values['area_ha'] = _one(areas, 'quantity')
+    operation = 'fertilizer_field_total' if total else 'fertilizer_product_mass'
+    missing = tuple(supplied_input_label(k) for k,v in values.items() if v is None)
+    if re.search(r'\bby volume\b|\bw/v\b|\bv/v\b', text, re.I):
+        missing += ('invalid nutrient percentage basis: this product-mass calculation requires percent by mass',)
+    return operation, {k:v for k,v in values.items() if v is not None}, missing
 
 
 def _basis_conversion(text: str):
     if not re.search(r"\bconvert\b", text, re.I):
         return None
     amounts = list(re.finditer(rf"\bconvert\s+(?P<quantity>{_NUMBER})\s*kg\s*(?P<basis>{_BASIS})\s*/\s*ha\b", text, re.I))
-    target = re.search(r"\bto\s+(?:kg\s*)?(?:elemental\s+)?(?P<basis>phosphorus|potassium|P2O5|K2O|P|K)(?:\s*/\s*ha)?\b", text, re.I)
-    if not amounts or not target:
+    targets = list(re.finditer(r"\b(?:to|or|and)\s+(?:kg\s*)?(?:elemental\s+)?(?P<basis>phosphorus|potassium|P2O5|K2O|P|K)(?:\s*/\s*ha)?\b", text, re.I))
+    if not amounts or not targets:
         return None
     quantity = _one(amounts, "quantity")
     basis = _one(amounts, "basis")
-    destination = {"phosphorus": "P", "potassium": "K"}.get(target["basis"].lower(), target["basis"].upper())
+    destinations = {{"phosphorus": "P", "potassium": "K"}.get(target["basis"].lower(), target["basis"].upper()) for target in targets}
+    destination = next(iter(destinations)) if len(destinations) == 1 else None
     values = {"quantity_kg_per_ha": quantity, "from_basis": basis.upper() if basis else None, "to_basis": destination}
     missing = tuple(supplied_input_label(key) for key, value in values.items() if value is None)
     # A supplied factor must be attached to the same destination/source
     # relation. Never silently discard a conflicting or unrecognized factor.
     equations = list(re.finditer(rf"\b(?P<to>{_BASIS})\s*=\s*(?P<factor>{_NUMBER})\s*[×*]\s*(?P<from>{_BASIS})\b", text, re.I))
     if equations:
-        if any(m["from"].upper() != values["from_basis"] or m["to"].upper() != destination for m in equations):
+        if any(_basis(m["from"]) != values["from_basis"] or _basis(m["to"]) != destination for m in equations):
             missing += ("invalid conversion equation: use the requested source and destination bases",)
         factor = _one(equations, "factor")
         if factor is None:
@@ -93,7 +109,7 @@ def _nutrient_balance(text: str):
         return None
     values: dict[str, Any] = {}
     missing = []
-    bases = {m["basis"].upper() for m in amounts}
+    bases = {_basis(m["basis"]) for m in amounts}
     if len(bases) != 1:
         missing.append("invalid mixed nutrient bases: convert both amounts to the same basis first")
     else:

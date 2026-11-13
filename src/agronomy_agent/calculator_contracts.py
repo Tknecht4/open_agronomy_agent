@@ -24,6 +24,8 @@ FOUNDATION_OPERATIONS = frozenset({
     "grain_moisture_adjustment",
     "single_nozzle_application_volume",
     "mean_temperature_gdd",
+    "grain_harvest_index",
+    "circular_sampling_area",
 })
 
 
@@ -50,6 +52,8 @@ def supplied_input_label(name: str) -> str:
         "net_depth_mm": "supplied net irrigation depth in mm",
         "application_efficiency_pct": "application efficiency (%)",
         "depth_mm": "water depth in mm",
+        "grain_dry_mass": "grain dry mass", "aboveground_dry_mass": "total above-ground dry biomass including grain",
+        "radius_m": "one sampling-circle radius in metres",
         "wet_mass": "wet grain mass or yield", "mass_unit": "mass unit (kg, tonnes or lb, including any ha/ac denominator)",
         "flow_l_per_min_per_nozzle": "nozzle flow in L/min", "speed_km_per_h": "travel speed in km/h",
         "boom_width_m": "effective treated width or nozzle spacing in metres",

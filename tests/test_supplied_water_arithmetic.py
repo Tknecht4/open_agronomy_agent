@@ -166,3 +166,18 @@ def test_mean_temperature_gdd_needs_one_complete_consistent_method(question):
 def test_nozzle_formula_cannot_silently_disagree_with_its_supplied_inputs(formula):
     question = f'A nozzle delivers 1.2 L/min, travel speed is 10 km/h and nozzle spacing 0.5 m. Using L/ha = {formula}, calculate application volume.'
     assert plan_tools(question).status == 'clarification_required'
+
+
+@pytest.mark.parametrize('question', [
+    'A teaching plan needs 24 or 30 mm net irrigation and 80% application efficiency. Calculate gross depth.',
+    'How many cubic metres supply 15 or 20 mm uniformly over 8 ha?',
+])
+def test_alternatives_before_the_shared_unit_need_clarification(question):
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'clarification_required'
+    assert not results
+
+
+@pytest.mark.parametrize('directive', ['Harvest corn.', 'Mow the pasture.', 'Drive into the field.', 'Plant corn.', 'Seed barley.', 'Feed the cattle.', 'Graze the pasture.', 'Récoltez le maïs.'])
+def test_an_extra_farm_imperative_is_not_consumed_by_calculator(directive):
+    assert plan_tools('A teaching plan needs 24 mm net irrigation and 80% application efficiency. Calculate gross depth. ' + directive).status == 'not_applicable'
