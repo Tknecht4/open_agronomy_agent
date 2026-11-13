@@ -125,6 +125,17 @@ class DecisionRouteState:
         lower = answer.lower()
         violations: list[str] = []
         if self.decision == "clubroot_containment":
+            scope = clubroot_question_scope(self.question)
+            if scope.negative_root_symptoms and not scope.current_symptoms and re.search(
+                r"\b(?:your|the|these) roots? (?:are|look|appear) (?:visibly )?swollen\b|"
+                r"\byou (?:have|report) (?:root )?galls?\b|\byour plants? (?:have|show) (?:root )?galls?\b",
+                lower,
+            ):
+                violations.append("clubroot_negative_observation_overwritten")
+            if (scope.symptomatic_other_crop and scope.soil_biosecurity_requested
+                    and re.search(r"\b(?:inspect\w*|examin\w*|investigat\w*|root checks?)\b", self.question, re.I)
+                    and not re.search(r"\b(?:inspect\w*|compar\w*|examin\w*|dig|diagnos\w*)\b[^.]{0,100}\b(?:roots?|plants?|symptoms?)\b", lower)):
+                violations.append("current_crop_inspection_not_answered")
             confirmation = bool(re.search(r"\b(?:representative sample|diagnostic lab|confirm(?:ation)?)\b", lower))
             sanitation = bool(re.search(r"\b(?:clean|remove) soil\b[^.]{0,80}\b(?:equipment|machinery|boots?)\b|\bsanitation\b", lower))
             if (clubroot_confirmation_requested(self.question) and not confirmation) or not sanitation:
@@ -764,6 +775,10 @@ def build_decision_route_state(question: str, question_type: str = "") -> Decisi
     if decision == "clubroot_containment" and not clubroot_confirmation_requested(question):
         constraints.append("Keep soil biosecurity separate from current symptom diagnosis; preserve reported history without inventing symptoms in the rotation crop or requiring a new symptomatic plant sample")
     disease_scope = clubroot_question_scope(question)
+    if disease_scope.negative_root_symptoms:
+        constraints.append("Preserve each specifically negated root sign; a tentative disease question is not positive evidence of symptoms")
+    if disease_scope.symptomatic_other_crop and disease_scope.soil_biosecurity_requested:
+        constraints.append("Answer both the current-crop inspection and the separate clubroot soil-history precautions; do not replace either requested workflow with the other")
     if disease_scope.explicit_clubroot and disease_scope.host_scope == 'other' and disease_scope.current_symptoms:
         constraints.append("Preserve the named current crop; a tentative disease name does not establish a susceptible host. Investigate its root symptoms separately from any clubroot soil-history concern")
     if decision == "erosion_control_plan":

@@ -10,7 +10,7 @@ from pathlib import Path
 
 from agronomy_agent.agno_runtime.local_index import RetrievedDoc
 from agronomy_agent.decision_route import build_decision_route_state
-from agronomy_agent.plant_health_scope import clubroot_confirmation_requested, clubroot_short_rotation_requested
+from agronomy_agent.plant_health_scope import clubroot_confirmation_requested, clubroot_short_rotation_requested, clubroot_question_scope
 from agronomy_agent.evidence_handshake import (
     EvidenceHandshake,
     build_evidence_handshake,
@@ -4312,7 +4312,12 @@ def _decision_route_failure_answer(
         )
     if decision == "clubroot_containment":
         guidance_scope = _clubroot_guidance_scope(state.question, jurisdiction)
+        disease_scope = clubroot_question_scope(state.question)
         if not clubroot_confirmation_requested(state.question):
+            inspection = (
+                " Assess the reported current-crop symptoms separately from clubroot soil history: compare affected and normal plants and intact roots, map the pattern, and record drainage, root injury and symptom progression. Seek crop-appropriate diagnostic help if the cause remains uncertain; the historical disease name does not diagnose the current crop."
+                if disease_scope.symptomatic_other_crop else ""
+            )
             return (
                 "For clubroot soil risk or reported history, limit soil movement even during a nonhost rotation. "
                 "Rotation reduces risk rather than proving the soil clean; resting spores can persist for many years, so one nonhost year does not eradicate clubroot. "
@@ -4321,6 +4326,15 @@ def _decision_route_failure_answer(
                 "Use any available diagnostic and field-location records to map the reported risk, and check susceptible brassica volunteers and cruciferous weeds in the rotation. "
                 f"Use {guidance_scope} for access, cleaning and longer-term rotation decisions. "
                 "If new symptoms appear in a susceptible crop, arrange representative diagnosis; soil-movement precautions need not wait for those symptoms."
+                + inspection
+            )
+        if not disease_scope.current_symptoms:
+            observation = ("You report: " + "; ".join(disease_scope.negated_root_observations) + ". Preserve those specific negative observations. "
+                           if disease_scope.negative_root_symptoms else "No swollen roots or galls have been reported. ")
+            return (
+                observation + "A tentative clubroot question does not confirm infection or establish those signs. Compare affected and normal plants and intact roots, record the actual symptoms and field pattern, and arrange a representative sample through a crop-diagnostic laboratory if concern remains. "
+                "Avoid carrying soil from areas with known or suspected clubroot risk to clean areas; remove adhering soil from equipment and follow current applicable local sanitation guidance. "
+                "Keep the reported observations separate from the diagnosis and use confirmation and " + guidance_scope + " for longer-term decisions."
             )
         return (
             "Swollen roots are a reason to suspect clubroot, not confirmation. One nonhost year does not eradicate clubroot; resting spores can persist for many years, and rotation reduces risk rather than proving a field clean. Check for susceptible brassica crops, volunteers and cruciferous weeds throughout the rotation. Treat this as suspected clubroot and act today to limit soil movement while arranging confirmation. Mark the patch and approach, keep unnecessary traffic out, work the suspect area last, and avoid moving soil, roots, or contaminated material to clean parts of the field. Before equipment, tools, or boots leave, remove adhering soil at the site and follow current applicable local sanitation guidance; record where material and wash water go. "

@@ -12,7 +12,7 @@ from agronomy_agent.agronomic_calculations import validate_supplied_nutrient_inp
 from agronomy_agent.supplied_math_scope import supplied_math_scope, has_unlabelled_numeric_alternatives
 from agronomy_agent.calculator_contracts import supplied_input_label
 
-_NUMBER = r"[+-]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+)"
+from agronomy_agent.supplied_numeric_inputs import NUMBER as _NUMBER, supplied_numeric_gaps, extended_unit
 _BASIS = r"P2O5|K2O|nitrogen|phosphorus|potassium|N|P|K"
 
 
@@ -64,11 +64,14 @@ def _product_mass(text: str):
     explicit_total = bool(re.search(r'\b(?:whole[- ]field|in total|total (?:product|fertili[sz]er|kilograms|kg|mass|amount|quantity)|product kilograms)\b', text, re.I))
     per_area = bool(re.search(r'\b(?:product|fertili[sz]er)\s+(?:mass\s+)?rate\b|\bkg\s+(?:product|fertili[sz]er)\s*/\s*ha\b', text, re.I))
     total = explicit_total or (not per_area and bool(re.search(rf'\b(?:over|across)\s+(?:a\s+)?(?:(?:whole|entire|total)\s+)?(?:area\s+(?:of\s+)?)?{_NUMBER}\s*(?:ha|hectares?)\b', text, re.I)))
+    areas = list(re.finditer(rf'(?<![\w.,+-])(?P<quantity>{_NUMBER})\s*(?:ha|hectares?)\b', text, re.I))
     if total:
-        areas = list(re.finditer(rf'(?<![\w.,+-])(?P<quantity>{_NUMBER})\s*(?:ha|hectares?)\b', text, re.I))
         values['area_ha'] = _one(areas, 'quantity')
     operation = 'fertilizer_field_total' if total else 'fertilizer_product_mass'
     missing = tuple(supplied_input_label(k) for k,v in values.items() if v is None)
+    missing += supplied_numeric_gaps(text, targets + percentages + areas)
+    if any(extended_unit(match) for match in targets + areas):
+        missing += ('invalid compound unit: product mass requires kg nutrient/ha and hectares',)
     if re.search(r'\bby volume\b|\bw/v\b|\bv/v\b', text, re.I):
         missing += ('invalid nutrient percentage basis: this product-mass calculation requires percent by mass',)
     return operation, {k:v for k,v in values.items() if v is not None}, missing
@@ -100,6 +103,9 @@ def _basis_conversion(text: str):
             values["factor"] = factor
     elif re.search(r"[=×*]|\bfactor\b", text):
         missing += ("one explicit destination = factor × source conversion equation",)
+    missing += supplied_numeric_gaps(text, amounts + targets + equations)
+    if any(extended_unit(match) for match in amounts + targets):
+        missing += ('invalid compound unit: nutrient conversion requires kg nutrient/ha',)
     return "nutrient_basis_conversion", {key: value for key, value in values.items() if value is not None}, missing
 
 
@@ -125,6 +131,7 @@ def _nutrient_balance(text: str):
     # Additional flow terms cannot disappear into a two-term balance.
     if re.search(r"\b(?:deposition|leaching|runoff|erosion|fixation|mineralization|credit|manure|soil supply)\b", text, re.I):
         return None
+    missing.extend(supplied_numeric_gaps(text, amounts))
     return "apparent_nutrient_balance", values, tuple(missing)
 
 
@@ -141,4 +148,7 @@ def _liquid_total(text: str):
     missing = tuple(supplied_input_label(key) for key, value in values.items() if value is None)
     if re.search(r"\b(?:carrier|water|tank)\b", text, re.I) and not re.search(r"\bdistinguish\b", text, re.I):
         return None
+    missing += supplied_numeric_gaps(text, rates + areas)
+    if any(extended_unit(match) for match in rates + areas):
+        missing += ('invalid compound unit: product volume requires L product/ha and hectares',)
     return "liquid_product_total", {key: value for key, value in values.items() if value is not None}, missing

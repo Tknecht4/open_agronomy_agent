@@ -10,7 +10,7 @@ from agronomy_agent.agronomic_calculations import (
 from agronomy_agent.calculator_contracts import supplied_input_label
 from agronomy_agent.supplied_math_scope import supplied_math_scope, has_unlabelled_numeric_alternatives
 
-_NUMBER = r"[+-]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+)"
+from agronomy_agent.supplied_numeric_inputs import NUMBER as _NUMBER, supplied_numeric_gaps, extended_unit
 _MASS = rf"(?P<value>{_NUMBER})\s*(?P<unit>kg|tonnes?|t|pounds?|lbs?)\b(?:\s*(?:/|per\s+)(?P<area>ha|hectares?|ac|acres?)\b)?(?!\s*(?:/|per\b))"
 
 
@@ -55,6 +55,9 @@ def parse_supplied_geometry_biomass_calculation(question: str) -> tuple[str, dic
 def _harvest_index(text):
     if not re.search(r'\b(?:harvest index|HI)\b', text, re.I):
         return None
+    output = re.search(r'\b(?:calculate|compute)\s+(?:the\s+)?(?:harvest index|HI)\b\s*(.*)', text, re.I)
+    if output and re.match(r'and\b(?!\s+(?:(?:its|the)\s+)?(?:percentage|percent|limits|limitations)\b)', output[1], re.I):
+        return None
     if re.search(r"\b(?:wet|fresh|root|tuber|below[- ]ground|straw only|stover only|vegetative only|nongrain)\b|"
                  r"\b(?:exclud\w*|omit\w*|without|minus|not includ(?:e[ds]?|ing)|doesn['’]t include|does not include)\b[^.!?;]{0,35}\bgrain\b|"
                  r"\b(?:contains?|has)\s+no\s+grain\b|"
@@ -68,7 +71,7 @@ def _harvest_index(text):
     units = {_one(rows, units=True) for rows in (grain, total)}
     values = {'grain_dry_mass': _one(grain), 'aboveground_dry_mass': _one(total),
               'mass_unit': next(iter(units)) if len(units) == 1 and None not in units else None}
-    return _bound('grain_harvest_index', values)
+    return _bound('grain_harvest_index', values, text, grain + total)
 
 
 def _circle(text):
@@ -78,9 +81,12 @@ def _circle(text):
         return None
     rows = list(re.finditer(rf'(?<![\w.,+-])(?P<value>{_NUMBER})\s*m(?:etre|eter)?s?[- ]radius\b', text, re.I))
     rows += list(re.finditer(rf'\bradius\s*(?:is|of|:|=)?\s*(?P<value>{_NUMBER})\s*(?:m|metres?|meters?)\b', text, re.I))
-    return _bound('circular_sampling_area', {'radius_m': _one(rows)})
+    return _bound('circular_sampling_area', {'radius_m': _one(rows)}, text, rows)
 
 
-def _bound(operation, values):
-    return operation, {key:value for key,value in values.items() if value is not None}, tuple(
-        supplied_input_label(key) for key,value in values.items() if value is None)
+def _bound(operation, values, text, matches):
+    missing = tuple(supplied_input_label(key) for key,value in values.items() if value is None)
+    missing += supplied_numeric_gaps(text, matches)
+    if any(extended_unit(match) for match in matches):
+        missing += ('invalid compound unit: supply the supported mass/area or radius unit',)
+    return operation, {key:value for key,value in values.items() if value is not None}, missing

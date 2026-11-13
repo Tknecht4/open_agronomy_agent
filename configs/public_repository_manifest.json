@@ -804,6 +804,7 @@
     "tests/test_supplied_grain_arithmetic.py",
     "tests/test_supplied_nutrient_arithmetic.py",
     "tests/test_supplied_water_arithmetic.py",
+    "tests/test_supplied_input_request_integrity.py",
     "tests/test_turn_readiness.py",
     "tests/test_workflow_execution_boundaries.py",
     ".agents/skills/workspace-contracts/SKILL.md",

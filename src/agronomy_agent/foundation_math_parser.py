@@ -10,11 +10,12 @@ import json
 import math
 import re
 from typing import Any
-from agronomy_agent.request_scope import FIELD_ACTION_PATTERN as _FIELD_IMPERATIVE, has_action_directive
+from agronomy_agent.request_scope import FIELD_ACTION_PATTERN as _FIELD_IMPERATIVE, has_action_directive, has_unqualified_followup
 from agronomy_agent.seed_establishment import parse_seed_establishment
+from agronomy_agent.supplied_numeric_inputs import NUMBER as SUPPLIED_NUMBER, supplied_numeric_gaps, extended_unit
 
 
-NUMBER = r"(-?[0-9][0-9,]*(?:\.[0-9]+)?)"
+NUMBER = rf"({SUPPLIED_NUMBER})"
 SIGNED_NUMBER = NUMBER
 AREA = r"(?:ac|acre|acres|ha|hectare|hectares)"
 YIELD_UNIT = r"(?:bu|bushels?|tonnes?|kg|lb)"
@@ -97,7 +98,7 @@ def _unsafe_action_request(lower: str) -> bool:
 def parse_foundation_calculation(question: str) -> tuple[str, dict[str, Any], tuple[str, ...]] | None:
     text = " ".join(question.replace("−", "-").split())
     lower = text.casefold()
-    if not _requested_arithmetic(lower) or _unsafe_action_request(lower):
+    if not _requested_arithmetic(lower) or _unsafe_action_request(lower) or has_unqualified_followup(text, calculation=True):
         return None
     for parser in (_soil_water_storage, _fertilizer_field_total, _seed_rate, _mean_temperature_gdd, _gdd, _partial_budget, _break_even, _current_ratio, _debt_asset):
         parsed = parser(text, lower)
@@ -144,12 +145,14 @@ def _seed_rate(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, .
     targets = {(_number(match.group(1)), match.group(2).casefold()) for match in target_matches}
     target, unit = next(iter(targets)) if len(targets) == 1 else (None, "")
     imperial = "ft" in unit or "foot" in unit or "feet" in unit
-    tkw = _find_number(
-        text,
+    tkw_patterns = (
         rf"{NUMBER}\s*g\s*(?:thousand[- ]kernel weight|tkw)\b",
         rf"(?:thousand[- ]kernel weight|tkw)\s*(?:is|of|:)?\s*{NUMBER}\s*g\b",
     )
-    establishment, establishment_missing = parse_seed_establishment(text)
+    tkw = _find_number(text, *tkw_patterns)
+    bindings = target_matches + [m for pattern in tkw_patterns for m in re.finditer(pattern, text, re.I)]
+    bindings.extend(re.finditer(r"\bfactor[- ]10\b", text, re.I))
+    establishment, establishment_missing = parse_seed_establishment(text, bindings=bindings)
     inputs: dict[str, Any] = dict(establishment)
     target_key = "target_plants_per_ft2" if imperial else "target_plants_per_m2"
     if target is not None:
@@ -163,6 +166,7 @@ def _seed_rate(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, .
     for key, label in ((target_key, "target plants"), ("tkw_g", "thousand-kernel weight")):
         if key in inputs and inputs[key] <= 0:
             missing += (f"invalid {label}: use a positive value",)
+    missing += supplied_numeric_gaps(text, bindings)
     requested_unit = re.search(r"\b(?:give|in|as)\s+(kg/ha|lb/ac)\b", lower)
     if requested_unit and requested_unit.group(1) != ("lb/ac" if imperial else "kg/ha"):
         missing += ("invalid requested output unit: use a separate unit conversion",)
@@ -187,9 +191,12 @@ def _mean_temperature_gdd(text: str, lower: str) -> tuple[str, dict[str, Any], t
     scoped = re.sub(r"\btoday['’]s\s+(?:gdd|growing degree[- ]days?)\b", "daily GDD", text, flags=re.I)
     if supplied_math_scope(scoped) is None:
         return None
-    number = r"([+-]?(?:\d+(?:\.\d+)?|\.\d+))"
-    mean = _find_number(text, rf"\b(?:mean daily|daily mean|average daily|daily average) temperature\s*(?:is|of|:|=)?\s*{number}\s*°?\s*C\b")
-    base = _find_number(text, rf"\bbase(?: temperature)?\s*(?:is|of|:|=)?\s*{number}\s*°?\s*C\b")
+    number = NUMBER
+    mean_pattern = rf"\b(?:mean daily|daily mean|average daily|daily average) temperature\s*(?:is|of|:|=)?\s*{number}\s*°?\s*C\b"
+    base_pattern = rf"\bbase(?: temperature)?\s*(?:is|of|:|=)?\s*{number}\s*°?\s*C\b"
+    mean = _find_number(text, mean_pattern)
+    base = _find_number(text, base_pattern)
+    numeric_bindings = [m for pattern in [mean_pattern, base_pattern, r"\bmax\s*\(\s*0\s*,"] for m in re.finditer(pattern, text, re.I)]
     values = {"mean_temp_c": mean, "base_temp_c": base}
     missing = tuple(label for key, label in (("mean_temp_c", "one supplied daily mean temperature in Celsius"),
                                             ("base_temp_c", "base temperature in Celsius")) if values[key] is None)
@@ -205,6 +212,9 @@ def _mean_temperature_gdd(text: str, lower: str) -> tuple[str, dict[str, Any], t
         missing += ("invalid temperatures: supply one value for each named temperature",)
     inputs = {key: value for key, value in values.items() if value is not None}
     inputs["method"] = "daily_mean_no_temperature_caps"
+    missing += supplied_numeric_gaps(text, numeric_bindings)
+    if any(extended_unit(m) for m in numeric_bindings):
+        missing += ("invalid temperature unit: supply Celsius values, not rates or compound units",)
     if not missing:
         from agronomy_agent.agronomic_calculations import validate_mean_temperature_gdd_inputs
         try:
@@ -240,6 +250,9 @@ def _gdd_json_inputs(text: str) -> tuple[dict[str, float], tuple[str, ...], str 
             return {}, invalid, None, text
     except (ValueError, RecursionError):
         return {}, invalid, None, text
+    allowed_keys = {name + suffix for name in ("max_temp", "min_temp", "base_temp", "upper_cap", "lower_cap") for suffix in ("_C", "_c")} | {"method", "temperature_unit"}
+    if set(supplied) - allowed_keys:
+        return {}, ("invalid structured GDD inputs: unsupported key or temperature unit",), None, text[:start] + " " + text[start + end:]
     # Prose operands cannot come from arbitrary metadata string values.
     prose = text[:start] + " " + text[start + end:]
     method = supplied.get("method")
@@ -346,6 +359,11 @@ def _gdd(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, ...]] |
     )
     if unbound_cap:
         missing += ("invalid cap: specify one consistent cap method and value in C",)
+    numeric_bindings = [match for group in patterns.values() for pattern in group for match in re.finditer(pattern, text, re.I)]
+    if inputs:
+        missing += supplied_numeric_gaps(text, numeric_bindings + upper_matches + lower_matches)
+    if any(extended_unit(m) for m in numeric_bindings + upper_matches + lower_matches):
+        missing += ("invalid temperature unit: supply Celsius values, not rates or compound units",)
     return "daily_gdd", inputs, missing
 
 

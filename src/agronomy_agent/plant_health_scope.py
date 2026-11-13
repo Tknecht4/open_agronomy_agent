@@ -31,6 +31,9 @@ class ClubrootQuestionScope:
     soil_biosecurity_requested: bool
     history_reported: bool
     explicit_clubroot: bool
+    negative_root_symptoms: bool = False
+    symptomatic_other_crop: bool = False
+    negated_root_observations: tuple[str, ...] = ()
 
     @property
     def workflow_applicable(self) -> bool:
@@ -63,13 +66,30 @@ def clubroot_question_scope(question: str) -> ClubrootQuestionScope:
                 continue
             current_clauses.append(clause)
     current = ' '.join(current_clauses)
-    hosts = {m.group() for m in re.finditer(rf'\b(?:{_HOST})\b', current, re.I)}
-    others = {m.group() for m in re.finditer(rf'\b(?:{_OTHER_CROP})\b', current, re.I)}
+    # A healthy neighbouring/reference crop is not the affected host. Keep all
+    # current crop mentions for provenance, but derive workflow host scope only
+    # from clauses that are not explicitly healthy comparisons.
+    clauses = [part.strip() for clause in current_clauses for part in re.split(
+        rf'\b(?:while|whereas)\b|\band\b(?=[^.!?;,]{{0,65}}\b(?:{_HOST}|{_OTHER_CROP})\b)', clause)]
+    healthy = r'(?:healthy|normal|unaffected|symptom[- ]free)'
+    healthy_subject = re.compile(
+        rf'\b(?:(?:adjacent|nearby|neighboring|neighbouring|reference)\s+)?(?:{_HOST}|{_OTHER_CROP})\s+(?:(?:roots?|plants?|crop)\s+)?(?:is|are|looks?|appears?)\s+{healthy}\b|'
+        rf'\b{healthy}\s+(?:{_HOST}|{_OTHER_CROP}|plants?|roots?|crop)\b', re.I)
+    clauses = [healthy_subject.sub('', clause) for clause in clauses]
+    relevant = ' '.join(clauses)
+    all_hosts = {m.group() for m in re.finditer(rf'\b(?:{_HOST})\b', current, re.I)}
+    all_others = {m.group() for m in re.finditer(rf'\b(?:{_OTHER_CROP})\b', current, re.I)}
+    hosts = {m.group() for m in re.finditer(rf'\b(?:{_HOST})\b', relevant, re.I)}
+    others = {m.group() for m in re.finditer(rf'\b(?:{_OTHER_CROP})\b', relevant, re.I)}
     host_scope = 'mixed' if hosts and others else 'susceptible' if hosts else 'other' if others else 'unknown'
-    symptoms = bool(_SYMPTOMS.search(_NEGATED_SYMPTOMS.sub('', current)))
-    return ClubrootQuestionScope(tuple(sorted(hosts | others)), host_scope, symptoms,
+    symptoms = bool(_SYMPTOMS.search(_NEGATED_SYMPTOMS.sub('', relevant)))
+    other_symptoms = any(re.search(rf'\b(?:{_OTHER_CROP})\b', clause, re.I)
+        and re.search(r'\b(?:symptoms?|stunt\w*|yellow\w*|wilting|dying|swollen|galls?|root\s+(?:damage|rot|injury))\b',
+                      _NEGATED_SYMPTOMS.sub('', clause), re.I) for clause in clauses)
+    return ClubrootQuestionScope(tuple(sorted(all_hosts | all_others)), host_scope, symptoms,
         bool(_DIAGNOSIS.search(current)), bool(_SOIL_REQUEST.search(text)), history_reported,
-        bool(re.search(r'\bclubroot\b', text)))
+        bool(re.search(r'\bclubroot\b', text)), bool(_NEGATED_SYMPTOMS.search(relevant)), other_symptoms,
+        tuple(m.group().strip() for m in _NEGATED_SYMPTOMS.finditer(relevant)))
 
 
 def clubroot_workflow_applicable(question: str) -> bool:

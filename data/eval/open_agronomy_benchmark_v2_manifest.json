@@ -52,8 +52,8 @@
     {
       "role": "runner",
       "path": "src/agronomy_agent/benchmark_v2_runner.py",
-      "sha256": "3cf48da294d756c2691d08ce1a714c438b8392c3cc3bacc9d5aa514ee5780680",
-      "bytes": 79537
+      "sha256": "557c1e7d45094ce81f9f8d3d6982c478d7caf9d37162ad4b52a0a2935db055f3",
+      "bytes": 79621
     },
     {
       "role": "runner_cli",
@@ -294,7 +294,135 @@
           "bytes": 1317
         }
       ]
+    },
+    {
+      "updated_at": "2026-11-13T06:15:51.843300+00:00",
+      "parent_commit": "9a37c6d9fa489c5c3cf11ad77472b93d2b1dab2f",
+      "predecessor_manifest_sha256": "1d1e059aa6388f5b3d51e0a355d89dc909a784565658497dcb90337994a0f66a",
+      "predecessor_manifest_path": "data/eval/open_agronomy_benchmark_v2_manifest.json",
+      "status": "retrospective_instrument_maintenance_not_preregistration",
+      "reason": "Bind the shared numeric-input module in the active tool-executor implementation fingerprint; preserve exposed frozen cases, constructs, scoring, original source identities and prior lineage.",
+      "artifact_changes": [
+        {
+          "role": "runner",
+          "path": "src/agronomy_agent/benchmark_v2_runner.py",
+          "previous_sha256": "3cf48da294d756c2691d08ce1a714c438b8392c3cc3bacc9d5aa514ee5780680",
+          "previous_bytes": 79537,
+          "sha256": "557c1e7d45094ce81f9f8d3d6982c478d7caf9d37162ad4b52a0a2935db055f3",
+          "bytes": 79621
+        }
+      ],
+      "unchanged_artifacts": [
+        {
+          "role": "suite",
+          "path": "data/eval/open_agronomy_benchmark_v2_cases.jsonl",
+          "sha256": "9785caf6ca8040b4bbe7906914aaa7c8c0375e48da90c30ec8a927a116daab32",
+          "bytes": 51336
+        },
+        {
+          "role": "contract",
+          "path": "configs/open_agronomy_benchmark_v2.json",
+          "sha256": "346af6715f622e821743234756fc5529c3718bec227bf7bd3a6c8557443ff6a5",
+          "bytes": 3859
+        },
+        {
+          "role": "case_schema",
+          "path": "configs/schemas/benchmark_v2_case.schema.json",
+          "sha256": "da3a21a1e071ae2139684baae7428aa770f752ce0c2802c0d65e58f23ea31a1d",
+          "bytes": 5597
+        },
+        {
+          "role": "causal_interface",
+          "path": "configs/open_agronomy_benchmark_v2_interface.json",
+          "sha256": "739b148a79930eef7c0fb8cc50d4fec2c39381387a3e861763b70618f5590b6c",
+          "bytes": 5189
+        },
+        {
+          "role": "preregistration",
+          "path": "configs/open_agronomy_benchmark_v2_preregistration.json",
+          "sha256": "310ac7d9cf5966ce95c79ea60532a7bf70becc43db4f6804845fbdf479de3c69",
+          "bytes": 5500
+        },
+        {
+          "role": "exposure_amendment",
+          "path": "data/eval/open_agronomy_benchmark_v2_exposure_amendment_20260813.json",
+          "sha256": "4f9314d75353b7f7d2982ae64530d7021b158aa85a921ea72a81224f948b30a4",
+          "bytes": 3214
+        },
+        {
+          "role": "metrics",
+          "path": "src/agronomy_agent/benchmark_v2_metrics.py",
+          "sha256": "62e4135c7ef5b857598c2bff0f9a3d9a5e40edabca8331f71cfa10e6d303ad02",
+          "bytes": 47037
+        },
+        {
+          "role": "runner_cli",
+          "path": "scripts/run_open_agronomy_benchmark_v2.py",
+          "sha256": "9bb850c35d0356e66078702b0d5c2df4d23ba83bbafe6bf24b950ada97cbb3de",
+          "bytes": 5109
+        },
+        {
+          "role": "audit",
+          "path": "scripts/audit_open_agronomy_benchmark_v2.py",
+          "sha256": "b4d0f932f5aa249d2bf99c6e88830eb760beef75011f6edbe34d1a450fc78d3e",
+          "bytes": 31886
+        },
+        {
+          "role": "test_metrics",
+          "path": "tests/test_benchmark_v2_metrics.py",
+          "sha256": "b2fc403bc81d714fb9c07ff0c25872c06ed7f2d953d921ac103b61cbeb80f119",
+          "bytes": 21592
+        },
+        {
+          "role": "test_design_audit",
+          "path": "tests/test_open_agronomy_benchmark_v2_audit.py",
+          "sha256": "d9d1f2490b012fa5032173372cd5c1049d63343b0ccacef8b4567e5e9d2bf4c0",
+          "bytes": 7955
+        },
+        {
+          "role": "test_tool_contract",
+          "path": "tests/test_open_agronomy_benchmark_v2_tool_contract.py",
+          "sha256": "b4491e82a82dbf07f6a3b0c564bce8eef208386e7d27eb6daf3e44c929b63016",
+          "bytes": 2670
+        },
+        {
+          "role": "test_runner",
+          "path": "tests/test_open_agronomy_benchmark_v2_runner.py",
+          "sha256": "fa3deac24caa9e4df2a76456b73ea7210f69d3e6aa9b7fddc744b1a8c0d33958",
+          "bytes": 33923
+        },
+        {
+          "role": "test_runtime_contract",
+          "path": "tests/test_open_agronomy_benchmark_v2_runtime_contract.py",
+          "sha256": "9e43c956880bb261a0382f995a9a3092756d4c46427dcad3669c4265a0396fbf",
+          "bytes": 5040
+        },
+        {
+          "role": "harness_contract",
+          "path": "configs/open_agronomy_benchmark_v2_harness_contract.json",
+          "sha256": "9353e8ded22ba7bbbd914bf35ca97851962e2bb99eee595d42a16500366044c8",
+          "bytes": 7377
+        },
+        {
+          "role": "harness_amendment",
+          "path": "data/eval/open_agronomy_benchmark_v2_harness_amendment_20260813.json",
+          "sha256": "6442c0f5f8432c624bb8180014f8f6cbdf077a1b60e65e13ae4f00906330eb30",
+          "bytes": 1317
+        },
+        {
+          "role": "harness_compatibility",
+          "path": "src/agronomy_agent/benchmark_harness_compatibility.py",
+          "sha256": "11941d5845e27a197af81d2dc69ed961ebbddee06386da30c16432515a0f6ee8",
+          "bytes": 41498
+        },
+        {
+          "role": "test_harness_compatibility",
+          "path": "tests/test_benchmark_harness_compatibility.py",
+          "sha256": "230eeb88b990acee1a67b61b1a2a5c94dc827ee36b3246741fa93a88f936d7d6",
+          "bytes": 18181
+        }
+      ]
     }
   ],
-  "updated_at": "2026-11-13T04:14:10.408673+00:00"
+  "updated_at": "2026-11-13T06:15:51.843300+00:00"
 }

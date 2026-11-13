@@ -4,12 +4,14 @@ November 12, 2026. Reference main: `91125d30acd447537184184352d8fadf96ee89ee`.
 
 ## Current status
 
-Collection and repair verification are in progress. The hosted regression
-collection has closed; the original full collection and replacement native
-campaigns are still running. No complete current matrix or new quality scores
-are claimed yet. Interrupted GPU attempts and failed provider-control attempts
-remain separate evidence. The prior full comparison used a separate evaluation
-checkpoint; the recent 87-case smoke assessment does not replace that matrix.
+Merged-main Luna collection is retained; both native merged-main baselines
+continue. Independent composed-source review found additional input, request
+and crop-role defects. The `4bd948a` candidate was stopped after 192 regression
+and 49 full-cohort observations; its outputs remain separate and are not reused.
+The successor is under source verification and must repeat the complete
+candidate matrix. No complete current matrix or new quality scores are claimed.
+Interrupted GPU attempts and failed provider controls remain evidence. The
+recent 87-case smoke assessment does not replace the full comparison.
 
 ## Frozen campaign scope
 
@@ -36,10 +38,10 @@ stale weather, basic definitions and trial interpretation.
 
 ## Instrument and source boundaries
 
-Current main includes a controlled lower-level Luna executor but its canonical
-registry accepts only native MLX profiles. Selectively integrate the versioned,
-content-bound external registry and lazy phase factories; retain native checks
-and unknown hosted weight/termination evidence. No provider grant is created by
+Reference main `91125d3` includes a controlled lower-level Luna executor but its
+canonical registry accepts only native MLX profiles. The campaign adds the
+versioned, content-bound external registry and lazy phase factories, retaining
+native checks and unknown hosted weight/termination evidence. No provider grant is created by
 selecting the registry. A failed conversation turn must stop subsequent dependent
 dispatch while preserving its actual output and failure receipts.
 
@@ -164,3 +166,21 @@ adjacent percentage reply can finish the same calculation. It rebuilds that
 short chain from user requests, not assistant answers. Other missing roles,
 changed topics, mixed action requests and broken history remain unresolved.
 Whole source and successor model verification remain required.
+
+
+## Composed source review and successor qualification
+
+Independent review reproduced five related contract problems: numeric prefixes
+accepted as complete operands; omitted losses, flows or requested outputs;
+compound-unit truncation; operational continuations inheriting explanation or
+arithmetic bypasses; and affected/reference/negative-symptom crop conflation.
+The successor repairs complete token, quantity, unit and request coverage across
+supplied, seed and reachable foundation/legacy calculations. Celsius GDD keys
+and units are explicit. Healthy comparison subjects no longer erase an affected
+crop, and fallback text preserves only the root signs actually negated. A
+requested current-crop inspection remains separate from soil-history hygiene.
+
+The additional local tests are software regressions, not additions to the
+approved 608-case model capsule. Original case, reference, rubric and policy
+bytes remain unchanged. The entire successor collection, automated triage and
+canonical analysis remain required before updated benchmark results or a PR.

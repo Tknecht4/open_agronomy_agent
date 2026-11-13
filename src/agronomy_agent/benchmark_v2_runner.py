@@ -223,6 +223,7 @@ def _runtime_implementation_receipts() -> dict[str, str]:
                     PROJECT_ROOT / "src/agronomy_agent/seed_establishment.py",
                     PROJECT_ROOT / "src/agronomy_agent/request_scope.py",
                     PROJECT_ROOT / "src/agronomy_agent/supplied_math_scope.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_numeric_inputs.py",
                     PROJECT_ROOT / "src/agronomy_agent/supplied_nutrient_parser.py",
                     PROJECT_ROOT / "src/agronomy_agent/supplied_water_parser.py",
                     PROJECT_ROOT / "src/agronomy_agent/supplied_grain_parser.py",

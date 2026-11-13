@@ -9,11 +9,12 @@ from __future__ import annotations
 from decimal import Decimal
 import re
 from typing import Any
+from agronomy_agent.supplied_numeric_inputs import NUMBER as SUPPLIED_NUMBER
 
 SEED_SURVIVAL_BASES = ("seeds_sown", "germinated_seeds")
 SEED_SURVIVAL_BASIS_GAP = "the survival denominator (all seeds sown or only germinated seeds)"
 SEED_GERMINATION_GAP = "seed-lot germination percent for post-germination survival"
-_NUMBER = r"(-?[0-9][0-9,]*(?:\.[0-9]+)?)"
+_NUMBER = rf"({SUPPLIED_NUMBER})"
 
 
 def established_fraction(survival_pct: Decimal, basis: str,
@@ -31,7 +32,7 @@ def established_fraction(survival_pct: Decimal, basis: str,
     return germination_pct / Decimal(100) * survival, "established fraction = germination × post-germination survival"
 
 
-def parse_seed_establishment(text: str) -> tuple[dict[str, Any], tuple[str, ...]]:
+def parse_seed_establishment(text: str, *, bindings: list[re.Match[str]] | None = None) -> tuple[dict[str, Any], tuple[str, ...]]:
     """Extract one supplied establishment model; ambiguity is never a default."""
     def matches(*patterns: str) -> list[re.Match[str]]:
         return [m for pattern in patterns for m in re.finditer(pattern, text, re.IGNORECASE)]
@@ -53,6 +54,8 @@ def parse_seed_establishment(text: str) -> tuple[dict[str, Any], tuple[str, ...]
         rf"{_NUMBER}\s*%\s*(?:(?:expected|overall|field|seedling|post[- ]germination)\s+)*(?:loss|mortality)\b",
         rf"\b(?:(?:expected|overall|field|seedling|post[- ]germination)\s+)*(?:loss|mortality)\s*(?:is|of|:)?\s*{_NUMBER}\s*%",
     )
+    if bindings is not None:
+        bindings.extend(germ_matches + survival_matches + loss_matches)
     germination, survival, loss = value(germ_matches), value(survival_matches), value(loss_matches)
     inputs: dict[str, Any] = {}
     missing: list[str] = []

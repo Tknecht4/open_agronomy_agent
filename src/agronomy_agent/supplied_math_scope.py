@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import re
 from agronomy_agent.foundation_math_parser import _unsafe_action_request
+from agronomy_agent.request_scope import has_unqualified_followup
+
 
 
 def has_unlabelled_numeric_alternatives(text: str) -> bool:
@@ -21,7 +23,7 @@ def supplied_math_scope(question: str) -> str | None:
     # Any later sentence or coordinated instruction still participates.
     scope = re.sub(r",?\s+not a recommended rate(?: or carrier[- ]water volume)?(?=[.!?]|$)", "", text, flags=re.I)
     scope = re.sub(r",?\s+assuming the label basis is correct(?=[.!?]|$)", "", scope, flags=re.I)
-    if _unsafe_action_request(scope.casefold()):
+    if _unsafe_action_request(scope.casefold()) or has_unqualified_followup(scope, calculation=True):
         return None
     if re.search(
         r"\b(?:should|may|can|could|would|must|legal|permitted|authorize|recommend|recommended|"

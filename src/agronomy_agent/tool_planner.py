@@ -14,6 +14,8 @@ import re
 from typing import Any, Mapping
 
 from agronomy_agent.agronomic_calculations import calculation_tool_schema
+from agronomy_agent.request_scope import has_unqualified_followup
+from agronomy_agent.supplied_numeric_inputs import NUMBER as SUPPLIED_NUMBER, area_unit_extension_gaps
 from agronomy_agent.calculator_contracts import CALCULATOR_VERSION, TOOL_PLANNER_VERSION, format_calculator_clarification, tool_version_for
 from agronomy_agent.foundation_math_parser import AREA, _unsafe_action_request, parse_foundation_calculation
 from agronomy_agent.supplied_nutrient_parser import parse_supplied_nutrient_calculation
@@ -25,7 +27,7 @@ from agronomy_agent.supplied_geometry_biomass_parser import parse_supplied_geome
 PLANNER_VERSION = TOOL_PLANNER_VERSION
 TOOL_PLAN_SCHEMA_VERSION = "open_agronomy_agent.tool_plan.v1"
 CALCULATOR_ID = "agronomic_calculator"
-_NUMBER = r"([0-9][0-9,]*(?:\.[0-9]+)?)"
+_NUMBER = rf"({SUPPLIED_NUMBER})"
 
 
 def _canonical(value: Any) -> str:
@@ -118,6 +120,7 @@ def plan_tools(question: str, *, field_context: Mapping[str, Any] | None = None)
     if parsed is None:
         return ToolPlan(TOOL_PLAN_SCHEMA_VERSION, PLANNER_VERSION, "not_applicable", ())
     operation, inputs, missing = parsed
+    missing += area_unit_extension_gaps(question)
     tool_version = tool_version_for(operation)
     seed = {
         "planner_version": PLANNER_VERSION,
@@ -217,7 +220,7 @@ def _parse_calculation(question: str) -> tuple[str, dict[str, Any], tuple[str, .
             if existing is not None and existing[0] == 'fertilizer_field_total' and not existing[2]:
                 return existing
         return supplied
-    if _unsafe_action_request(lower):
+    if _unsafe_action_request(lower) or has_unqualified_followup(text, calculation=True):
         return None
     if _explanation_or_method_request(lower) or _record_lookup_request(lower):
         return None

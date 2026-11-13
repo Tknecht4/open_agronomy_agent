@@ -286,3 +286,30 @@ emergence uses a visibly stated seeds-sown interpretation. No germination value
 is invented, and no crop population or survival percentage is selected. See
 [Manitoba's establishment definition](https://www.gov.mb.ca/agriculture/crops/crop-management/print,seeding-by-plant-population.html)
 and [Canola Council's emergence basis](https://www.canolacouncil.org/canola-encyclopedia/plant-establishment/seeding-rate/).
+
+
+### Complete arithmetic requests and observed crop roles
+
+`supplied_numeric_inputs.py` owns ordinary decimal/comma-thousands token
+boundaries shared by supplied, foundation and legacy extraction. A valid prefix
+of a decimal comma, exponent, fraction or malformed token is never an operand.
+The supplied parsers and seed/GDD owners bind every numeric token to an actual
+operand, a recognized incidental role or a supported method constant. A
+per-hectare product result may retain field area as context; an additional
+nutrient flow, dry-matter loss, excluded sampling area or unknown output cannot
+silently disappear. Unsupported compound units require clarification. Structured
+GDD accepts only its explicit Celsius input keys, method and temperature unit.
+
+`request_scope.py` positively qualifies complete explanatory/calculation request
+clauses. Unknown trailing or coordinated commands return to ordinary decision
+handling, including comma-separated requests. The bypass accepts bounded
+analytical continuations and explicit parameter declarations; it does not infer
+that a word is analytical from its spelling. Leaving a bypass is not a refusal.
+
+`plant_health_scope.py` preserves crop mentions while distinguishing the affected
+crop from a healthy reference subject. Negative root observations retain their
+actual wording: absence of galls does not imply absence of swelling. Decision
+checks reject invented root signs and require an explicitly requested current
+crop inspection alongside separate clubroot soil-history precautions. Fallbacks
+preserve these roles rather than assigning the historical disease to the current
+rotation crop.

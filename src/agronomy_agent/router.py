@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from agronomy_agent.map_component_interpretation import is_map_component_explanation_question
 from agronomy_agent.observation_guidance import observation_guidance
 from agronomy_agent.answerability import is_rate_basis_explanation, is_mechanism_explanation, product_action_request_text
-from agronomy_agent.request_scope import has_action_directive
+from agronomy_agent.request_scope import has_action_directive, has_unqualified_followup
 
 
 _AAFC_CROP_HEALTH_PRODUCT_PATTERN = (
@@ -843,7 +843,7 @@ def _is_benign_conceptual_explanation(text: str) -> bool:
     diagnostic or product routes.
     """
 
-    if has_action_directive(text):
+    if has_action_directive(text) or has_unqualified_followup(product_action_request_text(text)):
         return False
     if is_mechanism_explanation(text) or evidence_interpretation_kind(text):
         return True
