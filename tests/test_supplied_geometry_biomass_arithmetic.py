@@ -53,6 +53,10 @@ def test_ambiguous_units_or_invalid_values_need_clarification(question):
     HI.replace('Compute harvest index.', 'The biomass value does not include grain. Compute harvest index.'),
     HI.replace('Compute harvest index.', 'Grain is not included in the biomass value. Compute harvest index.'),
     HI.replace('Compute harvest index.', 'The biomass value is not including grain. Compute harvest index.'),
+    *[HI.replace('Compute harvest index.', suffix + ' Compute harvest index.') for suffix in (
+        'The biomass excludes grain.', 'The biomass omits grain.', 'The biomass contains no grain.',
+        'Grain was left out of the biomass.', 'The biomass is stover only.',
+    )],
     HI + ' Explain why this is not the field area.',
     CIRCLE.replace('Explain why this is not the field area.', 'Explain why this crop is failing.'),
 ])

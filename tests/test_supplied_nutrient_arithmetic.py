@@ -260,3 +260,17 @@ def test_explicit_area_total_never_returns_only_the_per_hectare_quantity(questio
     assert results[0].payload['value'] == 4800
     assert results[0].payload['unit'] == 'kg'
     assert results[0].payload['inputs']['area_ha'] == 16
+
+
+def test_explicit_per_area_output_is_not_changed_by_incidental_field_area():
+    question = 'Calculate fertilizer product rate: how much 25%-N fertilizer supplies 75 kg N/ha over 16 ha?'
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'ready'
+    assert results[0].operation == 'fertilizer_product_mass'
+    assert results[0].payload['value'] == 300
+    assert results[0].payload['unit'] == 'kg product/ha'
+
+
+def test_conflicting_requested_product_output_bases_need_clarification():
+    question = 'Calculate fertilizer product rate and total product: how much 25%-N fertilizer supplies 75 kg N/ha over 16 ha?'
+    assert plan_tools(question).status == 'clarification_required'

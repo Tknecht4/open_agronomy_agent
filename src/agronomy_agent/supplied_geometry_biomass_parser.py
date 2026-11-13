@@ -55,7 +55,10 @@ def parse_supplied_geometry_biomass_calculation(question: str) -> tuple[str, dic
 def _harvest_index(text):
     if not re.search(r'\b(?:harvest index|HI)\b', text, re.I):
         return None
-    if re.search(r"\b(?:wet|fresh|root|tuber|below[- ]ground|excluding|without grain|straw only|not includ(?:e[ds]?|ing)|doesn't include|does not include)\b|\bgrain\b[^.!?;]{0,35}\bnot (?:included|part)\b", text, re.I):
+    if re.search(r"\b(?:wet|fresh|root|tuber|below[- ]ground|straw only|stover only|vegetative only|nongrain)\b|"
+                 r"\b(?:exclud\w*|omit\w*|without|minus|not includ(?:e[ds]?|ing)|doesn['’]t include|does not include)\b[^.!?;]{0,35}\bgrain\b|"
+                 r"\b(?:contains?|has)\s+no\s+grain\b|"
+                 r"\bgrain\b[^.!?;]{0,35}\b(?:not (?:included|part|counted)|excluded|omitted|left out)\b", text, re.I):
         return None
     grain = list(re.finditer(_MASS + r'\s+(?:of\s+)?grain dry (?:mass|matter)\b', text, re.I))
     grain += list(re.finditer(r'\bgrain dry (?:mass|matter)\s*(?:is|of|:|=)\s*' + _MASS, text, re.I))
