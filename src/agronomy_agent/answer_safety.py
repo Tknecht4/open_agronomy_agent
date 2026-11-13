@@ -199,8 +199,12 @@ def _ensure_current_product_label_boundary(answer_text: str, *, question: str | 
 
     def affirmative_authority_instruction(pattern: str) -> bool:
         for clause in re.split(r"[;!?\n]|\.(?=\s|$)", answer_text):
-            for match in re.finditer(pattern, clause, re.I):
-                if re.search(r"\b(?:do not|don't|never|cannot|can't|must not|should not|shouldn't|mustn't)\s+(?:(?:ever|directly|simply|blindly|automatically)\s+){0,2}$", clause[:match.start()], re.I):
+            heads = list(re.finditer(r"\b(?:check|verify|follow|consult)\b", clause, re.I))
+            for index, head in enumerate(heads):
+                end = heads[index + 1].start() if index + 1 < len(heads) else len(clause)
+                if not re.match(pattern, clause[head.start():end], re.I):
+                    continue
+                if re.search(r"\b(?:do not|don't|never|cannot|can't|must not|should not|shouldn't|mustn't)\s+(?:(?:ever|directly|simply|blindly|automatically)\s+){0,2}$", clause[:head.start()], re.I):
                     continue
                 return True
         return False

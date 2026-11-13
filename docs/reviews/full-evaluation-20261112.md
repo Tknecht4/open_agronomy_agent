@@ -4,8 +4,13 @@ November 12, 2026. Reference main: `91125d30acd447537184184352d8fadf96ee89ee`.
 
 ## Current status
 
-Merged-main Luna collection is retained; both native merged-main baselines
-continue. Independent composed-source review found additional input, request
+Merged-main Luna and both native regression cohorts are retained. The E2B
+full-cohort VM disappeared after 2,054 archived observations; its last durable
+status reports 2,055, so a lost tail remains unknown. A complete fresh E2B
+full-cohort successor will retain its own identity and reuse no partial rows.
+E4B reached a controlled checkpoint at 1,794 full-cohort observations; pending
+artifacts and exact continuation eligibility are being verified. No complete
+native full-cohort result is claimed. Independent composed-source review found additional input, request
 and crop-role defects. The `4bd948a` candidate was stopped after 192 regression
 and 49 full-cohort observations; its outputs remain separate and are not reused.
 The later `222be26` source passed 4,577 backend checks but its real model outputs

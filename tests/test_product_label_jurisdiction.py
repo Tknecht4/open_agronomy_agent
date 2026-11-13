@@ -33,8 +33,14 @@ def test_correct_negated_foreign_authority_guidance_keeps_its_definition(questio
      "Follow a Canadian label", "EPA registration number"),
     ("What does PMRA mean on a label sent to my US farm?", "Do not fail to follow a Canadian label for this U.S. application.",
      "follow a Canadian label", "EPA registration number"),
+    ("What does PMRA mean on a label sent to my US farm?",
+     "Do not follow a Canadian label as authority here, but follow a Canadian label for this U.S. application.",
+     "follow a Canadian label for this", "EPA registration number"),
     ("What does EPA mean on a document sent to my Canadian farm?", "Follow an EPA label for this Canadian application.",
      "Follow an EPA label", "Health Canada registered product label"),
+    ("What does EPA mean on a document sent to my Canadian farm?",
+     "Do not follow an EPA label as authority here, but follow an EPA label for this Canadian application.",
+     "follow an EPA label for this", "Health Canada registered product label"),
 ])
 def test_affirmative_foreign_authority_instruction_remains_blocked(question, draft, forbidden, reminder):
     answer = enforce_answer_safety_postconditions(draft, question=question,
