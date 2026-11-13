@@ -8,6 +8,8 @@ import sys
 
 import pytest
 
+import agronomy_agent.benchmark_v2_runner as runner_module
+
 from agronomy_agent.benchmark_v2_runner import (
     DeterministicContractExecutor,
     ModelIdentity,
@@ -119,7 +121,7 @@ def test_observations_preserve_exact_component_model_stage_tool_and_evidence_ide
     observation = next(
         row
         for row in run["observations"]
-        if row["eval_id"] == "oab2::spring_wheat_stand::fully_specified_calculation"
+        if row["eval_id"] == "oab2::canola_nitrogen::fully_specified_calculation"
         and row["arm_id"] == "production_full"
     )
 
@@ -195,6 +197,37 @@ def test_pre_generation_hold_is_distinct_from_verifier_opportunity() -> None:
     assert observation["verifier_intervened"] is None
     assert measurement["values"]["verifier_false_negative"] is None
     assert measurement["values"]["risk_calibration"] == 1.0
+
+
+def test_seed_revision_is_declared_and_frozen_reference_gap_remains_observed() -> None:
+    declaration = DeterministicContractExecutor().harness_capabilities()["semantic_profile"]["tool_implementations"]["agronomic_calculator"]
+    assert declaration["operation_versions"]["seed_rate_mass"] == "agronomic_calculator_v3"
+    assert declaration["operation_versions"]["unit_conversion"] == "agronomic_calculator_v1"
+    observation = next(row for row in _run()["observations"] if
+                       row["eval_id"] == "oab2::spring_wheat_stand::fully_specified_calculation"
+                       and row["arm_id"] == "production_full")
+    assert observation["tool_results"] == []
+    assert observation["tool_invocations"][0]["tool_version"] == "agronomic_calculator_v3"
+    assert observation["answerability_state"] == "ask_one_discriminating_question"
+    assert observation["clarification_fields"] == ["the survival denominator (all seeds sown or only germinated seeds)"]
+    assert len(observation["clarifying_questions"]) == 1
+
+
+@pytest.mark.parametrize("helper", [
+    "calculator_contracts.py", "foundation_math_parser.py", "seed_establishment.py",
+    "request_scope.py", "supplied_math_scope.py", "supplied_nutrient_parser.py",
+    "supplied_water_parser.py", "supplied_grain_parser.py",
+    "supplied_geometry_biomass_parser.py", "water_arithmetic.py",
+])
+def test_tool_parser_helper_bytes_affect_system_identity(helper, monkeypatch) -> None:
+    baseline = DeterministicContractExecutor().harness_capabilities()
+    original = runner_module.file_sha256
+    target = ROOT / "src/agronomy_agent" / helper
+    monkeypatch.setattr(runner_module, "file_sha256", lambda path: "0" * 64 if path == target else original(path))
+    changed = DeterministicContractExecutor().harness_capabilities()
+    assert changed["implementation_receipts"]["tool_executor_bundle"] != baseline["implementation_receipts"]["tool_executor_bundle"]
+    assert changed["system_identity"]["system_configuration_sha256"] != baseline["system_identity"]["system_configuration_sha256"]
+    assert changed["semantic_profile"] == baseline["semantic_profile"]
 
 
 def test_summary_never_pools_models_revisions_or_arms() -> None:
@@ -364,7 +397,9 @@ class _TraceMutationExecutor(DeterministicContractExecutor):
             ] = {
                 "implementation_version": "alternate_calculator_v1",
                 "family": "supplied_input_arithmetic",
-                "operations": ["seed_rate_mass"],
+                "operations": list(capabilities["semantic_profile"]["tool_implementations"][
+                    "agronomic_calculator"
+                ]["operations"]),
                 "authority_roles": ["supplied_inputs_arithmetic_only"],
             }
             capabilities["system_identity"][
@@ -430,6 +465,9 @@ class _TraceMutationExecutor(DeterministicContractExecutor):
             row["tool_results"][0]["invocation_id"] = "unknown_invocation"
         elif self.mutation == "tool_artifact_ids" and row["tool_invocations"]:
             row["component_receipts"]["typed_tools"]["artifact_ids"] = []
+        elif self.mutation == "tool_operation_version" and row["tool_invocations"]:
+            for invocation in (row["tool_invocations"][0], row["tool_plan"]["invocations"][0]):
+                invocation["tool_version"] = "undeclared-operation-version"
         elif self.mutation == "tool_stale_invocation_id" and row["tool_results"]:
             row["selected_tools"] = ["alternate_calculator"]
             for invocation in (
@@ -616,6 +654,7 @@ class _TraceMutationExecutor(DeterministicContractExecutor):
         ("tool_result_schema", "tool result schema version mismatch"),
         ("tool_result_link", "unknown invocation"),
         ("tool_artifact_ids", "typed_tools artifact IDs"),
+        ("tool_operation_version", "tool invocation uses an unknown operation/authority/status semantic"),
         (
             "tool_stale_invocation_id",
             "tool invocation ID does not match canonical invocation content",

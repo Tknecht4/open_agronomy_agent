@@ -612,3 +612,12 @@ results and annotate the reference ambiguity separately. A correct overall
 emergence calculation or an appropriate denominator question must not be called
 an agronomic error solely because it differs from that unstated assumption.
 The original mechanical report and any later scientific triage remain distinct.
+
+The historical v2 synthetic contract executor also records current operation
+versions individually: revised seed arithmetic is v3, while unchanged legacy
+operations retain v1. A declared `operation_versions` map must cover every
+declared operation with a nonempty version; malformed maps fail negotiation.
+These implementation identities change the system fingerprint, not the frozen
+construct or cohort. The executor records actual planner clarification fields,
+including the unstated seed denominator in two old wheat cases. This remains
+synthetic trace QA and cannot establish agronomic performance.

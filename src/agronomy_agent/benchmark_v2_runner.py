@@ -20,6 +20,7 @@ from typing import Any, Protocol
 import yaml
 
 from agronomy_agent.agronomic_calculations import CalculationOperation
+from agronomy_agent.calculator_contracts import CALCULATOR_VERSION, tool_version_for
 from agronomy_agent.answerability import (
     ANSWERABILITY_POLICY_VERSION,
     assess_answerability,
@@ -217,6 +218,16 @@ def _runtime_implementation_receipts() -> dict[str, str]:
                     PROJECT_ROOT / "src/agronomy_agent/local_tools.py",
                     PROJECT_ROOT
                     / "src/agronomy_agent/agronomic_calculations.py",
+                    PROJECT_ROOT / "src/agronomy_agent/calculator_contracts.py",
+                    PROJECT_ROOT / "src/agronomy_agent/foundation_math_parser.py",
+                    PROJECT_ROOT / "src/agronomy_agent/seed_establishment.py",
+                    PROJECT_ROOT / "src/agronomy_agent/request_scope.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_math_scope.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_nutrient_parser.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_water_parser.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_grain_parser.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_geometry_biomass_parser.py",
+                    PROJECT_ROOT / "src/agronomy_agent/water_arithmetic.py",
                     PROJECT_ROOT
                     / "src/agronomy_agent/agno_runtime/tool_adapters.py",
                 )
@@ -263,7 +274,11 @@ def _deterministic_executor_semantic_profile() -> dict[str, Any]:
         "construct_profile_sha256": stable_sha256(construct_profile),
         "tool_implementations": {
             "agronomic_calculator": {
-                "implementation_version": "agronomic_calculator_v1",
+                "implementation_version": CALCULATOR_VERSION,
+                "operation_versions": {
+                    operation.value: tool_version_for(operation.value)
+                    for operation in CalculationOperation
+                },
                 "family": "supplied_input_arithmetic",
                 "operations": [operation.value for operation in CalculationOperation],
                 "authority_roles": ["supplied_inputs_arithmetic_only"],
@@ -478,20 +493,22 @@ class DeterministicContractExecutor:
         tool_clarification_used = bool(
             components.get("typed_tools")
             and plan.status == "clarification_required"
-            and case.get("stratum") == "one_critical_input_missing"
         )
         direct_answer = bool(
             tool_result_used
             or (
-                not pre_generation_intervened
+                not pre_generation_intervened and not tool_clarification_used
                 and expected.get("direct_answer_expected") is True
             )
         )
-        clarification_fields = (
-            list(expected.get("clarification_fields") or [])
-            if tool_clarification_used or state == "ask_one_discriminating_question"
-            else []
-        )
+        if tool_clarification_used:
+            clarification_fields = list(dict.fromkeys(
+                missing for invocation in plan.invocations for missing in invocation.missing_inputs
+            ))
+        elif state == "ask_one_discriminating_question":
+            clarification_fields = list(answerability.missing_inputs)
+        else:
+            clarification_fields = []
         clarifying_questions = (
             [
                 str(plan.clarification or answerability.response_text or "What is the missing decision input?")
@@ -511,6 +528,10 @@ class DeterministicContractExecutor:
                 or plan.clarification
                 or "A bounded authority or input check is required before the requested action."
             )
+            answer_numeric = None
+        elif tool_clarification_used:
+            answer_origin = "deterministic_tool_clarification"
+            draft_text = str(plan.clarification)
             answer_numeric = None
         else:
             answer_origin = "synthetic_mock_model"
@@ -943,7 +964,9 @@ def _validate_tool_trace(
             raise ValueError("tool invocation uses an unknown semantic family")
         if (
             invocation.get("tool_version")
-            != implementation.get("implementation_version")
+            != implementation.get("operation_versions", {}).get(
+                invocation.get("operation"), implementation.get("implementation_version")
+            )
             or invocation.get("operation")
             not in set(implementation.get("operations") or ())
             or invocation.get("operation") not in set(family["operations"])

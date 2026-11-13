@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from agronomy_agent.benchmark_harness_compatibility import (
     EXECUTOR_CAPABILITIES_SCHEMA_VERSION,
     REQUIRED_ARTIFACT_RECEIPTS,
@@ -20,6 +22,37 @@ CONTRACT = json.loads(
     )
 )
 COMPONENTS = tuple(CONTRACT["component_contracts"])
+
+
+@pytest.mark.parametrize("versions", [None, {}, {"other_operation": "v3"}, {"unit_conversion": ""}, {"unit_conversion": 3}])
+def test_incomplete_or_malformed_operation_versions_fail_closed(versions) -> None:
+    capabilities = _capabilities()
+    capabilities["semantic_profile"]["tool_implementations"]["test_calculator"]["operation_versions"] = versions
+    capabilities["system_identity"]["system_configuration_sha256"] = derive_system_configuration_sha256(capabilities)
+    report = negotiate_harness(
+        contract=CONTRACT, interface_components=COMPONENTS,
+        capabilities=capabilities, artifact_receipts=_receipts(),
+    )
+    assert report["status"] == "new_benchmark_required"
+    assert "tool_operation_versions_malformed:test_calculator" in report["reason_codes"]
+
+
+def test_explicit_operation_versions_change_system_identity_without_changing_construct() -> None:
+    capabilities = _capabilities()
+    baseline = negotiate_harness(
+        contract=CONTRACT, interface_components=COMPONENTS,
+        capabilities=capabilities, artifact_receipts=_receipts(),
+    )
+    capabilities["semantic_profile"]["tool_implementations"]["test_calculator"]["operation_versions"] = {"unit_conversion": "operation-v3"}
+    capabilities["system_identity"]["system_configuration_sha256"] = derive_system_configuration_sha256(capabilities)
+    revised = negotiate_harness(
+        contract=CONTRACT, interface_components=COMPONENTS,
+        capabilities=capabilities, artifact_receipts=_receipts(),
+    )
+    assert revised["status"] == "comparable"
+    assert revised["system_fingerprint"] != baseline["system_fingerprint"]
+    assert revised["construct_fingerprint"] == baseline["construct_fingerprint"]
+    assert revised["cohort_fingerprint"] == baseline["cohort_fingerprint"]
 
 
 def _receipts(seed: str = "a") -> dict[str, str]:

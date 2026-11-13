@@ -133,3 +133,14 @@ and mechanical scores remain unchanged. These reference limitations must stay
 visible alongside any automated scientific triage; no retrospective gold repair
 or exclusion from the full denominator is authorized. Active software checks
 use separately versioned qualified fixtures.
+
+The complete source check also exposed historical v2 trace integration gaps:
+its synthetic executor declared one v1 version for all calculator operations
+and copied expected clarification fields instead of actual planner gaps. The
+repair declares complete per-operation versions and preserves actual requested
+inputs. Two frozen v2 wheat cases additionally omit the survival denominator;
+their data remain unchanged, and current contract tests expose that limitation.
+Independent review also found missing parser/helper dependencies in the tool
+implementation fingerprint. The receipt now binds the shared action guard,
+seed establishment, supplied-input parsers and their arithmetic helpers, so a
+readiness-affecting helper change produces a different system identity.

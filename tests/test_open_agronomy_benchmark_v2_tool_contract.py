@@ -14,13 +14,20 @@ CASES = [
 ]
 
 
-def test_all_complete_v2_calculations_execute_declared_operation_within_tolerance() -> None:
+def test_frozen_v2_calculations_expose_unstated_seed_basis_without_rewriting_gold() -> None:
     calculations = [row for row in CASES if row["stratum"] == "fully_specified_calculation"]
     assert len(calculations) >= 5
 
     for row in calculations:
         plan, results = plan_and_execute_tools(row["question"], field_context=row["field_context"])
         assert row["expected_tools"] == ["agronomic_calculator"]
+        if row["eval_id"] == "oab2::spring_wheat_stand::fully_specified_calculation":
+            assert "survival is 85%" in row["question"]
+            assert plan.status == "clarification_required" and not results
+            assert list(plan.invocations[0].missing_inputs) == [
+                "the survival denominator (all seeds sown or only germinated seeds)"
+            ]
+            continue
         assert plan.status == "ready", row["eval_id"]
         assert len(results) == 1, row["eval_id"]
         assert results[0].operation == row["expected_tool_operation"]
@@ -29,7 +36,7 @@ def test_all_complete_v2_calculations_execute_declared_operation_within_toleranc
         )
 
 
-def test_all_missing_input_v2_calculations_request_exactly_one_declared_field() -> None:
+def test_frozen_v2_missing_inputs_include_the_previously_unstated_seed_basis() -> None:
     incomplete = [row for row in CASES if row["stratum"] == "one_critical_input_missing"]
     assert len(incomplete) >= 5
 
@@ -40,4 +47,11 @@ def test_all_missing_input_v2_calculations_request_exactly_one_declared_field() 
         assert not results
         assert len(plan.invocations) == 1
         assert plan.invocations[0].operation == row["expected_tool_operation"]
+        if row["eval_id"] == "oab2::spring_wheat_stand::one_critical_input_missing":
+            assert row["expected_response"]["clarification_fields"] == ["target_plants_per_m2"]
+            assert list(plan.invocations[0].missing_inputs) == [
+                "target plants per square metre or foot",
+                "the survival denominator (all seeds sown or only germinated seeds)",
+            ]
+            continue
         assert list(plan.invocations[0].missing_inputs) == row["expected_response"]["clarification_fields"]
