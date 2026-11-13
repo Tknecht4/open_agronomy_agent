@@ -730,10 +730,28 @@ const sessionContextValue = (session: SessionRecord, key: string): string => {
   return ''
 }
 
-const conversationLabel = (session: SessionRecord, fallback: string): string => {
-  const title = session.title?.trim() || fallback
-  const date = (session.updated_at || session.created_at || '').slice(0, 10)
-  return date ? `${title} · ${date}` : title
+const conversationLabels = (sessions: SessionRecord[], fallback: string): Map<string, string> => {
+  const labels = sessions.map(session => {
+    const title = session.title?.trim() || fallback
+    const timestamp = session.updated_at || session.created_at
+    const date = timestamp ? new Date(timestamp) : null
+    const when = date && Number.isFinite(date.getTime())
+      ? date.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : ''
+    return when ? `${title} · ${when}` : title
+  })
+  const totals = new Map<string, number>()
+  const used = new Set(labels)
+  for (const label of labels) totals.set(label, (totals.get(label) || 0) + 1)
+  return new Map(sessions.map((session, index) => {
+    const label = labels[index]
+    if (totals.get(label)! === 1) return [session.session_id, label]
+    let ordinal = 1
+    while (used.has(`${label} · Chat ${ordinal}`)) ordinal += 1
+    const uniqueLabel = `${label} · Chat ${ordinal}`
+    used.add(uniqueLabel)
+    return [session.session_id, uniqueLabel]
+  }))
 }
 
 const sessionForField = (
@@ -1754,6 +1772,8 @@ export function OpenAgronomyApp() {
   })
   const generalConversations = scopedSessions('general')
   const fieldConversations = conversationBaseKey === 'general' ? [] : scopedSessions(conversationBaseKey)
+  const generalConversationLabels = conversationLabels(generalConversations, 'General chat')
+  const fieldConversationLabels = conversationLabels(fieldConversations, 'Field chat')
   const evidenceTurn = turns.find((turn) => turn.turn_id === evidenceTurnId) || latestTurn
   const activeScenario: SampleProfile = sampleProfiles.find((sample) => sample.id === scenarioId) || { ...emptyFieldProfile, id: '', name: '', mlra: '', geometry: 'Location not set' }
   const evidenceDocs = topDocs(evidenceTurn)
@@ -4346,10 +4366,10 @@ export function OpenAgronomyApp() {
               >
                 <option value="" disabled>{sessionId ? 'Select a saved chat' : 'New chat · unsaved until asked'}</option>
                 <optgroup label="General">
-                  {generalConversations.map(item => <option key={item.session_id} value={item.session_id}>{conversationLabel(item, 'General chat')}</option>)}
+                  {generalConversations.map(item => <option key={item.session_id} value={item.session_id}>{generalConversationLabels.get(item.session_id)}</option>)}
                 </optgroup>
                 {conversationBaseKey !== 'general' ? <optgroup label={activeFieldContextId ? `Current field · ${fieldName}` : `Example field · ${fieldName}`}>
-                  {fieldConversations.map(item => <option key={item.session_id} value={item.session_id}>{conversationLabel(item, 'Field chat')}</option>)}
+                  {fieldConversations.map(item => <option key={item.session_id} value={item.session_id}>{fieldConversationLabels.get(item.session_id)}</option>)}
                 </optgroup> : null}
               </select>
             </div>

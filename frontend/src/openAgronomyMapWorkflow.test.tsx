@@ -2770,6 +2770,37 @@ describe('Open Agronomy map upload workflow', () => {
     expect(screen.getByRole('combobox', { name: 'Saved conversations' })).toHaveValue('field-two')
   })
 
+  it.each([
+    { label: 'identical dates', titles: ['What seed rate should I use?', 'What seed rate should I use?'], timestamp: '2026-11-12T12:00:00Z' },
+    { label: 'missing dates and a suffix already in a title', titles: ['', 'General chat', 'General chat · Chat 1'], timestamp: undefined },
+    { label: 'invalid dates and a suffix already in a title', titles: ['', 'General chat', 'General chat · Chat 1'], timestamp: 'unknown' },
+  ])('distinguishes saved chats with $label while reopening each original conversation', async ({ titles, timestamp }) => {
+    const listed = titles.map((title, index) => ({
+      session_id: `chat-${index}`, title,
+      context: { field_conversation_key: index === 0 ? 'general' : `general:chat:${index}` },
+      turns_included: false, turns: [], created_at: timestamp,
+    }))
+    const baseFetch = installFetchMock(emptyDemoFields, uploadPayload, listed)
+    const baseImplementation = baseFetch.getMockImplementation()!
+    baseFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const id = String(input).match(/^\/api\/sessions\/([^/]+)$/)?.[1]
+      const session = listed.find(item => item.session_id === id)
+      return session ? jsonResponse({ ...session, turns_included: true,
+        turns: [{ turn_id: `${id}-turn`, user_message: `Question ${id}`, answer: `Original answer ${id}`, trace: {} }],
+      }) : baseImplementation(input, init)
+    })
+    render(<OpenAgronomyApp />)
+    expect(await screen.findByText('Original answer chat-0')).toBeInTheDocument()
+    const picker = screen.getByRole('combobox', { name: 'Saved conversations' })
+    const options = within(picker).getAllByRole('option').filter(option => (option as HTMLOptionElement).value.startsWith('chat-'))
+    expect(options).toHaveLength(titles.length)
+    expect(new Set(options.map(option => option.textContent)).size).toBe(titles.length)
+    for (const session of listed.slice(1).concat(listed[0])) {
+      fireEvent.change(picker, { target: { value: session.session_id } })
+      expect(await screen.findByText(`Original answer ${session.session_id}`)).toBeInTheDocument()
+    }
+  })
+
   it('ignores a delayed conversation detail after selecting another saved chat', async () => {
     const listed = [
       { session_id: 'slow', title: 'Slow general', context: { field_conversation_key: 'general' }, turns_included: false, turns: [] },
