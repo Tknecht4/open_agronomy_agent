@@ -255,3 +255,64 @@ def test_named_gdd_note_is_context_and_does_not_supply_a_new_request_or_operand(
     assert plan.status == 'ready' and results[0].payload['value'] == 10
     context = SimpleNamespace(runtime_metadata={'tool_plan':plan.to_dict(), 'tool_results':[r.to_dict() for r in results]})
     assert deterministic_tool_response(context, question=question)[1] == 'deterministic_tool_result'
+
+
+@pytest.mark.parametrize('prefix', ['Can you', 'Could you please', 'Please would you', "I'd like you to", '  Will you'])
+@pytest.mark.parametrize('tail', [', mulch beds.', ' and transplant seedlings.', '. Mulch beds.'])
+def test_polite_calculation_wrappers_cannot_drop_a_second_request(prefix, tail):
+    from types import SimpleNamespace
+    from agronomy_agent.agent import deterministic_tool_response
+    from agronomy_agent.calculator_contracts import calculation_request_is_complete
+    question = prefix + ' calculate daily GDD from Tmax 24 C, Tmin 8 C and base 6 C' + tail
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'ready' and results[0].payload['value'] == 10
+    assert not calculation_request_is_complete(question, 'daily_gdd')
+    context = SimpleNamespace(runtime_metadata={'tool_plan':plan.to_dict(), 'tool_results':[r.to_dict() for r in results]})
+    assert deterministic_tool_response(context, question=question) == (None, None)
+    route = refine_query_route(question, classify_query(question))
+    assert route.question_type != 'exam_review' and route.risk_level != 'low'
+
+
+@pytest.mark.parametrize('question', [
+    'Can you calculate daily GDD from Tmax 24 C, Tmin 8 C and base 6 C?',
+    'Could you please calculate daily GDD from Tmax 24 C, Tmin 8 C and base 6 C?',
+    'Ignoring unusable tank volume, how much area will a 1000 L sprayer tank cover applying 100 L/ha?',
+    'For one day in a corn field, maximum temperature was 24°C and minimum temperature was 8°C. Using a 6°C base and no temperature caps, calculate growing degree days.',
+    'What yield breaks even from total cost CAD 400/ac and assumed price CAD 5/bu?',
+])
+def test_accepted_request_phrasings_keep_complete_deterministic_results(question):
+    from types import SimpleNamespace
+    from agronomy_agent.agent import deterministic_tool_response
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'ready' and results
+    context = SimpleNamespace(runtime_metadata={'tool_plan':plan.to_dict(), 'tool_results':[r.to_dict() for r in results]})
+    assert deterministic_tool_response(context, question=question)[1] == 'deterministic_tool_result'
+
+
+def test_unrecognized_calculation_head_still_inspects_unknown_tails():
+    from agronomy_agent.calculator_contracts import calculation_request_is_complete
+    assert not calculation_request_is_complete('Daily GDD from Tmax 24 C, Tmin 8 C and base 6 C, mulch beds.', 'daily_gdd')
+    assert not calculation_request_is_complete('Ignoring unusable tank volume, how much area will a 1000 L sprayer tank cover applying 100 L/ha, calculate fertilizer needs.', 'tank_coverage')
+    assert not calculation_request_is_complete('Using mulch beds, calculate daily GDD from Tmax 24 C, Tmin 8 C and base 6 C.', 'daily_gdd')
+
+
+@pytest.mark.parametrize('prefix', ['Mulch beds. ', 'Transplant seedlings, ',
+    'Maximum temperature was 24 C then mulch beds. ',
+    'Maximum temperature was 24 C also mulch beds. ',
+    'Maximum temperature was 24 C and mulch beds. '])
+def test_a_later_calculation_cannot_erase_an_earlier_request(prefix):
+    from agronomy_agent.calculator_contracts import calculation_request_is_complete
+    question = prefix + 'Calculate daily GDD from Tmax 24 C, Tmin 8 C and base 6 C.'
+    assert not calculation_request_is_complete(question, 'daily_gdd')
+    route = refine_query_route(question, classify_query(question))
+    assert route.question_type != 'exam_review' and route.risk_level != 'low'
+
+
+@pytest.mark.parametrize('question', [
+    'Can you explain soil texture, structure and porosity?',
+    'Could you please explain soil texture and soil structure?',
+])
+def test_polite_concept_lists_do_not_become_operational_requests(question):
+    route = refine_query_route(question, classify_query(question))
+    assert route.risk_level == 'low'
+    assert route.question_type in {'conceptual', 'exam_review'}

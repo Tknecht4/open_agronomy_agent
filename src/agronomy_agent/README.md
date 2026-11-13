@@ -302,7 +302,11 @@ GDD accepts only its explicit Celsius input keys, method and temperature unit.
 
 `request_scope.py` positively qualifies complete explanatory/calculation request
 clauses. Unknown trailing or coordinated commands return to ordinary decision
-handling, including comma-separated requests. The bypass accepts bounded
+handling, including comma-separated requests and polite request wrappers.
+Parser-owned arithmetic without an anchored request head still receives a full
+tail check. A first output after a qualified arithmetic input declaration, closed assumption
+or owned formula remains eligible; these prefixes do not authorize
+a second output or an unknown command. The bypass accepts bounded
 analytical continuations and explicit parameter declarations; it does not infer
 that a word is analytical from its spelling. Leaving a bypass is not a refusal.
 

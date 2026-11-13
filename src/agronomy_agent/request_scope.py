@@ -31,6 +31,48 @@ def has_action_directive(text: str) -> bool:
     return False
 
 
+def _calculation_premise(part: str) -> bool:
+    """Recognize input declarations; their values remain the parser's concern."""
+    closed = (
+        r"(?:ignoring unusable (?:tank )?volume|ignoring other nutrient credits for this arithmetic check|for this (?:product-mass )?calculation|for a teaching method|"
+        r"for one day(?: in (?:an?|the) [a-z -]{1,60}field)?|for a [a-z -]{1,60}field|"
+        r"(?:for|under) a uniform(?: [\d.]+ m root zone| profile)|"
+        r"for a standard-conditions model ETc\s*=\s*Kc\s*[×*]\s*ETo|"
+        r"using (?:a )?[+-]?(?:\d+(?:\.\d+)?|\.\d+)\s*°?C base|"
+        r"no (?:upper |lower |temperature )?caps?|"
+        r"negative (?:values|accumulation) (?:(?:are )?floored at zero|retained)|"
+        r"using (?:the [a-z '-]+ )?factor[- ]10 method|"
+        r"(?:using )?(?:P|K|L/ha)\s*=\s*(?:(?:P2O5|K2O|P|K|Q|speed|spacing)|[\d.×*/()+ =-])+)")
+    if re.fullmatch(closed, part, re.I):
+        return True
+    if re.fullmatch(r"(?:but )?(?:the )?[a-z][a-z /²-]{0,55} (?:is|are) not supplied", part, re.I):
+        return True
+    if not re.search(r"\d", part):
+        return False
+    # Bound the grammatical subject to the arithmetic owners' data roles.
+    # Imperatives such as 'Mulch beds' have no supported input subject.
+    subject = (
+        r"(?:(?:these are measured values:\s*)?(?:an? |the )(?:[a-z\d,.-]+ ){0,4}"
+        r"(?:field(?: plan)?|fertilizer(?: product)?|soil moisture probe|sprayer(?: tank)?|nozzle|"
+        r"crop budget|soybean count|blend|plan|budget|example|prescription)|"
+        r"(?:the )?target stand|(?:seed )?TKW|germination|expected (?:field survival|emergence)|soybeans in (?:an?|the) [a-z -]{1,60}field|(?:daily mean|mean daily|maximum|minimum) temperature|grain (?:dry )?mass|"
+        r"total above-ground dry biomass|field survival|Kc|ETo|field capacity|"
+        r"(?:measured )?volumetric water|travel speed|it)"
+    )
+    if re.fullmatch(subject + r"\s+(?:is|are|was|were|has|have|contains|requires|delivers|weighs|supplies|covers|receives|targets|reports|found|totals|needs|uses|calls for|travels at)\b\s+[^!?;]+", part, re.I):
+        return True
+    # Shared-subject or verbless input declarations following a comma/'and'.
+    return bool(re.fullmatch(
+        r"(?:assumes\s+[^!?;]+|each flowing\s+[^!?;]+|"
+        r"(?:(?:upper|lower) cap|base(?: temperature)?|target field capacity|field capacity|wilting point|"
+        r"rooting depth|nozzle spacing)\s+[^!?;]+|"
+        r"[+-]?(?:\d+(?:\.\d+)?|\.\d+)%(?: application efficiency| germination)|"
+        r"[+-]?(?:\d+(?:\.\d+)?|\.\d+) kg (?:P|N|K)/ha (?:applied|removed)|"
+        r"a [\d.,]+ ha zone yielding [\d.,]+ bu/ac|"
+        r"[+-]?[\d.,]+(?: for (?:[a-z]+|\d+) consecutive days)?|"
+        r"[+-]?[\d.,]+(?: t at [\d.,]+%|%) wet-basis moisture)", part, re.I))
+
+
 def has_unqualified_followup(text: str, *, calculation: bool = False) -> bool:
     """Require each later request clause to fit the bypass's declared purpose.
 
@@ -38,11 +80,23 @@ def has_unqualified_followup(text: str, *, calculation: bool = False) -> bool:
     positive scope check, so a new imperative need not be added to a verb list.
     Decimal points do not divide sentences.
     """
-    head = (r"(?:calculate|compute|convert|work out|how (?:many|much)|what (?:is|are))\b" if calculation else
+    head = (r"(?:calculate|compute|convert|work out|how (?:many|much)|"
+            r"what (?:is|are|yield breaks even|seed(?:ing)? (?:rate|mass)))\b" if calculation else
             r"(?:why|how|explain|describe|define|what|which)\b")
-    first = re.search(r"(?:^|[.!?;]\s*)(?:please\s+)?" + head, text, re.I)
-    if first is None:
+    wrapper = r"(?:(?:please\s+)?(?:can|could|would|will)\s+you\s+(?:please\s+)?|please\s+|I['’]d like you to\s+)?"
+    first = re.search(r"(?:^\s*|[.!?;]\s*)" + wrapper + head, text, re.I)
+    if first is None and not calculation:
         return False
+    if calculation:
+        candidate = first or re.search(r"\b" + head, text, re.I)
+        if candidate is not None:
+            prefix_parts = [part.strip() for part in re.split(
+                r",\s*(?!\d)|\b(?:and|then|also)\b|[!?;]|\.(?=\s|$)", text[:candidate.start()], flags=re.I) if part.strip()]
+            if prefix_parts and not all(_calculation_premise(part) for part in prefix_parts):
+                return True
+            first = candidate
+        # No recognized head does not prove completeness: inspect the entire
+        # parser-owned operand-bearing request instead of returning early.
     if calculation and re.search(r"\b(?:gdd|growing degree[- ]days?)\b", text, re.I):
         # The GDD parser validates structured facts, including duplicate keys,
         # unknown fields and malformed objects. Do not treat JSON as prose
@@ -58,13 +112,15 @@ def has_unqualified_followup(text: str, *, calculation: bool = False) -> bool:
                 return False  # Multiple objects are rejected by the GDD parser.
             prefix = re.sub(r"\bsupplied facts:\s*$", "", text[:position], flags=re.I)
             text = prefix + "Named input data" + remainder
-    clauses = [clause.strip() for clause in re.split(r"[!?;]|\.(?=\s|$)", text[first.start():]) if clause.strip()]
+    clauses = [clause.strip() for clause in re.split(r"[!?;]|\.(?=\s|$)", text[first.start() if first is not None else 0:]) if clause.strip()]
+    if clauses and not calculation:
+        clauses[0] = re.sub(r"^" + wrapper, "", clauses[0], count=1, flags=re.I)
     allowed = (r"(?:state (?:the )?(?:units|assumptions|arithmetic limits)|explain (?:its|the|their) (?:limits|limitations|boundaries))\b"
                if calculation else head)
     data_declaration = (
         r"(?:(?:but )?(?:I|we) (?:have not|haven['’]t) (?:supplied|provided) (?:the )?[a-z /²-]{1,80}|"
         r"(?:do not|don['’]t|never) (?:infer (?:crop|growth) stage|state (?:the )?weather provenance)|"
-        r"[a-z][a-z -]{0,55} (?:is unknown|are unknown|is not supplied|are not supplied|has not been supplied|have not been supplied)|Named input data|(?:give|show|state) (?:the )?final (?:value|answer)(?: and units| in (?:kg/ha|lb/ac|GDD))|"
+        r"[a-z][a-z /²-]{0,55} (?:is unknown|are unknown|is not supplied|are not supplied|has not been supplied|have not been supplied)|Named input data|(?:give|show|state) (?:the )?final (?:value|answer)(?: and units| in (?:kg/ha|lb/ac|GDD))|"
         r"this is (?:a math|an arithmetic|a numerical) exercise(?:,? not a rate recommendation)?|"
         r"(?:for this calculation,? )?field survival is [\d.,]+% of (?:all seeds sown|germinated seeds)|"
         r"the laboratory germination is [\d.,]+%|"

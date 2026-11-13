@@ -184,3 +184,11 @@ The additional local tests are software regressions, not additions to the
 approved 608-case model capsule. Original case, reference, rubric and policy
 bytes remain unchanged. The entire successor collection, automated triage and
 canonical analysis remain required before updated benchmark results or a PR.
+
+Whole-request completion also covers polite request wrappers and operations
+that precede the calculation. Input declarations, owned formulas, explicit
+missing-input statements and closed assumptions retain their arithmetic path;
+an unknown additional request does not disappear. Useful partial daily-GDD
+evidence remains available for generation without certifying the whole answer.
+Polite conceptual lists remain low-risk explanations. These are source-contract
+repairs; their tests do not establish agronomic answer quality.
