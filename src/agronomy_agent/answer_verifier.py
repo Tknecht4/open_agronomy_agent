@@ -10,7 +10,7 @@ from pathlib import Path
 
 from agronomy_agent.agno_runtime.local_index import RetrievedDoc
 from agronomy_agent.decision_route import build_decision_route_state
-from agronomy_agent.plant_health_scope import clubroot_confirmation_requested, clubroot_short_rotation_requested, clubroot_question_scope
+from agronomy_agent.plant_health_scope import clubroot_confirmation_requested, clubroot_short_rotation_requested, clubroot_question_scope, clubroot_workflow_applicable
 from agronomy_agent.evidence_handshake import (
     EvidenceHandshake,
     build_evidence_handshake,
@@ -28,7 +28,7 @@ from agronomy_agent.quantity_claims import unsupported_quantities, remove_numeri
 from agronomy_agent.execution_core import stable_sha256
 from agronomy_agent.observation_guidance import observation_guidance, sample_event_roles_stated, POTATO_MONITORING_ANSWER
 from agronomy_agent.high_consequence import classify_high_consequence_domains, fertility_quantity_requested
-from agronomy_agent.answerability import simple_definition_subject, is_rate_basis_explanation, is_mechanism_explanation
+from agronomy_agent.answerability import simple_definition_subject, is_quantity_concept_explanation, is_mechanism_explanation, requests_regulated_action, bounded_product_help_kind
 
 
 def editor_observation_record(observation: Mapping[str, Any]) -> dict[str, Any]:
@@ -1425,7 +1425,7 @@ def assess_claim_risk(
         reasons.append("scope_drift")
     if missing_intent_facets:
         reasons.append("missing_decision_content")
-    if is_rate_basis_explanation(question) and remove_numeric_application_instructions(candidate)[1]:
+    if (is_quantity_concept_explanation(question) or is_mechanism_explanation(question) or bounded_product_help_kind(question)) and remove_numeric_application_instructions(candidate)[1]:
         reasons.append("unasked_application_instruction")
     if sample_event_roles_stated(question) and not _sample_analysis_date_supplied(question):
         for clause in re.split(r"[.!?;\n]", candidate):
@@ -2393,7 +2393,7 @@ def _verify_answer_policy(
     docs = tuple(evidence_docs)
     entities = tuple(preserve_entities)
     required = tuple(required_entities)
-    if is_rate_basis_explanation(question):
+    if is_quantity_concept_explanation(question) or is_mechanism_explanation(question) or bounded_product_help_kind(question):
         application_cleaned, application_removed = remove_numeric_application_instructions(draft)
         if application_removed:
             retained = application_cleaned or bounded_decision_support(question, question_type)
@@ -3251,6 +3251,20 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
     def add(name: str, instruction: str, *patterns: str) -> None:
         requirements.append(_IntentRequirement(name=name, instruction=instruction, patterns=tuple(patterns)))
 
+    help_kind = bounded_product_help_kind(question)
+    if clubroot_workflow_applicable(question):
+        help_kind = None  # Incidental product history cannot erase containment.
+    if help_kind == "evidence_assessment":
+        add("requested_evidence_method", "Explain relevant observations, records, comparisons or tests without substituting an application plan.",
+            r"\b(?:observations?|records?|compar\w*|sampl\w*|tests?|history|scout\w*|measur\w*)\b")
+        return tuple(requirements)
+    if help_kind == "incident_information":
+        add("incident_access_boundary", "Avoid exposure and keep people or animals away from the incident.",
+            r"\b(?:avoid contact|avoid exposure|keep\b[^.]{0,70}\baway|restrict\b[^.]{0,40}\baccess)\b")
+        add("incident_qualified_response", "Contact appropriate emergency or spill-response services; do not improvise cleanup.",
+            r"\b(?:emergency|spill[- ]response|poison|authorities|qualified responders?)\b")
+        return tuple(requirements)
+
     method = observation_guidance(question)
     if method:
         for name, instruction, patterns in method.facets:
@@ -3913,7 +3927,7 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
         add("safety_water", "Check water and sensitive-area protections.", r"\bwater\b", r"\bsensitive area\b")
         add("safety_handling", "Cover storage, transport, mixing, handling, and disposal.", r"\bstorage\b", r"\bhandling\b", r"\bdisposal\b")
 
-    elif question_type == "product_label":
+    elif question_type == "product_label" and requests_regulated_action(question):
         if _requires_application_unit_mismatch_fallback(question_type, question):
             add("unit_distinction", "State that irrigation depth cannot be converted directly into product volume.", r"\bdo not convert\b", r"\bdifferent quantities\b")
             add("current_label_context", "Verify the exact product and current jurisdiction-specific label.", r"\bexact product\b", r"\bcurrent (?:product )?label\b", r"\bjurisdiction[- ]specific label\b")
@@ -4342,10 +4356,38 @@ def _decision_route_failure_answer(
             f"{guidance_scope} should control longer-term rotation, resistant-variety, access, and sanitation decisions, but containment should not wait for the result."
         )
     if decision == "pesticide_rate_request":
-        if re.search(r"\b(?:fungicide|disease|blight|mildew|rust|mold|mould)\b", lower):
+        requested_classes: set[str] = set()
+        for clause in re.split(r"[.!?;]\s*", lower):
+            request = re.search(
+                r"\b(?:what|which|how much|how many|tell me|give me|choose|select|recommend)\b|"
+                r"^\s*(?:please\s+)?(?:use|apply|spray)\b", clause,
+            )
+            if request:
+                requested_classes.update(re.findall(r"\b(?:insecticide|fungicide|herbicide)\b", clause[request.start():]))
+        if not requested_classes:
+            focus = request_focus(lower)
+            for product_class, pattern in (
+                ("insecticide", r"\b(?:insects?|aphids?|flea beetles?|cutworms?|caterpillars?|leaf feeding|defoliat\w*)\b"),
+                ("fungicide", r"\b(?:disease|blight|mildew|rust|mold|mould)\b"),
+                ("herbicide", r"\b(?:weeds?|kochia|waterhemp|pigweed|ryegrass)\b"),
+            ):
+                if re.search(pattern, focus):
+                    requested_classes.add(product_class)
+        target_class = next(iter(requested_classes)) if len(requested_classes) == 1 else None
+        if target_class == "insecticide":
+            return (
+                "I cannot choose an insecticide or state a rate from a feeding percentage or crop name alone. Confirm the pest identity and active life stage, then collect representative counts or injury measurements using the same units and sampling method as current local crop-and-pest guidance. Record crop stage, injury progression, population trend, natural enemies and plant stress; compare the applicable action threshold and expected avoided loss with treatment costs. "
+                "If treatment is justified, verify the exact product and registration, current jurisdiction-specific crop-and-target label, permitted rate and timing, on-site conditions, buffers, pollinator precautions, intervals, seasonal limits and resistance-management fit. A threshold or regional alert alone does not authorize an application."
+            )
+        if target_class == "fungicide":
             return (
                 "I cannot choose a fungicide or state a rate from the crop and disease name alone. First confirm the target disease from representative scouting or diagnostic evidence, and record incidence, severity, crop stage and canopy condition. Add recent and forecast weather, leaf wetness or irrigation where relevant, and the prior fungicide application history, including efficacy and modes of action. "
                 "Identify the exact product and registration, then verify the current PMRA product label for the crop and target disease. That label controls the rate, timing and interval, maximum applications, preharvest and re-entry intervals, mixing, buffers, and other restrictions. Fit any treatment into current local disease guidance and a resistance-management program that rotates effective FRAC or mode-of-action groups. Until the diagnosis, field risk, exact product, current label, and resistance fit are known, do not name or apply a product or rate."
+            )
+        if target_class != "herbicide":
+            return (
+                "I cannot choose a pesticide or state a rate without identifying the crop or use site, target, jurisdiction, exact product and current applicable label. Collect representative target-pressure or injury observations with crop and target stage, prior application history and current on-site conditions. Compare the appropriate local decision guidance and nonchemical options. "
+                "Any application must fit the current crop-and-target label, permitted rate and timing, restrictions, intervals and resistance-management requirements."
             )
         return (
             "I cannot set a herbicide rate from incomplete crop, weed or product details. Confirm weed identity, weed stage and size, density and distribution, crop stage, jurisdiction, the exact product and registration, and the current product label. Review the application record, prior products and herbicide groups, and survivor or resistance history. For a follow-up, map and revisit escapes and separate application failure, late emergence and resistance. "

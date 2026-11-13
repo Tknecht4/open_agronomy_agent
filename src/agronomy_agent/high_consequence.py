@@ -3,14 +3,14 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from agronomy_agent.answerability import is_rate_basis_explanation, product_action_request_text
+from agronomy_agent.answerability import is_quantity_concept_explanation, is_mechanism_explanation, product_action_request_text, has_recognized_regulated_product
 
 
 HIGH_CONSEQUENCE_SCHEMA = "open_agronomy_agent.high_consequence_policy.v1"
 
 
 def fertility_quantity_requested(question: str) -> bool:
-    if is_rate_basis_explanation(question):
+    if is_quantity_concept_explanation(question) or is_mechanism_explanation(question):
         return False
     # Fertilizer shorthand is case-sensitive here: a possessive "label's rate"
     # is not a sulphur request. Numeric proposals below have their own units.
@@ -57,10 +57,10 @@ def fertility_quantity_requested(question: str) -> bool:
 
 
 def classify_high_consequence_domains(question: str) -> list[str]:
-    if is_rate_basis_explanation(question):
+    if is_quantity_concept_explanation(question) or is_mechanism_explanation(question):
         return []
     domains: list[str] = []
-    product_term = re.search(
+    product_term = has_recognized_regulated_product(question) or re.search(
         r"\b(?:spray|herbicide|fungicide|insecticide|pesticide|product|tank mix|adjuvant|label|registration|"
         r"pulvéris\w*|produit|mélange en cuve|étiquette|homologation)\b",
         question,

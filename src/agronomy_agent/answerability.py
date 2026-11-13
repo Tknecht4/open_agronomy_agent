@@ -416,15 +416,51 @@ def is_rate_basis_explanation(question: str) -> bool:
         rf"|what does\s+{term}\s+mean"
         rf"|(?:what is|explain)\s+the difference between\s+{term}\s+and\s+{term}"
         rf"|how do\s+{term}\s+and\s+{term}\s+differ"
-        rf"|(?:explain|compare)\s+{term}\s+(?:versus|vs\.?|and|with)\s+{term}"
+        rf"|(?:what is|explain|compare)\s+{term}\s+(?:versus|vs\.?|and|with)\s+{term}"
+        rf"|I only want an explanation of\s+{term}\s+(?:versus|vs\.?|and|with)\s+{term}"
+    )
+    # A recorded quantity is context for explaining a unit basis, not a
+    # proposed rate. The entire historical declaration and remaining request
+    # must fit; an appended instruction cannot inherit this exclusion.
+    historical = (
+        r"(?:(?:a|the)\s+(?:(?:synthetic|historical|application)\s+)?(?:record|log)\s+"
+        r"(?:lists|records|shows)\s+(?:a\s+)?(?:previous|past|historical)\s+"
+        r"(?:pesticide|herbicide|fungicide|insecticide|product)\s+application\s+(?:at|of)\s+"
+        r"[+]?(?:\d+(?:\.\d+)?|\.\d+)\s*(?:mL|L|kg|g|lb|oz)\s*/\s*(?:ha|ac)\s*[.;]\s*)?"
     )
     return bool(re.fullmatch(
-        rf"\s*(?:please\s+)?(?:(?:can|could)\s+you\s+)?(?:in general,?\s+)?(?:{request})"
+        rf"\s*{historical}(?:please\s+)?(?:(?:can|could)\s+you\s+)?(?:in general,?\s+)?(?:{request})"
         r"(?:\s+(?:using|with)\s+(?:an?\s+)?(?:clearly\s+)?"
-        r"(?:hypothetical|illustrative|made[- ]up)\s+(?:fertili[sz]er\s+)?example)?[.!?]*"
+        r"(?:hypothetical|illustrative|made[- ]up)\s+(?:fertili[sz]er\s+)?example)?"
+        r"(?:,?\s+not a new application recommendation)?[.!?]*"
         r"(?:\s+I am not asking which product or dose to use[.!?]*)?\s*",
         product_action_request_text(question), re.I,
     ))
+
+
+def is_dose_response_explanation(question: str) -> bool:
+    """Recognize a whole unnamed dose-response concept request, not a dose.
+
+    A disclaimer alone never exempts an action: every clause must fit the
+    explanation grammar, including anything after a declined-selection line.
+    """
+    term = r"(?:(?:an?|the)\s+)?(?:(?:pesticide|herbicide|fungicide|insecticide)\s+)?dose[- ]response\s+curves?"
+    request = (
+        rf"(?:what (?:is|are)|define|explain|describe)\s+{term}"
+        rf"|what (?:does|do)\s+{term}\s+mean"
+        rf"|(?:explain|describe)\s+what\s+{term}\s+means?"
+    )
+    return bool(re.fullmatch(
+        rf"\s*(?:please\s+)?(?:(?:can|could)\s+you\s+)?(?:in general,?\s+)?(?:{request})"
+        r"(?:\s+in general)?[.!?]*"
+        r"(?:\s+I am not asking for a dose to apply[.!?]*)?\s*",
+        product_action_request_text(question), re.I,
+    ))
+
+
+def is_quantity_concept_explanation(question: str) -> bool:
+    """Share whole-request concept scope across routing and action guards."""
+    return is_rate_basis_explanation(question) or is_dose_response_explanation(question)
 
 
 def is_mechanism_explanation(question: str) -> bool:
@@ -448,8 +484,8 @@ def is_mechanism_explanation(question: str) -> bool:
         r"\b(?:my|our|your|i|we|you|growers?|farmers?|operators?|advis[eo]rs?)\b|"
         r"\b(?:this|these|that|those)\s+(?:field|farm|crop|plant|stand|sample|test|map|roots?|leaves)\b|"
         r"\b(?:today|tomorrow|tonight|currently|permission|authorize|approve|legal|legally|"
-        r"safe|safely|advisable|necessary|rates?|dose|dosage|thresholds?|labels?|"
-        r"phi|rei|ppe|herbicide|fungicide|insecticide|pesticide)\b", text,
+        r"safe|safely|advisable|necessary|thresholds?|"
+        r"phi|rei|ppe)\b", text,
     ):
         return False
     if re.search(
@@ -466,6 +502,7 @@ def is_mechanism_explanation(question: str) -> bool:
     if re.search(r"\b(?:should|must|ought|can|could|may|might|would)\b", remaining):
         return False
     if re.search(
+        r"\b(?:be|is|are|was|were)\s+(?:applied|sprayed|used|mixed|selected|recommended|permitted|allowed|registered)\b|"
         r"\b(?:apply|spray|treat|diagnose|prescribe|recommend|choose|select|"
         r"irrigate|fertilize|harvest|till|rip|subsoil|spread|drill|drive)\b|"
         r"(?:^|[.!?;]|\b(?:and|then|also))\s*(?:please\s+)?"
@@ -476,7 +513,7 @@ def is_mechanism_explanation(question: str) -> bool:
 
 
 def _is_benign_regulated_definition(question: str) -> bool:
-    if is_rate_basis_explanation(question):
+    if is_quantity_concept_explanation(question) or is_mechanism_explanation(question):
         return True
     if not _BENIGN_DEFINITION_RE.search(question):
         return False
@@ -550,11 +587,80 @@ def _regulated_route_backstop(question: str, route: Any | None) -> bool:
         str(value).casefold()
         for value in (getattr(route, "required_tools", ()) or ())
     }
-    return (
+    return requests_regulated_action(question) and (
         route_risk == "regulated"
         or question_type in _REGULATED_ROUTE_TYPES
         or "product_label" in required_tools
         or "pesticide_guard" in required_tools
+    )
+
+
+def bounded_product_help_kind(question: str) -> str | None:
+    """Recognize bounded evidence/incident questions, never permission.
+
+    Only explicit analytical heads and observational context are admitted.
+    Unknown context or additional requests keep the product-route hold.
+    This scope permits bounded generation, not a diagnosis or field action.
+    """
+    text = product_action_request_text(question).strip()
+    if (not has_recognized_regulated_product(text)
+            or _UNSAFE_BYPASS_RE.search(text) or has_action_directive(text)):
+        return None
+    clauses = [part.strip() for part in re.split(r"[!?;]|\.(?=\s|$)", text) if part.strip()]
+    head = re.compile(
+        r"^(?:please\s+)?(?:"
+        r"how (?:would|can|should) (?:you|one) (?:distinguish|differentiate|compare|assess|evaluate)\b|"
+        r"(?:which|what) (?:evidence|observations|factors)\b|"
+        r"what information\b)", re.I,
+    )
+    index = next((i for i, part in enumerate(clauses) if head.match(part)), None)
+    if index is None:
+        return None
+    context = re.compile(
+        r"^(?:repeated (?:weed )?escapes (?:follow|survive)\b|"
+        r"(?:a|the) (?:grower|farmer) asks (?:if|whether)\b|"
+        r"(?:a|the) (?:pesticide|herbicide|fungicide|insecticide) spill is reported\b|"
+        r"(?:wet|dry|recent) weather has (?:produced|caused)\b)[^!?;]*$", re.I,
+    )
+    if not all(context.fullmatch(part) and not has_unqualified_followup("Explain " + part)
+               for part in clauses[:index]):
+        return None
+    request = ". ".join(clauses[index:])
+    if re.search(r"\bspill\b", text, re.I):
+        return "incident_information" if re.fullmatch(r"what information(?: and immediate boundaries)? matter", request, re.I) else None
+    # Single-word alternatives in a discriminating-observation question are
+    # comparison objects, not successive commands. Keep any later clause and
+    # unknown multiword continuation available to the whole-request check.
+    scoped_request = re.sub(
+        r"^what observations distinguish\s+[a-z][a-z-]*(?:,\s*[a-z][a-z-]*)*"
+        r"(?:,?\s+and\s+[a-z][a-z-]*)?(?=,?\s+and\s+(?:what|which)\b|$)",
+        "What observations distinguish named alternatives", request, flags=re.I,
+    )
+    if has_unqualified_followup(scoped_request):
+        return None
+    # A request for an actual selection, rate or operation is not converted
+    # into an evidence question by an analytical prefix.
+    if re.search(
+        r"\b(?:choose|select|recommend|set|authorize|apply|spray|mix|use|harvest|graze|enter)\b|"
+        r"\b(?:what|which) (?:dose|rate|product|herbicide|fungicide|insecticide|pesticide)\b|"
+        r"\b(?:can|could|may|should|must) (?:I|we)\b", request, re.I,
+    ):
+        return None
+    return "evidence_assessment"
+
+
+def requests_regulated_action(question: str) -> bool:
+    """Retain authority holds for unknown requests in a product-aware route.
+
+    Callers establish product context independently. Only recognized bounded
+    help is excluded; unfamiliar products, quantities and restriction syntax
+    therefore keep the route's authority requirement.
+    """
+    return not (
+        _is_benign_regulated_definition(question)
+        or _is_fertilizer_only_request(question)
+        or _is_non_regulated_rate_request(question)
+        or bounded_product_help_kind(question)
     )
 
 
@@ -1032,7 +1138,7 @@ def matching_rule_pack(question: str) -> DomainRulePack:
         "conceptual.explanation.v1",
     )
     by_id = {pack.pack_id: pack for pack in DOMAIN_RULE_PACKS}
-    if is_rate_basis_explanation(question) or is_mechanism_explanation(question):
+    if is_quantity_concept_explanation(question) or is_mechanism_explanation(question):
         return by_id["conceptual.explanation.v1"]
     for pack_id in precedence:
         pack = by_id[pack_id]

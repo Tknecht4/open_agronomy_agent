@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from agronomy_agent.decision_capsule import DecisionCapsule, build_decision_capsule
 from agronomy_agent.query_context import analyze_query_context
 from agronomy_agent.router import request_focus, evidence_interpretation_kind
-from agronomy_agent.answerability import simple_definition_subject, is_mechanism_explanation
+from agronomy_agent.answerability import simple_definition_subject, is_mechanism_explanation, bounded_product_help_kind
 from agronomy_agent.observation_guidance import sample_event_roles_stated
 from agronomy_agent.plant_health_scope import clubroot_confirmation_requested, clubroot_short_rotation_requested, clubroot_workflow_applicable, clubroot_question_scope
 
@@ -709,6 +709,17 @@ def build_decision_route_state(question: str, question_type: str = "") -> Decisi
             capsule=None,
         )
 
+    help_kind = bounded_product_help_kind(question)
+    if help_kind and not clubroot_workflow_applicable(question):
+        return DecisionRouteState(
+            question=question, decision=help_kind, crop=crop, country=signals.country,
+            decisive_evidence=(), premise_anchors=(), source_boundary=source_boundary,
+            constraints=("Answer the requested evidence comparison or incident-information task. "
+                         "Preserve reported observations and uncertainty; do not certify a diagnosis, "
+                         "choose a product or authorize an application or improvised cleanup.",),
+            capsule=None,
+        )
+
     capsule = build_decision_capsule(question, crop=crop)
     decision = _decision_name(lower, question_type)
     capsule_can_override = not (
@@ -975,7 +986,7 @@ def _decision_name(lower: str, question_type: str) -> str:
         return "slc_map_interpretation"
     if re.search(r"\bregional soil map\b", lower) and re.search(r"\b(?:rescue nitrogen|nitrogen pass)\b", lower):
         return "map_based_rescue_n"
-    if re.search(r"\b(?:what|which)(?:\s+\w+){0,3}\s+rate\b|\bhow much\b|\busual herbicide rate\b", lower) and re.search(
+    if re.search(r"\b(?:what|which)(?:\s+\w+){0,3}\s+rates?\b|\bhow much\b|\busual herbicide rate\b", lower) and re.search(
         r"\b(?:herbicide|insecticide|fungicide|pesticide|spray|weed)\b", lower
     ):
         return "pesticide_rate_request"

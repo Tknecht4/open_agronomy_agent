@@ -8,8 +8,12 @@ Merged-main Luna collection is retained; both native merged-main baselines
 continue. Independent composed-source review found additional input, request
 and crop-role defects. The `4bd948a` candidate was stopped after 192 regression
 and 49 full-cohort observations; its outputs remain separate and are not reused.
-The successor is under source verification and must repeat the complete
-candidate matrix. No complete current matrix or new quality scores are claimed.
+The later `222be26` source passed 4,577 backend checks but its real model outputs
+exposed additional whole-response over-refusals. Its candidate collection was
+stopped after 192 regression and 333 full-cohort observations, retained with
+physical restore proofs and excluded from successor results. The next successor
+is under source verification and must repeat the complete candidate matrix.
+No complete current matrix or new quality scores are claimed.
 Interrupted GPU attempts and failed provider controls remain evidence. The
 recent 87-case smoke assessment does not replace the full comparison.
 
@@ -192,3 +196,32 @@ an unknown additional request does not disappear. Useful partial daily-GDD
 evidence remains available for generation without certifying the whole answer.
 Polite conceptual lists remain low-risk explanations. These are source-contract
 repairs; their tests do not establish agronomic answer quality.
+
+## Real-output product-scope repair
+
+At `222be26`, a dose-response definition received an application-rate refusal.
+Some requests for mechanisms, evidence to assess seed treatment, resistance
+versus application failure, and spill information also received an authority
+hold because their route mentioned pesticides. Correct bounded draft answers
+could subsequently be replaced by full management-plan or label requirements.
+An explicit insecticide-rate request additionally received a herbicide checklist.
+
+The repair separates the requested claim from the product topic, preserves
+authority holds for unknown product requests, and shares that scope with output
+postprocessing. Recognized evidence questions retain bounded generation and
+checks on unsupported quantities, entities, diagnoses and application claims.
+Their completeness requirements follow the requested assessment rather than an
+unasked management plan. Actual operational requests, including unfamiliar
+products and compound continuations, retain the authority boundary. Insect,
+disease, weed and unspecified-product fallbacks retain their own target scope.
+
+The incident scope is a request for relevant information and immediate
+boundaries, not product-specific cleanup permission. [Health Canada's incident
+guidance](https://www.canada.ca/en/health-canada/services/consumer-product-safety/pesticides-pest-management/public/protecting-your-health-environment/report-pesticide-incident.html)
+separates environmental-emergency referrals from routine incident reporting.
+No jurisdiction-specific reporting threshold or cleanup recipe is inferred.
+
+These findings come from retained outputs and production-path regression
+checks. They do not alter the approved cases, references, rubrics or policies.
+Independent composed review, whole-source verification and the complete new
+model comparison remain required before updated benchmark results or a PR.

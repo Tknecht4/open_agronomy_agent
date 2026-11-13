@@ -10,7 +10,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 import re
 
-from agronomy_agent.answerability import preferred_response_language, is_rate_basis_explanation, product_action_request_text
+from agronomy_agent.answerability import preferred_response_language, is_rate_basis_explanation, is_dose_response_explanation, product_action_request_text
 
 
 POTATO_MONITORING_ANSWER = (
@@ -92,11 +92,18 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
     # English method text must never replace a French answer.
     if preferred_response_language(question) == "fr" or has(r"\b(?:en fran[cç]ais|in french)\b"):
         return None
+    if is_dose_response_explanation(question):
+        yield ObservationGuidance("dose_response_concept", (
+            "A dose-response curve relates dose to a measured biological response under stated test conditions. "
+            "Its shape depends on the organism, response endpoint, exposure method and conditions. "
+            "It does not by itself establish a suitable field dose or override the applicable product label."
+        ), (("dose_response_relationship", "Explain the relationship between dose and measured biological response.",
+             (r"\bdose\b[^.]{0,140}\b(?:response|effect)\b", r"\b(?:response|effect)\b[^.]{0,140}\bdose\b")),))
     if is_rate_basis_explanation(question):
         q = product_action_request_text(question).lower()
         parts: list[str] = []
         facets: list[tuple[str, str, tuple[str, ...]]] = []
-        if has(r"\b(?:label|pesticide)\b"):
+        if has(r"\blabel\b"):
             parts.append("A pesticide label rate states the product amount or concentration for a specified labelled use and formulation. Read the label's stated product or active-ingredient basis and units; do not assume they are interchangeable. An application rate is distinct from a maximum residue limit, which concerns residue remaining in food.")
             facets.append(("label_rate_basis", "Explain the amount/concentration basis specified by the product label.", (r"\b(?:amount|quantity|concentration)\b[^.]{0,100}\b(?:product|label|pesticide|formulation)\b", r"\b(?:product|label|pesticide|formulation)\b[^.]{0,100}\b(?:amount|quantity|concentration)\b")))
         elif has(r"\bproduct\b"):

@@ -327,3 +327,24 @@ stage interpretation, and for ordinary model handling of extra commands. Its
 explicit `note` JSON key is text-only non-operative metadata; unknown numeric or
 unit-bearing keys remain invalid. Closed negative constraints preserve the pure
 calculation path rather than creating a new task.
+
+### Product topics and requested authority
+
+`answerability.py` separates whole quantity-concept and mechanism explanations
+from requests for application permission. `bounded_product_help_kind` admits
+recognized evidence-assessment and incident-information questions with qualified
+observational context. These retain bounded generation and output-claim checks;
+they do not certify a diagnosis, choose a product or authorize an operation.
+Their decision scope avoids imposing an unasked full management plan.
+
+`requests_regulated_action` is contextual: its callers must already have a
+product-aware route. Unknown product requests keep the authority hold. Routing
+alone cannot turn a recognized evidence question into application intent, and
+postprocessing uses the same scope before replacing an answer. Numeric
+application instructions remain checked even when a question only asks for
+evidence or an explanation. Historical rate context is not a new prescription;
+only the complete recognized declaration and explanation fit that exclusion.
+
+Pesticide-rate fallbacks distinguish insect, disease and weed targets, with a
+neutral path when the class is unknown. A leaf-feeding percentage is not by
+itself a sampling protocol, threshold or application authorization.

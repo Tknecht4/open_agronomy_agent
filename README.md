@@ -66,6 +66,10 @@ A reply can supply that basis and, when needed, the laboratory germination
 percentage in the same chat without using the model. Conceptual explanations
 and requests for field actions retain distinct
 evidence requirements.
+General product-rate and dose-response explanations, and bounded questions
+about evidence to collect, do not require permission to apply a pesticide.
+Product selection, application rates and use restrictions retain their current
+local authority requirements; an unfamiliar product is not an exemption.
 Reported disease history informs soil biosecurity across rotations; current
 symptoms and diagnostic confirmation retain their own evidence scope.
 
