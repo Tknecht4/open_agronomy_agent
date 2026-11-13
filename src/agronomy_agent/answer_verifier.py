@@ -28,7 +28,7 @@ from agronomy_agent.quantity_claims import unsupported_quantities, remove_numeri
 from agronomy_agent.execution_core import stable_sha256
 from agronomy_agent.observation_guidance import observation_guidance, sample_event_roles_stated, POTATO_MONITORING_ANSWER
 from agronomy_agent.high_consequence import classify_high_consequence_domains, fertility_quantity_requested
-from agronomy_agent.answerability import simple_definition_subject, is_quantity_concept_explanation, is_mechanism_explanation, requests_regulated_action, bounded_product_help_kind
+from agronomy_agent.answerability import simple_definition_subject, is_quantity_concept_explanation, is_mechanism_explanation, requests_regulated_action, bounded_product_help_kind, is_sampling_basis_explanation
 
 
 def editor_observation_record(observation: Mapping[str, Any]) -> dict[str, Any]:
@@ -3269,6 +3269,10 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
     if method:
         for name, instruction, patterns in method.facets:
             add(name, instruction, *patterns)
+    if is_sampling_basis_explanation(question):
+        # A units explanation needs its measurement contract, not a complete
+        # pest treatment plan, natural-enemy survey or product-label decision.
+        return tuple(requirements)
     if re.search(r"\bclubroot\b", lower) and clubroot_short_rotation_requested(question):
         add("clubroot_persistence", "Answer that one nonhost year does not eradicate persistent clubroot spores.", r"\b(?:does not|will not|cannot|not enough|not eradicate|not clean)\b[^.]{0,90}\b(?:clubroot|eradicat|clean|spores?)\b", r"\bspores?\b[^.]{0,60}\b(?:persist|years)\b")
 

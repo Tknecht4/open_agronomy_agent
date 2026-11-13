@@ -336,6 +336,11 @@ recognized evidence-assessment and incident-information questions with qualified
 observational context. These retain bounded generation and output-claim checks;
 they do not certify a diagnosis, choose a product or authorize an operation.
 Their decision scope avoids imposing an unasked full management plan.
+Closed comparisons of sampling count bases share the quantity-concept scope.
+The router, decision planner and verifier preserve the requested measurement
+explanation rather than requiring a pest-management plan. This does not exempt
+supplied field counts, treatment requests or appended operations; fallback
+guidance retains method-specific calibration without inventing a conversion.
 
 `requests_regulated_action` is contextual: its callers must already have a
 product-aware route. Unknown product requests keep the authority hold. Routing

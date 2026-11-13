@@ -10,7 +10,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 import re
 
-from agronomy_agent.answerability import preferred_response_language, is_rate_basis_explanation, is_dose_response_explanation, product_action_request_text
+from agronomy_agent.answerability import preferred_response_language, is_rate_basis_explanation, is_dose_response_explanation, is_sampling_basis_explanation, product_action_request_text
 
 
 POTATO_MONITORING_ANSWER = (
@@ -92,6 +92,22 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
     # English method text must never replace a French answer.
     if preferred_response_language(question) == "fr" or has(r"\b(?:en fran[cç]ais|in french)\b"):
         return None
+    if is_sampling_basis_explanation(question):
+        yield ObservationGuidance("sampling_basis_concept", (
+            "Counts per plant, leaf, stem or tiller describe insects on a defined plant unit; "
+            "counts per sweep describe insects caught by a defined sweep-net method. "
+            "These are different sampling bases, not interchangeable measurements with a universal conversion. "
+            "Use the counting method and units for which the relevant crop-and-pest threshold was validated; "
+            "a change of method needs a validated relationship, not an assumed conversion. "
+            "This explains the measurement basis and does not establish a field population or treatment decision."
+        ), (
+            ("sampling_basis_distinction", "Explain the different sampling units or methods.",
+             (r"\bper (?:plant|leaf|stem|tiller|sweep)\b", r"\bdifferent (?:sampling )?(?:units|bases|methods)\b")),
+            ("sampling_basis_calibration", "Do not assume conversion between methods; retain the threshold's validated basis.",
+             (r"\b(?:not interchangeable|validated|calibrat\w*|no universal conversion)\b",
+              r"\b(?:cannot|can't)\b[^.]{0,45}\bconvert\w*\b")),
+        ))
+        return
     if is_dose_response_explanation(question):
         yield ObservationGuidance("dose_response_concept", (
             "A dose-response curve relates dose to a measured biological response under stated test conditions. "

@@ -458,9 +458,35 @@ def is_dose_response_explanation(question: str) -> bool:
     ))
 
 
+def is_sampling_basis_explanation(question: str) -> bool:
+    """Recognize a complete comparison of count bases, not a field decision.
+
+    Threshold terminology does not turn a measurement-method question into
+    permission to treat. Closed subjects and whole-request matching prevent a
+    numerical proposal or an appended operation from inheriting that scope.
+    """
+    unit = r"(?:plant|tiller|sweep|leaf|stem)"
+    count = rf"(?:(?:aphid|pest|insect)\s+)?counts?\s+per\s+{unit}"
+    second = rf"(?:(?:(?:aphid|pest|insect)\s+)?counts?\s+)?per\s+{unit}"
+    threshold = r"(?:(?:an?|the)\s+)?(?:(?:current|local|economic|action|treatment)\s+)*thresholds?"
+    request = (
+        rf"(?:why are|explain why)\s+{count}\s+and\s+{second}\s+not interchangeable"
+        rf"|(?:what is|explain)\s+the difference between\s+{count}\s+and\s+{second}"
+        rf"|how do\s+{count}\s+and\s+{second}\s+differ"
+        rf"|(?:explain|describe|compare)\s+{count}\s+(?:and|versus|with)\s+{second}"
+        rf"|(?:why must|explain why)\s+(?:sampling|counting) units\s+match\s+{threshold}"
+    )
+    return bool(re.fullmatch(
+        rf"\s*(?:please\s+)?(?:(?:can|could)\s+you\s+)?(?:in general,?\s+)?(?:{request})"
+        rf"(?:\s+(?:when|for) interpreting\s+{threshold})?[.!?]*\s*",
+        product_action_request_text(question), re.I,
+    ))
+
+
 def is_quantity_concept_explanation(question: str) -> bool:
     """Share whole-request concept scope across routing and action guards."""
-    return is_rate_basis_explanation(question) or is_dose_response_explanation(question)
+    return (is_rate_basis_explanation(question) or is_dose_response_explanation(question)
+            or is_sampling_basis_explanation(question))
 
 
 def is_mechanism_explanation(question: str) -> bool:

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from agronomy_agent.decision_capsule import DecisionCapsule, build_decision_capsule
 from agronomy_agent.query_context import analyze_query_context
 from agronomy_agent.router import request_focus, evidence_interpretation_kind
-from agronomy_agent.answerability import simple_definition_subject, is_mechanism_explanation, bounded_product_help_kind
+from agronomy_agent.answerability import simple_definition_subject, is_mechanism_explanation, bounded_product_help_kind, is_sampling_basis_explanation
 from agronomy_agent.observation_guidance import sample_event_roles_stated
 from agronomy_agent.plant_health_scope import clubroot_confirmation_requested, clubroot_short_rotation_requested, clubroot_workflow_applicable, clubroot_question_scope
 
@@ -700,11 +700,11 @@ def build_decision_route_state(question: str, question_type: str = "") -> Decisi
                 source_boundary = name
                 break
 
-    if is_mechanism_explanation(question):
+    if is_mechanism_explanation(question) or is_sampling_basis_explanation(question):
         return DecisionRouteState(
             question=question, decision="exam_review", crop=crop, country=signals.country,
             decisive_evidence=(), premise_anchors=(), source_boundary=source_boundary,
-            constraints=("Explain the requested mechanism or rival explanations and discriminating observations; "
+            constraints=("Explain the requested mechanism, measurement basis or rival explanations and discriminating observations; "
                          "do not add a field operation, diagnosis or application recommendation.",),
             capsule=None,
         )

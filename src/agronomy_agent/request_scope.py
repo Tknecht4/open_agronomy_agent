@@ -5,7 +5,11 @@ import json
 import re
 
 FIELD_ACTION_PATTERN = (
-    r"(?:apply|spray|irrigate|fertilize|drain|mow|drive|graze|sell|buy|till|cultivate|prune|operate|enter|thin|reseed|mix|increase|decrease|reduce|raise|"
+    # Treating a field is an operation; treating measurements as equivalent
+    # is a comparison whose validity remains the evidence check's concern.
+    r"(?:treat(?!\s+(?:(?:these|those|the)\s+)?(?:measurements?|values?|results?|counts?|units?|estimates?)"
+    r"\s+as\s+(?:the\s+)?(?:same|equivalent|interchangeable)\b)|"
+    r"apply|spray|irrigate|fertilize|drain|mow|drive|graze|sell|buy|till|cultivate|prune|operate|enter|thin|reseed|mix|increase|decrease|reduce|raise|"
     r"lower(?!\s+cap\b)|spread(?!\s+rate\b)|water(?!\s+(?:storage|depth|content|potential|balance|capacity|volume|needed|deficit)\b)|"
     r"harvest(?!\s+index\b)|plant(?![-\s]+(?:population|density|available)\b)|seed(?![-\s]+(?:rate|mass|count|cost|tkw|quality|germination)\b)|"
     r"feed(?!\s+(?:conversion|intake|mass|rate|cost)\b)|récoltez|semez|plantez|fauchez|conduisez|pâturez|nourrissez)"

@@ -7,17 +7,25 @@ November 12, 2026. Reference main: `91125d30acd447537184184352d8fadf96ee89ee`.
 Merged-main Luna and both native regression cohorts are retained. The E2B
 full-cohort VM disappeared after 2,054 archived observations; its last durable
 status reports 2,055, so a lost tail remains unknown. A complete fresh E2B
-full-cohort successor will retain its own identity and reuse no partial rows.
-E4B reached a controlled checkpoint at 1,794 full-cohort observations; pending
-artifacts and exact continuation eligibility are being verified. No complete
+full-cohort successor is collecting with its own identity and reuses no partial rows.
+E4B reached a controlled checkpoint at 1,794 full-cohort observations. All raw
+files, including its pending case, were physically restored and hash-verified.
+The original live VM passed full plan and pinned-environment equality before
+canonical resume; its original deadline remains in effect and the interrupted
+case is recorded as a failure without retry. No complete
 native full-cohort result is claimed. Independent composed-source review found additional input, request
 and crop-role defects. The `4bd948a` candidate was stopped after 192 regression
 and 49 full-cohort observations; its outputs remain separate and are not reused.
 The later `222be26` source passed 4,577 backend checks but its real model outputs
 exposed additional whole-response over-refusals. Its candidate collection was
 stopped after 192 regression and 333 full-cohort observations, retained with
-physical restore proofs and excluded from successor results. The next successor
-is under source verification and must repeat the complete candidate matrix.
+physical restore proofs and excluded from successor results. Source `0c947a9`
+then passed 4,649 backend tests, but an actual model trace exposed another
+verifier-scope defect. Its correct explanation of plant counts versus sweep-net
+counts was replaced by a full pest-management checklist. That collection was
+stopped after 72 regression observations; its full and native candidate cohorts
+had not started. A shared measurement-basis repair is under source verification
+and must repeat the complete candidate matrix. Previous answers are not reused.
 No complete current matrix or new quality scores are claimed.
 Interrupted GPU attempts and failed provider controls remain evidence. The
 recent 87-case smoke assessment does not replace the full comparison.
@@ -28,7 +36,11 @@ recent 87-case smoke assessment does not replace the full comparison.
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Original complete comparison | 560 | 3 | 2 | 2 | 6,720 |
 | Refusal and crop-scope regressions | 48 | 3 | 2 | 2 | 576 |
-| Campaign total | 608 | 3 | 2 | 2 | 7,296 |
+| Total per source | 608 | 3 | 2 | 2 | 7,296 |
+
+The frozen main-compatible baseline and repaired candidate each require this
+matrix: 14,592 final planned observations across both sources. Superseded and
+interrupted attempts remain separate evidence and do not fill successor slots.
 
 The backends are pinned Gemma E2B, pinned Gemma E4B and hosted `gpt-6-luna`
 with medium reasoning. Arms are `raw_model` and `production_full`. All six
@@ -67,6 +79,16 @@ repairs are under verification: whole-request mechanism explanations, typed
 nutrient/product, water, grain-moisture and uncapped daily-mean GDD arithmetic,
 single-nozzle calibration, and final-renderer preservation of verified results.
 These repairs have not yet completed their successor model campaign.
+
+Sampling-basis explanations retain the actual requested comparison rather than
+triggering treatment-plan completeness requirements. Counts per plant and
+sweep-net catches use different observation methods; no universal conversion is
+assumed. [Manitoba Agriculture's sweep-net guidance](https://www.gov.mb.ca/agriculture/crops/insects/monitoring-using-sweep-net.html)
+defines a sweep protocol, while [University of Minnesota Extension](https://extension.umn.edu/agriculture/crop-production/soybean/fact-based-soybean-aphid-insecticide-recommendations)
+explains why whole-plant counts, rather than sweeps, underlie its soybean aphid
+threshold. This supports a method-specific explanation, not transfer of a
+numeric threshold, pesticide permission or a new diagnosis. Field decisions and
+additional operational clauses retain their ordinary evidence requirements.
 
 Native baseline traces also exposed a history-scope defect: a soil-hygiene
 request during corn after earlier canola clubroot was replaced with a current

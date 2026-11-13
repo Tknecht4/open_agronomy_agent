@@ -5,6 +5,8 @@ from agronomy_agent.answer_verifier import verify_answer
 
 
 @pytest.mark.parametrize("question,answer", [
+    ("Why are aphid counts per plant and per sweep not interchangeable when interpreting a local action threshold?",
+     "Aphids per plant measure density on individual plants; aphids per sweep measure insects collected by a defined sweep through the crop. They use different sampling units, so one cannot be converted to the other without a locally validated relationship. Compare a local threshold using the counting method for which it was developed."),
     ("Why can applying manure to supply nitrogen add too much phosphorus?",
      "Manure supplies nitrogen and phosphorus in a ratio that can differ from crop demand. When only part of its nitrogen is available, meeting nitrogen demand can add more phosphorus than the crop removes. Repeated surpluses can accumulate phosphorus in soil. This explains the mechanism and does not select a field application."),
     ("How can a shallow water table supply roots and also increase salinity risk?",
@@ -1121,3 +1123,70 @@ def test_coordinated_causal_predicates_remain_explanations(question):
     route = refine_query_route(question, classify_query(question))
     assert route.question_type == 'exam_review'
     assert route.risk_level == 'low'
+
+
+@pytest.mark.parametrize('question', [
+    'Why are aphid counts per plant and per sweep not interchangeable when interpreting a local action threshold?',
+    'Please explain the difference between insect counts per leaf and per sweep.',
+    'How do counts per tiller and counts per sweep differ?',
+    'Compare pest counts per stem versus per plant.',
+    'Why must sampling units match the local action threshold?',
+    'Could you explain why counting units match an economic threshold?',
+])
+def test_sampling_basis_explanations_keep_their_measurement_scope(question):
+    from agronomy_agent.answerability import is_sampling_basis_explanation
+    from agronomy_agent.high_consequence import classify_high_consequence_domains
+    from agronomy_agent.router import classify_query, refine_query_route
+    assert is_sampling_basis_explanation(question)
+    route = refine_query_route(question, classify_query(question))
+    assert (route.question_type, route.risk_level) == ('exam_review', 'low')
+    assert build_decision_route_state(question, route.question_type).decision == 'exam_review'
+    assert not classify_high_consequence_domains(question)
+
+
+@pytest.mark.parametrize('extra', [
+    ' Which insecticide rate should I spray today?',
+    ' Can I treat my field now?',
+    ' Apply the product tomorrow.',
+    ' Also give me a treatment plan.',
+    ' Mulch the beds.',
+    ' and spray my canola.',
+    ' and install drainage.',
+])
+def test_sampling_basis_explanation_never_exempts_a_follow_on_operation(extra):
+    from agronomy_agent.answerability import is_sampling_basis_explanation
+    question = 'Explain counts per plant versus per sweep' + extra
+    assert not is_sampling_basis_explanation(question)
+
+
+@pytest.mark.parametrize('question', [
+    'I counted 20 aphids per plant. Can I use the per-sweep threshold to spray today?',
+    'Why are my aphid counts per plant enough to spray?',
+    'Explain counts per plant versus per sweep and use Zedrin on corn.',
+    'Treat the field first. Explain counts per plant versus per sweep.',
+])
+def test_field_count_or_permission_request_keeps_ordinary_decision_guards(question):
+    from agronomy_agent.answerability import is_sampling_basis_explanation
+    from agronomy_agent.router import classify_query, refine_query_route
+    assert not is_sampling_basis_explanation(question)
+    route = refine_query_route(question, classify_query(question))
+    assert (route.question_type, route.risk_level) != ('exam_review', 'low')
+
+
+def test_missing_sampling_basis_answer_recovers_the_requested_concept_only():
+    from agronomy_agent.observation_guidance import observation_guidance
+    question = 'Explain counts per plant versus per sweep.'
+    method = observation_guidance(question)
+    assert method.key == 'sampling_basis_concept'
+    result = verify_answer('', question=question, evidence_text='', question_type='exam_review',
+        risk_level='low', editor=UnavailableEditor(), review_mode='risk_conditioned_selective_v3')
+    assert 'per plant' in result.answer and 'per sweep' in result.answer
+    assert 'validated' in result.answer
+    assert 'Do not spray from pest presence' not in result.answer
+
+
+def test_treating_measurements_as_equivalent_does_not_hide_a_separate_field_treatment():
+    from agronomy_agent.request_scope import has_action_directive
+    assert not has_action_directive('Treat these measurements as equivalent.')
+    assert has_action_directive('Treat the field. Treat these measurements as equivalent.')
+    assert has_action_directive('Treat the crop and treat these measurements as equivalent.')

@@ -68,6 +68,8 @@ and requests for field actions retain distinct
 evidence requirements.
 General product-rate and dose-response explanations, and bounded questions
 about evidence to collect, do not require permission to apply a pesticide.
+Explaining why sampling counts use different units does not require a treatment
+plan; thresholds retain the sampling method and basis for which they were validated.
 Product selection, application rates and use restrictions retain their current
 local authority requirements; an unfamiliar product is not an exemption.
 Reported disease history informs soil biosecurity across rotations; current
