@@ -16,7 +16,7 @@ from pathlib import Path
 from agronomy_agent.codex_app_server import validate_canonical_backend
 
 from agronomy_agent import local_tools
-from agronomy_agent.calculator_contracts import TOOL_PLANNER_VERSION
+from agronomy_agent.calculator_contracts import TOOL_PLANNER_VERSION, calculation_request_is_complete
 from agronomy_agent.agent import (
     MockGenerator,
     MLXGenerator,
@@ -407,6 +407,9 @@ def preview_turn_readiness(
                        and calculator.operation == selected.operation and dict(calculator.inputs) == dict(selected.inputs))
     reason = "calculator_planned" if independent else "generation_required"
     unverified = False
+    if independent and not calculation_request_is_complete(question, calculator.operation):
+        independent = False
+        reason = "additional_request_requires_generation"
     if independent and tool_plan.status == "ready":
         # The legacy ready plan is not a complete numerical validation contract.
         # Keep other complete operations unknown until their canonical validators

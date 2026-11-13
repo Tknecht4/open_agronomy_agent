@@ -220,11 +220,15 @@ def _parse_calculation(question: str) -> tuple[str, dict[str, Any], tuple[str, .
             if existing is not None and existing[0] == 'fertilizer_field_total' and not existing[2]:
                 return existing
         return supplied
-    if _unsafe_action_request(lower) or has_unqualified_followup(text, calculation=True):
+    if _unsafe_action_request(lower):
         return None
     if _explanation_or_method_request(lower) or _record_lookup_request(lower):
         return None
     foundation = parse_foundation_calculation(text)
+    # Legacy daily GDD can contribute verified arithmetic to a compound
+    # question. Whole-answer completion is checked separately by the agent.
+    if has_unqualified_followup(text, calculation=True) and not (foundation and foundation[0] == 'daily_gdd'):
+        return None
     if foundation is not None and not foundation[2]:
         # The foundation parser has bound every required numeric input. Its
         # complete operation is stronger evidence of arithmetic intent than a

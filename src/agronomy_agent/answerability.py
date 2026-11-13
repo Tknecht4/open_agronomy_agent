@@ -17,7 +17,7 @@ import re
 from typing import Any, Mapping, Sequence
 
 from agronomy_agent.request_scope import has_action_directive, has_unqualified_followup
-from agronomy_agent.calculator_contracts import TOOL_PLANNER_VERSION, format_calculator_clarification, tool_version_for
+from agronomy_agent.calculator_contracts import TOOL_PLANNER_VERSION, format_calculator_clarification, tool_version_for, calculation_request_is_complete
 
 
 ANSWERABILITY_POLICY_VERSION = "open_agronomy_agent.answerability.v1"
@@ -1103,8 +1103,12 @@ def assess_answerability(
             ),
         )
 
-    is_field_table = any(item.get("tool_id") == "field_table_query" for item in (tool_plan or {}).get("invocations", ()) if isinstance(item, Mapping))
-    if validated_deterministic_tool_execution(question, tool_plan, tool_results, field_context=field_context):
+    raw_invocations = (tool_plan or {}).get("invocations")
+    invocations = raw_invocations if isinstance(raw_invocations, (list, tuple)) else ()
+    is_field_table = any(item.get("tool_id") == "field_table_query" for item in invocations if isinstance(item, Mapping))
+    operation = next((str(item.get("operation") or "") for item in invocations if isinstance(item, Mapping) and item.get("tool_id") == CALCULATOR_ID), "")
+    calculation_complete = is_field_table or calculation_request_is_complete(question, operation)
+    if calculation_complete and validated_deterministic_tool_execution(question, tool_plan, tool_results, field_context=field_context):
         return AnswerabilityDecision(
             ANSWERABILITY_POLICY_VERSION,
             AnswerabilityState.ANSWER_DIRECTLY,
@@ -1112,7 +1116,8 @@ def assess_answerability(
             "field.reviewed_table.v1" if is_field_table else "calculation.supplied_inputs.v1",
             "low_arithmetic",
         )
-    validated_missing = validated_deterministic_tool_clarification(question, tool_plan, tool_results, field_context=field_context)
+    validated_missing = (validated_deterministic_tool_clarification(question, tool_plan, tool_results, field_context=field_context)
+                         if calculation_complete else None)
     if validated_missing is not None:
         return AnswerabilityDecision(
             ANSWERABILITY_POLICY_VERSION,

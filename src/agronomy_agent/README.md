@@ -313,3 +313,13 @@ checks reject invented root signs and require an explicitly requested current
 crop inspection alongside separate clubroot soil-history precautions. Fallbacks
 preserve these roles rather than assigning the historical disease to the current
 rotation crop.
+
+
+A valid tool plan may contribute arithmetic evidence to a compound request.
+`has_unqualified_followup` also controls answerability, model-free readiness and
+`deterministic_tool_response`: completion requires the whole request. Legacy
+daily GDD retains its verified sub-result for separately requested provenance or
+stage interpretation, and for ordinary model handling of extra commands. Its
+explicit `note` JSON key is text-only non-operative metadata; unknown numeric or
+unit-bearing keys remain invalid. Closed negative constraints preserve the pure
+calculation path rather than creating a new task.

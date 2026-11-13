@@ -222,3 +222,36 @@ def test_deep_unrecognized_gdd_data_is_clarified_without_an_uncaught_decoder_err
     question = 'Calculate daily GDD. {"max_temp_C":25,"min_temp_C":9,"base_temp_C":7,"extra":' + nested + '}'
     plan, results = plan_and_execute_tools(question)
     assert plan.status == 'clarification_required' and not results
+
+
+@pytest.mark.parametrize('tail', ['Mulch beds.', 'Transplant seedlings.'])
+def test_verified_daily_gdd_evidence_is_retained_while_extra_operations_need_a_complete_response(tail):
+    from types import SimpleNamespace
+    from agronomy_agent.agent import deterministic_tool_response
+    from agronomy_agent.answerability import assess_answerability
+    question = 'Calculate daily GDD from Tmax 24 C, Tmin 8 C and base 6 C, ' + tail
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'ready' and results[0].payload['value'] == 10
+    records = [row.to_dict() for row in results]
+    context = SimpleNamespace(runtime_metadata={'tool_plan': plan.to_dict(), 'tool_results': records})
+    assert deterministic_tool_response(context, question=question) == (None, None)
+    assert context.runtime_metadata['tool_results'] == records
+    decision = assess_answerability(question, tool_plan=plan.to_dict(), tool_results=records)
+    assert decision.reason != 'validated_deterministic_tool_result_available'
+
+
+def test_renderer_owned_boundary_only_completes_the_matching_operation():
+    from agronomy_agent.calculator_contracts import calculation_request_is_complete
+    question = 'Calculate area of a circular sampling plot with radius 12 metres. Explain why this is not the field area.'
+    assert calculation_request_is_complete(question, 'circular_sampling_area')
+    assert not calculation_request_is_complete(question, 'grain_harvest_index')
+
+
+def test_named_gdd_note_is_context_and_does_not_supply_a_new_request_or_operand():
+    from types import SimpleNamespace
+    from agronomy_agent.agent import deterministic_tool_response
+    question = 'Calculate GDD. {"max_temp_C":24,"min_temp_C":8,"base_temp_C":6,"note":"State the weather provenance"}'
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'ready' and results[0].payload['value'] == 10
+    context = SimpleNamespace(runtime_metadata={'tool_plan':plan.to_dict(), 'tool_results':[r.to_dict() for r in results]})
+    assert deterministic_tool_response(context, question=question)[1] == 'deterministic_tool_result'

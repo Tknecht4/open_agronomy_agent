@@ -1,5 +1,7 @@
 """Current typed-calculator identities shared by planning and verification."""
 
+import re
+
 CALCULATOR_VERSION = "agronomic_calculator_v3"
 LEGACY_CALCULATOR_VERSION = "agronomic_calculator_v1"
 CALCULATOR_SCHEMA_VERSION = "open_agronomy_agent.agronomic_calculator.schema.v3"
@@ -73,3 +75,16 @@ def format_calculator_clarification(missing_inputs: tuple[str, ...]) -> str:
             item.removeprefix("invalid ") for item in missing_inputs
         ) + "."
     return "To calculate this, provide " + ", ".join(missing_inputs) + "."
+
+
+def calculation_request_text(question: str, operation: str) -> str:
+    """Remove only explanatory co-outputs already owned by this renderer."""
+    if operation == "circular_sampling_area":
+        return re.sub(r"\s*Explain why (?:it|this) is not (?:the )?(?:farm )?field area[.!?]?\s*$", "", question, flags=re.I)
+    return question
+
+
+def calculation_request_is_complete(question: str, operation: str) -> bool:
+    """A valid calculation can be evidence without completing a compound task."""
+    from agronomy_agent.request_scope import has_unqualified_followup
+    return not has_unqualified_followup(calculation_request_text(question, operation), calculation=True)

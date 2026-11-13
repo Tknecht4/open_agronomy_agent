@@ -10,7 +10,7 @@ import json
 import math
 import re
 from typing import Any
-from agronomy_agent.request_scope import FIELD_ACTION_PATTERN as _FIELD_IMPERATIVE, has_action_directive, has_unqualified_followup
+from agronomy_agent.request_scope import FIELD_ACTION_PATTERN as _FIELD_IMPERATIVE, has_action_directive
 from agronomy_agent.seed_establishment import parse_seed_establishment
 from agronomy_agent.supplied_numeric_inputs import NUMBER as SUPPLIED_NUMBER, supplied_numeric_gaps, extended_unit
 
@@ -98,7 +98,7 @@ def _unsafe_action_request(lower: str) -> bool:
 def parse_foundation_calculation(question: str) -> tuple[str, dict[str, Any], tuple[str, ...]] | None:
     text = " ".join(question.replace("−", "-").split())
     lower = text.casefold()
-    if not _requested_arithmetic(lower) or _unsafe_action_request(lower) or has_unqualified_followup(text, calculation=True):
+    if not _requested_arithmetic(lower) or _unsafe_action_request(lower):
         return None
     for parser in (_soil_water_storage, _fertilizer_field_total, _seed_rate, _mean_temperature_gdd, _gdd, _partial_budget, _break_even, _current_ratio, _debt_asset):
         parsed = parser(text, lower)
@@ -250,9 +250,11 @@ def _gdd_json_inputs(text: str) -> tuple[dict[str, float], tuple[str, ...], str 
             return {}, invalid, None, text
     except (ValueError, RecursionError):
         return {}, invalid, None, text
-    allowed_keys = {name + suffix for name in ("max_temp", "min_temp", "base_temp", "upper_cap", "lower_cap") for suffix in ("_C", "_c")} | {"method", "temperature_unit"}
+    allowed_keys = {name + suffix for name in ("max_temp", "min_temp", "base_temp", "upper_cap", "lower_cap") for suffix in ("_C", "_c")} | {"method", "temperature_unit", "note"}
     if set(supplied) - allowed_keys:
         return {}, ("invalid structured GDD inputs: unsupported key or temperature unit",), None, text[:start] + " " + text[start + end:]
+    if "note" in supplied and not isinstance(supplied["note"], str):
+        return {}, ("invalid structured GDD note: metadata must be text and cannot supply operands",), None, text[:start] + " " + text[start + end:]
     # Prose operands cannot come from arbitrary metadata string values.
     prose = text[:start] + " " + text[start + end:]
     method = supplied.get("method")

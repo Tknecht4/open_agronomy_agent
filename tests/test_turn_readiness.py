@@ -648,3 +648,17 @@ def test_preview_waiting_for_session_guard_keeps_other_api_requests_responsive(r
         release.set()
         thread.join(timeout=2)
     assert not thread.is_alive()
+
+
+
+def test_partial_gdd_arithmetic_does_not_mark_the_whole_request_model_free(runtime, monkeypatch):
+    import agronomy_agent.agronomic_calculations as calculations
+    client, store = runtime
+    monkeypatch.setattr(chat_service, '_build_mlx_generator', no_generator)
+    def forbidden(*args, **kwargs):
+        raise AssertionError('preview must not execute arithmetic')
+    monkeypatch.setattr(calculations, 'calculate_agronomic', forbidden)
+    question = 'Calculate daily GDD from Tmax 24 C, Tmin 8 C and base 6 C, mulch beds.'
+    view = preview(client, turn(question))
+    assert view['requires_model'] is True and view['status'] == 'model_required'
+    assert view['reason'] == 'additional_request_requires_generation'

@@ -43,7 +43,7 @@ def has_unqualified_followup(text: str, *, calculation: bool = False) -> bool:
     first = re.search(r"(?:^|[.!?;]\s*)(?:please\s+)?" + head, text, re.I)
     if first is None:
         return False
-    if calculation and re.search(r"\b(?:daily gdd|growing degree[- ]days?)\b", text, re.I):
+    if calculation and re.search(r"\b(?:gdd|growing degree[- ]days?)\b", text, re.I):
         # The GDD parser validates structured facts, including duplicate keys,
         # unknown fields and malformed objects. Do not treat JSON as prose
         # commands; retain text following a valid object for the scope check.
@@ -61,17 +61,19 @@ def has_unqualified_followup(text: str, *, calculation: bool = False) -> bool:
     clauses = [clause.strip() for clause in re.split(r"[!?;]|\.(?=\s|$)", text[first.start():]) if clause.strip()]
     allowed = (r"(?:state (?:the )?(?:units|assumptions|arithmetic limits)|explain (?:its|the|their) (?:limits|limitations|boundaries))\b"
                if calculation else head)
+    data_declaration = (
+        r"(?:(?:but )?(?:I|we) (?:have not|haven['’]t) (?:supplied|provided) (?:the )?[a-z /²-]{1,80}|"
+        r"(?:do not|don['’]t|never) (?:infer (?:crop|growth) stage|state (?:the )?weather provenance)|"
+        r"[a-z][a-z -]{0,55} (?:is unknown|are unknown|is not supplied|are not supplied|has not been supplied|have not been supplied)|Named input data|(?:give|show|state) (?:the )?final (?:value|answer)(?: and units| in (?:kg/ha|lb/ac|GDD))|"
+        r"this is (?:a math|an arithmetic|a numerical) exercise(?:,? not a rate recommendation)?|"
+        r"(?:for this calculation,? )?field survival is [\d.,]+% of (?:all seeds sown|germinated seeds)|"
+        r"the laboratory germination is [\d.,]+%|"
+        r"explain whether (?:that|this) (?:alone )?(?:tells|establishes) (?:me )?plant[- ]available water)"
+    )
     for clause in clauses[1:]:
         if re.match(r"(?:please\s+)?" + allowed, clause, re.I):
             continue
-        if calculation and re.fullmatch(
-            r"(?:[a-z][a-z -]{0,55} (?:is unknown|are unknown|is not supplied|are not supplied|has not been supplied|have not been supplied)|Named input data|(?:give|show|state) (?:the )?final (?:value|answer)(?: and units| in (?:kg/ha|lb/ac|GDD))|"
-            r"this is (?:a math|an arithmetic|a numerical) exercise(?:,? not a rate recommendation)?|"
-            r"(?:for this calculation,? )?field survival is [\d.,]+% of (?:all seeds sown|germinated seeds)|"
-            r"the laboratory germination is [\d.,]+%|"
-            r"explain whether (?:that|this) (?:alone )?(?:tells|establishes) (?:me )?plant[- ]available water)",
-            clause, re.I,
-        ):
+        if calculation and re.fullmatch(data_declaration, clause, re.I):
             continue
         if (calculation and re.search(r"\bseed(?:ing)? (?:rate|mass)\b", clauses[0], re.I)
                 and re.fullmatch(r"(?:calculate|compute) (?:the )?(?:overall )?seed(?:ing)? (?:rate|mass)", clause, re.I)):
@@ -92,6 +94,8 @@ def has_unqualified_followup(text: str, *, calculation: bool = False) -> bool:
         for tail in [tail for clause in clauses for tail in re.split(r",\s*(?!\d)|\b(?:and|then|also)\b", clause, flags=re.I)[1:]]:
             tail = re.sub(r"^\s*(?:(?:and|then|also)\s+)*", "", tail, flags=re.I).strip()
             if re.fullmatch(r"(?:ignoring (?:losses|(?:unusable )?(?:tank )?volume)|not a (?:recommended rate|rate recommendation)|assuming the label basis is correct|not of (?:germinated seeds|seeds sown)|(?:not including|excluding) germination)", tail, re.I):
+                continue
+            if re.fullmatch(data_declaration, tail, re.I):
                 continue
             if not tail or re.match(premise, tail, re.I) or re.match(presentation, tail, re.I):
                 continue

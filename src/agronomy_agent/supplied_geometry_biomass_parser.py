@@ -7,7 +7,7 @@ from typing import Any
 from agronomy_agent.agronomic_calculations import (
     validate_circular_sampling_area_inputs, validate_grain_harvest_index_inputs,
 )
-from agronomy_agent.calculator_contracts import supplied_input_label
+from agronomy_agent.calculator_contracts import supplied_input_label, calculation_request_text
 from agronomy_agent.supplied_math_scope import supplied_math_scope, has_unlabelled_numeric_alternatives
 
 from agronomy_agent.supplied_numeric_inputs import NUMBER as _NUMBER, supplied_numeric_gaps, extended_unit
@@ -30,7 +30,7 @@ def _one(rows, *, units=False):
 def parse_supplied_geometry_biomass_calculation(question: str) -> tuple[str, dict[str, Any], tuple[str, ...]] | None:
     # This one closed explanatory suffix is answered by the geometry result's
     # boundary. All preceding text, and any other follow-up, remains in scope.
-    text = re.sub(r'\s*Explain why (?:it|this) is not (?:the )?(?:farm )?field area[.!?]?\s*$', '', question, flags=re.I)
+    text = calculation_request_text(question, 'circular_sampling_area')
     scope = supplied_math_scope(text)
     if scope is None:
         return None

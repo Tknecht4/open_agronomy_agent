@@ -35,6 +35,7 @@ from agronomy_agent.corpus_governance import (
 )
 from agronomy_agent.agno_runtime.runtime import resolve_agent_runtime
 from agronomy_agent.answer_safety import enforce_answer_safety_postconditions, normalize_general_answer
+from agronomy_agent.calculator_contracts import calculation_request_is_complete
 from agronomy_agent.answerability import (
     AnswerabilityState,
     assess_answerability,
@@ -4234,6 +4235,13 @@ def deterministic_tool_response(
         tool_plan=plan, tool_results=results,
         field_context=runtime.get("answerability_field_context"),
     ).state == AnswerabilityState.REFUSE_UNSAFE_ACTION:
+        return None, None
+    raw_invocations = plan.get("invocations")
+    invocations = raw_invocations if isinstance(raw_invocations, (list, tuple)) else ()
+    calculator = next((item for item in invocations if isinstance(item, Mapping) and item.get("tool_id") == "agronomic_calculator"), None)
+    if calculator and not calculation_request_is_complete(question, str(calculator.get("operation") or "")):
+        # Keep the verified tool evidence available to the model; a computed
+        # sub-result does not complete other requested claims or operations.
         return None, None
     if validated_deterministic_tool_execution(question, plan, results, field_context=runtime.get("answerability_field_context")):
         payload = results[0].get("payload") if isinstance(results[0], Mapping) else None
