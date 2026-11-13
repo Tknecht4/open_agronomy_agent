@@ -7,6 +7,7 @@ from agronomy_agent.map_component_interpretation import is_map_component_explana
 from agronomy_agent.observation_guidance import observation_guidance
 from agronomy_agent.answerability import is_quantity_concept_explanation, is_mechanism_explanation, product_action_request_text
 from agronomy_agent.request_scope import has_action_directive, has_unqualified_followup
+from agronomy_agent.plant_health_scope import current_root_swelling_clauses
 
 
 _AAFC_CROP_HEALTH_PRODUCT_PATTERN = (
@@ -385,7 +386,7 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
             else variety_guidance
         )
 
-    biological_problem = has(
+    biological_problem = bool(current_root_swelling_clauses(question)) or has(
         r"\b(?:clubroot|swollen roots?|disease|lesions?|blight|mildew|rust|aphids?|grasshoppers?|"
         r"drosophila|insects?|pests?|ravageurs?|l[eé]sions?|maladie)\b",
         q,
@@ -2675,6 +2676,10 @@ def classify_query(question: str) -> QueryRoute:
         namespaces.update({"crop_management", "soil_health", "exam_review"})
 
     qtype = _resolve_primary_question_type(q, qtype)
+    if current_root_swelling_clauses(question) and qtype in {"conceptual", "exam_review", "plant_health"}:
+        qtype = "plant_health"
+        namespaces.update({"plant_health", "field_data_boundary"})
+        guidance = "Inspect representative intact roots and record crop and field pattern; swelling alone does not identify a cause."
     benign_conceptual_explanation = _is_benign_conceptual_explanation(question)
     if _is_named_product_permission_request(question):
         qtype = "product_label"
@@ -3393,7 +3398,7 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
     # Reconcile the final decision object after broad retrieval signals have
     # been collected. These rules keep diagnosis ahead of treatment and make
     # missing-evidence guards consistent across unfamiliar question formats.
-    diagnosis_first = has(
+    diagnosis_first = bool(current_root_swelling_clauses(question)) or has(
         r"\b(?:is it|confirm|diagnos|not sure what|drift or|tank injury|"
         r"swollen roots?|yellow[- ]orange stripes?|rapidly expanding .*lesions?|"
         r"dying .*roots?|twisted after spraying|stand can recover)\b|\bclubroot\?",

@@ -38,6 +38,98 @@ class UnavailableEditor:
         raise RuntimeError("imposed editor failure")
 
 
+@pytest.mark.parametrize("subject", ["My soybean", "My corn", "My potato", "My carrot", "My millet", "My faba bean", "The"])
+def test_current_swollen_root_inspection_requires_a_practical_method(subject):
+    from agronomy_agent.decision_route import build_decision_route_state
+    question = f"{subject} roots are swollen. What should I inspect today?"
+    route = classify_query(question)
+    assert route.question_type == "plant_health"
+    assert build_decision_route_state(question, route.question_type).decision == "root_observation"
+    method = observation_guidance(question)
+    assert method and method.has_method("current_root_inspection")
+    draft = "Inspect the roots closely to determine the cause. Pathogens or environmental stress may be involved."
+    assert method.missing(draft)
+    result = verify_answer(draft, question=question, evidence_text="", question_type=route.question_type,
+        risk_level=route.risk_level, editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert result.answer != draft and not method.missing(result.answer)
+    assert "dig" in result.answer.lower() and "normal" in result.answer.lower()
+    assert "record" in result.answer.lower() and "diagnostic" in result.answer.lower()
+    assert "clubroot" not in result.answer.lower()
+    assert ("nodules" in result.answer.lower()) == ("soybean" in subject)
+
+
+@pytest.mark.parametrize("question", [
+    "Last year soybean roots were swollen. What should I inspect today?",
+    "Earlier canola had swollen roots. What should I inspect today?",
+    "My soybean roots are not swollen. What should I inspect today?",
+    "There are no swollen roots. What should I inspect today?",
+    "My corn leaves have galls. What should I inspect today?",
+    "My millet stems have galls. What should I inspect today?",
+    "I saw a dying patch. What should I inspect today?",
+    "Explain the difference between normal roots and swollen roots.",
+    "What are soybean nodules?",
+    "Define root swelling.",
+    "Last year the agronomist wrote 'soybean roots are swollen'. What should I inspect today?",
+    "Last year, I found swollen roots on my soybeans. What should I inspect today?",
+    "If soybean roots are swollen, what should I inspect?",
+])
+def test_root_method_does_not_invent_a_current_root_observation(question):
+    from agronomy_agent.plant_health_scope import root_inspection_requested
+    assert not root_inspection_requested(question)
+    method = observation_guidance(question)
+    assert method is None or not method.has_method("current_root_inspection")
+
+
+@pytest.mark.parametrize("question", [
+    "Soybean is healthy. My corn roots are swollen. What should I inspect today?",
+    "Last year soybean roots were swollen. My millet roots are swollen. What should I inspect today?",
+    "My corn roots are swollen, while nearby soybean is healthy. What should I inspect today?",
+    "Soybean roots are healthy and corn roots are swollen. What should I inspect today?",
+    "My corn roots are swollen beside healthy soybean roots. What should I inspect today?",
+])
+def test_normal_soybean_nodules_are_not_projected_from_history_or_a_healthy_reference(question):
+    method = observation_guidance(question)
+    assert method and method.has_method("current_root_inspection")
+    assert "On soybean" not in method.answer and "nodules" not in method.answer
+
+
+@pytest.mark.parametrize("question", [
+    "My corn roots are swollen. What should I inspect today, and what herbicide rate should I apply?",
+    "My corn roots are swollen. What should I inspect today? Then transplant seedlings.",
+    "Mulch beds. My corn roots are swollen. What should I inspect today?",
+    "Fertilize because soybean roots are swollen. What should I inspect today?",
+    "I found swollen roots on my soybeans then transplant. What should I inspect today?",
+])
+def test_root_observation_does_not_erase_an_additional_operation(question):
+    from agronomy_agent.decision_route import build_decision_route_state
+    from agronomy_agent.plant_health_scope import root_inspection_only_request
+    assert not root_inspection_only_request(question)
+    assert build_decision_route_state(question, classify_query(question).question_type).decision != "root_observation"
+
+
+@pytest.mark.parametrize("question", [
+    "My soybean roots are swollen. What should I inspect today?",
+    "My millet roots are swollen. What should I inspect today?",
+    "My corn roots are swollen today after last year's flooding. What should I inspect today?",
+    "How should I scout my healthy potato crop for late blight?",
+])
+def test_useful_inspection_method_reaches_the_persisted_product_path(tmp_path, monkeypatch, question):
+    terms = ("representative", "lesions", "local disease alerts", "diagnostic") if "potato" in question else ("roots", "normal", "record", "diagnostic")
+    _assert_persisted_product_answer(tmp_path, monkeypatch, question, terms)
+
+
+def test_potato_monitoring_rejects_surface_names_and_alerts_without_a_scouting_method():
+    question = "How should I scout my healthy potato crop for late blight?"
+    method = observation_guidance(question)
+    draft = "Inspect the foliage and stems for any early symptoms. Keep checking current local disease alerts."
+    assert method and {"potato_monitor_signs", "potato_monitor_coverage", "potato_monitor_followup"} <= set(method.missing(draft))
+    result = verify_answer(draft, question=question, evidence_text="", question_type="plant_health", risk_level="low",
+        editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert result.answer != draft and not method.missing(result.answer)
+    assert "water-soaked" in result.answer and "humid" in result.answer and "diagnostic" in result.answer
+    assert "absence does not exclude" in result.answer
+
+
 @pytest.mark.parametrize("question,key,terms", METHOD_CASES)
 def test_missing_observation_method_reaches_verifier_even_below_risk_threshold(question, key, terms):
     method = observation_guidance(question)
@@ -374,3 +466,40 @@ def test_combined_observations_keep_each_component_contradiction_check():
 def test_independent_pixel_or_buffer_question_does_not_hide_bare_field_pin_method(question):
     method = observation_guidance(question)
     assert method and method.has_method("point_area")
+
+
+@pytest.mark.parametrize("question", [
+    "My soybeans have swollen roots. What should I check?",
+    "I found swollen roots on my soybeans. What should I inspect?",
+    "Our faba bean roots look swollen. How should we examine roots?",
+    "My corn roots are swollen today after last year's flooding. What should I inspect today?",
+])
+def test_root_inspection_accepts_declarative_crop_and_observer_forms(question):
+    from agronomy_agent.plant_health_scope import root_inspection_only_request
+    assert root_inspection_only_request(question)
+    method = observation_guidance(question)
+    assert method and not method.missing(method.answer)
+
+
+def test_root_definition_retains_conceptual_routing():
+    from agronomy_agent.router import refine_query_route
+    q = "Define root swelling."
+    route = classify_query(q)
+    assert route.question_type in {"conceptual", "exam_review"}
+    assert refine_query_route(q, route).question_type in {"conceptual", "exam_review"}
+
+
+def test_root_history_can_reset_only_at_a_reported_current_transition():
+    from agronomy_agent.plant_health_scope import current_root_swelling_clauses, current_root_inspection_is_soybean
+    q = "Last year, soybean roots were swollen, but my millet roots are now swollen. What should I inspect today?"
+    assert current_root_swelling_clauses(q) == ("my millet roots are now swollen",)
+    assert not current_root_inspection_is_soybean(q)
+
+
+def test_root_inspection_with_a_product_rate_keeps_both_product_boundaries(tmp_path, monkeypatch):
+    q = "My corn roots are swollen. What should I inspect today, and what herbicide rate should I apply?"
+    _assert_persisted_product_answer(tmp_path, monkeypatch, q, ("roots", "label", "rate"))
+    cleaned = enforce_answer_safety_postconditions("Apply 12 litres now; it is approved.",
+        question=q, route=SimpleNamespace(question_type="product_label"))
+    assert "12 litres" not in cleaned
+    assert "roots" in cleaned.lower() and "label" in cleaned.lower()

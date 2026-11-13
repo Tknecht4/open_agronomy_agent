@@ -160,8 +160,15 @@ semantic completeness.
 
 `observation_guidance.py` owns bounded observation-method requirements shared
 by drafting, completeness review and fallback selection. Applicable methods
-cover paired scouting, satellite comparability, empty terrain coverage, point
-versus area geometry, crop-guide scope and regional stress interpretation.
+cover paired scouting, current swollen-root inspection, healthy-potato late-blight
+monitoring, satellite comparability, empty terrain coverage, point versus area
+geometry, crop-guide scope and regional stress interpretation. Root methods
+require a reported current root symptom and an inspection request; normal
+soybean nodules are discussed only when the currently affected roots are
+explicitly associated with soybean. History, negated observations, healthy
+reference crops and additional operational requests retain their own scope.
+Potato monitoring requires recognizable signs, representative coverage and
+diagnostic follow-up as well as crop surfaces and local alerts.
 Explicit missing method steps receive review even below the ordinary risk score
 threshold; complete answers keep the existing thresholds. Authority holds reuse
 reviewed procedural help without granting the blocked action. Product-label

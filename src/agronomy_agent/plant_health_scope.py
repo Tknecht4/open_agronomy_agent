@@ -22,6 +22,110 @@ _NEGATED_SYMPTOMS = re.compile(
     r"\b(?:root )?galls? (?:are|were) (?:absent|not present)\b", re.I)
 
 
+# A declared subject/predicate keeps observations separate from definitions,
+# quotations, historical reports and commands. Crop identity stays open: the
+# article/possessive form accepts multiword crops without a host whitelist.
+_ROOT_SUBJECT = r"(?:(?:my|our|the|these|this)\s+(?:[a-z][a-z-]*\s+){0,3}|(?:[a-z][a-z-]*\s+)?)roots?"
+_ROOT_DECLARATION = re.compile(
+    rf"(?:{_ROOT_SUBJECT}\s+(?:is|are|look|looks|appear|appears|seem|seems)\s+"
+    r"(?:(?:now|currently|visibly)\s+)?swollen|"
+    r"(?:(?:my|our|the|these|this)\s+)?[a-z][a-z-]*\s+(?:have|has)\s+swollen roots?|"
+    r"(?:i|we)\s+(?:see|notice|found|have found|can see)\s+swollen roots?"
+    r"(?:\s+(?:on|in)\s+(?:(?:my|our|the|these)\s+)?(?:[a-z][a-z-]*\s*){1,3})?)"
+    r"(?:\s+(?:today|now|currently))?", re.I,
+)
+_ROOT_INSPECTION_REQUEST = re.compile(
+    r"(?:what|which)\s+(?:should|can|could|do)\s+(?:i|we)\s+"
+    r"(?:inspect|check|examine|look for)(?:\s+(?:today|now|next|first|in the field))?"
+    r"|how\s+(?:(?:should|can|could|do)\s+(?:i|we)\s+)?"
+    r"(?:inspect|check|examine|sample)\s+(?:(?:my|our|the|these)\s+)?roots?", re.I,
+)
+
+
+_ROOT_CLAUSE_CONNECTOR = re.compile(
+    r"\b(?:then|also|please|because|if|when|unless|before|after|or|to|should|could|must|may|will|would)\b", re.I,
+)
+
+
+def _declared_root_match(clause: str) -> re.Match[str] | None:
+    match = _ROOT_DECLARATION.match(clause)
+    if match is None or _ROOT_CLAUSE_CONNECTOR.search(match.group()):
+        return None
+    if match.end() != len(clause) and not clause[match.end()].isspace():
+        return None
+    return match
+
+
+def current_root_swelling_clauses(question: str) -> tuple[str, ...]:
+    """Retain direct current root observations, never infer a cause or host.
+
+    Historical scope carries through comma/conjunction clauses until an explicit
+    current transition. Crop association uses only the matched observation span,
+    excluding neighbouring or reference plants in its suffix.
+    """
+    from agronomy_agent.request_scope import has_action_directive
+    found = []
+    text = ' '.join(question.casefold().split())
+    for sentence in re.split(r"[.!?;]", text):
+        historical = False
+        for clause in re.split(r",|\b(?:and|while|whereas|but)\b", sentence):
+            clause = clause.strip()
+            positive = _NEGATED_SYMPTOMS.sub('', clause)
+            match = _declared_root_match(positive)
+            history = _HISTORY.search(clause)
+            current = _CURRENT.search(match.group()) if match is not None else None
+            if history is not None and not (current is not None and current.start() < history.start()):
+                historical = True
+                continue
+            if historical:
+                if current is None:
+                    continue
+                historical = False
+            if has_action_directive(clause):
+                continue
+            if match is not None:
+                found.append(match.group().strip())
+    return tuple(found)
+
+
+def root_inspection_requested(question: str) -> bool:
+    """Recognize an explicit observation request about current root swelling."""
+    return bool(current_root_swelling_clauses(question) and _ROOT_INSPECTION_REQUEST.search(question))
+
+
+def root_inspection_only_request(question: str) -> bool:
+    """Qualify the complete observation task before omitting a decision plan."""
+    if not root_inspection_requested(question):
+        return False
+    clauses = [p.strip() for p in re.split(r'[.!?;]', question) if p.strip()]
+    if len(clauses) < 2 or not _ROOT_INSPECTION_REQUEST.fullmatch(clauses[-1]):
+        return False
+    # Every preceding sentence must itself be a complete declared observation.
+    # Unknown prefixes, extra commands and more complex compounds retain plans.
+    def declared_observation(clause: str) -> bool:
+        match = _declared_root_match(clause)
+        if match is None or not current_root_swelling_clauses(clause):
+            return False
+        tail = clause[match.end():].strip()
+        if not tail:
+            return True
+        # A current report can include a bounded historical noun phrase, but
+        # that phrase cannot consume an additional command or sequence.
+        return bool(_CURRENT.search(match.group()) and re.fullmatch(
+            r"(?:after|following)\s+(?:last (?:year|season)['’]s|previous|prior)\s+"
+            r"(?:[a-z][a-z-]*\s*){1,3}", tail, re.I,
+        ) and not _ROOT_CLAUSE_CONNECTOR.search(re.sub(r"^(?:after|following)\s+", "", tail, flags=re.I)))
+    return all(declared_observation(clause) for clause in clauses[:-1])
+
+
+def current_root_inspection_is_soybean(question: str) -> bool:
+    """Only a directly named current affected soybean supports nodule guidance."""
+    return any(re.search(r"\bsoybeans?\s+(?:plants?\s+)?roots?\b|"
+                         r"\bsoybeans?\s+(?:have|has)\s+swollen roots?\b|"
+                         r"\bswollen roots?\s+(?:on|in)\s+(?:(?:my|our|the|these)\s+)?soybeans?\b", clause, re.I)
+               for clause in current_root_swelling_clauses(question))
+
+
 @dataclass(frozen=True)
 class ClubrootQuestionScope:
     current_crops: tuple[str, ...]

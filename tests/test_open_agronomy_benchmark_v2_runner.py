@@ -777,6 +777,7 @@ def test_frozen_synthetic_fixture_never_executes_or_discards_conditional_scenari
     ("observation_guidance.py", {"kernel_config", "verifier_policy", "fallback_policy"}),
     ("quantity_claims.py", {"verifier_policy", "fallback_policy"}),
     ("request_scope.py", {"answerability_policy", "kernel_config", "verifier_policy", "fallback_policy", "tool_executor_bundle"}),
+    ("plant_health_scope.py", {"kernel_config", "verifier_policy", "fallback_policy"}),
 ])
 def test_shared_helper_bytes_change_their_consumer_implementation_identities(monkeypatch, helper, consumers):
     monkeypatch.setattr(runner_module, "_retrieval_runtime_paths", lambda: ())

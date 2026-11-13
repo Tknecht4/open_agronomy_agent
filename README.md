@@ -84,6 +84,10 @@ Product selection, application rates and use restrictions retain their current
 local authority requirements; an unfamiliar product is not an exemption.
 Reported disease history informs soil biosecurity across rotations; current
 symptoms and diagnostic confirmation retain their own evidence scope.
+Root-inspection help explains how to examine intact plants and compare normal
+structures before drawing a diagnosis. Healthy-potato scouting describes
+conditional signs, field coverage and diagnostic follow-up; local disease
+alerts alone do not establish whether a crop is infected.
 
 ## Evidence and licensing
 

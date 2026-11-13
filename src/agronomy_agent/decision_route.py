@@ -8,6 +8,7 @@ from agronomy_agent.query_context import analyze_query_context
 from agronomy_agent.router import request_focus, evidence_interpretation_kind
 from agronomy_agent.answerability import simple_definition_subject, is_mechanism_explanation, bounded_product_help_kind, is_sampling_basis_explanation
 from agronomy_agent.observation_guidance import sample_event_roles_stated
+from agronomy_agent.plant_health_scope import root_inspection_only_request
 from agronomy_agent.plant_health_scope import clubroot_confirmation_requested, clubroot_short_rotation_requested, clubroot_workflow_applicable, clubroot_question_scope
 
 
@@ -717,6 +718,15 @@ def build_decision_route_state(question: str, question_type: str = "") -> Decisi
             constraints=("Answer the requested evidence comparison or incident-information task. "
                          "Preserve reported observations and uncertainty; do not certify a diagnosis, "
                          "choose a product or authorize an application or improvised cleanup.",),
+            capsule=None,
+        )
+
+    if root_inspection_only_request(question) and not clubroot_workflow_applicable(question):
+        return DecisionRouteState(
+            question=question, decision="root_observation", crop=crop, country=signals.country,
+            decisive_evidence=(), premise_anchors=(), source_boundary=source_boundary,
+            constraints=("Give the requested practical root-inspection and recording method. "
+                         "Do not infer a pathogen, add a treatment plan or authorize an operation.",),
             capsule=None,
         )
 

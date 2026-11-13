@@ -11,10 +11,11 @@ from dataclasses import dataclass
 import re
 
 from agronomy_agent.answerability import preferred_response_language, is_rate_basis_explanation, is_dose_response_explanation, is_sampling_basis_explanation, product_action_request_text
+from agronomy_agent.plant_health_scope import root_inspection_requested, current_root_inspection_is_soybean
 
 
 POTATO_MONITORING_ANSWER = (
-    "Scout representative areas of the potato crop regularly for late-blight symptoms, including places where the canopy stays damp longer. Inspect leaves, their undersides and stems for new or spreading lesions; early-morning scouting can help reveal signs before the canopy dries. "
+    "Scout representative areas of the potato crop regularly, including low or shaded places where the canopy stays damp longer. Inspect leaves, their undersides and stems for water-soaked spots or new, dark, spreading lesions. White growth may appear beneath lesions under humid conditions, especially early in the morning; its absence does not exclude late blight. "
     "If suspect symptoms appear, photograph and locate them, compare suspect and nearby healthy plants, and promptly contact a local potato specialist or diagnostic lab for sampling instructions and confirmation. Follow current local disease alerts and crop-specific IPM guidance. "
     "Use crop stage, local disease risk and forecasts, and the exact crop/target/product label to plan any preventive fungicide program; visible collapse is not a prerequisite for prevention planning."
 )
@@ -100,6 +101,32 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
     # English method text must never replace a French answer.
     if preferred_response_language(question) == "fr" or has(r"\b(?:en fran[cç]ais|in french)\b"):
         return None
+    if root_inspection_requested(question):
+        answer = (
+            "Carefully dig or lift whole plants with their roots intact rather than pulling them out. "
+            "Compare affected plants with nearby normal plants and the normal underground structures of the affected crop. "
+            "Examine where the swelling joins the root, its shape, and any discoloration, soft or decaying tissue, or injury; swelling alone does not identify a cause. "
+            "Photograph the structures and record crop identity, growth stage, location and the pattern across the field. "
+            "Keep material from different areas separate and contain attached soil; ask a local diagnostic lab how to collect and package representative plants and soil if the cause remains uncertain."
+        )
+        facets = [
+            ("root_intact_sampling", "Explain how to examine intact roots without losing useful structures.",
+             (r"\b(?:dig|lift)\b", r"\bintact roots?\b")),
+            ("root_comparison", "Compare affected and normal plants rather than one swollen root alone.",
+             (r"\b(?:normal|healthy|unaffected)\b",)),
+            ("root_structure", "Describe concrete root structures, damage or discoloration to inspect.",
+             (r"\b(?:nodules?|galls?|discolou?r\w*|rot|injury|attachment|shape)\b",)),
+            ("root_records", "Record crop stage and field location or distribution of the symptoms.",
+             (r"\b(?:record|document|photograph|map)\w*\b",)),
+            ("root_confirmation", "Keep the cause uncertain and use diagnostic guidance if inspection is inconclusive.",
+             (r"\b(?:diagnostic|lab(?:oratory)?|confirmation|uncertain)\b",)),
+        ]
+        if current_root_inspection_is_soybean(question):
+            answer += (" On soybean, distinguish normal nodules attached to roots from irregular root galls; "
+                       "do not assume every swelling is a disease.")
+            facets.append(("soybean_normal_nodules", "Distinguish normal soybean nodules from abnormal root swellings.",
+                           (r"\b(?:nodules?|rhizobi\w*|nitrogen[- ]fix\w*)\b",)))
+        yield ObservationGuidance("current_root_inspection", answer, tuple(facets))
     if is_sampling_basis_explanation(question):
         yield ObservationGuidance("sampling_basis_concept", (
             "Counts per plant, leaf, stem or tiller describe insects on a defined plant unit; "
@@ -167,6 +194,12 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
     if has(r"\bpotato\w*\b") and has(r"\blate blight\b") and has(r"\bhealthy potato\w*\b|\bpotato\w*(?: crop)? (?:is|are|looks?|appears?) healthy\b") and has(r"\b(?:monitor|scout|watch)\w*\b"):
         yield ObservationGuidance("healthy_potato_monitoring", POTATO_MONITORING_ANSWER, (
             ("potato_monitor_surfaces", "Inspect potato foliage and stems for early symptoms.", (r"\b(?:leaves|foliage|stems)\b",)),
+            ("potato_monitor_signs", "Describe recognizable signs to look for, conditionally rather than diagnosing the healthy crop.",
+             (r"\b(?:lesions?|water[- ]soaked|necrosis)\b", r"\bwhite\b[^.]{0,50}\b(?:growth|sporulation)\b")),
+            ("potato_monitor_coverage", "Scout representative locations and consider places that remain damp or weather-related risk.",
+             (r"\brepresentative\b", r"\bacross (?:the )?field\b", r"\b(?:damp|wet|humid|weather|shaded|low[- ]lying)\b")),
+            ("potato_monitor_followup", "Record suspicious findings and seek diagnostic guidance if they appear.",
+             (r"\b(?:diagnostic|lab(?:oratory)?|confirmation|specialist)\b",)),
             ("potato_monitor_alerts", "Check current local disease alerts as part of healthy-crop monitoring.", (r"\b(?:local|regional)\b[^.]{0,60}\b(?:disease )?alerts?\b", r"\balerts?\b[^.]{0,60}\b(?:local|regional)\b")),
         ))
     if sample_event_roles_stated(question) and has(

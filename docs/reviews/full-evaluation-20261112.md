@@ -4,6 +4,16 @@ November 12, 2026. Reference main: `91125d30acd447537184184352d8fadf96ee89ee`.
 
 ## Current status
 
+The latest candidate is being replaced after independent review of a verified
+72-row E4B regression prefix (35 full-system answers) found incomplete root
+inspection and healthy-potato scouting methods. Source `3c751c0` had passed
+4,827 backend tests with 58 skipped; its UI-only successor retained identical
+serving code. That E4B collection was stopped at 103 completed regression rows
+with no pending attempt and no full-cohort dispatch. All 754 raw files were
+archived and hash/mode verified on the original VM and locally. These rows are
+diagnostic only; the entire candidate matrix must repeat at the repaired source.
+No final candidate or updated scientific quality scores are admitted yet.
+
 The 13 November successor passed source verification after actual answers
 exposed another backend over-refusal: otherwise complete seed calculations
 asked for the survival denominator without showing either conditional result.
@@ -17,8 +27,10 @@ and reload verified the saved conditional-calculation flow without model use.
 
 The E4B baseline has closed all 2,240 full-cohort slots, including seven failed
 observations. Its complete physical raw collection was verified locally and on
-the original VM before archival and VM shutdown. The fresh E2B full baseline is
-still collecting. The old candidate's Luna diagnostic has closed and remains
+the original VM before archival and VM shutdown. The fresh E2B full baseline has also closed all 2,240 slots: 2,234 completed
+and six failed. Whole-archive integrity, the original VM's canonical retention
+and report reader, durable local mirrors and process/GPU quiescence passed
+before its task-owned VM was stopped. The old candidate's Luna diagnostic has closed and remains
 separate evidence. A fresh main-compatible Luna baseline with unchanged serving
 messages and corrected transport instrumentation is collecting its full cohort;
 its regression cohort has closed. Independent review of all 96 E4B full-system
@@ -51,7 +63,7 @@ and no updated model-quality scores are available yet.
 Merged-main Luna and both native regression cohorts are retained. The E2B
 full-cohort VM disappeared after 2,054 archived observations; its last durable
 status reports 2,055, so a lost tail remains unknown. A complete fresh E2B
-full-cohort successor is collecting with its own identity and reuses no partial rows.
+full-cohort successor closed with its own identity and reused no partial rows.
 E4B reached a controlled checkpoint at 1,794 full-cohort observations. All raw
 files, including its pending case, were physically restored and hash-verified.
 The original live VM passed full plan and pinned-environment equality before
@@ -355,3 +367,28 @@ loss per seed sown can be additional to germination failure; it cannot become
 overall survival merely by subtraction from 100. The bounded repair keeps
 conditional-loss arithmetic and asks for overall emergence or an explicit
 post-germination loss definition. No model collection started at `c3c8d07`.
+
+
+## Root inspection and healthy-potato monitoring successor
+
+The diagnostic prefix exposed tautological root advice and potato monitoring
+that named foliage and local alerts without useful recognition or follow-up.
+The source repair shares practical observation requirements across drafting,
+verification and fallback: lift intact roots, compare affected and normal plants,
+inspect visible structures and tissue, document the field pattern and use
+conditional diagnostic follow-up. Soybean-specific normal nodules require a
+direct association with the currently affected roots, not a healthy reference
+or historical crop. Healthy-potato monitoring adds conditional lesion signs,
+representative coverage and diagnostic follow-up. The [field-observation
+guide](../public/operations/field-observations.md) records primary-source rationale
+and transfer limits; these references are not activated in runtime retrieval.
+
+Independent source review reproduced and closed historical-report, healthy
+reference, definition and compound-instruction scope defects in the repair.
+Present observations with earlier field history retain practical help; extra
+operations retain their separate decision requirements. Describing visible soft
+or decaying tissue avoids misclassifying an inspection checklist as an asserted
+named disease, without weakening diagnosis guards. Focused imposed-output tests
+exercise the actual persisted product path, including a mixed product-rate
+request. Such checks qualify the repair mechanism, not model performance.
+Whole-source QA and the complete new model matrix remain required.
