@@ -35,6 +35,53 @@ def has_action_directive(text: str) -> bool:
     return False
 
 
+def is_concept_comparison_scope(text: str) -> bool:
+    """Consume one nominal comparison, without granting scope to extra commands.
+
+    This is a structural check; personal decisions, authority, treatments and
+    action intent are still checked by the shared answerability boundary.
+    Unsupported multiword operands retain ordinary decision handling.
+    """
+    match = re.fullmatch(
+        r"\s*(?:please\s+)?(?:(?:can|could)\s+you\s+)?(?:please\s+)?"
+        r"(?:compare|contrast)\s+([^.!?;]+)[.!?]?\s*", text, re.I,
+    )
+    if match is None:
+        return False
+    if re.search(
+        r"\b(?:rates?|doses?|thresholds?|programs?|schedules?|regimens?|spray intervals?|"
+        r"products?|treatments?|options?|best|better|rank|rankings?|then|also|please)\b", match[1], re.I,
+    ):
+        # Rate-basis teaching has a separate whole-request contract. A nominal
+        # product/treatment comparison does not establish concept-only intent.
+        return False
+
+    def nominal(phrase: str) -> bool:
+        phrase = re.sub(r"^the\s+", "", phrase.strip(), flags=re.I)
+        return bool(re.fullmatch(
+            r"(?:[a-z][a-z-]*|"
+            r"(?:soil|plant|crop|root|seed|carbon|nitrogen|phosphorus|potassium|sulfur|sulphur|nutrient|water)"
+            r" (?!the\b|an?\b|my\b|our\b|your\b)[a-z-]+|"
+            r"(?:(?:hybrid|variety|genetic|physical|chemical|biological|physiological|mechanical|"
+            r"thermal|hydraulic|agronomic|sampling|measurement|soil|plant|crop|root|seed|water|nutrient) ){0,2}"
+            r"(?:concepts?|traits?|properties|processes?|mechanisms?|principles?|"
+            r"measurements?|units?|attributes?|definitions?|meanings?|characteristics?))",
+            phrase, re.I,
+        ))
+
+    parts = re.split(r"\s+such as\s+", match[1], flags=re.I)
+    if len(parts) > 2:
+        return False
+    operands = re.split(r"\s+(?:and|with|to|versus|vs\.?)\s+|,\s*(?:and\s+)?", parts[0], flags=re.I)
+    if len(operands) < 2 or not all(nominal(part) for part in operands):
+        return False
+    if len(parts) == 2:
+        examples = re.split(r"\s+and\s+|,\s*(?:and\s+)?", parts[1], flags=re.I)
+        if not all(nominal(part) for part in examples):
+            return False
+    return True
+
+
 def _calculation_premise(part: str) -> bool:
     """Recognize input declarations; their values remain the parser's concern."""
     closed = (
@@ -86,7 +133,7 @@ def has_unqualified_followup(text: str, *, calculation: bool = False) -> bool:
     """
     head = (r"(?:calculate|compute|convert|work out|how (?:many|much)|"
             r"what (?:is|are|yield breaks even|seed(?:ing)? (?:rate|mass)))\b" if calculation else
-            r"(?:why|how|explain|describe|define|what|which)\b")
+            r"(?:why|how|explain|describe|define|what|which|compare|contrast)\b")
     wrapper = r"(?:(?:please\s+)?(?:can|could|would|will)\s+you\s+(?:please\s+)?|please\s+|I['’]d like you to\s+)?"
     first = re.search(r"(?:^\s*|[.!?;]\s*)" + wrapper + head, text, re.I)
     if first is None and not calculation:
@@ -167,6 +214,10 @@ def has_unqualified_followup(text: str, *, calculation: bool = False) -> bool:
     # shared impersonal predicate. Bare unknown commands after 'explain why'
     # do not acquire the causal auxiliary from some earlier sentence.
     for clause in clauses:
+        if re.match(r"(?:compare|contrast)\b", clause, re.I):
+            if not is_concept_comparison_scope(clause):
+                return True
+            continue
         causal = re.match(r"(?:why|how)\s+(?:can|could|do|does|is|are)\b", clause, re.I)
         definition = re.match(r"(?:what (?:is|are)|define|explain(?!\s+(?:why|how|(?:the )?(?:mechanism|process))\b))\b", clause, re.I)
         for tail in re.split(r",\s*(?!\d)|\b(?:and|then|also)\b", clause, flags=re.I)[1:]:

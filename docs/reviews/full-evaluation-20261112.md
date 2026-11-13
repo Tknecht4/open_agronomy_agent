@@ -35,6 +35,17 @@ baselines. No semantic grades or updated quality ranking are claimed. The
 interrupted earlier E4B candidate prefix is fully retained and its task-owned VM
 is stopped. At most two task-owned Colab GPUs run concurrently.
 
+The later `a3553ed` checkpoint passed 4,785 backend tests, with 58 skipped,
+before a further independently confirmed comparison-scope defect was found.
+An impersonal comparison of rotation and hybrid traits could trigger an unasked
+variety-selection checklist, preventing a localized drydown correction from
+preserving the requested comparison. Its E4B run was stopped after 27 completed
+regression observations. All 232 raw files, including the pending attempt,
+were archived and hash/mode verified remotely and locally. Those outputs are
+diagnostic only. The shared whole-request comparison repair is under source
+verification; its entire candidate matrix must run afresh. Baselines continue,
+and no updated model-quality scores are available yet.
+
 ## Retained campaign history
 
 Merged-main Luna and both native regression cohorts are retained. The E2B

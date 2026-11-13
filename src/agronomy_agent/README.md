@@ -353,6 +353,12 @@ or owned formula remains eligible; these prefixes do not authorize
 a second output or an unknown command. The bypass accepts bounded
 analytical continuations and explicit parameter declarations; it does not infer
 that a word is analytical from its spelling. Leaving a bypass is not a refusal.
+Nominal concept comparisons use one shared, fully consumed grammar. Comparison
+operands and optional example lists must qualify; bounded nominal modifiers
+cannot contain an arbitrary extra imperative. Each later comparison clause
+receives the same product, treatment and rate exclusions. Personal decisions,
+permission and output application claims remain checked by answerability and
+verification. Unsupported comparison grammar retains ordinary handling.
 
 `plant_health_scope.py` preserves crop mentions while distinguishing the affected
 crop from a healthy reference subject. Negative root observations retain their

@@ -52,8 +52,8 @@
     {
       "role": "runner",
       "path": "src/agronomy_agent/benchmark_v2_runner.py",
-      "sha256": "e15442a9f0b0c6fdf4e02c49ec8460c74cb1ce909136c32b5425aac5b7f9ce49",
-      "bytes": 81404
+      "sha256": "7a02db479acdc1bc23f7138b9ab8e87a1862437231a33b2b930d7bcce631a880",
+      "bytes": 81806
     },
     {
       "role": "runner_cli",
@@ -88,8 +88,8 @@
     {
       "role": "test_runner",
       "path": "tests/test_open_agronomy_benchmark_v2_runner.py",
-      "sha256": "7b2518786b92abc21f1a303847a930885d35314a9580140ccae7acb9cc48c0d1",
-      "bytes": 35710
+      "sha256": "c9c987fc3ceb051916994800ed169af31b061f46967e011256a9a50a86293e7e",
+      "bytes": 35841
     },
     {
       "role": "test_runtime_contract",
@@ -696,6 +696,119 @@
         {
           "role": "test_harness_compatibility",
           "path": "tests/test_benchmark_harness_compatibility.py",
+          "sha256": "230eeb88b990acee1a67b61b1a2a5c94dc827ee36b3246741fa93a88f936d7d6",
+          "bytes": 18181
+        }
+      ]
+    },
+    {
+      "updated_at": "2026-11-13T19:09:49.349301+00:00",
+      "parent_commit": "a3553edad2be6a15ea2aa9a921a7ab9f075b1980",
+      "predecessor_manifest_sha256": "a8457c4f8461fb1e3bf73582a75b7ee48575f9301820f98f8f538efd3593e1d6",
+      "predecessor_manifest_path": "data/eval/open_agronomy_benchmark_v2_manifest.json",
+      "status": "retrospective_instrument_maintenance_not_preregistration",
+      "reason": "Bind shared comparison request-scope bytes to each consuming runtime component, including answerability; frozen cases, construct, scoring, rubrics and original run identities unchanged.",
+      "artifact_changes": [
+        {
+          "role": "runner",
+          "path": "src/agronomy_agent/benchmark_v2_runner.py",
+          "previous_sha256": "e15442a9f0b0c6fdf4e02c49ec8460c74cb1ce909136c32b5425aac5b7f9ce49",
+          "previous_bytes": 81404,
+          "sha256": "7a02db479acdc1bc23f7138b9ab8e87a1862437231a33b2b930d7bcce631a880",
+          "bytes": 81806
+        },
+        {
+          "role": "test_runner",
+          "path": "tests/test_open_agronomy_benchmark_v2_runner.py",
+          "previous_sha256": "7b2518786b92abc21f1a303847a930885d35314a9580140ccae7acb9cc48c0d1",
+          "previous_bytes": 35710,
+          "sha256": "c9c987fc3ceb051916994800ed169af31b061f46967e011256a9a50a86293e7e",
+          "bytes": 35841
+        }
+      ],
+      "unchanged_artifacts": [
+        {
+          "role": "suite",
+          "sha256": "9785caf6ca8040b4bbe7906914aaa7c8c0375e48da90c30ec8a927a116daab32",
+          "bytes": 51336
+        },
+        {
+          "role": "contract",
+          "sha256": "346af6715f622e821743234756fc5529c3718bec227bf7bd3a6c8557443ff6a5",
+          "bytes": 3859
+        },
+        {
+          "role": "case_schema",
+          "sha256": "da3a21a1e071ae2139684baae7428aa770f752ce0c2802c0d65e58f23ea31a1d",
+          "bytes": 5597
+        },
+        {
+          "role": "causal_interface",
+          "sha256": "739b148a79930eef7c0fb8cc50d4fec2c39381387a3e861763b70618f5590b6c",
+          "bytes": 5189
+        },
+        {
+          "role": "preregistration",
+          "sha256": "310ac7d9cf5966ce95c79ea60532a7bf70becc43db4f6804845fbdf479de3c69",
+          "bytes": 5500
+        },
+        {
+          "role": "exposure_amendment",
+          "sha256": "4f9314d75353b7f7d2982ae64530d7021b158aa85a921ea72a81224f948b30a4",
+          "bytes": 3214
+        },
+        {
+          "role": "metrics",
+          "sha256": "62e4135c7ef5b857598c2bff0f9a3d9a5e40edabca8331f71cfa10e6d303ad02",
+          "bytes": 47037
+        },
+        {
+          "role": "runner_cli",
+          "sha256": "9bb850c35d0356e66078702b0d5c2df4d23ba83bbafe6bf24b950ada97cbb3de",
+          "bytes": 5109
+        },
+        {
+          "role": "audit",
+          "sha256": "b4d0f932f5aa249d2bf99c6e88830eb760beef75011f6edbe34d1a450fc78d3e",
+          "bytes": 31886
+        },
+        {
+          "role": "test_metrics",
+          "sha256": "b2fc403bc81d714fb9c07ff0c25872c06ed7f2d953d921ac103b61cbeb80f119",
+          "bytes": 21592
+        },
+        {
+          "role": "test_design_audit",
+          "sha256": "d9d1f2490b012fa5032173372cd5c1049d63343b0ccacef8b4567e5e9d2bf4c0",
+          "bytes": 7955
+        },
+        {
+          "role": "test_tool_contract",
+          "sha256": "b2af4462a00b2ce52780a26740b1aab79e4846ea547650526933f37995b1d371",
+          "bytes": 2847
+        },
+        {
+          "role": "test_runtime_contract",
+          "sha256": "1f7aa0320975a3fb06a842f9a09729bfede7c5a891c1454eb87787eb673305e3",
+          "bytes": 5283
+        },
+        {
+          "role": "harness_contract",
+          "sha256": "9353e8ded22ba7bbbd914bf35ca97851962e2bb99eee595d42a16500366044c8",
+          "bytes": 7377
+        },
+        {
+          "role": "harness_amendment",
+          "sha256": "6442c0f5f8432c624bb8180014f8f6cbdf077a1b60e65e13ae4f00906330eb30",
+          "bytes": 1317
+        },
+        {
+          "role": "harness_compatibility",
+          "sha256": "11941d5845e27a197af81d2dc69ed961ebbddee06386da30c16432515a0f6ee8",
+          "bytes": 41498
+        },
+        {
+          "role": "test_harness_compatibility",
           "sha256": "230eeb88b990acee1a67b61b1a2a5c94dc827ee36b3246741fa93a88f936d7d6",
           "bytes": 18181
         }

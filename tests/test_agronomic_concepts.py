@@ -64,6 +64,74 @@ def test_markdown_drydown_subclause_does_not_destroy_coordinated_lodging_definit
     assert "lodging" not in result.localized_cleanup["edits"][0]["original"]
 
 
+@pytest.mark.parametrize("question", [
+    "Compare crop rotation and hybrid traits such as drydown and lodging.",
+    "Contrast crop rotation with variety traits such as drydown and standability.",
+    "Could you please compare crop rotation and hybrid traits such as drydown and lodging?",
+    "Contrast crop rotation with hybrid traits such as drydown, standability and lodging.",
+])
+def test_impersonal_concept_comparison_does_not_turn_into_variety_selection_advice(question):
+    draft = ("Rotation changes the crop sequence across seasons. Varieties within a crop differ in "
+             "standability, harvest drydown and lodging; drydown concerns moisture loss toward harvest, "
+             "and lodging means plants fall over.")
+    assert classify_query(question).question_type == "exam_review"
+    result = verify(draft, question)
+    assert result.answer == draft
+    assert not result.triggered and not result.final_assessment.reasons
+
+
+@pytest.mark.parametrize("question", [
+    "Compare soil texture and structure.",
+    "Compare germination and emergence.",
+    "Compare photosynthesis and respiration.",
+    "Please compare soil texture, structure and porosity.",
+])
+def test_general_comparison_scope_is_not_tied_to_one_crop_or_case(question):
+    from agronomy_agent.answerability import is_mechanism_explanation
+    from agronomy_agent.request_scope import has_unqualified_followup
+    assert is_mechanism_explanation(question)
+    assert not has_unqualified_followup(question)
+    assert classify_query(question).question_type == "exam_review"
+
+
+@pytest.mark.parametrize("question", [
+    "Compare crop rotation and hybrid traits; which should I choose?",
+    "Compare crop rotation and hybrid traits for my field.",
+    "Compare herbicide rates for canola.",
+    "Contrast fungicide programs for this crop.",
+    "Compare crop rotation and hybrid traits, then apply nitrogen.",
+    "Compare crop rotation and hybrid traits. Can the crop be sprayed?",
+    "Compare crop rotation and hybrid traits and recommend a herbicide rate.",
+    "Compare 30 kg/ha and 60 kg/ha nitrogen treatments.",
+    "Compare crop rotation and mulch beds.",
+    "Contrast these traits, then transplant seedlings.",
+    "Compare soil texture and structure, and choose an option.",
+    "Compare hybrids for our field and select the best one.",
+    "Mulch beds first. Compare photosynthesis and respiration.",
+    "Transplant seedlings first. Compare photosynthesis and respiration.",
+    "Compare photosynthesis and respiration and transplant seedlings.",
+    "Compare photosynthesis and respiration such as drydown and transplant seedlings.",
+    "Compare 20% and 40% concentrations.",
+    "Compare ProductA and ProductB and rank their properties.",
+    "Compare soil texture and structure. Authorize its use.",
+    "Compare soil texture and improve soil properties.",
+    "Compare crop rotation and optimize plant traits.",
+    "Compare photosynthesis and adjust soil texture.",
+    "Compare photosynthesis and respiration such as drydown and optimize plant traits.",
+    "Why does water move through soil? Compare products and treatments.",
+    "Why does water move through soil? Compare rates and doses.",
+    "Why does water move through soil? Contrast options and programs.",
+    "Explain why water moves through soil. Compare crop rotation and optimize plant traits.",
+    "Compare crop rotation and soil properties then mulch.",
+    "Compare soil texture and crop traits then transplant.",
+    "Compare crop rotation and soil properties also mulch.",
+    "Compare crop rotation and soil properties please mulch.",
+])
+def test_comparison_word_does_not_remove_decision_or_application_boundaries(question):
+    from agronomy_agent.answerability import is_mechanism_explanation
+    assert not is_mechanism_explanation(question)
+
+
 @pytest.mark.parametrize("answer", [
     "Drydown is moisture loss toward grain harvest, not drought tolerance.",
     "Drought stress can affect grain development and later drydown.",
@@ -149,6 +217,12 @@ def test_concept_origin_requires_named_defect_complete_edit_and_clean_final(chan
 
 
 @pytest.mark.parametrize("question,draft,retained", [
+    ("Compare crop rotation and hybrid traits such as drydown and lodging.",
+     "Rotation changes the crop sequence across seasons. Drydown is a variety's tolerance to drought. Lodging concerns plants falling over.",
+     "loss of moisture"),
+    ("Contrast crop rotation with hybrid traits such as drydown, standability and lodging.",
+     "Rotation changes the crop sequence across seasons. Drydown is moisture loss toward grain harvest, not drought tolerance. Lodging concerns plants falling over.",
+     "Rotation changes the crop sequence"),
     ("Explain harvest drydown and its distinction from drought tolerance.",
      "**Drydown** means a crop's ability to survive water stress, while lodging means plants fall over.",
      "while lodging means plants fall over"),
@@ -188,5 +262,11 @@ def test_repairs_and_preservation_reach_the_persisted_product_entrypoint(tmp_pat
         assert retained in result.answer
         assert store.get_turn(result.turn["turn_id"])["answer"] == result.answer
         assert len(result.stage_receipts) == 17
+        if question.startswith(("Compare crop rotation", "Contrast crop rotation")):
+            assert result.answer.startswith("Rotation changes the crop sequence across seasons.")
+            assert "Lodging concerns plants falling over." in result.answer
+            assert "disease ratings" not in result.answer and "local trials" not in result.answer
+            if "not drought tolerance" in draft:
+                assert result.answer == draft
     finally:
         store._conn.close()
