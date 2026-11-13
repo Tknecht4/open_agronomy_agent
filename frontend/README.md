@@ -32,7 +32,7 @@ Farms, Fields, Records, and Questions are primary. Data management, Evidence, an
 
 Questions opens in Together on desktop and Conversation on smaller screens. A workspace without a field still has a browsable regional overview; it does not create field geometry or infer a location. Map-only and conversation-only views remain available. On mobile, the explicit Map control preserves the question draft while giving GIS the full content width.
 
-Model opens above the entire desktop composer, with technical details available separately. On mobile it opens a native modal sheet. Native dialogs contain focus and restore it when closed; desktop popovers dismiss on Escape, outside interaction, and workspace changes. Unknown availability remains unreported rather than being labelled ready. Selection changes only the next question and does not rewrite previous answer lineage.
+Model opens above the entire desktop composer, with technical details available separately. On mobile it opens a native modal sheet. Native dialogs contain focus and restore it when closed; desktop popovers dismiss on Escape, outside interaction, and workspace changes. Unknown availability remains unreported rather than being labelled ready. Selection changes only the next question and does not rewrite previous answer lineage. With an empty composer and no installed model, the notice explains that a question can be checked for local calculation support. It does not declare every request ready; the server preview and submission gates still decide the exact request.
 
 ## Inputs and outputs
 
