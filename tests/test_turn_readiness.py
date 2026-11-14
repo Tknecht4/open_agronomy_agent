@@ -719,13 +719,17 @@ def test_product_total_negative_output_boundary_remains_model_free(runtime, monk
 
 
 @pytest.mark.parametrize("backend", ["mlx", "http"])
-def test_ambiguous_seed_scenarios_persist_partial_evidence_without_model_or_provincial_tail(runtime, monkeypatch, backend):
+@pytest.mark.parametrize("weight_clause", [
+    "TKW 36 g", "thousand kernel weight 36 g",
+    "thousand-kernel weight 36 g", "36 g thousand kernel weight",
+])
+def test_ambiguous_seed_scenarios_persist_partial_evidence_without_model_or_provincial_tail(runtime, monkeypatch, backend, weight_clause):
     client, store = runtime
     monkeypatch.setattr(chat_service, "_build_mlx_generator", no_generator)
     monkeypatch.setenv("AGRONOMY_AGENT_MODEL_BACKEND", backend)
     monkeypatch.delenv("AGRONOMY_AGENT_MODEL_BASE_URL", raising=False)
     sid = session(client)
-    question = ("Calculate seed rate for an Alberta field: target 240 plants/m2, TKW 36 g, "
+    question = (f"Calculate seed rate for an Alberta field: target 240 plants/m2, {weight_clause}, "
                 "germination 92%, and field survival 80%.")
     from agronomy_agent import capability_registry as registry
     with monkeypatch.context() as preview_patch:

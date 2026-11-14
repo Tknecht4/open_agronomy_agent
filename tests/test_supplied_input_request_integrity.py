@@ -15,6 +15,34 @@ _COMPLETE_ARITHMETIC = (
 )
 
 
+@pytest.mark.parametrize('weight_role', ['TKW', 'thousand kernel weight', 'thousand-kernel weight'])
+@pytest.mark.parametrize('position', ['prefix', 'comma'])
+def test_parser_owned_seed_weight_declarations_reach_the_same_calculation(weight_role, position):
+    if position == 'prefix':
+        question = f'{weight_role} is 36 g. Calculate wheat seed rate for 270 plants/m2, germination 92%, and survival 90% of germinated seeds.'
+    else:
+        question = f'Calculate wheat seed rate for 270 plants/m2, {weight_role} 36 g, germination 92%, and survival 90% of germinated seeds.'
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'ready' and len(results) == 1
+    assert plan.invocations[0].inputs['tkw_g'] == 36
+    assert plan.invocations[0].inputs['survival_basis'] == 'germinated_seeds'
+    assert results[0].payload['value'] == pytest.approx(117.3913043478261)
+
+
+@pytest.mark.parametrize('weight_role', ['TKW', 'thousand kernel weight', 'thousand-kernel weight'])
+@pytest.mark.parametrize('extra', [
+    'with instructions to transplant seedlings',
+    'and advise when to apply it',
+    ', show units with advice on mulching beds',
+    ', and recommend a field population',
+])
+def test_seed_weight_role_cannot_own_additional_grower_requests(weight_role, extra):
+    question = (f'Calculate wheat seed rate for 270 plants/m2, germination 92%, '
+                f'survival 90% of germinated seeds, {weight_role} 36 g {extra}.')
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'not_applicable' and not results
+
+
 @pytest.mark.parametrize('base', [
     'A soil moisture probe reports 0.22 cubic metres of water per cubic metre of soil over a hypothetical uniform 40 cm layer. Convert that to millimetres of water stored',
     'A 2400 L sprayer tank is applying 120 L/ha in a Saskatchewan wheat field. How many hectares can one full tank cover',

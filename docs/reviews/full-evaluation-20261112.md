@@ -4,19 +4,20 @@ November 12, 2026. Reference main: `91125d30acd447537184184352d8fadf96ee89ee`.
 
 ## Current status
 
-On November 14, independent composed review superseded candidate `582caf0`.
-A supplied-input calculation could silently drop an additional request beginning
-with “with instructions”; identifier restoration could turn a correct negative
-maturity-group contrast into a false self-contrast; and component fingerprints
-omitted the conversation resolver. A bound-evidence counterfactual then found
-that a germination operand could impose an unasked seed-quality checklist and
-replace otherwise useful mixed help. The shared repairs are under verification.
-A successor must pass source verification and repeat the complete candidate
-matrix. No candidate scientific score or updated ranking is available.
+On November 14, a browser walk and independent comparison with the original
+main-compatible baseline found a remaining input-role regression in `a45dc37`.
+The arithmetic parser accepted “thousand kernel weight 36 g,” but the later
+whole-request guard recognized only its abbreviation in that position. The UI
+unnecessarily required a model. The repair gives the guard the same explicit
+role aliases as the parser, including input declarations before the calculation;
+it keeps additional requests and unresolved survival denominators distinct.
+Source verification and the complete successor candidate matrix remain required.
+No candidate scientific score or updated ranking is available.
 
-The stopped E2B and E4B attempts retain 166 and 151 regression observations,
+The stopped E2B and E4B attempts retain 192 and 191 regression observations,
 respectively, including all raw and pending artifacts in verified archives.
-Neither dispatched its full cohort, and these rows cannot fill successor slots.
+E2B entered the full cohort but completed no full-cohort observations before
+controlled shutdown; E4B did not dispatch it. These rows cannot fill successor slots.
 Both original native baseline models have complete 192- and 2,240-slot
 collections, with original-source physical readers, the same maintained analysis
 implementation, complete archives and source-bound framing inputs. Six failed
@@ -24,6 +25,12 @@ full-cohort slots per model are declared synthetic fault controls; E4B retains
 one additional interrupted production slot. A fresh whole main-compatible Luna
 baseline is still collecting under its original clock. All twelve final raw
 collections and admission checks must complete before scientific grading.
+
+The prior `a45dc37` software checkpoint passed 5,063 backend tests with 58
+skipped and 508 frontend tests, plus documentation, build and public-package
+checks. Its browser flow preserved both conditional seed calculations and the
+clarified result after reload using the abbreviated input form. Those checks did
+not reveal the spelled-out input-role regression and do not qualify its successor.
 
 ## Superseded sources and diagnostic evidence
 

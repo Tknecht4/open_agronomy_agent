@@ -183,7 +183,7 @@ def _calculation_premise(part: str) -> bool:
         r"(?:(?:these are measured values:\s*)?(?:an? |the )(?:[a-z\d,.-]+ ){0,4}"
         r"(?:field(?: plan)?|fertilizer(?: product)?|soil moisture probe|sprayer(?: tank)?|nozzle|"
         r"crop budget|soybean count|blend|plan|budget|example|prescription)|"
-        r"(?:the )?target stand|(?:seed )?TKW|germination|expected (?:field survival|emergence)|soybeans in (?:an?|the) [a-z -]{1,60}field|(?:daily mean|mean daily|maximum|minimum) temperature|grain (?:dry )?mass|"
+        r"(?:the )?target stand|(?:seed )?(?:thousand[- ]kernel weight|TKW)|germination|expected (?:field survival|emergence)|soybeans in (?:an?|the) [a-z -]{1,60}field|(?:daily mean|mean daily|maximum|minimum) temperature|grain (?:dry )?mass|"
         r"total above-ground dry biomass|field survival|Kc|ETo|field capacity|"
         r"(?:measured )?volumetric water|travel speed|it)"
     )
@@ -332,7 +332,7 @@ def has_unqualified_followup(text: str, *, calculation: bool = False) -> bool:
     if calculation:
         premise = (r"(?:(?:an?\s+)?[+-]?(?:\d|\.\d)|(?:(?:the|an?)\s+)?(?:base(?: temperature)?|tmin|tmax|"
             r"(?:lab(?:oratory)? )?germination|(?:(?:expected|post[- ]germination) )?field (?:survival|mortality|loss)|expected emergence|target (?:stand|population)|"
-            r"(?:measured )?tkw|(?:(?:expected|overall|field|seedling|post[- ]germination|lab(?:oratory)?) )*(?:survival|emergence|mortality|loss|germination)|seed[- ]lot germination|rooting depth|root[- ]zone depth|field (?:area|capacity)|wilting point|"
+            r"(?:measured )?(?:thousand[- ]kernel weight|tkw)|(?:(?:expected|overall|field|seedling|post[- ]germination|lab(?:oratory)?) )*(?:survival|emergence|mortality|loss|germination)|seed[- ]lot germination|rooting depth|root[- ]zone depth|field (?:area|capacity)|wilting point|"
             r"measured volumetric water|kc|eto|net depth|application efficiency|travel speed|nozzle spacing|unusable (?:tank )?volume|radius|diameter|"
             r"grain dry (?:mass|matter)|total above[- ]ground dry (?:biomass|mass|matter)|"
             r"(?:upper|lower) cap|(?:no|without) (?:upper |lower |temperature )?caps?|negative (?:values|accumulation)|"

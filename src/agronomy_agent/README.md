@@ -395,6 +395,9 @@ whole value, unit and bounded method qualifiers; a recognized input name or
 presentation requests remain eligible. Request-bearing prepositional tails
 inside the initial calculation clause receive the same scope check as later
 comma clauses. Unknown scope uses ordinary handling rather than dropping work.
+Named thousand-kernel-weight declarations retain the extractor's explicit
+spelled-out and `TKW` roles in both input prefixes and comma tails. The entire
+value and any additional request still receive the same ownership checks.
 
 Maturity identifier restoration requires an explicit subject assignment and an
 unambiguous supplied identifier. Named subjects in the question must match.
