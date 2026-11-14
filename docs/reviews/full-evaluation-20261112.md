@@ -18,7 +18,17 @@ remain subject to their existing checks.
 
 The repair passed 817 focused deterministic tests, including supplied-input
 boundaries, production readiness/persistence and implementation identity changes.
-Independent review and whole-source verification are still in progress. Legacy
+Independent source review found no blocker. Committed `10799e3` passed 5,159
+backend tests, with 58 skipped and one failed design-audit check: the exposed
+development benchmark manifest still pinned the previous runner/test bytes.
+The maintenance correction binds those two current implementation artifacts,
+retains predecessor lineage and leaves all cases and scoring inputs unchanged.
+Its frontend, documentation, build and public materialization checks passed.
+The browser also verified the laboratory-germination prefix, correct saved seed
+mass and model-free provenance after reload. A presentation correction changes
+the pending readiness heading to “Checking calculation support”; the request
+binding and submission gate are unchanged. Final composed verification remains
+required. Legacy
 daily-GDD preview remains unknown because that operation has no separately
 callable canonical input validator. These checks establish software behavior,
 not agronomic accuracy. The complete successor matrix remains required; no
