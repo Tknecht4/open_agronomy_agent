@@ -429,3 +429,23 @@ retains a bounded method identifier, known parameter names and value types,
 unknown-field count and observed thread/turn binding booleans. It excludes
 payload values and unknown field names. Missing binding remains unknown;
 acknowledged provider turns do not become undispatched attempts.
+
+Observation support distinguishes stored grain from live plants across the
+whole request before overriding a route. Unknown clauses or another affected
+subject retain ordinary mixed-task handling. Soil-test evidence, reference/crop/
+actual ET distinctions, photo limitations and historical station records keep
+their measurement and time support. A reviewed observation method can accompany
+an evidence-clarification hold; it does not grant field-action authority.
+Mapped crop-classification context remains separate from complete farm history.
+The contradiction check qualifies the completeness predicate, including when a
+true disclaimer appears elsewhere. Soybean maturity identifiers are strings
+with significant leading zeroes; localized restoration requires one unambiguous
+supplied identifier in the same explicit role, and preserves adaptation
+uncertainty. See the public field-observation guide for primary-source rationale.
+
+Private-table planning qualifies the full query shape before requesting an
+upload or column. The supported normalized grammar retains unsupported filters
+and compound table requests as clarifications only after table ownership is
+established. Uploaded spatial context and incidental statistics stay available
+to the ordinary interpretation path. Supplied dry-mass arithmetic similarly
+keeps a named biomass ratio separate from harvest-timing management.

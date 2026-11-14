@@ -199,6 +199,8 @@ def _runtime_implementation_receipts() -> dict[str, str]:
                     PROJECT_ROOT / "src/agronomy_agent/server/services/answer_renderer.py",
                     PROJECT_ROOT / "src/agronomy_agent/execution_core.py",
                     PROJECT_ROOT / "src/agronomy_agent/codex_app_server.py",
+                    PROJECT_ROOT / "src/agronomy_agent/answer_safety.py",
+                    PROJECT_ROOT / "src/agronomy_agent/observation_guidance.py",
                 )
             ),
             "kernel_config": _bundle_sha256(
@@ -238,6 +240,7 @@ def _runtime_implementation_receipts() -> dict[str, str]:
             "tool_executor_bundle": _bundle_sha256(
                 (
                     PROJECT_ROOT / "src/agronomy_agent/tool_planner.py",
+                    PROJECT_ROOT / "src/agronomy_agent/field_data_capability.py",
                     PROJECT_ROOT / "src/agronomy_agent/capability_registry.py",
                     PROJECT_ROOT / "src/agronomy_agent/tools/registry.py",
                     PROJECT_ROOT / "src/agronomy_agent/local_tools.py",
@@ -265,6 +268,7 @@ def _runtime_implementation_receipts() -> dict[str, str]:
                     PROJECT_ROOT
                     / "src/agronomy_agent/server/services/chat_service.py",
                     PROJECT_ROOT / "src/agronomy_agent/answer_verifier.py",
+                    PROJECT_ROOT / "src/agronomy_agent/answer_safety.py",
                     PROJECT_ROOT / "src/agronomy_agent/agronomic_concepts.py",
                     PROJECT_ROOT / "src/agronomy_agent/observation_guidance.py",
                     PROJECT_ROOT / "src/agronomy_agent/quantity_claims.py",

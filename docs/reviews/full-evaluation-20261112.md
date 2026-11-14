@@ -423,3 +423,40 @@ weights and original evidence retain their identities. Fresh complete candidate
 cohorts and a fresh matched Luna baseline are required before reporting updated
 whole-suite numbers. The native baselines remain separately qualified for their
 recorded serving source and runtime.
+
+## Retained full-cohort prefix: additional task-ownership corrections
+
+A contiguous retained prefix contains 192 observations, including 97 production
+observations and four additional conversation turns. Independent read-only
+review covered those production answers. The incomplete run does not establish
+whole-suite performance. It exposed a second group of engineering defects:
+correct harvest-index arithmetic was displaced by harvest/storage advice;
+mentions of uploaded map context and the word “mean” claimed a table capability;
+soil-test evidence and ET terminology requests lost their explanatory content;
+and uneven stored-grain moisture acquired a live-plant nutrient workflow.
+
+The successor positively qualifies supplied dry-mass declarations and complete
+table-query shapes before a capability claims missing inputs. Grain-storage
+routing requires sole object ownership across the request; new subjects and
+unknown clauses retain ordinary mixed-task handling. The independent output
+backstop also excludes live-root additions for that grain-only scope. ET
+terminology retains the distinction between a reference surface, standard crop
+coefficients and actual use under stress. Reviewed evidence methods remain
+available alongside missing-evidence holds, while unsafe-action refusals retain
+their existing behavior.
+
+Public crop classifications cannot become a complete private rotation history
+through an instruction or an appended disclaimer. The positive completeness
+predicate receives its own contradiction check. Supplied soybean maturity-group
+identifiers retain significant leading zeroes; a bounded restoration requires a
+unique supplied identifier and an explicit maturity role. Uncertainty about
+local adaptation does not authorize changing that identifier. Ambiguous supplied
+identifiers are not silently reassigned.
+
+These repairs address demonstrated engineering mechanisms. The prefix also
+contains substantive model-quality weaknesses in source/sink explanations,
+atmospheric demand versus realized transpiration, mismatched soil depths,
+raster scaling, fertilizer seed-contact exposure and experimental comparisons.
+They remain visible scientific limitations for the complete assessment. No
+runtime retrieval or training receives evaluation cases, answers or golds, and
+none of this diagnostic review is formal blinded grading or field validation.

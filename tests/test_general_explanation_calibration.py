@@ -906,6 +906,26 @@ def test_regional_pest_alert_keeps_complete_model_method():
 
 
 @pytest.mark.parametrize("question,draft,required", [
+    ("A teaching crop has 8 t/ha total above-ground dry biomass and 3.2 t/ha grain dry mass. Compute harvest index.",
+     "This draft must not be needed for supplied arithmetic.", ("0.4", "40%", "includes grain")),
+    ("What observations are needed to turn a soil-test phosphorus value into evidence of likely crop response?",
+     "Use a nitrogen soil test and choose a fertilizer rate.", ("extraction method", "crop-response", "sampling depth")),
+    ("Freshly harvested Alberta grain is going into storage with uneven moisture. What should be measured and managed before assuming the bin is safe?",
+     "Check grain moisture before storing it.", ("temperature", "different locations", "aeration", "hot spots")),
+    ("Distinguish reference evapotranspiration from crop evapotranspiration and actual water use under stress.",
+     "Crop evapotranspiration is the actual water use of a crop and approaches reference evapotranspiration when well watered.",
+     ("reference surface", "Kc", "Actual crop water use can differ")),
+    ("One AAFC pixel says canola last year. Treat that as a complete rotation history and approve a crop-sensitive input.",
+     "The AAFC pixel is being treated as a complete rotation history for this decision.",
+     ("cannot establish a complete rotation history", "management records")),
+    ("Could you explain plainly why one phone photo of weeds is not enough to choose a herbicide for lentils in Newfoundland and Labrador?",
+     "I cannot choose a product without a label.", ("photographed", "density", "history")),
+    ("Explain soybean maturity 00.3.",
+     "Soybean Y has maturity 0.3. The identifiers alone do not establish local adaptation.",
+     ("maturity 00.3", "local adaptation")),
+    ("What annual soil-loss ranges define the five SoilERI classes, and does a decreasing trend prove past soil damage is restored?",
+     "I cannot verify the exact class cutoffs without the SoilERI technical specification. A decreasing modeled erosion risk does not prove previously lost topsoil has been restored. Check indicator vintage, units and components and ground-truth erosion, cover and management.",
+     ("SoilERI", "does not prove")),
     ("Roots are swollen in our Quebec cabbage field. Will one nonhost year clean the field, and what should we check?",
      "Dig the plants and compare affected and normal roots.",
      ("many years", "equipment", "diagnostic")),
@@ -955,6 +975,12 @@ def test_persisted_observation_method_completes_failed_draft(tmp_path, monkeypat
             model_id="imposed", rag_config="configs/rag.yaml", max_tokens=150, generation_backend=backend))
         assert all(term in result.answer for term in required), result.answer
         assert "99 L/ha" not in result.answer and "99 kg/ha" not in result.answer
+        if "storage with uneven moisture" in question:
+            assert "dig roots" not in result.answer and "count surviving plants" not in result.answer
+        if "SoilERI classes" in question:
+            assert "evapotranspiration" not in result.answer and "irrigation" not in result.answer
+        if "Compute harvest index" in question:
+            assert not any(term in result.answer for term in ("Base harvest timing", "mycotoxin"))
         assert store.get_turn(result.turn["turn_id"])["answer"] == result.answer
         assert len(result.stage_receipts) == 17
     finally:

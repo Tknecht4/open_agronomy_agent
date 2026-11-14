@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass
 
 from agronomy_agent.map_component_interpretation import is_map_component_explanation_question
-from agronomy_agent.observation_guidance import observation_guidance
+from agronomy_agent.observation_guidance import observation_guidance, stored_grain_context
 from agronomy_agent.answerability import is_quantity_concept_explanation, is_mechanism_explanation, product_action_request_text
 from agronomy_agent.request_scope import has_action_directive, has_unqualified_followup
 from agronomy_agent.plant_health_scope import current_root_swelling_clauses
@@ -569,6 +569,20 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
         tools.difference_update({"label_guard", "pesticide_safety_guard", "resistance_management_guard"})
         if risk == "regulated":
             risk = "medium"
+
+    # Reconcile the affected object and task before any domain-wide fallback.
+    if stored_grain_context(question) and not explicit_agrochemical_context:
+        qtype = "crop_management"
+        namespaces.difference_update({"fertility", "soil_health", "plant_health"})
+        namespaces.add("crop_management")
+        guidance = "Assess representative grain moisture, temperature, drying/cooling, airflow and changing storage conditions; do not substitute a live-crop nutrient differential."
+    if (has(r"\b(?:SoilERI|soil erosion risk)\b", question)
+            and qtype in {"soil_water", "regional_context", "field_data", "conceptual", "exam_review"}
+            and not has_action_directive(question) and not explicit_agrochemical_context
+            and not has(r"\b(?:choose|select|recommend|apply|spray|drain|till|cultivate|irrigate|plant)\b", request_focus(q))):
+        qtype = "field_data"
+        namespaces = {"field_data_boundary", "regional_environment", "soil_health"}
+        guidance = "Interpret the named erosion indicator's measure, class, trend and support from its specification. Unavailable thresholds remain unknown; a trend is not proof of restored soil."
 
     protected_boundary_explanation = (
         mapped_soil_field_boundary

@@ -1332,7 +1332,7 @@ def _decision_name(lower: str, question_type: str) -> str:
         return "wilt_differential"
     if re.search(r"\bfungicide\b", lower):
         return "fungicide_decision"
-    if re.search(r"\b(?:harvest|storage|drying|grain moisture)\b", lower):
+    if re.search(r"\b(?:harvest(?!\s+index\b)|storage|drying|grain moisture)\b", lower):
         return "harvest_storage"
     if re.search(r"\b(?:seed lots?|seed quality|germination|seed vigor|vigor test)\b", lower):
         return "seed_quality"

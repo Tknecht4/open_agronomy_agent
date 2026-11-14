@@ -509,7 +509,7 @@ def classify_verification_origin(
             and isinstance(final_reasons, (list, tuple)) and not final_reasons
             and all(
                 isinstance(edit, Mapping)
-                and edit.get("reason") in {"drydown_drought_conflation", "nutrient_active_ingredient_conflation", "lodging_standability_conflation"}
+                and edit.get("reason") in {"drydown_drought_conflation", "nutrient_active_ingredient_conflation", "lodging_standability_conflation", "soybean_maturity_identifier_changed"}
                 and edit["reason"] in original_reasons
                 and isinstance(edit.get("original"), str) and bool(edit["original"].strip())
                 and isinstance(edit.get("replacement"), str) and bool(edit["replacement"].strip())

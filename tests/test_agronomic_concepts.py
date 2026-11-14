@@ -309,3 +309,47 @@ def test_lodging_correction_requires_crop_context_and_supported_language():
     answer = "Lodging is resistance to falling over."
     for question in ("Explain lodging options for a trip.", "Explain crop lodging in French."):
         assert correct_concept_claims(answer, question) == (answer, ())
+
+
+@pytest.mark.parametrize('supplied,changed', [('00.3','0.3'),('000.4','0.4'),('000','0')])
+def test_supplied_soybean_maturity_identifiers_keep_significant_zeroes(supplied,changed):
+    question = f'Soybean X has maturity 0.6 and Y maturity {supplied}. Which is suitable locally?'
+    draft = f'Y has maturity {changed}. Local trial evidence is still needed.'
+    result = verify(draft, question)
+    assert f'maturity {supplied}' in result.answer
+    assert result.answer.endswith('Local trial evidence is still needed.')
+    assert result.localized_cleanup['edits'][0]['reason'] == 'soybean_maturity_identifier_changed'
+    assert not result.final_assessment.reasons
+
+
+@pytest.mark.parametrize('answer', [
+    'Maturity 0.3 is different from maturity 00.3.',
+    'Maturity 00.3 is not maturity 0.3.',
+    'If maturity 0.3 were supplied, local trials would still be needed.',
+])
+def test_identifier_correction_preserves_explicit_contrasts_and_conditionals(answer):
+    question = 'Soybean Y has maturity 00.3. What does this identifier establish?'
+    assert correct_concept_claims(answer,question)==(answer,())
+
+
+def test_competing_supplied_identifiers_are_not_silently_reassigned():
+    question = 'Soybean X has maturity 0.3 and Y maturity 00.3. Compare them.'
+    answer = 'X has maturity 0.3 and Y maturity 00.3.'
+    assert correct_concept_claims(answer,question)==(answer,())
+
+
+def test_identifier_assertion_is_separate_from_uncertainty_about_adaptation():
+    question = 'Soybean X maturity 0.6 and Y maturity 00.3: which is adapted locally?'
+    draft = 'The trial values (X maturity 0.6; Y maturity 0.3) may not apply universally to other regions.'
+    corrected, edits = correct_concept_claims(draft,question)
+    assert corrected == draft.replace('Y maturity 0.3','Y maturity 00.3')
+    assert len(edits)==1
+
+
+@pytest.mark.parametrize('answer', [
+    'If Y had maturity 0.3, it would be a different maturity group.',
+    'Suppose Y has maturity 0.3; this hypothetical differs from the supplied identifier.',
+    'Maturity 0.3 versus 00.3 illustrates the significance of leading zeroes.',
+])
+def test_maturity_counterfactual_and_explicit_comparison_are_not_rewritten(answer):
+    assert correct_concept_claims(answer,'Soybean Y has maturity 00.3. Explain the rating.')==(answer,())

@@ -9,8 +9,9 @@ from __future__ import annotations
 from collections.abc import Iterator
 from dataclasses import dataclass
 import re
+from datetime import date
 
-from agronomy_agent.answerability import preferred_response_language, is_rate_basis_explanation, is_dose_response_explanation, is_sampling_basis_explanation, product_action_request_text
+from agronomy_agent.answerability import preferred_response_language, is_rate_basis_explanation, is_dose_response_explanation, is_sampling_basis_explanation, is_evapotranspiration_explanation, product_action_request_text
 from agronomy_agent.plant_health_scope import root_inspection_requested, current_root_inspection_is_soybean, clubroot_workflow_applicable
 
 
@@ -47,6 +48,15 @@ class ObservationGuidance:
     def unsupported_inference(self, answer: str) -> bool:
         """Reject bounded contradictions even when a correct check is appended."""
         for sentence in re.split(r"[.!?;]\s*|\n+", answer):
+            if self.has_method("mapped_crop_history"):
+                for claim in re.finditer(
+                        r"\b(?:is|are)\s+(?:(?:being )?treated as\s+)?(?:a\s+)?(?:complete|full)[^.;]{0,35}\b(?:history|record)\b|"
+                        r"\b(?:provides?|establish(?:es)?|confirms?|proves?|represents?)\s+(?:a\s+)?(?:complete|full)[^.;]{0,35}\b(?:history|record)\b",
+                        sentence, re.I):
+                    prefix = sentence[:claim.start()]
+                    if (re.search(r"\b(?:pixel|map|classification|inventory)\b", prefix, re.I)
+                            and not re.search(r"\b(?:not|never|cannot|can't|doesn't)\s*$", prefix, re.I)):
+                        return True
             if self.has_method("scouting_unit_interpretation"):
                 if (
                     re.search(r"\bbelow\b[^.!?]{0,70}\bthreshold\b", sentence, re.I)
@@ -79,6 +89,37 @@ def sample_event_roles_stated(question: str) -> bool:
         re.search(r"\bsampl\w*\b[^.!?;]{0,80}\b(?:collected|collection date)\b", question, re.I)
         and re.search(r"\breport\b[^.!?;]{0,80}\b(?:issued|issuance|issue date)\b", question, re.I)
     )
+
+
+def stored_grain_context(question: str) -> bool:
+    """Require sole grain-storage ownership before a global route correction.
+
+    Extra subjects or unrecognized clauses retain ordinary mixed-task handling.
+    The bounded follow-up questions refer only to the preceding grain object.
+    """
+    if not (re.search(r"\bgrain\b",question,re.I) and re.search(r"\b(?:bin|storage|stored)\b",question,re.I)):
+        return False
+    clauses = [part.strip() for part in re.split(r"[.!?;]|\b(?:and|but|while|also|then)\b", question, flags=re.I) if part.strip()]
+    grain_subject = re.compile(
+        r"^(?:[a-z][a-z'-]*\s+){0,5}grain(?:\s+in\s+(?:(?:the|a|my|our)\s+)?(?:bin|storage))?"
+        r"\s+(?:is|are|has|have|enters?|needs?|requires?|will be|was|were)\b", re.I)
+    follow_up = re.compile(
+        r"(?:what should (?:be (?:measured|checked|monitored)|(?:I|we) (?:measure|check|monitor))|"
+        r"(?:measured|managed|monitored|checked)(?: before assuming (?:the|this|my|our) bin is safe)?|"
+        r"how should (?:I|we) (?:monitor|manage|check) (?:it|the bin|stored grain)|"
+        r"(?:moisture|temperature|airflow)(?: distribution)?)", re.I)
+    for clause in clauses:
+        if grain_subject.match(clause) or follow_up.fullmatch(clause):
+            continue
+        return False
+    return True
+
+
+def _past_weather_record(question: str) -> bool:
+    if re.search(r"\bhistorical\b", question, re.I):
+        return True
+    ranges = re.findall(r"\b((?:19|20)\d{2})\s*[-–]\s*((?:19|20)\d{2})\b", question)
+    return bool(ranges and all(int(start) <= int(end) < date.today().year for start,end in ranges))
 
 
 def observation_guidance(question: str) -> ObservationGuidance | None:
@@ -125,6 +166,76 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
     # English method text must never replace a French answer.
     if preferred_response_language(question) == "fr" or has(r"\b(?:en fran[cç]ais|in french)\b"):
         return None
+    if is_evapotranspiration_explanation(question):
+        yield ObservationGuidance("evapotranspiration_terms", (
+            "Reference evapotranspiration (ETo) describes atmospheric evaporative demand for a standardized, "
+            "well-watered reference surface. Standard crop evapotranspiration (ETc) uses a crop coefficient: "
+            "ETc = Kc × ETo for the crop and growth stage under standard conditions. "
+            "Actual crop water use can differ under soil-water stress or other nonstandard conditions; "
+            "use appropriate stress adjustments or measurements, not an assumed equality with ETc or ETo. "
+            "These distinctions alone do not determine an irrigation amount."
+        ), (("reference_ET_basis", "Define the reference surface.", (r"\breference surface\b",)),
+            ("crop_ET_coefficient", "Distinguish crop coefficient and standard conditions.", (r"\bKc\b", r"\bcrop coefficient\b")),
+            ("actual_ET_stress", "Keep actual stressed water use distinct.", (r"\bactual\b[^.]{0,140}\b(?:differ|stress|adjust)\w*\b",))))
+        return
+    if (has(r"\b(?:pixel|crop (?:map|classification|inventory)|public map)\b")
+            and has(r"\b(?:aafc|public|satellite|crop classification|crop inventory)\b")
+            and has(r"\b(?:rotation history|crop history|complete history|complete rotation)\b")):
+        yield ObservationGuidance("mapped_crop_history", (
+            "A public crop-classification pixel cannot establish a complete rotation history or authorize a crop-sensitive input. "
+            "It is a dated classification with spatial-support and classification uncertainty. "
+            "Verify crop identities and years against field boundaries and actual farm planting and management records, "
+            "including relevant input and carryover records. Keep the mapped prior separate from verified field history; "
+            "any input decision still needs its own crop, rotation and current-use requirements."
+        ), (("mapped_history_limit", "Reject complete field history from a pixel.",
+             (r"\b(?:cannot|does not|not enough|insufficient)\b[^.]{0,90}\b(?:complete|rotation history|farm history)\b",)),
+            ("mapped_history_records", "Require actual farm records.", (r"\b(?:farm|planting|management) records\b",))))
+    if (has(r"\b(?:photo|photograph|image)\b") and has(r"\b(?:why|explain)\b")
+            and has(r"\b(?:not enough|insufficient|cannot establish|cannot determine)\b")
+            and has(r"\b(?:herbicide|pesticide|fungicide|insecticide)\b")):
+        yield ObservationGuidance("photo_selection_evidence", (
+            "One phone photo shows only the photographed plants and view; it does not establish representative field pressure or all features needed for reliable identification. "
+            "Check the weed or pest identity and growth stage with suitable additional views or a qualified diagnostic check, "
+            "then scout representative density or injury and distribution. Record crop identity and stage, location, field and treatment history, "
+            "resistance concerns and current conditions. Use those observations and the exact current crop/target/product label to assess choices; "
+            "the image alone does not select a product or rate."
+        ), (("photo_limits", "Explain the image's limited coverage.", (r"\b(?:photographed|view|representative|coverage)\b",)),
+            ("photo_identity", "Check identity and growth stage.", (r"\bidentit\w*\b", r"\bidentification\b")),
+            ("photo_pressure", "Collect representative pressure and distribution.", (r"\b(?:density|pressure|distribution|injury)\b",)),
+            ("photo_history", "Retain field and treatment history.", (r"\bhistory\b", r"\brecords\b"))))
+    if (_past_weather_record(question) and has(r"\b(?:weather|climate|station)\b")
+            and has(r"\b(?:spray|spraying|pesticide|application window)\b")):
+        yield ObservationGuidance("historical_weather_limits", (
+            "Historical station or climate data describe past conditions at their recorded location and observation times. "
+            "They do not establish current on-site spray conditions. Check current local wind speed and direction, temperature, "
+            "humidity, inversion or drift risk and the short forecast, along with field surroundings and the exact current label. "
+            "Keep the historical record and its station provenance separate from the current observations; it does not authorize an application window."
+        ), (("historical_weather_scope", "Distinguish past station records from current local conditions.",
+             (r"\b(?:past|historical)\b[^.]{0,100}\b(?:station|location|conditions|record)\w*\b",)),
+            ("historical_weather_current", "Require current on-site conditions.", (r"\b(?:current|on[- ]site)\b[^.]{0,90}\b(?:wind|conditions)\b",))))
+    if stored_grain_context(question):
+        yield ObservationGuidance("stored_grain_monitoring", (
+            "Measure representative grain moisture and temperature at intake and in different locations in the bin; "
+            "an average can hide wet or warm pockets. Check crop-specific storage guidance and intended storage duration. "
+            "Plan drying where moisture requires it and cooling/aeration with adequate airflow; aeration cooling is not a substitute for sufficient drying. "
+            "Recheck the bulk for moisture migration, hot spots, insects, mould and spoilage, and keep suspect lots separate for testing and handling. "
+            "Keep records and monitor through storage rather than declaring the bin safe from one reading. "
+            "Use safe external sampling and monitoring procedures; do not enter grain or approach moving equipment to take readings."
+        ), (("storage_moisture_distribution", "Check representative moisture across the bulk.", (r"\b(?:representative|different locations|wet pockets|moisture distribution)\b",)),
+            ("storage_temperature", "Measure grain temperature.", (r"\btemperature\b",)),
+            ("storage_airflow_drying", "Distinguish cooling/aeration and drying needs.", (r"\baeration\b", r"\bairflow\b")),
+            ("storage_follow_up", "Monitor changing storage conditions.", (r"\b(?:recheck|monitor|hot spots|moisture migration)\b",))))
+    if (has(r"\bsoil[- ]test\b") and has(r"\b(?:phosphorus|potassium|nutrient)\b")
+            and has(r"\b(?:what observations|which observations|what evidence|what information|lab method|local calibration)\b")):
+        yield ObservationGuidance("soil_test_response_evidence", (
+            "Interpret the soil-test value with its laboratory extraction method, reporting units, sampling depth and date, "
+            "and representative sampling of the relevant soil and management zones. Different extraction methods are not interchangeable without validated calibration. "
+            "Use locally calibrated crop-response research and critical ranges for the crop, soil pH and relevant soil conditions; "
+            "a test value is an index of likely response, not a direct fertilizer requirement. Reconcile nutrient and manure history, placement and current growing conditions "
+            "before a recommendation; do not replace the missing method or calibration with an assumed rate."
+        ), (("soil_test_method_basis", "Retain method, units and sampling support.", (r"\b(?:method|extract\w*)\b",)),
+            ("soil_test_crop_response", "Use local crop-response calibration.", (r"\bcalibrat\w*\b",)),
+            ("soil_test_sampling_support", "Check representative sampling and depth.", (r"\b(?:sampling|sample depth|representative)\b",))))
     if root_inspection_requested(question) and not clubroot_workflow_applicable(question):
         answer = (
             "Carefully dig or lift whole plants with their roots intact rather than pulling them out. "

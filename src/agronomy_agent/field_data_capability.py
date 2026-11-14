@@ -53,6 +53,30 @@ def select_query(question: str, field_context: Mapping[str, Any] | None):
     data_request = bool(named) or bool(re.search(r"\b(?:uploaded|imported|my (?:data|dataset|table|spreadsheet))\b", text))
     if not data_request and not mentioned:
         return None
+    # Qualify the complete table-query shape before claiming missing inputs.
+    # Known identifiers are placeholders only for ownership, never permission.
+    owned = text
+    labels = {str(imp.get(k) or "").casefold() for imp in imports for k in ("filename", "import_id")}
+    for label in sorted(labels - {""}, key=len, reverse=True):
+        owned = re.sub(r"(?<!\w)"+re.escape(label)+r"(?!\w)", "TABLE", owned)
+    columns = {str(col.get(k) or "").casefold() for _, col in mentioned for k in ("column", "label")}
+    for label in sorted(columns - {""}, key=len, reverse=True):
+        owned = re.sub(r"(?<!\w)"+re.escape(label)+r"(?!\w)", "COLUMN", owned)
+    operand = r"(?:COLUMN|[a-z_][a-z0-9_.-]*)"
+    table = r"(?:(?:my|the|this) )?(?:(?:uploaded|imported|field) )?(?:data|table|dataset|spreadsheet|records|TABLE)"
+    suffix = rf" (?:in|from|of) {table}"
+    query = (rf"(?:(?:(?:what is|calculate|compute) )?(?:the )?(?:(?:area[- ]weighted|weighted) )?(?:mean|average|sum|total)(?: of)? {operand}|"
+             rf"(?:what are |show |list )?(?:the )?(?:unique|distinct)(?: values)?(?: of| for| in)? {operand}|"
+             r"how many (?:rows|records)(?: are there)?|(?:what is |show )?(?:the )?(?:row |record )?count|"
+             rf"(?:show|list)(?: me)?(?: the)?(?: (?:rows|records|values)(?: of| for| in)?)?(?: {operand})?|"
+             r"(?:describe|summarize|show)(?: my| the)?(?: uploaded| imported)? (?:data|table|dataset))")
+    # Explicit filters/compound requests keep a clarification only after the
+    # prefix independently establishes a table query. They never execute as an
+    # unfiltered aggregate. A statistic mentioned in map prose has no owner.
+    full_query = re.fullmatch(query + rf"(?:{suffix})?", owned)
+    unsupported_tail = re.match(query + suffix + r" (?:where|and|then|over|with|for)\b", owned)
+    if not full_query and not unsupported_tail:
+        return None
     operation = next((op for op, pattern in (
         ("mean", r"\b(?:mean|average)\b"), ("sum", r"\b(?:sum|total)\b"),
         ("unique", r"\b(?:unique|distinct)\b"), ("count", r"\b(?:count|how many)\b"),

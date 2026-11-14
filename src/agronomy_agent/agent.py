@@ -3785,13 +3785,15 @@ def decide_evidence_intervention(
         AnswerabilityState.REQUIRE_AUTHORITY,
         AnswerabilityState.REFUSE_UNSAFE_ACTION,
     }:
-        support = (
-            bounded_decision_support(question, context.route.question_type)
-            if context is not None and decision.state == AnswerabilityState.REQUIRE_AUTHORITY
-            else bounded_concept_prefix(question)
-            if context is not None
-            else None
-        )
+        support = None
+        if context is not None:
+            if decision.state == AnswerabilityState.REQUIRE_AUTHORITY:
+                support = bounded_decision_support(question, context.route.question_type)
+            elif decision.state == AnswerabilityState.ASK_ONE_DISCRIMINATING_QUESTION:
+                method = observation_guidance(question)
+                support = method.answer if method else bounded_concept_prefix(question)
+            else:
+                support = bounded_concept_prefix(question)
         hold_text = decision.response_text or baseline.hold_text
         if support:
             hold_text = support + ("\n\n" + hold_text if hold_text else "")

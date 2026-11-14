@@ -2608,6 +2608,7 @@ def _defect_claims(answer: str, assessment: ClaimRiskAssessment, reason: str) ->
         "unsupported_field_certainty": _UNSUPPORTED_CERTAINTY_RE,
         "drydown_drought_conflation": re.compile(r"\bdry[- ]?down\b", re.I),
         "lodging_standability_conflation": re.compile(r"\blodging\b", re.I),
+        "soybean_maturity_identifier_changed": re.compile(r"\b(?:maturity|MG)\b", re.I),
         "nutrient_active_ingredient_conflation": re.compile(r"\bactive[- ]ingredient", re.I),
     }.get(reason)
     claims = tuple(value.strip() for value in re.split(r"(?<=[.!?])\s+|\n+", answer) if value.strip())
@@ -4226,7 +4227,7 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
         add("mycotoxin_test", "Use a representative sample and test result, then segregate affected lots.", r"\bsample\b", r"\btest result\b", r"\bsegregate\b")
         add("mycotoxin_storage", "Manage drying, storage moisture, aeration, and monitoring.", r"\bdrying\b", r"\bstorage moisture\b", r"\baeration\b")
         add("mycotoxin_market", "Check buyer or marketing limits and do not blend around a limit.", r"\bmarketing limits?\b", r"\bbuyer limits?\b", r"\bdo not blend\b")
-    elif question_type == "crop_management" and re.search(r"\b(harvest|storage|drying|grain moisture)\b", focus):
+    elif question_type == "crop_management" and re.search(r"\b(harvest(?!\s+index\b)|storage|drying|grain moisture)\b", focus):
         add("harvest_moisture", "Measure crop or grain moisture and field loss or standability.", r"\bmoisture\b", r"\bfield loss\b", r"\bstandability\b")
         add("drying_storage", "Match harvest timing to drying, cooling, aeration, and storage capacity.", r"\bdrying\b", r"\baeration\b", r"\bstorage\b")
         add("quality_risk", "Address test weight, mold, mycotoxin, disease, or market quality as relevant.", r"\btest weight\b", r"\bmold\b", r"\bmycotoxin\b", r"\bquality\b")
@@ -5885,7 +5886,7 @@ def _conservative_failure_answer(question_type: str, *, question: str = "", _inc
                 "Treat mycotoxin risk as a field-to-storage lot-management problem. Before harvest, map field disease, ear mold, kernel damage and disease level; review weather, drought, humidity, insect or physical damage and delayed-harvest risk. Plan a representative sample and validated test for each lot, record the test result, and segregate affected or uncertain grain rather than blending around a limit. "
                 "Harvest and handle lots to limit further damage, then use prompt drying, verified storage moisture, cooling, aeration and temperature or moisture monitoring. Check current buyer, feed, food and marketing limits for the commodity and jurisdiction before moving or marketing the lot."
             )
-        if re.search(r"\b(harvest|storage|drying|grain moisture)\b", focus) and not (
+        if re.search(r"\b(harvest(?!\s+index\b)|storage|drying|grain moisture)\b", focus) and not (
             re.search(r"\b(variety|hybrid|cultivar|candidate list|public trials?|genetics)\b", lower)
             and re.search(r"\b(maturity|planting date|standability|disease package|field fit)\b", lower)
         ):

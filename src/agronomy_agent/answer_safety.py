@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from agronomy_agent.answer_verifier import bounded_decision_support
+from agronomy_agent.observation_guidance import stored_grain_context
 from agronomy_agent.answerability import preferred_response_language, is_quantity_concept_explanation, is_mechanism_explanation, requests_regulated_action, bounded_product_help_kind
 from agronomy_agent.quantity_claims import remove_numeric_application_instructions
 
@@ -354,6 +355,8 @@ def _normalize_pale_patchy_crop_differential(
         if isinstance(route, dict)
         else str(getattr(route, "question_type", "") or "")
     )
+    if stored_grain_context(str(question or "")):
+        return answer_text
     if question_type != "fertility_diagnostic" or not re.search(
         r"\b(?:pale|yellow(?:ing)?|chlorosis|stunt\w*|patchy|uneven|poor stand|stand loss)\b",
         str(question or ""),

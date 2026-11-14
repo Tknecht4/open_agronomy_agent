@@ -91,7 +91,12 @@ the limits of a short nonhost interval alongside diagnostic follow-up.
 Root-inspection help explains how to examine intact plants and compare normal
 structures before drawing a diagnosis. Healthy-potato scouting describes
 conditional signs, field coverage and diagnostic follow-up; local disease
-alerts alone do not establish whether a crop is infected.
+alerts alone do not establish whether a crop is infected. Stored-grain checks
+focus on moisture distribution, temperature and changing storage conditions.
+Reference ET, standard crop ET and actual water use under stress retain their
+distinct meanings. Uploaded map context does not imply an imported table query,
+and crop-classification pixels do not establish complete farm history. Soybean
+maturity identifiers preserve significant leading zeroes.
 
 ## Evidence and licensing
 

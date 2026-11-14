@@ -43,6 +43,46 @@ def _crop_lodging_context(question: str) -> bool:
         question, re.I))
 
 
+_SOY_MATURITY_ID = re.compile(r"\b(?:maturity(?:[- ]group| rating)?|MG)\s*(?:is|of|:|=)?\s*(?P<identifier>0{1,3}(?:\.\d+)?)\b", re.I)
+
+
+def _soybean_maturity_context(question: str) -> bool:
+    return bool(re.search(r"\bsoybeans?\b", question, re.I) and _SOY_MATURITY_ID.search(question))
+
+
+def _maturity_edits(sentence: str, question: str):
+    """Restore only an unambiguous supplied identifier in an explicit role."""
+    def collapsed(value):
+        value = value.lstrip("0") or "0"
+        return "0" + value if value.startswith(".") else value
+    groups = {}
+    for match in _SOY_MATURITY_ID.finditer(question):
+        identifier = match["identifier"]
+        groups.setdefault(collapsed(identifier), set()).add(identifier)
+    edits = []
+    def restore(match):
+        identifier = match["identifier"]
+        before = sentence[:match.start()]
+        after = sentence[match.end():]
+        clause_prefix = re.split(r"[;,!?]|\.(?=\s|$)|\b(?:but|whereas)\b", before, flags=re.I)[-1]
+        if re.search(r"\b(?:if|suppose|supposing|assuming|hypothetical)\b|^\s*were\b", clause_prefix, re.I):
+            return match.group()
+        if (re.search(r"\b(?:not|if|rather than|instead of)\s*$", before, re.I)
+                or re.match(r"\s+(?:(?:is|would be|could be)\s+)?(?:not|different|distinct|differs|versus|rather than|compared with|compared to)\b", after, re.I)):
+            return match.group()
+        supplied = groups.get(collapsed(identifier), set())
+        if len(supplied) != 1 or identifier in supplied:
+            return match.group()
+        original = next(iter(supplied))
+        if len(original) <= len(identifier):
+            return match.group()
+        start = match.start("identifier") - match.start()
+        replacement = match.group()[:start] + original + match.group()[start+len(identifier):]
+        edits.append({"reason": "soybean_maturity_identifier_changed", "original": match.group(), "replacement": replacement})
+        return replacement
+    return _SOY_MATURITY_ID.sub(restore, sentence), edits
+
+
 def concept_prompt_guidance(question: str) -> tuple[str, ...]:
     """Ground an explanation without pretending these rules are source hits."""
     if preferred_response_language(question) == "fr" or re.search(r"\b(?:en fran[cç]ais|in french)\b", question, re.I):
@@ -52,6 +92,8 @@ def concept_prompt_guidance(question: str) -> tuple[str, ...]:
         notes.append(DRYDOWN_DEFINITION)
     if _crop_lodging_context(question):
         notes.append(LODGING_DEFINITION)
+    if _soybean_maturity_context(question):
+        notes.append("Soybean maturity-group identifiers retain their supplied leading zeroes. Groups 000, 00 and 0 are distinct adaptation classifications, not interchangeable decimal formatting. Do not cast these identifiers to ordinary decimal numbers or infer local suitability from the identifier alone.")
     if is_rate_basis_explanation(question) and re.search(r"\bnutrient\b", question, re.I):
         notes.append(NUTRIENT_DEFINITION)
     return tuple(notes)
@@ -88,6 +130,11 @@ def correct_concept_claims(answer: str, question: str) -> tuple[str, tuple[dict[
             return sentence
         replacement = ""
         reason = ""
+        if _soybean_maturity_context(question):
+            restored, maturity_edits = _maturity_edits(sentence, question)
+            if maturity_edits:
+                edits.extend(maturity_edits)
+                return restored
         # Correct the term itself, never the distinct phrase "lodging resistance".
         # A bounded affirmative definition is required; preserve uncertainty,
         # negatives and reported misconceptions rather than changing their sense.

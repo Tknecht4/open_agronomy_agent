@@ -774,10 +774,12 @@ def test_frozen_synthetic_fixture_never_executes_or_discards_conditional_scenari
 
 @pytest.mark.parametrize("helper,consumers", [
     ("agronomic_concepts.py", {"kernel_config", "verifier_policy", "fallback_policy"}),
-    ("observation_guidance.py", {"kernel_config", "verifier_policy", "fallback_policy"}),
+    ("observation_guidance.py", {"kernel_config", "verifier_policy", "fallback_policy", "runtime_orchestrator"}),
     ("quantity_claims.py", {"verifier_policy", "fallback_policy"}),
     ("execution_core.py", {"runtime_orchestrator"}),
     ("codex_app_server.py", {"runtime_orchestrator"}),
+    ("answer_safety.py", {"runtime_orchestrator", "fallback_policy"}),
+    ("field_data_capability.py", {"tool_executor_bundle"}),
     ("request_scope.py", {"answerability_policy", "kernel_config", "verifier_policy", "fallback_policy", "tool_executor_bundle"}),
     ("plant_health_scope.py", {"kernel_config", "verifier_policy", "fallback_policy"}),
 ])

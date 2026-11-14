@@ -82,3 +82,22 @@ def test_preview_and_execution_share_validation(operation, validator, inputs):
 def test_zero_grain_or_zero_radius_are_values():
     assert calculate_agronomic('grain_harvest_index', {'grain_dry_mass': 0, 'aboveground_dry_mass': 12, 'mass_unit': 't'}).value == Decimal(0)
     assert calculate_agronomic('circular_sampling_area', {'radius_m': 0}).value == Decimal(0)
+
+
+@pytest.mark.parametrize('grain,total,unit', [(3.2,8,'t/ha'), (600,1500,'kg'), (2.4,6,'t/ac')])
+def test_crop_preface_and_value_first_biomass_declarations_preserve_owned_ratio(grain,total,unit):
+    question = f'A teaching crop has {total} {unit} total above-ground dry biomass and {grain} {unit} grain dry mass. Compute harvest index.'
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'ready' and results[0].operation == 'grain_harvest_index'
+    assert results[0].payload['value'] == pytest.approx(grain/total)
+    assert 'does not determine harvest timing' in results[0].answer
+    for tail in (' Then harvest tomorrow.', ' And choose a crop.', ' Mulch beds.'):
+        assert plan_tools(question+tail).status == 'not_applicable'
+
+
+def test_value_first_biomass_does_not_relax_dry_mass_or_inclusive_denominator():
+    question = 'A teaching crop has 8 t/ha total above-ground dry biomass and 3.2 t/ha grain dry mass. Compute harvest index.'
+    for changed in (question.replace('grain dry mass','grain wet mass'),
+                    question.replace('above-ground','below-ground'),
+                    question.replace('Compute','The biomass excludes grain. Compute')):
+        assert plan_tools(changed).status == 'not_applicable'

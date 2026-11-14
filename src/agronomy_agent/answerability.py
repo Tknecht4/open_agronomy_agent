@@ -485,10 +485,18 @@ def is_sampling_basis_explanation(question: str) -> bool:
     ))
 
 
+def is_evapotranspiration_explanation(question: str) -> bool:
+    """A complete terminology contrast, never a field irrigation decision."""
+    term = r"(?:reference (?:evapotranspiration|ET)|crop (?:evapotranspiration|ET)|actual water use(?: under stress)?)"
+    return bool(re.fullmatch(
+        rf"\s*(?:please )?(?:distinguish(?: between)?|compare|contrast|explain the difference between) "
+        rf"{term}(?:,? (?:from|and|versus|with) {term}|, {term}){{1,2}}[.?!]?\s*", question, re.I))
+
+
 def is_quantity_concept_explanation(question: str) -> bool:
     """Share whole-request concept scope across routing and action guards."""
     return (is_rate_basis_explanation(question) or is_dose_response_explanation(question)
-            or is_sampling_basis_explanation(question))
+            or is_sampling_basis_explanation(question) or is_evapotranspiration_explanation(question))
 
 
 def is_mechanism_explanation(question: str) -> bool:

@@ -100,6 +100,13 @@ def _calculation_premise(part: str) -> bool:
         return True
     if not re.search(r"\d", part):
         return False
+    # Value-first biomass declarations retain explicit named roles. Do not
+    # admit arbitrary crop prose or drop a later operational clause.
+    from agronomy_agent.supplied_numeric_inputs import NUMBER
+    biomass_role = r"(?:grain dry (?:mass|matter)|total above[- ]ground dry (?:biomass|mass|matter))"
+    mass = rf"{NUMBER}\s*(?:kg|tonnes?|t|pounds?|lbs?)(?:\s*(?:/|per\s+)(?:ha|hectares?|ac|acres?))?"
+    if re.fullmatch(rf"(?:(?:a|the) (?:(?:teaching|example|hypothetical) )?crop has )?{mass}\s+(?:of\s+)?{biomass_role}", part, re.I):
+        return True
     # Bound the grammatical subject to the arithmetic owners' data roles.
     # Imperatives such as 'Mulch beds' have no supported input subject.
     subject = (

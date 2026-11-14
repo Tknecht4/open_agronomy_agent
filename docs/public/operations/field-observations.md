@@ -132,3 +132,32 @@ planting rule for other berries; insect pollination remains important.
 
 These references support general observation methods. Their presence here
 does not admit them into runtime retrieval or qualify a field recommendation.
+
+Stored grain is a different observation object from a growing crop. Measure
+representative moisture and temperature across the grain bulk, check
+crop-specific storage guidance and intended duration, and plan adequate drying,
+cooling/aeration and airflow. An average can hide wet or warm pockets. Monitor
+for moisture migration, hot spots, insects and spoilage through storage; use
+safe external procedures rather than entering grain or moving equipment.
+The [Canadian Grain Commission's monitoring guidance](https://www.canada.ca/en/grain-commission/services/grain-quality/manage-stored-grain/monitor-grain-temperature.html)
+and [Ontario's aeration guide](https://www.ontario.ca/page/grain-aeration)
+support these distinctions. Their numerical schedules and targets are not
+transferred here as universal thresholds.
+
+A soil-test nutrient value requires its extraction method, units, sampling
+support and local crop-response calibration. One method's value is not another
+method's calibrated interpretation. [Manitoba's interpretation guidance](https://www.gov.mb.ca/agriculture/crops/soil-fertility/soil-fertility-guide/fertilizer-recommendation-guidelines.html)
+explains the method-specific basis; this does not establish a fertilizer rate
+for another soil or jurisdiction.
+
+Reference evapotranspiration describes a standardized reference surface.
+Standard crop ET uses a crop coefficient and growth-stage context; actual
+water use under stress requires appropriate adjustments or measurements.
+[FAO-56 concepts](https://www.fao.org/4/x0490e/x0490e04.htm) and its
+[soil-water-stress treatment](https://www.fao.org/4/x0490e/x0490e0e.htm)
+explain why these quantities are distinct. None alone specifies irrigation.
+
+Soybean maturity groups retain their leading zeroes: `000`, `00` and `0`
+identify distinct classifications. The [Manitoba cultivar research](https://manitobapulse.ca/wp-content/uploads/2016/03/12_Agronomic-Mgmt-of-Soybeans-in-MB_Cultivar-Growth-Rate-Maturity.pdf)
+reports these groups and ratings as such. Preserving a supplied identifier does
+not establish local adaptation or select a variety for another region.

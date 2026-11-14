@@ -550,3 +550,61 @@ def test_reviewed_concept_prefix_survives_mixed_action_without_exempting_whole_r
 def test_concept_prefix_does_not_create_a_new_numeric_or_language_bypass(question):
     from agronomy_agent.observation_guidance import bounded_concept_prefix
     assert bounded_concept_prefix(question) is None
+
+
+def test_mapped_history_affirmation_cannot_be_hidden_by_appended_correct_boundary():
+    question = 'One AAFC pixel says canola last year. Is this a complete rotation history?'
+    method = observation_guidance(question)
+    assert method and method.has_method('mapped_crop_history')
+    assert not method.missing(method.answer) and not method.unsupported_inference(method.answer)
+    bad = 'The AAFC pixel provides a complete rotation history. ' + method.answer
+    assert not method.missing(bad) and method.unsupported_inference(bad)
+    assert 'cannot establish a complete rotation history' in bounded_decision_support(question,'field_data')
+
+
+@pytest.mark.parametrize('tail', [' Then irrigate.', ' and recommend a water amount.', ' and mulch beds.'])
+def test_ET_terminology_scope_never_absorbs_an_additional_operation(tail):
+    from agronomy_agent.answerability import is_evapotranspiration_explanation
+    question = 'Distinguish reference evapotranspiration from crop evapotranspiration and actual water use under stress.'
+    assert is_evapotranspiration_explanation(question)
+    assert not is_evapotranspiration_explanation(question.rstrip('.')+tail)
+
+
+def test_stored_grain_scope_does_not_erase_a_live_crop_problem():
+    from agronomy_agent.observation_guidance import stored_grain_context
+    question = 'Stored grain has uneven moisture. In the field, my seedlings have yellow leaves and poor roots.'
+    assert not stored_grain_context(question)
+
+
+@pytest.mark.parametrize('claim', [
+    'The AAFC pixel provides a complete rotation history and does not require additional records.',
+    'The AAFC pixel is a complete rotation history, not just a screening prior.',
+])
+def test_history_negation_must_qualify_the_completeness_predicate(claim):
+    method = observation_guidance('One AAFC pixel says canola last year. Is this a complete rotation history?')
+    assert method.unsupported_inference(claim+' '+method.answer)
+    assert not method.unsupported_inference('The AAFC pixel does not provide a complete rotation history. Check actual farm records.')
+
+
+@pytest.mark.parametrize('question', [
+    'Grain in storage has wet pockets. My canola in the field is yellow. What should I inspect?',
+    'Grain in storage has wet pockets and my millet is pale. What should I inspect?',
+])
+def test_storage_override_requires_sole_object_ownership(question):
+    from agronomy_agent.observation_guidance import stored_grain_context
+    assert not stored_grain_context(question)
+
+
+def test_explicit_past_station_coverage_retains_historical_weather_limit():
+    question = 'Can I use the Newfoundland and Labrador 2007-2015 weather-station dataset to decide whether conditions are safe for spraying this field today?'
+    method = observation_guidance(question)
+    assert method and method.has_method('historical_weather_limits')
+    assert 'current on-site spray conditions' in method.answer
+
+
+def test_embedded_grain_filling_does_not_make_a_live_crop_a_storage_subject():
+    from agronomy_agent.observation_guidance import stored_grain_context
+    question = 'Grain in storage has wet pockets. My wheat in the field is yellow before grain filling. What should I check?'
+    assert not stored_grain_context(question)
+    from agronomy_agent.router import refine_query_route
+    assert refine_query_route(question,classify_query(question)).question_type == 'fertility_diagnostic'
