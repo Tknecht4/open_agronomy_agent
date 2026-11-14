@@ -134,6 +134,10 @@ def _calculation_value_is_owned(value: str, *, has_quantity: bool = False) -> bo
         wet basis rate model standard conditions net irrigation percent volume
         thousand kernel weight nozzle nozzles boom tank sprayer unusable
         row rows apart average established
+        cubic soil hypothetical uniform layer layers zone yielding yield
+        blend arithmetic check liquid that monoammonium diammonium ammonium
+        phosphate sulphate sulfate urea potash million whole farm
+        gdd values one two three four five six seven eight nine ten
     """.split())
     value = re.sub(r"n['’]t\b", " not", value, flags=re.I)
     # A named material is data in this role; it does not supply analysis or
@@ -183,9 +187,15 @@ def _calculation_premise(part: str) -> bool:
         r"total above-ground dry biomass|field survival|Kc|ETo|field capacity|"
         r"(?:measured )?volumetric water|travel speed|it)"
     )
-    declaration = re.fullmatch(subject + r"\s+(?:is|are|was|were|has|have|contains|requires|delivers|weighs|supplies|covers|receives|targets|reports|found|totals|needs|uses|calls for|travels at)\b\s+(?P<value>[^!?;]+)", part, re.I)
+    declaration = re.fullmatch(r"(?P<subject>" + subject + r")\s+(?:is|are|was|were|has|have|contains|requires|delivers|weighs|supplies|covers|receives|targets|reports|found|totals|needs|uses|calls for|travels at)\b\s+(?P<value>[^!?;]+)", part, re.I)
     if declaration:
-        return _calculation_value_is_owned(declaration['value'])
+        value = declaration['value']
+        if re.search(r"\bsprayer(?: tank)?$", declaration['subject'], re.I):
+            # A reported sprayer rate is data, not an imperative to apply.
+            # Keep this grammatical role local to the explicit subject.
+            value = re.sub(r"^applying\s+", "", value, flags=re.I)
+            value = re.sub(r"\s+in (?:an?|the) (?:[A-Z][a-z]+ ){1,3}(?:[a-z]+ )?field$", "", value)
+        return _calculation_value_is_owned(value)
     # Shared-subject or verbless input declarations following a comma/'and'.
     shared = re.fullmatch(
         r"(?:assumes\s+[^!?;]+|each flowing\s+[^!?;]+|"
@@ -350,6 +360,8 @@ def has_unqualified_followup(text: str, *, calculation: bool = False) -> bool:
             if not tail or re.fullmatch(presentation, tail, re.I):
                 continue
             data_tail = re.sub(r"^(?:with|of)\s+", "", tail, count=1, flags=re.I).replace('−', '-')
+            if re.fullmatch(r"without\s+(?:(?:an?|the)\s+)?" + premise, tail, re.I) and not re.search(r"\d", tail):
+                continue  # Explicitly absent operand: the typed parser clarifies.
             if _calculation_premise(data_tail):
                 continue
             owner = re.match(premise, data_tail, re.I)

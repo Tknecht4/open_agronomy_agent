@@ -15,6 +15,24 @@ _COMPLETE_ARITHMETIC = (
 )
 
 
+@pytest.mark.parametrize('base', [
+    'A soil moisture probe reports 0.22 cubic metres of water per cubic metre of soil over a hypothetical uniform 40 cm layer. Convert that to millimetres of water stored',
+    'A 2400 L sprayer tank is applying 120 L/ha in a Saskatchewan wheat field. How many hectares can one full tank cover',
+    'Calculate break-even price from total cost CAD 480/ac without an expected yield',
+])
+@pytest.mark.parametrize('tail', [
+    ', with instructions to transplant seedlings.',
+    ', without explaining the arithmetic and with advice on mulching beds.',
+    ', of course provide instructions to transplant seedlings.',
+])
+def test_descriptive_and_missing_operands_do_not_hide_additional_help(base, tail):
+    from agronomy_agent.request_scope import has_unqualified_followup
+    question = base + tail
+    assert has_unqualified_followup(question, calculation=True)
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'not_applicable' and not results
+
+
 @pytest.mark.parametrize('base', _COMPLETE_ARITHMETIC)
 @pytest.mark.parametrize('tail', [
     ', with instructions to transplant seedlings.',
