@@ -73,8 +73,8 @@ General product-rate and dose-response explanations, and bounded questions
 about evidence to collect, do not require permission to apply a pesticide.
 Requested fictional fertilizer examples show the product-to-nutrient arithmetic
 without selecting a field target. General concept checks distinguish harvest
-drydown from drought tolerance and fertilizer nutrient analysis from pesticide
-active ingredients. They are bounded checks, not a general scientific validator.
+drydown from drought tolerance, lodging from standability, and fertilizer nutrient
+analysis from pesticide active ingredients. They are bounded checks, not a general scientific validator.
 Impersonal concept comparisons preserve the requested explanation without
 requiring an unasked field-management plan. Personal choices, treatment-rate
 comparisons and added operational requests retain their evidence requirements.
@@ -82,8 +82,12 @@ Explaining why sampling counts use different units does not require a treatment
 plan; thresholds retain the sampling method and basis for which they were validated.
 Product selection, application rates and use restrictions retain their current
 local authority requirements; an unfamiliar product is not an exemption.
+Mixed definition-and-action requests can retain the supported general definition
+while the requested action waits for its evidence.
 Reported disease history informs soil biosecurity across rotations; current
 symptoms and diagnostic confirmation retain their own evidence scope.
+Suspected clubroot in a susceptible crop retains soil-movement precautions and
+the limits of a short nonhost interval alongside diagnostic follow-up.
 Root-inspection help explains how to examine intact plants and compare normal
 structures before drawing a diagnosis. Healthy-potato scouting describes
 conditional signs, field coverage and diagnostic follow-up; local disease

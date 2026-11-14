@@ -26,7 +26,7 @@ from agronomy_agent.model_prompt_budget import positive_int, prompt_budget_recei
 from agronomy_agent.model_errors import LocalModelSnapshotUnavailable
 from agronomy_agent.quantity_claims import unsupported_quantities, remove_numeric_application_instructions
 from agronomy_agent.execution_core import stable_sha256
-from agronomy_agent.observation_guidance import observation_guidance, sample_event_roles_stated, POTATO_MONITORING_ANSWER
+from agronomy_agent.observation_guidance import observation_guidance, sample_event_roles_stated, POTATO_MONITORING_ANSWER, bounded_concept_prefix
 from agronomy_agent.agronomic_concepts import correct_concept_claims
 from agronomy_agent.high_consequence import classify_high_consequence_domains, fertility_quantity_requested
 from agronomy_agent.answerability import simple_definition_subject, is_quantity_concept_explanation, is_mechanism_explanation, requests_regulated_action, bounded_product_help_kind, is_sampling_basis_explanation
@@ -2607,6 +2607,7 @@ def _defect_claims(answer: str, assessment: ClaimRiskAssessment, reason: str) ->
         "map_prior_presented_as_field_truth": _MAP_ASSERTION_RE,
         "unsupported_field_certainty": _UNSUPPORTED_CERTAINTY_RE,
         "drydown_drought_conflation": re.compile(r"\bdry[- ]?down\b", re.I),
+        "lodging_standability_conflation": re.compile(r"\blodging\b", re.I),
         "nutrient_active_ingredient_conflation": re.compile(r"\bactive[- ]ingredient", re.I),
     }.get(reason)
     claims = tuple(value.strip() for value in re.split(r"(?<=[.!?])\s+|\n+", answer) if value.strip())
@@ -5285,14 +5286,17 @@ def bounded_decision_support(question: str, question_type: str) -> str | None:
     This never preserves an unverified model prescription or supplies authority.
     English-only methods cannot replace a requested French response.
     """
+    concept = bounded_concept_prefix(question)
+    def with_concept(body: str) -> str:
+        return concept + "\n\n" + body if concept and concept not in body else body
     mixed = _mixed_rate_support(question)
     if mixed:
-        return mixed
+        return with_concept(mixed)
     if _looks_like_french(question):
         return None
     method = observation_guidance(question)
     if method:
-        return method.answer
+        return with_concept(method.answer)
     if question_type == "product_label" and re.search(
         r"\b(?:disease|blight|mummy berry|aphids?|pests?|collaps\w*)\b", question, re.I
     ):
@@ -5306,10 +5310,14 @@ def bounded_decision_support(question: str, question_type: str) -> str | None:
         answer = _conservative_failure_answer(question_type, question=question)
         # The procedural method transfers; a Canadian label reference does not.
         return answer.replace("current PMRA product label", "current jurisdiction-specific product label").replace("PMRA registration", "applicable registration")
-    return None
+    return concept
 
 
-def _conservative_failure_answer(question_type: str, *, question: str = "") -> str:
+def _conservative_failure_answer(question_type: str, *, question: str = "", _include_concept: bool = True) -> str:
+    if _include_concept:
+        concept = bounded_concept_prefix(question)
+        if concept:
+            return concept + "\n\n" + _conservative_failure_answer(question_type, question=question, _include_concept=False)
     if _looks_like_french(question):
         return _french_conservative_failure_answer(question_type)
     if is_mechanism_explanation(question):

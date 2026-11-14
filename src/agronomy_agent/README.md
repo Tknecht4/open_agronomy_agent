@@ -292,6 +292,11 @@ These checks do not constitute a general scientific correctness verifier.
 claim corrections, separately from retrieved evidence. In a variety/harvest
 context, drydown concerns crop or grain moisture loss toward harvest, rather
 than drought survival; see [Purdue's grain-drydown explanation](https://agry.purdue.edu/ext/corn/news/timeless/GrainDrying.html).
+Lodging is displacement from the upright position through root anchorage failure
+or stem bending/breakage, and can occur before maturity. Standability/lodging
+resistance concerns avoiding that failure; see [Manitoba Crop Alliance](https://mbcropalliance.ca/directory/production-resources/lodging-in-spring-cereals/).
+Corrections require affirmative equivalence with positive resistance/ability;
+loss, failure, causal explanations, negation and uncertainty retain their prose.
 Fertilizer nutrient conversion uses the declared nutrient analysis and its mass
 basis, rather than a pesticide active-ingredient concentration; see
 [UMN's nutrient-analysis explanation](https://extension.umn.edu/agriculture/specialty-crops/interpreting-soil-tests-for-fruit-and-vegetable-crops)
@@ -373,7 +378,8 @@ actual wording: absence of galls does not imply absence of swelling. Decision
 checks reject invented root signs and require an explicitly requested current
 crop inspection alongside separate clubroot soil-history precautions. Fallbacks
 preserve these roles rather than assigning the historical disease to the current
-rotation crop.
+rotation crop. Generic root-inspection guidance yields to the shared susceptible-crop
+clubroot workflow so fallback does not erase persistence and soil containment.
 
 
 A valid tool plan may contribute arithmetic evidence to a compound request.
@@ -417,3 +423,9 @@ inputs do not gain that path. A stage-specific seedling loss needs actual
 overall emergence or an explicit loss definition among germinated seeds. The
 parser and short follow-up resolver do not turn its complement into a supplied
 overall survival fact. Explicit post-germination mortality remains supported.
+
+Unknown App Server notifications still fail closed. Failed-attempt evidence
+retains a bounded method identifier, known parameter names and value types,
+unknown-field count and observed thread/turn binding booleans. It excludes
+payload values and unknown field names. Missing binding remains unknown;
+acknowledged provider turns do not become undispatched attempts.

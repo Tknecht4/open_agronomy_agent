@@ -906,6 +906,21 @@ def test_regional_pest_alert_keeps_complete_model_method():
 
 
 @pytest.mark.parametrize("question,draft,required", [
+    ("Roots are swollen in our Quebec cabbage field. Will one nonhost year clean the field, and what should we check?",
+     "Dig the plants and compare affected and normal roots.",
+     ("many years", "equipment", "diagnostic")),
+    ("Explain a dose-response curve, then choose tomorrow's herbicide dose.",
+     "Apply 99 L/ha tomorrow.",
+     ("measured biological response", "label")),
+    ("Define pesticide label rate and choose a herbicide rate for my canola.",
+     "Apply 99 L/ha tomorrow.",
+     ("amount or concentration", "label")),
+    ("Explain nutrient rate and choose nitrogen for my field without a soil test.",
+     "Apply 99 kg/ha nitrogen tomorrow.",
+     ("mass of a named nutrient", "soil")),
+    ("Explain how crop rotation differs from choosing varieties for standability, drydown and lodging.",
+     "Crop rotation changes the crop sequence across seasons. Varieties within a crop differ in harvest drydown, standability and lodging.\n**Lodging:** The plant’s physical resistance to falling over once mature.",
+     ("root anchorage failure", "before maturity", "crop sequence")),
     ("A regional insect alert covers my field pin. Does that prove infestation or what counts should I collect?",
      "A regional alert cannot prove that your field is over threshold. First identify the pest and active life stage. Without the identity I cannot determine what count is required.",
      ("representative field counts", "current local", "threshold")),
@@ -938,7 +953,8 @@ def test_persisted_observation_method_completes_failed_draft(tmp_path, monkeypat
             settings=build_settings(db_path=database, artifact_root=tmp_path / "artifacts", network_mode="offline"),
             session_id=session["session_id"], message=question, mode="agronomic_rag",
             model_id="imposed", rag_config="configs/rag.yaml", max_tokens=150, generation_backend=backend))
-        assert all(term in result.answer for term in required)
+        assert all(term in result.answer for term in required), result.answer
+        assert "99 L/ha" not in result.answer and "99 kg/ha" not in result.answer
         assert store.get_turn(result.turn["turn_id"])["answer"] == result.answer
         assert len(result.stage_receipts) == 17
     finally:

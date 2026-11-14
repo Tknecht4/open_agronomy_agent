@@ -197,6 +197,8 @@ def _runtime_implementation_receipts() -> dict[str, str]:
                     PROJECT_ROOT
                     / "src/agronomy_agent/server/services/chat_service.py",
                     PROJECT_ROOT / "src/agronomy_agent/server/services/answer_renderer.py",
+                    PROJECT_ROOT / "src/agronomy_agent/execution_core.py",
+                    PROJECT_ROOT / "src/agronomy_agent/codex_app_server.py",
                 )
             ),
             "kernel_config": _bundle_sha256(

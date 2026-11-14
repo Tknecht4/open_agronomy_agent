@@ -3,6 +3,7 @@
 Project-authored definitions, not retrieved evidence or field observations.
 Rationale: Purdue's Field Drydown of Mature Corn Grain, UMN's Interpreting
 soil tests for fruit and vegetable crops, and NPIC's Active Ingredients.
+Lodging definitions also use Manitoba Crop Alliance lodging guidance.
 Source links and qualification live in the package README. No evaluation
 questions, answers, labels or numerical recommendations belong here.
 """
@@ -18,6 +19,11 @@ DRYDOWN_DEFINITION = (
     "the crop or grain toward harvest; it is distinct from drought tolerance. "
     "The crop, maturity stage and weather affect its interpretation."
 )
+LODGING_DEFINITION = (
+    "Lodging means crop plants lean or fall from their upright position because of "
+    "root anchorage failure or stem bending or breakage. It can occur before maturity. "
+    "Standability or lodging resistance describes the ability to remain upright."
+)
 NUTRIENT_DEFINITION = (
     "A fertilizer nutrient rate is related to product rate through the declared "
     "nutrient analysis and its stated mass basis. Pesticide active-ingredient "
@@ -31,13 +37,21 @@ def _harvest_drydown_context(question: str) -> bool:
         r"\b(?:variet\w*|cultivars?|hybrids?|harvest\w*|grain)\b", question, re.I))
 
 
+def _crop_lodging_context(question: str) -> bool:
+    return bool(re.search(r"\blodging\b", question, re.I) and re.search(
+        r"\b(?:crops?|plants?|rotation|variet\w*|cultivars?|hybrids?|standability|cereals?|corn|wheat|barley)\b",
+        question, re.I))
+
+
 def concept_prompt_guidance(question: str) -> tuple[str, ...]:
     """Ground an explanation without pretending these rules are source hits."""
-    if preferred_response_language(question) == "fr":
+    if preferred_response_language(question) == "fr" or re.search(r"\b(?:en fran[cç]ais|in french)\b", question, re.I):
         return ()
     notes = []
     if _harvest_drydown_context(question):
         notes.append(DRYDOWN_DEFINITION)
+    if _crop_lodging_context(question):
+        notes.append(LODGING_DEFINITION)
     if is_rate_basis_explanation(question) and re.search(r"\bnutrient\b", question, re.I):
         notes.append(NUTRIENT_DEFINITION)
     return tuple(notes)
@@ -51,9 +65,10 @@ def correct_concept_claims(answer: str, question: str) -> tuple[str, tuple[dict[
     The caller must reassess the entire result before accepting a correction.
     This is deliberately not a general semantic correctness validator.
     """
-    if preferred_response_language(question) == "fr":
+    if preferred_response_language(question) == "fr" or re.search(r"\b(?:en fran[cç]ais|in french)\b", question, re.I):
         return answer, ()
     drydown = _harvest_drydown_context(question)
+    lodging = _crop_lodging_context(question)
     nutrient = is_rate_basis_explanation(question) and bool(re.search(r"\bnutrient\b", question, re.I))
     edits: list[dict[str, str]] = []
     rate_subject: str | None = None
@@ -73,6 +88,23 @@ def correct_concept_claims(answer: str, question: str) -> tuple[str, tuple[dict[
             return sentence
         replacement = ""
         reason = ""
+        # Correct the term itself, never the distinct phrase "lodging resistance".
+        # A bounded affirmative definition is required; preserve uncertainty,
+        # negatives and reported misconceptions rather than changing their sense.
+        lodging_definition = re.match(
+            r"\s*(?:[-*]\s+)?(?P<claim>(?:\*\*|__|`)?lodging(?:\*\*|__|`)?"
+            r"\s*(?::(?:\*\*|__|`)?|\s+(?:is|means|refers? to|describes?)\b)"
+            r"(?P<property>[^,;.!?\n]+))", sentence, re.I)
+        claim = lodging_definition["claim"] if lodging_definition else ""
+        if (lodging and lodging_definition and re.match(
+                r"\s*(?:(?:a|the)\s+)?(?:(?:plant|crop|variety)['’]s\s+)?(?:physical\s+)?"
+                r"(?:resistance\s+to\s+falling\b|(?:ability|capacity)\s+to\s+(?:remain|stay|stand)\s+upright\b)",
+                lodging_definition["property"], re.I) and not re.search(
+                r"\b(?:not|never|rather than|instead of|may|might|could|if|whether)\b", claim, re.I)):
+            replacement = LODGING_DEFINITION.rstrip(".")
+            edits.append({"reason": "lodging_standability_conflation", "original": claim,
+                          "replacement": replacement})
+            return sentence[:lodging_definition.start("claim")] + replacement + sentence[lodging_definition.end("claim"):]
         definition = re.match(
             r"\s*(?:[-*]\s+)?(?P<claim>(?:\*\*|__|`)?dry[- ]?down(?:\*\*|__|`)?"
             r"\s+(?:is|means|refers? to|describes?)\b[^,;.!?\n]+)", sentence, re.I)

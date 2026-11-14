@@ -1629,7 +1629,9 @@ def test_canonical_failed_attempt_keeps_known_acknowledgements_not_stale_stats(t
             error=CodexAppServerError("synthetic failure")
             error.provider_attempt={"state":"turn_acknowledged" if after_ack else "pre_dispatch",
                 "thread_id":"thread" if after_ack else None,"turn_id":"turn" if after_ack else None,
-                "turn_acknowledged":after_ack,"submitted":after_ack}
+                "turn_acknowledged":after_ack,"submitted":after_ack,
+                "event_diagnostic": {"method": "error", "params_shape": {"message": "str"},
+                    "thread_binding": None, "turn_binding": None, "other_field_count": 0}}
             raise error
     monkeypatch.setattr(module,"CodexAppServerClient",FailedClient)
     generator=_canonical_generator(tmp_path)
@@ -1642,6 +1644,8 @@ def test_canonical_failed_attempt_keeps_known_acknowledgements_not_stale_stats(t
     assert attempt["phase"]=="candidate_generation" and attempt["eval_id"]==_EVAL_ID and attempt["attempt_id"]==1
     assert attempt["turn_acknowledged"] is after_ack and attempt["turn_id"]==("turn" if after_ack else None)
     assert generator.last_generation_stats is None
+    assert attempt["event_diagnostic"]["method"] == "error"
+    assert attempt["event_diagnostic"]["params_shape"] == {"message": "str"}
 
 
 @pytest.mark.parametrize("change",["doc","graph","guard","missing","rights","eligibility"])
@@ -1923,3 +1927,46 @@ def test_render_bound_declared_graph_frame_must_exist_in_actual_message(tmp_path
     with pytest.raises(ValueError,match='actual original render frame differs'):
         render.build_records(profile,eval_id=_EVAL_ID,phase=phase,arm='production_full',
             messages=changed,question=envelope['question_fragment'],verifier_evidence_text=evidence)
+
+
+@pytest.mark.parametrize("params,thread_binding,turn_binding", [
+    ({}, None, None),
+    ({"threadId": "thread-1", "turnId": "turn-1"}, True, True),
+    ({"threadId": "foreign", "turn": {"id": "turn-1"}}, False, True),
+    ({"threadId": "thread-1", "thread": {"id": "foreign"}, "turnId": "foreign"}, False, False),
+])
+def test_unknown_notification_fails_closed_with_bounded_shape_not_values(params, thread_binding, turn_binding):
+    from agronomy_agent.codex_app_server import bounded_provider_attempt
+    secret = "PRIVATE-PAYLOAD-TOKEN-AND-ANSWER"
+    params = {**params, secret: {"nested": secret}, "message": secret}
+    client = _protocol_client([{"method": "provider/newEvent", "params": params}, *_terminal_events()])
+    with pytest.raises(CodexAppServerError, match="unclassified App Server event") as raised:
+        client.generate(user_text="question", base_instructions="")
+    evidence = bounded_provider_attempt(raised.value.provider_attempt)
+    diagnostic = evidence["event_diagnostic"]
+    assert diagnostic["method"] == "provider/newEvent" and diagnostic["stage"] == "turn_stream"
+    assert diagnostic["thread_binding"] is thread_binding and diagnostic["turn_binding"] is turn_binding
+    assert diagnostic["params_shape"]["message"] == "str" and diagnostic["other_field_count"] == 1
+    assert evidence["turn_acknowledged"] is True
+    assert secret not in json.dumps(evidence)
+    assert evidence == bounded_provider_attempt(evidence)
+    assert evidence["event_diagnostic"] == client.last_attempt_evidence["event_diagnostic"]
+
+
+def test_event_diagnostic_sanitizer_bounds_untrusted_shapes_and_methods():
+    from agronomy_agent.codex_app_server import bounded_provider_attempt
+    diagnostic = bounded_provider_attempt({"event_diagnostic": {
+        "method": "private://token with spaces", "stage": "private-stage",
+        "params_shape": {"message": ["private"], "turn": "dict", "private-key": "str"},
+        "other_field_count": 100000, "thread_binding": "private", "turn_binding": False,
+        "payload": "private"}})["event_diagnostic"]
+    assert diagnostic == {"method": "redacted", "stage": "turn_stream", "params_shape": {"turn": "dict"},
+        "other_field_count": 8192, "thread_binding": None, "turn_binding": False}
+
+
+def test_single_component_unknown_method_retains_name_but_still_fails_closed():
+    client = _protocol_client([{"method": "error", "params": {"message": "private"}}])
+    with pytest.raises(CodexAppServerError, match="unclassified App Server event") as raised:
+        client.generate(user_text="question", base_instructions="")
+    assert raised.value.provider_attempt["event_diagnostic"]["method"] == "error"
+    assert "private" not in json.dumps(raised.value.provider_attempt)

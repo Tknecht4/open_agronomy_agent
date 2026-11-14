@@ -503,3 +503,50 @@ def test_root_inspection_with_a_product_rate_keeps_both_product_boundaries(tmp_p
         question=q, route=SimpleNamespace(question_type="product_label"))
     assert "12 litres" not in cleaned
     assert "roots" in cleaned.lower() and "label" in cleaned.lower()
+
+
+@pytest.mark.parametrize("crop", ["cabbage", "canola", "broccoli"])
+def test_clubroot_workflow_keeps_persistence_and_containment_ahead_of_generic_root_method(crop):
+    from agronomy_agent.answer_verifier import _conservative_failure_answer
+    from agronomy_agent.decision_route import build_decision_route_state
+    question = f"Roots are swollen in our Quebec {crop} field. Will one nonhost year clean the field, and what should we check?"
+    route = classify_query(question)
+    state = build_decision_route_state(question, route.question_type)
+    assert state.decision == "clubroot_containment"
+    method = observation_guidance(question)
+    assert method is None or not method.has_method("current_root_inspection")
+    verified = verify_answer("Dig the roots and compare affected and normal plants.", question=question,
+        evidence_text="", question_type=route.question_type, risk_level=route.risk_level,
+        editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    for answer in (verified.answer, bounded_decision_support(question, route.question_type),
+                   _conservative_failure_answer(route.question_type, question=question)):
+        assert answer and not state.answer_violations(answer)
+        assert "many years" in answer and "equipment" in answer
+
+
+@pytest.mark.parametrize("question,required", [
+    ("Explain a dose-response curve, then choose tomorrow's herbicide dose.", "measured biological response"),
+    ("Define pesticide label rate and choose a herbicide rate for my canola.", "amount or concentration"),
+    ("Explain nutrient rate and choose nitrogen for my field without a soil test.", "mass of a named nutrient"),
+    ("Explain counts per plant versus per sweep; choose an insecticide rate.", "different sampling bases"),
+])
+def test_reviewed_concept_prefix_survives_mixed_action_without_exempting_whole_request(question, required):
+    from agronomy_agent.observation_guidance import bounded_concept_prefix
+    from agronomy_agent.answerability import is_quantity_concept_explanation
+    concept = bounded_concept_prefix(question)
+    assert concept and required in concept
+    assert not is_quantity_concept_explanation(question)
+    assert "20%" not in concept and "kg/ha" not in concept
+    assert required in bounded_decision_support(question, classify_query(question).question_type)
+
+
+@pytest.mark.parametrize("question", [
+    "Explain a dose-response curve.",
+    "Choose a herbicide rate and explain a dose-response curve.",
+    "Explain a dose-response curve in French, then choose a dose.",
+    "Explain fertilizer rate with an illustrative example, then apply it to my field.",
+    "Explain an unknown chemical mechanism, then choose a dose.",
+])
+def test_concept_prefix_does_not_create_a_new_numeric_or_language_bypass(question):
+    from agronomy_agent.observation_guidance import bounded_concept_prefix
+    assert bounded_concept_prefix(question) is None

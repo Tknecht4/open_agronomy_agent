@@ -45,6 +45,7 @@ from agronomy_agent.answerability import (
     validated_deterministic_tool_execution,
 )
 from agronomy_agent.answer_verifier import bounded_decision_support, context_evidence_text, verify_answer
+from agronomy_agent.observation_guidance import bounded_concept_prefix
 from agronomy_agent.observation_guidance import observation_guidance
 from agronomy_agent.agronomic_concepts import concept_prompt_guidance
 from agronomy_agent.canada_sources import (
@@ -3787,6 +3788,8 @@ def decide_evidence_intervention(
         support = (
             bounded_decision_support(question, context.route.question_type)
             if context is not None and decision.state == AnswerabilityState.REQUIRE_AUTHORITY
+            else bounded_concept_prefix(question)
+            if context is not None
             else None
         )
         hold_text = decision.response_text or baseline.hold_text

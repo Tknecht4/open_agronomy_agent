@@ -11,7 +11,7 @@ from dataclasses import dataclass
 import re
 
 from agronomy_agent.answerability import preferred_response_language, is_rate_basis_explanation, is_dose_response_explanation, is_sampling_basis_explanation, product_action_request_text
-from agronomy_agent.plant_health_scope import root_inspection_requested, current_root_inspection_is_soybean
+from agronomy_agent.plant_health_scope import root_inspection_requested, current_root_inspection_is_soybean, clubroot_workflow_applicable
 
 
 POTATO_MONITORING_ANSWER = (
@@ -95,13 +95,37 @@ def observation_guidance(question: str) -> ObservationGuidance | None:
     )
 
 
+def bounded_concept_prefix(question: str) -> str | None:
+    """Retain a reviewed definition without exempting any remaining request.
+
+    Only a complete supported terminology clause can contribute text. Choosing
+    the longest valid prefix keeps comparisons intact. This never changes the
+    whole request's route, evidence requirements or application authority.
+    """
+    if preferred_response_language(question) == "fr" or re.search(r"\b(?:en fran[cç]ais|in french)\b", question, re.I):
+        return None
+    boundaries = [m.start() for m in re.finditer(r"[.!?;]|,?\s+\b(?:and|then|also)\b", question, re.I)]
+    for end in reversed(boundaries):
+        prefix = question[:end].strip()
+        remainder = re.sub(r"^[.!?;,\s]+(?:(?:and|then|also)\s+)*", "", question[end:], flags=re.I)
+        if not remainder or not (is_rate_basis_explanation(prefix) or is_dose_response_explanation(prefix)
+                                 or is_sampling_basis_explanation(prefix)):
+            continue
+        method = observation_guidance(prefix)
+        # This support is nonnumerical terminology. Hypothetical examples have
+        # their separate whole-request checked-quantity contract.
+        if method and not any(name == "illustrative_rate_example" for name, _, _ in method.facets):
+            return method.answer
+    return None
+
+
 def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance]:
     q = question.lower()
     has = lambda p: bool(re.search(p, q))
     # English method text must never replace a French answer.
     if preferred_response_language(question) == "fr" or has(r"\b(?:en fran[cç]ais|in french)\b"):
         return None
-    if root_inspection_requested(question):
+    if root_inspection_requested(question) and not clubroot_workflow_applicable(question):
         answer = (
             "Carefully dig or lift whole plants with their roots intact rather than pulling them out. "
             "Compare affected plants with nearby normal plants and the normal underground structures of the affected crop. "

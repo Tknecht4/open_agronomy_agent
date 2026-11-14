@@ -84,6 +84,10 @@ supports these recognition and scouting methods; symptoms remain conditional,
 not a diagnosis of a healthy crop. Use local alerts and crop-specific IPM
 guidance for prevention planning; visible collapse is not a prerequisite. See [Minnesota late-blight monitoring](https://extension.umn.edu/agriculture/specialty-crops/vegetable-farming/disease-management/late-blight)
 for general scouting methods, with treatment authority still local.
+Clubroot can affect cabbage and other susceptible brassicas as well as canola;
+[Manitoba's brassica disease guidance](https://manitoba.ca/agriculture/crops/plant-diseases/clubroot-brassica.html)
+supports the host, long-lived resting-spore and soil-movement biology. Its older
+regional distribution and management intervals are not current local authority.
 For suspected clubroot, limit movement of contaminated soil while arranging
 confirmation. One nonhost year does not establish eradication: resting spores
 can persist for many years. Follow the [current applicable provincial plan](https://www.alberta.ca/alberta-clubroot-management-plan)

@@ -392,3 +392,34 @@ named disease, without weakening diagnosis guards. Focused imposed-output tests
 exercise the actual persisted product path, including a mixed product-rate
 request. Such checks qualify the repair mechanism, not model performance.
 Whole-source QA and the complete new model matrix remain required.
+
+
+## November 14 recovery and source corrections
+
+The Colab service now reports no active task VMs. Candidate `8a7e35b` completed
+its E4B regression cohort, but its full cohort has only a verified prefix; a
+collection manifest high-water mark is not proof that every archive was
+retained. E2B was qualified but never launched. The matched Luna baseline stopped
+at 2,033 of 2,240 full-cohort slots after three identical unknown-event errors;
+its original collection deadline expired. Acknowledged provider turns can have
+unknown remote outcomes. These runs remain diagnostic evidence and cannot be
+resumed by resetting the clock or promoted to a complete comparison.
+
+Read-only review of all 96 completed production-arm regression answers found
+three source-level issues: generic root fallback erased clubroot persistence
+and containment in a susceptible cabbage crop; lodging was defined as
+standability; and held mixed rate requests lost their safe general definitions.
+The successor keeps the governing disease workflow, grounds lodging separately
+from lodging resistance, and composes supported nonnumerical definitions with
+the whole request's action hold. Localized edits retain original prose and
+require full reassessment and a validated production-origin record. Correct
+loss/failure definitions, uncertainty and negation remain unchanged.
+
+Unknown App Server notifications gain shape-only diagnostic evidence while
+remaining rejected. A separate neutral transport probe returned successfully;
+it does not explain the previous failures or replace assessment cases. No
+semantic grading has run. The frozen questions, references, rubric, scoring
+weights and original evidence retain their identities. Fresh complete candidate
+cohorts and a fresh matched Luna baseline are required before reporting updated
+whole-suite numbers. The native baselines remain separately qualified for their
+recorded serving source and runtime.

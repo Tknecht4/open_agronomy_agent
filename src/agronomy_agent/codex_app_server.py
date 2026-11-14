@@ -458,13 +458,58 @@ class AppServerResult:
     receipt: dict[str, Any]
 
 
+_EVENT_SHAPE_KEYS = frozenset({"threadId", "turnId", "thread", "turn", "item", "status",
+                               "reason", "data", "message", "id", "items"})
+_EVENT_SHAPE_TYPES = frozenset({"null", "bool", "int", "float", "str", "list", "dict", "other"})
+
+
+def _event_shape_type(value):
+    return "null" if value is None else type(value).__name__ if type(value).__name__ in _EVENT_SHAPE_TYPES else "other"
+
+
+def _bounded_event_diagnostic(value):
+    """Retain protocol shape only; never unknown field names or payload values."""
+    if not isinstance(value, Mapping):
+        return {}
+    method = value.get("method")
+    method = method if (isinstance(method, str) and len(method) <= 96 and re.fullmatch(
+        r"[A-Za-z][A-Za-z0-9]*(?:/[A-Za-z][A-Za-z0-9]*){0,5}", method)) else "redacted"
+    shape = value.get("params_shape")
+    shape = {k: v for k, v in shape.items() if k in _EVENT_SHAPE_KEYS and type(v) is str and v in _EVENT_SHAPE_TYPES} if isinstance(shape, Mapping) else {}
+    count = value.get("other_field_count")
+    return {"method": method, "stage": "turn_stream", "params_shape": shape,
+            "other_field_count": min(count, 8192) if type(count) is int and count >= 0 else None,
+            **{k: value.get(k) if type(value.get(k)) is bool else None
+               for k in ("thread_binding", "turn_binding")}}
+
+
+def _unknown_event_diagnostic(method, params, thread_id, turn_id):
+    def binding(direct, nested, expected):
+        observed = []
+        if direct in params:
+            observed.append(params[direct])
+        if isinstance(params.get(nested), dict) and "id" in params[nested]:
+            observed.append(params[nested]["id"])
+        return all(value == expected for value in observed) if observed else None
+    return _bounded_event_diagnostic({
+        "method": method, "stage": "turn_stream",
+        "params_shape": {k: _event_shape_type(v) for k, v in params.items() if k in _EVENT_SHAPE_KEYS},
+        "other_field_count": sum(k not in _EVENT_SHAPE_KEYS for k in params),
+        "thread_binding": binding("threadId", "thread", thread_id),
+        "turn_binding": binding("turnId", "turn", turn_id),
+    })
+
+
 def bounded_provider_attempt(value):
     """No prompts, credentials, raw provider errors or unbounded objects."""
     fields={"attempt_id","phase","arm","eval_id","envelope_sha256","state","request_id",
             "thread_id","turn_id","selected_model","thread_acknowledged","turn_acknowledged","submitted","error_type"}
     if not isinstance(value,Mapping):return {}
-    return {k:(v[:160] if isinstance(v,str) else v) for k,v in value.items()
-            if k in fields and (v is None or type(v) in {str,int,bool})}
+    result = {k:(v[:160] if isinstance(v,str) else v) for k,v in value.items()
+              if k in fields and (v is None or type(v) in {str,int,bool})}
+    if isinstance(value.get("event_diagnostic"), Mapping):
+        result["event_diagnostic"] = _bounded_event_diagnostic(value["event_diagnostic"])
+    return result
 
 
 def _bounded_protocol_json(value, limit):
@@ -912,7 +957,11 @@ class CodexAppServerClient:
                 if set(params) != {"rateLimits"} or not isinstance(params["rateLimits"], dict):
                     raise CodexAppServerError("malformed account rate-limit observation")
             elif method not in {"item/completed","thread/tokenUsage/updated","turn/completed","model/rerouted","model/verification","turn/moderationMetadata"}:
-                raise CodexAppServerError("unclassified App Server event")
+                self.last_attempt_evidence["event_diagnostic"] = _unknown_event_diagnostic(
+                    method, params, thread_id, turn_id)
+                exc = CodexAppServerError("unclassified App Server event")
+                exc.provider_attempt = bounded_provider_attempt(self.last_attempt_evidence)
+                raise exc
             self._retain_event(events,payload)
             if payload.get("method") == "turn/completed":
                 params = payload.get("params") or {}

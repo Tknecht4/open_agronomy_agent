@@ -270,3 +270,42 @@ def test_repairs_and_preservation_reach_the_persisted_product_entrypoint(tmp_pat
                 assert result.answer == draft
     finally:
         store._conn.close()
+
+
+@pytest.mark.parametrize("definition", [
+    "**Lodging:** The plant’s physical resistance to falling over once mature.",
+    "Lodging is a crop's ability to remain upright.",
+    "Lodging means resistance to falling over.",
+])
+def test_lodging_definition_is_not_standability_and_preserves_other_prose(definition):
+    question = "Explain crop rotation, standability, drydown and lodging."
+    before = "Rotation changes the crop sequence.\n"
+    after = "\nStandability describes the ability to remain upright."
+    result = verify(before + definition + after, question)
+    assert result.selection_policy == "localized_agronomic_concept_correction_v1"
+    assert result.answer.startswith(before) and result.answer.endswith(after)
+    assert "root anchorage failure" in result.answer and "before maturity" in result.answer
+    assert result.localized_cleanup["edits"][0]["reason"] == "lodging_standability_conflation"
+    assert not result.final_assessment.reasons
+    assert "Lodging means crop plants lean" in build_answer_prompt("", question)
+
+
+@pytest.mark.parametrize("answer", [
+    "Lodging resistance is the plant's ability to remain upright.",
+    "Lodging is a loss of the ability to remain upright.",
+    "Lodging is caused by a lack of resistance to falling over.",
+    "Lodging means failure of a plant's ability to remain upright.",
+    "Lodging is not resistance to falling over.",
+    "Lodging means plants fall over. Standability is resistance to falling over.",
+    "Lodging may mean resistance to falling over, but I am uncertain.",
+    'The misconception is that "lodging is resistance to falling over".',
+    "Lodging: If it means resistance to falling over, the term is being misused.",
+])
+def test_lodging_correction_preserves_negation_uncertainty_and_distinct_term(answer):
+    assert correct_concept_claims(answer, "Explain crop lodging and standability.") == (answer, ())
+
+
+def test_lodging_correction_requires_crop_context_and_supported_language():
+    answer = "Lodging is resistance to falling over."
+    for question in ("Explain lodging options for a trip.", "Explain crop lodging in French."):
+        assert correct_concept_claims(answer, question) == (answer, ())

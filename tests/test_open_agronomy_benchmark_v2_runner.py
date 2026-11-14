@@ -776,6 +776,8 @@ def test_frozen_synthetic_fixture_never_executes_or_discards_conditional_scenari
     ("agronomic_concepts.py", {"kernel_config", "verifier_policy", "fallback_policy"}),
     ("observation_guidance.py", {"kernel_config", "verifier_policy", "fallback_policy"}),
     ("quantity_claims.py", {"verifier_policy", "fallback_policy"}),
+    ("execution_core.py", {"runtime_orchestrator"}),
+    ("codex_app_server.py", {"runtime_orchestrator"}),
     ("request_scope.py", {"answerability_policy", "kernel_config", "verifier_policy", "fallback_policy", "tool_executor_bundle"}),
     ("plant_health_scope.py", {"kernel_config", "verifier_policy", "fallback_policy"}),
 ])
