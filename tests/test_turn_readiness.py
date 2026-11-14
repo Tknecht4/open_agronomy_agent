@@ -80,6 +80,8 @@ def no_generator(*args, **kwargs):
 @pytest.mark.parametrize("question,reply,answer", [
     (SEED_AMBIGUOUS, "Overall, of seeds sown.", "4.8 kg/ha"),
     (SEED_AMBIGUOUS, "Only germinated seeds.", "5 kg/ha"),
+    (SEED_AMBIGUOUS, "The 75% survival is among germinated seeds.", "5 kg/ha"),
+    (SEED_AMBIGUOUS, "The 75.0% survival refers to all seeds sown.", "4.8 kg/ha"),
     (SEED_AMBIGUOUS.replace("germination is 96%, ", ""), "All seeds sown.", "4.8 kg/ha"),
 ])
 def test_seed_denominator_clarification_reply_previews_and_persists_without_model(runtime, monkeypatch, backend, question, reply, answer):

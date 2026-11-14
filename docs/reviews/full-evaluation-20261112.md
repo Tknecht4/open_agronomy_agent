@@ -460,3 +460,23 @@ raster scaling, fertilizer seed-contact exposure and experimental comparisons.
 They remain visible scientific limitations for the complete assessment. No
 runtime retrieval or training receives evaluation cases, answers or golds, and
 none of this diagnostic review is formal blinded grading or field validation.
+
+
+The November 14 browser walk found that a numeric restatement of the survival
+denominator was rejected as requiring a model. The bounded clarification now
+accepts “among” as well as “of” and a restated percentage only when it exactly
+matches the prior user input. Reconstruction of a later germination reply
+repeats the same equality check; changed values and compound actions remain
+new requests. Readiness and persisted-turn fixtures forbid model construction.
+
+Independent review of 27 production answers in a verified 56-observation E2B
+regression prefix found a completeness-check defect: generic spots, lesions or
+necrosis passed as recognizable late-blight signs. The checker now requires
+a meaningful descriptive alternative, preserving equivalent prose. The existing
+reviewed method supplies water-soaked spots, dark spreading lesions and possible
+white growth beneath lesions in humid conditions, explicitly retaining that
+absence does not exclude disease. These observations follow current
+[Manitoba extension guidance](https://www.gov.mb.ca/agriculture/crops/plant-diseases/late-blight-potatoes.html);
+no diagnostic or treatment authority is added. A model definition also conflated
+texture proportions with structure; that remains a recorded model-quality
+limitation. This incomplete diagnostic prefix is not a benchmark score.

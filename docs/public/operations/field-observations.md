@@ -74,6 +74,10 @@ after wet weather alone does not identify the cause. Inspect fresh foliage,
 stems, roots and tubers. [Alberta's late-blight guidance](https://www.alberta.ca/late-blight-of-potatoes-and-tomatoes)
 and [Cornell's lookalike guide](https://cce.cornell.edu/cornell-vegetable-program/late-blight-and-its-lookalikes-correctly-identify-late-blight-potatoes)
 support identification, with product decisions subject to local authority.
+Generic words such as “lesions” or “necrosis” alone do not complete a
+disease-specific scouting method. Recognizable descriptions can use equivalent
+wording; none establishes a diagnosis.
+
 For a healthy potato crop, scout representative areas, including low, shaded
 or persistently damp places, and inspect leaves, undersides and stems for
 water-soaked spots and dark, spreading lesions. White growth can occur beneath

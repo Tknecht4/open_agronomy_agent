@@ -130,6 +130,39 @@ def test_potato_monitoring_rejects_surface_names_and_alerts_without_a_scouting_m
     assert "absence does not exclude" in result.answer
 
 
+def test_generic_lesions_and_necrosis_do_not_complete_disease_specific_scouting(tmp_path, monkeypatch):
+    question = "How should I scout my healthy potato crop for late blight?"
+    draft = ("Scout representative areas. Inspect foliage and stems for spots, lesions, or necrosis. "
+             "Check local disease alerts and contact a diagnostic lab for suspect findings.")
+    method = observation_guidance(question)
+    assert method and method.missing(draft) == ("potato_monitor_signs",)
+    _assert_persisted_product_answer(tmp_path, monkeypatch, question,
+                                    ("water-soaked", "humid", "absence does not exclude"), draft=draft)
+
+
+@pytest.mark.parametrize("signs", [
+    "Look for white mildew growth under the soil.",
+    "Under the stem, look for white sporulation.",
+    "White growth below roots may appear when humid.",
+])
+def test_white_growth_requires_a_leaf_underside_location(signs):
+    method = observation_guidance("How should I scout my healthy potato crop for late blight?")
+    assert method and "potato_monitor_signs" in method.missing(signs)
+
+
+@pytest.mark.parametrize("signs", [
+    "Look for water-soaked patches on leaves.",
+    "Inspect lesions that look water soaked.",
+    "Watch for rapidly expanding dark lesions.",
+    "Watch for dark, spreading lesions.",
+    "White mildew growth may appear on leaf undersides in humid conditions.",
+    "Under leaves, white sporulation can appear when humid.",
+])
+def test_potato_signs_facet_preserves_descriptive_equivalent_prose(signs):
+    method = observation_guidance("How should I scout my healthy potato crop for late blight?")
+    assert method and "potato_monitor_signs" not in method.missing(signs)
+
+
 @pytest.mark.parametrize("question,key,terms", METHOD_CASES)
 def test_missing_observation_method_reaches_verifier_even_below_risk_threshold(question, key, terms):
     method = observation_guidance(question)
@@ -152,12 +185,12 @@ def test_real_persisted_product_path_returns_observation_help(tmp_path, monkeypa
     _assert_persisted_product_answer(tmp_path, monkeypatch, question, terms)
 
 
-def _assert_persisted_product_answer(tmp_path, monkeypatch, question, terms):
+def _assert_persisted_product_answer(tmp_path, monkeypatch, question, terms, *, draft=None):
     class IncompleteBackend:
         backend_id = "imposed_incomplete_fixture"
         intervention_profile = "balanced"
         def generate(self, messages):
-            return "More field information is required before drawing a conclusion."
+            return draft or "More field information is required before drawing a conclusion."
         def close(self):
             pass
 

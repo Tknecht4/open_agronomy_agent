@@ -16,7 +16,7 @@ from agronomy_agent.tool_planner import plan_tools
 from agronomy_agent.seed_establishment import SEED_SURVIVAL_BASIS_GAP, SEED_GERMINATION_GAP
 
 
-POLICY_VERSION = "conversation_calculation_reference.v3"
+POLICY_VERSION = "conversation_calculation_reference.v4"
 _MAX_CHAIN_DEPTH = 8
 _NUMBER = r"(?<![\w.])(?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?:\.[0-9]+)?(?!\w)"
 _NUMBER_RE = re.compile(_NUMBER)
@@ -25,10 +25,10 @@ _ELLIPTICAL_SUBSTITUTION = re.compile(
     re.IGNORECASE,
 )
 _SEED_BASIS_SELECTION = re.compile(
-    r"\s*(?:(?:it|that|(?:the\s+)?(?:field\s+)?survival)\s+is\s+|use\s+)?"
+    rf"\s*(?:(?:it|that|(?:the\s+)?(?:(?P<percent>{_NUMBER})\s*%\s+)?(?:field\s+)?survival)\s+(?:is|refers\s+to)\s+|use\s+)?"
     r"(?P<choice>overall(?:\s*,?\s*(?:of\s+)?(?:all\s+)?seeds?\s+(?:sown|planted))?"
-    r"|(?:of\s+)?(?:all\s+)?seeds?\s+(?:sown|planted)"
-    r"|(?:of\s+)?(?:only\s+)?(?:the\s+)?germinated\s+seeds?"
+    r"|(?:(?:of|among)\s+)?(?:all\s+)?seeds?\s+(?:sown|planted)"
+    r"|(?:(?:of|among)\s+)?(?:only\s+)?(?:the\s+)?germinated\s+seeds?"
     r"|post[- ]germination|after\s+germination)\s*[.!]?\s*",
     re.IGNORECASE,
 )
@@ -63,7 +63,9 @@ def resolve_calculation_follow_up(
 
     basis = _SEED_BASIS_SELECTION.fullmatch(current_question)
     if basis is not None:
-        return _resolve_seed_basis(current_question, recent_turns, basis.group("choice"))
+        return _resolve_seed_basis(
+            current_question, recent_turns, basis.group("choice"), basis.group("percent"),
+        )
     germination = _SEED_GERMINATION_SELECTION.fullmatch(current_question)
     if germination is not None:
         return _resolve_seed_germination(current_question, recent_turns, germination.group("percent"))
@@ -96,6 +98,7 @@ def _prior_user_question(
 
 def _resolve_seed_basis(
     current_question: str, recent_turns: list[dict[str, Any]], choice: str,
+    stated_percentage: str | None = None,
 ) -> ConversationResolution:
     antecedent = _prior_user_question(current_question, recent_turns)
     if isinstance(antecedent, ConversationResolution):
@@ -109,6 +112,10 @@ def _resolve_seed_basis(
             or invocation.operation not in {"seed_rate_mass", "seed_rate_mass_imperial"}
             or invocation.missing_inputs != (SEED_SURVIVAL_BASIS_GAP,)):
         return ConversationResolution(current_question, "antecedent_not_seed_basis_clarification")
+    if (stated_percentage is not None
+            and Decimal(stated_percentage.replace(",", ""))
+            != Decimal(str(invocation.inputs["field_survival_pct"]))):
+        return ConversationResolution(current_question, "basis_percentage_changed")
     conditional = bool(re.search(r"germinat", choice, re.IGNORECASE))
     basis = "germinated_seeds" if conditional else "seeds_sown"
     denominator = "germinated seeds" if conditional else "all seeds sown"
@@ -145,7 +152,9 @@ def _resolve_seed_germination(
     if basis is not None:
         # Reconstruct the adjacent basis turn from authorized user text again;
         # never recover operands from its assistant answer or stored metadata.
-        previous = _resolve_seed_basis(question, recent_turns[:-1], basis.group("choice"))
+        previous = _resolve_seed_basis(
+            question, recent_turns[:-1], basis.group("choice"), basis.group("percent"),
+        )
         if previous.status != "resolved_seed_survival_basis":
             return ConversationResolution(current_question, "unresolved_reference_chain")
         question = previous.effective_question

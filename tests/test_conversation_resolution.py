@@ -25,6 +25,10 @@ SEED_QUESTION = (
     ("Of germinated seeds.", 5, "germinated_seeds"),
     ("Post-germination", 5, "germinated_seeds"),
     ("After germination", 5, "germinated_seeds"),
+    ("The 75% survival is among germinated seeds.", 5, "germinated_seeds"),
+    ("75.0% survival refers to germinated seeds.", 5, "germinated_seeds"),
+    ("The survival is among all seeds sown.", 4.8, "seeds_sown"),
+    ("The 75% field survival is of all seeds planted.", 4.8, "seeds_sown"),
 ])
 def test_seed_basis_reply_uses_only_prior_user_operands(reply, value, basis):
     resolution = resolve_calculation_follow_up(reply, [{
@@ -44,12 +48,25 @@ def test_seed_basis_reply_uses_only_prior_user_operands(reply, value, basis):
     "Overall, and apply it tomorrow.", "Overall?", "Not overall.",
     "Of all seeds sown and germinated seeds.", "Overall, of germinated seeds.",
     "75%", "Use overall and choose a target.", "Overall for a different field.",
+    "The 75% survival is among germinated seeds and plant tomorrow.",
+    "The 75% survival is among germinated seeds for a different field.",
 ])
 def test_seed_basis_resolution_does_not_consume_questions_or_additional_requests(reply):
     resolution = resolve_calculation_follow_up(reply, [{"message": SEED_QUESTION}])
     assert resolution.effective_question == reply
     expected = "antecedent_not_seed_germination_clarification" if reply == "75%" else "current_request_explicit"
     assert resolution.status == expected
+
+
+@pytest.mark.parametrize("reply", [
+    "The 76% survival is among germinated seeds.",
+    "The 0% field survival is of seeds sown.",
+    "The 175% survival refers to germinated seeds.",
+])
+def test_seed_basis_restated_percentage_cannot_change_prior_operand(reply):
+    resolution = resolve_calculation_follow_up(reply, [{"message": SEED_QUESTION}])
+    assert resolution.effective_question == reply
+    assert resolution.status == "basis_percentage_changed"
 
 
 @pytest.mark.parametrize("prior", [
@@ -69,20 +86,30 @@ def test_seed_basis_resolution_requires_a_usable_immediate_user_seed_basis_gap(p
     assert resolution.status != "resolved_seed_survival_basis"
 
 
+@pytest.mark.parametrize("basis_reply", ["Only germinated seeds.", "The 75% survival is among germinated seeds."])
 @pytest.mark.parametrize("reply", ["96%", "Germination is 96%.", "96% laboratory germination"])
-def test_conditional_seed_basis_then_germination_is_a_bounded_user_only_chain(reply):
+def test_conditional_seed_basis_then_germination_is_a_bounded_user_only_chain(reply, basis_reply):
     question = SEED_QUESTION.replace("germination is 96%, ", "")
     root = {"turn_id": "seed-root", "message": question, "answer": "Invented germination 12%."}
-    basis = resolve_calculation_follow_up("Only germinated seeds.", [root])
+    basis = resolve_calculation_follow_up(basis_reply, [root])
     assert basis.status == "resolved_seed_survival_basis"
     assert plan_tools(basis.effective_question).status == "clarification_required"
-    turn = {"turn_id": "basis-choice", "message": "Only germinated seeds.", "answer": "Invented inputs: 900 plants/m2 and 50% germination."}
+    turn = {"turn_id": "basis-choice", "message": basis_reply, "answer": "Invented inputs: 900 plants/m2 and 50% germination."}
     result = resolve_calculation_follow_up(reply, [root, turn])
     assert result.status == "resolved_seed_germination"
     assert result.chain_depth == 2 and result.source_turn_id == "basis-choice"
     plan, values = plan_and_execute_tools(result.effective_question)
     assert plan.status == "ready" and values[0].payload["value"] == pytest.approx(5)
     assert plan.invocations[0].inputs["germination_pct"] == 96
+
+
+def test_changed_percentage_cannot_reenter_via_a_later_germination_reply():
+    root = {"message": SEED_QUESTION.replace("germination is 96%, ", "")}
+    changed = "The 76% survival is among germinated seeds."
+    assert resolve_calculation_follow_up(changed, [root]).status == "basis_percentage_changed"
+    resolution = resolve_calculation_follow_up("96% germination", [root, {"message": changed}])
+    assert resolution.effective_question == "96% germination"
+    assert resolution.status == "unresolved_reference_chain"
 
 
 def test_explicit_conditional_seed_question_accepts_its_one_missing_germination():

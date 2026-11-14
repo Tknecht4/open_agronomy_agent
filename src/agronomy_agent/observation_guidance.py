@@ -16,7 +16,7 @@ from agronomy_agent.plant_health_scope import root_inspection_requested, current
 
 
 POTATO_MONITORING_ANSWER = (
-    "Scout representative areas of the potato crop regularly, including low or shaded places where the canopy stays damp longer. Inspect leaves, their undersides and stems for water-soaked spots or new, dark, spreading lesions. White growth may appear beneath lesions under humid conditions, especially early in the morning; its absence does not exclude late blight. "
+    "Scout representative areas of the potato crop regularly, including low or shaded places where the canopy stays damp longer. Inspect leaves, their undersides and stems for water-soaked spots or new, dark, spreading lesions. White growth may appear on leaf undersides beneath lesions under humid conditions, especially early in the morning; its absence does not exclude late blight. "
     "If suspect symptoms appear, photograph and locate them, compare suspect and nearby healthy plants, and promptly contact a local potato specialist or diagnostic lab for sampling instructions and confirmation. Follow current local disease alerts and crop-specific IPM guidance. "
     "Use crop stage, local disease risk and forecasts, and the exact crop/target/product label to plan any preventive fungicide program; visible collapse is not a prerequisite for prevention planning."
 )
@@ -330,7 +330,12 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
         yield ObservationGuidance("healthy_potato_monitoring", POTATO_MONITORING_ANSWER, (
             ("potato_monitor_surfaces", "Inspect potato foliage and stems for early symptoms.", (r"\b(?:leaves|foliage|stems)\b",)),
             ("potato_monitor_signs", "Describe recognizable signs to look for, conditionally rather than diagnosing the healthy crop.",
-             (r"\b(?:lesions?|water[- ]soaked|necrosis)\b", r"\bwhite\b[^.]{0,50}\b(?:growth|sporulation)\b")),
+             (r"\bwater[-\s]soaked\b[^.]{0,50}\b(?:spots?|lesions?|patches?)\b",
+              r"\b(?:spots?|lesions?|patches?)\b[^.]{0,50}\bwater[-\s]soaked\b",
+              r"\b(?:dark|brown|black|greasy)\b[^.]{0,35}\b(?:spreading|expanding|enlarging)\b[^.]{0,25}\b(?:spots?|lesions?|patches?)\b",
+              r"\b(?:spreading|expanding|enlarging)\b[^.]{0,35}\b(?:dark|brown|black|greasy)\b[^.]{0,25}\b(?:spots?|lesions?|patches?)\b",
+              r"\bwhite\b[^.]{0,35}\b(?:growth|sporulation|mildew|fuzz)\b[^.]{0,50}\b(?:leaf undersides?|undersides? of (?:the )?leaves|(?:beneath|below|under) (?:the )?(?:leaves|foliage))\b",
+              r"\b(?:leaf undersides?|undersides? of (?:the )?leaves|(?:beneath|below|under) (?:the )?(?:leaves|foliage))\b[^.]{0,50}\bwhite\b[^.]{0,35}\b(?:growth|sporulation|mildew|fuzz)\b")),
             ("potato_monitor_coverage", "Scout representative locations and consider places that remain damp or weather-related risk.",
              (r"\brepresentative\b", r"\bacross (?:the )?field\b", r"\b(?:damp|wet|humid|weather|shaded|low[- ]lying)\b")),
             ("potato_monitor_followup", "Record suspicious findings and seek diagnostic guidance if they appear.",

@@ -145,8 +145,11 @@ operand, explicit new requests remain authoritative, and ambiguous references
 stay unresolved. The original user text is saved unchanged; the effective
 question, source turn and policy are recorded in the trace and execution hashes.
 The current tool recomputes the result, independent of the prior model's success.
-The v3 calculation-reference policy also accepts an explicit whole-reply seed
-denominator choice when that is the sole seed-calculator gap. If conditional
+The v4 calculation-reference policy also accepts an explicit whole-reply seed
+denominator choice when that is the sole seed-calculator gap. A restated
+survival percentage must exactly match the prior user input; “among” and “of”
+identify the same denominator. Changed percentages and extra actions stay
+authoritative as new requests. If conditional
 survival then leaves only laboratory germination missing, one adjacent explicit
 percentage reply can complete it. Both steps reconstruct only authorized user
 requests, preserve all previous operands and the operation, and replan through
