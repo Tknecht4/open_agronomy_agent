@@ -155,6 +155,8 @@ def test_white_growth_requires_a_leaf_underside_location(signs):
     "Inspect lesions that look water soaked.",
     "Watch for rapidly expanding dark lesions.",
     "Watch for dark, spreading lesions.",
+    "Look for new or spreading lesions.",
+    "Check whether lesions expand rapidly.",
     "White mildew growth may appear on leaf undersides in humid conditions.",
     "Under leaves, white sporulation can appear when humid.",
 ])

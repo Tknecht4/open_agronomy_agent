@@ -480,3 +480,11 @@ absence does not exclude disease. These observations follow current
 no diagnostic or treatment authority is added. A model definition also conflated
 texture proportions with structure; that remains a recorded model-quality
 limitation. This incomplete diagnostic prefix is not a benchmark score.
+
+The first whole-suite check of this matcher caught an overly narrow requirement
+for a dark colour alongside expanding lesions. Existing complete prose using
+“new or spreading lesions” provides useful temporal monitoring information and
+should remain intact. Expansion/spread alone is now a descriptive alternative;
+bare spots/lesions/necrosis remain insufficient. Leaf-location checks still
+exclude white growth beneath soil or roots. The failed exact-source test result
+remains retained and superseded, rather than reported as a pass.
