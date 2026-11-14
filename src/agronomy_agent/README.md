@@ -389,7 +389,34 @@ daily GDD retains its verified sub-result for separately requested provenance or
 stage interpretation, and for ordinary model handling of extra commands. Its
 explicit `note` JSON key is text-only non-operative metadata; unknown numeric or
 unit-bearing keys remain invalid. Closed negative constraints preserve the pure
-calculation path rather than creating a new task.
+calculation path rather than creating a new task. Data declarations consume their
+whole value, unit and bounded method qualifiers; a recognized input name or
+`with`, `of` or `without` prefix cannot own arbitrary instructions. Closed
+presentation requests remain eligible. Request-bearing prepositional tails
+inside the initial calculation clause receive the same scope check as later
+comma clauses. Unknown scope uses ordinary handling rather than dropping work.
+
+Maturity identifier restoration requires an explicit subject assignment and an
+unambiguous supplied identifier. Named subjects in the question must match.
+Unbound mentions and statements containing both identifiers remain
+unchanged; negative comparisons must not become false self-comparisons.
+Runtime orchestrator identity
+also binds `server/services/conversation_resolution.py`, because effective
+request changes affect readiness and persisted execution.
+
+The shared `seed_quality_workflow_requested` predicate separates an arithmetic
+operand from a request to assess seed lots, quality or vigor. Germination supplied
+for seed-mass arithmetic does not impose a lot-selection checklist on additional
+help. Router guidance, decision selection, verifier facets and fallback use the
+same predicate. Independently requested quality assessments retain their checks;
+no calculation or action authority follows from this topical selection.
+For water and fertilizer topics, a distinct selected method and a complete
+planner-recognized arithmetic fragment qualify supplied quantities as context.
+The original compound request retains ordinary execution. Independent water or
+nutrient management, unknown additional quantities and using the calculated
+result retain the management checks. Numeric support and field authority pass
+through their normal verification. Verifier and fallback implementation
+identities also bind their canonical planning dependency.
 
 ### Product topics and requested authority
 

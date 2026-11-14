@@ -196,6 +196,7 @@ def _runtime_implementation_receipts() -> dict[str, str]:
                     PROJECT_ROOT / "src/agronomy_agent/agent.py",
                     PROJECT_ROOT
                     / "src/agronomy_agent/server/services/chat_service.py",
+                    PROJECT_ROOT / "src/agronomy_agent/server/services/conversation_resolution.py",
                     PROJECT_ROOT / "src/agronomy_agent/server/services/answer_renderer.py",
                     PROJECT_ROOT / "src/agronomy_agent/execution_core.py",
                     PROJECT_ROOT / "src/agronomy_agent/codex_app_server.py",
@@ -279,6 +280,14 @@ def _runtime_implementation_receipts() -> dict[str, str]:
             ),
         }
     )
+    # Topic completeness and fallback eligibility consult the canonical
+    # planner's validation path. Bind that dependency without claiming tool
+    # execution or changing the frozen component/construct declarations.
+    for policy in ("verifier_policy", "fallback_policy"):
+        receipts[policy] = stable_sha256({
+            "policy_implementation_sha256": receipts[policy],
+            "canonical_planning_dependency_sha256": receipts["tool_executor_bundle"],
+        })
     return receipts
 
 

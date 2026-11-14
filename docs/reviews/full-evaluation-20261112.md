@@ -4,6 +4,29 @@ November 12, 2026. Reference main: `91125d30acd447537184184352d8fadf96ee89ee`.
 
 ## Current status
 
+On November 14, independent composed review superseded candidate `582caf0`.
+A supplied-input calculation could silently drop an additional request beginning
+with “with instructions”; identifier restoration could turn a correct negative
+maturity-group contrast into a false self-contrast; and component fingerprints
+omitted the conversation resolver. A bound-evidence counterfactual then found
+that a germination operand could impose an unasked seed-quality checklist and
+replace otherwise useful mixed help. The shared repairs are under verification.
+A successor must pass source verification and repeat the complete candidate
+matrix. No candidate scientific score or updated ranking is available.
+
+The stopped E2B and E4B attempts retain 166 and 151 regression observations,
+respectively, including all raw and pending artifacts in verified archives.
+Neither dispatched its full cohort, and these rows cannot fill successor slots.
+Both original native baseline models have complete 192- and 2,240-slot
+collections, with original-source physical readers, the same maintained analysis
+implementation, complete archives and source-bound framing inputs. Six failed
+full-cohort slots per model are declared synthetic fault controls; E4B retains
+one additional interrupted production slot. A fresh whole main-compatible Luna
+baseline is still collecting under its original clock. All twelve final raw
+collections and admission checks must complete before scientific grading.
+
+## Superseded sources and diagnostic evidence
+
 The latest candidate is being replaced after independent review of a verified
 72-row E4B regression prefix (35 full-system answers) found incomplete root
 inspection and healthy-potato scouting methods. Source `3c751c0` had passed
@@ -488,3 +511,43 @@ should remain intact. Expansion/spread alone is now a descriptive alternative;
 bare spots/lesions/necrosis remain insufficient. Leaf-location checks still
 exclude white growth beneath soil or roots. The failed exact-source test result
 remains retained and superseded, rather than reported as a pass.
+
+
+## Composed request, identifier and component repairs
+
+The final source pass reproduced the calculator completion defect across seed,
+water and fertilizer arithmetic. Positive whole-value and presentation scope
+checks retain recognized operands and units while sending additional requests
+through ordinary execution. A data-name or preposition prefix is insufficient.
+Readiness, production persistence and the final deterministic-response boundary
+must agree; unchanged arithmetic cases and missing-input clarifications remain
+regression controls. This does not grant a field action or disable model help.
+
+Soybean maturity-group restoration now requires an explicit subject assignment
+and an unambiguous supplied identifier, and preserves statements containing both
+identifiers. Correct supplied-identifier
+assertions can still be restored, with original prose and correction provenance
+retained. Component implementation receipts include the conversation resolver,
+so an effective-request policy change affects the orchestrator identity. Frozen
+case, rubric, policy and numeric-reference bytes are unchanged.
+
+A separate counterfactual uses an actual canonical seed-calculation result as
+verifier evidence, without adding a new runtime capability. It isolates a false
+seed-quality completeness requirement: germination supplied as an arithmetic
+operand did not request vigor testing or lot selection. Router guidance,
+decision selection, verifier facets and fallback now share a task-scope check;
+independently requested quality assessment retains the workflow. Numeric support
+and field-action authority checks remain unchanged. This is deterministic
+source QA, not a model-quality grade.
+
+
+The same bound-evidence counterfactual exposed water and fertilizer versions of
+the facet-ownership defect. Correct gross-depth and fertilizer-total arithmetic
+could be replaced with an unasked water-management or nutrient-target checklist.
+The shared qualifier requires a distinct selected method and a fully recognized
+arithmetic fragment through the maintained planner. Independently requested
+water/nutrient management, unknown quantities and references to applying the
+result retain ordinary checks. No runtime partial-tool execution or numeric
+exemption is added. Four canonical-result counterfactuals preserve their whole
+useful answers; the checks remain imposed engineering fixtures, not real model
+grades. The verifier and fallback identities bind their new planning dependency.

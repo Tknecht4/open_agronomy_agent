@@ -667,6 +667,39 @@ def test_partial_gdd_arithmetic_does_not_mark_the_whole_request_model_free(runti
     assert view['reason'] == 'additional_request_requires_generation'
 
 
+@pytest.mark.parametrize('base', [SEED_CONDITIONAL.rstrip('.'), GROSS_DEPTH.rstrip('.'), FIELD_N_TOTAL.rstrip('.')])
+def test_prepositional_followup_stays_in_model_readiness_and_persisted_request(runtime, monkeypatch, base):
+    client, store = runtime
+    prompts = []
+    class Backend:
+        backend_id = 'synthetic_scope_review'
+        intervention_profile = 'balanced'
+        draft = ('The supplied arithmetic does not set transplanting instructions. '
+                 'For transplanting help, specify the crop and seedling stage; '
+                 'seed mass does not prescribe transplant spacing.')
+        def generate(self, messages):
+            prompts.append(messages)
+            return self.draft
+        def close(self):
+            pass
+    monkeypatch.setattr(chat_service, '_build_mlx_generator', lambda *args, **kwargs: Backend())
+    sid = session(client)
+    question = base + ', with instructions to transplant seedlings.'
+    view = preview(client, turn(question), sid)
+    assert view['requires_model'] is True and view['status'] == 'model_required'
+    response = client.post(f'/api/sessions/{sid}/turns', headers=OWNER,
+                           json={**turn(question), 'readiness_binding': view['readiness_binding']})
+    assert response.status_code == 200, response.text
+    saved = store.get_turn(response.json()['turn_id'])
+    assert saved['user_message'] == question
+    assert prompts and any('with instructions to transplant seedlings' in message['content']
+                           for messages in prompts for message in messages if message['role'] == 'user')
+    assert saved['trace']['metadata'].get('generation_path') != 'deterministic_tool_result'
+    # This imposed backend intentionally omits the requested arithmetic. Its
+    # final fallback is not a model-accuracy fixture; preserve the actual draft.
+    assert saved['trace']['metadata']['answer_verification']['draft_output'] == Backend.draft
+
+
 @pytest.mark.parametrize('water_phrase', ['carrier-water volume', 'carrier water volume'])
 def test_product_total_negative_output_boundary_remains_model_free(runtime, monkeypatch, water_phrase):
     client, store = runtime

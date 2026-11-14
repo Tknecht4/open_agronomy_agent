@@ -1232,3 +1232,16 @@ def test_treating_measurements_as_equivalent_does_not_hide_a_separate_field_trea
     assert not has_action_directive('Treat these measurements as equivalent.')
     assert has_action_directive('Treat the field. Treat these measurements as equivalent.')
     assert has_action_directive('Treat the crop and treat these measurements as equivalent.')
+
+
+def test_french_soil_water_failure_returns_bounded_help_without_undefined_context():
+    class UnavailableEditor:
+        def generate(self, messages):
+            raise RuntimeError('Imposed unavailable editor')
+    result = verify_answer('Il faut irriguer immédiatement avec 999 mm.',
+        question='Réponds en français. Puis-je irriguer ce champ après la pluie ?',
+        evidence_text='', question_type='soil_water', risk_level='medium',
+        editor=UnavailableEditor(), review_mode='risk_conditioned_selective_v3')
+    assert result.fallback_applied
+    assert '999' not in result.answer
+    assert 'Vérifier au champ' in result.answer

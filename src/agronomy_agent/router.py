@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from agronomy_agent.map_component_interpretation import is_map_component_explanation_question
 from agronomy_agent.observation_guidance import observation_guidance, stored_grain_context
 from agronomy_agent.answerability import is_quantity_concept_explanation, is_mechanism_explanation, product_action_request_text
-from agronomy_agent.request_scope import has_action_directive, has_unqualified_followup
+from agronomy_agent.request_scope import has_action_directive, has_unqualified_followup, seed_quality_workflow_requested
 from agronomy_agent.plant_health_scope import current_root_swelling_clauses
 
 
@@ -1216,7 +1216,7 @@ def _resolve_primary_question_type(text: str, current: str) -> str:
     ):
         return "product_label"
 
-    if has(r"\b(seed lots?|seed quality|germination|germ test|cold test|accelerated aging|seed vigor|vigor test)\b", text) and has(
+    if seed_quality_workflow_requested(text) and has(
         r"\b(plant|planting|stand|replant|seeding rate)\b", text
     ):
         return "crop_management"
@@ -2373,7 +2373,7 @@ def classify_query(question: str) -> QueryRoute:
         expansions.update({"seed treatment", "insecticide seed treatment", "early planting", "soil temperature", "cool wet soils", "pest history", "field history", "planting conditions", "pest pressure", "seedcorn maggot", "bean leaf beetle", "wireworm", "grub", "threshold", "risk"})
         guidance = "Frame seed-treatment need as risk-based, not automatic. Explicitly ask for field history, planting conditions, and pest pressure; cover planting date, soil temperature or cool-wet soils, residue or manure history, target pest risk, threshold where available, and label fit."
 
-    if has(r"\b(seed quality|germination|vigor|vigour|seed lot|seedling vigor)\b", q):
+    if seed_quality_workflow_requested(q):
         namespaces.update({"crop_management", "plant_health", "field_data_boundary"})
         pass
         if has(r"\b(weather|cold|cool|wet|heat|stress|planting conditions|storage)\b", q):
@@ -3177,7 +3177,7 @@ def refine_query_route(question: str, route: QueryRoute) -> QueryRoute:
             pass
             expansions.update({"bloom timing", "flowering", "pollination", "pollinator activity", "temperature during bloom", "soil moisture", "tissue test", "disease scouting", "crop-specific extension"})
             guidance = "Build a crop-specific reproductive-set differential spanning pollination biology, bloom weather, water status, nutrition, and disease; do not assume one cause."
-        if has(r"\b(seed lots?|seed quality|germination|germ test|vigor|cold test|accelerated aging)\b", q):
+        if seed_quality_workflow_requested(q):
             expansions.update({"germination percentage", "vigor test", "seed lot", "soil temperature", "planting date", "seedbed", "stand establishment", "replant risk"})
             guidance = "Use lot-specific germination and vigor evidence with planting conditions to estimate stand-establishment risk; do not invent a seeding-rate adjustment."
         if has(r"\b(trait packages?|technology traits?|trait stewardship|refuge)\b", q):

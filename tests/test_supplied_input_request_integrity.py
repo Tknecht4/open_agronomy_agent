@@ -8,6 +8,104 @@ from agronomy_agent.router import classify_query, refine_query_route
 from agronomy_agent.tool_planner import plan_and_execute_tools, plan_tools
 
 
+_COMPLETE_ARITHMETIC = (
+    'Calculate the seed rate: target stand is 80 plants/m2, TKW is 4.5 g, germination is 96%, and expected field survival is 75% of germinated seeds',
+    'A teaching plan needs 24 mm net irrigation and assumes 80% application efficiency. Calculate gross depth',
+    'A field covers 16 hectares. A dry fertilizer product is 25% nitrogen by mass. Calculate the total product kilograms needed to supply 75 kg N/ha',
+)
+
+
+@pytest.mark.parametrize('base', _COMPLETE_ARITHMETIC)
+@pytest.mark.parametrize('tail', [
+    ', with instructions to transplant seedlings.',
+    ', with advice on mulching beds.',
+    ', without explaining the arithmetic and with instructions to transplant seedlings.',
+    ', of course provide instructions to transplant seedlings.',
+    ', show the units with instructions to transplant seedlings.',
+    ', target stand is 80 plants/m2 with instructions to transplant seedlings.',
+    ' with instructions to transplant seedlings.',
+    '. State the units with instructions to transplant seedlings.',
+])
+def test_input_or_presentation_prefix_cannot_own_a_request_bearing_tail(base, tail):
+    from agronomy_agent.calculator_contracts import calculation_request_is_complete
+    from agronomy_agent.request_scope import has_unqualified_followup
+    question = base + tail
+    assert has_unqualified_followup(question, calculation=True)
+    assert not calculation_request_is_complete(question, 'seed_rate_mass')
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status != 'ready' and not results
+
+
+@pytest.mark.parametrize('base', _COMPLETE_ARITHMETIC)
+@pytest.mark.parametrize('tail', [', with all assumptions stated.', ', without explaining the arithmetic.',
+                                  ', with units and assumptions stated.'])
+def test_closed_presentation_tails_preserve_supplied_arithmetic(base, tail):
+    from agronomy_agent.calculator_contracts import calculation_request_is_complete
+    question = base + tail
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'ready' and results
+    assert calculation_request_is_complete(question, plan.invocations[0].operation)
+
+
+@pytest.mark.parametrize('base', _COMPLETE_ARITHMETIC + (
+    'A field covers 24 hectares. The fertilizer is 46% nitrogen. Calculate the total product for 40 kg N/ha',))
+def test_bound_arithmetic_does_not_acquire_an_unasked_management_checklist(base):
+    from types import SimpleNamespace
+    from agronomy_agent.answer_verifier import verify_answer, context_evidence_text
+    from agronomy_agent.evidence_contracts import capability_evidence_from_records
+    from agronomy_agent.request_scope import seed_quality_workflow_requested
+    _, results = plan_and_execute_tools(base + '.')
+    assert len(results) == 1
+    evidence = context_evidence_text(SimpleNamespace(runtime_metadata={
+        'evidence_fabric': {'evidence_packet': {'capability_evidence': [
+            item.to_dict() for item in capability_evidence_from_records(results)]}}}))
+    question = base + ', with instructions to transplant seedlings.'
+    draft = results[0].payload['answer'] + (
+        ' Where transplants have root balls, keep them intact and moist during handling; '
+        'use crop-specific depth, spacing and establishment guidance rather than '
+        'converting seed mass to a transplant plan. What crop and seedling stage are involved?')
+    class NoEditor:
+        def generate(self, messages):
+            raise AssertionError('complete, bound answer must not require an editor')
+    route = refine_query_route(question, classify_query(question))
+    assert not seed_quality_workflow_requested(question)
+    assert build_decision_route_state(question, route.question_type).decision != 'seed_quality'
+    result = verify_answer(draft, question=question, evidence_text=evidence,
+        question_type=route.question_type, risk_level=route.risk_level,
+        editor=NoEditor(), review_mode='risk_conditioned_selective_v3')
+    assert result.answer == draft
+    assert not result.draft_assessment.unsupported_numbers
+    assert not result.draft_assessment.missing_intent_facets
+    assert not result.fallback_applied
+
+
+@pytest.mark.parametrize('base,topic,extra', [
+    (_COMPLETE_ARITHMETIC[1], 'soil_water', 'choose an irrigation schedule'),
+    (_COMPLETE_ARITHMETIC[2], 'fertility_rate', 'choose the nutrient rate for my field'),
+    (_COMPLETE_ARITHMETIC[1], 'soil_water', 'tell me when to apply it'),
+    (_COMPLETE_ARITHMETIC[2], 'fertility_rate', 'recommend an irrigation schedule'),
+])
+def test_independent_management_or_result_use_keeps_ordinary_checks(base, topic, extra):
+    from agronomy_agent.request_scope import topic_is_supplied_arithmetic_context
+    from agronomy_agent.answer_verifier import _intent_requirements
+    question = base + ', with instructions to transplant seedlings and ' + extra + '.'
+    assert not topic_is_supplied_arithmetic_context(question, topic)
+    assert _intent_requirements(question, topic)
+
+
+@pytest.mark.parametrize('question', [
+    'Compare seed lots using germination results and vigor tests.',
+    'How should I interpret seed quality before planting?',
+    _COMPLETE_ARITHMETIC[0] + ', and compare seed lots using germination and vigor tests.',
+    _COMPLETE_ARITHMETIC[0] + ', with advice on evaluating seed quality.',
+])
+def test_independently_requested_seed_quality_keeps_its_own_workflow(question):
+    from agronomy_agent.request_scope import seed_quality_workflow_requested
+    from agronomy_agent.answer_verifier import _intent_requirements
+    assert seed_quality_workflow_requested(question)
+    assert 'seed_vigor' in {item.name for item in _intent_requirements(question, 'crop_management')}
+
+
 @pytest.mark.parametrize('question', [
     'For a uniform profile, field capacity is 0,31, wilting point 0,15 and rooting depth 0.4 m. Compute total available water.',
     'For a standard-conditions model ETc = Kc × ETo, Kc is 1/day and ETo is 4 mm/day. Compute ETc.',

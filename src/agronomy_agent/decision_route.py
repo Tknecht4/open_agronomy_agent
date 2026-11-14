@@ -8,6 +8,7 @@ from agronomy_agent.query_context import analyze_query_context
 from agronomy_agent.router import request_focus, evidence_interpretation_kind
 from agronomy_agent.answerability import simple_definition_subject, is_mechanism_explanation, bounded_product_help_kind, is_sampling_basis_explanation
 from agronomy_agent.observation_guidance import sample_event_roles_stated
+from agronomy_agent.request_scope import seed_quality_workflow_requested
 from agronomy_agent.plant_health_scope import root_inspection_only_request
 from agronomy_agent.plant_health_scope import clubroot_confirmation_requested, clubroot_short_rotation_requested, clubroot_workflow_applicable, clubroot_question_scope
 
@@ -1334,7 +1335,7 @@ def _decision_name(lower: str, question_type: str) -> str:
         return "fungicide_decision"
     if re.search(r"\b(?:harvest(?!\s+index\b)|storage|drying|grain moisture)\b", lower):
         return "harvest_storage"
-    if re.search(r"\b(?:seed lots?|seed quality|germination|seed vigor|vigor test)\b", lower):
+    if seed_quality_workflow_requested(lower):
         return "seed_quality"
     if re.search(r"\b(?:planting window|plant into|wants? to plant|before planting|crop establishment)\b", lower):
         return "planting_window"

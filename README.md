@@ -42,61 +42,32 @@ See [contributing](CONTRIBUTING.md), [support](SUPPORT.md), and [security report
 
 ## Evaluate the current agent
 
-The [evaluation guide](docs/public/operations/release-evaluation.md) identifies
-the canonical runner, complete comparison matrix, controller-only references,
-and the distinction between software checks and agronomic evidence. Benchmark
-results depend on the exact source, model, cohort, arm and runtime. Raw-model,
-full-system and hosted Luna results retain their separate execution limits;
-neither a refusal nor a fluent answer establishes correctness.
+The [evaluation guide](docs/public/operations/release-evaluation.md) explains the
+complete comparison of raw models, the full system and hosted Luna. Results bind
+the exact source, model, cohort, arm and runtime. The [current campaign record](docs/reviews/full-evaluation-20261112.md)
+separates completed observations, diagnostic attempts and pending scientific
+review. Historical smoke panels retain their original scope.
 
-The [current full-evaluation record](docs/reviews/full-evaluation-20261112.md)
-tracks the rerun of merged main, refusal and crop-scope checks, and the complete
-comparison campaign. Its status explicitly distinguishes planned work from
-completed observations. Historical smoke panels and frozen benchmarks remain
-evidence for their original revisions.
+The current software supports these bounded workflows:
 
-The calculator checks supplied quantities for nutrient, product, water,
-sprayer-calibration, grain-moisture, thermal-time, harvest-index and circular
-sampling-area arithmetic. It shows the
-units and assumptions and asks for missing or conflicting inputs. A calculated
-quantity does not select a field target, authorize a product or establish crop
-stage. Seed-mass calculations distinguish overall emergence from survival after
-germination and retain the supplied basis. When otherwise complete inputs include
-laboratory germination but leave field survival's denominator unclear, the agent
-shows both labelled arithmetic scenarios and asks which basis applies. Neither
-scenario selects a field rate. Seedling-loss percentages need a clear relation
-to germination before their complement can represent overall survival. A reply can supply that basis and, when needed, the laboratory germination
-percentage in the same chat without using the model. Conceptual explanations
-and requests for field actions retain distinct
-evidence requirements.
-General product-rate and dose-response explanations, and bounded questions
-about evidence to collect, do not require permission to apply a pesticide.
-Requested fictional fertilizer examples show the product-to-nutrient arithmetic
-without selecting a field target. General concept checks distinguish harvest
-drydown from drought tolerance, lodging from standability, and fertilizer nutrient
-analysis from pesticide active ingredients. They are bounded checks, not a general scientific validator.
-Impersonal concept comparisons preserve the requested explanation without
-requiring an unasked field-management plan. Personal choices, treatment-rate
-comparisons and added operational requests retain their evidence requirements.
-Explaining why sampling counts use different units does not require a treatment
-plan; thresholds retain the sampling method and basis for which they were validated.
-Product selection, application rates and use restrictions retain their current
-local authority requirements; an unfamiliar product is not an exemption.
-Mixed definition-and-action requests can retain the supported general definition
-while the requested action waits for its evidence.
-Reported disease history informs soil biosecurity across rotations; current
-symptoms and diagnostic confirmation retain their own evidence scope.
-Suspected clubroot in a susceptible crop retains soil-movement precautions and
-the limits of a short nonhost interval alongside diagnostic follow-up.
-Root-inspection help explains how to examine intact plants and compare normal
-structures before drawing a diagnosis. Healthy-potato scouting describes
-conditional signs, field coverage and diagnostic follow-up; local disease
-alerts alone do not establish whether a crop is infected. Stored-grain checks
-focus on moisture distribution, temperature and changing storage conditions.
-Reference ET, standard crop ET and actual water use under stress retain their
-distinct meanings. Uploaded map context does not imply an imported table query,
-and crop-classification pixels do not establish complete farm history. Soybean
-maturity identifiers preserve significant leading zeroes.
+- **Calculate from supplied inputs:** nutrient and product quantities, water,
+  sprayer calibration, grain moisture, thermal time, harvest index and sampling
+  area, with units and assumptions. A calculation does not select a field target
+  or authorize a product.
+- **Resolve seed-establishment ambiguity:** distinguish overall emergence from
+  survival after germination. Otherwise complete inputs with an unclear
+  denominator produce two labelled scenarios; a short reply can select the
+  supplied basis without model use.
+- **Explain and collect useful evidence:** definitions, methods, hypothetical
+  arithmetic examples and scouting questions can receive bounded help. Disease
+  history informs soil precautions across rotations; current symptoms and
+  diagnoses keep their own evidence requirements.
+- **Keep the whole request:** a calculation or definition cannot silently replace
+  additional requested help. Field actions, product selection and use
+  restrictions retain their applicable evidence and current authority checks.
+
+These are software contracts under evaluation. Tests, a fluent answer and a
+refusal each require interpretation; none establishes general agronomic accuracy.
 
 ## Evidence and licensing
 

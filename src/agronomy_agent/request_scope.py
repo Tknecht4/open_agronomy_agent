@@ -35,6 +35,34 @@ def has_action_directive(text: str) -> bool:
     return False
 
 
+def seed_quality_workflow_requested(text: str) -> bool:
+    """Distinguish seed-quality work from germination supplied as an operand.
+
+    This selects a topical method only; it grants no answer or action bypass.
+    A separately requested quality assessment retains its ordinary obligations.
+    """
+    quality_subject = r"(?:seed[- ]lots?|seed quality|germination (?:tests?|results|evidence)|germ test|cold test|accelerated aging|seed(?:ling)? vigou?r|vigou?r test)"
+    topic = r"(?:germination|" + quality_subject + r")"
+    if not re.search(r"\b" + topic + r"\b", text, re.I):
+        return False
+    arithmetic = re.search(r"\b(?:calculate|compute|convert|work out|how (?:many|much)|what seed(?:ing)? (?:rate|mass))\b", text, re.I)
+    if not arithmetic or not re.search(r"\b(?:seed(?:ing)? (?:rate|mass)|TKW|thousand[- ]kernel|target (?:stand|population))\b", text, re.I):
+        return True
+    # A germination percentage in the arithmetic does not request lot/vigor
+    # selection. Inspect other explicit requests rather than the whole bag of
+    # topical words; the original request remains intact for ordinary handling.
+    if re.search(r"\b(?:instructions?|advice|help)\s+(?:on|for|with|about|to)\s+(?:how to\s+)?(?:(?:assess\w*|compar\w*|interpret\w*|evaluat\w*|choos\w*|select\w*)\s+(?:the\s+)?)?" + quality_subject + r"\b", text, re.I):
+        return True
+    head = r"(?:compare|contrast|assess|evaluate|interpret|choose|select|recommend|advise|explain|describe|check|which|what|how)\b"
+    for clause in re.split(r",\s*(?!\d)|\b(?:and|then|also)\b|[!?;]|\.(?=\s|$)", text, flags=re.I):
+        clause = re.sub(r"^\s*(?:(?:please\s+)?(?:can|could|would|will)\s+you\s+)?(?:please\s+)?", "", clause, flags=re.I)
+        if re.match(r"how (?:many|much)\b|what seed(?:ing)? (?:rate|mass)\b", clause, re.I):
+            continue
+        if re.match(head, clause, re.I) and re.search(r"\b" + quality_subject + r"\b|\bwhich lot\b", clause, re.I):
+            return True
+    return False
+
+
 def is_concept_comparison_scope(text: str) -> bool:
     """Consume one nominal comparison, without granting scope to extra commands.
 
@@ -82,6 +110,42 @@ def is_concept_comparison_scope(text: str) -> bool:
     return True
 
 
+def _calculation_value_is_owned(value: str, *, has_quantity: bool = False) -> bool:
+    """Consume a data value, unit and bounded method qualifiers in full.
+
+    Typed parsers still validate quantities. A recognized input name or
+    preposition cannot grant ownership to arbitrary trailing instructions.
+    """
+    words = frozenset("""
+        is are was were has have does include of with without not no the a an
+        for per at in by or from over how much supplies labelled labeled
+        to already including excluding all overall expected post germination
+        germinated germinable viable sown seeds seed seedling seedlings stage
+        before after among includes field survival
+        mortality loss emergence emerge lab laboratory
+        application efficiency upper lower maximum minimum base temperature
+        cap caps negative values accumulation floored zero retained consecutive
+        day days daily hour hours h min c f degree degrees kg g mg t tonne tonnes
+        pound pounds lb lbs l litre litres liter liters cm mm m km ha hectare
+        hectares ac acre acres plant plants ft square metre metres meter meters
+        bu bushel bushels cad usd n p k o nitrogen phosphorus potassium
+        dry mass matter grain total above ground biomass stand target product
+        fertilizer nutrient removed applied volumetric water content moisture
+        wet basis rate model standard conditions net irrigation percent volume
+        thousand kernel weight nozzle nozzles boom tank sprayer unusable
+        row rows apart average established
+    """.split())
+    value = re.sub(r"n['’]t\b", " not", value, flags=re.I)
+    # A named material is data in this role; it does not supply analysis or
+    # permission. Typed parsers must still account for every supplied quantity.
+    value = re.sub(r"\bfrom\s+[a-z][a-z-]*(?=\s+label(?:l)?ed\b|\s*$)", "from product", value, flags=re.I)
+    return bool(
+        (has_quantity or re.search(r"\d", value))
+        and re.fullmatch(r"[A-Za-z\d\s.,:%°²³₀₁₂₃₄₅₆₇₈₉/$×*+=()−-]*", value)
+        and set(re.findall(r"[a-z]+", value.casefold())) <= words
+    )
+
+
 def _calculation_premise(part: str) -> bool:
     """Recognize input declarations; their values remain the parser's concern."""
     closed = (
@@ -96,7 +160,9 @@ def _calculation_premise(part: str) -> bool:
         r"(?:using )?(?:P|K|L/ha)\s*=\s*(?:(?:P2O5|K2O|P|K|Q|speed|spacing)|[\d.×*/()+ =-])+)")
     if re.fullmatch(closed, part, re.I):
         return True
-    if re.fullmatch(r"(?:but )?(?:the )?[a-z][a-z /²-]{0,55} (?:is|are) not supplied", part, re.I):
+    if re.fullmatch(r"(?:but )?(?:the )?[a-z][a-z /²-]{0,55} (?:is|are) (?:not supplied|unknown|missing)", part, re.I):
+        return True
+    if re.fullmatch(r"(?:the )?unusable (?:tank )?volume (?:is |of )?(?:unknown|missing|not supplied)", part, re.I):
         return True
     if not re.search(r"\d", part):
         return False
@@ -117,10 +183,11 @@ def _calculation_premise(part: str) -> bool:
         r"total above-ground dry biomass|field survival|Kc|ETo|field capacity|"
         r"(?:measured )?volumetric water|travel speed|it)"
     )
-    if re.fullmatch(subject + r"\s+(?:is|are|was|were|has|have|contains|requires|delivers|weighs|supplies|covers|receives|targets|reports|found|totals|needs|uses|calls for|travels at)\b\s+[^!?;]+", part, re.I):
-        return True
+    declaration = re.fullmatch(subject + r"\s+(?:is|are|was|were|has|have|contains|requires|delivers|weighs|supplies|covers|receives|targets|reports|found|totals|needs|uses|calls for|travels at)\b\s+(?P<value>[^!?;]+)", part, re.I)
+    if declaration:
+        return _calculation_value_is_owned(declaration['value'])
     # Shared-subject or verbless input declarations following a comma/'and'.
-    return bool(re.fullmatch(
+    shared = re.fullmatch(
         r"(?:assumes\s+[^!?;]+|each flowing\s+[^!?;]+|"
         r"(?:(?:upper|lower) cap|base(?: temperature)?|target field capacity|field capacity|wilting point|"
         r"rooting depth|nozzle spacing)\s+[^!?;]+|"
@@ -128,7 +195,62 @@ def _calculation_premise(part: str) -> bool:
         r"[+-]?(?:\d+(?:\.\d+)?|\.\d+) kg (?:P|N|K)/ha (?:applied|removed)|"
         r"a [\d.,]+ ha zone yielding [\d.,]+ bu/ac|"
         r"[+-]?[\d.,]+(?: for (?:[a-z]+|\d+) consecutive days)?|"
-        r"[+-]?[\d.,]+(?: t at [\d.,]+%|%) wet-basis moisture)", part, re.I))
+        r"[+-]?[\d.,]+(?: t at [\d.,]+%|%) wet-basis moisture)", part, re.I)
+    if shared:
+        # The broad shared-subject alternatives also need full value ownership.
+        value = re.sub(r"^(?:assumes|each flowing|(?:(?:upper|lower) cap|base(?: temperature)?|target field capacity|field capacity|wilting point|rooting depth|nozzle spacing))\s+", "", part, flags=re.I)
+        return _calculation_value_is_owned(value)
+    return False
+
+
+def topic_is_supplied_arithmetic_context(text: str, question_type: str) -> bool:
+    """Qualify a topic as operands rather than an added management request.
+
+    Only completeness/fallback selection uses this result. It neither executes
+    partial arithmetic nor grants numeric support, field authority or a bypass.
+    Unknown quantities, topic requests and references to using the result keep
+    the ordinary management checks.
+    """
+    topics = {
+        'soil_water': r"\b(?:water|irrigat\w*|drain\w*|rain\w*|wetness|moisture|ET[oc]?|rooting depth|water table)\b",
+        'fertility_rate': r"\b(?:fertili[sz]\w*|nutrient\w*|nitrogen|phosphorus|potassium|manure|compost|credits?|product|rates?|placement|soil tests?|yield goal|N|P|K|P2O5|K2O)\b",
+    }
+    topic = topics.get(question_type)
+    if topic is None:
+        return False
+    from agronomy_agent.decision_route import build_decision_route_state
+    state = build_decision_route_state(text, question_type)
+    if (state.decision == question_type or state.capsule is None
+            or not state.capsule.is_specific):
+        return False  # A distinct, concrete requested task must own the method.
+    head = r"\b(?:calculate|compute|convert|work out|how (?:many|much))\b"
+    parts = re.split(r",\s*(?!\d)|\b(?:and|then|also)\b|[!?;]|\.(?=\s|$)|\bwith\s+(?=(?:instructions?|advice|help)\b)", text, flags=re.I)
+    arithmetic = []
+    other = []
+    found_head = False
+    for part in parts:
+        part = part.strip()
+        if not part:
+            continue
+        if re.search(head, part, re.I):
+            arithmetic.append(part)
+            found_head = True
+        elif _calculation_premise(part):
+            arithmetic.append(part)
+        else:
+            other.append(part)
+    if not found_head or not other:
+        return False
+    for part in other:
+        if (any(re.search(pattern, part, re.I) for pattern in topics.values()) or re.search(r"\d", part)
+                or re.search(r"\b(?:it|this|that|these|those|calculated|apply|use|proceed)\b", part, re.I)):
+            return False
+    # The maintained planner must recognize the complete arithmetic fragment;
+    # merely containing "calculate" does not establish a supplied calculation.
+    from agronomy_agent.tool_planner import plan_tools
+    plan = plan_tools('. '.join(arithmetic) + '.')
+    return bool(plan.status == 'ready' and len(plan.invocations) == 1
+                and plan.invocations[0].tool_id == 'agronomic_calculator')
 
 
 def has_unqualified_followup(text: str, *, calculation: bool = False) -> bool:
@@ -178,14 +300,18 @@ def has_unqualified_followup(text: str, *, calculation: bool = False) -> bool:
     data_declaration = (
         r"(?:(?:but )?(?:I|we) (?:have not|haven['’]t) (?:supplied|provided) (?:the )?[a-z /²-]{1,80}|"
         r"(?:do not|don['’]t|never) (?:infer (?:crop|growth) stage|state (?:the )?weather provenance)|"
-        r"[a-z][a-z /²-]{0,55} (?:is unknown|are unknown|is not supplied|are not supplied|has not been supplied|have not been supplied)|Named input data|(?:give|show|state) (?:the )?final (?:value|answer)(?: and units| in (?:kg/ha|lb/ac|GDD))|"
+        r"[a-z][a-z /²-]{0,55} (?:is unknown|are unknown|is missing|are missing|is not supplied|are not supplied|has not been supplied|have not been supplied)|Named input data|(?:give|show|state) (?:the )?final (?:value|answer)(?: and units| in (?:kg/ha|lb/ac|GDD))|"
         r"this is (?:a math|an arithmetic|a numerical) exercise(?:,? not a rate recommendation)?|"
         r"(?:for this calculation,? )?field survival is [\d.,]+% of (?:all seeds sown|germinated seeds)|"
         r"the laboratory germination is [\d.,]+%|"
         r"explain whether (?:that|this) (?:alone )?(?:tells|establishes) (?:me )?plant[- ]available water)"
     )
     for clause in clauses[1:]:
-        if re.match(r"(?:please\s+)?" + allowed, clause, re.I):
+        owned_output = r"(?:please\s+)?" + allowed
+        if calculation:
+            owned_output += r"(?:\s+and\s+(?:the\s+)?(?:units|assumptions|arithmetic limits))*"
+        if (re.fullmatch(owned_output, clause, re.I) if calculation
+                else re.match(owned_output, clause, re.I)):
             continue
         if calculation and re.fullmatch(data_declaration, clause, re.I):
             continue
@@ -194,24 +320,41 @@ def has_unqualified_followup(text: str, *, calculation: bool = False) -> bool:
             continue
         return True
     if calculation:
-        premise = (r"(?:(?:an?\s+)?[+-]?(?:\d|\.\d)|(?:of|with|without|does(?: not|n['’]t)|is|are|has|have)\b|(?:(?:the|an?)\s+)?(?:base(?: temperature)?|tmin|tmax|"
+        premise = (r"(?:(?:an?\s+)?[+-]?(?:\d|\.\d)|(?:(?:the|an?)\s+)?(?:base(?: temperature)?|tmin|tmax|"
             r"(?:lab(?:oratory)? )?germination|(?:(?:expected|post[- ]germination) )?field (?:survival|mortality|loss)|expected emergence|target (?:stand|population)|"
             r"(?:measured )?tkw|(?:(?:expected|overall|field|seedling|post[- ]germination|lab(?:oratory)?) )*(?:survival|emergence|mortality|loss|germination)|seed[- ]lot germination|rooting depth|root[- ]zone depth|field (?:area|capacity)|wilting point|"
-            r"measured volumetric water|kc|eto|net depth|application efficiency|travel speed|nozzle spacing|"
+            r"measured volumetric water|kc|eto|net depth|application efficiency|travel speed|nozzle spacing|unusable (?:tank )?volume|radius|diameter|"
             r"grain dry (?:mass|matter)|total above[- ]ground dry (?:biomass|mass|matter)|"
             r"(?:upper|lower) cap|(?:no|without) (?:upper |lower |temperature )?caps?|negative (?:values|accumulation)|"
             r"(?:added|lost) revenue|(?:added|saved) costs?|current (?:assets?|liabilities)|total (?:debt|assets?|product)|"
-            r"expected yield|(?:an? )?assumed price|operating cost|total cost|(?:an? )?unspecified (?:upper|lower) cap|P2O5|K2O|P|K)\b)")
-        presentation = (r"(?:units|assumptions|arithmetic limits|(?:(?:show|give|state|include) (?:the )?(?:units|assumptions|arithmetic limits|formula|calculation)|"
+            r"expected yield|(?:an? )?assumed price|(?:an? )?average of|operating cost|total cost|(?:an? )?unspecified (?:upper|lower) cap|P2O5|K2O|P|K)\b)")
+        presentation = (r"(?:(?:units|assumptions|arithmetic limits)(?: (?:stated|shown|included))?|with (?:all |the )?(?:units|assumptions|arithmetic limits|formula|calculation)(?: (?:stated|shown|included))?|without (?:showing|explaining) (?:the )?(?:arithmetic|formula|calculation)|(?:(?:show|give|state|include) (?:the )?(?:units|assumptions|arithmetic limits|formula|calculation)|"
             r"explain (?:its|the|their) (?:limits|limitations|boundaries)|"
-            r"distinguish it from total carrier volume))\b")
-        for tail in [tail for clause in clauses for tail in re.split(r",\s*(?!\d)|\b(?:and|then|also)\b", clause, flags=re.I)[1:]]:
+            r"distinguish it from total carrier volume))")
+        tails = []
+        for clause in clauses:
+            parts = re.split(r",\s*(?!\d)|\b(?:and|then|also)\b", clause, flags=re.I)
+            tails.extend(parts[1:])
+            # A prepositional request can occur inside the initial arithmetic
+            # clause too. It needs the same complete ownership as a comma tail.
+            for part in parts:
+                tails.extend(part[match.start():] for match in re.finditer(r"\b(?:with|without)\b", part, re.I))
+        for tail in tails:
             tail = re.sub(r"^\s*(?:(?:and|then|also)\s+)*", "", tail, flags=re.I).strip()
-            if re.fullmatch(r"(?:ignoring (?:losses|(?:unusable )?(?:tank )?volume)|not a (?:recommended rate(?: or carrier[- ]water volume)?|rate recommendation)|assuming the label basis is correct|not of (?:germinated seeds|seeds sown)|(?:not including|excluding) germination)", tail, re.I):
+            if re.fullmatch(r"(?:ignoring (?:losses|(?:unusable )?(?:tank )?volume)|not a (?:recommended rate(?: or carrier[- ]water volume)?|rate recommendation)|assuming the label basis is correct|(?:not )?of (?:germinated seeds|(?:all )?seeds sown)|(?:not including|excluding|does(?: not|n['’]t) (?:already )?include|without(?: (?:already )?including)?) (?:laboratory )?germination|without (?:upper |lower |temperature )?caps?|seedling (?:loss|mortality))", tail, re.I):
                 continue
             if re.fullmatch(data_declaration, tail, re.I):
                 continue
-            if not tail or re.match(premise, tail, re.I) or re.match(presentation, tail, re.I):
+            if re.fullmatch(r"(?:P2O5|K2O|P|K)", tail, re.I):
+                continue
+            if not tail or re.fullmatch(presentation, tail, re.I):
+                continue
+            data_tail = re.sub(r"^(?:with|of)\s+", "", tail, count=1, flags=re.I).replace('−', '-')
+            if _calculation_premise(data_tail):
+                continue
+            owner = re.match(premise, data_tail, re.I)
+            if owner and _calculation_value_is_owned(
+                    data_tail[owner.end():], has_quantity=bool(re.search(r"\d", owner.group()))):
                 continue
             if re.search(r"\bgrain\b.*\bwet[- ]basis moisture\b", text, re.I) and re.match(r"equivalent (?:grain )?mass\b", tail, re.I):
                 continue

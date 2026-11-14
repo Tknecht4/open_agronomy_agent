@@ -28,6 +28,7 @@ from agronomy_agent.quantity_claims import unsupported_quantities, remove_numeri
 from agronomy_agent.execution_core import stable_sha256
 from agronomy_agent.observation_guidance import observation_guidance, sample_event_roles_stated, POTATO_MONITORING_ANSWER, bounded_concept_prefix
 from agronomy_agent.agronomic_concepts import correct_concept_claims
+from agronomy_agent.request_scope import seed_quality_workflow_requested, topic_is_supplied_arithmetic_context
 from agronomy_agent.high_consequence import classify_high_consequence_domains, fertility_quantity_requested
 from agronomy_agent.answerability import simple_definition_subject, is_quantity_concept_explanation, is_mechanism_explanation, requests_regulated_action, bounded_product_help_kind, is_sampling_basis_explanation
 
@@ -3635,7 +3636,7 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
     if requirements:
         return tuple(requirements)
 
-    if question_type == "fertility_rate":
+    if question_type == "fertility_rate" and not topic_is_supplied_arithmetic_context(question, question_type):
         if re.search(r"\b(volatilization|fertilizer source)\b", lower):
             add("volatilization_source", "Identify the fertilizer source, such as urea, UAN, or ammonium.", r"\bfertilizer source\b", r"\burea\b", r"\bUAN\b", r"\bammonium\b")
             add("volatilization_placement", "Check placement, surface application, incorporation, or injection.", r"\bplacement\b", r"\bsurface application\b", r"\bincorporation\b", r"\binjection\b")
@@ -3749,7 +3750,7 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
         add("treatment_fit", "Compare untreated risk with treatment spectrum and the current label.", r"\brisk\b", r"\bcurrent (?:product )?label\b", r"\bseed treatment\b")
         add("treatment_economic_risk", "Base treatment on target-pest and economic risk rather than insurance by default.", r"\btarget pest\b", r"\beconomic risk\b", r"\bnot insurance\b")
 
-    elif question_type == "soil_water":
+    elif question_type == "soil_water" and not topic_is_supplied_arithmetic_context(question, question_type):
         if re.search(r"\b(climate normals?|historical gridded|gridded climate)\b", lower):
             add("climate_history", "Describe climate normals or gridded climate as a historical average or context.", r"\bclimate normals?\b", r"\bhistorical average\b", r"\bgridded climate\b")
             add("climate_forecast", "Use the current forecast, current weather, or short-term outlook for the operation window.", r"\bcurrent forecast\b", r"\bcurrent weather\b", r"\bshort[- ]term outlook\b")
@@ -4164,7 +4165,7 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
         add("fruit_nutrition", "Use current soil or tissue tests for nutrition rather than assuming a deficiency.", r"\bnutrition\b", r"\bsoil test\b", r"\btissue test\b")
         add("fruit_disease", "Use scouting and crop-specific extension guidance for disease and reproductive diagnosis.", r"\bdisease\b", r"\bscouting\b", r"\bcrop[- ]specific extension\b")
 
-    elif question_type == "crop_management" and re.search(r"\b(seed lots?|seed quality|germination|germ test|cold test|accelerated aging|seed vigor|vigor test)\b", lower):
+    elif question_type == "crop_management" and seed_quality_workflow_requested(question):
         add("seed_germination", "Use the lot-specific germination percentage or germ test.", r"\bgermination percentage\b", r"\bgerm test\b", r"\bgermination\b")
         add("seed_vigor", "Use a vigor, cold, or accelerated-aging test where relevant.", r"\bvigor test\b", r"\bcold test\b", r"\baccelerated aging\b")
         add("seed_lot", "Keep seed-lot identity and quality information separate.", r"\bseed lot\b", r"\bseed quality\b", r"\bseed size\b")
@@ -5413,7 +5414,7 @@ def _conservative_failure_answer(question_type: str, *, question: str = "", _inc
             "Confirm the cause with a representative diagnostic sample or local crop specialist. Consider treatment only after diagnosis, current label fit, and the expected yield benefit, "
             "crop value, commodity price, and application cost support a reasonable return, ROI, and field-level economics."
         )
-    if question_type == "fertility_rate":
+    if question_type == "fertility_rate" and not topic_is_supplied_arithmetic_context(question, question_type):
         if re.search(r"\b(volatilization|fertilizer source)\b", lower):
             return (
                 "First identify the fertilizer source, formulation and application record: urea, UAN, ammonium or another source can have different loss pathways. Check placement and whether it is a surface application, incorporated, banded or injected; then evaluate volatilization and other loss risk from soil condition, temperature, residue, wind, soil pH, and the actual rainfall timing or irrigation timing after application. "
@@ -5683,7 +5684,7 @@ def _conservative_failure_answer(question_type: str, *, question: str = "", _inc
             "Use the NRCS soil survey or Soil Data Access (SDA) map unit as a regional prior and screening context. Inspect dominant components and component percentages plus mapped texture, drainage class, hydrologic group, hydric rating, slope, and restrictive-layer clues. Treat every listed attribute as a mapped interpretation, not exact field truth: it cannot prove which component occurs at a boundary point or confirm current field conditions, and it is not a replacement for soil tests or field observations. "
             "Confirm the uploaded or drawn boundary and field history, then ground-truth representative and unusual management zones with scouting, field observations, a soil pit or probe, and appropriate soil samples before changing management."
         )
-    if question_type == "soil_water":
+    if question_type == "soil_water" and not topic_is_supplied_arithmetic_context(question, question_type):
         if re.search(r"\b(climate normals?|historical gridded|gridded climate)\b", lower):
             return (
                 "Use climate normals, a historical average, or historical gridded climate as a long-run prior and planning context; they describe what has occurred, not a prediction of the next operation window. Use the current forecast, current weather and short-term outlook for the actual period, including probability and uncertainty rather than a categorical promise. "
@@ -5804,7 +5805,7 @@ def _conservative_failure_answer(question_type: str, *, question: str = "", _inc
                 "Treat poor fruit set or kernel set as a crop-specific reproductive differential. Confirm bloom timing, flowering and crop stage, then check pollination biology: pollen shed and receptivity or synchrony for wind- or self-pollinated crops, and pollinator activity or bee activity only where the crop depends on it. Reconstruct temperature, heat, cold, rain and other weather during bloom. "
                 "At the same time, compare root-zone soil moisture, irrigation and water stress; use a current soil test or tissue test for nutrition rather than assuming boron, calcium or another deficiency; and scout flowers, fruit and canopy for disease. Use crop-specific extension guidance to decide which observation or sample can separate the causes."
             )
-        if re.search(r"\b(seed lots?|seed quality|germination|germ test|cold test|accelerated aging|seed vigor|vigor test)\b", lower):
+        if seed_quality_workflow_requested(question):
             if re.search(r"\bpotato(?:es)?\b", lower):
                 return (
                     "For potato, evaluate seed tubers rather than treating the lot like botanical seed. Verify certified-source and lot identity, seed-tuber health and disease status, physiological age, sprout condition, size distribution, storage history, and any cutting and healing or suberization plan. Inspect for rot, dehydration, pressure bruising, and other damage, and keep materially different lots separate. "

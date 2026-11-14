@@ -55,26 +55,67 @@ def _maturity_edits(sentence: str, question: str):
     def collapsed(value):
         value = value.lstrip("0") or "0"
         return "0" + value if value.startswith(".") else value
+    def named_subject(prefix):
+        subject = re.search(r"\b([A-Za-z][A-Za-z0-9_-]*)(?:['’]s\s+|\s+has\s+)$", prefix)
+        if subject is None:
+            # Bare labels are explicit record subjects, not a modal's final
+            # verb ("Y may have maturity..."). Named varieties use has/'s.
+            subject = re.search(r"\b([A-Z](?:\d+)?)\s+$", prefix)
+        if subject is None or subject[1].casefold() in {
+                'soybean', 'soybeans', 'variety', 'cultivar', 'hybrid', 'the', 'a',
+                'an', 'i', 'we', 'you', 'they', 'he', 'she', 'it', 'its', 'is',
+                'have', 'has', 'may', 'could', 'would', 'should', 'must', 'will',
+                'can', 'of', 'with', 'explain', 'which'}:
+            return None
+        return subject[1].casefold()
     groups = {}
+    subjects = {}
     for match in _SOY_MATURITY_ID.finditer(question):
         identifier = match["identifier"]
         groups.setdefault(collapsed(identifier), set()).add(identifier)
+        subject = named_subject(question[:match.start()])
+        if subject:
+            subjects.setdefault(identifier, set()).add(subject)
     edits = []
+    def role_text(value):
+        for pattern, replacement in (
+            (r"\bcan['’]t\b|\bcannot\b", "can not"),
+            (r"\bwon['’]t\b", "will not"),
+            (r"\bshan['’]t\b", "shall not"),
+        ):
+            value = re.sub(pattern, replacement, value, flags=re.I)
+        return re.sub(r"n['’]t\b", " not", value, flags=re.I)
     def restore(match):
         identifier = match["identifier"]
         before = sentence[:match.start()]
         after = sentence[match.end():]
+        # Normalize only for role detection; replacement offsets and prose
+        # remain bound to the original sentence. Negative comparisons must
+        # never become false self-comparisons after restoring an identifier.
+        before_role = role_text(before)
+        after_role = role_text(after)
         clause_prefix = re.split(r"[;,!?]|\.(?=\s|$)|\b(?:but|whereas)\b", before, flags=re.I)[-1]
-        if re.search(r"\b(?:if|suppose|supposing|assuming|hypothetical)\b|^\s*were\b", clause_prefix, re.I):
+        if re.search(r"\b(?:if|suppose|supposing|assuming|hypothetical|another|other)\b|^\s*were\b", clause_prefix, re.I):
             return match.group()
-        if (re.search(r"\b(?:not|if|rather than|instead of)\s*$", before, re.I)
-                or re.match(r"\s+(?:(?:is|would be|could be)\s+)?(?:not|different|distinct|differs|versus|rather than|compared with|compared to)\b", after, re.I)):
+        if (re.search(r"\b(?:not|if|rather than|instead of|different from|distinct from|differs from|versus|compared with|compared to|contrasts with)\s*$", before_role, re.I)
+                or re.search(r"\b(?:not|never)\b[^;.!?]{0,60}\b(?:confused with|treated as|interpreted as|equated (?:to|with)|same (?:identifier )?as|equivalent to|mean)\s*$", before_role, re.I)
+                or re.match(r"\s+(?:(?:is|are|was|were|would be|could be|does|do|did|can|could|would|should|must|will|shall|may|might|has|have)\s+)?(?:not|never|different|distinct|differs|versus|rather than|compared with|compared to|contrasts with)\b", after_role, re.I)):
             return match.group()
         supplied = groups.get(collapsed(identifier), set())
         if len(supplied) != 1 or identifier in supplied:
             return match.group()
         original = next(iter(supplied))
         if len(original) <= len(identifier):
+            return match.group()
+        # Restore an explicit entity/identifier assignment, not any mention of
+        # a number that happens to collapse to the question's identifier.
+        subject = named_subject(before)
+        supplied_subjects = subjects.get(original, set())
+        if subject is None or (supplied_subjects and subject not in supplied_subjects):
+            return match.group()
+        if re.search(r"(?<![\d.])" + re.escape(original) + r"(?!\d|\.\d)", sentence):
+            # Both identifiers are deliberate local operands. Rewriting one
+            # would invent a relationship, even with an unfamiliar predicate.
             return match.group()
         start = match.start("identifier") - match.start()
         replacement = match.group()[:start] + original + match.group()[start+len(identifier):]

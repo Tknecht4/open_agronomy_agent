@@ -353,3 +353,47 @@ def test_identifier_assertion_is_separate_from_uncertainty_about_adaptation():
 ])
 def test_maturity_counterfactual_and_explicit_comparison_are_not_rewritten(answer):
     assert correct_concept_claims(answer,'Soybean Y has maturity 00.3. Explain the rating.')==(answer,())
+
+
+@pytest.mark.parametrize('answer', [
+    "Maturity group 0.3 isn't the same identifier as 00.3.",
+    "Maturity group 0.3 isn’t the same identifier as 00.3.",
+    'Maturity group 0.3 does not mean 00.3.',
+    "Maturity group 0.3 doesn't mean 00.3.",
+    'Maturity group 0.3 should not be confused with 00.3.',
+    'Maturity group 0.3 contrasts with 00.3.',
+    "Maturity group 00.3 isn't maturity group 0.3.",
+    "Maturity group 0.3 can't be treated as 00.3.",
+    'Maturity group 0.3 cannot be treated as 00.3.',
+    'Maturity group 0.3 must not be confused with 00.3.',
+    "Maturity group 0.3 won't mean 00.3.",
+    'Maturity group 00.3 must not be confused with maturity group 0.3.',
+    'Maturity group 00.3 is distinct from maturity group 0.3.',
+    'Maturity group 00.3 should never be treated as maturity group 0.3.',
+    'Maturity group 0.3 is clearly different from 00.3.',
+    'Maturity group 0.3 is simply not the same identifier as 00.3.',
+])
+def test_maturity_negative_relationships_keep_their_identifier_roles(answer):
+    question = 'Explain soybean maturity group 00.3.'
+    assert correct_concept_claims(answer, question) == (answer, ())
+    result = verify(answer, question)
+    assert result.answer == answer
+    assert not result.localized_cleanup
+
+
+def test_maturity_restoration_requires_an_explicit_supplied_entity_assignment():
+    question = 'Soybean X has maturity 0.6 and Y maturity 00.3.'
+    comparison = 'Y has maturity 0.3, compared with 00.3.'
+    assert correct_concept_claims(comparison, question) == (comparison, ())
+    local_comparison = 'Y has maturity 0.3 and is clearly different from 00.3.'
+    assert correct_concept_claims(local_comparison, question) == (local_comparison, ())
+    unbound = 'Maturity group 0.3 concerns a different cultivar.'
+    assert correct_concept_claims(unbound, question) == (unbound, ())
+    other = 'Another soybean Z has maturity 0.3.'
+    assert correct_concept_claims(other, 'Explain soybean maturity 00.3.') == (other, ())
+
+
+@pytest.mark.parametrize('modal', ['may have', 'could have', 'might have', 'would have'])
+def test_maturity_hypothesis_is_not_an_affirmative_subject_assignment(modal):
+    answer = f'Soybean Y {modal} maturity group 0.3.'
+    assert correct_concept_claims(answer, 'Explain soybean maturity group 00.3.') == (answer, ())
