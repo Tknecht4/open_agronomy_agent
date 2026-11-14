@@ -4,15 +4,25 @@ November 12, 2026. Reference main: `91125d30acd447537184184352d8fadf96ee89ee`.
 
 ## Current status
 
-On November 14, a browser walk and independent comparison with the original
-main-compatible baseline found a remaining input-role regression in `a45dc37`.
-The arithmetic parser accepted “thousand kernel weight 36 g,” but the later
-whole-request guard recognized only its abbreviation in that position. The UI
-unnecessarily required a model. The repair gives the guard the same explicit
-role aliases as the parser, including input declarations before the calculation;
-it keeps additional requests and unresolved survival denominators distinct.
-Source verification and the complete successor candidate matrix remain required.
-No candidate scientific score or updated ranking is available.
+On November 14, the browser walk exposed an input-role regression in `a45dc37`:
+the parser accepted “thousand kernel weight 36 g,” but the later whole-request
+guard rejected that form. The narrow repair in `0554e2b` passed its software
+checks and browser flow. A bounded independent audit then reproduced the same
+role drift across seed, temperature, water and budget operands. Both candidates
+are superseded. The current repair shares their existing noncapturing operand
+definitions between parsers and request qualification rather than maintaining
+separate alias lists. A financial counterexample also showed an extra supplied
+percentage could be ignored; amount-only bindings now retain that quantity as
+an unresolved input. Additional instructions and unsupported compound units
+remain subject to their existing checks.
+
+The repair passed 817 focused deterministic tests, including supplied-input
+boundaries, production readiness/persistence and implementation identity changes.
+Independent review and whole-source verification are still in progress. Legacy
+daily-GDD preview remains unknown because that operation has no separately
+callable canonical input validator. These checks establish software behavior,
+not agronomic accuracy. The complete successor matrix remains required; no
+candidate scientific score or updated ranking is available.
 
 The stopped E2B and E4B attempts retain 192 and 191 regression observations,
 respectively, including all raw and pending artifacts in verified archives.
@@ -26,6 +36,12 @@ one additional interrupted production slot. A fresh whole main-compatible Luna
 baseline is still collecting under its original clock. All twelve final raw
 collections and admission checks must complete before scientific grading.
 
+The later stopped `0554e2b` attempts retain seven E2B and thirteen E4B regression
+observations, including all raw and pending bytes in verified archives. Neither
+dispatched the full cohort. Both task-owned VMs were stopped after actual
+process/GPU quiescence. These incomplete diagnostic rows are never reused as
+successor observations.
+
 The prior `a45dc37` software checkpoint passed 5,063 backend tests with 58
 skipped and 508 frontend tests, plus documentation, build and public-package
 checks. Its browser flow preserved both conditional seed calculations and the
@@ -34,7 +50,7 @@ not reveal the spelled-out input-role regression and do not qualify its successo
 
 ## Superseded sources and diagnostic evidence
 
-The latest candidate is being replaced after independent review of a verified
+An earlier candidate was replaced after independent review of a verified
 72-row E4B regression prefix (35 full-system answers) found incomplete root
 inspection and healthy-potato scouting methods. Source `3c751c0` had passed
 4,827 backend tests with 58 skipped; its UI-only successor retained identical

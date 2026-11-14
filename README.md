@@ -53,7 +53,10 @@ The current software supports these bounded workflows:
 - **Calculate from supplied inputs:** nutrient and product quantities, water,
   sprayer calibration, grain moisture, thermal time, harvest index and sampling
   area, with units and assumptions. A calculation does not select a field target
-  or authorize a product.
+  or authorize a product. Named inputs such as laboratory germination,
+  permanent wilting point and harvested yield use shared role definitions in
+  parsing and request checks. Extra quantities and unsupported compound units
+  require clarification rather than being dropped from the calculation.
 - **Resolve seed-establishment ambiguity:** distinguish overall emergence from
   survival after germination. Otherwise complete inputs with an unclear
   denominator produce two labelled scenarios; a short reply can select the

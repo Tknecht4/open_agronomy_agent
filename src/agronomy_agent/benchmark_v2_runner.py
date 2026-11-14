@@ -189,6 +189,7 @@ def _runtime_implementation_receipts() -> dict[str, str]:
                 (
                     PROJECT_ROOT / "src/agronomy_agent/answerability.py",
                     PROJECT_ROOT / "src/agronomy_agent/request_scope.py",
+                    PROJECT_ROOT / "src/agronomy_agent/arithmetic_input_roles.py",
                 )
             ),
             "runtime_orchestrator": _bundle_sha256(
@@ -211,6 +212,7 @@ def _runtime_implementation_receipts() -> dict[str, str]:
                     PROJECT_ROOT / "src/agronomy_agent/observation_guidance.py",
                     PROJECT_ROOT / "src/agronomy_agent/answerability.py",
                     PROJECT_ROOT / "src/agronomy_agent/request_scope.py",
+                    PROJECT_ROOT / "src/agronomy_agent/arithmetic_input_roles.py",
                     PROJECT_ROOT / "src/agronomy_agent/plant_health_scope.py",
                 )
             ),
@@ -222,6 +224,7 @@ def _runtime_implementation_receipts() -> dict[str, str]:
                     PROJECT_ROOT / "src/agronomy_agent/quantity_claims.py",
                     PROJECT_ROOT / "src/agronomy_agent/answerability.py",
                     PROJECT_ROOT / "src/agronomy_agent/request_scope.py",
+                    PROJECT_ROOT / "src/agronomy_agent/arithmetic_input_roles.py",
                     PROJECT_ROOT / "src/agronomy_agent/plant_health_scope.py",
                 )
             ),
@@ -252,6 +255,7 @@ def _runtime_implementation_receipts() -> dict[str, str]:
                     PROJECT_ROOT / "src/agronomy_agent/seed_establishment.py",
                     PROJECT_ROOT / "src/agronomy_agent/seed_survival_scenarios.py",
                     PROJECT_ROOT / "src/agronomy_agent/request_scope.py",
+                    PROJECT_ROOT / "src/agronomy_agent/arithmetic_input_roles.py",
                     PROJECT_ROOT / "src/agronomy_agent/supplied_math_scope.py",
                     PROJECT_ROOT / "src/agronomy_agent/supplied_numeric_inputs.py",
                     PROJECT_ROOT / "src/agronomy_agent/supplied_nutrient_parser.py",
@@ -275,6 +279,7 @@ def _runtime_implementation_receipts() -> dict[str, str]:
                     PROJECT_ROOT / "src/agronomy_agent/quantity_claims.py",
                     PROJECT_ROOT / "src/agronomy_agent/answerability.py",
                     PROJECT_ROOT / "src/agronomy_agent/request_scope.py",
+                    PROJECT_ROOT / "src/agronomy_agent/arithmetic_input_roles.py",
                     PROJECT_ROOT / "src/agronomy_agent/plant_health_scope.py",
                 )
             ),

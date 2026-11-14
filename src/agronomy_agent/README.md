@@ -479,3 +479,14 @@ and compound table requests as clarifications only after table ownership is
 established. Uploaded spatial context and incidental statistics stay available
 to the ordinary interpretation path. Supplied dry-mass arithmetic similarly
 keeps a named biomass ratio separate from harvest-timing management.
+
+`arithmetic_input_roles.py` owns existing named operands shared by arithmetic
+parsers and whole-request qualification. These patterns contain no capturing
+groups, so reuse cannot shift numeric bindings. A recognized name alone does
+not establish a valid value or a complete request. Financial parsers bind the
+amount itself, preserving extra quantities and compound-unit errors as gaps.
+The nominal partial-budget input “lower costs CAD 25/ac” has a closed data-clause
+exception; instructions to lower costs by or to an amount remain actions.
+All five benchmark implementation groups consuming these roles include their
+source bytes in their identity. Legacy ready operations without an independently
+callable canonical input validator retain unknown preview readiness.

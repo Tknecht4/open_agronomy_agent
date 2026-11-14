@@ -10,6 +10,7 @@ from agronomy_agent.agronomic_calculations import validate_single_nozzle_inputs
 from agronomy_agent.calculator_contracts import supplied_input_label
 
 from agronomy_agent.supplied_numeric_inputs import NUMBER as _NUMBER, supplied_numeric_gaps, extended_unit
+from agronomy_agent.arithmetic_input_roles import FIELD_CAPACITY_ROLE, WILTING_POINT_ROLE, ROOT_DEPTH_ROLE
 
 
 def _value(text: str, *patterns: str, bindings: list[re.Match[str]]) -> str | None:
@@ -66,10 +67,10 @@ def _water_storage(text: str):
         return None
     if not re.search(r'\buniform\b', text, re.I) or re.search(r'\b(?:gravimetric|mass basis|layers|zones)\b|kg/kg|g/g|%', text, re.I):
         return None
-    upper = _value(text, rf'\b(?:target )?field capacity\s*(?:is|of|:|=)?\s*(?P<quantity>{_NUMBER})(?![\d%]|\.\d)', bindings=bindings)
+    upper = _value(text, rf'\b{FIELD_CAPACITY_ROLE}\s*(?:is|of|:|=)?\s*(?P<quantity>{_NUMBER})(?![\d%]|\.\d)', bindings=bindings)
     refill = bool(re.search(r'\b(?:refill|deficit)\b', text, re.I))
-    lower = _value(text, rf'\b' + (r'(?:measured )?volumetric water' if refill else r'(?:permanent )?wilting point') + rf'\s*(?:is|of|:|=)?\s*(?P<quantity>{_NUMBER})(?![\d%]|\.\d)', bindings=bindings)
-    depth_m = _value(text, rf'\b(?:rooting|root[- ]zone) depth\s*(?:is|of|:|=)?\s*(?P<quantity>{_NUMBER})\s*m\b',
+    lower = _value(text, rf'\b' + (r'(?:measured )?volumetric water' if refill else WILTING_POINT_ROLE) + rf'\s*(?:is|of|:|=)?\s*(?P<quantity>{_NUMBER})(?![\d%]|\.\d)', bindings=bindings)
+    depth_m = _value(text, rf'\b{ROOT_DEPTH_ROLE}\s*(?:is|of|:|=)?\s*(?P<quantity>{_NUMBER})\s*m\b',
                      rf'(?<![\w.,+-])(?P<quantity>{_NUMBER})\s*m\s+root[- ]zone\b', bindings=bindings)
     return _bound('water_storage_difference', {'upper_volumetric': upper, 'lower_volumetric': lower, 'root_depth_m': depth_m,
                   'interpretation': 'refill_deficit' if refill else 'available_capacity'}, text, bindings)

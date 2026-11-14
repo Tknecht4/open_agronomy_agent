@@ -784,6 +784,7 @@ def test_frozen_synthetic_fixture_never_executes_or_discards_conditional_scenari
     ("tool_planner.py", {"tool_planner", "tool_executor_bundle", "verifier_policy", "fallback_policy"}),
     ("foundation_math_parser.py", {"tool_executor_bundle", "verifier_policy", "fallback_policy"}),
     ("request_scope.py", {"answerability_policy", "kernel_config", "verifier_policy", "fallback_policy", "tool_executor_bundle"}),
+    ("arithmetic_input_roles.py", {"answerability_policy", "kernel_config", "verifier_policy", "fallback_policy", "tool_executor_bundle"}),
     ("plant_health_scope.py", {"kernel_config", "verifier_policy", "fallback_policy"}),
 ])
 def test_shared_helper_bytes_change_their_consumer_implementation_identities(monkeypatch, helper, consumers):

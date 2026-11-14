@@ -3,6 +3,12 @@ from __future__ import annotations
 
 import json
 import re
+from agronomy_agent.arithmetic_input_roles import (
+    ARITHMETIC_INPUT_ROLE_PATTERN, MONEY_FLOW_ROLE_PATTERN,
+    BALANCE_SHEET_ROLE_PATTERN, YIELD_ROLE, AREA_UNIT_PATTERN,
+    YIELD_UNIT_PATTERN,
+)
+from agronomy_agent.supplied_numeric_inputs import NUMBER
 
 FIELD_ACTION_PATTERN = (
     # Treating a field is an operation; treating measurements as equivalent
@@ -22,6 +28,9 @@ def has_action_directive(text: str) -> bool:
         r"|proceed|go ahead|carry out|execute|perform|implement|undertake|turn|begin|commence)\b|"
         r"(?:give|provide|write|show|develop|create|design)\b[^.!?;]{0,55}\b(?:instructions|directions|steps|plan)\b)")
     for match in re.finditer(pattern, text, re.I):
+        if (match['verb'] and match['verb'].lower() == 'lower'
+                and _closed_nominal_budget_data_clause(text, match.start('verb'))):
+            continue
         # In a single finite causal question, "How can X supply ... and
         # increase Y?" shares the auxiliary and subject. Exempt only that
         # weak predicate span; later commands must still be inspected.
@@ -33,6 +42,25 @@ def has_action_directive(text: str) -> bool:
             continue
         return True
     return False
+
+
+def _closed_nominal_budget_data_clause(text: str, start: int) -> bool:
+    """Distinguish one quantified budget input from an instruction to lower.
+
+    This exception needs an explicit arithmetic task and one complete money
+    value with an area basis. Modifiers, extra quantities and other work stay
+    subject to the ordinary action checks.
+    """
+    if not re.search(r"\b(?:calculate|compute|work out)\b", text, re.I):
+        return False
+    if not re.search(r"\b(?:partial[- ]budget|net change)\b", text, re.I):
+        return False
+    clause = re.split(r"[!?;]|\.(?=\s|$)|,\s*(?!\d)|\b(?:and|then|also)\b", text[start:], maxsplit=1, flags=re.I)[0].strip()
+    return bool(re.fullmatch(
+        rf"lower\s+costs?\s+(?:(?:is|are|was|were|of)\s+|[:=]\s*)?"
+        rf"(?:CAD|USD|\$)\s*{NUMBER}\s*(?:/|per\s+){AREA_UNIT_PATTERN}",
+        clause, re.I,
+    ))
 
 
 def seed_quality_workflow_requested(text: str) -> bool:
@@ -152,6 +180,9 @@ def _calculation_value_is_owned(value: str, *, has_quantity: bool = False) -> bo
 
 def _calculation_premise(part: str) -> bool:
     """Recognize input declarations; their values remain the parser's concern."""
+    declarations = re.split(rf"\s+with\s+(?=(?:the\s+)?{ARITHMETIC_INPUT_ROLE_PATTERN}\b)", part, flags=re.I)
+    if len(declarations) > 1:
+        return all(_calculation_premise(item) for item in declarations)
     closed = (
         r"(?:ignoring unusable (?:tank )?volume|ignoring other nutrient credits for this arithmetic check|for this (?:product-mass )?calculation|for a teaching method|"
         r"for one day(?: in (?:an?|the) [a-z -]{1,60}field)?|for a [a-z -]{1,60}field|"
@@ -170,9 +201,26 @@ def _calculation_premise(part: str) -> bool:
         return True
     if not re.search(r"\d", part):
         return False
+    named = re.fullmatch(
+        rf"(?:the\s+)?(?P<role>{ARITHMETIC_INPUT_ROLE_PATTERN})\s+(?P<value>[^!?;]+)",
+        part, re.I,
+    )
+    if named:
+        value = re.sub(r"^(?:(?:is|are|was|were|of)\b\s*|[:=]\s*)", "", named['value'], count=1, flags=re.I).strip()
+        if not re.match(rf"(?:(?:CAD|USD|\$)\s*)?{NUMBER}", value, re.I):
+            return False
+        # A closed magnitude or whole-farm label remains parser-owned data;
+        # canonical validation still clarifies unsupported notation/bases.
+        money = rf"(?:(?:CAD|USD|\$)\s*)?{NUMBER}(?:\s*(?:billion|million|thousand|[kmb]))?"
+        if re.fullmatch(MONEY_FLOW_ROLE_PATTERN, named['role'], re.I):
+            return bool(re.fullmatch(rf"{money}(?:\s*(?:/|per\s+){AREA_UNIT_PATTERN})?(?:\s+(?:total for (?:the )?(?:whole )?farm|for (?:the )?whole[- ]farm|whole[- ]farm total))?", value, re.I))
+        if re.fullmatch(BALANCE_SHEET_ROLE_PATTERN, named['role'], re.I):
+            return bool(re.fullmatch(money, value, re.I))
+        if re.fullmatch(YIELD_ROLE, named['role'], re.I):
+            return bool(re.fullmatch(rf"{NUMBER}\s*{YIELD_UNIT_PATTERN}\s*(?:/|per\s+){AREA_UNIT_PATTERN}", value, re.I))
+        return _calculation_value_is_owned(value)
     # Value-first biomass declarations retain explicit named roles. Do not
     # admit arbitrary crop prose or drop a later operational clause.
-    from agronomy_agent.supplied_numeric_inputs import NUMBER
     biomass_role = r"(?:grain dry (?:mass|matter)|total above[- ]ground dry (?:biomass|mass|matter))"
     mass = rf"{NUMBER}\s*(?:kg|tonnes?|t|pounds?|lbs?)(?:\s*(?:/|per\s+)(?:ha|hectares?|ac|acres?))?"
     if re.fullmatch(rf"(?:(?:a|the) (?:(?:teaching|example|hypothetical) )?crop has )?{mass}\s+(?:of\s+)?{biomass_role}", part, re.I):
@@ -183,8 +231,8 @@ def _calculation_premise(part: str) -> bool:
         r"(?:(?:these are measured values:\s*)?(?:an? |the )(?:[a-z\d,.-]+ ){0,4}"
         r"(?:field(?: plan)?|fertilizer(?: product)?|soil moisture probe|sprayer(?: tank)?|nozzle|"
         r"crop budget|soybean count|blend|plan|budget|example|prescription)|"
-        r"(?:the )?target stand|(?:seed )?(?:thousand[- ]kernel weight|TKW)|germination|expected (?:field survival|emergence)|soybeans in (?:an?|the) [a-z -]{1,60}field|(?:daily mean|mean daily|maximum|minimum) temperature|grain (?:dry )?mass|"
-        r"total above-ground dry biomass|field survival|Kc|ETo|field capacity|"
+        r"seed TKW|soybeans in (?:an?|the) [a-z -]{1,60}field|grain (?:dry )?mass|"
+        r"total above-ground dry biomass|Kc|ETo|"
         r"(?:measured )?volumetric water|travel speed|it)"
     )
     declaration = re.fullmatch(r"(?P<subject>" + subject + r")\s+(?:is|are|was|were|has|have|contains|requires|delivers|weighs|supplies|covers|receives|targets|reports|found|totals|needs|uses|calls for|travels at)\b\s+(?P<value>[^!?;]+)", part, re.I)
@@ -330,14 +378,13 @@ def has_unqualified_followup(text: str, *, calculation: bool = False) -> bool:
             continue
         return True
     if calculation:
-        premise = (r"(?:(?:an?\s+)?[+-]?(?:\d|\.\d)|(?:(?:the|an?)\s+)?(?:base(?: temperature)?|tmin|tmax|"
-            r"(?:lab(?:oratory)? )?germination|(?:(?:expected|post[- ]germination) )?field (?:survival|mortality|loss)|expected emergence|target (?:stand|population)|"
-            r"(?:measured )?(?:thousand[- ]kernel weight|tkw)|(?:(?:expected|overall|field|seedling|post[- ]germination|lab(?:oratory)?) )*(?:survival|emergence|mortality|loss|germination)|seed[- ]lot germination|rooting depth|root[- ]zone depth|field (?:area|capacity)|wilting point|"
+        premise = (r"(?:(?:an?\s+)?[+-]?(?:\d|\.\d)|(?:(?:the|an?)\s+)?(?:"
+            r"measured tkw|field area|"
             r"measured volumetric water|kc|eto|net depth|application efficiency|travel speed|nozzle spacing|unusable (?:tank )?volume|radius|diameter|"
             r"grain dry (?:mass|matter)|total above[- ]ground dry (?:biomass|mass|matter)|"
             r"(?:upper|lower) cap|(?:no|without) (?:upper |lower |temperature )?caps?|negative (?:values|accumulation)|"
-            r"(?:added|lost) revenue|(?:added|saved) costs?|current (?:assets?|liabilities)|total (?:debt|assets?|product)|"
-            r"expected yield|(?:an? )?assumed price|(?:an? )?average of|operating cost|total cost|(?:an? )?unspecified (?:upper|lower) cap|P2O5|K2O|P|K)\b)")
+            r"total product|"
+            r"(?:an? )?assumed price|(?:an? )?average of|(?:an? )?unspecified (?:upper|lower) cap|P2O5|K2O|P|K)\b)")
         presentation = (r"(?:(?:units|assumptions|arithmetic limits)(?: (?:stated|shown|included))?|with (?:all |the )?(?:units|assumptions|arithmetic limits|formula|calculation)(?: (?:stated|shown|included))?|without (?:showing|explaining) (?:the )?(?:arithmetic|formula|calculation)|(?:(?:show|give|state|include) (?:the )?(?:units|assumptions|arithmetic limits|formula|calculation)|"
             r"explain (?:its|the|their) (?:limits|limitations|boundaries)|"
             r"distinguish it from total carrier volume))")
@@ -360,7 +407,8 @@ def has_unqualified_followup(text: str, *, calculation: bool = False) -> bool:
             if not tail or re.fullmatch(presentation, tail, re.I):
                 continue
             data_tail = re.sub(r"^(?:with|of)\s+", "", tail, count=1, flags=re.I).replace('−', '-')
-            if re.fullmatch(r"without\s+(?:(?:an?|the)\s+)?" + premise, tail, re.I) and not re.search(r"\d", tail):
+            absent_input = rf"(?:{premise}|{ARITHMETIC_INPUT_ROLE_PATTERN}\b)"
+            if re.fullmatch(r"without\s+(?:(?:an?|the)\s+)?" + absent_input, tail, re.I) and not re.search(r"\d", tail):
                 continue  # Explicitly absent operand: the typed parser clarifies.
             if _calculation_premise(data_tail):
                 continue

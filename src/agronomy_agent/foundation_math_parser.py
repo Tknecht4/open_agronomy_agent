@@ -12,13 +12,22 @@ import re
 from typing import Any
 from agronomy_agent.request_scope import FIELD_ACTION_PATTERN as _FIELD_IMPERATIVE, has_action_directive
 from agronomy_agent.seed_establishment import parse_seed_establishment
-from agronomy_agent.supplied_numeric_inputs import NUMBER as SUPPLIED_NUMBER, supplied_numeric_gaps, extended_unit
+from agronomy_agent.supplied_numeric_inputs import NUMBER as SUPPLIED_NUMBER, supplied_numeric_gaps, extended_unit, area_unit_extension_gaps
+from agronomy_agent.arithmetic_input_roles import (
+    SEED_WEIGHT_ROLE, SEED_TARGET_ROLE, MEAN_TEMPERATURE_ROLE,
+    MAX_TEMPERATURE_ROLE, MIN_TEMPERATURE_ROLE, BASE_TEMPERATURE_ROLE,
+    ADDED_RETURNS_ROLE, REDUCED_COSTS_ROLE, ADDED_COSTS_ROLE,
+    REDUCED_RETURNS_ROLE, YIELD_ROLE, CURRENT_ASSETS_ROLE,
+    CURRENT_LIABILITIES_ROLE, TOTAL_DEBT_ROLE, TOTAL_ASSETS_ROLE,
+    AREA_UNIT_PATTERN, YIELD_UNIT_PATTERN, COST_BASIS_ROLE,
+    VALUE_FIRST_COST_BASIS_ROLE, BUDGET_TOTAL_ROLE, UNQUALIFIED_COST_ROLE,
+)
 
 
 NUMBER = rf"({SUPPLIED_NUMBER})"
 SIGNED_NUMBER = NUMBER
-AREA = r"(?:ac|acre|acres|ha|hectare|hectares)"
-YIELD_UNIT = r"(?:bu|bushels?|tonnes?|kg|lb)"
+AREA = AREA_UNIT_PATTERN
+YIELD_UNIT = YIELD_UNIT_PATTERN
 MONEY = rf"(?:CAD|USD|\$)\s*{NUMBER}"
 
 
@@ -27,11 +36,21 @@ def _number(value: str) -> float:
     return float(value.replace(",", ""))
 
 
-def _find_number(text: str, *patterns: str) -> float | None:
+def _record_number_binding(text: str, match: re.Match[str], bindings: list[re.Match[str]], group: str | int = 1) -> None:
+    # Bind the amount, not enclosing prose that could contain another quantity.
+    number = re.compile(SUPPLIED_NUMBER).match(text, match.start(group))
+    assert number is not None and number.end() == match.end(group)
+    bindings.append(number)
+
+
+def _find_number(text: str, *patterns: str, bindings: list[re.Match[str]] | None = None) -> float | None:
+    matches = [match for pattern in patterns for match in re.finditer(pattern, text, re.IGNORECASE)]
+    if bindings is not None:
+        for match in matches:
+            _record_number_binding(text, match, bindings)
     values = {
         _number(match.group(1))
-        for pattern in patterns
-        for match in re.finditer(pattern, text, re.IGNORECASE)
+        for match in matches
     }
     return next(iter(values)) if len(values) == 1 else None
 
@@ -83,7 +102,6 @@ def _unsafe_action_request(lower: str) -> bool:
         r"recommended (?:application |herbicide |pesticide |fertilizer )?rate|"
         r"legal (?:application |fertilizer |herbicide |pesticide )?rate|"
         r"today['’]s (?:cash |market |local )?(?:bid|price)|sell (?:now|today)|lock in (?:a )?sale)\b|"
-        rf"(?:^|[.!?;]\s*|\b(?:and|also|then)\s+)(?:please\s+)?{_FIELD_IMPERATIVE}\b|"
         r"(?:^|[.!?;]\s*|\b(?:and|also|then)\s+)(?:please\s+)?(?:recommend|choose|select|authorize|approve)\b[^.!?;]{0,80}\b(?:product|rate|dose|treatment|timing|irrigation)\b|"
         r"(?:^|[.!?;]\s*|\band\s+)(?:is|would|will|can|may)\b[^.!?;]{0,50}\b(?:legal|allowed|permitted|safe to|authorized|approved)\b|"
         r"\b(?:puis-je|peut-on|peux-tu|pouvez-vous|devrais-je|dois-je|pouvons-nous)\s+(?:appliquer|pulvériser|utiliser|irriguer|fertiliser|traiter|drainer)\b|"
@@ -139,15 +157,15 @@ def _seed_rate(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, .
     if not re.search(r"\b(?:seed(?:ing)? (?:rate|mass|purchase)|seed[- ]lot|thousand[- ]kernel|tkw)\b", lower):
         return None
     target_matches = list(re.finditer(
-        rf"{NUMBER}\s*(?:[A-Za-z-]+\s+)?(?:established\s+)?plants\s*(?:/|per\s+)(m²|m2|square metre|square meter|ft²|ft2|square foot|square feet)",
+        rf"(?:\b{SEED_TARGET_ROLE}\s*(?:is|of|:)?\s*)?{NUMBER}\s*(?:[A-Za-z-]+\s+)?(?:established\s+)?plants\s*(?:/|per\s+)(m²|m2|square metre|square meter|ft²|ft2|square foot|square feet)",
         text, re.IGNORECASE,
     ))
     targets = {(_number(match.group(1)), match.group(2).casefold()) for match in target_matches}
     target, unit = next(iter(targets)) if len(targets) == 1 else (None, "")
     imperial = "ft" in unit or "foot" in unit or "feet" in unit
     tkw_patterns = (
-        rf"{NUMBER}\s*g\s*(?:thousand[- ]kernel weight|tkw)\b",
-        rf"(?:thousand[- ]kernel weight|tkw)\s*(?:is|of|:)?\s*{NUMBER}\s*g\b",
+        rf"{NUMBER}\s*g\s*{SEED_WEIGHT_ROLE}\b",
+        rf"{SEED_WEIGHT_ROLE}\s*(?:is|of|:)?\s*{NUMBER}\s*g\b",
     )
     tkw = _find_number(text, *tkw_patterns)
     bindings = target_matches + [m for pattern in tkw_patterns for m in re.finditer(pattern, text, re.I)]
@@ -183,7 +201,7 @@ def _seed_rate(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, .
 
 
 def _mean_temperature_gdd(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, ...]] | None:
-    if not re.search(r"\b(?:gdd|growing degree[- ]days?)\b", lower) or not re.search(r"\b(?:mean daily|daily mean|average daily|daily average) temperature\b", lower):
+    if not re.search(r"\b(?:gdd|growing degree[- ]days?)\b", lower) or not re.search(rf"\b{MEAN_TEMPERATURE_ROLE}\b", lower):
         return None
     # Reuse the whole-request guard. A possessive date here names the daily
     # accounting period; it is not permission to act or a weather observation.
@@ -192,8 +210,8 @@ def _mean_temperature_gdd(text: str, lower: str) -> tuple[str, dict[str, Any], t
     if supplied_math_scope(scoped) is None:
         return None
     number = NUMBER
-    mean_pattern = rf"\b(?:mean daily|daily mean|average daily|daily average) temperature\s*(?:is|of|:|=)?\s*{number}\s*°?\s*C\b"
-    base_pattern = rf"\bbase(?: temperature)?\s*(?:is|of|:|=)?\s*{number}\s*°?\s*C\b"
+    mean_pattern = rf"\b{MEAN_TEMPERATURE_ROLE}\s*(?:is|of|:|=)?\s*{number}\s*°?\s*C\b"
+    base_pattern = rf"\b{BASE_TEMPERATURE_ROLE}\s*(?:is|of|:|=)?\s*{number}\s*°?\s*C\b"
     mean = _find_number(text, mean_pattern)
     base = _find_number(text, base_pattern)
     numeric_bindings = [m for pattern in [mean_pattern, base_pattern, r"\bmax\s*\(\s*0\s*,"] for m in re.finditer(pattern, text, re.I)]
@@ -296,16 +314,16 @@ def _gdd_json_inputs(text: str) -> tuple[dict[str, float], tuple[str, ...], str 
 def _gdd(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, ...]] | None:
     if not re.search(r"\b(?:gdd|growing degree[- ]days?|heat units?)\b", lower):
         return None
-    if re.search(r"\b(?:mean daily|daily mean|average daily|daily average) temperature\b", lower):
+    if re.search(rf"\b{MEAN_TEMPERATURE_ROLE}\b", lower):
         # The separate mean-input contract owns these requests, including
         # its decision to decline an extra unhandled question.
         return None
     structured, structured_errors, structured_method, text = _gdd_json_inputs(text)
     lower = text.casefold()
     patterns = {
-        "max_temp_c": (rf"\b(?:tmax|max(?:imum)?(?: temp(?:erature)?)?|high)\s*(?:was|is|of|:)?\s*{SIGNED_NUMBER}\s*°?\s*C\b",),
-        "min_temp_c": (rf"\b(?:tmin|min(?:imum)?(?: temp(?:erature)?)?|low)\s*(?:was|is|of|:)?\s*{SIGNED_NUMBER}\s*°?\s*C\b",),
-        "base_temp_c": (rf"\bbase(?: temperature)?\s*(?:was|is|of|:)?\s*{SIGNED_NUMBER}\s*°?\s*C\b", rf"{SIGNED_NUMBER}\s*°?\s*C\s+base\b"),
+        "max_temp_c": (rf"\b{MAX_TEMPERATURE_ROLE}\s*(?:was|is|of|:)?\s*{SIGNED_NUMBER}\s*°?\s*C\b",),
+        "min_temp_c": (rf"\b{MIN_TEMPERATURE_ROLE}\s*(?:was|is|of|:)?\s*{SIGNED_NUMBER}\s*°?\s*C\b",),
+        "base_temp_c": (rf"\b{BASE_TEMPERATURE_ROLE}\s*(?:was|is|of|:)?\s*{SIGNED_NUMBER}\s*°?\s*C\b", rf"{SIGNED_NUMBER}\s*°?\s*C\s+base\b"),
     }
     high, low, base = (_find_number(text, *patterns[key]) for key in ("max_temp_c", "min_temp_c", "base_temp_c"))
     upper_patterns = (
@@ -370,28 +388,28 @@ def _gdd(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, ...]] |
 
 
 def _partial_budget(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, ...]] | None:
-    if not re.search(r"\b(?:partial[- ]budget|partial budget|net change)\b", lower) or not re.search(r"\b(?:revenue|return|income|cost)\b", lower):
+    if not re.search(r"\b(?:partial[- ]budget|partial budget|net change)\b", lower) or not re.search(rf"\b(?:{ADDED_RETURNS_ROLE}|{REDUCED_COSTS_ROLE}|{ADDED_COSTS_ROLE}|{REDUCED_RETURNS_ROLE}|revenue|returns?|income|costs?)\b", lower):
         return None
     categories = {
         "added_returns": (
-            rf"\b(?:added|additional|increased)\s+(?:revenue|returns?|income)\s*(?:(?:of|is|are|:)\s*)?{MONEY}",
+            rf"\b{ADDED_RETURNS_ROLE}\s*(?:(?:of|is|are|:)\s*)?{MONEY}",
             rf"\b(?:adds?|increases?)\s*{MONEY}.{{0,35}}\b(?:revenue|returns?|income)\b",
         ),
         "reduced_costs": (
-            rf"\b(?:reduced|saved|lower)\s+costs?\s*(?:(?:of|is|are|:)\s*)?{MONEY}",
+            rf"\b{REDUCED_COSTS_ROLE}\s*(?:(?:of|is|are|:)\s*)?{MONEY}",
             rf"\b(?:saves?|reduces?)\s*{MONEY}.{{0,35}}\bcosts?\b",
-            rf"\bcost\s+savings?\s*(?:(?:of|is|are|:)\s*)?{MONEY}",
         ),
         "added_costs": (
-            rf"\b(?:added|additional|increased)\s+costs?\s*(?:(?:of|is|are|:)\s*)?{MONEY}",
+            rf"\b{ADDED_COSTS_ROLE}\s*(?:(?:of|is|are|:)\s*)?{MONEY}",
             rf"\b(?:adds?|increases?)\s*{MONEY}.{{0,35}}\bcosts?\b",
         ),
         "reduced_returns": (
-            rf"\b(?:lost|foregone|reduced)\s+(?:revenue|returns?|income)\s*(?:(?:of|is|are|:)\s*)?{MONEY}",
+            rf"\b{REDUCED_RETURNS_ROLE}\s*(?:(?:of|is|are|:)\s*)?{MONEY}",
             rf"\b(?:loses?|forgoes?)\s*{MONEY}.{{0,35}}\b(?:revenue|returns?|income)\b",
         ),
     }
-    values = {key: _find_number(text, *patterns) for key, patterns in categories.items()}
+    bindings: list[re.Match[str]] = []
+    values = {key: _find_number(text, *patterns, bindings=bindings) for key, patterns in categories.items()}
     inputs: dict[str, Any] = {key: value for key, value in values.items() if value is not None}
     currency = _currency(text)
     if currency:
@@ -425,46 +443,58 @@ def _partial_budget(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[s
         missing += ("invalid basis: state the same per-area basis for all four changes",)
     if area_matches and re.search(r"\b(?:whole[- ]farm|whole farm|total for (?:the )?(?:farm|field))\b", lower):
         missing += ("invalid basis: whole-farm totals cannot be mixed with per-area amounts",)
+    missing += supplied_numeric_gaps(text, bindings) + area_unit_extension_gaps(text)
     return "partial_budget", inputs, missing
 
 
-def _cost_candidates(text: str) -> set[tuple[float, str, str]]:
+def _cost_candidates(text: str, *, bindings: list[re.Match[str]]) -> set[tuple[float, str, str]]:
     specific_patterns = (
-        rf"\b(?P<basis>total economic|total|operating)\s+costs?\s*(?:of|is|are|:)?\s*(?:CAD|USD|\$)\s*(?P<value>{SUPPLIED_NUMBER})\s*(?:/|per\s+)(?P<area>{AREA})\b",
-        rf"\b(?:crop\s+)?budget\s+totals?\s*(?:CAD|USD|\$)\s*(?P<value>{SUPPLIED_NUMBER})\s*(?:/|per\s+)(?P<area>{AREA})\b",
-        rf"(?:CAD|USD|\$)\s*(?P<value>{SUPPLIED_NUMBER})\s*(?:/|per\s+)(?P<area>{AREA})\s+(?P<basis>total|operating)\s+cost\b",
+        rf"\b(?P<basis>{COST_BASIS_ROLE})\s+{UNQUALIFIED_COST_ROLE}\s*(?:of|is|are|:)?\s*(?:CAD|USD|\$)\s*(?P<value>{SUPPLIED_NUMBER})\s*(?:/|per\s+)(?P<area>{AREA})\b",
+        rf"\b{BUDGET_TOTAL_ROLE}\s*(?:CAD|USD|\$)\s*(?P<value>{SUPPLIED_NUMBER})\s*(?:/|per\s+)(?P<area>{AREA})\b",
+        rf"(?:CAD|USD|\$)\s*(?P<value>{SUPPLIED_NUMBER})\s*(?:/|per\s+)(?P<area>{AREA})\s+(?P<basis>{VALUE_FIRST_COST_BASIS_ROLE})\s+cost\b",
     )
     candidates: set[tuple[float, str, str]] = set()
     for index, pattern in enumerate(specific_patterns):
         for match in re.finditer(pattern, text, re.IGNORECASE):
+            _record_number_binding(text, match, bindings, 'value')
             basis = (match.groupdict().get("basis") or ("budget_total_supplied" if index == 1 else "")).lower()
             candidates.add((_number(match.group("value")), _area(match.group("area")), "total_economic" if basis == "total economic" else basis))
     if candidates:
         return candidates
-    generic = rf"\bcosts?\s*(?:of|is|are|:)?\s*(?:CAD|USD|\$)\s*(?P<value>{SUPPLIED_NUMBER})\s*(?:/|per\s+)(?P<area>{AREA})\b"
+    generic = rf"\b{UNQUALIFIED_COST_ROLE}\s*(?:of|is|are|:)?\s*(?:CAD|USD|\$)\s*(?P<value>{SUPPLIED_NUMBER})\s*(?:/|per\s+)(?P<area>{AREA})\b"
+    matches = list(re.finditer(generic, text, re.IGNORECASE))
+    for match in matches:
+        _record_number_binding(text, match, bindings, 'value')
     return {
         (_number(match.group("value")), _area(match.group("area")), "")
-        for match in re.finditer(generic, text, re.IGNORECASE)
+        for match in matches
     }
 
 
-def _yield(text: str) -> tuple[float, str, str] | None:
+def _yield(text: str, *, bindings: list[re.Match[str]]) -> tuple[float, str, str] | None:
     patterns = (
-        rf"\b(?:expected|harvested|target)?\s*yield\s*(?:of|is|:)?\s*{NUMBER}\s*({YIELD_UNIT})\s*(?:/|per\s+)({AREA})\b",
+        rf"\b{YIELD_ROLE}\s*(?:of|is|:)?\s*{NUMBER}\s*({YIELD_UNIT})\s*(?:/|per\s+)({AREA})\b",
         rf"{NUMBER}\s*({YIELD_UNIT})\s*(?:/|per\s+)({AREA})\b",
     )
+    matches = [match for pattern in patterns for match in re.finditer(pattern, text, re.IGNORECASE)]
+    for match in matches:
+        _record_number_binding(text, match, bindings)
     values = {
         (_number(match.group(1)), _yield_unit(match.group(2)), _area(match.group(3)))
-        for pattern in patterns
-        for match in re.finditer(pattern, text, re.IGNORECASE)
+        for match in matches
     }
     return next(iter(values)) if len(values) == 1 else None
 
 
-def _price(text: str) -> tuple[float, str] | None:
+def _price(text: str, *, bindings: list[re.Match[str]]) -> tuple[float, str] | None:
+    matches = list(re.finditer(rf"(?:CAD|USD|\$)\s*{NUMBER}\s*(?:/|per\s+)({YIELD_UNIT})\b", text, re.IGNORECASE))
+    for match in matches:
+        _record_number_binding(text, match, bindings)
+    if any(extended_unit(match) for match in matches):
+        return None
     values = {
         (_number(match.group(1)), _yield_unit(match.group(2)))
-        for match in re.finditer(rf"(?:CAD|USD|\$)\s*{NUMBER}\s*(?:/|per\s+)({YIELD_UNIT})\b", text, re.IGNORECASE)
+        for match in matches
     }
     return next(iter(values)) if len(values) == 1 else None
 
@@ -477,7 +507,8 @@ def _break_even(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, 
     if price_question == yield_question:
         return None
     operation = "break_even_price" if price_question else "break_even_yield"
-    costs = _cost_candidates(text)
+    bindings: list[re.Match[str]] = []
+    costs = _cost_candidates(text, bindings=bindings)
     requested_basis = (
         "operating" if re.search(r"\boperating[- ]cost break[- ]?even\b", lower)
         else "total_economic" if re.search(r"\btotal economic[- ]cost break[- ]?even\b", lower)
@@ -488,8 +519,8 @@ def _break_even(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, 
         compatible = {"total", "total_economic", "budget_total_supplied"} if requested_basis == "total" else {requested_basis}
         costs = {candidate for candidate in costs if candidate[2] in compatible}
     cost = next(iter(costs)) if len(costs) == 1 else None
-    harvested = _yield(text) if price_question else None
-    selling_price = _price(text) if yield_question else None
+    harvested = _yield(text, bindings=bindings) if price_question else None
+    selling_price = _price(text, bindings=bindings) if yield_question else None
     currency = _currency(text)
     inputs: dict[str, Any] = {}
     missing: tuple[str, ...] = ()
@@ -528,23 +559,30 @@ def _break_even(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, 
                 missing += ("invalid assumed selling price must be positive",)
         else:
             missing += ("assumed selling price per harvested unit",)
+    missing += supplied_numeric_gaps(text, bindings) + area_unit_extension_gaps(text)
     return operation, inputs, tuple(dict.fromkeys(missing))
 
 
-def _finance_value(text: str, noun: str) -> float | None:
-    return _find_number(
+def _finance_value(text: str, noun: str, *, bindings: list[re.Match[str]]) -> float | None:
+    start = len(bindings)
+    value = _find_number(
         text,
         rf"\b{noun}\s*(?:of|are|is|:)?\s*(?:CAD|USD|\$)?\s*{NUMBER}",
         rf"(?:CAD|USD|\$)\s*{NUMBER}\s*{noun}\b",
+        bindings=bindings,
     )
+    if any(re.match(r"\s*(?:%|/|per\b)", text[match.end():], re.I) for match in bindings[start:]):
+        return None
+    return value
 
 
 def _current_ratio(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, ...]] | None:
     if not re.search(r"\bcurrent ratio\b", lower):
         return None
+    bindings: list[re.Match[str]] = []
     values = {
-        "current_assets": _finance_value(text, r"current assets?"),
-        "current_liabilities": _finance_value(text, r"current liabilities"),
+        "current_assets": _finance_value(text, CURRENT_ASSETS_ROLE, bindings=bindings),
+        "current_liabilities": _finance_value(text, CURRENT_LIABILITIES_ROLE, bindings=bindings),
     }
     inputs = {key: value for key, value in values.items() if value is not None}
     missing = tuple(key for key, value in values.items() if value is None)
@@ -556,15 +594,17 @@ def _current_ratio(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[st
         missing += ("invalid current assets: use a nonnegative amount",)
     if values["current_liabilities"] is not None and values["current_liabilities"] <= 0:
         missing += ("current liabilities must be positive",)
+    missing += supplied_numeric_gaps(text, bindings)
     return "current_ratio", inputs, missing
 
 
 def _debt_asset(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, ...]] | None:
     if not re.search(r"\bdebt[- ]to[- ]asset(?: ratio)?\b|\bdebt/asset(?: ratio)?\b", lower):
         return None
+    bindings: list[re.Match[str]] = []
     values = {
-        "total_debt": _finance_value(text, r"(?:total\s+)?debt"),
-        "total_assets": _finance_value(text, r"(?:total\s+)?assets"),
+        "total_debt": _finance_value(text, TOTAL_DEBT_ROLE, bindings=bindings),
+        "total_assets": _finance_value(text, TOTAL_ASSETS_ROLE, bindings=bindings),
     }
     inputs = {key: value for key, value in values.items() if value is not None}
     missing = tuple(key for key, value in values.items() if value is None)
@@ -576,4 +616,5 @@ def _debt_asset(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, 
         missing += ("invalid total debt: use a nonnegative amount",)
     if values["total_assets"] is not None and values["total_assets"] <= 0:
         missing += ("total assets must be positive",)
+    missing += supplied_numeric_gaps(text, bindings)
     return "debt_to_asset_percent", inputs, missing

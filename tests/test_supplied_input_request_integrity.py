@@ -15,6 +15,102 @@ _COMPLETE_ARITHMETIC = (
 )
 
 
+_ROLE_REGRESSIONS = (
+    ('Laboratory germination is 92%. Calculate wheat seed rate for 270 plants/m2, TKW 36 g and survival 90% of germinated seeds.', 'seed_rate_mass', 117.3913043478261),
+    ('Target population is 270 plants/m2. Calculate wheat seed rate with TKW 36 g, germination 92%, and survival 90% of germinated seeds.', 'seed_rate_mass', 117.3913043478261),
+    ('Average daily temperature is 16 C. Calculate daily GDD with base temperature 6 C, no temperature caps and negative accumulation floored at zero.', 'mean_temperature_gdd', 10),
+    ('Calculate daily GDD from base temperature 6 C, average daily temperature is 16 C, no temperature caps and negative accumulation floored at zero.', 'mean_temperature_gdd', 10),
+    ('Calculate daily GDD from high 25 C, low 9 C and base 7 C.', 'daily_gdd', 10),
+    ('Calculate daily GDD from maximum temperature 25 C, minimum temperature 9 C and base 7 C.', 'daily_gdd', 10),
+    ('For a uniform profile, field capacity is 0.30, permanent wilting point is 0.15 and rooting depth is 0.4 m. Calculate total available water.', 'water_storage_difference', 60),
+    ('Root-zone depth is 0.4 m. For a uniform profile, field capacity is 0.30 and wilting point is 0.15. Calculate total available water.', 'water_storage_difference', 60),
+    ('Calculate a partial-budget net change: added returns CAD 100/ac, saved costs CAD 25/ac, added costs CAD 80/ac and lost revenue CAD 15/ac.', 'partial_budget', 30),
+    ('Calculate a partial-budget net change: added revenue CAD 100/ac, reduced costs CAD 25/ac, added costs CAD 80/ac and lost revenue CAD 15/ac.', 'partial_budget', 30),
+    ('Calculate a partial-budget net change: added revenue CAD 100/ac, saved costs CAD 25/ac, additional costs CAD 80/ac and lost revenue CAD 15/ac.', 'partial_budget', 30),
+    ('Calculate a partial-budget net change: added revenue CAD 100/ac, saved costs CAD 25/ac, added costs CAD 80/ac and foregone income CAD 15/ac.', 'partial_budget', 30),
+    ('Calculate break-even price from total cost CAD 500/ac and harvested yield 50 bu/ac.', 'break_even_price', 10),
+    ('Calculate break-even price from total cost CAD 500/ac and target yield 50 bu/ac.', 'break_even_price', 10),
+)
+
+
+@pytest.mark.parametrize('question,operation,value', _ROLE_REGRESSIONS)
+def test_existing_named_input_roles_keep_whole_calculator_requests(question, operation, value):
+    from agronomy_agent.calculator_contracts import calculation_request_is_complete
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'ready' and len(results) == 1
+    assert plan.invocations[0].operation == operation
+    assert calculation_request_is_complete(question, operation)
+    assert results[0].payload['value'] == pytest.approx(value)
+    if operation == 'seed_rate_mass':
+        assert plan.invocations[0].inputs['germination_pct'] == 92
+        assert plan.invocations[0].inputs['survival_basis'] == 'germinated_seeds'
+
+
+@pytest.mark.parametrize('question,operation,value', _ROLE_REGRESSIONS)
+@pytest.mark.parametrize('extra', [', with instructions to transplant seedlings.', ', recommend a field population.'])
+def test_shared_roles_do_not_hide_independent_requests(question, operation, value, extra):
+    from agronomy_agent.calculator_contracts import calculation_request_is_complete
+    mixed = question.rstrip('.') + extra
+    assert not calculation_request_is_complete(mixed, operation)
+    _, results = plan_and_execute_tools(mixed)
+    assert not results or operation == 'daily_gdd'  # Legacy GDD keeps a labelled sub-result, never whole completion.
+
+
+def test_shared_role_patterns_preserve_operand_capture_indices():
+    import re
+    from agronomy_agent.arithmetic_input_roles import ARITHMETIC_INPUT_ROLES, ARITHMETIC_INPUT_ROLE_PATTERN
+    assert all(re.compile(pattern).groups == 0 for pattern in (*ARITHMETIC_INPUT_ROLES, ARITHMETIC_INPUT_ROLE_PATTERN))
+
+
+@pytest.mark.parametrize('role', ['saved costs', 'reduced costs', 'lower costs', 'cost savings'])
+def test_nominal_budget_cost_roles_retain_supplied_basis(role):
+    question = (f'Calculate a partial-budget net change: added returns CAD 100/ac, {role} CAD 25/ac, '
+                'additional costs CAD 80/ac and foregone returns CAD 15/ac.')
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'ready' and len(results) == 1
+    assert plan.invocations[0].inputs['area_unit'] == 'ac'
+    assert plan.invocations[0].inputs['reduced_costs'] == 25
+    assert results[0].payload['value'] == 30
+
+
+@pytest.mark.parametrize('cost_clause', ['lower costs by CAD 25/ac', 'lower costs to CAD 25/ac',
+    'lower costs CAD 25/ac by 10%', 'saved costs CAD 25/ac by 10%', 'saved costs CAD 25/ac/day'])
+def test_budget_modifiers_and_compound_bases_cannot_be_silently_dropped(cost_clause):
+    question = (f'Calculate a partial-budget net change: added returns CAD 100/ac, {cost_clause}, '
+                'additional costs CAD 80/ac and foregone returns CAD 15/ac.')
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status != 'ready'
+    assert not any(result.status == 'calculated' for result in results)
+
+
+@pytest.mark.parametrize('question', [
+    'Calculate a partial-budget net change: added revenue CAD 100/ac by 10%, saved costs CAD 25/ac, added costs CAD 80/ac and lost revenue CAD 15/ac.',
+    'Calculate a partial-budget net change: the change adds CAD 100 with 10% more revenue, saved costs CAD 25/ac, added costs CAD 80/ac and lost revenue CAD 15/ac.',
+    'Calculate break-even price from total cost CAD 500/ac by 10% and expected yield 50 bu/ac.',
+    'Calculate break-even yield from total cost CAD 500/ac and an assumed price CAD 10/bu with 10% added.',
+    'Calculate current ratio from current assets CAD 300,000 by 10% and current liabilities CAD 120,000.',
+    'Calculate debt-to-asset ratio from total debt CAD 100,000 by 10% and total assets CAD 400,000.',
+    'Calculate current ratio from current assets CAD 300% and current liabilities CAD 100.',
+    'Calculate debt-to-asset ratio from total debt CAD 100/ac and total assets CAD 400.',
+    'Calculate break-even yield from total cost CAD 500/ac and an assumed price CAD 10/bu/year.',
+])
+def test_financial_quantity_bindings_never_cover_extra_numbers_or_incompatible_units(question):
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status != 'ready'
+    assert not any(result.status == 'calculated' for result in results)
+
+
+@pytest.mark.parametrize('question', [
+    'Lower costs CAD 25/ac.',
+    'Calculate a partial-budget net change and lower costs by CAD 25/ac.',
+    'Calculate a partial-budget net change and lower costs CAD 25/ac by 10%.',
+    'Calculate a partial-budget net change and lower costs CAD 25/ac with instructions to spray.',
+])
+def test_nominal_budget_exception_cannot_authorize_lowering_costs(question):
+    from agronomy_agent.request_scope import has_action_directive
+    assert has_action_directive(question)
+
+
 @pytest.mark.parametrize('weight_role', ['TKW', 'thousand kernel weight', 'thousand-kernel weight'])
 @pytest.mark.parametrize('position', ['prefix', 'comma'])
 def test_parser_owned_seed_weight_declarations_reach_the_same_calculation(weight_role, position):

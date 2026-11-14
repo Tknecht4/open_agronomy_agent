@@ -76,6 +76,38 @@ def no_generator(*args, **kwargs):
     raise AssertionError("calculator readiness/execution must not construct a generator")
 
 
+@pytest.mark.parametrize('question,answer', [
+    ('Laboratory germination is 92%. Calculate wheat seed rate for 270 plants/m2, TKW 36 g and survival 90% of germinated seeds.', '117.391 kg/ha'),
+    ('Average daily temperature is 16 C. Calculate daily GDD with base temperature 6 C, no temperature caps and negative accumulation floored at zero.', '10'),
+    ('Root-zone depth is 0.4 m. For a uniform profile, field capacity is 0.30 and permanent wilting point is 0.15. Calculate total available water.', '60 mm'),
+])
+@pytest.mark.parametrize('backend', ['mlx', 'http'])
+def test_shared_agronomic_roles_agree_in_readiness_and_persisted_execution(runtime, monkeypatch, question, answer, backend):
+    client, store = runtime
+    monkeypatch.setattr(chat_service, '_build_mlx_generator', no_generator)
+    monkeypatch.setenv('AGRONOMY_AGENT_MODEL_BACKEND', backend)
+    monkeypatch.delenv('AGRONOMY_AGENT_MODEL_BASE_URL', raising=False)
+    sid = session(client)
+    view = preview(client, turn(question), sid)
+    assert view['requires_model'] is False and view['status'] == 'ready'
+    result = client.post(f'/api/sessions/{sid}/turns', headers=OWNER,
+                         json={**turn(question), 'readiness_binding':view['readiness_binding']})
+    assert result.status_code == 200, result.text
+    saved = store.get_turn(result.json()['turn_id'])
+    assert saved['answer'].startswith(answer)
+    assert saved['trace']['metadata']['generation_path'] == 'deterministic_tool_result'
+    assert saved['trace']['metadata'].get('generation_stats') is None
+
+
+def test_legacy_daily_gdd_role_aliases_keep_unvalidated_readiness_unknown(runtime):
+    # Legacy daily_gdd has no independently callable canonical input validator.
+    # A ready parser plan must not invent model-free readiness qualification.
+    client, _ = runtime
+    view = preview(client, turn('Calculate daily GDD from high 25 C, low 9 C and base 7 C.'))
+    assert view['requires_model'] is None and view['status'] == 'unknown'
+    assert view['calculator']['operation'] == 'daily_gdd'
+
+
 @pytest.mark.parametrize("backend", ["mlx", "http"])
 @pytest.mark.parametrize("question,reply,answer", [
     (SEED_AMBIGUOUS, "Overall, of seeds sown.", "4.8 kg/ha"),

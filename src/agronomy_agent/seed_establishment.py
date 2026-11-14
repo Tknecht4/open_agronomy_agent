@@ -10,6 +10,7 @@ from decimal import Decimal
 import re
 from typing import Any
 from agronomy_agent.supplied_numeric_inputs import NUMBER as SUPPLIED_NUMBER
+from agronomy_agent.arithmetic_input_roles import GERMINATION_ROLE, SURVIVAL_ROLE, SEED_LOSS_ROLE
 
 SEED_SURVIVAL_BASES = ("seeds_sown", "germinated_seeds")
 SEED_SURVIVAL_BASIS_GAP = "the survival denominator (all seeds sown or only germinated seeds)"
@@ -55,17 +56,17 @@ def parse_seed_establishment(text: str, *, bindings: list[re.Match[str]] | None 
         return next(iter(values)) if len(values) == 1 else None
 
     germ_matches = matches(
-        rf"{_NUMBER}\s*%\s*(?:(?:seed[- ]lot|lab(?:oratory)?)\s+)?germination\b",
-        rf"\bgermination\s*(?:rate\s*)?(?:is|of|:)?\s*{_NUMBER}\s*%",
+        rf"{_NUMBER}\s*%\s*{GERMINATION_ROLE}\b",
+        rf"\b{GERMINATION_ROLE}\s*(?:rate\s*)?(?:is|of|:)?\s*{_NUMBER}\s*%",
     )
     survival_matches = matches(
-        rf"{_NUMBER}\s*%\s*(?:(?:expected|overall|field|seedling|post[- ]germination)\s+)*(?:survival|emergence)\b",
-        rf"\b(?:(?:expected|overall|field|seedling|post[- ]germination)\s+)*(?:survival|emergence)\s*(?:rate\s*)?(?:is|of|:)?\s*{_NUMBER}\s*%",
+        rf"{_NUMBER}\s*%\s*{SURVIVAL_ROLE}\b",
+        rf"\b{SURVIVAL_ROLE}\s*(?:rate\s*)?(?:is|of|:)?\s*{_NUMBER}\s*%",
         rf"{_NUMBER}\s*%\s+of\s+(?:all\s+)?(?:seeds?\s+(?:sown|planted)|germinated\s+seeds?)\s+(?:emerge|survive)\b",
     )
     loss_matches = matches(
-        rf"{_NUMBER}\s*%\s*(?:(?:expected|overall|field|seedling|post[- ]germination)\s+)*(?:loss|mortality)\b",
-        rf"\b(?:(?:expected|overall|field|seedling|post[- ]germination)\s+)*(?:loss|mortality)\s*(?:is|of|:)?\s*{_NUMBER}\s*%",
+        rf"{_NUMBER}\s*%\s*{SEED_LOSS_ROLE}\b",
+        rf"\b{SEED_LOSS_ROLE}\s*(?:is|of|:)?\s*{_NUMBER}\s*%",
     )
     if bindings is not None:
         bindings.extend(germ_matches + survival_matches + loss_matches)
