@@ -33,6 +33,19 @@ NUTRIENT_DEFINITION = (
 
 
 def _harvest_drydown_context(question: str) -> bool:
+    # Cultivar comparisons also occur in water-deficit experiments. Resolve
+    # the term's referent before treating an incidental crop/variety as harvest
+    # scope; mixed soil/harvest requests cannot authorize a global rewrite.
+    if re.search(r"\bsoil(?:[- ](?:water|moisture))?[- ]+dry[- ]?down\b|\bdry[- ]?down\s+(?:of|in)\s+(?:the\s+)?soil\b", question, re.I):
+        return False
+    for experiment in re.finditer(
+            r"\bdry[- ]?down[- ]+(?:experiments?|treatments?|protocols?|cycles?|stud(?:y|ies))\b", question, re.I):
+        if not re.search(
+                r"\b(?:harvest(?:[- ]+grain)?|grain(?:[- ]+moisture)?|kernels?(?:[- ]+moisture)?)[- ]+$",
+                question[:experiment.start()], re.I):
+            # Grain yield elsewhere in a cultivar experiment does not turn
+            # its dry-down treatment into a harvest-grain referent.
+            return False
     return bool(re.search(r"\bdry[- ]?down\b", question, re.I) and re.search(
         r"\b(?:variet\w*|cultivars?|hybrids?|harvest\w*|grain)\b", question, re.I))
 
@@ -195,12 +208,21 @@ def correct_concept_claims(answer: str, question: str) -> tuple[str, tuple[dict[
             return sentence[:lodging_definition.start("claim")] + replacement + sentence[lodging_definition.end("claim"):]
         definition = re.match(
             r"\s*(?:[-*]\s+)?(?P<claim>(?:\*\*|__|`)?dry[- ]?down(?:\*\*|__|`)?"
-            r"\s+(?:is|means|refers? to|describes?)\b[^,;.!?\n]+)", sentence, re.I)
-        false_property = re.search(
-            r"\b(?:ability|capacity|toleran\w*|resistan\w*)\b[^.;!?]{0,100}"
-            r"\b(?:drought|moisture stress|water stress|water shortage)\b|"
-            r"\b(?:drought|moisture[- ]stress|water[- ]stress)\s+(?:tolerance|resistance)\b",
-            definition["claim"] if definition else "", re.I)
+            r"\s+(?:is|means|refers? to|describes?)\b(?P<property>[^,;.!?\n]+))", sentence, re.I)
+        # The false trait must be the definition's head property. Mentioning
+        # drought tolerance as an experimental purpose or a separate trait
+        # does not equate the two concepts.
+        false_property = re.match(
+            r"\s*(?:(?:a|an|the)\s+)?"
+            r"(?:(?:plant|crop|variety|cultivar|hybrid)['’]s\s+)?"
+            r"(?:(?:ability|capacity)\s+to\s+(?:(?:mature|grow)\s+and\s+)?"
+            r"(?:survive|tolerate|withstand|resist|endure|cope\s+with)\s+"
+            r"(?:(?:periods?|conditions?)\s+of\s+)?"
+            r"(?:drought|moisture stress|water stress|water shortage)\b|"
+            r"(?:tolerance|resistance)\s+(?:to|of|against)\s+"
+            r"(?:drought|moisture stress|water stress|water shortage)\b|"
+            r"(?:drought|moisture[- ]stress|water[- ]stress)\s+(?:tolerance|resistance)\b)",
+            re.sub(r"[*_`]", "", definition["property"]) if definition else "", re.I)
         if (drydown and definition and false_property and not re.search(
             r"\b(?:not|never|rather than|instead of)\b",
             definition["claim"][:false_property.start()], re.I

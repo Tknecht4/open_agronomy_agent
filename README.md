@@ -64,7 +64,8 @@ The current software supports these bounded workflows:
 - **Explain and collect useful evidence:** definitions, methods, hypothetical
   arithmetic examples and scouting questions can receive bounded help. Disease
   history informs soil precautions across rotations; current symptoms and
-  diagnoses keep their own evidence requirements.
+  diagnoses keep their own evidence requirements. Experimental soil drying and
+  harvest grain drying retain their distinct meanings in variety comparisons.
 - **Keep the whole request:** a calculation or definition cannot silently replace
   additional requested help. Field actions, product selection and use
   restrictions retain their applicable evidence and current authority checks.

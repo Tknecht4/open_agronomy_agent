@@ -148,6 +148,40 @@ def test_nonharvest_drydown_and_french_questions_do_not_receive_english_capsules
     assert not concept_prompt_guidance("Expliquez le drydown des variétés en français.")
 
 
+@pytest.mark.parametrize("question", [
+    "In a soybean cultivar screening experiment, what does a soil dry-down treatment mean?",
+    "Explain soil-water drydown when comparing soybean varieties.",
+    "Explain soil-moisture drydown when comparing soybean varieties.",
+    "Explain drydown of the soil in a soybean cultivar comparison.",
+    "What is a drydown study comparing soybean cultivars?",
+    "In a soybean cultivar grain-yield screening experiment, what does a dry-down treatment mean?",
+    "Compare harvest drydown with a controlled drydown treatment in soybean cultivars.",
+    "What is a dry-down experiment when comparing soybean cultivars?",
+    "Compare harvest grain drydown with soil drydown treatments in soybean cultivar experiments.",
+])
+def test_experimental_soil_drydown_referent_overrides_incidental_cultivar_scope(question):
+    draft = "Dry-down refers to withholding irrigation to investigate drought tolerance in the tested cultivars."
+    assert correct_concept_claims(draft, question) == (draft, ())
+    assert not concept_prompt_guidance(question)
+
+
+def test_grain_drydown_still_has_harvest_scope_in_a_hybrid_experiment():
+    question = "Compare harvest grain drydown among corn hybrids in a field experiment."
+    corrected, edits = correct_concept_claims("Drydown is drought tolerance.", question)
+    assert "loss of moisture" in corrected and len(edits) == 1
+    assert concept_prompt_guidance(question)
+
+
+@pytest.mark.parametrize("draft", [
+    "Drydown is moisture loss toward harvest and drought tolerance is a separate trait.",
+    "Drydown describes moisture loss toward harvest while drought tolerance concerns stress response.",
+    "Drydown is a hybrid’s ability to lose grain moisture even after drought stress.",
+])
+def test_a_separate_drought_trait_is_not_the_definition_head(draft):
+    question = "Compare harvest drydown in hybrids with drought tolerance."
+    assert correct_concept_claims(draft, question) == (draft, ())
+
+
 @pytest.mark.parametrize("incorrect", [
     "These two rates are related because the product contains active ingredient(s) that deliver the desired nutrients.",
     "A nutrient rate is derived from the product rate and the concentration of the active ingredient in the product.",
@@ -217,6 +251,9 @@ def test_concept_origin_requires_named_defect_complete_edit_and_clean_final(chan
 
 
 @pytest.mark.parametrize("question,draft,retained", [
+    ("In a soybean cultivar screening experiment, what does a soil dry-down treatment mean?",
+     "Dry-down refers to withholding irrigation to investigate drought tolerance in the tested cultivars.",
+     "withholding irrigation to investigate drought tolerance"),
     ("Compare crop rotation and hybrid traits such as drydown and lodging.",
      "Rotation changes the crop sequence across seasons. Drydown is a variety's tolerance to drought. Lodging concerns plants falling over.",
      "loss of moisture"),
@@ -262,6 +299,9 @@ def test_repairs_and_preservation_reach_the_persisted_product_entrypoint(tmp_pat
         assert retained in result.answer
         assert store.get_turn(result.turn["turn_id"])["answer"] == result.answer
         assert len(result.stage_receipts) == 17
+        if "soil dry-down treatment" in question:
+            assert result.answer == draft
+            assert "toward harvest" not in result.answer
         if question.startswith(("Compare crop rotation", "Contrast crop rotation")):
             assert result.answer.startswith("Rotation changes the crop sequence across seasons.")
             assert "Lodging concerns plants falling over." in result.answer

@@ -292,6 +292,14 @@ These checks do not constitute a general scientific correctness verifier.
 claim corrections, separately from retrieved evidence. In a variety/harvest
 context, drydown concerns crop or grain moisture loss toward harvest, rather
 than drought survival; see [Purdue's grain-drydown explanation](https://agry.purdue.edu/ext/corn/news/timeless/GrainDrying.html).
+An explicit soil dry-down treatment has a different referent: progressive soil
+drying can be used in water-deficit experiments, including cultivar comparisons;
+see [the soybean dry-down methods in Shekoofa et al.](https://pmc.ncbi.nlm.nih.gov/articles/PMC10534556/).
+Prompt guidance and claim correction share this scope check. Explicit soil
+drying and mixed soil/harvest requests do not authorize a global harvest
+definition rewrite. A correction also requires the false trait to be the
+definition's head property; a drought-related purpose or a separate comparison
+does not establish equivalence.
 Lodging is displacement from the upright position through root anchorage failure
 or stem bending/breakage, and can occur before maturity. Standability/lodging
 resistance concerns avoiding that failure; see [Manitoba Crop Alliance](https://mbcropalliance.ca/directory/production-resources/lodging-in-spring-cereals/).

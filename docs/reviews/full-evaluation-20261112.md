@@ -4,6 +4,41 @@ November 12, 2026. Reference main: `91125d30acd447537184184352d8fadf96ee89ee`.
 
 ## Current status
 
+On November 15, independent source review reproduced a correctness defect in
+`a03d808`: an experimental soil dry-down definition was rewritten as harvest
+grain drying because the question also mentioned a cultivar. The production
+verifier accepted that wrong replacement without calling an editor. Primary
+[soybean dry-down research](https://pmc.ncbi.nlm.nih.gov/articles/PMC10534556/)
+uses progressive soil drying to investigate water-deficit responses; a grain
+harvest definition cannot replace that referent.
+
+The correction shares referent checks between prompt guidance and claim
+correction, abstains from mixed soil/harvest rewrites, and requires a direct
+survival or tolerance equivalence rather than a later mention of drought.
+Incidental grain-yield terminology cannot override experimental scope, and
+moisture-loss ability remains distinct from survival under drought. It passed
+134 focused and 1,142 expanded deterministic checks, including persisted
+production requests, and scoped independent review. The composed source passed
+5,174 backend tests with 58 skipped and 26 warnings, plus 508 frontend tests,
+type checking, documentation, build and public-package checks. The complete
+successor candidate matrix remains required; source tests are not scientific
+grades.
+
+All three `a03d808` producers have been stopped as superseded. Each completed
+192 regression observations; the partial full-cohort observations and pending
+artifacts remain diagnostic evidence and cannot fill successor slots. Luna
+retained 513 full-cohort rows without a final report. Both native stop helpers
+returned after checking the original source and process ownership. Their
+192-row regression cohorts and 107 E2B / 70 E4B full-cohort rows, including
+pending artifacts, have complete all-byte/mode-verified local archives. Actual
+process and GPU checks found no remaining evaluation workers or GPU processes.
+Luna's 513-row full prefix also has a complete verified archive, preserving its
+eight failed observations and missing final report.
+The six complete baseline collections are preserved unchanged. No current
+scientific grades or updated ranking are available.
+
+### Earlier source checkpoints
+
 On November 14, the browser walk exposed an input-role regression in `a45dc37`:
 the parser accepted “thousand kernel weight 36 g,” but the later whole-request
 guard rejected that form. The narrow repair in `0554e2b` passed its software
