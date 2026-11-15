@@ -67,6 +67,8 @@ policy and run corpus, provenance and retrieval gates. The base composite builde
 does not replay the separate Ask Science context admission: preserve that
 hash-bound overlay and the current config when refreshing the active store.
 Confirm that only the project shard and active-store hashes change in the policy.
+Refresh the active runtime profile's policy and knowledge-release manifest pins
+in `configs/runtime_profiles.json` before testing app startup.
 This is a source wording
 maintenance path; it does not admit new external evidence or evaluation content.
 

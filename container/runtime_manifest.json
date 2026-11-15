@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-11-15T20:48:15+00:00",
+  "generated_at": "2026-11-15T20:52:57+00:00",
   "status": "pass",
-  "contract_sha256": "fb0a875a2533ea40540c9c63815de0a0775e2f19fbaec9124e994567aebcd6c4",
+  "contract_sha256": "b5a4f7ab5abf60fcf850fd7116eb9aafa0f25279a500578c88ead91fb70f1841",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -44,8 +44,8 @@
     {
       "path": "data/derived/rag/offline_agronomy/active/shards/project_context-0001.jsonl",
       "role": "runtime_knowledge",
-      "bytes": 64623,
-      "sha256": "d73d945d0304254031f642683547707ce4f9d64063ecf852db0d0bf76c4bee7e"
+      "bytes": 64839,
+      "sha256": "ad0909927171c516c77ab6779e4c0c0a0641150f1361cf74ae329fb86e313b0c"
     },
     {
       "path": "data/derived/rag/offline_agronomy/active/shards/project_decisive-0001.jsonl",
@@ -408,7 +408,7 @@
       "sha256": "715d556f867415445d0b83e6ddea6bbe3b3f3e61587aae96dd504f66d90d5984"
     }
   ],
-  "runtime_knowledge_bytes": 872431736,
+  "runtime_knowledge_bytes": 872431952,
   "runtime_policies": [],
   "runtime_assets": [
     {
@@ -438,20 +438,20 @@
     {
       "path": "scripts",
       "file_count": 149,
-      "bytes": 1962079,
-      "sha256": "d17e07c9c49275f4695fa1b5c27102dbc4ed8507f9c10b82c53b5d9b5455b2c3"
+      "bytes": 1962264,
+      "sha256": "013fe278cb9f926bb371e662408ece95240bbf2155fec6212c918326bb73dae7"
     },
     {
       "path": "configs",
       "file_count": 94,
-      "bytes": 356394,
-      "sha256": "04206979976f404314e17135e87dfedda871f987f383b79dd89ad926f623074e"
+      "bytes": 356440,
+      "sha256": "fd6870c57d047904d06355900ac4cdbe8cea8882caedc0df4966e860e32fbc1a"
     },
     {
       "path": "data/manifests",
       "file_count": 41,
       "bytes": 19676131,
-      "sha256": "1b16b92fd5318522f2cf6ad2d1d43ae57a676ea44b9be74191e175b535aae36a"
+      "sha256": "d2cc58e761744670344fecc86d85b9a653df3ae0663951fe0afa3c08bd82045d"
     },
     {
       "path": "data/eval",
@@ -709,7 +709,7 @@
       "path": "data/manifests/runtime_corpus_policy.json",
       "role": "runtime_control",
       "bytes": 45296,
-      "sha256": "863b8f2198e0fbf3cf8d4e108e6fbc33b7746cbece23048643b609f30255b5fa"
+      "sha256": "13f7c7e73f82b3c49fb1b6b554a1cfb50b71b4c95b60a0ab41744ba233425e24"
     }
   ]
 }

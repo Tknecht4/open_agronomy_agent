@@ -14,12 +14,12 @@
       "runtime_corpus_audit_required": true,
       "runtime_policy": {
         "path": "data/manifests/runtime_corpus_policy.json",
-        "sha256": "4ec7f8a9ef941c759167ee471e35283fd969a9a48806fd1986672a31515c904a"
+        "sha256": "13f7c7e73f82b3c49fb1b6b554a1cfb50b71b4c95b60a0ab41744ba233425e24"
       },
       "knowledge_release": {
         "store_id": "offline-agronomy",
         "manifest_path": "data/derived/rag/offline_agronomy/active/store_manifest.json",
-        "manifest_sha256": "b3bdb39187bf02bebbee3b34bea13f87fddeeef0eb5bb7162b0c4a59394b6616"
+        "manifest_sha256": "3b8014c32578f6a18f19adfe1fa2f53c0fbdd2f5bc3aff5373d61ab33887f76a"
       }
     }
   ],

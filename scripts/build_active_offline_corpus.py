@@ -42,6 +42,7 @@ from agronomy_agent.corpus_release import (  # noqa: E402
 
 
 DEFAULT_OUTPUT = ROOT / "data" / "derived" / "rag" / "offline_agronomy" / "active"
+PROJECT_CONTEXT_SOURCE = Path("data/seed/agronomy_rag_corpus_v2.jsonl")
 MAX_SHARD_BYTES = 16 * 1024 * 1024
 _PAGE = re.compile(r"\[page\s+(\d+)\]", re.IGNORECASE)
 _SPACE = re.compile(r"\s+")
@@ -449,7 +450,7 @@ def build(*, archive: Path, output: Path) -> dict[str, Any]:
     metadata = _source_metadata(rows)
     canadian, pdf_sources = _canadian_pdf_records(archive, metadata)
     tables, table_sources = _xlsx_records(archive, metadata)
-    project = _project_records(ROOT / "data/seed/agronomy_rag_corpus.jsonl", evidence_tier="internal_synthesis", eligibility="context_only", source_kind="project_seed")
+    project = _project_records(ROOT / PROJECT_CONTEXT_SOURCE, evidence_tier="internal_synthesis", eligibility="context_only", source_kind="project_seed")
     boundary = _project_records(ROOT / "data/seed/boundary_rag_corpus.jsonl", evidence_tier="project_safety_policy", eligibility="decisive", source_kind="project_boundary")
     soilwise = _project_records(ROOT / "data/derived/rag/soilwise_rag_corpus.jsonl", evidence_tier="open_ontology", eligibility="context_only", source_kind="soilwise")
     components = {
@@ -537,7 +538,7 @@ def refresh_project_context(*, previous: Path, output: Path) -> dict[str, Any]:
         raise ValueError("refresh supports one project-context shard")
     shard = project_shards[0]
     old_project = [json.loads(line) for line in (previous / shard["path"]).read_text().splitlines() if line.strip()]
-    project = _project_records(ROOT / "data/seed/agronomy_rag_corpus.jsonl", evidence_tier="internal_synthesis", eligibility="context_only", source_kind="project_seed")
+    project = _project_records(ROOT / PROJECT_CONTEXT_SOURCE, evidence_tier="internal_synthesis", eligibility="context_only", source_kind="project_seed")
     old_ids = {row["doc_id"] for row in old_project}
     if len(old_ids) != len(old_project) or old_ids != {row["doc_id"] for row in project} or len(project) != len(old_project):
         raise ValueError("project document membership changed; full rebuild required")

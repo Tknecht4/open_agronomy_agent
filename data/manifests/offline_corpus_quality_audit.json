@@ -3,7 +3,7 @@
   "config_path": "configs/rag.yaml",
   "config_sha256": "9b16e2659ecf95774a2f05ed85a425930d00a16d6a5aad3b32b29d3627fcfe53",
   "policy_path": "data/manifests/runtime_corpus_policy.json",
-  "policy_sha256": "863b8f2198e0fbf3cf8d4e108e6fbc33b7746cbece23048643b609f30255b5fa",
+  "policy_sha256": "13f7c7e73f82b3c49fb1b6b554a1cfb50b71b4c95b60a0ab41744ba233425e24",
   "components": [
     {
       "path": "data/derived/rag/offline_agronomy/active/shards/canadian_context-0001.jsonl",

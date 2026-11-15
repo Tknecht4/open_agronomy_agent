@@ -16,9 +16,9 @@ PREVIOUS = ROOT / "data/derived/rag/offline_agronomy/active"
 
 @pytest.fixture
 def seed(tmp_path, monkeypatch):
-    path = tmp_path / "source/data/seed/agronomy_rag_corpus.jsonl"
+    path = tmp_path / "source" / builder.PROJECT_CONTEXT_SOURCE
     path.parent.mkdir(parents=True)
-    shutil.copyfile(ROOT / "data/seed/agronomy_rag_corpus.jsonl", path)
+    shutil.copyfile(ROOT / builder.PROJECT_CONTEXT_SOURCE, path)
     monkeypatch.setattr(builder, "ROOT", tmp_path / "source")
     return path
 
