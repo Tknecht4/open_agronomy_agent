@@ -2225,7 +2225,7 @@ def classify_query(question: str) -> QueryRoute:
             expansions.update({"disease severity", "scouting", "hybrid susceptibility", "growth stage", "weather", "yield potential", "economics", "label"})
             guidance = "For fungicide ROI decisions, explicitly cover disease severity or scouting, hybrid or variety susceptibility, growth stage, weather, yield potential or economics, and label fit. State that price alone is not enough."
         elif qtype == "plant_health":
-            guidance = "Diagnose first. If identification or threshold data are missing, ask for them before treatment advice."
+            guidance = "For symptoms, establish the likely cause before choosing treatment. For preventive disease planning, use crop-specific risk and current local forecasting guidance; visible infection is not always a prerequisite. Check current crop, target and product-label fit. Ask for action thresholds where applicable, rather than assuming every disease has one."
 
     if has(r"\b(insect|insects|aphid|threshold|scout|sampling|count|beneficial|natural enemies|insecticide justified)\b", q) and has(
         r"\b(insecticide|treatment|spray|justified|threshold|scout|count|crop stage)\b",

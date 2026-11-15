@@ -4,6 +4,48 @@ November 12, 2026. Reference main: `91125d30acd447537184184352d8fadf96ee89ee`.
 
 ## Current status
 
+On November 15, the complete `a2eb20e` collection and its automated grading
+closed. All twelve collections retain 14,592 planned slots, including explicit
+execution failures and synthetic fault controls. The full-cohort grading
+exports contain 9,056 labelled and 4,279 unknown eligible bindings; all 1,152
+regression bindings have returned labels. These are automated development
+labels, not expert agronomic validation. A descriptor leak in the controller's
+subprocess transport caused grading failures; those unknowns remain unknown.
+Canonical criterion analysis is complete for all twelve collections without
+resampling unknowns.
+
+Actual answer review reproduced missing supplied-input calculations, a
+metadata-date false positive and six classes of task-scope or refusal defects.
+The repaired serving source is frozen at `a71a91d`. It passed 5,528 backend
+tests with 58 skipped, 508 frontend tests, type checking, builds, documentation
+and public-package checks, followed by independent source review. Its transport
+uses scalable descriptor polling and closes process resources on failure.
+These software checks do not establish answer quality.
+
+A fresh whole assessment is underway at that exact source, using the unchanged
+560 original cases and 48 regressions. Both native models run on task-owned
+Colab L4 GPUs. Hosted Luna has separately reviewed controls and requires fresh
+dispatch checks. The new study retains the original grading functions, prompts,
+rubrics, masks and weights in a separate result namespace. Prior candidate
+answers and labels do not fill new slots. The six complete instrumented
+main-compatible baseline collections retain their original source identities.
+No updated ranking, scientific clearance or pull request is claimed yet.
+
+Review of all 96 hosted-system regression answers subsequently reproduced two
+verifier defects: equivalent report-issued wording could lose supplied dates,
+and a claim edit could discard previously complete root-inspection steps.
+The delivered project context also treated diagnosis and economic thresholds as
+universal prerequisites for prevention. A separate source repair preserves
+dates and required method content, distinguishes visible decay checks from
+disease assertions, and scopes prevention to crop-specific risk and current
+guidance. Its 32 focused regressions, including two persisted product flows,
+pass; the full active corpus provenance
+gate passes and retrieval completed 21 cases with one explicitly blocked case.
+Those checks do not qualify the repaired source's real model outputs. The
+running `a71a91d` collection remains frozen and retains its original defects.
+
+### Earlier soil-drying checkpoint
+
 On November 15, independent source review reproduced a correctness defect in
 `a03d808`: an experimental soil dry-down definition was rewritten as harvest
 grain drying because the question also mentioned a cultivar. The production

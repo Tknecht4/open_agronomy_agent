@@ -1,9 +1,9 @@
 {
   "schema_version": "open_agronomy_agent.offline_corpus_successor_quality_audit.v1",
   "config_path": "configs/rag.yaml",
-  "config_sha256": "8f45880dbadf368848d52251aaafb24e25b17d9baa7923aa7707f6880fc04b91",
+  "config_sha256": "9b16e2659ecf95774a2f05ed85a425930d00a16d6a5aad3b32b29d3627fcfe53",
   "policy_path": "data/manifests/runtime_corpus_policy.json",
-  "policy_sha256": "a322ee54efaf01496c48e346df472f273c348a33f31431022a56b05892d8dcfb",
+  "policy_sha256": "863b8f2198e0fbf3cf8d4e108e6fbc33b7746cbece23048643b609f30255b5fa",
   "components": [
     {
       "path": "data/derived/rag/offline_agronomy/active/shards/canadian_context-0001.jsonl",
@@ -56,6 +56,17 @@
       "evidence_tier": "open_ontology",
       "source_locator_complete_rows": 1783,
       "quality_ledger_complete_rows": 1783,
+      "source_locator_complete_rate": 1.0,
+      "quality_ledger_complete_rate": 1.0,
+      "failures": {}
+    },
+    {
+      "path": "data/derived/rag/offline_agronomy/ask_science/v1/shards/foundations-0001.jsonl",
+      "activation": "direct_startup",
+      "rows": 2,
+      "evidence_tier": "internal_synthesis",
+      "source_locator_complete_rows": 2,
+      "quality_ledger_complete_rows": 2,
       "source_locator_complete_rate": 1.0,
       "quality_ledger_complete_rate": 1.0,
       "failures": {}
@@ -623,9 +634,9 @@
     }
   ],
   "totals": {
-    "rows": 221344,
-    "source_locator_complete_rows": 221344,
-    "quality_ledger_complete_rows": 221344
+    "rows": 221346,
+    "source_locator_complete_rows": 221346,
+    "quality_ledger_complete_rows": 221346
   },
   "promotion_gate": {
     "requires_source_locator_complete_rate": 1.0,

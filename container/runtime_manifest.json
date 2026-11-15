@@ -1,8 +1,8 @@
 {
   "schema_version": "open_agronomy_agent.edge_runtime_manifest.v1",
-  "generated_at": "2026-11-15T01:19:02+00:00",
+  "generated_at": "2026-11-15T20:48:15+00:00",
   "status": "pass",
-  "contract_sha256": "35cd89f57ad9f8718a28464f3f3c8edfa2cdfd5c03c16011c55277b92d87ab4c",
+  "contract_sha256": "fb0a875a2533ea40540c9c63815de0a0775e2f19fbaec9124e994567aebcd6c4",
   "image_contract": {
     "containerfile": "Containerfile",
     "application_port": 8080,
@@ -44,8 +44,8 @@
     {
       "path": "data/derived/rag/offline_agronomy/active/shards/project_context-0001.jsonl",
       "role": "runtime_knowledge",
-      "bytes": 64253,
-      "sha256": "6a3eb04006b4dafdc9234cda826dd3de54397bb655b67394cac4300c6a4159e2"
+      "bytes": 64623,
+      "sha256": "d73d945d0304254031f642683547707ce4f9d64063ecf852db0d0bf76c4bee7e"
     },
     {
       "path": "data/derived/rag/offline_agronomy/active/shards/project_decisive-0001.jsonl",
@@ -408,14 +408,14 @@
       "sha256": "715d556f867415445d0b83e6ddea6bbe3b3f3e61587aae96dd504f66d90d5984"
     }
   ],
-  "runtime_knowledge_bytes": 872431366,
+  "runtime_knowledge_bytes": 872431736,
   "runtime_policies": [],
   "runtime_assets": [
     {
       "path": "src/agronomy_agent",
-      "file_count": 212,
-      "bytes": 6779232,
-      "sha256": "05f2e1f4059d1ff9d063482c6c8c0a028fcd817b8eaf8590bf544fe6d8f15556"
+      "file_count": 214,
+      "bytes": 6846739,
+      "sha256": "07a3c7f48ac610995c4e13acec7e891c37ab54c971fa0bab7a0d9d8d73ef0faa"
     },
     {
       "path": "frontend/src",
@@ -438,26 +438,26 @@
     {
       "path": "scripts",
       "file_count": 149,
-      "bytes": 1955974,
-      "sha256": "8e8ae3ab4d0a3301a424a3ed0d980334ab220bdeaa6d81fe5e57d5caa4b77e16"
+      "bytes": 1962079,
+      "sha256": "d17e07c9c49275f4695fa1b5c27102dbc4ed8507f9c10b82c53b5d9b5455b2c3"
     },
     {
       "path": "configs",
-      "file_count": 93,
-      "bytes": 323510,
-      "sha256": "07e64563c3114758e9ce9d5e9b0b3560494cedc78f1aba0704829ab69e58bd10"
+      "file_count": 94,
+      "bytes": 356394,
+      "sha256": "04206979976f404314e17135e87dfedda871f987f383b79dd89ad926f623074e"
     },
     {
       "path": "data/manifests",
       "file_count": 41,
-      "bytes": 19675733,
-      "sha256": "2f85b1724320a02a47502fad15d06f15896ddfe486bf2503cf449a9bfadb7415"
+      "bytes": 19676131,
+      "sha256": "1b16b92fd5318522f2cf6ad2d1d43ae57a676ea44b9be74191e175b535aae36a"
     },
     {
       "path": "data/eval",
       "file_count": 76,
-      "bytes": 3397870,
-      "sha256": "54875202d48b8a193fb4e063fcd304eb086baf93a159293f45e9b2481262625d"
+      "bytes": 3406571,
+      "sha256": "ccbaaea1483cd2e8ad9c17b03cbdd5cb0f23c451d7a6f8b24990093bdf54ce9d"
     },
     {
       "path": "data/snapshots",
@@ -468,8 +468,8 @@
     {
       "path": "docs/public",
       "file_count": 103,
-      "bytes": 10072358,
-      "sha256": "bbc9e0db5444d01e23dbc37f03ac3fda8361475b25265a024ddea3b141f16fc6"
+      "bytes": 10076171,
+      "sha256": "89a1521ecbf6cc0b5768bb8886ff30b90f3b512ac63ee7fe2bdad9c1fbca5f20"
     }
   ],
   "geo_cache_seed": {
@@ -709,7 +709,7 @@
       "path": "data/manifests/runtime_corpus_policy.json",
       "role": "runtime_control",
       "bytes": 45296,
-      "sha256": "4ec7f8a9ef941c759167ee471e35283fd969a9a48806fd1986672a31515c904a"
+      "sha256": "863b8f2198e0fbf3cf8d4e108e6fbc33b7746cbece23048643b609f30255b5fa"
     }
   ]
 }

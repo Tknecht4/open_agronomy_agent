@@ -857,7 +857,9 @@
     "docs/reviews/uncertainty-refusal-colab-assessment-20261112.md",
     "docs/reviews/pr131-independent-review-20261112.md",
     "docs/reviews/full-evaluation-20261112.md",
-    "tests/test_release_eval_external.py"
+    "tests/test_release_eval_external.py",
+    "tests/test_project_corpus_refresh.py",
+    "tests/test_verifier_content_preservation.py"
   ],
   "trees": [
     "src",

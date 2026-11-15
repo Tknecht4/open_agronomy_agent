@@ -646,7 +646,7 @@ including the unstated seed denominator in two old wheat cases. This remains
 synthetic trace QA and cannot establish agronomic performance.
 
 The v5 planner wrapper supports conditional seed-survival clarification records to
-the current product path. These contain two checked v3 arithmetic children,
+the current product path. These contain two checked v4 arithmetic children,
 retain ASK/PARTIAL and choose no rate. Their semantics are outside the historical
 frozen-v1 construct. The version-2 **synthetic contract executor** is restricted
 to executing ready calculations and recording current planner clarification
@@ -695,3 +695,17 @@ inherit an unrelated irrigation or harvest checklist. Supplied endpoints of an e
 may be restated separately on the same unit basis. This does not admit interior
 values, altered signs or conversions as evidence, or establish the statistical
 interpretation by itself. Appended operations retain ordinary evidence checks.
+
+Verification also preserves useful content: an accepted edit cannot discard a
+previously satisfied observation-method facet while repairing a separate claim.
+Explicit report-issued dates retain their role alongside collection and analysis
+dates. Inspecting roots for visible decay does not itself assert a disease;
+named diseases, confirmed findings and causal claims still require support.
+
+Symptom investigation and preventive disease planning have different evidence
+needs. [Manitoba's potato late-blight guidance](https://www.gov.mb.ca/agriculture/crops/plant-diseases/late-blight-potatoes.html)
+describes preventive protection informed by forecasting before infection, without
+an economic threshold. The project context therefore asks for diagnosis where
+relevant, crop-specific risk and current local guidance for prevention, and
+thresholds where applicable. This does not select a product or rate, establish
+current registration, or replace the label for the proposed crop and target.

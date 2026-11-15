@@ -56,6 +56,20 @@ No default profile, field authority, training or evaluation admission follows.
 
 ## Invariants
 
+For a wording correction confined to existing project context records,
+`build_active_offline_corpus.py --refresh-project-context-from <previous-store>
+--output <new-store>` verifies the complete previous release before generating
+a separate store. It preserves external shards, duplicate membership and source
+receipts byte for byte, regenerates project source hashes and the quality ledger,
+and rejects ID or duplicate changes requiring a full raw-source rebuild. Inspect
+the result before replacing the active store, then rebuild the composite runtime
+policy and run corpus, provenance and retrieval gates. The base composite builder
+does not replay the separate Ask Science context admission: preserve that
+hash-bound overlay and the current config when refreshing the active store.
+Confirm that only the project shard and active-store hashes change in the policy.
+This is a source wording
+maintenance path; it does not admit new external evidence or evaluation content.
+
 - Builders are deterministic where source bytes/config are fixed.
 - Preflights and audits do not generate, judge, mutate authority, or claim readiness beyond their stated gate.
 - Benchmark runners preserve exact questions, responses, identities, and traces in ignored run bundles.

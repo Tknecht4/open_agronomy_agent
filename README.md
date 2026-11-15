@@ -48,6 +48,12 @@ the exact source, model, cohort, arm and runtime. The [current campaign record](
 separates completed observations, diagnostic attempts and pending scientific
 review. Historical smoke panels retain their original scope.
 
+The current development suite contains 560 original cases and 48 refusal and
+crop-scope regressions. It compares raw and full-system answers with two trials
+per case on pinned E2B and E4B models and hosted Luna. The cases are exposed
+development material; automated labels and different backend runtimes do not
+establish field accuracy or a general model ranking.
+
 The current software supports these bounded workflows:
 
 - **Calculate from supplied inputs:** nutrient and product quantities, water,

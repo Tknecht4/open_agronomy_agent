@@ -1426,10 +1426,13 @@ def assess_claim_risk(
     unsupported_stages = _unsupported_values(_CROP_STAGE_RE, candidate, allowed)
     unsupported_names = _unsupported_values(_ITALIC_BINOMIAL_RE, candidate, allowed)
     unsupported_names = _dedupe((*unsupported_names, *_unsupported_values(_PAREN_BINOMIAL_RE, candidate, allowed)))
-    unsupported_conditions = _unsupported_values(_NAMED_CONDITION_RE, candidate, condition_allowed)
+    observation_method = observation_guidance(question)
+    unsupported_conditions = _unsupported_condition_values(
+        candidate, condition_allowed,
+        root_inspection=observation_method is not None and observation_method.has_method("current_root_inspection"),
+    )
     unsupported_pests = _unsupported_values(_NAMED_PEST_RE, candidate, allowed)
     missing_intent_facets = _missing_intent_facets(candidate, question=question, question_type=question_type)
-    observation_method = observation_guidance(question)
     decision_state = build_decision_route_state(question, question_type)
     route_violations = decision_state.answer_violations(candidate)
     premise_coverage = decision_state.premise_coverage(candidate)
@@ -3184,9 +3187,12 @@ def _rewrite_rejection_reasons(
         and rewrite_assessment.evidence_commit_score < 0.4
     ):
         reasons.append("weak_rewrite_evidence_commit")
-    if draft_assessment.missing_intent_facets:
-        draft_missing = set(draft_assessment.missing_intent_facets)
-        rewrite_missing = set(rewrite_assessment.missing_intent_facets)
+    draft_missing = set(draft_assessment.missing_intent_facets)
+    rewrite_missing = set(rewrite_assessment.missing_intent_facets)
+    reasons.extend(f"decision_content_lost:{facet}" for facet in sorted(rewrite_missing - draft_missing))
+    if require_complete_decision_content and rewrite_missing:
+        reasons.append("decision_content_still_incomplete")
+    if draft_missing:
         decision_content_improved = (
             len(rewrite_missing) <= len(draft_missing)
             and bool(draft_missing - rewrite_missing)
@@ -3200,8 +3206,6 @@ def _rewrite_rejection_reasons(
         )
         if not decision_content_improved and not stronger_evidence_commit:
             reasons.append("decision_content_not_improved")
-        if require_complete_decision_content and rewrite_missing:
-            reasons.append("decision_content_still_incomplete")
     if _protocol_kind(question) and rewrite_assessment.missing_intent_facets:
         reasons.append("protocol_decision_incomplete")
     if set(rewrite_assessment.unsupported_numbers) - set(draft_assessment.unsupported_numbers):
@@ -6208,6 +6212,38 @@ def _unsupported_diagnostic_assertion(answer: str, evidence: str) -> bool:
         if not supported:
             return True
     return False
+
+
+def _unsupported_condition_values(text: str, allowed: str, *, root_inspection: bool) -> tuple[str, ...]:
+    """Distinguish a visible decay check from a disease or an asserted finding.
+
+    Only bare 'rot' in an explicit root-inspection list gets this exemption.
+    Evaluate each occurrence so a later diagnosis cannot borrow its support.
+    """
+    values: list[str] = []
+    for match in _NAMED_CONDITION_RE.finditer(text):
+        value = match.group(1)
+        if re.search(rf"(?<!\w){re.escape(_normalize_for_matching(value))}(?!\w)", allowed):
+            continue
+        if root_inspection and value.lower() == "rot":
+            start = max((text.rfind(mark, 0, match.start()) for mark in ".!?;\n"), default=-1) + 1
+            end = min((pos for mark in ".!?;\n" if (pos := text.find(mark, match.end())) >= 0), default=len(text))
+            prefix, suffix = text[start:match.start()], text[match.end():end]
+            inspection = re.search(r"\b(?:look|looking|check|checking|inspect|inspecting|examine|examining)\b[^.!?;\n]{0,350}\bfor\b", prefix, re.I)
+            list_item = re.search(r"(?:\bfor|,|\band|\bor|\bany|\bsigns of)\s*$", prefix, re.I)
+            # A comma alone is not a list boundary: ', which explains the
+            # swelling' asserts a cause. Admit only the remaining visible
+            # descriptors, with no attached finding or causal proposition.
+            list_end = re.fullmatch(
+                r"\s*(?:(?:,\s*(?:(?:and|or)\s+)?|\s+(?:and|or)\s+)"
+                r"(?:lesions?|discolou?ration|pruning|damage|cracks?|injur(?:y|ies)))*\s*",
+                suffix, re.I,
+            )
+            assertion = re.search(r"\b(?:confirmed|diagnos\w*|caus\w*|established|proven|present)\b", prefix + suffix, re.I)
+            if inspection and list_item and list_end and not assertion:
+                continue
+        values.append(value)
+    return _dedupe(values)
 
 
 def _unsupported_values(
