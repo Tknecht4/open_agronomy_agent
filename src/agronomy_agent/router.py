@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass
 
 from agronomy_agent.map_component_interpretation import is_map_component_explanation_question
-from agronomy_agent.observation_guidance import observation_guidance, stored_grain_context
+from agronomy_agent.observation_guidance import observation_guidance, stored_grain_context, stored_grain_probe_monitoring
 from agronomy_agent.answerability import is_quantity_concept_explanation, is_mechanism_explanation, product_action_request_text
 from agronomy_agent.request_scope import has_action_directive, has_unqualified_followup, seed_quality_workflow_requested
 from agronomy_agent.plant_health_scope import current_root_swelling_clauses
@@ -205,6 +205,16 @@ def _is_named_product_permission_request(question: str) -> bool:
     )
 
 
+def _stored_grain_probe_route(audience: str = "farmer") -> QueryRoute:
+    return QueryRoute(
+        question_type="crop_management", risk_level="medium",
+        namespaces=("crop_management",), required_tools=(), answer_style="plain", audience=audience,
+        query_expansion=("stored grain", "grain bin", "probe traps", "grain temperature", "insect identification", "monitoring intervals"),
+        guidance="Answer stored-grain probe-trap monitoring and count interpretation using the applicable stored-grain method and measured grain temperature. Detection counts do not authorize treatment; do not substitute field-edge sweeps or a crop-spraying decision.",
+        knowledge_bucket="farmer_knowledge", knowledge_domains=("farmer_knowledge",),
+    )
+
+
 def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     """Reconcile high-signal user intents after the broad lexical route.
 
@@ -214,6 +224,8 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
     field evidence. It does not encode benchmark answers.
     """
 
+    if stored_grain_probe_monitoring(question):
+        return _stored_grain_probe_route(route.audience)
     if is_quantity_concept_explanation(question):
         return QueryRoute(
             question_type="exam_review", risk_level="low",
@@ -1423,6 +1435,8 @@ def _infer_knowledge_domains(q: str, namespaces: set[str]) -> set[str]:
 
 
 def classify_query(question: str) -> QueryRoute:
+    if stored_grain_probe_monitoring(question):
+        return _stored_grain_probe_route()
     q = _routing_text(question)
     namespaces: set[str] = set()
     required_tools: set[str] = set()

@@ -7,6 +7,7 @@ from agronomy_agent.arithmetic_input_roles import (
     ARITHMETIC_INPUT_ROLE_PATTERN, MONEY_FLOW_ROLE_PATTERN,
     BALANCE_SHEET_ROLE_PATTERN, YIELD_ROLE, AREA_UNIT_PATTERN,
     YIELD_UNIT_PATTERN,
+    SEED_TARGET_ROLE,
 )
 from agronomy_agent.supplied_numeric_inputs import NUMBER
 
@@ -63,6 +64,31 @@ def _closed_nominal_budget_data_clause(text: str, start: int) -> bool:
     ))
 
 
+def explicitly_unspecified_management_task(text: str) -> bool:
+    """A deictic frequency question explicitly says its activity is unknown.
+
+    This only selects a clarification obligation. It grants no operation,
+    quantity or product-authority exception, and consumes the whole request.
+    """
+    return bool(re.fullmatch(
+        r"\s*(?:how often|when) should (?:I|we) do (?:it|that)(?: then)?[?!.]\s*"
+        r"(?:this is (?:the|a) [a-z -]{1,80}field from before,? but )?"
+        r"(?:I|we) (?:still )?(?:have not|haven['’]t) (?:said|specified|identified) "
+        r"(?:which|the) (?:(?:crop|soil),?\s*(?:or\s+)?)?(?:(?:crop|soil),?\s*(?:or\s+)?)?"
+        r"(?:job|task|operation)(?: (?:I|we) mean)?[.!?]*\s*", text, re.I))
+
+
+def soil_test_repeatability_requested(text: str) -> bool:
+    """A whole request for repeat-sampling comparability, not a soil map."""
+    role = r"(?:locations?|depth|timing|handling|laboratory method)"
+    return bool(re.fullmatch(
+        r"\s*(?:(?:I|we) want to compare soil tests from (?:the )?same "
+        r"(?:[a-z-]+\s+){0,3}field over time[.!?]\s*)?"
+        rf"what should (?:stay|remain) consistent about sampling {role}"
+        rf"(?:,?\s+(?:and\s+)?{role}){{1,5}} so (?:the|a) trend (?:is|remains) meaningful"
+        r"[.!?]*\s*", text, re.I))
+
+
 def seed_quality_workflow_requested(text: str) -> bool:
     """Distinguish seed-quality work from germination supplied as an operand.
 
@@ -74,7 +100,10 @@ def seed_quality_workflow_requested(text: str) -> bool:
     if not re.search(r"\b" + topic + r"\b", text, re.I):
         return False
     arithmetic = re.search(r"\b(?:calculate|compute|convert|work out|how (?:many|much)|what seed(?:ing)? (?:rate|mass))\b", text, re.I)
-    if not arithmetic or not re.search(r"\b(?:seed(?:ing)? (?:rate|mass)|TKW|thousand[- ]kernel|target (?:stand|population))\b", text, re.I):
+    if not arithmetic or not re.search(
+        rf"\b(?:seed(?:ing)? (?:rate|mass|count|population(?: density)?)|"
+        rf"seeds?\s*(?:/|per)\s*(?:m[²2]|square met(?:re|er)s?)|TKW|thousand[- ]kernel|{SEED_TARGET_ROLE})\b", text, re.I
+    ):
         return True
     # A germination percentage in the arithmetic does not request lot/vigor
     # selection. Inspect other explicit requests rather than the whole bag of
@@ -184,16 +213,24 @@ def _calculation_premise(part: str) -> bool:
     if len(declarations) > 1:
         return all(_calculation_premise(item) for item in declarations)
     closed = (
-        r"(?:ignoring unusable (?:tank )?volume|ignoring other nutrient credits for this arithmetic check|for this (?:product-mass )?calculation|for a teaching method|"
+        r"under (?:a|the) (?:simple )?incremental budget|"
+        r"(?:ignoring unusable (?:tank )?volume|ignoring other nutrient credits for this arithmetic check|for this (?:product-mass )?calculation|"
+        r"for a (?:teaching|hypothetical|illustrative) (?:GDD )?method|"
         r"for one day(?: in (?:an?|the) [a-z -]{1,60}field)?|for a [a-z -]{1,60}field|"
         r"(?:for|under) a uniform(?: [\d.]+ m root zone| profile)|"
-        r"for a standard-conditions model ETc\s*=\s*Kc\s*[×*]\s*ETo|"
+        rf"(?:for|under) a {NUMBER} m root[- ]zone|"
+        r"(?:for|under) a uniform[- ]profile assumption|"
+        r"for a (?:(?:teaching|hypothetical|illustrative) )?standard-conditions model ETc\s*=\s*Kc\s*[×*]\s*ETo|"
         r"using (?:a )?[+-]?(?:\d+(?:\.\d+)?|\.\d+)\s*°?C base|"
         r"no (?:upper |lower |temperature )?caps?|"
         r"negative (?:values|accumulation) (?:(?:are )?floored at zero|retained)|"
         r"using (?:the [a-z '-]+ )?factor[- ]10 method|"
         r"(?:using )?(?:P|K|L/ha)\s*=\s*(?:(?:P2O5|K2O|P|K|Q|speed|spacing)|[\d.×*/()+ =-])+)")
     if re.fullmatch(closed, part, re.I):
+        return True
+    if re.fullmatch(rf"(?:an?|the) intervention costs?\s*(?:CAD|USD|\$)\s*{NUMBER}\s*/\s*{AREA_UNIT_PATTERN}", part, re.I):
+        return True
+    if re.fullmatch(rf"(?:crop|assumed selling) price\s*(?:is|of|:)?\s*(?:CAD|USD|\$)\s*{NUMBER}\s*/\s*{YIELD_UNIT_PATTERN}", part, re.I):
         return True
     if re.fullmatch(r"(?:but )?(?:the )?[a-z][a-z /²-]{0,55} (?:is|are) (?:not supplied|unknown|missing)", part, re.I):
         return True
@@ -230,7 +267,7 @@ def _calculation_premise(part: str) -> bool:
     subject = (
         r"(?:(?:these are measured values:\s*)?(?:an? |the )(?:[a-z\d,.-]+ ){0,4}"
         r"(?:field(?: plan)?|fertilizer(?: product)?|soil moisture probe|sprayer(?: tank)?|nozzle|"
-        r"crop budget|soybean count|blend|plan|budget|example|prescription)|"
+        r"crop budget|soybean count|blend|mixture|plan|budget|example|prescription)|"
         r"seed TKW|soybeans in (?:an?|the) [a-z -]{1,60}field|grain (?:dry )?mass|"
         r"total above-ground dry biomass|Kc|ETo|"
         r"(?:measured )?volumetric water|travel speed|it)"
@@ -319,7 +356,7 @@ def has_unqualified_followup(text: str, *, calculation: bool = False) -> bool:
     Decimal points do not divide sentences.
     """
     head = (r"(?:calculate|compute|convert|work out|how (?:many|much)|"
-            r"what (?:is|are|yield breaks even|seed(?:ing)? (?:rate|mass)))\b" if calculation else
+            r"what (?:is|are|yield(?: increase)? breaks even|seed(?:ing)? (?:rate|mass)))\b" if calculation else
             r"(?:why|how|explain|describe|define|what|which|compare|contrast)\b")
     wrapper = r"(?:(?:please\s+)?(?:can|could|would|will)\s+you\s+(?:please\s+)?|please\s+|I['’]d like you to\s+)?"
     first = re.search(r"(?:^\s*|[.!?;]\s*)" + wrapper + head, text, re.I)

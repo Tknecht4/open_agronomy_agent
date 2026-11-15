@@ -114,7 +114,7 @@ return a useful status rather than fabricating a successful capability result.
 tool/capability planners after authentication and field/session authorization.
 It reads an optional existing session and creates no session, turn or operation
 receipt. `requires_model` is false for validated unit conversion, tank coverage,
-fertilizer field totals, soil-water storage, or the canonical missing-input
+fertilizer field totals, soil-water storage, the qualified supplied-model arithmetic forms, or the canonical missing-input
 clarification. Unvalidated complete calculations remain
 unknown. The response binds the request and current field/history state. Turn
 submission reauthorizes, replans and rejects a stale binding, including after
@@ -145,8 +145,8 @@ operand, explicit new requests remain authoritative, and ambiguous references
 stay unresolved. The original user text is saved unchanged; the effective
 question, source turn and policy are recorded in the trace and execution hashes.
 The current tool recomputes the result, independent of the prior model's success.
-The v4 calculation-reference policy also accepts an explicit whole-reply seed
-denominator choice when that is the sole seed-calculator gap. A restated
+The v5 calculation-reference policy also accepts an explicit whole-reply seed
+denominator choice for seed-mass or seed-count calculations when that is the sole seed-calculator gap. A restated
 survival percentage must exactly match the prior user input; “among” and “of”
 identify the same denominator. Changed percentages and extra actions stay
 authoritative as new requests. If conditional

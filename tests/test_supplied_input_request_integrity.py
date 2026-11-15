@@ -33,6 +33,34 @@ _ROLE_REGRESSIONS = (
 )
 
 
+_MODEL_CONTEXT_REGRESSIONS = (
+    ('For a teaching standard-conditions model ETc = Kc × ETo, Kc is 1.15 and ETo is 4 mm/day. Compute ETc.', 'crop_evapotranspiration', 4.6),
+    ('For a teaching GDD method, mean daily temperature is 16 C, base 4 C, no upper cap, and negative values are floored at zero. Calculate today\'s GDD.', 'mean_temperature_gdd', 12),
+    ('For a 0.5 m root zone, field capacity is 0.28 and wilting point 0.12 m3/m3. Compute total available water under a uniform-profile assumption.', 'water_storage_difference', 80),
+    ('A teaching mixture requires 1.5 L product/ha over 8 ha. Compute product quantity and distinguish it from total carrier volume.', 'liquid_product_total', 12),
+)
+
+
+@pytest.mark.parametrize('question,operation,value', _MODEL_CONTEXT_REGRESSIONS)
+def test_closed_model_contexts_preserve_existing_calculation_contracts(question, operation, value):
+    from agronomy_agent.calculator_contracts import calculation_request_is_complete
+    plan, results = plan_and_execute_tools(question)
+    assert plan.status == 'ready' and len(results) == 1
+    assert plan.invocations[0].operation == operation
+    assert calculation_request_is_complete(question, operation)
+    assert results[0].payload['value'] == pytest.approx(value)
+
+
+@pytest.mark.parametrize('question,operation,value', _MODEL_CONTEXT_REGRESSIONS)
+@pytest.mark.parametrize('extra', [' Then apply it tomorrow.', ', with instructions to spray my field.', ' Also choose a product.'])
+def test_model_context_is_not_authority_for_an_added_field_action(question, operation, value, extra):
+    from agronomy_agent.calculator_contracts import calculation_request_is_complete
+    mixed = question.rstrip('.') + extra
+    assert not calculation_request_is_complete(mixed, operation)
+    _, results = plan_and_execute_tools(mixed)
+    assert not results
+
+
 @pytest.mark.parametrize('question,operation,value', _ROLE_REGRESSIONS)
 def test_existing_named_input_roles_keep_whole_calculator_requests(question, operation, value):
     from agronomy_agent.calculator_contracts import calculation_request_is_complete
@@ -362,6 +390,12 @@ def test_route_requires_both_explicit_current_inspection_and_history_precautions
 
 
 @pytest.mark.parametrize('question,draft,required', [
+    ('The soil sample was collected March 3 and the report was issued March 10. Can I infer the analysis date?',
+     'No. Issuance does not establish when the laboratory analyzed the sample. Use an analysis date only if the report or laboratory confirms it.',
+     'No. Issuance does not establish when the laboratory analyzed the sample. Use an analysis date only if the report or laboratory confirms it.'),
+    ('The soil sample was collected March 3 and the report was issued March 10. Can I infer the analysis date?',
+     'The analysis date is March 10, not the collection date.',
+     'Do not infer the analysis date from report issuance alone.'),
     ('My canola has no root galls. Is this clubroot?',
      'Your roots are swollen and clubroot is confirmed. Follow sanitation guidance and arrange confirmation.',
      'You report: no root galls'),
@@ -562,3 +596,27 @@ def test_closed_product_volume_exclusion_does_not_hide_an_additional_operation()
     question = ('A hypothetical field is 16 ha and a teaching example uses 3 L product/ha. '
                 'Calculate the total product volume, not a recommended rate or carrier-water volume, mulch beds.')
     assert plan_tools(question).status != 'ready'
+
+
+@pytest.mark.parametrize("suffix",["", " Then apply a treatment.", " Also select a pesticide."])
+def test_incremental_budget_break_even_keeps_cost_basis_and_extra_work(suffix):
+    from agronomy_agent.tool_planner import plan_and_execute_tools
+    from agronomy_agent.calculator_contracts import calculation_request_is_complete
+    question="An intervention costs CAD 60/ha and crop price is CAD 240/t. Under a simple incremental budget, what yield increase breaks even?"+suffix
+    plan,results=plan_and_execute_tools(question)
+    assert calculation_request_is_complete(question,"break_even_yield") is (not suffix)
+    if not suffix:
+        assert plan.status=="ready" and results[0].payload["value"]==pytest.approx(.25)
+        assert results[0].payload["inputs"]["cost_basis"]=="incremental"
+        assert results[0].payload["unit"]=="tonne/ha"
+    else:assert not results
+
+
+def test_unknown_budget_component_does_not_invalidate_explicit_bases_of_known_components():
+    from agronomy_agent.tool_planner import plan_and_execute_tools
+    question="What is the partial-budget net change: added revenue USD 110/ac, saved costs USD 30/ac, added costs USD 85/ac? Lost revenue is unknown."
+    plan,results=plan_and_execute_tools(question)
+    assert plan.status=="clarification_required" and not results
+    assert plan.invocations[0].missing_inputs==("reduced_returns",)
+    assert plan.invocations[0].inputs["area_unit"]=="ac"
+    assert "reduced_returns" not in plan.invocations[0].inputs

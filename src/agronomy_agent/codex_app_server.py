@@ -13,7 +13,7 @@ import hashlib
 import json
 import math
 import os
-import select
+import selectors
 import signal
 import queue
 import re
@@ -587,25 +587,25 @@ class CodexAppServerClient:
         self._stderr_lines: list[str] = []
         self._pending_notifications: list[dict[str, Any]] = []
         self._closed = False
-        self._process = subprocess.Popen(
-            list(self.command),
-            cwd=self.cwd,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=False,
-            bufsize=0,
-            start_new_session=False,
-        )
-        if self._process.stdin is None or self._process.stdout is None or self._process.stderr is None:
-            self.close()
-            raise CodexAppServerError("failed to open App Server stdio pipes")
-        self._stdout_thread = threading.Thread(target=self._read_stdout, daemon=True)
-        self._stderr_thread = threading.Thread(target=self._read_stderr, daemon=True)
-        self._stdout_thread.start()
-        self._stderr_thread.start()
-        atexit.register(self.close)
         try:
+            self._process = subprocess.Popen(
+                list(self.command),
+                cwd=self.cwd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=False,
+                bufsize=0,
+                start_new_session=False,
+            )
+            if self._process.stdin is None or self._process.stdout is None or self._process.stderr is None:
+                self.close()
+                raise CodexAppServerError("failed to open App Server stdio pipes")
+            self._stdout_thread = threading.Thread(target=self._read_stdout, daemon=True)
+            self._stderr_thread = threading.Thread(target=self._read_stderr, daemon=True)
+            self._stdout_thread.start()
+            self._stderr_thread.start()
+            atexit.register(self.close)
             self.initialize_result = self._request(
                 "initialize",
                 {
@@ -683,12 +683,16 @@ class CodexAppServerClient:
         assert self._process.stdin is not None
         fd=self._process.stdin.fileno();os.set_blocking(fd,False)
         offset=0
-        while offset<len(encoded):
-            if not select.select([], [fd], [], min(self._remaining(),0.1))[1]:continue
-            if payload.get("method") in {"thread/start","turn/start"} and self.before_dispatch is not None:
-                self.before_dispatch(payload["method"])
-            try:offset+=os.write(fd,encoded[offset:offset+4096])
-            except BlockingIOError:continue
+        # select.select is limited to FD_SETSIZE even when the process has a
+        # higher open-file limit. Use the platform selector for bounded writes.
+        with selectors.DefaultSelector() as writable:
+            writable.register(fd, selectors.EVENT_WRITE)
+            while offset<len(encoded):
+                if not writable.select(min(self._remaining(),0.1)):continue
+                if payload.get("method") in {"thread/start","turn/start"} and self.before_dispatch is not None:
+                    self.before_dispatch(payload["method"])
+                try:offset+=os.write(fd,encoded[offset:offset+4096])
+                except BlockingIOError:continue
 
     def _notify(self, method: str, params: dict[str, Any]) -> None:
         self._send({"method":method,"params":params})
@@ -1105,25 +1109,56 @@ class CodexAppServerClient:
     def close(self) -> dict[str, Any]:
         if self._closed:return self.local_closeout or {"status":"unknown"}
         self._closed=True
+        # Explicit close must release the callback's strong reference as well
+        # as all pipe descriptors; a long benchmark creates many clients.
+        atexit.unregister(self.close)
         process=getattr(self,"_process",None)
-        if process is None:return {"status":"not_started","remote_cancellation_confirmed":None}
+        if process is None:
+            temporary_cwd=getattr(self,"_temporary_cwd",None)
+            if temporary_cwd is not None:temporary_cwd.cleanup();self._temporary_cwd=None
+            self.local_closeout={"status":"not_started","remote_cancellation_confirmed":None}
+            return self.local_closeout
         pipe_error=None
         if process.stdin is not None:
             try:process.stdin.close()
             except OSError as exc:pipe_error=type(exc).__name__
-        if process.poll() is None:
-            try:process.terminate()
-            except ProcessLookupError:pass
-        try:process.wait(timeout=2)
-        except subprocess.TimeoutExpired:
-            try:process.kill()
-            except ProcessLookupError:pass
-            process.wait(timeout=2)
-        self.local_closeout={"status":"reaped","local_returncode":process.returncode,
-            "scope":"direct_owned_process_only; descendants_unverified",
-            "owned_group_absent":None,"remote_cancellation_confirmed":None,"pipe_close_error":pipe_error}
-        temporary_cwd=getattr(self,"_temporary_cwd",None)
-        if temporary_cwd is not None:temporary_cwd.cleanup();self._temporary_cwd=None
+        process_error=None
+        reaped=False
+        try:
+            if process.poll() is None:
+                try:process.terminate()
+                except ProcessLookupError:pass
+            try:process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                try:process.kill()
+                except ProcessLookupError:pass
+                process.wait(timeout=2)
+            reaped=True
+        except Exception as exc:
+            process_error=type(exc).__name__
+            raise
+        finally:
+            # Even a failed kill/wait must release owned descriptors. The
+            # process outcome remains unknown; cleanup cannot claim cancellation.
+            for name in ("stdout", "stderr"):
+                pipe=getattr(process,name,None)
+                if pipe is not None:
+                    try:pipe.close()
+                    except OSError as exc:pipe_error=type(exc).__name__
+            readers_alive={}
+            for name in ("_stdout_thread", "_stderr_thread"):
+                reader=getattr(self,name,None)
+                if reader is not None:
+                    if reader.ident is not None and reader is not threading.current_thread():
+                        reader.join(timeout=0.2)
+                    readers_alive[name]=reader.is_alive()
+            self.local_closeout={"status":"reaped" if reaped else "unknown",
+                "local_returncode":process.returncode, "process_close_error":process_error,
+                "reader_threads_alive":readers_alive,
+                "scope":"direct_owned_process_only; descendants_unverified",
+                "owned_group_absent":None,"remote_cancellation_confirmed":None,"pipe_close_error":pipe_error}
+            temporary_cwd=getattr(self,"_temporary_cwd",None)
+            if temporary_cwd is not None:temporary_cwd.cleanup();self._temporary_cwd=None
         return self.local_closeout
 
     def __enter__(self) -> "CodexAppServerClient":

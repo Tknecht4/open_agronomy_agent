@@ -55,12 +55,14 @@ from agronomy_agent.agronomic_calculations import (
     validate_circular_sampling_area_inputs,
     validate_single_nozzle_inputs,
     validate_mean_temperature_gdd_inputs,
-    validate_seed_rate_inputs,
+    validate_seed_calculation_inputs,
 )
 from agronomy_agent.decision_contract import build_decision_contract
 from agronomy_agent.evidence_contracts import question_frame_from_runtime
 from agronomy_agent.tool_planner import plan_tools
 from agronomy_agent.water_arithmetic import WATER_INPUTS, validate_water_arithmetic_inputs
+from agronomy_agent.supplied_model_arithmetic import MODEL_INPUTS, validate_model_arithmetic_inputs
+from agronomy_agent.calculator_contracts import SEED_ESTABLISHMENT_OPERATIONS
 from agronomy_agent.router import classify_query, refine_query_route
 from agronomy_agent.answer_verifier import _EditorObservation, context_evidence_text, validate_editor_max_words, verify_answer
 from agronomy_agent.answer_safety import enforce_answer_safety_postconditions
@@ -424,9 +426,16 @@ def preview_turn_readiness(
                 validated_inputs = True
             except (ValueError, DecimalException):
                 validated_inputs = False
-        elif calculator.operation in {"seed_rate_mass", "seed_rate_mass_imperial"}:
+        elif calculator.operation in SEED_ESTABLISHMENT_OPERATIONS:
             try:
-                validate_seed_rate_inputs(calculator.operation, calculator.inputs)
+                validate_seed_calculation_inputs(calculator.operation, calculator.inputs)
+                validated_inputs = True
+            except (ValueError, DecimalException):
+                validated_inputs = False
+                reason = "invalid_calculator_inputs"
+        elif calculator.operation in MODEL_INPUTS:
+            try:
+                validate_model_arithmetic_inputs(calculator.operation, calculator.inputs)
                 validated_inputs = True
             except (ValueError, DecimalException):
                 validated_inputs = False

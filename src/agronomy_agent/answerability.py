@@ -493,10 +493,43 @@ def is_evapotranspiration_explanation(question: str) -> bool:
         rf"{term}(?:,? (?:from|and|versus|with) {term}|, {term}){{1,2}}[.?!]?\s*", question, re.I))
 
 
+def stewardship_explanation_kind(question: str) -> str | None:
+    """Whole impersonal evidence/safety questions, never use authorization.
+
+    Nominal mixing/application and a trial's evidential role are not requests
+    to perform an operation. Every remaining clause must fit this grammar.
+    """
+    text = " ".join(question.split())
+    prefix = r"(?:please\s+)?(?:(?:can|could)\s+you\s+)?"
+    requests = {
+        "protective_equipment_basis": (
+            r"(?:what should determine|what determines|explain what determines)\s+"
+            r"(?:PPE|personal protective equipment)\s+for\s+"
+            r"(?:mixing(?:,? loading)? and application|pesticide handling)"
+            r"(?:\s+rather than (?:relying on|using) (?:a\s+)?(?:generic|remembered|generic remembered) checklist)?"
+        ),
+        "recommendation_safety_checks": (
+            r"(?:what|which)\s+(?:health,? safety,? and environmental|health and safety|environmental|safety)\s+"
+            r"(?:checks|considerations)\s+(?:belong in|should inform|are needed for)\s+"
+            r"(?:a|an? general|a generic)\s+pesticide recommendation"
+        ),
+        "efficacy_authority_boundary": (
+            r"(?:does|can)\s+(?:an?\s+)?(?:agronomic\s+)?(?:efficacy|field efficacy) trial\s+"
+            r"(?:establish|prove|demonstrate)\s+that\s+(?:a\s+)?pesticide use\s+"
+            r"(?:satisfies|meets)\s+(?:current\s+)?(?:residue and registration|registration and residue) requirements"
+        ),
+    }
+    for kind, request in requests.items():
+        if re.fullmatch(rf"\s*{prefix}(?:{request})[.!?]*\s*", text, re.I):
+            return kind
+    return None
+
+
 def is_quantity_concept_explanation(question: str) -> bool:
     """Share whole-request concept scope across routing and action guards."""
     return (is_rate_basis_explanation(question) or is_dose_response_explanation(question)
-            or is_sampling_basis_explanation(question) or is_evapotranspiration_explanation(question))
+            or is_sampling_basis_explanation(question) or is_evapotranspiration_explanation(question)
+            or stewardship_explanation_kind(question) is not None)
 
 
 def is_mechanism_explanation(question: str) -> bool:
@@ -516,11 +549,32 @@ def is_mechanism_explanation(question: str) -> bool:
         r"(?:why|how)\s+(?:does|do|can|could|is|are)\b|"
         r"(?:explain|describe)\s+(?:the\s+)?(?:mechanism|process|how|why)\b|"
         r"(?:compare|contrast)\b|"
+        r"how should (?:that|this) (?:model )?result be interpreted\b|"
+        r"what (?:statistical )?diagnostics should accompany (?:the|this|that) (?:claim|trend|estimate)\b|"
         r"which\s+(?:rival|alternative|possible)\s+(?:explanations|causes)\s+"
         r"should\s+be\s+(?:investigated|considered|checked)\b)", text,
     )
-    if request is None or has_action_directive(text) or has_unqualified_followup(text):
+    # Coordinated season names are nominal process context. Preserve every
+    # other span, including a later imperative or permission request.
+    scope_text = re.sub(r"\bplanting\s+and\s+harvest\s+seasons\b", "crop seasons", text)
+    if request is None or has_action_directive(scope_text) or has_unqualified_followup(scope_text):
         return False
+    if re.search(r"\b(?:result be interpreted|diagnostics should accompany)\b", request.group()):
+        context = [part.strip() for part in re.split(r"[.!?;]", text[:request.start()]) if part.strip()]
+        model_data = (
+            r"(?:a|the) (?:pooled|fitted|statistical|regression) model "
+            r"(?:(?:improves|reduces|worsens|increases) (?:overall|pooled) (?:error|accuracy|performance|fit)"
+            r"(?: but (?:worsens|improves) predictions for (?P<subgroup>[a-z-]+(?: [a-z-]+){0,3}))?"
+            r"|(?:predicts|estimates) (?:crop )?yield)"
+            r"|(?:a|the) fitted [a-z-]+(?: [a-z-]+){0,2} trend "
+            r"(?:rises|falls|increases|decreases|changes)(?: slightly)? but observations "
+            r"(?:are|remain) (?:sparse|irregular|noisy)(?: and (?:sparse|irregular|noisy))?"
+        )
+        matches = [re.fullmatch(model_data, clause, re.I) for clause in context]
+        if not matches or not all(matches):
+            return False
+        if any(match["subgroup"] and re.search(r"\b(?:and|then|also|but|please|with|without|including|as|to|for)\b", match["subgroup"], re.I) for match in matches):
+            return False
     if re.search(r"\b(?:compare|contrast)\b", request.group()):
         if not is_concept_comparison_scope(text):
             return False
@@ -548,7 +602,7 @@ def is_mechanism_explanation(question: str) -> bool:
     if re.search(
         r"\b(?:be|is|are|was|were)\s+(?:applied|sprayed|used|mixed|selected|recommended|permitted|allowed|registered)\b|"
         r"\b(?:apply|spray|treat|diagnose|prescribe|recommend|choose|select|"
-        r"irrigate|fertilize|harvest|till|rip|subsoil|spread|drill|drive)\b|"
+        r"irrigate|fertilize|harvest(?!\s+seasons?\b)|till|rip|subsoil|spread|drill|drive)\b|"
         r"(?:^|[.!?;]|\b(?:and|then|also))\s*(?:please\s+)?"
         r"(?:start|stop|add|remove|change|plant|seed|sow|feed|use)\b", text,
     ):

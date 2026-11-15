@@ -8,6 +8,7 @@ from typing import Any, Mapping, Sequence
 
 from agronomy_agent.calculator_contracts import CALCULATOR_SCHEMA_VERSION, CALCULATOR_VERSION
 from agronomy_agent.water_arithmetic import WATER_INPUTS, water_arithmetic
+from agronomy_agent.supplied_model_arithmetic import MODEL_INPUTS, MODEL_OPTIONAL_INPUTS, model_arithmetic, validate_model_arithmetic_inputs
 from agronomy_agent.seed_establishment import SEED_SURVIVAL_BASES, established_fraction
 
 
@@ -50,6 +51,20 @@ class FoundationCalculationOperation(StrEnum):
     MEAN_TEMPERATURE_GDD = "mean_temperature_gdd"
     GRAIN_HARVEST_INDEX = "grain_harvest_index"
     CIRCULAR_SAMPLING_AREA = "circular_sampling_area"
+    SEED_POPULATION_DENSITY = "seed_population_density"
+    SEED_MASS_FROM_SEED_DENSITY = "seed_mass_from_seed_density"
+    AREA_COST_CHANGE = "area_cost_change"
+    INCREMENTAL_MARGIN = "incremental_margin"
+    SOIL_CARBON_STOCK = "soil_carbon_stock"
+    SOIL_TOTAL_POROSITY = "soil_total_porosity"
+    REMAINING_NITROGEN_BUDGET = "remaining_nitrogen_budget"
+    DAILY_WATER_BALANCE = "daily_water_balance"
+    NDVI_FROM_REFLECTANCE = "ndvi_from_reflectance"
+    SOIL_NITRATE_N_STOCK = "soil_nitrate_n_stock"
+    LAND_EQUIVALENT_RATIO = "land_equivalent_ratio"
+    MEAN_PAIRED_DIFFERENCE = "mean_paired_difference"
+    LIME_EQUIVALENT_MASS = "lime_equivalent_mass"
+    SIMPLIFIED_STRESS_ET = "simplified_stress_et"
 
 
 ALL_CALCULATION_OPERATIONS = tuple(CalculationOperation) + tuple(FoundationCalculationOperation)
@@ -203,6 +218,8 @@ def calculation_tool_schema() -> dict[str, Any]:
             "apparent_nutrient_balance": {"required": ["applied_kg_per_ha", "removed_kg_per_ha", "nutrient_basis"]},
             "liquid_product_total": {"required": ["area_ha", "product_rate_l_per_ha"]},
             **{operation: {"required": sorted(inputs)} for operation, inputs in WATER_INPUTS.items()},
+            **{operation: {"required": sorted(inputs), "optional": sorted(MODEL_OPTIONAL_INPUTS.get(operation, set()))}
+               for operation, inputs in MODEL_INPUTS.items()},
             "grain_moisture_adjustment": {"required": ["wet_mass", "mass_unit", "initial_moisture_pct", "target_moisture_pct"],
                                           "supported_mass_units": list(GRAIN_MASS_UNITS)},
             "single_nozzle_application_volume": {"required": ["flow_l_per_min_per_nozzle", "speed_km_per_h", "nozzle_spacing_m"]},
@@ -264,6 +281,10 @@ def calculate_agronomic(operation: str | CalculationOperation | FoundationCalcul
     if selected.value in WATER_INPUTS:
         value, unit, formula, normalized, assumptions, boundary = water_arithmetic(selected.value, inputs)
         return _result(selected, value, unit, f"{formula} {_format_formula_result(value)} {unit}", normalized,
+                       assumptions=assumptions, boundary=_ARITHMETIC_BOUNDARY + " " + boundary)
+    if selected.value in MODEL_INPUTS:
+        value, unit, formula, normalized, assumptions, boundary = model_arithmetic(selected.value, inputs)
+        return _result(selected, value, unit, formula, normalized,
                        assumptions=assumptions, boundary=_ARITHMETIC_BOUNDARY + " " + boundary)
     return handlers[selected](inputs)
 
@@ -407,6 +428,13 @@ def validate_seed_rate_inputs(operation: str, inputs: Mapping[str, Any]) -> dict
     except DecimalException as exc:
         raise ValueError("seed mass is outside the supported numeric output range") from exc
     return result
+
+
+def validate_seed_calculation_inputs(operation: str, inputs: Mapping[str, Any]) -> dict[str, Any]:
+    """Validate one seed-establishment operation for shared preview/replay."""
+    if operation == "seed_population_density":
+        return validate_model_arithmetic_inputs(operation, inputs)
+    return validate_seed_rate_inputs(operation, inputs)
 
 
 def _seed_rate_mass_imperial(inputs: Mapping[str, Any]) -> AgronomicCalculation:
@@ -1223,8 +1251,8 @@ def _yield_unit(value: Any) -> str:
 
 def _cost_basis(value: Any) -> str:
     basis = str(value or "").strip().lower()
-    if basis not in {"total", "total_economic", "operating", "budget_total_supplied"}:
-        raise ValueError("cost_basis must be total, total_economic, operating, or budget_total_supplied")
+    if basis not in {"total", "total_economic", "operating", "budget_total_supplied", "incremental"}:
+        raise ValueError("cost_basis must be total, total_economic, operating, budget_total_supplied, or incremental")
     return basis
 
 
@@ -1234,6 +1262,7 @@ def _cost_basis_label(basis: str) -> str:
         "total_economic": "total economic cost",
         "operating": "operating cost",
         "budget_total_supplied": "user-supplied budget total (included cost categories unverified)",
+        "incremental": "supplied intervention cost under the stated incremental budget (other costs and actual yield response unverified)",
     }[basis]
 
 

@@ -1970,3 +1970,123 @@ def test_single_component_unknown_method_retains_name_but_still_fails_closed():
         client.generate(user_text="question", base_instructions="")
     assert raised.value.provider_attempt["event_diagnostic"]["method"] == "error"
     assert "private" not in json.dumps(raised.value.provider_attempt)
+
+
+def test_transport_writes_on_descriptors_above_select_limit():
+    import fcntl
+    import os
+    from time import perf_counter
+    read_fd, write_fd = os.pipe()
+    high_fd = None
+    try:
+        try:
+            high_fd = fcntl.fcntl(write_fd, fcntl.F_DUPFD, 1100)
+        except OSError as error:
+            pytest.skip(f"platform open-file limit does not permit high descriptor: {error}")
+        pipe = os.fdopen(high_fd, "wb", buffering=0);high_fd = None
+        client = object.__new__(CodexAppServerClient)
+        client._closed = False;client._deadline = perf_counter()+2
+        client._process = SimpleNamespace(stdin=pipe,poll=lambda:None)
+        client.before_dispatch = None
+        try:
+            client._send({"method":"initialized","params":{}})
+            assert json.loads(os.read(read_fd,4096)) == {"method":"initialized","params":{}}
+        finally:
+            pipe.close()
+    finally:
+        os.close(read_fd);os.close(write_fd)
+        if high_fd is not None:os.close(high_fd)
+
+
+def test_repeated_real_process_close_releases_all_pipes_and_exit_callback(monkeypatch):
+    import atexit
+    import os
+    import subprocess
+    import sys
+    import threading
+    import agronomy_agent.codex_app_server as module
+    unregistered = []
+    original_unregister = atexit.unregister
+    def unregister(callback):
+        unregistered.append(callback)
+        original_unregister(callback)
+    monkeypatch.setattr(module.atexit,"unregister",unregister)
+    for _ in range(40):
+        client = object.__new__(CodexAppServerClient)
+        client._closed = False;client._temporary_cwd = None
+        process = subprocess.Popen([sys.executable,"-c","pass"],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,bufsize=0)
+        client._process = process
+        atexit.register(client.close)
+        descriptors = [pipe.fileno() for pipe in (process.stdin,process.stdout,process.stderr)]
+        receipt = client.close()
+        assert receipt["status"] == "reaped"
+        assert all(pipe.closed for pipe in (process.stdin,process.stdout,process.stderr))
+        for descriptor in descriptors:
+            with pytest.raises(OSError):os.fstat(descriptor)
+        assert client.close() is receipt
+    assert len(unregistered) == 40
+
+
+@pytest.mark.parametrize("failure",["second_wait_timeout","terminate_error"])
+def test_exceptional_process_close_still_closes_pipes_without_claiming_reaped(failure):
+    import io
+    import subprocess
+    class Process:
+        returncode = None
+        stdin, stdout, stderr = io.BytesIO(), io.BytesIO(), io.BytesIO()
+        def poll(self):return None
+        def terminate(self):
+            if failure == "terminate_error":raise PermissionError("synthetic")
+        def kill(self):pass
+        def wait(self,timeout):raise subprocess.TimeoutExpired("synthetic",timeout)
+    client = object.__new__(CodexAppServerClient)
+    client._closed=False;client._process=Process();client._temporary_cwd=None
+    with pytest.raises(PermissionError if failure == "terminate_error" else subprocess.TimeoutExpired):
+        client.close()
+    receipt=client.local_closeout
+    assert receipt["status"] == "unknown" and receipt["local_returncode"] is None
+    assert receipt["process_close_error"] == ("PermissionError" if failure == "terminate_error" else "TimeoutExpired")
+    assert receipt["remote_cancellation_confirmed"] is None
+    assert all(pipe.closed for pipe in (client._process.stdin,client._process.stdout,client._process.stderr))
+    assert client.close() is receipt
+
+
+def test_reader_start_failure_releases_process_pipes_and_temporary_cwd(monkeypatch):
+    import sys
+    import agronomy_agent.codex_app_server as module
+    processes=[]
+    original_popen=module.subprocess.Popen
+    def popen(*args,**kwargs):
+        process=original_popen(*args,**kwargs);processes.append(process);return process
+    def fail_start(self):raise RuntimeError("synthetic reader startup failure")
+    monkeypatch.setattr(module.subprocess,"Popen",popen)
+    monkeypatch.setattr(module.threading.Thread,"start",fail_start)
+    with pytest.raises(RuntimeError,match="reader startup"):
+        CodexAppServerClient(command=[sys.executable,"-c","import time;time.sleep(20)"],verify_catalog=False,collect_protocol_identity=False)
+    assert len(processes)==1 and processes[0].poll() is not None
+    assert all(pipe.closed for pipe in (processes[0].stdin,processes[0].stdout,processes[0].stderr))
+
+
+def test_owned_readers_are_joined_and_unfinished_reader_state_remains_explicit():
+    import io
+    import queue
+    import subprocess
+    import sys
+    import threading
+    client=object.__new__(CodexAppServerClient)
+    client._closed=False;client._temporary_cwd=None;client._reader_error=None
+    client._stdout_queue=queue.Queue(maxsize=32);client._buffer_lock=threading.Lock()
+    client._queued_bytes=0;client._stderr_bytes=0;client._stderr_lines=[]
+    client._process=subprocess.Popen([sys.executable,"-c","pass"],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,bufsize=0)
+    client._stdout_thread=threading.Thread(target=client._read_stdout,daemon=True)
+    client._stderr_thread=threading.Thread(target=client._read_stderr,daemon=True)
+    client._stdout_thread.start();client._stderr_thread.start()
+    assert client.close()["reader_threads_alive"] == {"_stdout_thread":False,"_stderr_thread":False}
+    class Reader:
+        ident=1
+        def join(self,timeout):assert timeout == .2
+        def is_alive(self):return True
+    client._closed=False;client._stdout_thread=Reader();client._stderr_thread=Reader()
+    receipt=client.close()
+    assert receipt["reader_threads_alive"] == {"_stdout_thread":True,"_stderr_thread":True}
+    assert receipt["remote_cancellation_confirmed"] is None

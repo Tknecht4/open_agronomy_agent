@@ -6,7 +6,7 @@ scope checks must consume the entire value and the rest of the request.
 """
 
 SEED_WEIGHT_ROLE = r"(?:thousand[- ]kernel weight|tkw)"
-SEED_TARGET_ROLE = r"target (?:stand|population)"
+SEED_TARGET_ROLE = r"target(?: established)? (?:stand|population)"
 GERMINATION_ROLE = r"(?:overall\s+)?(?:(?:seed[- ]lot|lab(?:oratory)?)\s+)?germination"
 SURVIVAL_ROLE = r"(?:(?:expected|overall|field|seedling|post[- ]germination)\s+)*(?:survival|emergence)"
 SEED_LOSS_ROLE = r"(?:(?:expected|overall|field|seedling|post[- ]germination)\s+)*(?:loss|mortality)"
@@ -38,7 +38,7 @@ TOTAL_ASSETS_ROLE = r"(?:total\s+)?assets"
 # These existing financial basis labels also need one definition wherever a
 # supplied value is recognized. They do not select a currency or output basis.
 AREA_UNIT_PATTERN = r"(?:ac|acre|acres|ha|hectare|hectares)"
-YIELD_UNIT_PATTERN = r"(?:bu|bushels?|tonnes?|kg|lb)"
+YIELD_UNIT_PATTERN = r"(?:bu|bushels?|tonnes?|t|kg|lb)"
 MONEY_FLOW_ROLES = (
     ADDED_RETURNS_ROLE, REDUCED_COSTS_ROLE, ADDED_COSTS_ROLE,
     REDUCED_RETURNS_ROLE, COST_ROLE,

@@ -201,13 +201,13 @@ def test_pre_generation_hold_is_distinct_from_verifier_opportunity() -> None:
 
 def test_seed_revision_is_declared_and_frozen_reference_gap_remains_observed() -> None:
     declaration = DeterministicContractExecutor().harness_capabilities()["semantic_profile"]["tool_implementations"]["agronomic_calculator"]
-    assert declaration["operation_versions"]["seed_rate_mass"] == "agronomic_calculator_v3"
+    assert declaration["operation_versions"]["seed_rate_mass"] == "agronomic_calculator_v4"
     assert declaration["operation_versions"]["unit_conversion"] == "agronomic_calculator_v1"
     observation = next(row for row in _run()["observations"] if
                        row["eval_id"] == "oab2::spring_wheat_stand::fully_specified_calculation"
                        and row["arm_id"] == "production_full")
     assert observation["tool_results"] == []
-    assert observation["tool_invocations"][0]["tool_version"] == "agronomic_calculator_v3"
+    assert observation["tool_invocations"][0]["tool_version"] == "agronomic_calculator_v4"
     assert observation["answerability_state"] == "ask_one_discriminating_question"
     assert observation["clarification_fields"] == ["the survival denominator (all seeds sown or only germinated seeds)"]
     assert len(observation["clarifying_questions"]) == 1
@@ -216,7 +216,7 @@ def test_seed_revision_is_declared_and_frozen_reference_gap_remains_observed() -
 @pytest.mark.parametrize("helper", [
     "calculator_contracts.py", "foundation_math_parser.py", "seed_establishment.py", "seed_survival_scenarios.py",
     "request_scope.py", "supplied_math_scope.py", "supplied_nutrient_parser.py",
-    "supplied_water_parser.py", "supplied_grain_parser.py",
+    "supplied_water_parser.py", "supplied_model_parser.py", "supplied_model_arithmetic.py", "supplied_grain_parser.py",
     "supplied_geometry_biomass_parser.py", "water_arithmetic.py",
 ])
 def test_tool_parser_helper_bytes_affect_system_identity(helper, monkeypatch) -> None:
@@ -779,10 +779,14 @@ def test_frozen_synthetic_fixture_never_executes_or_discards_conditional_scenari
     ("execution_core.py", {"runtime_orchestrator"}),
     ("conversation_resolution.py", {"runtime_orchestrator"}),
     ("codex_app_server.py", {"runtime_orchestrator"}),
+    ("router.py", {"kernel_config", "runtime_orchestrator", "verifier_policy", "fallback_policy"}),
+    ("decision_route.py", {"kernel_config", "runtime_orchestrator", "verifier_policy", "fallback_policy"}),
     ("answer_safety.py", {"runtime_orchestrator", "fallback_policy"}),
     ("field_data_capability.py", {"tool_executor_bundle", "verifier_policy", "fallback_policy"}),
     ("tool_planner.py", {"tool_planner", "tool_executor_bundle", "verifier_policy", "fallback_policy"}),
     ("foundation_math_parser.py", {"tool_executor_bundle", "verifier_policy", "fallback_policy"}),
+    ("supplied_model_parser.py", {"tool_executor_bundle", "verifier_policy", "fallback_policy"}),
+    ("supplied_model_arithmetic.py", {"tool_executor_bundle", "verifier_policy", "fallback_policy"}),
     ("request_scope.py", {"answerability_policy", "kernel_config", "verifier_policy", "fallback_policy", "tool_executor_bundle"}),
     ("arithmetic_input_roles.py", {"answerability_policy", "kernel_config", "verifier_policy", "fallback_policy", "tool_executor_bundle"}),
     ("plant_health_scope.py", {"kernel_config", "verifier_policy", "fallback_policy"}),

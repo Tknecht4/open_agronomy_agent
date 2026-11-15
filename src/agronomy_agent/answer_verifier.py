@@ -26,7 +26,7 @@ from agronomy_agent.model_prompt_budget import positive_int, prompt_budget_recei
 from agronomy_agent.model_errors import LocalModelSnapshotUnavailable
 from agronomy_agent.quantity_claims import unsupported_quantities, remove_numeric_application_instructions
 from agronomy_agent.execution_core import stable_sha256
-from agronomy_agent.observation_guidance import observation_guidance, sample_event_roles_stated, POTATO_MONITORING_ANSWER, bounded_concept_prefix
+from agronomy_agent.observation_guidance import observation_guidance, sample_event_roles_stated, POTATO_MONITORING_ANSWER, bounded_concept_prefix, stored_grain_probe_monitoring
 from agronomy_agent.agronomic_concepts import correct_concept_claims
 from agronomy_agent.request_scope import seed_quality_workflow_requested, topic_is_supplied_arithmetic_context
 from agronomy_agent.high_consequence import classify_high_consequence_domains, fertility_quantity_requested
@@ -1298,18 +1298,100 @@ def _destroys_diagnostic_sampling_contrast(question: str, answer: str) -> bool:
     return False
 
 
-def _sample_analysis_date_supplied(question: str) -> bool:
-    """A question about an analysis date is not a supplied analysis event."""
+def _sample_event_date_pattern() -> str:
     month = (
         r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|"
         r"Aug(?:ust)?|Sept?(?:ember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)"
     )
     day = r"\d{1,2}(?:st|nd|rd|th)?"
-    date = rf"(?:\d{{4}}-\d{{1,2}}-\d{{1,2}}|\d{{1,2}}[/-]\d{{1,2}}(?:[/-]\d{{2,4}})?|{month}\s+{day}|{day}\s+{month})"
-    return bool(re.search(
+    return rf"(?:\d{{4}}-\d{{1,2}}-\d{{1,2}}|\d{{1,2}}[/-]\d{{1,2}}(?:[/-]\d{{2,4}})?|{month}\s+{day}|{day}\s+{month})"
+
+
+def _sample_analysis_date_value_mentions(text: str) -> Iterable[re.Match[str]]:
+    """Locate dated analysis propositions without assigning them truth."""
+    date = _sample_event_date_pattern()
+    return re.finditer(
         rf"\b(?:(?:processing|analysis) date\s*(?:(?:was|is)\s+|:\s*)?|"
-        rf"(?:processed|analy[sz]ed)\s+(?:on\s+)?){date}\b", question, re.I,
+        rf"(?:processed|analy[sz]ed)\s+(?:on\s+)?){date}\b", text, re.I,
+    )
+
+
+def _sample_analysis_proposition_disclaimed(clause: str, proposition: re.Match[str]) -> bool:
+    """Bind a denial to one proposition rather than the surrounding clause."""
+    before = clause[:proposition.start()]
+    local = re.split(r"\b(?:but|however|yet|so|alongside)\b|,", before, flags=re.I)[-1]
+    kind = "processing" if "process" in proposition.group().casefold() else "analysis"
+    after = clause[proposition.end():]
+    return bool(re.search(
+        r"\b(?:no|unconfirmed|unverified|unknown|proposed)\s+(?:the\s+)?$|"
+        r"\b(?:not true|false|incorrect|wrong)\s+(?:that\s+)?(?:the\s+)?$|"
+        r"\b(?:not|never|cannot|can't)\s+(?:confirm(?:ed)?|verify|verified|establish(?:ed)?|"
+        r"report(?:ed)?|know|known|say|state(?:d)?|use|record|take|treat|assume|infer)\s+(?:that\s+)?(?:the\s+)?$",
+        local, re.I,
+    ) or re.match(
+        rf"\s*,?\s*(?:(?:but|and|although)\s+)?(?:that|it|this|the {kind} date)\s+"
+        r"(?:is|was|remains)\s+(?:unconfirmed|unverified|unknown|false|incorrect|wrong|"
+        r"not (?:true|confirmed|verified|established))\b",
+        after, re.I,
     ))
+
+
+def _sample_event_question_clause(clause: str) -> bool:
+    """A Do-use imperative is not a Do-I inquiry."""
+    return clause.rstrip().endswith("?") or bool(re.match(
+        r"\s*(?:(?:is|was|are|were|what|when|which|how|why)\b|"
+        r"(?:can|could|may|would|should|do|does|did)\s+(?:I|we|you|they|it|this|that|the|an?)\b)",
+        clause, re.I,
+    ))
+
+
+def _sample_analysis_date_supplied(question: str) -> bool:
+    """Only affirmative supplied events establish an analysis date.
+
+    A proposed date in a question or conditional is not observed information,
+    even when it happens to match an independently supplied report date.
+    """
+    for match in re.finditer(r"([^.!?;\n]+)([.!?;\n]|$)", question):
+        clause, end = match.groups()
+        if _sample_event_question_clause(clause + end):
+            continue
+        for event in _sample_analysis_date_value_mentions(clause):
+            if _sample_analysis_proposition_disclaimed(clause, event):
+                continue
+            before, after = clause[:event.start()], clause[event.end():]
+            if re.search(r"\b(?:if|whether|maybe|perhaps|assum(?:e|ing)|hypothetic\w*)\b", before, re.I):
+                continue
+            if re.match(r"\s*,?\s*(?:if|unless|assuming|provided that)\b", after, re.I):
+                continue
+            return True
+    return False
+
+
+def _unprovided_sample_analysis_event_claim(clause: str) -> bool:
+    """Separate asserted event attribution from acquiring an unknown date.
+
+    A request to check the laboratory is useful information gathering, not a
+    claim that analysis occurred on the report date. Conversely, unrelated
+    negation or a suggestion to check cannot excuse an invented dated event.
+    """
+    if _sample_event_question_clause(clause):
+        return False
+    if any(not _sample_analysis_proposition_disclaimed(clause, event)
+           for event in _sample_analysis_date_value_mentions(clause)):
+        return True
+    event = r"(?:date (?:the )?lab(?:oratory)? (?:processed|analy[sz]ed)|(?:lab(?:oratory)? )?(?:processing|analysis) date)"
+    report = r"(?:lab(?:oratory)? )?report (?:issuance |issue )?date"
+    attribution = r"(?:is|was|equals?|means?|as|(?:must|should|will) be)\s+(?:the\s+)?"
+    date = _sample_event_date_pattern()
+    # These are positive assignments. A later request to ask the laboratory
+    # or negation of the collection role does not revoke the assignment.
+    assignments = re.finditer(
+        rf"\b(?:{report})\s+{attribution}{event}\b|"
+        rf"\b{event}\s+{attribution}(?:{report})\b|"
+        rf"\b{date}\s*,?\s*(?:(?:which|that)\s+)?{attribution}{event}\b",
+        clause, re.I,
+    )
+    return any(not _sample_analysis_proposition_disclaimed(clause, assignment) for assignment in assignments)
 
 
 def assess_claim_risk(
@@ -1432,14 +1514,8 @@ def assess_claim_risk(
     if (is_quantity_concept_explanation(question) or is_mechanism_explanation(question) or bounded_product_help_kind(question)) and remove_numeric_application_instructions(candidate)[1]:
         reasons.append("unasked_application_instruction")
     if sample_event_roles_stated(question) and not _sample_analysis_date_supplied(question):
-        for clause in re.split(r"[.!?;\n]", candidate):
-            if re.search(
-                r"\b(?:date (?:the )?lab(?:oratory)? (?:processed|analy[sz]ed)|(?:lab(?:oratory)? )?(?:processing|analysis) date)\b",
-                clause, re.I,
-            ) and not re.search(
-                r"\b(?:not|unknown|unprovided|unavailable|unspecified|unreported|"
-                r"cannot(?: be)? infer\w*|can't(?: be)? infer\w*|if provided|if supplied)\b", clause, re.I
-            ):
+        for clause in re.findall(r"[^.!?;\n]+[.!?;\n]?", candidate):
+            if _unprovided_sample_analysis_event_claim(clause):
                 reasons.append("sample_event_role_conflation")
     definition = simple_definition_subject(question)
     if definition in {"soil texture"}:
@@ -3291,7 +3367,9 @@ def _intent_requirements(question: str, question_type: str) -> tuple[_IntentRequ
     if method:
         for name, instruction, patterns in method.facets:
             add(name, instruction, *patterns)
-    if is_sampling_basis_explanation(question):
+        if method.has_method("unspecified_management_task") or method.has_method("soil_test_repeatability"):
+            return tuple(requirements)
+    if is_sampling_basis_explanation(question) or is_mechanism_explanation(question) or stored_grain_probe_monitoring(question):
         # A units explanation needs its measurement contract, not a complete
         # pest treatment plan, natural-enemy survey or product-label decision.
         return tuple(requirements)

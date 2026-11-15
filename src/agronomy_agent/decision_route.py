@@ -7,8 +7,8 @@ from agronomy_agent.decision_capsule import DecisionCapsule, build_decision_caps
 from agronomy_agent.query_context import analyze_query_context
 from agronomy_agent.router import request_focus, evidence_interpretation_kind
 from agronomy_agent.answerability import simple_definition_subject, is_mechanism_explanation, bounded_product_help_kind, is_sampling_basis_explanation
-from agronomy_agent.observation_guidance import sample_event_roles_stated
-from agronomy_agent.request_scope import seed_quality_workflow_requested
+from agronomy_agent.observation_guidance import sample_event_roles_stated, stored_grain_probe_monitoring
+from agronomy_agent.request_scope import seed_quality_workflow_requested, soil_test_repeatability_requested
 from agronomy_agent.plant_health_scope import root_inspection_only_request
 from agronomy_agent.plant_health_scope import clubroot_confirmation_requested, clubroot_short_rotation_requested, clubroot_workflow_applicable, clubroot_question_scope
 
@@ -702,7 +702,8 @@ def build_decision_route_state(question: str, question_type: str = "") -> Decisi
                 source_boundary = name
                 break
 
-    if is_mechanism_explanation(question) or is_sampling_basis_explanation(question):
+    if (is_mechanism_explanation(question) or is_sampling_basis_explanation(question)
+            or stored_grain_probe_monitoring(question) or soil_test_repeatability_requested(question)):
         return DecisionRouteState(
             question=question, decision="exam_review", crop=crop, country=signals.country,
             decisive_evidence=(), premise_anchors=(), source_boundary=source_boundary,

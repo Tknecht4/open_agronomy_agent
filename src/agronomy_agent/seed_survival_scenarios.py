@@ -10,7 +10,8 @@ import hashlib
 import json
 from typing import Any
 
-from agronomy_agent.agronomic_calculations import _format_decimal, validate_seed_rate_inputs
+from agronomy_agent.agronomic_calculations import _format_decimal, validate_seed_calculation_inputs
+from agronomy_agent.calculator_contracts import SEED_ESTABLISHMENT_OPERATIONS
 from agronomy_agent.seed_establishment import SEED_SURVIVAL_BASIS_GAP, SEED_SURVIVAL_BASES, parse_seed_establishment
 
 SCHEMA_VERSION = "open_agronomy_agent.seed_survival_clarification.v1"
@@ -24,7 +25,7 @@ def conditional_seed_payload(invocation: Any, *, question: str) -> dict[str, Any
     seeds sown. Its complement is not necessarily overall establishment.
     """
     if (invocation.tool_id != "agronomic_calculator"
-            or invocation.operation not in {"seed_rate_mass", "seed_rate_mass_imperial"}
+            or invocation.operation not in SEED_ESTABLISHMENT_OPERATIONS
             or invocation.status != "clarification_required"
             or tuple(invocation.missing_inputs) != (SEED_SURVIVAL_BASIS_GAP,)
             or "survival_basis" in invocation.inputs
@@ -45,7 +46,7 @@ def conditional_seed_payload(invocation: Any, *, question: str) -> dict[str, Any
     # silently leave an apparently selected overall-emergence result.
     try:
         for basis in SEED_SURVIVAL_BASES:
-            validate_seed_rate_inputs(invocation.operation, {**inputs, "survival_basis": basis})
+            validate_seed_calculation_inputs(invocation.operation, {**inputs, "survival_basis": basis})
     except (ArithmeticError, TypeError, ValueError):
         return None
     from agronomy_agent.capability_registry import execute_registered_capability

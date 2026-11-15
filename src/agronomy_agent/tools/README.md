@@ -59,8 +59,8 @@ factor-10 imperial seeding approximation and exact dimensional conversion are
 shown as distinct methods; they can differ. A computed scenario is not a
 current quote, observed field outcome, or regulated rate.
 
-The v4 planner wrapper can retain a seed-survival clarification while executing
-two conditional v3 calculator children. This requires an otherwise complete
+The v5 planner wrapper can retain a seed-survival clarification while executing
+two conditional v4 calculator children. This requires an otherwise complete
 pure seed calculation, valid supplied germination and a sole unqualified-survival
 basis gap. The parent `clarification_scenarios` record has its own schema and
 provenance, retains the original missing input and contains no selected scalar
@@ -70,6 +70,32 @@ hash. Exact replay qualifies the response; altered child values, IDs or prose
 cannot inherit the bypass. Readiness remains non-executing, and choosing a basis
 in the next user turn produces the ordinary single-result calculation.
 The structured single-calculation API still requires a denominator.
+
+The v4 calculator exposes 45 structured operations. Its additional supplied-model
+forms cover seed count and physical-seed mass, zoned cost changes, incremental
+margin, soil carbon and nitrate-N stocks, total porosity, available-N budgets,
+daily water balances, reflectance NDVI, land equivalent ratio, paired yield
+differences, lime equivalence and an explicitly simplified stress-ET model.
+`supplied_model_arithmetic.py` owns typed validation and formulas;
+`supplied_model_parser.py` owns bounded natural-language extraction and whole
+request completeness. Not every structured input spelling has a conversational
+parser. Unsupported qualifiers or extra instructions cannot inherit a
+model-free result. Missing and incompatible inputs require clarification.
+
+Material and measurement bases matter. Carbon stock requires a supplied coarse-
+fragment volume; nitrate stock is conditional on matching dry-soil mass support.
+Porosity requires dry bulk density and matching soil-solid particle density.
+Neither is plant-available water or a crop-available nutrient credit. Intercrop
+yields are per total intercrop area, and each named crop appears once. A paired
+mean is not a significance test. Lime conversion requires an already supplied
+pure-CaCO3-equivalent target and applicable effective product quality; it cannot
+infer the target. The simplified stress multiplier applies to all ET only when
+explicitly requested, rather than representing a dual-coefficient crop model.
+An explicit incremental-budget break-even calculation retains the supplied
+intervention cost basis; it is not a whole-farm profitability forecast. A missing
+partial-budget component remains unknown even when the other unit bases agree.
+These results retain their assumptions and do not establish measured conditions,
+profit, a field recommendation or product authorization.
 
 ```bash
 PYTHONPATH=src python -m agronomy_agent.tool_cli calculate unit_conversion \

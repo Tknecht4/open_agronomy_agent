@@ -51,8 +51,8 @@ review. Historical smoke panels retain their original scope.
 The current software supports these bounded workflows:
 
 - **Calculate from supplied inputs:** nutrient and product quantities, water,
-  sprayer calibration, grain moisture, thermal time, harvest index and sampling
-  area, with units and assumptions. A calculation does not select a field target
+  sprayer calibration, grain moisture, thermal time, harvest index, sampling
+  area and explicitly supplied soil, crop and budget models, with units and assumptions. A calculation does not select a field target
   or authorize a product. Named inputs such as laboratory germination,
   permanent wilting point and harvested yield use shared role definitions in
   parsing and request checks. Extra quantities and unsupported compound units
@@ -66,6 +66,10 @@ The current software supports these bounded workflows:
   history informs soil precautions across rotations; current symptoms and
   diagnoses keep their own evidence requirements. Experimental soil drying and
   harvest grain drying retain their distinct meanings in variety comparisons.
+- **Explain safety and evidence:** general pesticide safety checks, task-specific
+  PPE sources and the distinction between efficacy and registration can receive
+  bounded explanations. These questions do not authorize a use. Stored-grain
+  probe monitoring retains its own object and method.
 - **Keep the whole request:** a calculation or definition cannot silently replace
   additional requested help. Field actions, product selection and use
   restrictions retain their applicable evidence and current authority checks.

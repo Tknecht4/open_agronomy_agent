@@ -349,6 +349,15 @@ def unsupported_quantities(answer: str, *, question: str, evidence: str) -> tupl
     answer, answer_annotations = _scientific_notation(answer)
     illustrative_spans = _checked_rate_illustration_spans(answer, question)
     allowed = {_quantity(m) for m in NUMBER_RE.finditer(normalized_source)}
+    # A stated range owns its exact endpoints on the range's unit basis.
+    # Restating an endpoint separately is not new arithmetic; intermediate
+    # values, changed signs or units remain unsupported.
+    if re.search(r"\b(?:confidence|credible|uncertainty|prediction|measurement) intervals?\b", source, re.I):
+        allowed.update(
+            Quantity(endpoint, None, quantity.unit)
+            for quantity in tuple(allowed) if quantity.upper is not None and quantity.unit
+            for endpoint in (quantity.value, quantity.upper)
+        )
     derived = _container_total(question, evidence)
     grounded_operand_spans: list[tuple[int, int]] = []
     if derived:

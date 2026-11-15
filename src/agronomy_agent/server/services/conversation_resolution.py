@@ -14,9 +14,10 @@ from typing import Any
 
 from agronomy_agent.tool_planner import plan_tools
 from agronomy_agent.seed_establishment import SEED_SURVIVAL_BASIS_GAP, SEED_GERMINATION_GAP
+from agronomy_agent.calculator_contracts import SEED_ESTABLISHMENT_OPERATIONS
 
 
-POLICY_VERSION = "conversation_calculation_reference.v4"
+POLICY_VERSION = "conversation_calculation_reference.v5"
 _MAX_CHAIN_DEPTH = 8
 _NUMBER = r"(?<![\w.])(?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?:\.[0-9]+)?(?!\w)"
 _NUMBER_RE = re.compile(_NUMBER)
@@ -109,7 +110,7 @@ def _resolve_seed_basis(
         return ConversationResolution(current_question, "antecedent_not_seed_basis_clarification")
     invocation = original.invocations[0]
     if (invocation.tool_id != "agronomic_calculator"
-            or invocation.operation not in {"seed_rate_mass", "seed_rate_mass_imperial"}
+            or invocation.operation not in SEED_ESTABLISHMENT_OPERATIONS
             or invocation.missing_inputs != (SEED_SURVIVAL_BASIS_GAP,)):
         return ConversationResolution(current_question, "antecedent_not_seed_basis_clarification")
     if (stated_percentage is not None
@@ -164,7 +165,7 @@ def _resolve_seed_germination(
         return ConversationResolution(current_question, "antecedent_not_seed_germination_clarification")
     invocation = original.invocations[0]
     if (invocation.tool_id != "agronomic_calculator"
-            or invocation.operation not in {"seed_rate_mass", "seed_rate_mass_imperial"}
+            or invocation.operation not in SEED_ESTABLISHMENT_OPERATIONS
             or invocation.missing_inputs != (SEED_GERMINATION_GAP,)
             or "germination_pct" in invocation.inputs):
         return ConversationResolution(current_question, "antecedent_not_seed_germination_clarification")

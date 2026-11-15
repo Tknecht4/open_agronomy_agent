@@ -194,6 +194,8 @@ def _runtime_implementation_receipts() -> dict[str, str]:
             ),
             "runtime_orchestrator": _bundle_sha256(
                 (
+                    PROJECT_ROOT / "src/agronomy_agent/router.py",
+                    PROJECT_ROOT / "src/agronomy_agent/decision_route.py",
                     PROJECT_ROOT / "src/agronomy_agent/agent.py",
                     PROJECT_ROOT
                     / "src/agronomy_agent/server/services/chat_service.py",
@@ -207,6 +209,8 @@ def _runtime_implementation_receipts() -> dict[str, str]:
             ),
             "kernel_config": _bundle_sha256(
                 (
+                    PROJECT_ROOT / "src/agronomy_agent/router.py",
+                    PROJECT_ROOT / "src/agronomy_agent/decision_route.py",
                     PROJECT_ROOT / "src/agronomy_agent/agent.py",
                     PROJECT_ROOT / "src/agronomy_agent/agronomic_concepts.py",
                     PROJECT_ROOT / "src/agronomy_agent/observation_guidance.py",
@@ -218,6 +222,8 @@ def _runtime_implementation_receipts() -> dict[str, str]:
             ),
             "verifier_policy": _bundle_sha256(
                 (
+                    PROJECT_ROOT / "src/agronomy_agent/router.py",
+                    PROJECT_ROOT / "src/agronomy_agent/decision_route.py",
                     PROJECT_ROOT / "src/agronomy_agent/answer_verifier.py",
                     PROJECT_ROOT / "src/agronomy_agent/agronomic_concepts.py",
                     PROJECT_ROOT / "src/agronomy_agent/observation_guidance.py",
@@ -260,6 +266,8 @@ def _runtime_implementation_receipts() -> dict[str, str]:
                     PROJECT_ROOT / "src/agronomy_agent/supplied_numeric_inputs.py",
                     PROJECT_ROOT / "src/agronomy_agent/supplied_nutrient_parser.py",
                     PROJECT_ROOT / "src/agronomy_agent/supplied_water_parser.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_model_parser.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_model_arithmetic.py",
                     PROJECT_ROOT / "src/agronomy_agent/supplied_grain_parser.py",
                     PROJECT_ROOT / "src/agronomy_agent/supplied_geometry_biomass_parser.py",
                     PROJECT_ROOT / "src/agronomy_agent/water_arithmetic.py",
@@ -269,6 +277,8 @@ def _runtime_implementation_receipts() -> dict[str, str]:
             ),
             "fallback_policy": _bundle_sha256(
                 (
+                    PROJECT_ROOT / "src/agronomy_agent/router.py",
+                    PROJECT_ROOT / "src/agronomy_agent/decision_route.py",
                     PROJECT_ROOT / "src/agronomy_agent/agent.py",
                     PROJECT_ROOT
                     / "src/agronomy_agent/server/services/chat_service.py",

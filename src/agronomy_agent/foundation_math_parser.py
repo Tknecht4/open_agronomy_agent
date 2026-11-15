@@ -63,7 +63,7 @@ def _yield_unit(value: str) -> str:
     text = value.lower()
     if text.startswith(("bu", "bushel")):
         return "bu"
-    if text.startswith("tonne"):
+    if text == "t" or text.startswith("tonne"):
         return "tonne"
     return text
 
@@ -90,7 +90,7 @@ def _requested_arithmetic(lower: str) -> bool:
         return False
     return bool(re.search(
         r"\b(?:calculate|compute|convert|work out|how many|about how many|what is (?:the|one|my)|"
-        r"what yield breaks even|what seed(?:ing)? (?:rate|mass) (?:is|would be) (?:required|needed)|"
+        r"what yield(?: increase)? breaks even|what seed(?:ing)? (?:rate|mass) (?:is|would be) (?:required|needed)|"
         r"break-even (?:price|yield)|break even (?:price|yield))\b",
         lower,
     ))
@@ -425,8 +425,9 @@ def _partial_budget(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[s
                 phrase = match.group(0) + (immediate_suffix.group(0) if immediate_suffix else "")
                 units.update(_area(value) for value in re.findall(rf"(?:/|per\s+)({AREA})\b", phrase, re.IGNORECASE))
         category_area_units[key] = units
-    area_matches = set().union(*category_area_units.values())
-    if len(area_matches) == 1 and all(units == area_matches for units in category_area_units.values()):
+    supplied_category_areas = {key: units for key, units in category_area_units.items() if values[key] is not None}
+    area_matches = set().union(*supplied_category_areas.values()) if supplied_category_areas else set()
+    if len(area_matches) == 1 and all(units == area_matches for units in supplied_category_areas.values()):
         inputs["area_unit"] = next(iter(area_matches))
     missing = tuple(key for key, value in values.items() if value is None)
     if _unparsed_magnitude(text):
@@ -439,7 +440,7 @@ def _partial_budget(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[s
         missing += ("one consistent currency",)
     if len(area_matches) > 1:
         missing += ("invalid basis: use one consistent area unit",)
-    if area_matches and not all(units == area_matches for units in category_area_units.values()):
+    if area_matches and not all(units == area_matches for units in supplied_category_areas.values()):
         missing += ("invalid basis: state the same per-area basis for all four changes",)
     if area_matches and re.search(r"\b(?:whole[- ]farm|whole farm|total for (?:the )?(?:farm|field))\b", lower):
         missing += ("invalid basis: whole-farm totals cannot be mixed with per-area amounts",)
@@ -448,6 +449,15 @@ def _partial_budget(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[s
 
 
 def _cost_candidates(text: str, *, bindings: list[re.Match[str]]) -> set[tuple[float, str, str]]:
+    # A stated intervention cost in an explicit incremental budget is not an
+    # unknown whole-farm operating/total cost. Keep its narrower basis named.
+    if re.search(r"\b(?:simple )?incremental budget\b", text, re.I):
+        matches = list(re.finditer(
+            rf"\bintervention costs?\s*(?:of|is|are|:)?\s*(?:CAD|USD|\$)\s*(?P<value>{SUPPLIED_NUMBER})\s*(?:/|per\s+)(?P<area>{AREA})\b", text, re.I))
+        if matches:
+            for match in matches:
+                _record_number_binding(text, match, bindings, "value")
+            return {(_number(m["value"]), _area(m["area"]), "incremental") for m in matches}
     specific_patterns = (
         rf"\b(?P<basis>{COST_BASIS_ROLE})\s+{UNQUALIFIED_COST_ROLE}\s*(?:of|is|are|:)?\s*(?:CAD|USD|\$)\s*(?P<value>{SUPPLIED_NUMBER})\s*(?:/|per\s+)(?P<area>{AREA})\b",
         rf"\b{BUDGET_TOTAL_ROLE}\s*(?:CAD|USD|\$)\s*(?P<value>{SUPPLIED_NUMBER})\s*(?:/|per\s+)(?P<area>{AREA})\b",
@@ -503,7 +513,7 @@ def _break_even(text: str, lower: str) -> tuple[str, dict[str, Any], tuple[str, 
     if not re.search(r"\bbreak[- ]?even\b|\bbreaks? even\b", lower):
         return None
     price_question = bool(re.search(r"\bbreak[- ]?even\s+(?:sale\s+)?price\b", lower))
-    yield_question = bool(re.search(r"\bbreak[- ]?even\s+yield\b|\bwhat yield breaks? even\b|\byield breaks? even\b", lower))
+    yield_question = bool(re.search(r"\bbreak[- ]?even\s+yield\b|\bwhat yield(?: increase)? breaks? even\b|\byield breaks? even\b", lower))
     if price_question == yield_question:
         return None
     operation = "break_even_price" if price_question else "break_even_yield"

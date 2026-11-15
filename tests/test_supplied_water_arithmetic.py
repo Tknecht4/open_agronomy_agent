@@ -19,6 +19,10 @@ EXAMPLES = [
     ("A nozzle delivers 1.2 L/min, travel speed is 10 km/h and nozzle spacing 0.5 m. Using L/ha = 600Q/(speed × spacing), calculate application volume.", "single_nozzle_application_volume", 144, "L/ha"),
     ("A blend contains 16% K2O. How much blend supplies 48 kg K2O/ha, assuming the label basis is correct?", "fertilizer_product_mass", 300, "kg product/ha"),
     ("How much 25%-N fertilizer supplies 75 kg N/ha in a product-mass calculation?", "fertilizer_product_mass", 300, "kg product/ha"),
+    ("For a teaching standard-conditions model ETc = Kc × ETo, Kc is 1.15 and ETo is 4 mm/day. Compute ETc.", "crop_evapotranspiration", 4.6, "mm/day"),
+    ("For a teaching GDD method, mean daily temperature is 16 C, base 4 C, no upper cap, and negative values are floored at zero. Calculate today's GDD.", "mean_temperature_gdd", 12, "GDD"),
+    ("For a 0.5 m root zone, field capacity is 0.28 and wilting point 0.12 m3/m3. Compute total available water under a uniform-profile assumption.", "water_storage_difference", 80, "mm"),
+    ("A teaching mixture requires 1.5 L product/ha over 8 ha. Compute product quantity and distinguish it from total carrier volume.", "liquid_product_total", 12, "L product"),
 ]
 
 

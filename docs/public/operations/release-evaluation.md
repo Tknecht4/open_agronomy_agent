@@ -645,7 +645,7 @@ construct or cohort. The executor records actual planner clarification fields,
 including the unstated seed denominator in two old wheat cases. This remains
 synthetic trace QA and cannot establish agronomic performance.
 
-The v4 planner wrapper adds conditional seed-survival clarification records to
+The v5 planner wrapper supports conditional seed-survival clarification records to
 the current product path. These contain two checked v3 arithmetic children,
 retain ASK/PARTIAL and choose no rate. Their semantics are outside the historical
 frozen-v1 construct. The version-2 **synthetic contract executor** is restricted
@@ -655,3 +655,43 @@ construct, validator, metric identity, cases and gold stay unchanged. Qualify th
 current scenario feature through persisted production/preview/follow-up tests
 and the complete canonical release assessment, not a historical V2 fixture
 score. Tool implementation receipts include the scenario module.
+
+
+### Supplied-model calculations and transport maintenance
+
+The current calculator contract is
+`configs/benchmark_capability_conformance_v4.json` (45 structured operations).
+Prior conformance contracts retain their original bytes and cannot qualify the
+expanded implementation. Natural requests use bounded operand and whole-request
+ownership; structured operation coverage does not imply every phrasing is parsed.
+The tools README describes material bases and interpretation limits.
+
+App Server writes use the platform selector, including descriptors above the
+`select()` limit. Explicit close unregisters the exit callback, releases all
+owned pipes, and bounds reader joins even when termination or waiting fails.
+Failure to reap still propagates; receipts distinguish direct-process reaping,
+unresolved reader state and unknown remote cancellation. Failed or interrupted
+historical judgments remain unknown under their frozen retry policy. A later
+transport repair cannot turn them into successful original observations.
+
+
+Bounded stewardship questions distinguish current-label PPE sources, general
+recommendation safety checks and efficacy versus registration/residue evidence
+from requests to select or authorize a product. The source rationale is the
+[EPA applicator core manual](https://nepis.epa.gov/Exe/ZyPURL.cgi?Dockey=P1017DIK.txt)
+and [Health Canada residue-limit explanation](https://www.canada.ca/en/health-canada/services/consumer-product-safety/pesticides-pest-management/public/protecting-your-health-environment/pesticides-food/maximum-residue-limits-pesticides/how-they-are-set.html).
+They do not provide the current label for a particular proposed use.
+
+Stored-grain probe monitoring is distinct from field-edge scouting and treatment
+selection. [Manitoba's monitoring guidance](https://gov.mb.ca/agriculture/crops/insects/prevention-and-management-of-insects-and-mites-in-farm-stored-grain.html)
+uses grain temperature to vary checking intervals. The software's bounded method
+preserves that scope and count-interpretation limits; it does not invent a local
+interval or promote trap catches into a pesticide threshold. The active retrieved
+bundle still controls which numerical source facts can support a model answer.
+
+Task ownership also controls completeness checks. An explicitly unidentified
+activity needs clarification; a model-validation or causal explanation must not
+inherit an unrelated irrigation or harvest checklist. Supplied endpoints of an explicitly named uncertainty interval
+may be restated separately on the same unit basis. This does not admit interior
+values, altered signs or conversions as evidence, or establish the statistical
+interpretation by itself. Appended operations retain ordinary evidence checks.

@@ -11,8 +11,9 @@ from dataclasses import dataclass
 import re
 from datetime import date
 
-from agronomy_agent.answerability import preferred_response_language, is_rate_basis_explanation, is_dose_response_explanation, is_sampling_basis_explanation, is_evapotranspiration_explanation, product_action_request_text
+from agronomy_agent.answerability import preferred_response_language, is_rate_basis_explanation, is_dose_response_explanation, is_sampling_basis_explanation, is_evapotranspiration_explanation, product_action_request_text, stewardship_explanation_kind
 from agronomy_agent.plant_health_scope import root_inspection_requested, current_root_inspection_is_soybean, clubroot_workflow_applicable
+from agronomy_agent.request_scope import explicitly_unspecified_management_task, soil_test_repeatability_requested
 
 
 POTATO_MONITORING_ANSWER = (
@@ -20,6 +21,14 @@ POTATO_MONITORING_ANSWER = (
     "If suspect symptoms appear, photograph and locate them, compare suspect and nearby healthy plants, and promptly contact a local potato specialist or diagnostic lab for sampling instructions and confirmation. Follow current local disease alerts and crop-specific IPM guidance. "
     "Use crop stage, local disease risk and forecasts, and the exact crop/target/product label to plan any preventive fungicide program; visible collapse is not a prerequisite for prevention planning."
 )
+
+
+def _proposition_explicitly_denied(prefix: str) -> bool:
+    """Bind denial to the immediately following claim, not later caveats."""
+    return bool(re.search(
+        r"\b(?:(?:it is |is )?(?:false|incorrect|untrue|not true) that|"
+        r"(?:does not|doesn't) mean|(?:cannot|can't|do not|don't|never) assume(?: that)?)"
+        r"\s+(?:(?:a|an|the)\s+)?$", prefix, re.I))
 
 
 @dataclass(frozen=True)
@@ -48,6 +57,18 @@ class ObservationGuidance:
     def unsupported_inference(self, answer: str) -> bool:
         """Reject bounded contradictions even when a correct check is appended."""
         for sentence in re.split(r"[.!?;]\s*|\n+", answer):
+            if self.has_method("efficacy_authority_boundary"):
+                for claim in re.finditer(
+                    r"\b(?:trial|efficacy)(?: alone)?\s+(?:establishes|proves|confirms|demonstrates)\b"
+                    r"[^.;]{0,100}?\b(?:registration|permitted use|residue compliance|legal use)\b",
+                    sentence, re.I,
+                ):
+                    if not _proposition_explicitly_denied(sentence[:claim.start()]):
+                        return True
+            if self.has_method("protective_equipment_basis"):
+                for claim in re.finditer(r"\bno (?:PPE|protective equipment) is (?:needed|required)\b", sentence, re.I):
+                    if not _proposition_explicitly_denied(sentence[:claim.start()]):
+                        return True
             if self.has_method("mapped_crop_history"):
                 for claim in re.finditer(
                         r"\b(?:is|are)\s+(?:(?:being )?treated as\s+)?(?:a\s+)?(?:complete|full)[^.;]{0,35}\b(?:history|record)\b|"
@@ -99,7 +120,7 @@ def stored_grain_context(question: str) -> bool:
     """
     if not (re.search(r"\bgrain\b",question,re.I) and re.search(r"\b(?:bin|storage|stored)\b",question,re.I)):
         return False
-    clauses = [part.strip() for part in re.split(r"[.!?;]|\b(?:and|but|while|also|then)\b", question, flags=re.I) if part.strip()]
+    clauses = [part.strip(" ,") for part in re.split(r"[.!?;]|\b(?:and|but|while|also|then)\b", question, flags=re.I) if part.strip(" ,")]
     grain_subject = re.compile(
         r"^(?:[a-z][a-z'-]*\s+){0,5}grain(?:\s+in\s+(?:(?:the|a|my|our)\s+)?(?:bin|storage))?"
         r"\s+(?:is|are|has|have|enters?|needs?|requires?|will be|was|were)\b", re.I)
@@ -107,12 +128,27 @@ def stored_grain_context(question: str) -> bool:
         r"(?:what should (?:be (?:measured|checked|monitored)|(?:I|we) (?:measure|check|monitor))|"
         r"(?:measured|managed|monitored|checked)(?: before assuming (?:the|this|my|our) bin is safe)?|"
         r"how should (?:I|we) (?:monitor|manage|check) (?:it|the bin|stored grain)|"
-        r"(?:moisture|temperature|airflow)(?: distribution)?)", re.I)
+        r"(?:moisture|temperature|airflow)(?: distribution)?|"
+        r"how often should (?:grain[- ]bin )?probe traps? be checked(?: as (?:the )?grain cools)?|"
+        r"why (?:is|are) (?:the )?counts? not (?:a )?(?:treatment|action) thresholds?)", re.I)
+    grain_insect_observation = re.compile(
+        r"(?:I|we) (?:found|observed|saw|detected) (?:insects|pests|beetles|weevils) in "
+        r"(?:a|the|my|our) (?:[a-z-]+\s+){0,3}grain bin", re.I)
     for clause in clauses:
-        if grain_subject.match(clause) or follow_up.fullmatch(clause):
+        if grain_subject.match(clause) or grain_insect_observation.fullmatch(clause) or follow_up.fullmatch(clause):
             continue
         return False
     return True
+
+
+def stored_grain_probe_monitoring(question: str) -> bool:
+    """Positive whole grain/probe ownership; no treatment-selection exemption."""
+    return bool(re.fullmatch(
+        r"\s*(?:(?:I|we) (?:found|observed|saw|detected) (?:insects|pests|beetles|weevils) in "
+        r"(?:a|the|my|our) (?:[a-z-]+\s+){0,3}grain bin[.!?]\s*)?"
+        r"how often should (?:grain[- ]bin )?probe traps? be checked as (?:the )?grain cools"
+        r"(?:,?\s+and\s+|[.!?]\s*)why (?:is|are) (?:the )?counts? not (?:a )?(?:treatment|action) thresholds?"
+        r"[.!?]*\s*", question, re.I))
 
 
 def _past_weather_record(question: str) -> bool:
@@ -166,6 +202,51 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
     # English method text must never replace a French answer.
     if preferred_response_language(question) == "fr" or has(r"\b(?:en fran[cç]ais|in french)\b"):
         return None
+    if explicitly_unspecified_management_task(question):
+        yield ObservationGuidance("unspecified_management_task", (
+            "Which job or management task do you mean? A field or crop category alone does not identify the activity or its frequency. "
+            "Name the task and crop, then provide the relevant conditions or records so the timing question can be assessed without assuming an operation."
+        ), (("identify_missing_task", "Ask which activity the frequency question refers to.",
+             (r"\b(?:which|what|specify|name|identify)\b[^.!?]{0,80}\b(?:job|task|activity|operation)\b",)),))
+        return
+    if soil_test_repeatability_requested(question):
+        yield ObservationGuidance("soil_test_repeatability", (
+            "Resample the same georeferenced area and management zones with the same representative collection and compositing method; keep unusual areas separate. "
+            "Maintain the same sampling depth appropriate to the test and its calibration, and comparable season, crop and timing relative to fertilizer, manure and tillage. Record differences rather than treating unlike samples as a trend. "
+            "Use clean equipment, consistent containers and the laboratory's handling, storage and transport protocol. Retain the same laboratory extraction or analytical method, reporting units and sample identity, or establish comparability before comparing results. "
+            "Keep location, depth, dates, handling and management records with each result; changing these can mimic a soil trend. This does not select a new numerical sampling depth or a nutrient rate."
+        ), (("repeat_sampling_location", "Retain sampling area and spatial support.", (r"\b(?:location|georeferenced|same area|same zones)\b",)),
+            ("repeat_sampling_depth", "Maintain test-appropriate depth.", (r"\bdepth\b",)),
+            ("repeat_sampling_time", "Retain comparable sampling timing.", (r"\b(?:timing|season)\b",)),
+            ("repeat_sampling_handling", "Retain comparable handling.", (r"\b(?:handling|storage|transport)\b",))))
+        return
+    stewardship = stewardship_explanation_kind(question)
+    if stewardship == "protective_equipment_basis":
+        yield ObservationGuidance(stewardship, (
+            "Determine PPE from the current applicable product label for the exact formulation and task, including mixing, loading and application; requirements can differ between tasks. "
+            "Check applicable worker-protection requirements and the safety data sheet for supporting hazard information. A remembered generic checklist does not replace the label. "
+            "Select compatible equipment, check its fit and condition, and follow required training, use, cleaning and replacement instructions. This does not specify PPE for an unidentified product."
+        ), (("ppe_label_task_basis", "Explain current label and task-specific PPE.", (r"\blabel\b",)),
+            ("ppe_task_variation", "Retain mixing/loading/application distinctions.", (r"\b(?:task|mixing|loading)\b",))))
+        return
+    if stewardship == "recommendation_safety_checks":
+        yield ObservationGuidance(stewardship, (
+            "A pesticide recommendation should check the current applicable label and registration for the exact crop, site and target, alongside whether treatment is justified by scouting and IPM. "
+            "Check handler exposure, task-specific PPE and training, restricted-entry and preharvest intervals, drift and weather restrictions, nearby people, water and sensitive habitats, pollinators and other non-target organisms. "
+            "Include mixing and compatibility restrictions, equipment calibration, storage, spill response, disposal and application records. Current local requirements and the actual label determine the applicable controls; a checklist alone does not authorize a use."
+        ), (("recommendation_label_basis", "Retain current product authority.", (r"\blabel\b",)),
+            ("handler_safety", "Include handler exposure or PPE.", (r"\b(?:PPE|protective equipment|handler exposure)\b",)),
+            ("environmental_protection", "Include off-target environmental exposure.", (r"\b(?:drift|pollinator|water|non-target)\b",))))
+        return
+    if stewardship == "efficacy_authority_boundary":
+        yield ObservationGuidance(stewardship, (
+            "No. An agronomic efficacy trial evaluates treatment performance under its study conditions; it does not establish current registration, permitted use or residue compliance. "
+            "Verify the current applicable registration and product label for the jurisdiction, crop, target, use pattern and preharvest restrictions, and the applicable residue limits and market requirements. "
+            "Efficacy, registration and residue evidence answer different questions; an effective treatment is not automatically an authorized or residue-compliant use."
+        ), (("efficacy_not_authority", "Distinguish trial efficacy from legal/residue compliance.", (r"\b(?:does not|cannot|can't|not automatically)\b",)),
+            ("current_registration", "Identify current label/registration authority.", (r"\b(?:label|registration)\b",)),
+            ("residue_requirements", "Retain the separate residue requirement.", (r"\bresidue\b",))))
+        return
     if is_evapotranspiration_explanation(question):
         yield ObservationGuidance("evapotranspiration_terms", (
             "Reference evapotranspiration (ETo) describes atmospheric evaporative demand for a standardized, "
@@ -213,6 +294,15 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
         ), (("historical_weather_scope", "Distinguish past station records from current local conditions.",
              (r"\b(?:past|historical)\b[^.]{0,100}\b(?:station|location|conditions|record)\w*\b",)),
             ("historical_weather_current", "Require current on-site conditions.", (r"\b(?:current|on[- ]site)\b[^.]{0,90}\b(?:wind|conditions)\b",))))
+    if stored_grain_probe_monitoring(question):
+        yield ObservationGuidance("stored_grain_probe_monitoring", (
+            "Use applicable local stored-grain guidance and measured grain temperature to set probe-trap inspection intervals as the grain cools; a field-scouting interval is not a bin-monitoring method. "
+            "Record trap location, exposure time, insect identity, catches, grain moisture and temperature. Catches reflect insect activity and sampling conditions, not a direct population density or treatment threshold. "
+            "Follow up detections with representative grain samples and grain-condition checks. Monitoring does not authorize a pesticide or fumigant. Use safe external monitoring procedures without entering grain or approaching moving equipment."
+        ), (("probe_method", "Retain the probe-trap monitoring method.", (r"\b(?:probe|trap)\b",)),
+            ("grain_cooling", "Tie interval assessment to grain temperature.", (r"\b(?:temperature|cooling|cools)\b",)),
+            ("trap_count_limit", "Distinguish detection counts from a treatment threshold.", (r"\b(?:not|cannot|does not)\b[^.!?]{0,100}\b(?:threshold|density|treatment)\b",))))
+        return
     if stored_grain_context(question):
         yield ObservationGuidance("stored_grain_monitoring", (
             "Measure representative grain moisture and temperature at intake and in different locations in the bin; "
@@ -341,6 +431,22 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
             ("potato_monitor_followup", "Record suspicious findings and seek diagnostic guidance if they appear.",
              (r"\b(?:diagnostic|lab(?:oratory)?|confirmation|specialist)\b",)),
             ("potato_monitor_alerts", "Check current local disease alerts as part of healthy-crop monitoring.", (r"\b(?:local|regional)\b[^.]{0,60}\b(?:disease )?alerts?\b", r"\balerts?\b[^.]{0,60}\b(?:local|regional)\b")),
+        ))
+    if sample_event_roles_stated(question) and has(
+        r"\b(?:infer|deduce|establish|determine)\w*\b[^.!?;]{0,70}\b(?:analysis|processing) date\b"
+    ):
+        yield ObservationGuidance("sample_analysis_date", (
+            "Do not infer the analysis date from report issuance alone. Collection, analysis and report issuance "
+            "are distinct events even when calendar dates happen to coincide. Preserve an independently supplied "
+            "analysis or processing date separately; otherwise check the report or ask the laboratory for it."
+        ), (
+            ("analysis_date_attribution", "Distinguish report issuance from independent evidence of analysis timing.", (
+                r"\b(?:cannot|can't|do not|don't)\b[^.!?;]{0,35}\b(?:infer|establish|determine)\b",
+                r"\b(?:does not|doesn't)\s+(?:establish|determine|show)\b",
+                r"\b(?:analysis|processing) date\b[^.!?;]{0,50}\b(?:unknown|unprovided|unavailable|unspecified|unreported|provided|supplied|given)\b",
+                r"\b(?:provided|supplied|given)\b[^.!?;]{0,50}\b(?:analysis|processing) date\b",
+                r"\b(?:check|ask|request|obtain|verify)\b[^.!?;]{0,100}\b(?:lab(?:oratory)?|report)\b",
+            )),
         ))
     if sample_event_roles_stated(question) and has(
         r"\b(?:sampling dates?|sample date|collection date|which date|preserv\w*)\b|"

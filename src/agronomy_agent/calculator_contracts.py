@@ -1,12 +1,14 @@
 """Current typed-calculator identities shared by planning and verification."""
 
 import re
+from agronomy_agent.supplied_model_arithmetic import MODEL_INPUTS
 
-CALCULATOR_VERSION = "agronomic_calculator_v3"
+CALCULATOR_VERSION = "agronomic_calculator_v4"
 LEGACY_CALCULATOR_VERSION = "agronomic_calculator_v1"
-CALCULATOR_SCHEMA_VERSION = "open_agronomy_agent.agronomic_calculator.schema.v3"
-TOOL_PLANNER_VERSION = "open_agronomy_agent.tool_planner.v4"
-EXPLICIT_ARITHMETIC_SELECTOR_ID = "explicit_arithmetic_parser_v3"
+CALCULATOR_SCHEMA_VERSION = "open_agronomy_agent.agronomic_calculator.schema.v4"
+TOOL_PLANNER_VERSION = "open_agronomy_agent.tool_planner.v5"
+EXPLICIT_ARITHMETIC_SELECTOR_ID = "explicit_arithmetic_parser_v4"
+SEED_ESTABLISHMENT_OPERATIONS = frozenset({"seed_rate_mass", "seed_rate_mass_imperial", "seed_population_density"})
 
 FOUNDATION_OPERATIONS = frozenset({
     "seed_rate_mass_imperial",
@@ -28,7 +30,7 @@ FOUNDATION_OPERATIONS = frozenset({
     "mean_temperature_gdd",
     "grain_harvest_index",
     "circular_sampling_area",
-})
+}) | frozenset(MODEL_INPUTS)
 
 
 def tool_version_for(operation: str) -> str:
@@ -86,5 +88,8 @@ def calculation_request_text(question: str, operation: str) -> str:
 
 def calculation_request_is_complete(question: str, operation: str) -> bool:
     """A valid calculation can be evidence without completing a compound task."""
+    if operation in MODEL_INPUTS:
+        from agronomy_agent.supplied_model_parser import model_calculation_request_is_complete
+        return model_calculation_request_is_complete(question, operation)
     from agronomy_agent.request_scope import has_unqualified_followup
     return not has_unqualified_followup(calculation_request_text(question, operation), calculation=True)

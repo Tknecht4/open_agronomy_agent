@@ -16,7 +16,7 @@ from agronomy_agent.answer_verifier import verify_answer
     ("Rain followed by drying produced a surface crust and poor emergence. Explain the mechanism and what observations distinguish crusting from seed failure.",
      "Rain can break down surface aggregates and create a seal that hardens as it dries. Viable seedlings can then be trapped under the crust. Dig carefully along affected and normal rows and compare intact, viable seedlings bent beneath the crust with missing, dead or decayed seeds. Record crust strength, seed depth and emergence progress. Poor emergence alone does not identify the cause."),
 ])
-def test_mechanism_request_keeps_supported_model_explanation_in_saved_answer(tmp_path, monkeypatch, question, answer):
+def test_mechanism_request_keeps_supported_model_explanation_in_saved_answer(tmp_path, monkeypatch, question, answer, *, allow_source_gap=False):
     from agronomy_agent.execution_core import AgentExecutionRequest
     from agronomy_agent.server.services import chat_service
     from agronomy_agent.server.settings import build_settings
@@ -40,8 +40,12 @@ def test_mechanism_request_keeps_supported_model_explanation_in_saved_answer(tmp
             settings=build_settings(db_path=database, artifact_root=tmp_path / "artifacts", network_mode="offline"),
             session_id=session["session_id"], message=question, mode="agronomic_rag",
             model_id="imposed", rag_config="configs/rag.yaml", max_tokens=180, generation_backend=backend))
-        assert result.answer == answer
-        assert store.get_turn(result.turn["turn_id"])["answer"] == answer
+        if allow_source_gap:
+            assert result.answer.startswith(answer + "\n\n")
+            assert "No Manitoba-specific applied guidance was retrieved" in result.answer
+        else:
+            assert result.answer == answer
+        assert store.get_turn(result.turn["turn_id"])["answer"] == result.answer
         assert backend.calls == 1
         assert len(result.stage_receipts) == 17
     finally:
@@ -837,6 +841,80 @@ def test_sample_date_unknowns_do_not_trigger_unnecessary_replacement(ending):
 
 
 @pytest.mark.parametrize("ending", [
+    "Use an analysis date only if the report or laboratory confirms it.",
+    "Check the report or ask the laboratory if you need the analysis date.",
+    "To determine the analysis date, check the report or ask the laboratory.",
+    "Record the processing date after it has been confirmed.",
+    "Request the analysis date from the laboratory.",
+    "Retain the analysis date if known.",
+    "Record the analysis date when available.",
+    "Issuance alone gives no analysis date.",
+])
+def test_acquiring_an_unknown_sample_date_is_not_asserting_an_event(ending):
+    question = "The soil sample was collected March 3 and the report was issued March 10. Can I infer the analysis date?"
+    answer = "No. Issuance does not establish when the laboratory analyzed the sample. " + ending
+    result = verify_answer(answer, question=question, evidence_text="", question_type="field_data", risk_level="low",
+        editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert result.answer == answer and not result.triggered
+
+
+def test_inferred_sample_date_fallback_preserves_the_metadata_question():
+    question = "The soil sample was collected March 3 and the report was issued March 10. Can I infer the analysis date?"
+    result = verify_answer("Use the report issuance date as the analysis date.",
+        question=question, evidence_text="", question_type="fertility_diagnostic", risk_level="low",
+        editor=UnavailableEditor(), review_mode="risk_conditioned_selective_v3")
+    assert result.fallback_applied
+    assert "do not infer" in result.answer.lower()
+    assert "issuance" in result.answer.lower()
+    assert "nutrient diagnosis" not in result.answer.lower()
+
+
+@pytest.mark.parametrize("ending", [
+    "The analysis date is March 10, not the collection date.",
+    "The analysis date is March 10, so check the laboratory report.",
+    "The analysis date is March 10 if the laboratory confirms it.",
+    "The analysis date is March 10, so ask the laboratory if needed.",
+    "Check the report; use the report issuance date as the analysis date.",
+    "The analysis date must be the report date, so ask the laboratory if needed.",
+    "The report was issued March 10, which is the analysis date, not the collection date.",
+    "It is not true that the analysis date was March 3, but the analysis date is March 10. Ask the laboratory if needed.",
+    "The analysis date is March 10, alongside an unconfirmed processing date. Check the laboratory if needed.",
+    "Do use the report issue date as the analysis date. Check the laboratory if needed.",
+])
+def test_date_acquisition_language_does_not_license_an_invented_analysis_event(ending):
+    from agronomy_agent.answer_verifier import assess_claim_risk
+    question = "The soil sample was collected March 3 and the report was issued March 10. Can I infer the analysis date?"
+    assessment = assess_claim_risk(ending, question=question, question_type="field_data")
+    assert "sample_event_role_conflation" in assessment.reasons
+
+
+@pytest.mark.parametrize("query", [
+    "Is the analysis date March 10?",
+    "Can I infer the analysis date is March 10?",
+    "What if the analysis date was March 10?",
+    "If the analysis date is March 10, may I record it?",
+])
+def test_a_proposed_analysis_date_is_not_a_supplied_event(query):
+    from agronomy_agent.answer_verifier import assess_claim_risk
+    question = "The soil sample was collected March 3 and the report was issued March 10. " + query
+    assessment = assess_claim_risk("The analysis date is March 10.", question=question, question_type="field_data")
+    assert "sample_event_role_conflation" in assessment.reasons
+
+
+@pytest.mark.parametrize("statement", [
+    "It is not true that the analysis date was March 10.",
+    "The analysis date was March 10, but that is unconfirmed.",
+    "The laboratory has not confirmed that the analysis date was March 10.",
+    "No analysis date was March 10.",
+])
+def test_negated_or_unconfirmed_analysis_dates_do_not_establish_an_event(statement):
+    from agronomy_agent.answer_verifier import assess_claim_risk
+    question = "The soil sample was collected March 3 and the report was issued March 10. " + statement
+    assessment = assess_claim_risk("The analysis date is March 10.", question=question, question_type="field_data")
+    assert "sample_event_role_conflation" in assessment.reasons
+
+
+@pytest.mark.parametrize("ending", [
     "The report issuance date is the analysis date.",
     "Use the report issuance date as the analysis date.",
     "The analysis date is May 19.",
@@ -1245,3 +1323,184 @@ def test_french_soil_water_failure_returns_bounded_help_without_undefined_contex
     assert result.fallback_applied
     assert '999' not in result.answer
     assert 'Vérifier au champ' in result.answer
+
+
+STEWARDSHIP_QUESTIONS = [
+    "What health, safety, and environmental checks belong in a pesticide recommendation?",
+    "Which environmental considerations should inform a general pesticide recommendation?",
+    "What should determine PPE for mixing and application rather than relying on a generic remembered checklist?",
+    "Explain what determines personal protective equipment for pesticide handling.",
+    "Does an agronomic efficacy trial establish that a pesticide use satisfies current residue and registration requirements?",
+    "Can a field efficacy trial prove that pesticide use meets registration and residue requirements?",
+]
+
+
+@pytest.mark.parametrize("question", STEWARDSHIP_QUESTIONS)
+def test_impersonal_stewardship_questions_allow_the_supported_model_answer(tmp_path,monkeypatch,question):
+    from agronomy_agent.observation_guidance import observation_guidance
+    answer=observation_guidance(question).answer
+    # Reuse the actual saved production boundary, with a supplied deterministic
+    # backend answer; this tests the gate, not model agronomic quality.
+    test_mechanism_request_keeps_supported_model_explanation_in_saved_answer(tmp_path,monkeypatch,question,answer)
+
+
+@pytest.mark.parametrize("question",STEWARDSHIP_QUESTIONS)
+@pytest.mark.parametrize("extra",[" Then apply it tomorrow."," Also choose a pesticide."," Can I use Product Z on my wheat?"," What rate is safe for my field?"])
+def test_stewardship_prefix_does_not_exempt_a_remaining_field_or_product_request(question,extra):
+    from agronomy_agent.answerability import stewardship_explanation_kind,is_quantity_concept_explanation
+    assert stewardship_explanation_kind(question+extra) is None
+    assert not is_quantity_concept_explanation(question+extra)
+
+
+@pytest.mark.parametrize("question,unsafe",[
+    (STEWARDSHIP_QUESTIONS[2],"No PPE is required. Follow the current label for each mixing task."),
+    (STEWARDSHIP_QUESTIONS[4],"An efficacy trial proves residue compliance. It does not replace current registration and label review."),
+])
+def test_stewardship_caveat_cannot_license_a_contradictory_safety_claim(question,unsafe):
+    from agronomy_agent.observation_guidance import observation_guidance
+    assert observation_guidance(question).unsupported_inference(unsafe)
+
+
+@pytest.mark.parametrize("answer,unsupported",[
+    ("The endpoints are -0.2 t/ha and +0.6 t/ha.",False),
+    ("The interval is -0.2 to +0.6 t/ha.",False),
+    ("The lower endpoint is +0.2 t/ha.",True),
+    ("The estimate is +0.3 t/ha.",True),
+    ("The lower endpoint is -0.2 kg/ha.",True),
+    ("The lower endpoint is -0.2 unknownunits.",True),
+])
+def test_exact_supplied_range_endpoints_retain_shared_units_without_licensing_intermediate_values(answer,unsupported):
+    from agronomy_agent.quantity_claims import unsupported_quantities
+    question="A yield-effect confidence interval spans -0.2 to +0.6 t/ha. Does it establish a strictly positive effect?"
+    assert bool(unsupported_quantities(answer,question=question,evidence="")) is unsupported
+
+
+def test_unidentified_frequency_task_retains_the_actual_clarification_in_production(tmp_path,monkeypatch):
+    question="How often should I do it then? This is the Saskatchewan vegetable field from before, but I still haven't said which crop, soil, or job I mean."
+    answer="Which job or management task do you mean? Please specify the crop, soil and activity before choosing a frequency."
+    test_mechanism_request_keeps_supported_model_explanation_in_saved_answer(tmp_path,monkeypatch,question,answer)
+
+
+@pytest.mark.parametrize("extra",[" Then irrigate tomorrow."," Also choose a pesticide."," Give me a rate."])
+def test_explicit_unknown_task_does_not_discard_an_additional_request(extra):
+    from agronomy_agent.request_scope import explicitly_unspecified_management_task
+    question="How often should I do it then? I haven't specified the task."
+    assert explicitly_unspecified_management_task(question)
+    assert not explicitly_unspecified_management_task(question+extra)
+
+
+@pytest.mark.parametrize("extra",["", " Then harvest wheat tomorrow."," And apply a pesticide."])
+def test_coordinated_crop_season_names_remain_a_mechanism_only_without_operations(extra):
+    from agronomy_agent.answerability import is_mechanism_explanation
+    question="Why can rotating crops with different planting and harvest seasons help weed management?"
+    assert is_mechanism_explanation(question+extra) is (not extra)
+
+
+@pytest.mark.parametrize("question,answer",[
+    ("A pooled model improves overall error but worsens predictions for dryland canola. How should that result be interpreted?",
+     "Overall error can hide poorer subgroup performance. Check the dryland canola sample size, validation split and error distribution separately. Compare matched alternatives and uncertainty; improved pooled error does not qualify the model for that subgroup or establish a field prescription."),
+    ("A fitted vegetation-index trend rises slightly but observations are sparse and irregular. What diagnostics should accompany the claim?",
+     "Assess the observation count, temporal coverage and gaps, residuals, influential points and sensitivity to the fitting method. Account for seasonality, acquisition quality and uncertainty in the fitted trend. A slight estimated rise alone does not establish a robust trend or identify a crop problem."),
+    ("Why can rotating crops with different planting and harvest seasons help weed management?",
+     "Different crop seasons change the timing of disturbance and competition. This can disrupt weed life cycles and reduce repeated selection for weeds adapted to one crop schedule. Crop sequence, cover and weed biology affect the outcome; rotation does not guarantee weed control or authorize a pesticide use."),
+    ("A yield-effect confidence interval spans -0.2 to +0.6 t/ha. Does it establish a strictly positive effect?",
+     "No. The interval includes negative effects down to -0.2 t/ha and positive effects up to +0.6 t/ha, so it does not establish a strictly positive yield effect."),
+])
+def test_analytical_task_keeps_supported_explanation_instead_of_topic_field_checklist(tmp_path,monkeypatch,question,answer):
+    test_mechanism_request_keeps_supported_model_explanation_in_saved_answer(tmp_path,monkeypatch,question,answer)
+
+
+@pytest.mark.parametrize("question",[
+    "A pooled model improves overall error but worsens predictions for dryland canola. How should that result be interpreted?",
+    "A fitted vegetation-index trend rises slightly but observations are sparse and irregular. What diagnostics should accompany the claim?",
+])
+@pytest.mark.parametrize("extra",[" Then irrigate tomorrow."," Also recommend a nitrogen rate."," Can I apply a pesticide?"])
+def test_statistical_interpretation_does_not_exempt_operations(question,extra):
+    from agronomy_agent.answerability import is_mechanism_explanation
+    assert not is_mechanism_explanation(question+extra)
+
+
+GRAIN_PROBE_QUESTION="We found insects in a Manitoba grain bin. How often should probe traps be checked as grain cools, and why is the count not a treatment threshold?"
+
+
+def test_stored_grain_probe_monitoring_is_a_monitoring_task_in_both_route_passes_and_production(tmp_path,monkeypatch):
+    from agronomy_agent.router import classify_query,refine_query_route
+    from agronomy_agent.answerability import assess_answerability
+    route=classify_query(GRAIN_PROBE_QUESTION)
+    for current in [route,refine_query_route(GRAIN_PROBE_QUESTION,route)]:
+        assert current.question_type=="crop_management" and current.risk_level!="regulated"
+        assert assess_answerability(GRAIN_PROBE_QUESTION,route=current).state.value!="require_authority"
+        assert "label_boundary" not in current.namespaces
+    answer=("Use the applicable Manitoba stored-grain monitoring guidance and actual grain temperature to set inspection intervals as grain cools. "
+            "Record trap position, exposure time, insect identity, catches, grain moisture and temperature; trap catches depend on activity and sampling conditions and are not a direct grain-density treatment threshold. "
+            "Use representative grain samples and grain condition to assess a detected population. Monitoring does not authorize a pesticide or fumigant.")
+    test_mechanism_request_keeps_supported_model_explanation_in_saved_answer(tmp_path,monkeypatch,GRAIN_PROBE_QUESTION,answer,allow_source_gap=True)
+
+
+@pytest.mark.parametrize("extra",[" Choose a fumigant and dose."," Then apply a pesticide."," Also frobnicate the bin."," Can I use Product Z?"])
+def test_probe_monitoring_does_not_own_an_additional_unknown_or_product_action(extra):
+    from agronomy_agent.observation_guidance import stored_grain_probe_monitoring
+    from agronomy_agent.router import classify_query,refine_query_route
+    assert not stored_grain_probe_monitoring(GRAIN_PROBE_QUESTION+extra)
+    if "fumigant" in extra or "pesticide" in extra:
+        from agronomy_agent.answerability import assess_answerability
+        q=GRAIN_PROBE_QUESTION+extra
+        route=refine_query_route(q,classify_query(q))
+        assert assess_answerability(q,route=route).state.value=="require_authority"
+
+
+@pytest.mark.parametrize("question",[
+    "A fitted model predicts yield; mulch beds. How should that result be interpreted?",
+    "Frobnicate beds. A fitted model predicts yield. How should that result be interpreted?",
+    "A fitted model predicts yield; perform soil surgery. How should that result be interpreted?",
+])
+def test_analytical_head_does_not_own_earlier_unhandled_commands(question):
+    from agronomy_agent.answerability import is_mechanism_explanation
+    assert not is_mechanism_explanation(question)
+
+
+@pytest.mark.parametrize("kind,answer,unsafe",[
+    (2,"Determine PPE from the current label and task. No PPE is required, but that does not mean the label is optional.",True),
+    (2,"Do not assume that no PPE is required. Follow the current label and task requirements.",False),
+    (4,"It is false that a trial proves registration. Check current registration, residue requirements and the label.",False),
+    (4,"A trial proves registration, but that does not mean its label is optional.",True),
+])
+def test_stewardship_denial_is_local_to_its_proposition(kind,answer,unsafe):
+    from agronomy_agent.observation_guidance import observation_guidance
+    assert observation_guidance(STEWARDSHIP_QUESTIONS[kind]).unsupported_inference(answer) is unsafe
+
+
+@pytest.mark.parametrize("subgroup",["canola then mulch","canola and mulch beds","canola also irrigate"])
+def test_model_subgroup_nominal_cannot_hide_a_second_directive(subgroup):
+    from agronomy_agent.answerability import is_mechanism_explanation
+    assert not is_mechanism_explanation(f"A pooled model improves overall error but worsens predictions for {subgroup}. How should that result be interpreted?")
+
+
+def test_denied_trial_claim_does_not_hide_a_later_affirmative_trial_claim():
+    from agronomy_agent.observation_guidance import observation_guidance
+    assert observation_guidance(STEWARDSHIP_QUESTIONS[4]).unsupported_inference(
+        "It is not true that a trial proves registration, but a trial proves legal use.")
+
+
+SOIL_REPEAT_QUESTION="We want to compare soil tests from the same Alberta field over time. What should stay consistent about sampling location, depth, timing, and handling so the trend is meaningful?"
+
+
+def test_repeat_sampling_fallback_rejects_invented_depth_without_replacing_task_with_soil_maps():
+    from agronomy_agent.observation_guidance import observation_guidance
+    from agronomy_agent.answer_verifier import verify_answer
+    method=observation_guidance(SOIL_REPEAT_QUESTION)
+    assert method is not None and method.has_method("soil_test_repeatability")
+    class Unavailable:
+        def generate(self,messages):raise RuntimeError("synthetic editor unavailable")
+    unsafe="Keep the same location, timing and handling. Use a depth of 24 inches every time."
+    result=verify_answer(unsafe,question=SOIL_REPEAT_QUESTION,evidence_text="",question_type="field_data",risk_level="medium",evidence_docs=(),editor=Unavailable())
+    assert result.answer==method.answer
+    assert "24" not in result.answer and "NRCS" not in result.answer
+    assert result.draft_assessment.unsupported_numbers
+
+
+@pytest.mark.parametrize("extra",[" Then apply nitrogen."," Also choose a depth of 30 cm."," Frobnicate beds."])
+def test_repeat_sampling_scope_keeps_other_actions_and_numerical_selection(extra):
+    from agronomy_agent.request_scope import soil_test_repeatability_requested
+    assert soil_test_repeatability_requested(SOIL_REPEAT_QUESTION)
+    assert not soil_test_repeatability_requested(SOIL_REPEAT_QUESTION+extra)
