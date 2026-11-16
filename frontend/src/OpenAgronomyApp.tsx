@@ -1069,6 +1069,7 @@ const topDocs = (turn: Turn | null): RetrievedDoc[] => (turn?.trace?.retrieved_d
 const decisionLabel = (questionType: string | undefined): string => {
   if (!questionType) return 'Pending'
   if (questionType === 'fertility_diagnostic') return 'Crop stress'
+  if (questionType === 'exam_review') return 'Explanation or calculation'
   const label = questionType.replace(/[_-]+/g, ' ')
   return `${label.charAt(0).toUpperCase()}${label.slice(1)}`
 }
@@ -4566,7 +4567,7 @@ function EvidenceMetrics({ route, docCount, graphCount, mapCount, checkCount }: 
   checkCount: number
 }) {
   const items: Array<[string, string, string?]> = [
-    ['Decision', decisionLabel(route?.question_type), route?.question_type],
+    ['Question type', decisionLabel(route?.question_type), route?.question_type],
     ['Sensitivity', sensitivityLabel(route?.risk_level), route?.risk_level],
     ['Retrieved context', `${docCount} retrieved`],
     ['Graph', `${graphCount} linked`],

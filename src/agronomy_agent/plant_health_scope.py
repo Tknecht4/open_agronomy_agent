@@ -64,7 +64,7 @@ _ROOT_DECLARATION = re.compile(
     r"(?:(?:now|currently|visibly)\s+)?swollen|"
     r"(?:(?:my|our|the|these|this)\s+)?[a-z][a-z-]*\s+(?:have|has)\s+swollen roots?|"
     r"(?:i|we)\s+(?:see|notice|found|have found|can see)\s+swollen roots?"
-    r"(?:\s+(?:on|in)\s+(?:(?:my|our|the|these)\s+)?(?:[a-z][a-z-]*\s*){1,3})?)"
+    r"(?:\s+(?:on|in)\s+(?:(?:my|our|the|these)\s+)?[a-z][a-z-]*(?:\s+[a-z][a-z-]*){0,2})?)"
     r"(?:\s+(?:today|now|currently))?", re.I,
 )
 _ROOT_INSPECTION_REQUEST = re.compile(

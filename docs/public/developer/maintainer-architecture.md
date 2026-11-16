@@ -115,9 +115,10 @@ complete retained model-comparison harness. Its results therefore support the
 QA/QC merge and model-specific diagnostics, not a product-parity or sealed-v3
 claim.
 
-## What helps the small models
+## Historical small-model findings
 
-The most effective components are deterministic and selective:
+The frozen September two-Gemma assessment found these benefits from
+deterministic and selective components:
 
 - typed calculations bypass generation and reached 16/16 in every full-system
   trial;
@@ -130,11 +131,14 @@ The most effective components are deterministic and selective:
 - claim/action-level verification can preserve supported text instead of
   suppressing an entire answer.
 
-The remaining cost is excessive fallback dependence: 148/241 full-system
+That checkpoint still relied heavily on fallback: 148/241 full-system
 cases for Gemma 3 270M and 98–100/241 for Gemma 4 E2B. Gemma 4 also varied in
 27 full-system cases across otherwise deterministic trials. Improving those
-two boundaries is more valuable than adding another broad trigger ladder or
-larger prompt.
+two boundaries motivated later repairs. These counts describe that frozen
+checkpoint and do not measure the current runtime. The current raw/full-system
+comparison uses the complete release-evaluation suite; its source identities,
+coverage and pending reviews are recorded separately in the
+[evaluation operator guide](../operations/release-evaluation.md).
 
 ## Configuration and data authority
 

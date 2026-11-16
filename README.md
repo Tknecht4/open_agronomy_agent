@@ -48,52 +48,35 @@ the exact source, model, cohort, arm and runtime. The [current campaign record](
 separates completed observations, diagnostic attempts and pending scientific
 review. Historical smoke panels retain their original scope.
 
-The current development suite contains 560 original cases and 48 refusal and
+The separately frozen development campaign contains 560 original cases and 48 refusal and
 crop-scope regressions. It compares raw and full-system answers with two trials
 per case on pinned E2B and E4B models and hosted Luna. The cases are exposed
 development material; automated labels and different backend runtimes do not
 establish field accuracy or a general model ranking.
 
-The current software supports these bounded workflows:
+Current workflows include:
 
-- **Calculate from supplied inputs:** nutrient and product quantities, water,
-  sprayer calibration, grain moisture, thermal time, harvest index, sampling
-  area and explicitly supplied soil, crop and budget models, with units and assumptions. A calculation does not select a field target
-  or authorize a product. Named inputs such as laboratory germination,
-  permanent wilting point and harvested yield use shared role definitions in
-  parsing and request checks. Extra quantities and unsupported compound units
-  stay in the whole request and cannot inherit a calculator-only answer;
-  clarification or ordinary model handling may be required.
-  Supplied area and kg/ha can produce a total mass; supplied total available
-  water and depletion fraction can produce an allowable depletion amount.
-  Neither calculation chooses the rate or depletion fraction for a field.
-- **Resolve seed-establishment ambiguity:** distinguish overall emergence from
-  survival after germination. Otherwise complete inputs with an unclear
-  denominator produce two labelled scenarios; a short reply can select the
-  supplied basis without model use.
-- **Explain and collect useful evidence:** definitions, methods, hypothetical
-  arithmetic examples and scouting questions can receive bounded help. Disease
-  history informs soil precautions across rotations; current symptoms and
-  diagnoses keep their own evidence requirements. Experimental soil drying and
-  harvest grain drying retain their distinct meanings in variety comparisons.
-  Sampling design, comparable soil-test depths, forecast bookkeeping and
-  marginal-return explanations retain their analytical scope; incidental crop
-  or nutrient words do not turn them into a field prescription.
-- **Explain safety and evidence:** general pesticide safety checks, task-specific
-  PPE sources and the distinctions between efficacy, crop tolerance and registration can receive
-  bounded explanations. These questions do not authorize a use. Stored-grain
-  probe monitoring retains its own object and method.
-- **Interpret the named source:** product identity and requested passage content
-  control regional-source interpretation. Crop-stage code questions do not
-  require unrelated raster metadata. Regional alerts can inform preventive
-  potato disease planning before visible symptoms, with current crop, target
-  and product restrictions checked separately.
-- **Keep the whole request:** a calculation or definition cannot silently replace
-  additional requested help. Field actions, product selection and use
-  restrictions retain their applicable evidence and current authority checks.
+- **Calculate from supplied inputs:** field totals, seed rates, nutrient and
+  product quantities, water, sprayer calibration, grain moisture and thermal
+  time. Recognized calculations with validated complete inputs can run without
+  loading a model. For
+  example, 120 ha at a supplied 75 kg/ha gives a total of 9,000 kg; the
+  calculation does not choose the rate.
+- **Clarify seed establishment:** when a survival percentage could mean overall
+  emergence or survival after germination, inspect both labelled calculations.
+  A short reply can select the intended basis and complete the calculation.
+- **Keep useful field records:** save observations and soil tests with their
+  known sample dates, depths and methods. Corrections preserve the original
+  record; an unknown sample date stays unknown.
+- **Get explanations and scouting help:** ask about measurement methods,
+  comparisons, crop symptoms and evidence to collect. Current crop, disease
+  history and the requested task keep their distinct roles. Model-generated
+  explanations still need source and applicability review.
 
-These are software contracts under evaluation. Tests, a fluent answer and a
-refusal each require interpretation; none establishes general agronomic accuracy.
+A compound question retains its additional requests: a calculation cannot
+silently replace a request for field advice. Product selection and use retain
+current crop, target, jurisdiction and authority checks. The report separates
+these software contracts and execution checks from judged answer quality.
 
 ## Evidence and licensing
 

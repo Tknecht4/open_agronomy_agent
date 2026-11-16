@@ -757,16 +757,29 @@ def bounded_product_help_kind(question: str) -> str | None:
 def non_prescriptive_help_requested(question: str) -> bool:
     """Own the output-only application guard for bounded help.
 
-    The root predicate qualifies the whole observation request. This union
-    does not classify capability, grant a bypass or remove an authority hold.
+    Root inspection intent owns this output check even when extra observation
+    context needs the ordinary decision planner. The stricter whole-request
+    root predicate still controls that planner. Explicit operations, rates and
+    product-authority requests do not inherit this exclusion. This union does
+    not classify capability, grant a bypass or remove an authority hold.
     """
-    from agronomy_agent.plant_health_scope import root_inspection_only_request
+    from agronomy_agent.plant_health_scope import root_inspection_requested
 
     return bool(
         is_quantity_concept_explanation(question)
         or is_mechanism_explanation(question)
         or bounded_product_help_kind(question)
-        or root_inspection_only_request(question)
+        or (root_inspection_requested(question)
+            and not has_action_directive(question)
+            and not _DIRECT_RATE_RE.search(question)
+            and not _regulated_pack_claim_intent(question)
+            # The output grammar also distinguishes an application from using
+            # a label or response data. Normalize interrogative word order
+            # only for this check; keep the original request for all planners.
+            and not has_application_instruction(re.sub(
+                r"\b(can|could|may|might|should|must|would)\s+(I|we)\s+",
+                lambda match: f"{match[2]} {match[1]} ", question, flags=re.I,
+            )))
     )
 
 
@@ -803,7 +816,8 @@ def has_application_instruction(answer: str) -> bool:
         rf"\b(?!(?:['’]s)?(?:[- ]{modifier}){{0,3}}[- ]{reference}(?![-\w]))"
     )
     determiner = r"(?:(?:the|your|our|this|that|a|an|some|any|each|every|all(?: the| your| our)?)\s+)?"
-    field = r"(?:(?:whole|entire)\s+)?(?:fields?|crops?|canop(?:y|ies)|plants?|beds?)\b"
+    field_modifier = r"(?:(?:whole|entire|affected|symptomatic|healthy|nearby|adjacent)\s+){0,2}"
+    field = rf"{field_modifier}(?:fields?|crops?|canop(?:y|ies)|plants?|beds?)\b"
     def application(spray: str, apply: str, use: str, treat: str) -> str:
         return (
             rf"(?:{spray}\s+(?:{determiner}(?:{field}|{material})|now\b|today\b)|"
@@ -828,7 +842,7 @@ def has_application_instruction(answer: str) -> bool:
     # Physical handling is not a material application. Own the complete gentle
     # lifting/handling clause; a later treatment instruction stays visible.
     answer = re.sub(
-        rf"{start}(?P<handling_verb>treat)\s+(?:the|your|our|these|those)\s+plants?\s+"
+        rf"{start}(?P<handling_verb>treat)\s+(?:the|your|our|these|those)\s+{field_modifier}plants?\s+"
         r"(?:gently|carefully)\s+while\s+(?:lifting|handling)\s+(?:them|it)"
         r"(?:\s+to\s+(?:preserve|protect|keep)\s+(?:(?:the|their)\s+)?(?:fine\s+)?roots?(?:\s+intact)?)?"
         r"(?=\s*(?:[.!?;\n]|$))",
@@ -841,8 +855,28 @@ def has_application_instruction(answer: str) -> bool:
         not re.search(r"\b(?:can|could|may|might|would|should|must)\s*$", answer[:match.start()], re.I)
         for match in re.finditer(rf"{start}(?:please\s+)?{operation}", answer, re.I)
     )
+    # A material-subject passive and an impersonal recommendation can impose
+    # the same operation as an imperative. Require a positive prescriptive
+    # modal, not past-tense history, negation, or a data/label noun phrase.
+    prescriptive_modal = r"(?:should|must|needs? to|ought to|(?:is|are) to)"
+    def passive(modal: str) -> str:
+        return (
+            rf"{determiner}{material}\s+{modal}be\s+"
+            r"(?:applied|sprayed|used|spread|added|mixed|increased|reduced)\b|"
+            rf"{determiner}{field}\s+{modal}be\s+"
+            rf"(?:sprayed\b|treated\s+with\s+{determiner}{material})"
+        )
+    passive_instruction = passive(prescriptive_modal + r"\s+")
+    subjunctive_application = passive(r"(?:(?:should|must)\s+)?")
+    recommended_complement = (
+        rf"to\s+{operation}|that\s+(?:"
+        rf"(?:I|you|we)\s+(?:(?:should|must)\s+)?{operation}|"
+        rf"{subjunctive_application})"
+    )
     return bool(
         direct
+        or re.search(rf"{start}(?:{passive_instruction})", answer, re.I)
+        or re.search(rf"{start}it is (?:recommended|advised|advisable|necessary|best) (?:{recommended_complement})", answer, re.I)
         or re.search(rf"{start}(?:please\s+)?consider\s+{gerund}", answer, re.I)
         or re.search(rf"\b(?:I|you|we)\s+(?:can|should|must|may|could|would|need to|ought to)\s+(?:also\s+)?{operation}", answer, re.I)
         or re.search(rf"\b(?:growers?|farmers?)\s+(?:should|must|need to|ought to)\s+{operation}", answer, re.I)

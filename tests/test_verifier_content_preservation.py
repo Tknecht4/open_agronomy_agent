@@ -555,16 +555,23 @@ def test_rewrite_can_remove_an_unasked_application_and_keep_the_explanation():
 @pytest.mark.parametrize("question,explanation", [
     (APPLICATION_EXPLANATION_QUESTION, APPLICATION_EXPLANATION),
     (ROOT_QUESTION, ROOT_METHOD.replace("rot, or discoloration", "rot, or unusual discoloration")),
+    ("My corn roots are swollen beside the gate. What should I inspect today?", ROOT_METHOD),
+])
+@pytest.mark.parametrize("instruction", [
+    "Spray the whole field now.",
+    "A fungicide should be applied to the roots tomorrow.",
+    "It is recommended to apply a fungicide to the roots tomorrow.",
+    "It is recommended that a fungicide be applied to the roots tomorrow.",
 ])
 def test_persisted_non_prescriptive_help_rejects_an_imposed_nonnumeric_spray_instruction(
-    tmp_path, monkeypatch, question, explanation,
+    tmp_path, monkeypatch, question, explanation, instruction,
 ):
     from agronomy_agent.answerability import has_application_instruction
     from agronomy_agent.execution_core import AgentExecutionRequest
     from agronomy_agent.server.services import chat_service
     from agronomy_agent.server.settings import build_settings
     from agronomy_agent.server.storage.db import TraceStore
-    draft = explanation + " Spray the whole field now."
+    draft = explanation + " " + instruction
 
     class Backend:
         backend_id = "imposed_unasked_application_fixture"
@@ -632,7 +639,96 @@ def test_root_inspection_keeps_negative_application_boundaries_and_label_informa
     ROOT_QUESTION + " Then apply a fungicide.",
     "Apply a fungicide. " + ROOT_QUESTION,
     ROOT_QUESTION + " Also, which pesticide rate should I spray?",
+    "My corn roots are swollen beside the gate. What should I inspect today? What fungicide rate should I apply?",
+    "My corn roots are swollen beside the gate. What should I inspect today? Then irrigate the field.",
+    ROOT_QUESTION + " Can I apply a fungicide to the roots?",
+    ROOT_QUESTION + " May we spray the affected plants?",
+    ROOT_QUESTION + " Should I use a pesticide on the roots?",
 ])
 def test_non_prescriptive_output_scope_does_not_consume_a_mixed_root_and_action_request(question):
     from agronomy_agent.answerability import non_prescriptive_help_requested
     assert not non_prescriptive_help_requested(question)
+
+
+@pytest.mark.parametrize("question", [
+    "My corn roots are swollen beside the gate. What should I inspect today?",
+    "My corn roots are swollen in the lower part of the field. What should I inspect today?",
+    "My corn roots are swollen at V4. What should I inspect today?",
+    "I found swollen roots on my corn near the gate. What should I inspect today?",
+    "My corn roots are swollen beside healthy soybean plants. What should I inspect today?",
+])
+def test_root_context_does_not_disable_the_output_application_guard(question):
+    from agronomy_agent.answer_safety import enforce_answer_safety_postconditions
+    from agronomy_agent.answerability import has_application_instruction, non_prescriptive_help_requested
+    from agronomy_agent.plant_health_scope import root_inspection_only_request
+    from agronomy_agent.router import classify_query, refine_query_route
+
+    # Extra context still needs the ordinary whole-request decision planner.
+    assert not root_inspection_only_request(question)
+    assert non_prescriptive_help_requested(question)
+    route = refine_query_route(question, classify_query(question))
+    assert enforce_answer_safety_postconditions(ROOT_METHOD, question=question, route=route) == ROOT_METHOD
+    instruction = "Apply a fungicide to the roots tomorrow."
+    draft = ROOT_METHOD + " " + instruction
+    assessment = assess_claim_risk(draft, question=question, question_type=route.question_type,
+                                  risk_level=route.risk_level)
+    assert "unrequested_application_instruction" in assessment.reasons
+    final = enforce_answer_safety_postconditions(draft, question=question, route=route)
+    assert instruction not in final and not has_application_instruction(final)
+
+
+@pytest.mark.parametrize("instruction", [
+    "A fungicide should be applied to the roots tomorrow.",
+    "The fungicide must be sprayed on the affected plants.",
+    "The affected plants should be sprayed tomorrow.",
+    "The plants should be treated with a fungicide tomorrow.",
+    "It is recommended to apply a fungicide to the roots tomorrow.",
+    "It is advisable to spray the whole field now.",
+    "It is advised that you spray the whole field now.",
+    "It is recommended that you apply a fungicide to the roots tomorrow.",
+    "It is recommended that a fungicide be applied to the roots tomorrow.",
+    "It is recommended that the plants be treated with a fungicide tomorrow.",
+])
+def test_passive_or_impersonal_wording_does_not_authorize_an_unasked_application(instruction):
+    from agronomy_agent.answer_safety import enforce_answer_safety_postconditions
+    from agronomy_agent.answerability import has_application_instruction
+
+    draft = ROOT_METHOD + " " + instruction
+    assert has_application_instruction(instruction)
+    assessment = assess_claim_risk(draft, question=ROOT_QUESTION, question_type="plant_health", risk_level="low")
+    assert "unrequested_application_instruction" in assessment.reasons
+    final = enforce_answer_safety_postconditions(draft, question=ROOT_QUESTION)
+    assert instruction not in final and not has_application_instruction(final)
+
+
+@pytest.mark.parametrize("statement", [
+    "A fungicide should not be applied from these observations alone.",
+    "A fungicide must never be applied without the applicable label.",
+    "It is not recommended to apply a fungicide from these observations alone.",
+    "It is recommended to inspect the roots before considering treatment.",
+    "It is recommended that you do not apply a fungicide from these observations alone.",
+    "It is not recommended that you apply a fungicide from these observations alone.",
+    "It is recommended that fungicide response data be compared with untreated controls.",
+    "Fungicide response data should be compared with the untreated controls.",
+    "A fungicide was applied to these plants last year.",
+    "The pesticide label states which crops may be treated.",
+    "Spray drift affects plants near the field edge.",
+    "Treat the affected plants gently while lifting them to preserve the fine roots.",
+])
+def test_passive_application_screen_keeps_denials_history_and_analytical_information(statement):
+    from agronomy_agent.answer_safety import enforce_answer_safety_postconditions
+    from agronomy_agent.answerability import has_application_instruction
+
+    draft = ROOT_METHOD + " " + statement
+    assert not has_application_instruction(statement)
+    assert enforce_answer_safety_postconditions(draft, question=ROOT_QUESTION) == draft
+
+
+@pytest.mark.parametrize("followup", [
+    "Can I use the pesticide label as a record?",
+    "Can I use fungicide response data to compare the treatments?",
+    "May we compare fungicide response data with the untreated controls?",
+])
+def test_root_output_scope_does_not_confuse_analytical_or_label_objects_with_applications(followup):
+    from agronomy_agent.answerability import non_prescriptive_help_requested
+    assert non_prescriptive_help_requested(ROOT_QUESTION + " " + followup)

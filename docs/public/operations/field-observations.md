@@ -94,8 +94,10 @@ supports the host, long-lived resting-spore and soil-movement biology. Its older
 regional distribution and management intervals are not current local authority.
 For suspected clubroot, limit movement of contaminated soil while arranging
 confirmation. One nonhost year does not establish eradication: resting spores
-can persist for many years. Follow the [current applicable provincial plan](https://www.alberta.ca/alberta-clubroot-management-plan)
-and any municipal requirements for the field. Check all susceptible brassica
+can persist for many years. For an Alberta field, consult the
+[Alberta clubroot management plan](https://www.alberta.ca/alberta-clubroot-management-plan)
+and applicable municipal requirements. Other regions need their own current
+guidance. Check all susceptible brassica
 crops, volunteers and cruciferous weeds when assessing a nonhost interval.
 
 Treat regional crop-health and agroclimate layers as screening context. Confirm

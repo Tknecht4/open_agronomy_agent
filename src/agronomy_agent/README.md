@@ -167,6 +167,13 @@ require a reported current root symptom and an inspection request; normal
 soybean nodules are discussed only when the currently affected roots are
 explicitly associated with soybean. History, negated observations, healthy
 reference crops and additional operational requests retain their own scope.
+The output application check recognizes reported root-inspection intent even
+with extra location or crop-stage context. Its stricter whole-request predicate
+still owns decision-plan selection; an explicit operation, rate or product
+authority request keeps the ordinary checks. Unasked material applications
+are screened in imperative, prescriptive passive and impersonal recommendation
+forms. Negated boundaries, historical applications and analytical data statements
+do not become application instructions merely from those words.
 Potato monitoring requires recognizable signs, representative coverage and
 diagnostic follow-up as well as crop surfaces and local alerts.
 Explicit missing method steps receive review even below the ordinary risk score

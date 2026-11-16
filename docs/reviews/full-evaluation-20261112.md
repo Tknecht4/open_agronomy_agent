@@ -4,6 +4,29 @@ November 12, 2026. Reference main: `91125d30acd447537184184352d8fadf96ee89ee`.
 
 ## Current status
 
+On November 16, the `67e490e` source completed source verification: 5,951
+backend tests passed on macOS with 58 skipped; 6,050 passed in Linux CI with
+27 skipped. Its frontend passed 508 tests, type checking and building. These
+are engineering checks. The separate 608-case real-output campaign is still
+in progress: both native regression cohorts completed, their full cohorts are
+running, and both hosted Luna cohorts closed with their original failures
+retained. Whole-suite semantic grading and updated comparison numbers remain
+pending.
+
+A subsequent independent production-path review reproduced two current output
+guard gaps using imposed synthetic backend answers, including persisted
+17-stage turns. Ordinary location context could disable the root-inspection
+output application guard. Prescriptive passive and impersonal wording could
+also evade the active-voice instruction check. These are software findings,
+not observed errors in the running model campaign or proof of when the gaps
+were introduced. Repairs separate output-only inspection intent from strict
+decision-plan selection and recognize those additional application forms while
+retaining denials, historical records and analytical statements. The repaired
+source requires its own verification and whole real-output assessment; the
+running `67e490e` results retain their original source identity.
+
+### November 15 collection and source checkpoints
+
 On November 15, the complete `a2eb20e` collection and its automated grading
 closed. All twelve collections retain 14,592 planned slots, including explicit
 execution failures and synthetic fault controls. The full-cohort grading
