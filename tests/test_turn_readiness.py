@@ -34,6 +34,8 @@ PRODUCT_MASS = "How much 25%-N fertilizer supplies 75 kg N/ha in a product-mass 
 GRAIN_MASS = "Grain mass is 12 t at 25% wet-basis moisture. Calculate dry matter and equivalent mass at 10% moisture, ignoring losses."
 MEAN_GDD = "Daily mean temperature is 17 C, base 6 C, no upper cap and negative values are floored at zero. Calculate GDD."
 JOINT_PRODUCT = "Calculate fertilizer product rate and total product: how much 25%-N fertilizer supplies 75 kg N/ha over 16 ha?"
+SUPPLIED_MASS = "For 120 ha at 75 kg/ha, what is the total mass?"
+SUPPLIED_PRODUCT_MASS = "For 120 ha at 75 kg/ha, what is the total product mass?"
 HARVEST_INDEX = "Total above-ground dry biomass is 12 t/ha and grain dry mass is 4.2 t/ha. Compute harvest index."
 SAMPLING_AREA = "Calculate area of a circular sampling plot with radius 12 metres. Explain why this is not the field area."
 SEED_MISSING = "Calculate seed rate: target stand is 200 plants/m², TKW is missing, germination is 95%, post-germination field survival is 90%."
@@ -106,6 +108,52 @@ def test_legacy_daily_gdd_role_aliases_keep_unvalidated_readiness_unknown(runtim
     view = preview(client, turn('Calculate daily GDD from high 25 C, low 9 C and base 7 C.'))
     assert view['requires_model'] is None and view['status'] == 'unknown'
     assert view['calculator']['operation'] == 'daily_gdd'
+
+
+@pytest.mark.parametrize('question', [
+    'For 120 ha at 75 kg/ha/day, what is the total product mass?',
+    'For 120 ha at 75 kg N/ha, what is the total product mass?',
+    'For 120 ha at 75 kg/ha and 20% loss, what is the total product mass?',
+    'For 120 ha at 75 kg/ha, what is the total product mass? Then spray it.',
+    'For 120 ha at 75 kg/ha, what is the total product mass? Also flarn the crop.',
+    'For 120 ha at 7.5e1 kg/ha, what is the total product mass?',
+])
+def test_supplied_mass_preview_cannot_own_extra_units_quantities_or_tasks(runtime, monkeypatch, question):
+    client, _ = runtime
+    monkeypatch.setattr(chat_service, '_build_mlx_generator', no_generator)
+    assert preview(client, turn(question))['requires_model'] is not False
+
+
+@pytest.mark.parametrize('question', [
+    'For 0 ha at 75 kg/ha, what is the total mass?',
+    'For -120 ha at 75 kg/ha, what is the total mass?',
+    'For 120 ha at -75 kg/ha, what is the total product mass?',
+])
+def test_supplied_mass_invalid_ranges_preview_as_input_clarification(runtime, monkeypatch, question):
+    client, _ = runtime
+    monkeypatch.setattr(chat_service, '_build_mlx_generator', no_generator)
+    view = preview(client, turn(question))
+    assert view['requires_model'] is False and view['status'] == 'clarification_required'
+
+
+def test_supplied_mass_preview_keeps_unqualified_decimal_magnitude_unknown(runtime, monkeypatch):
+    client, _ = runtime
+    monkeypatch.setattr(chat_service, '_build_mlx_generator', no_generator)
+    view = preview(client, turn('For 999999999999999999999999 ha at 75 kg/ha, what is the total mass?'))
+    assert view['requires_model'] is None and view['status'] == 'unknown'
+    assert view['calculator']['operation'] == 'field_product_total'
+
+
+@pytest.mark.parametrize('question', [SUPPLIED_MASS, SUPPLIED_PRODUCT_MASS])
+def test_mass_preview_does_not_execute_the_planners_imported_calculator(runtime, monkeypatch, question):
+    import agronomy_agent.tool_planner as planner
+    client, _ = runtime
+    def forbidden(*args, **kwargs):
+        raise AssertionError('planning must validate inputs without executing arithmetic')
+    monkeypatch.setattr(planner, 'calculate_agronomic', forbidden)
+    monkeypatch.setattr(chat_service, '_build_mlx_generator', no_generator)
+    view = preview(client, turn(question))
+    assert view['requires_model'] is False and view['status'] == 'ready'
 
 
 @pytest.mark.parametrize("backend", ["mlx", "http"])
@@ -201,6 +249,8 @@ def test_conditional_seed_basis_and_missing_lab_germination_complete_without_mod
                                           (P_CONVERSION, "deterministic_tool_result"),
                                           (P_BALANCE, "deterministic_tool_result"),
                                           (LIQUID_TOTAL, "deterministic_tool_result"),
+                                          (SUPPLIED_MASS, "deterministic_tool_result"),
+                                          (SUPPLIED_PRODUCT_MASS, "deterministic_tool_result"),
                                           *[(q, "deterministic_tool_result") for q in (WATER_CAPACITY, WATER_REFILL, CROP_ET, GROSS_DEPTH, DEPTH_VOLUME, NOZZLE_VOLUME, PRODUCT_MASS, GRAIN_MASS, MEAN_GDD, HARVEST_INDEX, SAMPLING_AREA, JOINT_PRODUCT)],
                                           *[(q, "deterministic_tool_result") for q in (SEED_OVERALL, SEED_CONDITIONAL, SEED_NO_LAB, SEED_IMPERIAL)],
                                           (SEED_AMBIGUOUS, "deterministic_tool_clarification"),
@@ -230,6 +280,7 @@ def test_actual_missing_model_calculation_and_clarification_persist_without_cons
         expected = {TANK: "10 ha", CONVERSION: "112.085 kg/ha", AREA_CONVERSION: "98.842 ac",
                     FIELD_N_TOTAL: "2,086.957 kg", WATER_STORAGE: "72 mm",
                     P_CONVERSION: "32.73 kg P/ha", P_BALANCE: "17 kg P/ha", LIQUID_TOTAL: "48 L product",
+                    SUPPLIED_MASS: "9,000 kg", SUPPLIED_PRODUCT_MASS: "9,000 kg",
                     WATER_CAPACITY: "160 mm", WATER_REFILL: "40 mm", CROP_ET: "4.4 mm/day", GROSS_DEPTH: "30 mm",
                     DEPTH_VOLUME: "1,200 m³", NOZZLE_VOLUME: "144 L/ha", PRODUCT_MASS: "300 kg product/ha", GRAIN_MASS: "10 t", MEAN_GDD: "11 GDD", HARVEST_INDEX: "0.35 harvest index", SAMPLING_AREA: "452.389 m²", JOINT_PRODUCT: "4,800 kg",
                     SEED_OVERALL: "4.8 kg/ha", SEED_CONDITIONAL: "5 kg/ha", SEED_NO_LAB: "4.8 kg/ha", SEED_IMPERIAL: "4.61 lb/ac"}
@@ -264,6 +315,8 @@ def test_preview_is_read_only_and_does_not_create_a_session(runtime, monkeypatch
                                                (P_CONVERSION, "nutrient_basis_conversion"),
                                                (P_BALANCE, "apparent_nutrient_balance"),
                                                (LIQUID_TOTAL, "liquid_product_total"),
+                                               (SUPPLIED_MASS, "field_product_total"),
+                                               (SUPPLIED_PRODUCT_MASS, "field_product_total"),
                                                (WATER_CAPACITY, "water_storage_difference"), (WATER_REFILL, "water_storage_difference"),
                                                (CROP_ET, "crop_evapotranspiration"), (GROSS_DEPTH, "gross_irrigation_depth"),
                                                (DEPTH_VOLUME, "water_depth_volume"), (NOZZLE_VOLUME, "single_nozzle_application_volume"),

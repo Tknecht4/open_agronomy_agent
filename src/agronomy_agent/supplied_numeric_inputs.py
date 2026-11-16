@@ -27,7 +27,7 @@ def unit_owned_area_mass_total(text: str) -> dict[str, str] | None:
     area = rf"(?P<area>{NUMBER})\s*(?:ha|hectares?)"
     rate = rf"(?P<rate>{NUMBER})\s*kg\s*(?:/|per\s+)(?:ha|hectares?)"
     premise = rf"{area}\s+(?:at|with a supplied rate of)\s+{rate}"
-    output = r"(?:the\s+)?(?:total(?:\s+mass)?|mass needed)"
+    output = r"(?:the\s+)?(?:total(?:\s+(?:product\s+)?mass)?|mass needed)"
     patterns = (
         rf"(?:for\s+)?{premise}\s*[,;.]?\s*(?:what is|calculate|compute|work out)\s+{output}",
         rf"(?:calculate|compute|work out)\s+{output}\s+for\s+{premise}",

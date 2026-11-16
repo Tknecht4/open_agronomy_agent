@@ -7,6 +7,7 @@ from agronomy_agent.supplied_numeric_inputs import unit_owned_area_mass_total
 
 @pytest.mark.parametrize('question,expected', [
     ('For 65 ha at 85 kg/ha, what is the total?', 5525),
+    ('For 120 ha at 75 kg/ha, what is the total product mass?', 9000),
     ('For 18 hectares at 47.5 kg per hectare, compute the total mass.', 855),
     ('Calculate the total mass for 2.5 ha at 12 kg/ha.', 30),
     ('What is the total for 1,200 ha at 12.5 kg/ha?', 15000),

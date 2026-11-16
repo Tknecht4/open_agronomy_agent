@@ -113,7 +113,9 @@ return a useful status rather than fabricating a successful capability result.
 `POST /api/turn-readiness` previews the same turn payload through the canonical
 tool/capability planners after authentication and field/session authorization.
 It reads an optional existing session and creates no session, turn or operation
-receipt. `requires_model` is false for validated unit conversion, tank coverage,
+receipt. `requires_model` is false for validated unit conversion, supplied area
+× mass-rate totals (for example, “For 120 ha at 75 kg/ha, what is the total
+product mass?”), tank coverage,
 fertilizer field totals, soil-water storage, the qualified supplied-model arithmetic forms, or the canonical missing-input
 clarification. Unvalidated complete calculations remain
 unknown. The response binds the request and current field/history state. Turn

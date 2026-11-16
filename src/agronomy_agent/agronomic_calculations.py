@@ -953,10 +953,17 @@ def _row_population(inputs: Mapping[str, Any]) -> AgronomicCalculation:
     )
 
 
-def _field_product_total(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+def validate_field_product_total_inputs(inputs: Mapping[str, Any]) -> dict[str, Decimal]:
+    """Validate supplied area and mass rate without executing the calculation."""
     _require_only(inputs, required={"area_ha", "product_rate_kg_per_ha"})
     area = _positive(inputs, "area_ha")
     rate = _nonnegative(inputs, "product_rate_kg_per_ha")
+    return {"area_ha": area, "product_rate_kg_per_ha": rate}
+
+
+def _field_product_total(inputs: Mapping[str, Any]) -> AgronomicCalculation:
+    normalized = validate_field_product_total_inputs(inputs)
+    area, rate = normalized["area_ha"], normalized["product_rate_kg_per_ha"]
     answer = area * rate
     return _result(
         CalculationOperation.FIELD_PRODUCT_TOTAL,

@@ -47,6 +47,7 @@ from agronomy_agent.capability_registry import capability_registry
 from agronomy_agent.agronomic_calculations import (
     _format_decimal, calculation_tool_schema, validate_tank_coverage_inputs,
     validate_unit_conversion_inputs, validate_fertilizer_field_total_inputs,
+    validate_field_product_total_inputs,
     validate_soil_water_storage_inputs,
     validate_supplied_nutrient_inputs,
     validate_fertilizer_product_mass_inputs, validate_sprayer_application_volume_inputs,
@@ -426,6 +427,22 @@ def preview_turn_readiness(
                 validated_inputs = True
             except (ValueError, DecimalException):
                 validated_inputs = False
+        elif calculator.operation == "field_product_total":
+            try:
+                values = validate_field_product_total_inputs(calculator.inputs)
+                area, rate = values["area_ha"], values["product_rate_kg_per_ha"]
+                # Bound the existing Decimal/JSON formatter without multiplying
+                # operands or executing a capability during readiness preview.
+                if any(len(value.as_tuple().digits) > 28 or
+                       (value and not -300 <= value.adjusted() <= 23)
+                       for value in values.values()):
+                    raise ValueError("field total operands exceed preview precision")
+                if rate and not -300 <= area.adjusted() + rate.adjusted() + 1 <= 23:
+                    raise ValueError("field total exceeds preview precision")
+                validated_inputs = True
+            except (ValueError, DecimalException):
+                validated_inputs = False
+                reason = "invalid_calculator_inputs"
         elif calculator.operation in SEED_ESTABLISHMENT_OPERATIONS:
             try:
                 validate_seed_calculation_inputs(calculator.operation, calculator.inputs)

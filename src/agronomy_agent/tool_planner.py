@@ -13,7 +13,7 @@ import json
 import re
 from typing import Any, Mapping
 
-from agronomy_agent.agronomic_calculations import calculation_tool_schema, calculate_agronomic
+from agronomy_agent.agronomic_calculations import calculation_tool_schema, calculate_agronomic, validate_field_product_total_inputs
 from agronomy_agent.request_scope import has_unqualified_followup
 from agronomy_agent.supplied_numeric_inputs import NUMBER as SUPPLIED_NUMBER, SPACED_SIGNED_NUMBER, area_unit_extension_gaps, unit_owned_area_mass_total
 from agronomy_agent.calculator_contracts import CALCULATOR_VERSION, TOOL_PLANNER_VERSION, format_calculator_clarification, tool_version_for
@@ -527,7 +527,7 @@ def _parse_field_product_total(text: str, lower: str):  # noqa: ANN202
     supplied = unit_owned_area_mass_total(text)
     if supplied is not None:
         try:
-            calculate_agronomic('field_product_total', supplied)
+            validate_field_product_total_inputs(supplied)
         except ValueError as error:
             return 'field_product_total', supplied, ('invalid ' + str(error),)
         return 'field_product_total', supplied, ()
