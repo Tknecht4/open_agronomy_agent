@@ -29,7 +29,12 @@ class Editor:
     ("The laboratory report was issued on 2030-06-21.", "2030-06-21"),
     ("The report has been issued on 2030-06-21.", "2030-06-21"),
     ("Report issuance (2030-06-21).", "2030-06-21"),
+    ("Report issuance (21 June 2030).", "2030-06-21"),
+    ("Report issuance (June 21, 2030).", "2030-06-21"),
+    ("Report issuance (21 Jun. 2030).", "2030-06-21"),
+    ("Report issuance (Jun. 21, 2030).", "2030-06-21"),
     ("Report issuance (21 June).", "21 June"),
+    ("Report issuance (21 Jun.).", "21 June"),
 ])
 def test_supplied_date_roles_survive_equivalent_report_event_prose(issuance, report_date):
     question = (
@@ -119,6 +124,13 @@ def test_rhetorical_or_unrelated_notes_do_not_supply_root_recording_instructions
     "Treat report issuance (2030-06-21) as the processing date.",
     "Analysis (2030-06-21) and report issuance (2030-06-21).",
     "Processing (21 June) and report issuance (21 June).",
+    "Report issuance (21 June 2030) is the analysis date.",
+    "Treat report issuance (June 21, 2030) as the collection date.",
+    "Analysis (21 Jun. 2030) and report issuance (21 Jun. 2030).",
+    "Report issuance (21 Jun. 2030) is the analysis date.",
+    "The collection date is report issuance (Jun. 21, 2030).",
+    "No analysis (21 Jun. 2030) is confirmed. Analysis (21 Jun. 2030).",
+    "No analysis (21 Jun.) is confirmed. Analysis (21 Jun.).",
 ])
 def test_nominal_date_items_do_not_license_role_conflation_or_an_invented_event(proposition):
     question = (
@@ -140,6 +152,8 @@ def test_nominal_date_items_do_not_license_role_conflation_or_an_invented_event(
     "Do not use the analysis date as report issuance (2030-06-21).",
     "It is not true that report issuance (2030-06-21) is the analysis date.",
     "If report issuance (2030-06-21) is the collection date, check the separate event records first.",
+    "Report issuance (21 June 2030) is not the analysis date.",
+    "Do not treat report issuance (Jun. 21, 2030) as the collection date.",
 ])
 def test_nominal_report_role_denials_or_conditionals_do_not_assert_reassignment(ending):
     question = (
@@ -159,6 +173,10 @@ def test_nominal_report_role_denials_or_conditionals_do_not_assert_reassignment(
     "If analysis (2030-06-19), can I store that?",
     "No analysis (2030-06-19) is confirmed.",
     "Analysis (2030-06-19), but that is unconfirmed.",
+    "Is the analysis (19 Jun. 2030) supplied?",
+    "If analysis (19 Jun. 2030), can I store that?",
+    "No analysis (19 Jun. 2030) is confirmed.",
+    "Analysis (19 Jun. 2030), but that is unconfirmed.",
 ])
 def test_nominal_analysis_event_retains_occurrence_local_question_and_denial_controls(statement):
     question = (
@@ -171,6 +189,38 @@ def test_nominal_analysis_event_retains_occurrence_local_question_and_denial_con
     )
     assessment = assess_claim_risk(draft, question=question, question_type="field_data")
     assert "sample_event_role_conflation" in assessment.reasons
+
+
+def test_abbreviated_analysis_date_can_be_supplied_without_merging_event_roles():
+    question = (
+        "My soil sample was collected 2030-06-14. Analysis (19 Jun. 2030) is supplied, "
+        "and the report was issued 2030-06-21. Which sampling date should I compare, "
+        "and how should I keep the dates?"
+    )
+    draft = (
+        "Use the collection date, 2030-06-14, for sampling comparisons. Keep distinct events "
+        "separately linked: analysis (19 Jun. 2030); report issuance (21 Jun. 2030)."
+    )
+    editor = Editor()
+    result = verify_answer(draft, question=question, evidence_text="", question_type="field_data",
+                           risk_level="low", editor=editor,
+                           review_mode="risk_conditioned_selective_v3")
+    assert result.answer == draft and editor.calls == 0 and not result.triggered
+
+
+@pytest.mark.parametrize("text,clauses", [
+    ("Analysis (21 Jun. 2030). Report issuance (21 June 2030).",
+     ["Analysis (21 Jun. 2030).", " Report issuance (21 June 2030)."]),
+    ("Analysis (21 Jun.). Report issuance (21 June).",
+     ["Analysis (21 Jun.).", " Report issuance (21 June)."]),
+    ("Analysis 21 Jun. Another event remains unknown.",
+     ["Analysis 21 Jun.", " Another event remains unknown."]),
+    ("No analysis is confirmed. Analysis (21 Jun. 2030).",
+     ["No analysis is confirmed.", " Analysis (21 Jun. 2030)."]),
+])
+def test_sample_event_clause_boundaries_preserve_original_date_and_sentence_bytes(text, clauses):
+    from agronomy_agent.answer_verifier import _sample_event_clauses
+    assert [clause + ending for clause, ending in _sample_event_clauses(text)] == clauses
 
 
 def test_independently_supplied_coincident_dates_retain_their_separate_roles():
@@ -243,6 +293,12 @@ def test_public_verification_rejects_an_editor_that_drops_concrete_root_inspecti
             "Record crop stage and the field pattern.",
             "Note where symptoms occur in the field and the crop stage, and take clear photos.",
         ),
+    ),
+    (
+        "My soil sample was collected 2030-06-14, analysed 2030-06-19, and its report issued "
+        "2030-06-21. Which sampling date should I compare across seasons, and how should I preserve the other dates?",
+        "Store distinct dated events: collection (2030-06-14), analysis (2030-06-19), and report issuance "
+        "(June 21, 2030). Use the collection date for sampling comparisons; retain each role separately.",
     ),
     (
         ROOT_QUESTION,

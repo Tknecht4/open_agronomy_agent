@@ -123,10 +123,11 @@ def sample_event_date_pattern() -> str:
     """Shared dated-event spelling; recognition does not establish its truth."""
     month = (
         r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|"
-        r"Aug(?:ust)?|Sept?(?:ember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)"
+        r"Aug(?:ust)?|Sept?(?:ember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?"
     )
     day = r"\d{1,2}(?:st|nd|rd|th)?"
-    return rf"(?:\d{{4}}-\d{{1,2}}-\d{{1,2}}|\d{{1,2}}[/-]\d{{1,2}}(?:[/-]\d{{2,4}})?|{month}\s+{day}|{day}\s+{month})"
+    year = r"(?:,?\s+\d{4})?"
+    return rf"(?:\d{{4}}-\d{{1,2}}-\d{{1,2}}|\d{{1,2}}[/-]\d{{1,2}}(?:[/-]\d{{2,4}})?|{month}\s+{day}{year}|{day}\s+{month}{year})"
 
 
 def stored_grain_context(question: str) -> bool:

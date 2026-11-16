@@ -1388,14 +1388,30 @@ def _nominal_report_event_role_reassigned(clause: str) -> bool:
     return False
 
 
+def _sample_event_clauses(text: str) -> Iterable[tuple[str, str]]:
+    """Keep date-owned abbreviation dots inside their original event clause."""
+    protected: set[int] = set()
+    for event in re.finditer(sample_event_date_pattern(), text, re.I):
+        closed_item = bool(re.match(r"\s*\)", text[event.end():]))
+        for offset, character in enumerate(event.group()):
+            if character == "." and (offset < len(event.group()) - 1 or closed_item):
+                protected.add(event.start() + offset)
+    start = 0
+    for ending in re.finditer(r"[.!?;\n]", text):
+        if ending.start() not in protected:
+            yield text[start:ending.start()], ending.group()
+            start = ending.end()
+    if start < len(text):
+        yield text[start:], ""
+
+
 def _sample_analysis_date_supplied(question: str) -> bool:
     """Only affirmative supplied events establish an analysis date.
 
     A proposed date in a question or conditional is not observed information,
     even when it happens to match an independently supplied report date.
     """
-    for match in re.finditer(r"([^.!?;\n]+)([.!?;\n]|$)", question):
-        clause, end = match.groups()
+    for clause, end in _sample_event_clauses(question):
         if _sample_event_question_clause(clause + end):
             continue
         for event in _sample_analysis_date_value_mentions(clause):
@@ -1573,7 +1589,8 @@ def assess_claim_risk(
         reasons.append("unasked_application_instruction")
     if sample_event_roles_stated(question):
         analysis_supplied = _sample_analysis_date_supplied(question)
-        for clause in re.findall(r"[^.!?;\n]+[.!?;\n]?", candidate):
+        for clause, ending in _sample_event_clauses(candidate):
+            clause += ending
             if (_nominal_report_event_role_reassigned(clause)
                     or (not analysis_supplied and _unprovided_sample_analysis_event_claim(clause))):
                 reasons.append("sample_event_role_conflation")
