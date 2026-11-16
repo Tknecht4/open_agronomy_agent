@@ -809,6 +809,7 @@
     "tests/test_supplied_nutrient_arithmetic.py",
     "tests/test_supplied_water_arithmetic.py",
     "tests/test_supplied_model_parser.py",
+    "tests/test_supplied_depletion_arithmetic.py",
     "tests/test_supplied_model_arithmetic.py",
     "tests/test_supplied_input_request_integrity.py",
     "tests/test_turn_readiness.py",
@@ -860,6 +861,7 @@
     "docs/reviews/full-evaluation-20261112.md",
     "tests/test_release_eval_external.py",
     "tests/test_project_corpus_refresh.py",
+    "tests/test_unit_owned_mass_total.py",
     "tests/test_verifier_content_preservation.py",
     "data/seed/agronomy_rag_corpus_v2.jsonl"
   ],
