@@ -13,9 +13,9 @@ import json
 import re
 from typing import Any, Mapping
 
-from agronomy_agent.agronomic_calculations import calculation_tool_schema
+from agronomy_agent.agronomic_calculations import calculation_tool_schema, calculate_agronomic
 from agronomy_agent.request_scope import has_unqualified_followup
-from agronomy_agent.supplied_numeric_inputs import NUMBER as SUPPLIED_NUMBER, SPACED_SIGNED_NUMBER, area_unit_extension_gaps
+from agronomy_agent.supplied_numeric_inputs import NUMBER as SUPPLIED_NUMBER, SPACED_SIGNED_NUMBER, area_unit_extension_gaps, unit_owned_area_mass_total
 from agronomy_agent.calculator_contracts import CALCULATOR_VERSION, TOOL_PLANNER_VERSION, format_calculator_clarification, tool_version_for
 from agronomy_agent.foundation_math_parser import AREA, _unsafe_action_request, parse_foundation_calculation
 from agronomy_agent.supplied_nutrient_parser import parse_supplied_nutrient_calculation
@@ -524,6 +524,13 @@ def _parse_row_population(text: str, lower: str):  # noqa: ANN202
 
 
 def _parse_field_product_total(text: str, lower: str):  # noqa: ANN202
+    supplied = unit_owned_area_mass_total(text)
+    if supplied is not None:
+        try:
+            calculate_agronomic('field_product_total', supplied)
+        except ValueError as error:
+            return 'field_product_total', supplied, ('invalid ' + str(error),)
+        return 'field_product_total', supplied, ()
     if "whole field" not in lower or "kg/ha of a fertilizer product" not in lower:
         return None
     area = re.search(rf"field is\s*{_NUMBER}\s*ha", text, re.IGNORECASE)

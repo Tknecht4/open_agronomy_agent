@@ -9,6 +9,7 @@ import sys
 import pytest
 
 import agronomy_agent.benchmark_v2_runner as runner_module
+from agronomy_agent.calculator_contracts import CALCULATOR_VERSION
 
 from agronomy_agent.benchmark_v2_runner import (
     DeterministicContractExecutor,
@@ -201,13 +202,13 @@ def test_pre_generation_hold_is_distinct_from_verifier_opportunity() -> None:
 
 def test_seed_revision_is_declared_and_frozen_reference_gap_remains_observed() -> None:
     declaration = DeterministicContractExecutor().harness_capabilities()["semantic_profile"]["tool_implementations"]["agronomic_calculator"]
-    assert declaration["operation_versions"]["seed_rate_mass"] == "agronomic_calculator_v4"
+    assert declaration["operation_versions"]["seed_rate_mass"] == CALCULATOR_VERSION
     assert declaration["operation_versions"]["unit_conversion"] == "agronomic_calculator_v1"
     observation = next(row for row in _run()["observations"] if
                        row["eval_id"] == "oab2::spring_wheat_stand::fully_specified_calculation"
                        and row["arm_id"] == "production_full")
     assert observation["tool_results"] == []
-    assert observation["tool_invocations"][0]["tool_version"] == "agronomic_calculator_v4"
+    assert observation["tool_invocations"][0]["tool_version"] == CALCULATOR_VERSION
     assert observation["answerability_state"] == "ask_one_discriminating_question"
     assert observation["clarification_fields"] == ["the survival denominator (all seeds sown or only germinated seeds)"]
     assert len(observation["clarifying_questions"]) == 1
@@ -787,7 +788,10 @@ def test_frozen_synthetic_fixture_never_executes_or_discards_conditional_scenari
     ("foundation_math_parser.py", {"tool_executor_bundle", "verifier_policy", "fallback_policy"}),
     ("supplied_model_parser.py", {"tool_executor_bundle", "verifier_policy", "fallback_policy"}),
     ("supplied_model_arithmetic.py", {"tool_executor_bundle", "verifier_policy", "fallback_policy"}),
-    ("request_scope.py", {"answerability_policy", "kernel_config", "verifier_policy", "fallback_policy", "tool_executor_bundle"}),
+    ("request_scope.py", {"answerability_policy", "kernel_config", "verifier_policy", "fallback_policy", "tool_executor_bundle", "field_context_contract"}),
+    ("evidence_handshake.py", {"verifier_policy", "fallback_policy", "field_context_contract"}),
+    ("supplied_numeric_inputs.py", {"answerability_policy", "kernel_config", "verifier_policy", "fallback_policy", "tool_executor_bundle"}),
+    ("supplied_depletion_request.py", {"answerability_policy", "kernel_config", "verifier_policy", "fallback_policy", "tool_executor_bundle"}),
     ("arithmetic_input_roles.py", {"answerability_policy", "kernel_config", "verifier_policy", "fallback_policy", "tool_executor_bundle"}),
     ("plant_health_scope.py", {"kernel_config", "verifier_policy", "fallback_policy"}),
 ])

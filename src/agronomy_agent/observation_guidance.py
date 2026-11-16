@@ -65,6 +65,13 @@ class ObservationGuidance:
                 ):
                     if not _proposition_explicitly_denied(sentence[:claim.start()]):
                         return True
+            if self.has_method("crop_tolerance_authority_boundary"):
+                for claim in re.finditer(
+                    r"\b(?:trait|tolerance)(?: alone)?\s+(?:establishes|proves|confirms|demonstrates|authorizes)\b"
+                    r"[^.;]{0,100}?\b(?:registration|permitted use|legal use|herbicide use)\b", sentence, re.I,
+                ):
+                    if not _proposition_explicitly_denied(sentence[:claim.start()]):
+                        return True
             if self.has_method("protective_equipment_basis"):
                 for claim in re.finditer(r"\bno (?:PPE|protective equipment) is (?:needed|required)\b", sentence, re.I):
                     if not _proposition_explicitly_denied(sentence[:claim.start()]):
@@ -237,6 +244,15 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
         ), (("recommendation_label_basis", "Retain current product authority.", (r"\blabel\b",)),
             ("handler_safety", "Include handler exposure or PPE.", (r"\b(?:PPE|protective equipment|handler exposure)\b",)),
             ("environmental_protection", "Include off-target environmental exposure.", (r"\b(?:drift|pollinator|water|non-target)\b",))))
+        return
+    if stewardship == "crop_tolerance_authority_boundary":
+        yield ObservationGuidance(stewardship, (
+            "No. A crop's herbicide-tolerance trait describes a biological response; it does not establish that a proposed herbicide use is currently permitted. "
+            "Verify the crop and trait identity and the exact current product registration and label for the jurisdiction, crop, target, application timing and method, and other use restrictions. "
+            "Crop tolerance and use authorization answer different questions. Neither the trait nor a remembered use pattern replaces the current applicable label."
+        ), (("trait_not_authority", "Separate crop tolerance from use authorization.", (r"\b(?:does not|cannot|not automatically)\b[^.]{0,100}\b(?:permitted|authoriz|registration)\w*\b",)),
+            ("trait_current_label", "Retain exact current label and jurisdiction checks.", (r"\bcurrent\b[^.]{0,65}\blabel\b",)),
+            ("trait_identity", "Verify crop and trait identity.", (r"\b(?:crop|trait) identity\b",))))
         return
     if stewardship == "efficacy_authority_boundary":
         yield ObservationGuidance(stewardship, (

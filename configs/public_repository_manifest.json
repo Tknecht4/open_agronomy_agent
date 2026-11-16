@@ -448,6 +448,7 @@
     "configs/benchmark_capability_conformance_v2.json",
     "configs/benchmark_capability_conformance_v3.json",
     "configs/benchmark_capability_conformance_v4.json",
+    "configs/benchmark_capability_conformance_v5.json",
     "docs/reviews/production-foundations-benchmark-20260927.md",
     "docs/reviews/production-foundations-efficacy-audit-20260927.md",
     "docs/reviews/production-foundations-method-transfer-plan-20260927.md",

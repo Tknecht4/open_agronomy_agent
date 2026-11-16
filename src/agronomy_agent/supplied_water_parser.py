@@ -11,6 +11,7 @@ from agronomy_agent.calculator_contracts import supplied_input_label
 
 from agronomy_agent.supplied_numeric_inputs import NUMBER as _NUMBER, supplied_numeric_gaps, extended_unit
 from agronomy_agent.arithmetic_input_roles import FIELD_CAPACITY_ROLE, WILTING_POINT_ROLE, ROOT_DEPTH_ROLE
+from agronomy_agent.supplied_depletion_request import supplied_depletion_request
 
 
 def _value(text: str, *patterns: str, bindings: list[re.Match[str]]) -> str | None:
@@ -35,6 +36,18 @@ def _value(text: str, *patterns: str, bindings: list[re.Match[str]]) -> str | No
 
 
 def parse_supplied_water_calculation(question: str) -> tuple[str, dict[str, Any], tuple[str, ...]] | None:
+    depletion = supplied_depletion_request(question)
+    if depletion is not None:
+        values = {'total_available_water_mm': depletion.total_available_water_mm,
+                  'depletion_fraction': depletion.depletion_fraction}
+        missing = tuple(supplied_input_label(key) for key, value in values.items() if value is None)
+        bound = {key: value for key, value in values.items() if value is not None}
+        if not missing:
+            try:
+                validate_water_arithmetic_inputs('allowable_water_depletion', bound)
+            except ValueError as error:
+                missing = ('invalid ' + str(error),)
+        return 'allowable_water_depletion', bound, missing
     text = supplied_math_scope(question)
     if text is None:
         return None

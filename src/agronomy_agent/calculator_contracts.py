@@ -3,11 +3,11 @@
 import re
 from agronomy_agent.supplied_model_arithmetic import MODEL_INPUTS
 
-CALCULATOR_VERSION = "agronomic_calculator_v4"
+CALCULATOR_VERSION = "agronomic_calculator_v5"
 LEGACY_CALCULATOR_VERSION = "agronomic_calculator_v1"
-CALCULATOR_SCHEMA_VERSION = "open_agronomy_agent.agronomic_calculator.schema.v4"
-TOOL_PLANNER_VERSION = "open_agronomy_agent.tool_planner.v5"
-EXPLICIT_ARITHMETIC_SELECTOR_ID = "explicit_arithmetic_parser_v4"
+CALCULATOR_SCHEMA_VERSION = "open_agronomy_agent.agronomic_calculator.schema.v5"
+TOOL_PLANNER_VERSION = "open_agronomy_agent.tool_planner.v6"
+EXPLICIT_ARITHMETIC_SELECTOR_ID = "explicit_arithmetic_parser_v5"
 SEED_ESTABLISHMENT_OPERATIONS = frozenset({"seed_rate_mass", "seed_rate_mass_imperial", "seed_population_density"})
 
 FOUNDATION_OPERATIONS = frozenset({
@@ -25,6 +25,7 @@ FOUNDATION_OPERATIONS = frozenset({
     "crop_evapotranspiration",
     "gross_irrigation_depth",
     "water_depth_volume",
+    "allowable_water_depletion",
     "grain_moisture_adjustment",
     "single_nozzle_application_volume",
     "mean_temperature_gdd",
@@ -56,6 +57,8 @@ def supplied_input_label(name: str) -> str:
         "net_depth_mm": "supplied net irrigation depth in mm",
         "application_efficiency_pct": "application efficiency (%)",
         "depth_mm": "water depth in mm",
+        "total_available_water_mm": "supplied total available water in mm",
+        "depletion_fraction": "supplied allowable depletion fraction (0 to 1)",
         "grain_dry_mass": "grain dry mass", "aboveground_dry_mass": "total above-ground dry biomass including grain",
         "radius_m": "one sampling-circle radius in metres",
         "wet_mass": "wet grain mass or yield", "mass_unit": "mass unit (kg, tonnes or lb, including any ha/ac denominator)",

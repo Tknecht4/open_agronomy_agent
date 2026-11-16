@@ -22,6 +22,39 @@ _NEGATED_SYMPTOMS = re.compile(
     r"\b(?:root )?galls? (?:are|were) (?:absent|not present)\b", re.I)
 
 
+def foliar_symptoms_reported(question: str) -> bool:
+    """Find affirmative current foliar reports, not a disease-name mention.
+
+    This classifies the report, never confirms its cause or accuracy. Negated,
+    historical and conditional signs cannot impose a current-lesion protocol.
+    """
+    sign = r"(?:lesions?|leaf spots?|spots?|necrosis|blighting)"
+    for clause in re.split(r"[.!?;,]|\b(?:but|whereas|and)\b", question, flags=re.I):
+        clause = clause.strip()
+        history = re.search(r"\b(?:last (?:year|season)|previous|prior|historical|history)\b", clause, re.I)
+        current = re.search(r"\b(?:today|now|currently)\b", clause, re.I)
+        if (re.match(r"(?:if|when|unless|what|which|how|why)\b", clause, re.I)
+                or history and (current is None or current.start() > history.start())):
+            continue
+        positive = re.sub(
+            rf"\b(?:no|without|no evidence of|not seeing|have not found|haven['’]t found)\s+"
+            rf"(?:(?:any|visible|new|leaf|foliar)\s+)*{sign}\b|"
+            rf"\b{sign}\s+(?:(?:have|has|had)\s+)?(?:not been found|are absent|are not present|were absent)\b",
+            "", clause, flags=re.I,
+        )
+        if re.match(
+            rf"(?:(?:my|our|the|these|this)\s+)?(?:[a-z-]+\s+){{0,2}}"
+            rf"(?:leaves|foliage|stems?|plants?)\s+(?:have|has|show|shows|developed|are showing|with)\s+"
+            rf"(?:(?!(?:no|not|without)\b)[a-z-]+\s+){{0,4}}{sign}\b|"
+            rf"(?:I|we)\s+(?:see|found|observed|noticed)\s+(?:[a-z-]+\s+){{0,4}}{sign}\b|"
+            rf"(?:(?:new|dark|spreading|expanding|leaf|foliar|stem)\s+){{0,3}}{sign}\s+"
+            rf"(?:are|have been)\s+(?:found|seen|observed|spreading|expanding|present)\b",
+            positive, re.I,
+        ):
+            return True
+    return False
+
+
 # A declared subject/predicate keeps observations separate from definitions,
 # quotations, historical reports and commands. Crop identity stays open: the
 # article/possessive form accepts multiword crops without a host whitelist.

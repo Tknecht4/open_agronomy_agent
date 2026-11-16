@@ -9,7 +9,8 @@ from agronomy_agent.arithmetic_input_roles import (
     YIELD_UNIT_PATTERN,
     SEED_TARGET_ROLE,
 )
-from agronomy_agent.supplied_numeric_inputs import NUMBER
+from agronomy_agent.supplied_numeric_inputs import NUMBER, unit_owned_area_mass_total
+from agronomy_agent.supplied_depletion_request import supplied_depletion_request
 
 FIELD_ACTION_PATTERN = (
     # Treating a field is an operation; treating measurements as equivalent
@@ -23,7 +24,29 @@ FIELD_ACTION_PATTERN = (
 )
 
 
+def proposition_assertion_status(prefix: str, suffix: str = '') -> str:
+    """Classify adjacent assertion scope without certifying a fact as true."""
+    if re.search(
+        r"\b(?:(?:(?:it is |is )?(?:false|incorrect|untrue|not true)(?: to (?:say|claim|state|suggest))?|"
+        r"not the case) that|(?:does not|doesn['’]t) (?:mean|establish|confirm|demonstrate|prove|show|support)(?: that)?|"
+        r"(?:cannot|can['’]t|do not|don['’]t|never) (?:assume|say|confirm)(?: that)?)\s+(?:the\s+)?$",
+        prefix, re.I,
+    ) or re.match(r"\s*(?:(?:products?|estimates?|measurements?|data)\s+)?[\"'’”]?\s*(?:is|was)\s+(?:false|incorrect|untrue)\b", suffix, re.I):
+        return 'negated'
+    if re.search(r"\b(?:unknown|unclear|uncertain|unconfirmed|unverified|not (?:known|clear|established|confirmed))\s+"
+            r"(?:whether|if|that)\s+(?:the\s+)?$|\b(?:whether|if|assuming|supposing|suppose(?: that)?)\s+$", prefix, re.I):
+        return 'unknown'
+    if re.search(r"\b(?:does|do|can|could|may|might|would|should|must|is|are|is it true that|is it the case that)\s+$", prefix, re.I) or re.match(r"\s*(?:data\s*)?\?", suffix):
+        return 'questioned'
+    return 'asserted'
+
+
 def has_action_directive(text: str) -> bool:
+    # An embedded request for instructions remains an operational request
+    # even when its action verb is unfamiliar to the domain vocabulary.
+    if re.search(r"\b(?:with|including|plus|along with|as well as)\s+(?:(?:an?|the|detailed|practical|step[- ]by[- ]step)\s+)*"
+            r"(?:instructions|directions|steps|an? action plan)\b", text, re.I):
+        return True
     start = r"(?:^|[.!?;,]\s*|\b(?:and|also|then)\s+)"
     pattern = (start + r"(?:please\s+)?(?:(?P<verb>" + FIELD_ACTION_PATTERN +
         r"|proceed|go ahead|carry out|execute|perform|implement|undertake|turn|begin|commence)\b|"
@@ -78,6 +101,126 @@ def explicitly_unspecified_management_task(text: str) -> bool:
         r"(?:job|task|operation)(?: (?:I|we) mean)?[.!?]*\s*", text, re.I))
 
 
+def analytical_request_kind(text: str) -> str | None:
+    """Own a whole analytical task without turning its topic into an action.
+
+    Heads describe an analysis; objects establish its measurement, sampling,
+    comparison, economic or forecast role. Context must be declarative and
+    every requested clause must be owned. This selects content only: it is
+    neither evidence of a field condition nor authority for an operation.
+    """
+    text = ' '.join(text.casefold().split())
+    if has_action_directive(text):
+        return None
+    # Preserve unknown action/permission clauses even inside a method request.
+    if re.search(
+        r"\b(?:apply|spray|fertilize|irrigate|prescribe|recommend|authorize|approve|"
+        r"permitted|registered|legal|shorten|lengthen|tighten|increase the rate|set the rate)\b|"
+        r"\b(?:be|is|are|should be|can be)\s+(?:applied|sprayed|used|mixed)\b|"
+        r"\b(?:what|which)\s+(?:product|dose|application rate)\b", text,
+    ):
+        return None
+    clauses = [part.strip() for part in re.split(
+        r"[!?;]|\.(?=\s|$)|,\s*(?=(?:what|which|how|should|can)\b)", text,
+    ) if part.strip()]
+    kinds = []
+    requested = False
+    for clause in clauses:
+        clause = re.sub(r"^(?:please\s+)?(?:(?:can|could) you\s+)?", "", clause)
+        kind = None
+        head = None
+        if re.match(r"how (?:would|could|can|should) (?:i|we|you|one) (?:estimate|measure|sample|count)\b", clause):
+            head = re.match(
+                r"how (?:would|could|can|should) (?:i|we|you|one) (?:estimate|measure|sample|count)\s+"
+                r"(?:(?:an?|the)\s+)?(?:(?!(?:in|across|from|without|using|with|over|of|at|between|to|for)\b)[a-z-]+\s+){0,3}"
+                r"(?:population|density|stand|incidence|severity|counts?|samples?)"
+                r"(?=$|\s+(?:in|across|from|without|using|with|over|of|at|between)\b)", clause)
+            if head:
+                kind = "sampling_design"
+        elif re.match(r"can\b", clause):
+            head = re.match(r"can\s+([^!?;]+?)\s+be\s+(?:directly\s+)?(?:compared|interpreted|averaged|combined|regarded|treated)\b", clause)
+            if head and re.search(r"\b(?:concentrations?|measurements?|values?|samples?|counts?|results?|estimates?)\b", head[1]):
+                if not re.search(r"\b(?:i|we|you|me|that|which|who|whether|if|when|because|is|are|has|have|show|shows|can|could|may|should|must|would|please|choose|select|set|use|start|stop|change|make|give|tell|then|also)\b", head[1]):
+                    kind = "measurement_interpretation"
+        elif re.match(r"(?:what|which) (?:additional )?(?:evidence|observations|information|records|checks|factors|data)\b", clause):
+            head = re.match(r"(?:what|which) (?:additional )?(?:evidence|observations|information|records|checks|factors|data)\b", clause)
+            # An inquiry about an inference's evidential basis is analytical.
+            # Evidence needed for an actual irrigation, containment or other
+            # field decision still belongs to that domain's complete method.
+            if re.match(r"\s+(?:determines?|explains?|constrains?|affects?)\s+"
+                    r"(?:[a-z-]+\s+){0,3}(?:risk|inference|interpretation|uncertainty)\s+"
+                    r"(?:beyond|from|given)\b", clause[head.end():]):
+                kind = "evidence_method"
+        elif re.match(r"what should (?:the |an? )?(?:efficacy|response|comparator|comparison|statistical) analysis (?:account for|consider|include)\b", clause):
+            head = re.match(r"what should (?:the |an? )?(?:efficacy|response|comparator|comparison|statistical) analysis (?:account for|consider|include)\b", clause)
+            kind = "response_analysis"
+        elif re.match(r"what should (?:an? |the )?(?:defensible |reliable |supported )?(?:diagnosis|identification) (?:request|require|document|establish)\b", clause):
+            head = re.match(r"what should (?:an? |the )?(?:defensible |reliable |supported )?(?:diagnosis|identification) (?:request|require|document|establish)\b", clause)
+            kind = "diagnostic_evidence"
+        elif re.match(r"what does (?:this|that) (?:show|mean|imply)\b", clause):
+            head = re.match(r"what does (?:this|that) (?:show|mean|imply)\b", clause)
+            if re.search(r"\b(?:economic\w*|profit\w*|marginal|returns?)\b", text):
+                kind = "economic_interpretation"
+        elif re.match(r"(?:explain|describe) (?:an? |the )?(?:defensible |appropriate |decision )*(?:interpretation|meaning)\b", clause):
+            head = re.match(r"(?:explain|describe) (?:an? |the )?(?:defensible |appropriate |decision )*(?:interpretation|meaning)\b", clause)
+            if re.search(r"\b(?:forecasts?|probability|chance|predictions?)\b", text):
+                kind = "forecast_interpretation"
+        elif re.match(r"should (?:an? |the )?model (?:book|count|record|treat|include)\b", clause):
+            head = re.match(r"should (?:an? |the )?model (?:book|count|record|treat|include)\b", clause)
+            if re.search(r"\b(?:forecast\w*|predict\w*|observ\w*|received|measur\w*)\b", text):
+                kind = "forecast_bookkeeping"
+        if kind and head:
+            # The matched analytical predicate owns its subject. A coordinated
+            # measurement subject can contain depths/units; inspect everything
+            # after that predicate for independent requests and decision modals.
+            remainder = clause[head.end():]
+            if kind in {'response_analysis', 'diagnostic_evidence'} and remainder.strip():
+                return None
+            if kind == 'measurement_interpretation' and remainder.strip() and not re.fullmatch(
+                r"\s*(?:as\s+(?:(?:an?|the)\s+)?"
+                r"(?:(?:seasonal|temporal|measured|reported|apparent|real|statistical|meaningful|relative|absolute)\s+){0,3}"
+                r"(?:change|difference|trend|mean|average|estimate|measurement|concentration|stock|quantity)"
+                r"(?:\s+(?:without adjustments?|with appropriate adjustments?|over time|across seasons|between samples))?|"
+                r"(?:directly\s+)?(?:without|with)\s+(?:an?\s+)?adjustment)\s*", remainder,
+            ):
+                return None
+            if kind == 'sampling_design' and (re.search(r"\bto\s+[a-z-]+\b", remainder)
+                    or remainder.strip() and not re.match(r"\s*(?:in|across|from|without|using|with|over|of|at|between)\b", remainder)):
+                return None
+            if (has_unqualified_followup("Explain " + remainder)
+                    or re.search(r"\bto\s+[a-z-]+\b", remainder)
+                    or re.search(r"\b(?:should|must|ought|can|could|may|might|would|please)\b", remainder)
+                    or re.search(r"\b(?:choose|select|set|use|start|stop|make|give|tell)\b", remainder)
+                    or re.search(r"(?:^|[,;]|\b(?:and|then|also|to))\s*change\b", remainder)):
+                return None
+            requested = True
+            kinds.append(kind)
+            continue
+        # Context precedes the requested analysis and contains a finite report,
+        # not a proposal. Unknown request heads or later context fail closed.
+        context_scope = re.sub(r"\b(?:and|but)\s+(?:also\s+)?(?=(?:fell|rose|increased|decreased|changed|improved|worsened)\b)", "while ", clause)
+        context_scope = re.sub(
+            r"\b(?:in|from|across|between)\s+(?:the\s+)?(?:treated|untreated|control|check|affected|normal|healthy)\s+and\s+"
+            r"(?:treated|untreated|control|check|affected|normal|healthy)\s+(?:plots|areas|zones|samples)\b",
+            "in comparator groups", context_scope,
+        )
+        report = re.match(
+            r"(?P<subject>(?:if\s+)?(?:an?\s+|the\s+)?[a-z][a-z -]{0,75}?)\s+"
+            r"(?:is|are|was|were|has|have|shows?|reports?|predicts?|indicates?|fell|falls?|rose|rises?|increases?|reduces?|drains?)\b", clause)
+        subject = report['subject'] if report else ''
+        nominal_subject = bool(subject and not re.search(
+            r"\b(?:i|we|you|me|my|our|your|that|which|who|whether|to|please|tell|give|show|help|choose|select|recommend|use|make)\b", subject)
+            and (re.match(r"^(?:if|an?|the)\b", subject)
+                 or re.fullmatch(r"(?:(?:pest|insect|weed|plant|crop|treated|untreated|control|check|baseline|follow-up|population|sample|reported|measured)\s+){0,3}"
+                     r"(?:counts?|measurements?|values?|samples?|results?|estimates?)", subject)))
+        if (requested or re.match(r"(?:what|which|why|how|can|could|should|must|please|explain|describe)\b", clause)
+                or re.search(r"\b(?:should|must|ought|may|might|would|please)\b", clause)
+                or not nominal_subject
+                or has_unqualified_followup("Explain " + context_scope)):
+            return None
+    return kinds[0] if kinds and len(set(kinds)) == 1 else None
+
+
 def soil_test_repeatability_requested(text: str) -> bool:
     """A whole request for repeat-sampling comparability, not a soil map."""
     role = r"(?:locations?|depth|timing|handling|laboratory method)"
@@ -129,7 +272,7 @@ def is_concept_comparison_scope(text: str) -> bool:
     """
     match = re.fullmatch(
         r"\s*(?:please\s+)?(?:(?:can|could)\s+you\s+)?(?:please\s+)?"
-        r"(?:compare|contrast)\s+([^.!?;]+)[.!?]?\s*", text, re.I,
+        r"(?:compare|contrast|distinguish)\s+([^.!?;]+?)(?:\s+in\s+(?:an?|the)\s+(?:sampling|scouting|survey|measurement|laboratory|statistical)\s+report)?[.!?]?\s*", text, re.I,
     )
     if match is None:
         return False
@@ -145,7 +288,7 @@ def is_concept_comparison_scope(text: str) -> bool:
         phrase = re.sub(r"^the\s+", "", phrase.strip(), flags=re.I)
         return bool(re.fullmatch(
             r"(?:[a-z][a-z-]*|"
-            r"(?:soil|plant|crop|root|seed|carbon|nitrogen|phosphorus|potassium|sulfur|sulphur|nutrient|water)"
+            r"(?:soil|plant|crop|root|seed|carbon|nitrogen|phosphorus|potassium|sulfur|sulphur|nutrient|water|disease|pest|insect|weather)"
             r" (?!the\b|an?\b|my\b|our\b|your\b)[a-z-]+|"
             r"(?:(?:hybrid|variety|genetic|physical|chemical|biological|physiological|mechanical|"
             r"thermal|hydraulic|agronomic|sampling|measurement|soil|plant|crop|root|seed|water|nutrient) ){0,2}"
@@ -157,7 +300,7 @@ def is_concept_comparison_scope(text: str) -> bool:
     parts = re.split(r"\s+such as\s+", match[1], flags=re.I)
     if len(parts) > 2:
         return False
-    operands = re.split(r"\s+(?:and|with|to|versus|vs\.?)\s+|,\s*(?:and\s+)?", parts[0], flags=re.I)
+    operands = re.split(r"\s+(?:and|with|to|from|versus|vs\.?)\s+|,\s*(?:and\s+)?", parts[0], flags=re.I)
     if len(operands) < 2 or not all(nominal(part) for part in operands):
         return False
     if len(parts) == 2:
@@ -355,9 +498,13 @@ def has_unqualified_followup(text: str, *, calculation: bool = False) -> bool:
     positive scope check, so a new imperative need not be added to a verb list.
     Decimal points do not divide sentences.
     """
+    if calculation and unit_owned_area_mass_total(text) is not None:
+        return False  # The same full operand/request grammar owns parser scope.
+    if calculation and supplied_depletion_request(text) is not None:
+        return False  # Supplied p and TAW, with only the owned scope explanation.
     head = (r"(?:calculate|compute|convert|work out|how (?:many|much)|"
             r"what (?:is|are|yield(?: increase)? breaks even|seed(?:ing)? (?:rate|mass)))\b" if calculation else
-            r"(?:why|how|explain|describe|define|what|which|compare|contrast)\b")
+            r"(?:why|how|explain|describe|define|what|which|compare|contrast|distinguish)\b")
     wrapper = r"(?:(?:please\s+)?(?:can|could|would|will)\s+you\s+(?:please\s+)?|please\s+|I['’]d like you to\s+)?"
     first = re.search(r"(?:^\s*|[.!?;]\s*)" + wrapper + head, text, re.I)
     if first is None and not calculation:
@@ -461,10 +608,19 @@ def has_unqualified_followup(text: str, *, calculation: bool = False) -> bool:
     # shared impersonal predicate. Bare unknown commands after 'explain why'
     # do not acquire the causal auxiliary from some earlier sentence.
     for clause in clauses:
-        if re.match(r"(?:compare|contrast)\b", clause, re.I):
+        if re.match(r"(?:compare|contrast|distinguish)\b", clause, re.I):
             if not is_concept_comparison_scope(clause):
                 return True
             continue
+        # A coordinated grammatical subject precedes its shared copula. It is
+        # not a series of follow-on requests. Replace only that subject span;
+        # coordination in the predicate and any later commands stays visible.
+        clause = re.sub(
+            r"^(?P<head>(?:(?:explain|describe)\s+)?(?:why|how)\s+)"
+            r"[a-z][a-z-]*(?:,\s*[a-z][a-z-]*)*\s*(?:,?\s+and\s+[a-z][a-z-]*)"
+            r"(?=\s+(?:are|were|is|was)\b)",
+            lambda match: match['head'] + "the named subjects", clause, flags=re.I,
+        )
         causal = re.match(r"(?:why|how)\s+(?:can|could|do|does|is|are)\b", clause, re.I)
         definition = re.match(r"(?:what (?:is|are)|define|explain(?!\s+(?:why|how|(?:the )?(?:mechanism|process))\b))\b", clause, re.I)
         for tail in re.split(r",\s*(?!\d)|\b(?:and|then|also)\b", clause, flags=re.I)[1:]:

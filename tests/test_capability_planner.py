@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from agronomy_agent.agent import load_agent_resources, build_context
 from agronomy_agent.capability_planner import PLANNER_VERSION
+from agronomy_agent.calculator_contracts import EXPLICIT_ARITHMETIC_SELECTOR_ID
 
 
 def test_production_context_retains_registry_planner_identity() -> None:
@@ -21,7 +22,7 @@ def test_production_context_retains_registry_planner_identity() -> None:
     )
     legacy = metadata["tool_plan"]["invocations"][0]
     assert calculator["invocation_id"] == legacy["invocation_id"]
-    assert calculator["selector_id"] == "explicit_arithmetic_parser_v4"
+    assert calculator["selector_id"] == EXPLICIT_ARITHMETIC_SELECTOR_ID
 
 
 def test_planner_selects_registered_guards_without_model_or_answer_inputs() -> None:

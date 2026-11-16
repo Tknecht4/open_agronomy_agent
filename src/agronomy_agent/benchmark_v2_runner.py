@@ -190,6 +190,8 @@ def _runtime_implementation_receipts() -> dict[str, str]:
                     PROJECT_ROOT / "src/agronomy_agent/answerability.py",
                     PROJECT_ROOT / "src/agronomy_agent/request_scope.py",
                     PROJECT_ROOT / "src/agronomy_agent/arithmetic_input_roles.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_numeric_inputs.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_depletion_request.py",
                 )
             ),
             "runtime_orchestrator": _bundle_sha256(
@@ -218,6 +220,8 @@ def _runtime_implementation_receipts() -> dict[str, str]:
                     PROJECT_ROOT / "src/agronomy_agent/request_scope.py",
                     PROJECT_ROOT / "src/agronomy_agent/arithmetic_input_roles.py",
                     PROJECT_ROOT / "src/agronomy_agent/plant_health_scope.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_numeric_inputs.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_depletion_request.py",
                 )
             ),
             "verifier_policy": _bundle_sha256(
@@ -225,6 +229,7 @@ def _runtime_implementation_receipts() -> dict[str, str]:
                     PROJECT_ROOT / "src/agronomy_agent/router.py",
                     PROJECT_ROOT / "src/agronomy_agent/decision_route.py",
                     PROJECT_ROOT / "src/agronomy_agent/answer_verifier.py",
+                    PROJECT_ROOT / "src/agronomy_agent/evidence_handshake.py",
                     PROJECT_ROOT / "src/agronomy_agent/agronomic_concepts.py",
                     PROJECT_ROOT / "src/agronomy_agent/observation_guidance.py",
                     PROJECT_ROOT / "src/agronomy_agent/quantity_claims.py",
@@ -237,6 +242,8 @@ def _runtime_implementation_receipts() -> dict[str, str]:
             "field_context_contract": _bundle_sha256(
                 (
                     PROJECT_ROOT / "src/agronomy_agent/context_packer.py",
+                    PROJECT_ROOT / "src/agronomy_agent/evidence_handshake.py",
+                    PROJECT_ROOT / "src/agronomy_agent/request_scope.py",
                     PROJECT_ROOT
                     / "src/agronomy_agent/server/services/field_context_compiler.py",
                     PROJECT_ROOT / "src/agronomy_agent/server/schemas.py",
@@ -266,6 +273,7 @@ def _runtime_implementation_receipts() -> dict[str, str]:
                     PROJECT_ROOT / "src/agronomy_agent/supplied_numeric_inputs.py",
                     PROJECT_ROOT / "src/agronomy_agent/supplied_nutrient_parser.py",
                     PROJECT_ROOT / "src/agronomy_agent/supplied_water_parser.py",
+                    PROJECT_ROOT / "src/agronomy_agent/supplied_depletion_request.py",
                     PROJECT_ROOT / "src/agronomy_agent/supplied_model_parser.py",
                     PROJECT_ROOT / "src/agronomy_agent/supplied_model_arithmetic.py",
                     PROJECT_ROOT / "src/agronomy_agent/supplied_grain_parser.py",
@@ -283,6 +291,7 @@ def _runtime_implementation_receipts() -> dict[str, str]:
                     PROJECT_ROOT
                     / "src/agronomy_agent/server/services/chat_service.py",
                     PROJECT_ROOT / "src/agronomy_agent/answer_verifier.py",
+                    PROJECT_ROOT / "src/agronomy_agent/evidence_handshake.py",
                     PROJECT_ROOT / "src/agronomy_agent/answer_safety.py",
                     PROJECT_ROOT / "src/agronomy_agent/agronomic_concepts.py",
                     PROJECT_ROOT / "src/agronomy_agent/observation_guidance.py",

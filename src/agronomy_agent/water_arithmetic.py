@@ -14,6 +14,7 @@ WATER_INPUTS = {
     "crop_evapotranspiration": {"crop_coefficient", "reference_et_mm_per_day"},
     "gross_irrigation_depth": {"net_depth_mm", "application_efficiency_pct"},
     "water_depth_volume": {"depth_mm", "area_ha"},
+    "allowable_water_depletion": {"total_available_water_mm", "depletion_fraction"},
 }
 
 
@@ -47,6 +48,8 @@ def validate_water_arithmetic_inputs(operation: str, inputs: Mapping[str, Any]) 
             raise ValueError("field capacity must not be below wilting point")
     if operation == "gross_irrigation_depth" and not 0 < values["application_efficiency_pct"] <= 100:
         raise ValueError("application_efficiency_pct must be above zero and at most 100")
+    if operation == "allowable_water_depletion" and values["depletion_fraction"] > 1:
+        raise ValueError("depletion_fraction must be a fraction from zero to one")
     return values
 
 
@@ -54,6 +57,13 @@ def water_arithmetic(operation: str, inputs: Mapping[str, Any]) -> tuple[Decimal
     values = validate_water_arithmetic_inputs(operation, inputs)
     with localcontext() as context:
         context.prec = 28
+        if operation == "allowable_water_depletion":
+            total, fraction = values['total_available_water_mm'], values['depletion_fraction']
+            return total * fraction, 'mm', f'supplied depletion allowance = {fraction} × {total} mm', values, (
+                'total available water and allowable depletion fraction are supplied, not selected or independently calibrated',
+            ), ('This is depletion from field-capacity storage under the supplied assumption, not current measured depletion, remaining water, an irrigation date or a gross application depth. '
+                'When p is the FAO no-stress fraction, p × TAW is readily available water (RAW); a management-allowed depletion limit can differ from physiological RAW. '
+                'The field-appropriate fraction depends on crop, growth stage, soil and evaporative demand; this arithmetic does not choose it.')
         if operation == "water_storage_difference":
             upper, lower, depth = (values[k] for k in ("upper_volumetric", "lower_volumetric", "root_depth_m"))
             difference = upper - lower

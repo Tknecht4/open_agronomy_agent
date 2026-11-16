@@ -23,7 +23,7 @@ from agronomy_agent.capability_registry import (  # noqa: E402
 )
 
 
-DEFAULT_CONTRACT = ROOT / "configs/benchmark_capability_conformance_v4.json"
+DEFAULT_CONTRACT = ROOT / "configs/benchmark_capability_conformance_v5.json"
 
 
 def _canonical_sha256(value: object) -> str:
@@ -42,6 +42,7 @@ def run_conformance(contract_path: Path) -> dict[str, Any]:
         "open_agronomy_agent.benchmark_capability_conformance.v2",
         "open_agronomy_agent.benchmark_capability_conformance.v3",
         "open_agronomy_agent.benchmark_capability_conformance.v4",
+        "open_agronomy_agent.benchmark_capability_conformance.v5",
     }:
         raise ValueError("unsupported capability conformance schema")
     if contract.get("claim_eligible") is not False:

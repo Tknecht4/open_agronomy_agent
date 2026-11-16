@@ -6,10 +6,10 @@ from dataclasses import dataclass
 from agronomy_agent.decision_capsule import DecisionCapsule, build_decision_capsule
 from agronomy_agent.query_context import analyze_query_context
 from agronomy_agent.router import request_focus, evidence_interpretation_kind
-from agronomy_agent.answerability import simple_definition_subject, is_mechanism_explanation, bounded_product_help_kind, is_sampling_basis_explanation
+from agronomy_agent.answerability import simple_definition_subject, is_mechanism_explanation, bounded_product_help_kind, is_quantity_concept_explanation
 from agronomy_agent.observation_guidance import sample_event_roles_stated, stored_grain_probe_monitoring
 from agronomy_agent.request_scope import seed_quality_workflow_requested, soil_test_repeatability_requested
-from agronomy_agent.plant_health_scope import root_inspection_only_request
+from agronomy_agent.plant_health_scope import root_inspection_only_request, foliar_symptoms_reported
 from agronomy_agent.plant_health_scope import clubroot_confirmation_requested, clubroot_short_rotation_requested, clubroot_workflow_applicable, clubroot_question_scope
 
 
@@ -393,7 +393,7 @@ class DecisionRouteState:
         if (
             self.decision == "plant_health_diagnostic"
             and self.crop == "potato"
-            and re.search(r"\b(?:lesions?|disease program)\b", self.question, re.IGNORECASE)
+            and foliar_symptoms_reported(self.question)
         ):
             lanes = (
                 r"\b(?:representative|fresh) (?:lesion|leaf|stem|diagnostic) sample\b|\bdiagnostic lab\b",
@@ -403,16 +403,13 @@ class DecisionRouteState:
             )
             if sum(bool(re.search(pattern, answer, re.IGNORECASE)) for pattern in lanes) < 3:
                 violations.append("potato_disease_program_evidence_missing")
-        if (
-            self.decision == "fungicide_decision"
-            and self.crop == "potato"
-            and re.search(r"\blate blight\b", self.question, re.IGNORECASE)
-            and not re.search(r"\b(?:representative|fresh) (?:diagnostic )?sample\b|\bdiagnostic (?:sample|lab)\b", lower)
-        ):
-            violations.append("late_blight_confirmation_sample_missing")
+        # Late-blight prevention can precede visible infection. A diagnostic
+        # sample is checked by the symptomatic diagnostic contract above;
+        # naming a disease in a risk forecast does not establish lesions or
+        # make a positive sample a prerequisite for preventive planning.
         if self.decision == "freeze_recovery":
             lanes = (
-                r"\b(?:crop stage|growing point|developing head|crown)\b",
+                r"\b(?:crop stage|growing[- ]points?|developing heads?|crowns?)\b",
                 r"\b(?:new growth|warm(?:er)? (?:weather|conditions)|recovery period|revisit)\b",
                 r"\b(?:firm|yellow[- ]green|water[- ]soaked|white|brown|soft)\b[^.]{0,55}\b(?:tissue|growing point|head|crown)\b",
                 r"\b(?:stand count|plant count|tiller count|surviving stand|stand uniformity|representative stand)\b",
@@ -702,7 +699,7 @@ def build_decision_route_state(question: str, question_type: str = "") -> Decisi
                 source_boundary = name
                 break
 
-    if (is_mechanism_explanation(question) or is_sampling_basis_explanation(question)
+    if (is_mechanism_explanation(question) or is_quantity_concept_explanation(question)
             or stored_grain_probe_monitoring(question) or soil_test_repeatability_requested(question)):
         return DecisionRouteState(
             question=question, decision="exam_review", crop=crop, country=signals.country,
@@ -1248,7 +1245,7 @@ def _decision_name(lower: str, question_type: str) -> str:
     ) and re.search(r"\b(?:cut|cutting|harvest|spray|watch)\w*\b", lower):
         return "forage_defoliator_harvest_decision"
     if not re.search(r"\b(?:seed treatment|treated seed)\b", lower) and re.search(
-        r"\b(?:insects?|pests?|caterpillars?|moths?|trap captures?|aphids?|rootworm beetles?|defoliat\w*)\b", lower
+        r"\b(?:insects?|pests?|grasshoppers?|caterpillars?|moths?|trap captures?|aphids?|rootworm beetles?|defoliat\w*)\b", lower
     ) and re.search(
         r"\b(?:spray|treat)\w*\b|\b(?:insecticide|threshold)\b", lower
     ):

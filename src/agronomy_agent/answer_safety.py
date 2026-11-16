@@ -5,7 +5,7 @@ from typing import Any
 
 from agronomy_agent.answer_verifier import bounded_decision_support
 from agronomy_agent.observation_guidance import stored_grain_context
-from agronomy_agent.answerability import preferred_response_language, is_quantity_concept_explanation, is_mechanism_explanation, requests_regulated_action, bounded_product_help_kind
+from agronomy_agent.answerability import preferred_response_language, is_quantity_concept_explanation, is_mechanism_explanation, requests_regulated_action, bounded_product_help_kind, has_application_instruction
 from agronomy_agent.quantity_claims import remove_numeric_application_instructions
 
 
@@ -57,6 +57,11 @@ def enforce_answer_safety_postconditions(
             answer_text = cleaned or bounded_decision_support(str(question), _route_question_type(route)) or (
                 "The available answer does not support an application rate. "
                 "A general explanation or evidence comparison does not establish permission for a field operation."
+            )
+        if has_application_instruction(answer_text):
+            answer_text = bounded_decision_support(str(question), _route_question_type(route)) or (
+                "A general explanation or evidence comparison does not establish a product choice or "
+                "permission for a field application. The application needs its own evidence and current authority."
             )
     if _route_question_type(route) == "product_label" and not is_quantity_concept_explanation(str(question or "")):
         answer_text = _ensure_current_product_label_boundary(answer_text, question=question)

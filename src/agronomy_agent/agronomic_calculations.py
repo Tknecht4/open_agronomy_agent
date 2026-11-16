@@ -30,7 +30,7 @@ class CalculationOperation(StrEnum):
 
 
 class FoundationCalculationOperation(StrEnum):
-    """Current v2 extension; excluded from the historical harness inventory."""
+    """Current supplied-input extensions, outside the historical harness inventory."""
 
     SEED_RATE_MASS_IMPERIAL = "seed_rate_mass_imperial"
     BREAK_EVEN_PRICE = "break_even_price"
@@ -46,6 +46,7 @@ class FoundationCalculationOperation(StrEnum):
     CROP_EVAPOTRANSPIRATION = "crop_evapotranspiration"
     GROSS_IRRIGATION_DEPTH = "gross_irrigation_depth"
     WATER_DEPTH_VOLUME = "water_depth_volume"
+    ALLOWABLE_WATER_DEPLETION = "allowable_water_depletion"
     GRAIN_MOISTURE_ADJUSTMENT = "grain_moisture_adjustment"
     SINGLE_NOZZLE_APPLICATION_VOLUME = "single_nozzle_application_volume"
     MEAN_TEMPERATURE_GDD = "mean_temperature_gdd"

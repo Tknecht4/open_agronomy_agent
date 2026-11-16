@@ -4,7 +4,7 @@ The agent has three materially different capability classes: deterministic local
 
 ## Structured calculator
 
-**Implemented:** typed decimal calculations for unit conversion, seed/fertilizer/nutrient quantities, sprayer/tank/area operations, growing degree days, row population, weighted averages, and partial budgets. A bounded planner recognizes explicit supported arithmetic requests; it does not infer targets or fill missing material inputs.
+**Implemented:** typed decimal calculations for unit conversion, seed/fertilizer/nutrient quantities, sprayer/tank/area operations, supplied water accounting and allowable depletion, growing degree days, row population, weighted averages, and partial budgets. A bounded planner recognizes explicit supported arithmetic requests; it does not infer targets or fill missing material inputs.
 
 **Tested:** deterministic executor, API/adapter and registry contracts, plus a natural-language question through planner, tool receipt, evidence context, final answer, and trace-facing metadata.
 

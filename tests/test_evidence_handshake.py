@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from agronomy_agent.agno_runtime.local_index import RetrievedDoc
 from agronomy_agent.evidence_handshake import (
     build_evidence_handshake,
@@ -9,6 +11,92 @@ from agronomy_agent.evidence_handshake import (
 )
 from agronomy_agent.decision_contract import build_decision_contract
 from agronomy_agent.router import classify_query
+
+
+REGIONAL_PRODUCTS = [
+    ("AAFC crop health indices", "ca_aafc_crop_health_indices_specification"),
+    ("British Columbia Detailed Soil Survey", "ca_aafc_bc_detailed_soil_survey_specification"),
+    ("Nova Scotia Detailed Soil Survey", "ca_aafc_ns_detailed_soil_survey_specification"),
+    ("Prince Edward Island Detailed Soil Survey", "ca_aafc_pei_detailed_soil_survey_specification"),
+    ("agro-pedological atlas of Quebec", "ca_aafc_qc_agropedological_atlas_specification"),
+    ("New Brunswick agricultural soil classes", "nb_geonb_agricultural_soil_classes"),
+    ("Newfoundland and Labrador weather station climate monitoring data", "nl_historical_weather_station_climate_metadata"),
+]
+
+
+@pytest.mark.parametrize("requested", REGIONAL_PRODUCTS)
+@pytest.mark.parametrize("retrieved", REGIONAL_PRODUCTS)
+def test_named_regional_source_meaning_requires_the_requested_product_identity(requested, retrieved):
+    title, source_id = retrieved
+    document = RetrievedDoc(doc_id=source_id + ":passage", title=title,
+        text="This specification describes mapped regional support, coverage and source limits.",
+        source="Synthetic provincial or federal publisher", score=9.0,
+        allowed_roles=("grower", "adviser"),
+        tags=("coverage", "regional context"), namespaces=("regional_environment",),
+        source_type="regional_environment_profile", source_id=source_id,
+        retrieval_policy="context_only")
+    handshake = build_evidence_handshake(f"What does the {requested[0]} describe?", (document,))
+    if requested == retrieved:
+        assert handshake.primary_doc_id == document.doc_id
+        assert handshake.role_for(document.doc_id) == "interpretive"
+        assert handshake.has_strong_primary
+    else:
+        assert handshake.primary_doc_id is None
+        assert handshake.role_for(document.doc_id) == "boundary"
+        assert not handshake.has_strong_primary
+        assert not handshake.missing_decisive_terms("The requested product is not established here.")
+    assert not handshake.has_field_action_primary
+    assert handshake.authority_for(document.doc_id)[1] == "not_authorized"
+
+
+def test_each_explicitly_requested_regional_product_can_keep_its_own_source():
+    documents = tuple(RetrievedDoc(doc_id=source_id, title=title,
+        text="Mapped regional information with coverage and scale limits.", source="Synthetic publisher",
+        score=9.0, tags=("coverage",), namespaces=("regional_environment",),
+        allowed_roles=("grower", "adviser"),
+        source_type="regional_environment_profile", source_id=source_id, retrieval_policy="context_only")
+        for title, source_id in REGIONAL_PRODUCTS[1:3])
+    handshake = build_evidence_handshake(
+        "Compare the British Columbia Detailed Soil Survey and Nova Scotia Detailed Soil Survey coverage.", documents)
+    assert all(handshake.role_for(doc.doc_id) == "interpretive" for doc in documents)
+    assert all(handshake.authority_for(doc.doc_id)[1] == "not_authorized" for doc in documents)
+
+
+def test_named_product_fidelity_uses_requested_facts_instead_of_another_passages_tags():
+    from agronomy_agent.answer_verifier import assess_claim_risk
+    product = RetrievedDoc(doc_id="synthetic-stage", title="AAFC Crop Health Indices stage specification",
+        text="The 5 km crop development layer is a modelled regional estimate; scout representative field areas.",
+        source="Agriculture and Agri-Food Canada", score=9.0,
+        allowed_roles=("grower", "adviser"),
+        tags=("station precipitation temperature", "versatile soil moisture budget", "crop stress index"),
+        namespaces=("regional_environment",), source_type="regional_environment_profile",
+        source_id="ca_aafc_crop_health_indices_specification", retrieval_policy="context_only")
+    question = "What can the AAFC crop development layer establish about crop stage?"
+    answer = product.text
+    assessment = assess_claim_risk(answer, question=question, evidence_text=product.text,
+        evidence_docs=(product,), question_type="regional_context", risk_level="low")
+    assert not assessment.missing_evidence_terms
+    assert "missing_named_product_fidelity" not in assessment.reasons
+    assert "weak_primary_evidence_alignment" not in assessment.reasons
+    # Removing the requested scale and regional/field boundary still needs review.
+    unsafe = assess_claim_risk("The layer establishes the stage of every plant.", question=question,
+        evidence_text=product.text, evidence_docs=(product,), question_type="regional_context", risk_level="low")
+    assert "missing_named_product_fidelity" in unsafe.reasons
+
+
+@pytest.mark.parametrize("title,source_id", REGIONAL_PRODUCTS[1:4])
+def test_matched_soil_product_without_a_facet_contract_retains_primary_content_checks(title, source_id):
+    from agronomy_agent.answer_verifier import assess_claim_risk
+    document = RetrievedDoc(doc_id=source_id, title=title,
+        text="The survey describes mapped soil units with survey coverage and mapping scale limits.",
+        source="Synthetic publisher", score=9.0, allowed_roles=("grower",),
+        tags=("mapped soil units", "survey coverage", "mapping scale"), namespaces=("regional_environment",),
+        source_type="regional_environment_profile", source_id=source_id, retrieval_policy="context_only")
+    assessment = assess_claim_risk("The product is a live rainfall sensor.",
+        question=f"What does the {title} describe?", evidence_text=document.text,
+        evidence_docs=(document,), question_type="regional_context", risk_level="low")
+    assert assessment.requires_review and assessment.missing_evidence_terms
+    assert "missing_named_product_fidelity" in assessment.reasons
 
 
 def _doc(
@@ -663,3 +751,142 @@ def test_context_only_applied_guidance_cannot_become_decisive_or_primary() -> No
     assert state.decisive_terms == ()
     assert state.role_for(historical.doc_id) == "boundary"
     assert state.evidence_roles[0][2] == "context_only_not_decisive"
+
+
+def _synthetic_crop_health_passage(key, text, score=1):
+    return RetrievedDoc(doc_id='ca_aafc_crop_health_indices_specification:' + key,
+        title='AAFC Crop Health Indices specification', text=text, source='Synthetic product specification',
+        source_id='ca_aafc_crop_health_indices_specification', score=score, tags=('unrelated metadata',),
+        source_type='regional_environment_profile', namespaces=('regional_environment',), allowed_roles=('grower',),
+        retrieval_policy='context_only')
+
+
+@pytest.mark.parametrize('question,passage', [
+    ('Are AAFC crop health grids remotely sensed or station-driven VSMB estimates?',
+     'The VSMB uses station temperature and precipitation with crop-specific coefficients.'),
+    ('Why does the AAFC crop development layer use different models for wheat and corn?',
+     'The cool-season model differs from the warm-season model in its phenology and heat-unit assumptions.'),
+    ('How should I read AAFC crop development stage values for small grains?',
+     'Growth Stage codes include emergence, jointing and heading for small grains.'),
+])
+def test_requested_product_facet_selects_passage_content_before_shared_title_metadata(question, passage):
+    metadata = _synthetic_crop_health_passage('metadata', 'Reference system WGS 84. Gregorian calendar. Data distribution and contact information.', score=100)
+    relevant = _synthetic_crop_health_passage('requested-facet', passage)
+    ranked = rerank_evidence_docs(question, (metadata, relevant), raw_query_ranks={metadata.doc_id: 1})
+    assert ranked[0].doc_id == relevant.doc_id
+    handshake = build_evidence_handshake(question, (metadata, relevant))
+    assert handshake.primary_doc_id == relevant.doc_id
+    assert not handshake.has_field_action_primary
+
+
+@pytest.mark.parametrize('question,answer', [
+    ('Why can I not interpret an AAFC crop development layer for wheat with the corn and soybean heat-unit model?',
+     'The heat-unit model is specific to corn and soybean, not wheat. Use a wheat-specific interpretation and treat the regional layer as context, not a field measurement.'),
+    ('How should I read AAFC crop development stage values for small grains?',
+     'Use the small-grain code meanings for this regional model, not another crop family. The layer is not a field measurement; confirm the actual wheat stage by scouting.'),
+])
+def test_stage_facet_does_not_acquire_an_unasked_resolution_requirement(question, answer):
+    from agronomy_agent.answer_verifier import assess_claim_risk
+    passage = _synthetic_crop_health_passage('stage', 'A modelled regional crop-development layer; cool-season and warm-season model assumptions differ. Growth Stage includes emergence, jointing and heading.')
+    assessment = assess_claim_risk(answer, question=question, evidence_text=passage.text,
+        evidence_docs=(passage,), question_type='regional_context', risk_level='low')
+    assert not assessment.missing_evidence_terms
+    assert 'missing_named_product_fidelity' not in assessment.reasons
+    if 'values' in question:
+        explicit = assess_claim_risk(answer, question=question + ' What is its spatial resolution?',
+            evidence_text=passage.text, evidence_docs=(passage,), question_type='regional_context', risk_level='low')
+        assert '5 km modelled regional raster' in explicit.missing_evidence_terms
+
+
+@pytest.mark.parametrize('claim,contradiction', [
+    ('The AAFC crop health grids are remotely sensed products, not station-driven VSMB estimates.', True),
+    ('AAFC crop health grids are not station-driven regional estimates.', True),
+    ('The AAFC crop health grids are station-driven VSMB regional estimates, not remotely sensed field measurements.', False),
+    ('It is not true that the AAFC crop health grids are remotely sensed products.', False),
+    ('NDVI satellite products are remotely sensed. AAFC crop health grids are modelled regional estimates.', False),
+])
+def test_crop_health_model_assertions_cannot_contradict_the_supplied_product_specification(claim, contradiction):
+    from agronomy_agent.answer_verifier import assess_claim_risk, verify_answer
+    question = 'Are AAFC crop health grids remotely sensed products or station-driven VSMB regional estimates?'
+    passage = _synthetic_crop_health_passage('inputs', 'VSMB model estimates use station temperature and precipitation with crop-specific coefficients. A regional model is not a field measurement.')
+    assessment = assess_claim_risk(claim, question=question, evidence_text=passage.text, evidence_docs=(passage,), question_type='field_data', risk_level='low')
+    assert ('named_product_source_contradiction' in assessment.reasons) is contradiction
+    if contradiction:
+        class UnavailableEditor:
+            def generate(self, messages):
+                raise AssertionError('A supplied product contradiction has a reviewed source-bound fallback')
+        result = verify_answer(claim, question=question, evidence_text=passage.text, evidence_docs=(passage,),
+            question_type='field_data', risk_level='low', editor=UnavailableEditor(), review_mode='risk_conditioned_selective_v3')
+        assert 'derived from station temperature and precipitation' in result.answer
+        assert 'not remotely sensed field measurements' in result.answer
+        assert not result.final_assessment.requires_review
+    # Another product's document cannot provide the missing source premise.
+    foreign = _synthetic_crop_health_passage('inputs', passage.text)
+    assert 'named_product_source_contradiction' not in assess_claim_risk(claim,
+        question='How are AAFC Annual Crop Inventory images obtained?', evidence_text=foreign.text,
+        evidence_docs=(foreign,), question_type='field_data', risk_level='low').reasons
+
+
+@pytest.mark.parametrize('denial', [
+    'It is incorrect to say that AAFC crop health grids are remotely sensed products.',
+    'The statement that AAFC crop health grids are remotely sensed is false.',
+    'It is not the case that AAFC crop health grids are remotely sensed products.',
+])
+def test_product_source_contradiction_is_local_to_an_affirmed_claim(denial):
+    from agronomy_agent.answer_verifier import _crop_health_source_contradiction
+    question = 'Are AAFC crop health grids remotely sensed products or station-driven VSMB estimates?'
+    source = _synthetic_crop_health_passage('inputs', 'VSMB uses station temperature and precipitation.')
+    assert not _crop_health_source_contradiction(question, denial, (source,))
+    assert _crop_health_source_contradiction(question, denial + ' AAFC crop health grids are remotely sensed products.', (source,))
+
+
+def test_another_regional_products_question_cannot_select_crop_health_fallback():
+    from agronomy_agent.answer_verifier import _named_crop_health_interpretation_fallback, _named_product_field_decision_fallback
+    source = _synthetic_crop_health_passage('inputs', 'VSMB uses station temperature and precipitation.')
+    question = 'What are the model inputs for the British Columbia Detailed Soil Survey?'
+    assert _named_crop_health_interpretation_fallback(question, (source,)) is None
+    assert _named_product_field_decision_fallback(question + ' Can I set a fertilizer rate?', (source,)) is None
+
+
+@pytest.mark.parametrize('text', [
+    'VSMB is not used for this product. Temperature and precipitation are not inputs to this product.',
+    'VSMB uses no temperature and precipitation data.',
+    'It is not true that VSMB uses station temperature and precipitation.',
+    'The statement that VSMB uses station temperature and precipitation is false.',
+])
+def test_model_input_support_requires_an_affirmative_relation_not_token_cooccurrence(text):
+    from agronomy_agent.evidence_handshake import crop_health_model_inputs_supported
+    from agronomy_agent.answer_verifier import _crop_health_source_contradiction, _named_crop_health_interpretation_fallback
+    source = _synthetic_crop_health_passage('inputs', text)
+    question = 'Are AAFC crop health grids remotely sensed products or station-driven VSMB estimates?'
+    assert not crop_health_model_inputs_supported(source)
+    assert not _crop_health_source_contradiction(question, 'AAFC crop health grids are remotely sensed products.', (source,))
+    answer = _named_crop_health_interpretation_fallback(question, (source,))
+    assert answer is None or 'derived from station temperature and precipitation' not in answer
+    assert build_evidence_handshake(question, (source,)).primary_doc_id is None
+
+
+@pytest.mark.parametrize('text', [
+    'It is unknown whether VSMB uses station temperature and precipitation.',
+    'The report does not establish that VSMB uses station temperature and precipitation.',
+    'Does VSMB use station temperature and precipitation?',
+    'VSMB uses station temperature and precipitation?',
+    'Could VSMB use station temperature and precipitation?',
+    'Assuming VSMB uses station temperature and precipitation, the result follows.',
+    'It is not clear whether VSMB uses station temperature and precipitation.',
+])
+def test_unknown_or_questioned_model_input_relation_is_not_affirmative_source_evidence(text):
+    from agronomy_agent.evidence_handshake import crop_health_model_inputs_supported
+    source = _synthetic_crop_health_passage('inputs', text)
+    assert not crop_health_model_inputs_supported(source)
+
+
+@pytest.mark.parametrize('prefix,suffix,status', [
+    ('The report states that ', '.', 'asserted'),
+    ('It is not true that ', '.', 'negated'),
+    ('It is unknown whether ', '.', 'unknown'),
+    ('Does ', '?', 'questioned'),
+])
+def test_proposition_scope_keeps_unknown_separate_from_denial(prefix, suffix, status):
+    from agronomy_agent.request_scope import proposition_assertion_status
+    assert proposition_assertion_status(prefix, suffix) == status

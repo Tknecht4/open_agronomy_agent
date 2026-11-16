@@ -10,6 +10,7 @@ from agronomy_agent.decision_contract import AgronomyDecisionContract, obligatio
 from agronomy_agent.evidence_authority import classify_evidence_authority
 from agronomy_agent.router import evidence_interpretation_kind, explanation_focus_query
 from agronomy_agent.answerability import simple_definition_subject
+from agronomy_agent.request_scope import proposition_assertion_status
 
 
 _GENERIC_TAGS = {
@@ -364,6 +365,9 @@ def rerank_evidence_docs(
             + authority_fit_bonus
             + (2.0 if scoped_explanation and _query_coverage(question, doc) >= 0.25 else 0.0)
             + (4.0 * len(focus_tokens & doc_tokens) / len(focus_tokens) if focus_tokens else 0.0)
+            + (6.0 * len(set(crop_health_requested_facets(question)) & set(_crop_health_doc_facets(doc)))
+               if named_regional_product_matches(question, doc)
+               and 'ca_aafc_crop_health_indices_specification' in ' '.join((doc.doc_id, doc.source_id)) else 0.0)
         )
         scored.append((score, -index, replace(doc, score=round(score, 6))))
     scored.sort(key=lambda item: (item[0], item[1]), reverse=True)
@@ -679,6 +683,87 @@ def _definition_context_fit(subject: str, doc: RetrievedDoc) -> bool:
     ))
 
 
+def named_regional_product_matches(question: str, doc: RetrievedDoc) -> bool:
+    """Match the requested product to the document, not just its publisher.
+
+    A known regional specification is not a specification for every other
+    regional product. This identity check grants no field-action authority.
+    """
+    if getattr(doc, 'source_type', None) not in {"regional_environment_profile", "regional_environment"}:
+        return False
+    identity = " ".join(str(getattr(doc, key, '') or '') for key in ('source_id', 'doc_id', 'title', 'source')).lower()
+    crop_health_requested = bool(re.search(
+        r"\b(?:crop[- ]health (?:index|indices|grids?|layers?|products?)|crop stress index|csi)\b|"
+        r"\baafc\b.{0,100}\bcrop development stage\b|"
+        r"\b(?:crop development|crop[- ]stage|growth[- ]stage) (?:layer|raster|product|values?)\b|"
+        r"\b(?:indices? de sant[eé] des cultures|indice de stress des cultures|stade de d[eé]veloppement (?:de la culture|des cultures))\b",
+        question, re.I,
+    ))
+    crop_health_doc = (
+        "ca_aafc_crop_health_indices_specification" in identity
+        or bool(re.search(r"\b(?:agriculture and agri-food canada|aafc)\b", identity)
+                and re.search(r"\b(?:crop health indices?|crop stress index|crop development stage)\b", identity))
+    )
+    matches = (
+        (r"\b(?:quebec|québec) agro[- ]pedological atlas\b|\bagro[- ]pedological atlas of (?:quebec|québec)\b", r"ca_aafc_qc_agropedological_atlas_specification|agro[- ]pedological atlas of (?:quebec|québec)"),
+        (r"\bbritish columbia detailed soil survey\b", r"ca_aafc_bc_detailed_soil_survey_specification|british columbia detailed soil survey"),
+        (r"\bnova scotia detailed soil survey\b", r"ca_aafc_ns_detailed_soil_survey_specification|nova scotia detailed soil survey"),
+        (r"\b(?:prince edward island|pei) detailed soil survey\b", r"ca_aafc_pei_detailed_soil_survey_specification|prince edward island detailed soil survey"),
+        (r"\b(?:geonb|new brunswick) agricultural soil classes\b", r"nb_geonb_agricultural_soil_classes|new brunswick agricultural soil classes"),
+        (r"\bnewfoundland and labrador weather station climate monitoring data\b", r"nl_historical_weather_station_climate_metadata|newfoundland and labrador weather station climate monitoring data"),
+        (r"\b(?:estimated )?historical crop[- ]?yields?\b|\bhistorical[- ]?yield[- ]?by[- ]?slc\b", r"ca_aafc_historical_crop_yield_slc_specification|historical crop yield"),
+        (r"\b(?:soil )?(?:erosion|erision|eroshun)(?: risk)? (?:map|layer|indicator)\b|\bsoileri\b", r"ca_aafc_soil_erosion_risk_technical_chapter_2021|soil erosion risk indicator|soileri"),
+    )
+    return (crop_health_requested and crop_health_doc) or any(
+        re.search(q_pattern, question, re.I) and re.search(doc_pattern, identity)
+        for q_pattern, doc_pattern in matches
+    )
+
+
+def crop_health_requested_facets(question: str) -> tuple[str, ...]:
+    """Describe requested product facts, never field-action authority."""
+    facets = []
+    if re.search(r"\b(?:resolution|spatial scale|grid size|pixel size)\b", question, re.I):
+        facets.append('resolution')
+    if re.search(r"\b(?:VSMB|station[- ]driven|station[- ]weather|remotely sensed|satellite|model inputs?|input data)\b", question, re.I):
+        facets.append('model_inputs')
+    if re.search(r"\b(?:crop development|crop[- ]stage|growth[- ]stage)\b", question, re.I):
+        if re.search(r"\b(?:models?|heat[- ]units?|cool[- ]season|warm[- ]season)\b", question, re.I):
+            facets.append('stage_models')
+        if re.search(r"\b(?:values?|codes?|scale|small grains|jointing|heading|ripening)\b", question, re.I):
+            facets.append('stage_codes')
+    return tuple(facets)
+
+
+def _crop_health_doc_facets(doc: RetrievedDoc) -> tuple[str, ...]:
+    # Inspect passage content, not a shared title or another passage's tags.
+    text = ' '.join(doc.text.casefold().replace('-', ' ').split())
+    facets = []
+    if re.search(r"\b(?:spatial resolution|5000 metre|5\s*km)\b", text):
+        facets.append('resolution')
+    if crop_health_model_inputs_supported(doc):
+        facets.append('model_inputs')
+    if all(term in text for term in ('model', 'cool season', 'warm season')):
+        facets.append('stage_models')
+    if all(term in text for term in ('growth stage', 'emergence', 'jointing', 'heading')):
+        facets.append('stage_codes')
+    return tuple(facets)
+
+
+def crop_health_model_inputs_supported(doc: RetrievedDoc) -> bool:
+    """Require an affirmed model-input relation in this actual passage."""
+    text = ' '.join(doc.text.split())
+    observation = r"(?:(?:station|measured|daily|local|observed)\s+)?"
+    for match in re.finditer(
+        rf"\bVSMB\)?(?:\s+model)?\s+(?:estimates\s+)?(?:uses?|using)\s+"
+        rf"{observation}temperature(?:\s+data)?\s+(?:and|with)\s+{observation}precipitation\b",
+        text, re.I,
+    ):
+        if proposition_assertion_status(text[:match.start()], text[match.end():]) == 'asserted':
+            return True
+    return False
+
+
 def _is_named_regional_product_interpretation(
     state: DecisionRouteState,
     doc: RetrievedDoc,
@@ -691,29 +776,11 @@ def _is_named_regional_product_interpretation(
         return False
     if _REGIONAL_PRODUCT_PRESCRIPTION_RE.search(state.question) and not _REGIONAL_PRODUCT_BOUNDARY_QUESTION_RE.search(state.question):
         return False
-    identity = " ".join((doc.source_id, doc.doc_id, doc.title, doc.source)).lower()
-    crop_health_product = bool(
-        "ca_aafc_crop_health_indices_specification" in identity
-        or (
-            re.search(r"\b(?:agriculture and agri-food canada|aafc)\b", identity, re.IGNORECASE)
-            and re.search(r"\bcrop health indices?\b", identity, re.IGNORECASE)
-        )
-    )
-    detailed_soil_product = bool(
-        re.search(r"ca_aafc_(?:bc|ns|pei)_detailed_soil_survey_specification", identity)
-        or "ca_aafc_qc_agropedological_atlas_specification" in identity
-        or "nb_geonb_agricultural_soil_classes" in identity
-        or "nl_historical_weather_station_climate_metadata" in identity
-        or re.search(
-            r"\b(?:british columbia|nova scotia|prince edward island) detailed soil survey\b|"
-            r"\bagro[- ]pedological atlas of (?:quebec|québec)\b|"
-            r"\bnew brunswick agricultural soil classes\b|"
-            r"\bnewfoundland and labrador weather station climate monitoring data\b",
-            identity,
-            re.IGNORECASE,
-        )
-    )
-    return crop_health_product or detailed_soil_product
+    if not named_regional_product_matches(state.question, doc):
+        return False
+    requested = crop_health_requested_facets(state.question)
+    is_crop_health = 'ca_aafc_crop_health_indices_specification' in ' '.join((doc.doc_id, doc.source_id))
+    return not is_crop_health or not requested or bool(set(requested) & set(_crop_health_doc_facets(doc)))
 
 
 def _query_coverage(question: str, doc: RetrievedDoc) -> float:

@@ -63,6 +63,9 @@ The current software supports these bounded workflows:
   permanent wilting point and harvested yield use shared role definitions in
   parsing and request checks. Extra quantities and unsupported compound units
   require clarification rather than being dropped from the calculation.
+  Supplied area and kg/ha can produce a total mass; supplied total available
+  water and depletion fraction can produce an allowable depletion amount.
+  Neither calculation chooses the rate or depletion fraction for a field.
 - **Resolve seed-establishment ambiguity:** distinguish overall emergence from
   survival after germination. Otherwise complete inputs with an unclear
   denominator produce two labelled scenarios; a short reply can select the
@@ -72,10 +75,18 @@ The current software supports these bounded workflows:
   history informs soil precautions across rotations; current symptoms and
   diagnoses keep their own evidence requirements. Experimental soil drying and
   harvest grain drying retain their distinct meanings in variety comparisons.
+  Sampling design, comparable soil-test depths, forecast bookkeeping and
+  marginal-return explanations retain their analytical scope; incidental crop
+  or nutrient words do not turn them into a field prescription.
 - **Explain safety and evidence:** general pesticide safety checks, task-specific
-  PPE sources and the distinction between efficacy and registration can receive
+  PPE sources and the distinctions between efficacy, crop tolerance and registration can receive
   bounded explanations. These questions do not authorize a use. Stored-grain
   probe monitoring retains its own object and method.
+- **Interpret the named source:** product identity and requested passage content
+  control regional-source interpretation. Crop-stage code questions do not
+  require unrelated raster metadata. Regional alerts can inform preventive
+  potato disease planning before visible symptoms, with current crop, target
+  and product restrictions checked separately.
 - **Keep the whole request:** a calculation or definition cannot silently replace
   additional requested help. Field actions, product selection and use
   restrictions retain their applicable evidence and current authority checks.

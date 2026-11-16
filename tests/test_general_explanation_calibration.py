@@ -16,7 +16,7 @@ from agronomy_agent.answer_verifier import verify_answer
     ("Rain followed by drying produced a surface crust and poor emergence. Explain the mechanism and what observations distinguish crusting from seed failure.",
      "Rain can break down surface aggregates and create a seal that hardens as it dries. Viable seedlings can then be trapped under the crust. Dig carefully along affected and normal rows and compare intact, viable seedlings bent beneath the crust with missing, dead or decayed seeds. Record crust strength, seed depth and emergence progress. Poor emergence alone does not identify the cause."),
 ])
-def test_mechanism_request_keeps_supported_model_explanation_in_saved_answer(tmp_path, monkeypatch, question, answer, *, allow_source_gap=False):
+def test_mechanism_request_keeps_supported_model_explanation_in_saved_answer(tmp_path, monkeypatch, question, answer, *, allow_source_gap=False, required_prompt_terms=()):
     from agronomy_agent.execution_core import AgentExecutionRequest
     from agronomy_agent.server.services import chat_service
     from agronomy_agent.server.settings import build_settings
@@ -27,6 +27,9 @@ def test_mechanism_request_keeps_supported_model_explanation_in_saved_answer(tmp
         calls = 0
         def generate(self, messages):
             self.calls += 1
+            prompt = '\n'.join(message['content'] for message in messages)
+            for term in required_prompt_terms:
+                assert term.casefold() in prompt.casefold()
             return answer
         def close(self):
             pass
@@ -1504,3 +1507,244 @@ def test_repeat_sampling_scope_keeps_other_actions_and_numerical_selection(extra
     from agronomy_agent.request_scope import soil_test_repeatability_requested
     assert soil_test_repeatability_requested(SOIL_REPEAT_QUESTION)
     assert not soil_test_repeatability_requested(SOIL_REPEAT_QUESTION+extra)
+
+
+ANALYTICAL_METHOD_FIXTURES = [
+    ('How would you estimate plant population in a spatially patchy field without oversampling only the healthiest rows?',
+     'sampling_design',
+     'Define a sampling frame covering the whole field, including gaps and poor rows. Use random or systematic locations within contrasting zones, count a defined ground area at each location, and weight zone estimates by their areas. Report variability and the sampling method; healthy rows alone give a biased estimate.'),
+    ('Can nitrate concentrations from 0-15 cm and 0-60 cm samples be interpreted as a seasonal change without adjustment?',
+     'measurement_interpretation',
+     'No. Those samples represent different depth intervals, so their concentrations are not directly comparable as a seasonal trend. Compare matched depths and sampling methods, preserve dates and laboratory methods, and distinguish concentration from nutrient stock. Missing depth information cannot be recovered by assuming uniform nitrate through the profile.'),
+    ('A forecast predicts rain tonight. Should a model book it as received water in the irrigation balance?',
+     'forecast_bookkeeping',
+     'No. Keep forecast rain as a scenario input with its forecast time and uncertainty. Record received rainfall separately from a dated local observation, then estimate effective infiltration and runoff before updating the balance. A prediction does not establish water received by the field.'),
+    ('A forecast has a chance of temperatures below a specified damage threshold. Explain a defensible decision interpretation.',
+     'forecast_interpretation',
+     'That probability describes a possible temperature outcome, not certain damage. Check the forecast location and time, crop and stage, exposure and duration, uncertainty and consequences. Compare plausible outcomes and the cost of a mistaken decision; the forecast alone cannot establish field injury or a specific intervention.'),
+    ('Pest counts fell after treatment but also fell in an untreated check. What should efficacy analysis account for?',
+     'response_analysis',
+     'Compare the change in treated plots with the change in the untreated check, using comparable sampling dates and methods. Account for baseline differences, natural population changes, weather and sampling variability, replication and uncertainty. A decline after treatment alone does not demonstrate treatment efficacy.'),
+    ('If added nitrogen increases yield but reduces profit, what does that show about choosing an economically optimum rate?',
+     'economic_interpretation',
+     'More yield does not necessarily mean more profit. Compare marginal crop revenue with the marginal nutrient and application costs; the economic optimum can occur before maximum yield. This qualitative example cannot establish a field rate without a calibrated response and current price and cost assumptions.'),
+    ('A phosphorus-rich field drains directly to a ditch. What additional evidence determines loss risk beyond the soil concentration?',
+     'evidence_method',
+     'Assess runoff and erosion, slope and soil cover, drainage pathways and connectivity to the ditch, timing of rain or snowmelt, phosphorus form and transport, and management history. Representative soil and water observations help distinguish the source from its transport pathway. Soil concentration alone does not establish the load reaching water.'),
+]
+
+
+@pytest.mark.parametrize('question,kind,answer', ANALYTICAL_METHOD_FIXTURES)
+def test_analytical_task_owns_capsule_and_saved_answer(tmp_path, monkeypatch, question, kind, answer):
+    from agronomy_agent.request_scope import analytical_request_kind
+    from agronomy_agent.answer_verifier import _intent_requirements
+    assert analytical_request_kind(question) == kind
+    state = build_decision_route_state(question, 'plant_health')
+    assert state.decision == 'exam_review' and state.capsule is None
+    assert not _intent_requirements(question, 'fertility_rate')
+    test_mechanism_request_keeps_supported_model_explanation_in_saved_answer(tmp_path, monkeypatch, question, answer)
+
+
+@pytest.mark.parametrize('question,kind,answer', ANALYTICAL_METHOD_FIXTURES)
+@pytest.mark.parametrize('extra', [
+    ' Also choose a product for my field.',
+    ' Then spray all fields.',
+    ' Can I apply glyphosate today?',
+    ' And make the irrigation schedule.',
+    ' Also flarn the crop.',
+    ' What rate should I use?',
+])
+def test_analytical_content_cannot_erase_a_second_requested_task(question, kind, answer, extra):
+    from agronomy_agent.request_scope import analytical_request_kind
+    from agronomy_agent.answerability import is_quantity_concept_explanation
+    assert analytical_request_kind(question + extra) is None
+    assert not is_quantity_concept_explanation(question + extra)
+
+
+@pytest.mark.parametrize('question', [
+    'Explain why calcium, magnesium and sulfur are called secondary nutrients rather than unimportant nutrients.',
+    'Explain why copper, zinc and boron are called micronutrients.',
+    'Why can repeated use of one effective insecticide mode of action select for resistance?',
+    'Why can repeated stress exposure select for tolerance?',
+])
+def test_nominal_causal_subjects_and_evolutionary_predicates_are_not_operations(question):
+    from agronomy_agent.answerability import is_mechanism_explanation
+    assert is_mechanism_explanation(question)
+    for extra in [' And spray the field.', ' Can I select a herbicide?', ' Also flarn the crop.']:
+        assert not is_mechanism_explanation(question + extra)
+
+
+@pytest.mark.parametrize('question', [
+    'A late-blight alert was issued, but no lesions have been found. Does every potato field need a fungicide today?',
+    'A potato adviser wants to tighten every fungicide interval because late-blight risk is rising. What checks matter first?',
+])
+def test_potato_prevention_method_does_not_invent_current_lesions_or_require_them(question):
+    from agronomy_agent.answer_verifier import bounded_decision_support
+    state = build_decision_route_state(question, 'product_label')
+    assert state.decision == 'fungicide_decision' and state.crop == 'potato'
+    answer = bounded_decision_support(question, 'product_label')
+    assert 'Late-blight protection is preventive' in answer
+    assert 'before visible lesions' in answer and 'If lesions' in answer
+    assert 'current jurisdiction-specific product label' in answer and 'prior applications' in answer
+    assert 'new potato leaf lesions' not in answer
+    assert 'late_blight_confirmation_sample_missing' not in state.answer_violations(
+        'Assess field-specific infection risk, crop stage, susceptibility, weather risk and current label restrictions. Prevention can precede symptoms.')
+
+
+@pytest.mark.parametrize('question', [
+    'Tell me which herbicide is best for this field. What should the efficacy analysis account for?',
+    'Choose the option that is best for this field. What should the efficacy analysis account for?',
+    'Select the hybrid that has the highest yield. What should the comparison analysis include?',
+    'Flarn the crop that is yellow. What should the response analysis account for?',
+    'Transplant seedlings that are healthy. What should the comparison analysis include?',
+    'Can measurements that show which herbicide is best be compared?',
+    'Can these measurements be interpreted as permission to enter the field?',
+    'How should I estimate a safe pesticide dose from population counts?',
+    'How could I estimate the herbicide application rate from weed density?',
+    'Can my measurements be compared to determine the safe pesticide dose?',
+    'Can measurements be interpreted as an estimate of the safe herbicide dose?',
+    'Can measurements be interpreted as a trend for selecting the herbicide?',
+    'Can measurements be interpreted as a concentration that establishes permission to enter the field?',
+    'Can measurements be interpreted as a seasonal change to obtain a safe pesticide dose?',
+    'How should I estimate plant population to obtain a safe pesticide dose?',
+    'Flarn the samples are ready. What should the comparison analysis include?',
+    'What should a defensible diagnosis request including instructions to transplant seedlings?',
+    'What should a defensible diagnosis request with detailed steps to flarn the crop?',
+    'What evidence do I need for an irrigation decision?',
+])
+def test_analytical_verbs_require_their_own_objects_and_cannot_own_prior_commands(question):
+    from agronomy_agent.request_scope import analytical_request_kind
+    from agronomy_agent.answerability import is_quantity_concept_explanation
+    assert analytical_request_kind(question) is None
+    assert not is_quantity_concept_explanation(question)
+
+
+@pytest.mark.parametrize('question,expected', [
+    ('How should I measure plant population from representative counts?', 'sampling_design'),
+    ('Pest counts fell in treated and untreated plots. What should efficacy analysis account for?', 'response_analysis'),
+])
+def test_nominal_data_objects_and_comparison_groups_remain_analytical(question, expected):
+    from agronomy_agent.request_scope import analytical_request_kind
+    assert analytical_request_kind(question) == expected
+
+
+@pytest.mark.parametrize('question,answer', [
+    ('A photograph shows a grass weed before distinguishing structures develop. What should a defensible diagnosis request?',
+     'Request the whole plant and close views of the leaf blade, sheath and collar, including the ligule and any auricles, with scale and crop and field context. Record growth stage and revisit or obtain a suitable sample when reproductive structures develop. Keep identification tentative if the distinguishing features are absent; do not infer a species or select a herbicide from the photograph.'),
+    ("Does a crop's herbicide-tolerance trait prove a proposed herbicide use is currently permitted in the region?",
+     "No. A crop's tolerance trait describes a biological response, not use authorization. Verify the crop and trait identity and exact current product registration and label for the jurisdiction, crop, target, timing and method. The trait does not establish that the proposed use is currently permitted."),
+])
+def test_nonauthorizing_identification_and_trait_explanations_reach_saved_model_answer(tmp_path, monkeypatch, question, answer):
+    test_mechanism_request_keeps_supported_model_explanation_in_saved_answer(tmp_path, monkeypatch, question, answer)
+    for extra in [' Then spray the field.', ' Can I use glyphosate today?', ' Also flarn the crop.']:
+        from agronomy_agent.answerability import is_quantity_concept_explanation
+        assert not is_quantity_concept_explanation(question + extra)
+
+
+@pytest.mark.parametrize('report,reported', [
+    ('My potato leaves have expanding lesions.', True),
+    ('Potato foliage shows new spots.', True),
+    ('I found lesions on potato leaves.', True),
+    ('Leaf lesions are expanding.', True),
+    ('My potato leaves have no lesions.', False),
+    ('No lesions have been found on potato leaves.', False),
+    ('If lesions develop on potato leaves, what should I record?', False),
+    ('Last year potato leaves had lesions.', False),
+    ('A potato disease program is being reviewed; no symptoms have been reported.', False),
+    ('I do not know whether lesions are present.', False),
+    ('The report does not confirm that lesions are present.', False),
+    ('I cannot say I see lesions.', False),
+    ("Potato leaves show lesions today after last year's flooding.", True),
+])
+def test_foliar_diagnostic_requirements_follow_affirmative_current_reports(report, reported):
+    from agronomy_agent.plant_health_scope import foliar_symptoms_reported
+    from agronomy_agent.decision_route import DecisionRouteState
+    assert foliar_symptoms_reported(report) is reported
+    state = DecisionRouteState(question=report, decision='plant_health_diagnostic', crop='potato', country='canada',
+        decisive_evidence=(), premise_anchors=(), source_boundary=None, constraints=(), capsule=None)
+    violations = state.answer_violations('Check current crop-specific prevention guidance and local risk.')
+    assert ('potato_disease_program_evidence_missing' in violations) is reported
+
+
+@pytest.mark.parametrize('question,required', [
+    ("A pea grower says, 'There are lots of little grasshoppers on the road edge.' What would you need to know before deciding whether any part of the Saskatchewan field should be sprayed?",
+     ('ground area', 'interior', 'crop-and-pest threshold', 'current product label')),
+    ('Propose an integrated response to a suspected resistant weed population without naming a pesticide product.',
+     ('weed identification', 'application record', 'crop rotation', 'current label')),
+])
+def test_authority_holds_keep_reviewed_requested_scouting_or_integrated_methods(tmp_path, monkeypatch, question, required):
+    from agronomy_agent.answerability import assess_answerability
+    from agronomy_agent.router import classify_query, refine_query_route
+    from agronomy_agent.execution_core import AgentExecutionRequest
+    from agronomy_agent.server.services import chat_service
+    from agronomy_agent.server.settings import build_settings
+    from agronomy_agent.server.storage.db import TraceStore
+    class Backend:
+        backend_id = 'not_needed_under_authority_hold'
+        intervention_profile = 'balanced'
+        calls = 0
+        def generate(self, messages):
+            self.calls += 1
+            raise AssertionError('This fixture requires an authority hold, not unverified model application advice')
+        def close(self):
+            pass
+    backend = Backend()
+    route = refine_query_route(question, classify_query(question))
+    assert assess_answerability(question, route=route).state.value == 'require_authority'
+    monkeypatch.setattr(chat_service, '_build_mlx_generator', lambda *a, **k: backend)
+    database = tmp_path / 'held-method.sqlite3'
+    store = TraceStore(database)
+    try:
+        session = store.create_session('Synthetic held method', {}, {})
+        result = chat_service.execute_agent_request(AgentExecutionRequest(store=store,
+            settings=build_settings(db_path=database, artifact_root=tmp_path / 'artifacts', network_mode='offline'),
+            session_id=session['session_id'], message=question, mode='agronomic_rag', model_id='imposed',
+            rag_config='configs/rag.yaml', max_tokens=180, generation_backend=backend))
+        for term in required:
+            assert term in result.answer
+        assert backend.calls == 0
+        assert store.get_turn(result.turn['turn_id'])['answer'] == result.answer
+    finally:
+        store._conn.close()
+
+
+@pytest.mark.parametrize('question,answer', [
+    ('Distinguish disease incidence from severity in a scouting report.',
+     'Incidence is the proportion of assessed plants or units affected. Severity is the amount of affected tissue on each assessed plant or part. Record the sampling units and method and report the two measures separately; neither by itself identifies a pathogen.'),
+    ('Distinguish soil texture from structure.',
+     'Texture describes the proportions of sand, silt and clay. Structure describes how soil particles are arranged into aggregates and pores. These are distinct properties; a texture class alone does not establish the condition of soil structure.'),
+])
+def test_distinguish_nominal_concepts_keeps_saved_explanation_without_diagnostic_facets(tmp_path, monkeypatch, question, answer):
+    from agronomy_agent.answerability import is_mechanism_explanation
+    assert is_mechanism_explanation(question)
+    for extra in [' And spray the field.', ' Should I use glyphosate?', ' Also flarn the crop.']:
+        assert not is_mechanism_explanation(question + extra)
+    test_mechanism_request_keeps_supported_model_explanation_in_saved_answer(tmp_path, monkeypatch, question, answer)
+
+
+def test_conceptual_measure_comparison_editor_can_remove_an_unasked_numeric_example():
+    question = 'Distinguish disease incidence from severity in a scouting report.'
+    answer = 'Incidence is the proportion of assessed plants affected. Severity is the proportion of tissue affected on each assessed plant or part. Report the sampling method and keep the two measures distinct.'
+    class Editor:
+        def generate(self, messages):
+            return answer
+    result = verify_answer(answer + ' For example, 12 of 40 plants have disease.', question=question, evidence_text='',
+        question_type='exam_review', risk_level='low', editor=Editor(), review_mode='risk_conditioned_selective_v3')
+    assert result.answer == answer
+    assert 'unsupported_numeric_specificity' in result.draft_assessment.reasons
+    assert not result.final_assessment.missing_intent_facets
+
+
+def test_generic_nutrient_evidence_facet_accepts_soil_or_tissue_evidence_role():
+    from agronomy_agent.answer_verifier import _missing_intent_facets
+    question = 'A variable-rate fertilizer map increases total spend. How should the adviser evaluate whether the prescription is economically defensible?'
+    answer = 'Use current soil or tissue evidence and a realistic yield goal. Reconcile the source, application records and previous-crop credits. Compare costs and expected yield return with a uniform baseline, and test response using replicated check strips.'
+    assert 'current_nutrient_evidence' not in _missing_intent_facets(answer, question=question, question_type='fertility_rate')
+
+
+def test_crop_health_model_inputs_reach_the_actual_production_draft_prompt(tmp_path, monkeypatch):
+    question = 'What input data drive the model behind AAFC crop health grids?'
+    answer = 'AAFC crop health grids are modelled regional estimates using station temperature and precipitation with crop-specific models including VSMB. They are not remotely sensed field measurements. Use representative field observations to establish actual crop conditions.'
+    assert 'VSMB' not in question and 'temperature' not in question
+    test_mechanism_request_keeps_supported_model_explanation_in_saved_answer(tmp_path, monkeypatch, question, answer,
+        required_prompt_terms=('VSMB', 'temperature', 'precipitation'))

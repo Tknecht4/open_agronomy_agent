@@ -44,6 +44,41 @@ gate passes and retrieval completed 21 cases with one explicitly blocked case.
 Those checks do not qualify the repaired source's real model outputs. The
 running `a71a91d` collection remains frozen and retains its original defects.
 
+An independent engineering diagnostic of a fixed 1,024-row prefix from the
+running hosted campaign found further task-ownership and evidence-selection
+defects. The unused `a9f7a9a` candidate is on dispatch hold. Source fixes now
+separate soil-domain classification from an irrigation task, preserve negated
+map assertions, match regional product identities and requested passage facets,
+and keep crop-specific frost recovery conditional on the known crop and stage.
+They also preserve analytical sampling, comparison, forecast and economic
+questions while keeping application authority separate from useful scouting or
+integrated management guidance. The potato method distinguishes prevention
+from reported-lesion diagnosis. Bounded output checks reject an unrequested
+application even without a number.
+
+The retained-context replay covered all 33 selected diagnostic traces: 21 had
+original provider drafts and 12 had no provider draft to replay. It rehydrated
+the original selected full passages from frozen source, checked their trace
+metadata and reused the compiled field receipt; it did not reproduce every
+tool note or make a new model call. That replay additionally exposed unasked
+resolution requirements on correct stage explanations and an uncorrected
+AAFC remote-sensing claim. Both received source-level repairs. These are
+engineering observations, not new benchmark rows, rubric labels or scientific
+clearance. The whole final-source matrix and its independent assessment remain
+required; the running frozen campaign continues unchanged.
+
+The same retained review identified a useful calculation recognition gap:
+an explicitly supplied metric area and kg/ha rate could miss an existing
+registered mass-total operation. A shared whole-request repair now reaches that
+operation without inferring the material basis. A separate typed supplied-input
+depletion operation computes supplied fraction × TAW and preserves the bounded explanation
+of why p needs crop and context calibration. It does not choose p or an irrigation
+program or equate an arbitrary management allowance with physiological RAW.
+These additions use calculator/schema v5 and planner v6; the new
+46-operation deterministic conformance contract preserves earlier contracts.
+The optional derived coverage percentage in another diagnostic answer remains
+outside that typed path; its useful evidence-reporting answer is retained.
+
 ### Earlier soil-drying checkpoint
 
 On November 15, independent source review reproduced a correctness defect in

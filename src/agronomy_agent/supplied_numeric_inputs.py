@@ -17,6 +17,30 @@ SPACED_SIGNED_NUMBER = rf"(?<![\w.,+-])[+-]?\s*{_BODY}{_END}"
 _NUMERIC_TOKEN = re.compile(r"(?<![\w.,])[+-]?(?:\d+(?:[.,]\d+)*|\.\d+)(?:[A-Za-z][\w+-]*|(?:[/×*+-]\d+(?:[.,]\d+)*)+)?")
 
 
+def unit_owned_area_mass_total(text: str) -> dict[str, str] | None:
+    """Own one complete area × areal-mass request, without a material guess.
+
+    Both operands and compatible metric units must be supplied. Full matching
+    leaves extra quantities, compound units and unknown tasks to ordinary
+    planning; the registered calculator still validates ranges and arithmetic.
+    """
+    area = rf"(?P<area>{NUMBER})\s*(?:ha|hectares?)"
+    rate = rf"(?P<rate>{NUMBER})\s*kg\s*(?:/|per\s+)(?:ha|hectares?)"
+    premise = rf"{area}\s+(?:at|with a supplied rate of)\s+{rate}"
+    output = r"(?:the\s+)?(?:total(?:\s+mass)?|mass needed)"
+    patterns = (
+        rf"(?:for\s+)?{premise}\s*[,;.]?\s*(?:what is|calculate|compute|work out)\s+{output}",
+        rf"(?:calculate|compute|work out)\s+{output}\s+for\s+{premise}",
+        rf"what is\s+{output}\s+for\s+{premise}",
+    )
+    for pattern in patterns:
+        match = re.fullmatch(rf"\s*(?:please\s+)?{pattern}[.!?]*\s*", text, re.I)
+        if match:
+            return {'area_ha': match['area'].replace(',', ''),
+                    'product_rate_kg_per_ha': match['rate'].replace(',', '')}
+    return None
+
+
 def supplied_numeric_gaps(text: str, matches: list[re.Match[str]]) -> tuple[str, ...]:
     """Every supplied quantity must have a recognized role or method constant.
 

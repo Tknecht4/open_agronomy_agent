@@ -13,17 +13,12 @@ from agronomy_agent.decision_route import build_decision_route_state
 from agronomy_agent.geographic_context import format_trusted_geographic_context
 from agronomy_agent.paths import repo_path
 from agronomy_agent.router import evidence_interpretation_kind
+from agronomy_agent.evidence_handshake import named_regional_product_matches
 
 
 DEFAULT_CONTEXT_POLICY_PATH = "configs/context_policy_v1.yaml"
 DEFAULT_SOURCE_TYPE_BUDGETS = {"applied_guidance": 4, "boundary": 2, "regional_environment": 2, "ontology": 1}
 USER_FIELD_CONTEXT_KEYS = ("crop_current", "region_text", "province_state", "management_notes")
-_AAFC_CROP_HEALTH_PRODUCT_RE = re.compile(
-    r"(?:\baafc\b.{0,100}\b(?:crop[- ]health (?:index|indices)|crop stress index|crop development stage|growth[- ]stage raster)\b|"
-    r"\b(?:crop[- ]health (?:index|indices)|crop stress index)\b|"
-    r"\bcrop development stage (?:layer|raster|product|values?)\b|\bgrowth[- ]stage raster\b)",
-    re.IGNORECASE,
-)
 
 
 def estimate_tokens(text: str) -> int:
@@ -401,7 +396,7 @@ class ContextPacker:
             evidence_roles=evidence_roles,
             max_tokens_override=(
                 int(self._slots.get("regional_context", {}).get("named_product_max_tokens") or 1100)
-                if _AAFC_CROP_HEALTH_PRODUCT_RE.search(question)
+                if any(named_regional_product_matches(question, doc) for doc in regional_docs)
                 else None
             ),
         )

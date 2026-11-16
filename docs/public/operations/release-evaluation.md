@@ -660,7 +660,7 @@ score. Tool implementation receipts include the scenario module.
 ### Supplied-model calculations and transport maintenance
 
 The current calculator contract is
-`configs/benchmark_capability_conformance_v4.json` (45 structured operations).
+`configs/benchmark_capability_conformance_v5.json` (46 structured operations).
 Prior conformance contracts retain their original bytes and cannot qualify the
 expanded implementation. Natural requests use bounded operand and whole-request
 ownership; structured operation coverage does not imply every phrasing is parsed.
@@ -709,3 +709,67 @@ an economic threshold. The project context therefore asks for diagnosis where
 relevant, crop-specific risk and current local guidance for prevention, and
 thresholds where applicable. This does not select a product or rate, establish
 current registration, or replace the label for the proposed crop and target.
+
+The authored potato decision method follows the same distinction: an alert is
+neither a blanket instruction to spray every field nor merely a scouting cue.
+It can inform preventive planning using applicable local risk guidance, crop
+susceptibility, weather, canopy growth and prior protection. A fresh lesion
+sample belongs to an affirmative symptom investigation; unknown, denied or
+conditional symptoms cannot create that observation. No fixed product, rate or
+interval is supplied by this method.
+
+Whole-request analytical scope binds a request head to its actual object and
+remaining clauses. Population sampling, measurement comparisons, comparator
+analysis, forecast-versus-observation bookkeeping and economic concepts must
+not inherit an incidental stress, irrigation or nutrient-rate checklist.
+Estimating a dose **from** population counts is still a dose request. Earlier
+commands, embedded instructions and unknown additional tasks retain their own
+checks. An independent output check rejects unasked application instructions
+in these nonauthorizing answers, including instructions without a numeric rate.
+Source tests exercise a finite grammar; they do not establish universal natural
+language coverage.
+
+Evidence selection also binds the named product and requested facet to passage
+content. Shared publisher names, titles and tags do not make an unrelated
+specification or metadata page decisive. For the
+[AAFC Crop Health Indices](https://open.canada.ca/data/en/dataset/84d1ff0d-4689-466c-b792-f860a1fb1603),
+the retained specification distinguishes model inputs, crop-family models and
+stage-code meanings. Stage-code explanations need not repeat an unrequested
+resolution. A claim that these products are remotely sensed must not override
+supplied station-temperature, precipitation and VSMB source evidence. This is
+a product-specific source check, not a claim that all remote-sensing statements
+are verified.
+
+Crop tolerance and registered use remain separate evidence roles. The bounded
+trait explanation checks current crop/trait identity and the actual applicable
+product label; it does not infer permission from biological tolerance. See
+[Health Canada's registered-product and label guidance](https://www.canada.ca/en/health-canada/services/about-pesticides/are-pesticides-safe.html)
+and the separate
+[crop-variety registration guidance](https://inspection.canada.ca/en/plant-health/plant-varieties/variety-registration/registration-procedures/guidance-document).
+Held application decisions can still include reviewed pest-sampling or
+integrated weed-management methods. Grasshopper density uses a defined ground
+area rather than automatically inheriting a sweep or plant count; the
+[Saskatchewan sampling guide](https://www.saskatchewan.ca/business/agriculture-natural-resources-and-industry/agribusiness-farmers-and-ranchers/crops-and-irrigation/insects/economic-thresholds-of-insect-pests)
+distinguishes in-field sampling from roadside observations. No generic numerical
+threshold is activated by this method.
+
+The current calculator contract is v5, with planner v6 and the v5 arithmetic
+selector. Its 46 structured operations include `allowable_water_depletion`:
+supplied total available water in millimetres multiplied by a supplied depletion
+fraction. An explicitly stated percentage is converted to a fraction; missing,
+conflicting, invalid or unsupported inputs are not filled from a crop table.
+[FAO-56 chapter 8](https://www.fao.org/4/x0490e/x0490e0e.htm) supplies the
+relationship RAW = p × TAW when p denotes the no-stress depletion fraction.
+An arbitrary management-allowed depletion limit can differ from physiological
+RAW. The tool reports depletion allowance under the supplied assumption,
+not current measured depletion, remaining water, an irrigation date
+or gross application depth. The accompanying explanation retains the dependence
+on crop, growth stage, soil and evaporative demand without selecting p.
+
+One shared whole-request metric area/areal-mass grammar also feeds the existing
+`field_product_total` operation and its completeness check. It computes mass on
+the supplied kg/ha basis without inferring a product analysis or converting
+nutrient mass into product mass. Extra quantities, basis qualifiers, compound
+units and additional requests cannot be silently consumed. The earlier v1–v4
+conformance files remain frozen; v5 is a new deterministic conformance contract,
+separate from the 608-case model assessment and its scientific interpretation.

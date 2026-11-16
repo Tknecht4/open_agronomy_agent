@@ -17,7 +17,7 @@ import re
 from typing import Any, Mapping, Sequence
 
 from agronomy_agent.request_scope import (
-    has_action_directive, has_unqualified_followup, is_concept_comparison_scope,
+    has_action_directive, has_unqualified_followup, is_concept_comparison_scope, analytical_request_kind,
 )
 from agronomy_agent.calculator_contracts import TOOL_PLANNER_VERSION, format_calculator_clarification, tool_version_for, calculation_request_is_complete
 
@@ -518,6 +518,12 @@ def stewardship_explanation_kind(question: str) -> str | None:
             r"(?:establish|prove|demonstrate)\s+that\s+(?:a\s+)?pesticide use\s+"
             r"(?:satisfies|meets)\s+(?:current\s+)?(?:residue and registration|registration and residue) requirements"
         ),
+        "crop_tolerance_authority_boundary": (
+            r"(?:does|can)\s+(?:a\s+)?crop(?:['’]s)?\s+(?:herbicide[- ]tolerance|herbicide[- ]tolerant)\s+trait\s+"
+            r"(?:establish|prove|demonstrate)\s+(?:that\s+)?(?:a\s+)?(?:proposed\s+)?herbicide use\s+"
+            r"is\s+(?:currently\s+)?(?:permitted|registered|authorized|allowed)"
+            r"(?:\s+in\s+(?:the|a)\s+(?:region|jurisdiction))?"
+        ),
     }
     for kind, request in requests.items():
         if re.fullmatch(rf"\s*{prefix}(?:{request})[.!?]*\s*", text, re.I):
@@ -526,10 +532,11 @@ def stewardship_explanation_kind(question: str) -> str | None:
 
 
 def is_quantity_concept_explanation(question: str) -> bool:
-    """Share whole-request concept scope across routing and action guards."""
+    """Share whole-request concept and analytical-method scope across guards."""
     return (is_rate_basis_explanation(question) or is_dose_response_explanation(question)
             or is_sampling_basis_explanation(question) or is_evapotranspiration_explanation(question)
-            or stewardship_explanation_kind(question) is not None)
+            or stewardship_explanation_kind(question) is not None
+            or analytical_request_kind(question) is not None)
 
 
 def is_mechanism_explanation(question: str) -> bool:
@@ -541,14 +548,14 @@ def is_mechanism_explanation(question: str) -> bool:
     """
     text = " ".join(question.lower().split())
     text = re.sub(
-        r"^(?:please\s+)?(?:can|could)\s+you\s+(?:please\s+)?(?=(?:compare|contrast)\b)",
+        r"^(?:please\s+)?(?:can|could)\s+you\s+(?:please\s+)?(?=(?:compare|contrast|distinguish)\b)",
         "", text,
     )
     request = re.search(
         r"(?:^|[.!?;]\s*)(?:please\s+)?(?:"
         r"(?:why|how)\s+(?:does|do|can|could|is|are)\b|"
         r"(?:explain|describe)\s+(?:the\s+)?(?:mechanism|process|how|why)\b|"
-        r"(?:compare|contrast)\b|"
+        r"(?:compare|contrast|distinguish)\b|"
         r"how should (?:that|this) (?:model )?result be interpreted\b|"
         r"what (?:statistical )?diagnostics should accompany (?:the|this|that) (?:claim|trend|estimate)\b|"
         r"which\s+(?:rival|alternative|possible)\s+(?:explanations|causes)\s+"
@@ -575,7 +582,7 @@ def is_mechanism_explanation(question: str) -> bool:
             return False
         if any(match["subgroup"] and re.search(r"\b(?:and|then|also|but|please|with|without|including|as|to|for)\b", match["subgroup"], re.I) for match in matches):
             return False
-    if re.search(r"\b(?:compare|contrast)\b", request.group()):
+    if re.search(r"\b(?:compare|contrast|distinguish)\b", request.group()):
         if not is_concept_comparison_scope(text):
             return False
     if re.search(
@@ -601,7 +608,7 @@ def is_mechanism_explanation(question: str) -> bool:
         return False
     if re.search(
         r"\b(?:be|is|are|was|were)\s+(?:applied|sprayed|used|mixed|selected|recommended|permitted|allowed|registered)\b|"
-        r"\b(?:apply|spray|treat|diagnose|prescribe|recommend|choose|select|"
+        r"\b(?:apply|spray|treat|diagnose|prescribe|recommend|choose|select(?!\s+for\s+(?:resistance|tolerance)\b)|"
         r"irrigate|fertilize|harvest(?!\s+seasons?\b)|till|rip|subsoil|spread|drill|drive)\b|"
         r"(?:^|[.!?;]|\b(?:and|then|also))\s*(?:please\s+)?"
         r"(?:start|stop|add|remove|change|plant|seed|sow|feed|use)\b", text,
@@ -759,6 +766,60 @@ def requests_regulated_action(question: str) -> bool:
         or _is_fertilizer_only_request(question)
         or _is_non_regulated_rate_request(question)
         or bounded_product_help_kind(question)
+    )
+
+
+def has_application_instruction(answer: str) -> bool:
+    """Recognize direct application instructions in a non-authorizing answer.
+
+    Callers establish that the question only requests explanation or evidence.
+    This is a bounded output check, not a label validator. Noun phrases such
+    as spray drift and instructions to read a label are not applications.
+    """
+    reference = r"(?:labels?(?!\s+rates?\b)|records?|history|analysis|tests?|data|information|curves?|models?|formula|identity|name|number|comparisons?|effects?|groups?|arms?|contrasts?|prices?|costs?)"
+    # Read the head of the object: nitrogen uptake data and herbicide response
+    # data are analytical inputs. A preposition, conjunction or time cue ends
+    # that noun phrase, so an application cannot borrow a later data word.
+    modifier = r"(?!(?:and|or|then|to|for|on|in|at|with|from|per|by|before|after|if|unless|only|that|which|so|now|today|tomorrow|spray|apply|use|treat|check|compare)\b)[a-z-]+"
+    material = (
+        rf"(?:{_NAMED_PESTICIDE_PATTERN}|pesticides?|herbicides?|fungicides?|insecticides?|"
+        r"fertilizers?|nitrogen|phosphorus|potassium|manure|compost|treatments?|products?|tank[- ]mix(?:ture)?s?)"
+        rf"\b(?!(?:['’]s)?(?:[- ]{modifier}){{0,3}}[- ]{reference}(?![-\w]))"
+    )
+    determiner = r"(?:(?:the|your|our|this|that|a|an|some|any|each|every|all(?: the| your| our)?)\s+)?"
+    field = r"(?:(?:whole|entire)\s+)?(?:fields?|crops?|canop(?:y|ies)|plants?|beds?)\b"
+    def application(spray: str, apply: str, use: str, treat: str) -> str:
+        return (
+            rf"(?:{spray}\s+(?:{determiner}(?:{field}|{material})|now\b|today\b)|"
+            rf"{apply}\s+{determiner}{material}|"
+            rf"{use}\s+{determiner}{material}|"
+            rf"{treat}\s+(?:the|your|our|this|that)\s+{field})"
+        )
+    operation = application("spray", "apply", "use", "treat")
+    gerund = application("spraying", "applying", "using", "treating")
+    operation = rf"(?:{operation}|(?:add|spread|increase|reduce|raise|lower|choose|select|recommend)\s+{determiner}{material})"
+    start = r"(?:^|[.!?;:\n]|,\s*|\b(?:and|then|also)\s+)\s*(?:[-*]\s*)?"
+    # Denying that evidence establishes permission is not a recommendation.
+    # Mask only the modal subject in that explicit subordinate proposition;
+    # a separate positive instruction remains visible to every check below.
+    answer = re.sub(
+        r"\b(?:(?:does|do|did|would|will)\s+not|cannot|can't|can’t)\s+"
+        r"(?:mean|establish|show|confirm|justify|imply|prove)\s+(?:that\s+)?"
+        r"(?P<modal>(?:I|you|we)\s+(?:can|should|must|may|could|would))(?=\s+" + operation + r")",
+        lambda match: match.group().replace(match['modal'], ' ' * len(match['modal'])),
+        answer, flags=re.I,
+    )
+    direct = any(
+        not re.search(r"\b(?:can|could|may|might|would|should|must)\s*$", answer[:match.start()], re.I)
+        for match in re.finditer(rf"{start}(?:please\s+)?{operation}", answer, re.I)
+    )
+    return bool(
+        direct
+        or re.search(rf"{start}(?:please\s+)?consider\s+{gerund}", answer, re.I)
+        or re.search(rf"\b(?:I|you|we)\s+(?:can|should|must|may|could|would|need to|ought to)\s+(?:also\s+)?{operation}", answer, re.I)
+        or re.search(rf"\b(?:growers?|farmers?)\s+(?:should|must|need to|ought to)\s+{operation}", answer, re.I)
+        or re.search(rf"{start}(?:I|we) recommend(?: that you)?\s+(?:{operation}|{gerund})", answer, re.I)
+        or re.search(rf"{start}(?:it is time to|the next step is to)\s+{operation}", answer, re.I)
     )
 
 

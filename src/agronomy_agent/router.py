@@ -232,7 +232,7 @@ def _repair_interface_route(question: str, route: QueryRoute) -> QueryRoute:
             namespaces=("exam_review", "product_stewardship"), required_tools=(),
             answer_style="exam_review", audience=route.audience,
             query_expansion=(),
-            guidance="Explain the requested quantity concept directly; do not choose a product dose or a field nutrient target.",
+            guidance="Answer the requested explanation or analytical method directly; do not add a field operation, product choice or nutrient target.",
             knowledge_bucket="farmer_knowledge", knowledge_domains=("farmer_knowledge",),
         )
     q = _routing_text(question)

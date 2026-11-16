@@ -305,7 +305,7 @@ deterministic registry/executor gate is:
 
 ```bash
 PYTHONPATH=src .venv/bin/python scripts/run_benchmark_capability_conformance.py \
-  --contract configs/benchmark_capability_conformance_v4.json
+  --contract configs/benchmark_capability_conformance_v5.json
 ```
 
 The v1/v2/v3 contracts are retained as historical evidence and intentionally fail
