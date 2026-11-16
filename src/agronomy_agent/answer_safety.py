@@ -5,7 +5,7 @@ from typing import Any
 
 from agronomy_agent.answer_verifier import bounded_decision_support
 from agronomy_agent.observation_guidance import stored_grain_context
-from agronomy_agent.answerability import preferred_response_language, is_quantity_concept_explanation, is_mechanism_explanation, requests_regulated_action, bounded_product_help_kind, has_application_instruction
+from agronomy_agent.answerability import preferred_response_language, is_quantity_concept_explanation, requests_regulated_action, non_prescriptive_help_requested, has_application_instruction
 from agronomy_agent.quantity_claims import remove_numeric_application_instructions
 
 
@@ -47,9 +47,7 @@ def enforce_answer_safety_postconditions(
     answer_text = _normalize_field_trafficability_gaps(answer_text, question=question)
     answer_text = _normalize_salinity_terminology(answer_text, question=question, route=route)
     answer_text = _ensure_cross_border_fertility_authority_boundary(answer_text, question=question)
-    if (is_quantity_concept_explanation(str(question or ""))
-            or is_mechanism_explanation(str(question or ""))
-            or bounded_product_help_kind(str(question or ""))
+    if (non_prescriptive_help_requested(str(question or ""))
             or (_route_question_type(route) == "product_label"
                 and not requests_regulated_action(str(question or "")))):
         cleaned, removed = remove_numeric_application_instructions(answer_text)

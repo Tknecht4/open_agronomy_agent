@@ -793,7 +793,7 @@ def test_frozen_synthetic_fixture_never_executes_or_discards_conditional_scenari
     ("supplied_numeric_inputs.py", {"answerability_policy", "kernel_config", "verifier_policy", "fallback_policy", "tool_executor_bundle"}),
     ("supplied_depletion_request.py", {"answerability_policy", "kernel_config", "verifier_policy", "fallback_policy", "tool_executor_bundle"}),
     ("arithmetic_input_roles.py", {"answerability_policy", "kernel_config", "verifier_policy", "fallback_policy", "tool_executor_bundle"}),
-    ("plant_health_scope.py", {"kernel_config", "verifier_policy", "fallback_policy"}),
+    ("plant_health_scope.py", {"answerability_policy", "kernel_config", "verifier_policy", "fallback_policy"}),
 ])
 def test_shared_helper_bytes_change_their_consumer_implementation_identities(monkeypatch, helper, consumers):
     monkeypatch.setattr(runner_module, "_retrieval_runtime_paths", lambda: ())

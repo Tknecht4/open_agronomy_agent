@@ -754,6 +754,22 @@ def bounded_product_help_kind(question: str) -> str | None:
     return "evidence_assessment"
 
 
+def non_prescriptive_help_requested(question: str) -> bool:
+    """Own the output-only application guard for bounded help.
+
+    The root predicate qualifies the whole observation request. This union
+    does not classify capability, grant a bypass or remove an authority hold.
+    """
+    from agronomy_agent.plant_health_scope import root_inspection_only_request
+
+    return bool(
+        is_quantity_concept_explanation(question)
+        or is_mechanism_explanation(question)
+        or bounded_product_help_kind(question)
+        or root_inspection_only_request(question)
+    )
+
+
 def requests_regulated_action(question: str) -> bool:
     """Retain authority holds for unknown requests in a product-aware route.
 
@@ -807,6 +823,18 @@ def has_application_instruction(answer: str) -> bool:
         r"(?:mean|establish|show|confirm|justify|imply|prove)\s+(?:that\s+)?"
         r"(?P<modal>(?:I|you|we)\s+(?:can|should|must|may|could|would))(?=\s+" + operation + r")",
         lambda match: match.group().replace(match['modal'], ' ' * len(match['modal'])),
+        answer, flags=re.I,
+    )
+    # Physical handling is not a material application. Own the complete gentle
+    # lifting/handling clause; a later treatment instruction stays visible.
+    answer = re.sub(
+        rf"{start}(?P<handling_verb>treat)\s+(?:the|your|our|these|those)\s+plants?\s+"
+        r"(?:gently|carefully)\s+while\s+(?:lifting|handling)\s+(?:them|it)"
+        r"(?:\s+to\s+(?:preserve|protect|keep)\s+(?:(?:the|their)\s+)?(?:fine\s+)?roots?(?:\s+intact)?)?"
+        r"(?=\s*(?:[.!?;\n]|$))",
+        lambda match: match.group()[:match.start('handling_verb') - match.start()]
+        + ' ' * len(match['handling_verb'])
+        + match.group()[match.end('handling_verb') - match.start():],
         answer, flags=re.I,
     )
     direct = any(

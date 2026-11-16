@@ -192,6 +192,7 @@ def _runtime_implementation_receipts() -> dict[str, str]:
                     PROJECT_ROOT / "src/agronomy_agent/arithmetic_input_roles.py",
                     PROJECT_ROOT / "src/agronomy_agent/supplied_numeric_inputs.py",
                     PROJECT_ROOT / "src/agronomy_agent/supplied_depletion_request.py",
+                    PROJECT_ROOT / "src/agronomy_agent/plant_health_scope.py",
                 )
             ),
             "runtime_orchestrator": _bundle_sha256(

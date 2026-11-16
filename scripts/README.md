@@ -308,7 +308,7 @@ PYTHONPATH=src .venv/bin/python scripts/run_benchmark_capability_conformance.py 
   --contract configs/benchmark_capability_conformance_v5.json
 ```
 
-The v1/v2/v3 contracts are retained as historical evidence and intentionally fail
+The v1–v4 contracts are retained as historical evidence and intentionally fail
 current-version conformance. The [follow-up record](../docs/reviews/production-foundations-benchmark-20260927.md)
 distinguishes calculator gain from corpus gain and records interrupted model
 runs as incomplete.

@@ -24,15 +24,17 @@ class Editor:
         return self.answer
 
 
-@pytest.mark.parametrize("issuance", [
-    "Report issued: 2030-06-21.",
-    "The laboratory report was issued on 2030-06-21.",
-    "The report has been issued on 2030-06-21.",
+@pytest.mark.parametrize("issuance,report_date", [
+    ("Report issued: 2030-06-21.", "2030-06-21"),
+    ("The laboratory report was issued on 2030-06-21.", "2030-06-21"),
+    ("The report has been issued on 2030-06-21.", "2030-06-21"),
+    ("Report issuance (2030-06-21).", "2030-06-21"),
+    ("Report issuance (21 June).", "21 June"),
 ])
-def test_supplied_date_roles_survive_equivalent_report_event_prose(issuance):
+def test_supplied_date_roles_survive_equivalent_report_event_prose(issuance, report_date):
     question = (
         "My soil sample was collected 2030-06-14, analysed 2030-06-19, and its report "
-        "issued 2030-06-21. Which sampling date should I compare across seasons, and "
+        f"issued {report_date}. Which sampling date should I compare across seasons, and "
         "how should I preserve the other dates?"
     )
     draft = (
@@ -51,6 +53,8 @@ def test_supplied_date_roles_survive_equivalent_report_event_prose(issuance):
     "Look for lesions, rot, or discoloration.",
     "Compare the roots, looking for damaged attachments, rot, and discoloration.",
     "Inspect the roots for rot.",
+    "Look for galls, lesions, rot, or unusual discoloration.",
+    "Check the roots for rot and abnormal discoloration.",
 ])
 def test_generic_decay_in_an_inspection_list_is_not_a_named_disease(inspection):
     draft = ROOT_METHOD.replace("Look for the shape and attachment of swellings, lesions, rot, or discoloration.", inspection)
@@ -67,6 +71,8 @@ def test_generic_decay_in_an_inspection_list_is_not_a_named_disease(inspection):
     "Look for damaged attachments, rot, which explains the swelling.",
     "Check the roots for rot, identified on every affected plant.",
     "Look for rot, or discoloration that explains the swelling.",
+    "Look for rot, or unusual discoloration that explains the swelling.",
+    "Look for rot and abnormal discoloration, which confirms the diagnosis.",
     "Look for root rot.",
     "Look for bacterial rot.",
     "Look for soft rot.",
@@ -82,6 +88,104 @@ def test_generic_decay_exception_does_not_apply_to_other_tasks():
     assessment = assess_claim_risk("Look for rot.", question="What should I inspect on grain leaves?",
                                   evidence_text="", question_type="plant_health", risk_level="high")
     assert assessment.unsupported_named_conditions
+
+
+def test_root_records_accept_an_explicit_note_of_stage_and_symptom_distribution():
+    draft = ROOT_METHOD.replace(
+        "Record crop stage and the field pattern.",
+        "Note where symptoms occur in the field and the crop stage, and take clear photos.",
+    )
+    result = verify_answer(draft, question=ROOT_QUESTION, evidence_text="", question_type="plant_health",
+                           risk_level="high", editor=Editor(), review_mode="risk_conditioned_selective_v3")
+    assert result.answer == draft and not result.triggered
+
+
+@pytest.mark.parametrize("statement", [
+    "Note that crop stage alone cannot establish the cause.",
+    "Note the current herbicide label, but crop stage is unknown.",
+    "Note where symptoms occur, but ignore the distribution and the crop stage.",
+])
+def test_rhetorical_or_unrelated_notes_do_not_supply_root_recording_instructions(statement):
+    draft = ROOT_METHOD.replace("Record crop stage and the field pattern.", statement)
+    assessment = assess_claim_risk(draft, question=ROOT_QUESTION, question_type="plant_health", risk_level="high")
+    assert "root_records" in assessment.missing_intent_facets
+
+
+@pytest.mark.parametrize("proposition", [
+    "Report issuance (2030-06-21) is the analysis date.",
+    "Report issuance (2030-06-21) is the collection date.",
+    "The analysis date is report issuance (2030-06-21).",
+    "Use the collection date as report issuance (2030-06-21).",
+    "Treat report issuance (2030-06-21) as the processing date.",
+    "Analysis (2030-06-21) and report issuance (2030-06-21).",
+    "Processing (21 June) and report issuance (21 June).",
+])
+def test_nominal_date_items_do_not_license_role_conflation_or_an_invented_event(proposition):
+    question = (
+        "The soil sample was collected 2030-06-14 and its report issued 2030-06-21. "
+        "Which sampling date should I compare, and how should I keep the other dates?"
+    )
+    draft = (
+        "Use the collection date, 2030-06-14, for comparisons. Keep each event separately linked. "
+        "Report issuance (2030-06-21). "
+        + proposition
+    )
+    assessment = assess_claim_risk(draft, question=question, evidence_text="", question_type="field_data")
+    assert "sample_event_role_conflation" in assessment.reasons
+
+
+@pytest.mark.parametrize("ending", [
+    "Report issuance (2030-06-21) is not the analysis date.",
+    "Do not treat report issuance (2030-06-21) as the collection date.",
+    "Do not use the analysis date as report issuance (2030-06-21).",
+    "It is not true that report issuance (2030-06-21) is the analysis date.",
+    "If report issuance (2030-06-21) is the collection date, check the separate event records first.",
+])
+def test_nominal_report_role_denials_or_conditionals_do_not_assert_reassignment(ending):
+    question = (
+        "The soil sample was collected 2030-06-14 and its report issued 2030-06-21. "
+        "Which sampling date should I compare and how should I keep the dates?"
+    )
+    draft = (
+        "Use the collection date for sampling comparisons. Keep distinct events separately. "
+        "Report issuance (2030-06-21). " + ending
+    )
+    assessment = assess_claim_risk(draft, question=question, question_type="field_data")
+    assert "sample_event_role_conflation" not in assessment.reasons
+
+
+@pytest.mark.parametrize("statement", [
+    "Is the analysis (2030-06-19) supplied?",
+    "If analysis (2030-06-19), can I store that?",
+    "No analysis (2030-06-19) is confirmed.",
+    "Analysis (2030-06-19), but that is unconfirmed.",
+])
+def test_nominal_analysis_event_retains_occurrence_local_question_and_denial_controls(statement):
+    question = (
+        "The soil sample was collected 2030-06-14 and the report issued 2030-06-21. "
+        + statement + " How should I keep the dates?"
+    )
+    draft = (
+        "Use the collection date for sampling comparisons. Keep the events separately: "
+        "analysis (2030-06-19); report issuance (2030-06-21)."
+    )
+    assessment = assess_claim_risk(draft, question=question, question_type="field_data")
+    assert "sample_event_role_conflation" in assessment.reasons
+
+
+def test_independently_supplied_coincident_dates_retain_their_separate_roles():
+    question = (
+        "The soil sample was collected 2030-06-14, analysed 2030-06-21, and its report "
+        "issued 2030-06-21. Which sampling date should I compare, and how should I keep the dates?"
+    )
+    draft = (
+        "Use the collection date for sampling comparisons. Keep distinct events: collection "
+        "(2030-06-14), analysis (2030-06-21), and report issuance (2030-06-21). "
+        "The analysis and report dates coincide, but their event roles remain separate."
+    )
+    result = verify_answer(draft, question=question, evidence_text="", question_type="field_data",
+                           risk_level="low", editor=Editor(), review_mode="risk_conditioned_selective_v3")
+    assert result.answer == draft and not result.triggered
 
 
 @pytest.mark.parametrize("draft_missing_records", [False, True])
@@ -126,6 +230,23 @@ def test_public_verification_rejects_an_editor_that_drops_concrete_root_inspecti
         "2030-06-21. Which sampling date should I compare across seasons, and how should I preserve the other dates?",
         "Use the sample collection date, 2030-06-14, for sampling-date comparisons. Analysis date: "
         "2030-06-19. Report issued: 2030-06-21. Keep the three events separately linked to the sample and original report.",
+    ),
+    (
+        "My soil sample was collected 2030-06-14, analysed 2030-06-19, and its report issued "
+        "2030-06-21. Which sampling date should I compare across seasons, and how should I preserve the other dates?",
+        "Store distinct dated events: collection (2030-06-14), analysis (2030-06-19), and report issuance "
+        "(2030-06-21). Use the collection date for sampling comparisons; retain each role separately.",
+    ),
+    (
+        ROOT_QUESTION,
+        ROOT_METHOD.replace("rot, or discoloration", "rot, or unusual discoloration").replace(
+            "Record crop stage and the field pattern.",
+            "Note where symptoms occur in the field and the crop stage, and take clear photos.",
+        ),
+    ),
+    (
+        ROOT_QUESTION,
+        ROOT_METHOD + " Treat the plants gently while lifting them to preserve the fine roots.",
     ),
 ])
 def test_complete_method_survives_the_persisted_production_path(tmp_path, monkeypatch, question, draft):
@@ -358,6 +479,8 @@ def test_explanations_cannot_introduce_nonnumeric_application_instructions(instr
     "An efficacy result does not mean you can use glyphosate.",
     "This mechanism does not establish that you should spray the field.",
     "The analysis cannot show that you may apply nitrogen.",
+    "Treat the plants gently while lifting them to preserve the fine roots.",
+    "Treat your plant carefully while lifting it to keep the roots intact.",
 ])
 def test_descriptions_data_methods_and_negative_application_boundaries_are_not_instructions(prose):
     from agronomy_agent.answerability import has_application_instruction
@@ -373,13 +496,19 @@ def test_rewrite_can_remove_an_unasked_application_and_keep_the_explanation():
     assert "unrequested_application_instruction" in result.draft_assessment.reasons
 
 
-def test_persisted_explanation_rejects_an_imposed_nonnumeric_spray_instruction(tmp_path, monkeypatch):
+@pytest.mark.parametrize("question,explanation", [
+    (APPLICATION_EXPLANATION_QUESTION, APPLICATION_EXPLANATION),
+    (ROOT_QUESTION, ROOT_METHOD.replace("rot, or discoloration", "rot, or unusual discoloration")),
+])
+def test_persisted_non_prescriptive_help_rejects_an_imposed_nonnumeric_spray_instruction(
+    tmp_path, monkeypatch, question, explanation,
+):
     from agronomy_agent.answerability import has_application_instruction
     from agronomy_agent.execution_core import AgentExecutionRequest
     from agronomy_agent.server.services import chat_service
     from agronomy_agent.server.settings import build_settings
     from agronomy_agent.server.storage.db import TraceStore
-    draft = APPLICATION_EXPLANATION + " Spray the whole field now."
+    draft = explanation + " Spray the whole field now."
 
     class Backend:
         backend_id = "imposed_unasked_application_fixture"
@@ -401,7 +530,7 @@ def test_persisted_explanation_rejects_an_imposed_nonnumeric_spray_instruction(t
         session = store.create_session("Bounded explanation", {}, {})
         result = chat_service.execute_agent_request(AgentExecutionRequest(store=store,
             settings=build_settings(db_path=db, artifact_root=tmp_path / "artifacts", network_mode="offline"),
-            session_id=session["session_id"], message=APPLICATION_EXPLANATION_QUESTION,
+            session_id=session["session_id"], message=question,
             mode="agronomic_rag", model_id="imposed", rag_config="configs/rag.yaml", max_tokens=200,
             generation_backend=backend))
         assert backend.calls >= 1 and len(result.stage_receipts) == 17
@@ -409,3 +538,45 @@ def test_persisted_explanation_rejects_an_imposed_nonnumeric_spray_instruction(t
         assert store.get_turn(result.turn["turn_id"])["answer"] == result.answer
     finally:
         store._conn.close()
+
+
+@pytest.mark.parametrize("instruction", [
+    "Apply a fungicide to the roots tomorrow.",
+    "Use a pesticide on the affected plants.",
+    "Apply a fungicide at 2 L/ha tomorrow.",
+    "Treat the plants with a fungicide.",
+    "Treat the plants gently while lifting them to preserve the fine roots. Then apply a fungicide.",
+    "Treat the plants gently while lifting them with a fungicide.",
+])
+def test_root_inspection_cannot_introduce_an_unasked_material_application(instruction):
+    from agronomy_agent.answer_safety import enforce_answer_safety_postconditions
+    from agronomy_agent.answerability import has_application_instruction
+    from agronomy_agent.router import classify_query, refine_query_route
+    route = refine_query_route(ROOT_QUESTION, classify_query(ROOT_QUESTION))
+    draft = ROOT_METHOD.replace("rot, or discoloration", "rot, or unusual discoloration") + " " + instruction
+    assessment = assess_claim_risk(draft, question=ROOT_QUESTION, question_type=route.question_type,
+                                  risk_level=route.risk_level)
+    assert "unrequested_application_instruction" in assessment.reasons
+    final = enforce_answer_safety_postconditions(draft, question=ROOT_QUESTION, route=route)
+    assert not has_application_instruction(final) and instruction not in final
+
+
+@pytest.mark.parametrize("boundary", [
+    "Do not apply a fungicide from these observations alone.",
+    "Use the pesticide label to check restrictions before any separate treatment decision.",
+])
+def test_root_inspection_keeps_negative_application_boundaries_and_label_information(boundary):
+    draft = ROOT_METHOD + " " + boundary
+    result = verify_answer(draft, question=ROOT_QUESTION, evidence_text="", question_type="plant_health",
+                           risk_level="high", editor=Editor(), review_mode="risk_conditioned_selective_v3")
+    assert result.answer == draft and not result.triggered
+
+
+@pytest.mark.parametrize("question", [
+    ROOT_QUESTION + " Then apply a fungicide.",
+    "Apply a fungicide. " + ROOT_QUESTION,
+    ROOT_QUESTION + " Also, which pesticide rate should I spray?",
+])
+def test_non_prescriptive_output_scope_does_not_consume_a_mixed_root_and_action_request(question):
+    from agronomy_agent.answerability import non_prescriptive_help_requested
+    assert not non_prescriptive_help_requested(question)

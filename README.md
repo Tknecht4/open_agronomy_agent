@@ -62,7 +62,8 @@ The current software supports these bounded workflows:
   or authorize a product. Named inputs such as laboratory germination,
   permanent wilting point and harvested yield use shared role definitions in
   parsing and request checks. Extra quantities and unsupported compound units
-  require clarification rather than being dropped from the calculation.
+  stay in the whole request and cannot inherit a calculator-only answer;
+  clarification or ordinary model handling may be required.
   Supplied area and kg/ha can produce a total mass; supplied total available
   water and depletion fraction can produce an allowable depletion amount.
   Neither calculation chooses the rate or depletion fraction for a field.

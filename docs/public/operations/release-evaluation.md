@@ -621,9 +621,9 @@ if any case covered by that threshold has unknown compliance.
 ## Revised seed-establishment contract
 
 The current default registry selects `release_harness_v2.jsonl` and capability
-conformance v3. The revised seed fixture explicitly declares survival after
+conformance v5. The revised seed fixture explicitly declares survival after
 germination; its successor case identity and provenance distinguish it from
-the original v1 case. Existing v1 case files and conformance v1/v2 remain intact.
+the original v1 case. Existing v1 case files and conformance v1–v4 remain intact.
 The calculator's structured seed inputs require `survival_basis`: `seeds_sown`
 uses overall emergence once, while `germinated_seeds` additionally requires
 `germination_pct`. Both imperial methods retain their stated conversion method.
@@ -637,7 +637,7 @@ an agronomic error solely because it differs from that unstated assumption.
 The original mechanical report and any later scientific triage remain distinct.
 
 The historical v2 synthetic contract executor also records current operation
-versions individually: revised seed arithmetic is v3, while unchanged legacy
+versions individually: current seed arithmetic is v5, while unchanged legacy
 operations retain v1. A declared `operation_versions` map must cover every
 declared operation with a nonempty version; malformed maps fail negotiation.
 These implementation identities change the system fingerprint, not the frozen
@@ -645,8 +645,8 @@ construct or cohort. The executor records actual planner clarification fields,
 including the unstated seed denominator in two old wheat cases. This remains
 synthetic trace QA and cannot establish agronomic performance.
 
-The v5 planner wrapper supports conditional seed-survival clarification records to
-the current product path. These contain two checked v4 arithmetic children,
+The v6 planner wrapper supports conditional seed-survival clarification records in
+the current product path. These contain two checked v5 arithmetic children,
 retain ASK/PARTIAL and choose no rate. Their semantics are outside the historical
 frozen-v1 construct. The version-2 **synthetic contract executor** is restricted
 to executing ready calculations and recording current planner clarification

@@ -29,11 +29,11 @@ from agronomy_agent.model_prompt_budget import positive_int, prompt_budget_recei
 from agronomy_agent.model_errors import LocalModelSnapshotUnavailable
 from agronomy_agent.quantity_claims import unsupported_quantities, remove_numeric_application_instructions
 from agronomy_agent.execution_core import stable_sha256
-from agronomy_agent.observation_guidance import observation_guidance, sample_event_roles_stated, POTATO_MONITORING_ANSWER, bounded_concept_prefix, stored_grain_probe_monitoring
+from agronomy_agent.observation_guidance import observation_guidance, sample_event_roles_stated, sample_event_date_pattern, POTATO_MONITORING_ANSWER, bounded_concept_prefix, stored_grain_probe_monitoring
 from agronomy_agent.agronomic_concepts import correct_concept_claims
 from agronomy_agent.request_scope import seed_quality_workflow_requested, topic_is_supplied_arithmetic_context, proposition_assertion_status
 from agronomy_agent.high_consequence import classify_high_consequence_domains, fertility_quantity_requested
-from agronomy_agent.answerability import simple_definition_subject, is_quantity_concept_explanation, is_mechanism_explanation, requests_regulated_action, bounded_product_help_kind, has_application_instruction
+from agronomy_agent.answerability import simple_definition_subject, is_quantity_concept_explanation, is_mechanism_explanation, requests_regulated_action, bounded_product_help_kind, non_prescriptive_help_requested, has_application_instruction
 
 
 def editor_observation_record(observation: Mapping[str, Any]) -> dict[str, Any]:
@@ -1325,29 +1325,22 @@ def _destroys_diagnostic_sampling_contrast(question: str, answer: str) -> bool:
     return False
 
 
-def _sample_event_date_pattern() -> str:
-    month = (
-        r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|"
-        r"Aug(?:ust)?|Sept?(?:ember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)"
-    )
-    day = r"\d{1,2}(?:st|nd|rd|th)?"
-    return rf"(?:\d{{4}}-\d{{1,2}}-\d{{1,2}}|\d{{1,2}}[/-]\d{{1,2}}(?:[/-]\d{{2,4}})?|{month}\s+{day}|{day}\s+{month})"
-
-
 def _sample_analysis_date_value_mentions(text: str) -> Iterable[re.Match[str]]:
     """Locate dated analysis propositions without assigning them truth."""
-    date = _sample_event_date_pattern()
+    date = sample_event_date_pattern()
     return re.finditer(
-        rf"\b(?:(?:processing|analysis) date\s*(?:(?:was|is)\s+|:\s*)?|"
-        rf"(?:processed|analy[sz]ed)\s+(?:on\s+)?){date}\b", text, re.I,
+        rf"\b(?:(?:(?:processing|analysis) date\s*(?:(?:was|is)\s+|:\s*)?|"
+        rf"(?:processed|analy[sz]ed)\s+(?:on\s+)?){date}\b|"
+        rf"(?:processing|analysis)\s*\(\s*{date}\s*\))", text, re.I,
     )
 
 
-def _sample_analysis_proposition_disclaimed(clause: str, proposition: re.Match[str]) -> bool:
+def _sample_event_proposition_disclaimed(clause: str, proposition: re.Match[str]) -> bool:
     """Bind a denial to one proposition rather than the surrounding clause."""
     before = clause[:proposition.start()]
     local = re.split(r"\b(?:but|however|yet|so|alongside)\b|,", before, flags=re.I)[-1]
-    kind = "processing" if "process" in proposition.group().casefold() else "analysis"
+    value = proposition.group().casefold()
+    kind = "processing" if "process" in value else "collection" if "collection" in value else "analysis"
     after = clause[proposition.end():]
     return bool(re.search(
         r"\b(?:no|unconfirmed|unverified|unknown|proposed)\s+(?:the\s+)?$|"
@@ -1372,6 +1365,29 @@ def _sample_event_question_clause(clause: str) -> bool:
     ))
 
 
+def _nominal_report_event_role_reassigned(clause: str) -> bool:
+    """A dated report item cannot borrow another event's role.
+
+    This concerns role assignment, not whether independently supplied calendar
+    dates coincide. Parallel labelled items remain distinct events.
+    """
+    if _sample_event_question_clause(clause):
+        return False
+    item = rf"report issuance\s*\(\s*{sample_event_date_pattern()}\s*\)"
+    role = r"(?:(?:sample )?collection|sampling|analysis|processing) date"
+    link = r"(?:is|was|equals?|means?|as|(?:must|should|will) be)\s+(?:the\s+)?"
+    for assignment in re.finditer(
+        rf"\b(?:{item}\s+{link}{role}\b|{role}\s+{link}{item})", clause, re.I,
+    ):
+        if _sample_event_proposition_disclaimed(clause, assignment):
+            continue
+        before = re.split(r"\b(?:but|however|yet)\b|,", clause[:assignment.start()], flags=re.I)[-1]
+        if re.search(r"\b(?:if|whether|assuming|hypothetic\w*)\b", before, re.I):
+            continue
+        return True
+    return False
+
+
 def _sample_analysis_date_supplied(question: str) -> bool:
     """Only affirmative supplied events establish an analysis date.
 
@@ -1383,7 +1399,7 @@ def _sample_analysis_date_supplied(question: str) -> bool:
         if _sample_event_question_clause(clause + end):
             continue
         for event in _sample_analysis_date_value_mentions(clause):
-            if _sample_analysis_proposition_disclaimed(clause, event):
+            if _sample_event_proposition_disclaimed(clause, event):
                 continue
             before, after = clause[:event.start()], clause[event.end():]
             if re.search(r"\b(?:if|whether|maybe|perhaps|assum(?:e|ing)|hypothetic\w*)\b", before, re.I):
@@ -1403,13 +1419,13 @@ def _unprovided_sample_analysis_event_claim(clause: str) -> bool:
     """
     if _sample_event_question_clause(clause):
         return False
-    if any(not _sample_analysis_proposition_disclaimed(clause, event)
+    if any(not _sample_event_proposition_disclaimed(clause, event)
            for event in _sample_analysis_date_value_mentions(clause)):
         return True
     event = r"(?:date (?:the )?lab(?:oratory)? (?:processed|analy[sz]ed)|(?:lab(?:oratory)? )?(?:processing|analysis) date)"
     report = r"(?:lab(?:oratory)? )?report (?:issuance |issue )?date"
     attribution = r"(?:is|was|equals?|means?|as|(?:must|should|will) be)\s+(?:the\s+)?"
-    date = _sample_event_date_pattern()
+    date = sample_event_date_pattern()
     # These are positive assignments. A later request to ask the laboratory
     # or negation of the collection role does not revoke the assignment.
     assignments = re.finditer(
@@ -1418,7 +1434,7 @@ def _unprovided_sample_analysis_event_claim(clause: str) -> bool:
         rf"\b{date}\s*,?\s*(?:(?:which|that)\s+)?{attribution}{event}\b",
         clause, re.I,
     )
-    return any(not _sample_analysis_proposition_disclaimed(clause, assignment) for assignment in assignments)
+    return any(not _sample_event_proposition_disclaimed(clause, assignment) for assignment in assignments)
 
 
 def assess_claim_risk(
@@ -1518,8 +1534,7 @@ def assess_claim_risk(
         reasons.append("unsupported_regulated_permission")
     if _crop_health_source_contradiction(question, candidate, docs):
         reasons.append("named_product_source_contradiction")
-    if (is_quantity_concept_explanation(question) or is_mechanism_explanation(question)
-            or bounded_product_help_kind(question)) and has_application_instruction(candidate):
+    if non_prescriptive_help_requested(question) and has_application_instruction(candidate):
         reasons.append("unrequested_application_instruction")
     if _UNSUPPORTED_CERTAINTY_RE.search(candidate):
         reasons.append("unsupported_field_certainty")
@@ -1554,11 +1569,13 @@ def assess_claim_risk(
         reasons.append("scope_drift")
     if missing_intent_facets:
         reasons.append("missing_decision_content")
-    if (is_quantity_concept_explanation(question) or is_mechanism_explanation(question) or bounded_product_help_kind(question)) and remove_numeric_application_instructions(candidate)[1]:
+    if non_prescriptive_help_requested(question) and remove_numeric_application_instructions(candidate)[1]:
         reasons.append("unasked_application_instruction")
-    if sample_event_roles_stated(question) and not _sample_analysis_date_supplied(question):
+    if sample_event_roles_stated(question):
+        analysis_supplied = _sample_analysis_date_supplied(question)
         for clause in re.findall(r"[^.!?;\n]+[.!?;\n]?", candidate):
-            if _unprovided_sample_analysis_event_claim(clause):
+            if (_nominal_report_event_role_reassigned(clause)
+                    or (not analysis_supplied and _unprovided_sample_analysis_event_claim(clause))):
                 reasons.append("sample_event_role_conflation")
     definition = simple_definition_subject(question)
     if definition in {"soil texture"}:
@@ -2531,7 +2548,7 @@ def _verify_answer_policy(
                 draft_output=draft, selection_policy="localized_agronomic_concept_correction_v1",
                 localized_cleanup={"kind": "agronomic_concept_correction", "edits": list(concept_edits),
                     "other_prose_unchanged": True, "editor_invoked": False})
-    if is_quantity_concept_explanation(question) or is_mechanism_explanation(question) or bounded_product_help_kind(question):
+    if non_prescriptive_help_requested(question):
         application_cleaned, application_removed = remove_numeric_application_instructions(draft)
         if application_removed:
             retained = application_cleaned or bounded_decision_support(question, question_type)
@@ -6341,6 +6358,7 @@ def _unsupported_condition_values(text: str, allowed: str, *, root_inspection: b
             # descriptors, with no attached finding or causal proposition.
             list_end = re.fullmatch(
                 r"\s*(?:(?:,\s*(?:(?:and|or)\s+)?|\s+(?:and|or)\s+)"
+                r"(?:(?:unusual|abnormal)\s+)?"
                 r"(?:lesions?|discolou?ration|pruning|damage|cracks?|injur(?:y|ies)))*\s*",
                 suffix, re.I,
             )

@@ -176,6 +176,13 @@ cleanup can retain that reviewed help when replacing an unverified answer, but
 cannot preserve arbitrary draft permissions or rates. These lexical method
 checks do not establish complete scientific verification. Source rationale and
 transfer limits are in the [field observation guide](../../docs/public/operations/field-observations.md).
+Sample-date completeness accepts closed `report issuance (date)` event items
+and separately checks unsupported analysis attribution and cross-role
+assignments. Independently supplied coincident dates retain their event roles.
+Root-inspection lists can describe rot or unusual discoloration without
+asserting a disease. Strict inspection-only answers share the output application
+guard used for explanations: an unasked material application receives review,
+while useful inspection guidance can be retained.
 Numeric-rate obligations distinguish pesticide scouting, stages and application
 history from fertility tests and credits. Mixed pesticide/nutrient requests
 retain the product-label and fertility authority lanes.

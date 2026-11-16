@@ -119,6 +119,16 @@ def sample_event_roles_stated(question: str) -> bool:
     )
 
 
+def sample_event_date_pattern() -> str:
+    """Shared dated-event spelling; recognition does not establish its truth."""
+    month = (
+        r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|"
+        r"Aug(?:ust)?|Sept?(?:ember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)"
+    )
+    day = r"\d{1,2}(?:st|nd|rd|th)?"
+    return rf"(?:\d{{4}}-\d{{1,2}}-\d{{1,2}}|\d{{1,2}}[/-]\d{{1,2}}(?:[/-]\d{{2,4}})?|{month}\s+{day}|{day}\s+{month})"
+
+
 def stored_grain_context(question: str) -> bool:
     """Require sole grain-storage ownership before a global route correction.
 
@@ -358,7 +368,9 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
             ("root_structure", "Describe concrete root structures, damage or discoloration to inspect.",
              (r"\b(?:nodules?|galls?|discolou?r\w*|rot|injury|attachment|shape)\b",)),
             ("root_records", "Record crop stage and field location or distribution of the symptoms.",
-             (r"\b(?:record|document|photograph|map)\w*\b",)),
+             (r"\b(?:record|document|photograph|map)\w*\b",
+              r"\b(?:note|noting)\s+where\s+(?:the\s+)?(?:symptoms|swellings|affected plants)\s+"
+              r"(?:occur|appear|are found)(?:\s+in\s+(?:the\s+)?field)?\s+and\s+(?:the\s+)?(?:crop|growth) stage\b")),
             ("root_confirmation", "Keep the cause uncertain and use diagnostic guidance if inspection is inconclusive.",
              (r"\b(?:diagnostic|lab(?:oratory)?|confirmation|uncertain)\b",)),
         ]
@@ -475,7 +487,14 @@ def _matching_observation_methods(question: str) -> Iterator[ObservationGuidance
             "from report issuance. Compare sampling depth, timing and analytical method as well as the dates."
         ), (
             ("date_collection", "Use the collection event for sampling-date comparisons.", (r"\bcollection date\b", r"\bdate of collection\b", r"\bsampling[- ]event date\b")),
-            ("date_report", "Preserve the report issuance event under its own role.", (r"\breport (?:issuance|issue) date\b", r"\bdate (?:the )?(?:lab(?:oratory)? )?report was issued\b", r"\breport\s+(?:(?:was|is|has been)\s+)?issued\b")),
+            ("date_report", "Preserve the report issuance event under its own role.", (
+                r"\breport (?:issuance|issue) date\b",
+                r"\bdate (?:the )?(?:lab(?:oratory)? )?report was issued\b",
+                r"\breport\s+(?:(?:was|is|has been)\s+)?issued\b",
+                # A closed dated event item, not a substring of an assignment
+                # such as 'report issuance (DATE) is the analysis date'.
+                rf"\breport issuance\s*\(\s*{sample_event_date_pattern()}\s*\)(?=\s*(?:[.!?;\n]|$))",
+            )),
             ("date_separation", "Keep distinct events and their provenance linked without overwriting.", (r"\bseparate(?:ly)?\b", r"\bdistinct(?:ly)?\b", r"\b(?:retain|keep|preserve) both\b")),
         ))
     if has(r"\b(?:ndvi|vegetation index)\b") and has(r"\b(?:compar\w*|dates?|lower|declin\w*|chang\w*)\b"):

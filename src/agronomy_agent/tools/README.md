@@ -59,8 +59,8 @@ factor-10 imperial seeding approximation and exact dimensional conversion are
 shown as distinct methods; they can differ. A computed scenario is not a
 current quote, observed field outcome, or regulated rate.
 
-The v5 planner wrapper can retain a seed-survival clarification while executing
-two conditional v4 calculator children. This requires an otherwise complete
+The v6 planner wrapper can retain a seed-survival clarification while executing
+two conditional v5 calculator children. This requires an otherwise complete
 pure seed calculation, valid supplied germination and a sole unqualified-survival
 basis gap. The parent `clarification_scenarios` record has its own schema and
 provenance, retains the original missing input and contains no selected scalar
@@ -71,7 +71,7 @@ cannot inherit the bypass. Readiness remains non-executing, and choosing a basis
 in the next user turn produces the ordinary single-result calculation.
 The structured single-calculation API still requires a denominator.
 
-The v4 calculator exposes 45 structured operations. Its additional supplied-model
+The v5 calculator exposes 46 structured operations. Its supplied-model
 forms cover seed count and physical-seed mass, zoned cost changes, incremental
 margin, soil carbon and nitrate-N stocks, total porosity, available-N budgets,
 daily water balances, reflectance NDVI, land equivalent ratio, paired yield
@@ -80,7 +80,17 @@ differences, lime equivalence and an explicitly simplified stress-ET model.
 `supplied_model_parser.py` owns bounded natural-language extraction and whole
 request completeness. Not every structured input spelling has a conversational
 parser. Unsupported qualifiers or extra instructions cannot inherit a
-model-free result. Missing and incompatible inputs require clarification.
+model-free result. For recognized supported forms, missing or incompatible
+inputs produce a clarification.
+
+The supplied `allowable_water_depletion` operation multiplies total available
+water in millimetres by a supplied depletion fraction. It reports an allowable
+depletion amount under that assumption. This is FAO readily available water
+(RAW) only when the fraction denotes the no-stress depletion fraction; a
+management-allowed limit may differ. The operation selects no field fraction,
+irrigation date or application depth. See the
+[evaluation guide](../../../docs/public/operations/release-evaluation.md)
+for the relationship, source and interpretation limits.
 
 Material and measurement bases matter. Carbon stock requires a supplied coarse-
 fragment volume; nitrate stock is conditional on matching dry-soil mass support.
