@@ -2245,6 +2245,9 @@ export function OpenAgronomyApp() {
   const currentReadiness = matchingTurnReadiness(turnReadiness, readinessKey)
   const checkingTurnReadiness = turnReadiness?.key === readinessKey && turnReadiness.status === 'checking'
   const questionModelReady = canAskWithReadiness(selectedModelReady, turnReadiness, readinessKey)
+  // Workspace blockers have their own guidance; a blocked preview cannot establish a model requirement.
+  const showModelReadinessNotice = !selectedModelReady && !isAnalyzing && answerCapability.canGenerateAnswer
+    && fieldsHydrated && !questionContextRequiresSave && !savingField && !loadingConversation
 
   useEffect(() => {
     if (!message.trim() || !answerCapability.canGenerateAnswer || !fieldsHydrated || questionContextRequiresSave || savingField || loadingConversation) {
@@ -4390,7 +4393,7 @@ export function OpenAgronomyApp() {
                 {!selectedModelReady && currentReadiness?.requires_model !== false && selectedModelProfile?.local_detail ? <p>{selectedModelProfile.local_detail}</p> : null}
               </details>
               {answerCapability.state === 'notes_only' ? <span>{answerCapability.detail}</span> : null}
-              {!selectedModelReady ? <div className="model-setup-notice" role="status"><strong>{!message.trim() ? 'Model optional for calculations' : checkingTurnReadiness ? 'Checking calculation support' : currentReadiness?.requires_model === false ? currentReadiness.status === 'clarification_required' ? 'Calculation input needed' : 'Calculation ready' : 'Model setup required'}</strong><p>{!message.trim() ? 'Enter a question to check local calculation support, or install a model for generated answers.' : currentReadiness?.requires_model === false ? currentReadiness.calculator?.clarification || 'This supplied-input calculation can run locally without the model.' : currentReadiness?.status === 'unknown' ? 'This calculation is planned, but its complete-input readiness has not been verified. Model setup is still required before submitting it.' : checkingTurnReadiness ? 'Checking whether this question can use a local calculation.' : 'Choose an installed model in Model settings.'}</p></div> : null}
+              {showModelReadinessNotice ? <div className="model-setup-notice" role="status"><strong>{!message.trim() ? 'Model optional for calculations' : checkingTurnReadiness ? 'Checking calculation support' : currentReadiness?.requires_model === false ? currentReadiness.status === 'clarification_required' ? 'Calculation input needed' : 'Calculation ready' : 'Model setup required'}</strong><p>{!message.trim() ? 'Enter a question to check local calculation support, or install a model for generated answers.' : currentReadiness?.requires_model === false ? currentReadiness.calculator?.clarification || 'This supplied-input calculation can run locally without the model.' : currentReadiness?.status === 'unknown' ? 'This calculation is planned, but its complete-input readiness has not been verified. Model setup is still required before submitting it.' : checkingTurnReadiness ? 'Checking whether this question can use a local calculation.' : 'Choose an installed model in Model settings.'}</p></div> : null}
               {runtimeAccess === 'unavailable' ? <button type="button" onClick={() => void recoverRuntime()}>Retry local runtime</button> : null}
             </div>
 

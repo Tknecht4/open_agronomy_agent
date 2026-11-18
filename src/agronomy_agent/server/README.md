@@ -270,3 +270,25 @@ inputs do not gain that path. A stage-specific seedling loss needs actual
 overall emergence or an explicit loss definition among germinated seeds. The
 parser and short follow-up resolver do not turn its complement into a supplied
 overall survival fact. Explicit post-germination mortality remains supported.
+
+
+### Timeline record bundles
+
+The main timeline form posts `/api/fields/{field_id}/records` through
+`farm_routes.py::RecordBundle` and `storage/field_record_store.py::append_bundle`.
+This is separate from the single-event FieldSyncPanel protocol described above.
+The local SQLite bundle transaction binds `(field_id, operation_id)` to the
+normalized event payload digest in `field_record_operations`; exact retries
+return the original events with `already_saved`, and changed payloads conflict.
+Pydantic validation rejects a first invalid request before append with HTTP 422;
+store validation conflicts return HTTP 409. A later rejection following an
+unknown outcome does not prove the earlier attempt failed. Backups must include
+the operation ledger, not just the event rows.
+
+`RecordEntryDialog` captures its event JSON and operation UUID before dispatch,
+locks edits during unknown outcomes, and checks returned IDs, field and submitted
+content before clearing storage. It uses field/season/correction draft slots and
+expected-version checks, rather than the separate sync client's actor partitions
+and native Web Locks. `FarmRecords` offers recovery on a superseded original
+when that correction slot remains unconfirmed. Neither client may interpret an
+unknown observation date as a measured date or erase the immutable original.

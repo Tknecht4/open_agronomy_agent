@@ -3818,6 +3818,7 @@ it('server calculator readiness cannot enable Ask for newly edited unsaved geome
   fireEvent.click(screen.getByRole('button', { name: 'Conversation' }))
   expect(screen.getByRole('button', { name: 'Ask' })).toBeDisabled()
   expect(screen.getByText('Save field changes before asking.')).toBeInTheDocument()
+  expect(screen.queryByText('Model setup required')).not.toBeInTheDocument()
   expect(screen.getByLabelText('Your question')).toHaveValue('Exact conversion for saved field')
   expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/turns/stream'))).toBe(false)
 })
@@ -3929,17 +3930,29 @@ describe('production answer origin and publicity wording', () => {
     expect(JSON.stringify(turn)).toBe(before)
   })
 
-  it('never assigns an origin to pending stream text before the completed receipt arrives', async () => {
+  it('keeps setup notices and final-origin claims out of pending answers', async () => {
     const fetchMock = installFetchMock(), base = fetchMock.getMockImplementation()!
     let release!: (value: Response) => void
     const pending = new Promise<Response>(resolve => { release = resolve })
     const completed = publicityTurn('tool')
+    let streamRequested = false
+    let backgroundReadinessReturned = false
     fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       if (url === '/api/configs') return jsonResponse(missingModelConfig)
-      if (url === '/api/turn-readiness') return jsonResponse(readinessResponse(JSON.parse(String(init?.body))))
+      if (url === '/api/turn-readiness') {
+        const body = JSON.parse(String(init?.body))
+        if (streamRequested) {
+          backgroundReadinessReturned = true
+          return jsonResponse(readinessResponse(body, 'model_required'))
+        }
+        return jsonResponse(readinessResponse(body))
+      }
       if (url === '/api/sessions' && init?.method === 'POST') return jsonResponse({ session_id: 'pending-origin', context: JSON.parse(String(init.body)).context, turns: [] })
-      if (url === '/api/sessions/pending-origin/turns/stream') return pending
+      if (url === '/api/sessions/pending-origin/turns/stream') {
+        streamRequested = true
+        return pending
+      }
       return base(input, init)
     })
     render(<OpenAgronomyApp />)
@@ -3948,9 +3961,12 @@ describe('production answer origin and publicity wording', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Ask' })).toBeEnabled())
     fireEvent.click(screen.getByRole('button', { name: 'Ask' }))
     expect(await screen.findByLabelText('Answer execution and origin')).toHaveTextContent('Preparing answer…')
+    await waitFor(() => expect(backgroundReadinessReturned).toBe(true))
+    expect(screen.queryByText(/^(Model setup required|Calculation ready|Calculation input needed|Checking calculation support|Model optional for calculations)$/)).not.toBeInTheDocument()
     await act(async () => { release({ ok: true, status: 200, body: null, text: async () => `event: answer.completed\ndata: ${JSON.stringify({ turn: completed })}\n\n` } as Response) })
     await screen.findByText(completed.answer)
     expect(screen.getByLabelText('Answer execution and origin')).toHaveTextContent('Local tool result · Model not used')
+    expect(screen.getByText('Model optional for calculations')).toBeInTheDocument()
   })
 
   it.each(['missing', 'failed', 'disabled_by_arm'])('does not expose verifier final labels with %s verification', async state => {

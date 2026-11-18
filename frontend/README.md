@@ -34,7 +34,7 @@ the exception when an upstream fix is available or reassess before expiry.
 - `src/FieldSetupDialog.tsx` owns the name/location/review field wizard; `src/WorkspaceDialog.tsx` supplies accessible modal behavior.
 - `src/MapPresentationControls.tsx` and `src/mapPresentation.ts` own map style/layer display preferences. `src/FieldMapInsights.tsx` renders lazy, on-demand analysis with independent geometry/source requests, compact coverage rows, and stale-request cancellation.
 - `src/FarmRecords.tsx` owns the paginated record timeline and server-side type filters, including correction chains. `src/RecordEntryDialog.tsx` owns field-scoped entry, lab-report transcription and durable drafts. `src/RecordDetails.tsx` supplies readable record provenance; `src/fieldLabels.ts` maps stored identifiers to presentation names.
-- `src/FieldSyncPanel.tsx` owns field-event sync, typed soil-test entry, and recovery of unconfirmed record requests; `src/fieldEventSave.ts` persists retry identities before sending either record form; `src/FieldRecords.css` styles compact history and focused entry dialogs.
+- `src/FieldSyncPanel.tsx` owns field-event sync, typed soil-test entry, and recovery of unconfirmed record requests; `src/fieldEventSave.ts` persists scoped retry identities for that panel’s observation and soil-test forms; `src/FieldRecords.css` styles compact history and focused entry dialogs.
 - `src/FieldImageryAnalyticsPanel.tsx` owns on-demand saved-point/polygon imagery analysis; `src/FieldDataPanel.tsx` owns reviewed table intake and scene discovery. Point results require explicit sampling support in the server receipt.
 - `src/api.ts` is the API client boundary.
 - `src/LeafletFieldMap.tsx` and `src/fieldGeometry.ts` render and validate pin, boundary, and imported-geometry interaction.
@@ -54,7 +54,11 @@ Questions opens in Together on desktop and Conversation on smaller screens. A wo
 While the server checks calculation support for the current draft, the notice
 shows a pending check rather than requiring model setup. Ask remains gated by
 the current request's validated response; delayed responses for an older draft
-cannot qualify the new question.
+cannot qualify the new question. During submission, execution progress describes
+the accepted question; calculation and model notices return for the next draft
+after that request finishes. While field context is loading, being saved, or has
+unsaved changes, the workspace's own loading/save guidance takes priority over
+model setup advice. Ask still requires saved context and a current readiness check.
 
 Model opens above the entire desktop composer, with technical details available separately. On mobile it opens a native modal sheet. Native dialogs contain focus and restore it when closed; desktop popovers dismiss on Escape, outside interaction, and workspace changes. Unknown availability remains unreported rather than being labelled ready. Selection changes only the next question and does not rewrite previous answer lineage. With an empty composer and no installed model, the notice explains that a question can be checked for local calculation support. It does not declare every request ready; the server preview and submission gates still decide the exact request.
 
@@ -139,7 +143,30 @@ Run the API and exercise a general question, field creation/edit/reload, source 
 
 Expected states include API unavailable, model setup required, field context incomplete, adapter blocked/offline, stale local draft, invalid geometry, upload rejected, and stream interrupted. Preserve the user's input and actionable recovery information where safe.
 
-### Scoped record recovery (candidate protocol v2)
+### Timeline record entry and recovery
+
+`RecordEntryDialog` posts an atomic bundle to `/api/fields/{id}/records`. Native
+inputs lock during dispatch and while its outcome is unconfirmed. The form
+persists the exact event JSON and operation UUID before sending; **Retry saved
+request**, including after closing and reopening the same entry or correction,
+replays those bytes with the same UUID. A superseded original with an unresolved
+correction draft offers **Resume record save**; this opens recovery only, never a
+new correction of that superseded target. It verifies the acknowledgement’s status,
+record count, distinct IDs, field and submitted content before clearing a draft.
+Only a definite first HTTP 422 releases that attempt for editing; a later 422
+following uncertainty does not establish that the original request failed.
+
+Drafts edited by an earlier UI version keep their later values after the original
+request is confirmed. A later correction targets the confirmed record. New edits
+require a separate explicit save and UUID. Destination collisions or storage
+failure preserve the old draft instead of silently replacing another version.
+This form uses a draft slot per field, season and correction target, with expected
+stored-version checks. These checks provide best-effort protection against other
+windows; they do not implement the actor partitioning or native Web Lock protocol
+of `FieldSyncPanel` below. Browser-local drafts are readable to anyone with access
+to the browser profile.
+
+### FieldSyncPanel scoped record recovery (candidate protocol v2)
 
 The save client fetches the server-resolved actor/workspace/field scope before displaying pending requests or dispatching a save. The server checks those expected identities again after authorization, before append. It returns an operation-bound receipt; a server that ignores the retry protocol cannot produce a confirmed save.
 

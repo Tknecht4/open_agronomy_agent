@@ -1,8 +1,41 @@
-# Complete agronomic evaluation campaign
+# Agronomic evaluation campaign
 
 November 12, 2026. Reference main: `91125d30acd447537184184352d8fadf96ee89ee`.
 
-## Current status
+## Current assessment status — November 18
+
+The fresh serving-source assessment uses `d4def84` and producer hash
+`a9c70423012d9d8d0c2ae324f93c317293ef9a319f56a9709098e15a12d20a11`.
+It runs all 608 frozen development cases, raw and full-system arms, two trials,
+on E2B, E4B and hosted Luna: 7,296 new observation slots across six runs. The
+six historical reference runs, their accepted labels and unknowns remain
+unchanged. The new collections are still running; no fresh whole-study semantic
+scores or agronomic conclusions are available yet. The completed historical
+study below must not be read as an evaluation of this successor.
+
+The successor repairs requested-task ownership, false authority holds,
+terminal-answer selection and jurisdiction-specific fallback wording. Exact
+serving-source checks passed 6,141 backend tests with 58 skipped. UI-only changes
+in the separate integration checkout pass 532 frontend tests, type checking and
+build, with strict docs and public-scope checks. All 364 model-producer files
+remain byte- and mode-identical to the frozen generation checkout. Source checks
+and this equivalence do not replace real model observations or final PR CI.
+
+Synthetic browser checks exercised calculator clarification, saved and unsaved
+field context, conversations, record corrections and unknown dates. Two readiness
+notices were repaired. Record entry now locks pending and unconfirmed inputs,
+retains exact request identities through reload, verifies acknowledgements and
+preserves older-version edits. Recovery of actual committed observations and
+corrections was tested by deliberately withholding their first acknowledgement;
+the SQLite ledger retained one operation and one event per submitted write.
+A replaced original exposes recovery of an unresolved correction. These checks
+used a real local API with synthetic records, not an installed native package,
+real farm data or live terrain-provider validation.
+
+Final answer review, current canonical reports, source/document integration,
+independent review, exact PR CI and workspace retirement remain unfinished.
+
+## Historical completed whole assessment — `ea615e4`
 
 On November 17, the evaluated serving candidate is `ea615e4`, with producer
 source hash `02a9f477c0bcf095868ecacb269d0af7d48bcbc8b45ac6b88bf0e0c998ce4995`.

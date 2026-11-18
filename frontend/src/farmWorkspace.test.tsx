@@ -162,7 +162,7 @@ describe('farm cockpit workflows',()=>{
 })
 
 describe('retained record intake', () => {
-  it('keeps an uncertain save across reload and retries the same operation without duplicating it', async () => {
+  it('keeps an uncertain save across reload and retries the same captured operation', async () => {
     const { default: FarmRecords } = await import('./FarmRecords')
     localStorage.clear()
     const writes: Array<{ operation_id: string; events: unknown[] }> = []
@@ -170,6 +170,7 @@ describe('retained record intake', () => {
       if (init?.method === 'POST') {
         writes.push(JSON.parse(init.body))
         if (writes.length === 1) throw new TypeError('Connection lost after server acceptance')
+        return { ok: true, json: async () => ({ status: 'already_saved', events: writes[0].events.map(event => ({ ...(event as object), id: '550e8400-e29b-41d4-a716-446655440001', field_context_id: 'west', occurred_at: '2026-11-18T12:00:00Z' })) }) }
       }
       return { ok: true, json: async () => ({ events: [], total: 0, next_offset: null }) }
     }))
@@ -182,7 +183,8 @@ describe('retained record intake', () => {
     render(<FarmRecords key="west:2026" fieldId="west" season={2026} />)
     fireEvent.click(screen.getByRole('button', { name: 'Add record' }))
     expect(screen.getByLabelText('What did you observe or do?')).toHaveValue('Synthetic scouting note')
-    fireEvent.submit(screen.getByRole('button', { name: 'Save record' }).closest('form')!)
+    expect(screen.getByLabelText('What did you observe or do?')).toBeDisabled()
+    fireEvent.submit(screen.getByRole('button', { name: 'Retry saved request' }).closest('form')!)
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(writes).toHaveLength(2)
     expect(writes[1]).toEqual(writes[0])

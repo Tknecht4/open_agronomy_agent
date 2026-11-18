@@ -192,27 +192,32 @@ Esri imagery credits follow the [provider's current service metadata](https://se
 
 **Fields** has **Overview**, **Records & soil tests**, and **Map context**. Overview holds supplied details; Records & soil tests retains observations, measurements, corrections, and linked answer history; Map context shows regional matches with source and uncertainty. Field-event sync and recovery are available with the records. A browser draft is not a synchronized record until the API confirms it.
 
-**Add record** opens a focused entry form; **Correct** beside an existing record
-preselects it for an append-only correction. The original remains in the timeline.
-**Add soil test** retains the exact report value, unit, method, depth and sample ID.
-Enter the sampling date only when known, and explicitly mark whether you retained
-the original report. Entry time and sampling time are different facts: sample rows label their recording
-time, and sampling dates remain explicit or unknown in field context. Failed save
-confirmations keep the form values, but the server may already have saved the record;
-check the timeline before retrying. **Resume unsaved record** reopens a failed
-record form that was closed. A pending save can be dismissed without cancelling
-the request or enabling another submission.
+**Add record** opens a field-scoped entry form; **Correct** beside an existing
+record preselects it for an append-only correction. The original remains in the
+timeline. Choose **Soil sample / report** to transcribe measurements with explicit
+value, unit, method, depth and sample ID. Keep the original lab report separately.
+Enter observation and sampling dates only when known; recording time does not
+supply a missing observation date.
 
-An unconfirmed save also retains its exact request on this device. After
-reopening the page, **Retry saved record** in Records & soil tests resends that
-request with the same retry identity; the local SQLite server returns the
-original record if it already saved it. Review the timeline first if you are
-unsure. A confirmed save clears its recovery entry, so a later intentional save
-creates a separate record even when its contents match. A conflict keeps the
-original request for investigation. If browser storage is unavailable or
-corrupt, saving is blocked instead of discarding the recovery information.
-Keep this device's unconfirmed requests private. Moving record files to a
-different server does not transfer those server-side retry receipts.
+Inputs lock while saving. If the outcome is unconfirmed, **Retry saved request**
+resends the exact captured request with its original identity; it recovers an
+already saved record without appending a duplicate. Closing keeps the draft;
+reopen **Add record** or the same **Correct** form to recover it. If a
+correction already reached the server, **Resume record save** beside its
+replaced original reopens that captured request for confirmation. Resolve that
+request before editing or starting another record. A confirmed save clears the
+draft only after its response matches the submitted records. If an earlier app
+version accepted later edits, confirmation keeps them for a new explicit save.
+A definite first validation rejection permits editing; an uncertain save remains
+locked for recovery. Storage failures or another window’s changed draft block
+dispatch or clearing instead of replacing that stored version.
+
+The separate field-event sync panel also offers **Add soil test**, **Resume
+unsaved record** and **Retry saved record**. Its scoped recovery captures the
+original request and requires persistent storage and Web Locks. Keep this
+device’s unconfirmed requests private. Moving record files to a different server
+does not transfer server-side retry receipts. Neither form’s local draft is a
+synchronized record until the API confirms it.
 
 The timeline shows concise summaries. Open **Record details** for capture and
 measurement metadata, or expand an answer for its full text and provenance.

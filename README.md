@@ -55,7 +55,8 @@ development material; automated labels and different backend runtimes do not
 establish field accuracy or a general model ranking.
 
 All twelve original comparison runs and their corrected scoring reports are
-retained. Missing reviews, unknown criteria, failed executions and unavailable
+retained. A fresh whole successor assessment is running; its results remain
+separate from that completed historical study. Missing reviews, unknown criteria, failed executions and unavailable
 provider finish reasons keep their denominators. The campaign record identifies
 the evaluated source separately from subsequent source repairs and pending runs.
 
@@ -72,7 +73,9 @@ Current workflows include:
   A short reply can select the intended basis and complete the calculation.
 - **Keep useful field records:** save observations and soil tests with their
   known sample dates, depths and methods. Corrections preserve the original
-  record; an unknown sample date stays unknown.
+  record; an unknown sample date stays unknown. Unconfirmed saves keep the exact
+  captured request for retry after reopening, including corrections whose
+  original record has already been replaced.
 - **Get explanations and scouting help:** ask about measurement methods,
   concept comparisons, study designs, crop symptoms and evidence to collect.
   Supported explanations and record checklists retain their requested scope.
