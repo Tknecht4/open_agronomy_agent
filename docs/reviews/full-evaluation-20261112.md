@@ -9,8 +9,8 @@ The fresh serving-source assessment uses `d4def84` and producer hash
 It plans all 608 frozen development cases, raw and full-system arms, two trials,
 on E2B, E4B and hosted Luna: 7,296 new observation slots across six runs. The
 six historical reference runs, their accepted labels and unknowns remain
-unchanged. The successor benchmark is incomplete. Luna's whole collection is
-retained and E2B is still collecting. Both E4B attempts lost their Colab
+unchanged. The successor benchmark is incomplete. Luna and E2B have collected
+their whole cohorts. Both E4B attempts lost their Colab
 assignments before whole completion; the provider's reason is unknown. No new
 replacement campaign is scheduled. There are no fresh whole-study semantic
 scores. The completed historical study below must not be read as an evaluation
@@ -23,7 +23,7 @@ At the November 18 closeout inspection:
 | Model / attempt | Regression observations / 192 | Original-cohort observations / 2,240 | Disposition |
 | --- | ---: | ---: | --- |
 | Hosted Luna | 192 | 2,240 | Whole collection retained; execution failures remain visible |
-| E2B | 192 | Still collecting | Existing job retains its original time limit |
+| E2B | 192 | 2,240 | Whole collection finished within its original time limit |
 | E4B, original attempt | 192 | 291 | Assignment lost; retained prefix only |
 | E4B, replacement attempt | 192 | 135 | Assignment lost; retained prefix only |
 
@@ -36,6 +36,12 @@ were copied and hash-verified in the durable output tree. The two leftover local
 E4B deadline monitors were retired; E2B was untouched. The regression cohort has
 an original-VM reader receipt. No full-cohort final original-VM reader or whole
 two-cohort E4B completion receipt is available.
+
+E2B's regression collection has 192 completed observations. Its original
+cohort has 2,234 completed and six failed observations. Independent inspection
+identifies all six failures as declared synthetic raw-model fault controls,
+not native-model refusals. The job finished within its unchanged original
+limit, and both cohorts have original-VM canonical-reader receipts.
 
 Luna's regression collection has 192 completed observations. Its original
 cohort has 2,218 completed and 22 failed observations. Six failures are declared
@@ -119,7 +125,10 @@ independent checks verify the final refinement, including complete constituent
 sums, negation, quoted misconceptions and unrelated-clause ownership. Replaying
 the four retained rate-definition answers repairs both E2B errors and preserves
 both valid E4B answers byte for byte. These are source and replay checks, not
-another model run or a new set of benchmark grades; final-head CI is separate.
+another model run or a new set of benchmark grades. At source commit `c765762`,
+all four PR workflows passed: Linux backend (6,291 passed, 27 skipped), frontend
+(532 tests), Mac source contracts, release-evaluation foundation and documentation.
+The Mac workflow checks source contracts, not an installed native package.
 
 Reading actual retained answers also confirmed useful boundaries: alternative
 seed-survival denominators are shown explicitly, non-brassica root symptoms do
@@ -131,10 +140,30 @@ occasional repetitive boundary wording. This qualitative review is not a frozen
 semantic regrade, a measured refusal rate or expert/field validation.
 
 Draft [PR #134](https://github.com/Tknecht4/open_agronomy_agent/pull/134) contains
-the composed source fixes and tracks exact final-head CI separately. Current
-canonical reporting and cleanup of active evaluation inputs await job closeout.
-The full current benchmark remains an unmet requirement; preserving its failures
-and partial outputs does not turn it into a completed assessment.
+the composed source fixes. Documentation closeout is separate from the frozen
+model source and requires its own final-head CI. The full current benchmark
+remains an unmet requirement; preserving its failures and partial outputs does
+not turn it into a completed assessment.
+
+### Retention and workspace cleanup
+
+On November 18, the owner authorized direct deletion of evaluation generations
+superseded by newer ones. The controller deleted 75 internal directories
+(12,484,430,852 logical bytes) and four old external A71/67 transport roots
+(5,306,904,973 logical bytes), including their four project link aliases.
+The measured internal free-space increase was 11,944,529,920 bytes. The external
+APFS image has more free space internally; its sparsebundle has not been
+compacted, so no reduction in host-drive image size is claimed.
+
+The latest complete `ea615e4` comparison, current `d4def84` collections,
+required matched baselines, controller inputs and compact negative findings
+remain. Older narrative sections describe their original observations and
+custody events; they do not imply that every superseded raw generation is still
+available for replay. Deletion scopes, hashes and completion receipts remain in
+the private output tree. Current source, runtime and grower data were excluded.
+The separate historical source/research archive was not deleted merely because
+it was old. The primary checkout remains clean on the reference main; PR fixes
+remain in their isolated branch.
 
 ## Historical completed whole assessment — `ea615e4`
 

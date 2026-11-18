@@ -55,9 +55,11 @@ development material; automated labels and different backend runtimes do not
 establish field accuracy or a general model ranking.
 
 All twelve original comparison runs and their corrected scoring reports are
-retained. The successor benchmark is incomplete: Luna's whole collection is
-retained, E2B is still collecting, and the replacement E4B Colab session was lost
-with only partial results recovered. No updated whole-study scores are available.
+retained as the latest complete comparison. The successor benchmark is incomplete:
+Luna and E2B have collected their whole cohorts, while both E4B Colab attempts
+were lost with only partial results recovered. No updated whole-study scores
+are available. Superseded evaluation generations have been deleted at the
+owner's request; current results, required baselines and compact findings remain.
 Later source fixes have software and retained-output replay checks; they have
 not received a new model assessment. Missing reviews, unknown criteria, failed
 executions and unavailable provider finish reasons keep their denominators.
